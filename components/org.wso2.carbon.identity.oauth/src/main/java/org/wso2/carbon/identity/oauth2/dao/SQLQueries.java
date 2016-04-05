@@ -298,7 +298,7 @@ public class SQLQueries {
 
     public static final String RETRIEVE_ROLES_OF_SCOPE = "SELECT IOS.ROLES FROM IDN_OAUTH2_SCOPE IOS WHERE SCOPE_KEY" +
                                                         " = ?";
-
+    public static final String RETRIEVE_PKCE_TABLE = "SELECT _PKCE_MANDATORY, PKCE_SUPPORT_PLAIN FROM IDN_OAUTH_CONSUMER_APPS LIMIT 1";
     private SQLQueries() {
 
     }

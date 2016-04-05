@@ -25,12 +25,20 @@ import org.osgi.framework.ServiceRegistration;
 import org.osgi.service.component.ComponentContext;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.application.mgt.listener.ApplicationMgtListener;
+import org.wso2.carbon.identity.base.IdentityRuntimeException;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
+import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
+import org.wso2.carbon.identity.oauth2.dao.SQLQueries;
 import org.wso2.carbon.identity.user.store.configuration.listener.UserStoreConfigListener;
 import org.wso2.carbon.stratos.common.listeners.TenantMgtListener;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
 /**
  * @scr.component name="identity.oauth2.component" immediate="true"
@@ -90,6 +98,17 @@ public class OAuth2ServiceComponent {
         } else {
             log.error("OAuth - ApplicationMgtListener could not be registered.");
         }
+        if(checkPKCESupport()) {
+            OAuth2ServiceComponentHolder.setPkceEnabled(true);
+            if(log.isInfoEnabled()) {
+                log.info("PKCE Support enabled.");
+            }
+        } else {
+            OAuth2ServiceComponentHolder.setPkceEnabled(false);
+            if(log.isInfoEnabled()) {
+                log.info("PKCE Support is disabled.");
+            }
+        }
     }
 
     /**
@@ -124,5 +143,37 @@ public class OAuth2ServiceComponent {
     protected void setIdentityCoreInitializedEventService(IdentityCoreInitializedEvent identityCoreInitializedEvent) {
         /* reference IdentityCoreInitializedEvent service to guarantee that this component will wait until identity core
          is started */
+    }
+
+    private boolean checkPKCESupport() {
+        Connection connection = null;
+        try {
+            connection = IdentityDatabaseUtil.getDBConnection();
+        } catch (IdentityRuntimeException e) {
+            return false;
+        }
+
+
+        if(connection != null) {
+            try {
+                PreparedStatement preparedStatement = connection.prepareStatement(SQLQueries.RETRIEVE_PKCE_TABLE);
+                ResultSet resultSet = preparedStatement.executeQuery();
+                if(resultSet != null) {
+                    //following statement will throw SQLException if the column is not found
+                    resultSet.findColumn("_PKCE_MANDATORY");
+                    //if we are here then the column exists, so PKCE is supported by the database.
+                    return true;
+                }
+            } catch (SQLException e) {
+
+            } finally {
+                try {
+                    connection.close();
+                } catch (SQLException e) {
+
+                }
+            }
+        }
+        return false;
     }
 }
