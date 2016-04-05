@@ -318,7 +318,9 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
                     MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
 
                     byte[] hash = messageDigest.digest(codeVerifier.getBytes(StandardCharsets.US_ASCII));
-                    String referencePKCECodeChallenge = new String(new Base64().encode(hash));
+                    //Trim the base64 string to remove trailing CR LF characters.
+                    String referencePKCECodeChallenge = new String(Base64.encodeBase64URLSafe(hash),
+                            StandardCharsets.UTF_8).trim();
                     if (!referencePKCECodeChallenge.equals(referenceCodeChallenge)) {
                         return false;
                     }
