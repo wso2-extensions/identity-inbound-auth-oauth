@@ -26,7 +26,7 @@ import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 public class OAuth2ServiceComponentHolder {
 
     private static ApplicationManagementService applicationMgtService;
-
+    private static boolean pkceEnabled = false;
     private OAuth2ServiceComponentHolder(){
 
     }
@@ -47,5 +47,13 @@ public class OAuth2ServiceComponentHolder {
      */
     public static void setApplicationMgtService(ApplicationManagementService applicationMgtService) {
         OAuth2ServiceComponentHolder.applicationMgtService = applicationMgtService;
+    }
+
+    public static boolean isPkceEnabled() {
+        return pkceEnabled;
+    }
+
+    public static void setPkceEnabled(boolean pkceEnabled) {
+        OAuth2ServiceComponentHolder.pkceEnabled = pkceEnabled;
     }
 }
