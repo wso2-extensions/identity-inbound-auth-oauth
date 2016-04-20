@@ -18,10 +18,6 @@
 
 package org.wso2.carbon.identity.oauth2.token.handlers.grant;
 
-import java.sql.Timestamp;
-import java.util.Date;
-import java.util.UUID;
-
 import org.apache.axiom.util.base64.Base64Utils;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.logging.Log;
@@ -31,7 +27,6 @@ import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.base.IdentityException;
-import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
@@ -43,17 +38,21 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.TokenMgtDAO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
-import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
+import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
-import org.wso2.carbon.utils.xml.StringUtils;
+
+import java.sql.Timestamp;
+import java.util.Date;
+import java.util.UUID;
 
 public abstract class AbstractAuthorizationGrantHandler implements AuthorizationGrantHandler {
 
@@ -149,7 +148,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
 
                     if (expireTime > 0 || expireTime < 0) {
                         if (log.isDebugEnabled()) {
-                            if(expireTime > 0) {
+                            if (expireTime > 0) {
                                 log.debug("Access Token " + existingAccessTokenDO.getAccessToken() + " is still valid");
                             } else {
                                 log.debug("Infinite lifetime Access Token " + existingAccessTokenDO.getAccessToken() +
@@ -164,11 +163,11 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                                         GrantType.REFRESH_TOKEN.toString())) {
                             tokenRespDTO.setRefreshToken(existingAccessTokenDO.getRefreshToken());
                         }
-                        if(expireTime > 0){
-                            tokenRespDTO.setExpiresIn(expireTime/1000);
+                        if (expireTime > 0) {
+                            tokenRespDTO.setExpiresIn(expireTime / 1000);
                             tokenRespDTO.setExpiresInMillis(expireTime);
                         } else {
-                            tokenRespDTO.setExpiresIn(Long.MAX_VALUE/1000);
+                            tokenRespDTO.setExpiresIn(Long.MAX_VALUE / 1000);
                             tokenRespDTO.setExpiresInMillis(Long.MAX_VALUE);
                         }
                         tokReqMsgCtx.addProperty(EXISTING_TOKEN_ISSUED, true);
@@ -212,11 +211,11 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
 
                 long refreshTokenExpiryTime = OAuth2Util.getRefreshTokenExpireTimeMillis(existingAccessTokenDO);
 
-                if(OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE.equals(
+                if (OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE.equals(
                         existingAccessTokenDO.getTokenState()) && (expireTime > 0 || expireTime < 0)) {
                     // token is active and valid
                     if (log.isDebugEnabled()) {
-                        if(expireTime > 0){
+                        if (expireTime > 0) {
                             log.debug("Access token " + existingAccessTokenDO.getAccessToken() +
                                     " is valid for another " + expireTime + "ms");
                         } else {
@@ -232,11 +231,11 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                                     GrantType.REFRESH_TOKEN.toString())) {
                         tokenRespDTO.setRefreshToken(existingAccessTokenDO.getRefreshToken());
                     }
-                    if(expireTime > 0) {
+                    if (expireTime > 0) {
                         tokenRespDTO.setExpiresIn(expireTime / 1000);
                         tokenRespDTO.setExpiresInMillis(expireTime);
                     } else {
-                        tokenRespDTO.setExpiresIn(Long.MAX_VALUE/1000);
+                        tokenRespDTO.setExpiresIn(Long.MAX_VALUE / 1000);
                         tokenRespDTO.setExpiresInMillis(Long.MAX_VALUE);
                     }
                     if (cacheEnabled) {
@@ -300,7 +299,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             long validityPeriodInMillis = OAuthServerConfiguration.getInstance().
                     getApplicationAccessTokenValidityPeriodInSeconds() * 1000;
 
-            if(isOfTypeApplicationUser()){
+            if (isOfTypeApplicationUser()) {
                 validityPeriodInMillis = OAuthServerConfiguration.getInstance().
                         getUserAccessTokenValidityPeriodInSeconds() * 1000;
             }
@@ -328,7 +327,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             AccessTokenDO newAccessTokenDO = new AccessTokenDO(consumerKey, tokReqMsgCtx.getAuthorizedUser(),
                     tokReqMsgCtx.getScope(), timestamp, refreshTokenIssuedTime,
                     validityPeriodInMillis, refreshTokenValidityPeriodInMillis, tokenType);
-            
+
             String newAccessToken;
 
             try {
@@ -337,17 +336,17 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                 // set the validity period. this is needed by downstream handlers.
                 // if this is set before - then this will override it by the calculated new value.
                 tokReqMsgCtx.setValidityPeriod(validityPeriodInMillis);
-                
+
                 // set the refresh token validity period. this is needed by downstream handlers.
                 // if this is set before - then this will override it by the calculated new value.
                 tokReqMsgCtx.setRefreshTokenvalidityPeriod(refreshTokenValidityPeriodInMillis);
-                
+
                 // set access token issued time.this is needed by downstream handlers.
                 tokReqMsgCtx.setAccessTokenIssuedTime(timestamp.getTime());
-                
+
                 // set refresh token issued time.this is needed by downstream handlers.
                 tokReqMsgCtx.setRefreshTokenIssuedTime(refreshTokenIssuedTime.getTime());
-                
+
                 newAccessToken = oauthIssuerImpl.accessToken(tokReqMsgCtx);
                 if (OAuth2Util.checkUserNameAssertionEnabled()) {
                     //use ':' for token & userStoreDomain separation
@@ -387,7 +386,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                         "Client ID : " + oAuth2AccessTokenReqDTO.getClientId() +
                         ", Authorized User : " + tokReqMsgCtx.getAuthorizedUser() +
                         ", Timestamp : " + timestamp +
-                          ", Validity period (s) : " + newAccessTokenDO.getValidityPeriod() +
+                        ", Validity period (s) : " + newAccessTokenDO.getValidityPeriod() +
                         ", Scope : " + OAuth2Util.buildScopeString(tokReqMsgCtx.getScope()) +
                         " and Token State : " + OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
             }
@@ -426,7 +425,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                                             existingAccessTokenDO) throws IdentityOAuth2Exception {
         try {
             tokenMgtDAO.storeAccessToken(newAccessToken, oAuth2AccessTokenReqDTO.getClientId(),
-                                         newAccessTokenDO, existingAccessTokenDO, userStoreDomain);
+                    newAccessTokenDO, existingAccessTokenDO, userStoreDomain);
         } catch (IdentityException e) {
             throw new IdentityOAuth2Exception(
                     "Error occurred while storing new access token : " + newAccessToken, e);
@@ -519,16 +518,16 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         // the given client ID was not found in the tenantDomain sent in the request
         if (DEFAULT_SP_NAME.equals(serviceProviderName)) {
             if (log.isDebugEnabled()) {
-                log.debug("Valid Service provider not found for client id "+clientId +
-                        " and tenant domain "+tenantDomain);
+                log.debug("Valid Service provider not found for client id " + clientId +
+                        " and tenant domain " + tenantDomain);
             }
             return false;
         }
 
-        if (!serviceProvider.isSaasApp() && !userTenantDomain.equals(tenantDomain)){
-            if(log.isDebugEnabled()) {
-                log.debug("Non-SaaS service provider tenant domain is not same as user tenant domain; " +
-                        tenantDomain + " != " + userTenantDomain);
+        if (!serviceProvider.isSaasApp() && !userTenantDomain.equals(tenantDomain)) {
+            if (log.isDebugEnabled()) {
+                log.debug("Non-SaaS service provider's tenant domain " + tenantDomain +
+                        " is not same as user tenant domain " + userTenantDomain);
             }
             return false;
         }
