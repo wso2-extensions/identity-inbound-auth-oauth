@@ -28,6 +28,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
+import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
+import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -45,10 +47,13 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.TokenMgtDAO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
+import org.wso2.carbon.utils.xml.StringUtils;
 
 public abstract class AbstractAuthorizationGrantHandler implements AuthorizationGrantHandler {
 
@@ -59,6 +64,8 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     protected boolean cacheEnabled;
     protected OAuthCache oauthCache;
     public static final String EXISTING_TOKEN_ISSUED = "existingTokenUsed";
+    public static final String DEFAULT_SP_NAME = "default";
+    public static final String OAUTH2 = "oauth2";
 
     @Override
     public void init() throws IdentityOAuth2Exception {
@@ -480,6 +487,10 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
 
         OAuth2AccessTokenReqDTO tokenReqDTO = tokReqMsgCtx.getOauth2AccessTokenReqDTO();
         String grantType = tokenReqDTO.getGrantType();
+        String clientId = tokenReqDTO.getClientId();
+        String username = tokenReqDTO.getResourceOwnerUsername();
+        String userTenantDomain = MultitenantUtils.getTenantDomain(username);
+        String tenantDomain = tokenReqDTO.getTenantDomain();
 
         // Load application data from the cache
         AppInfoCache appInfoCache = AppInfoCache.getInstance();
@@ -492,6 +503,36 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                 throw new IdentityOAuth2Exception(e.getMessage(), e);
             }
         }
+
+        ServiceProvider serviceProvider;
+        try {
+            serviceProvider = OAuth2ServiceComponentHolder.getApplicationMgtService().getServiceProviderByClientId(
+                    clientId, OAUTH2, tenantDomain);
+        } catch (IdentityApplicationManagementException e) {
+            throw new IdentityOAuth2Exception("Error occurred while retrieving OAuth2 application data for client id " +
+                    clientId, e);
+        }
+
+        String serviceProviderName = serviceProvider.getApplicationName();
+        // FIX for IDENTITY-4531
+        // if the service provider name is returned as "default" it means that a valid service provider for
+        // the given client ID was not found in the tenantDomain sent in the request
+        if (DEFAULT_SP_NAME.equals(serviceProviderName)) {
+            if (log.isDebugEnabled()) {
+                log.debug("Valid Service provider not found for client id "+clientId +
+                        " and tenant domain "+tenantDomain);
+            }
+            return false;
+        }
+
+        if (!serviceProvider.isSaasApp() && !userTenantDomain.equals(tenantDomain)){
+            if(log.isDebugEnabled()) {
+                log.debug("Non-SaaS service provider tenant domain is not same as user tenant domain; " +
+                        tenantDomain + " != " + userTenantDomain);
+            }
+            return false;
+        }
+
         // If the application has defined a limited set of grant types, then check the grant
         if (oAuthAppDO.getGrantTypes() != null && !oAuthAppDO.getGrantTypes().contains(grantType)) {
             if (log.isDebugEnabled()) {

@@ -59,27 +59,10 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
         OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO = tokReqMsgCtx.getOauth2AccessTokenReqDTO();
         String username = oAuth2AccessTokenReqDTO.getResourceOwnerUsername();
         String userTenantDomain = MultitenantUtils.getTenantDomain(username);
-        String clientId = oAuth2AccessTokenReqDTO.getClientId();
-        String tenantDomain = oAuth2AccessTokenReqDTO.getTenantDomain();
-        ServiceProvider serviceProvider = null;
-        try {
-            serviceProvider = OAuth2ServiceComponentHolder.getApplicationMgtService().getServiceProviderByClientId(
-                    clientId, "oauth2", tenantDomain);
-        } catch (IdentityApplicationManagementException e) {
-            throw new IdentityOAuth2Exception("Error occurred while retrieving OAuth2 application data for client id " +
-                    clientId, e);
-        }
-        if(!serviceProvider.isSaasApp() && !userTenantDomain.equals(tenantDomain)){
-            if(log.isDebugEnabled()) {
-                log.debug("Non-SaaS service provider tenant domain is not same as user tenant domain; " +
-                        tenantDomain + " != " + userTenantDomain);
-            }
-            return false;
-
-        }
         String tenantAwareUserName = MultitenantUtils.getTenantAwareUsername(username);
         username = tenantAwareUserName + "@" + userTenantDomain;
-        int tenantId = MultitenantConstants.INVALID_TENANT_ID;
+        int tenantId;
+
         try {
             tenantId = IdentityTenantUtil.getTenantIdOfUser(username);
         } catch (IdentityRuntimeException e) {
