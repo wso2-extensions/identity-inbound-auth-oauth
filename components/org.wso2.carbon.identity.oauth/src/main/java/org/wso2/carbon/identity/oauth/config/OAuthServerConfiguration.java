@@ -153,6 +153,8 @@ public class OAuthServerConfiguration {
     private String openIDConnectUserInfoEndpointAccessTokenValidator = "org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoISAccessTokenValidator";
     private String openIDConnectUserInfoEndpointResponseBuilder = "org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoJSONResponseBuilder";
     private OAuth2ScopeValidator oAuth2ScopeValidator;
+    // property added to fix IDENTITY-4492 in backward compatible manner
+    private boolean isJWTSignedWithSPKey = false;
 
     private OAuthServerConfiguration() {
         buildOAuthServerConfiguration();
@@ -237,7 +239,7 @@ public class OAuthServerConfiguration {
 
         // read openid connect configurations
         parseOpenIDConnectConfig(oauthElem);
-        
+
         // parse OAuth 2.0 token generator
         parseOAuthTokenGeneratorConfig(oauthElem);
 
@@ -272,11 +274,11 @@ public class OAuthServerConfiguration {
     public String getOauth2UserInfoEPUrl() {
         return oauth2UserInfoEPUrl;
     }
-    
+
     /**
      * instantiate the OAuth token generator. to override the default implementation, one can specify the custom class
      * in the identity.xml.
-     * 
+     *
      * @return
      */
     public OAuthIssuer getOAuthTokenGenerator() {
@@ -765,6 +767,10 @@ public class OAuthServerConfiguration {
         return openIDConnectUserInfoEndpointResponseBuilder;
     }
 
+    public boolean isJWTSignedWithSPKey() {
+        return isJWTSignedWithSPKey;
+    }
+
     private void parseOAuthCallbackHandlers(OMElement callbackHandlersElem) {
         if (callbackHandlersElem == null) {
             warnOnFaultyConfiguration("OAuthCallbackHandlers element is not available.");
@@ -1101,7 +1107,7 @@ public class OAuthServerConfiguration {
         }
 
     }
-    
+
     /**
      * parse the configuration to load the class name of the OAuth 2.0 token generator.
      * this is a global configuration at the moment.
@@ -1440,6 +1446,11 @@ public class OAuthServerConfiguration {
                         openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_USERINFO_ENDPOINT_RESPONSE_BUILDER))
                                 .getText().trim();
             }
+            if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_SIGN_JWT_WITH_SP_KEY)) != null) {
+                isJWTSignedWithSPKey =
+                        Boolean.parseBoolean(openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_SIGN_JWT_WITH_SP_KEY))
+                                .getText().trim());
+            }
             if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.SUPPORTED_CLAIMS)) != null) {
                 String supportedClaimStr =
                         openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.SUPPORTED_CLAIMS))
@@ -1502,6 +1513,7 @@ public class OAuthServerConfiguration {
         public static final String OPENID_CONNECT_USERINFO_ENDPOINT_REQUEST_VALIDATOR = "UserInfoEndpointRequestValidator";
         public static final String OPENID_CONNECT_USERINFO_ENDPOINT_ACCESS_TOKEN_VALIDATOR = "UserInfoEndpointAccessTokenValidator";
         public static final String OPENID_CONNECT_USERINFO_ENDPOINT_RESPONSE_BUILDER = "UserInfoEndpointResponseBuilder";
+        public static final String OPENID_CONNECT_SIGN_JWT_WITH_SP_KEY = "SignJWTWithSPKey";
         public static final String OPENID_CONNECT_IDTOKEN_CUSTOM_CLAIM_CALLBACK_HANDLER = "IDTokenCustomClaimsCallBackHandler";
         public static final String SUPPORTED_CLAIMS = "OpenIDConnectClaims";
         // Callback handler related configuration elements
