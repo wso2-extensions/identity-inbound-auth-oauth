@@ -136,7 +136,6 @@ public final class OAuthConstants {
         public static final String DISPLAY = "display";
         public static final String ID_TOKEN_HINT = "id_token_hint";
         public static final String LOGIN_HINT = "login_hint";
-        public static final String TENANT_DOMAIN = "tenant_domain";
         private OAuth20Params(){
 
         }

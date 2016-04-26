@@ -28,6 +28,7 @@ import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.opensaml.saml2.core.Assertion;
 import org.opensaml.saml2.core.Attribute;
 import org.opensaml.saml2.core.AttributeStatement;
+import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.claim.mgt.ClaimManagementException;
 import org.wso2.carbon.claim.mgt.ClaimManagerHandler;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
@@ -213,7 +214,7 @@ public class SAMLAssertionClaimsCallback implements CustomClaimsCallbackHandler 
             throws UserStoreException, IdentityApplicationManagementException, IdentityException {
 
         String username = requestMsgCtx.getAuthorizedUser().toString();
-        String tenantDomain = requestMsgCtx.getAuthorizedUser().getTenantDomain();
+        String tenantDomain = (String) requestMsgCtx.getProperty(MultitenantConstants.TENANT_DOMAIN);
 
         UserRealm realm;
         List<String> claimURIList = new ArrayList<String>();
@@ -309,7 +310,7 @@ public class SAMLAssertionClaimsCallback implements CustomClaimsCallbackHandler 
             ClaimManagementException {
 
         AuthenticatedUser user = requestMsgCtx.getAuthorizationReqDTO().getUser();
-        String tenantDomain = (String) requestMsgCtx.getProperty(OAuthConstants.OAuth20Params.TENANT_DOMAIN);
+        String tenantDomain = (String) requestMsgCtx.getProperty(MultitenantConstants.TENANT_DOMAIN);
 
         UserRealm realm;
         List<String> claimURIList = new ArrayList<String>();
