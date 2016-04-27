@@ -237,7 +237,7 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
 
             if(isExistingUser) {
                 String claimSeparator = getMultiAttributeSeparator(authzUser, tenantID);
-                if (StringUtils.isBlank(claimSeparator)) {
+                if (StringUtils.isNotBlank(claimSeparator)) {
                     userAttributeSeparator = claimSeparator;
                 }
             }
