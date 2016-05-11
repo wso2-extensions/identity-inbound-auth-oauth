@@ -23,6 +23,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.base.IdentityRuntimeException;
@@ -113,7 +114,12 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
                     .getDomainFromThreadLocal())) {
                 username = UserCoreUtil.getDomainFromThreadLocal() + CarbonConstants.DOMAIN_SEPARATOR + username;
             }
-            tokReqMsgCtx.setAuthorizedUser(OAuth2Util.getUserFromUserName(username));
+
+            //set subject identifier as the current authenticated user. IDTokenBuilder will override this if a subject
+            // claim is set.
+            AuthenticatedUser authenticatedUser = OAuth2Util.getUserFromUserName(username);
+            authenticatedUser.setAuthenticatedSubjectIdentifier(authenticatedUser.getUserName());
+            tokReqMsgCtx.setAuthorizedUser(authenticatedUser);
             tokReqMsgCtx.setScope(oAuth2AccessTokenReqDTO.getScope());
         } else {
             throw new IdentityOAuth2Exception("Authentication failed for " + username);
