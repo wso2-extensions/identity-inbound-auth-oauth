@@ -660,6 +660,22 @@ public class OAuth2Util {
         throw new IllegalArgumentException("Cannot create user from empty user name");
     }
 
+    public static AuthenticatedUser getFederatedUser(String username) throws IllegalArgumentException {
+        if (StringUtils.isNotBlank(username)) {
+            String tenantDomain = MultitenantUtils.getTenantDomain(username);
+            String tenantAwareUsername = MultitenantUtils.getTenantAwareUsername(username);
+            String tenantAwareUsernameWithNoUserDomain = UserCoreUtil.removeDomainFromName(tenantAwareUsername);
+            String userStoreDomain = IdentityUtil.extractDomainFromName(username).toUpperCase();
+            AuthenticatedUser user = new AuthenticatedUser();
+            user.setUserName(tenantAwareUsernameWithNoUserDomain);
+            user.setTenantDomain(tenantDomain);
+            user.setUserStoreDomain(userStoreDomain);
+
+            return user;
+        }
+        throw new IllegalArgumentException("Cannot create user from empty user name");
+    }
+
     public static String getIDTokenIssuer() {
         String issuer = OAuthServerConfiguration.getInstance().getOpenIDConnectIDTokenIssuerIdentifier();
         if (StringUtils.isBlank(issuer)) {
