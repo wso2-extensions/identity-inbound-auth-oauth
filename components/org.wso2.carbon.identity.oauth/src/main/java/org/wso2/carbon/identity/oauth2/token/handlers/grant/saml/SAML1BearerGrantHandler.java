@@ -206,6 +206,7 @@ public class SAML1BearerGrantHandler extends AbstractAuthorizationGrantHandler {
                     return false;
                 }
                 AuthenticatedUser user = OAuth2Util.getUserFromUserName(resourceOwnerUserName);
+                user.setAuthenticatedSubjectIdentifier(resourceOwnerUserName);
                 user.setFederatedUser(true);
                 tokReqMsgCtx.setAuthorizedUser(user);
                 if (log.isDebugEnabled()) {
