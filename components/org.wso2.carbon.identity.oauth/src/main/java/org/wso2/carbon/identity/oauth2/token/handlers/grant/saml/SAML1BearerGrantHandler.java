@@ -38,6 +38,7 @@ import org.opensaml.xml.security.x509.X509Credential;
 import org.opensaml.xml.signature.SignatureValidator;
 import org.opensaml.xml.validation.ValidationException;
 import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.Property;
@@ -204,7 +205,9 @@ public class SAML1BearerGrantHandler extends AbstractAuthorizationGrantHandler {
                     }
                     return false;
                 }
-                tokReqMsgCtx.setAuthorizedUser(OAuth2Util.getUserFromUserName(resourceOwnerUserName));
+                AuthenticatedUser user = OAuth2Util.getUserFromUserName(resourceOwnerUserName);
+                user.setFederatedUser(true);
+                tokReqMsgCtx.setAuthorizedUser(user);
                 if (log.isDebugEnabled()) {
                     log.debug("Resource Owner User Name is set to " + resourceOwnerUserName);
                 }
