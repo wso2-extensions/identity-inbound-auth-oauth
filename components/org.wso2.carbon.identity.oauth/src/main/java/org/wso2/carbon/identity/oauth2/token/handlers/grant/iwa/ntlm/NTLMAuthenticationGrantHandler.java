@@ -21,7 +21,6 @@ package org.wso2.carbon.identity.oauth2.token.handlers.grant.iwa.ntlm;
 import com.sun.jna.platform.win32.Sspi;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -114,8 +113,7 @@ public class NTLMAuthenticationGrantHandler extends AbstractAuthorizationGrantHa
                         }
                         String resourceOwnerUserNameWithDomain = WindowsAccountImpl.getCurrentUsername();
                         String resourceOwnerUserName = resourceOwnerUserNameWithDomain.split("\\\\")[1];
-                        AuthenticatedUser user = OAuth2Util.getUserFromUserName(resourceOwnerUserName);
-                        tokReqMsgCtx.setAuthorizedUser(user);
+                        tokReqMsgCtx.setAuthorizedUser(OAuth2Util.getUserFromUserName(resourceOwnerUserName));
                         break;
                     }
                     String continueToken = response.getHeader("WWW-Authenticate").
