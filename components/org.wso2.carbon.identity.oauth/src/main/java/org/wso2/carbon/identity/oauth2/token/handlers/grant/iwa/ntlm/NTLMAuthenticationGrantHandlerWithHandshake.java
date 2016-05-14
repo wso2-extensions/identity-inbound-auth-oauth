@@ -108,7 +108,6 @@ public class NTLMAuthenticationGrantHandlerWithHandshake extends AbstractAuthori
                 String resourceOwnerUserNameWithDomain = serverContext.getIdentity().getFqn();
                 String resourceOwnerUserName = resourceOwnerUserNameWithDomain.split("\\\\")[1];
                 AuthenticatedUser user = OAuth2Util.getUserFromUserName(resourceOwnerUserName);
-                user.setFederatedUser(true);
                 tokReqMsgCtx.setAuthorizedUser(user);
                 return true;
             } else {

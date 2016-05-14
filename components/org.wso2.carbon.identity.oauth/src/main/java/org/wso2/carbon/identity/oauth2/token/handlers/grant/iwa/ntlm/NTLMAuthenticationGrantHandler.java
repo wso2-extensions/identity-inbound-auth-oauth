@@ -115,7 +115,6 @@ public class NTLMAuthenticationGrantHandler extends AbstractAuthorizationGrantHa
                         String resourceOwnerUserNameWithDomain = WindowsAccountImpl.getCurrentUsername();
                         String resourceOwnerUserName = resourceOwnerUserNameWithDomain.split("\\\\")[1];
                         AuthenticatedUser user = OAuth2Util.getUserFromUserName(resourceOwnerUserName);
-                        user.setFederatedUser(true);
                         tokReqMsgCtx.setAuthorizedUser(user);
                         break;
                     }
