@@ -28,6 +28,7 @@ import com.nimbusds.jwt.PlainJWT;
 import com.nimbusds.jwt.SignedJWT;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.io.Charsets;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
@@ -56,6 +57,7 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.user.api.UserStoreManager;
 import org.wso2.carbon.user.core.UserStoreException;
 
 import java.security.Key;
@@ -133,28 +135,32 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
                 String claim = serviceProvider.getLocalAndOutBoundAuthenticationConfig().getSubjectClaimUri();
 
                 if (claim != null) {
-                    String username = request.getAuthorizedUser().toString();
-                    String tenantUser = request.getAuthorizedUser().getUserName();
-                    String domainName = request.getAuthorizedUser().getTenantDomain();
+                    String username = request.getAuthorizedUser().getUserName();
+                    String userStore = request.getAuthorizedUser().getUserStoreDomain();
+                    String tenantDomain = request.getAuthorizedUser().getTenantDomain();
+                    String fqdnUsername = request.getAuthorizedUser().toString();
                     try {
-                        subject = IdentityTenantUtil.getRealm(domainName, username).getUserStoreManager().
-                                getUserClaimValue(tenantUser, claim, null);
-                        if (subject == null) {
+                        UserStoreManager usm = IdentityTenantUtil.getRealm(tenantDomain,
+                                                                           fqdnUsername).getUserStoreManager();
+                        subject = ((org.wso2.carbon.user.core.UserStoreManager)usm).getSecondaryUserStoreManager
+                                (userStore).getUserClaimValue(username, claim, null);
+                        if (StringUtils.isBlank(subject)) {
                             subject = request.getAuthorizedUser().getAuthenticatedSubjectIdentifier();
                         }
                     } catch (IdentityException e) {
-                        String error = "Error occurred while getting user claim for domain " + domainName + ", " +
-                                "user " + username + ", claim " + claim;
+                        String error = "Error occurred while getting user claim for user " + request
+                                .getAuthorizedUser().toString() + ", claim " + claim;
                         throw new IdentityOAuth2Exception(error, e);
                     } catch (UserStoreException e) {
                         if (e.getMessage().contains("UserNotFound")) {
                             if (log.isDebugEnabled()) {
-                                log.debug("User " + username + " not found in user store");
+                                log.debug("User " + username + " not found in user store " + userStore + " in tenant " +
+                                          tenantDomain);
                             }
                             subject = request.getAuthorizedUser().toString();
                         } else {
-                            String error = "Error occurred while getting user claim for domain " + domainName + ", " +
-                                    "user " + username + ", claim " + claim;
+                            String error = "Error occurred while getting user claim for user " + request
+                                    .getAuthorizedUser().toString() + ", claim " + claim;
                             throw new IdentityOAuth2Exception(error, e);
                         }
 
