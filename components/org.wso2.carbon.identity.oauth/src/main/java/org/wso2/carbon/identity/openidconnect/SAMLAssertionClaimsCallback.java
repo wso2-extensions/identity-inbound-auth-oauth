@@ -255,7 +255,8 @@ public class SAMLAssertionClaimsCallback implements CustomClaimsCallbackHandler 
         String spName = applicationMgtService
                 .getServiceProviderNameByClientId(requestMsgCtx.getOauth2AccessTokenReqDTO().getClientId(),
                                                   INBOUND_AUTH2_TYPE, tenantDomain);
-        ServiceProvider serviceProvider = applicationMgtService.getApplicationExcludingFileBasedSPs(spName,                                                                                                    tenantDomain);
+        ServiceProvider serviceProvider = applicationMgtService.getApplicationExcludingFileBasedSPs(spName,
+                                                                                                    tenantDomain);
         if (serviceProvider == null) {
             return mappedAppClaims;
         }
