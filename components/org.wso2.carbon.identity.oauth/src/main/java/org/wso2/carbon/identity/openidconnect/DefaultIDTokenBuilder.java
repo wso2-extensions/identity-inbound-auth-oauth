@@ -57,8 +57,8 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
-import org.wso2.carbon.user.api.UserStoreManager;
 import org.wso2.carbon.user.core.UserStoreException;
+import org.wso2.carbon.user.core.UserStoreManager;
 
 import java.security.Key;
 import java.security.MessageDigest;
@@ -142,8 +142,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
                     try {
                         UserStoreManager usm = IdentityTenantUtil.getRealm(tenantDomain,
                                                                            fqdnUsername).getUserStoreManager();
-                        subject = ((org.wso2.carbon.user.core.UserStoreManager)usm).getSecondaryUserStoreManager
-                                (userStore).getUserClaimValue(username, claim, null);
+                        subject = usm.getSecondaryUserStoreManager(userStore).getUserClaimValue(username, claim, null);
                         if (StringUtils.isBlank(subject)) {
                             subject = request.getAuthorizedUser().getAuthenticatedSubjectIdentifier();
                         }
