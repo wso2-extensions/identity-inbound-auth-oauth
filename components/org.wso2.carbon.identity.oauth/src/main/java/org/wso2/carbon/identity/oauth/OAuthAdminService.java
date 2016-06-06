@@ -26,6 +26,7 @@ import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.core.AbstractAdmin;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
@@ -37,6 +38,7 @@ import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientExcepti
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerDAO;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.identity.oauth.dto.OAuthRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth.dto.OAuthRevocationResponseDTO;
@@ -312,6 +314,83 @@ public class OAuthAdminService extends AbstractAdmin {
         dao.updateConsumerApplication(oauthappdo);
         if (OAuthServerConfiguration.getInstance().isCacheEnabled()) {
             appInfoCache.addToCache(oauthappdo.getOauthConsumerKey(), oauthappdo);
+        }
+    }
+
+    /**
+     *
+     * @return
+     * @throws IdentityOAuthAdminException
+     */
+    public String getOauthApplicationState(String consumerKey) throws IdentityOAuthAdminException {
+        OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
+        return oAuthAppDAO.getConsumerAppState(consumerKey);
+    }
+
+    /**
+     *
+     * @param consumerKey
+     * @param newState
+     * @throws IdentityOAuthAdminException
+     */
+    public void updateConsumerAppState(String consumerKey, String newState) throws IdentityOAuthAdminException {
+
+        OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
+        TokenMgtDAO tokenMgtDAO = new TokenMgtDAO();
+        try {
+            oAuthAppDAO.updateConsumerAppState(consumerKey, newState);
+
+            //Revoke all active access tokens
+            Set<String> accessTokens = tokenMgtDAO.getActiveTokensForConsumerKey(consumerKey);
+            if(accessTokens != null && accessTokens.size() != 0) {
+                tokenMgtDAO.revokeTokensBatch((String[]) accessTokens.toArray());
+            }
+
+            //Deactivate all active authorization codes
+            Set<String> authorizationCodes = tokenMgtDAO.getActiveAuthorizationCodesForConsumerKey(consumerKey);
+            if(authorizationCodes != null && authorizationCodes.size() != 0) {
+                for(String authzCode : authorizationCodes) {
+                    tokenMgtDAO.changeAuthzCodeState(authzCode, OAuthConstants.AuthorizationCodeState.REVOKED);
+                }
+            }
+
+        } catch (IdentityApplicationManagementException e) {
+            throw new IdentityOAuthAdminException("Error while updating consumer application state", e);
+        } catch (IdentityOAuth2Exception e) {
+            throw new IdentityOAuthAdminException("Error while updating consumer application state", e);
+        }
+    }
+
+    /**
+     *
+     * @param consumerKey
+     * @throws IdentityOAuthAdminException
+     */
+    public void updateOauthSecretKey(String consumerKey) throws IdentityOAuthAdminException {
+
+        OAuthConsumerDAO oAuthConsumerDAO = new OAuthConsumerDAO();
+        TokenMgtDAO tokenMgtDAO = new TokenMgtDAO();
+        try {
+            oAuthConsumerDAO.updateSecretKey(consumerKey, OAuthUtil.getRandomNumber());
+
+            //Revoke all active access tokens
+            Set<String> accessTokens = tokenMgtDAO.getActiveTokensForConsumerKey(consumerKey);
+            if(accessTokens != null && accessTokens.size() != 0) {
+                tokenMgtDAO.revokeTokens(accessTokens.toArray(new String[accessTokens.size()]));
+            }
+
+            //Deactivate all active authorization codes
+            Set<String> authorizationCodes = tokenMgtDAO.getActiveAuthorizationCodesForConsumerKey(consumerKey);
+            if(authorizationCodes != null && authorizationCodes.size() != 0) {
+                for(String authzCode : authorizationCodes) {
+                    tokenMgtDAO.changeAuthzCodeState(authzCode, OAuthConstants.AuthorizationCodeState.REVOKED);
+                }
+            }
+
+        } catch (IdentityOAuth2Exception e) {
+            throw new IdentityOAuthAdminException("Error while updating auth secret key using consumer key", e);
+        } catch (IdentityApplicationManagementException e) {
+            throw new IdentityOAuthAdminException("Error while updating auth secret key using consumer key", e);
         }
     }
 
