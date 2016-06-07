@@ -82,6 +82,15 @@ public class SQLQueries {
         public static final String UPDATE_OAUTH_INFO = "UPDATE IDN_OAUTH_CONSUMER_APPS SET APP_NAME=? WHERE " +
                 "CONSUMER_KEY=?";
 
+        public static final String UPDATE_OAUTH_SECRET_KEY = "UPDATE IDN_OAUTH_CONSUMER_APPS SET CONSUMER_SECRET=? WHERE " +
+                "CONSUMER_KEY=?";
+
+        public static final String GET_APPLICATION_STATE = "SELECT APP_STATE FROM IDN_OAUTH_CONSUMER_APPS WHERE " +
+                "CONSUMER_KEY=?";
+
+        public static final String UPDATE_APPLICATION_STATE = "UPDATE IDN_OAUTH_CONSUMER_APPS SET APP_STATE=? WHERE " +
+                "CONSUMER_KEY=?";
+
         private OAuthAppDAOSQLQueries() {
         }
     }

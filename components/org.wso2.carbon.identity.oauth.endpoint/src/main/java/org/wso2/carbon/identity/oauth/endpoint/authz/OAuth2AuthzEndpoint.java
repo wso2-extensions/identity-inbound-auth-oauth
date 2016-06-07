@@ -38,6 +38,7 @@ import org.wso2.carbon.identity.application.authentication.framework.util.Framew
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.model.Claim;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
+import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
@@ -46,6 +47,7 @@ import org.wso2.carbon.identity.oauth.cache.SessionDataCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.endpoint.OAuthRequestWrapper;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.OpenIDConnectUserRPStore;
@@ -178,6 +180,23 @@ public class OAuth2AuthzEndpoint {
         SessionDataCacheEntry sessionDataCacheEntry = null;
 
         try {
+            if(clientId != null) {
+                OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
+                try {
+                    String appState = oAuthAppDAO.getConsumerAppState(clientId);
+                    if(!appState.equalsIgnoreCase(OAuthConstants.OauthAppStates.APP_STATE_ACTIVE)) {
+                        if (log.isDebugEnabled()) {
+                            log.debug("Oauth App is not in active state.");
+                        }
+                        OAuthResponse oAuthResponse = OAuthASResponse.errorResponse(HttpServletResponse.SC_UNAUTHORIZED)
+                                .setError(OAuth2ErrorCodes.INVALID_CLIENT)
+                                .setErrorDescription("Oauth application is not in active state.").buildJSONMessage();
+                        return Response.status(oAuthResponse.getResponseStatus()).entity(oAuthResponse.getBody()).build();
+                    }
+                } catch (IdentityOAuthAdminException e) {
+                    throw new URISyntaxException("Error in getting oauth app state.", "Error in getting oauth app state.");
+                }
+            }
 
             if (clientId != null && sessionDataKeyFromLogin == null && sessionDataKeyFromConsent == null) {
                 // Authz request from client

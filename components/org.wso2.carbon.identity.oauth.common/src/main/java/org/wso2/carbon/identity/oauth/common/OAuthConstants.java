@@ -94,6 +94,8 @@ public final class OAuthConstants {
     //Constants used for OAuth/OpenID Connect Configuration UI
     public static final String CALLBACK_URL_REGEXP_PREFIX = "regexp=";
 
+    public static final String AUTHORIZATION_CODE_STORE_TABLE = "IDN_OAUTH2_AUTHORIZATION_CODE";
+
     public static class GrantTypes {
         public static final String IMPLICIT = "implicit";
         public static final String TOKEN = "token";
@@ -195,10 +197,21 @@ public final class OAuthConstants {
 
     public static class AuthorizationCodeState {
         public static final String ACTIVE = "ACTIVE";
+        public static final String REVOKED = "REVOKED";
         public static final String EXPIRED = "EXPIRED";
         public static final String INACTIVE = "INACTIVE";
 
         private AuthorizationCodeState(){
+
+        }
+    }
+
+    public static class OauthAppStates {
+        public static final String APP_STATE_ACTIVE = "ACTIVE";
+        public static final String APP_STATE_INACTIVE = "INACTIVE";
+        public static final String APP_STATE_REVOKED = "REVOKED";
+
+        private OauthAppStates(){
 
         }
     }

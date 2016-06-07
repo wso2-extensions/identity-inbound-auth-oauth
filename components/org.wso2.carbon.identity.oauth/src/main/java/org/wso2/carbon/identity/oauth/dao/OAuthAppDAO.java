@@ -448,6 +448,48 @@ public class OAuthAppDAO {
         }
     }
 
+    public String getConsumerAppState(String consumerKey) throws IdentityOAuthAdminException {
+        PreparedStatement prepStmt = null;
+        Connection connection = null;
+        ResultSet rSet = null;
+        String consumerAppState = null;
+
+        try {
+            connection = IdentityDatabaseUtil.getDBConnection();
+            prepStmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.GET_APPLICATION_STATE);
+            prepStmt.setString(1, consumerKey);
+            rSet = prepStmt.executeQuery();
+            if(rSet != null && rSet.next()) {
+                consumerAppState = rSet.getString("APP_STATE");
+            }
+            connection.commit();
+        } catch (SQLException e) {
+            throw new IdentityOAuthAdminException("Error while executing the SQL prepStmt.", e);
+        } finally {
+            IdentityDatabaseUtil.closeAllConnections(connection, null, prepStmt);
+        }
+        return consumerAppState;
+    }
+
+    public void updateConsumerAppState(String consumerKey, String state) throws IdentityApplicationManagementException {
+        PreparedStatement statement = null;
+        Connection connection = null;
+
+        try {
+            connection = IdentityDatabaseUtil.getDBConnection();
+            statement = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.UPDATE_APPLICATION_STATE);
+            statement.setString(1, state);
+            statement.setString(2, consumerKey);
+            statement.execute();
+            connection.setAutoCommit(false);
+            connection.commit();
+        } catch (SQLException e) {
+            throw new IdentityApplicationManagementException("Error while executing the SQL statement.", e);
+        } finally {
+            IdentityDatabaseUtil.closeAllConnections(connection, null, statement);
+        }
+    }
+
     private boolean isDuplicateApplication(String username, int tenantId, String userDomain, OAuthAppDO consumerAppDTO)
             throws IdentityOAuthAdminException {
         Connection connection = IdentityDatabaseUtil.getDBConnection();

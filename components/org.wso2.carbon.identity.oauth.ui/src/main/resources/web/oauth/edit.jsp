@@ -64,10 +64,12 @@
     List<String> allowedGrants = null;
     String applicationSPName = null;
     OAuthAdminClient client = null;
+    String action = null;
     try {
 
     	applicationSPName = request.getParameter("appName");
     	session.setAttribute("application-sp-name", applicationSPName);
+        action = request.getParameter("action");
 
        	String cookie = (String) session.getAttribute(ServerConstants.ADMIN_SERVICE_COOKIE);
 		String backendServerURL = CarbonUIUtil.getServerURL(config.getServletContext(), session);
@@ -76,35 +78,55 @@
 		                                                                  .getAttribute(CarbonConstants.CONFIGURATION_CONTEXT);
 		client = new OAuthAdminClient(cookie, backendServerURL, configContext);
 
-		if (appName!=null){
-			app = client.getOAuthApplicationDataByAppName(appName);
-		}else{
-			app = client.getOAuthApplicationData(consumerkey);
-		}
-
-        if(app.getCallbackUrl() == null){
-            app.setCallbackUrl("");
+        if (appName != null) {
+            app = client.getOAuthApplicationDataByAppName(appName);
+        } else {
+            app = client.getOAuthApplicationData(consumerkey);
         }
-        allowedGrants = new ArrayList<String>(Arrays.asList(client.getAllowedOAuthGrantTypes()));
-		if (OAuthConstants.OAuthVersions.VERSION_2.equals(app.getOAuthVersion())) {
-			id = resourceBundle.getString("consumerkey.oauth20");
-			secret = resourceBundle.getString("consumersecret.oauth20");
-		} else {
-			id = resourceBundle.getString("consumerkey.oauth10a");
-			secret = resourceBundle.getString("consumersecret.oauth10a");
-		}
-		// setting grants if oauth version 2.0
-		if(OAuthConstants.OAuthVersions.VERSION_2.equals(app.getOAuthVersion())){
-            String grants = app.getGrantTypes();
-            if(grants != null) {
-	            codeGrant = grants.contains("authorization_code") ? true : false;
-	            implicitGrant = grants.contains("implicit") ? true : false;
-	            passowrdGrant = grants.contains("password") ? true : false;
-	            clientCredGrant = grants.contains("client_credentials") ? true : false;
-	            refreshGrant = grants.contains("refresh_token") ? true : false;
-	            samlGrant1 = grants.contains("urn:ietf:params:oauth:grant-type:saml1-bearer") ? true : false;
-	            samlGrant2 = grants.contains("urn:ietf:params:oauth:grant-type:saml2-bearer") ? true : false;
-	            ntlmGrant = grants.contains("iwa:ntlm") ? true : false;
+
+        if (action != null && action.equalsIgnoreCase("regenerate")) {
+            String oauthAppState = client.getOauthApplicationState(consumerkey);
+            client.regenerateSecretKey(consumerkey);
+            if(oauthAppState.equalsIgnoreCase(OAuthConstants.OauthAppStates.APP_STATE_REVOKED)) {
+                client.updateOauthApplicationState(consumerkey, OAuthConstants.OauthAppStates.APP_STATE_ACTIVE);
+            }
+            CarbonUIMessage.sendCarbonUIMessage("Client secret successfully updated.",CarbonUIMessage.INFO, request);
+
+        } else if (action != null && action.equalsIgnoreCase("revoke")) {
+            String oauthAppState = client.getOauthApplicationState(consumerkey);
+            if(oauthAppState.equalsIgnoreCase(OAuthConstants.OauthAppStates.APP_STATE_REVOKED)) {
+                CarbonUIMessage.sendCarbonUIMessage("Application is already revoked.",
+                        CarbonUIMessage.INFO, request);
+            } else {
+                client.updateOauthApplicationState(consumerkey, OAuthConstants.OauthAppStates.APP_STATE_REVOKED);
+                CarbonUIMessage.sendCarbonUIMessage("Application successfully revoked.",CarbonUIMessage.INFO, request);
+            }
+        } else {
+
+            if (app.getCallbackUrl() == null) {
+                app.setCallbackUrl("");
+            }
+            allowedGrants = new ArrayList<String>(Arrays.asList(client.getAllowedOAuthGrantTypes()));
+            if (OAuthConstants.OAuthVersions.VERSION_2.equals(app.getOAuthVersion())) {
+                id = resourceBundle.getString("consumerkey.oauth20");
+                secret = resourceBundle.getString("consumersecret.oauth20");
+            } else {
+                id = resourceBundle.getString("consumerkey.oauth10a");
+                secret = resourceBundle.getString("consumersecret.oauth10a");
+            }
+            // setting grants if oauth version 2.0
+            if (OAuthConstants.OAuthVersions.VERSION_2.equals(app.getOAuthVersion())) {
+                String grants = app.getGrantTypes();
+                if (grants != null) {
+                    codeGrant = grants.contains("authorization_code") ? true : false;
+                    implicitGrant = grants.contains("implicit") ? true : false;
+                    passowrdGrant = grants.contains("password") ? true : false;
+                    clientCredGrant = grants.contains("client_credentials") ? true : false;
+                    refreshGrant = grants.contains("refresh_token") ? true : false;
+                    samlGrant1 = grants.contains("urn:ietf:params:oauth:grant-type:saml1-bearer") ? true : false;
+                    samlGrant2 = grants.contains("urn:ietf:params:oauth:grant-type:saml2-bearer") ? true : false;
+                    ntlmGrant = grants.contains("iwa:ntlm") ? true : false;
+                }
             }
         }
 	} catch (Exception e) {
@@ -124,6 +146,14 @@
 </script>
 <%
     }
+
+    if((action != null) && (action.equalsIgnoreCase("revoke") || action.equalsIgnoreCase("regenerate"))) {
+        session.setAttribute("oauth-consum-secret", app.getOauthConsumerSecret());
+%>
+        <script>
+            location.href = '../application/configure-service-provider.jsp?action=<%=action%>&display=oauthapp&spName=<%=Encode.forUriComponent(applicationSPName)%>&oauthapp=<%=Encode.forUriComponent(app.getOauthConsumerKey())%>';
+        </script>
+  <%  } else {
 %>
 
 <fmt:bundle basename="org.wso2.carbon.identity.oauth.ui.i18n.Resources">
@@ -369,3 +399,6 @@
     </div>
 </fmt:bundle>
 
+<%
+    }
+%>

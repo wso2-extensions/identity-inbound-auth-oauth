@@ -83,6 +83,8 @@ public class TokenMgtDAO {
 
     private static final String IDN_OAUTH2_ACCESS_TOKEN = "IDN_OAUTH2_ACCESS_TOKEN";
 
+    private static final String IDN_OAUTH2_AUTHORIZATION_CODE = "IDN_OAUTH2_AUTHORIZATION_CODE";
+
     static {
 
         final Log log = LogFactory.getLog(TokenMgtDAO.class);
@@ -675,27 +677,11 @@ public class TokenMgtDAO {
 
     }
 
-    public void expireAuthzCode(String authzCode) throws IdentityOAuth2Exception {
+    public void changeAuthzCodeState(String authzCode, String newState) throws IdentityOAuth2Exception {
         if (maxPoolSize > 0) {
             authContextTokenQueue.push(new AuthContextTokenDO(authzCode));
         } else {
-            doExpireAuthzCode(authzCode);
-        }
-    }
-
-    public void doExpireAuthzCode(String authzCode) throws IdentityOAuth2Exception {
-        Connection connection = IdentityDatabaseUtil.getDBConnection();
-        PreparedStatement prepStmt = null;
-
-        try {
-            prepStmt = connection.prepareStatement(SQLQueries.EXPIRE_AUTHZ_CODE);
-            prepStmt.setString(1, persistenceProcessor.getPreprocessedAuthzCode(authzCode));
-            prepStmt.execute();
-            connection.commit();
-        } catch (SQLException e) {
-            throw new IdentityOAuth2Exception("Error when cleaning up an authorization code", e);
-        } finally {
-            IdentityDatabaseUtil.closeAllConnections(connection, null, prepStmt);
+            doChangeAuthzCodeState(authzCode, newState);
         }
     }
 
@@ -715,6 +701,25 @@ public class TokenMgtDAO {
         } catch (SQLException e) {
             throw new IdentityOAuth2Exception("Error when deactivating authorization code", e);
         } finally {
+            IdentityDatabaseUtil.closeAllConnections(connection, null, prepStmt);
+        }
+    }
+
+    public void doChangeAuthzCodeState(String authzCode, String newState) throws IdentityOAuth2Exception {
+        String authCodeStoreTable = OAuthConstants.AUTHORIZATION_CODE_STORE_TABLE;
+        Connection connection = IdentityDatabaseUtil.getDBConnection();
+        PreparedStatement prepStmt = null;
+        try {
+            String sqlQuery = SQLQueries.UPDATE_AUTHORIZATION_CODE_STATE.replace(IDN_OAUTH2_AUTHORIZATION_CODE, authCodeStoreTable);
+            prepStmt = connection.prepareStatement(sqlQuery);
+            prepStmt.setString(1, newState);
+            prepStmt.setString(2, persistenceProcessor.getPreprocessedAuthzCode(authzCode));
+            prepStmt.execute();
+            connection.commit();
+        } catch (SQLException e) {
+            IdentityDatabaseUtil.rollBack(connection);
+            throw new IdentityOAuth2Exception("Error occurred while updating the state of Authorization Code : " + authzCode.toString(), e);
+        }  finally {
             IdentityDatabaseUtil.closeAllConnections(connection, null, prepStmt);
         }
     }
@@ -1202,6 +1207,30 @@ public class TokenMgtDAO {
             String sqlQuery = SQLQueries.GET_AUTHORIZATION_CODES_FOR_CONSUMER_KEY;
             ps = connection.prepareStatement(sqlQuery);
             ps.setString(1, consumerKey);
+            rs = ps.executeQuery();
+            while (rs.next()) {
+                authorizationCodes.add(rs.getString(1));
+            }
+            connection.commit();
+        } catch (SQLException e) {
+            IdentityDatabaseUtil.rollBack(connection);
+            throw new IdentityOAuth2Exception("Error occurred while getting authorization codes from authorization code table for the application with consumer key : " + consumerKey, e);
+        } finally {
+            IdentityDatabaseUtil.closeAllConnections(connection, null, ps);
+        }
+        return authorizationCodes;
+    }
+
+    public Set<String> getActiveAuthorizationCodesForConsumerKey(String consumerKey) throws IdentityOAuth2Exception {
+        Connection connection = IdentityDatabaseUtil.getDBConnection();
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        Set<String> authorizationCodes = new HashSet<>();
+        try {
+            String sqlQuery = SQLQueries.GET_ACTIVE_AUTHORIZATION_CODES_FOR_CONSUMER_KEY;
+            ps = connection.prepareStatement(sqlQuery);
+            ps.setString(1, consumerKey);
+            ps.setString(2, OAuthConstants.AuthorizationCodeState.ACTIVE);
             rs = ps.executeQuery();
             while (rs.next()) {
                 authorizationCodes.add(rs.getString(1));

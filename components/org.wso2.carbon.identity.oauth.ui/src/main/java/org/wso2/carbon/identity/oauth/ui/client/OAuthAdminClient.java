@@ -108,4 +108,16 @@ public class OAuthAdminClient {
         }
         return allowedGrantTypes;
     }
+
+    public void regenerateSecretKey(String consumerkey) throws Exception {
+        stub.updateOauthSecretKey(consumerkey);
+    }
+
+    public String getOauthApplicationState(String consumerKey) throws Exception {
+        return stub.getOauthApplicationState(consumerKey);
+    }
+
+    public void updateOauthApplicationState(String consumerKey, String newState) throws Exception {
+        stub.updateConsumerAppState(consumerKey, newState);
+    }
 }

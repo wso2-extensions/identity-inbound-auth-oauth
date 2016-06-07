@@ -28,9 +28,11 @@ import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.message.OAuthResponse;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.OAuthClientException;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.endpoint.OAuthRequestWrapper;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth2.ResponseHeader;
@@ -72,6 +74,23 @@ public class OAuth2TokenEndpoint {
             carbonContext.setTenantDomain(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
 
             HttpServletRequestWrapper httpRequest = new OAuthRequestWrapper(request, paramMap);
+
+            String consumer_key = httpRequest.getParameter(OAuth.OAUTH_CLIENT_ID);
+            OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
+            try {
+                String appState = oAuthAppDAO.getConsumerAppState(consumer_key);
+                if(!appState.equalsIgnoreCase(OAuthConstants.OauthAppStates.APP_STATE_ACTIVE)) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Oauth App is not in active state.");
+                    }
+                    OAuthResponse oAuthResponse = OAuthASResponse.errorResponse(HttpServletResponse.SC_UNAUTHORIZED)
+                            .setError(OAuth2ErrorCodes.INVALID_CLIENT)
+                            .setErrorDescription("Oauth application is not in active state.").buildJSONMessage();
+                    return Response.status(oAuthResponse.getResponseStatus()).entity(oAuthResponse.getBody()).build();
+                }
+            } catch (IdentityOAuthAdminException e) {
+                e.printStackTrace();
+            }
 
             // extract the basic auth credentials if present in the request and use for
             // authentication.

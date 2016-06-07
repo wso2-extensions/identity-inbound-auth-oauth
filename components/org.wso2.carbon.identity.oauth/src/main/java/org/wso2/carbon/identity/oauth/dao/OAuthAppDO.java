@@ -35,6 +35,7 @@ public class OAuthAppDO implements Serializable {
     private String grantTypes;
     private boolean pkceSupportPlain;
     private boolean pkceMandatory;
+    private String state;
 
     public AuthenticatedUser getUser() {
         return user;
@@ -114,5 +115,13 @@ public class OAuthAppDO implements Serializable {
 
     public void setPkceMandatory(boolean pkceMandatory) {
         this.pkceMandatory = pkceMandatory;
+    }
+
+    public void setState(String state) {
+        this.state = state;
+    }
+
+    public String getState() {
+        return state;
     }
 }
