@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth2.dao;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 
@@ -56,7 +57,8 @@ public class AuthPersistenceTask implements Runnable {
                             log.debug("Auth Token Data removing Task is started to run");
                         }
                         TokenMgtDAO tokenMgtDAO = new TokenMgtDAO();
-                        tokenMgtDAO.doExpireAuthzCode(authContextTokenDO.getAuthzCode());
+                        tokenMgtDAO.doChangeAuthzCodeState(authContextTokenDO.getAuthzCode(),
+                                OAuthConstants.AuthorizationCodeState.EXPIRED);
                     } else if (authContextTokenDO.getAuthzCodeDO() == null && authContextTokenDO.getTokenId() != null) {
                         if (log.isDebugEnabled()) {
                             log.debug("Auth Code Deactivating Task is started to run");
