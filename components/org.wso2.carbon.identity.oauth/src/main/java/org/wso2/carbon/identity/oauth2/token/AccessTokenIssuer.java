@@ -333,17 +333,19 @@ public class AccessTokenIssuer {
             AuthorizationGrantCacheEntry authorizationGrantCacheEntry =
                     AuthorizationGrantCache.getInstance().getValueFromCacheByCode(oldCacheKey);
             AuthorizationGrantCacheKey newCacheKey = new AuthorizationGrantCacheKey(tokenRespDTO.getAccessToken());
-            authorizationGrantCacheEntry.setTokenId(tokenRespDTO.getTokenId());
-            if (AuthorizationGrantCache.getInstance().getValueFromCacheByToken(newCacheKey) == null) {
-                if (log.isDebugEnabled()) {
-                    log.debug("No AuthorizationGrantCache entry found for the access token:" +
-                            newCacheKey.getUserAttributesId() +
-                            ", hence adding to cache");
+            if (authorizationGrantCacheEntry != null) {
+                authorizationGrantCacheEntry.setTokenId(tokenRespDTO.getTokenId());
+                if (AuthorizationGrantCache.getInstance().getValueFromCacheByToken(newCacheKey) == null) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("No AuthorizationGrantCache entry found for the access token:" +
+                                newCacheKey.getUserAttributesId() +
+                                ", hence adding to cache");
+                    }
+                    AuthorizationGrantCache.getInstance().addToCacheByToken(newCacheKey, authorizationGrantCacheEntry);
+                    AuthorizationGrantCache.getInstance().clearCacheEntryByCode(oldCacheKey);
+                } else {
+                    //if the user attributes are already saved for access token, no need to add again.
                 }
-                AuthorizationGrantCache.getInstance().addToCacheByToken(newCacheKey, authorizationGrantCacheEntry);
-                AuthorizationGrantCache.getInstance().clearCacheEntryByCode(oldCacheKey);
-            } else {
-                //if the user attributes are already saved for access token, no need to add again.
             }
         }
     }
