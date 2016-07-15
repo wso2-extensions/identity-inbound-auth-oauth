@@ -163,7 +163,7 @@ public class UserInfoJSONResponseBuilder implements UserInfoResponseBuilder {
                                     } else {
                                         if (arrMainClaims[i].trim().equals("birthdate")) {
                                             Date date = new Date();
-                                            DateFormat dateFormat = new SimpleDateFormat("yyyy-mm-dd");
+                                            DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
                                             String sampleDate = dateFormat.format(date);
                                             claims.put(arrMainClaims[i].trim(), sampleDate);
                                         } else {
