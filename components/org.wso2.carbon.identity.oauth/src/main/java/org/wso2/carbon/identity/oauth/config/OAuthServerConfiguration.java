@@ -1477,9 +1477,7 @@ public class OAuthServerConfiguration {
 
         OMElement openIDConnectConfigElem =
                 oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT));
-
         parseSupportedScopes(openIDConnectConfigElem);
-
         if (openIDConnectConfigElem != null) {
             if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_IDTOKEN_BUILDER)) != null) {
                 openIDConnectIDTokenBuilderClassName =

@@ -33,10 +33,13 @@ import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
 import org.wso2.carbon.identity.oauth.user.UserInfoResponseBuilder;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.Map;
+import java.util.Date;
 
 /**
  *
@@ -159,7 +162,10 @@ public class UserInfoJSONResponseBuilder implements UserInfoResponseBuilder {
                                         claims.put(arrMainClaims[i].trim(), jsonObject);
                                     } else {
                                         if (arrMainClaims[i].trim().equals("birthdate")) {
-                                            claims.put(arrMainClaims[i].trim(), "2014-10-10");
+                                            Date date = new Date();
+                                            DateFormat dateFormat = new SimpleDateFormat("yyyy-mm-dd");
+                                            String sampleDate = dateFormat.format(date);
+                                            claims.put(arrMainClaims[i].trim(), sampleDate);
                                         } else {
                                             claims.put(arrMainClaims[i].trim(), " ");
                                         }
