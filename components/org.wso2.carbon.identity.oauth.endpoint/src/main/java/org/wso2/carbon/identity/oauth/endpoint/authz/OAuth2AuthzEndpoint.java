@@ -84,6 +84,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -96,6 +97,8 @@ public class OAuth2AuthzEndpoint {
     public static final String APPROVE = "approve";
     private boolean isCacheAvailable = false;
     private static final String REDIRECT_URI = "redirect_uri";
+    private static long time = 0;
+
     @GET
     @Path("/")
     @Consumes("application/x-www-form-urlencoded")
@@ -235,6 +238,15 @@ public class OAuth2AuthzEndpoint {
             } else if (resultFromLogin != null) { // Authentication response
 
                 sessionDataCacheEntry = resultFromLogin;
+                Date now = new Date();
+                if (StringUtils.isNotEmpty(request.getParameter("max_age")) || (StringUtils.isNotEmpty(request.
+                        getParameter("prompt")) && request.getParameter("prompt").equals(OAuthConstants.Prompt.LOGIN))) {
+                    if (time != 0) {
+                        sessionDataCacheEntry.setTime(time);
+                    }
+                } else {
+                    sessionDataCacheEntry.setTime(now.getTime());
+                }
                 OAuth2Parameters oauth2Params = sessionDataCacheEntry.getoAuth2Parameters();
                 AuthenticationResult authnResult = getAuthenticationResult(request, sessionDataKeyFromLogin);
                 if (authnResult != null) {
@@ -570,6 +582,7 @@ public class OAuth2AuthzEndpoint {
         authorizationGrantCacheEntry.setCodeId(codeId);
         authorizationGrantCacheEntry.setPkceCodeChallenge(pkceCodeChallenge);
         authorizationGrantCacheEntry.setPkceCodeChallengeMethod(pkceCodeChallengeMethod);
+        authorizationGrantCacheEntry.setAuthTime(sessionDataCacheEntry.getTime());
         AuthorizationGrantCache.getInstance().addToCacheByCode(authorizationGrantCacheKey, authorizationGrantCacheEntry);
     }
 
@@ -846,6 +859,24 @@ public class OAuth2AuthzEndpoint {
 
         consentUrl = EndpointUtil.getUserConsentURL(oauth2Params, loggedInUser, sessionDataKey,
                 OAuth2Util.isOIDCAuthzRequest(oauth2Params.getScopes()) ? true : false);
+        if (StringUtils.isNotEmpty(request.getParameter("max_age"))) {
+            Date now = new Date();
+            int max = 0;
+            time = sessionDataCacheEntry.getTime();
+            long seconds = (now.getTime() - time) / 1000;
+            String maxAge = (String) request.getParameter("max_age");
+            if (maxAge != null) {
+                max = Integer.parseInt(maxAge);
+            }
+            if (seconds > max) {
+                try {
+                    return EndpointUtil.getLoginPageURL(oauth2Params.getClientId(), sessionDataKey, true,
+                            false, oauth2Params.getScopes(), request.getParameterMap());
+                } catch (IdentityOAuth2Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }
 
         //Skip the consent page if User has provided approve always or skip consent from file
         if ((OAuthConstants.Prompt.CONSENT).equals(oauth2Params.getPrompt())) {
@@ -912,6 +943,7 @@ public class OAuth2AuthzEndpoint {
         authzReqDTO.setPkceCodeChallenge(oauth2Params.getPkceCodeChallenge());
         authzReqDTO.setPkceCodeChallengeMethod(oauth2Params.getPkceCodeChallengeMethod());
         authzReqDTO.setTenantDomain(oauth2Params.getTenantDomain());
+        authzReqDTO.setAuthTime(sessionDataCacheEntry.getTime());
         return EndpointUtil.getOAuth2Service().authorize(authzReqDTO);
     }
 
