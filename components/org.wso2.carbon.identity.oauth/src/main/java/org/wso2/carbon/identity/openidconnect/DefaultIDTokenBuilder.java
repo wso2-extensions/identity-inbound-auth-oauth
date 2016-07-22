@@ -218,7 +218,6 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
             if (authorizationGrantCacheEntry != null) {
                 nonceValue = authorizationGrantCacheEntry.getNonceValue();
                 authTime = authorizationGrantCacheEntry.getAuthTime();
-
             }
         }
         String atHash = null;

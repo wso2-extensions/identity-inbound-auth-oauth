@@ -242,10 +242,10 @@ public class OAuth2AuthzEndpoint {
                 if (StringUtils.isNotEmpty(request.getParameter("max_age")) || (StringUtils.isNotEmpty(request.
                         getParameter("prompt")) && request.getParameter("prompt").equals(OAuthConstants.Prompt.LOGIN))) {
                     if (time != 0) {
-                        sessionDataCacheEntry.setTime(time);
+                        sessionDataCacheEntry.setAuthTime(time);
                     }
                 } else {
-                    sessionDataCacheEntry.setTime(now.getTime());
+                    sessionDataCacheEntry.setAuthTime(now.getTime());
                 }
                 OAuth2Parameters oauth2Params = sessionDataCacheEntry.getoAuth2Parameters();
                 AuthenticationResult authnResult = getAuthenticationResult(request, sessionDataKeyFromLogin);
@@ -582,7 +582,7 @@ public class OAuth2AuthzEndpoint {
         authorizationGrantCacheEntry.setCodeId(codeId);
         authorizationGrantCacheEntry.setPkceCodeChallenge(pkceCodeChallenge);
         authorizationGrantCacheEntry.setPkceCodeChallengeMethod(pkceCodeChallengeMethod);
-        authorizationGrantCacheEntry.setAuthTime(sessionDataCacheEntry.getTime());
+        authorizationGrantCacheEntry.setAuthTime(sessionDataCacheEntry.getAuthTime());
         AuthorizationGrantCache.getInstance().addToCacheByCode(authorizationGrantCacheKey, authorizationGrantCacheEntry);
     }
 
@@ -862,13 +862,13 @@ public class OAuth2AuthzEndpoint {
         if (StringUtils.isNotEmpty(request.getParameter("max_age"))) {
             Date now = new Date();
             int max = 0;
-            time = sessionDataCacheEntry.getTime();
-            long seconds = (now.getTime() - time) / 1000;
+            time = sessionDataCacheEntry.getAuthTime();
+            long difference = (now.getTime() - time) / 1000;
             String maxAge = (String) request.getParameter("max_age");
             if (maxAge != null) {
                 max = Integer.parseInt(maxAge);
             }
-            if (seconds > max) {
+            if (difference > max) {
                 try {
                     return EndpointUtil.getLoginPageURL(oauth2Params.getClientId(), sessionDataKey, true,
                             false, oauth2Params.getScopes(), request.getParameterMap());
@@ -943,7 +943,7 @@ public class OAuth2AuthzEndpoint {
         authzReqDTO.setPkceCodeChallenge(oauth2Params.getPkceCodeChallenge());
         authzReqDTO.setPkceCodeChallengeMethod(oauth2Params.getPkceCodeChallengeMethod());
         authzReqDTO.setTenantDomain(oauth2Params.getTenantDomain());
-        authzReqDTO.setAuthTime(sessionDataCacheEntry.getTime());
+        authzReqDTO.setAuthTime(sessionDataCacheEntry.getAuthTime());
         return EndpointUtil.getOAuth2Service().authorize(authzReqDTO);
     }
 

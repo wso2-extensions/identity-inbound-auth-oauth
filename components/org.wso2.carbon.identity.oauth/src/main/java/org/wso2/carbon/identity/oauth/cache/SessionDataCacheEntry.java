@@ -37,7 +37,7 @@ public class SessionDataCacheEntry extends CacheEntry {
 
     private ConcurrentMap<String, String[]> paramMap = new ConcurrentHashMap<String, String[]>();
 
-    private long time;
+    private long authTime;
 
     public OAuth2Parameters getoAuth2Parameters() {
         return oAuth2Parameters;
@@ -79,13 +79,12 @@ public class SessionDataCacheEntry extends CacheEntry {
         this.authenticatedIdPs = authenticatedIdPs;
     }
 
-    public long getTime() {
-        return time;
+    public long getAuthTime() {
+        return authTime;
     }
 
-    public void setTime(long time) {
-        this.time = time;
+    public void setAuthTime(long authTime) {
+        this.authTime = authTime;
     }
-
 
 }
