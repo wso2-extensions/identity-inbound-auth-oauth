@@ -945,7 +945,7 @@ public class OAuth2AuthzEndpoint {
         authzReqDTO.setPkceCodeChallenge(oauth2Params.getPkceCodeChallenge());
         authzReqDTO.setPkceCodeChallengeMethod(oauth2Params.getPkceCodeChallengeMethod());
         authzReqDTO.setTenantDomain(oauth2Params.getTenantDomain());
-        authzReqDTO.setAuthTime(sessionDataCacheEntry.getAuthTime());
+        authzReqDTO.setAuthTime(sessionDataCacheEntryNew.getAuthTime());
         return EndpointUtil.getOAuth2Service().authorize(authzReqDTO);
     }
 
