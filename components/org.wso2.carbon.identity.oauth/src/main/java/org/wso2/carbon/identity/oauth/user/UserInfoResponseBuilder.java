@@ -20,6 +20,8 @@ package org.wso2.carbon.identity.oauth.user;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 
+import java.util.ArrayList;
+
 /**
  * Abstract representation of the UserInfoResponse. The response can be a JSON
  * or a JWT
@@ -32,7 +34,7 @@ public interface UserInfoResponseBuilder {
      * @throws org.apache.oltu.oauth2.common.exception.OAuthSystemException
      * @throws org.apache.oltu.oauth2.common.exception.OAuthProblemException TODO
      */
-    public String getResponseString(OAuth2TokenValidationResponseDTO tokenResponse)
+    public String getResponseString(OAuth2TokenValidationResponseDTO tokenResponse, ArrayList<String> lstEssential)
             throws UserInfoEndpointException, OAuthSystemException;
 
 }
