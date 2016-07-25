@@ -97,7 +97,9 @@ public class OAuth2AuthzEndpoint {
     public static final String APPROVE = "approve";
     private boolean isCacheAvailable = false;
     private static final String REDIRECT_URI = "redirect_uri";
-    private static long time = 0;
+    String sessionDataKey = UUIDGenerator.generateUUID();
+    SessionDataCacheKey cacheKey = new SessionDataCacheKey(sessionDataKey);
+    SessionDataCacheEntry sessionDataCacheEntryNew = new SessionDataCacheEntry();
 
     @GET
     @Path("/")
@@ -111,7 +113,7 @@ public class OAuth2AuthzEndpoint {
         PrivilegedCarbonContext carbonContext = PrivilegedCarbonContext.getThreadLocalCarbonContext();
         carbonContext.setTenantId(MultitenantConstants.SUPER_TENANT_ID);
         carbonContext.setTenantDomain(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
-
+        SessionDataCache.getInstance().addToCache(cacheKey, sessionDataCacheEntryNew);
         String clientId = request.getParameter("client_id");
 
         String sessionDataKeyFromLogin = getSessionDataKey(request);
@@ -241,11 +243,11 @@ public class OAuth2AuthzEndpoint {
                 Date now = new Date();
                 if (StringUtils.isNotEmpty(request.getParameter("max_age")) || (StringUtils.isNotEmpty(request.
                         getParameter("prompt")) && request.getParameter("prompt").equals(OAuthConstants.Prompt.LOGIN))) {
-                    if (time != 0) {
-                        sessionDataCacheEntry.setAuthTime(time);
+                    if (sessionDataCacheEntryNew.getAuthTime() != 0) {
+                        sessionDataCacheEntryNew.setAuthTime(sessionDataCacheEntryNew.getAuthTime());
                     }
-                } else {
-                    sessionDataCacheEntry.setAuthTime(now.getTime());
+                } else{
+                    sessionDataCacheEntryNew.setAuthTime(now.getTime());
                 }
                 OAuth2Parameters oauth2Params = sessionDataCacheEntry.getoAuth2Parameters();
                 AuthenticationResult authnResult = getAuthenticationResult(request, sessionDataKeyFromLogin);
@@ -582,7 +584,7 @@ public class OAuth2AuthzEndpoint {
         authorizationGrantCacheEntry.setCodeId(codeId);
         authorizationGrantCacheEntry.setPkceCodeChallenge(pkceCodeChallenge);
         authorizationGrantCacheEntry.setPkceCodeChallengeMethod(pkceCodeChallengeMethod);
-        authorizationGrantCacheEntry.setAuthTime(sessionDataCacheEntry.getAuthTime());
+        authorizationGrantCacheEntry.setAuthTime(sessionDataCacheEntryNew.getAuthTime());
         AuthorizationGrantCache.getInstance().addToCacheByCode(authorizationGrantCacheKey, authorizationGrantCacheEntry);
     }
 
