@@ -245,6 +245,8 @@ public class OAuth2AuthzEndpoint {
                         getParameter("prompt")) && request.getParameter("prompt").equals(OAuthConstants.Prompt.LOGIN))) {
                     if (sessionDataCacheEntryNew.getAuthTime() != 0) {
                         sessionDataCacheEntryNew.setAuthTime(sessionDataCacheEntryNew.getAuthTime());
+                    } else {
+                        sessionDataCacheEntryNew.setAuthTime(now.getTime());
                     }
                 } else{
                     sessionDataCacheEntryNew.setAuthTime(now.getTime());
