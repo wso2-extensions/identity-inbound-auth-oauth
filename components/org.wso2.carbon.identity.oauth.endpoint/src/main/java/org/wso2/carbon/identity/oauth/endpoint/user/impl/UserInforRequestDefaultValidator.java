@@ -33,7 +33,7 @@ import java.nio.charset.CharsetDecoder;
 import java.util.Scanner;
 
 /**
- * Validates the schema and authorization header according to the specification
+ * Validates authorization header according to the specification
  *
  * @see http://openid.net/specs/openid-connect-basic-1_0-22.html#anchor6
  */
