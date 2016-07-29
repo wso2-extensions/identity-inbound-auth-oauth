@@ -211,16 +211,15 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         }
 
         String nonceValue = null;
+        long authTime = 0;
         // AuthorizationCode only available for authorization code grant type
         if (request.getProperty(AUTHORIZATION_CODE) != null) {
             AuthorizationGrantCacheEntry authorizationGrantCacheEntry = getAuthorizationGrantCacheEntry(request);
             if (authorizationGrantCacheEntry != null) {
                 nonceValue = authorizationGrantCacheEntry.getNonceValue();
+                authTime = authorizationGrantCacheEntry.getAuthTime();
             }
         }
-        // Get access token issued time
-        long accessTokenIssuedTime = getAccessTokenIssuedTime(tokenRespDTO.getAccessToken(), request) / 1000;
-
         String atHash = null;
         if (!JWSAlgorithm.NONE.getName().equals(signatureAlgorithm.getName())) {
             String digAlg = mapDigestAlgorithm(signatureAlgorithm);
@@ -270,7 +269,9 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         jwtClaimsSet.setClaim("azp", request.getOauth2AccessTokenReqDTO().getClientId());
         jwtClaimsSet.setExpirationTime(new Date(curTimeInMillis + lifetimeInMillis));
         jwtClaimsSet.setIssueTime(new Date(curTimeInMillis));
-        jwtClaimsSet.setClaim("auth_time", accessTokenIssuedTime);
+        if (authTime != 0) {
+            jwtClaimsSet.setClaim("auth_time", authTime / 1000);
+        }
         if(atHash != null){
             jwtClaimsSet.setClaim("at_hash", atHash);
         }
@@ -318,9 +319,6 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         String subject = request.getAuthorizationReqDTO().getUser().getAuthenticatedSubjectIdentifier();
 
         String nonceValue = request.getAuthorizationReqDTO().getNonce();
-
-        // Get access token issued time
-        long accessTokenIssuedTime = getAccessTokenIssuedTime(tokenRespDTO.getAccessToken(), request) / 1000;
 
         String atHash = null;
         String responseType = request.getAuthorizationReqDTO().getResponseType();
@@ -377,7 +375,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         jwtClaimsSet.setClaim("azp", request.getAuthorizationReqDTO().getConsumerKey());
         jwtClaimsSet.setExpirationTime(new Date(curTimeInMillis + lifetimeInMillis));
         jwtClaimsSet.setIssueTime(new Date(curTimeInMillis));
-        jwtClaimsSet.setClaim("auth_time", accessTokenIssuedTime);
+        jwtClaimsSet.setClaim("auth_time", request.getAuthorizationReqDTO().getAuthTime()/1000);
         if(atHash != null){
             jwtClaimsSet.setClaim("at_hash", atHash);
         }
