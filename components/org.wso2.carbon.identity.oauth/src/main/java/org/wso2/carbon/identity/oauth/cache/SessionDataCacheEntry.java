@@ -37,6 +37,16 @@ public class SessionDataCacheEntry extends CacheEntry {
 
     private ConcurrentMap<String, String[]> paramMap = new ConcurrentHashMap<String, String[]>();
 
+    private String claim;
+
+    public String getClaim() {
+        return claim;
+    }
+
+    public void setClaim(String claim) {
+        this.claim = claim;
+    }
+
     public OAuth2Parameters getoAuth2Parameters() {
         return oAuth2Parameters;
     }

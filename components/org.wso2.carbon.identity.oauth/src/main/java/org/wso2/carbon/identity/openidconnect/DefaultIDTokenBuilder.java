@@ -55,6 +55,9 @@ import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
+import org.wso2.carbon.identity.oauth.cache.SessionDataCacheKey;
+import org.wso2.carbon.identity.oauth.cache.SessionDataCacheEntry;
+import org.wso2.carbon.identity.oauth.cache.SessionDataCache;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -211,13 +214,20 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         }
 
         String nonceValue = null;
+        String claims = null;
         // AuthorizationCode only available for authorization code grant type
         if (request.getProperty(AUTHORIZATION_CODE) != null) {
             AuthorizationGrantCacheEntry authorizationGrantCacheEntry = getAuthorizationGrantCacheEntry(request);
             if (authorizationGrantCacheEntry != null) {
                 nonceValue = authorizationGrantCacheEntry.getNonceValue();
+                claims = authorizationGrantCacheEntry.getClaims();
             }
         }
+
+        SessionDataCacheKey cacheKey = new SessionDataCacheKey(tokenRespDTO.getAccessToken());
+        SessionDataCacheEntry sessionDataCacheEntryNew = new SessionDataCacheEntry();
+        sessionDataCacheEntryNew.setClaim(claims);
+        SessionDataCache.getInstance().addToCache(cacheKey, sessionDataCacheEntryNew);
         // Get access token issued time
         long accessTokenIssuedTime = getAccessTokenIssuedTime(tokenRespDTO.getAccessToken(), request) / 1000;
 
@@ -301,6 +311,10 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
                 log.debug("Error while getting Federated Identity Provider ", e);
             }
         }
+        SessionDataCacheKey cacheKey = new SessionDataCacheKey(tokenRespDTO.getAccessToken());
+        SessionDataCacheEntry sessionDataCacheEntryNew = new SessionDataCacheEntry();
+        sessionDataCacheEntryNew.setClaim(request.getAuthorizationReqDTO().getClaims());
+        SessionDataCache.getInstance().addToCache(cacheKey, sessionDataCacheEntryNew);
         FederatedAuthenticatorConfig[] fedAuthnConfigs =
                 identityProvider.getFederatedAuthenticatorConfigs();
 

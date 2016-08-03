@@ -35,8 +35,17 @@ public class OAuth2AuthorizeReqDTO {
     private String pkceCodeChallenge;
     private String pkceCodeChallengeMethod;
     private String tenantDomain;
+    private String claims;
 
     private Properties properties = new Properties();
+
+    public String getClaims() {
+        return claims;
+    }
+
+    public void setClaims(String claims) {
+        this.claims = claims;
+    }
 
     public AuthenticatedUser getUser() {
         return user;

@@ -22,9 +22,13 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.as.response.OAuthASResponse;
+import org.json.JSONObject;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.message.OAuthResponse;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
+import org.wso2.carbon.identity.oauth.cache.SessionDataCache;
+import org.wso2.carbon.identity.oauth.cache.SessionDataCacheEntry;
+import org.wso2.carbon.identity.oauth.cache.SessionDataCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
@@ -47,6 +51,8 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
+import java.util.ArrayList;
+import java.util.Iterator;
 
 @Path("/userinfo")
 public class OpenIDConnectUserEndpoint {
@@ -63,6 +69,36 @@ public class OpenIDConnectUserEndpoint {
             // validate the request
             UserInfoRequestValidator requestValidator = UserInfoEndpointConfig.getInstance().getUserInfoRequestValidator();
             String accessToken = requestValidator.validateRequest(request);
+            SessionDataCacheKey cacheKey = new SessionDataCacheKey(accessToken);
+            SessionDataCacheEntry cacheEntry = (SessionDataCacheEntry) SessionDataCache.getInstance().getValueFromCache(cacheKey);
+            String claims = cacheEntry.getClaim();
+            ArrayList<String> lstEssential = new ArrayList();
+            String key = null;
+            if (StringUtils.isNotEmpty(claims)) {
+                JSONObject jsonObjectClaims = new JSONObject(claims);
+                if ((jsonObjectClaims != null) && jsonObjectClaims.toString().contains("userinfo")) {
+                    JSONObject newJSON = jsonObjectClaims.getJSONObject("userinfo");
+                    Iterator<?> keys = newJSON.keys();
+                    while (keys.hasNext()) {
+                        key = (String) keys.next();
+                        String value = null;
+                        if (newJSON != null) {
+                            value = newJSON.get(key).toString();
+                        }
+                        JSONObject jsonObjectValues = new JSONObject(value);
+                        if (jsonObjectValues != null) {
+                            Iterator<?> claimKeyValues = jsonObjectValues.keys();
+                            while (claimKeyValues.hasNext()) {
+                                String claimKeys = (String) claimKeyValues.next();
+                                String claimValues = jsonObjectValues.get(claimKeys).toString();
+                                if (claimValues.equals("true") && claimKeys.equals("essential")) {
+                                    lstEssential.add(key);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
             //validate the app state
             OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
@@ -97,7 +133,7 @@ public class OpenIDConnectUserEndpoint {
             // build the claims
             //ToDO - Validate the grant type to be implicit or authorization_code before retrieving claims
             UserInfoResponseBuilder userInfoResponseBuilder = UserInfoEndpointConfig.getInstance().getUserInfoResponseBuilder();
-            response = userInfoResponseBuilder.getResponseString(tokenResponse);
+            response = userInfoResponseBuilder.getResponseString(tokenResponse, lstEssential);
 
         } catch (UserInfoEndpointException e) {
             return handleError(e);

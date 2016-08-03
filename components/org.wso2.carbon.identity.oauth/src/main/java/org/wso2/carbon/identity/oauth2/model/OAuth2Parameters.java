@@ -44,6 +44,15 @@ public class OAuth2Parameters implements Serializable {
     private String pkceCodeChallengeMethod;
     private LinkedHashSet acrValues;
     private String tenantDomain;
+    private String claims;
+
+    public String getClaims() {
+        return claims;
+    }
+
+    public void setClaims(String claims) {
+        this.claims = claims;
+    }
 
     public String getApplicationName() {
         return applicationName;
