@@ -156,6 +156,8 @@ public class OAuthServerConfiguration {
     private String openIDConnectUserInfoEndpointAccessTokenValidator = "org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoISAccessTokenValidator";
     private String openIDConnectUserInfoEndpointResponseBuilder = "org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoJSONResponseBuilder";
     private OAuth2ScopeValidator oAuth2ScopeValidator;
+    private Map<String, Object> scopes = new HashMap<>();
+    private Map<String, Object> supportedScopes ;
     // property added to fix IDENTITY-4492 in backward compatible manner
     private boolean isJWTSignedWithSPKey = false;
     // property added to fix IDENTITY-4534 in backward compatible manner
@@ -778,6 +780,23 @@ public class OAuthServerConfiguration {
     public String getOpenIDConnectUserInfoEndpointResponseBuilder() {
         return openIDConnectUserInfoEndpointResponseBuilder;
     }
+
+    public Map<String, Object> getSupportedScopes() {
+        if (supportedScopes == null) {
+            synchronized (this) {
+                if (supportedScopes == null) {
+                    Map<String, Object> supportedScopesTemp = new Hashtable<>();
+                    for (Map.Entry<String, Object> entry : scopes.entrySet()) {
+
+                        supportedScopesTemp.put(entry.getKey(), entry.getValue());
+                    }
+                    supportedScopes = supportedScopesTemp;
+                }
+            }
+        }
+        return supportedScopes;
+    }
+
 
     public boolean isJWTSignedWithSPKey() {
         return isJWTSignedWithSPKey;
@@ -1421,11 +1440,44 @@ public class OAuthServerConfiguration {
         }
     }
 
+    private void parseSupportedScopes(OMElement openIDConnectConfigElem) {
+        OMElement supportedScopes =
+                openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.SUPPORTED_SCOPES));
+        if (supportedScopes != null) {
+            Iterator<OMElement> iterator = supportedScopes.getChildrenWithName(getQNameWithIdentityNS(ConfigElements.SUPPORTED_SCOPE));
+
+            while (iterator.hasNext()) {
+                OMElement supportedScopeElement = iterator.next();
+                String scopeId = supportedScopeElement.getAttributeValue(new QName(
+                        ConfigElements.SCOPE_ID));
+                OMElement scopeClaimElement = supportedScopeElement.
+                        getFirstChildWithName(
+                                getQNameWithIdentityNS(ConfigElements.SUPPORTED_SCOPE_CLAIMS));
+                OMElement scopeSubClaimElement = supportedScopeElement.
+                        getFirstChildWithName(
+                                getQNameWithIdentityNS(ConfigElements.SUPPORTED_SUB_CLAIMS));
+                String scopeClaim = null;
+                if (scopeClaimElement != null) {
+                    scopeClaim = scopeClaimElement.getText();
+                }
+                String scopeSubClaim = null;
+                if (scopeSubClaimElement != null) {
+                    scopeSubClaim = scopeSubClaimElement.getText();
+                }
+                if (scopeSubClaim != null) {
+                    scopes.put(scopeId, scopeClaim + ":" + scopeSubClaim);
+                } else {
+                    scopes.put(scopeId, scopeClaim);
+                }
+            }
+        }
+    }
+
     private void parseOpenIDConnectConfig(OMElement oauthConfigElem) {
 
         OMElement openIDConnectConfigElem =
                 oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT));
-
+        parseSupportedScopes(openIDConnectConfigElem);
         if (openIDConnectConfigElem != null) {
             if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_IDTOKEN_BUILDER)) != null) {
                 openIDConnectIDTokenBuilderClassName =
@@ -1554,6 +1606,11 @@ public class OAuthServerConfiguration {
         public static final String OPENID_CONNECT_SIGN_JWT_WITH_SP_KEY = "SignJWTWithSPKey";
         public static final String OPENID_CONNECT_IDTOKEN_CUSTOM_CLAIM_CALLBACK_HANDLER = "IDTokenCustomClaimsCallBackHandler";
         public static final String SUPPORTED_CLAIMS = "OpenIDConnectClaims";
+        public static final String SUPPORTED_SCOPES = "Scopes";
+        public static final String SUPPORTED_SCOPE = "Scope";
+        public static final String SUPPORTED_SCOPE_CLAIMS = "Claims";
+        public static final String SUPPORTED_SUB_CLAIMS = "Subclaims";
+        public static final String SCOPE_ID = "id";
         // Callback handler related configuration elements
         private static final String OAUTH_CALLBACK_HANDLERS = "OAuthCallbackHandlers";
         private static final String OAUTH_CALLBACK_HANDLER = "OAuthCallbackHandler";
