@@ -52,24 +52,24 @@ public class SQLQueries {
             "IDN_OAUTH2_ACCESS_TOKEN WHERE TOKEN_ID = ?";
 
     public static final String UPDATE_TOKEN_AGAINST_AUTHZ_CODE = "UPDATE IDN_OAUTH2_AUTHORIZATION_CODE SET " +
-                                                                 "TOKEN_ID=? WHERE AUTHORIZATION_CODE=?";
+            "TOKEN_ID=? WHERE AUTHORIZATION_CODE=?";
 
     public static final String GET_ACCESS_TOKEN_BY_AUTHZ_CODE = "SELECT AUTHORIZATION_CODE FROM " +
-                                                                "IDN_OAUTH2_AUTHORIZATION_CODE WHERE " +
-                                                                "TOKEN_ID=?";
+            "IDN_OAUTH2_AUTHORIZATION_CODE WHERE " +
+            "TOKEN_ID=?";
 
     public static final String UPDATE_NEW_TOKEN_AGAINST_AUTHZ_CODE = "UPDATE IDN_OAUTH2_AUTHORIZATION_CODE SET " +
             "TOKEN_ID=? WHERE TOKEN_ID=?";
 
     public static final String DEACTIVATE_AUTHZ_CODE = "UPDATE IDN_OAUTH2_AUTHORIZATION_CODE SET " +
-                                                   "STATE='INACTIVE' WHERE AUTHORIZATION_CODE= ?";
+            "STATE='INACTIVE' WHERE AUTHORIZATION_CODE= ?";
 
     public static final String EXPIRE_AUTHZ_CODE = "UPDATE IDN_OAUTH2_AUTHORIZATION_CODE SET " +
             "STATE='EXPIRED' WHERE AUTHORIZATION_CODE= ?";
 
     public static final String DEACTIVATE_AUTHZ_CODE_AND_INSERT_CURRENT_TOKEN = "UPDATE IDN_OAUTH2_AUTHORIZATION_CODE SET " +
-                                                                           "STATE='INACTIVE', TOKEN_ID=?" +
-                                                                            " WHERE AUTHORIZATION_CODE= ?";
+            "STATE='INACTIVE', TOKEN_ID=?" +
+            " WHERE AUTHORIZATION_CODE= ?";
 
     public static final String RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_ORACLE = "SELECT * FROM (SELECT " +
             "ACCESS_TOKEN, REFRESH_TOKEN, TIME_CREATED, REFRESH_TOKEN_TIME_CREATED, VALIDITY_PERIOD, " +
@@ -153,7 +153,7 @@ public class SQLQueries {
             "TOKEN_STATE_ID=? WHERE TOKEN_ID=?";
 
     public static final String REVOKE_ACCESS_TOKEN = "UPDATE IDN_OAUTH2_ACCESS_TOKEN SET TOKEN_STATE=?, " +
-                                                     "TOKEN_STATE_ID=? WHERE ACCESS_TOKEN=?";
+            "TOKEN_STATE_ID=? WHERE ACCESS_TOKEN=?";
 
     public static final String REVOKE_REFRESH_TOKEN = "UPDATE IDN_OAUTH2_ACCESS_TOKEN SET TOKEN_STATE=?, " +
             "TOKEN_STATE_ID=? WHERE REFRESH_TOKEN=?";
@@ -255,7 +255,10 @@ public class SQLQueries {
             "IDN_OAUTH2_RESOURCE_SCOPE IORS WHERE RESOURCE_PATH = ? AND IORS.SCOPE_ID = IOS.SCOPE_ID";
 
     public static final String DELETE_IDN_OPENID_USER_RPS = "DELETE FROM IDN_OPENID_USER_RPS WHERE USER_NAME = ? AND " +
-            "RP_URL = ?";
+            "TENANT_ID=? AND RP_URL = ?";
+
+    public static final String UPDATE_TRUSTED_ALWAYS_IDN_OPENID_USER_RPS = "UPDATE IDN_OPENID_USER_RPS SET TRUSTED_ALWAYS=? " +
+            "WHERE USER_NAME = ? AND TENANT_ID=? AND RP_URL = ?";
 
     public static final String RENAME_USER_STORE_IN_ACCESS_TOKENS_TABLE = "UPDATE IDN_OAUTH2_ACCESS_TOKEN SET " +
             "USER_DOMAIN=? WHERE TENANT_ID=? AND USER_DOMAIN=?";
@@ -307,8 +310,9 @@ public class SQLQueries {
 
 
     public static final String RETRIEVE_ROLES_OF_SCOPE = "SELECT IOS.ROLES FROM IDN_OAUTH2_SCOPE IOS WHERE SCOPE_KEY" +
-                                                        " = ?";
+            " = ?";
     public static final String RETRIEVE_PKCE_TABLE = "SELECT PKCE_MANDATORY, PKCE_SUPPORT_PLAIN FROM IDN_OAUTH_CONSUMER_APPS LIMIT 1";
+
     private SQLQueries() {
 
     }
