@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth.cache;
 
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 
+import java.util.LinkedHashSet;
 import java.util.Map;
 
 /**
@@ -40,6 +41,8 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
     private String pkceCodeChallenge;
 
     private String pkceCodeChallengeMethod;
+
+    private LinkedHashSet acrValue;
 
     public AuthorizationGrantCacheEntry(Map<ClaimMapping, String> userAttributes) {
         this.userAttributes = userAttributes;
@@ -91,5 +94,13 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
 
     public void setPkceCodeChallengeMethod(String pkceCodeChallengeMethod) {
         this.pkceCodeChallengeMethod = pkceCodeChallengeMethod;
+    }
+
+    public LinkedHashSet getAcrValue() {
+        return acrValue;
+    }
+
+    public void setAcrValue(LinkedHashSet acrValue) {
+        this.acrValue = acrValue;
     }
 }
