@@ -64,8 +64,11 @@ public class JwksEndpoint {
                 file = new FileInputStream(CarbonUtils.getServerConfiguration().getFirstProperty
                         ("Security.KeyStore.Location"));
                 KeyStore keystore = KeyStore.getInstance(KeyStore.getDefaultType());
-                keystore.load(file, "wso2carbon".toCharArray());
-                String alias = "wso2carbon";
+                String password = CarbonUtils.getServerConfiguration().getInstance().getFirstProperty
+                        ("Security.KeyStore.Password");
+                keystore.load(file, password.toCharArray());
+                String alias = CarbonUtils.getServerConfiguration().getInstance().getFirstProperty
+                        ("Security.KeyStore.KeyAlias");
                 // Get certificate of public key
                 Certificate cert = keystore.getCertificate(alias);
                 // Get public key
