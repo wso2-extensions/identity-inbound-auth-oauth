@@ -92,6 +92,10 @@
             <artifactId>org.wso2.carbon.identity.oidc.session</artifactId>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>commons-codec.wso2</groupId>
+            <artifactId>commons-codec</artifactId>
+        </dependency>
     </dependencies>
 
     <build>

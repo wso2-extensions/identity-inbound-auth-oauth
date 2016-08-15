@@ -39,7 +39,17 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
 
     private String pkceCodeChallenge;
 
+    private long authTime;
+
     private String pkceCodeChallengeMethod;
+
+    public long getAuthTime() {
+        return authTime;
+    }
+
+    public void setAuthTime(long authTime) {
+        this.authTime = authTime;
+    }
 
     public AuthorizationGrantCacheEntry(Map<ClaimMapping, String> userAttributes) {
         this.userAttributes = userAttributes;
