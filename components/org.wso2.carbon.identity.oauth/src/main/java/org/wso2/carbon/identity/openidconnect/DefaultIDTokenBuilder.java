@@ -88,6 +88,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.LinkedHashSet;
 
 /**
  * This is the IDToken generator for the OpenID Connect Implementation. This
@@ -214,11 +215,13 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         }
 
         String nonceValue = null;
+        LinkedHashSet acrValue = new LinkedHashSet();
         // AuthorizationCode only available for authorization code grant type
         if (request.getProperty(AUTHORIZATION_CODE) != null) {
             AuthorizationGrantCacheEntry authorizationGrantCacheEntry = getAuthorizationGrantCacheEntry(request);
             if (authorizationGrantCacheEntry != null) {
                 nonceValue = authorizationGrantCacheEntry.getNonceValue();
+                acrValue = authorizationGrantCacheEntry.getAcrValue();
             }
         }
         // Get access token issued time
@@ -280,6 +283,9 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         if (nonceValue != null) {
             jwtClaimsSet.setClaim("nonce", nonceValue);
         }
+        if (acrValue != null) {
+            jwtClaimsSet.setClaim("acr", "urn:mace:incommon:iap:silver");
+        }
 
         request.addProperty(OAuthConstants.ACCESS_TOKEN, tokenRespDTO.getAccessToken());
         request.addProperty(MultitenantConstants.TENANT_DOMAIN, request.getOauth2AccessTokenReqDTO().getTenantDomain());
@@ -322,6 +328,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         String subject = request.getAuthorizationReqDTO().getUser().getAuthenticatedSubjectIdentifier();
 
         String nonceValue = request.getAuthorizationReqDTO().getNonce();
+        LinkedHashSet acrValue = request.getAuthorizationReqDTO().getACRValues();
 
         // Get access token issued time
         long accessTokenIssuedTime = getAccessTokenIssuedTime(tokenRespDTO.getAccessToken(), request) / 1000;
@@ -386,6 +393,9 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         }
         if (nonceValue != null) {
             jwtClaimsSet.setClaim("nonce", nonceValue);
+        }
+        if (acrValue != null) {
+            jwtClaimsSet.setClaim("acr", "urn:mace:incommon:iap:silver");
         }
 
         request.addProperty(OAuthConstants.ACCESS_TOKEN, tokenRespDTO.getAccessToken());
