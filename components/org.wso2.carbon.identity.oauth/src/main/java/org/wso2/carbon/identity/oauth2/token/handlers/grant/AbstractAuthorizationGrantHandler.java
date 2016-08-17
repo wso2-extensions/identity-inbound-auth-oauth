@@ -24,6 +24,7 @@ import java.util.UUID;
 
 import org.apache.axiom.util.base64.Base64Utils;
 import org.apache.commons.io.Charsets;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
@@ -478,6 +479,12 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     public boolean validateGrant(OAuthTokenReqMessageContext tokReqMsgCtx)
             throws IdentityOAuth2Exception {
 
+        return true;
+    }
+
+    @Override
+    public boolean isAuthorizedClient(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
+
         OAuth2AccessTokenReqDTO tokenReqDTO = tokReqMsgCtx.getOauth2AccessTokenReqDTO();
         String grantType = tokenReqDTO.getGrantType();
 
@@ -492,14 +499,22 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                 throw new IdentityOAuth2Exception(e.getMessage(), e);
             }
         }
+
+        if (StringUtils.isBlank(oAuthAppDO.getGrantTypes())) {
+            if (log.isDebugEnabled()) {
+                log.debug("Could not find authorized grant types for client id: " + tokenReqDTO.getClientId());
+            }
+            return false;
+        }
         // If the application has defined a limited set of grant types, then check the grant
-        if (oAuthAppDO.getGrantTypes() != null && !oAuthAppDO.getGrantTypes().contains(grantType)) {
+        if (!oAuthAppDO.getGrantTypes().contains(grantType)) {
             if (log.isDebugEnabled()) {
                 //Do not change this log format as these logs use by external applications
                 log.debug("Unsupported Grant Type : " + grantType + " for client id : " + tokenReqDTO.getClientId());
             }
             return false;
         }
+
         return true;
     }
 }

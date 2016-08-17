@@ -35,5 +35,13 @@ public interface ResponseTypeHandler {
 
     public OAuth2AuthorizeRespDTO issue(OAuthAuthzReqMessageContext oauthAuthzMsgCtx)
             throws IdentityOAuth2Exception;
+
+    /**
+     * check whether client has authorization to get access token from provided grant type
+     * @param tokReqMsgCtx
+     * @return
+     * @throws IdentityOAuth2Exception
+     */
+    public boolean isAuthorizedClient(OAuthAuthzReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception;
 }
 
