@@ -103,4 +103,13 @@ public interface AuthorizationGrantHandler {
      */
     public OAuth2AccessTokenRespDTO issue(OAuthTokenReqMessageContext tokReqMsgCtx)
             throws IdentityOAuth2Exception;
+
+    /**
+     * check whether client has authorization to get access token from provided grant type
+     * @param tokReqMsgCtx
+     * @return
+     * @throws IdentityOAuth2Exception
+     */
+    public boolean isAuthorizedClient(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception;
+
 }

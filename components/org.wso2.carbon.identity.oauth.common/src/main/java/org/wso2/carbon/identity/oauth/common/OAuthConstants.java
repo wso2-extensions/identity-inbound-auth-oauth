@@ -90,6 +90,8 @@ public final class OAuthConstants {
     public static final String OAUTH_PKCE_PLAIN_CHALLENGE = "plain";
     //Response types
     public static final String NONE = "none";
+    public static final String TOKEN = "token";
+    public static final String CODE = "code";
 
     //Constants used for OAuth/OpenID Connect Configuration UI
     public static final String CALLBACK_URL_REGEXP_PREFIX = "regexp=";
@@ -104,6 +106,7 @@ public final class OAuthConstants {
     public static class GrantTypes {
         public static final String IMPLICIT = "implicit";
         public static final String TOKEN = "token";
+        public static final String AUTHORIZATION_CODE = "authorization_code";
 
         private GrantTypes() {
         }

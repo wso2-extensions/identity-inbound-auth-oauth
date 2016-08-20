@@ -96,6 +96,15 @@ public class AuthorizationHandlerManager {
 
         authzReqMsgCtx.addProperty("OAuthAppDO", oAuthAppDO);
 
+        boolean isAuthorizedClient = authzHandler.isAuthorizedClient(authzReqMsgCtx);
+
+        if (!isAuthorizedClient) {
+            handleErrorRequest(authorizeRespDTO, OAuthError.CodeResponse.UNAUTHORIZED_CLIENT,
+                    "The authenticated client is not authorized to use this authorization grant type");
+            authorizeRespDTO.setCallbackURI(authzReqDTO.getCallbackUrl());
+            return authorizeRespDTO;
+        }
+
         boolean accessDelegationAuthzStatus = authzHandler.validateAccessDelegation(authzReqMsgCtx);
         if(authzReqMsgCtx.getProperty("ErrorCode") != null){
             authorizeRespDTO.setErrorCode((String)authzReqMsgCtx.getProperty("ErrorCode"));

@@ -182,8 +182,32 @@ public class AccessTokenIssuer {
             tokReqMsgCtx.setAuthorizedUser(appDeveloper);
         }
 
+        boolean isAuthorizedClient = false;
+
+        String error = "The authenticated client is not authorized to use this authorization grant type";
+
+        try {
+            isAuthorizedClient = authzGrantHandler.isAuthorizedClient(tokReqMsgCtx);
+        } catch(IdentityOAuth2Exception e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Error occurred while validating client for authorization", e);
+            }
+            error = e.getMessage();
+        }
+
+        if (!isAuthorizedClient) {
+
+            if (log.isDebugEnabled()) {
+                log.debug("Client Id: " + tokenReqDTO.getClientId() + " is not authorized to use grant type: " + tokenReqDTO.getGrantType());
+            }
+            tokenRespDTO = handleError(OAuthError.TokenResponse.UNAUTHORIZED_CLIENT, error, tokenReqDTO);
+            setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
+            triggerPostListeners(tokenReqDTO, tokenRespDTO, tokReqMsgCtx, isRefreshRequest);
+            return tokenRespDTO;
+        }
+
         boolean isValidGrant = false;
-        String error = "Provided Authorization Grant is invalid";
+        error = "Provided Authorization Grant is invalid";
         try {
             isValidGrant = authzGrantHandler.validateGrant(tokReqMsgCtx);
         } catch (IdentityOAuth2Exception e) {

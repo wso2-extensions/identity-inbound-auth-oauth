@@ -132,8 +132,9 @@ public class OAuth2Service extends AbstractAdmin {
                             .getApplicationName() + ", does not support the requested grant type.");
                 }
                 validationResponseDTO.setValidClient(false);
-                validationResponseDTO.setErrorCode(OAuth2ErrorCodes.UNSUPPORTED_GRANT_TYPE);
-                validationResponseDTO.setErrorMsg("Requested Grant type is not supported.");
+                validationResponseDTO.setErrorCode(OAuth2ErrorCodes.UNAUTHORIZED_CLIENT);
+                validationResponseDTO.setErrorMsg("The authenticated client is not authorized to use this " +
+                        "authorization grant type");
                 return validationResponseDTO;
             }
 
