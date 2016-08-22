@@ -17,6 +17,7 @@
  */
 package org.wso2.carbon.identity.oauth.endpoint.authz;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -82,9 +83,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Path("/authorize")
@@ -742,33 +741,47 @@ public class OAuth2AuthzEndpoint {
 
         boolean forceAuthenticate = false;
         boolean checkAuthentication = false;
-
         // values {none, login, consent, select_profile}
+        String[] arrPrompt = new String[]{"none", "login", "consent", "select_profile"};
+        List lstPrompt = Arrays.asList(arrPrompt);
         boolean contains_none = (OAuthConstants.Prompt.NONE).equals(prompt);
-        String[] prompts = null;
+        String[] prompts;
         if (StringUtils.isNotBlank(prompt)) {
             prompts = prompt.trim().split("\\s");
-            contains_none = (OAuthConstants.Prompt.NONE).equals(prompt);
-            if (prompts.length > 1 && contains_none) {
+            List lstPrompts = Arrays.asList(prompts);
+            if (!CollectionUtils.containsAny(lstPrompts, lstPrompt)) {
                 if (log.isDebugEnabled()) {
-                    log.debug("Invalid prompt variable combination. The value 'none' cannot be used with others " +
-                            "prompts. Prompt: " + prompt);
+                    log.debug("Invalid prompt variables passed with the authorization request" + prompt);
                 }
                 OAuthProblemException ex = OAuthProblemException.error(OAuth2ErrorCodes.INVALID_REQUEST,
-                        "Invalid prompt variable combination. The value \'none\' cannot be used with others prompts.");
+                        "Invalid prompt variables passed with the authorization request");
                 return EndpointUtil.getErrorRedirectURL(ex, params);
             }
-        }
-
-        if ((OAuthConstants.Prompt.LOGIN).equals(prompt)) { // prompt for authentication
-            checkAuthentication = false;
-            forceAuthenticate = true;
-        } else if (contains_none) {
-            checkAuthentication = true;
-            forceAuthenticate = false;
-        } else if ((OAuthConstants.Prompt.CONSENT).equals(prompt)) {
-            checkAuthentication = false;
-            forceAuthenticate = false;
+            if (prompts.length > 1) {
+                if (lstPrompts.contains(OAuthConstants.Prompt.NONE)) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Invalid prompt variable combination. The value 'none' cannot be used with others " +
+                                "prompts. Prompt: " + prompt);
+                    }
+                    OAuthProblemException ex = OAuthProblemException.error(OAuth2ErrorCodes.INVALID_REQUEST,
+                            "Invalid prompt variable combination. The value \'none\' cannot be used with others prompts.");
+                    return EndpointUtil.getErrorRedirectURL(ex, params);
+                } else if (lstPrompts.contains(OAuthConstants.Prompt.LOGIN) && (lstPrompts.contains(OAuthConstants.Prompt.CONSENT))) {
+                    forceAuthenticate = true;
+                    checkAuthentication = false;
+                }
+            } else {
+                if ((OAuthConstants.Prompt.LOGIN).equals(prompt)) { // prompt for authentication
+                    checkAuthentication = false;
+                    forceAuthenticate = true;
+                } else if (contains_none) {
+                    checkAuthentication = true;
+                    forceAuthenticate = false;
+                } else if ((OAuthConstants.Prompt.CONSENT).equals(prompt)) {
+                    checkAuthentication = false;
+                    forceAuthenticate = false;
+                }
+            }
         }
 
         String sessionDataKey = UUIDGenerator.generateUUID();
@@ -854,8 +867,13 @@ public class OAuth2AuthzEndpoint {
         consentUrl = EndpointUtil.getUserConsentURL(oauth2Params, loggedInUser, sessionDataKey,
                 OAuth2Util.isOIDCAuthzRequest(oauth2Params.getScopes()) ? true : false);
 
+        String[] prompts = null;
+        if (StringUtils.isNotBlank(oauth2Params.getPrompt())) {
+            prompts = oauth2Params.getPrompt().trim().split("\\s");
+        }
+
         //Skip the consent page if User has provided approve always or skip consent from file
-        if ((OAuthConstants.Prompt.CONSENT).equals(oauth2Params.getPrompt())) {
+        if (prompts != null && Arrays.asList(prompts).contains(OAuthConstants.Prompt.CONSENT)) {
             return consentUrl;
 
         } else if ((OAuthConstants.Prompt.NONE).equals(oauth2Params.getPrompt())) {
