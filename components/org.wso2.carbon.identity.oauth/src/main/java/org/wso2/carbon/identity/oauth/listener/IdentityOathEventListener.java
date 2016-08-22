@@ -223,7 +223,7 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
         Set<String> accessTokens;
         Set<String> authorizationCodes;
         AuthenticatedUser authenticatedUser = new AuthenticatedUser();
-        authenticatedUser.setUserStoreDomain(userStoreDomain);
+        authenticatedUser.setUserStoreDomain(userStoreDomain.toUpperCase());
         authenticatedUser.setTenantDomain(tenantDomain);
         authenticatedUser.setUserName(userName);
         try {
