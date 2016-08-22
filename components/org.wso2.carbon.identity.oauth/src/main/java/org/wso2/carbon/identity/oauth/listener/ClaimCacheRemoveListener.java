@@ -37,11 +37,11 @@ public class ClaimCacheRemoveListener extends AbstractCacheListener<ClaimCacheKe
             throws CacheEntryListenerException {
 
         if(cacheEntryEvent == null || cacheEntryEvent.getKey() == null ||
-                cacheEntryEvent.getKey().getEndUserName() == null) {
+                cacheEntryEvent.getKey().getAuthenticatedUser() == null) {
             return;
         }
 
         ClaimMetaDataCache.getInstance().clearCacheEntry(
-                new ClaimMetaDataCacheKey(OAuthUtil.getAuthenticatedUser(cacheEntryEvent.getKey().getEndUserName())));
+                new ClaimMetaDataCacheKey(cacheEntryEvent.getKey().getAuthenticatedUser()));
     }
 }
