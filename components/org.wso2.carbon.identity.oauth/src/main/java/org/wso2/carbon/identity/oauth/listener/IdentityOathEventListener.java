@@ -276,7 +276,7 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
         ClaimCache claimCache = ClaimCache.getInstance();
         AuthenticatedUser authenticatedUser = new AuthenticatedUser();
         authenticatedUser.setUserName(userName);
-        authenticatedUser.setTenantDomain(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain());
+        authenticatedUser.setTenantDomain(IdentityTenantUtil.getTenantDomain(userStoreManager.getTenantId()));
         authenticatedUser.setUserStoreDomain(UserCoreUtil.getDomainName(userStoreManager.getRealmConfiguration()));
         ClaimCacheKey cacheKey = new ClaimCacheKey(authenticatedUser);
         if(cacheKey != null) {
