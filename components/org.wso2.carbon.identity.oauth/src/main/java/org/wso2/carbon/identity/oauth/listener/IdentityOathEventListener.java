@@ -25,6 +25,7 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.core.AbstractIdentityUserOperationEventListener;
 import org.wso2.carbon.identity.core.model.IdentityErrorMsgContext;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
@@ -97,6 +98,15 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
                                            UserStoreManager userStoreManager) throws UserStoreException {
         removeTokensFromCache(userName, userStoreManager);
         return true;
+    }
+    
+    @Override
+    public boolean doPostSetUserClaimValue(String userName, UserStoreManager userStoreManager) throws UserStoreException {
+        if (!isEnable()) {
+            return true;
+        }
+        return revokeTokensOfLockedUser(userName, userStoreManager) && revokeTokensOfDisabledUser(userName, userStoreManager)
+                && removeUserClaimsFromCache(userName, userStoreManager);
     }
 
     @Override
@@ -220,7 +230,7 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
     private void removeTokensFromCache(String userName, UserStoreManager userStoreManager) throws
             UserStoreException {
         String userStoreDomain = UserCoreUtil.getDomainName(userStoreManager.getRealmConfiguration());
-        String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        String tenantDomain = IdentityTenantUtil.getTenantDomain(userStoreManager.getTenantId());
         TokenMgtDAO tokenMgtDAO = new TokenMgtDAO();
         Set<String> accessTokens;
         Set<String> authorizationCodes;
