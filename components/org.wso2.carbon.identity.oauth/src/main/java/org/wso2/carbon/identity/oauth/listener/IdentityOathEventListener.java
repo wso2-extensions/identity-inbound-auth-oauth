@@ -130,7 +130,7 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
         return revokeTokensOfLockedUser(userName, userStoreManager) && revokeTokensOfDisabledUser(userName, userStoreManager);
     }
 
-    private boolean revokeTokensOfLockedUser(String userName, UserStoreManager userStoreManager) {
+    private boolean revokeTokensOfLockedUser(String userName, UserStoreManager userStoreManager) throws UserStoreException {
 
         IdentityErrorMsgContext errorContext = IdentityUtil.getIdentityErrorMsg();
 
@@ -140,7 +140,7 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
         return true;
     }
 
-    private boolean revokeTokensOfDisabledUser(String userName, UserStoreManager userStoreManager) {
+    private boolean revokeTokensOfDisabledUser(String userName, UserStoreManager userStoreManager) throws UserStoreException {
 
         IdentityErrorMsgContext errorContext = IdentityUtil.getIdentityErrorMsg();
 
@@ -150,11 +150,11 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
         return true;
     }
 
-    private boolean revokeTokens(String username, UserStoreManager userStoreManager){
+    private boolean revokeTokens(String username, UserStoreManager userStoreManager) throws UserStoreException {
         TokenMgtDAO tokenMgtDAO = new TokenMgtDAO();
 
         String userStoreDomain = UserCoreUtil.getDomainName(userStoreManager.getRealmConfiguration());
-        String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        String tenantDomain = IdentityTenantUtil.getTenantDomain(userStoreManager.getTenantId());
         AuthenticatedUser authenticatedUser = new AuthenticatedUser();
         authenticatedUser.setUserStoreDomain(userStoreDomain);
         authenticatedUser.setTenantDomain(tenantDomain);
@@ -272,7 +272,7 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
      * Remove user claims from ClaimCache
      * @param userName
      */
-    private boolean removeUserClaimsFromCache(String userName, UserStoreManager userStoreManager) {
+    private boolean removeUserClaimsFromCache(String userName, UserStoreManager userStoreManager) throws UserStoreException {
         ClaimCache claimCache = ClaimCache.getInstance();
         AuthenticatedUser authenticatedUser = new AuthenticatedUser();
         authenticatedUser.setUserName(userName);
@@ -290,11 +290,11 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
      * @param username
      * @param userStoreManager
      */
-    private void removeClaimCacheEntry(String username, UserStoreManager userStoreManager) {
+    private void removeClaimCacheEntry(String username, UserStoreManager userStoreManager) throws UserStoreException {
 
         AuthenticatedUser authenticatedUser = new AuthenticatedUser();
         authenticatedUser.setUserName(username);
-        authenticatedUser.setTenantDomain(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain());
+        authenticatedUser.setTenantDomain(IdentityTenantUtil.getTenantDomain(userStoreManager.getTenantId()));
         authenticatedUser.setUserStoreDomain(UserCoreUtil.getDomainName(userStoreManager.getRealmConfiguration()));
 
         ClaimMetaDataCacheEntry cacheEntry = ClaimMetaDataCache.getInstance().getValueFromCache(
