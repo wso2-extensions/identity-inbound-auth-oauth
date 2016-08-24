@@ -54,8 +54,9 @@ public class ClaimCacheKey extends CacheKey {
 
     @Override
     public String toString() {
+        String result = authenticatedUser != null ? authenticatedUser.toString() : authenticatedUser;
         return "ClaimCacheKey{" +
-                "endUserName='" + authenticatedUser.getUserName() + '\'' +
+                "authenticatedUser='" + result + '\'' +
                 '}';
     }
 }
