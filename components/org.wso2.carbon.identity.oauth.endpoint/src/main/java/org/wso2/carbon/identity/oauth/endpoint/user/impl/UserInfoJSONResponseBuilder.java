@@ -22,7 +22,10 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.utils.JSONUtils;
 import org.json.JSONObject;
+import org.wso2.carbon.context.CarbonContext;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
@@ -36,6 +39,7 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.registry.core.Resource;
 import org.wso2.carbon.registry.core.exceptions.RegistryException;
 import org.wso2.carbon.registry.core.service.RegistryService;
+import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
 import java.util.ArrayList;
 import java.util.Map;
@@ -61,10 +65,18 @@ public class UserInfoJSONResponseBuilder implements UserInfoResponseBuilder {
             throws UserInfoEndpointException {
         Resource resource = null;
         try {
+            PrivilegedCarbonContext.startTenantFlow();
+            PrivilegedCarbonContext carbonContext = PrivilegedCarbonContext.getThreadLocalCarbonContext();
+            int tenantId = IdentityTenantUtil.getTenantIdOfUser(tokenResponse.getAuthorizedUser());
+            String tenantDomain = IdentityTenantUtil.getTenantDomain(tenantId);
+            carbonContext.setTenantId(tenantId);
+            carbonContext.setTenantDomain(tenantDomain);
             RegistryService registry = OAuth2ServiceComponentHolder.getRegistryService();
-            resource = registry.getConfigSystemRegistry().get(OAuthConstants.SCOPE_RESOURCE_PATH);
+            resource = registry.getConfigSystemRegistry(tenantId).get(OAuthConstants.SCOPE_RESOURCE_PATH);
         } catch (RegistryException e) {
             log.error("Error while obtaining registry collection from :" + OAuthConstants.SCOPE_RESOURCE_PATH, e);
+        } finally {
+            PrivilegedCarbonContext.endTenantFlow();
         }
 
         Map<ClaimMapping, String> userAttributes = getUserAttributesFromCache(tokenResponse);
