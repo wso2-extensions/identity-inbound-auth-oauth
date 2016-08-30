@@ -41,6 +41,9 @@
         <operation name="revokeAuthzForAppsByResoureOwner" mep="http://www.w3.org/2006/01/wsdl/in-out">
             <parameter name="AuthorizationAction" locked="true">/permission/admin/login</parameter>
         </operation>
+        <operation name="updateApproveAlwaysForAppConsentByResourceOwner" mep="http://www.w3.org/2006/01/wsdl/in-out">
+            <parameter name="AuthorizationAction" locked="true">/permission/admin/login</parameter>
+        </operation>
     </service>
 
     <service name="OAuth2TokenValidationService" scope="transportsession">
