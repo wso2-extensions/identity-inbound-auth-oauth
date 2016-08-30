@@ -25,9 +25,11 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.core.AbstractAdmin;
+import org.wso2.carbon.core.multitenancy.utils.TenantUtils;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.User;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
@@ -547,6 +549,7 @@ public class OAuthAdminService extends AbstractAdmin {
         TokenMgtDAO tokenMgtDAO = new TokenMgtDAO();
         if (revokeRequestDTO.getApps() != null && revokeRequestDTO.getApps().length > 0) {
             String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+            int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
             String tenantAwareUserName = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
             AuthenticatedUser user = new AuthenticatedUser();
             user.setUserName(UserCoreUtil.removeDomainFromName(tenantAwareUserName));
@@ -618,7 +621,7 @@ public class OAuthAdminService extends AbstractAdmin {
                         }
 
                         try {
-                            tokenMgtDAO.revokeOAuthConsentByApplicationAndUser(userName, appName);
+                            tokenMgtDAO.revokeOAuthConsentByApplicationAndUser(tenantAwareUserName, tenantId, appName);
                         } catch (IdentityOAuth2Exception e) {
                             String errorMsg = "Error occurred while removing OAuth Consent of Application " + appName +
                                     " of user " + userName;
@@ -639,6 +642,34 @@ public class OAuthAdminService extends AbstractAdmin {
             return revokeRespDTO;
         }
         return new OAuthRevocationResponseDTO();
+    }
+
+    /**
+     * Revoke approve always of the consent for OAuth apps by resource owners
+     *
+     * @param appName name of the app
+     * @param state   state of the approve always
+     * @return revokeRespDTO DTO representing success or failure message
+     */
+    public OAuthRevocationResponseDTO updateApproveAlwaysForAppConsentByResourceOwner(String appName, String state)
+            throws IdentityOAuthAdminException {
+        TokenMgtDAO tokenMgtDAO = new TokenMgtDAO();
+        OAuthRevocationResponseDTO revokeRespDTO = new OAuthRevocationResponseDTO();
+        String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
+        String tenantAwareUserName = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
+
+        try {
+            tokenMgtDAO.updateApproveAlwaysForAppConsentByResourceOwner(tenantAwareUserName, tenantId, appName, state);
+        } catch (IdentityOAuth2Exception e) {
+            String errorMsg = "Error occurred while revoking OAuth Consent approve always of Application " + appName +
+                    " of user " + tenantAwareUserName;
+            log.error(errorMsg, e);
+            revokeRespDTO.setError(true);
+            revokeRespDTO.setErrorCode(OAuth2ErrorCodes.INVALID_REQUEST);
+            revokeRespDTO.setErrorMsg("Invalid revocation request");
+        }
+        return revokeRespDTO;
     }
 
     private void triggerPreRevokeListeners(OAuthRevocationRequestDTO

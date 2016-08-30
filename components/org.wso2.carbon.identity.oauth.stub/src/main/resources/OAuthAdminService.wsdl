@@ -85,6 +85,14 @@
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
+            <xs:element name="updateApproveAlwaysForAppConsentByResourceOwner">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element minOccurs="0" name="appName" nillable="true" type="xs:string"/>
+                        <xs:element minOccurs="0" name="state" nillable="true" type="xs:string"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
             <xs:element name="removeOAuthApplicationData">
                 <xs:complexType>
                     <xs:sequence>
@@ -298,6 +306,9 @@
     <wsdl:message name="revokeAuthzForAppsByResoureOwnerResponse">
         <wsdl:part name="parameters" element="ns1:revokeAuthzForAppsByResoureOwnerResponse"></wsdl:part>
     </wsdl:message>
+    <wsdl:message name="updateApproveAlwaysForAppConsentByResourceOwnerRequest">
+        <wsdl:part name="parameters" element="ns1:updateApproveAlwaysForAppConsentByResourceOwner"/>
+    </wsdl:message>
     <wsdl:portType name="OAuthAdminServicePortType">
         <wsdl:operation name="isPKCESupportEnabled">
             <wsdl:input message="tns:isPKCESupportEnabledRequest" wsaw:Action="urn:isPKCESupportEnabled"/>
@@ -361,6 +372,10 @@
             <wsdl:input message="tns:revokeAuthzForAppsByResoureOwnerRequest" wsaw:Action="urn:revokeAuthzForAppsByResoureOwner"></wsdl:input>
             <wsdl:output message="tns:revokeAuthzForAppsByResoureOwnerResponse" wsaw:Action="urn:revokeAuthzForAppsByResoureOwnerResponse"></wsdl:output>
             <wsdl:fault message="tns:OAuthAdminServiceIdentityOAuthAdminException" name="OAuthAdminServiceIdentityOAuthAdminException" wsaw:Action="urn:revokeAuthzForAppsByResoureOwnerOAuthAdminServiceIdentityOAuthAdminException"></wsdl:fault>
+        </wsdl:operation>
+        <wsdl:operation name="updateApproveAlwaysForAppConsentByResourceOwner">
+            <wsdl:input message="tns:updateApproveAlwaysForAppConsentByResourceOwnerRequest" wsaw:Action="urn:updateApproveAlwaysForAppConsentByResourceOwner"/>
+            <wsdl:fault message="tns:OAuthAdminServiceIdentityOAuthAdminException" name="OAuthAdminServiceIdentityOAuthAdminException" wsaw:Action="urn:updateApproveAlwaysForAppConsentByResourceOwnerOAuthAdminServiceIdentityOAuthAdminException"/>
         </wsdl:operation>
     </wsdl:portType>
     <wsdl:binding name="OAuthAdminServiceSoap11Binding" type="tns:OAuthAdminServicePortType">
@@ -510,6 +525,15 @@
             </wsdl:output>
             <wsdl:fault name="OAuthAdminServiceIdentityOAuthAdminException">
                 <soap:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"></soap:fault>
+            </wsdl:fault>
+        </wsdl:operation>
+        <wsdl:operation name="updateApproveAlwaysForAppConsentByResourceOwner">
+            <soap:operation soapAction="urn:updateApproveAlwaysForAppConsentByResourceOwner" style="document"/>
+            <wsdl:input>
+                <soap:body use="literal"/>
+            </wsdl:input>
+            <wsdl:fault name="OAuthAdminServiceIdentityOAuthAdminException">
+                <soap:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
             </wsdl:fault>
         </wsdl:operation>
     </wsdl:binding>
@@ -662,6 +686,15 @@
                 <soap12:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"></soap12:fault>
             </wsdl:fault>
         </wsdl:operation>
+        <wsdl:operation name="updateApproveAlwaysForAppConsentByResourceOwner">
+            <soap12:operation soapAction="urn:updateApproveAlwaysForAppConsentByResourceOwner" style="document"/>
+            <wsdl:input>
+                <soap12:body use="literal"/>
+            </wsdl:input>
+            <wsdl:fault name="OAuthAdminServiceIdentityOAuthAdminException">
+                <soap12:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
+            </wsdl:fault>
+        </wsdl:operation>
     </wsdl:binding>
     <wsdl:binding name="OAuthAdminServiceHttpBinding" type="tns:OAuthAdminServicePortType">
         <http:binding verb="POST"></http:binding>
@@ -775,6 +808,12 @@
             <wsdl:output>
                 <mime:content type="text/xml" part="parameters"></mime:content>
             </wsdl:output>
+        </wsdl:operation>
+        <wsdl:operation name="updateApproveAlwaysForAppConsentByResourceOwner">
+            <http:operation location="updateApproveAlwaysForAppConsentByResourceOwner"/>
+            <wsdl:input>
+                <mime:content type="text/xml" part="parameters"/>
+            </wsdl:input>
         </wsdl:operation>
     </wsdl:binding>
     <wsdl:service name="OAuthAdminService">
