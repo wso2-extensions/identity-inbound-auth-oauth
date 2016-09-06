@@ -71,9 +71,11 @@ public class AuthorizationGrantCache extends BaseCache<AuthorizationGrantCacheKe
         if (tokenId != null) {
             storeToSessionStore(tokenId, entry);
         } else {
-            storeToSessionStore(replaceFromTokenId(key.getUserAttributesId()), entry);
+            tokenId = replaceFromTokenId(key.getUserAttributesId());
+            if (tokenId != null) {
+                storeToSessionStore(tokenId, entry);
+            }
         }
-
     }
 
     /**
