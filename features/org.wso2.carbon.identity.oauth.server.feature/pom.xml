@@ -22,7 +22,7 @@
         <groupId>org.wso2.carbon.identity</groupId>
         <artifactId>identity-inbound-auth-oauth</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <version>5.1.3</version>
+        <version>5.1.4-SNAPSHOT</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
