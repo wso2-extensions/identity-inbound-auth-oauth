@@ -111,7 +111,7 @@ public class UserInfoJSONResponseBuilder implements UserInfoResponseBuilder {
                     if (supportedScope.equals(requestedScope)) {
                         requestedScopeClaims = resource.getProperty(requestedScope);
                         if (requestedScopeClaims.contains(",")) {
-                            arrRequestedScopeClaims = requestedScopeClaims.split(",");
+                            arrRequestedScopeClaims = requestedScopeClaims.split("\\s*,\\s*");
                         } else {
                             arrRequestedScopeClaims = new String[1];
                             arrRequestedScopeClaims[0] = requestedScopeClaims;
