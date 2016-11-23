@@ -39,6 +39,8 @@ import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.buildScopeArray;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getTenantDomain;
 
 import java.sql.Connection;
 import java.sql.DataTruncation;
@@ -63,6 +65,8 @@ import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingDeque;
+
+
 
 /**
  * Data Access Layer functionality for Token management in OAuth 2.0 implementation. This includes
@@ -499,7 +503,7 @@ public class TokenMgtDAO {
                     user.setTenantDomain(tenantDomain);
                     user.setUserStoreDomain(userDomain);
                     user.setAuthenticatedSubjectIdentifier(subjectIdentifier);
-                    AccessTokenDO accessTokenDO = new AccessTokenDO(consumerKey, user, OAuth2Util.buildScopeArray
+                    AccessTokenDO accessTokenDO = new AccessTokenDO(consumerKey, user, buildScopeArray
                             (scope), new Timestamp(issuedTime), new Timestamp(refreshTokenIssuedTime)
                             , validityPeriodInMillis, refreshTokenValidityPeriodInMillis, userType);
                     accessTokenDO.setAccessToken(accessToken);
@@ -574,7 +578,7 @@ public class TokenMgtDAO {
                     long validityPeriodInMillis = resultSet.getLong(5);
                     long refreshTokenValidityPeriodMillis = resultSet.getLong(6);
                     String tokenType = resultSet.getString(7);
-                    String[] scope = OAuth2Util.buildScopeArray(resultSet.getString(8));
+                    String[] scope = buildScopeArray(resultSet.getString(8));
                     String tokenId = resultSet.getString(9);
                     String subjectIdentifier = resultSet.getString(10);
 
@@ -714,7 +718,7 @@ public class TokenMgtDAO {
 
             connection.commit();
 
-            return new AuthzCodeDO(user, OAuth2Util.buildScopeArray(scopeString), issuedTime, validityPeriod,
+            return new AuthzCodeDO(user, buildScopeArray(scopeString), issuedTime, validityPeriod,
                         callbackUrl, consumerKey, authorizationKey, codeId, codeState, pkceCodeChallenge,
                         pkceCodeChallengeMethod);
 
@@ -886,7 +890,7 @@ public class TokenMgtDAO {
                     String userDomain = resultSet.getString(4);
                     String tenantDomain = OAuth2Util.getTenantDomain(tenantId);
 
-                    validationDataDO.setScope(OAuth2Util.buildScopeArray(resultSet.getString(5)));
+                    validationDataDO.setScope(buildScopeArray(resultSet.getString(5)));
                     validationDataDO.setRefreshTokenState(resultSet.getString(6));
                     validationDataDO.setIssuedTime(
                             resultSet.getTimestamp(7, Calendar.getInstance(TimeZone.getTimeZone(UTC))));
@@ -970,7 +974,7 @@ public class TokenMgtDAO {
                     int tenantId = resultSet.getInt(3);
                     String tenantDomain = OAuth2Util.getTenantDomain(tenantId);
                     String userDomain = resultSet.getString(4);
-                    String[] scope = OAuth2Util.buildScopeArray(resultSet.getString(5));
+                    String[] scope = buildScopeArray(resultSet.getString(5));
                     Timestamp issuedTime = resultSet.getTimestamp(6, Calendar.getInstance(TimeZone.getTimeZone(UTC)));
                     Timestamp refreshTokenIssuedTime = resultSet.getTimestamp(7,
                             Calendar.getInstance(TimeZone.getTimeZone(UTC)));
@@ -1275,6 +1279,47 @@ public class TokenMgtDAO {
             IdentityDatabaseUtil.closeAllConnections(connection, null, ps);
         }
         return accessTokens;
+    }
+
+    public Set<AccessTokenDO> getActiveDetailedTokensForConsumerKey(String consumerKey) throws IdentityOAuth2Exception{
+        Connection connection = IdentityDatabaseUtil.getDBConnection();
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        Set<AccessTokenDO> activeDetailedTokens = new HashSet<>();
+        try {
+            String sqlQuery = SQLQueries.GET_ACTIVE_DETAILS_FOR_CONSUMER_KEY;
+            ps = connection.prepareStatement(sqlQuery);
+            ps.setString(1,consumerKey);
+            ps.setString(2, OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
+            rs = ps.executeQuery();
+            while(rs.next()){
+                String authzUser = rs.getString(1);
+                String token = rs.getString(2);
+                int tenentId = rs.getInt(3);
+                String userDomain = rs.getString(4);
+                String tokenSope = rs.getString(5);
+                String[] scope = buildScopeArray(tokenSope);
+                AuthenticatedUser user = new AuthenticatedUser();
+                user.setUserName(authzUser);
+                user.setTenantDomain(getTenantDomain(tenentId));
+                user.setUserStoreDomain(userDomain);
+                AccessTokenDO aTokenDetail = new AccessTokenDO();//consumerKey,user,scope,issuedTime,refreshTokenIssuedTime,validityPeriodInMillis,refreshTokenValidityPeriodInMillis,tokenType);
+                aTokenDetail.setAccessToken(token);
+                aTokenDetail.setConsumerKey(consumerKey);
+                aTokenDetail.setScope(scope);
+                aTokenDetail.setAuthzUser(user);
+                activeDetailedTokens.add(aTokenDetail);
+            }
+            connection.commit();
+        } catch (SQLException e) {
+            IdentityDatabaseUtil.rollBack(connection);
+            throw new IdentityOAuth2Exception("Error occurred while getting access tokens from acces token table for " +
+                    "the application with consumer key : " + consumerKey, e);
+        } finally {
+            IdentityDatabaseUtil.closeAllConnections(connection, null, ps);
+        }
+
+        return activeDetailedTokens;
     }
 
     public Set<String> getAuthorizationCodesForConsumerKey(String consumerKey) throws IdentityOAuth2Exception {
@@ -1592,7 +1637,7 @@ public class TokenMgtDAO {
                     long validityPeriodInMillis = resultSet.getLong(5);
                     long refreshTokenValidityPeriodMillis = resultSet.getLong(6);
                     String tokenType = resultSet.getString(7);
-                    String[] scope = OAuth2Util.buildScopeArray(resultSet.getString(8));
+                    String[] scope = buildScopeArray(resultSet.getString(8));
                     String tokenId = resultSet.getString(9);
                     String authzUser = resultSet.getString(10);
                     String userStoreDomain = resultSet.getString(11);
@@ -1656,7 +1701,7 @@ public class TokenMgtDAO {
                     long validityPeriodInMillis = resultSet.getLong(5);
                     long refreshTokenValidityPeriodMillis = resultSet.getLong(6);
                     String tokenType = resultSet.getString(7);
-                    String[] scope = OAuth2Util.buildScopeArray(resultSet.getString(8));
+                    String[] scope = buildScopeArray(resultSet.getString(8));
                     String tokenId = resultSet.getString(9);
                     String authzUser = resultSet.getString(10);
                     String consumerKey = resultSet.getString(11);
@@ -1737,7 +1782,7 @@ public class TokenMgtDAO {
                 String authzCode = rs.getString(2);
                 String consumerKey = rs.getString(3);
                 String authzUser = rs.getString(4);
-                String[] scope = OAuth2Util.buildScopeArray(rs.getString(5));
+                String[] scope = buildScopeArray(rs.getString(5));
                 Timestamp issuedTime = rs.getTimestamp(6, Calendar.getInstance(TimeZone.getTimeZone(UTC)));
                 long validityPeriodInMillis = rs.getLong(7);
                 String callbackUrl = rs.getString(8);
@@ -1782,7 +1827,7 @@ public class TokenMgtDAO {
                 String authzCode = rs.getString(2);
                 String consumerKey = rs.getString(3);
                 String authzUser = rs.getString(4);
-                String[] scope = OAuth2Util.buildScopeArray(rs.getString(5));
+                String[] scope = buildScopeArray(rs.getString(5));
                 Timestamp issuedTime = rs.getTimestamp(6, Calendar.getInstance(TimeZone.getTimeZone(UTC)));
                 long validityPeriodInMillis = rs.getLong(7);
                 String callbackUrl = rs.getString(8);
@@ -2072,7 +2117,7 @@ public class TokenMgtDAO {
                         statement = connection.prepareStatement(sqlQuery);
                         statement.setString(1, OAuthConstants.TokenStates.TOKEN_STATE_REVOKED);
                         statement.setString(2, UUID.randomUUID().toString());
-                        statement.setString(3, persistenceProcessor.getProcessedAccessTokenIdentifier(token));
+                        statement.setString(3, consumerKey);
                         int count = statement.executeUpdate();
                         if (log.isDebugEnabled()) {
                             log.debug("Number of rows being updated : " + count);
@@ -2084,13 +2129,15 @@ public class TokenMgtDAO {
                     String sqlQuery = SQLQueries.REVOKE_ACCESS_TOKEN.replace(IDN_OAUTH2_ACCESS_TOKEN, accessTokenStoreTable);
                     connection.setAutoCommit(false);
                     statement = connection.prepareStatement(sqlQuery);
-                    for (String token : accessTokens) {
+                    //for (String token : accessTokens) {
                         statement.setString(1, OAuthConstants.TokenStates.TOKEN_STATE_REVOKED);
                         statement.setString(2, UUID.randomUUID().toString());
-                        statement.setString(3, persistenceProcessor.getProcessedAccessTokenIdentifier(token));
-                        statement.addBatch();
-                    }
-                    statement.executeBatch();
+                        statement.setString(3, consumerKey);
+                        statement.setString(4, OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
+                        statement.execute();
+//                        statement.addBatch();
+                    //}
+//                    statement.executeBatch();
                 }
             }
 
@@ -2302,7 +2349,7 @@ public class TokenMgtDAO {
                     user.setTenantDomain(tenantDomain);
                     user.setUserStoreDomain(userDomain);
                     user.setAuthenticatedSubjectIdentifier(subjectIdentifier);
-                    AccessTokenDO accessTokenDO = new AccessTokenDO(consumerKey, user, OAuth2Util.buildScopeArray
+                    AccessTokenDO accessTokenDO = new AccessTokenDO(consumerKey, user, buildScopeArray
                             (scope), new Timestamp(issuedTime), new Timestamp(refreshTokenIssuedTime)
                             , validityPeriodInMillis, refreshTokenValidityPeriodInMillis, userType);
                     accessTokenDO.setAccessToken(accessToken);
