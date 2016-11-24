@@ -2110,7 +2110,7 @@ public class TokenMgtDAO {
                                 OAuth2Util.checkUserNameAssertionEnabled()) {
                             accessTokenStoreTable = OAuth2Util.getAccessTokenStoreTableFromAccessToken(token);
                         }
-                        String sqlQuery = SQLQueries.REVOKE_ACCESS_TOKEN.replace(
+                        String sqlQuery = SQLQueries.REVOKE_APP_ACCESS_TOKEN.replace(
                                 IDN_OAUTH2_ACCESS_TOKEN, accessTokenStoreTable);
 
                         connection.setAutoCommit(false);
@@ -2126,7 +2126,7 @@ public class TokenMgtDAO {
                     }
                 } else {
 
-                    String sqlQuery = SQLQueries.REVOKE_ACCESS_TOKEN.replace(IDN_OAUTH2_ACCESS_TOKEN, accessTokenStoreTable);
+                    String sqlQuery = SQLQueries.REVOKE_APP_ACCESS_TOKEN.replace(IDN_OAUTH2_ACCESS_TOKEN, accessTokenStoreTable);
                     connection.setAutoCommit(false);
                     statement = connection.prepareStatement(sqlQuery);
                     //for (String token : accessTokens) {
