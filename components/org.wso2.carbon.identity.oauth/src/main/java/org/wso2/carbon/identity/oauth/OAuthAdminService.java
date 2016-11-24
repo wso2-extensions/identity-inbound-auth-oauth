@@ -430,8 +430,6 @@ public class OAuthAdminService extends AbstractAdmin {
                     OAuthCacheKey cacheKey = new OAuthCacheKey(authorizationCode);
                     oauthCache.clearCacheEntry(cacheKey);
                 }
-
-
                 if (log.isDebugEnabled()) {
                     log.debug("Access tokens are removed from the cache.");
                 }
