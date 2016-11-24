@@ -1764,7 +1764,6 @@ public class TokenMgtDAO {
 
         //we do not support access token partitioning here
         Connection connection = IdentityDatabaseUtil.getDBConnection();
-        ;
         PreparedStatement ps = null;
         ResultSet rs = null;
 
