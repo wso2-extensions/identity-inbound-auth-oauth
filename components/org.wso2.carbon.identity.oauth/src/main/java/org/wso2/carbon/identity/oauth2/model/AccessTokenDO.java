@@ -82,11 +82,11 @@ public class AccessTokenDO extends CacheEntry {
             refreshTokenIssuedTime, long validityPeriodInMillis, long refreshTokenValidityPeriodInMillis, String
                                  tokenType, String authorizationCode) {
         this(consumerKey, authzUser, scope, issuedTime, refreshTokenIssuedTime, validityPeriodInMillis,
-             refreshTokenValidityPeriodInMillis, tokenType);
+                refreshTokenValidityPeriodInMillis, tokenType);
         this.authorizationCode = authorizationCode;
     }
 
-    public AccessTokenDO(){
+    public AccessTokenDO() {
 
     }
 
@@ -108,6 +108,10 @@ public class AccessTokenDO extends CacheEntry {
 
     public AuthenticatedUser getAuthzUser() {
         return authzUser;
+    }
+
+    public void setAuthzUser(AuthenticatedUser authzUser) {
+        this.authzUser = authzUser;
     }
 
     public String[] getScope() {
