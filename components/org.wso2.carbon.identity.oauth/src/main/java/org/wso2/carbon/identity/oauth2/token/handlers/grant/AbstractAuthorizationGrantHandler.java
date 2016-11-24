@@ -106,7 +106,6 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         OAuthCacheKey cacheKey = new OAuthCacheKey(cacheKeyString);
         String userStoreDomain = null;
 
-
         //select the user store domain when multiple user stores are configured.
         if (OAuth2Util.checkAccessTokenPartitioningEnabled() &&
                 OAuth2Util.checkUserNameAssertionEnabled()) {

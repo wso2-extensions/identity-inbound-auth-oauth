@@ -40,7 +40,6 @@ import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 
-
 import java.sql.Connection;
 import java.sql.DataTruncation;
 import java.sql.PreparedStatement;
@@ -1776,7 +1775,6 @@ public class TokenMgtDAO {
 
         //we do not support access token partitioning here
         Connection connection = IdentityDatabaseUtil.getDBConnection();
-        ;
         PreparedStatement ps = null;
         ResultSet rs = null;
 
