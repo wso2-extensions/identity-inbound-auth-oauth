@@ -394,17 +394,32 @@ public class OAuthAdminService extends AbstractAdmin {
 
     private void updateAppAndRevokeTokensAndAuthzCodes(String consumerKey, Properties properties) throws IdentityOAuthAdminException {
         TokenMgtDAO tokenMgtDAO = new TokenMgtDAO();
-
+        int countToken = 0;
         try {
-            Set<String> accessTokens = tokenMgtDAO.getActiveTokensForConsumerKey(consumerKey);
+            Set<AccessTokenDO> activeDetailedTokens = tokenMgtDAO.getActiveDetailedTokensForConsumerKey(consumerKey);
+            String[] accessTokens = new String[activeDetailedTokens.size()];
+            String cacheKeyString;
             if (OAuthServerConfiguration.getInstance().isCacheEnabled()) {
                 OAuthCache oauthCache = OAuthCache.getInstance();
-                for (String accessToken : accessTokens) {
-                    OAuthCacheKey cacheKey = new OAuthCacheKey(accessToken);
-                    oauthCache.clearCacheEntry(cacheKey);
+                for (AccessTokenDO detailToken : activeDetailedTokens) {
+                    String token = detailToken.getAccessToken();
+                    accessTokens[countToken] = token;
+                    countToken++;
+                    String scope = OAuth2Util.buildScopeString(detailToken.getScope());
+                    String authorizedUser = detailToken.getAuthzUser().toString();
+                    boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authorizedUser);
+                    if (isUsernameCaseSensitive) {
+                        cacheKeyString = consumerKey + ":" + authorizedUser + ":" + scope;
+                    } else {
+                        cacheKeyString = consumerKey + ":" + authorizedUser.toLowerCase() + ":" + scope;
+                    }
+                    OAuthCacheKey cacheKeyUser = new OAuthCacheKey(cacheKeyString);
+                    oauthCache.clearCacheEntry(cacheKeyUser);
+
                 }
+
                 if (log.isDebugEnabled()) {
-                    log.debug("Access tokens are removed from the cache.");
+                    log.debug("Access tokens and token of users are removed from the cache.");
                 }
             }
 
@@ -415,6 +430,8 @@ public class OAuthAdminService extends AbstractAdmin {
                     OAuthCacheKey cacheKey = new OAuthCacheKey(authorizationCode);
                     oauthCache.clearCacheEntry(cacheKey);
                 }
+
+
                 if (log.isDebugEnabled()) {
                     log.debug("Access tokens are removed from the cache.");
                 }
@@ -422,7 +439,7 @@ public class OAuthAdminService extends AbstractAdmin {
 
             tokenMgtDAO.updateAppAndRevokeTokensAndAuthzCodes(consumerKey, properties,
                     authorizationCodes.toArray(new String[authorizationCodes.size()]),
-                    accessTokens.toArray(new String[accessTokens.size()]));
+                    accessTokens);
 
         } catch (IdentityOAuth2Exception | IdentityApplicationManagementException e) {
             throw new IdentityOAuthAdminException("Error in updating oauth app & revoking access tokens and authz codes.", e);

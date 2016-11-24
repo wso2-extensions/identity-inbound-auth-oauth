@@ -110,6 +110,10 @@ public class AccessTokenDO extends CacheEntry {
         return authzUser;
     }
 
+    public void setAuthzUser(AuthenticatedUser authzUser){
+        this.authzUser = authzUser;
+    }
+
     public String[] getScope() {
         return scope;
     }

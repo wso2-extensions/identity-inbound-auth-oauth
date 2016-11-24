@@ -23,6 +23,7 @@ import org.wso2.carbon.identity.application.common.cache.BaseCache;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.utils.CarbonUtils;
 
+
 // Cache used by Authorization endpoint. This class cannot be in oauth.endpoint component
 // since it needs to be visible to Hazelcast.
 public class SessionDataCache extends BaseCache<SessionDataCacheKey, SessionDataCacheEntry> {
