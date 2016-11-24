@@ -398,19 +398,24 @@ public class OAuthAdminService extends AbstractAdmin {
         try {
             Set<AccessTokenDO> activeDetailedTokens = tokenMgtDAO.getActiveDetailedTokensForConsumerKey(consumerKey);
             String[] accessTokens = new String[activeDetailedTokens.size()];
-            String cacheKeyString;
+
             if (OAuthServerConfiguration.getInstance().isCacheEnabled()) {
                 OAuthCache oauthCache = OAuthCache.getInstance();
                 for (AccessTokenDO detailToken : activeDetailedTokens) {
                     String token = detailToken.getAccessToken();
                     accessTokens[countToken] = token;
                     countToken++;
-                    for (String singleScope : detailToken.getScope()) {
-                        cacheKeyString = consumerKey + ":" + detailToken.getAuthzUser().toString() + ":" + singleScope;
-                        OAuthCacheKey cacheKeyUser = new OAuthCacheKey(cacheKeyString);
-                        oauthCache.clearCacheEntry(cacheKeyUser);
+                    String scope = OAuth2Util.buildScopeString(detailToken.getScope());
+                    String authorizedUser = detailToken.getAuthzUser().toString();
+                    boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authorizedUser);
+                    String cacheKeyString;
+                    if (isUsernameCaseSensitive) {
+                        cacheKeyString = consumerKey + ":" + authorizedUser + ":" + scope;
+                    } else {
+                        cacheKeyString = consumerKey + ":" + authorizedUser.toLowerCase() + ":" + scope;
                     }
-
+                    OAuthCacheKey cacheKeyUser = new OAuthCacheKey(cacheKeyString);
+                    oauthCache.clearCacheEntry(cacheKeyUser);
                 }
 
                 if (log.isDebugEnabled()) {
