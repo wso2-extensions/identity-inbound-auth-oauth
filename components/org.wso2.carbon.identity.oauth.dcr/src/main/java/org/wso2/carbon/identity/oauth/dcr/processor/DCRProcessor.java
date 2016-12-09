@@ -18,7 +18,6 @@
 package org.wso2.carbon.identity.oauth.dcr.processor;
 
 
-import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.IdentityMessageContext;
@@ -34,7 +33,6 @@ import org.wso2.carbon.identity.oauth.dcr.handler.UnRegistrationHandler;
 import org.wso2.carbon.identity.oauth.dcr.model.RegistrationRequest;
 import org.wso2.carbon.identity.oauth.dcr.model.UnregistrationRequest;
 import org.wso2.carbon.identity.oauth.dcr.util.DCRConstants;
-import org.wso2.carbon.identity.oauth.dcr.util.DCRExceptionBuilder;
 import org.wso2.carbon.identity.oauth.dcr.util.ErrorCodes;
 import org.wso2.carbon.identity.oauth.dcr.util.HandlerManager;
 
@@ -43,6 +41,43 @@ import java.util.regex.Matcher;
 public class DCRProcessor extends IdentityProcessor {
 
     private static Log log = LogFactory.getLog(DCRProcessor.class);
+
+    @Override
+    public boolean canHandle(IdentityRequest identityRequest) {
+        boolean canHandle = false;
+        if (identityRequest != null && identityRequest instanceof RegistrationRequest) {
+            ;
+        }
+        canHandle = true;
+        if (identityRequest != null) {
+            Matcher registerMatcher =
+                    DCRConstants.DCR_ENDPOINT_REGISTER_URL_PATTERN.matcher(identityRequest.getRequestURI());
+            Matcher unRegisterMatcher =
+                    DCRConstants.DCR_ENDPOINT_UNREGISTER_URL_PATTERN.matcher(identityRequest.getRequestURI());
+            if (registerMatcher.matches() || unRegisterMatcher.matches()) {
+                canHandle = true;
+            }
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("canHandle " + canHandle + " by DCRProcessor.");
+        }
+        return canHandle;
+    }
+
+    @Override
+    public String getCallbackPath(IdentityMessageContext context) {
+        return null;
+    }
+
+    @Override
+    public String getRelyingPartyId(IdentityMessageContext identityMessageContext) {
+        return null;
+    }
+
+    @Override
+    public String getRelyingPartyId() {
+        return null;
+    }
 
     @Override
     public IdentityResponse.IdentityResponseBuilder process(IdentityRequest identityRequest) throws DCRException {
@@ -60,16 +95,6 @@ public class DCRProcessor extends IdentityProcessor {
         return identityResponseBuilder;
     }
 
-    @Override
-    public String getCallbackPath(IdentityMessageContext context) {
-        return null;
-    }
-
-    @Override
-    public String getRelyingPartyId() {
-        return null;
-    }
-
     protected IdentityResponse.IdentityResponseBuilder registerOAuthApplication(DCRMessageContext dcrMessageContext)
             throws RegistrationException {
 
@@ -80,14 +105,9 @@ public class DCRProcessor extends IdentityProcessor {
                     HandlerManager.getInstance().getRegistrationHandler(dcrMessageContext);
             identityResponseBuilder = registrationHandler.handle(dcrMessageContext);
         } catch (DCRException e) {
-            if (e.getErrorInfoList().size() == 0) {
-                throw DCRExceptionBuilder
-                        .buildException(new RegistrationException(e.getErrorMessage()), ErrorCodes.BAD_REQUEST
-                                .toString(), e.getErrorMessage());
-            } else {
-                throw DCRExceptionBuilder.buildException(RegistrationException.class, e.getErrorInfoList()
-                        .get(e.getErrorInfoList().size() - 1));
-            }
+
+            throw RegistrationException
+                    .error(RegistrationException.class, ErrorCodes.BAD_REQUEST.toString(), e.getMessage());
         }
         return identityResponseBuilder;
     }
@@ -100,33 +120,9 @@ public class DCRProcessor extends IdentityProcessor {
                     HandlerManager.getInstance().getUnRegistrationHandler(dcrMessageContext);
             identityResponseBuilder = unRegistrationHandler.handle(dcrMessageContext);
         } catch (DCRException e) {
-            if (StringUtils.isBlank(e.getCode())) {
-                throw DCRExceptionBuilder
-                        .buildException(new UnRegistrationException(e.getErrorMessage()), ErrorCodes.BAD_REQUEST
-                                .toString(), e.getErrorMessage());
-            } else {
-                throw DCRExceptionBuilder.buildException(UnRegistrationException.class, e.getErrorInfoList()
-                        .get(e.getErrorInfoList().size()));
-            }
+            throw UnRegistrationException
+                    .error(UnRegistrationException.class, ErrorCodes.BAD_REQUEST.toString(), e.getMessage());
         }
         return identityResponseBuilder;
-    }
-
-    @Override
-    public boolean canHandle(IdentityRequest identityRequest) {
-        boolean canHandle = false;
-        if (identityRequest != null) {
-            Matcher registerMatcher =
-                    DCRConstants.DCR_ENDPOINT_REGISTER_URL_PATTERN.matcher(identityRequest.getRequestURI());
-            Matcher unRegisterMatcher =
-                    DCRConstants.DCR_ENDPOINT_UNREGISTER_URL_PATTERN.matcher(identityRequest.getRequestURI());
-            if (registerMatcher.matches() || unRegisterMatcher.matches()) {
-                canHandle = true;
-            }
-        }
-        if (log.isDebugEnabled()) {
-            log.debug("canHandle " + canHandle + " by DCRProcessor.");
-        }
-        return canHandle;
     }
 }

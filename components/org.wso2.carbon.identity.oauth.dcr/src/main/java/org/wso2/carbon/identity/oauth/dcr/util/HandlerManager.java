@@ -53,5 +53,4 @@ public class HandlerManager {
         }
         throw DCRRuntimeException.error("Cannot find AuthenticationHandler to handle this request");
     }
-
 }

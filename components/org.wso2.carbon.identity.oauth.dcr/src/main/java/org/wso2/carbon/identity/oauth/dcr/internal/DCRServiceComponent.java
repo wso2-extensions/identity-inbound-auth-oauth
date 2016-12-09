@@ -37,16 +37,13 @@ import org.wso2.carbon.identity.oauth.dcr.processor.DCRProcessor;
  * @scr.component name="identity.oauth.dcr" immediate="true"
  * @scr.reference name="identity.application.management.service"
  * interface="org.wso2.carbon.identity.application.mgt.ApplicationManagementService"
- * cardinality="1..1" policy="dynamic"
- * bind="setApplicationManagementService" unbind="unsetApplicationManagementService"
+ * cardinality="1..1" policy="dynamic" bind="setApplicationManagementService" unbind="unsetApplicationManagementService"
  * @scr.reference name="identity.oauth.dcr.handler.register"
  * interface="org.wso2.carbon.identity.oauth.dcr.handler.RegistrationHandler"
- * cardinality="0..n" policy="dynamic"
- * bind="setRegistrationHandler" unbind="unsetRegistrationHandler"
+ * cardinality="0..n" policy="dynamic" bind="setRegistrationHandler" unbind="unsetRegistrationHandler"
  * @scr.reference name="identity.oauth.dcr.handler.unregister"
  * interface="org.wso2.carbon.identity.oauth.dcr.handler.UnRegistrationHandler"
- * cardinality="0..n" policy="dynamic"
- * bind="setUnRegistrationHandler" unbind="unsetUnRegistrationHandler"
+ * cardinality="0..n" policy="dynamic" bind="setUnRegistrationHandler" unbind="unsetUnRegistrationHandler"
  */
 public class DCRServiceComponent {
 
@@ -92,7 +89,8 @@ public class DCRServiceComponent {
     /**
      * Sets RegistrationHandler Service.
      *
-     * @param registrationHandler An instance of RegistrationHandler
+     * @param registrationHandler
+     *         An instance of RegistrationHandler
      */
     protected void setRegistrationHandler(RegistrationHandler registrationHandler) {
 
@@ -106,7 +104,8 @@ public class DCRServiceComponent {
     /**
      * Unsets RegistrationHandler Service.
      *
-     * @param registrationHandler An instance of RegistrationHandler
+     * @param registrationHandler
+     *         An instance of RegistrationHandler
      */
     protected void unsetRegistrationHandler(RegistrationHandler registrationHandler) {
 
@@ -120,7 +119,8 @@ public class DCRServiceComponent {
     /**
      * Sets DCRManagementService Service.
      *
-     * @param unRegistrationHandler An instance of DCRManagementService
+     * @param unRegistrationHandler
+     *         An instance of DCRManagementService
      */
     protected void setUnRegistrationHandler(UnRegistrationHandler
                                                     unRegistrationHandler) {
@@ -134,7 +134,8 @@ public class DCRServiceComponent {
     /**
      * Unsets UnRegistrationHandler.
      *
-     * @param unRegistrationHandler An instance of UnRegistrationHandler
+     * @param unRegistrationHandler
+     *         An instance of UnRegistrationHandler
      */
     protected void unsetUnRegistrationHandler(UnRegistrationHandler unRegistrationHandler) {
 
@@ -148,7 +149,8 @@ public class DCRServiceComponent {
     /**
      * Sets ApplicationManagement Service.
      *
-     * @param applicationManagementService An instance of ApplicationManagementService
+     * @param applicationManagementService
+     *         An instance of ApplicationManagementService
      */
     protected void setApplicationManagementService(ApplicationManagementService applicationManagementService) {
 
@@ -162,7 +164,8 @@ public class DCRServiceComponent {
     /**
      * Unsets ApplicationManagement Service.
      *
-     * @param applicationManagementService An instance of ApplicationManagementService
+     * @param applicationManagementService
+     *         An instance of ApplicationManagementService
      */
     protected void unsetApplicationManagementService(ApplicationManagementService applicationManagementService) {
 
@@ -171,6 +174,4 @@ public class DCRServiceComponent {
         }
         DCRDataHolder.getInstance().setApplicationManagementService(null);
     }
-
-
 }

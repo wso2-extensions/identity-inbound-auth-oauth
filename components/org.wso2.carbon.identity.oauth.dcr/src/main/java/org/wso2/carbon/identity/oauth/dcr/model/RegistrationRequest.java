@@ -35,7 +35,6 @@ public class RegistrationRequest extends IdentityRequest {
 
         super(builder);
         this.registrationRequestProfile = builder.registrationRequestProfile;
-
     }
 
     public RegistrationRequestProfile getRegistrationRequestProfile() {
@@ -51,6 +50,11 @@ public class RegistrationRequest extends IdentityRequest {
             super(request, response);
         }
 
+        @Override
+        public RegistrationRequest build() throws FrameworkRuntimeException {
+            return new RegistrationRequest(this);
+        }
+
         public RegistrationRequestProfile getRegistrationRequestProfile() {
             return registrationRequestProfile;
         }
@@ -59,11 +63,6 @@ public class RegistrationRequest extends IdentityRequest {
                 RegistrationRequestProfile registrationRequestProfile) {
             this.registrationRequestProfile = registrationRequestProfile;
             return this;
-        }
-
-        @Override
-        public RegistrationRequest build() throws FrameworkRuntimeException {
-            return new RegistrationRequest(this);
         }
     }
 
@@ -86,7 +85,5 @@ public class RegistrationRequest extends IdentityRequest {
         public final static String SOFTWARE_VERSION = "software_version";
 
         public final static String EXT_PARAM_OWNER = "ext_param_owner";
-
     }
-
 }

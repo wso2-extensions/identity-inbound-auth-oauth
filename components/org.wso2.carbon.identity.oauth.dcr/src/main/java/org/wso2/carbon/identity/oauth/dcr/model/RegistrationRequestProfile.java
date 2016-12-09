@@ -45,39 +45,6 @@ public class RegistrationRequestProfile {
 
     private String tenantDomain;
 
-
-    public List<String> getRedirectUris() {
-        return redirectUris;
-    }
-
-    public void setRedirectUris(List<String> redirectUris) {
-        this.redirectUris = redirectUris;
-    }
-
-    public String getTokenEndpointAuthMethod() {
-        return tokenEndpointAuthMethod;
-    }
-
-    public void setTokenEndpointAuthMethod(String tokenEndpointAuthMethod) {
-        this.tokenEndpointAuthMethod = tokenEndpointAuthMethod;
-    }
-
-    public List<String> getGrantTypes() {
-        return grantTypes;
-    }
-
-    public void setGrantTypes(List<String> grantTypes) {
-        this.grantTypes = grantTypes;
-    }
-
-    public List<String> getResponseTypes() {
-        return responseTypes;
-    }
-
-    public void setResponseTypes(List<String> responseTypes) {
-        this.responseTypes = responseTypes;
-    }
-
     public String getClientName() {
         return clientName;
     }
@@ -94,22 +61,6 @@ public class RegistrationRequestProfile {
         this.clientUri = clientUri;
     }
 
-    public String getLogoUri() {
-        return logoUri;
-    }
-
-    public void setLogoUri(String logoUri) {
-        this.logoUri = logoUri;
-    }
-
-    public List<String> getScopes() {
-        return scopes;
-    }
-
-    public void setScopes(List<String> scopes) {
-        this.scopes = scopes;
-    }
-
     public List<String> getContacts() {
         return contacts;
     }
@@ -118,20 +69,20 @@ public class RegistrationRequestProfile {
         this.contacts = contacts;
     }
 
-    public String getTosUri() {
-        return tosUri;
+    public List<String> getGrantTypes() {
+        return grantTypes;
     }
 
-    public void setTosUri(String tosUri) {
-        this.tosUri = tosUri;
+    public void setGrantTypes(List<String> grantTypes) {
+        this.grantTypes = grantTypes;
     }
 
-    public String getPolicyUri() {
-        return policyUri;
+    public String getJkws() {
+        return jkws;
     }
 
-    public void setPolicyUri(String policyUri) {
-        this.policyUri = policyUri;
+    public void setJkws(String jkws) {
+        this.jkws = jkws;
     }
 
     public String getJwksUri() {
@@ -142,12 +93,52 @@ public class RegistrationRequestProfile {
         this.jwksUri = jwksUri;
     }
 
-    public String getJkws() {
-        return jkws;
+    public String getLogoUri() {
+        return logoUri;
     }
 
-    public void setJkws(String jkws) {
-        this.jkws = jkws;
+    public void setLogoUri(String logoUri) {
+        this.logoUri = logoUri;
+    }
+
+    public String getOwner() {
+        return owner;
+    }
+
+    public void setOwner(String owner) {
+        this.owner = owner;
+    }
+
+    public String getPolicyUri() {
+        return policyUri;
+    }
+
+    public void setPolicyUri(String policyUri) {
+        this.policyUri = policyUri;
+    }
+
+    public List<String> getRedirectUris() {
+        return redirectUris;
+    }
+
+    public void setRedirectUris(List<String> redirectUris) {
+        this.redirectUris = redirectUris;
+    }
+
+    public List<String> getResponseTypes() {
+        return responseTypes;
+    }
+
+    public void setResponseTypes(List<String> responseTypes) {
+        this.responseTypes = responseTypes;
+    }
+
+    public List<String> getScopes() {
+        return scopes;
+    }
+
+    public void setScopes(List<String> scopes) {
+        this.scopes = scopes;
     }
 
     public String getSoftwareId() {
@@ -166,19 +157,27 @@ public class RegistrationRequestProfile {
         this.softwareVersion = softwareVersion;
     }
 
-    public String getOwner() {
-        return owner;
-    }
-
-    public void setOwner(String owner) {
-        this.owner = owner;
-    }
-
     public String getTenantDomain() {
         return tenantDomain;
     }
 
     public void setTenantDomain(String tenantDomain) {
         this.tenantDomain = tenantDomain;
+    }
+
+    public String getTokenEndpointAuthMethod() {
+        return tokenEndpointAuthMethod;
+    }
+
+    public void setTokenEndpointAuthMethod(String tokenEndpointAuthMethod) {
+        this.tokenEndpointAuthMethod = tokenEndpointAuthMethod;
+    }
+
+    public String getTosUri() {
+        return tosUri;
+    }
+
+    public void setTosUri(String tosUri) {
+        this.tosUri = tosUri;
     }
 }

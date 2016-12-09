@@ -84,7 +84,6 @@ public class RegistrationRequestFactory extends HttpIdentityRequestFactory {
                 RegistrationRequest.RegistrationRequestBuilder(request, response);
         create(registerRequestBuilder, request, response);
         return registerRequestBuilder;
-
     }
 
     @Override
@@ -119,7 +118,8 @@ public class RegistrationRequestFactory extends HttpIdentityRequestFactory {
             } else if (obj != null) {
                 registrationRequestProfile.getRedirectUris().add((String) obj);
             } else {
-                throw FrameworkClientException.error("RedirectUris property must have at least one URI value.");
+                throw FrameworkClientException.error(FrameworkClientException.class,
+                                                     "RedirectUris property must have at least one URI value.");
             }
 
             registrationRequestProfile.setTokenEndpointAuthMethod((String) jsonData
@@ -202,13 +202,11 @@ public class RegistrationRequestFactory extends HttpIdentityRequestFactory {
                 if (objOwner != null) {
                     username = (String) objOwner;
                 } else {
-                    throw FrameworkClientException.error("Invalid application owner.");
+                    throw FrameworkClientException.error(FrameworkClientException.class, "Invalid application owner.");
                 }
             }
             registrationRequestProfile.setOwner(username);
             registerRequestBuilder.setRegistrationRequestProfile(registrationRequestProfile);
-
-
         } catch (IOException e) {
             String errorMessage = "Error occurred while reading servlet request body, " + e.getMessage();
             FrameworkClientException.error(errorMessage, e);

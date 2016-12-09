@@ -40,12 +40,11 @@ public class HttpUnregistrationResponseFactory extends HttpIdentityResponseFacto
         return false;
     }
 
-    @Override
-    public HttpIdentityResponse.HttpIdentityResponseBuilder create(IdentityResponse identityResponse) {
-        HttpIdentityResponse.HttpIdentityResponseBuilder httpIdentityResponseBuilder = new HttpIdentityResponse
-                .HttpIdentityResponseBuilder();
-        create(httpIdentityResponseBuilder, identityResponse);
-        return httpIdentityResponseBuilder;
+    public boolean canHandle(FrameworkException exception) {
+        if (exception instanceof UnRegistrationException) {
+            return true;
+        }
+        return false;
     }
 
     @Override
@@ -58,6 +57,14 @@ public class HttpUnregistrationResponseFactory extends HttpIdentityResponseFacto
                                               OAuthConstants.HTTP_RESP_HEADER_VAL_PRAGMA_NO_CACHE);
     }
 
+    @Override
+    public HttpIdentityResponse.HttpIdentityResponseBuilder create(IdentityResponse identityResponse) {
+        HttpIdentityResponse.HttpIdentityResponseBuilder httpIdentityResponseBuilder = new HttpIdentityResponse
+                .HttpIdentityResponseBuilder();
+        create(httpIdentityResponseBuilder, identityResponse);
+        return httpIdentityResponseBuilder;
+    }
+
     public HttpIdentityResponse.HttpIdentityResponseBuilder handleException(FrameworkException exception) {
 
         HttpIdentityResponse.HttpIdentityResponseBuilder builder =
@@ -68,12 +75,5 @@ public class HttpUnregistrationResponseFactory extends HttpIdentityResponseFacto
         builder.addHeader(OAuthConstants.HTTP_RESP_HEADER_PRAGMA,
                           OAuthConstants.HTTP_RESP_HEADER_VAL_PRAGMA_NO_CACHE);
         return builder;
-    }
-
-    public boolean canHandle(FrameworkException exception) {
-        if (exception instanceof UnRegistrationException) {
-            return true;
-        }
-        return false;
     }
 }

@@ -65,7 +65,6 @@ public class UnregistrationRequestFactory extends HttpIdentityRequestFactory {
                 new UnregistrationRequest.DCRUnregisterRequestBuilder();
         create(unregisterRequestBuilder, request, response);
         return unregisterRequestBuilder;
-
     }
 
     @Override
@@ -92,7 +91,5 @@ public class UnregistrationRequestFactory extends HttpIdentityRequestFactory {
         unregisterRequestBuilder.setApplicationName(applicationName);
         unregisterRequestBuilder.setUserId(clientId);
         unregisterRequestBuilder.setConsumerKey(consumerKey);
-
     }
-
 }

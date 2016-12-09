@@ -37,7 +37,6 @@ import org.wso2.carbon.identity.oauth.dcr.DCRException;
 import org.wso2.carbon.identity.oauth.dcr.internal.DCRDataHolder;
 import org.wso2.carbon.identity.oauth.dcr.model.RegistrationRequestProfile;
 import org.wso2.carbon.identity.oauth.dcr.model.RegistrationResponseProfile;
-import org.wso2.carbon.identity.oauth.dcr.util.DCRExceptionBuilder;
 import org.wso2.carbon.identity.oauth.dcr.util.ErrorCodes;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.registry.core.Registry;
@@ -65,10 +64,36 @@ public class DCRManagementService {
     }
 
     /**
+     * This method will check the existence of an OAuth application provided application-name.
+     *
+     * @param applicationName
+     *         - OAuth application name
+     * @return The status of the operation
+     * @throws DCRException
+     */
+    public boolean isOAuthApplicationAvailable(String applicationName) throws DCRException {
+        ApplicationManagementService appMgtService = DCRDataHolder.getInstance().
+                getApplicationManagementService();
+        if (appMgtService == null) {
+            throw new IllegalStateException("Error occurred while retrieving Application Management Service");
+        }
+        try {
+            return appMgtService
+                           .getServiceProvider(applicationName, CarbonContext.getThreadLocalCarbonContext()
+                                   .getTenantDomain())
+                   != null;
+        } catch (IdentityApplicationManagementException e) {
+            throw new DCRException(
+                    "Error occurred while retrieving information of OAuthApp " + applicationName, e);
+        }
+    }
+
+    /**
      * This method will register a new OAuth application using the data provided by
      * RegistrationRequestProfile.
      *
-     * @param profile - RegistrationRequestProfile of the OAuth application to be created.
+     * @param profile
+     *         - RegistrationRequestProfile of the OAuth application to be created.
      * @return RegistrationResponseProfile object which holds the necessary data of created OAuth app.
      * @throws DCRException
      */
@@ -97,7 +122,75 @@ public class DCRManagementService {
     }
 
     /**
-     * @param profile - RegistrationRequestProfile of the OAuth application to be created.
+     * This method will unregister a created OAuth application.
+     *
+     * @param userId
+     *         - UserId of the owner
+     * @param applicationName
+     *         - OAuth application name
+     * @param consumerKey
+     *         - ConsumerKey of the OAuth application
+     * @return The status of the operation
+     * @throws DCRException
+     */
+    public void unregisterOAuthApplication(String userId, String applicationName, String consumerKey)
+            throws DCRException {
+
+        if (!StringUtils.isNotEmpty(userId) || !StringUtils.isNotEmpty(applicationName) || !StringUtils
+                .isNotEmpty(consumerKey)) {
+            throw new DCRException(
+                    "Username, Application Name and Consumer Key cannot be null or empty");
+        }
+        String tenantDomain = MultitenantUtils.getTenantDomain(userId);
+        String userName = MultitenantUtils.getTenantAwareUsername(userId);
+
+        PrivilegedCarbonContext.startTenantFlow();
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(tenantDomain, true);
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(userName);
+
+        OAuthAdminService oAuthAdminService = new OAuthAdminService();
+        OAuthConsumerAppDTO oAuthConsumerApp = null;
+        try {
+            oAuthConsumerApp = oAuthAdminService.getOAuthApplicationData(consumerKey);
+        } catch (Exception e) {
+            //We had to catch Exception here because getOAuthApplicationData can throw exceptions of java.lang.Exception
+            // class.
+            if (log.isDebugEnabled()) {
+                log.debug("Error occurred while oauth application data by consumer id.", e);
+            }
+        }
+
+        if (oAuthConsumerApp != null) {
+            try {
+                oAuthAdminService.removeOAuthApplicationData(consumerKey);
+                ApplicationManagementService appMgtService = DCRDataHolder.getInstance().
+                        getApplicationManagementService();
+
+                if (appMgtService == null) {
+                    throw new IllegalStateException("Error occurred while retrieving Application Management Service");
+                }
+                ServiceProvider createdServiceProvider =
+                        appMgtService.getServiceProvider(applicationName, tenantDomain);
+                if (createdServiceProvider == null) {
+                    throw new DCRException(
+                            "Couldn't retrieve Service Provider Application " + applicationName);
+                }
+                appMgtService.deleteApplication(applicationName, tenantDomain, userName);
+            } catch (IdentityApplicationManagementException e) {
+                throw new DCRException(
+                        "Error occurred while removing ServiceProvider for application '" + applicationName + "'", e);
+            } catch (IdentityOAuthAdminException e) {
+                throw new DCRException("Error occurred while removing application '" +
+                                       applicationName + "'", e);
+            } finally {
+                PrivilegedCarbonContext.endTenantFlow();
+            }
+        }
+    }
+
+    /**
+     * @param profile
+     *         - RegistrationRequestProfile of the OAuth application to be created.
      * @return RegistrationResponseProfile object which holds the necessary data of created OAuth app.
      * @throws DCRException
      * @throws IdentityException
@@ -143,22 +236,20 @@ public class DCRManagementService {
                 existingServiceProvider = appMgtService.getServiceProvider(applicationName, profile.getTenantDomain());
                 if (existingServiceProvider == null) {
                     appMgtService.createApplication(serviceProvider, profile.getTenantDomain(), userName);
-                    createdServiceProvider = appMgtService.getServiceProvider(applicationName, profile.getTenantDomain());
+                    createdServiceProvider = appMgtService
+                            .getServiceProvider(applicationName, profile.getTenantDomain());
                 } else {
                     createdServiceProvider = existingServiceProvider;
                 }
-
             } catch (IdentityApplicationManagementException e) {
                 String errorMessage = "Error occurred while reading service provider, " + applicationName;
-                throw DCRExceptionBuilder.buildException(new DCRException(errorMessage, e), ErrorCodes.BAD_REQUEST
-                        .toString(), errorMessage);
+                throw DCRException.error(DCRException.class, ErrorCodes.BAD_REQUEST.toString(), errorMessage);
             }
 
             if (createdServiceProvider == null) {
                 String errorMessage = "Couldn't create Service Provider Application " + applicationName;
-                throw DCRExceptionBuilder
-                        .buildException(new DCRException(errorMessage), ErrorCodes.META_DATA_VALIDATION_FAILED
-                                .toString(), errorMessage);
+                throw DCRException
+                        .error(DCRException.class, ErrorCodes.META_DATA_VALIDATION_FAILED.toString(), errorMessage);
             }
             //Set SaaS app option
             createdServiceProvider.setSaasApp(false);
@@ -170,9 +261,8 @@ public class DCRManagementService {
             //TODO: After implement multi-urls to the oAuth application, we have to change this API call
             if (profile.getRedirectUris().size() == 0) {
                 String errorMessage = "RedirectUris property must have at least one URI value.";
-                throw DCRExceptionBuilder
-                        .buildException(new DCRException(errorMessage), ErrorCodes.META_DATA_VALIDATION_FAILED
-                                .toString(), errorMessage);
+                throw DCRException
+                        .error(DCRException.class, ErrorCodes.META_DATA_VALIDATION_FAILED.toString(), errorMessage);
             }
             oAuthConsumerApp.setCallbackUrl(profile.getRedirectUris().get(0));
             oAuthConsumerApp.setGrantTypes(grantType);
@@ -187,9 +277,8 @@ public class DCRManagementService {
                     oAuthAdminService.registerOAuthApplicationData(oAuthConsumerApp);
                 }
             } catch (IdentityOAuthAdminException e) {
-                throw DCRExceptionBuilder
-                        .buildException(new DCRException(e.getMessage(), e), ErrorCodes.META_DATA_VALIDATION_FAILED
-                                .toString(), e.getMessage());
+                throw DCRException
+                        .error(DCRException.class, ErrorCodes.META_DATA_VALIDATION_FAILED.toString(), e.getMessage());
             }
 
             if (log.isDebugEnabled()) {
@@ -202,8 +291,7 @@ public class DCRManagementService {
                 createdApp = oAuthAdminService
                         .getOAuthApplicationDataByAppName(oAuthConsumerApp.getApplicationName());
             } catch (IdentityOAuthAdminException e) {
-                throw DCRExceptionBuilder.buildException(new DCRException(e.getMessage(), e), ErrorCodes.BAD_REQUEST
-                        .toString(), e.getMessage());
+                throw DCRException.error(DCRException.class, ErrorCodes.BAD_REQUEST.toString(), e.getMessage());
             }
 
             if (log.isDebugEnabled()) {
@@ -222,22 +310,21 @@ public class DCRManagementService {
                 Property property = new Property();
                 property.setName(OAUTH_CONSUMER_SECRET);
                 property.setValue(oauthConsumerSecret);
-                Property[] properties = {property};
+                Property[] properties = { property };
                 inboundAuthenticationRequestConfig.setProperties(properties);
             }
             inboundAuthenticationRequestConfigs.add(inboundAuthenticationRequestConfig);
             inboundAuthenticationConfig.setInboundAuthenticationRequestConfigs(inboundAuthenticationRequestConfigs
-                                                                                       .toArray(new InboundAuthenticationRequestConfig[inboundAuthenticationRequestConfigs
-                                                                                               .size()]));
+                                                                                       .toArray(
+                                                                                               new InboundAuthenticationRequestConfig[inboundAuthenticationRequestConfigs
+                                                                                                       .size()]));
             createdServiceProvider.setInboundAuthenticationConfig(inboundAuthenticationConfig);
 
             // Update the Service Provider app to add OAuthApp as an Inbound Authentication Config
             try {
                 appMgtService.updateApplication(createdServiceProvider, profile.getTenantDomain(), userName);
             } catch (IdentityApplicationManagementException e) {
-                throw DCRExceptionBuilder
-                        .buildException(new DCRException(e.getMessage(), e), ErrorCodes.BAD_REQUEST.toString(), e
-                                .getMessage());
+                throw DCRException.error(DCRException.class, ErrorCodes.BAD_REQUEST.toString(), e.getMessage());
             }
 
             RegistrationResponseProfile registrationResponseProfile = new RegistrationResponseProfile();
@@ -250,99 +337,9 @@ public class DCRManagementService {
                 registrationResponseProfile.setGrantTypes(Arrays.asList(split));
             }
             return registrationResponseProfile;
-
         } finally {
             PrivilegedCarbonContext.endTenantFlow();
             PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(baseUser);
-        }
-    }
-
-    /**
-     * This method will unregister a created OAuth application.
-     *
-     * @param userId          - UserId of the owner
-     * @param applicationName - OAuth application name
-     * @param consumerKey     - ConsumerKey of the OAuth application
-     * @return The status of the operation
-     * @throws DCRException
-     */
-    public void unregisterOAuthApplication(String userId, String applicationName, String consumerKey)
-            throws DCRException {
-
-        if (!StringUtils.isNotEmpty(userId) || !StringUtils.isNotEmpty(applicationName) || !StringUtils
-                .isNotEmpty(consumerKey)) {
-            throw new DCRException(
-                    "Username, Application Name and Consumer Key cannot be null or empty");
-        }
-        String tenantDomain = MultitenantUtils.getTenantDomain(userId);
-        String userName = MultitenantUtils.getTenantAwareUsername(userId);
-
-        PrivilegedCarbonContext.startTenantFlow();
-        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(tenantDomain, true);
-        PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(userName);
-
-        OAuthAdminService oAuthAdminService = new OAuthAdminService();
-        OAuthConsumerAppDTO oAuthConsumerApp = null;
-        try {
-            oAuthConsumerApp = oAuthAdminService.getOAuthApplicationData(consumerKey);
-        } catch (Exception e) {
-            //We had to catch Exception here because getOAuthApplicationData can throw exceptions of java.lang.Exception
-            // class.
-            if(log.isDebugEnabled()) {
-                log.debug("Error occurred while oauth application data by consumer id.", e);
-            }
-        }
-
-        if (oAuthConsumerApp != null) {
-            try {
-                oAuthAdminService.removeOAuthApplicationData(consumerKey);
-                ApplicationManagementService appMgtService = DCRDataHolder.getInstance().
-                        getApplicationManagementService();
-
-                if (appMgtService == null) {
-                    throw new IllegalStateException("Error occurred while retrieving Application Management Service");
-                }
-                ServiceProvider createdServiceProvider =
-                        appMgtService.getServiceProvider(applicationName, tenantDomain);
-                if (createdServiceProvider == null) {
-                    throw new DCRException(
-                            "Couldn't retrieve Service Provider Application " + applicationName);
-                }
-                appMgtService.deleteApplication(applicationName, tenantDomain, userName);
-
-            } catch (IdentityApplicationManagementException e) {
-                throw new DCRException(
-                        "Error occurred while removing ServiceProvider for application '" + applicationName + "'", e);
-            } catch (IdentityOAuthAdminException e) {
-                throw new DCRException("Error occurred while removing application '" +
-                                       applicationName + "'", e);
-            } finally {
-                PrivilegedCarbonContext.endTenantFlow();
-            }
-        }
-    }
-
-    /**
-     * This method will check the existence of an OAuth application provided application-name.
-     *
-     * @param applicationName - OAuth application name
-     * @return The status of the operation
-     * @throws DCRException
-     */
-    public boolean isOAuthApplicationAvailable(String applicationName) throws DCRException {
-        ApplicationManagementService appMgtService = DCRDataHolder.getInstance().
-                getApplicationManagementService();
-        if (appMgtService == null) {
-            throw new IllegalStateException("Error occurred while retrieving Application Management Service");
-        }
-        try {
-            return appMgtService
-                           .getServiceProvider(applicationName, CarbonContext.getThreadLocalCarbonContext()
-                                   .getTenantDomain())
-                   != null;
-        } catch (IdentityApplicationManagementException e) {
-            throw new DCRException(
-                    "Error occurred while retrieving information of OAuthApp " + applicationName, e);
         }
     }
 
@@ -354,6 +351,4 @@ public class DCRManagementService {
         return (Registry) PrivilegedCarbonContext.getThreadLocalCarbonContext().getRegistry(RegistryType.
                                                                                                     SYSTEM_CONFIGURATION);
     }
-
-
 }
