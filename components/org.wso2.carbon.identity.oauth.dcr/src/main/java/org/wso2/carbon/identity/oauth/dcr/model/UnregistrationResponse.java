@@ -47,14 +47,14 @@ public class UnregistrationResponse extends IdentityResponse {
             super(context);
         }
 
-        public DCUnregisterResponseBuilder setIsUnregistered(boolean isUnregistered) {
-            this.isUnregistered = isUnregistered;
-            return this;
-        }
-
         @Override
         public UnregistrationResponse build() {
             return new UnregistrationResponse(this);
+        }
+
+        public DCUnregisterResponseBuilder setIsUnregistered(boolean isUnregistered) {
+            this.isUnregistered = isUnregistered;
+            return this;
         }
     }
 }

@@ -27,38 +27,19 @@ public class OIDCDCRException extends DCRException {
 
     private static final long serialVersionUID = -3151279311929070297L;
 
-    private String errorMessage;
+    public OIDCDCRException(String message) {
+        super(message);
+    }
 
-    public OIDCDCRException(String msg, Exception nestedEx) {
-        super(msg, nestedEx);
-        setErrorMessage(msg);
+    public OIDCDCRException(String errorCode, String message) {
+        super(errorCode, message);
     }
 
     public OIDCDCRException(String message, Throwable cause) {
         super(message, cause);
-        setErrorMessage(message);
     }
 
-    public OIDCDCRException(String msg) {
-        super(msg);
-        setErrorMessage(msg);
-    }
-
-    public OIDCDCRException(String message, String errorMessage) {
-        super(message);
-        this.errorMessage = errorMessage;
-    }
-
-    public OIDCDCRException(String message, Throwable cause, String errorMessage) {
-        super(message, cause);
-        this.errorMessage = errorMessage;
-    }
-
-    public String getErrorMessage() {
-        return errorMessage;
-    }
-
-    public void setErrorMessage(String errorMessage) {
-        this.errorMessage = errorMessage;
+    public OIDCDCRException(String errorCode, String message, Throwable cause) {
+        super(errorCode, message, cause);
     }
 }

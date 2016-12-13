@@ -33,12 +33,12 @@ public class UnregistrationRequest extends IdentityRequest {
         this.userId = builder.userId;
     }
 
-    public String getConsumerKey() {
-        return consumerKey;
-    }
-
     public String getApplicationName() {
         return applicationName;
+    }
+
+    public String getConsumerKey() {
+        return consumerKey;
     }
 
     public String getUserId() {
@@ -50,20 +50,20 @@ public class UnregistrationRequest extends IdentityRequest {
         private String applicationName;
         private String userId;
 
-        public void setConsumerKey(String consumerKey) {
-            this.consumerKey = consumerKey;
+        public UnregistrationRequest build() {
+            return new UnregistrationRequest(this);
         }
 
         public void setApplicationName(String applicationName) {
             this.applicationName = applicationName;
         }
 
-        public void setUserId(String userId) {
-            this.userId = userId;
+        public void setConsumerKey(String consumerKey) {
+            this.consumerKey = consumerKey;
         }
 
-        public UnregistrationRequest build() {
-            return new UnregistrationRequest(this);
+        public void setUserId(String userId) {
+            this.userId = userId;
         }
     }
 }

@@ -21,11 +21,20 @@ package org.wso2.carbon.identity.oauth.dcr;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.FrameworkClientException;
 
 public class DCRClientException extends FrameworkClientException {
-    protected DCRClientException(String errorDescription) {
-        super(errorDescription);
+
+    public DCRClientException(String message) {
+        super(message);
     }
 
-    public DCRClientException(String errorDescription, Throwable cause) {
-        super(errorDescription, cause);
+    public DCRClientException(String errorCode, String message) {
+        super(errorCode, message);
+    }
+
+    public DCRClientException(String message, Throwable cause) {
+        super(message, cause);
+    }
+
+    public DCRClientException(String errorCode, String message, Throwable cause) {
+        super(errorCode, message, cause);
     }
 }
