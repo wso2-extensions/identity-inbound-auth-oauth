@@ -70,6 +70,7 @@ import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
+import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.security.Key;
 import java.security.KeyStore;
@@ -154,21 +155,20 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         // setting subject
         String subject = request.getAuthorizedUser().getAuthenticatedSubjectIdentifier();
 
+        ApplicationManagementService applicationMgtService = OAuth2ServiceComponentHolder.getApplicationMgtService();
+        ServiceProvider serviceProvider = null;
+
+        try {
+            String spName = applicationMgtService.getServiceProviderNameByClientId(
+                    request.getOauth2AccessTokenReqDTO().getClientId(), INBOUND_AUTH2_TYPE, tenantDomain);
+            serviceProvider = applicationMgtService.getApplicationExcludingFileBasedSPs(spName, tenantDomain);
+        } catch (IdentityApplicationManagementException e) {
+            throw new IdentityOAuth2Exception("Error while getting service provider information.", e);
+        }
+
         if (!GrantType.AUTHORIZATION_CODE.toString().equals(request.getOauth2AccessTokenReqDTO().getGrantType()) &&
                 !org.wso2.carbon.identity.oauth.common.GrantType.SAML20_BEARER.toString().equals(
                         request.getOauth2AccessTokenReqDTO().getGrantType())) {
-
-            ApplicationManagementService applicationMgtService = OAuth2ServiceComponentHolder
-                    .getApplicationMgtService();
-            ServiceProvider serviceProvider = null;
-
-            try {
-                String spName = applicationMgtService.getServiceProviderNameByClientId(
-                        request.getOauth2AccessTokenReqDTO().getClientId(), INBOUND_AUTH2_TYPE, tenantDomain);
-                serviceProvider = applicationMgtService.getApplicationExcludingFileBasedSPs(spName, tenantDomain);
-            } catch (IdentityApplicationManagementException e) {
-                throw new IdentityOAuth2Exception("Error while getting service provider information.", e);
-            }
 
             if (serviceProvider != null) {
                 String claim = serviceProvider.getLocalAndOutBoundAuthenticationConfig().getSubjectClaimUri();
@@ -193,7 +193,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
                         if (e.getMessage().contains("UserNotFound")) {
                             if (log.isDebugEnabled()) {
                                 log.debug("User " + username + " not found in user store " + userStore + " in tenant " +
-                                          tenantDomain);
+                                        tenantDomain);
                             }
                             subject = request.getAuthorizedUser().toString();
                         } else {
@@ -290,6 +290,23 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         CustomClaimsCallbackHandler claimsCallBackHandler =
                 OAuthServerConfiguration.getInstance().getOpenIDConnectCustomClaimsCallbackHandler();
         claimsCallBackHandler.handleCustomClaims(jwtClaimsSet, request);
+
+        if (jwtClaimsSet.getSubject() != null) {
+            String subjectIdentifier = jwtClaimsSet.getSubject();
+            // Append tenant domain and user store domain to the subject identifier if needed
+            if (serviceProvider.getLocalAndOutBoundAuthenticationConfig().isUseTenantDomainInLocalSubjectIdentifier()) {
+                subjectIdentifier = UserCoreUtil.addTenantDomainToEntry(subjectIdentifier, request.getAuthorizedUser().getTenantDomain());
+            }
+            if (serviceProvider.getLocalAndOutBoundAuthenticationConfig().isUseUserstoreDomainInLocalSubjectIdentifier()) {
+                if (IdentityUtil.getPrimaryDomainName().equalsIgnoreCase(request.getAuthorizedUser().getUserStoreDomain())) {
+                    subjectIdentifier = IdentityUtil.getPrimaryDomainName() + "/" + subjectIdentifier;
+                } else {
+                    subjectIdentifier = UserCoreUtil.addDomainToName(subjectIdentifier, request.getAuthorizedUser().getUserStoreDomain());
+                }
+            }
+            jwtClaimsSet.setSubject(subjectIdentifier);
+        }
+
         if (JWSAlgorithm.NONE.getName().equals(signatureAlgorithm.getName())) {
             return new PlainJWT(jwtClaimsSet).serialize();
         }

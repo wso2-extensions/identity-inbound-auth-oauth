@@ -23,8 +23,12 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.utils.JSONUtils;
 import org.json.JSONObject;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
+import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
@@ -33,12 +37,15 @@ import org.wso2.carbon.identity.oauth.endpoint.util.ClaimUtil;
 import org.wso2.carbon.identity.oauth.user.UserInfoClaimRetriever;
 import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
 import org.wso2.carbon.identity.oauth.user.UserInfoResponseBuilder;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.registry.core.Resource;
 import org.wso2.carbon.registry.core.exceptions.RegistryException;
 import org.wso2.carbon.registry.core.service.RegistryService;
+import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -57,12 +64,15 @@ public class UserInfoJSONResponseBuilder implements UserInfoResponseBuilder {
     private static final String PHONE_NUMBER_VERIFIED = "phone_number_verified";
     private static final String EMAIL_VERIFIED = "email_verified";
     private static final String ADDRESS = "address";
+    private static final String INBOUND_AUTH2_TYPE = "oauth2";
     Map<String, Object> claimsforAddressScope = new HashMap<>();
 
     @Override
     public String getResponseString(OAuth2TokenValidationResponseDTO tokenResponse)
             throws UserInfoEndpointException {
         Resource resource = null;
+        ServiceProvider serviceProvider = null;
+        AccessTokenDO accessTokenDO = null;
         try {
             PrivilegedCarbonContext.startTenantFlow();
             PrivilegedCarbonContext carbonContext = PrivilegedCarbonContext.getThreadLocalCarbonContext();
@@ -73,6 +83,21 @@ public class UserInfoJSONResponseBuilder implements UserInfoResponseBuilder {
              */
             int tenantId = OAuth2Util.getClientTenatId();
             String tenantDomain = IdentityTenantUtil.getTenantDomain(tenantId);
+
+            ApplicationManagementService applicationMgtService = OAuth2ServiceComponentHolder
+                    .getApplicationMgtService();
+            try {
+                accessTokenDO = OAuth2Util.getAccessTokenDOfromTokenIdentifier(tokenResponse.getAuthorizationContextToken().getTokenString());
+                String spName = applicationMgtService.getServiceProviderNameByClientId(
+                        OAuth2Util.getClientIdForAccessToken(tokenResponse.getAuthorizationContextToken().getTokenString()),
+                        INBOUND_AUTH2_TYPE, tenantDomain);
+                serviceProvider = applicationMgtService.getApplicationExcludingFileBasedSPs(spName, tenantDomain);
+            } catch (IdentityApplicationManagementException e) {
+                throw new UserInfoEndpointException("Error while getting service provider information.", e);
+            } catch (IdentityOAuth2Exception e) {
+                throw new UserInfoEndpointException("Error while getting client id of the given access token.", e);
+            }
+
             carbonContext.setTenantId(tenantId);
             carbonContext.setTenantDomain(tenantDomain);
             RegistryService registry = OAuth2ServiceComponentHolder.getRegistryService();
@@ -99,8 +124,8 @@ public class UserInfoJSONResponseBuilder implements UserInfoResponseBuilder {
             UserInfoClaimRetriever retriever = UserInfoEndpointConfig.getInstance().getUserInfoClaimRetriever();
             claims = retriever.getClaimsMap(userAttributes);
         }
-        if(claims == null){
-            claims = new HashMap<String,Object>();
+        if (claims == null) {
+            claims = new HashMap<String, Object>();
         }
         String[] arrRequestedScopeClaims = null;
         for (String requestedScope : tokenResponse.getScope()) {
@@ -164,6 +189,22 @@ public class UserInfoJSONResponseBuilder implements UserInfoResponseBuilder {
             for (String key : lstEssential) {
                 returnClaims.put(key, claims.get(key));
             }
+        }
+
+        if (returnClaims.get("sub") != null) {
+            String subjectIdentifier = (String) returnClaims.get("sub");
+            // Append tenant domain and user store domain to the subject identifier if needed
+            if (serviceProvider.getLocalAndOutBoundAuthenticationConfig().isUseTenantDomainInLocalSubjectIdentifier()) {
+                subjectIdentifier = UserCoreUtil.addTenantDomainToEntry(subjectIdentifier, accessTokenDO.getAuthzUser().getTenantDomain());
+            }
+            if (serviceProvider.getLocalAndOutBoundAuthenticationConfig().isUseUserstoreDomainInLocalSubjectIdentifier()) {
+                if (IdentityUtil.getPrimaryDomainName().equalsIgnoreCase(accessTokenDO.getAuthzUser().getUserStoreDomain())) {
+                    subjectIdentifier = IdentityUtil.getPrimaryDomainName() + "/" + subjectIdentifier;
+                } else {
+                    subjectIdentifier = UserCoreUtil.addDomainToName(subjectIdentifier, accessTokenDO.getAuthzUser().getUserStoreDomain());
+                }
+            }
+            returnClaims.put("sub", subjectIdentifier);
         }
         return JSONUtils.buildJSON(returnClaims);
     }
