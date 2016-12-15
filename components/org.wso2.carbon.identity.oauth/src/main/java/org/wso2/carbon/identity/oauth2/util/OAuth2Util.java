@@ -30,6 +30,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.message.types.ResponseType;
 import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.core.util.IdentityIOStreamUtils;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
@@ -570,7 +571,7 @@ public class OAuth2Util {
         long currentTime;
         long validityPeriodMillis = accessTokenDO.getValidityPeriodInMillis();
 
-        if(validityPeriodMillis < 0){
+        if(validityPeriodMillis < 0 && IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)){
             log.debug("Access Token : " + accessTokenDO.getAccessToken() + " has infinite lifetime");
             return -1;
         }

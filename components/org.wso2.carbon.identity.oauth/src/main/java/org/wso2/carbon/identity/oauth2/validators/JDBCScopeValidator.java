@@ -23,7 +23,9 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.common.model.User;
+import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
@@ -105,7 +107,7 @@ public class JDBCScopeValidator extends OAuth2ScopeValidator {
 
         //If the access token does not bear the scope required for accessing the Resource.
         if(!scopeList.contains(resourceScope)){
-            if(log.isDebugEnabled()){
+            if(log.isDebugEnabled() && IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)){
                 log.debug("Access token '" + accessTokenDO.getAccessToken() + "' does not bear the scope '" +
                             resourceScope + "'");
             }

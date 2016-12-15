@@ -27,6 +27,7 @@ import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.message.types.ResponseType;
 import org.wso2.carbon.identity.application.common.model.Claim;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
+import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
@@ -229,7 +230,7 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
 
                 } else {
 
-                    if (log.isDebugEnabled()) {
+                    if (log.isDebugEnabled() && IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
                         log.debug("Access Token is " + existingAccessTokenDO.getTokenState());
                     }
                     String tokenState = existingAccessTokenDO.getTokenState();
