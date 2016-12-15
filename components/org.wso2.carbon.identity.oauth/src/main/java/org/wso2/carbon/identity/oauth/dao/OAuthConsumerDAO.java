@@ -132,7 +132,7 @@ public class OAuthConsumerDAO {
             if (resultSet.next()) {
                 username = resultSet.getString(1);
             } else {
-                log.debug("Invalid client id : " + clientId + ", and consumer secret : " + clientSecret);
+                log.debug("Invalid client id : " + clientId);
             }
             connection.commit();
         } catch (SQLException e) {

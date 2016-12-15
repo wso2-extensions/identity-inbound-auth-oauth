@@ -22,7 +22,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
+import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
@@ -352,7 +354,7 @@ public class AccessTokenIssuer {
             if (authorizationGrantCacheEntry != null) {
                 authorizationGrantCacheEntry.setTokenId(tokenRespDTO.getTokenId());
                 if (AuthorizationGrantCache.getInstance().getValueFromCacheByToken(newCacheKey) == null) {
-                    if (log.isDebugEnabled()) {
+                    if (log.isDebugEnabled() && IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
                         log.debug("No AuthorizationGrantCache entry found for the access token:" +
                                 newCacheKey.getUserAttributesId() +
                                 ", hence adding to cache");
