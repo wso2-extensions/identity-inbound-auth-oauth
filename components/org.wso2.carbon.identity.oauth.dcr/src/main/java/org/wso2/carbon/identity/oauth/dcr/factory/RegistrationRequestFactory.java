@@ -26,12 +26,14 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 import org.wso2.carbon.context.CarbonContext;
+import org.wso2.carbon.identity.auth.service.AuthenticationContext;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.FrameworkClientException;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.FrameworkRuntimeException;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.HttpIdentityRequestFactory;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.HttpIdentityResponse;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.IdentityRequest;
 import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.dcr.model.RegistrationRequest;
 import org.wso2.carbon.identity.oauth.dcr.model.RegistrationRequestProfile;
@@ -57,6 +59,7 @@ import static org.wso2.carbon.identity.oauth.dcr.factory.HttpRegistrationRespons
 public class RegistrationRequestFactory extends HttpIdentityRequestFactory {
 
     private static Log log = LogFactory.getLog(RegistrationRequestFactory.class);
+    private static final String AUTH_CONTEXT = "auth-context";
 
     @Override
     public boolean canHandle(HttpServletRequest request, HttpServletResponse response) throws
@@ -198,9 +201,14 @@ public class RegistrationRequestFactory extends HttpIdentityRequestFactory {
             registrationRequestProfile.setSoftwareVersion((String) jsonData
                     .get(RegistrationRequest.RegisterRequestConstant.SOFTWARE_VERSION));
 
-            //TODO:This parameter is a custom one and we have to remove if we can collect the user name by having
-            // some authentication mechanism.
-            String username = CarbonContext.getThreadLocalCarbonContext().getUsername();
+            String username = null;
+            AuthenticationContext authenticationContext = (AuthenticationContext) request.getAttribute(AUTH_CONTEXT);
+            if (authenticationContext != null && authenticationContext.getUser() != null && StringUtils.isNotEmpty
+                    (authenticationContext.getUser().getUserName()) ) {
+                username = IdentityUtil.addDomainToName(authenticationContext.getUser().getUserName(),
+                        authenticationContext.getUser().getUserStoreDomain());
+            }
+
             if (StringUtils.isBlank(username)) {
                 Object objOwner = jsonData.get(RegistrationRequest.RegisterRequestConstant.EXT_PARAM_OWNER);
                 if (objOwner != null) {
@@ -214,10 +222,13 @@ public class RegistrationRequestFactory extends HttpIdentityRequestFactory {
                         String errorMessage = "Invalid application owner, " + e.getMessage();
                         throw IdentityException.error(FrameworkClientException.class, errorMessage, e);
                     }
-                } else {
-                    throw IdentityException.error(FrameworkClientException.class, "Invalid application owner.");
                 }
             }
+
+            if (StringUtils.isBlank(username)) {
+                throw IdentityException.error(FrameworkClientException.class, "Invalid application owner.");
+            }
+
             registrationRequestProfile.setOwner(username);
             registerRequestBuilder.setRegistrationRequestProfile(registrationRequestProfile);
 

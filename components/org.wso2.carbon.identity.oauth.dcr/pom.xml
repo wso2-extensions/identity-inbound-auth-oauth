@@ -64,6 +64,10 @@
             <groupId>org.wso2.carbon.identity.framework</groupId>
             <artifactId>org.wso2.carbon.identity.application.authentication.framework</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon.identity.auth.rest</groupId>
+            <artifactId>org.wso2.carbon.identity.auth.service</artifactId>
+        </dependency>
     </dependencies>
 
     <build>
@@ -106,6 +110,7 @@
                             org.wso2.carbon.identity.application.mgt;version="${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.identity.application.authentication.framework.*;version="${carbon.identity.framework.imp.pkg.version.range}",
                             javax.servlet.http; version="${imp.pkg.version.javax.servlet}",
+                            org.wso2.carbon.identity.auth.service.*;version="${org.wso2.carbon.identity.auth.service.version.range}",
                             org.wso2.carbon.user.api; version="${carbon.user.api.imp.pkg.version.range}",
                             org.wso2.carbon.identity.oauth.*;version="${identity.inbound.auth.oauth.imp.pkg.version.range}",
                         </Import-Package>
