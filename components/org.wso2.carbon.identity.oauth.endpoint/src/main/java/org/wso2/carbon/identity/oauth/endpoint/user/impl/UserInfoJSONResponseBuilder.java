@@ -118,7 +118,14 @@ public class UserInfoJSONResponseBuilder implements UserInfoResponseBuilder {
                         }
                         for (Map.Entry<String, Object> entry : claims.entrySet()) {
                             String requestedClaims = entry.getKey();
-                            if (Arrays.asList(arrRequestedScopeClaims).contains(requestedClaims)) {
+                            boolean contains = false;
+                            for (String scopeClaim : arrRequestedScopeClaims) {
+                                contains = StringUtils.equalsIgnoreCase(StringUtils.trim(scopeClaim), requestedClaims);
+                                if (contains) {
+                                    break;
+                                }
+                            }
+                            if (contains) {
                                 returnClaims.put(entry.getKey(), claims.get(entry.getKey()));
                                 if (requestedScope.equals("address")) {
                                     if (!requestedScope.equals(ADDRESS)) {
