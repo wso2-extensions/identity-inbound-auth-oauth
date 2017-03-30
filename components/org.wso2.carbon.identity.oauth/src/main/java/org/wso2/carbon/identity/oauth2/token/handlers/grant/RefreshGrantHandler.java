@@ -41,6 +41,7 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -95,11 +96,13 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             }
         }
 
-        AccessTokenDO accessTokenDO = tokenMgtDAO.retrieveLatestAccessToken(tokenReqDTO.getClientId(),
+        List<AccessTokenDO> accessTokenDOs = tokenMgtDAO.retrieveLatestAccessTokens(tokenReqDTO.getClientId(),
                 validationDataDO.getAuthorizedUser(),
-                userStoreDomain, OAuth2Util.buildScopeString(validationDataDO.getScope()), true);
+                userStoreDomain, OAuth2Util.buildScopeString(validationDataDO.getScope()), true, 10);
 
-        if (accessTokenDO == null) {
+        boolean isLatest = false;
+
+        if (accessTokenDOs == null || accessTokenDOs.size() < 1) {
             if (log.isDebugEnabled()) {
                 log.debug("Error while retrieving the latest refresh token");
             }
@@ -108,7 +111,17 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
                         validationDataDO.getScope(), validationDataDO.getAccessToken());
             }
             return false;
-        } else if (!refreshToken.equals(accessTokenDO.getRefreshToken())) {
+        } else {
+            for(AccessTokenDO token : accessTokenDOs){
+                if (refreshToken.equals(token.getRefreshToken()) &&
+                        token.getTokenState().equals(OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE) ||
+                        token.getTokenState().equals(OAuthConstants.TokenStates.TOKEN_STATE_EXPIRED)) {
+                    isLatest = true;
+                }
+            }
+        }
+
+        if (!isLatest) {
             if (log.isDebugEnabled()) {
                 log.debug("Refresh token is not the latest.");
             }
