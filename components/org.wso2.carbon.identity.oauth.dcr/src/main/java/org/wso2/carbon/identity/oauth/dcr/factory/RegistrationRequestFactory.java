@@ -18,6 +18,8 @@
 
 package org.wso2.carbon.identity.oauth.dcr.factory;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -117,6 +119,13 @@ public class RegistrationRequestFactory extends HttpIdentityRequestFactory {
             if (obj != null && obj instanceof JSONArray) {
                 JSONArray redirectUris = (JSONArray) obj;
                 for (int i = 0; i < redirectUris.size(); i++) {
+                    try{
+                        URL redirectURL = new URL(redirectUris.get(i).toString());
+                    }
+                    catch (MalformedURLException e){
+                        String errorMessage = "The redirection URI " + redirectUris.get(i).toString() + " is not allowed by this Server";
+                        throw IdentityException.error(FrameworkClientException.class, errorMessage, e);
+                    }
                     registrationRequestProfile.getRedirectUris().add(redirectUris.get(i).toString());
                 }
             } else if (obj != null) {
