@@ -171,7 +171,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         long refreshValidity = refreshTokenValidationDataDO.getValidityPeriodInMillis();
         long skew = OAuthServerConfiguration.getInstance().getTimeStampSkewInSeconds() * 1000;
 
-        if (issuedTime + refreshValidity - (System.currentTimeMillis() + skew) > 1000) {
+        if (issuedTime + refreshValidity - (System.currentTimeMillis() - skew) > 1000) {
             if (!renew) {
                 // if refresh token renewal not enabled, we use existing one else we issue a new refresh token
                 refreshToken = oauth2AccessTokenReqDTO.getRefreshToken();

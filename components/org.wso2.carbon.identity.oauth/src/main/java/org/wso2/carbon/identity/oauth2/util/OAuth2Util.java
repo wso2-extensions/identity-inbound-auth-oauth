@@ -450,13 +450,13 @@ public class OAuth2Util {
 
         //check the validity of cached OAuth2AccessToken Response
         long skew = OAuthServerConfiguration.getInstance().getTimeStampSkewInSeconds() * 1000;
-        if (issuedTime + validityPeriodMillis - (currentTime + skew) > 1000) {
+        if (issuedTime + validityPeriodMillis - (currentTime - skew) > 1000) {
             long refreshValidity = OAuthServerConfiguration.getInstance()
                     .getRefreshTokenValidityPeriodInSeconds() * 1000;
-            if (issuedTime + refreshValidity - currentTime + skew > 1000) {
+            if (issuedTime + refreshValidity - currentTime - skew > 1000) {
                 //Set new validity period to response object
-                accessTokenDO.setValidityPeriod((issuedTime + validityPeriodMillis - (currentTime + skew)) / 1000);
-                accessTokenDO.setValidityPeriodInMillis(issuedTime + validityPeriodMillis - (currentTime + skew));
+                accessTokenDO.setValidityPeriod((issuedTime + validityPeriodMillis - (currentTime - skew)) / 1000);
+                accessTokenDO.setValidityPeriodInMillis(issuedTime + validityPeriodMillis - (currentTime - skew));
                 //Set issued time period to response object
                 accessTokenDO.setIssuedTime(new Timestamp(currentTime));
                 return accessTokenDO;
