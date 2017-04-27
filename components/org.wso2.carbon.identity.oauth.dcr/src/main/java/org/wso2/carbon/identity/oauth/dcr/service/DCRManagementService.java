@@ -33,6 +33,7 @@ import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.OAuthAdminService;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.dcr.DCRException;
 import org.wso2.carbon.identity.oauth.dcr.internal.DCRDataHolder;
 import org.wso2.carbon.identity.oauth.dcr.model.RegistrationRequestProfile;
@@ -157,7 +158,8 @@ public class DCRManagementService {
 
             if (createdServiceProvider == null) {
                 String errorMessage = "Couldn't create Service Provider Application " + applicationName;
-                throw IdentityException.error(DCRException.class, ErrorCodes.META_DATA_VALIDATION_FAILED.toString(), errorMessage);
+                throw IdentityException.error(DCRException.class, ErrorCodes.META_DATA_VALIDATION_FAILED.toString(),
+                        errorMessage);
             }
             //Set SaaS app option
             createdServiceProvider.setSaasApp(false);
@@ -169,9 +171,14 @@ public class DCRManagementService {
             //TODO: After implement multi-urls to the oAuth application, we have to change this API call
             if (profile.getRedirectUris().size() == 0) {
                 String errorMessage = "RedirectUris property must have at least one URI value.";
-                throw IdentityException.error(DCRException.class, ErrorCodes.META_DATA_VALIDATION_FAILED.toString(), errorMessage);
+                throw IdentityException.error(DCRException.class, ErrorCodes.META_DATA_VALIDATION_FAILED.toString(),
+                        errorMessage);
+            } else if (profile.getRedirectUris().size() == 1) {
+                oAuthConsumerApp.setCallbackUrl(profile.getRedirectUris().get(0));
+            } else {
+                oAuthConsumerApp.setCallbackUrl(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX +
+                        createRegexPattern(profile.getRedirectUris()));
             }
-            oAuthConsumerApp.setCallbackUrl(profile.getRedirectUris().get(0));
             oAuthConsumerApp.setGrantTypes(grantType);
             oAuthConsumerApp.setOAuthVersion(OAUTH_VERSION);
             if (log.isDebugEnabled()) {
@@ -341,6 +348,18 @@ public class DCRManagementService {
 
     private String replaceInvalidChars(String username) {
         return username.replaceAll("@", "_AT_");
+    }
+
+    private String createRegexPattern(List<String> redirectURIs) {
+        String regex = "";
+        for (String redirectURI : redirectURIs) {
+            if (StringUtils.isNotEmpty(regex)) {
+                regex = regex + "|" + redirectURI;
+            } else {
+                regex = "(" + redirectURI;
+            }
+        }
+        return regex + ")";
     }
 
     protected Registry getConfigSystemRegistry() {
