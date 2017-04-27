@@ -71,4 +71,9 @@ public final class DCRConstants {
 
     }
 
+    public static class GrantTypes {
+        public static final String IMPLICIT = "implicit";
+        public static final String AUTHORIZATION_CODE = "authorization_code";
+    }
+
 }

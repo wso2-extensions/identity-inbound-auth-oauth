@@ -43,8 +43,6 @@ import org.wso2.carbon.user.api.UserStoreException;
 
 import java.io.IOException;
 import java.io.Reader;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.regex.Matcher;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -60,6 +58,7 @@ import static org.wso2.carbon.identity.oauth.dcr.factory.HttpRegistrationRespons
 public class RegistrationRequestFactory extends HttpIdentityRequestFactory {
 
     private static Log log = LogFactory.getLog(RegistrationRequestFactory.class);
+
 
     @Override
     public boolean canHandle(HttpServletRequest request, HttpServletResponse response)
@@ -114,30 +113,29 @@ public class RegistrationRequestFactory extends HttpIdentityRequestFactory {
                 registrationRequestProfile = new RegistrationRequestProfile();
             }
 
-            Object obj = jsonData.get(RegistrationRequest.RegisterRequestConstant.REDIRECT_URIS);
+            Object obj = jsonData.get(RegistrationRequest.RegisterRequestConstant.GRANT_TYPES);
+            if (obj != null && obj instanceof JSONArray) {
+                JSONArray grantTypes = (JSONArray) obj;
+                for (Object grantType : grantTypes) {
+                    if (IdentityUtil.isNotBlank((String) grantType)) {
+                        registrationRequestProfile.getGrantTypes().add((String) grantType);
+                    }
+                }
+            } else if (IdentityUtil.isNotBlank((String) obj)) {
+                registrationRequestProfile.getGrantTypes().add((String) obj);
+            }
+
+            obj = jsonData.get(RegistrationRequest.RegisterRequestConstant.REDIRECT_URIS);
             if (obj != null && obj instanceof JSONArray) {
                 JSONArray redirectUris = (JSONArray) obj;
                 for (Object redirectUri : redirectUris) {
-                    //ToDO invalid_redirect_uri - error code should be sent to client in below error cases.
-
-                    if (redirectUri == null || IdentityUtil.isBlank(redirectUri.toString())) {
-                        throw IdentityException
-                                .error(FrameworkClientException.class, "The redirection URI is either null or blank.");
-                    }
-
-                    String redirectUriStr = redirectUri.toString();
-                    try {
-                        //Trying to parse the URI, just to verify the URI syntax is correct.
-                        URI redirectURL = new URI(redirectUriStr);
-                    } catch (URISyntaxException e) {
-                        String errorMessage = "The redirection URI " + redirectUriStr + " is not a valid URI.";
-                        throw IdentityException.error(FrameworkClientException.class, errorMessage, e);
-                    }
-                    registrationRequestProfile.getRedirectUris().add(redirectUriStr);
+                    registrationRequestProfile.getRedirectUris().add((String) redirectUri);
                 }
             } else if (obj != null) {
                 registrationRequestProfile.getRedirectUris().add((String) obj);
-            } else {
+
+            } else if (registrationRequestProfile.getGrantTypes().contains(DCRConstants.GrantTypes.AUTHORIZATION_CODE)
+                    || registrationRequestProfile.getGrantTypes().contains(DCRConstants.GrantTypes.IMPLICIT)) {
                 throw IdentityException.error(FrameworkClientException.class,
                         "RedirectUris property must have at least one URI value.");
             }
@@ -145,15 +143,7 @@ public class RegistrationRequestFactory extends HttpIdentityRequestFactory {
             registrationRequestProfile.setTokenEndpointAuthMethod(
                     (String) jsonData.get(RegistrationRequest.RegisterRequestConstant.TOKEN_ENDPOINT_AUTH_METHOD));
 
-            obj = jsonData.get(RegistrationRequest.RegisterRequestConstant.GRANT_TYPES);
-            if (obj != null && obj instanceof JSONArray) {
-                JSONArray redirectUris = (JSONArray) obj;
-                for (int i = 0; i < redirectUris.size(); i++) {
-                    registrationRequestProfile.getGrantTypes().add(redirectUris.get(i).toString());
-                }
-            } else if (obj != null) {
-                registrationRequestProfile.getGrantTypes().add((String) obj);
-            }
+
 
             obj = jsonData.get(RegistrationRequest.RegisterRequestConstant.RESPONSE_TYPES);
             if (obj != null && obj instanceof JSONArray) {
