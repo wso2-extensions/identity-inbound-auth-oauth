@@ -37,14 +37,6 @@ import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import org.apache.commons.codec.binary.Base64;
-
 /**
  * Implements the AuthorizationGrantHandler for the Grant Type : authorization_code.
  */
@@ -158,12 +150,11 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
         // Check whether the grant is expired
         long issuedTimeInMillis = authzCodeDO.getIssuedTime().getTime();
         long validityPeriodInMillis = authzCodeDO.getValidityPeriod();
-        long timestampSkew = OAuthServerConfiguration.getInstance()
-                .getTimeStampSkewInSeconds() * 1000;
+        long timestampSkew = OAuthServerConfiguration.getInstance().getTimeStampSkewInSeconds() * 1000;
         long currentTimeInMillis = System.currentTimeMillis();
 
-        // if authorization code is expired.
-        if ((currentTimeInMillis - timestampSkew) > (issuedTimeInMillis + validityPeriodInMillis)) {
+        // check if authorization code is expired.
+        if (OAuth2Util.calculateValidityInMillis(issuedTimeInMillis, validityPeriodInMillis) < 1000) {
             if (log.isDebugEnabled()) {
                 log.debug("Authorization Code is expired." +
                         " Issued Time(ms) : " + issuedTimeInMillis +

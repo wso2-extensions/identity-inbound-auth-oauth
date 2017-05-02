@@ -30,7 +30,6 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.ResponseHeader;
-import org.wso2.carbon.identity.oauth2.dao.SQLQueries;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
@@ -168,10 +167,9 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
                 .validateRefreshToken(oauth2AccessTokenReqDTO.getClientId(), oauth2AccessTokenReqDTO.getRefreshToken());
 
         long issuedTime = refreshTokenValidationDataDO.getIssuedTime().getTime();
-        long refreshValidity = refreshTokenValidationDataDO.getValidityPeriodInMillis();
-        long skew = OAuthServerConfiguration.getInstance().getTimeStampSkewInSeconds() * 1000;
+        long refreshValidityMillis = refreshTokenValidationDataDO.getValidityPeriodInMillis();
 
-        if (issuedTime + refreshValidity - (System.currentTimeMillis() - skew) > 1000) {
+        if (OAuth2Util.calculateValidityInMillis(issuedTime, refreshValidityMillis) >= 1000) {
             if (!renew) {
                 // if refresh token renewal not enabled, we use existing one else we issue a new refresh token
                 refreshToken = oauth2AccessTokenReqDTO.getRefreshToken();

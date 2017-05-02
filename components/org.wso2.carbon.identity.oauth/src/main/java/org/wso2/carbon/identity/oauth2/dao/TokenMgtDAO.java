@@ -47,8 +47,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLIntegrityConstraintViolationException;
 import java.sql.Timestamp;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -1265,30 +1263,14 @@ public class TokenMgtDAO {
             ps.setString(3, authenticatedUser.getUserStoreDomain());
             ps.setString(4, OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
             rs = ps.executeQuery();
-            
-            long currentTimeInMillis;
-            String timeFormat = "yyyy-MMM-dd HH:mm:ss.S";
-            SimpleDateFormat dateFormatUTC = new SimpleDateFormat(timeFormat);
-            dateFormatUTC.setTimeZone(TimeZone.getTimeZone(UTC));
-            //Local time zone
-            SimpleDateFormat dateFormatLocal = new SimpleDateFormat(timeFormat);
-            String currentTime = dateFormatUTC.format(new Date());
-            try {
-                currentTimeInMillis = dateFormatLocal.parse(currentTime).getTime();
-            } catch (ParseException e) {
-                IdentityDatabaseUtil.rollBack(connection);
-                throw new IdentityOAuth2Exception("Error while parsing current time to UTC : " + currentTime , e);
-            }
 
             while (rs.next()){
-                int validityPeriod = rs.getInt(3);
+                long validityPeriodInMillis = rs.getLong(3);
                 Timestamp timeCreated = rs.getTimestamp(2);
                 long issuedTimeInMillis = timeCreated.getTime();
-                long validityPeriodInMillis = validityPeriod;
-                long timestampSkew = OAuthServerConfiguration.getInstance().getTimeStampSkewInSeconds() * 1000;
 
                 // if authorization code is not expired.
-                if ((currentTimeInMillis - timestampSkew) < (issuedTimeInMillis + validityPeriodInMillis)) {
+                if (OAuth2Util.calculateValidityInMillis(issuedTimeInMillis, validityPeriodInMillis) > 1000) {
                     authorizationCodes.add(persistenceProcessor.getPreprocessedAuthzCode(rs.getString(1)));
                 }
             }
