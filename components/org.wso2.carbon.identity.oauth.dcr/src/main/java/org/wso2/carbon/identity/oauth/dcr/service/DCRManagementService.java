@@ -184,7 +184,7 @@ public class DCRManagementService {
                     oAuthConsumerApp.setCallbackUrl(redirectUri);
                 } else {
                     //TODO: need to add error code
-                    throw IdentityException.error(DCRException.class, "Redirect URI " + redirectUri + " is invalid");
+                    throw IdentityException.error(DCRException.class, "Redirect URI: " + redirectUri + ", is invalid");
                 }
 
             } else if (profile.getRedirectUris().size() > 1) {
@@ -363,23 +363,23 @@ public class DCRManagementService {
     }
 
     private String createRegexPattern(List<String> redirectURIs) throws DCRException {
-        String regex = "";
+        StringBuilder regexPattern = new StringBuilder();
         for (String redirectURI : redirectURIs) {
             if (DCRUtils.isRedirectionUriValid(redirectURI)) {
-                if (StringUtils.isNotEmpty(regex)) {
-                    regex += "|" + redirectURI;
+                if (regexPattern.length() > 0) {
+                    regexPattern.append("|").append(redirectURI);
                 } else {
-                    regex = "(" + redirectURI;
+                    regexPattern.append("(").append(redirectURI);
                 }
             } else {
                 //TODO: need to add error code
-                throw IdentityException.error(DCRException.class, "Redirect URI " + redirectURI + " is invalid");
+                throw IdentityException.error(DCRException.class, "Redirect URI: " + redirectURI + ", is invalid");
             }
         }
-        if (StringUtils.isNotEmpty(regex)) {
-            regex += ")";
+        if (regexPattern.length() > 0) {
+            regexPattern.append(")");
         }
-        return regex;
+        return regexPattern.toString();
     }
 
     protected Registry getConfigSystemRegistry() {

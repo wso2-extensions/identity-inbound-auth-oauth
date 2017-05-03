@@ -34,7 +34,7 @@ public class DCRUtils {
             log.debug("Validating uri: " + redirectUri);
         }
         
-        if (IdentityUtil.isNotBlank(redirectUri)) {
+        if (IdentityUtil.isBlank(redirectUri)) {
             log.error("The redirection URI is either null or blank.");
             return false;
         }
@@ -43,7 +43,7 @@ public class DCRUtils {
             //Trying to parse the URI, just to verify the URI syntax is correct.
             URI redirectURL = new URI(redirectUri);
         } catch (URISyntaxException e) {
-            String errorMessage = "The redirection URI " + redirectUri + " is not a valid URI.";
+            String errorMessage = "The redirection URI: " + redirectUri + ", is not a valid URI.";
             log.error(errorMessage, e);
             return false;
         }
