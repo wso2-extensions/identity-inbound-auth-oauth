@@ -23,7 +23,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.utils.JSONUtils;
 import org.json.JSONObject;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
+import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
@@ -33,12 +36,14 @@ import org.wso2.carbon.identity.oauth.endpoint.util.ClaimUtil;
 import org.wso2.carbon.identity.oauth.user.UserInfoClaimRetriever;
 import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
 import org.wso2.carbon.identity.oauth.user.UserInfoResponseBuilder;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.registry.core.Resource;
 import org.wso2.carbon.registry.core.exceptions.RegistryException;
 import org.wso2.carbon.registry.core.service.RegistryService;
+import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -57,6 +62,8 @@ public class UserInfoJSONResponseBuilder implements UserInfoResponseBuilder {
     private static final String PHONE_NUMBER_VERIFIED = "phone_number_verified";
     private static final String EMAIL_VERIFIED = "email_verified";
     private static final String ADDRESS = "address";
+    private static String tenantDomain;
+    private final static String INBOUND_AUTH2_TYPE = "oauth2";
     Map<String, Object> claimsforAddressScope = new HashMap<>();
 
     @Override
@@ -72,7 +79,7 @@ public class UserInfoJSONResponseBuilder implements UserInfoResponseBuilder {
                 of the service provider
              */
             int tenantId = OAuth2Util.getClientTenatId();
-            String tenantDomain = IdentityTenantUtil.getTenantDomain(tenantId);
+            tenantDomain = IdentityTenantUtil.getTenantDomain(tenantId);
             carbonContext.setTenantId(tenantId);
             carbonContext.setTenantDomain(tenantDomain);
             RegistryService registry = OAuth2ServiceComponentHolder.getRegistryService();
@@ -158,7 +165,63 @@ public class UserInfoJSONResponseBuilder implements UserInfoResponseBuilder {
             returnClaims.put(ADDRESS, jsonObject);
         }
         if (!returnClaims.containsKey("sub") || StringUtils.isBlank((String) claims.get("sub"))) {
-            returnClaims.put("sub", tokenResponse.getAuthorizedUser());
+
+            String accesstokenClientId = null;
+            try {
+                accesstokenClientId = OAuth2Util.getClientIdForAccessToken(tokenResponse.getAuthorizationContextToken().getTokenString());
+            } catch (IdentityOAuth2Exception e) {
+                log.error("Error while obtaining service provider clientID " ,e);
+            }
+
+            ApplicationManagementService applicationMgtService = OAuth2ServiceComponentHolder.getApplicationMgtService();
+
+            String serviceProviderName = null;
+            try {
+                serviceProviderName = applicationMgtService.getServiceProviderNameByClientId(
+                        accesstokenClientId, INBOUND_AUTH2_TYPE, tenantDomain);
+            } catch (IdentityApplicationManagementException e) {
+                log.error("Error while obtaining service provider name ", e);
+            }
+            ServiceProvider serviceProvider = null;
+            try {
+                serviceProvider = applicationMgtService.getApplicationExcludingFileBasedSPs(serviceProviderName,
+                        tenantDomain);
+            } catch (IdentityApplicationManagementException e) {
+                log.error("Error while obtaining service provider ", e);
+            }
+
+            String subject = null;
+            String userStoreName;
+
+            String userName = MultitenantUtils.getTenantAwareUsername(tokenResponse.getAuthorizedUser());
+            if (userName.contains("/")) {
+                userStoreName = userName.split("/")[0].trim();
+                userName = userName.split("/")[1];
+            } else {
+                userStoreName = "PRIMARY";
+            }
+
+            if (serviceProvider != null) {
+                if (serviceProvider.getLocalAndOutBoundAuthenticationConfig().isUseTenantDomainInLocalSubjectIdentifier()
+                        && serviceProvider.getLocalAndOutBoundAuthenticationConfig()
+                        .isUseUserstoreDomainInLocalSubjectIdentifier()) {
+                    subject = userStoreName + "/" + userName + "@" + tenantDomain;
+                } else if (!serviceProvider.getLocalAndOutBoundAuthenticationConfig()
+                        .isUseTenantDomainInLocalSubjectIdentifier()
+                        && serviceProvider.getLocalAndOutBoundAuthenticationConfig()
+                        .isUseUserstoreDomainInLocalSubjectIdentifier()) {
+                    subject = userStoreName + "/" + userName;
+                } else if (serviceProvider.getLocalAndOutBoundAuthenticationConfig()
+                        .isUseTenantDomainInLocalSubjectIdentifier() &&
+                        !serviceProvider.getLocalAndOutBoundAuthenticationConfig()
+                                .isUseUserstoreDomainInLocalSubjectIdentifier()) {
+                    subject = userName + "@" + tenantDomain;
+                } else {
+                    subject = userName;
+                }
+            }
+
+            returnClaims.put("sub", subject);
         }
         if (lstEssential != null) {
             for (String key : lstEssential) {
