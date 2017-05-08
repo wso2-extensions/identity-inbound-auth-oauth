@@ -62,7 +62,7 @@ public class UserInfoJSONResponseBuilder implements UserInfoResponseBuilder {
     private static final String PHONE_NUMBER_VERIFIED = "phone_number_verified";
     private static final String EMAIL_VERIFIED = "email_verified";
     private static final String ADDRESS = "address";
-    private static String tenantDomain;
+    private String tenantDomain;
     private final static String INBOUND_AUTH2_TYPE = "oauth2";
     Map<String, Object> claimsforAddressScope = new HashMap<>();
 
