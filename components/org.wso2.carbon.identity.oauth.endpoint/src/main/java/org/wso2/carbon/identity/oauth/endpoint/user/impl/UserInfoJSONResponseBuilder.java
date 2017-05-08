@@ -79,7 +79,7 @@ public class UserInfoJSONResponseBuilder implements UserInfoResponseBuilder {
                 of the service provider
              */
             int tenantId = OAuth2Util.getClientTenatId();
-            String tenantDomain = IdentityTenantUtil.getTenantDomain(tenantId);
+            tenantDomain = IdentityTenantUtil.getTenantDomain(tenantId);
             carbonContext.setTenantId(tenantId);
             carbonContext.setTenantDomain(tenantDomain);
             RegistryService registry = OAuth2ServiceComponentHolder.getRegistryService();
