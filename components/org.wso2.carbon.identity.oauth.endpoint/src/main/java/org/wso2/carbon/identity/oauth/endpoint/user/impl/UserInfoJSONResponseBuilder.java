@@ -26,8 +26,10 @@ import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
@@ -43,6 +45,7 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.registry.core.Resource;
 import org.wso2.carbon.registry.core.exceptions.RegistryException;
 import org.wso2.carbon.registry.core.service.RegistryService;
+import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.util.ArrayList;
@@ -62,8 +65,8 @@ public class UserInfoJSONResponseBuilder implements UserInfoResponseBuilder {
     private static final String PHONE_NUMBER_VERIFIED = "phone_number_verified";
     private static final String EMAIL_VERIFIED = "email_verified";
     private static final String ADDRESS = "address";
+    private static final String DEFULT_USERSTORE = "PRIMARY";
     private String tenantDomain;
-    private final static String INBOUND_AUTH2_TYPE = "oauth2";
     Map<String, Object> claimsforAddressScope = new HashMap<>();
 
     @Override
@@ -166,56 +169,57 @@ public class UserInfoJSONResponseBuilder implements UserInfoResponseBuilder {
         }
         if (!returnClaims.containsKey("sub") || StringUtils.isBlank((String) claims.get("sub"))) {
 
-            String accessTokenClientId = null;
+            String accessTokenClientId;
             try {
-                accessTokenClientId = OAuth2Util.getClientIdForAccessToken(tokenResponse.getAuthorizationContextToken().getTokenString());
+                accessTokenClientId = OAuth2Util.getClientIdForAccessToken
+                        (tokenResponse.getAuthorizationContextToken().getTokenString());
             } catch (IdentityOAuth2Exception e) {
                 log.error("Error while obtaining service provider access token clientID ", e);
+                throw new UserInfoEndpointException("Error while obtaining service provider access token clientID", e);
             }
 
             ApplicationManagementService applicationMgtService = OAuth2ServiceComponentHolder.getApplicationMgtService();
 
-            String serviceProviderName = null;
+            String serviceProviderName;
             try {
                 serviceProviderName = applicationMgtService.getServiceProviderNameByClientId(
-                        accessTokenClientId, INBOUND_AUTH2_TYPE, tenantDomain);
+                        accessTokenClientId, IdentityApplicationConstants.OAuth2.NAME, tenantDomain);
             } catch (IdentityApplicationManagementException e) {
                 log.error("Error while obtaining service provider name ", e);
+                throw new UserInfoEndpointException("Error while obtaining service provider name", e);
             }
-            ServiceProvider serviceProvider = null;
+            ServiceProvider serviceProvider;
             try {
                 serviceProvider = applicationMgtService.getApplicationExcludingFileBasedSPs(serviceProviderName,
                         tenantDomain);
             } catch (IdentityApplicationManagementException e) {
                 log.error("Error while obtaining service provider ", e);
+                throw new UserInfoEndpointException("Error while obtaining service provider", e);
             }
 
             String subject = null;
             String userStoreName;
 
-            String userName = MultitenantUtils.getTenantAwareUsername(tokenResponse.getAuthorizedUser());
-            if (userName.contains("/")) {
-                userStoreName = userName.split("/")[0].trim();
-                userName = userName.split("/")[1];
-            } else {
-                userStoreName = "PRIMARY";
-            }
+            String userName = MultitenantUtils.getTenantAwareUsername(tokenResponse.getAuthorizedUser()).
+                    split(UserCoreConstants.DOMAIN_SEPARATOR)[1];
+            userStoreName = IdentityUtil.extractDomainFromName(userName);
 
             if (serviceProvider != null) {
                 if (serviceProvider.getLocalAndOutBoundAuthenticationConfig().isUseTenantDomainInLocalSubjectIdentifier()
                         && serviceProvider.getLocalAndOutBoundAuthenticationConfig()
                         .isUseUserstoreDomainInLocalSubjectIdentifier()) {
-                    subject = userStoreName + "/" + userName + "@" + tenantDomain;
+                    subject = userStoreName + UserCoreConstants.DOMAIN_SEPARATOR + userName +
+                            UserCoreConstants.TENANT_DOMAIN_COMBINER + tenantDomain;
                 } else if (!serviceProvider.getLocalAndOutBoundAuthenticationConfig()
                         .isUseTenantDomainInLocalSubjectIdentifier()
                         && serviceProvider.getLocalAndOutBoundAuthenticationConfig()
                         .isUseUserstoreDomainInLocalSubjectIdentifier()) {
-                    subject = userStoreName + "/" + userName;
+                    subject = userStoreName + UserCoreConstants.DOMAIN_SEPARATOR + userName;
                 } else if (serviceProvider.getLocalAndOutBoundAuthenticationConfig()
                         .isUseTenantDomainInLocalSubjectIdentifier() &&
                         !serviceProvider.getLocalAndOutBoundAuthenticationConfig()
                                 .isUseUserstoreDomainInLocalSubjectIdentifier()) {
-                    subject = userName + "@" + tenantDomain;
+                    subject = userName + UserCoreConstants.TENANT_DOMAIN_COMBINER + tenantDomain;
                 } else {
                     subject = userName;
                 }
