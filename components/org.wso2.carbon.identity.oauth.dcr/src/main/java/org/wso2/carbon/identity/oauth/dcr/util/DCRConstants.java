@@ -63,6 +63,7 @@ public final class DCRConstants {
         public static final String OAUTH_CLIENT_USERNAME = "username";
         public static final String OAUTH_CLIENT_APPLICATION = "application";
         public static final String VALIDITY_PERIOD = "validityPeriod";
+        public static final String GRANT_TYPE_CODE = "authorization_code";
 
         private ClientMetadata() {
             throw new AssertionError();

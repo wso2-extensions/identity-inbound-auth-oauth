@@ -37,6 +37,7 @@ import org.wso2.carbon.identity.oauth.dcr.DCRException;
 import org.wso2.carbon.identity.oauth.dcr.internal.DCRDataHolder;
 import org.wso2.carbon.identity.oauth.dcr.model.RegistrationRequestProfile;
 import org.wso2.carbon.identity.oauth.dcr.model.RegistrationResponseProfile;
+import org.wso2.carbon.identity.oauth.dcr.util.DCRConstants.ClientMetadata;
 import org.wso2.carbon.identity.oauth.dcr.util.ErrorCodes;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.registry.core.Registry;
@@ -163,7 +164,6 @@ public class DCRManagementService {
             createdServiceProvider.setSaasApp(false);
             // Then Create OAuthApp
             OAuthAdminService oAuthAdminService = new OAuthAdminService();
-
             OAuthConsumerAppDTO oAuthConsumerApp = new OAuthConsumerAppDTO();
             oAuthConsumerApp.setApplicationName(applicationName);
             //TODO: After implement multi-urls to the oAuth application, we have to change this API call
@@ -172,7 +172,11 @@ public class DCRManagementService {
                 throw IdentityException.error(DCRException.class, ErrorCodes.META_DATA_VALIDATION_FAILED.toString(), errorMessage);
             }
             oAuthConsumerApp.setCallbackUrl(profile.getRedirectUris().get(0));
-            oAuthConsumerApp.setGrantTypes(grantType);
+            if (grantType.isEmpty()) {
+                oAuthConsumerApp.setGrantTypes(ClientMetadata.GRANT_TYPE_CODE);
+            } else {
+                oAuthConsumerApp.setGrantTypes(grantType);
+            }
             oAuthConsumerApp.setOAuthVersion(OAUTH_VERSION);
             if (log.isDebugEnabled()) {
                 log.debug("Creating OAuth App " + applicationName);
