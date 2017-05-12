@@ -65,7 +65,6 @@ public class UserInfoJSONResponseBuilder implements UserInfoResponseBuilder {
     private static final String PHONE_NUMBER_VERIFIED = "phone_number_verified";
     private static final String EMAIL_VERIFIED = "email_verified";
     private static final String ADDRESS = "address";
-    private static final String DEFULT_USERSTORE = "PRIMARY";
     private String tenantDomain;
     Map<String, Object> claimsforAddressScope = new HashMap<>();
 
@@ -185,15 +184,15 @@ public class UserInfoJSONResponseBuilder implements UserInfoResponseBuilder {
                 serviceProviderName = applicationMgtService.getServiceProviderNameByClientId(
                         accessTokenClientId, IdentityApplicationConstants.OAuth2.NAME, tenantDomain);
             } catch (IdentityApplicationManagementException e) {
-                log.error("Error while obtaining service provider name ", e);
                 throw new UserInfoEndpointException("Error while obtaining service provider name", e);
             }
+
+            //getting service provider name
             ServiceProvider serviceProvider;
             try {
                 serviceProvider = applicationMgtService.getApplicationExcludingFileBasedSPs(serviceProviderName,
                         tenantDomain);
             } catch (IdentityApplicationManagementException e) {
-                log.error("Error while obtaining service provider ", e);
                 throw new UserInfoEndpointException("Error while obtaining service provider", e);
             }
 
@@ -204,6 +203,7 @@ public class UserInfoJSONResponseBuilder implements UserInfoResponseBuilder {
                     split(UserCoreConstants.DOMAIN_SEPARATOR)[1];
             userStoreName = IdentityUtil.extractDomainFromName(userName);
 
+            // building subject in accordance with Local and Outbound Authentication Configuration preferences
             if (serviceProvider != null) {
                 if (serviceProvider.getLocalAndOutBoundAuthenticationConfig().isUseTenantDomainInLocalSubjectIdentifier()
                         && serviceProvider.getLocalAndOutBoundAuthenticationConfig()
