@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth2.validators;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.base.MultitenantConstants;
@@ -66,6 +67,7 @@ public class JDBCScopeValidator extends OAuth2ScopeValidator {
         }
 
         String resourceScope = null;
+        int resourceTenantId = -1;
         TokenMgtDAO tokenMgtDAO = new TokenMgtDAO();
 
         boolean cacheHit = false;
@@ -78,17 +80,24 @@ public class JDBCScopeValidator extends OAuth2ScopeValidator {
             //Cache hit
             if (result instanceof ResourceScopeCacheEntry) {
                 resourceScope = ((ResourceScopeCacheEntry) result).getScope();
+                resourceTenantId = ((ResourceScopeCacheEntry) result).getTenantId();
                 cacheHit = true;
             }
         }
 
         if (!cacheHit) {
-            resourceScope = tokenMgtDAO.findScopeOfResource(resource);
+            Pair<String, Integer> scopeMap = tokenMgtDAO.findTenantAndScopeOfResource(resource);
+
+            if (scopeMap != null) {
+                resourceScope = scopeMap.getLeft();
+                resourceTenantId = scopeMap.getRight();
+            }
 
             if (OAuthServerConfiguration.getInstance().isCacheEnabled()) {
                 OAuthCache oauthCache = OAuthCache.getInstance();
                 OAuthCacheKey cacheKey = new OAuthCacheKey(resource);
                 ResourceScopeCacheEntry cacheEntry = new ResourceScopeCacheEntry(resourceScope);
+                cacheEntry.setTenantId(resourceTenantId);
                 //Store resourceScope in cache even if it is null (to avoid database calls when accessing resources for
                 //which scopes haven't been defined).
                 oauthCache.addToCache(cacheKey, cacheEntry);
@@ -116,7 +125,7 @@ public class JDBCScopeValidator extends OAuth2ScopeValidator {
 
         try {
             //Get the roles associated with the scope, if any
-            Set<String> rolesOfScope = tokenMgtDAO.getRolesOfScopeByScopeKey(resourceScope);
+            Set<String> rolesOfScope = tokenMgtDAO.getRolesOfScopeByScopeKey(resourceScope, resourceTenantId);
 
             //If the scope doesn't have any roles associated with it.
             if(rolesOfScope == null || rolesOfScope.isEmpty()){
