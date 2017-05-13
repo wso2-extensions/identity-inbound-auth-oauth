@@ -111,6 +111,31 @@ public class DCRManagementService {
         //the OAuth App is created.
 
         String applicationName = profile.getOwner() + "_" + profile.getClientName();
+
+        List<String> responseTypes = profile.getResponseTypes();
+        List<String> grantTypes = profile.getGrantTypes();
+
+        if (!responseTypes.isEmpty()){
+            if(responseTypes.contains(ClientMetadata.RESPONSE_TYPE_CODE) &&
+                !grantTypes.contains(ClientMetadata.GRANT_TYPE_CODE)){
+                grantTypes.add(ClientMetadata.GRANT_TYPE_CODE);
+            }
+            else if ((responseTypes.contains(ClientMetadata.RESPONSE_TYPE_ID_TOKEN) ||
+                responseTypes.contains(ClientMetadata.RESPONSE_TYPE_TOKEN_ID_TOKEN)) &&
+                !grantTypes.contains(ClientMetadata.GRANT_TYPE_IMPLICIT)){
+                grantTypes.add(ClientMetadata.GRANT_TYPE_IMPLICIT);
+            }
+            else if (responseTypes.contains(ClientMetadata.RESPONSE_TYPE_CODE_ID_TOKEN) ||
+                responseTypes.contains(ClientMetadata.RESPONSE_TYPE_CODE_TOKEN) ||
+                responseTypes.contains(ClientMetadata.RESPONSE_TYPE_CODE_TOKEN_ID_TOKEN)) {
+                if (!grantTypes.contains(ClientMetadata.GRANT_TYPE_CODE)) {
+                    grantTypes.add(ClientMetadata.GRANT_TYPE_CODE);
+                }
+                if (!grantTypes.contains(ClientMetadata.GRANT_TYPE_IMPLICIT)) {
+                    grantTypes.add(ClientMetadata.GRANT_TYPE_IMPLICIT);
+                }
+            }
+        }
         String grantType = StringUtils.join(profile.getGrantTypes(), " ");
         String baseUser = CarbonContext.getThreadLocalCarbonContext().getUsername();
         String userName = MultitenantUtils.getTenantAwareUsername(profile.getOwner());
@@ -351,6 +376,4 @@ public class DCRManagementService {
         return (Registry) PrivilegedCarbonContext.getThreadLocalCarbonContext().getRegistry(
                 RegistryType.SYSTEM_CONFIGURATION);
     }
-
-
 }

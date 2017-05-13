@@ -64,6 +64,14 @@ public final class DCRConstants {
         public static final String OAUTH_CLIENT_APPLICATION = "application";
         public static final String VALIDITY_PERIOD = "validityPeriod";
         public static final String GRANT_TYPE_CODE = "authorization_code";
+        public static final String GRANT_TYPE_IMPLICIT = "implicit";
+        public static final String RESPONSE_TYPE_CODE = "code";
+        public static final String RESPONSE_TYPE_ID_TOKEN = "id_token";
+        public static final String RESPONSE_TYPE_TOKEN_ID_TOKEN = "token id_token";
+        public static final String RESPONSE_TYPE_CODE_ID_TOKEN = "code id_token";
+        public static final String RESPONSE_TYPE_CODE_TOKEN = "code token";
+        public static final String RESPONSE_TYPE_CODE_TOKEN_ID_TOKEN = "code token id_token";
+
 
         private ClientMetadata() {
             throw new AssertionError();
