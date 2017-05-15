@@ -208,17 +208,17 @@ public class UserInfoJSONResponseBuilder implements UserInfoResponseBuilder {
         }
 
         String subject = null;
-        String userStoreName;
-        String userName;
+        String userName = tokenResponse.getAuthorizedUser();
+        String userStoreName = IdentityUtil.extractDomainFromName(userName);
 
-        if (tokenResponse.getAuthorizedUser().contains(UserCoreConstants.DOMAIN_SEPARATOR)) {
-            userName = MultitenantUtils.getTenantAwareUsername(tokenResponse.getAuthorizedUser()).
+        if (userName.contains(UserCoreConstants.DOMAIN_SEPARATOR)) {
+            userName = MultitenantUtils.getTenantAwareUsername(userName).
                     split(UserCoreConstants.DOMAIN_SEPARATOR)[1];
-        } else {
-            userName = MultitenantUtils.getTenantAwareUsername(tokenResponse.getAuthorizedUser());
-        }
 
-        userStoreName = IdentityUtil.extractDomainFromName(userName);
+        } else {
+            userName = MultitenantUtils.getTenantAwareUsername(userName);
+
+        }
 
         // building subject in accordance with Local and Outbound Authentication Configuration preferences
         if (serviceProvider != null) {
