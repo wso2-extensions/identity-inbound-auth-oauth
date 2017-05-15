@@ -108,8 +108,8 @@ public class UserInfoJSONResponseBuilder implements UserInfoResponseBuilder {
             UserInfoClaimRetriever retriever = UserInfoEndpointConfig.getInstance().getUserInfoClaimRetriever();
             claims = retriever.getClaimsMap(userAttributes);
         }
-        if(claims == null){
-            claims = new HashMap<String,Object>();
+        if (claims == null) {
+            claims = new HashMap<String, Object>();
         }
         String[] arrRequestedScopeClaims = null;
         for (String requestedScope : tokenResponse.getScope()) {
@@ -167,64 +167,7 @@ public class UserInfoJSONResponseBuilder implements UserInfoResponseBuilder {
             returnClaims.put(ADDRESS, jsonObject);
         }
         if (!returnClaims.containsKey("sub") || StringUtils.isBlank((String) claims.get("sub"))) {
-
-            String accessTokenClientId;
-            try {
-                accessTokenClientId = OAuth2Util.getClientIdForAccessToken
-                        (tokenResponse.getAuthorizationContextToken().getTokenString());
-            } catch (IdentityOAuth2Exception e) {
-                log.error("Error while obtaining service provider access token clientID ", e);
-                throw new UserInfoEndpointException("Error while obtaining service provider access token clientID", e);
-            }
-
-            ApplicationManagementService applicationMgtService = OAuth2ServiceComponentHolder.getApplicationMgtService();
-
-            String serviceProviderName;
-            try {
-                serviceProviderName = applicationMgtService.getServiceProviderNameByClientId(
-                        accessTokenClientId, IdentityApplicationConstants.OAuth2.NAME, tenantDomain);
-            } catch (IdentityApplicationManagementException e) {
-                throw new UserInfoEndpointException("Error while obtaining service provider name", e);
-            }
-
-            //getting service provider name
-            ServiceProvider serviceProvider;
-            try {
-                serviceProvider = applicationMgtService.getApplicationExcludingFileBasedSPs(serviceProviderName,
-                        tenantDomain);
-            } catch (IdentityApplicationManagementException e) {
-                throw new UserInfoEndpointException("Error while obtaining service provider", e);
-            }
-
-            String subject = null;
-            String userStoreName;
-
-            String userName = MultitenantUtils.getTenantAwareUsername(tokenResponse.getAuthorizedUser()).
-                    split(UserCoreConstants.DOMAIN_SEPARATOR)[1];
-            userStoreName = IdentityUtil.extractDomainFromName(userName);
-
-            // building subject in accordance with Local and Outbound Authentication Configuration preferences
-            if (serviceProvider != null) {
-                if (serviceProvider.getLocalAndOutBoundAuthenticationConfig().isUseTenantDomainInLocalSubjectIdentifier()
-                        && serviceProvider.getLocalAndOutBoundAuthenticationConfig()
-                        .isUseUserstoreDomainInLocalSubjectIdentifier()) {
-                    subject = userStoreName + UserCoreConstants.DOMAIN_SEPARATOR + userName +
-                            UserCoreConstants.TENANT_DOMAIN_COMBINER + tenantDomain;
-                } else if (!serviceProvider.getLocalAndOutBoundAuthenticationConfig()
-                        .isUseTenantDomainInLocalSubjectIdentifier()
-                        && serviceProvider.getLocalAndOutBoundAuthenticationConfig()
-                        .isUseUserstoreDomainInLocalSubjectIdentifier()) {
-                    subject = userStoreName + UserCoreConstants.DOMAIN_SEPARATOR + userName;
-                } else if (serviceProvider.getLocalAndOutBoundAuthenticationConfig()
-                        .isUseTenantDomainInLocalSubjectIdentifier() &&
-                        !serviceProvider.getLocalAndOutBoundAuthenticationConfig()
-                                .isUseUserstoreDomainInLocalSubjectIdentifier()) {
-                    subject = userName + UserCoreConstants.TENANT_DOMAIN_COMBINER + tenantDomain;
-                } else {
-                    subject = userName;
-                }
-            }
-
+            String subject = returnSubjectClaim(returnClaims, tokenResponse);
             returnClaims.put("sub", subject);
         }
         if (lstEssential != null) {
@@ -233,6 +176,69 @@ public class UserInfoJSONResponseBuilder implements UserInfoResponseBuilder {
             }
         }
         return JSONUtils.buildJSON(returnClaims);
+    }
+
+    private String returnSubjectClaim(Map<String, Object> returnClaims, OAuth2TokenValidationResponseDTO tokenResponse)
+            throws UserInfoEndpointException {
+
+        String accessTokenClientId;
+        try {
+            accessTokenClientId = OAuth2Util.getClientIdForAccessToken
+                    (tokenResponse.getAuthorizationContextToken().getTokenString());
+        } catch (IdentityOAuth2Exception e) {
+            throw new UserInfoEndpointException("Error while obtaining service provider access token clientID", e);
+        }
+
+        ApplicationManagementService applicationMgtService = OAuth2ServiceComponentHolder.getApplicationMgtService();
+
+        //getting service provider name
+        String serviceProviderName;
+        try {
+            serviceProviderName = applicationMgtService.getServiceProviderNameByClientId(
+                    accessTokenClientId, IdentityApplicationConstants.OAuth2.NAME, tenantDomain);
+        } catch (IdentityApplicationManagementException e) {
+            throw new UserInfoEndpointException("Error while obtaining service provider name", e);
+        }
+        ServiceProvider serviceProvider;
+        try {
+            serviceProvider = applicationMgtService.getApplicationExcludingFileBasedSPs(serviceProviderName,
+                    tenantDomain);
+        } catch (IdentityApplicationManagementException e) {
+            throw new UserInfoEndpointException("Error while obtaining service provider", e);
+        }
+
+        String subject = null;
+        String userStoreName;
+        String userName;
+
+        if (tokenResponse.getAuthorizedUser().contains(UserCoreConstants.DOMAIN_SEPARATOR)) {
+            userName = MultitenantUtils.getTenantAwareUsername(tokenResponse.getAuthorizedUser()).
+                    split(UserCoreConstants.DOMAIN_SEPARATOR)[1];
+        } else {
+            userName = MultitenantUtils.getTenantAwareUsername(tokenResponse.getAuthorizedUser());
+        }
+
+        userStoreName = IdentityUtil.extractDomainFromName(userName);
+
+        // building subject in accordance with Local and Outbound Authentication Configuration preferences
+        if (serviceProvider != null) {
+
+            boolean isUseTenantDomainInLocalSubject = serviceProvider.getLocalAndOutBoundAuthenticationConfig()
+                    .isUseTenantDomainInLocalSubjectIdentifier();
+            boolean isUseUserStoreDomainInLocalSubject = serviceProvider.getLocalAndOutBoundAuthenticationConfig()
+                    .isUseUserstoreDomainInLocalSubjectIdentifier();
+
+            subject = userName;
+
+            if (isUseUserStoreDomainInLocalSubject) {
+                subject = userStoreName + UserCoreConstants.DOMAIN_SEPARATOR + subject;
+            }
+            if (isUseTenantDomainInLocalSubject) {
+                subject = subject + UserCoreConstants.TENANT_DOMAIN_COMBINER + tenantDomain;
+            }
+        }
+
+        return subject;
     }
 
     private Map<ClaimMapping, String> getUserAttributesFromCache(OAuth2TokenValidationResponseDTO tokenResponse) {
