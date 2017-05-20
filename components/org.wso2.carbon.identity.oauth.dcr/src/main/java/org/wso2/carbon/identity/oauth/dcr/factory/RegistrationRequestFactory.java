@@ -18,6 +18,10 @@
 
 package org.wso2.carbon.identity.oauth.dcr.factory;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -36,6 +40,7 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.dcr.model.RegistrationRequest;
 import org.wso2.carbon.identity.oauth.dcr.model.RegistrationRequestProfile;
 import org.wso2.carbon.identity.oauth.dcr.util.DCRConstants;
+import org.wso2.carbon.identity.oauth.dcr.util.DCRConstants.ClientMetadata;
 import org.wso2.carbon.registry.core.utils.UUIDGenerator;
 import org.wso2.carbon.user.api.UserRealm;
 import org.wso2.carbon.user.api.UserStoreException;
@@ -113,24 +118,7 @@ public class RegistrationRequestFactory extends HttpIdentityRequestFactory {
                 registrationRequestProfile = new RegistrationRequestProfile();
             }
 
-            Object obj = jsonData.get(RegistrationRequest.RegisterRequestConstant.REDIRECT_URIS);
-            if (obj != null && obj instanceof JSONArray) {
-                JSONArray redirectUris = (JSONArray) obj;
-                for (int i = 0; i < redirectUris.size(); i++) {
-                    registrationRequestProfile.getRedirectUris().add(redirectUris.get(i).toString());
-                }
-            } else if (obj != null) {
-                registrationRequestProfile.getRedirectUris().add((String) obj);
-            } else {
-                throw IdentityException.error(FrameworkClientException.class, "RedirectUris property must have at " +
-                        "least one URI value.");
-            }
-
-            registrationRequestProfile.setTokenEndpointAuthMethod((String) jsonData
-                    .get(RegistrationRequest.RegisterRequestConstant.TOKEN_ENDPOINT_AUTH_METHOD));
-
-
-            obj = jsonData.get(RegistrationRequest.RegisterRequestConstant.GRANT_TYPES);
+            Object obj = jsonData.get(RegistrationRequest.RegisterRequestConstant.GRANT_TYPES);
             if (obj != null && obj instanceof JSONArray) {
                 JSONArray redirectUris = (JSONArray) obj;
                 for (int i = 0; i < redirectUris.size(); i++) {
@@ -140,6 +128,26 @@ public class RegistrationRequestFactory extends HttpIdentityRequestFactory {
                 registrationRequestProfile.getGrantTypes().add((String) obj);
             }
 
+            List<String> grandTypes = new ArrayList<>();
+            grandTypes.addAll(Arrays.asList(ClientMetadata.GRANT_TYPE_PASSWORD,
+                ClientMetadata.GRANT_TYPE_CLIENT_CREDENTIALS, ClientMetadata.GRANT_TYPE_SAML2,
+                ClientMetadata.GRANT_TYPE_IWA_NTLM));
+
+            obj = jsonData.get(RegistrationRequest.RegisterRequestConstant.REDIRECT_URIS);
+            if (obj != null && obj instanceof JSONArray) {
+                JSONArray redirectUris = (JSONArray) obj;
+                for (int i = 0; i < redirectUris.size(); i++) {
+                    registrationRequestProfile.getRedirectUris().add(redirectUris.get(i).toString());
+                }
+            } else if (obj != null) {
+                registrationRequestProfile.getRedirectUris().add((String) obj);
+            } else if (Collections.disjoint(registrationRequestProfile.getGrantTypes(), grandTypes)) {
+                throw IdentityException.error(FrameworkClientException.class, "RedirectUris property must have at " +
+                        "least one URI value.");
+            }
+
+            registrationRequestProfile.setTokenEndpointAuthMethod((String) jsonData
+                    .get(RegistrationRequest.RegisterRequestConstant.TOKEN_ENDPOINT_AUTH_METHOD));
 
             obj = jsonData.get(RegistrationRequest.RegisterRequestConstant.RESPONSE_TYPES);
             if (obj != null && obj instanceof JSONArray) {

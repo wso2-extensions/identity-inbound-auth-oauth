@@ -17,6 +17,7 @@
  */
 package org.wso2.carbon.identity.oauth.dcr.service;
 
+import java.util.Collections;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -192,11 +193,19 @@ public class DCRManagementService {
             OAuthConsumerAppDTO oAuthConsumerApp = new OAuthConsumerAppDTO();
             oAuthConsumerApp.setApplicationName(applicationName);
             //TODO: After implement multi-urls to the oAuth application, we have to change this API call
+            List<String> grandTypes = new ArrayList<>();
+            grandTypes.addAll(Arrays.asList(ClientMetadata.GRANT_TYPE_PASSWORD,
+                ClientMetadata.GRANT_TYPE_CLIENT_CREDENTIALS, ClientMetadata.GRANT_TYPE_SAML2,
+                ClientMetadata.GRANT_TYPE_IWA_NTLM));
             if (profile.getRedirectUris().size() == 0) {
-                String errorMessage = "RedirectUris property must have at least one URI value.";
-                throw IdentityException.error(DCRException.class, ErrorCodes.META_DATA_VALIDATION_FAILED.toString(), errorMessage);
+                if (Collections.disjoint(profile.getGrantTypes(), grandTypes)) {
+                    String errorMessage = "RedirectUris property must have at least one URI value.";
+                    throw IdentityException.error(DCRException.class,
+                        ErrorCodes.META_DATA_VALIDATION_FAILED.toString(), errorMessage);
+                }
+            } else {
+                oAuthConsumerApp.setCallbackUrl(profile.getRedirectUris().get(0));
             }
-            oAuthConsumerApp.setCallbackUrl(profile.getRedirectUris().get(0));
             if (grantType.isEmpty()) {
                 oAuthConsumerApp.setGrantTypes(ClientMetadata.GRANT_TYPE_CODE);
             } else {

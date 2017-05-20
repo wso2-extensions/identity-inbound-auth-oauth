@@ -65,6 +65,10 @@ public final class DCRConstants {
         public static final String VALIDITY_PERIOD = "validityPeriod";
         public static final String GRANT_TYPE_CODE = "authorization_code";
         public static final String GRANT_TYPE_IMPLICIT = "implicit";
+        public static final String GRANT_TYPE_PASSWORD = "password";
+        public static final String GRANT_TYPE_CLIENT_CREDENTIALS = "client_credentials";
+        public static final String GRANT_TYPE_SAML2 = "urn:ietf:params:oauth:grant-type:saml2-bearer";
+        public static final String GRANT_TYPE_IWA_NTLM = "iwa:ntlm";
         public static final String RESPONSE_TYPE_CODE = "code";
         public static final String RESPONSE_TYPE_ID_TOKEN = "id_token";
         public static final String RESPONSE_TYPE_TOKEN_ID_TOKEN = "token id_token";
