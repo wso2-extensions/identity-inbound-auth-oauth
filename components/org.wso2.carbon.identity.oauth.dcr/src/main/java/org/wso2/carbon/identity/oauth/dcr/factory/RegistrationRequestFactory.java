@@ -120,9 +120,9 @@ public class RegistrationRequestFactory extends HttpIdentityRequestFactory {
 
             Object obj = jsonData.get(RegistrationRequest.RegisterRequestConstant.GRANT_TYPES);
             if (obj != null && obj instanceof JSONArray) {
-                JSONArray redirectUris = (JSONArray) obj;
-                for (int i = 0; i < redirectUris.size(); i++) {
-                    registrationRequestProfile.getGrantTypes().add(redirectUris.get(i).toString());
+                JSONArray grantTypes = (JSONArray) obj;
+                for (int i = 0; i < grantTypes.size(); i++) {
+                    registrationRequestProfile.getGrantTypes().add(grantTypes.get(i).toString());
                 }
             } else if (obj != null) {
                 registrationRequestProfile.getGrantTypes().add((String) obj);
@@ -151,9 +151,9 @@ public class RegistrationRequestFactory extends HttpIdentityRequestFactory {
 
             obj = jsonData.get(RegistrationRequest.RegisterRequestConstant.RESPONSE_TYPES);
             if (obj != null && obj instanceof JSONArray) {
-                JSONArray redirectUris = (JSONArray) obj;
-                for (int i = 0; i < redirectUris.size(); i++) {
-                    registrationRequestProfile.getResponseTypes().add(redirectUris.get(i).toString());
+                JSONArray responseTypes = (JSONArray) obj;
+                for (int i = 0; i < responseTypes.size(); i++) {
+                    registrationRequestProfile.getResponseTypes().add(responseTypes.get(i).toString());
                 }
             } else if (obj != null) {
                 registrationRequestProfile.getResponseTypes().add((String) obj);
@@ -175,9 +175,9 @@ public class RegistrationRequestFactory extends HttpIdentityRequestFactory {
 
             obj = jsonData.get(RegistrationRequest.RegisterRequestConstant.SCOPE);
             if (obj != null && obj instanceof JSONArray) {
-                JSONArray redirectUris = (JSONArray) obj;
-                for (int i = 0; i < redirectUris.size(); i++) {
-                    registrationRequestProfile.getScopes().add(redirectUris.get(i).toString());
+                JSONArray scope = (JSONArray) obj;
+                for (int i = 0; i < scope.size(); i++) {
+                    registrationRequestProfile.getScopes().add(scope.get(i).toString());
                 }
             } else if (obj != null) {
                 registrationRequestProfile.getScopes().add((String) obj);
@@ -185,9 +185,9 @@ public class RegistrationRequestFactory extends HttpIdentityRequestFactory {
 
             obj = jsonData.get(RegistrationRequest.RegisterRequestConstant.CONTACTS);
             if (obj != null && obj instanceof JSONArray) {
-                JSONArray redirectUris = (JSONArray) obj;
-                for (int i = 0; i < redirectUris.size(); i++) {
-                    registrationRequestProfile.getContacts().add(redirectUris.get(i).toString());
+                JSONArray contacts = (JSONArray) obj;
+                for (int i = 0; i < contacts.size(); i++) {
+                    registrationRequestProfile.getContacts().add(contacts.get(i).toString());
                 }
             } else if (obj != null) {
                 registrationRequestProfile.getContacts().add((String) obj);
