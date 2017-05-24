@@ -277,4 +277,10 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
         }
     }
 
+    @Override
+    public boolean issueRefreshToken() throws IdentityOAuth2Exception {
+
+        return OAuthServerConfiguration.getInstance()
+                .getValueForIsRefreshTokenAllowed(OAuthConstants.GrantTypes.AUTHORIZATION_CODE);
+    }
 }

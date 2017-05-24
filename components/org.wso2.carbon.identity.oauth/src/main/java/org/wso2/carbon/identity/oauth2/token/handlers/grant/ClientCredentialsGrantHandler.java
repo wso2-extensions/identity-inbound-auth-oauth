@@ -20,6 +20,8 @@ package org.wso2.carbon.identity.oauth2.token.handlers.grant;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 
@@ -34,7 +36,7 @@ public class ClientCredentialsGrantHandler extends AbstractAuthorizationGrantHan
     public boolean validateGrant(OAuthTokenReqMessageContext tokReqMsgCtx)
             throws IdentityOAuth2Exception {
 
-        if(!super.validateGrant(tokReqMsgCtx)){
+        if (!super.validateGrant(tokReqMsgCtx)){
             return false;
         }
 
@@ -44,12 +46,14 @@ public class ClientCredentialsGrantHandler extends AbstractAuthorizationGrantHan
     }
 
     @Override
-    public boolean issueRefreshToken() throws IdentityOAuth2Exception {
+    public boolean isOfTypeApplicationUser() throws IdentityOAuth2Exception {
         return false;
     }
 
     @Override
-    public boolean isOfTypeApplicationUser() throws IdentityOAuth2Exception {
-        return false;
+    public boolean issueRefreshToken() throws IdentityOAuth2Exception {
+
+        return OAuthServerConfiguration.getInstance()
+                .getValueForIsRefreshTokenAllowed(OAuthConstants.GrantTypes.CLIENT_CREDENTIALS);
     }
 }

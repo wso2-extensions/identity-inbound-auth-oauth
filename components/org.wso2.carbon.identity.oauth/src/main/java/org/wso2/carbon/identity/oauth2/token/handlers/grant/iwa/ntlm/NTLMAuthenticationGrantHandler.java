@@ -23,6 +23,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AbstractAuthorizationGrantHandler;
@@ -138,4 +140,10 @@ public class NTLMAuthenticationGrantHandler extends AbstractAuthorizationGrantHa
 
     }
 
+    @Override
+    public boolean issueRefreshToken() throws IdentityOAuth2Exception {
+
+        return OAuthServerConfiguration.getInstance()
+                .getValueForIsRefreshTokenAllowed(OAuthConstants.GrantTypes.IWA_NTLM);
+    }
 }

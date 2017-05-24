@@ -53,7 +53,6 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AbstractAuthorizationGrantHandler;
-import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.util.X509CredentialImpl;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
@@ -546,5 +545,12 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
         }
 
         return true;
+    }
+
+    @Override
+    public boolean issueRefreshToken() throws IdentityOAuth2Exception {
+
+        return OAuthServerConfiguration.getInstance()
+                .getValueForIsRefreshTokenAllowed(OAuthConstants.OAUTH_SAML2_BEARER_METHOD);
     }
 }

@@ -142,6 +142,15 @@ public class OAuth2AuthzEndpoint {
         carbonContext.setTenantId(MultitenantConstants.SUPER_TENANT_ID);
         carbonContext.setTenantDomain(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
 
+        // Validate repeated parameters
+        if (!(request instanceof OAuthRequestWrapper)) {
+            if (!EndpointUtil.validateParams(request, response, null)) {
+                return Response.status(HttpServletResponse.SC_BAD_REQUEST).location(new URI(
+                        EndpointUtil.getErrorPageURL(OAuth2ErrorCodes.INVALID_REQUEST,
+                                "Invalid authorization request with repeated parameters", null))).build();
+            }
+        }
+
         String clientId = request.getParameter("client_id");
 
         String sessionDataKeyFromLogin = getSessionDataKey(request);
@@ -266,21 +275,8 @@ public class OAuth2AuthzEndpoint {
                 }
 
             } else if (resultFromLogin != null) { // Authentication response
-                long authTime = 0;
                 Cookie cookie = FrameworkUtils.getAuthCookie(request);
-                if (cookie != null) {
-                    String sessionContextKey = DigestUtils.sha256Hex(cookie.getValue());
-                    SessionContext sessionContext = FrameworkUtils.getSessionContextFromCache(sessionContextKey);
-                    if (sessionContext != null) {
-                        if (sessionContext.getProperty(FrameworkConstants.UPDATED_TIMESTAMP) != null) {
-                            authTime = Long.parseLong(
-                                    sessionContext.getProperty(FrameworkConstants.UPDATED_TIMESTAMP).toString());
-                        } else {
-                            authTime = Long.parseLong(
-                                    sessionContext.getProperty(FrameworkConstants.CREATED_TIMESTAMP).toString());
-                        }
-                    }
-                }
+                long authTime = getAuthenticatedTimeFromCommonAuthCookie(cookie);
                 sessionDataCacheEntry = resultFromLogin;
                 if (authTime > 0) {
                     sessionDataCacheEntry.setAuthTime(authTime);
@@ -365,17 +361,8 @@ public class OAuth2AuthzEndpoint {
                 }
 
             } else if (resultFromConsent != null) { // Consent submission
-                long authTime = 0;
                 Cookie cookie = FrameworkUtils.getAuthCookie(request);
-                if (cookie != null) {
-                    String sessionContextKey = DigestUtils.sha256Hex(cookie.getValue());
-                    SessionContext sessionContext = FrameworkUtils.getSessionContextFromCache(sessionContextKey);
-                    if (sessionContext.getProperty(FrameworkConstants.UPDATED_TIMESTAMP) != null) {
-                        authTime = Long.parseLong(sessionContext.getProperty(FrameworkConstants.UPDATED_TIMESTAMP).toString());
-                    } else {
-                        authTime = Long.parseLong(sessionContext.getProperty(FrameworkConstants.CREATED_TIMESTAMP).toString());
-                    }
-                }
+                long authTime = getAuthenticatedTimeFromCommonAuthCookie(cookie);
                 sessionDataCacheEntry = resultFromConsent;
                 OAuth2Parameters oauth2Params = sessionDataCacheEntry.getoAuth2Parameters();
                 if (authTime > 0) {
@@ -604,6 +591,13 @@ public class OAuth2AuthzEndpoint {
     @Produces("text/html")
     public Response authorizePost(@Context HttpServletRequest request,@Context HttpServletResponse response,  MultivaluedMap paramMap)
             throws URISyntaxException {
+
+        // Validate repeated parameters
+        if (!EndpointUtil.validateParams(request, response, paramMap)) {
+            return Response.status(HttpServletResponse.SC_BAD_REQUEST).location(new URI(
+                    EndpointUtil.getErrorPageURL(OAuth2ErrorCodes.INVALID_REQUEST,
+                            "Invalid authorization request with repeated parameters", null))).build();
+        }
         HttpServletRequestWrapper httpRequest = new OAuthRequestWrapper(request, paramMap);
         return authorize(httpRequest, response);
     }
@@ -1331,5 +1325,29 @@ public class OAuth2AuthzEndpoint {
             }
         }
         return redirectURL;
+    }
+
+
+    /**
+     * Gets the last authenticated value from the commonAuthId cookie
+     * @param cookie CommonAuthId cookie
+     * @return the last authenticated timestamp
+     */
+    private long getAuthenticatedTimeFromCommonAuthCookie(Cookie cookie) {
+        long authTime = 0;
+        if (cookie != null) {
+            String sessionContextKey = DigestUtils.sha256Hex(cookie.getValue());
+            SessionContext sessionContext = FrameworkUtils.getSessionContextFromCache(sessionContextKey);
+            if (sessionContext != null) {
+                if (sessionContext.getProperty(FrameworkConstants.UPDATED_TIMESTAMP) != null) {
+                    authTime = Long.parseLong(
+                            sessionContext.getProperty(FrameworkConstants.UPDATED_TIMESTAMP).toString());
+                } else {
+                    authTime = Long.parseLong(
+                            sessionContext.getProperty(FrameworkConstants.CREATED_TIMESTAMP).toString());
+                }
+            }
+        }
+        return authTime;
     }
 }

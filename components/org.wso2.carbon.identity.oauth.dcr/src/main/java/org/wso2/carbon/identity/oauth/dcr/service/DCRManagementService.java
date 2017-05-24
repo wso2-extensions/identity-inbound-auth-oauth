@@ -150,7 +150,10 @@ public class DCRManagementService {
                     createdServiceProvider = appMgtService.getServiceProvider(applicationName,
                                                                               profile.getTenantDomain());
                 } else {
-                    createdServiceProvider = existingServiceProvider;
+                    String errorMessage = "Service Provider with name: " + applicationName +
+                        " already registered";
+                    throw IdentityException.error(DCRException.class,
+                        ErrorCodes.META_DATA_VALIDATION_FAILED.toString(), errorMessage);
                 }
 
             } catch (IdentityApplicationManagementException e) {

@@ -1176,4 +1176,5 @@ public class OAuth2Util {
         log.error("Unsupported Signature Algorithm in identity.xml");
         throw new IdentityOAuth2Exception("Unsupported Signature Algorithm in identity.xml");
     }
+
 }

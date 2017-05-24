@@ -53,6 +53,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
+import java.net.URI;
 
 @Path("/token")
 public class OAuth2TokenEndpoint {
@@ -73,6 +74,13 @@ public class OAuth2TokenEndpoint {
                     .getThreadLocalCarbonContext();
             carbonContext.setTenantId(MultitenantConstants.SUPER_TENANT_ID);
             carbonContext.setTenantDomain(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+
+            // Validate repeated parameters
+            if (!EndpointUtil.validateParams(request, null, paramMap)) {
+                OAuthResponse response = OAuthASResponse.errorResponse(HttpServletResponse.SC_BAD_REQUEST).
+                        setError(OAuth2ErrorCodes.INVALID_REQUEST).setErrorDescription("Invalid request with repeated parameters.").buildJSONMessage();
+                return Response.status(response.getResponseStatus()).entity(response.getBody()).build();
+            }
 
             HttpServletRequestWrapper httpRequest = new OAuthRequestWrapper(request, paramMap);
 

@@ -391,7 +391,6 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                 log.debug("Persisted Access Token for " +
                         "Client ID : " + oAuth2AccessTokenReqDTO.getClientId() +
                         ", Authorized User : " + tokReqMsgCtx.getAuthorizedUser() +
-                        ", Is Federated User : " + tokReqMsgCtx.getAuthorizedUser().isFederatedUser() +
                         ", Timestamp : " + timestamp +
                           ", Validity period (s) : " + newAccessTokenDO.getValidityPeriod() +
                         ", Scope : " + OAuth2Util.buildScopeString(tokReqMsgCtx.getScope()) +

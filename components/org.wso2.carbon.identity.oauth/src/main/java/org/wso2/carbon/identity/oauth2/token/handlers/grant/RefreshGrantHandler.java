@@ -130,7 +130,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             }
 
             if (log.isDebugEnabled()) {
-                log.debug("Refresh token validation successful for " + "Client id : " + tokenReqDTO.getClientId() +
+                log.debug("Refresh token validation successful for Client id : " + tokenReqDTO.getClientId() +
                           ", Authorized User : " + validationDataDO.getAuthorizedUser() +
                           ", Token Scope : " + OAuth2Util.buildScopeString(validationDataDO.getScope()));
             }

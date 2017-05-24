@@ -52,6 +52,9 @@ import org.wso2.carbon.identity.webfinger.DefaultWebFingerProcessor;
 import org.wso2.carbon.identity.webfinger.WebFingerProcessor;
 
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.MultivaluedMap;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.Map;
@@ -422,4 +425,23 @@ public class EndpointUtil {
         return ServerConfiguration.getInstance().getFirstProperty("HostName");
     }
 
+    public static boolean validateParams(@Context HttpServletRequest request, @Context HttpServletResponse response,
+                                         MultivaluedMap<String, String> paramMap) {
+        if (paramMap != null) {
+            for (String key : paramMap.keySet()) {
+                if (paramMap.get(key).size() > 1) {
+                    return false;
+                }
+            }
+        }
+        if (request.getParameterMap() != null) {
+            Map<String, String[]> map = request.getParameterMap();
+            for (String key : map.keySet()) {
+                if (map.get(key).length > 1) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
 }
