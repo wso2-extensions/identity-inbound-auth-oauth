@@ -218,7 +218,7 @@ public class AccessTokenIssuer {
         }
 
         if (tokReqMsgCtx.getAuthorizedUser().isFederatedUser()) {
-            tokReqMsgCtx.getAuthorizedUser().setTenantDomain(oAuthAppDO.getUser().getTenantDomain());
+            tokReqMsgCtx.getAuthorizedUser().setTenantDomain(OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO));
         }
 
         if (!isValidGrant) {
