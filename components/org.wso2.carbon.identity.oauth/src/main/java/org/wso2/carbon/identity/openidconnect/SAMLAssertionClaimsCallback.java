@@ -341,7 +341,7 @@ public class SAMLAssertionClaimsCallback implements CustomClaimsCallbackHandler 
 	    }
             return new HashMap<>();
         }
-        
+
         if (log.isDebugEnabled()) {
             log.debug("Number of user claims retrieved from user store: " + userClaims.size());
         }
