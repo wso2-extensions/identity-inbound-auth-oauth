@@ -25,9 +25,12 @@ import org.apache.oltu.oauth2.as.response.OAuthASResponse;
 import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.message.OAuthResponse;
+import org.apache.oltu.oauth2.common.message.types.GrantType;
+import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoEndpointConfig;
 import org.wso2.carbon.identity.oauth.user.UserInfoAccessTokenValidator;
@@ -76,12 +79,16 @@ public class OpenIDConnectUserEndpoint {
                the tenantId in a thread local variable.
              */
             setServiceProviderTenantId(accessToken);
+            OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
 
             // build the claims
             //ToDO - Validate the grant type to be implicit or authorization_code before retrieving claims
-            UserInfoResponseBuilder userInfoResponseBuilder =
-                    UserInfoEndpointConfig.getInstance().getUserInfoResponseBuilder();
-            response = userInfoResponseBuilder.getResponseString(tokenResponse);
+            String grantType = oAuthAppDAO.getGrantType(accessToken);
+            if (!GrantType.CLIENT_CREDENTIALS.toString().equals(grantType)) {
+                UserInfoResponseBuilder userInfoResponseBuilder =
+                        UserInfoEndpointConfig.getInstance().getUserInfoResponseBuilder();
+                response = userInfoResponseBuilder.getResponseString(tokenResponse);
+            }
 
         } catch (UserInfoEndpointException e) {
             return handleError(e);

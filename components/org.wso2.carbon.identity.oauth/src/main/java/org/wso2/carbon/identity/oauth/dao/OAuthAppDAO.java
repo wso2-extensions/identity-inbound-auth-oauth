@@ -54,6 +54,7 @@ public class OAuthAppDAO {
 
     public static final Log log = LogFactory.getLog(OAuthAppDAO.class);
     private TokenPersistenceProcessor persistenceProcessor;
+    private String GRANT_TYPE = "GRANT_TYPE";
 
     public OAuthAppDAO() {
 
@@ -551,6 +552,42 @@ public class OAuthAppDAO {
             IdentityDatabaseUtil.closeAllConnections(connection, rSet, prepStmt);
         }
         return isDuplicateConsumer;
+    }
+
+    /**
+     * Get the grant type.
+     *
+     * @param accessToken Access token
+     * @return grant type
+     */
+    public String getGrantType(String accessToken) {
+
+        PreparedStatement prepStmt = null;
+        Connection connection = null;
+        ResultSet rSet = null;
+        String grantType = null;
+
+        try {
+            connection = IdentityDatabaseUtil.getDBConnection();
+            prepStmt = connection.prepareStatement(SQLQueries.OAuthConsumerDAOSQLQueries.GET_GRANT_TYPE_BY_TOKEN);
+            prepStmt.setString(1, accessToken);
+            rSet = prepStmt.executeQuery();
+            if (rSet != null && rSet.next()) {
+                grantType = rSet.getString(GRANT_TYPE);
+            }
+            connection.commit();
+        } catch (SQLException e) {
+            try {
+                throw new IdentityOAuthAdminException("Error when executing the SQL : "
+                        + SQLQueries.OAuthConsumerDAOSQLQueries.GET_GRANT_TYPE_BY_TOKEN, e);
+            } catch (IdentityOAuthAdminException e1) {
+                log.error("Error when executing the SQL : "
+                        + SQLQueries.OAuthConsumerDAOSQLQueries.GET_GRANT_TYPE_BY_TOKEN, e1);
+            }
+        } finally {
+            IdentityDatabaseUtil.closeAllConnections(connection, null, prepStmt);
+        }
+        return grantType;
     }
 
 }

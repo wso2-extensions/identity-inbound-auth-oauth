@@ -119,6 +119,9 @@ public class SQLQueries {
         public static final String GET_ACCESS_TOKEN = "SELECT SCOPE, AUTHZ_USER FROM IDN_OAUTH1A_ACCESS_TOKEN " +
                 "WHERE ACCESS_TOKEN=?";
 
+        public static final String GET_GRANT_TYPE_BY_TOKEN = "SELECT GRANT_TYPE FROM " +
+                "IDN_OAUTH2_ACCESS_TOKEN WHERE ACCESS_TOKEN = ?";
+
         public static final String GET_ACCESS_TOKEN_SECRET = "SELECT ACCESS_TOKEN_SECRET FROM IDN_OAUTH1A_ACCESS_TOKEN " +
                 "WHERE ACCESS_TOKEN=?";
 
