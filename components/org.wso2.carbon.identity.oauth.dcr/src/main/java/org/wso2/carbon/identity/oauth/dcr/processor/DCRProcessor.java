@@ -30,8 +30,10 @@ import org.wso2.carbon.identity.oauth.dcr.DCRException;
 import org.wso2.carbon.identity.oauth.dcr.context.DCRMessageContext;
 import org.wso2.carbon.identity.oauth.dcr.exception.RegistrationException;
 import org.wso2.carbon.identity.oauth.dcr.exception.UnRegistrationException;
+import org.wso2.carbon.identity.oauth.dcr.handler.ReadHandler;
 import org.wso2.carbon.identity.oauth.dcr.handler.RegistrationHandler;
 import org.wso2.carbon.identity.oauth.dcr.handler.UnRegistrationHandler;
+import org.wso2.carbon.identity.oauth.dcr.model.ReadRequest;
 import org.wso2.carbon.identity.oauth.dcr.model.RegistrationRequest;
 import org.wso2.carbon.identity.oauth.dcr.model.UnregistrationRequest;
 import org.wso2.carbon.identity.oauth.dcr.util.DCRConstants;
@@ -56,6 +58,8 @@ public class DCRProcessor extends IdentityProcessor {
             identityResponseBuilder = registerOAuthApplication(dcrMessageContext);
         } else if (identityRequest instanceof UnregistrationRequest) {
             identityResponseBuilder = unRegisterOAuthApplication(dcrMessageContext);
+        } else if (identityRequest instanceof ReadRequest){
+            identityResponseBuilder = readOAuthApplication(dcrMessageContext);
         }
         return identityResponseBuilder;
     }
@@ -111,6 +115,17 @@ public class DCRProcessor extends IdentityProcessor {
         return identityResponseBuilder;
     }
 
+    protected IdentityResponse.IdentityResponseBuilder readOAuthApplication(DCRMessageContext dcrMessageContext)
+            throws DCRException{
+        IdentityResponse.IdentityResponseBuilder identityResponseBuilder = null;
+
+//        ReadHandler readHandler = HandlerManager.getInstance().getReadHandler(dcrMessageContext);
+        ReadHandler readHandler = new ReadHandler();
+        identityResponseBuilder = readHandler.handle(dcrMessageContext);
+
+        return identityResponseBuilder;
+    }
+
     @Override
     public boolean canHandle(IdentityRequest identityRequest) {
         boolean canHandle = false;
@@ -118,7 +133,7 @@ public class DCRProcessor extends IdentityProcessor {
             Matcher registerMatcher =
                     DCRConstants.DCR_ENDPOINT_REGISTER_URL_PATTERN.matcher(identityRequest.getRequestURI());
             Matcher unRegisterMatcher =
-                    DCRConstants.DCR_ENDPOINT_UNREGISTER_URL_PATTERN.matcher(identityRequest.getRequestURI());
+                    DCRConstants.DCRM_ENDPOINT_CLIENT_CONFIGURATION_URL_PATTERN.matcher(identityRequest.getRequestURI());
             if (registerMatcher.matches() || unRegisterMatcher.matches()) {
                 canHandle = true;
             }

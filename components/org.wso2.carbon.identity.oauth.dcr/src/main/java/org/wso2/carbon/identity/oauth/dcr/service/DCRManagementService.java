@@ -315,6 +315,44 @@ public class DCRManagementService {
         }
     }
 
+    public RegistrationResponseProfile readOAuthApplication(String consumerKey, String userId)
+        throws DCRException{
+
+        String tenantDomain = MultitenantUtils.getTenantDomain(userId);
+        String userName = MultitenantUtils.getTenantAwareUsername(userId);
+
+        PrivilegedCarbonContext.startTenantFlow();
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(tenantDomain, true);
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(userName);
+
+        OAuthAdminService oAuthAdminService = new OAuthAdminService();
+        OAuthConsumerAppDTO oAuthConsumerApp = null;
+
+        try {
+            oAuthConsumerApp = oAuthAdminService.getOAuthApplicationData(consumerKey);
+        } catch (IdentityOAuthAdminException e) {
+            throw IdentityException.error(DCRException.class, ErrorCodes.BAD_REQUEST.toString(), e.getMessage());
+        }
+
+        if(oAuthConsumerApp != null){
+          try{
+            RegistrationResponseProfile registrationResponseProfile = new RegistrationResponseProfile();
+            registrationResponseProfile.setClientId(oAuthConsumerApp.getOauthConsumerKey());
+            registrationResponseProfile.getRedirectUrls().add(oAuthConsumerApp.getCallbackUrl());
+            registrationResponseProfile.setClientSecret(oAuthConsumerApp.getOauthConsumerSecret());
+            registrationResponseProfile.setClientName(oAuthConsumerApp.getApplicationName());
+            if (StringUtils.isNotBlank(oAuthConsumerApp.getGrantTypes())) {
+              String[] split = oAuthConsumerApp.getGrantTypes().split(" ");
+              registrationResponseProfile.setGrantTypes(Arrays.asList(split));
+            }
+            return registrationResponseProfile;
+          }finally {
+            PrivilegedCarbonContext.endTenantFlow();
+          }
+        }
+      return null;
+    }
+
     /**
      * This method will check the existence of an OAuth application provided application-name.
      *

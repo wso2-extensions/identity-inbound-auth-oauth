@@ -35,6 +35,7 @@ public class DCRDataHolder {
     private ApplicationManagementService applicationManagementService = null;
     private List<RegistrationHandler> registrationHandlerList = new ArrayList<>();
     private List<UnRegistrationHandler> unRegistrationHandlerList = new ArrayList<>();
+//    private List<ReadHandler> readHandlerList = new ArrayList<>();
 
     private DCRDataHolder() {
     }
@@ -72,4 +73,13 @@ public class DCRDataHolder {
             List<UnRegistrationHandler> unRegistrationHandlerList) {
         this.unRegistrationHandlerList = unRegistrationHandlerList;
     }
+
+//    public List<ReadHandler> getReadHandlerList() {
+//        return readHandlerList;
+//    }
+//
+//    public void setReadHandlerList(
+//        List<ReadHandler> readHandlerList) {
+//        this.readHandlerList = readHandlerList;
+//    }
 }

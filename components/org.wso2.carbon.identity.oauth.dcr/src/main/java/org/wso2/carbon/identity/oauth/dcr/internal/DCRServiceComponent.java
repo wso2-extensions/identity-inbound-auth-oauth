@@ -27,6 +27,7 @@ import org.wso2.carbon.identity.application.authentication.framework.inbound.Ide
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.oauth.dcr.factory.HttpRegistrationResponseFactory;
 import org.wso2.carbon.identity.oauth.dcr.factory.HttpUnregistrationResponseFactory;
+import org.wso2.carbon.identity.oauth.dcr.factory.ReadRequestFactory;
 import org.wso2.carbon.identity.oauth.dcr.factory.RegistrationRequestFactory;
 import org.wso2.carbon.identity.oauth.dcr.factory.UnregistrationRequestFactory;
 import org.wso2.carbon.identity.oauth.dcr.handler.RegistrationHandler;
@@ -71,11 +72,17 @@ public class DCRServiceComponent {
             componentContext.getBundleContext().registerService(HttpIdentityResponseFactory.class.getName(),
                                                                 new HttpUnregistrationResponseFactory(), null);
 
+            componentContext.getBundleContext().registerService(HttpIdentityRequestFactory.class.getName(),
+                                                                new ReadRequestFactory(), null);
+
             componentContext.getBundleContext().registerService(RegistrationHandler.class.getName(),
                                                                 new RegistrationHandler(), null);
 
             componentContext.getBundleContext().registerService(UnRegistrationHandler.class.getName(),
                                                                 new UnRegistrationHandler(), null);
+
+//            componentContext.getBundleContext().registerService(ReadHandler.class.getName(),
+//                                                                new ReadHandler(), null);
         } catch (Throwable e) {
             log.error("Error occurred while activating DCRServiceComponent", e);
         }
@@ -143,6 +150,14 @@ public class DCRServiceComponent {
         }
         DCRDataHolder.getInstance().getUnRegistrationHandlerList().add(null);
     }
+
+//    protected void setReadHandler(ReadHandler readHandler){
+//        DCRDataHolder.getInstance().getReadHandlerList().add(readHandler);
+//    }
+//
+//    protected void unsetReadHandler(ReadHandler readHandler){
+//        DCRDataHolder.getInstance().getReadHandlerList().add(null);
+//    }
 
 
     /**
