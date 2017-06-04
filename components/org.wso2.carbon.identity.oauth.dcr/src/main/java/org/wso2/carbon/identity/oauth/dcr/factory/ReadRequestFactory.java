@@ -1,3 +1,20 @@
+/*
+ * Copyright (c) 2016, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ *
+ * WSO2 Inc. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * you may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 package org.wso2.carbon.identity.oauth.dcr.factory;
 
 import java.util.regex.Matcher;
@@ -9,10 +26,8 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.FrameworkClientException;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.HttpIdentityRequestFactory;
-import org.wso2.carbon.identity.application.authentication.framework.inbound.HttpIdentityResponse.HttpIdentityResponseBuilder;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.IdentityRequest.IdentityRequestBuilder;
 import org.wso2.carbon.identity.oauth.dcr.model.ReadRequest;
-import org.wso2.carbon.identity.oauth.dcr.model.ReadRequest.ReadRequestBuilder;
 import org.wso2.carbon.identity.oauth.dcr.util.DCRConstants;
 
 /**
@@ -20,10 +35,10 @@ import org.wso2.carbon.identity.oauth.dcr.util.DCRConstants;
  */
 public class ReadRequestFactory extends HttpIdentityRequestFactory {
 
-  private static Log log = LogFactory.getLog(RegistrationRequestFactory.class);
+  private static Log log = LogFactory.getLog(ReadRequestFactory.class);
 
   @Override
-  public boolean canHandle(HttpServletRequest request, HttpServletResponse response){
+  public boolean canHandle(HttpServletRequest request, HttpServletResponse response) {
 
     boolean canHandle = false;
     if (request != null) {
@@ -60,10 +75,10 @@ public class ReadRequestFactory extends HttpIdentityRequestFactory {
       consumerKey = matcher.group(2);
     }
 
-    String userID = CarbonContext.getThreadLocalCarbonContext().getUsername();
+    String username = CarbonContext.getThreadLocalCarbonContext().getUsername();
 
     readRequestBuilder.setConsumerKey(consumerKey);
-    readRequestBuilder.setUserId(userID);
+    readRequestBuilder.setUsername(username);
   }
 
 }

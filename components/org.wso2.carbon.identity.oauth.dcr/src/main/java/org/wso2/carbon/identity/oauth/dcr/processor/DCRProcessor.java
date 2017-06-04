@@ -58,7 +58,7 @@ public class DCRProcessor extends IdentityProcessor {
             identityResponseBuilder = registerOAuthApplication(dcrMessageContext);
         } else if (identityRequest instanceof UnregistrationRequest) {
             identityResponseBuilder = unRegisterOAuthApplication(dcrMessageContext);
-        } else if (identityRequest instanceof ReadRequest){
+        } else if (identityRequest instanceof ReadRequest) {
             identityResponseBuilder = readOAuthApplication(dcrMessageContext);
         }
         return identityResponseBuilder;
@@ -133,7 +133,7 @@ public class DCRProcessor extends IdentityProcessor {
             Matcher registerMatcher =
                     DCRConstants.DCR_ENDPOINT_REGISTER_URL_PATTERN.matcher(identityRequest.getRequestURI());
             Matcher unRegisterMatcher =
-                    DCRConstants.DCRM_ENDPOINT_CLIENT_CONFIGURATION_URL_PATTERN.matcher(identityRequest.getRequestURI());
+                    DCRConstants.DCR_ENDPOINT_UNREGISTER_URL_PATTERN.matcher(identityRequest.getRequestURI());
             if (registerMatcher.matches() || unRegisterMatcher.matches()) {
                 canHandle = true;
             }

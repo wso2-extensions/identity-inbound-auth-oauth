@@ -316,41 +316,46 @@ public class DCRManagementService {
     }
 
     public RegistrationResponseProfile readOAuthApplication(String consumerKey, String userId)
-        throws DCRException{
+        throws DCRException {
 
         String tenantDomain = MultitenantUtils.getTenantDomain(userId);
         String userName = MultitenantUtils.getTenantAwareUsername(userId);
 
-        PrivilegedCarbonContext.startTenantFlow();
-        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(tenantDomain, true);
-        PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(userName);
-
-        OAuthAdminService oAuthAdminService = new OAuthAdminService();
-        OAuthConsumerAppDTO oAuthConsumerApp = null;
-
         try {
-            oAuthConsumerApp = oAuthAdminService.getOAuthApplicationData(consumerKey);
-        } catch (IdentityOAuthAdminException e) {
-            throw IdentityException.error(DCRException.class, ErrorCodes.BAD_REQUEST.toString(), e.getMessage());
-        }
+            PrivilegedCarbonContext.startTenantFlow();
+            PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                .setTenantDomain(tenantDomain, true);
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(userName);
 
-        if(oAuthConsumerApp != null){
-          try{
-            RegistrationResponseProfile registrationResponseProfile = new RegistrationResponseProfile();
-            registrationResponseProfile.setClientId(oAuthConsumerApp.getOauthConsumerKey());
-            registrationResponseProfile.getRedirectUrls().add(oAuthConsumerApp.getCallbackUrl());
-            registrationResponseProfile.setClientSecret(oAuthConsumerApp.getOauthConsumerSecret());
-            registrationResponseProfile.setClientName(oAuthConsumerApp.getApplicationName());
-            if (StringUtils.isNotBlank(oAuthConsumerApp.getGrantTypes())) {
-              String[] split = oAuthConsumerApp.getGrantTypes().split(" ");
-              registrationResponseProfile.setGrantTypes(Arrays.asList(split));
+            OAuthAdminService oAuthAdminService = new OAuthAdminService();
+            OAuthConsumerAppDTO oAuthConsumerApp = null;
+
+            try {
+                oAuthConsumerApp = oAuthAdminService.getOAuthApplicationData(consumerKey);
+            } catch (IdentityOAuthAdminException e) {
+                throw IdentityException
+                    .error(DCRException.class, ErrorCodes.BAD_REQUEST.toString(), e.getMessage());
             }
-            return registrationResponseProfile;
-          }finally {
+
+            if (oAuthConsumerApp != null) {
+
+                RegistrationResponseProfile registrationResponseProfile = new RegistrationResponseProfile();
+                registrationResponseProfile.setClientId(oAuthConsumerApp.getOauthConsumerKey());
+                registrationResponseProfile.getRedirectUrls()
+                    .add(oAuthConsumerApp.getCallbackUrl());
+                registrationResponseProfile
+                    .setClientSecret(oAuthConsumerApp.getOauthConsumerSecret());
+                registrationResponseProfile.setClientName(oAuthConsumerApp.getApplicationName());
+                if (StringUtils.isNotBlank(oAuthConsumerApp.getGrantTypes())) {
+                    String[] split = oAuthConsumerApp.getGrantTypes().split(" ");
+                    registrationResponseProfile.setGrantTypes(Arrays.asList(split));
+                }
+                return registrationResponseProfile;
+            }
+        } finally {
             PrivilegedCarbonContext.endTenantFlow();
-          }
         }
-      return null;
+        return null;
     }
 
     /**

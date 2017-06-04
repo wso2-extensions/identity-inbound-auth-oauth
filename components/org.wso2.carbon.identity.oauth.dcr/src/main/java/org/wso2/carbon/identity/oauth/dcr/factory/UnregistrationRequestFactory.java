@@ -46,7 +46,7 @@ public class UnregistrationRequestFactory extends HttpIdentityRequestFactory {
                                                                                        FrameworkRuntimeException {
         boolean canHandle = false;
         if (request != null) {
-            Matcher matcher = DCRConstants.DCRM_ENDPOINT_CLIENT_CONFIGURATION_URL_PATTERN.matcher(request.getRequestURI());
+            Matcher matcher = DCRConstants.DCR_ENDPOINT_UNREGISTER_URL_PATTERN.matcher(request.getRequestURI());
             if (matcher.matches() && HttpMethod.DELETE.equals(request.getMethod())) {
                 canHandle = true;
             }
@@ -84,7 +84,7 @@ public class UnregistrationRequestFactory extends HttpIdentityRequestFactory {
         String clientId = request.getParameter("userId");
         String applicationName = request.getParameter("applicationName");
         String consumerKey = null;
-        Matcher matcher = DCRConstants.DCRM_ENDPOINT_CLIENT_CONFIGURATION_URL_PATTERN.matcher(request.getRequestURI());
+        Matcher matcher = DCRConstants.DCR_ENDPOINT_UNREGISTER_URL_PATTERN.matcher(request.getRequestURI());
         if (matcher.find()) {
             consumerKey = matcher.group(2);
         }
