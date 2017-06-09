@@ -28,6 +28,7 @@ import org.wso2.carbon.identity.application.authentication.framework.inbound.Ide
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.oauth.dcr.DCRException;
 import org.wso2.carbon.identity.oauth.dcr.context.DCRMessageContext;
+import org.wso2.carbon.identity.oauth.dcr.exception.ReadException;
 import org.wso2.carbon.identity.oauth.dcr.exception.RegistrationException;
 import org.wso2.carbon.identity.oauth.dcr.exception.UnRegistrationException;
 import org.wso2.carbon.identity.oauth.dcr.handler.ReadHandler;
@@ -116,12 +117,21 @@ public class DCRProcessor extends IdentityProcessor {
     }
 
     protected IdentityResponse.IdentityResponseBuilder readOAuthApplication(DCRMessageContext dcrMessageContext)
-            throws DCRException{
+            throws ReadException{
         IdentityResponse.IdentityResponseBuilder identityResponseBuilder = null;
 
-//        ReadHandler readHandler = HandlerManager.getInstance().getReadHandler(dcrMessageContext);
         ReadHandler readHandler = new ReadHandler();
-        identityResponseBuilder = readHandler.handle(dcrMessageContext);
+        try {
+            identityResponseBuilder = readHandler.handle(dcrMessageContext);
+        } catch (DCRException e) {
+            if (StringUtils.isBlank(e.getErrorCode())) {
+                throw IdentityException.error(ReadException.class,
+                    ErrorCodes.BAD_REQUEST.toString(), e.getMessage(), e);
+            } else {
+                throw  IdentityException.error(ReadException.class, e.getErrorCode(), e.getMessage()
+                    , e);
+            }
+        }
 
         return identityResponseBuilder;
     }

@@ -315,11 +315,19 @@ public class DCRManagementService {
         }
     }
 
-    public RegistrationResponseProfile readOAuthApplication(String consumerKey, String userId)
+    /**
+     * This method will read a registered OAuth application
+     *
+     * @param consumerKey   - consumer key of the application
+     * @param username      - user name of the owner
+     * @return an object which holds the registered metadata of the application
+     * @throws DCRException
+     */
+    public RegistrationResponseProfile readOAuthApplication(String consumerKey, String username)
         throws DCRException {
 
-        String tenantDomain = MultitenantUtils.getTenantDomain(userId);
-        String userName = MultitenantUtils.getTenantAwareUsername(userId);
+        String tenantDomain = MultitenantUtils.getTenantDomain(username);
+        String userName = MultitenantUtils.getTenantAwareUsername(username);
 
         try {
             PrivilegedCarbonContext.startTenantFlow();
@@ -333,8 +341,7 @@ public class DCRManagementService {
             try {
                 oAuthConsumerApp = oAuthAdminService.getOAuthApplicationData(consumerKey);
             } catch (IdentityOAuthAdminException e) {
-                throw IdentityException
-                    .error(DCRException.class, ErrorCodes.BAD_REQUEST.toString(), e.getMessage());
+                throw new DCRException(e.getMessage(), e);
             }
 
             if (oAuthConsumerApp != null) {
@@ -351,11 +358,12 @@ public class DCRManagementService {
                     registrationResponseProfile.setGrantTypes(Arrays.asList(split));
                 }
                 return registrationResponseProfile;
+            } else {
+                throw new DCRException("Service provider does not contain any information.");
             }
         } finally {
             PrivilegedCarbonContext.endTenantFlow();
         }
-        return null;
     }
 
     /**

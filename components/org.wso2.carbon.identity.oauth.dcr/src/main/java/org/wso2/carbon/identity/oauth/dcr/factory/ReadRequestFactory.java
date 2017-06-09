@@ -31,7 +31,7 @@ import org.wso2.carbon.identity.oauth.dcr.model.ReadRequest;
 import org.wso2.carbon.identity.oauth.dcr.util.DCRConstants;
 
 /**
- * ReadRequestFactory build the request for DCR Read Request.
+ * ReadRequestFactory build the request for DCRM Read Request.
  */
 public class ReadRequestFactory extends HttpIdentityRequestFactory {
 
@@ -42,20 +42,21 @@ public class ReadRequestFactory extends HttpIdentityRequestFactory {
 
     boolean canHandle = false;
     if (request != null) {
-      Matcher matcher = DCRConstants.DCRM_ENDPOINT_CLIENT_CONFIGURATION_URL_PATTERN.matcher(request.getRequestURI());
+      Matcher matcher = DCRConstants.DCRM_ENDPOINT_CLIENT_CONFIGURATION_URL_PATTERN
+          .matcher(request.getRequestURI());
       if (matcher.matches() && HttpMethod.GET.equals(request.getMethod())) {
         canHandle = true;
       }
     }
     if (log.isDebugEnabled()) {
-      log.debug("canHandle " + canHandle + " by RegistrationRequestFactory.");
+      log.debug("canHandle " + canHandle + " by ReadRequestFactory.");
     }
     return canHandle;
   }
 
   @Override
-  public ReadRequest.ReadRequestBuilder create(HttpServletRequest request, HttpServletResponse response)
-      throws FrameworkClientException {
+  public ReadRequest.ReadRequestBuilder create(HttpServletRequest request,
+      HttpServletResponse response) throws FrameworkClientException {
 
     ReadRequest.ReadRequestBuilder readRequestBuilder = new ReadRequest.ReadRequestBuilder();
     create(readRequestBuilder, request, response);
@@ -70,7 +71,8 @@ public class ReadRequestFactory extends HttpIdentityRequestFactory {
     super.create(readRequestBuilder, request, response);
 
     String consumerKey = null;
-    Matcher matcher = DCRConstants.DCRM_ENDPOINT_CLIENT_CONFIGURATION_URL_PATTERN.matcher(request.getRequestURI());
+    Matcher matcher = DCRConstants.DCRM_ENDPOINT_CLIENT_CONFIGURATION_URL_PATTERN
+        .matcher(request.getRequestURI());
     if (matcher.find()) {
       consumerKey = matcher.group(2);
     }

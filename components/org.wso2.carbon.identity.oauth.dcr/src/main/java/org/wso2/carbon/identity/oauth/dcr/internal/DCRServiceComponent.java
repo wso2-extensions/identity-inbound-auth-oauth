@@ -81,8 +81,6 @@ public class DCRServiceComponent {
             componentContext.getBundleContext().registerService(UnRegistrationHandler.class.getName(),
                                                                 new UnRegistrationHandler(), null);
 
-//            componentContext.getBundleContext().registerService(ReadHandler.class.getName(),
-//                                                                new ReadHandler(), null);
         } catch (Throwable e) {
             log.error("Error occurred while activating DCRServiceComponent", e);
         }
@@ -150,15 +148,6 @@ public class DCRServiceComponent {
         }
         DCRDataHolder.getInstance().getUnRegistrationHandlerList().add(null);
     }
-
-//    protected void setReadHandler(ReadHandler readHandler){
-//        DCRDataHolder.getInstance().getReadHandlerList().add(readHandler);
-//    }
-//
-//    protected void unsetReadHandler(ReadHandler readHandler){
-//        DCRDataHolder.getInstance().getReadHandlerList().add(null);
-//    }
-
 
     /**
      * Sets ApplicationManagement Service.

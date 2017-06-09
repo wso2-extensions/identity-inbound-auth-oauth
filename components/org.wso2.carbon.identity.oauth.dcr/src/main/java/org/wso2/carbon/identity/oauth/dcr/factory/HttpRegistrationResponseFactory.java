@@ -25,6 +25,7 @@ import org.wso2.carbon.identity.application.authentication.framework.inbound.Htt
 import org.wso2.carbon.identity.application.authentication.framework.inbound.HttpIdentityResponseFactory;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.IdentityResponse;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.dcr.exception.ReadException;
 import org.wso2.carbon.identity.oauth.dcr.exception.RegistrationException;
 import org.wso2.carbon.identity.oauth.dcr.model.RegistrationResponse;
 import org.wso2.carbon.identity.oauth.dcr.util.ErrorCodes;
@@ -97,6 +98,8 @@ public class HttpRegistrationResponseFactory extends HttpIdentityResponseFactory
     public boolean canHandle(FrameworkException exception) {
 
         if (exception instanceof RegistrationException) {
+            return true;
+        } else if (exception instanceof ReadException) {
             return true;
         }
         return false;

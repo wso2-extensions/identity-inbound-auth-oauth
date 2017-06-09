@@ -19,7 +19,6 @@ package org.wso2.carbon.identity.oauth.dcr.util;
 
 import org.wso2.carbon.identity.oauth.dcr.DCRRuntimeException;
 import org.wso2.carbon.identity.oauth.dcr.context.DCRMessageContext;
-import org.wso2.carbon.identity.oauth.dcr.handler.ReadHandler;
 import org.wso2.carbon.identity.oauth.dcr.handler.RegistrationHandler;
 import org.wso2.carbon.identity.oauth.dcr.handler.UnRegistrationHandler;
 import org.wso2.carbon.identity.oauth.dcr.internal.DCRDataHolder;
@@ -54,14 +53,5 @@ public class HandlerManager {
         }
         throw DCRRuntimeException.error("Cannot find AuthenticationHandler to handle this request");
     }
-
-//    public ReadHandler getReadHandler(DCRMessageContext dcrMessageContext){
-//        List<ReadHandler> readHandlers = DCRDataHolder.getInstance().getReadHandlerList();
-////        readHandlers.add(new ReadHandler());
-//        if (readHandlers != null && readHandlers.size() >0) {
-//            return readHandlers.get(0);
-//        }
-//        throw DCRRuntimeException.error("Cannot find AuthenticationHandler to handle this request");
-//    }
 
 }
