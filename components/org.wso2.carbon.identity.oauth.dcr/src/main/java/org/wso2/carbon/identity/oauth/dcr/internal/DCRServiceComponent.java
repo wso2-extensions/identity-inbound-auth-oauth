@@ -30,6 +30,7 @@ import org.wso2.carbon.identity.oauth.dcr.factory.HttpUnregistrationResponseFact
 import org.wso2.carbon.identity.oauth.dcr.factory.ReadRequestFactory;
 import org.wso2.carbon.identity.oauth.dcr.factory.RegistrationRequestFactory;
 import org.wso2.carbon.identity.oauth.dcr.factory.UnregistrationRequestFactory;
+import org.wso2.carbon.identity.oauth.dcr.factory.UpdateRequestFactory;
 import org.wso2.carbon.identity.oauth.dcr.handler.RegistrationHandler;
 import org.wso2.carbon.identity.oauth.dcr.handler.UnRegistrationHandler;
 import org.wso2.carbon.identity.oauth.dcr.processor.DCRProcessor;
@@ -74,6 +75,9 @@ public class DCRServiceComponent {
 
             componentContext.getBundleContext().registerService(HttpIdentityRequestFactory.class.getName(),
                                                                 new ReadRequestFactory(), null);
+
+            componentContext.getBundleContext().registerService(HttpIdentityRequestFactory.class.getName(),
+                                                                new UpdateRequestFactory(), null);
 
             componentContext.getBundleContext().registerService(RegistrationHandler.class.getName(),
                                                                 new RegistrationHandler(), null);

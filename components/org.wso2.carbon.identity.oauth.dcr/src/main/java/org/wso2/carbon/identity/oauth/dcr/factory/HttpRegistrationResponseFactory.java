@@ -27,6 +27,7 @@ import org.wso2.carbon.identity.application.authentication.framework.inbound.Ide
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.dcr.exception.ReadException;
 import org.wso2.carbon.identity.oauth.dcr.exception.RegistrationException;
+import org.wso2.carbon.identity.oauth.dcr.exception.UpdateException;
 import org.wso2.carbon.identity.oauth.dcr.model.RegistrationResponse;
 import org.wso2.carbon.identity.oauth.dcr.util.ErrorCodes;
 
@@ -100,6 +101,8 @@ public class HttpRegistrationResponseFactory extends HttpIdentityResponseFactory
         if (exception instanceof RegistrationException) {
             return true;
         } else if (exception instanceof ReadException) {
+            return true;
+        } else if (exception instanceof UpdateException) {
             return true;
         }
         return false;
