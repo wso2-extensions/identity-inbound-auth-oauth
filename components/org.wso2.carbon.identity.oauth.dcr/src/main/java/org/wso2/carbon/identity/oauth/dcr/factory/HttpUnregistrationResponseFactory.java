@@ -17,6 +17,7 @@
  */
 package org.wso2.carbon.identity.oauth.dcr.factory;
 
+import org.json.simple.JSONObject;
 import org.wso2.carbon.identity.application.authentication.framework.exception.FrameworkException;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.HttpIdentityResponse;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.HttpIdentityResponseFactory;
@@ -26,11 +27,14 @@ import org.wso2.carbon.identity.oauth.dcr.exception.UnRegistrationException;
 import org.wso2.carbon.identity.oauth.dcr.model.UnregistrationResponse;
 
 import javax.servlet.http.HttpServletResponse;
+import org.wso2.carbon.identity.oauth.dcr.util.ErrorCodes;
 
 /**
  * Http UnRegistration Response Factory.
  */
 public class HttpUnregistrationResponseFactory extends HttpIdentityResponseFactory {
+
+    public static String BACKEND_FAILED = "backend_failed";
 
     @Override
     public boolean canHandle(IdentityResponse identityResponse) {
@@ -62,12 +66,17 @@ public class HttpUnregistrationResponseFactory extends HttpIdentityResponseFacto
 
         HttpIdentityResponse.HttpIdentityResponseBuilder builder =
                 new HttpIdentityResponse.HttpIdentityResponseBuilder();
-        builder.setStatusCode(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
-        builder.addHeader(OAuthConstants.HTTP_RESP_HEADER_CACHE_CONTROL,
-                          OAuthConstants.HTTP_RESP_HEADER_VAL_CACHE_CONTROL_NO_STORE);
-        builder.addHeader(OAuthConstants.HTTP_RESP_HEADER_PRAGMA,
-                          OAuthConstants.HTTP_RESP_HEADER_VAL_PRAGMA_NO_CACHE);
-        return builder;
+        String errorMessage = null;
+        if (ErrorCodes.BAD_REQUEST.name().equals(exception.getErrorCode())) {
+          errorMessage = generateErrorResponse(BACKEND_FAILED, exception.getMessage()).toJSONString();
+        }
+          builder.setBody(errorMessage);
+          builder.setStatusCode(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
+          builder.addHeader(OAuthConstants.HTTP_RESP_HEADER_CACHE_CONTROL,
+                            OAuthConstants.HTTP_RESP_HEADER_VAL_CACHE_CONTROL_NO_STORE);
+          builder.addHeader(OAuthConstants.HTTP_RESP_HEADER_PRAGMA,
+                            OAuthConstants.HTTP_RESP_HEADER_VAL_PRAGMA_NO_CACHE);
+          return builder;
     }
 
     public boolean canHandle(FrameworkException exception) {
@@ -75,5 +84,12 @@ public class HttpUnregistrationResponseFactory extends HttpIdentityResponseFacto
             return true;
         }
         return false;
+    }
+
+    protected JSONObject generateErrorResponse(String error, String description) {
+        JSONObject obj = new JSONObject();
+        obj.put("error", error);
+        obj.put("error_description", description);
+        return obj;
     }
 }

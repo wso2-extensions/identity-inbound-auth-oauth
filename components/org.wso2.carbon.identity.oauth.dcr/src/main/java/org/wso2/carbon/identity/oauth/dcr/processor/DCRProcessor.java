@@ -115,9 +115,11 @@ public class DCRProcessor extends IdentityProcessor {
             identityResponseBuilder = unRegistrationHandler.handle(dcrMessageContext);
         } catch (DCRException e) {
             if (StringUtils.isBlank(e.getErrorCode())) {
-                throw IdentityException.error(UnRegistrationException.class, ErrorCodes.BAD_REQUEST.toString(), e);
+                throw IdentityException.error(UnRegistrationException.class,
+                    ErrorCodes.BAD_REQUEST.toString(), e.getMessage(), e);
             } else {
-                throw  IdentityException.error(UnRegistrationException.class, e.getErrorCode(), e);
+                throw  IdentityException.error(UnRegistrationException.class, e.getErrorCode(),
+                    e.getMessage(), e);
             }
         }
         return identityResponseBuilder;

@@ -38,6 +38,8 @@ import org.wso2.carbon.identity.oauth.dcr.DCRException;
 import org.wso2.carbon.identity.oauth.dcr.internal.DCRDataHolder;
 import org.wso2.carbon.identity.oauth.dcr.model.RegistrationRequestProfile;
 import org.wso2.carbon.identity.oauth.dcr.model.RegistrationResponseProfile;
+import org.wso2.carbon.identity.oauth.dcr.model.UnregistrationResponse;
+import org.wso2.carbon.identity.oauth.dcr.model.UnregistrationResponse.DCUnregisterResponseBuilder;
 import org.wso2.carbon.identity.oauth.dcr.model.UpdateRequestProfile;
 import org.wso2.carbon.identity.oauth.dcr.util.DCRConstants;
 import org.wso2.carbon.identity.oauth.dcr.util.ErrorCodes;
@@ -274,21 +276,17 @@ public class DCRManagementService {
      * This method will unregister a created OAuth application.
      *
      * @param userId          - UserId of the owner
-     * @param applicationName - OAuth application name
      * @param consumerKey     - ConsumerKey of the OAuth application
      * @return The status of the operation
      * @throws DCRException
      */
-    public void unregisterOAuthApplication(String userId, String applicationName, String consumerKey)
+    public DCUnregisterResponseBuilder unregisterOAuthApplication(String userId, String consumerKey)
             throws DCRException {
 
-        if (!StringUtils.isNotEmpty(userId) || !StringUtils.isNotEmpty(applicationName) || !StringUtils
-                .isNotEmpty(consumerKey)) {
-            throw new DCRException(
-                    "Username, Application Name and Consumer Key cannot be null or empty");
-        }
         String tenantDomain = MultitenantUtils.getTenantDomain(userId);
         String userName = MultitenantUtils.getTenantAwareUsername(userId);
+
+        DCUnregisterResponseBuilder unregisterResponseBuilder = new DCUnregisterResponseBuilder();
 
         PrivilegedCarbonContext.startTenantFlow();
         PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(tenantDomain, true);
@@ -299,12 +297,10 @@ public class DCRManagementService {
         try {
             oAuthConsumerApp = oAuthAdminService.getOAuthApplicationData(consumerKey);
         } catch (Exception e) {
-            //We had to catch Exception here because getOAuthApplicationData can throw exceptions of java.lang.Exception
-            // class.
-            if(log.isDebugEnabled()) {
-                log.debug("Error occurred while oauth application data by consumer id.", e);
-            }
+            throw new DCRException(e.getMessage(), e);
         }
+
+        String applicationName = oAuthConsumerApp.getApplicationName();
 
         if (oAuthConsumerApp != null) {
             try {
@@ -322,6 +318,8 @@ public class DCRManagementService {
                             "Couldn't retrieve Service Provider Application " + applicationName);
                 }
                 appMgtService.deleteApplication(applicationName, tenantDomain, userName);
+                unregisterResponseBuilder.setIsUnregistered(true);
+
 
             } catch (IdentityApplicationManagementException e) {
                 throw new DCRException(
@@ -332,7 +330,10 @@ public class DCRManagementService {
             } finally {
                 PrivilegedCarbonContext.endTenantFlow();
             }
+        } else {
+          unregisterResponseBuilder.setIsUnregistered(false);
         }
+        return unregisterResponseBuilder;
     }
 
     /**

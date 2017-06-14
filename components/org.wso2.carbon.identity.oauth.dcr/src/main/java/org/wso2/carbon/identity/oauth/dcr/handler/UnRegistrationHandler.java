@@ -17,7 +17,6 @@
  */
 package org.wso2.carbon.identity.oauth.dcr.handler;
 
-
 import org.wso2.carbon.identity.application.authentication.framework.inbound.IdentityResponse;
 import org.wso2.carbon.identity.oauth.dcr.DCRException;
 import org.wso2.carbon.identity.oauth.dcr.context.DCRMessageContext;
@@ -28,18 +27,16 @@ import org.wso2.carbon.identity.oauth.dcr.service.DCRManagementService;
 public class UnRegistrationHandler extends AbstractDCRHandler {
 
     @Override
-    public IdentityResponse.IdentityResponseBuilder handle(DCRMessageContext dcrMessageContext) throws DCRException {
-        UnregistrationResponse.DCUnregisterResponseBuilder dcUnregisterResponseBuilder = null;
+    public IdentityResponse.IdentityResponseBuilder handle(DCRMessageContext dcrMessageContext)
+        throws DCRException {
 
-        UnregistrationRequest unregistrationRequest = (UnregistrationRequest) dcrMessageContext.getIdentityRequest();
-        dcUnregisterResponseBuilder = new UnregistrationResponse.DCUnregisterResponseBuilder();
+        UnregistrationRequest unregistrationRequest = (UnregistrationRequest) dcrMessageContext
+            .getIdentityRequest();
 
-        DCRManagementService.getInstance().unregisterOAuthApplication(unregistrationRequest.getUserId(),
-                                                                      unregistrationRequest
-                                                                              .getApplicationName(),
-                                                                      unregistrationRequest
-                                                                              .getConsumerKey());
+        UnregistrationResponse.DCUnregisterResponseBuilder unregisterResponseBuilder =
+            DCRManagementService.getInstance().unregisterOAuthApplication(unregistrationRequest
+                    .getUserId(), unregistrationRequest.getConsumerKey());
 
-        return dcUnregisterResponseBuilder;
+        return unregisterResponseBuilder;
     }
 }
