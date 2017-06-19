@@ -33,24 +33,24 @@ import org.wso2.carbon.identity.oauth.dcr.service.DCRManagementService;
  */
 public class UpdateHandler extends AbstractDCRHandler{
 
-  @Override
-  public IdentityResponseBuilder handle(DCRMessageContext dcrMessageContext) throws DCRException {
+    @Override
+    public IdentityResponseBuilder handle(DCRMessageContext dcrMessageContext) throws DCRException {
 
-    RegistrationResponse.DCRRegisterResponseBuilder updateResponseBuilder;
+        RegistrationResponse.DCRRegisterResponseBuilder updateResponseBuilder;
 
-    UpdateRequest updateRequest = (UpdateRequest) dcrMessageContext.getIdentityRequest();
+        UpdateRequest updateRequest = (UpdateRequest) dcrMessageContext.getIdentityRequest();
 
-    UpdateRequestProfile updateRequestProfile = updateRequest.getUpdateRequestProfile();
+        UpdateRequestProfile updateRequestProfile = updateRequest.getUpdateRequestProfile();
 
-    updateRequestProfile.setTenantDomain(updateRequest.getTenantDomain());
+        updateRequestProfile.setTenantDomain(updateRequest.getTenantDomain());
 
-    RegistrationResponseProfile registrationResponseProfile = DCRManagementService.getInstance()
-        .updateOAuthApplication(updateRequestProfile);
+        RegistrationResponseProfile registrationResponseProfile = DCRManagementService.getInstance()
+            .updateOAuthApplication(updateRequestProfile);
 
-    updateResponseBuilder = new RegistrationResponse.DCRRegisterResponseBuilder();
+        updateResponseBuilder = new RegistrationResponse.DCRRegisterResponseBuilder();
 
-    updateResponseBuilder.setRegistrationResponseProfile(registrationResponseProfile);
+        updateResponseBuilder.setRegistrationResponseProfile(registrationResponseProfile);
 
-    return updateResponseBuilder;
-  }
+        return updateResponseBuilder;
+    }
 }

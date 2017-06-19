@@ -35,52 +35,52 @@ import org.wso2.carbon.identity.oauth.dcr.util.DCRConstants;
  */
 public class ReadRequestFactory extends HttpIdentityRequestFactory {
 
-  private static Log log = LogFactory.getLog(ReadRequestFactory.class);
+    private static Log log = LogFactory.getLog(ReadRequestFactory.class);
 
-  @Override
-  public boolean canHandle(HttpServletRequest request, HttpServletResponse response) {
+    @Override
+    public boolean canHandle(HttpServletRequest request, HttpServletResponse response) {
 
-    boolean canHandle = false;
-    if (request != null) {
-      Matcher matcher = DCRConstants.DCRM_ENDPOINT_CLIENT_CONFIGURATION_URL_PATTERN
-          .matcher(request.getRequestURI());
-      if (matcher.matches() && HttpMethod.GET.equals(request.getMethod())) {
-        canHandle = true;
-      }
-    }
-    if (log.isDebugEnabled()) {
-      log.debug("canHandle " + canHandle + " by ReadRequestFactory.");
-    }
-    return canHandle;
-  }
-
-  @Override
-  public ReadRequest.ReadRequestBuilder create(HttpServletRequest request,
-      HttpServletResponse response) throws FrameworkClientException {
-
-    ReadRequest.ReadRequestBuilder readRequestBuilder = new ReadRequest.ReadRequestBuilder();
-    create(readRequestBuilder, request, response);
-    return readRequestBuilder;
-  }
-
-  @Override
-  public void create(IdentityRequestBuilder builder, HttpServletRequest request,
-      HttpServletResponse response) throws FrameworkClientException {
-
-    ReadRequest.ReadRequestBuilder readRequestBuilder = (ReadRequest.ReadRequestBuilder)builder;
-    super.create(readRequestBuilder, request, response);
-
-    String consumerKey = null;
-    Matcher matcher = DCRConstants.DCRM_ENDPOINT_CLIENT_CONFIGURATION_URL_PATTERN
-        .matcher(request.getRequestURI());
-    if (matcher.find()) {
-      consumerKey = matcher.group(2);
+        boolean canHandle = false;
+        if (request != null) {
+            Matcher matcher = DCRConstants.DCRM_ENDPOINT_CLIENT_CONFIGURATION_URL_PATTERN
+                .matcher(request.getRequestURI());
+            if (matcher.matches() && HttpMethod.GET.equals(request.getMethod())) {
+                canHandle = true;
+            }
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("canHandle " + canHandle + " by ReadRequestFactory.");
+        }
+        return canHandle;
     }
 
-    String username = CarbonContext.getThreadLocalCarbonContext().getUsername();
+    @Override
+    public ReadRequest.ReadRequestBuilder create(HttpServletRequest request,
+        HttpServletResponse response) throws FrameworkClientException {
 
-    readRequestBuilder.setConsumerKey(consumerKey);
-    readRequestBuilder.setUsername(username);
-  }
+        ReadRequest.ReadRequestBuilder readRequestBuilder = new ReadRequest.ReadRequestBuilder();
+        create(readRequestBuilder, request, response);
+        return readRequestBuilder;
+    }
+
+    @Override
+    public void create(IdentityRequestBuilder builder, HttpServletRequest request,
+        HttpServletResponse response) throws FrameworkClientException {
+
+        ReadRequest.ReadRequestBuilder readRequestBuilder = (ReadRequest.ReadRequestBuilder)builder;
+        super.create(readRequestBuilder, request, response);
+
+        String consumerKey = null;
+        Matcher matcher = DCRConstants.DCRM_ENDPOINT_CLIENT_CONFIGURATION_URL_PATTERN
+            .matcher(request.getRequestURI());
+        if (matcher.find()) {
+            consumerKey = matcher.group(2);
+        }
+
+        String username = CarbonContext.getThreadLocalCarbonContext().getUsername();
+
+        readRequestBuilder.setConsumerKey(consumerKey);
+        readRequestBuilder.setUsername(username);
+    }
 
 }

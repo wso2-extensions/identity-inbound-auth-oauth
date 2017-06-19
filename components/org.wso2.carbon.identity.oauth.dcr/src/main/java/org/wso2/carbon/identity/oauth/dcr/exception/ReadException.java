@@ -22,19 +22,19 @@ import org.wso2.carbon.identity.oauth.dcr.DCRException;
 
 public class ReadException extends DCRException {
 
-  public ReadException(String message) {
-    super(message);
-  }
+    public ReadException(String message) {
+      super(message);
+    }
 
-  public ReadException(String errorCode, String message) {
-    super(errorCode, message);
-  }
+    public ReadException(String errorCode, String message) {
+      super(errorCode, message);
+    }
 
-  public ReadException(String message, Throwable cause) {
-    super(message, cause);
-  }
+    public ReadException(String message, Throwable cause) {
+      super(message, cause);
+    }
 
-  public ReadException(String errorCode, String message, Throwable cause) {
-    super(errorCode, message, cause);
-  }
+    public ReadException(String errorCode, String message, Throwable cause) {
+      super(errorCode, message, cause);
+    }
 }

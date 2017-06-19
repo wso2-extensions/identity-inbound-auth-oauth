@@ -69,7 +69,6 @@ public final class DCRConstants {
             throw new AssertionError();
         }
 
-
     }
 
     public static class GrantTypes {

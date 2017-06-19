@@ -26,73 +26,73 @@ import java.util.List;
  */
 public class UpdateRequestProfile {
 
-  private String consumerKey;
-  private String clientId;
-  private String clientSecret;
-  private String clientName;
-  private List<String> redirectUris = new ArrayList<>();
-  private List<String> grantTypes = new ArrayList<>();
+    private String consumerKey;
+    private String clientId;
+    private String clientSecret;
+    private String clientName;
+    private List<String> redirectUris = new ArrayList<>();
+    private List<String> grantTypes = new ArrayList<>();
 
-  private String username;
-  private String tenantDomain;
+    private String username;
+    private String tenantDomain;
 
-  public String getConsumerKey() { return consumerKey; }
+    public String getConsumerKey() { return consumerKey; }
 
-  public void setConsumerKey(String consumerKey) { this.consumerKey = consumerKey; }
+    public void setConsumerKey(String consumerKey) { this.consumerKey = consumerKey; }
 
-  public String getClientId() {
-    return clientId;
-  }
+    public String getClientId() {
+      return clientId;
+    }
 
-  public void setClientId(String clientId) {
-    this.clientId = clientId;
-  }
+    public void setClientId(String clientId) {
+      this.clientId = clientId;
+    }
 
-  public String getClientSecret() {
-    return clientSecret;
-  }
+    public String getClientSecret() {
+      return clientSecret;
+    }
 
-  public void setClientSecret(String clientSecret) {
-    this.clientSecret = clientSecret;
-  }
+    public void setClientSecret(String clientSecret) {
+      this.clientSecret = clientSecret;
+    }
 
-  public String getClientName() {
-    return clientName;
-  }
+    public String getClientName() {
+      return clientName;
+    }
 
-  public void setClientName(String clientName) {
-    this.clientName = clientName;
-  }
+    public void setClientName(String clientName) {
+      this.clientName = clientName;
+    }
 
-  public List<String> getRedirectUris() {
-    return redirectUris;
-  }
+    public List<String> getRedirectUris() {
+      return redirectUris;
+    }
 
-  public void setRedirectUris(List<String> redirectUris) {
-    this.redirectUris = redirectUris;
-  }
+    public void setRedirectUris(List<String> redirectUris) {
+      this.redirectUris = redirectUris;
+    }
 
-  public List<String> getGrantTypes() {
-    return grantTypes;
-  }
+    public List<String> getGrantTypes() {
+      return grantTypes;
+    }
 
-  public void setGrantTypes(List<String> grantTypes) {
-    this.grantTypes = grantTypes;
-  }
+    public void setGrantTypes(List<String> grantTypes) {
+      this.grantTypes = grantTypes;
+    }
 
-  public String getUsername() {
-    return username;
-  }
+    public String getUsername() {
+      return username;
+    }
 
-  public void setUsername(String username) {
-    this.username = username;
-  }
+    public void setUsername(String username) {
+      this.username = username;
+    }
 
-  public String getTenantDomain() {
-    return tenantDomain;
-  }
+    public String getTenantDomain() {
+      return tenantDomain;
+    }
 
-  public void setTenantDomain(String tenantDomain) {
-    this.tenantDomain = tenantDomain;
-  }
+    public void setTenantDomain(String tenantDomain) {
+      this.tenantDomain = tenantDomain;
+    }
 }

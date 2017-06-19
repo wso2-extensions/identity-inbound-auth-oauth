@@ -34,8 +34,13 @@ public class UnRegistrationHandler extends AbstractDCRHandler {
             .getIdentityRequest();
 
         UnregistrationResponse.DCUnregisterResponseBuilder unregisterResponseBuilder =
-            DCRManagementService.getInstance().unregisterOAuthApplication(unregistrationRequest
-                    .getUserId(), unregistrationRequest.getConsumerKey());
+            new UnregistrationResponse.DCUnregisterResponseBuilder();
+
+        boolean isUnRegistered = DCRManagementService.getInstance()
+            .unregisterOAuthApplication(unregistrationRequest.getUserId(), unregistrationRequest
+                .getConsumerKey());
+
+        unregisterResponseBuilder.setIsUnregistered(isUnRegistered);
 
         return unregisterResponseBuilder;
     }

@@ -25,39 +25,39 @@ import org.wso2.carbon.identity.application.authentication.framework.inbound.Ide
  */
 public class ReadRequest extends IdentityRequest {
 
-  private String consumerKey;
-  private String username;
-
-  public ReadRequest(ReadRequestBuilder builder) throws FrameworkClientException {
-    super(builder);
-    this.consumerKey = builder.consumerKey;
-    this.username = builder.username;
-  }
-
-  public String getConsumerKey() {
-    return consumerKey;
-  }
-
-  public String getUsername() {
-    return username;
-  }
-
-  public static class ReadRequestBuilder extends IdentityRequestBuilder{
-
     private String consumerKey;
     private String username;
 
-    public void setConsumerKey(String consumerKey) {
-      this.consumerKey = consumerKey;
+    public ReadRequest(ReadRequestBuilder builder) throws FrameworkClientException {
+        super(builder);
+        this.consumerKey = builder.consumerKey;
+        this.username = builder.username;
     }
 
-    public void setUsername(String username) {
-      this.username = username;
+    public String getConsumerKey() {
+      return consumerKey;
     }
 
-    @Override
-    public ReadRequest build() throws FrameworkClientException {
-      return new ReadRequest(this);
+    public String getUsername() {
+      return username;
     }
-  }
+
+    public static class ReadRequestBuilder extends IdentityRequestBuilder{
+
+        private String consumerKey;
+        private String username;
+
+        public void setConsumerKey(String consumerKey) {
+          this.consumerKey = consumerKey;
+        }
+
+        public void setUsername(String username) {
+          this.username = username;
+        }
+
+        @Override
+        public ReadRequest build() throws FrameworkClientException {
+            return new ReadRequest(this);
+        }
+    }
 }

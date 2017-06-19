@@ -26,47 +26,47 @@ import org.wso2.carbon.identity.application.authentication.framework.inbound.Ide
 
 public class UpdateRequest extends IdentityRequest {
 
-  private UpdateRequestProfile updateRequestProfile;
-
-  public UpdateRequest(UpdateRequestBuilder builder) throws FrameworkClientException {
-
-    super(builder);
-    this.updateRequestProfile = builder.updateRequestProfile;
-  }
-
-  public UpdateRequestProfile getUpdateRequestProfile() {
-    return updateRequestProfile;
-  }
-
-  public static class UpdateRequestBuilder extends IdentityRequestBuilder {
-
     private UpdateRequestProfile updateRequestProfile;
 
-    public UpdateRequestBuilder(HttpServletRequest request, HttpServletResponse response) {
-      super(request, response);
+    public UpdateRequest(UpdateRequestBuilder builder) throws FrameworkClientException {
+
+        super(builder);
+        this.updateRequestProfile = builder.updateRequestProfile;
     }
 
     public UpdateRequestProfile getUpdateRequestProfile() {
       return updateRequestProfile;
     }
 
-    public UpdateRequestBuilder setUpdateRequestProfile(UpdateRequestProfile updateRequestProfile) {
-      this.updateRequestProfile = updateRequestProfile;
-      return this;
+    public static class UpdateRequestBuilder extends IdentityRequestBuilder {
+
+        private UpdateRequestProfile updateRequestProfile;
+
+        public UpdateRequestBuilder(HttpServletRequest request, HttpServletResponse response) {
+            super(request, response);
+        }
+
+        public UpdateRequestProfile getUpdateRequestProfile() {
+        return updateRequestProfile;
+      }
+
+        public UpdateRequestBuilder setUpdateRequestProfile(UpdateRequestProfile updateRequestProfile) {
+            this.updateRequestProfile = updateRequestProfile;
+            return this;
+        }
+
+        @Override
+        public UpdateRequest build() throws FrameworkRuntimeException, FrameworkClientException{
+            return new UpdateRequest(this);
+        }
     }
 
-    @Override
-    public UpdateRequest build() throws FrameworkRuntimeException, FrameworkClientException{
-      return new UpdateRequest(this);
+    public static class UpdateRequestConstant extends IdentityRequestConstants {
+        public static final String CLIENT_ID = "client_id";
+        public static final String CLIENT_SECRET = "client_secret";
+        public static final String CLIENT_NAME = "client_name";
+        public final static String REDIRECT_URIS = "redirect_uris";
+        public final static String GRANT_TYPES = "grant_types";
+
     }
-  }
-
-  public static class UpdateRequestConstant extends IdentityRequestConstants {
-    public static final String CLIENT_ID = "client_id";
-    public static final String CLIENT_SECRET = "client_secret";
-    public static final String CLIENT_NAME = "client_name";
-    public final static String REDIRECT_URIS = "redirect_uris";
-    public final static String GRANT_TYPES = "grant_types";
-
-  }
 }

@@ -30,20 +30,20 @@ import org.wso2.carbon.identity.oauth.dcr.service.DCRManagementService;
  */
 public class ReadHandler extends AbstractDCRHandler {
 
-  @Override
-  public IdentityResponseBuilder handle(DCRMessageContext dcrMessageContext) throws DCRException {
+    @Override
+    public IdentityResponseBuilder handle(DCRMessageContext dcrMessageContext) throws DCRException {
 
-    RegistrationResponse.DCRRegisterResponseBuilder dcrReadResponseBuilder;
+        RegistrationResponse.DCRRegisterResponseBuilder dcrReadResponseBuilder;
 
-    ReadRequest readRequest = (ReadRequest) dcrMessageContext.getIdentityRequest();
+        ReadRequest readRequest = (ReadRequest) dcrMessageContext.getIdentityRequest();
 
-    RegistrationResponseProfile registrationResponseProfile =
-        DCRManagementService.getInstance().readOAuthApplication(readRequest.getConsumerKey(),
-            readRequest.getUsername());
+        RegistrationResponseProfile registrationResponseProfile =
+            DCRManagementService.getInstance().readOAuthApplication(readRequest.getConsumerKey(),
+                readRequest.getUsername());
 
-    dcrReadResponseBuilder = new RegistrationResponse.DCRRegisterResponseBuilder();
-    dcrReadResponseBuilder.setRegistrationResponseProfile(registrationResponseProfile);
+        dcrReadResponseBuilder = new RegistrationResponse.DCRRegisterResponseBuilder();
+        dcrReadResponseBuilder.setRegistrationResponseProfile(registrationResponseProfile);
 
-    return dcrReadResponseBuilder;
-  }
+        return dcrReadResponseBuilder;
+    }
 }

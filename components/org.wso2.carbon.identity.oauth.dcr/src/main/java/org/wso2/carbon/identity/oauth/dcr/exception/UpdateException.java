@@ -22,19 +22,19 @@ import org.wso2.carbon.identity.oauth.dcr.DCRException;
 
 public class UpdateException extends DCRException {
 
-  public UpdateException(String message) {
-    super(message);
-  }
+    public UpdateException(String message) {
+      super(message);
+    }
 
-  public UpdateException(String errorCode, String message) {
-    super(errorCode, message);
-  }
+    public UpdateException(String errorCode, String message) {
+      super(errorCode, message);
+    }
 
-  public UpdateException(String message, Throwable cause) {
-    super(message, cause);
-  }
+    public UpdateException(String message, Throwable cause) {
+      super(message, cause);
+    }
 
-  public UpdateException(String errorCode, String message, Throwable cause) {
-    super(errorCode, message, cause);
-  }
+    public UpdateException(String errorCode, String message, Throwable cause) {
+      super(errorCode, message, cause);
+    }
 }

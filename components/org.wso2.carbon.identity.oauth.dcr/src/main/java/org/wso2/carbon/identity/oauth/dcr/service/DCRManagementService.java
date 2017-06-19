@@ -38,8 +38,6 @@ import org.wso2.carbon.identity.oauth.dcr.DCRException;
 import org.wso2.carbon.identity.oauth.dcr.internal.DCRDataHolder;
 import org.wso2.carbon.identity.oauth.dcr.model.RegistrationRequestProfile;
 import org.wso2.carbon.identity.oauth.dcr.model.RegistrationResponseProfile;
-import org.wso2.carbon.identity.oauth.dcr.model.UnregistrationResponse;
-import org.wso2.carbon.identity.oauth.dcr.model.UnregistrationResponse.DCUnregisterResponseBuilder;
 import org.wso2.carbon.identity.oauth.dcr.model.UpdateRequestProfile;
 import org.wso2.carbon.identity.oauth.dcr.util.DCRConstants;
 import org.wso2.carbon.identity.oauth.dcr.util.ErrorCodes;
@@ -280,13 +278,11 @@ public class DCRManagementService {
      * @return The status of the operation
      * @throws DCRException
      */
-    public DCUnregisterResponseBuilder unregisterOAuthApplication(String userId, String consumerKey)
-            throws DCRException {
+    public boolean unregisterOAuthApplication(String userId, String consumerKey)
+        throws DCRException {
 
         String tenantDomain = MultitenantUtils.getTenantDomain(userId);
         String userName = MultitenantUtils.getTenantAwareUsername(userId);
-
-        DCUnregisterResponseBuilder unregisterResponseBuilder = new DCUnregisterResponseBuilder();
 
         PrivilegedCarbonContext.startTenantFlow();
         PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(tenantDomain, true);
@@ -297,7 +293,7 @@ public class DCRManagementService {
         try {
             oAuthConsumerApp = oAuthAdminService.getOAuthApplicationData(consumerKey);
         } catch (Exception e) {
-            throw new DCRException(e.getMessage(), e);
+            throw new DCRException("Error occurred while reading the existing service provider.", e);
         }
 
         String applicationName = oAuthConsumerApp.getApplicationName();
@@ -318,8 +314,8 @@ public class DCRManagementService {
                             "Couldn't retrieve Service Provider Application " + applicationName);
                 }
                 appMgtService.deleteApplication(applicationName, tenantDomain, userName);
-                unregisterResponseBuilder.setIsUnregistered(true);
 
+                return true;
 
             } catch (IdentityApplicationManagementException e) {
                 throw new DCRException(
@@ -331,9 +327,8 @@ public class DCRManagementService {
                 PrivilegedCarbonContext.endTenantFlow();
             }
         } else {
-          unregisterResponseBuilder.setIsUnregistered(false);
+            return false;
         }
-        return unregisterResponseBuilder;
     }
 
     /**
@@ -362,7 +357,8 @@ public class DCRManagementService {
             try {
                 oAuthConsumerApp = oAuthAdminService.getOAuthApplicationData(consumerKey);
             } catch (IdentityOAuthAdminException e) {
-                throw new DCRException(e.getMessage(), e);
+                throw new DCRException("Error occurred while reading the existing service provider."
+                                                                                              , e);
             }
 
             if (oAuthConsumerApp != null) {
@@ -421,7 +417,7 @@ public class DCRManagementService {
           existingApp = oAuthAdminService.getOAuthApplicationData(updateRequestProfile
               .getConsumerKey());
         } catch (IdentityOAuthAdminException e) {
-          throw new DCRException(e.getMessage(), e);
+          throw new DCRException("Error occurred while reading the existing service provider.", e);
         }
 
         ServiceProvider existingServiceProvider;
@@ -468,7 +464,7 @@ public class DCRManagementService {
           updatedApp = oAuthAdminService.getOAuthApplicationData(updateRequestProfile
               .getConsumerKey());
         } catch (IdentityOAuthAdminException e) {
-          throw new DCRException(e.getMessage(), e);
+          throw new DCRException("Error occurred while reading the updated service provider", e);
         }
 
         existingServiceProvider.setApplicationName(updatedApp.getApplicationName());
@@ -485,7 +481,7 @@ public class DCRManagementService {
         inboundAuthenticationRequestConfig.setInboundAuthType(AUTH_TYPE_OAUTH_2);
         String oauthConsumerSecret = updatedApp.getOauthConsumerSecret();
 
-        if (oauthConsumerSecret != null && !oauthConsumerSecret.isEmpty()) {
+        if (StringUtils.isNotBlank(oauthConsumerSecret)) {
           Property property = new Property();
           property.setName(OAUTH_CONSUMER_SECRET);
           property.setValue(oauthConsumerSecret);
@@ -513,8 +509,8 @@ public class DCRManagementService {
         updateResponseProfile.getRedirectUrls().add(updatedApp.getCallbackUrl());
 
         if (StringUtils.isNotBlank(updatedApp.getGrantTypes())) {
-          String[] split = updatedApp.getGrantTypes().split(" ");
-          updateResponseProfile.setGrantTypes(Arrays.asList(split));
+          String[] grantType = updatedApp.getGrantTypes().split(" ");
+          updateResponseProfile.setGrantTypes(Arrays.asList(grantType));
         }
         return updateResponseProfile;
 
