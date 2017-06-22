@@ -134,11 +134,13 @@ public class OAuth2TokenEndpoint {
                 if (log.isDebugEnabled()) {
                     log.debug("Error decoding authorization header. Space delimited \"<authMethod> <base64Hash>\" format violated.", e);
                 }
-                OAuthResponse oAuthResponse = OAuthASResponse.errorResponse(HttpServletResponse.SC_NOT_FOUND)
-                        .setError(OAuth2ErrorCodes.SERVER_ERROR)
+                OAuthResponse oAuthResponse = OAuthASResponse.errorResponse(HttpServletResponse.SC_UNAUTHORIZED)
+                        .setError(OAuth2ErrorCodes.INVALID_CLIENT)
                         .setErrorDescription("Error decoding authorization header. Space delimited \"<authMethod> <base64Hash>\" format violated.").buildJSONMessage();
-                return Response.status(oAuthResponse.getResponseStatus()).entity(oAuthResponse.getBody()).build();
+                return Response.status(oAuthResponse.getResponseStatus()).header(OAuthConstants.HTTP_RESP_HEADER_AUTHENTICATE,
+                        EndpointUtil.getRealmInfo()).entity(oAuthResponse.getBody()).build();
             }
+
 
             // extract the basic auth credentials if present in the request and use for
             // authentication.
