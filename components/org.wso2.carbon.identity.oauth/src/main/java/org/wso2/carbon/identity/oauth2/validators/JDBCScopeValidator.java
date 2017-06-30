@@ -57,8 +57,8 @@ public class JDBCScopeValidator extends OAuth2ScopeValidator {
     // The following constants are as same as the constants defined in
     // org.wso2.carbon.apimgt.keymgt.handlers.ResourceConstants.
     // If any changes are taking place in that these should also be updated accordingly.
-    public static final String CHECK_TRUE = "true";
-    public static final String SAML2_ASSERTION_ENABLED = "wso2.saml2.assertion";
+    private static final String CHECK_TRUE = "true";
+    private static final String SAML2_ASSERTION_ENABLED = "wso2.saml2.assertion";
 
     Log log = LogFactory.getLog(JDBCScopeValidator.class);
 
