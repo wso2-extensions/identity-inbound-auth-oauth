@@ -57,7 +57,6 @@ public class JDBCScopeValidator extends OAuth2ScopeValidator {
     // The following constants are as same as the constants defined in
     // org.wso2.carbon.apimgt.keymgt.handlers.ResourceConstants.
     // If any changes are taking place in that these should also be updated accordingly.
-    private static final String CHECK_TRUE = "true";
     private static final String SAML2_ASSERTION_ENABLED = "wso2.saml2.assertion";
 
     Log log = LogFactory.getLog(JDBCScopeValidator.class);
@@ -130,11 +129,11 @@ public class JDBCScopeValidator extends OAuth2ScopeValidator {
             return false;
         }
 
-        // If GrantType is SAML20_BEAERER and SAML2_ASSERTION_ENABLED system property is set to true
-        // Avoid validating user roles
-        String isSAML2Enabled = System.getProperty(SAML2_ASSERTION_ENABLED);
+        // If GrantType is SAML20_BEAERER and SAML2_ASSERTION_ENABLED system property is set to true,
+        // avoid validating user roles.
+        // This system property is set at server start using -D option, Thus will be a permanent property.
         if (GrantType.SAML20_BEARER.toString().equalsIgnoreCase(accessTokenDO.getGrantType())
-                && isSAML2Enabled != null && CHECK_TRUE.equalsIgnoreCase(isSAML2Enabled)) {
+                && Boolean.parseBoolean(System.getProperty(SAML2_ASSERTION_ENABLED))) {
             return true;
         }
 
