@@ -174,6 +174,7 @@ public class OIDCSessionManagementUtil {
         Cookie cookie =
                 new Cookie(OIDCSessionConstants.OPBS_COOKIE_ID, UUID.randomUUID().toString());
         cookie.setSecure(true);
+        cookie.setHttpOnly(true);
         cookie.setPath("/");
 
         response.addCookie(cookie);
