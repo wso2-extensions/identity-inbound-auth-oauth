@@ -30,6 +30,7 @@ import org.wso2.carbon.identity.base.IdentityRuntimeException;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
 import org.wso2.carbon.identity.oauth2.dao.SQLQueries;
@@ -71,6 +72,8 @@ public class OAuth2ServiceComponent {
         //Registering OAuth2Service as a OSGIService
         bundleContext = context.getBundleContext();
         bundleContext.registerService(OAuth2Service.class.getName(), new OAuth2Service(), null);
+        //Registering OAuth2ScopeService as a OSGIService
+        bundleContext.registerService(OAuth2ScopeService.class.getName(), new OAuth2ScopeService(), null);
         //Registering TenantCreationEventListener
         ServiceRegistration scopeTenantMgtListenerSR = bundleContext.registerService(
                 TenantMgtListener.class.getName(), scopeTenantMgtListener, null);

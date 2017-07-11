@@ -1,0 +1,346 @@
+swagger: '2.0'
+######################################################
+# Prolog
+######################################################
+info:
+  version: "1.0.0"
+  title: "WSO2 Identity Server Scope Endpoint"
+  description: |
+    This document specifies a **OAuth2 Scope Endpoint** for WSO2 **Identity Server** .
+
+    It is written with [swagger 2](http://swagger.io/).
+
+  contact:
+    name: "WSO2"
+    url: "http://wso2.com/identity-and-access-management"
+    email: "architecture@wso2.com"
+  license:
+    name: "Apache 2.0"
+    url: "http://www.apache.org/licenses/LICENSE-2.0.html"
+
+######################################################
+# The fixed parts of the URLs of the API
+######################################################
+
+# The schemes supported by the API
+schemes:
+  - https
+
+# The domain of the API.
+# This is configured by the customer during deployment.
+# The given host is just an example.
+host: localhost
+
+# The base path of the API.
+# Will be prefixed to all paths.
+
+# For a tenant, basepath should be /t/{tenant_domain}/api/identity/oauth2/v1.0.
+basePath: /api/identity/oauth2/v1.0
+#basePath: /t/{tenant_domain}/api/identity/oauth2/v1.0
+
+# The following media types can be passed as input in message bodies of the API.
+# The actual media type must be specified in the Content-Type header field of the request.
+# The default is json, i.e. the Content-Type header is not needed to
+# be set, but supporting it serves extensibility.
+consumes:
+  - application/json
+
+# The following media types may be passed as output in message bodies of the API.
+# The media type(s) consumable by the requestor is specified in the Accept header field
+# of the corresponding request.
+# The actual media type returned will be specfied in the Content-Type header field
+# of the of the response.
+# The default of the Accept header is json, i.e. there is not needed to
+# set the value, but supporting it serves extensibility.
+produces:
+  - application/json
+paths:
+  /scopes:
+    # Endpoint uses to create scope
+    post:
+      description: |
+         This API is used to create a scope.
+      x-wso2-request: |
+        curl -X POST -H "Authorization: Basic YWRtaW46YWRtaW4=" -H "Content-Type: application/json" -d '{"name": "profile", "description": "get all profile information", "bindings": ["role1", "role2"]}' "https://localhost:9443/api/identity/oauth2/v1.0/scopes"
+
+      x-wso2-response: |
+        "HTTP/1.1 201 Created"
+        {"name": "profile", "description": "get all profile information", "bindings": ["role1", "role2"]}
+
+      summary: |
+        Registers a Scope
+
+      operationId: registerScope
+
+      parameters:
+        -
+          name: scope
+          in: body
+          description: a scope with the bindings which to be registered
+          required: true
+          schema:
+            $ref: '#/definitions/scope'
+
+      responses:
+        201:
+          description: Successfully Created
+          schema:
+            $ref: '#/definitions/scope'
+        400:
+          description: Bad Request
+          schema:
+             $ref: '#/definitions/error'
+        409:
+          description: Conflict
+          schema:
+             $ref: '#/definitions/error'
+        500:
+          description: Server Error
+          schema:
+             $ref: '#/definitions/error'
+      tags:
+        - Scope Management
+
+    # Endpoint uses to get all the available scopes
+    get:
+      description: |
+         This API is used to get all the available scopes.
+      x-wso2-request: |
+        curl -X GET -H "Authorization: Basic YWRtaW46YWRtaW4=" -H "Content-Type: application/json" -d '{}' "https://localhost:9443/api/identity/oauth2/v1.0/scopes"
+
+      x-wso2-response: |
+        [{"name": "profile", "description": "get all profile information", "bindings": ["role1", "role2"]}]
+
+      summary: |
+        Returns all available Scopes
+
+      operationId: getScopes
+
+      parameters:
+        -
+          name: startIndex
+          in: query
+          description: start index of the list of scopes to be retrieved
+          required: false
+          type: integer
+        -
+          name: count
+          in: query
+          description: a limited number of scopes to be retrieved
+          required: false
+          type: integer
+
+      responses:
+        200:
+          description: Successful Retrieved
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/scope'
+        404:
+          description: Not Found
+          schema:
+             $ref: '#/definitions/error'
+        500:
+          description: Server Error
+          schema:
+             $ref: '#/definitions/error'
+      tags:
+        - Scope Management
+
+  # Endpoint uses to get scope by scope name
+  /scopes/name/{name}:
+    get:
+      description: |
+         This API is used to get a scope by given scope name.
+      x-wso2-request: |
+        curl -X GET -H "Authorization: Basic YWRtaW46YWRtaW4=" -H "Content-Type: application/json" -d '{}' "https://localhost:9443/api/identity/oauth2/v1.0/scopes/name/profile"
+
+      x-wso2-response: |
+        {"name": "profile", "description": "get all profile information", "bindings": ["role1", "role2"]}
+
+      summary: |
+        Returns a Scope by Scope Name
+
+      operationId: getScope
+
+      parameters:
+        -
+          name: name
+          in: path
+          description: scope name of the scope which the details to be retrieved
+          required: true
+          schema:
+            type: string
+
+      responses:
+        200:
+          description: Successful Retrieved
+          schema:
+            $ref: '#/definitions/scope'
+        404:
+          description: Not Found
+          schema:
+             $ref: '#/definitions/error'
+        500:
+          description: Server Error
+          schema:
+             $ref: '#/definitions/error'
+      tags:
+        - Scope Management
+
+    # Endpoint uses to delete scope by scope name
+    delete:
+      description: |
+         This API is used to delete scope by scope name.
+      x-wso2-request: |
+        curl -X DELETE -H "Authorization: Basic YWRtaW46YWRtaW4=" -H "Content-Type: application/json" -d '{}' "https://localhost:9443/api/identity/oauth2/v1.0/scopes/name/profile"
+
+      x-wso2-response: |
+        "HTTP/1.1 204 No Content"
+
+      summary: |
+        Deletes a Scope
+
+      operationId: deleteScope
+
+      parameters:
+        -
+          name: name
+          in: path
+          description: scope name of the scope which need to get deleted
+          required: true
+          type: string
+
+      responses:
+        204:
+          description: Successful deleted
+          schema:
+            title: key
+            type: string
+        500:
+          description: Server Error
+          schema:
+             $ref: '#/definitions/error'
+      tags:
+        - Scope Management
+
+    # Endpoint uses to update a scope using scope name
+    put:
+      description: |
+         This API is used to update a scope by scope name.
+      x-wso2-request: |
+        curl -X PUT -H "Authorization: Basic YWRtaW46YWRtaW4=" -H "Content-Type: application/json" -d '{"name": "profile", "description": "get all profile information", "bindings": ["role3", "role4"]}' "https://localhost:9443/api/identity/oauth2/v1.0/scopes/name/profile"
+
+      x-wso2-response: |
+        "HTTP/1.1 200 OK"
+        {"name": "profile", "description": "get all profile information", "bindings": ["role3", "role4"]}
+
+      summary: |
+        Updates a Scope
+
+      operationId: updateScope
+
+      parameters:
+        -
+          name: scope
+          in: body
+          description: updated scope
+          required: true
+          schema:
+            $ref: '#/definitions/scope'
+        -
+          name: name
+          in: path
+          description: scope name of the scope which need to get updated
+          required: true
+          type: string
+
+      responses:
+        200:
+          description: Successful updated
+          schema:
+            $ref: '#/definitions/scope'
+        409:
+          description: Conflict
+          schema:
+             $ref: '#/definitions/error'
+        500:
+          description: Server Error
+          schema:
+             $ref: '#/definitions/error'
+      tags:
+        - Scope Management
+
+    # Endpoint uses to check scope existance using scope name
+    head:
+      description: |
+         This API is used to check scope existance using scope name.
+      x-wso2-request: |
+        curl -X GET -H "Authorization: Basic YWRtaW46YWRtaW4=" -H "Content-Type: application/json" -d '{}' "https://localhost:9443/api/identity/oauth2/v1.0/scopes/name/openid"
+
+      x-wso2-response: |
+        "HTTP/1.1 200 OK"
+
+      summary: |
+        Check Scope Existance using Scope Name
+
+      operationId: isScopeExists
+
+      parameters:
+        -
+          name: name
+          in: path
+          description: scope name of the scope which the existance should be checked
+          required: true
+          schema:
+            type: string
+
+      responses:
+        200:
+          description: Scope Exists
+          schema:
+            title: key
+            type: string
+        404:
+          description: Not Found
+          schema:
+             $ref: '#/definitions/error'
+        500:
+          description: Server Error
+          schema:
+             $ref: '#/definitions/error'
+      tags:
+        - Scope Management
+
+definitions:
+#-----------------------------------------------------
+# The Scope Object
+#-----------------------------------------------------
+  scope:
+    type: object
+    properties:
+      name:
+        type: string
+        required: true
+      description:
+        type: string
+        required: true
+      bindings:
+        type: array
+        required: false
+        items:
+          type: string
+
+#-----------------------------------------------------
+# The Error Response object
+#-----------------------------------------------------
+  error:
+    type: object
+    properties:
+      code:
+        type: string
+      message:
+        type: string
+      description:
+        type: string

@@ -1563,14 +1563,14 @@ public class TokenMgtDAO {
         ResultSet rs = null;
 
         try {
-            String sql = SQLQueries.RETRIEVE_IOS_SCOPE_KEY;
+            String sql = SQLQueries.RETRIEVE_SCOPE_NAME_FOR_RESOURCE;
 
             ps = connection.prepareStatement(sql);
             ps.setString(1, resourceUri);
             rs = ps.executeQuery();
 
             if (rs.next()) {
-                return rs.getString("SCOPE_KEY");
+                return rs.getString("NAME");
             }
             connection.commit();
             return null;
@@ -1596,16 +1596,16 @@ public class TokenMgtDAO {
         ResultSet rs = null;
 
         try {
-            String sql = SQLQueries.RETRIEVE_IOS_SCOPE_KEY_WITH_TENANT;
+            String sql = SQLQueries.RETRIEVE_SCOPE_WITH_TENANT_FOR_RESOURCE;
 
             ps = connection.prepareStatement(sql);
             ps.setString(1, resourceUri);
             rs = ps.executeQuery();
 
             if (rs.next()) {
-                String scopeKey = rs.getString("SCOPE_KEY");
+                String scopeName = rs.getString("NAME");
                 int tenantId = rs.getInt("TENANT_ID");
-                return Pair.of(scopeKey, tenantId);
+                return Pair.of(scopeName, tenantId);
             }
             connection.commit();
             return null;
@@ -2184,36 +2184,36 @@ public class TokenMgtDAO {
     /**
      * Get the list of roles associated for a given scope.
      *
-     * @param scopeKey The Scope Key.
+     * @param scopeName Name of the scope.
      * @return The Set of roles associated with the given scope.
      * @throws IdentityOAuth2Exception If an SQL error occurs while retrieving the roles.
      */
     @Deprecated
-    public Set<String> getRolesOfScopeByScopeKey(String scopeKey) throws IdentityOAuth2Exception {
+    public Set<String> getBindingsOfScopeByScopeName(String scopeName) throws IdentityOAuth2Exception {
 
         Connection connection = IdentityDatabaseUtil.getDBConnection();
 
         PreparedStatement ps = null;
         ResultSet rs = null;
-        Set<String> roles = null;
+        Set<String> bindings = new HashSet<>();
 
         try {
-            String sql = SQLQueries.RETRIEVE_ROLES_OF_SCOPE;
+            String sql = SQLQueries.RETRIEVE_BINDINGS_OF_SCOPE;
 
             ps = connection.prepareStatement(sql);
-            ps.setString(1, scopeKey);
+            ps.setString(1, scopeName);
             rs = ps.executeQuery();
 
-            if (rs.next()) {
-                String rolesString = rs.getString("ROLES");
-                if (!rolesString.isEmpty()) {
-                    roles = new HashSet<>(new ArrayList<>(Arrays.asList(rolesString.replaceAll(" ", "").split(","))));
+            while (rs.next()) {
+                String binding = rs.getString("SCOPE_BINDING");
+                if (!binding.isEmpty()) {
+                    bindings.add(binding);
                 }
             }
             connection.commit();
-            return roles;
+            return bindings;
         } catch (SQLException e) {
-            String errorMsg = "Error getting roles of scope - " + scopeKey;
+            String errorMsg = "Error getting roles of scope - " + scopeName;
             throw new IdentityOAuth2Exception(errorMsg, e);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, rs, ps);
@@ -2223,37 +2223,37 @@ public class TokenMgtDAO {
     /**
      * Get the list of roles associated for a given scope.
      *
-     * @param scopeKey The Scope Key.
+     * @param scopeName name of the scope.
      * @param tenantId Tenant Id
      * @return The Set of roles associated with the given scope.
      * @throws IdentityOAuth2Exception If an SQL error occurs while retrieving the roles.
      */
-    public Set<String> getRolesOfScopeByScopeKey(String scopeKey, int tenantId) throws IdentityOAuth2Exception {
+    public Set<String> getBindingsOfScopeByScopeName(String scopeName, int tenantId) throws IdentityOAuth2Exception {
 
         Connection connection = IdentityDatabaseUtil.getDBConnection();
 
         PreparedStatement ps = null;
         ResultSet rs = null;
-        Set<String> roles = null;
+        Set<String> bindings = new HashSet<>();
 
         try {
-            String sql = SQLQueries.RETRIEVE_ROLES_OF_SCOPE_FOR_TENANT;
+            String sql = SQLQueries.RETRIEVE_BINDINGS_OF_SCOPE_FOR_TENANT;
 
             ps = connection.prepareStatement(sql);
-            ps.setString(1, scopeKey);
+            ps.setString(1, scopeName);
             ps.setInt(2, tenantId);
             rs = ps.executeQuery();
 
-            if (rs.next()) {
-                String rolesString = rs.getString("ROLES");
-                if (!rolesString.isEmpty()) {
-                    roles = new HashSet<>(new ArrayList<>(Arrays.asList(rolesString.replaceAll(" ", "").split(","))));
+            while (rs.next()) {
+                String binding = rs.getString("SCOPE_BINDING");
+                if (!binding.isEmpty()) {
+                    bindings.add(binding);
                 }
             }
             connection.commit();
-            return roles;
+            return bindings;
         } catch (SQLException e) {
-            String errorMsg = "Error getting roles of scope - " + scopeKey;
+            String errorMsg = "Error getting bindings of scope - " + scopeName;
             throw new IdentityOAuth2Exception(errorMsg, e);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, rs, ps);

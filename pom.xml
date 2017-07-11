@@ -27,7 +27,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
     <artifactId>identity-inbound-auth-oauth</artifactId>
-    <version>5.4.14-SNAPSHOT</version>
+    <version>5.4.15-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>WSO2 Carbon OAuth module</name>
     <url>http://wso2.org</url>
@@ -49,6 +49,7 @@
         <module>components/org.wso2.carbon.identity.oauth.dcr</module>
         <module>components/org.wso2.carbon.identity.oidc.dcr</module>
         <module>components/org.wso2.carbon.identity.discovery</module>
+        <module>components/org.wso2.carbon.identity.oauth.scope.endpoint</module>
         <module>components/org.wso2.carbon.identity.webfinger</module>
 
         <module>features/org.wso2.carbon.identity.oauth.common.feature</module>
@@ -326,6 +327,12 @@
             </dependency>
             <dependency>
                 <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
+                <artifactId>org.wso2.carbon.identity.oauth.scope.endpoint</artifactId>
+                <version>${project.version}</version>
+                <type>war</type>
+            </dependency>
+            <dependency>
+                <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
                 <artifactId>org.wso2.carbon.identity.oauth.ui</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -365,6 +372,39 @@
                 <type>zip</type>
             </dependency>
 
+            <!--Swagger Dependencies-->
+            <dependency>
+                <groupId>org.codehaus.jackson</groupId>
+                <artifactId>jackson-core-asl</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.codehaus.jackson</groupId>
+                <artifactId>jackson-mapper-asl</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.codehaus.jackson</groupId>
+                <artifactId>jackson-jaxrs</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework</groupId>
+                <artifactId>spring-web</artifactId>
+                <version>${spring-web.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.swagger</groupId>
+                <artifactId>swagger-jaxrs</artifactId>
+                <version>${swagger-jaxrs.version}</version>
+            </dependency>
+
+            <!--Test Dependencies-->
+            <dependency>
+                <groupId>junit</groupId>
+                <artifactId>junit</artifactId>
+                <version>${junit.version}</version>
+            </dependency>
 
         </dependencies>
     </dependencyManagement>
@@ -616,6 +656,14 @@
         <maven.scr.plugin.version>1.7.4</maven.scr.plugin.version>
         <maven.bundle.plugin.version>2.4.0</maven.bundle.plugin.version>
         <maven.buildnumber.plugin.version>1.4</maven.buildnumber.plugin.version>
+
+        <!--Swagger Dependency Version-->
+        <jackson.version>1.8.6</jackson.version>
+        <spring-web.version>4.1.6.RELEASE</spring-web.version>
+        <swagger-jaxrs.version>1.5.2</swagger-jaxrs.version>
+
+        <!--Test Dependencies-->
+        <junit.version>4.12</junit.version>
     </properties>
 
 </project>
