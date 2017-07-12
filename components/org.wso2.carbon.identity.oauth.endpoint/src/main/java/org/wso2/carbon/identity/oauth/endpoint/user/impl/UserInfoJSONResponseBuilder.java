@@ -208,7 +208,7 @@ public class UserInfoJSONResponseBuilder implements UserInfoResponseBuilder {
                 Iterator<?> keys = newJSON.keys();
                 while (keys.hasNext()) {
                     key = (String) keys.next();
-                    String value = null;
+                    String value;
                     value = newJSON.get(key).toString();
                     JSONObject jsonObjectValues = new JSONObject(value);
                     if (jsonObjectValues != null) {

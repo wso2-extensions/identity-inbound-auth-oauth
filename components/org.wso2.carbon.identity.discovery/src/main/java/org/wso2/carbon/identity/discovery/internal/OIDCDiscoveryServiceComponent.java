@@ -44,9 +44,7 @@ public class OIDCDiscoveryServiceComponent {
 
     protected void activate(ComponentContext context) {
         try {
-            synchronized (OIDCDiscoveryServiceComponent.class) {
-                bundleContext = context.getBundleContext();
-            }
+            bundleContext = context.getBundleContext();
             bundleContext.registerService(OIDCProcessor.class.getName(), DefaultOIDCProcessor.getInstance(), null);
             // exposing server configuration as a service
             if (log.isDebugEnabled()) {

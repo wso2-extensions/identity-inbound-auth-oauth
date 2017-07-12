@@ -76,26 +76,26 @@ public class UnregistrationRequestFactory extends HttpIdentityRequestFactory {
         if (builder instanceof UnregistrationRequest.DCRUnregisterRequestBuilder) {
             unregisterRequestBuilder =
                     (UnregistrationRequest.DCRUnregisterRequestBuilder) builder;
+            super.create(unregisterRequestBuilder, request, response);
+
+            Map<String, String> headers = new HashMap<>();
+            headers.put(HttpHeaders.AUTHORIZATION, request.getHeader(HttpHeaders.AUTHORIZATION));
+
+            unregisterRequestBuilder.setMethod(request.getMethod());
+            unregisterRequestBuilder.setHeaders(headers);
+
+            String clientId = request.getParameter("userId");
+            String applicationName = request.getParameter("applicationName");
+            String consumerKey = null;
+            Matcher matcher = DCRConstants.DCR_ENDPOINT_UNREGISTER_URL_PATTERN.matcher(request.getRequestURI());
+            if (matcher.find()) {
+                consumerKey = matcher.group(2);
+            }
+
+            unregisterRequestBuilder.setApplicationName(applicationName);
+            unregisterRequestBuilder.setUserId(clientId);
+            unregisterRequestBuilder.setConsumerKey(consumerKey);
         }
-        super.create(unregisterRequestBuilder, request, response);
-
-        Map<String, String> headers = new HashMap<>();
-        headers.put(HttpHeaders.AUTHORIZATION, request.getHeader(HttpHeaders.AUTHORIZATION));
-
-        unregisterRequestBuilder.setMethod(request.getMethod());
-        unregisterRequestBuilder.setHeaders(headers);
-
-        String clientId = request.getParameter("userId");
-        String applicationName = request.getParameter("applicationName");
-        String consumerKey = null;
-        Matcher matcher = DCRConstants.DCR_ENDPOINT_UNREGISTER_URL_PATTERN.matcher(request.getRequestURI());
-        if (matcher.find()) {
-            consumerKey = matcher.group(2);
-        }
-
-        unregisterRequestBuilder.setApplicationName(applicationName);
-        unregisterRequestBuilder.setUserId(clientId);
-        unregisterRequestBuilder.setConsumerKey(consumerKey);
 
     }
 

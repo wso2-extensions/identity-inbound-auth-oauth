@@ -60,14 +60,14 @@ public class HttpRegistrationResponseFactory extends HttpIdentityResponseFactory
         RegistrationResponse registrationResponse=null;
         if (identityResponse instanceof RegistrationResponse) {
             registrationResponse = (RegistrationResponse) identityResponse;
+            httpIdentityResponseBuilder.setBody(generateSuccessfulResponse(registrationResponse).toJSONString());
+            httpIdentityResponseBuilder.setStatusCode(HttpServletResponse.SC_CREATED);
+            httpIdentityResponseBuilder.addHeader(OAuthConstants.HTTP_RESP_HEADER_CACHE_CONTROL,
+                    OAuthConstants.HTTP_RESP_HEADER_VAL_CACHE_CONTROL_NO_STORE);
+            httpIdentityResponseBuilder.addHeader(OAuthConstants.HTTP_RESP_HEADER_PRAGMA,
+                    OAuthConstants.HTTP_RESP_HEADER_VAL_PRAGMA_NO_CACHE);
+            httpIdentityResponseBuilder.addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON);
         }
-        httpIdentityResponseBuilder.setBody(generateSuccessfulResponse(registrationResponse).toJSONString());
-        httpIdentityResponseBuilder.setStatusCode(HttpServletResponse.SC_CREATED);
-        httpIdentityResponseBuilder.addHeader(OAuthConstants.HTTP_RESP_HEADER_CACHE_CONTROL,
-                                              OAuthConstants.HTTP_RESP_HEADER_VAL_CACHE_CONTROL_NO_STORE);
-        httpIdentityResponseBuilder.addHeader(OAuthConstants.HTTP_RESP_HEADER_PRAGMA,
-                                              OAuthConstants.HTTP_RESP_HEADER_VAL_PRAGMA_NO_CACHE);
-        httpIdentityResponseBuilder.addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON);
     }
 
     public HttpIdentityResponse.HttpIdentityResponseBuilder handleException(FrameworkException exception) {

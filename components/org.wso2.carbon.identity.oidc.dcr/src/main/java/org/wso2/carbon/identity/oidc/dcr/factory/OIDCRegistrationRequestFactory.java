@@ -42,7 +42,8 @@ public class OIDCRegistrationRequestFactory extends RegistrationRequestFactory {
 
     @Override
     public boolean canHandle(HttpServletRequest request, HttpServletResponse response) throws
-                                                                                       FrameworkRuntimeException {
+            FrameworkRuntimeException {
+
         boolean canHandle = false;
         if (request != null) {
             Matcher matcher = OIDCDCRConstants.OIDC_DCR_ENDPOINT_REGISTER_URL_PATTERN.matcher(request.getRequestURI());
@@ -79,15 +80,15 @@ public class OIDCRegistrationRequestFactory extends RegistrationRequestFactory {
     public void create(IdentityRequest.IdentityRequestBuilder builder, HttpServletRequest request,
                        HttpServletResponse response) throws FrameworkClientException {
 
-        OIDCRegistrationRequest.OIDCRegistrationRequestBuilder registerRequestBuilder =null;
+        OIDCRegistrationRequest.OIDCRegistrationRequestBuilder registerRequestBuilder = null;
         if (builder instanceof OIDCRegistrationRequest.OIDCRegistrationRequestBuilder) {
             registerRequestBuilder =
                     (OIDCRegistrationRequest.OIDCRegistrationRequestBuilder) builder;
-        }
-        OIDCRegistrationRequestProfile oidcRegistrationRequestProfile = new OIDCRegistrationRequestProfile();
-        registerRequestBuilder.setRegistrationRequestProfile(oidcRegistrationRequestProfile);
+            OIDCRegistrationRequestProfile oidcRegistrationRequestProfile = new OIDCRegistrationRequestProfile();
+            registerRequestBuilder.setRegistrationRequestProfile(oidcRegistrationRequestProfile);
 
-        super.create(registerRequestBuilder, request, response);
+            super.create(registerRequestBuilder, request, response);
+        }
     }
 
 

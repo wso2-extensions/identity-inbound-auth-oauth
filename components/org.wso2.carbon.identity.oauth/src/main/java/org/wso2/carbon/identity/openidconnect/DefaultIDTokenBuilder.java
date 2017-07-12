@@ -242,8 +242,6 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
                 authTime = authorizationGrantCacheEntry.getAuthTime();
             }
         }
-        // Get access token issued time
-        //long accessTokenIssuedTime = getAccessTokenIssuedTime(tokenRespDTO.getAccessToken(), request) / 1000;
 
         String atHash = null;
         if (!JWSAlgorithm.NONE.getName().equals(signatureAlgorithm.getName())) {
@@ -342,9 +340,6 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
 
         String nonceValue = request.getAuthorizationReqDTO().getNonce();
         LinkedHashSet acrValue = request.getAuthorizationReqDTO().getACRValues();
-
-        // Get access token issued time
-        //long accessTokenIssuedTime = getAccessTokenIssuedTime(tokenRespDTO.getAccessToken(), request) / 1000;
 
         String atHash = null;
         String responseType = request.getAuthorizationReqDTO().getResponseType();
@@ -538,78 +533,6 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
                 (AuthorizationGrantCacheEntry) AuthorizationGrantCache.getInstance().
                         getValueFromCacheByCode(authorizationGrantCacheKey);
         return authorizationGrantCacheEntry;
-    }
-
-    private long getAccessTokenIssuedTime(String accessToken, OAuthTokenReqMessageContext request)
-            throws IdentityOAuth2Exception {
-
-        AccessTokenDO accessTokenDO = null;
-        TokenMgtDAO tokenMgtDAO = new TokenMgtDAO();
-
-        OAuthCache oauthCache = OAuthCache.getInstance();
-        String authorizedUser = request.getAuthorizedUser().toString();
-        boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authorizedUser);
-        if (!isUsernameCaseSensitive) {
-            authorizedUser = authorizedUser.toLowerCase();
-        }
-
-        OAuthCacheKey cacheKey = new OAuthCacheKey(
-                request.getOauth2AccessTokenReqDTO().getClientId() + ":" + authorizedUser +
-                        ":" + OAuth2Util.buildScopeString(request.getScope()));
-        CacheEntry result = oauthCache.getValueFromCache(cacheKey);
-
-        // cache hit, do the type check.
-        if (result instanceof AccessTokenDO) {
-            accessTokenDO = (AccessTokenDO) result;
-        }
-
-        // Cache miss, load the access token info from the database.
-        if (accessTokenDO == null) {
-            accessTokenDO = tokenMgtDAO.retrieveAccessToken(accessToken, false);
-        }
-
-        // if the access token or client id is not valid
-        if (accessTokenDO == null) {
-            throw new IdentityOAuth2Exception("Access token based information is not available in cache or database");
-        }
-
-        return accessTokenDO.getIssuedTime().getTime();
-    }
-
-    private long getAccessTokenIssuedTime(String accessToken, OAuthAuthzReqMessageContext request)
-            throws IdentityOAuth2Exception {
-
-        AccessTokenDO accessTokenDO = null;
-        TokenMgtDAO tokenMgtDAO = new TokenMgtDAO();
-
-        OAuthCache oauthCache = OAuthCache.getInstance();
-        String authorizedUser = request.getAuthorizationReqDTO().getUser().toString();
-        boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authorizedUser);
-        if (!isUsernameCaseSensitive){
-            authorizedUser = authorizedUser.toLowerCase();
-        }
-
-        OAuthCacheKey cacheKey = new OAuthCacheKey(
-                request.getAuthorizationReqDTO().getConsumerKey() + ":" + authorizedUser +
-                        ":" + OAuth2Util.buildScopeString(request.getApprovedScope()));
-        CacheEntry result = oauthCache.getValueFromCache(cacheKey);
-
-        // cache hit, do the type check.
-        if (result instanceof AccessTokenDO) {
-            accessTokenDO = (AccessTokenDO) result;
-        }
-
-        // Cache miss, load the access token info from the database.
-        if (accessTokenDO == null) {
-            accessTokenDO = tokenMgtDAO.retrieveAccessToken(accessToken, false);
-        }
-
-        // if the access token or client id is not valid
-        if (accessTokenDO == null) {
-            throw new IdentityOAuth2Exception("Access token based information is not available in cache or database");
-        }
-
-        return accessTokenDO.getIssuedTime().getTime();
     }
 
     /**
