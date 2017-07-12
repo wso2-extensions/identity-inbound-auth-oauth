@@ -393,34 +393,25 @@ public class SAML1BearerGrantHandler extends AbstractAuthorizationGrantHandler {
             notOnOrAfterFromConditions = assertion.getConditions().getNotOnOrAfter();
         }
 
-        //redundant null check from findbugs
-        //if (subject != null) {
-            SubjectConfirmation subjectConfirmation = subject.getSubjectConfirmation();
-            List<ConfirmationMethod> confirmationMethods = subjectConfirmation.getConfirmationMethods();
-            for (ConfirmationMethod confirmationMethod : confirmationMethods) {
-                if (OAuthConstants.OAUTH_SAML1_BEARER_METHOD.equals(confirmationMethod.getConfirmationMethod())) {
-                    bearerFound = true;
-                }
-
-            }
-            if (!bearerFound) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Cannot find Method attribute in SubjectConfirmation " + subject.getSubjectConfirmation());
-                }
-                return false;
+        SubjectConfirmation subjectConfirmation = subject.getSubjectConfirmation();
+        List<ConfirmationMethod> confirmationMethods = subjectConfirmation.getConfirmationMethods();
+        for (ConfirmationMethod confirmationMethod : confirmationMethods) {
+            if (OAuthConstants.OAUTH_SAML1_BEARER_METHOD.equals(confirmationMethod.getConfirmationMethod())) {
+                bearerFound = true;
             }
 
-            XMLObject confirmationData = subject.getSubjectConfirmation().getSubjectConfirmationData();
-            if (confirmationData == null) {
-                log.warn("Subject confirmation data is missing.");
+        }
+        if (!bearerFound) {
+            if (log.isDebugEnabled()) {
+                log.debug("Cannot find Method attribute in SubjectConfirmation " + subject.getSubjectConfirmation());
             }
+            return false;
+        }
 
-//        } else {
-//            if (log.isDebugEnabled()) {
-//                log.debug("No SubjectConfirmation exist in Assertion");
-//            }
-//            return false;
-//        }
+        XMLObject confirmationData = subject.getSubjectConfirmation().getSubjectConfirmationData();
+        if (confirmationData == null) {
+            log.warn("Subject confirmation data is missing.");
+        }
 
         if (!bearerFound) {
             if (log.isDebugEnabled()) {
