@@ -132,7 +132,7 @@ public class TokenMgtDAO {
 
     public TokenMgtDAO() {
         try {
-            synchronized (this) {
+            synchronized (TokenMgtDAO.this) {
                 persistenceProcessor = OAuthServerConfiguration.getInstance().getPersistenceProcessor();
             }
         } catch (IdentityOAuth2Exception e) {
@@ -145,7 +145,7 @@ public class TokenMgtDAO {
         }
 
         if (IdentityUtil.getProperty("OAuth.TokenPersistence.RetryCount") != null) {
-            synchronized (this) {
+            synchronized (TokenMgtDAO.this) {
                 tokenPersistRetryCount =
                         Integer.parseInt(IdentityUtil.getProperty("OAuth.TokenPersistence.RetryCount"));
             }

@@ -46,7 +46,8 @@ public class HttpOIDCRegistrationResponseFactory extends HttpRegistrationRespons
     @Override
     public void create(HttpIdentityResponse.HttpIdentityResponseBuilder httpIdentityResponseBuilder,
                        IdentityResponse identityResponse) {
-        RegistrationResponse registrationResponse =null;
+
+        RegistrationResponse registrationResponse = null;
         if (identityResponse instanceof RegistrationResponse) {
             registrationResponse = (RegistrationResponse) identityResponse;
         }
