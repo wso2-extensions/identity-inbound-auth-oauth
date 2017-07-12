@@ -101,11 +101,8 @@ public class OAuth2ScopeService {
                         ERROR_CODE_FAILED_TO_GET_ALL_SCOPES, e);
             }
         } else {
-            //avoid null pointer dereference
-            //if (startIndex != null && count != null) {
                 //check if it is a pagination request.
                 scopes = listScopesWithPagination(startIndex, count);
-            //}
         }
         return scopes;
     }
