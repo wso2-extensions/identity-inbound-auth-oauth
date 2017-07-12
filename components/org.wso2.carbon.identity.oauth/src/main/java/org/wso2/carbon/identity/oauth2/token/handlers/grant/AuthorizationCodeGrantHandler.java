@@ -51,7 +51,7 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
 
 
     public AuthorizationCodeGrantHandler() {
-        synchronized (AuthorizationCodeGrantHandler.this) {
+        synchronized (AuthorizationCodeGrantHandler.class) {
             appInfoCache = AppInfoCache.getInstance();
         }
     }

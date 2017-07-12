@@ -51,7 +51,7 @@ public class WebFingerServiceComponent {
 
     protected void activate(ComponentContext context) {
         try {
-            synchronized (WebFingerServiceComponent.this) {
+            synchronized (WebFingerServiceComponent.class) {
                 bundleContext = context.getBundleContext();
             }
             WebFingerProcessor webFingerProcessor = DefaultWebFingerProcessor.getInstance();
