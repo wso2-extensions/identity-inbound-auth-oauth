@@ -190,12 +190,13 @@ public class SAML1BearerGrantHandler extends AbstractAuthorizationGrantHandler {
             return false;
         }
 
-        if (assertion == null) {
-            if (log.isDebugEnabled()) {
-                log.debug("Assertion is null, cannot continue");
-            }
-            return false;
-        }
+        //redundant check found by find bugs
+//        if (assertion == null) {
+//            if (log.isDebugEnabled()) {
+//                log.debug("Assertion is null, cannot continue");
+//            }
+//            return false;
+//        }
 
         /**
          * The Assertion MUST contain a <Subject> element.  The subject MAY identify the resource owner for whom
@@ -400,7 +401,8 @@ public class SAML1BearerGrantHandler extends AbstractAuthorizationGrantHandler {
             notOnOrAfterFromConditions = assertion.getConditions().getNotOnOrAfter();
         }
 
-        if (subject != null) {
+        //redundant null check from findbugs
+        //if (subject != null) {
             SubjectConfirmation subjectConfirmation = subject.getSubjectConfirmation();
             List<ConfirmationMethod> confirmationMethods = subjectConfirmation.getConfirmationMethods();
             for (ConfirmationMethod confirmationMethod : confirmationMethods) {
@@ -421,12 +423,12 @@ public class SAML1BearerGrantHandler extends AbstractAuthorizationGrantHandler {
                 log.warn("Subject confirmation data is missing.");
             }
 
-        } else {
-            if (log.isDebugEnabled()) {
-                log.debug("No SubjectConfirmation exist in Assertion");
-            }
-            return false;
-        }
+//        } else {
+//            if (log.isDebugEnabled()) {
+//                log.debug("No SubjectConfirmation exist in Assertion");
+//            }
+//            return false;
+//        }
 
         if (!bearerFound) {
             if (log.isDebugEnabled()) {

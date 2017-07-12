@@ -79,8 +79,11 @@ public class OIDCRegistrationRequestFactory extends RegistrationRequestFactory {
     public void create(IdentityRequest.IdentityRequestBuilder builder, HttpServletRequest request,
                        HttpServletResponse response) throws FrameworkClientException {
 
-        OIDCRegistrationRequest.OIDCRegistrationRequestBuilder registerRequestBuilder =
-                (OIDCRegistrationRequest.OIDCRegistrationRequestBuilder) builder;
+        OIDCRegistrationRequest.OIDCRegistrationRequestBuilder registerRequestBuilder =null;
+        if (builder instanceof OIDCRegistrationRequest.OIDCRegistrationRequestBuilder) {
+            registerRequestBuilder =
+                    (OIDCRegistrationRequest.OIDCRegistrationRequestBuilder) builder;
+        }
         OIDCRegistrationRequestProfile oidcRegistrationRequestProfile = new OIDCRegistrationRequestProfile();
         registerRequestBuilder.setRegistrationRequestProfile(oidcRegistrationRequestProfile);
 

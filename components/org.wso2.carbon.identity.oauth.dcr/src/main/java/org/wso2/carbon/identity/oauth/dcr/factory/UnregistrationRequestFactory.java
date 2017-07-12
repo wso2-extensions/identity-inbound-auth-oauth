@@ -71,8 +71,12 @@ public class UnregistrationRequestFactory extends HttpIdentityRequestFactory {
     @Override
     public void create(IdentityRequest.IdentityRequestBuilder builder, HttpServletRequest request,
                        HttpServletResponse response) throws FrameworkClientException {
-        UnregistrationRequest.DCRUnregisterRequestBuilder unregisterRequestBuilder =
-                (UnregistrationRequest.DCRUnregisterRequestBuilder) builder;
+
+        UnregistrationRequest.DCRUnregisterRequestBuilder unregisterRequestBuilder = null;
+        if (builder instanceof UnregistrationRequest.DCRUnregisterRequestBuilder) {
+            unregisterRequestBuilder =
+                    (UnregistrationRequest.DCRUnregisterRequestBuilder) builder;
+        }
         super.create(unregisterRequestBuilder, request, response);
 
         Map<String, String> headers = new HashMap<>();

@@ -57,7 +57,10 @@ public class HttpRegistrationResponseFactory extends HttpIdentityResponseFactory
     @Override
     public void create(HttpIdentityResponse.HttpIdentityResponseBuilder httpIdentityResponseBuilder,
                        IdentityResponse identityResponse) {
-        RegistrationResponse registrationResponse = (RegistrationResponse) identityResponse;
+        RegistrationResponse registrationResponse=null;
+        if (identityResponse instanceof RegistrationResponse) {
+            registrationResponse = (RegistrationResponse) identityResponse;
+        }
         httpIdentityResponseBuilder.setBody(generateSuccessfulResponse(registrationResponse).toJSONString());
         httpIdentityResponseBuilder.setStatusCode(HttpServletResponse.SC_CREATED);
         httpIdentityResponseBuilder.addHeader(OAuthConstants.HTTP_RESP_HEADER_CACHE_CONTROL,

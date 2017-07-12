@@ -267,11 +267,7 @@ public class EndpointUtil {
             if (log.isDebugEnabled()) {
                 log.debug("Server error occurred while building error redirect url", e);
             }
-            if(params != null) {
-                redirectURL = getErrorPageURL(ex.getError(), ex.getMessage(), params.getApplicationName());
-            } else {
-                redirectURL = getErrorPageURL(ex.getError(), ex.getMessage(), null);
-            }
+            redirectURL = getErrorPageURL(ex.getError(), ex.getMessage(), params.getApplicationName());
         }
         return redirectURL;
     }

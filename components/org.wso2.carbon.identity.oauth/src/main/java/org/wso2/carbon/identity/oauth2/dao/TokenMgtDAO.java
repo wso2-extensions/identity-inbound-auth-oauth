@@ -132,7 +132,9 @@ public class TokenMgtDAO {
 
     public TokenMgtDAO() {
         try {
-            persistenceProcessor = OAuthServerConfiguration.getInstance().getPersistenceProcessor();
+            synchronized (this) {
+                persistenceProcessor = OAuthServerConfiguration.getInstance().getPersistenceProcessor();
+            }
         } catch (IdentityOAuth2Exception e) {
             log.error("Error retrieving TokenPersistenceProcessor. Defaulting to PlainTextProcessor", e);
             persistenceProcessor = new PlainTextPersistenceProcessor();
@@ -143,7 +145,10 @@ public class TokenMgtDAO {
         }
 
         if (IdentityUtil.getProperty("OAuth.TokenPersistence.RetryCount") != null) {
-            tokenPersistRetryCount = Integer.parseInt(IdentityUtil.getProperty("OAuth.TokenPersistence.RetryCount"));
+            synchronized (this) {
+                tokenPersistRetryCount =
+                        Integer.parseInt(IdentityUtil.getProperty("OAuth.TokenPersistence.RetryCount"));
+            }
         }
     }
 
@@ -1396,7 +1401,7 @@ public class TokenMgtDAO {
         Connection connection = IdentityDatabaseUtil.getDBConnection();
         PreparedStatement ps = null;
         ResultSet rs = null;
-        Set<AccessTokenDO> activeDetailedTokens = new HashSet<>();
+        Set<AccessTokenDO> activeDetailedTokens;
         Map<String, AccessTokenDO> tokenMap = new HashMap<>();
         try {
             String sqlQuery = SQLQueries.GET_ACTIVE_DETAILS_FOR_CONSUMER_KEY;
@@ -2761,7 +2766,7 @@ public class TokenMgtDAO {
     public void revokeSaaSTokensOfOtherTenants(String consumerKey, int tenantId) throws IdentityOAuth2Exception {
 
         if (consumerKey == null) {
-            log.error("invalid parameters provided. Client ID: " + consumerKey + "and tenant ID: " + tenantId);
+            log.error("invalid parameters provided. tenant ID: " + tenantId);
             return;
         }
         Connection connection = IdentityDatabaseUtil.getDBConnection();

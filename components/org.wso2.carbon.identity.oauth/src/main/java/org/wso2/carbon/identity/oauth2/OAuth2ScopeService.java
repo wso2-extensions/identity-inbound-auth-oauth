@@ -90,7 +90,7 @@ public class OAuth2ScopeService {
      */
     public Set<Scope> getScopes(Integer startIndex, Integer count)
             throws IdentityOAuth2ScopeServerException {
-        Set<Scope> scopes = new HashSet<>();
+        Set<Scope> scopes;
 
         // check for no query params.
         if (startIndex == null && count == null) {
@@ -101,8 +101,11 @@ public class OAuth2ScopeService {
                         ERROR_CODE_FAILED_TO_GET_ALL_SCOPES, e);
             }
         } else {
-            //check if it is a pagination request.
-            scopes = listScopesWithPagination(startIndex, count);
+            //avoid null pointer dereference
+            //if (startIndex != null && count != null) {
+                //check if it is a pagination request.
+                scopes = listScopesWithPagination(startIndex, count);
+            //}
         }
         return scopes;
     }
@@ -265,14 +268,14 @@ public class OAuth2ScopeService {
      * @return List of available scopes
      * @throws IdentityOAuth2ScopeServerException
      */
-    private Set<Scope> listScopesWithPagination(int startIndex, int count)
+    private Set<Scope> listScopesWithPagination(Integer startIndex, Integer count)
             throws IdentityOAuth2ScopeServerException {
         Set<Scope> scopes;
 
-        if (count < 0) {
+        if (count == null || count < 0) {
             count = Oauth2ScopeConstants.MAX_FILTER_COUNT;
         }
-        if (startIndex < 1) {
+        if (startIndex == null || startIndex < 1) {
             startIndex = 1;
         }
 

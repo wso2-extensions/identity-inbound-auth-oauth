@@ -94,9 +94,12 @@ public class RegistrationRequestFactory extends HttpIdentityRequestFactory {
     public void create(IdentityRequest.IdentityRequestBuilder builder, HttpServletRequest request,
             HttpServletResponse response) throws FrameworkClientException {
 
-        RegistrationRequest.RegistrationRequestBuilder registerRequestBuilder = (RegistrationRequest.
-                RegistrationRequestBuilder) builder;
-
+        RegistrationRequest.RegistrationRequestBuilder registerRequestBuilder= null;
+        if (builder instanceof RegistrationRequest.
+                RegistrationRequestBuilder) {
+            registerRequestBuilder = (RegistrationRequest.
+                    RegistrationRequestBuilder) builder;
+        }
         super.create(registerRequestBuilder, request, response);
 
         try {

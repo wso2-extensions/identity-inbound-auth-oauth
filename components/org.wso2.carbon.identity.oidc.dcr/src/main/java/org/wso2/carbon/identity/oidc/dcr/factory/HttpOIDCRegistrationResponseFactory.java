@@ -46,7 +46,10 @@ public class HttpOIDCRegistrationResponseFactory extends HttpRegistrationRespons
     @Override
     public void create(HttpIdentityResponse.HttpIdentityResponseBuilder httpIdentityResponseBuilder,
                        IdentityResponse identityResponse) {
-        RegistrationResponse registrationResponse = (RegistrationResponse) identityResponse;
+        RegistrationResponse registrationResponse =null;
+        if (identityResponse instanceof RegistrationResponse) {
+            registrationResponse = (RegistrationResponse) identityResponse;
+        }
         httpIdentityResponseBuilder.setStatusCode(HttpServletResponse.SC_CREATED);
         httpIdentityResponseBuilder.addHeader(OAuthConstants.HTTP_RESP_HEADER_CACHE_CONTROL,
                                               OAuthConstants.HTTP_RESP_HEADER_VAL_CACHE_CONTROL_NO_STORE);
@@ -54,6 +57,7 @@ public class HttpOIDCRegistrationResponseFactory extends HttpRegistrationRespons
                                               OAuthConstants.HTTP_RESP_HEADER_VAL_PRAGMA_NO_CACHE);
         httpIdentityResponseBuilder.addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON);
         httpIdentityResponseBuilder.setBody(generateSuccessfulResponse(registrationResponse).toJSONString());
+
     }
 
     public HttpIdentityResponse.HttpIdentityResponseBuilder handleException(FrameworkException exception) {

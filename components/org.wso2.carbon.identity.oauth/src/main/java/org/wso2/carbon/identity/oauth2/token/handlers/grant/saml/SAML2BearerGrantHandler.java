@@ -480,10 +480,9 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
             tokReqMsgCtx.setValidityPeriod(notOnOrAfterFromSubjectConfirmations.getMillis() - curTimeInMillis);
         }
 
-        if (notOnOrAfterFromConditions == null && notOnOrAfterFromAndNotBeforeSubjectConfirmations == null) {
+        if (notOnOrAfterFromConditions == null) {
             if (log.isDebugEnabled()) {
-                log.debug("No valid NotOnOrAfter element found in either Conditions or SubjectConfirmationData " +
-                        "element");
+                log.debug("No valid NotOnOrAfter element found");
             }
             return false;
         }

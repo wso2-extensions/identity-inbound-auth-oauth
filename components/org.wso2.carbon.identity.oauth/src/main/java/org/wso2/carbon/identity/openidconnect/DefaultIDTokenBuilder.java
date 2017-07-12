@@ -243,7 +243,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
             }
         }
         // Get access token issued time
-        long accessTokenIssuedTime = getAccessTokenIssuedTime(tokenRespDTO.getAccessToken(), request) / 1000;
+        //long accessTokenIssuedTime = getAccessTokenIssuedTime(tokenRespDTO.getAccessToken(), request) / 1000;
 
         String atHash = null;
         if (!JWSAlgorithm.NONE.getName().equals(signatureAlgorithm.getName())) {
@@ -344,7 +344,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         LinkedHashSet acrValue = request.getAuthorizationReqDTO().getACRValues();
 
         // Get access token issued time
-        long accessTokenIssuedTime = getAccessTokenIssuedTime(tokenRespDTO.getAccessToken(), request) / 1000;
+        //long accessTokenIssuedTime = getAccessTokenIssuedTime(tokenRespDTO.getAccessToken(), request) / 1000;
 
         String atHash = null;
         String responseType = request.getAuthorizationReqDTO().getResponseType();

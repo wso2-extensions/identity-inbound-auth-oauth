@@ -204,21 +204,21 @@ public class UserInfoJSONResponseBuilder implements UserInfoResponseBuilder {
         ArrayList essentailClaimslist = new ArrayList();
         if ((jsonObjectClaims != null) && jsonObjectClaims.toString().contains("userinfo")) {
             JSONObject newJSON = jsonObjectClaims.getJSONObject("userinfo");
-            Iterator<?> keys = newJSON.keys();
-            while (keys.hasNext()) {
-                key = (String) keys.next();
-                String value = null;
-                if (newJSON != null) {
+            if (newJSON != null) {
+                Iterator<?> keys = newJSON.keys();
+                while (keys.hasNext()) {
+                    key = (String) keys.next();
+                    String value = null;
                     value = newJSON.get(key).toString();
-                }
-                JSONObject jsonObjectValues = new JSONObject(value);
-                if (jsonObjectValues != null) {
-                    Iterator<?> claimKeyValues = jsonObjectValues.keys();
-                    while (claimKeyValues.hasNext()) {
-                        String claimKeys = (String) claimKeyValues.next();
-                        String claimValues = jsonObjectValues.get(claimKeys).toString();
-                        if (claimValues.equals("true") && claimKeys.equals("essential")) {
-                            essentailClaimslist.add(key);
+                    JSONObject jsonObjectValues = new JSONObject(value);
+                    if (jsonObjectValues != null) {
+                        Iterator<?> claimKeyValues = jsonObjectValues.keys();
+                        while (claimKeyValues.hasNext()) {
+                            String claimKeys = (String) claimKeyValues.next();
+                            String claimValues = jsonObjectValues.get(claimKeys).toString();
+                            if (claimValues.equals("true") && claimKeys.equals("essential")) {
+                                essentailClaimslist.add(key);
+                            }
                         }
                     }
                 }

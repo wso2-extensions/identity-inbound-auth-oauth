@@ -720,6 +720,11 @@ public class OAuth2AuthzEndpoint {
         AuthorizationGrantCacheKey authorizationGrantCacheKey = new AuthorizationGrantCacheKey(code);
         AuthorizationGrantCacheEntry authorizationGrantCacheEntry = new AuthorizationGrantCacheEntry(
                 sessionDataCacheEntry.getLoggedInUser().getUserAttributes());
+//        ClaimMapping claimMapping1 = new ClaimMapping();
+//        Claim claim1 = new Claim();
+//        claim1.setClaimUri("sub");
+//        claimMapping1.setRemoteClaim(claim1);
+//        String sub = sessionDataCacheEntry.getLoggedInUser().getUserAttributes().get(claimMapping1);
         String sub = sessionDataCacheEntry.getLoggedInUser().getUserAttributes().get("sub");
         if(StringUtils.isBlank(sub)){
             sub = sessionDataCacheEntry.getLoggedInUser().getAuthenticatedSubjectIdentifier();
