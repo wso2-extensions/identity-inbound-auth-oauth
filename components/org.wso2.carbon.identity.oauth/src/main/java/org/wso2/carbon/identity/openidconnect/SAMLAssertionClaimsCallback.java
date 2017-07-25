@@ -277,6 +277,12 @@ public class SAMLAssertionClaimsCallback implements CustomClaimsCallbackHandler 
         Map<String, Object> mappedAppClaims = new HashMap<>();
 
         String spTenantDomain = (String) requestMsgCtx.getProperty(MultitenantConstants.TENANT_DOMAIN);
+
+        // There are certain flows where tenant domain is not added as a message context property.
+        if (spTenantDomain == null) {
+            spTenantDomain = requestMsgCtx.getOauth2AccessTokenReqDTO().getTenantDomain();
+        }
+
         ApplicationManagementService applicationMgtService = OAuth2ServiceComponentHolder.getApplicationMgtService();
         String spName = applicationMgtService
                 .getServiceProviderNameByClientId(requestMsgCtx.getOauth2AccessTokenReqDTO().getClientId(),
@@ -422,6 +428,12 @@ public class SAMLAssertionClaimsCallback implements CustomClaimsCallbackHandler 
         Map<String, Object> mappedAppClaims = new HashMap<>();
 
         String spTenantDomain = (String) requestMsgCtx.getProperty(MultitenantConstants.TENANT_DOMAIN);
+
+        // There are certain flows where tenant domain is not added as a message context property.
+        if (spTenantDomain == null) {
+            spTenantDomain = requestMsgCtx.getAuthorizationReqDTO().getTenantDomain();
+        }
+
         ApplicationManagementService applicationMgtService = OAuth2ServiceComponentHolder.getApplicationMgtService();
         String spName = applicationMgtService
                 .getServiceProviderNameByClientId(requestMsgCtx.getAuthorizationReqDTO().getConsumerKey(),

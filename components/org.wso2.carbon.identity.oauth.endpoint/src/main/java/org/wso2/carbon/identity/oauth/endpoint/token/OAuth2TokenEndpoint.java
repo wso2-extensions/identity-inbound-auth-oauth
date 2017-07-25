@@ -33,17 +33,14 @@ import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
-import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.common.exception.OAuthClientException;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.endpoint.OAuthRequestWrapper;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
-import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.ResponseHeader;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.model.CarbonOAuthTokenRequest;
-import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
 import javax.servlet.http.HttpServletRequest;
@@ -57,7 +54,6 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
-import java.net.URI;
 
 @Path("/token")
 public class OAuth2TokenEndpoint {
@@ -83,67 +79,15 @@ public class OAuth2TokenEndpoint {
             // Validate repeated parameters
             if (!EndpointUtil.validateParams(request, null, paramMap)) {
                 OAuthResponse response = OAuthASResponse.errorResponse(HttpServletResponse.SC_BAD_REQUEST).
-                        setError(OAuth2ErrorCodes.INVALID_REQUEST).setErrorDescription("Invalid request with repeated parameters.").buildJSONMessage();
+                        setError(OAuth2ErrorCodes.INVALID_REQUEST).setErrorDescription("Invalid request with repeated" +
+                        " parameters.").buildJSONMessage();
                 return Response.status(response.getResponseStatus()).entity(response.getBody()).build();
             }
 
             HttpServletRequestWrapper httpRequest = new OAuthRequestWrapper(request, paramMap);
 
             String consumerKey = null;
-            OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
-            try {
-                if (StringUtils.isNotEmpty(httpRequest.getParameter(OAuth.OAUTH_CLIENT_ID))) {
-                    consumerKey = httpRequest.getParameter(OAuth.OAUTH_CLIENT_ID);
-                } else if (request.getHeader(OAuthConstants.HTTP_REQ_HEADER_AUTHZ) != null) {
-                    consumerKey = EndpointUtil.extractCredentialsFromAuthzHeader(request.getHeader(OAuthConstants.
-                            HTTP_REQ_HEADER_AUTHZ))[0];
-                }
 
-                if (StringUtils.isNotEmpty(consumerKey)) {
-                    String appState = oAuthAppDAO.getConsumerAppState(consumerKey);
-                    if (StringUtils.isEmpty(appState)) {
-                        if (log.isDebugEnabled()) {
-                            log.debug("A valid OAuth client could not be found for client_id: " + consumerKey);
-                        }
-                        OAuthResponse oAuthResponse = OAuthASResponse.errorResponse(HttpServletResponse.SC_UNAUTHORIZED)
-                                .setError(OAuth2ErrorCodes.INVALID_CLIENT)
-                                .setErrorDescription("A valid OAuth client could not be found for client_id: " +
-                                        consumerKey).buildJSONMessage();
-                        return Response.status(oAuthResponse.getResponseStatus()).entity(oAuthResponse.getBody()).build();
-                    }
-
-                    if (!OAuthConstants.OauthAppStates.APP_STATE_ACTIVE.equalsIgnoreCase(appState)) {
-                        if (log.isDebugEnabled()) {
-                            log.debug("Oauth App is not in active state.");
-                        }
-                        OAuthResponse oAuthResponse = OAuthASResponse.errorResponse(HttpServletResponse.SC_UNAUTHORIZED)
-                                .setError(OAuth2ErrorCodes.INVALID_CLIENT)
-                                .setErrorDescription("Oauth application is not in active state.").buildJSONMessage();
-                        return Response.status(oAuthResponse.getResponseStatus()).entity(oAuthResponse.getBody()).build();
-                    }
-                }
-            } catch (IdentityOAuthAdminException e) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Error in getting oauth app state.", e);
-                }
-                OAuthResponse oAuthResponse = OAuthASResponse.errorResponse(HttpServletResponse.SC_NOT_FOUND)
-                        .setError(OAuth2ErrorCodes.SERVER_ERROR)
-                        .setErrorDescription("Error in getting oauth app state.").buildJSONMessage();
-                return Response.status(oAuthResponse.getResponseStatus()).entity(oAuthResponse.getBody()).build();
-            } catch (OAuthClientException e) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Error decoding authorization header. Space delimited \"<authMethod> <base64Hash>\" format violated.", e);
-                }
-                OAuthResponse oAuthResponse = OAuthASResponse.errorResponse(HttpServletResponse.SC_UNAUTHORIZED)
-                        .setError(OAuth2ErrorCodes.INVALID_CLIENT)
-                        .setErrorDescription("Error decoding authorization header. Space delimited \"<authMethod> <base64Hash>\" format violated.").buildJSONMessage();
-                return Response.status(oAuthResponse.getResponseStatus()).header(OAuthConstants.HTTP_RESP_HEADER_AUTHENTICATE,
-                        EndpointUtil.getRealmInfo()).entity(oAuthResponse.getBody()).build();
-            }
-
-
-            // extract the basic auth credentials if present in the request and use for
-            // authentication.
             if (request.getHeader(OAuthConstants.HTTP_REQ_HEADER_AUTHZ) != null) {
 
                 try {
@@ -166,13 +110,67 @@ public class OAuth2TokenEndpoint {
                     paramMap.add(OAuth.OAUTH_CLIENT_ID, clientCredentials[0]);
                     paramMap.add(OAuth.OAUTH_CLIENT_SECRET, clientCredentials[1]);
 
+                    consumerKey = clientCredentials[0];
+
                 } catch (OAuthClientException e) {
                     // malformed credential string is considered as an auth failure.
                     log.error("Error while extracting credentials from authorization header", e);
                     return handleBasicAuthFailure();
                 }
-            }
-            CarbonOAuthTokenRequest oauthRequest = null;
+            } else if (StringUtils.isNotEmpty(httpRequest.getParameter(OAuth.OAUTH_CLIENT_ID))) {
+                    consumerKey = httpRequest.getParameter(OAuth.OAUTH_CLIENT_ID);
+                }
+
+                if (StringUtils.isNotEmpty(consumerKey)) {
+                    OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
+                    try {
+                        String appState = oAuthAppDAO.getConsumerAppState(consumerKey);
+                        if (StringUtils.isEmpty(appState)) {
+                            if (log.isDebugEnabled()) {
+                                log.debug("A valid OAuth client could not be found for client_id: " + consumerKey);
+                            }
+                            OAuthResponse oAuthResponse = OAuthASResponse.errorResponse(HttpServletResponse
+                                    .SC_UNAUTHORIZED)
+                                    .setError(OAuth2ErrorCodes.INVALID_CLIENT)
+                                    .setErrorDescription("A valid OAuth client could not be found for client_id: " +
+                                            consumerKey).buildJSONMessage();
+                            return Response.status(oAuthResponse.getResponseStatus()).entity(oAuthResponse.getBody())
+                                    .build();
+                        }
+
+                        if (!OAuthConstants.OauthAppStates.APP_STATE_ACTIVE.equalsIgnoreCase(appState)) {
+                            if (log.isDebugEnabled()) {
+                                log.debug("Oauth App is not in active state.");
+                            }
+                            OAuthResponse oAuthResponse = OAuthASResponse.errorResponse(HttpServletResponse
+                                    .SC_UNAUTHORIZED)
+                                    .setError(OAuth2ErrorCodes.INVALID_CLIENT)
+                                    .setErrorDescription("Oauth application is not in active state.")
+                                    .buildJSONMessage();
+                            return Response.status(oAuthResponse.getResponseStatus()).entity(oAuthResponse.getBody())
+                                    .build();
+                        }
+                    } catch (IdentityOAuthAdminException e) {
+                        if (log.isDebugEnabled()) {
+                            log.debug("Error in getting oauth app state.", e);
+                        }
+                        OAuthResponse oAuthResponse = OAuthASResponse.errorResponse(HttpServletResponse.SC_NOT_FOUND)
+                                .setError(OAuth2ErrorCodes.SERVER_ERROR)
+                                .setErrorDescription("Error in getting oauth app state.").buildJSONMessage();
+                        return Response.status(oAuthResponse.getResponseStatus()).entity(oAuthResponse.getBody())
+                                .build();
+                    }
+                } else {
+                    OAuthResponse oAuthResponse = OAuthASResponse.errorResponse(HttpServletResponse
+                            .SC_BAD_REQUEST)
+                            .setError(OAuth2ErrorCodes.INVALID_REQUEST)
+                            .setErrorDescription("Missing parameters: client_id")
+                            .buildJSONMessage();
+                    return Response.status(oAuthResponse.getResponseStatus()).entity(oAuthResponse.getBody())
+                            .build();
+                }
+
+            CarbonOAuthTokenRequest oauthRequest;
 
             try {
                 oauthRequest = new CarbonOAuthTokenRequest(httpRequest);
@@ -278,7 +276,8 @@ public class OAuth2TokenEndpoint {
 
     private Response handleServerError() throws OAuthSystemException {
         OAuthResponse response = OAuthASResponse.errorResponse(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).
-                setError(OAuth2ErrorCodes.SERVER_ERROR).setErrorDescription("Internal Server Error.").buildJSONMessage();
+                setError(OAuth2ErrorCodes.SERVER_ERROR).setErrorDescription("Internal Server Error.")
+                .buildJSONMessage();
 
         return Response.status(response.getResponseStatus()).header(OAuthConstants.HTTP_RESP_HEADER_AUTHENTICATE,
                 EndpointUtil.getRealmInfo()).entity(response.getBody()).build();
@@ -287,7 +286,8 @@ public class OAuth2TokenEndpoint {
 
     private Response handleSQLError() throws OAuthSystemException {
         OAuthResponse response = OAuthASResponse.errorResponse(HttpServletResponse.SC_BAD_GATEWAY).
-                setError(OAuth2ErrorCodes.SERVER_ERROR).setErrorDescription("Service Unavailable Error.").buildJSONMessage();
+                setError(OAuth2ErrorCodes.SERVER_ERROR).setErrorDescription("Service Unavailable Error.")
+                .buildJSONMessage();
 
         return Response.status(response.getResponseStatus()).header(OAuthConstants.HTTP_RESP_HEADER_AUTHENTICATE,
                 EndpointUtil.getRealmInfo()).entity(response.getBody()).build();

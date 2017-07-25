@@ -52,16 +52,16 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.webfinger.DefaultWebFingerProcessor;
 import org.wso2.carbon.identity.webfinger.WebFingerProcessor;
 
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpServletRequest;
-import javax.ws.rs.core.Context;
-import javax.ws.rs.core.MultivaluedMap;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.MultivaluedMap;
 
 public class EndpointUtil {
 
@@ -197,7 +197,8 @@ public class EndpointUtil {
                 }
             }
         }
-        String errMsg = "Error decoding authorization header. Space delimited \"<authMethod> <base64Hash>\" format violated.";
+        String errMsg = "Error decoding authorization header. Space delimited \"<authMethod> <base64Hash>\" format " +
+                "violated.";
         throw new OAuthClientException(errMsg);
     }
 
