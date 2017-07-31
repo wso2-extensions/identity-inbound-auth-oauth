@@ -161,6 +161,7 @@ public class OAuthAdminService extends AbstractAdmin {
                 dto.setGrantTypes(app.getGrantTypes());
                 dto.setPkceMandatory(app.isPkceMandatory());
                 dto.setPkceSupportPlain(app.isPkceSupportPlain());
+                dto.setAudiences(app.getAudiences());
             }
             return dto;
         } catch (InvalidOAuthClientException | IdentityOAuth2Exception e) {
@@ -191,6 +192,7 @@ public class OAuthAdminService extends AbstractAdmin {
                 dto.setGrantTypes(app.getGrantTypes());
                 dto.setPkceMandatory(app.isPkceMandatory());
                 dto.setPkceSupportPlain(app.isPkceSupportPlain());
+                dto.setAudiences(app.getAudiences());
             }
             return dto;
         } catch (InvalidOAuthClientException | IdentityOAuth2Exception e) {
@@ -272,6 +274,7 @@ public class OAuthAdminService extends AbstractAdmin {
                         }
                     }
                     app.setGrantTypes(application.getGrantTypes());
+                    app.setAudiences(application.getAudiences());
                     app.setPkceMandatory(application.getPkceMandatory());
                     app.setPkceSupportPlain(application.getPkceSupportPlain());
                 }
@@ -320,6 +323,7 @@ public class OAuthAdminService extends AbstractAdmin {
                 }
             }
             oauthappdo.setGrantTypes(consumerAppDTO.getGrantTypes());
+            oauthappdo.setAudiences(consumerAppDTO.getAudiences());
         }
         dao.updateConsumerApplication(oauthappdo);
         if (OAuthServerConfiguration.getInstance().isCacheEnabled()) {
@@ -535,6 +539,7 @@ public class OAuthAdminService extends AbstractAdmin {
                                 appDTO.setGrantTypes(appDO.getGrantTypes());
                                 appDTO.setPkceMandatory(appDO.isPkceMandatory());
                                 appDTO.setPkceSupportPlain(appDO.isPkceSupportPlain());
+                                appDTO.setAudiences(appDO.getAudiences());
                                 appDTOs.add(appDTO);
                             } catch (InvalidOAuthClientException e) {
                                 String errorMsg = "Invalid Client ID : " + scopedToken.getConsumerKey();

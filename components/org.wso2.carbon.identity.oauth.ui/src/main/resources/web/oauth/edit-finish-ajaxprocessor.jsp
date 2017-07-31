@@ -25,6 +25,7 @@
 <%@ page import="org.wso2.carbon.ui.CarbonUIMessage"%>
 <%@ page import="org.wso2.carbon.ui.CarbonUIUtil"%>
 <%@ page import="org.wso2.carbon.utils.ServerConstants"%>
+<%@ page import="org.wso2.carbon.identity.core.util.IdentityUtil" %>
 
 <%@ page import="java.util.ResourceBundle" %>
 
@@ -65,11 +66,11 @@
     String BUNDLE = "org.wso2.carbon.identity.oauth.ui.i18n.Resources";
 	ResourceBundle resourceBundle = ResourceBundle.getBundle(BUNDLE, request.getLocale());
 	OAuthConsumerAppDTO app = new OAuthConsumerAppDTO();
-	
+
 	String spName = (String) session.getAttribute("application-sp-name");
 	session.removeAttribute("application-sp-name");
 	boolean isError = false;
-	
+
     try {
 
         String cookie = (String) session.getAttribute(ServerConstants.ADMIN_SERVICE_COOKIE);
@@ -94,6 +95,17 @@
         grants = buff.toString();
         if(OAuthConstants.OAuthVersions.VERSION_2.equals(oauthVersion)){
             app.setGrantTypes(grants);
+        }
+
+        if (Boolean.parseBoolean(request.getParameter("enableAudienceRestriction"))) {
+            String audiencesCountParameter = request.getParameter("audiencePropertyCounter");
+            if (IdentityUtil.isNotBlank(audiencesCountParameter)) {
+                int audiencesCount = Integer.parseInt(audiencesCountParameter);
+                   String[] audiences = request.getParameterValues("audiencePropertyName");
+                if (OAuthConstants.OAuthVersions.VERSION_2.equals(oauthVersion)) {
+                    app.setAudiences(audiences);
+                }
+            }
         }
         client.updateOAuthApplicationData(app);
         String message = resourceBundle.getString("app.updated.successfully");

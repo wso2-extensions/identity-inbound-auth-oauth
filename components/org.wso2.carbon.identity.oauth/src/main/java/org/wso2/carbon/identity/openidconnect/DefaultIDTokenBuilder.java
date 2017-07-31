@@ -60,6 +60,7 @@ import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dao.TokenMgtDAO;
@@ -283,8 +284,8 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
 
         ArrayList<String> audience = new ArrayList<String>();
         audience.add(request.getOauth2AccessTokenReqDTO().getClientId());
-        if (CollectionUtils.isNotEmpty(getOIDCEndpointUrl())) {
-            audience.addAll(getOIDCEndpointUrl());
+        if (CollectionUtils.isNotEmpty(getOIDCEndpointUrl(request.getOauth2AccessTokenReqDTO().getTenantDomain(), request.getOauth2AccessTokenReqDTO().getClientId()))) {
+            audience.addAll(getOIDCEndpointUrl(request.getOauth2AccessTokenReqDTO().getTenantDomain(), request.getOauth2AccessTokenReqDTO().getClientId()));
         }
 
         JWTClaimsSet jwtClaimsSet = new JWTClaimsSet();
@@ -390,8 +391,8 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
 
         ArrayList<String> audience = new ArrayList<String>();
         audience.add(request.getAuthorizationReqDTO().getConsumerKey());
-        if (CollectionUtils.isNotEmpty(getOIDCEndpointUrl())) {
-            audience.addAll(getOIDCEndpointUrl());
+        if (CollectionUtils.isNotEmpty(getOIDCEndpointUrl(request.getAuthorizationReqDTO().getTenantDomain(), request.getAuthorizationReqDTO().getConsumerKey()))) {
+            audience.addAll(getOIDCEndpointUrl(request.getAuthorizationReqDTO().getTenantDomain(), request.getAuthorizationReqDTO().getConsumerKey()));
         }
 
         JWTClaimsSet jwtClaimsSet = new JWTClaimsSet();
@@ -806,44 +807,55 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         return buf.toString();
     }
 
-    private List<String> getOIDCEndpointUrl() {
-        List<String> OIDCEntityId = getOIDCAudiences();
+    private List<String> getOIDCEndpointUrl(String tenantDomain, String consumerKey) {
+        List<String> OIDCEntityId = getOIDCAudiences(tenantDomain, consumerKey);
         return OIDCEntityId;
     }
 
-    private List<String> getOIDCAudiences() {
-        List<String> audiences = new ArrayList<String>();
-        IdentityConfigParser configParser = IdentityConfigParser.getInstance();
-        OMElement oauthElem = configParser.getConfigElement(CONFIG_ELEM_OAUTH);
+    private List<String> getOIDCAudiences(String tenantDomain, String consumerKey) {
+        List<String> audiences = null;
 
-        if (oauthElem == null) {
-            warnOnFaultyConfiguration("OAuth element is not available.");
-            return Collections.EMPTY_LIST;
+        OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
+        try {
+            audiences = oAuthAppDAO.getOIDCAudiences(tenantDomain, consumerKey);
+        } catch (IdentityOAuth2Exception e) {
+            log.error("Error while retrieving OIDC audiences for tenant domain: "
+                    + tenantDomain + " and client ID: " + consumerKey);
         }
-        OMElement configOpenIDConnect = oauthElem.getFirstChildWithName(getQNameWithIdentityNS(OPENID_CONNECT));
+        if(audiences == null || audiences.isEmpty()) {
+            audiences = new ArrayList<String>();
+            IdentityConfigParser configParser = IdentityConfigParser.getInstance();
+            OMElement oauthElem = configParser.getConfigElement(CONFIG_ELEM_OAUTH);
 
-        if (configOpenIDConnect == null) {
-            warnOnFaultyConfiguration("OpenID element is not available.");
-            return Collections.EMPTY_LIST;
-        }
-        OMElement configAudience = configOpenIDConnect.
-                getFirstChildWithName(getQNameWithIdentityNS(OPENID_CONNECT_AUDIENCES));
-
-        if (configAudience == null) {
-            return Collections.EMPTY_LIST;
-        }
-
-        Iterator<OMElement> iterator =
-                configAudience.getChildrenWithName(getQNameWithIdentityNS(OPENID_CONNECT_AUDIENCE));
-        while (iterator.hasNext()) {
-            OMElement supportedAudience = iterator.next();
-            String supportedAudienceName = null;
-
-            if (supportedAudience != null) {
-                supportedAudienceName = IdentityUtil.fillURLPlaceholders(supportedAudience.getText());
+            if (oauthElem == null) {
+                warnOnFaultyConfiguration("OAuth element is not available.");
+                return Collections.EMPTY_LIST;
             }
-            if (StringUtils.isNotBlank(supportedAudienceName)) {
-                audiences.add(supportedAudienceName);
+            OMElement configOpenIDConnect = oauthElem.getFirstChildWithName(getQNameWithIdentityNS(OPENID_CONNECT));
+
+            if (configOpenIDConnect == null) {
+                warnOnFaultyConfiguration("OpenID element is not available.");
+                return Collections.EMPTY_LIST;
+            }
+            OMElement configAudience = configOpenIDConnect.
+                    getFirstChildWithName(getQNameWithIdentityNS(OPENID_CONNECT_AUDIENCES));
+
+            if (configAudience == null) {
+                return Collections.EMPTY_LIST;
+            }
+
+            Iterator<OMElement> iterator =
+                    configAudience.getChildrenWithName(getQNameWithIdentityNS(OPENID_CONNECT_AUDIENCE));
+            while (iterator.hasNext()) {
+                OMElement supportedAudience = iterator.next();
+                String supportedAudienceName = null;
+
+                if (supportedAudience != null) {
+                    supportedAudienceName = IdentityUtil.fillURLPlaceholders(supportedAudience.getText());
+                }
+                if (StringUtils.isNotBlank(supportedAudienceName)) {
+                    audiences.add(supportedAudienceName);
+                }
             }
         }
         return audiences;

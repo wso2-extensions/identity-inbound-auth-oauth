@@ -25,6 +25,7 @@
 <%@ page import="org.wso2.carbon.ui.CarbonUIMessage"%>
 <%@ page import="org.wso2.carbon.ui.CarbonUIUtil"%>
 <%@ page import="org.wso2.carbon.utils.ServerConstants"%>
+<%@ page import="org.wso2.carbon.identity.core.util.IdentityUtil" %>
 
 <%@ page import="java.util.ResourceBundle" %>
 
@@ -65,7 +66,7 @@
 	String BUNDLE = "org.wso2.carbon.identity.oauth.ui.i18n.Resources";
 	ResourceBundle resourceBundle = ResourceBundle.getBundle(BUNDLE, request.getLocale());
 	OAuthConsumerAppDTO app = new OAuthConsumerAppDTO();
-	
+
 	String spName = (String) session.getAttribute("application-sp-name");
 	session.removeAttribute("application-sp-name");
 	boolean isError = false;
@@ -98,13 +99,24 @@
         if(OAuthConstants.OAuthVersions.VERSION_2.equals(oauthVersion)){
             app.setGrantTypes(grants);
         }
-		app.setPkceMandatory(pkceMandatory);
+
+        if (Boolean.parseBoolean(request.getParameter("enableAudienceRestriction"))) {
+            String audiencesCountParameter = request.getParameter("audiencePropertyCounter");
+            if (IdentityUtil.isNotBlank(audiencesCountParameter)) {
+                int audiencesCount = Integer.parseInt(audiencesCountParameter);
+                String[] audiences = request.getParameterValues("audiencePropertyName");
+                if (OAuthConstants.OAuthVersions.VERSION_2.equals(oauthVersion)) {
+                    app.setAudiences(audiences);
+                }
+            }
+        }
+        app.setPkceMandatory(pkceMandatory);
 		app.setPkceSupportPlain(pkceSupportPlain);
 
 		client.registerOAuthApplicationData(app);
-		
+
 		consumerApp = client.getOAuthApplicationDataByAppName(applicationName);
-		
+
 		String message = resourceBundle.getString("app.added.successfully");
 		CarbonUIMessage.sendCarbonUIMessage(message, CarbonUIMessage.INFO, request);
 
@@ -127,7 +139,7 @@ if (qpplicationComponentFound) {
     location.href = '../application/configure-service-provider.jsp?action=update&display=oauthapp&spName=<%=Encode.forUriComponent(spName)%>&oauthapp=<%=Encode.forUriComponent(consumerApp.getOauthConsumerKey())%>';
 <% } else { %>
     location.href = '../application/configure-service-provider.jsp?display=oauthapp&spName=<%=Encode.forUriComponent(spName)%>&action=cancel';
-<% } 
+<% }
 } else {%>
     location.href = 'index.jsp';
 <% } %>

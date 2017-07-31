@@ -202,7 +202,7 @@
                 <xs:sequence>
                     <xs:element minOccurs="0" name="OAuthVersion" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="applicationName" nillable="true" type="xs:string"/>
-                    <xs:element minOccurs="0" name="callbackUrl" nillable="true" type="xs:string"/>
+                    <xs:element maxOccurs="unbounded" minOccurs="0" name="audiences" nillable="true" type="xs:string"/>                    <xs:element minOccurs="0" name="callbackUrl" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="grantTypes" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="oauthConsumerKey" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="oauthConsumerSecret" nillable="true" type="xs:string"/>
@@ -260,6 +260,8 @@
         <wsdl:part name="parameters" element="ns1:updateConsumerAppState"/>
     </wsdl:message>
     <wsdl:message name="updateConsumerAppStateResponse"/>
+    <wsdl:message name="getAudiencesRequest"/>
+    <wsdl:message name="getAudiencesResponse"/>
     <wsdl:message name="updateConsumerApplicationRequest">
         <wsdl:part name="parameters" element="ns1:updateConsumerApplication"/>
     </wsdl:message>
@@ -381,6 +383,9 @@
             <wsdl:output message="tns:getAppsAuthorizedByUserResponse" wsaw:Action="urn:getAppsAuthorizedByUserResponse"/>
             <wsdl:fault message="tns:OAuthAdminServiceIdentityOAuthAdminException" name="OAuthAdminServiceIdentityOAuthAdminException" wsaw:Action="urn:getAppsAuthorizedByUserOAuthAdminServiceIdentityOAuthAdminException"/>
         </wsdl:operation>
+        <wsdl:operation name="getAudiences">
+            <wsdl:input message="tns:getAudiencesRequest" wsaw:Action="urn:getAudiences"/>
+            <wsdl:output message="tns:getAudiencesResponse" wsaw:Action="urn:getAudiencesResponse"/></wsdl:operation>
         <wsdl:operation name="revokeAuthzForAppsByResoureOwner">
             <wsdl:input message="tns:revokeAuthzForAppsByResoureOwnerRequest" wsaw:Action="urn:revokeAuthzForAppsByResoureOwner"/>
             <wsdl:output message="tns:revokeAuthzForAppsByResoureOwnerResponse" wsaw:Action="urn:revokeAuthzForAppsByResoureOwnerResponse"/>
@@ -550,6 +555,15 @@
             <wsdl:fault name="OAuthAdminServiceIdentityOAuthAdminException">
                 <soap:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
             </wsdl:fault>
+        </wsdl:operation>
+        <wsdl:operation name="getAudiences">
+            <soap:operation soapAction="urn:getAudiences" style="document"/>
+            <wsdl:input>
+                <soap:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap:body use="literal"/>
+        </wsdl:output>
         </wsdl:operation>
         <wsdl:operation name="revokeAuthzForAppsByResoureOwner">
             <soap:operation soapAction="urn:revokeAuthzForAppsByResoureOwner" style="document"/>
@@ -728,6 +742,15 @@
                 <soap12:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
             </wsdl:fault>
         </wsdl:operation>
+        <wsdl:operation name="getAudiences">
+            <http:operation location="getAudiences"/>
+            <wsdl:input>
+                <mime:content type="text/xml" part="parameters"/>
+            </wsdl:input>
+            <wsdl:output>
+                <mime:content type="text/xml" part="parameters"/>
+        </wsdl:output>
+        </wsdl:operation>
         <wsdl:operation name="revokeAuthzForAppsByResoureOwner">
             <soap12:operation soapAction="urn:revokeAuthzForAppsByResoureOwner" style="document"/>
             <wsdl:input>
@@ -867,6 +890,15 @@
             </wsdl:input>
             <wsdl:output>
                 <mime:content type="text/xml" part="parameters"/>
+            </wsdl:output>
+        </wsdl:operation>
+        <wsdl:operation name="getAudiences">
+            <soap12:operation soapAction="urn:getAudiences" style="document"/>
+            <wsdl:input>
+                <soap12:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap12:body use="literal"/>
             </wsdl:output>
         </wsdl:operation>
         <wsdl:operation name="revokeAuthzForAppsByResoureOwner">
