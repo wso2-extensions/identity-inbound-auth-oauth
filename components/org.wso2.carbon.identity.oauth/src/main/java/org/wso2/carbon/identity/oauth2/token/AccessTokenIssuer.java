@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -18,6 +18,9 @@
 
 package org.wso2.carbon.identity.oauth2.token;
 
+import com.nimbusds.jwt.JWT;
+import com.nimbusds.jwt.JWTParser;
+import com.nimbusds.jwt.ReadOnlyJWTClaimsSet;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.error.OAuthError;
@@ -29,6 +32,7 @@ import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
+import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -45,6 +49,7 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.IDTokenBuilder;
 import org.wso2.carbon.utils.CarbonUtils;
 
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Hashtable;
@@ -305,7 +310,21 @@ public class AccessTokenIssuer {
 
         if (tokReqMsgCtx.getScope() != null && OAuth2Util.isOIDCAuthzRequest(tokReqMsgCtx.getScope())) {
             IDTokenBuilder builder = OAuthServerConfiguration.getInstance().getOpenIDConnectIDTokenBuilder();
-            tokenRespDTO.setIDToken(builder.buildIDToken(tokReqMsgCtx, tokenRespDTO));
+            String idToken = builder.buildIDToken(tokReqMsgCtx, tokenRespDTO);
+            try {
+                JWT jwt = JWTParser.parse(idToken);
+                if (isValidIdToken(jwt)) {
+                    tokenRespDTO.setIDToken(idToken);
+                } else {
+                    tokenRespDTO = handleError(
+                            OAuth2ErrorCodes.SERVER_ERROR,
+                            "Server Error",
+                            tokenReqDTO);
+                    return tokenRespDTO;
+                }
+            } catch (ParseException e) {
+                throw new IdentityException("Error while parsing JWT token", e);
+            }
         }
 
         if (tokenReqDTO.getGrantType().equals(GrantType.AUTHORIZATION_CODE.toString())) {
@@ -427,5 +446,35 @@ public class AccessTokenIssuer {
         if (tokReqMsgCtx.getProperty(OAuthConstants.RESPONSE_HEADERS_PROPERTY) != null) {
             tokenRespDTO.setResponseHeaders((ResponseHeader[]) tokReqMsgCtx.getProperty(OAuthConstants.RESPONSE_HEADERS_PROPERTY));
         }
+    }
+
+    /**
+     * Method to check whether id token contains the required claims(iss,sub,aud,exp,iat) defined by the oidc spec
+     * @param jwt id token
+     * @return true or false(whether id token contains the required claims)
+     * @throws ParseException
+     */
+    private boolean isValidIdToken(JWT jwt) throws ParseException {
+
+        ReadOnlyJWTClaimsSet idClaims = jwt.getJWTClaimsSet();
+        if (idClaims.getIssuer() == null) {
+            log.error("ID token does not have required issuer claim");
+            return false;
+        } else if (idClaims.getSubject() == null) {
+            log.error("ID token does not have required subject claim");
+            return false;
+        } else if (idClaims.getAudience() == null) {
+            log.error("ID token does not have required audience claim");
+            return false;
+        } else if (idClaims.getExpirationTime() == null) {
+            log.error("ID token does not have required expiration time claim");
+            return false;
+        } else if (idClaims.getIssueTime() == null) {
+            log.error("ID token does not have required issued time claim");
+            return false;
+        } else {
+            return true;
+        }
+
     }
 }
