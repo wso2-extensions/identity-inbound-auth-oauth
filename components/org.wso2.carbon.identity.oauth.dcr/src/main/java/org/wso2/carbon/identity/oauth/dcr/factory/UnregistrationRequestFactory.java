@@ -95,6 +95,9 @@ public class UnregistrationRequestFactory extends HttpIdentityRequestFactory {
             unregisterRequestBuilder.setApplicationName(applicationName);
             unregisterRequestBuilder.setUserId(clientId);
             unregisterRequestBuilder.setConsumerKey(consumerKey);
+        } else {
+            log.error("Can't create unregisterRequestBuilder. builder is not an instance of " +
+                    "UnregistrationRequest.DCRUnregisterRequestBuilder");
         }
 
     }

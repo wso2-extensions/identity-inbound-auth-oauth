@@ -88,6 +88,9 @@ public class OIDCRegistrationRequestFactory extends RegistrationRequestFactory {
             registerRequestBuilder.setRegistrationRequestProfile(oidcRegistrationRequestProfile);
 
             super.create(registerRequestBuilder, request, response);
+        } else {
+            log.error("Can't create registerRequestBuilder. builder is not an instance of " +
+                    "OIDCRegistrationRequest.OIDCRegistrationRequestBuilder");
         }
     }
 

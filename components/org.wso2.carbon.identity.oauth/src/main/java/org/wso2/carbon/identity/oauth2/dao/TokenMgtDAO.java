@@ -2761,7 +2761,7 @@ public class TokenMgtDAO {
     public void revokeSaaSTokensOfOtherTenants(String consumerKey, int tenantId) throws IdentityOAuth2Exception {
 
         if (consumerKey == null) {
-            log.error("invalid client key for tenant ID: " + tenantId);
+            log.error("Couldn't revoke token for tenant ID: " + tenantId + " because of null consumer key");
             return;
         }
         Connection connection = IdentityDatabaseUtil.getDBConnection();

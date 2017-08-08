@@ -95,12 +95,9 @@ public class RegistrationRequestFactory extends HttpIdentityRequestFactory {
             HttpServletResponse response) throws FrameworkClientException {
 
         RegistrationRequest.RegistrationRequestBuilder registerRequestBuilder = null;
-        if (builder instanceof RegistrationRequest.
-                RegistrationRequestBuilder) {
-            registerRequestBuilder = (RegistrationRequest.
-                    RegistrationRequestBuilder) builder;
+        if (builder instanceof RegistrationRequest.RegistrationRequestBuilder) {
+            registerRequestBuilder = (RegistrationRequest.RegistrationRequestBuilder) builder;
             super.create(registerRequestBuilder, request, response);
-
             try {
                 Reader requestBodyReader = request.getReader();
                 JSONParser jsonParser = new JSONParser();
