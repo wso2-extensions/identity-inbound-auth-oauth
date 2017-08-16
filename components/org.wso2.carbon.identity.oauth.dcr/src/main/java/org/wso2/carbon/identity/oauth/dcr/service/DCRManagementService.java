@@ -335,6 +335,57 @@ public class DCRManagementService {
     }
 
     /**
+     * This method will read a registered OAuth application
+     *
+     * @param consumerKey   - consumer key of the application
+     * @param username      - user name of the owner
+     * @return an object which holds the registered metadata of the application
+     * @throws DCRException
+     */
+    public RegistrationResponseProfile readOAuthApplication(String consumerKey, String username)
+        throws DCRException {
+
+        String tenantDomain = MultitenantUtils.getTenantDomain(username);
+        String userName = MultitenantUtils.getTenantAwareUsername(username);
+
+        try {
+            PrivilegedCarbonContext.startTenantFlow();
+            PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                .setTenantDomain(tenantDomain, true);
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(userName);
+
+            OAuthAdminService oAuthAdminService = new OAuthAdminService();
+            OAuthConsumerAppDTO oAuthConsumerApp = null;
+
+            try {
+                oAuthConsumerApp = oAuthAdminService.getOAuthApplicationData(consumerKey);
+            } catch (IdentityOAuthAdminException e) {
+                throw new DCRException(e.getMessage(), e);
+            }
+
+            if (oAuthConsumerApp != null) {
+
+                RegistrationResponseProfile registrationResponseProfile = new RegistrationResponseProfile();
+                registrationResponseProfile.setClientId(oAuthConsumerApp.getOauthConsumerKey());
+                registrationResponseProfile.getRedirectUrls()
+                    .add(oAuthConsumerApp.getCallbackUrl());
+                registrationResponseProfile
+                    .setClientSecret(oAuthConsumerApp.getOauthConsumerSecret());
+                registrationResponseProfile.setClientName(oAuthConsumerApp.getApplicationName());
+                if (StringUtils.isNotBlank(oAuthConsumerApp.getGrantTypes())) {
+                    String[] split = oAuthConsumerApp.getGrantTypes().split(" ");
+                    registrationResponseProfile.setGrantTypes(Arrays.asList(split));
+                }
+                return registrationResponseProfile;
+            } else {
+                throw new DCRException("Service provider does not contain any information.");
+            }
+        } finally {
+            PrivilegedCarbonContext.endTenantFlow();
+        }
+    }
+
+    /**
      * This method will check the existence of an OAuth application provided application-name.
      *
      * @param applicationName - OAuth application name
