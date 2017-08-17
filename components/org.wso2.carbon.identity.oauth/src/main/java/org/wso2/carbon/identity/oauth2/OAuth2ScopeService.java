@@ -258,16 +258,16 @@ public class OAuth2ScopeService {
      * @return List of available scopes
      * @throws IdentityOAuth2ScopeServerException
      */
-    private Set<Scope> listScopesWithPagination(int startIndex, int count)
+    private Set<Scope> listScopesWithPagination(Integer startIndex, Integer count)
             throws IdentityOAuth2ScopeServerException {
 
         Set<Scope> scopes;
 
-        if (count < 0) {
+        if (count == null || count < 0) {
             count = Oauth2ScopeConstants.MAX_FILTER_COUNT;
         }
 
-        if (startIndex < 1) {
+        if (startIndex == null || startIndex < 1) {
             startIndex = 1;
         }
 
