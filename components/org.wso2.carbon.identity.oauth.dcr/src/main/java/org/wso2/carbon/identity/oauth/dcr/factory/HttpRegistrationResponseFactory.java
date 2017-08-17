@@ -71,6 +71,7 @@ public class HttpRegistrationResponseFactory extends HttpIdentityResponseFactory
                     OAuthConstants.HTTP_RESP_HEADER_VAL_PRAGMA_NO_CACHE);
             httpIdentityResponseBuilder.addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON);
         } else {
+            // This else part will not be reached from application logic.
             log.error("Can't create httpIdentityResponseBuilder. identityResponse is not an instance of " +
                     "RegistrationResponse");
         }
@@ -97,10 +98,8 @@ public class HttpRegistrationResponseFactory extends HttpIdentityResponseFactory
 
     @Override
     public boolean canHandle(IdentityResponse identityResponse) {
-        if (identityResponse instanceof RegistrationResponse) {
-            return true;
-        }
-        return false;
+
+        return identityResponse instanceof RegistrationResponse;
     }
 
     public boolean canHandle(FrameworkException exception) {
