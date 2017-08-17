@@ -63,6 +63,11 @@ public class JDBCScopeValidator extends OAuth2ScopeValidator {
     @Override
     public boolean validateScope(AccessTokenDO accessTokenDO, String resource) throws IdentityOAuth2Exception {
 
+        // Return true if there is no resource to validate the token against.
+        if (resource == null) {
+            return true;
+        }
+
         //Get the list of scopes associated with the access token
         String[] scopes = accessTokenDO.getScope();
 

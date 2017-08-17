@@ -88,7 +88,7 @@ public class OAuthScopeCache extends BaseCache<OAuthScopeCacheKey, Scope> {
         if (IdentityUtil.getIdentityCacheConfig(IDENTITY_CACHE_MANAGER, OAUTH_SCOPE_CACHE_NAME).isEnabled()) {
             super.clearCacheEntry(key);
             if (log.isDebugEnabled()) {
-                log.debug("Scope: " + key.getScopeName() + " is deleted from the cache.");
+                log.debug("Scope: " + key.getScopeName() + " is removed from the cache.");
             }
         }
     }

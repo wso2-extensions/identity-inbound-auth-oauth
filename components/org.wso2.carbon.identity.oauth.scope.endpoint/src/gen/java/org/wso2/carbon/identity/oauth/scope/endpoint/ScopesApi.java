@@ -8,6 +8,7 @@ import io.swagger.annotations.ApiParam;
 
 import org.wso2.carbon.identity.oauth.scope.endpoint.dto.ErrorDTO;
 import org.wso2.carbon.identity.oauth.scope.endpoint.dto.ScopeDTO;
+import org.wso2.carbon.identity.oauth.scope.endpoint.dto.ScopeToUpdateDTO;
 
 import java.util.List;
 
@@ -119,7 +120,7 @@ public class ScopesApi  {
         
         @io.swagger.annotations.ApiResponse(code = 500, message = "Server Error") })
 
-    public Response updateScope(@ApiParam(value = "updated scope" ,required=true ) ScopeDTO scope,
+    public Response updateScope(@ApiParam(value = "updated scope" ,required=true ) ScopeToUpdateDTO scope,
     @ApiParam(value = "scope name of the scope which need to get updated",required=true ) @PathParam("name") String name)
     {
     return delegate.updateScope(scope,name);

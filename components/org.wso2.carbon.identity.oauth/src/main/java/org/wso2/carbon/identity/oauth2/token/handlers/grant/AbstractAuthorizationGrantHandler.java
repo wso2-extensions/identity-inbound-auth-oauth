@@ -18,13 +18,8 @@
 
 package org.wso2.carbon.identity.oauth2.token.handlers.grant;
 
-import java.sql.Timestamp;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
-
 import org.apache.axiom.util.base64.Base64Utils;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -33,28 +28,28 @@ import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
-import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
-import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
 import org.wso2.carbon.identity.oauth.callback.OAuthCallback;
 import org.wso2.carbon.identity.oauth.callback.OAuthCallbackManager;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
-import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
-import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.config.SpOAuth2ExpiryTimeConfiguration;
 import org.wso2.carbon.identity.oauth2.dao.TokenMgtDAO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
-import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponent;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
-import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
+import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+
+import java.sql.Timestamp;
+import java.util.Date;
+import java.util.UUID;
 
 public abstract class AbstractAuthorizationGrantHandler implements AuthorizationGrantHandler {
 
@@ -72,6 +67,9 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         callbackManager = new OAuthCallbackManager();
         // Set the cache instance if caching is enabled.
         if (OAuthServerConfiguration.getInstance().isCacheEnabled()) {
+            if (log.isDebugEnabled()) {
+                log.debug("Initializing Oauth Cache.");
+            }
             cacheEnabled = true;
             oauthCache = OAuthCache.getInstance();
         }
@@ -147,21 +145,36 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                 if (cacheEntry != null && cacheEntry instanceof AccessTokenDO) {
                     existingAccessTokenDO = (AccessTokenDO) cacheEntry;
 
-                    if (log.isDebugEnabled() && IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
-                        log.debug("Retrieved active access token : " + existingAccessTokenDO.getAccessToken() +
+                    if (log.isDebugEnabled()
+                            && IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                        log.debug("Retrieved active access token(hashed): " + DigestUtils.sha256Hex
+                                (existingAccessTokenDO.getAccessToken()) +
                                 " for client Id " + consumerKey + ", user " + authorizedUser +
                                 " and scope " + scope + " from cache");
                     }
 
                     long expireTimeMillis = OAuth2Util.getTokenExpireTimeMillis(existingAccessTokenDO);
 
-                    if (expireTimeMillis > 0 || expireTimeMillis < 0) {
+                    if (expireTimeMillis != 0) {
                         if (log.isDebugEnabled()) {
-                            if((expireTimeMillis > 0) && (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN))) {
-                                log.debug("Access Token " + existingAccessTokenDO.getAccessToken() + " is still valid");
+                            if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                                if (expireTimeMillis > 0) {
+                                    log.debug("Access Token(hashed): " + DigestUtils.sha256Hex(existingAccessTokenDO
+                                            .getAccessToken()) + " is still valid. Remaining time: " +
+                                            expireTimeMillis + "ms");
+                                } else {
+                                    log.debug("Infinite lifetime Access Token(hashed) "
+                                            + DigestUtils.sha256Hex(existingAccessTokenDO
+                                            .getAccessToken()) + " found in cache");
+                                }
                             } else {
-                                log.debug("Infinite lifetime Access Token " + existingAccessTokenDO.getAccessToken() +
-                                        " found in cache");
+                                if (expireTimeMillis > 0) {
+                                    log.debug("Valid access token is found in cache for client: " + consumerKey + ". " +
+                                            "Remaining time: " + expireTimeMillis + "ms");
+                                } else {
+                                    log.debug("Infinite lifetime Access Token found in cache for client: " +
+                                            consumerKey);
+                                }
                             }
                         }
                         tokenRespDTO = new OAuth2AccessTokenRespDTO();
@@ -172,32 +185,41 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                                         GrantType.REFRESH_TOKEN.toString())) {
                             tokenRespDTO.setRefreshToken(existingAccessTokenDO.getRefreshToken());
                         }
-                        if(expireTimeMillis > 0){
-                            tokenRespDTO.setExpiresIn(expireTimeMillis/1000);
+                        if (expireTimeMillis > 0) {
+                            tokenRespDTO.setExpiresIn(expireTimeMillis / 1000);
                             tokenRespDTO.setExpiresInMillis(expireTimeMillis);
                         } else {
-                            tokenRespDTO.setExpiresIn(Long.MAX_VALUE/1000);
+                            tokenRespDTO.setExpiresIn(Long.MAX_VALUE / 1000);
                             tokenRespDTO.setExpiresInMillis(Long.MAX_VALUE);
                         }
                         tokReqMsgCtx.addProperty(EXISTING_TOKEN_ISSUED, true);
                         return tokenRespDTO;
                     } else {
 
-                        long refreshTokenExpireTimeMillis = OAuth2Util.getRefreshTokenExpireTimeMillis(existingAccessTokenDO);
+                        long refreshTokenExpireTimeMillis = OAuth2Util.getRefreshTokenExpireTimeMillis
+                                (existingAccessTokenDO);
 
-                        if (refreshTokenExpireTimeMillis < 0 || refreshTokenExpireTimeMillis > 0) {
-                            log.debug("Access token has expired, But refresh token is still valid. User existing " +
-                                    "refresh token.");
+                        if (refreshTokenExpireTimeMillis != 0) {
+                            if (log.isDebugEnabled()) {
+                                log.debug("Existing access token has expired, but refresh token is still valid for " +
+                                        "client: " + consumerKey + ". Remaining time: " +
+                                        refreshTokenExpireTimeMillis + "ms. Using existing refresh token.");
+                            }
                             refreshToken = existingAccessTokenDO.getRefreshToken();
                             refreshTokenIssuedTime = existingAccessTokenDO.getRefreshTokenIssuedTime();
                             refreshTokenValidityPeriodInMillis = existingAccessTokenDO.getRefreshTokenValidityPeriodInMillis();
                         }
                         //Token is expired. Clear it from cache.
                         oauthCache.clearCacheEntry(cacheKey);
-                        if (log.isDebugEnabled() && IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
-                            log.debug("Access token " + existingAccessTokenDO.getAccessToken() +
-                                    " is expired. Therefore cleared it from cache and marked it" +
-                                    " as expired in database");
+                        if (log.isDebugEnabled()) {
+                            if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                                log.debug("Access token(hashed) " + DigestUtils.sha256Hex(existingAccessTokenDO
+                                        .getAccessToken()) + " is expired. Therefore cleared it from cache and marked" +
+                                        " it as expired in database");
+                            } else {
+                                log.debug("Existing access token for client: " + consumerKey + " is expired. " +
+                                        "Therefore cleared it from cache and marked it as expired in database");
+                            }
                         }
                     }
                 }
@@ -210,10 +232,16 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
 
             if (existingAccessTokenDO != null) {
 
-                if (log.isDebugEnabled() && IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
-                    log.debug("Retrieved latest access token : " + existingAccessTokenDO.getAccessToken() +
-                            " for client Id " + consumerKey + ", user " + authorizedUser +
-                            " and scope " + scope + " from database");
+                if (log.isDebugEnabled()) {
+                    if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                        log.debug("Retrieved latest access token(hashed): " + DigestUtils.sha256Hex
+                                (existingAccessTokenDO.getAccessToken()) +
+                                " for client Id: " + consumerKey + " user: " + authorizedUser +
+                                " and scope: " + scope + " from database");
+                    } else {
+                        log.debug("Retrieved latest access token for client Id: " + consumerKey + " user: " +
+                                authorizedUser + " and scope: " + scope + " from database");
+                    }
                 }
 
                 long expireTime = OAuth2Util.getTokenExpireTimeMillis(existingAccessTokenDO);
@@ -221,15 +249,25 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                 long refreshTokenExpiryTime = OAuth2Util.getRefreshTokenExpireTimeMillis(existingAccessTokenDO);
 
                 if(OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE.equals(
-                        existingAccessTokenDO.getTokenState()) && (expireTime > 0 || expireTime < 0)) {
+                        existingAccessTokenDO.getTokenState()) && expireTime != 0) {
                     // token is active and valid
                     if (log.isDebugEnabled()) {
-                        if(expireTime > 0 && IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)){
-                            log.debug("Access token " + existingAccessTokenDO.getAccessToken() +
-                                    " is valid for another " + expireTime + "ms");
+                        if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                            if (expireTime > 0) {
+                                log.debug("Valid access token(hashed) " + DigestUtils.sha256Hex
+                                        (existingAccessTokenDO.getAccessToken()) +
+                                        " found in database. Remaining time: " + expireTime + "ms");
+                            } else {
+                                log.debug("Infinite lifetime Access Token(hashed) " + DigestUtils.sha256Hex(existingAccessTokenDO
+                                        .getAccessToken()) + " found in database");
+                            }
                         } else {
-                            log.debug("Infinite lifetime Access Token " + existingAccessTokenDO.getAccessToken() +
-                                    " found in cache");
+                            if (expireTime > 0) {
+                                log.debug("Valid access token found in database for client: " + consumerKey + ". " +
+                                        "Remaining time:  " + expireTime + "ms");
+                            } else {
+                                log.debug("Infinite lifetime Access Token found in database for client: " + consumerKey);
+                            }
                         }
                     }
                     tokenRespDTO = new OAuth2AccessTokenRespDTO();
@@ -255,50 +293,63 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                         if (log.isDebugEnabled()) {
                             log.debug("Access Token info was added to the cache for the cache key : " +
                                     cacheKey.getCacheKeyString());
-                            log.debug("Access token was added to OAuthCache for cache key : " + accessTokenCacheKey
-                                    .getCacheKeyString());
+                            if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                                log.debug("Access token was added to OAuthCache for cache key : " + accessTokenCacheKey
+                                        .getCacheKeyString());
+                            }
                         }
                     }
                     return tokenRespDTO;
                 } else {
-                    if (log.isDebugEnabled() && IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
-                        log.debug("Access token + " + existingAccessTokenDO.getAccessToken() + " is not valid anymore");
+                    if (log.isDebugEnabled()) {
+                        if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                            log.debug("Access token(hashed) " + DigestUtils.sha256Hex(existingAccessTokenDO
+                                    .getAccessToken()) + " is not valid anymore");
+                        } else {
+                            log.debug("Latest access token in the database for client: " + consumerKey + " is not " +
+                                    "valid anymore");
+                        }
                     }
                     String tokenState = existingAccessTokenDO.getTokenState();
                     if (OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE.equals(tokenState)) {
 
                         // Token is expired. If refresh token is still valid, use it.
-                        if (refreshTokenExpiryTime > 0 || refreshTokenExpiryTime < 0) {
+                        if (refreshTokenExpiryTime != 0) {
                             if (log.isDebugEnabled()) {
-                                log.debug("Access token has expired, But refresh token is still valid. User existing " +
-                                        "refresh token.");
+                                log.debug("Access token has expired, but refresh token is still valid. Using " +
+                                        "existing refresh token.");
                             }
                             refreshToken = existingAccessTokenDO.getRefreshToken();
                             refreshTokenIssuedTime = existingAccessTokenDO.getRefreshTokenIssuedTime();
-                            refreshTokenValidityPeriodInMillis = existingAccessTokenDO.getRefreshTokenValidityPeriodInMillis();
+                            refreshTokenValidityPeriodInMillis = existingAccessTokenDO
+                                    .getRefreshTokenValidityPeriodInMillis();
                         }
-                        if (log.isDebugEnabled() && IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
-                            log.debug("Marked token " + existingAccessTokenDO.getAccessToken() + " as expired");
+                        if (log.isDebugEnabled()
+                                && IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                            log.debug("Marked access token(hashed) " + DigestUtils.sha256Hex(existingAccessTokenDO
+                                    .getAccessToken()) + " as expired");
                         }
                     } else {
                         //Token is revoked or inactive
-                        if (log.isDebugEnabled() && IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
-                            log.debug("Token " + existingAccessTokenDO.getAccessToken() + " is " + existingAccessTokenDO.getTokenState());
+                        if (log.isDebugEnabled()
+                                && IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                            log.debug("Token(hashed) " + DigestUtils.sha256Hex(existingAccessTokenDO.getAccessToken
+                                    ()) + " is " + existingAccessTokenDO.getTokenState());
                         }
                     }
                 }
             } else {
                 if (log.isDebugEnabled()) {
-                    log.debug("No access token found in database for client Id " + consumerKey +
-                            ", user " + authorizedUser + " and scope " + scope +
+                    log.debug("No access token found in database for client Id: " + consumerKey +
+                            ", user: " + authorizedUser + " and scope: " + scope +
                             ". Therefore issuing new token");
                 }
             }
 
             // issue a new access token.
             if (log.isDebugEnabled()) {
-                log.debug("Issuing a new access token for "
-                        + consumerKey + " AuthorizedUser : " + authorizedUser);
+                log.debug("Issuing a new access token for client: " + consumerKey + " AuthorizedUser: " +
+                        authorizedUser);
             }
 
             Timestamp timestamp = new Timestamp(new Date().getTime());
@@ -312,7 +363,8 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             if (spTimeConfigObj.getApplicationAccessTokenExpiryTime() != null) {
                 validityPeriodInMillis = spTimeConfigObj.getApplicationAccessTokenExpiryTime();
                 if (log.isDebugEnabled()) {
-                    log.debug("OAuth application id : " + consumerKey + ", application access token validity time in milliseconds : " + validityPeriodInMillis);
+                    log.debug("OAuth application id : " + consumerKey + ", application access token validity time in " +
+                            "milliseconds : " + validityPeriodInMillis);
                 }
             } else {
                 validityPeriodInMillis = OAuthServerConfiguration.getInstance()
@@ -320,11 +372,12 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             }
 
             // if the user is an application user
-            if(isOfTypeApplicationUser()) {
+            if (isOfTypeApplicationUser()) {
                 if (spTimeConfigObj.getUserAccessTokenExpiryTime() != null) {
                     validityPeriodInMillis = spTimeConfigObj.getUserAccessTokenExpiryTime();
                     if (log.isDebugEnabled()) {
-                        log.debug("OAuth application id : " + consumerKey + ", user access token validity time in milliseconds : " + validityPeriodInMillis);
+                        log.debug("OAuth application id: " + consumerKey + ", user access token validity time " +
+                                validityPeriodInMillis + "ms");
                     }
                 } else {
                     validityPeriodInMillis = OAuthServerConfiguration.getInstance().
@@ -344,7 +397,8 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                 if (spTimeConfigObj.getRefreshTokenExpiryTime() != null) {
                     refreshTokenValidityPeriodInMillis = spTimeConfigObj.getRefreshTokenExpiryTime();
                     if (log.isDebugEnabled()) {
-                        log.debug("OAuth application id : " + consumerKey + ", refresh token validity time in milliseconds : " + refreshTokenValidityPeriodInMillis);
+                        log.debug("OAuth application id : " + consumerKey + ", refresh token validity time " +
+                                refreshTokenValidityPeriodInMillis + "ms");
                     }
                 } else {
                     refreshTokenValidityPeriodInMillis = OAuthServerConfiguration.getInstance()
@@ -423,13 +477,13 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
 
             if (log.isDebugEnabled()) {
                 log.debug("Persisted Access Token for " +
-                        "Client ID : " + oAuth2AccessTokenReqDTO.getClientId() +
-                        ", Authorized User : " + tokReqMsgCtx.getAuthorizedUser() +
-                        ", Is Federated User : " + tokReqMsgCtx.getAuthorizedUser().isFederatedUser() +
-                        ", Timestamp : " + timestamp +
-                          ", Validity period (s) : " + newAccessTokenDO.getValidityPeriod() +
-                        ", Scope : " + OAuth2Util.buildScopeString(tokReqMsgCtx.getScope()) +
-                        " and Token State : " + OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
+                        "Client ID: " + oAuth2AccessTokenReqDTO.getClientId() +
+                        ", Authorized User: " + tokReqMsgCtx.getAuthorizedUser() +
+                        ", Is Federated User: " + tokReqMsgCtx.getAuthorizedUser().isFederatedUser() +
+                        ", Timestamp: " + timestamp +
+                        ", Validity period: " + newAccessTokenDO.getValidityPeriod() + "s" +
+                        ", Scope: " + OAuth2Util.buildScopeString(tokReqMsgCtx.getScope()) +
+                        " and Token State: " + OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
             }
 
             //update cache with newly added token
@@ -440,8 +494,10 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                 oauthCache.addToCache(accessTokenCacheKey, newAccessTokenDO);
                 if (log.isDebugEnabled()) {
                     log.debug("Access token was added to OAuthCache for cache key : " + cacheKey.getCacheKeyString());
-                    log.debug("Access token was added to OAuthCache for cache key : " + accessTokenCacheKey
-                            .getCacheKeyString());
+                    if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                        log.debug("Access token was added to OAuthCache for cache key(hashed) : "
+                                + DigestUtils.sha256Hex(accessTokenCacheKey.getCacheKeyString()));
+                    }
                 }
             }
 

@@ -430,7 +430,9 @@ public class SAML1BearerGrantHandler extends AbstractAuthorizationGrantHandler {
          * that Bearer Assertions are not replayed, by maintaining the set of used ID values for the length of
          * time for which the Assertion would be considered valid based on the applicable NotOnOrAfter instant.
          */
-        if (notOnOrAfterFromConditions != null && notOnOrAfterFromConditions.compareTo(new DateTime()) < 1) {
+        long timestampSkewInMillis = OAuthServerConfiguration.getInstance().getTimeStampSkewInSeconds() * 1000;
+        if (notOnOrAfterFromConditions != null && notOnOrAfterFromConditions.plus(timestampSkewInMillis).isBeforeNow
+                ()) {
             // notOnOrAfter is an expired timestamp
             if (log.isDebugEnabled()) {
                 log.debug("NotOnOrAfter is having an expired timestamp in Conditions element");
@@ -440,7 +442,7 @@ public class SAML1BearerGrantHandler extends AbstractAuthorizationGrantHandler {
         boolean validSubjectConfirmationDataExists = false;
         if (!notOnOrAfterFromSubjectConfirmations.isEmpty()) {
             for (DateTime entry : notOnOrAfterFromSubjectConfirmations) {
-                if (entry.compareTo(new DateTime()) >= 1) {
+                if (entry.plus(timestampSkewInMillis).isAfterNow()) {
                     validSubjectConfirmationDataExists = true;
                 }
             }

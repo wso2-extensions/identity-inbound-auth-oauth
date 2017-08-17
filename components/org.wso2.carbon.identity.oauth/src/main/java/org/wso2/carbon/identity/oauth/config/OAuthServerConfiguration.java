@@ -163,6 +163,7 @@ public class OAuthServerConfiguration {
     private String openIDConnectUserInfoEndpointAccessTokenValidator = "org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoISAccessTokenValidator";
     private String openIDConnectUserInfoEndpointResponseBuilder = "org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoJSONResponseBuilder";
     private OAuth2ScopeValidator oAuth2ScopeValidator;
+    private Set<OAuth2ScopeValidator> oAuth2ScopeValidators = new HashSet<>();
     // property added to fix IDENTITY-4492 in backward compatible manner
     private boolean isJWTSignedWithSPKey = false;
     // property added to fix IDENTITY-4534 in backward compatible manner
@@ -963,28 +964,78 @@ public class OAuthServerConfiguration {
     }
 
     private void parseScopeValidator(OMElement scopeValidatorElem) {
-        String scopeValidatorClazz = null;
-        String scopesToSkipAttr = null;
+
+        Set<OAuth2ScopeValidator> scopeValidators = new HashSet<>();
+
         if (ConfigElements.SCOPE_VALIDATORS.equals(scopeValidatorElem.getLocalName())) {
-            if (scopeValidatorElem.getFirstChildWithName
-                    (getQNameWithIdentityNS(ConfigElements.OIDC_SCOPE_VALIDATOR)) != null) {
-                scopeValidatorClazz =
-                        scopeValidatorElem.getFirstChildWithName(getQNameWithIdentityNS
-                                (ConfigElements.OIDC_SCOPE_VALIDATOR)).getAttributeValue(new QName(ConfigElements.SCOPE_CLASS_ATTR));
+            Iterator scopeIterator = scopeValidatorElem
+                    .getChildrenWithName(getQNameWithIdentityNS(ConfigElements.SCOPE_VALIDATOR_ELEM));
+
+            while (scopeIterator.hasNext()) {
+                OMElement scopeValidatorElement = (OMElement) scopeIterator.next();
+                String validatorClazz = scopeValidatorElement.getAttributeValue(new QName(ConfigElements
+                        .SCOPE_CLASS_ATTR));
+                if (validatorClazz != null) {
+                    OAuth2ScopeValidator scopeValidator = getOAuth2ScopeValidatorInstance(validatorClazz);
+                    if (scopeValidator == null) {
+                        continue;
+                    }
+                    String scopesToSkipAttr = scopeValidatorElement.getAttributeValue(new QName(ConfigElements
+                            .SKIP_SCOPE_ATTR));
+                    scopeValidator.setScopesToSkip(getScopesToSkipSet(scopesToSkipAttr));
+
+                    Iterator propertyIterator = scopeValidatorElement.getChildrenWithName
+                            (getQNameWithIdentityNS(ConfigElements.SCOPE_VALIDATOR_PROPERTY));
+                    Map<String, String> properties = new HashMap<>();
+
+                    while (propertyIterator.hasNext()) {
+                        OMElement propertyElement = (OMElement) propertyIterator.next();
+                        String paramName = propertyElement.getAttributeValue(new QName(ConfigElements
+                                .SCOPE_VALIDATOR_PROPERTY_NAME_ATTR));
+                        String paramValue = propertyElement.getText();
+                        properties.put(paramName, paramValue);
+                        if (log.isDebugEnabled()) {
+                            log.debug(String.format("Property: %s with value: %s is set to validator: %s.",
+                                    paramName, paramValue, validatorClazz));
+                        }
+                    }
+                    scopeValidator.setProperties(properties);
+                    scopeValidators.add(scopeValidator);
+
+                    if (log.isDebugEnabled()) {
+                        log.debug(String.format("Scope validator: %s is added to scope validators list.", scopeValidator
+                                .getClass().getCanonicalName()));
+                    }
+                }
             }
         } else {
-            scopeValidatorClazz = scopeValidatorElem.getAttributeValue(new QName(ConfigElements.SCOPE_CLASS_ATTR));
-            scopesToSkipAttr = scopeValidatorElem.getAttributeValue(new QName(ConfigElements.SKIP_SCOPE_ATTR));
-        }
-        try {
-            Class clazz = Thread.currentThread().getContextClassLoader().loadClass(scopeValidatorClazz);
-            OAuth2ScopeValidator scopeValidator = (OAuth2ScopeValidator) clazz.newInstance();
-            if (scopesToSkipAttr != null && !"".equals(scopesToSkipAttr)) {
-                //Split the scopes attr by a -space- character and create the set (avoid duplicates).
-                Set<String> scopesToSkip = new HashSet<String>(Arrays.asList(scopesToSkipAttr.split(" ")));
-                scopeValidator.setScopesToSkip(scopesToSkip);
+            String scopeValidatorClazz = scopeValidatorElem.getAttributeValue(new QName
+                    (ConfigElements.SCOPE_CLASS_ATTR));
+            String scopesToSkipAttr = scopeValidatorElem.getAttributeValue(new QName(ConfigElements.SKIP_SCOPE_ATTR));
+
+            if (scopeValidatorClazz != null) {
+                OAuth2ScopeValidator scopeValidator = getOAuth2ScopeValidatorInstance(scopeValidatorClazz);
+                if (scopeValidator != null) {
+                    scopeValidator.setScopesToSkip(getScopesToSkipSet(scopesToSkipAttr));
+                }
+                scopeValidators.add(scopeValidator);
             }
-            setoAuth2ScopeValidator(scopeValidator);
+        }
+        setOAuth2ScopeValidators(scopeValidators);
+    }
+
+    /**
+     * Create an instance of a OAuth2ScopeValidator type class for a given class name.
+     *
+     * @param scopeValidatorClazz Canonical name of the OAuth2ScopeValidator class
+     * @return OAuth2ScopeValidator type class instance.
+     */
+    private OAuth2ScopeValidator getOAuth2ScopeValidatorInstance(String scopeValidatorClazz) {
+
+        try {
+
+            Class clazz = Thread.currentThread().getContextClassLoader().loadClass(scopeValidatorClazz);
+            return (OAuth2ScopeValidator) clazz.newInstance();
         } catch (ClassNotFoundException e) {
             log.error("Class not found in build path " + scopeValidatorClazz, e);
         } catch (InstantiationException e) {
@@ -992,6 +1043,23 @@ public class OAuthServerConfiguration {
         } catch (IllegalAccessException e) {
             log.error("Class access error " + scopeValidatorClazz, e);
         }
+        return null;
+    }
+
+    /**
+     * Parse space delimited scopes to a Set.
+     *
+     * @param scopesToSkip Space delimited scopes.
+     * @return
+     */
+    private Set<String> getScopesToSkipSet(String scopesToSkip) {
+
+        Set<String> scopes = new HashSet<>();
+        if (StringUtils.isNotEmpty(scopesToSkip)) {
+            // Split the scopes attr by a -space- character and create the set (avoid duplicates).
+            scopes = new HashSet<>(Arrays.asList(scopesToSkip.trim().split("\\s+")));
+        }
+        return scopes;
     }
 
     private void warnOnFaultyConfiguration(String logMsg) {
@@ -1727,6 +1795,14 @@ public class OAuthServerConfiguration {
         this.oAuth2ScopeValidator = oAuth2ScopeValidator;
     }
 
+    public Set<OAuth2ScopeValidator> getOAuth2ScopeValidators() {
+        return oAuth2ScopeValidators;
+    }
+
+    public void setOAuth2ScopeValidators(Set<OAuth2ScopeValidator> oAuth2ScopeValidators) {
+        this.oAuth2ScopeValidators = oAuth2ScopeValidators;
+    }
+
     private void parseUseSPTenantDomainConfig(OMElement oauthElem) {
 
         OMElement useSPTenantDomainValueElement = oauthElem
@@ -1804,6 +1880,9 @@ public class OAuthServerConfiguration {
         private static final String TOKEN_CLASS_ATTR = "class";
         private static final String SCOPE_VALIDATOR = "OAuthScopeValidator";
         private static final String SCOPE_VALIDATORS = "ScopeValidators";
+        private static final String SCOPE_VALIDATOR_ELEM = "ScopeValidator";
+        private static final String SCOPE_VALIDATOR_PROPERTY = "Property";
+        private static final String SCOPE_VALIDATOR_PROPERTY_NAME_ATTR = "name";
         private static final String OIDC_SCOPE_VALIDATOR = "OIDCScopeValidator";
         private static final String SCOPE_CLASS_ATTR = "class";
         private static final String SKIP_SCOPE_ATTR = "scopesToSkip";

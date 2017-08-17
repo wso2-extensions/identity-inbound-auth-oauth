@@ -19,6 +19,7 @@ package org.wso2.carbon.identity.oauth.endpoint.authz;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -720,27 +721,31 @@ public class OAuth2AuthzEndpoint {
         AuthorizationGrantCacheKey authorizationGrantCacheKey = new AuthorizationGrantCacheKey(code);
         AuthorizationGrantCacheEntry authorizationGrantCacheEntry = new AuthorizationGrantCacheEntry(
                 sessionDataCacheEntry.getLoggedInUser().getUserAttributes());
-        String sub = sessionDataCacheEntry.getLoggedInUser().getUserAttributes().get("sub");
-        if(StringUtils.isBlank(sub)){
+
+        ClaimMapping key = new ClaimMapping();
+        Claim claimOfKey = new Claim();
+        claimOfKey.setClaimUri(OAuth2Util.SUB);
+        key.setRemoteClaim(claimOfKey);
+        String sub = sessionDataCacheEntry.getLoggedInUser().getUserAttributes().get(key);
+
+        if (StringUtils.isBlank(sub)) {
             sub = sessionDataCacheEntry.getLoggedInUser().getAuthenticatedSubjectIdentifier();
         }
-        if(StringUtils.isNotBlank(sub)){
-            ClaimMapping claimMapping = new ClaimMapping();
-            Claim claim = new Claim();
-            claim.setClaimUri("sub");
-            claimMapping.setRemoteClaim(claim);
-            sessionDataCacheEntry.getLoggedInUser().getUserAttributes().put(claimMapping, sub);
+        if (StringUtils.isNotBlank(sub)) {
+            sessionDataCacheEntry.getLoggedInUser().getUserAttributes().put(key, sub);
         }
         //PKCE
-        String[] pkceCodeChallengeArray = sessionDataCacheEntry.getParamMap().get(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE);
-        String[] pkceCodeChallengeMethodArray = sessionDataCacheEntry.getParamMap().get(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE_METHOD);
+        String[] pkceCodeChallengeArray = sessionDataCacheEntry.getParamMap().get(
+                OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE);
+        String[] pkceCodeChallengeMethodArray = sessionDataCacheEntry.getParamMap().get(
+                OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE_METHOD);
         String pkceCodeChallenge = null;
         String pkceCodeChallengeMethod = null;
 
-        if(pkceCodeChallengeArray != null && pkceCodeChallengeArray.length > 0){
+        if (ArrayUtils.isNotEmpty(pkceCodeChallengeArray)) {
             pkceCodeChallenge = pkceCodeChallengeArray[0];
         }
-        if(pkceCodeChallengeMethodArray != null && pkceCodeChallengeMethodArray.length > 0) {
+        if (ArrayUtils.isNotEmpty(pkceCodeChallengeMethodArray)) {
             pkceCodeChallengeMethod = pkceCodeChallengeMethodArray[0];
         }
         authorizationGrantCacheEntry.setAcrValue(sessionDataCacheEntry.getoAuth2Parameters().getACRValues());
@@ -751,7 +756,8 @@ public class OAuth2AuthzEndpoint {
         authorizationGrantCacheEntry.setEssentialClaims(
                 sessionDataCacheEntry.getoAuth2Parameters().getEssentialClaims());
         authorizationGrantCacheEntry.setAuthTime(sessionDataCacheEntry.getAuthTime());
-        AuthorizationGrantCache.getInstance().addToCacheByCode(authorizationGrantCacheKey, authorizationGrantCacheEntry);
+        AuthorizationGrantCache.getInstance().addToCacheByCode(
+                authorizationGrantCacheKey, authorizationGrantCacheEntry);
     }
 
     /**

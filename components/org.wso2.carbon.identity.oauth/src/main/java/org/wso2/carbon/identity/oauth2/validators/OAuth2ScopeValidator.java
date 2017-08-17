@@ -21,6 +21,8 @@ package org.wso2.carbon.identity.oauth2.validators;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -29,6 +31,7 @@ import java.util.Set;
 public abstract class OAuth2ScopeValidator {
 
     protected Set<String> scopesToSkip;
+    protected Map<String, String> properties = new HashMap<>();
 
     /**
      * Method to validate the scopes associated with the access token against the resource that is being accessed.
@@ -48,4 +51,21 @@ public abstract class OAuth2ScopeValidator {
         this.scopesToSkip = scopesToSkip;
     }
 
+    public Map<String, String> getProperties() {
+        return properties;
+    }
+
+    public void setProperties(Map<String, String> properties) {
+        this.properties = properties;
+    }
+
+    /**
+     * Checks whether a given scopes can be handled by the validator.
+     *
+     * @param messageContext OAuth2TokenValidationMessageContext for the request.
+     * @return true if the given scopes can be validated, otherwise false.
+     */
+    public boolean canHandle(OAuth2TokenValidationMessageContext messageContext) {
+        return true;
+    }
 }

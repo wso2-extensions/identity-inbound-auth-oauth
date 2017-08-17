@@ -17,11 +17,17 @@
 package org.wso2.carbon.identity.oauth.scope.endpoint.util;
 
 import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.oauth.scope.endpoint.Exceptions.ScopeEndpointException;
 import org.wso2.carbon.identity.oauth.scope.endpoint.dto.ErrorDTO;
 import org.wso2.carbon.identity.oauth.scope.endpoint.dto.ScopeDTO;
+import org.wso2.carbon.identity.oauth.scope.endpoint.dto.ScopeToUpdateDTO;
+import org.wso2.carbon.identity.oauth.scope.endpoint.impl.ScopesApiServiceImpl;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeClientException;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
+import org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 
 import javax.ws.rs.core.Response;
@@ -43,16 +49,20 @@ public class ScopeUtils {
      *
      * @param status      response status
      * @param message     error message
-     * @param code        status code
-     * @param description error description
-     * @param log         Log instance
      * @param throwable   throwable
      * @throws ScopeEndpointException
      */
-    public static void handleScopeEndpointException(Response.Status status, String message,
-                                                    String code, String description, Log log, Throwable throwable,
-                                                    boolean isServerException)
+    public static void handleErrorResponse(Response.Status status, String message, Throwable throwable,
+                                           boolean isServerException, Log log)
             throws ScopeEndpointException {
+
+        String errorCode;
+        if (throwable instanceof IdentityOAuth2ScopeException) {
+            errorCode = ((IdentityOAuth2ScopeException) throwable).getErrorCode();
+        } else {
+            errorCode = Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_UNEXPECTED.getCode();
+        }
+
         if (isServerException) {
             if (throwable == null) {
                 log.error(message);
@@ -60,7 +70,8 @@ public class ScopeUtils {
                 log.error(message, throwable);
             }
         }
-        throw buildScopeEndpointException(status, message, code, description, isServerException);
+        throw buildScopeEndpointException(status, message, errorCode, throwable == null ? "" : throwable.getMessage(),
+                isServerException);
     }
 
     private static ScopeEndpointException buildScopeEndpointException(Response.Status status, String message,
@@ -93,6 +104,10 @@ public class ScopeUtils {
                 scopeDTO.getName(),
                 scopeDTO.getDescription(),
                 scopeDTO.getBindings());
+    }
+
+    public static Scope getUpdatedScope(ScopeToUpdateDTO scopeDTO, String name) {
+        return new Scope(name, scopeDTO.getDescription(), scopeDTO.getBindings());
     }
 
     public static ScopeDTO getScopeDTO(Scope scope) {

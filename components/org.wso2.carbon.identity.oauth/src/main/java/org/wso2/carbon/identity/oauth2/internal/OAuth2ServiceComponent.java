@@ -166,52 +166,38 @@ public class OAuth2ServiceComponent {
     }
 
     private boolean checkPKCESupport() {
-        Connection connection = null;
-        try {
-            connection = IdentityDatabaseUtil.getDBConnection();
-        } catch (IdentityRuntimeException e) {
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
+
+            String sql;
+            if (connection.getMetaData().getDriverName().contains("MySQL")
+                    || connection.getMetaData().getDriverName().contains("H2")) {
+                sql = SQLQueries.RETRIEVE_PKCE_TABLE_MYSQL;
+            } else if (connection.getMetaData().getDatabaseProductName().contains("DB2")) {
+                sql = SQLQueries.RETRIEVE_PKCE_TABLE_DB2SQL;
+            } else if (connection.getMetaData().getDriverName().contains("MS SQL") ||
+                    connection.getMetaData().getDriverName().contains("Microsoft")) {
+                sql = SQLQueries.RETRIEVE_PKCE_TABLE_MSSQL;
+            } else if (connection.getMetaData().getDriverName().contains("PostgreSQL")) {
+                sql = SQLQueries.RETRIEVE_PKCE_TABLE_MYSQL;
+            } else if (connection.getMetaData().getDriverName().contains("Informix")) {
+                // Driver name = "IBM Informix JDBC Driver for IBM Informix Dynamic Server"
+                sql = SQLQueries.RETRIEVE_PKCE_TABLE_INFORMIX;
+            } else {
+                sql = SQLQueries.RETRIEVE_PKCE_TABLE_ORACLE;
+            }
+
+            try (PreparedStatement preparedStatement = connection.prepareStatement(sql);
+                 ResultSet resultSet = preparedStatement.executeQuery()) {
+                // Following statement will throw SQLException if the column is not found
+                resultSet.findColumn("PKCE_MANDATORY");
+                // If we are here then the column exists, so PKCE is supported by the database.
+                return true;
+            }
+
+        } catch (IdentityRuntimeException | SQLException e) {
             return false;
         }
 
-
-        if(connection != null) {
-            try {
-                String sql;
-                if (connection.getMetaData().getDriverName().contains("MySQL")
-                        || connection.getMetaData().getDriverName().contains("H2")) {
-                    sql = SQLQueries.RETRIEVE_PKCE_TABLE_MYSQL;
-                } else if (connection.getMetaData().getDatabaseProductName().contains("DB2")) {
-                    sql = SQLQueries.RETRIEVE_PKCE_TABLE_DB2SQL;
-                } else if (connection.getMetaData().getDriverName().contains("MS SQL") ||
-                        connection.getMetaData().getDriverName().contains("Microsoft")) {
-                    sql = SQLQueries.RETRIEVE_PKCE_TABLE_MSSQL;
-                } else if (connection.getMetaData().getDriverName().contains("PostgreSQL")) {
-                    sql = SQLQueries.RETRIEVE_PKCE_TABLE_MYSQL;
-                } else if (connection.getMetaData().getDriverName().contains("Informix")){
-                    // Driver name = "IBM Informix JDBC Driver for IBM Informix Dynamic Server"
-                    sql = SQLQueries.RETRIEVE_PKCE_TABLE_INFORMIX;
-                } else {
-                    sql = SQLQueries.RETRIEVE_PKCE_TABLE_ORACLE;
-                }
-                PreparedStatement preparedStatement = connection.prepareStatement(sql);
-                ResultSet resultSet = preparedStatement.executeQuery();
-                if(resultSet != null) {
-                    //following statement will throw SQLException if the column is not found
-                    resultSet.findColumn("PKCE_MANDATORY");
-                    //if we are here then the column exists, so PKCE is supported by the database.
-                    return true;
-                }
-            } catch (SQLException e) {
-
-            } finally {
-                try {
-                    connection.close();
-                } catch (SQLException e) {
-
-                }
-            }
-        }
-        return false;
     }
 
     protected void setRegistryService(RegistryService registryService) {

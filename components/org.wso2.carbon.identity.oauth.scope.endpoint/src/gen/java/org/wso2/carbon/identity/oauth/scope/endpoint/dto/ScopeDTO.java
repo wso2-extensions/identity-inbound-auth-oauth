@@ -16,10 +16,10 @@ import javax.validation.constraints.NotNull;
 public class ScopeDTO  {
   
   
-  
+  @NotNull
   private String name = null;
   
-  
+  @NotNull
   private String description = null;
   
   
@@ -28,7 +28,7 @@ public class ScopeDTO  {
   
   /**
    **/
-  @ApiModelProperty(value = "")
+  @ApiModelProperty(required = true, value = "")
   @JsonProperty("name")
   public String getName() {
     return name;
@@ -40,7 +40,7 @@ public class ScopeDTO  {
   
   /**
    **/
-  @ApiModelProperty(value = "")
+  @ApiModelProperty(required = true, value = "")
   @JsonProperty("description")
   public String getDescription() {
     return description;

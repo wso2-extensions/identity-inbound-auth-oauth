@@ -65,7 +65,7 @@ paths:
 
       x-wso2-response: |
         "HTTP/1.1 201 Created"
-        {"name": "profile", "description": "get all profile information", "bindings": ["role1", "role2"]}
+        {"name": "profile", "description": "Add a new Profile", "bindings": ["role1", "role2"]}
 
       summary: |
         Registers a Scope
@@ -106,7 +106,7 @@ paths:
       description: |
          This API is used to get all the available scopes.
       x-wso2-request: |
-        curl -X GET -H "Authorization: Basic YWRtaW46YWRtaW4=" -H "Content-Type: application/json" -d '{}' "https://localhost:9443/api/identity/oauth2/v1.0/scopes"
+              curl -X GET -H "Authorization: Basic YWRtaW46YWRtaW4=" -H "Content-Type: application/json" -d '{}' "https://localhost:9443/api/identity/oauth2/v1.0/scopes"
 
       x-wso2-response: |
         [{"name": "profile", "description": "get all profile information", "bindings": ["role1", "role2"]}]
@@ -170,8 +170,7 @@ paths:
           in: path
           description: scope name of the scope which the details to be retrieved
           required: true
-          schema:
-            type: string
+          type: string
 
       responses:
         200:
@@ -248,7 +247,7 @@ paths:
           description: updated scope
           required: true
           schema:
-            $ref: '#/definitions/scope'
+            $ref: '#/definitions/scopeToUpdate'
         -
           name: name
           in: path
@@ -293,8 +292,7 @@ paths:
           in: path
           description: scope name of the scope which the existance should be checked
           required: true
-          schema:
-            type: string
+          type: string
 
       responses:
         200:
@@ -319,16 +317,29 @@ definitions:
 #-----------------------------------------------------
   scope:
     type: object
+    required:
+      - name
+      - description
     properties:
       name:
         type: string
-        required: true
       description:
         type: string
-        required: true
       bindings:
         type: array
-        required: false
+        items:
+          type: string
+
+#-----------------------------------------------------
+# The Scope Object
+#-----------------------------------------------------
+  scopeToUpdate:
+    type: object
+    properties:
+      description:
+        type: string
+      bindings:
+        type: array
         items:
           type: string
 

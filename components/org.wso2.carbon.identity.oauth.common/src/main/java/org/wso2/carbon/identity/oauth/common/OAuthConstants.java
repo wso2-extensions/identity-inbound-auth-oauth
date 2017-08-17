@@ -271,6 +271,8 @@ public final class OAuthConstants {
     public static class UserType {
         public static final String APPLICATION = "APPLICATION";
         public static final String APPLICATION_USER = "APPLICATION_USER";
+        public static final String FEDERATED_USER_DOMAIN_PREFIX = "FEDERATED";
+        public static final String FEDERATED_USER_DOMAIN_SEPARATOR = ":";
 
         private UserType() {
 

@@ -393,33 +393,27 @@ public class SAMLAssertionClaimsCallback implements CustomClaimsCallbackHandler 
      * @return
      */
     private static String getServiceProviderMappedUserRoles(ServiceProvider serviceProvider,
-            List<String> locallyMappedUserRoles, String claimSeparator) throws FrameworkException {
-        if (CollectionUtils.isNotEmpty(locallyMappedUserRoles)) {
+                                                            List<String> locallyMappedUserRoles,
+                                                            String claimSeparator) throws FrameworkException {
 
+        if (CollectionUtils.isNotEmpty(locallyMappedUserRoles)) {
+            // Get Local Role to Service Provider Role mappings
             RoleMapping[] localToSpRoleMapping = serviceProvider.getPermissionAndRoleConfig().getRoleMappings();
 
-            if (ArrayUtils.isEmpty(localToSpRoleMapping)) {
-                return null;
-            }
-
-            StringBuilder spMappedUserRoles = new StringBuilder();
-            for (RoleMapping roleMapping : localToSpRoleMapping) {
-                if (locallyMappedUserRoles.contains(roleMapping.getLocalRole().getLocalRoleName())) {
-                    spMappedUserRoles.append(roleMapping.getRemoteRole()).append(claimSeparator);
-                    locallyMappedUserRoles.remove(roleMapping.getLocalRole().getLocalRoleName());
+            if (ArrayUtils.isNotEmpty(localToSpRoleMapping)) {
+                for (RoleMapping roleMapping : localToSpRoleMapping) {
+                    // check whether a local role is mapped to service provider role
+                    if (locallyMappedUserRoles.contains(roleMapping.getLocalRole().getLocalRoleName())) {
+                        // remove the local role from the list of user roles
+                        locallyMappedUserRoles.remove(roleMapping.getLocalRole().getLocalRoleName());
+                        // add the service provider mapped role
+                        locallyMappedUserRoles.add(roleMapping.getRemoteRole());
+                    }
                 }
             }
-
-            for (String remainingRole : locallyMappedUserRoles) {
-                spMappedUserRoles.append(remainingRole).append(claimSeparator);
-            }
-
-            return spMappedUserRoles.length() > 0 ?
-                    spMappedUserRoles.toString().substring(0, spMappedUserRoles.length() - 1) :
-                    null;
         }
 
-        return null;
+        return StringUtils.join(locallyMappedUserRoles, claimSeparator);
     }
 
     private static Map<String, Object> getClaimsFromUserStore(OAuthAuthzReqMessageContext requestMsgCtx)

@@ -19,6 +19,7 @@ package org.wso2.carbon.identity.oauth2.util;
 import org.apache.commons.lang.StringUtils;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.context.CarbonContext;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -96,6 +97,6 @@ public class Oauth2ScopeUtils {
     }
 
     public static int getTenantID() {
-        return CarbonContext.getThreadLocalCarbonContext().getTenantId();
+        return PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
     }
 }
