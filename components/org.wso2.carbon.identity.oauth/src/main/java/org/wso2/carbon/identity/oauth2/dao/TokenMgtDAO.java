@@ -50,6 +50,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLIntegrityConstraintViolationException;
+import java.sql.Savepoint;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -299,6 +300,7 @@ public class TokenMgtDAO {
         String authenticatedIDP = accessTokenDO.getAuthzUser().getFederatedIdPName();
         PreparedStatement insertTokenPrepStmt = null;
         PreparedStatement addScopePrepStmt = null;
+        Savepoint savepoint = null;
 
         String accessTokenStoreTable = "IDN_OAUTH2_ACCESS_TOKEN";
         if (StringUtils.isNotBlank(userStoreDomain) &&
@@ -317,6 +319,13 @@ public class TokenMgtDAO {
                 accessTokenStoreTable);
         String sqlAddScopes = SQLQueries.INSERT_OAUTH2_TOKEN_SCOPE;
         try {
+
+            //In PostgreSQL, if some error occurs, we are rollback the transaction upto this point and start recover
+            //process.
+            if (connection.getMetaData().getDriverName().contains("PostgreSQL")) {
+                savepoint = connection.setSavepoint();
+            }
+
             insertTokenPrepStmt = connection.prepareStatement(sql);
             insertTokenPrepStmt.setString(1, persistenceProcessor.getProcessedAccessTokenIdentifier(accessToken));
 
@@ -361,6 +370,15 @@ public class TokenMgtDAO {
             }
         } catch (SQLIntegrityConstraintViolationException e) {
 
+            //Roll back to saved save point in failure case.
+            if (connection != null && savepoint != null) {
+                try {
+                    connection.rollback(savepoint);
+                } catch (SQLException e1) {
+                    throw new IdentityOAuth2Exception("Error occurred in rolling back to last save point.", e);
+                }
+            }
+
             if (retryAttempt >= tokenPersistRetryCount) {
                 log.error("'CON_APP_KEY' constrain violation retry count exceeds above the maximum count - " +
                         tokenPersistRetryCount);
@@ -375,6 +393,16 @@ public class TokenMgtDAO {
         } catch (DataTruncation e) {
             throw new IdentityOAuth2Exception("Invalid request", e);
         } catch (SQLException e) {
+
+            //Roll back to saved save point in failure case.
+            if (connection != null && savepoint != null) {
+                try {
+                    connection.rollback(savepoint);
+                } catch (SQLException e1) {
+                    throw new IdentityOAuth2Exception("Error occurred in rolling back to last save point.", e);
+                }
+            }
+
             // Handle constrain violation issue in JDBC drivers which does not throw
             // SQLIntegrityConstraintViolationException
             if (StringUtils.containsIgnoreCase(e.getMessage(), "CON_APP_KEY")) {
