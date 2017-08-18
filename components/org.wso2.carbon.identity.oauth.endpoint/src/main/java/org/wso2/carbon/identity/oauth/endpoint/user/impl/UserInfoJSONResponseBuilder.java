@@ -46,6 +46,7 @@ import org.wso2.carbon.registry.core.Resource;
 import org.wso2.carbon.registry.core.exceptions.RegistryException;
 import org.wso2.carbon.registry.core.service.RegistryService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
+import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -169,8 +170,8 @@ public class UserInfoJSONResponseBuilder implements UserInfoResponseBuilder {
             }
             returnClaims.put(ADDRESS, jsonObject);
         }
-        if (!returnClaims.containsKey("sub") || StringUtils.isBlank((String) claims.get("sub"))) {
-            returnClaims.put("sub", tokenResponse.getAuthorizedUser());
+        if (!returnClaims.containsKey(OAuth2Util.SUB) || StringUtils.isBlank((String) claims.get(OAuth2Util.SUB))) {
+            returnClaims.put(OAuth2Util.SUB, getUsername(tenantDomain, tokenResponse));
         }
         if (essentialClaims != null) {
             for (String key : essentialClaims) {
@@ -241,24 +242,7 @@ public class UserInfoJSONResponseBuilder implements UserInfoResponseBuilder {
     protected String returnSubjectClaim(String sub, String tenantDomain, OAuth2TokenValidationResponseDTO tokenResponse)
             throws UserInfoEndpointException {
 
-        String clientId = null;
-
-        try {
-            clientId = OAuth2Util.getClientIdForAccessToken
-                    (tokenResponse.getAuthorizationContextToken().getTokenString());
-        } catch (IdentityOAuth2Exception e) {
-            throw new UserInfoEndpointException("Error while obtaining the client ID :" + clientId, e);
-        }
-        ApplicationManagementService applicationMgtService = OAuth2ServiceComponentHolder.getApplicationMgtService();
-
-        ServiceProvider serviceProvider;
-        try {
-            //getting service provider
-            serviceProvider = applicationMgtService.getServiceProviderByClientId(
-                    clientId, IdentityApplicationConstants.OAuth2.NAME, tenantDomain);
-        } catch (IdentityApplicationManagementException e) {
-            throw new UserInfoEndpointException("Error while obtaining the service provider.", e);
-        }
+        ServiceProvider serviceProvider = getServiceProviderFromTokenResponse(tenantDomain, tokenResponse);
         String userName = tokenResponse.getAuthorizedUser();
         String userStoreDomain = IdentityUtil.extractDomainFromName(userName);
 
@@ -280,4 +264,51 @@ public class UserInfoJSONResponseBuilder implements UserInfoResponseBuilder {
         }
         return sub;
     }
+
+    private String getUsername(String tenantDomain, OAuth2TokenValidationResponseDTO tokenResponse) throws UserInfoEndpointException {
+
+        ServiceProvider serviceProvider = getServiceProviderFromTokenResponse(tenantDomain, tokenResponse);
+        String userName = tokenResponse.getAuthorizedUser();
+        String userStoreDomain = IdentityUtil.extractDomainFromName(userName);
+
+        if (serviceProvider != null) {
+            boolean isUseTenantDomainInLocalSubject = serviceProvider.getLocalAndOutBoundAuthenticationConfig()
+                    .isUseTenantDomainInLocalSubjectIdentifier();
+            boolean isUseUserStoreDomainInLocalSubject = serviceProvider.getLocalAndOutBoundAuthenticationConfig()
+                    .isUseUserstoreDomainInLocalSubjectIdentifier();
+
+            if (!isUseTenantDomainInLocalSubject) {
+                userName = UserCoreUtil.removeDistinguishedName(userName);
+                if (isUseUserStoreDomainInLocalSubject) {
+                    userName = UserCoreUtil.addDomainToName(userName, userStoreDomain);
+                }
+            }
+            return userName;
+        }
+        return userName;
+    }
+
+    private ServiceProvider getServiceProviderFromTokenResponse(String tenantDomain, OAuth2TokenValidationResponseDTO tokenResponse) throws UserInfoEndpointException {
+
+        String clientId = null;
+
+        try {
+            clientId = OAuth2Util.getClientIdForAccessToken
+                    (tokenResponse.getAuthorizationContextToken().getTokenString());
+        } catch (IdentityOAuth2Exception e) {
+            throw new UserInfoEndpointException("Error while obtaining the client ID :" + clientId, e);
+        }
+        ApplicationManagementService applicationMgtService = OAuth2ServiceComponentHolder.getApplicationMgtService();
+
+        ServiceProvider serviceProvider;
+        try {
+            //getting service provider
+            serviceProvider = applicationMgtService.getServiceProviderByClientId(
+                    clientId, IdentityApplicationConstants.OAuth2.NAME, tenantDomain);
+            return serviceProvider;
+        } catch (IdentityApplicationManagementException e) {
+            throw new UserInfoEndpointException("Error while obtaining the service provider.", e);
+        }
+    }
+
 }
