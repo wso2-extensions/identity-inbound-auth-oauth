@@ -52,6 +52,7 @@ import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuerImpl;
 import org.wso2.carbon.identity.oauth2.token.handlers.clientauth.ClientAuthenticationHandler;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.saml.SAML2TokenCallbackHandler;
+import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeHandler;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeValidator;
 import org.wso2.carbon.identity.openidconnect.CustomClaimsCallbackHandler;
 import org.wso2.carbon.identity.openidconnect.IDTokenBuilder;
@@ -125,6 +126,7 @@ public class OAuthServerConfiguration {
     private Map<String, String> supportedGrantTypeClassNames = new HashMap<>();
     private Map<String, Boolean> refreshTokenAllowedGrantTypes = new HashMap<>();
     private Map<String, String> idTokenAllowedForGrantTypesMap = new HashMap<>();
+    private Set<String> idTokenAllowedGrantTypesSet = new HashSet<>();
     private Map<String, AuthorizationGrantHandler> supportedGrantTypes;
     private Map<String, String> supportedGrantTypeValidatorNames = new HashMap<>();
     private Map<String, Class<? extends OAuthValidator<HttpServletRequest>>> supportedGrantTypeValidators;
@@ -165,6 +167,7 @@ public class OAuthServerConfiguration {
     private String openIDConnectUserInfoEndpointResponseBuilder = "org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoJSONResponseBuilder";
     private OAuth2ScopeValidator oAuth2ScopeValidator;
     private Set<OAuth2ScopeValidator> oAuth2ScopeValidators = new HashSet<>();
+    private Set<OAuth2ScopeHandler> oAuth2ScopeHandlers = new HashSet<>();
     // property added to fix IDENTITY-4492 in backward compatible manner
     private boolean isJWTSignedWithSPKey = false;
     // property added to fix IDENTITY-4534 in backward compatible manner
@@ -226,6 +229,14 @@ public class OAuthServerConfiguration {
             parseScopeValidator(scopeValidatorElem);
         } else if (scopeValidatorsElem != null) {
             parseScopeValidator(scopeValidatorsElem);
+        }
+
+        //Get the configured scope handlers
+        OMElement scopeHandlersElem = oauthElem.getFirstChildWithName(
+                getQNameWithIdentityNS(ConfigElements.SCOPE_HANDLERS));
+
+        if (scopeHandlersElem != null) {
+            parseScopeHandlers(scopeHandlersElem);
         }
 
         // read default timeout periods
@@ -708,6 +719,10 @@ public class OAuthServerConfiguration {
         return idTokenAllowedForGrantTypesMap;
     }
 
+    public Set<String> getIdTokenAllowedGrantTypesSet() {
+        return idTokenAllowedGrantTypesSet;
+    }
+
     public boolean isUserNameAssertionEnabled() {
         return assertionsUserNameEnabled;
     }
@@ -981,7 +996,7 @@ public class OAuthServerConfiguration {
                 String validatorClazz = scopeValidatorElement.getAttributeValue(new QName(ConfigElements
                         .SCOPE_CLASS_ATTR));
                 if (validatorClazz != null) {
-                    OAuth2ScopeValidator scopeValidator = getOAuth2ScopeValidatorInstance(validatorClazz);
+                    OAuth2ScopeValidator scopeValidator = getClassInstance(validatorClazz, OAuth2ScopeValidator.class);
                     if (scopeValidator == null) {
                         continue;
                     }
@@ -1000,7 +1015,7 @@ public class OAuthServerConfiguration {
                         String paramValue = propertyElement.getText();
                         properties.put(paramName, paramValue);
                         if (log.isDebugEnabled()) {
-                            log.debug(String.format("Property: %s with value: %s is set to validator: %s.",
+                            log.debug(String.format("Property: %s with value: %s is set to ScopeValidator: %s.",
                                     paramName, paramValue, validatorClazz));
                         }
                     }
@@ -1008,7 +1023,7 @@ public class OAuthServerConfiguration {
                     scopeValidators.add(scopeValidator);
 
                     if (log.isDebugEnabled()) {
-                        log.debug(String.format("Scope validator: %s is added to scope validators list.", scopeValidator
+                        log.debug(String.format("ScopeValidator: %s is added to ScopeValidators list.", scopeValidator
                                 .getClass().getCanonicalName()));
                     }
                 }
@@ -1019,7 +1034,7 @@ public class OAuthServerConfiguration {
             String scopesToSkipAttr = scopeValidatorElem.getAttributeValue(new QName(ConfigElements.SKIP_SCOPE_ATTR));
 
             if (scopeValidatorClazz != null) {
-                OAuth2ScopeValidator scopeValidator = getOAuth2ScopeValidatorInstance(scopeValidatorClazz);
+                OAuth2ScopeValidator scopeValidator = getClassInstance(scopeValidatorClazz, OAuth2ScopeValidator.class);
                 if (scopeValidator != null) {
                     scopeValidator.setScopesToSkip(getScopesToSkipSet(scopesToSkipAttr));
                 }
@@ -1029,24 +1044,75 @@ public class OAuthServerConfiguration {
         setOAuth2ScopeValidators(scopeValidators);
     }
 
+    private void parseScopeHandlers(OMElement scopeHandlersElem) {
+
+        Set<OAuth2ScopeHandler> scopeHandlers = new HashSet<>();
+
+        Iterator scopeHandlerIterator = scopeHandlersElem
+                .getChildrenWithName(getQNameWithIdentityNS(ConfigElements.SCOPE_HANDLER));
+
+        if (scopeHandlerIterator == null) {
+            return;
+        }
+
+        while (scopeHandlerIterator.hasNext()) {
+            OMElement scopeHandlerElem = (OMElement) scopeHandlerIterator.next();
+            String scopeHandlerClazz = scopeHandlerElem.getAttributeValue(new QName(ConfigElements
+                    .SCOPE_HANDLER_CLASS_ATTR));
+
+            if (scopeHandlerClazz != null) {
+                OAuth2ScopeHandler scopeHandler = getClassInstance(scopeHandlerClazz, OAuth2ScopeHandler.class);
+
+                if (scopeHandler == null) {
+                    continue;
+                }
+                Iterator propertyIterator = scopeHandlerElem.getChildrenWithName
+                        (getQNameWithIdentityNS(ConfigElements.SCOPE_HANDLER_PROPERTY));
+                Map<String, String> properties = new HashMap<>();
+
+                while (propertyIterator.hasNext()) {
+                    OMElement propertyElement = (OMElement) propertyIterator.next();
+                    String paramName = propertyElement.getAttributeValue(new QName(ConfigElements
+                            .SCOPE_HANDLER_PROPERTY_NAME_ATTR));
+                    String paramValue = propertyElement.getText();
+                    properties.put(paramName, paramValue);
+                    if (log.isDebugEnabled()) {
+                        log.debug(String.format("Property: %s with value: %s is set to ScopeHandler: %s.", paramName,
+                                paramValue, scopeHandlerClazz));
+                    }
+                }
+                scopeHandler.setProperties(properties);
+                scopeHandlers.add(scopeHandler);
+
+                if (log.isDebugEnabled()) {
+                    log.debug(String.format("ScopeHandler: %s is added to ScopeHandler list.", scopeHandler
+                            .getClass().getCanonicalName()));
+                }
+            }
+        }
+        setOAuth2ScopeHandlers(scopeHandlers);
+    }
+
     /**
      * Create an instance of a OAuth2ScopeValidator type class for a given class name.
      *
      * @param scopeValidatorClazz Canonical name of the OAuth2ScopeValidator class
      * @return OAuth2ScopeValidator type class instance.
      */
-    private OAuth2ScopeValidator getOAuth2ScopeValidatorInstance(String scopeValidatorClazz) {
+    private <T> T getClassInstance(String scopeValidatorClazz, Class<T> type) {
 
         try {
 
             Class clazz = Thread.currentThread().getContextClassLoader().loadClass(scopeValidatorClazz);
-            return (OAuth2ScopeValidator) clazz.newInstance();
+            return type.cast(clazz.newInstance());
         } catch (ClassNotFoundException e) {
             log.error("Class not found in build path " + scopeValidatorClazz, e);
         } catch (InstantiationException e) {
             log.error("Class initialization error " + scopeValidatorClazz, e);
         } catch (IllegalAccessException e) {
             log.error("Class access error " + scopeValidatorClazz, e);
+        } catch (ClassCastException e) {
+            log.error("Cannot cast the class: " + scopeValidatorClazz + " to type: " + type.getCanonicalName(), e);
         }
         return null;
     }
@@ -1433,6 +1499,10 @@ public class OAuthServerConfiguration {
 
                 if (StringUtils.isNotEmpty(grantTypeName) && StringUtils.isNotEmpty(idTokenAllowed)) {
                     idTokenAllowedForGrantTypesMap.put(grantTypeName, idTokenAllowed);
+
+                    if (Boolean.parseBoolean(idTokenAllowed)) {
+                        idTokenAllowedGrantTypesSet.add(grantTypeName);
+                    }
                 }
 
 
@@ -1813,6 +1883,14 @@ public class OAuthServerConfiguration {
         this.oAuth2ScopeValidators = oAuth2ScopeValidators;
     }
 
+    public Set<OAuth2ScopeHandler> getOAuth2ScopeHandlers() {
+        return oAuth2ScopeHandlers;
+    }
+
+    public void setOAuth2ScopeHandlers(Set<OAuth2ScopeHandler> oAuth2ScopeHandlers) {
+        this.oAuth2ScopeHandlers = oAuth2ScopeHandlers;
+    }
+
     private void parseUseSPTenantDomainConfig(OMElement oauthElem) {
 
         OMElement useSPTenantDomainValueElement = oauthElem
@@ -1889,12 +1967,16 @@ public class OAuthServerConfiguration {
         private static final String TOKEN_VALIDATOR = "TokenValidator";
         private static final String TOKEN_TYPE_ATTR = "type";
         private static final String TOKEN_CLASS_ATTR = "class";
+        private static final String SCOPE_HANDLERS = "ScopeHandlers";
+        private static final String SCOPE_HANDLER = "ScopeHandler";
+        private static final String SCOPE_HANDLER_CLASS_ATTR = "class";
+        private static final String SCOPE_HANDLER_PROPERTY = "Property";
+        private static final String SCOPE_HANDLER_PROPERTY_NAME_ATTR = "name";
         private static final String SCOPE_VALIDATOR = "OAuthScopeValidator";
         private static final String SCOPE_VALIDATORS = "ScopeValidators";
         private static final String SCOPE_VALIDATOR_ELEM = "ScopeValidator";
         private static final String SCOPE_VALIDATOR_PROPERTY = "Property";
         private static final String SCOPE_VALIDATOR_PROPERTY_NAME_ATTR = "name";
-        private static final String OIDC_SCOPE_VALIDATOR = "OIDCScopeValidator";
         private static final String SCOPE_CLASS_ATTR = "class";
         private static final String SKIP_SCOPE_ATTR = "scopesToSkip";
         private static final String IMPLICIT_ERROR_FRAGMENT = "ImplicitErrorFragment";

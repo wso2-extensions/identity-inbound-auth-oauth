@@ -1089,6 +1089,8 @@ public class OAuth2AuthzEndpoint {
                     sessionState.setAuthenticated(false);
                     return redirectUrl;
                 } else {
+                    errorResponse = EndpointUtil.getErrorRedirectURL(
+                            OAuthProblemException.error(OAuth2ErrorCodes.CONSENT_REQUIRED), oauth2Params);
                     return errorResponse;
                 }
             }

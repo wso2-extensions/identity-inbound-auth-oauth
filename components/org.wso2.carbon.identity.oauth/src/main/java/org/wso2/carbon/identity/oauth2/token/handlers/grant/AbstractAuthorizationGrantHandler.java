@@ -46,9 +46,11 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeHandler;
 
 import java.sql.Timestamp;
 import java.util.Date;
+import java.util.Set;
 import java.util.UUID;
 
 public abstract class AbstractAuthorizationGrantHandler implements AuthorizationGrantHandler {
@@ -578,7 +580,23 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         callbackManager.handleCallback(scopeValidationCallback);
         tokReqMsgCtx.setValidityPeriod(scopeValidationCallback.getValidityPeriod());
         tokReqMsgCtx.setScope(scopeValidationCallback.getApprovedScope());
-        return scopeValidationCallback.isValidScope();
+
+        Set<OAuth2ScopeHandler> scopeHandlers = OAuthServerConfiguration.getInstance().getOAuth2ScopeHandlers();
+        boolean isValid = true;
+
+        for (OAuth2ScopeHandler scopeHandler: scopeHandlers) {
+            if (scopeHandler != null && scopeHandler.canHandle(tokReqMsgCtx)) {
+                isValid = scopeHandler.validateScope(tokReqMsgCtx);
+                if (log.isDebugEnabled()) {
+                    log.debug(String.format("ScopeHandler: %s validated to: %s", scopeHandler.getClass()
+                                    .getCanonicalName(), isValid));
+                }
+                if (!isValid) {
+                    break;
+                }
+            }
+        }
+        return isValid && scopeValidationCallback.isValidScope();
     }
 
     @Override
