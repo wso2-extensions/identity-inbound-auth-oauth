@@ -19,6 +19,8 @@
 package org.wso2.carbon.identity.oauth2.token.handlers.grant.iwa.ntlm.util;
 
 import org.apache.catalina.connector.Response;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -32,6 +34,8 @@ import java.util.Map;
 public class SimpleHttpResponse extends Response {
     private int _status = 500;
     private Map<String, List<String>> _headers = new HashMap<String, List<String>>();
+    private static Log log = LogFactory.getLog(SimpleHttpResponse.class);
+
 
     @Override
     public int getStatus() {
@@ -73,10 +77,12 @@ public class SimpleHttpResponse extends Response {
 
     @Override
     public void flushBuffer() {
-        System.out.println(_status + " " + getStatusString());
-        for (String header : _headers.keySet()) {
-            for (String headerValue : _headers.get(header)) {
-                System.out.println(header + ": " + headerValue);
+        if(log.isDebugEnabled()){
+            log.debug(_status + " " + getStatusString());
+            for (Map.Entry<String, List<String>> headerEntry : _headers.entrySet()) {
+                for (String valueEntry : headerEntry.getValue()) {
+                    log.debug(headerEntry.getKey() + ": " + valueEntry);
+                }
             }
         }
     }

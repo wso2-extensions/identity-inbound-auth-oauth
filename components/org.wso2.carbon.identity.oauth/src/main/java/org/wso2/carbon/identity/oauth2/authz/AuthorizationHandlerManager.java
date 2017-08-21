@@ -93,8 +93,19 @@ public class AuthorizationHandlerManager {
 
         // loading the stored application data
         OAuthAppDO oAuthAppDO = getAppInformation(authzReqDTO);
-
         authzReqMsgCtx.addProperty("OAuthAppDO", oAuthAppDO);
+
+        // load the SP tenant domain from the OAuth App info
+        authzReqMsgCtx.getAuthorizationReqDTO().setTenantDomain(OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO));
+
+        boolean isAuthorizedClient = authzHandler.isAuthorizedClient(authzReqMsgCtx);
+
+        if (!isAuthorizedClient) {
+            handleErrorRequest(authorizeRespDTO, OAuthError.CodeResponse.UNAUTHORIZED_CLIENT,
+                    "The authenticated client is not authorized to use this authorization grant type");
+            authorizeRespDTO.setCallbackURI(authzReqDTO.getCallbackUrl());
+            return authorizeRespDTO;
+        }
 
         boolean accessDelegationAuthzStatus = authzHandler.validateAccessDelegation(authzReqMsgCtx);
         if(authzReqMsgCtx.getProperty("ErrorCode") != null){

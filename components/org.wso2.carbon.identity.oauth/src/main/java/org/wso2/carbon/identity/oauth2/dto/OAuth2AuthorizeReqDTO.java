@@ -36,6 +36,15 @@ public class OAuth2AuthorizeReqDTO {
     private String pkceCodeChallengeMethod;
     private String tenantDomain;
     private long authTime;
+    private String essentialClaims;
+
+    public String getEssentialClaims() {
+        return essentialClaims;
+    }
+
+    public void setEssentialClaims(String essentialClaims) {
+        this.essentialClaims = essentialClaims;
+    }
 
     public long getAuthTime() {
         return authTime;

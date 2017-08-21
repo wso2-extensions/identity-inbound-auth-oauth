@@ -31,6 +31,7 @@
             <ref bean="revokeEndpointBean"/>
             <ref bean="userinfoEndpointBean"/>
             <ref bean="jwksEndpointBean"/>
+            <ref bean="oidcdiscoveryEndpointBean"/>
         </jaxrs:serviceBeans>
     </jaxrs:server>
 
@@ -40,4 +41,5 @@
     <bean id="revokeEndpointBean" class="org.wso2.carbon.identity.oauth.endpoint.revoke.OAuthRevocationEndpoint"/>
     <bean id="userinfoEndpointBean" class="org.wso2.carbon.identity.oauth.endpoint.user.OpenIDConnectUserEndpoint"/>
     <bean id="jwksEndpointBean" class="org.wso2.carbon.identity.oauth.endpoint.jwks.JwksEndpoint"/>
+    <bean id = "oidcdiscoveryEndpointBean" class="org.wso2.carbon.identity.oauth.endpoint.oidcdiscovery.OIDCDiscoveryEndpoint"/>
 </beans>

@@ -17,7 +17,6 @@
 package org.wso2.carbon.identity.oauth.listener;
 
 import org.wso2.carbon.identity.application.common.listener.AbstractCacheListener;
-import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.util.ClaimCacheKey;
 import org.wso2.carbon.identity.oauth.util.ClaimMetaDataCache;
 import org.wso2.carbon.identity.oauth.util.ClaimMetaDataCacheKey;
@@ -36,12 +35,12 @@ public class ClaimCacheRemoveListener extends AbstractCacheListener<ClaimCacheKe
     public void entryRemoved(CacheEntryEvent<? extends ClaimCacheKey, ? extends UserClaims> cacheEntryEvent)
             throws CacheEntryListenerException {
 
-        if(cacheEntryEvent == null || cacheEntryEvent.getKey() == null ||
-                cacheEntryEvent.getKey().getEndUserName() == null) {
+        if (cacheEntryEvent == null || cacheEntryEvent.getKey() == null ||
+                cacheEntryEvent.getKey().getAuthenticatedUser() == null) {
             return;
         }
 
         ClaimMetaDataCache.getInstance().clearCacheEntry(
-                new ClaimMetaDataCacheKey(OAuthUtil.getAuthenticatedUser(cacheEntryEvent.getKey().getEndUserName())));
+                new ClaimMetaDataCacheKey(cacheEntryEvent.getKey().getAuthenticatedUser()));
     }
 }

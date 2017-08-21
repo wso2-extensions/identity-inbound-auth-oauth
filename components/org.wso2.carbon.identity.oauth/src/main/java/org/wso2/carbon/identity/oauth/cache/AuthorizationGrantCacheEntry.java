@@ -44,6 +44,18 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
 
     private LinkedHashSet acrValue;
 
+    private String essentialClaims;
+
+    private long authTime;
+
+    public String getEssentialClaims() {
+        return essentialClaims;
+    }
+
+    public void setEssentialClaims(String essentialClaims) {
+        this.essentialClaims = essentialClaims;
+    }
+
     public LinkedHashSet getAcrValue() {
         return acrValue;
     }
@@ -51,8 +63,6 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
     public void setAcrValue(LinkedHashSet acrValue) {
         this.acrValue = acrValue;
     }
-
-    private long authTime;
 
     public long getAuthTime() {
         return authTime;

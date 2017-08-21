@@ -18,6 +18,8 @@
 package org.wso2.carbon.identity.oidc.dcr.factory;
 
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.exception.FrameworkException;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.HttpIdentityResponse;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.IdentityResponse;
@@ -30,6 +32,9 @@ import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 
 public class HttpOIDCRegistrationResponseFactory extends HttpRegistrationResponseFactory {
+
+    private static Log log = LogFactory.getLog(HttpOIDCRegistrationResponseFactory.class);
+
     @Override
     public String getName() {
         return null;
@@ -46,14 +51,22 @@ public class HttpOIDCRegistrationResponseFactory extends HttpRegistrationRespons
     @Override
     public void create(HttpIdentityResponse.HttpIdentityResponseBuilder httpIdentityResponseBuilder,
                        IdentityResponse identityResponse) {
-        RegistrationResponse registrationResponse = (RegistrationResponse) identityResponse;
-        httpIdentityResponseBuilder.setStatusCode(HttpServletResponse.SC_CREATED);
-        httpIdentityResponseBuilder.addHeader(OAuthConstants.HTTP_RESP_HEADER_CACHE_CONTROL,
-                                              OAuthConstants.HTTP_RESP_HEADER_VAL_CACHE_CONTROL_NO_STORE);
-        httpIdentityResponseBuilder.addHeader(OAuthConstants.HTTP_RESP_HEADER_PRAGMA,
-                                              OAuthConstants.HTTP_RESP_HEADER_VAL_PRAGMA_NO_CACHE);
-        httpIdentityResponseBuilder.addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON);
-        httpIdentityResponseBuilder.setBody(generateSuccessfulResponse(registrationResponse).toJSONString());
+
+        RegistrationResponse registrationResponse = null;
+        if (identityResponse instanceof RegistrationResponse) {
+            registrationResponse = (RegistrationResponse) identityResponse;
+            httpIdentityResponseBuilder.setStatusCode(HttpServletResponse.SC_CREATED);
+            httpIdentityResponseBuilder.addHeader(OAuthConstants.HTTP_RESP_HEADER_CACHE_CONTROL,
+                    OAuthConstants.HTTP_RESP_HEADER_VAL_CACHE_CONTROL_NO_STORE);
+            httpIdentityResponseBuilder.addHeader(OAuthConstants.HTTP_RESP_HEADER_PRAGMA,
+                    OAuthConstants.HTTP_RESP_HEADER_VAL_PRAGMA_NO_CACHE);
+            httpIdentityResponseBuilder.addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON);
+            httpIdentityResponseBuilder.setBody(generateSuccessfulResponse(registrationResponse).toJSONString());
+        } else {
+            // This else part will not be reached from application logic.
+            log.error("Can't create httpIdentityResponseBuilder. identityResponse is not an instance of " +
+                    "RegistrationResponse");
+        }
     }
 
     public HttpIdentityResponse.HttpIdentityResponseBuilder handleException(FrameworkException exception) {

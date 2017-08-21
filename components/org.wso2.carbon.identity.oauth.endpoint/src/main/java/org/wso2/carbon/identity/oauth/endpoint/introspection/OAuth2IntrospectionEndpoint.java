@@ -73,7 +73,7 @@ public class OAuth2IntrospectionEndpoint {
         }
 
         if (StringUtils.isBlank(token)) {
-            return Response.status(Response.Status.BAD_REQUEST).entity("{'error': 'Invalid input'}").build();
+            return Response.status(Response.Status.BAD_REQUEST).entity("{\"error\": \"Invalid input\"}").build();
         }
 
         // validate the access token against the OAuth2TokenValidationService OSGi service.
@@ -92,7 +92,7 @@ public class OAuth2IntrospectionEndpoint {
             if (log.isDebugEnabled()) {
                 log.debug("The error why token is made inactive: " + introspectionResponse.getError());
             }
-            return Response.status(Response.Status.OK).entity("{'active':false}").build();
+            return Response.status(Response.Status.OK).entity("{\"active\":false}").build();
         }
 
         IntrospectionResponseBuilder respBuilder = new IntrospectionResponseBuilder()

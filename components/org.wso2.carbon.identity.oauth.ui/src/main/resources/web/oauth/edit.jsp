@@ -21,12 +21,11 @@
 <%@ page import="org.wso2.carbon.identity.oauth.common.OAuthConstants" %>
 <%@ page import="org.wso2.carbon.identity.oauth.stub.dto.OAuthConsumerAppDTO" %>
 <%@ page import="org.wso2.carbon.identity.oauth.ui.client.OAuthAdminClient" %>
-<%@ page import="org.wso2.carbon.identity.oauth.ui.util.OAuthUIUtil" %>
 <%@ page import="org.wso2.carbon.ui.CarbonUIMessage" %>
-<%@ page import="org.wso2.carbon.ui.CarbonUIUtil"%>
-<%@ page import="org.wso2.carbon.utils.ServerConstants" %>
-
+<%@ page import="org.wso2.carbon.ui.CarbonUIUtil" %>
+<%@ page import="org.wso2.carbon.utils.ServerConstants"%>
 <%@ page import="java.util.ArrayList" %>
+
 <%@ page import="java.util.Arrays" %>
 <%@ page import="java.util.List" %>
 <%@ page import="java.util.ResourceBundle" %>
@@ -55,16 +54,12 @@
 	// grants
 	boolean codeGrant = false;
     boolean implicitGrant = false;
-	boolean passowrdGrant = false;
-	boolean clientCredGrant = false;
-	boolean refreshGrant = false;
-	boolean samlGrant1 = false;
-	boolean samlGrant2 = false;
-	boolean ntlmGrant = false;
     List<String> allowedGrants = null;
     String applicationSPName = null;
     OAuthAdminClient client = null;
     String action = null;
+    String grants = null;
+
     try {
 
     	applicationSPName = request.getParameter("appName");
@@ -118,20 +113,17 @@
             }
             // setting grants if oauth version 2.0
             if (OAuthConstants.OAuthVersions.VERSION_2.equals(app.getOAuthVersion())) {
-                String grants = app.getGrantTypes();
+                grants = app.getGrantTypes();
                 if (grants != null) {
                     codeGrant = grants.contains("authorization_code");
                     implicitGrant = grants.contains("implicit");
-                    passowrdGrant = grants.contains("password");
-                    clientCredGrant = grants.contains("client_credentials");
-                    refreshGrant = grants.contains("refresh_token");
-                    samlGrant1 = grants.contains("urn:ietf:params:oauth:grant-type:saml1-bearer");
-                    samlGrant2 = grants.contains("urn:ietf:params:oauth:grant-type:saml2-bearer");
-                    ntlmGrant = grants.contains("iwa:ntlm");
+                } else {
+                    grants = "";
                 }
             }
         }
-	} catch (Exception e) {
+
+    } catch (Exception e) {
 		String message = resourceBundle.getString("error.while.loading.user.application.data");
 		CarbonUIMessage.sendCarbonUIMessage(message, CarbonUIMessage.ERROR, request);
 		forwardTo = "../admin/error.jsp";
@@ -184,8 +176,8 @@
                         }
                     }
 
-                    if($(jQuery("#grant_code"))[0].checked || $(jQuery("#grant_implicit"))[0].checked) {
-                         callbackUrl = document.getElementById('callback').value;
+                    if ($(jQuery("#grant_authorization_code"))[0].checked || $(jQuery("#grant_implicit"))[0].checked) {
+                        callbackUrl = document.getElementById('callback').value;
                         if (callbackUrl.trim() == '') {
                             CARBON.showWarningDialog('<fmt:message key="callback.is.required"/>');
                             return false;
@@ -210,10 +202,13 @@
                     }
                     var versionValue = document.getElementsByName("oauthVersion")[0].value;
                     if (versionValue == '<%=OAuthConstants.OAuthVersions.VERSION_2%>') {
-                        if (!$(jQuery("#grant_code"))[0].checked && !$(jQuery("#grant_implicit"))[0].checked) {
+                        if (!$(jQuery("#grant_authorization_code"))[0].checked && !$(jQuery("#grant_implicit"))[0].checked) {
                             document.getElementsByName("callback")[0].value = '';
                         } else {
-                            if (!isWhiteListed(callbackUrl, ["url"]) || !isNotBlackListed(callbackUrl,
+                            // This is to support providing regex patterns for callback URLs
+                            if (callbackUrl.startsWith("regexp=")) {
+                                // skip validation
+                            } else if (!isWhiteListed(callbackUrl, ["url"]) || !isNotBlackListed(callbackUrl,
                                             ["uri-unsafe-exists"])) {
                                 CARBON.showWarningDialog('<fmt:message key="callback.is.not.url"/>');
                                 return false;
@@ -231,7 +226,7 @@
 
                 function adjustForm() {
                     var oauthVersion = $('input[name=oauthVersion]:checked').val();
-                    var supportGrantCode = $('input[name=grant_code]:checked').val() != null;
+                    var supportGrantCode = $('input[name=grant_authorization_code]:checked').val() != null;
                     var supportImplicit = $('input[name=grant_implicit]:checked').val() != null;
 
                     if(!supportGrantCode && !supportImplicit){
@@ -303,31 +298,39 @@
                                     <td>
                                     <table>
                                     <%
-                                        try{
-                                            if(allowedGrants.contains("authorization_code")){
-                                                %><tr><label><input type="checkbox" id="grant_code" name="grant_code" value="authorization_code"  <%=(codeGrant ? "checked=\"checked\"" : "")%>/>Code</label></tr><%
+                                        try {
+                                            if (allowedGrants.contains("authorization_code")) {
+                                                allowedGrants.remove("authorization_code");
+                                                %><tr><td><label><input type="checkbox" id="grant_authorization_code" name="grant_authorization_code" value="authorization_code" <%=(grants.contains("authorization_code") ? "checked=\"checked\"" : "")%> onclick="toggleCallback()"/>Code</label></td></tr><%
                                             }
-                                            if(allowedGrants.contains("implicit")){
-                                                %><tr><label><input type="checkbox" id="grant_implicit" name="grant_implicit" value="implicit"  <%=(implicitGrant ? "checked=\"checked\"" : "")%>/>Implicit</label></tr><%
+                                            if (allowedGrants.contains("implicit")) {
+                                                allowedGrants.remove("implicit");
+                                                %><tr><td><label><input type="checkbox" id="grant_implicit" name="grant_implicit" value="implicit" <%=(grants.contains("implicit") ? "checked=\"checked\"" : "")%> onclick="toggleCallback()"/>Implicit</label></td></tr><%
                                             }
-                                            if(allowedGrants.contains("password")){
-                                                %><tr><lable><input type="checkbox" id="grant_password" name="grant_password" value="password"  <%=(passowrdGrant ? "checked=\"checked\"" : "")%>/>Password</lable></tr><%
+                                            if (allowedGrants.contains("password")) {
+                                                allowedGrants.remove("password");
+                                                %><tr><td><lable><input type="checkbox" id="grant_password" name="grant_password" value="password" <%=(grants.contains("password") ? "checked=\"checked\"" : "")%>/>Password</lable></td></tr><%
                                             }
-                                            if(allowedGrants.contains("client_credentials")){
-                                                %><tr><label><input type="checkbox" id="grant_client" name="grant_client" value="client_credentials"  <%=(clientCredGrant ? "checked=\"checked\"" : "")%>/>Client Credential</label></tr><%
+                                            if (allowedGrants.contains("client_credentials")) {
+                                                allowedGrants.remove("client_credentials");
+                                                %><tr><td><label><input type="checkbox" id="grant_client_credentials" name="grant_client_credentials" value="client_credentials" <%=(grants.contains("client_credentials") ? "checked=\"checked\"" : "")%>/>Client Credential</label></td></tr><%
                                             }
-                                            if(allowedGrants.contains("refresh_token")){
-                                                %><tr><label><input type="checkbox" id="grant_refresh" name="grant_refresh" value="refresh_token"  <%=(refreshGrant ? "checked=\"checked\"" : "")%>/>Refresh Token</label></tr><%
+                                            if (allowedGrants.contains("refresh_token")) {
+                                                allowedGrants.remove("refresh_token");
+                                                %><tr><td><label><input type="checkbox" id="grant_refresh_token" name="grant_refresh_token" value="refresh_token" <%=(grants.contains("refresh_token") ? "checked=\"checked\"" : "")%>/>Refresh Token</label></td></tr><%
                                             }
-                                            if(allowedGrants.contains("urn:ietf:params:oauth:grant-type:saml1-bearer")){
-                                                %><tr><tr><label><input type="checkbox" id="grant_saml1" name="grant_saml1" value="urn:ietf:params:oauth:grant-type:saml1-bearer"  <%=(samlGrant1 ? "checked=\"checked\"" : "")%>/>SAML1</label></tr><%
+                                            for (String grantType : allowedGrants) {
+                                                if (grantType.equals("urn:ietf:params:oauth:grant-type:saml1-bearer")) {
+                                                    %><tr><td><label><input type="checkbox" id="grant_urn:ietf:params:oauth:grant-type:saml1-bearer" name="grant_urn:ietf:params:oauth:grant-type:saml1-bearer" value="urn:ietf:params:oauth:grant-type:saml1-bearer" <%=(grants.contains(grantType) ? "checked=\"checked\"" : "")%>/>SAML1</label></td></tr><%
+                                                } else if (grantType.equals("urn:ietf:params:oauth:grant-type:saml2-bearer")) {
+                                                    %><tr><td><label><input type="checkbox" id="grant_urn:ietf:params:oauth:grant-type:saml2-bearer" name="grant_urn:ietf:params:oauth:grant-type:saml2-bearer" value="urn:ietf:params:oauth:grant-type:saml2-bearer" <%=(grants.contains(grantType) ? "checked=\"checked\"" : "")%>/>SAML2</label></td></tr><%
+                                                } else if (grantType.equals("iwa:ntlm")) {
+                                                    %><tr><td><label><input type="checkbox" id="grant_iwa:ntlm" name="grant_iwa:ntlm" value="iwa:ntlm" <%=(grants.contains(grantType) ? "checked=\"checked\"" : "")%>/>IWA-NTLM</label></td></tr><%
+                                                } else {
+                                                    %><tr><td><label><input type="checkbox" id=<%="grant_"+grantType%> name=<%="grant_"+grantType%> value=<%=grantType%> <%=(grants.contains(grantType) ? "checked=\"checked\"" : "")%>/><%=grantType%></label></td></tr><%
+                                                }
                                             }
-                                            if(allowedGrants.contains("urn:ietf:params:oauth:grant-type:saml2-bearer")){
-                                                %><tr><tr><label><input type="checkbox" id="grant_saml2" name="grant_saml2" value="urn:ietf:params:oauth:grant-type:saml2-bearer"  <%=(samlGrant2 ? "checked=\"checked\"" : "")%>/>SAML2</label></tr><%
-                                            } if(allowedGrants.contains("iwa:ntlm")){
-                                                %><tr><tr><label><input type="checkbox" id="grant_ntlm" name="grant_ntlm" value="iwa:ntlm"  <%=(ntlmGrant ? "checked=\"checked\"" : "")%>/>IWA-NTLM</label></tr><%
-                                            }
-                                    } catch (Exception e){
+                                    } catch (Exception e) {
                                         forwardTo = "../admin/error.jsp";
                                         String message = resourceBundle.getString("error.while.getting.allowed.grants") + " : " + e.getMessage();
                                         CarbonUIMessage.sendCarbonUIMessage(message, CarbonUIMessage.ERROR, request, e);

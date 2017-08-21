@@ -40,31 +40,40 @@ import org.opensaml.xml.validation.ValidationException;
 import org.w3c.dom.NodeList;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.Property;
+import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AbstractAuthorizationGrantHandler;
-import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.util.X509CredentialImpl;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
+import org.wso2.carbon.user.api.UserStoreException;
+import org.wso2.carbon.user.api.UserStoreManager;
+import org.wso2.carbon.user.core.service.RealmService;
+import org.wso2.carbon.user.core.util.UserCoreUtil;
+import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 
 /**
  * This implements SAML 2.0 Bearer Assertion Profile for OAuth 2.0 -
@@ -73,6 +82,9 @@ import java.util.Set;
 public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
 
     private static Log log = LogFactory.getLog(SAML2BearerGrantHandler.class);
+    private static final String SAMLSSO_AUTHENTICATOR = "samlsso";
+    private static final String SAML2SSO_AUTHENTICATOR_NAME = "SAMLSSOAuthenticator";
+
     SAMLSignatureProfileValidator profileValidator = null;
 
     @Override
@@ -129,8 +141,7 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
         // Logging the SAML token
         if (log.isDebugEnabled() && IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.SAML_ASSERTION)) {
             log.debug("Received SAML assertion : " +
-                            new String(Base64.decodeBase64(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getAssertion()))
-            );
+                            new String(Base64.decodeBase64(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getAssertion())));
         }
 
         try {
@@ -162,26 +173,23 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
             return false;
         }
 
-        /**
-         * The Assertion MUST contain a <Subject> element.  The subject MAY identify the resource owner for whom
-         * the access token is being requested.  For client authentication, the Subject MUST be the "client_id"
-         * of the OAuth client.  When using an Assertion as an authorization grant, the Subject SHOULD identify
-         * an authorized accessor for whom the access token is being requested (typically the resource owner, or
-         * an authorized delegate).  Additional information identifying the subject/principal of the transaction
-         * MAY be included in an <AttributeStatement>.
+        /*
+          The Assertion MUST contain a <Subject> element.  The subject MAY identify the resource owner for whom
+          the access token is being requested.  For client authentication, the Subject MUST be the "client_id"
+          of the OAuth client.  When using an Assertion as an authorization grant, the Subject SHOULD identify
+          an authorized accessor for whom the access token is being requested (typically the resource owner, or
+          an authorized delegate).  Additional information identifying the subject/principal of the transaction
+          MAY be included in an <AttributeStatement>.
          */
+
         if (assertion.getSubject() != null) {
-            String resourceOwnerUserName = assertion.getSubject().getNameID().getValue();
-            if (StringUtils.isBlank(resourceOwnerUserName)) {
+            String subjectIdentifier = assertion.getSubject().getNameID().getValue();
+            if (StringUtils.isBlank(subjectIdentifier)) {
                 if (log.isDebugEnabled()){
                     log.debug("NameID in Assertion cannot be empty");
                 }
                 return false;
             }
-            AuthenticatedUser user = OAuth2Util.getUserFromUserName(resourceOwnerUserName);
-            user.setAuthenticatedSubjectIdentifier(resourceOwnerUserName);
-            user.setFederatedUser(true);
-            tokReqMsgCtx.setAuthorizedUser(user);
         } else {
             if (log.isDebugEnabled()) {
                 log.debug("Cannot find a Subject in the Assertion");
@@ -196,12 +204,33 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
             return false;
         } else {
             try {
+
+                if (log.isDebugEnabled()) {
+                    log.debug("Retrieving identity provider : " + assertion.getIssuer().getValue() + " for " +
+                            "authenticator name " + SAMLSSO_AUTHENTICATOR);
+                }
                 identityProvider = IdentityProviderManager.getInstance().
                         getIdPByAuthenticatorPropertyValue("IdPEntityId",
-                                assertion.getIssuer().getValue(), tenantDomain, false);
+                                assertion.getIssuer().getValue(), tenantDomain, SAMLSSO_AUTHENTICATOR, false);
+
+                if (identityProvider == null) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Couldnt find an idp for samlsso authenticator. Hence retrieving " +
+                                "identity provider : " + assertion
+                                .getIssuer().getValue() + " for " +
+                                "authenticator name " + SAML2SSO_AUTHENTICATOR_NAME);
+                    }
+
+                    identityProvider = IdentityProviderManager.getInstance().
+                            getIdPByAuthenticatorPropertyValue("IdPEntityId",
+                                    assertion.getIssuer().getValue(), tenantDomain, SAML2SSO_AUTHENTICATOR_NAME, false);
+                }
                 // IF Federated IDP not found get the resident IDP and check,
-                // resident IDP entitiID == issuer
+                // resident IDP entityID == issuer
                 if (identityProvider != null) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Found an idp with given information. IDP name : " + identityProvider.getIdentityProviderName());
+                    }
                     if (IdentityApplicationConstants.RESIDENT_IDP_RESERVED_NAME.equals(
                             identityProvider.getIdentityProviderName())) {
                         identityProvider = IdentityProviderManager.getInstance().getResidentIdP(tenantDomain);
@@ -255,20 +284,22 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
                     return false;
                 }
             } catch (IdentityProviderManagementException e) {
-                log.error("Error while getting Federated Identity Provider ", e);
+                throw new IdentityOAuth2Exception("Error while getting an Identity Provider for issuer value : " +
+                        assertion.getIssuer().getValue(), e);
             }
         }
 
-        /**
-         * The Assertion MUST contain <Conditions> element with an <AudienceRestriction> element with an <Audience>
-         * element containing a URI reference that identifies the authorization server, or the service provider
-         * SAML entity of its controlling domain, as an intended audience.  The token endpoint URL of the
-         * authorization server MAY be used as an acceptable value for an <Audience> element.  The authorization
-         * server MUST verify that it is an intended audience for the Assertion.
+        setUser(tokReqMsgCtx, identityProvider, assertion, tenantDomain);
+        /*
+          The Assertion MUST contain <Conditions> element with an <AudienceRestriction> element with an <Audience>
+          element containing a URI reference that identifies the authorization server, or the service provider
+          SAML entity of its controlling domain, as an intended audience.  The token endpoint URL of the
+          authorization server MAY be used as an acceptable value for an <Audience> element.  The authorization
+          server MUST verify that it is an intended audience for the Assertion.
          */
 
         if (StringUtils.isBlank(tokenEndpointAlias)) {
-            if (log.isDebugEnabled()){
+            if (log.isDebugEnabled()) {
                 String errorMsg = "Token Endpoint alias has not been configured in the Identity Provider : "
                         + identityProvider.getIdentityProviderName() + " in tenant : " + tenantDomain;
                 log.debug(errorMsg);
@@ -279,8 +310,11 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
         Conditions conditions = assertion.getConditions();
         if (conditions != null) {
             //Set validity period extracted from SAML Assertion
-            long curTimeInMillis = Calendar.getInstance().getTimeInMillis();
-            tokReqMsgCtx.setValidityPeriod(conditions.getNotOnOrAfter().getMillis() - curTimeInMillis);
+            if (conditions.getNotOnOrAfter() != null) {
+                long curTimeInMillis = Calendar.getInstance().getTimeInMillis();
+                tokReqMsgCtx.setValidityPeriod(conditions.getNotOnOrAfter().getMillis() - curTimeInMillis);
+            }
+
             List<AudienceRestriction> audienceRestrictions = conditions.getAudienceRestrictions();
             if (audienceRestrictions != null && !audienceRestrictions.isEmpty()) {
                 boolean audienceFound = false;
@@ -321,35 +355,40 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
         }
 
 
-        /**
-         * The Assertion MUST have an expiry that limits the time window during which it can be used.  The expiry
-         * can be expressed either as the NotOnOrAfter attribute of the <Conditions> element or as the NotOnOrAfter
-         * attribute of a suitable <SubjectConfirmationData> element.
+        /*
+          The Assertion MUST have an expiry that limits the time window during which it can be used.  The expiry
+          can be expressed either as the NotOnOrAfter attribute of the <Conditions> element or as the NotOnOrAfter
+          attribute of a suitable <SubjectConfirmationData> element.
          */
 
-        /**
-         * The <Subject> element MUST contain at least one <SubjectConfirmation> element that allows the
-         * authorization server to confirm it as a Bearer Assertion.  Such a <SubjectConfirmation> element MUST
-         * have a Method attribute with a value of "urn:oasis:names:tc:SAML:2.0:cm:bearer".  The
-         * <SubjectConfirmation> element MUST contain a <SubjectConfirmationData> element, unless the Assertion
-         * has a suitable NotOnOrAfter attribute on the <Conditions> element, in which case the
-         * <SubjectConfirmationData> element MAY be omitted. When present, the <SubjectConfirmationData> element
-         * MUST have a Recipient attribute with a value indicating the token endpoint URL of the authorization
-         * server (or an acceptable alias).  The authorization server MUST verify that the value of the Recipient
-         * attribute matches the token endpoint URL (or an acceptable alias) to which the Assertion was delivered.
-         * The <SubjectConfirmationData> element MUST have a NotOnOrAfter attribute that limits the window during
-         * which the Assertion can be confirmed.  The <SubjectConfirmationData> element MAY also contain an Address
-         * attribute limiting the client address from which the Assertion can be delivered.  Verification of the
-         * Address is at the discretion of the authorization server.
+        /*
+          The <Subject> element MUST contain at least one <SubjectConfirmation> element that allows the
+          authorization server to confirm it as a Bearer Assertion.  Such a <SubjectConfirmation> element MUST
+          have a Method attribute with a value of "urn:oasis:names:tc:SAML:2.0:cm:bearer".  The
+          <SubjectConfirmation> element MUST contain a <SubjectConfirmationData> element, unless the Assertion
+          has a suitable NotOnOrAfter attribute on the <Conditions> element, in which case the
+          <SubjectConfirmationData> element MAY be omitted. When present, the <SubjectConfirmationData> element
+          MUST have a Recipient attribute with a value indicating the token endpoint URL of the authorization
+          server (or an acceptable alias).  The authorization server MUST verify that the value of the Recipient
+          attribute matches the token endpoint URL (or an acceptable alias) to which the Assertion was delivered.
+          The <SubjectConfirmationData> element MUST have a NotOnOrAfter attribute that limits the window during
+          which the Assertion can be confirmed.  The <SubjectConfirmationData> element MAY also contain an Address
+          attribute limiting the client address from which the Assertion can be delivered.  Verification of the
+          Address is at the discretion of the authorization server.
          */
 
         DateTime notOnOrAfterFromConditions = null;
-        Set<DateTime> notOnOrAfterFromSubjectConfirmations = new HashSet<DateTime>();
+        Map<DateTime,DateTime> notOnOrAfterFromAndNotBeforeSubjectConfirmations = new HashMap<>();
         boolean bearerFound = false;
         List<String> recipientURLS = new ArrayList<>();
 
         if (assertion.getConditions() != null && assertion.getConditions().getNotOnOrAfter() != null) {
             notOnOrAfterFromConditions = assertion.getConditions().getNotOnOrAfter();
+        }
+
+        DateTime notBeforeConditions = null;
+        if (assertion.getConditions() != null && assertion.getConditions().getNotBefore() != null) {
+            notBeforeConditions = assertion.getConditions().getNotBefore();
         }
 
         List<SubjectConfirmation> subjectConfirmations = assertion.getSubject().getSubjectConfirmations();
@@ -370,21 +409,33 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
                     if (s.getSubjectConfirmationData().getRecipient() != null) {
                         recipientURLS.add(s.getSubjectConfirmationData().getRecipient());
                     }
-                    if (s.getSubjectConfirmationData().getNotOnOrAfter() != null) {
-                        notOnOrAfterFromSubjectConfirmations.add(s.getSubjectConfirmationData().getNotOnOrAfter());
+                    if (s.getSubjectConfirmationData().getNotOnOrAfter() != null || s.getSubjectConfirmationData()
+                            .getNotBefore() != null) {
+                        notOnOrAfterFromAndNotBeforeSubjectConfirmations.put(s.getSubjectConfirmationData().getNotOnOrAfter(),
+                                s.getSubjectConfirmationData().getNotBefore());
                     } else {
                         if (log.isDebugEnabled()){
-                            log.debug("Cannot find NotOnOrAfter attribute in SubjectConfirmationData " +
+                            log.debug("Cannot find NotOnOrAfter and NotBefore attributes in " +
+                                    "SubjectConfirmationData " +
                                     s.getSubjectConfirmationData().toString());
+                        }
+                    }
+                } else {
+                    if (s.getSubjectConfirmationData() == null && notOnOrAfterFromConditions == null) {
+                        if (log.isDebugEnabled()){
+                            log.debug("Neither can find NotOnOrAfter attribute in Conditions nor SubjectConfirmationData" +
+                                    "in SubjectConfirmation " + s.toString());
                         }
                         return false;
                     }
-                } else if (s.getSubjectConfirmationData() == null && notOnOrAfterFromConditions == null) {
-                    if (log.isDebugEnabled()){
-                        log.debug("Neither can find NotOnOrAfter attribute in Conditions nor SubjectConfirmationData" +
-                                "in SubjectConfirmation " + s.toString());
+
+                    if (s.getSubjectConfirmationData() == null && notBeforeConditions == null) {
+                        if (log.isDebugEnabled()){
+                            log.debug("Neither can find NotBefore attribute in Conditions nor SubjectConfirmationData" +
+                                    "in SubjectConfirmation " + s.toString());
+                        }
+                        return false;
                     }
-                    return false;
                 }
             }
         } else {
@@ -411,30 +462,64 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
             return false;
         }
 
-        /**
-         * The authorization server MUST verify that the NotOnOrAfter instant has not passed, subject to allowable
-         * clock skew between systems.  An invalid NotOnOrAfter instant on the <Conditions> element invalidates
-         * the entire Assertion.  An invalid NotOnOrAfter instant on a <SubjectConfirmationData> element only
-         * invalidates the individual <SubjectConfirmation>.  The authorization server MAY reject Assertions with
-         * a NotOnOrAfter instant that is unreasonably far in the future.  The authorization server MAY ensure
-         * that Bearer Assertions are not replayed, by maintaining the set of used ID values for the length of
-         * time for which the Assertion would be considered valid based on the applicable NotOnOrAfter instant.
+        /*
+          The authorization server MUST verify that the NotOnOrAfter instant has not passed, subject to allowable
+          clock skew between systems.  An invalid NotOnOrAfter instant on the <Conditions> element invalidates
+          the entire Assertion.  An invalid NotOnOrAfter instant on a <SubjectConfirmationData> element only
+          invalidates the individual <SubjectConfirmation>.  The authorization server MAY reject Assertions with
+          a NotOnOrAfter instant that is unreasonably far in the future.  The authorization server MAY ensure
+          that Bearer Assertions are not replayed, by maintaining the set of used ID values for the length of
+          time for which the Assertion would be considered valid based on the applicable NotOnOrAfter instant.
          */
-        if (notOnOrAfterFromConditions != null && notOnOrAfterFromConditions.compareTo(new DateTime()) < 1) {
+        long timestampSkewInMillis = OAuthServerConfiguration.getInstance().getTimeStampSkewInSeconds() * 1000;
+        if (notOnOrAfterFromConditions != null && notOnOrAfterFromConditions.plus(timestampSkewInMillis).isBeforeNow
+                ()) {
             // notOnOrAfter is an expired timestamp
             if (log.isDebugEnabled()){
                 log.debug("NotOnOrAfter is having an expired timestamp in Conditions element");
             }
             return false;
         }
+
+        if (notBeforeConditions != null && notBeforeConditions.minus(timestampSkewInMillis).isAfterNow()) {
+            // notBefore is an early timestamp
+            if (log.isDebugEnabled()){
+                log.debug("NotBefore is having an early timestamp in Conditions element");
+            }
+            return false;
+        }
+
         boolean validSubjectConfirmationDataExists = false;
-        if (!notOnOrAfterFromSubjectConfirmations.isEmpty()) {
-            for (DateTime entry : notOnOrAfterFromSubjectConfirmations) {
-                if (entry.compareTo(new DateTime()) >= 1) {
-                    validSubjectConfirmationDataExists = true;
+        DateTime notOnOrAfterFromSubjectConfirmations = null;
+        if (!notOnOrAfterFromAndNotBeforeSubjectConfirmations.isEmpty()) {
+            for (Map.Entry<DateTime, DateTime> entry : notOnOrAfterFromAndNotBeforeSubjectConfirmations.entrySet()) {
+                if (entry.getKey().plus(timestampSkewInMillis).isAfterNow()) {
+                    notOnOrAfterFromSubjectConfirmations = entry.getKey();
+                    if (entry.getKey().compareTo(new DateTime()) >= 1) {
+                        validSubjectConfirmationDataExists = true;
+                    }
+                }
+                if (entry.getValue() != null) {
+                    if (entry.getValue().minus(timestampSkewInMillis).isBeforeNow()) {
+                        validSubjectConfirmationDataExists = true;
+                    }
                 }
             }
         }
+
+        if (notOnOrAfterFromConditions == null && notOnOrAfterFromSubjectConfirmations != null) {
+            //Set validity period extracted from SAML subject confirmation
+            long curTimeInMillis = Calendar.getInstance().getTimeInMillis();
+            tokReqMsgCtx.setValidityPeriod(notOnOrAfterFromSubjectConfirmations.getMillis() - curTimeInMillis);
+        }
+
+        if (notOnOrAfterFromConditions == null) {
+            if (log.isDebugEnabled()) {
+                log.debug("No valid NotOnOrAfter element found");
+            }
+            return false;
+        }
+
         if (notOnOrAfterFromConditions == null && !validSubjectConfirmationDataExists) {
             if (log.isDebugEnabled()){
                 log.debug("No valid NotOnOrAfter element found in SubjectConfirmations");
@@ -442,9 +527,16 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
             return false;
         }
 
-        /**
-         * The Assertion MUST be digitally signed by the issuer and the authorization server MUST verify the
-         * signature.
+        if (notBeforeConditions == null && !validSubjectConfirmationDataExists) {
+            if (log.isDebugEnabled()){
+                log.debug("No valid NotBefore element found in SubjectConfirmations");
+            }
+            return false;
+        }
+
+        /*
+          The Assertion MUST be digitally signed by the issuer and the authorization server MUST verify the
+          signature.
          */
 
         try {
@@ -478,13 +570,14 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
         }
 
 
-        /**
-         * The authorization server MUST verify that the Assertion is valid in all other respects per
-         * [OASIS.saml-core-2.0-os], such as (but not limited to) evaluating all content within the Conditions
-         * element including the NotOnOrAfter and NotBefore attributes, rejecting unknown condition types, etc.
-         *
-         * [OASIS.saml-core-2.0-os] - http://docs.oasis-open.org/security/saml/v2.0/saml-core-2.0-os.pdf
+        /*
+          The authorization server MUST verify that the Assertion is valid in all other respects per
+          [OASIS.saml-core-2.0-os], such as (but not limited to) evaluating all content within the Conditions
+          element including the NotOnOrAfter and NotBefore attributes, rejecting unknown condition types, etc.
+
+          [OASIS.saml-core-2.0-os] - http://docs.oasis-open.org/security/saml/v2.0/saml-core-2.0-os.pdf
          */
+
 
         // TODO: Throw the SAML request through the general SAML2 validation routines
 
@@ -506,4 +599,154 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
 
         return true;
     }
+
+    @Override
+    public boolean issueRefreshToken() throws IdentityOAuth2Exception {
+
+        return OAuthServerConfiguration.getInstance()
+                .getValueForIsRefreshTokenAllowed(OAuthConstants.OAUTH_SAML2_BEARER_METHOD);
+    }
+
+    /**
+     * Set the user identified from subject identifier from assertion
+     * @param tokReqMsgCtx Token Request Message Context
+     * @param identityProvider Identity Provider
+     * @param assertion Assertion
+     * @param spTenantDomain Service Provider Tenant Domain.
+     * @throws IdentityOAuth2Exception
+     */
+    protected void setUser(OAuthTokenReqMessageContext tokReqMsgCtx, IdentityProvider identityProvider, Assertion
+            assertion, String spTenantDomain) throws IdentityOAuth2Exception {
+        if (OAuthConstants.UserType.FEDERATED_USER_DOMAIN_PREFIX.equalsIgnoreCase(OAuthServerConfiguration.getInstance()
+                .getSaml2BearerTokenUserType())) {
+            setFederatedUser(tokReqMsgCtx, assertion, spTenantDomain);
+        } else if (OAuthConstants.UserType.LOCAL_USER_TYPE.equalsIgnoreCase(OAuthServerConfiguration.getInstance()
+                .getSaml2BearerTokenUserType())) {
+            try {
+                setLocalUser(tokReqMsgCtx, assertion, spTenantDomain);
+            } catch (UserStoreException e) {
+                throw new IdentityOAuth2Exception("Error while building local user from given assertion", e);
+            }
+        } else {
+            if (IdentityApplicationConstants.RESIDENT_IDP_RESERVED_NAME.equals(
+                    identityProvider.getIdentityProviderName())) {
+                try {
+                    setLocalUser(tokReqMsgCtx, assertion, spTenantDomain);
+                } catch (UserStoreException e) {
+                    throw new IdentityOAuth2Exception("Error while building local user from given assertion", e);
+                }
+            } else {
+                setFederatedUser(tokReqMsgCtx, assertion, spTenantDomain);
+            }
+        }
+    }
+
+    /**
+     * Build and set Federated User Object.
+     * @param tokReqMsgCtx Token request message context.
+     * @param assertion SAML2 Assertion.
+     * @param tenantDomain Tenant Domain.
+     */
+    protected void setFederatedUser(OAuthTokenReqMessageContext tokReqMsgCtx, Assertion assertion, String
+            tenantDomain) {
+
+        String subjectIdentifier = assertion.getSubject().getNameID().getValue();
+        if (log.isDebugEnabled()) {
+            log.debug("Setting federated user : " + subjectIdentifier + ". with SP tenant domain : " + tenantDomain);
+        }
+        AuthenticatedUser user =
+                AuthenticatedUser.createFederateAuthenticatedUserFromSubjectIdentifier(subjectIdentifier);
+        user.setUserName(subjectIdentifier);
+        tokReqMsgCtx.setAuthorizedUser(user);
+    }
+
+    /**
+     * Set the local user to the token req message context after validating the user.
+     *
+     * @param tokReqMsgCtx Token Request Message Context
+     * @param assertion SAML2 Assertion
+     * @param spTenantDomain Service Provider tenant domain
+     * @throws UserStoreException
+     * @throws IdentityOAuth2Exception
+     */
+    protected void setLocalUser(OAuthTokenReqMessageContext tokReqMsgCtx, Assertion assertion, String spTenantDomain)
+            throws UserStoreException, IdentityOAuth2Exception {
+
+        RealmService realmService = OAuthComponentServiceHolder.getInstance().getRealmService();
+        UserStoreManager userStoreManager = null;
+        ServiceProvider serviceProvider = null;
+
+        try {
+            if (log.isDebugEnabled()) {
+                log.debug("Retrieving service provider for client id : " + tokReqMsgCtx.getOauth2AccessTokenReqDTO()
+                        .getClientId() + ". Tenant domain : " + spTenantDomain);
+            }
+            serviceProvider = OAuth2ServiceComponentHolder.getApplicationMgtService().getServiceProviderByClientId(
+                    tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId(), OAuthConstants.Scope.OAUTH2,
+                    spTenantDomain);
+        } catch (IdentityApplicationManagementException e) {
+            throw new IdentityOAuth2Exception("Error while retrieving service provider for client id : " +
+                    tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId() + " in tenant domain " + spTenantDomain);
+        }
+
+        AuthenticatedUser authenticatedUser = buildLocalUser(tokReqMsgCtx, assertion, serviceProvider, spTenantDomain);
+        if (log.isDebugEnabled()) {
+            log.debug("Setting local user with username :" + authenticatedUser.getUserName() + ". User store domain :" +
+                    authenticatedUser.getUserStoreDomain() + ". Tenant domain : " + authenticatedUser.getTenantDomain
+                    () + " . Authenticated subjectIdentifier : " + authenticatedUser
+                    .getAuthenticatedSubjectIdentifier());
+        }
+
+        if (!spTenantDomain.equalsIgnoreCase(authenticatedUser.getTenantDomain()) && !serviceProvider.isSaasApp()) {
+            throw new IdentityOAuth2Exception("Non SaaS app tries to issue token for a different tenant domain. User " +
+                    "tenant domain : " + authenticatedUser.getTenantDomain() + ". SP tenant domain : " +
+                    spTenantDomain);
+        }
+
+        userStoreManager = realmService.getTenantUserRealm(IdentityTenantUtil.getTenantId(authenticatedUser
+                .getTenantDomain())).getUserStoreManager();
+
+        if (log.isDebugEnabled()) {
+            log.debug("Checking whether the user exists in local user store");
+        }
+        boolean isExistingUser = userStoreManager.isExistingUser(authenticatedUser.getUsernameAsSubjectIdentifier(true,
+                false));
+        if (!isExistingUser) {
+            throw new IdentityOAuth2Exception("User " + authenticatedUser.getUsernameAsSubjectIdentifier(true,
+                    false) + " doesn't exist in local user store.");
+        }
+        tokReqMsgCtx.setAuthorizedUser(authenticatedUser);
+    }
+
+    /**
+     * Build the local user using subject information in the assertion.
+     *
+     * @param tokReqMsgCtx   Token message context.
+     * @param assertion      SAML2 Assertion
+     * @param spTenantDomain Service provider tenant domain
+     * @return Authenticated User
+     */
+    protected AuthenticatedUser buildLocalUser(OAuthTokenReqMessageContext tokReqMsgCtx, Assertion assertion,
+                                               ServiceProvider serviceProvider, String spTenantDomain) {
+
+        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+        String subjectIdentifier = assertion.getSubject().getNameID().getValue();
+        String userTenantDomain = null;
+        if (log.isDebugEnabled()) {
+            log.debug("Building local user with assertion subject : " + subjectIdentifier);
+        }
+        authenticatedUser.setUserStoreDomain(UserCoreUtil.extractDomainFromName(subjectIdentifier));
+        authenticatedUser.setUserName(MultitenantUtils.getTenantAwareUsername(UserCoreUtil.removeDomainFromName
+                (subjectIdentifier)));
+
+        userTenantDomain = MultitenantUtils.getTenantDomain(subjectIdentifier);
+        if (StringUtils.isEmpty(userTenantDomain)) {
+            userTenantDomain = spTenantDomain;
+        }
+
+        authenticatedUser.setTenantDomain(userTenantDomain);
+        authenticatedUser.setAuthenticatedSubjectIdentifier(authenticatedUser.getUserName(), serviceProvider);
+        return authenticatedUser;
+    }
+
 }

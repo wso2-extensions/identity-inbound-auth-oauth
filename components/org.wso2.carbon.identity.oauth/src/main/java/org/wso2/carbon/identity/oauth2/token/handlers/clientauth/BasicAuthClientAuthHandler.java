@@ -18,6 +18,8 @@
 
 package org.wso2.carbon.identity.oauth2.token.handlers.clientauth;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -26,6 +28,8 @@ import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 public class BasicAuthClientAuthHandler extends AbstractClientAuthHandler {
+
+    private static Log log = LogFactory.getLog(BasicAuthClientAuthHandler.class);
 
     @Override
     public boolean authenticateClient(OAuthTokenReqMessageContext tokReqMsgCtx)
@@ -37,6 +41,10 @@ public class BasicAuthClientAuthHandler extends AbstractClientAuthHandler {
             OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO =
                     tokReqMsgCtx.getOauth2AccessTokenReqDTO();
             try {
+                if (log.isDebugEnabled()) {
+                    log.debug("Authenticating client: " + oAuth2AccessTokenReqDTO.getClientId() + " with client " +
+                            "secret.");
+                }
                 return OAuth2Util.authenticateClient(oAuth2AccessTokenReqDTO.getClientId(),
                         oAuth2AccessTokenReqDTO.getClientSecret());
             } catch (IdentityOAuthAdminException e) {

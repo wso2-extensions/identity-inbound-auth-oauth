@@ -18,13 +18,14 @@
 package org.wso2.carbon.identity.oauth.dcr.factory;
 
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.wso2.carbon.identity.application.authentication.framework.exception.FrameworkException;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.HttpIdentityResponse;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.HttpIdentityResponseFactory;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.IdentityResponse;
-import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.dcr.exception.RegistrationException;
 import org.wso2.carbon.identity.oauth.dcr.model.RegistrationResponse;
@@ -45,6 +46,7 @@ public class HttpRegistrationResponseFactory extends HttpIdentityResponseFactory
     public static String INVALID_SOFTWARE_STATEMENT = "invalid_software_statement";
     public static String UNAPPROVED_SOFTWARE_STATEMENT = "unapproved_software_statement";
     public static String BACKEND_FAILED = "backend_failed";
+    private static Log log = LogFactory.getLog(HttpRegistrationResponseFactory.class);
 
     @Override
     public HttpIdentityResponse.HttpIdentityResponseBuilder create(IdentityResponse identityResponse) {
@@ -58,29 +60,31 @@ public class HttpRegistrationResponseFactory extends HttpIdentityResponseFactory
     @Override
     public void create(HttpIdentityResponse.HttpIdentityResponseBuilder httpIdentityResponseBuilder,
                        IdentityResponse identityResponse) {
-        RegistrationResponse registrationResponse = (RegistrationResponse) identityResponse;
-        httpIdentityResponseBuilder.setBody(generateSuccessfulResponse(registrationResponse).toJSONString());
-        httpIdentityResponseBuilder.setStatusCode(HttpServletResponse.SC_CREATED);
-        httpIdentityResponseBuilder.addHeader(OAuthConstants.HTTP_RESP_HEADER_CACHE_CONTROL,
-                                              OAuthConstants.HTTP_RESP_HEADER_VAL_CACHE_CONTROL_NO_STORE);
-        httpIdentityResponseBuilder.addHeader(OAuthConstants.HTTP_RESP_HEADER_PRAGMA,
-                                              OAuthConstants.HTTP_RESP_HEADER_VAL_PRAGMA_NO_CACHE);
-        httpIdentityResponseBuilder.addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON);
+        RegistrationResponse registrationResponse=null;
+        if (identityResponse instanceof RegistrationResponse) {
+            registrationResponse = (RegistrationResponse) identityResponse;
+            httpIdentityResponseBuilder.setBody(generateSuccessfulResponse(registrationResponse).toJSONString());
+            httpIdentityResponseBuilder.setStatusCode(HttpServletResponse.SC_CREATED);
+            httpIdentityResponseBuilder.addHeader(OAuthConstants.HTTP_RESP_HEADER_CACHE_CONTROL,
+                    OAuthConstants.HTTP_RESP_HEADER_VAL_CACHE_CONTROL_NO_STORE);
+            httpIdentityResponseBuilder.addHeader(OAuthConstants.HTTP_RESP_HEADER_PRAGMA,
+                    OAuthConstants.HTTP_RESP_HEADER_VAL_PRAGMA_NO_CACHE);
+            httpIdentityResponseBuilder.addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON);
+        } else {
+            // This else part will not be reached from application logic.
+            log.error("Can't create httpIdentityResponseBuilder. identityResponse is not an instance of " +
+                    "RegistrationResponse");
+        }
     }
 
     public HttpIdentityResponse.HttpIdentityResponseBuilder handleException(FrameworkException exception) {
         HttpIdentityResponse.HttpIdentityResponseBuilder builder =
                 new HttpIdentityResponse.HttpIdentityResponseBuilder();
         String errorMessage = "";
-        List<IdentityException.ErrorInfo> errorInfoList = exception.getErrorInfoList();
-        if (errorInfoList.size() > 0) {
-            IdentityException.ErrorInfo errorInfo = errorInfoList.get(errorInfoList.size() - 1);
-            if (ErrorCodes.META_DATA_VALIDATION_FAILED.name().equals(errorInfo.getErrorCode())) {
-                errorMessage = generateErrorResponse(INVALID_CLIENT_METADATA, exception.getMessage()).toJSONString();
-            } else if (ErrorCodes.BAD_REQUEST.name().equals(errorInfo.getErrorCode())) {
-                errorMessage = generateErrorResponse(BACKEND_FAILED, exception.getMessage()).toJSONString();
-            }
-
+        if (ErrorCodes.META_DATA_VALIDATION_FAILED.name().equals(exception.getErrorCode())) {
+            errorMessage = generateErrorResponse(INVALID_CLIENT_METADATA, exception.getMessage()).toJSONString();
+        } else if (ErrorCodes.BAD_REQUEST.name().equals(exception.getErrorCode())) {
+            errorMessage = generateErrorResponse(BACKEND_FAILED, exception.getMessage()).toJSONString();
         }
         builder.setBody(errorMessage);
         builder.setStatusCode(HttpServletResponse.SC_BAD_REQUEST);
@@ -94,10 +98,8 @@ public class HttpRegistrationResponseFactory extends HttpIdentityResponseFactory
 
     @Override
     public boolean canHandle(IdentityResponse identityResponse) {
-        if (identityResponse instanceof RegistrationResponse) {
-            return true;
-        }
-        return false;
+
+        return identityResponse instanceof RegistrationResponse;
     }
 
     public boolean canHandle(FrameworkException exception) {
@@ -131,6 +133,9 @@ public class HttpRegistrationResponseFactory extends HttpIdentityResponseFactory
         obj.put(RegistrationResponse.DCRegisterResponseConstants.CLIENT_SECRET, registrationResponse
                 .getRegistrationResponseProfile()
                 .getClientSecret());
+        obj.put(RegistrationResponse.DCRegisterResponseConstants.CLIENT_SECRET_EXPIRES_AT, registrationResponse
+                .getRegistrationResponseProfile()
+                .getClientSecretExpiresAt());
         return obj;
     }
 

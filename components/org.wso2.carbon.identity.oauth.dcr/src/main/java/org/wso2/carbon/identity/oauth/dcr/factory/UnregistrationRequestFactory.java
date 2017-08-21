@@ -71,27 +71,35 @@ public class UnregistrationRequestFactory extends HttpIdentityRequestFactory {
     @Override
     public void create(IdentityRequest.IdentityRequestBuilder builder, HttpServletRequest request,
                        HttpServletResponse response) throws FrameworkClientException {
-        UnregistrationRequest.DCRUnregisterRequestBuilder unregisterRequestBuilder =
-                (UnregistrationRequest.DCRUnregisterRequestBuilder) builder;
-        super.create(unregisterRequestBuilder, request, response);
 
-        Map<String, String> headers = new HashMap<>();
-        headers.put(HttpHeaders.AUTHORIZATION, request.getHeader(HttpHeaders.AUTHORIZATION));
+        UnregistrationRequest.DCRUnregisterRequestBuilder unregisterRequestBuilder = null;
+        if (builder instanceof UnregistrationRequest.DCRUnregisterRequestBuilder) {
+            unregisterRequestBuilder =
+                    (UnregistrationRequest.DCRUnregisterRequestBuilder) builder;
+            super.create(unregisterRequestBuilder, request, response);
 
-        unregisterRequestBuilder.setMethod(request.getMethod());
-        unregisterRequestBuilder.setHeaders(headers);
+            Map<String, String> headers = new HashMap<>();
+            headers.put(HttpHeaders.AUTHORIZATION, request.getHeader(HttpHeaders.AUTHORIZATION));
 
-        String clientId = request.getParameter("userId");
-        String applicationName = request.getParameter("applicationName");
-        String consumerKey = null;
-        Matcher matcher = DCRConstants.DCR_ENDPOINT_UNREGISTER_URL_PATTERN.matcher(request.getRequestURI());
-        if (matcher.find()) {
-            consumerKey = matcher.group(1);
+            unregisterRequestBuilder.setMethod(request.getMethod());
+            unregisterRequestBuilder.setHeaders(headers);
+
+            String clientId = request.getParameter("userId");
+            String applicationName = request.getParameter("applicationName");
+            String consumerKey = null;
+            Matcher matcher = DCRConstants.DCR_ENDPOINT_UNREGISTER_URL_PATTERN.matcher(request.getRequestURI());
+            if (matcher.find()) {
+                consumerKey = matcher.group(2);
+            }
+
+            unregisterRequestBuilder.setApplicationName(applicationName);
+            unregisterRequestBuilder.setUserId(clientId);
+            unregisterRequestBuilder.setConsumerKey(consumerKey);
+        } else {
+            // This else part will not be reached from application logic.
+            log.error("Can't create unregisterRequestBuilder. builder is not an instance of " +
+                    "UnregistrationRequest.DCRUnregisterRequestBuilder");
         }
-
-        unregisterRequestBuilder.setApplicationName(applicationName);
-        unregisterRequestBuilder.setUserId(clientId);
-        unregisterRequestBuilder.setConsumerKey(consumerKey);
 
     }
 

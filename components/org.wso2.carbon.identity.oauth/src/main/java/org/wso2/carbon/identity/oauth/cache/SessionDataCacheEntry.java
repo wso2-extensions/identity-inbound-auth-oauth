@@ -32,6 +32,7 @@ public class SessionDataCacheEntry extends CacheEntry {
     private OAuth2Parameters oAuth2Parameters;
     private long authTime;
     private String authenticatedIdPs;
+    private String essentialClaims ;
 
     private String queryString = null;
 
@@ -83,6 +84,14 @@ public class SessionDataCacheEntry extends CacheEntry {
 
     public void setAuthTime(long authTime) {
         this.authTime = authTime;
+    }
+
+    public String getEssentialClaims() {
+        return essentialClaims;
+    }
+
+    public void setEssentialClaims(String essentialClaims) {
+        this.essentialClaims = essentialClaims;
     }
 
 }

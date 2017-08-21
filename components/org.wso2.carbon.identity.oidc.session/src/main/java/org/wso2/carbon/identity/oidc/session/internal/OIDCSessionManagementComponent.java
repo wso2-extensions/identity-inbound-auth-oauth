@@ -26,6 +26,7 @@ import org.osgi.service.http.HttpService;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
 import org.wso2.carbon.identity.oidc.session.servlet.OIDCLogoutServlet;
 import org.wso2.carbon.identity.oidc.session.servlet.OIDCSessionIFrameServlet;
+import org.wso2.carbon.user.core.service.RealmService;
 
 import javax.servlet.Servlet;
 
@@ -34,6 +35,9 @@ import javax.servlet.Servlet;
  * @scr.reference name="osgi.httpservice" interface="org.osgi.service.http.HttpService"
  * cardinality="1..1" policy="dynamic" bind="setHttpService"
  * unbind="unsetHttpService"
+ * @scr.reference name="user.realmservice.default"
+ * interface="org.wso2.carbon.user.core.service.RealmService" cardinality="1..1"
+ * policy="dynamic" bind="setRealmService" unbind="unsetRealmService"
  */
 public class OIDCSessionManagementComponent {
     private static final Log log = LogFactory.getLog(OIDCSessionManagementComponent.class);
@@ -90,5 +94,20 @@ public class OIDCSessionManagementComponent {
             log.info("Unsetting the HTTP Service in OIDC Session Management bundle");
         }
         OIDCSessionManagementComponentServiceHolder.setHttpService(null);
+    }
+    protected void setRealmService(RealmService realmService) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Setting the Realm Service");
+        }
+        OIDCSessionManagementComponentServiceHolder.setRealmService(realmService);
+    }
+
+    protected void unsetRealmService(RealmService realmService) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Unsetting the Realm Service");
+        }
+        OIDCSessionManagementComponentServiceHolder.setRealmService(null);
     }
 }

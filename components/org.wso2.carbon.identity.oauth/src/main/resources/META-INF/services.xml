@@ -33,13 +33,53 @@
 		<schema schemaNamespace="http://org.apache.axis2/xsd" elementFormDefaultQualified="true" />
 		<description>OAuth administration related functionality.</description>
 		<parameter name="ServiceClass">org.wso2.carbon.identity.oauth.OAuthAdminService</parameter>
-		<parameter name="AuthorizationAction" locked="false">/permission/admin/manage</parameter>
+		<parameter name="AuthorizationAction" locked="false">/permission/admin/manage/identity/applicationmgt</parameter>
         <parameter name="adminService" locked="true">true</parameter>
+
+        <operation name="registerOAuthConsumer" mep="http://www.w3.org/2006/01/wsdl/in-out">
+            <parameter name="AuthorizationAction" locked="true">/permission/admin/manage/identity/applicationmgt/create</parameter>
+        </operation>
+        <operation name="getAllOAuthApplicationData" mep="http://www.w3.org/2006/01/wsdl/in-out">
+            <parameter name="AuthorizationAction" locked="true">/permission/admin/manage/identity/applicationmgt/view</parameter>
+        </operation>
+        <operation name="getOAuthApplicationData" mep="http://www.w3.org/2006/01/wsdl/in-out">
+            <parameter name="AuthorizationAction" locked="true">/permission/admin/manage/identity/applicationmgt/view</parameter>
+        </operation>
+        <operation name="getOAuthApplicationDataByAppName" mep="http://www.w3.org/2006/01/wsdl/in-out">
+            <parameter name="AuthorizationAction" locked="true">/permission/admin/manage/identity/applicationmgt/view</parameter>
+        </operation>
+        <operation name="registerOAuthApplicationData" mep="http://www.w3.org/2006/01/wsdl/in-out">
+            <parameter name="AuthorizationAction" locked="true">/permission/admin/manage/identity/applicationmgt/create</parameter>
+        </operation>
+        <operation name="updateConsumerApplication" mep="http://www.w3.org/2006/01/wsdl/in-out">
+            <parameter name="AuthorizationAction" locked="true">/permission/admin/manage/identity/applicationmgt/update</parameter>
+        </operation>
+        <operation name="getOauthApplicationState" mep="http://www.w3.org/2006/01/wsdl/in-out">
+            <parameter name="AuthorizationAction" locked="true">/permission/admin/manage/identity/applicationmgt/view</parameter>
+        </operation>
+        <operation name="updateConsumerAppState" mep="http://www.w3.org/2006/01/wsdl/in-out">
+            <parameter name="AuthorizationAction" locked="true">/permission/admin/manage/identity/applicationmgt/update</parameter>
+        </operation>
+        <operation name="updateOauthSecretKey" mep="http://www.w3.org/2006/01/wsdl/in-out">
+            <parameter name="AuthorizationAction" locked="true">/permission/admin/manage/identity/applicationmgt/update</parameter>
+        </operation>
+        <operation name="removeOAuthApplicationData" mep="http://www.w3.org/2006/01/wsdl/in-out">
+            <parameter name="AuthorizationAction" locked="true">/permission/admin/manage/identity/applicationmgt/delete</parameter>
+        </operation>
         <operation name="getAppsAuthorizedByUser" mep="http://www.w3.org/2006/01/wsdl/in-out">
             <parameter name="AuthorizationAction" locked="true">/permission/admin/login</parameter>
         </operation>
         <operation name="revokeAuthzForAppsByResoureOwner" mep="http://www.w3.org/2006/01/wsdl/in-out">
             <parameter name="AuthorizationAction" locked="true">/permission/admin/login</parameter>
+        </operation>
+        <operation name="updateApproveAlwaysForAppConsentByResourceOwner" mep="http://www.w3.org/2006/01/wsdl/in-out">
+            <parameter name="AuthorizationAction" locked="true">/permission/admin/manage/identity/applicationmgt/update</parameter>
+        </operation>
+        <operation name="getAllowedGrantTypes" mep="http://www.w3.org/2006/01/wsdl/in-out">
+            <parameter name="AuthorizationAction" locked="true">/permission/admin/manage/identity/applicationmgt/view</parameter>
+        </operation>
+        <operation name="isPKCESupportEnabled" mep="http://www.w3.org/2006/01/wsdl/in-out">
+            <parameter name="AuthorizationAction" locked="true">/permission/admin/manage/identity/applicationmgt/view</parameter>
         </operation>
     </service>
 
@@ -50,8 +90,19 @@
         <schema schemaNamespace="http://org.apache.axis2/xsd" elementFormDefaultQualified="true" />
         <description>OAuth administration related functionality.</description>
         <parameter name="ServiceClass">org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService</parameter>
-        <parameter name="AuthorizationAction" locked="true">/permission/admin/manage/identity/pep</parameter>
+        <parameter name="AuthorizationAction" locked="false">/permission/admin/manage/identity
+            /applicationmgt</parameter>
         <parameter name="adminService" locked="true">true</parameter>
+
+        <operation name="validate" mep="http://www.w3.org/2006/01/wsdl/in-out">
+            <parameter name="AuthorizationAction" locked="true">/permission/admin/manage/identity/applicationmgt/view</parameter>
+        </operation>
+        <operation name="findOAuthConsumerIfTokenIsValid" mep="http://www.w3.org/2006/01/wsdl/in-out">
+            <parameter name="AuthorizationAction" locked="true">/permission/admin/manage/identity/applicationmgt/view</parameter>
+        </operation>
+        <operation name="buildIntrospectionResponse" mep="http://www.w3.org/2006/01/wsdl/in-out">
+            <parameter name="AuthorizationAction" locked="true">/permission/admin/manage/identity/applicationmgt/view</parameter>
+        </operation>
     </service>
 
 	<parameter name="hiddenService" locked="true">true</parameter>

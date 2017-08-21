@@ -49,46 +49,10 @@
     String applicationName = request.getParameter("application");
     String consumersecret = request.getParameter("consumersecret");
     String oauthVersion = request.getParameter("oauthVersion");
-    //-- start setting grants
-    String grantCode = request.getParameter("grant_code");
-    String grantImplicit = request.getParameter("grant_implicit");
-    String grantPassword = request.getParameter("grant_password");
-    String grantClient = request.getParameter("grant_client");
-    String grantRefresh = request.getParameter("grant_refresh");
-    String grantSAML1 = request.getParameter("grant_saml1");
-    String grantSAML2 = request.getParameter("grant_saml2");
-    String grantNTLM = request.getParameter("grant_ntlm");
-    String grants = null;
+    String grants;
    	StringBuffer buff = new StringBuffer();
     boolean pkceMandatory = false;
     boolean pkceSupportPlain = false;
-
-
-	if (grantCode != null) {
-		buff.append(grantCode + " ");
-	}
-    if (grantImplicit != null) {
-        buff.append(grantImplicit + " ");
-    }
-	if (grantPassword != null) {
-		buff.append(grantPassword + " ");
-	}
-	if (grantClient != null) {
-		buff.append(grantClient + " ");
-	}
-	if (grantRefresh != null) {
-		buff.append(grantRefresh + " ");
-	}
-	if (grantSAML1 != null) {
-		buff.append(grantSAML1+ " ");
-	}
-	if (grantSAML2 != null) {
-    		buff.append(grantSAML2+ " ");
-    }
-    if (grantNTLM != null) {
-		buff.append(grantNTLM);
-	}
-	grants = buff.toString();
 
     if(request.getParameter("pkce") != null) {
         pkceMandatory = true;
@@ -120,6 +84,14 @@
         app.setOAuthVersion(oauthVersion);
         app.setPkceMandatory(pkceMandatory);
         app.setPkceSupportPlain(pkceSupportPlain);
+        String[] grantTypes = client.getAllowedOAuthGrantTypes();
+        for (String grantType : grantTypes) {
+            String grant = request.getParameter("grant_" + grantType);
+            if (grant != null) {
+                buff.append(grantType + " ");
+            }
+        }
+        grants = buff.toString();
         if(OAuthConstants.OAuthVersions.VERSION_2.equals(oauthVersion)){
             app.setGrantTypes(grants);
         }

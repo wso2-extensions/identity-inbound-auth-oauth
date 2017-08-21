@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth.cache;
 
 import org.wso2.carbon.identity.application.common.cache.BaseCache;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.utils.CarbonUtils;
 
@@ -50,5 +51,10 @@ public class AppInfoCache extends BaseCache<String, OAuthAppDO> {
             }
         }
         return instance;
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return super.isEnabled() && OAuthServerConfiguration.getInstance().isCacheEnabled();
     }
 }

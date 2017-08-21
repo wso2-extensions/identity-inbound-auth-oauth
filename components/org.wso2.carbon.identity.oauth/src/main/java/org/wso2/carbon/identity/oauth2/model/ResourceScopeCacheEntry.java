@@ -22,9 +22,11 @@ import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 
 public class ResourceScopeCacheEntry extends CacheEntry {
 
-    private static final long serialVersionUID = 3954760566883107381L;
+    private static final long serialVersionUID = 8986718905978405685L;
 
     private String scope;
+
+    private int tenantId;
 
     public ResourceScopeCacheEntry(String scope) {
         this.scope = scope;
@@ -36,6 +38,14 @@ public class ResourceScopeCacheEntry extends CacheEntry {
 
     public void setScope(String scope) {
         this.scope = scope;
+    }
+
+    public int getTenantId() {
+        return tenantId;
+    }
+
+    public void setTenantId(int tenantId) {
+        this.tenantId = tenantId;
     }
 
 }

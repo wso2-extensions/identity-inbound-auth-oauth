@@ -23,6 +23,8 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 
+import java.util.Set;
+
 /**
  * Default OAuth2 access token validator that supports "bearer" token type.
  * However this validator does not validate scopes or access delegation.
@@ -30,6 +32,7 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 public class DefaultOAuth2TokenValidator implements OAuth2TokenValidator {
 
     public static final String TOKEN_TYPE = "bearer";
+    private static final String ACCESS_TOKEN_DO = "AccessTokenDO";
 
     @Override
     public boolean validateAccessDelegation(OAuth2TokenValidationMessageContext messageContext)
@@ -43,28 +46,30 @@ public class DefaultOAuth2TokenValidator implements OAuth2TokenValidator {
     public boolean validateScope(OAuth2TokenValidationMessageContext messageContext)
             throws IdentityOAuth2Exception {
 
-        OAuth2ScopeValidator scopeValidator = OAuthServerConfiguration.getInstance().getoAuth2ScopeValidator();
+        Set<OAuth2ScopeValidator> oAuth2ScopeValidators = OAuthServerConfiguration.getInstance()
+                .getOAuth2ScopeValidators();
+        for (OAuth2ScopeValidator validator: oAuth2ScopeValidators) {
 
-        //If a scope validator is engaged through the configuration
-        if (scopeValidator != null && messageContext.getRequestDTO() != null &&
-            messageContext.getRequestDTO().getContext() != null) {
-            
-            String resource = null;
+            if (validator != null && validator.canHandle(messageContext)) {
+                String resource = null;
+                if (messageContext.getRequestDTO().getContext() != null) {
+                    //Iterate the array of context params to find the 'resource' context param.
+                    for (OAuth2TokenValidationRequestDTO.TokenValidationContextParam resourceParam :
+                            messageContext.getRequestDTO().getContext()) {
+                        //If the context param is the resource that is being accessed
+                        if (resourceParam != null && "resource".equals(resourceParam.getKey())) {
+                            resource = resourceParam.getValue();
+                            break;
+                        }
+                    }
+                }
+                boolean isValid = validator.validateScope((AccessTokenDO) messageContext.getProperty
+                        (ACCESS_TOKEN_DO), resource);
 
-            //Iterate the array of context params to find the 'resource' context param.
-            for (OAuth2TokenValidationRequestDTO.TokenValidationContextParam resourceParam :
-                    messageContext.getRequestDTO().getContext()) {
-                //If the context param is the resource that is being accessed
-                if (resourceParam != null && "resource".equals(resourceParam.getKey())) {
-                    resource = resourceParam.getValue();
-                    break;
+                if (!isValid) {
+                    return false;
                 }
             }
-
-            //Return True if there is no resource to validate the token against
-            //OR if the token has a valid scope to access the resource. False otherwise.
-            return resource == null ||
-                    scopeValidator.validateScope((AccessTokenDO) messageContext.getProperty("AccessTokenDO"), resource);
         }
         return true;
     }

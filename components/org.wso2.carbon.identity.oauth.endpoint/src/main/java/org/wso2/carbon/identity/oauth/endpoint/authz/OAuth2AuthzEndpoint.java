@@ -18,7 +18,8 @@
 package org.wso2.carbon.identity.oauth.endpoint.authz;
 
 import org.apache.commons.codec.digest.DigestUtils;
-import org.wso2.carbon.identity.application.authentication.framework.context.SessionContext;
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -28,10 +29,13 @@ import org.apache.oltu.oauth2.common.OAuth;
 import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.message.OAuthResponse;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticatorFlowStatus;
 import org.wso2.carbon.identity.application.authentication.framework.CommonAuthenticationHandler;
 import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationResultCacheEntry;
+import org.wso2.carbon.identity.application.authentication.framework.context.SessionContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticationResult;
 import org.wso2.carbon.identity.application.authentication.framework.model.CommonAuthRequestWrapper;
@@ -63,8 +67,24 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionState;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
 import org.wso2.carbon.registry.core.utils.UUIDGenerator;
+import org.wso2.carbon.utils.CarbonUtils;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Scanner;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import javax.servlet.ServletException;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
@@ -80,16 +100,6 @@ import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Path("/authorize")
 public class OAuth2AuthzEndpoint {
@@ -97,7 +107,29 @@ public class OAuth2AuthzEndpoint {
     private static final Log log = LogFactory.getLog(OAuth2AuthzEndpoint.class);
     public static final String APPROVE = "approve";
     private boolean isCacheAvailable = false;
+
     private static final String REDIRECT_URI = "redirect_uri";
+    private static final String RESPONSE_MODE_FORM_POST = "form_post";
+    private static final String RESPONSE_MODE = "response_mode";
+    private static final String AUTHENTICATION_RESULT_ERROR_PARAM_KEY = "AuthenticationError";
+    private static final String formPostRedirectPage = getFormPostRedirectPage();
+
+    private static String getFormPostRedirectPage() {
+
+        java.nio.file.Path path = Paths.get(CarbonUtils.getCarbonHome(), "repository", "resources",
+                "identity", "pages", "oauth_response.html");
+        if (Files.exists(path)) {
+            try {
+                return new Scanner(Files.newInputStream(path), "UTF-8").useDelimiter("\\A").next();
+            } catch (IOException e) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Failed to find OAuth From post response page in : " + path.toString());
+                }
+            }
+        }
+        return null;
+    }
+
     @GET
     @Path("/")
     @Consumes("application/x-www-form-urlencoded")
@@ -110,6 +142,15 @@ public class OAuth2AuthzEndpoint {
         PrivilegedCarbonContext carbonContext = PrivilegedCarbonContext.getThreadLocalCarbonContext();
         carbonContext.setTenantId(MultitenantConstants.SUPER_TENANT_ID);
         carbonContext.setTenantDomain(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+
+        // Validate repeated parameters
+        if (!(request instanceof OAuthRequestWrapper)) {
+            if (!EndpointUtil.validateParams(request, response, null)) {
+                return Response.status(HttpServletResponse.SC_BAD_REQUEST).location(new URI(
+                        EndpointUtil.getErrorPageURL(OAuth2ErrorCodes.INVALID_REQUEST,
+                                "Invalid authorization request with repeated parameters", null))).build();
+            }
+        }
 
         String clientId = request.getParameter("client_id");
 
@@ -189,6 +230,17 @@ public class OAuth2AuthzEndpoint {
                 OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
                 try {
                     String appState = oAuthAppDAO.getConsumerAppState(clientId);
+                    if (StringUtils.isEmpty(appState)) {
+                        if (log.isDebugEnabled()) {
+                            log.debug("A valid OAuth client could not be found for client_id: " + clientId);
+                        }
+                        OAuthResponse oAuthResponse = OAuthASResponse.errorResponse(HttpServletResponse.SC_UNAUTHORIZED)
+                                .setError(OAuth2ErrorCodes.INVALID_CLIENT)
+                                .setErrorDescription("A valid OAuth client could not be found for client_id: " +
+                                        clientId).buildJSONMessage();
+                        return Response.status(oAuthResponse.getResponseStatus()).entity(oAuthResponse.getBody()).build();
+                    }
+
                     if(!OAuthConstants.OauthAppStates.APP_STATE_ACTIVE.equalsIgnoreCase(appState)) {
                         if (log.isDebugEnabled()) {
                             log.debug("Oauth App is not in active state.");
@@ -235,17 +287,8 @@ public class OAuth2AuthzEndpoint {
                 }
 
             } else if (resultFromLogin != null) { // Authentication response
-                long authTime = 0;
                 Cookie cookie = FrameworkUtils.getAuthCookie(request);
-                if (cookie != null) {
-                    String sessionContextKey = DigestUtils.sha256Hex(cookie.getValue());
-                    SessionContext sessionContext = FrameworkUtils.getSessionContextFromCache(sessionContextKey);
-                    if (sessionContext.getProperty(FrameworkConstants.UPDATED_TIMESTAMP) != null) {
-                        authTime = Long.parseLong(sessionContext.getProperty(FrameworkConstants.UPDATED_TIMESTAMP).toString());
-                    } else {
-                        authTime = Long.parseLong(sessionContext.getProperty(FrameworkConstants.CREATED_TIMESTAMP).toString());
-                    }
-                }
+                long authTime = getAuthenticatedTimeFromCommonAuthCookie(cookie);
                 sessionDataCacheEntry = resultFromLogin;
                 if (authTime > 0) {
                     sessionDataCacheEntry.setAuthTime(authTime);
@@ -271,6 +314,20 @@ public class OAuth2AuthzEndpoint {
                         redirectURL =
                                 doUserAuthz(request, sessionDataKeyFromLogin, sessionDataCacheEntry, sessionState);
 
+                        if (RESPONSE_MODE_FORM_POST.equals(oauth2Params.getResponseMode()) && isJSON(redirectURL)) {
+
+                            String sessionStateValue = null;
+                            if (isOIDCRequest) {
+                                sessionState.setAddSessionState(true);
+                                sessionStateValue = manageOIDCSessionState(request, response, sessionState, oauth2Params,
+                                        sessionDataCacheEntry.getLoggedInUser().getAuthenticatedSubjectIdentifier(),
+                                        redirectURL);
+                            }
+
+                            return Response.ok(createFormPage(redirectURL, oauth2Params.getRedirectURI(),
+                                    StringUtils.EMPTY, sessionStateValue)).build();
+                        }
+
                         if (isOIDCRequest) {
                             redirectURL = manageOIDCSessionState(request, response, sessionState, oauth2Params,
                                                                  authenticatedUser.getAuthenticatedSubjectIdentifier(),
@@ -281,8 +338,15 @@ public class OAuth2AuthzEndpoint {
 
                     } else {
 
-                        OAuthProblemException oauthException = OAuthProblemException.error(
-                                OAuth2ErrorCodes.LOGIN_REQUIRED, "Authentication required");
+                        OAuthProblemException oauthException;
+                        Object authError =
+                                authnResult.getProperty(AUTHENTICATION_RESULT_ERROR_PARAM_KEY);
+                        if (authError != null && authError instanceof OAuthProblemException) {
+                            oauthException = (OAuthProblemException) authError;
+                        } else {
+                            oauthException = OAuthProblemException.error(OAuth2ErrorCodes.LOGIN_REQUIRED,
+                                                                         "Authentication required");
+                        }
                         redirectURL = EndpointUtil.getErrorRedirectURL(oauthException, oauth2Params);
                         if (isOIDCRequest) {
                             Cookie opBrowserStateCookie = OIDCSessionManagementUtil.getOPBrowserStateCookie(request);
@@ -309,17 +373,8 @@ public class OAuth2AuthzEndpoint {
                 }
 
             } else if (resultFromConsent != null) { // Consent submission
-                long authTime = 0;
                 Cookie cookie = FrameworkUtils.getAuthCookie(request);
-                if (cookie != null) {
-                    String sessionContextKey = DigestUtils.sha256Hex(cookie.getValue());
-                    SessionContext sessionContext = FrameworkUtils.getSessionContextFromCache(sessionContextKey);
-                    if (sessionContext.getProperty(FrameworkConstants.UPDATED_TIMESTAMP) != null) {
-                        authTime = Long.parseLong(sessionContext.getProperty(FrameworkConstants.UPDATED_TIMESTAMP).toString());
-                    } else {
-                        authTime = Long.parseLong(sessionContext.getProperty(FrameworkConstants.CREATED_TIMESTAMP).toString());
-                    }
-                }
+                long authTime = getAuthenticatedTimeFromCommonAuthCookie(cookie);
                 sessionDataCacheEntry = resultFromConsent;
                 OAuth2Parameters oauth2Params = sessionDataCacheEntry.getoAuth2Parameters();
                 if (authTime > 0) {
@@ -353,14 +408,18 @@ public class OAuth2AuthzEndpoint {
 
                     String authenticatedIdPs = sessionDataCacheEntry.getAuthenticatedIdPs();
 
-                    if (authenticatedIdPs != null && !authenticatedIdPs.isEmpty()) {
-                        try {
-                            redirectURL = redirectURL + "&AuthenticatedIdPs=" + URLEncoder.encode(authenticatedIdPs
-                                    , "UTF-8");
-                        } catch (UnsupportedEncodingException e) {
-                            //this exception should not occur
-                            log.error("Error while encoding the url", e);
+                    if (RESPONSE_MODE_FORM_POST.equals(oauth2Params.getResponseMode()) && isJSON(redirectURL)) {
+
+                        String sessionStateValue = null;
+                        if (isOIDCRequest) {
+                            sessionState.setAddSessionState(true);
+                            sessionStateValue = manageOIDCSessionState(request, response, sessionState, oauth2Params,
+                                    sessionDataCacheEntry.getLoggedInUser().getAuthenticatedSubjectIdentifier(),
+                                    redirectURL);
                         }
+
+                        return Response.ok(createFormPage(redirectURL, oauth2Params.getRedirectURI(),
+                                authenticatedIdPs, sessionStateValue)).build();
                     }
 
                     if (isOIDCRequest) {
@@ -446,6 +505,69 @@ public class OAuth2AuthzEndpoint {
         }
     }
 
+    private boolean isJSON(String redirectURL) {
+
+        try {
+            new JSONObject(redirectURL);
+        } catch (JSONException ex) {
+            return false;
+        }
+        return true;
+    }
+
+    private String createFormPage(String jsonPayLoad, String redirectURI, String authenticatedIdPs,
+                                  String sessionStateValue) {
+
+        if (StringUtils.isNotBlank(formPostRedirectPage)) {
+            String newPage = formPostRedirectPage;
+            String pageWithRedirectURI = newPage.replace("$redirectURI", redirectURI);
+            return pageWithRedirectURI.replace("<!--$params-->", buildParams(jsonPayLoad, authenticatedIdPs, sessionStateValue));
+        }
+
+        String formHead = "<html>\n" +
+                "   <head><title>Submit This Form</title></head>\n" +
+                "   <body onload=\"javascript:document.forms[0].submit()\">\n" +
+                "    <p>Click the submit button if automatic redirection failed.</p>" +
+                "    <form method=\"post\" action=\"" + redirectURI + "\">\n";
+
+        String formBottom = "<input type=\"submit\" value=\"Submit\">" +
+                "</form>\n" +
+                "</body>\n" +
+                "</html>";
+
+        StringBuilder form = new StringBuilder(formHead);
+        form.append(buildParams(jsonPayLoad, authenticatedIdPs, sessionStateValue));
+        form.append(formBottom);
+        return form.toString();
+    }
+
+    private String buildParams(String jsonPayLoad, String authenticatedIdPs, String sessionStateValue) {
+
+        JSONObject jsonObject = new JSONObject(jsonPayLoad);
+        StringBuilder paramStringBuilder = new StringBuilder();
+
+        for (Object key : jsonObject.keySet()) {
+            paramStringBuilder.append("<input type=\"hidden\" name=\"")
+                    .append(key)
+                    .append("\"" + "value=\"")
+                    .append(jsonObject.get(key.toString()))
+                    .append("\"/>\n");
+        }
+
+        if (authenticatedIdPs != null && !authenticatedIdPs.isEmpty()) {
+            paramStringBuilder.append("<input type=\"hidden\" name=\"AuthenticatedIdPs\" value=\"")
+                    .append(authenticatedIdPs)
+                    .append("\"/>\n");
+        }
+
+        if (sessionStateValue != null && !sessionStateValue.isEmpty()) {
+            paramStringBuilder.append("<input type=\"hidden\" name=\"session_state\" value=\"")
+                    .append(sessionStateValue)
+                    .append("\"/>\n");
+        }
+        return paramStringBuilder.toString();
+    }
+
     /**
      * Remove authentication result from request
      * @param req
@@ -481,6 +603,13 @@ public class OAuth2AuthzEndpoint {
     @Produces("text/html")
     public Response authorizePost(@Context HttpServletRequest request,@Context HttpServletResponse response,  MultivaluedMap paramMap)
             throws URISyntaxException {
+
+        // Validate repeated parameters
+        if (!EndpointUtil.validateParams(request, response, paramMap)) {
+            return Response.status(HttpServletResponse.SC_BAD_REQUEST).location(new URI(
+                    EndpointUtil.getErrorPageURL(OAuth2ErrorCodes.INVALID_REQUEST,
+                            "Invalid authorization request with repeated parameters", null))).build();
+        }
         HttpServletRequestWrapper httpRequest = new OAuthRequestWrapper(request, paramMap);
         return authorize(httpRequest, response);
     }
@@ -537,7 +666,16 @@ public class OAuth2AuthzEndpoint {
                 builder.setParam(OAuth.OAUTH_STATE, oauth2Params.getState());
             }
             String redirectURL = authzRespDTO.getCallbackURI();
-            oauthResponse = builder.location(redirectURL).buildQueryMessage();
+
+            if (RESPONSE_MODE_FORM_POST.equals(oauth2Params.getResponseMode())) {
+                String authenticatedIdPs = sessionDataCacheEntry.getAuthenticatedIdPs();
+                if (authenticatedIdPs != null && !authenticatedIdPs.isEmpty()) {
+                    builder.setParam("AuthenticatedIdPs", sessionDataCacheEntry.getAuthenticatedIdPs());
+                }
+                oauthResponse = builder.location(redirectURL).buildJSONMessage();
+            } else {
+                oauthResponse = builder.location(redirectURL).buildQueryMessage();
+            }
 
             sessionState.setAuthenticated(true);
 
@@ -564,34 +702,50 @@ public class OAuth2AuthzEndpoint {
             return EndpointUtil.getErrorRedirectURL(oauthProblemException, oauth2Params);
         }
 
-        return oauthResponse.getLocationUri();
+        //When responseType equal to "id_token" the resulting token is passed back as a query parameter
+        //According to the specification it should pass as URL Fragment
+        if (OAuthConstants.ID_TOKEN.equalsIgnoreCase(responseType)) {
+            if (authzRespDTO.getCallbackURI().contains("?")) {
+                return authzRespDTO.getCallbackURI() + "#" + oauthResponse.getLocationUri().substring(
+                        authzRespDTO.getCallbackURI().length() + 1, oauthResponse.getLocationUri().length());
+            } else {
+                return oauthResponse.getLocationUri().replace("?", "#");
+            }
+        } else {
+            return oauthResponse.getBody() == null ? appendAuthenticatedIDPs(sessionDataCacheEntry, oauthResponse
+                    .getLocationUri()) : oauthResponse.getBody();
+        }
     }
 
     private void addUserAttributesToCache(SessionDataCacheEntry sessionDataCacheEntry, String code, String codeId) {
         AuthorizationGrantCacheKey authorizationGrantCacheKey = new AuthorizationGrantCacheKey(code);
         AuthorizationGrantCacheEntry authorizationGrantCacheEntry = new AuthorizationGrantCacheEntry(
                 sessionDataCacheEntry.getLoggedInUser().getUserAttributes());
-        String sub = sessionDataCacheEntry.getLoggedInUser().getUserAttributes().get("sub");
-        if(StringUtils.isBlank(sub)){
+
+        ClaimMapping key = new ClaimMapping();
+        Claim claimOfKey = new Claim();
+        claimOfKey.setClaimUri(OAuth2Util.SUB);
+        key.setRemoteClaim(claimOfKey);
+        String sub = sessionDataCacheEntry.getLoggedInUser().getUserAttributes().get(key);
+
+        if (StringUtils.isBlank(sub)) {
             sub = sessionDataCacheEntry.getLoggedInUser().getAuthenticatedSubjectIdentifier();
         }
-        if(StringUtils.isNotBlank(sub)){
-            ClaimMapping claimMapping = new ClaimMapping();
-            Claim claim = new Claim();
-            claim.setClaimUri("sub");
-            claimMapping.setRemoteClaim(claim);
-            sessionDataCacheEntry.getLoggedInUser().getUserAttributes().put(claimMapping, sub);
+        if (StringUtils.isNotBlank(sub)) {
+            sessionDataCacheEntry.getLoggedInUser().getUserAttributes().put(key, sub);
         }
         //PKCE
-        String[] pkceCodeChallengeArray = sessionDataCacheEntry.getParamMap().get(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE);
-        String[] pkceCodeChallengeMethodArray = sessionDataCacheEntry.getParamMap().get(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE_METHOD);
+        String[] pkceCodeChallengeArray = sessionDataCacheEntry.getParamMap().get(
+                OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE);
+        String[] pkceCodeChallengeMethodArray = sessionDataCacheEntry.getParamMap().get(
+                OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE_METHOD);
         String pkceCodeChallenge = null;
         String pkceCodeChallengeMethod = null;
 
-        if(pkceCodeChallengeArray != null && pkceCodeChallengeArray.length > 0){
+        if (ArrayUtils.isNotEmpty(pkceCodeChallengeArray)) {
             pkceCodeChallenge = pkceCodeChallengeArray[0];
         }
-        if(pkceCodeChallengeMethodArray != null && pkceCodeChallengeMethodArray.length > 0) {
+        if (ArrayUtils.isNotEmpty(pkceCodeChallengeMethodArray)) {
             pkceCodeChallengeMethod = pkceCodeChallengeMethodArray[0];
         }
         authorizationGrantCacheEntry.setAcrValue(sessionDataCacheEntry.getoAuth2Parameters().getACRValues());
@@ -599,8 +753,11 @@ public class OAuth2AuthzEndpoint {
         authorizationGrantCacheEntry.setCodeId(codeId);
         authorizationGrantCacheEntry.setPkceCodeChallenge(pkceCodeChallenge);
         authorizationGrantCacheEntry.setPkceCodeChallengeMethod(pkceCodeChallengeMethod);
+        authorizationGrantCacheEntry.setEssentialClaims(
+                sessionDataCacheEntry.getoAuth2Parameters().getEssentialClaims());
         authorizationGrantCacheEntry.setAuthTime(sessionDataCacheEntry.getAuthTime());
-        AuthorizationGrantCache.getInstance().addToCacheByCode(authorizationGrantCacheKey, authorizationGrantCacheEntry);
+        AuthorizationGrantCache.getInstance().addToCacheByCode(
+                authorizationGrantCacheKey, authorizationGrantCacheEntry);
     }
 
     /**
@@ -661,6 +818,7 @@ public class OAuth2AuthzEndpoint {
         params.setClientId(clientId);
         params.setRedirectURI(clientDTO.getCallbackURL());
         params.setResponseType(oauthRequest.getResponseType());
+        params.setResponseMode(oauthRequest.getParam(RESPONSE_MODE));
         params.setScopes(oauthRequest.getScopes());
         if (params.getScopes() == null) { // to avoid null pointers
             Set<String> scopeSet = new HashSet<String>();
@@ -730,6 +888,9 @@ public class OAuth2AuthzEndpoint {
             }
             params.setACRValues(list);
         }
+        if (StringUtils.isNotBlank(oauthRequest.getParam("claims"))) {
+            params.setEssentialClaims(oauthRequest.getParam("claims"));
+        }
         String prompt = oauthRequest.getParam(OAuthConstants.OAuth20Params.PROMPT);
         params.setPrompt(prompt);
 
@@ -766,32 +927,50 @@ public class OAuth2AuthzEndpoint {
         boolean forceAuthenticate = false;
         boolean checkAuthentication = false;
 
-        // values {none, login, consent, select_profile}
+        // prompt values = {none, login, consent, select_profile}
+        String[] arrPrompt = new String[]{OAuthConstants.Prompt.NONE, OAuthConstants.Prompt.LOGIN,
+                OAuthConstants.Prompt.CONSENT, OAuthConstants.Prompt.SELECT_ACCOUNT};
+
+        List lstPrompt = Arrays.asList(arrPrompt);
         boolean contains_none = (OAuthConstants.Prompt.NONE).equals(prompt);
-        String[] prompts = null;
+        String[] prompts;
         if (StringUtils.isNotBlank(prompt)) {
             prompts = prompt.trim().split("\\s");
-            contains_none = (OAuthConstants.Prompt.NONE).equals(prompt);
-            if (prompts.length > 1 && contains_none) {
+            List lstPrompts = Arrays.asList(prompts);
+            if (!CollectionUtils.containsAny(lstPrompts, lstPrompt)) {
                 if (log.isDebugEnabled()) {
-                    log.debug("Invalid prompt variable combination. The value 'none' cannot be used with others " +
-                            "prompts. Prompt: " + prompt);
+                    log.debug("Invalid prompt variables passed with the authorization request" + prompt);
                 }
                 OAuthProblemException ex = OAuthProblemException.error(OAuth2ErrorCodes.INVALID_REQUEST,
-                        "Invalid prompt variable combination. The value \'none\' cannot be used with others prompts.");
+                        "Invalid prompt variables passed with the authorization request");
                 return EndpointUtil.getErrorRedirectURL(ex, params);
             }
-        }
 
-        if ((OAuthConstants.Prompt.LOGIN).equals(prompt)) { // prompt for authentication
-            checkAuthentication = false;
-            forceAuthenticate = true;
-        } else if (contains_none) {
-            checkAuthentication = true;
-            forceAuthenticate = false;
-        } else if ((OAuthConstants.Prompt.CONSENT).equals(prompt)) {
-            checkAuthentication = false;
-            forceAuthenticate = false;
+            if (prompts.length > 1) {
+                if (lstPrompts.contains(OAuthConstants.Prompt.NONE)) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Invalid prompt variable combination. The value 'none' cannot be used with others " +
+                                "prompts. Prompt: " + prompt);
+                    }
+                    OAuthProblemException ex = OAuthProblemException.error(OAuth2ErrorCodes.INVALID_REQUEST,
+                            "Invalid prompt variable combination. The value \'none\' cannot be used with others prompts.");
+                    return EndpointUtil.getErrorRedirectURL(ex, params);
+                } else if (lstPrompts.contains(OAuthConstants.Prompt.LOGIN) && (lstPrompts.contains(OAuthConstants.Prompt.CONSENT))) {
+                    forceAuthenticate = true;
+                    checkAuthentication = false;
+                }
+            } else {
+                if ((OAuthConstants.Prompt.LOGIN).equals(prompt)) { // prompt for authentication
+                    checkAuthentication = false;
+                    forceAuthenticate = true;
+                } else if (contains_none) {
+                    checkAuthentication = true;
+                    forceAuthenticate = false;
+                } else if ((OAuthConstants.Prompt.CONSENT).equals(prompt)) {
+                    checkAuthentication = false;
+                    forceAuthenticate = false;
+                }
+            }
         }
 
         String sessionDataKey = UUIDGenerator.generateUUID();
@@ -877,8 +1056,13 @@ public class OAuth2AuthzEndpoint {
         consentUrl = EndpointUtil.getUserConsentURL(oauth2Params, loggedInUser, sessionDataKey,
                 OAuth2Util.isOIDCAuthzRequest(oauth2Params.getScopes()) ? true : false);
 
+        String[] prompts = null;
+        if (StringUtils.isNotBlank(oauth2Params.getPrompt())) {
+            prompts = oauth2Params.getPrompt().trim().split("\\s");
+        }
+
         //Skip the consent page if User has provided approve always or skip consent from file
-        if ((OAuthConstants.Prompt.CONSENT).equals(oauth2Params.getPrompt())) {
+        if (prompts != null && Arrays.asList(prompts).contains(OAuthConstants.Prompt.CONSENT)) {
             return consentUrl;
 
         } else if ((OAuthConstants.Prompt.NONE).equals(oauth2Params.getPrompt())) {
@@ -905,6 +1089,8 @@ public class OAuth2AuthzEndpoint {
                     sessionState.setAuthenticated(false);
                     return redirectUrl;
                 } else {
+                    errorResponse = EndpointUtil.getErrorRedirectURL(
+                            OAuthProblemException.error(OAuth2ErrorCodes.CONSENT_REQUIRED), oauth2Params);
                     return errorResponse;
                 }
             }
@@ -943,6 +1129,7 @@ public class OAuth2AuthzEndpoint {
         authzReqDTO.setPkceCodeChallengeMethod(oauth2Params.getPkceCodeChallengeMethod());
         authzReqDTO.setTenantDomain(oauth2Params.getTenantDomain());
         authzReqDTO.setAuthTime(oauth2Params.getAuthTime());
+        authzReqDTO.setEssentialClaims(oauth2Params.getEssentialClaims());
         return EndpointUtil.getOAuth2Service().authorize(authzReqDTO);
     }
 
@@ -1084,6 +1271,9 @@ public class OAuth2AuthzEndpoint {
         Cookie opBrowserStateCookie = OIDCSessionManagementUtil.getOPBrowserStateCookie(request);
         if (sessionStateObj.isAuthenticated()) { // successful user authentication
             if (opBrowserStateCookie == null) { // new browser session
+                if (log.isDebugEnabled()) {
+                    log.debug("User authenticated. Initiate OIDC browser session.");
+                }
                 opBrowserStateCookie = OIDCSessionManagementUtil.addOPBrowserStateCookie(response);
 
                 sessionStateObj.setAuthenticatedUser(authenticatedUser);
@@ -1095,31 +1285,28 @@ public class OAuth2AuthzEndpoint {
                         OIDCSessionManagementUtil.getSessionManager()
                                                  .getOIDCSessionState(opBrowserStateCookie.getValue());
                 if (previousSessionState != null) {
-                    if (previousSessionState.getAuthenticatedUser().equals(authenticatedUser)) {
-
-                        if (!previousSessionState.getSessionParticipants().contains(oAuth2Parameters.getClientId())) {
-                            // User is authenticated to a new client. Restore browser session state
-                            String oldOPBrowserStateCookieId = opBrowserStateCookie.getValue();
-                            opBrowserStateCookie = OIDCSessionManagementUtil.addOPBrowserStateCookie(response);
-                            String newOPBrowserStateCookieId = opBrowserStateCookie.getValue();
-                            previousSessionState.addSessionParticipant(oAuth2Parameters.getClientId());
-                            OIDCSessionManagementUtil.getSessionManager()
-                                                     .restoreOIDCSessionState(oldOPBrowserStateCookieId,
-                                                                              newOPBrowserStateCookieId,
-                                                                              previousSessionState);
-                        }
-                    } else {
+                    if (!previousSessionState.getSessionParticipants().contains(oAuth2Parameters.getClientId())) {
+                        // User is authenticated to a new client. Restore browser session state
                         if (log.isDebugEnabled()) {
-                            log.debug("Existing session is not authenticated for the given user " + authenticatedUser);
+                            log.debug("User is authenticated to a new client. Restore browser session state.");
                         }
-                        redirectURL = EndpointUtil.getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED,
-                                                                   "No valid session found for the authenticated user " +
-                                                                   authenticatedUser,
-                                                                   oAuth2Parameters.getApplicationName());
-                        sessionStateObj.setAddSessionState(false);
+                        String oldOPBrowserStateCookieId = opBrowserStateCookie.getValue();
+                        opBrowserStateCookie = OIDCSessionManagementUtil.addOPBrowserStateCookie(response);
+                        String newOPBrowserStateCookieId = opBrowserStateCookie.getValue();
+                        previousSessionState.addSessionParticipant(oAuth2Parameters.getClientId());
+                        OIDCSessionManagementUtil.getSessionManager().restoreOIDCSessionState
+                                (oldOPBrowserStateCookieId, newOPBrowserStateCookieId, previousSessionState);
                     }
                 } else {
                     log.warn("No session state found for the received Session ID : " + opBrowserStateCookie.getValue());
+                    if (log.isDebugEnabled()) {
+                        log.debug("Restore browser session state.");
+                    }
+                    opBrowserStateCookie = OIDCSessionManagementUtil.addOPBrowserStateCookie(response);
+                    sessionStateObj.setAuthenticatedUser(authenticatedUser);
+                    sessionStateObj.addSessionParticipant(oAuth2Parameters.getClientId());
+                    OIDCSessionManagementUtil.getSessionManager()
+                            .storeOIDCSessionState(opBrowserStateCookie.getValue(), sessionStateObj);
                 }
             }
         }
@@ -1132,9 +1319,54 @@ public class OAuth2AuthzEndpoint {
                                                                                       opBrowserStateCookie.getValue());
             redirectURL = OIDCSessionManagementUtil.addSessionStateToURL(redirectURL, sessionStateParam,
                                                                          oAuth2Parameters.getResponseType());
+
+            if (RESPONSE_MODE_FORM_POST.equals(oAuth2Parameters.getResponseMode()) && isJSON(redirectURL)) {
+                return sessionStateParam;
+            }
         }
 
         return redirectURL;
     }
 
+    private String appendAuthenticatedIDPs(SessionDataCacheEntry sessionDataCacheEntry, String redirectURL) {
+        if (sessionDataCacheEntry != null) {
+            String authenticatedIdPs = sessionDataCacheEntry.getAuthenticatedIdPs();
+
+            if (authenticatedIdPs != null && !authenticatedIdPs.isEmpty()) {
+                try {
+                    String IDPAppendedRedirectURL = redirectURL + "&AuthenticatedIdPs=" + URLEncoder.encode
+                            (authenticatedIdPs, "UTF-8");
+                    return IDPAppendedRedirectURL;
+                } catch (UnsupportedEncodingException e) {
+                    //this exception should not occur
+                    log.error("Error while encoding the url", e);
+                }
+            }
+        }
+        return redirectURL;
+    }
+
+
+    /**
+     * Gets the last authenticated value from the commonAuthId cookie
+     * @param cookie CommonAuthId cookie
+     * @return the last authenticated timestamp
+     */
+    private long getAuthenticatedTimeFromCommonAuthCookie(Cookie cookie) {
+        long authTime = 0;
+        if (cookie != null) {
+            String sessionContextKey = DigestUtils.sha256Hex(cookie.getValue());
+            SessionContext sessionContext = FrameworkUtils.getSessionContextFromCache(sessionContextKey);
+            if (sessionContext != null) {
+                if (sessionContext.getProperty(FrameworkConstants.UPDATED_TIMESTAMP) != null) {
+                    authTime = Long.parseLong(
+                            sessionContext.getProperty(FrameworkConstants.UPDATED_TIMESTAMP).toString());
+                } else {
+                    authTime = Long.parseLong(
+                            sessionContext.getProperty(FrameworkConstants.CREATED_TIMESTAMP).toString());
+                }
+            }
+        }
+        return authTime;
+    }
 }

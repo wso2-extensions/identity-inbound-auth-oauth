@@ -31,20 +31,21 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.core.util.KeyStoreManager;
 import org.wso2.carbon.identity.core.util.IdentityIOStreamUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.utils.CarbonUtils;
 
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
-import javax.ws.rs.PathParam;
 import javax.ws.rs.core.MediaType;
 
 
-@Path("/jwks/{tenantDomain : (/tenantDomain)?}")
 public class JwksEndpoint {
     private static final Log log = LogFactory.getLog(JwksEndpoint.class);
     private static final char[] ENCODE_MAP = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_".toCharArray();
@@ -53,14 +54,24 @@ public class JwksEndpoint {
     private static final String kid = "d0ec514a32b6f88c0abd12a2840699bdd3deba9d";
 
     @GET
+    @Path(value = "/jwks")
     @Produces(MediaType.APPLICATION_JSON)
-    public String jwks(@PathParam("tenantDomain") String tenantDomain) {
+    public String jwks() {
+
+        String tenantDomain = null;
+        Object tenantObj = IdentityUtil.threadLocalProperties.get().get(OAuthConstants.TENANT_NAME_FROM_CONTEXT);
+        if (tenantObj != null){
+            tenantDomain = (String) tenantObj;
+        }
+        if (StringUtils.isEmpty(tenantDomain)){
+            tenantDomain = MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
+        }
+
         RSAPublicKey publicKey = null;
         JSONObject jwksJson = new JSONObject();
         FileInputStream file = null;
         try {
-            if (StringUtils.isEmpty(tenantDomain)) {
-
+            if (tenantDomain.equals(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)) {
                 file = new FileInputStream(CarbonUtils.getServerConfiguration().getFirstProperty
                         ("Security.KeyStore.Location"));
                 KeyStore keystore = KeyStore.getInstance(KeyStore.getDefaultType());

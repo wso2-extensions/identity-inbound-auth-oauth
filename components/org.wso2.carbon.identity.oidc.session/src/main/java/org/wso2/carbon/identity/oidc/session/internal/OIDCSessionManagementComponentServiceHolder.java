@@ -19,9 +19,11 @@
 package org.wso2.carbon.identity.oidc.session.internal;
 
 import org.osgi.service.http.HttpService;
+import org.wso2.carbon.user.core.service.RealmService;
 
 public class OIDCSessionManagementComponentServiceHolder {
     private static HttpService httpService;
+    private static RealmService realmService;
 
     private OIDCSessionManagementComponentServiceHolder() {
 
@@ -33,5 +35,12 @@ public class OIDCSessionManagementComponentServiceHolder {
 
     public static void setHttpService(HttpService httpService) {
         OIDCSessionManagementComponentServiceHolder.httpService = httpService;
+    }
+    public static void setRealmService(RealmService realmService) {
+        OIDCSessionManagementComponentServiceHolder.realmService = realmService;
+    }
+
+    public static RealmService getRealmService() {
+        return realmService;
     }
 }

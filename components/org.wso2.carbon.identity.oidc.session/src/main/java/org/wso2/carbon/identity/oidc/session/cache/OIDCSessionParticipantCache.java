@@ -18,6 +18,8 @@
 
 package org.wso2.carbon.identity.oidc.session.cache;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.store.SessionDataStore;
 import org.wso2.carbon.identity.application.common.cache.BaseCache;
 
@@ -27,6 +29,7 @@ import org.wso2.carbon.identity.application.common.cache.BaseCache;
 public class OIDCSessionParticipantCache
         extends BaseCache<OIDCSessionParticipantCacheKey, OIDCSessionParticipantCacheEntry> {
 
+    private static final Log log = LogFactory.getLog(OIDCSessionParticipantCache.class);
     private static final String OIDC_SESSION_PARTICIPANT_CACHE_NAME = "OIDCSessionParticipantCache";
 
     private static volatile OIDCSessionParticipantCache instance;
@@ -64,6 +67,10 @@ public class OIDCSessionParticipantCache
     public void addToCache(OIDCSessionParticipantCacheKey key, OIDCSessionParticipantCacheEntry entry) {
         super.addToCache(key, entry);
         SessionDataStore.getInstance().storeSessionData(key.getSessionID(), OIDC_SESSION_PARTICIPANT_CACHE_NAME, entry);
+        if (log.isDebugEnabled()) {
+            log.debug("Session corresponding to the key : " + key.getSessionID() + " added to cache and persistence "
+                    + "queue.");
+        }
     }
 
     /**
@@ -77,8 +84,12 @@ public class OIDCSessionParticipantCache
     public OIDCSessionParticipantCacheEntry getValueFromCache(OIDCSessionParticipantCacheKey key) {
         OIDCSessionParticipantCacheEntry entry = super.getValueFromCache(key);
         if (entry == null) {
-            entry = (OIDCSessionParticipantCacheEntry) SessionDataStore.getInstance().getSessionData(key.getSessionID(),
-                                                                                                     OIDC_SESSION_PARTICIPANT_CACHE_NAME);
+            if (log.isDebugEnabled()) {
+                log.debug("Session corresponding to the key : " + key.getSessionID() + " cannot be found. Retrieving " +
+                        "from session persistence store.");
+            }
+            entry = (OIDCSessionParticipantCacheEntry) SessionDataStore.getInstance().getSessionData(key.getSessionID
+                    (), OIDC_SESSION_PARTICIPANT_CACHE_NAME);
         }
 
         return entry;
@@ -93,5 +104,9 @@ public class OIDCSessionParticipantCache
     public void clearCacheEntry(OIDCSessionParticipantCacheKey key) {
         super.clearCacheEntry(key);
         SessionDataStore.getInstance().clearSessionData(key.getSessionID(), OIDC_SESSION_PARTICIPANT_CACHE_NAME);
+        if (log.isDebugEnabled()) {
+            log.debug("Session corresponding to the key : " + key.getSessionID() + " cleared from cache and " +
+                    "remove request added to persistence queue.");
+        }
     }
 }

@@ -169,20 +169,22 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
     @Override
     public void generateToken(OAuth2TokenValidationMessageContext messageContext) throws IdentityOAuth2Exception {
 
-        String clientId = ((AccessTokenDO)messageContext.getProperty("AccessTokenDO")).getConsumerKey();
-        long issuedTime = ((AccessTokenDO)messageContext.getProperty("AccessTokenDO")).getIssuedTime().getTime();
+        AccessTokenDO accessTokenDO = (AccessTokenDO)messageContext.getProperty("AccessTokenDO");
+        String clientId = accessTokenDO.getConsumerKey();
+        long issuedTime = accessTokenDO.getIssuedTime().getTime();
         String authzUser = messageContext.getResponseDTO().getAuthorizedUser();
-        int tenantID = ((AccessTokenDO)messageContext.getProperty("AccessTokenDO")).getTenantID();
-        String tenantDomain = OAuth2Util.getTenantDomain(tenantID);
+        int tenantId = accessTokenDO.getTenantID();
+        String tenantDomain = OAuth2Util.getTenantDomain(tenantId);
         boolean isExistingUser = false;
         String tenantAwareUsername = null;
 
         RealmService realmService = OAuthComponentServiceHolder.getInstance().getRealmService();
-        // TODO : Need to handle situation where federated user name is similar to a one we have in our user store
-        if (realmService != null && tenantID != MultitenantConstants.INVALID_TENANT_ID ) {
-            tenantAwareUsername = MultitenantUtils.getTenantAwareUsername(authzUser);
+        tenantAwareUsername = MultitenantUtils.getTenantAwareUsername(authzUser);
+
+        if (realmService != null && tenantId != MultitenantConstants.INVALID_TENANT_ID && !accessTokenDO.getAuthzUser()
+                .isFederatedUser()) {
             try {
-                UserRealm userRealm = realmService.getTenantUserRealm(tenantID);
+                UserRealm userRealm = realmService.getTenantUserRealm(tenantId);
                 if (userRealm != null) {
                     UserStoreManager userStoreManager = (UserStoreManager) userRealm.getUserStoreManager();
                     isExistingUser = userStoreManager.isExistingUser(tenantAwareUsername);
@@ -234,8 +236,13 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
             ClaimCacheKey cacheKey = null;
             UserClaims result = null;
 
-            if(requestedClaims != null) {
-                cacheKey = new ClaimCacheKey(authzUser, requestedClaims);
+            AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+            authenticatedUser.setUserName(UserCoreUtil.removeDomainFromName(tenantAwareUsername));
+            authenticatedUser.setUserStoreDomain(IdentityUtil.extractDomainFromName(tenantAwareUsername));
+            authenticatedUser.setTenantDomain(tenantDomain);
+
+            if (requestedClaims != null) {
+                cacheKey = new ClaimCacheKey(authenticatedUser);
                 result = claimsLocalCache.getValueFromCache(cacheKey);
             }
 
@@ -247,16 +254,12 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
                 UserClaims userClaims = new UserClaims(claimValues);
                 claimsLocalCache.addToCache(cacheKey, userClaims);
 
-                AuthenticatedUser authenticatedUser = new AuthenticatedUser();
-                authenticatedUser.setUserName(UserCoreUtil.removeDomainFromName(tenantAwareUsername));
-                authenticatedUser.setUserStoreDomain(IdentityUtil.extractDomainFromName(tenantAwareUsername));
-                authenticatedUser.setTenantDomain(tenantDomain);
                 ClaimMetaDataCache.getInstance().addToCache(new ClaimMetaDataCacheKey(authenticatedUser),
                         new ClaimMetaDataCacheEntry(cacheKey));
             }
 
             if(isExistingUser) {
-                String claimSeparator = getMultiAttributeSeparator(authzUser, tenantID);
+                String claimSeparator = getMultiAttributeSeparator(authzUser, tenantId);
                 if (StringUtils.isNotBlank(claimSeparator)) {
                     userAttributeSeparator = claimSeparator;
                 }
@@ -288,9 +291,9 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
         JWT jwt = null;
         if(!JWSAlgorithm.NONE.equals(signatureAlgorithm)){
             JWSHeader header = new JWSHeader(JWSAlgorithm.RS256);
-            header.setX509CertThumbprint(new Base64URL(getThumbPrint(tenantDomain, tenantID)));
+            header.setX509CertThumbprint(new Base64URL(getThumbPrint(tenantDomain, tenantId)));
             jwt = new SignedJWT(header, claimsSet);
-            jwt = signJWT((SignedJWT)jwt, tenantDomain, tenantID);
+            jwt = signJWT((SignedJWT)jwt, tenantDomain, tenantId);
         } else {
             jwt = new PlainJWT(claimsSet);
         }

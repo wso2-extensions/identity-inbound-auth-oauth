@@ -17,6 +17,7 @@
  */
 package org.wso2.carbon.identity.oauth.dcr.model;
 
+import org.wso2.carbon.identity.application.authentication.framework.inbound.FrameworkClientException;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.IdentityRequest;
 
 
@@ -26,7 +27,7 @@ public class UnregistrationRequest extends IdentityRequest {
     private String applicationName;
     private String userId;
 
-    protected UnregistrationRequest(DCRUnregisterRequestBuilder builder) {
+    protected UnregistrationRequest(DCRUnregisterRequestBuilder builder) throws FrameworkClientException {
         super(builder);
         this.consumerKey = builder.consumerKey;
         this.applicationName = builder.applicationName;
@@ -62,7 +63,7 @@ public class UnregistrationRequest extends IdentityRequest {
             this.userId = userId;
         }
 
-        public UnregistrationRequest build() {
+        public UnregistrationRequest build() throws FrameworkClientException {
             return new UnregistrationRequest(this);
         }
     }

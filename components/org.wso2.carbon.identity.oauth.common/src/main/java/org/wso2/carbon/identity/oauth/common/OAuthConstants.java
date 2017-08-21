@@ -106,13 +106,25 @@ public final class OAuthConstants {
     //Oauth Event Interceptor Proxy Name
     public static final String OAUTH_INTERCEPTOR_PROXY = "OauthDataInterceptorHandlerProxy";
 
+    public static final String RESPONSE_HEADERS_PROPERTY = "RESPONSE_HEADERS";
+
+
     //Constants used for multiple scopes
     public static final String OIDC_SCOPE_CONFIG_PATH = "oidc-scope-config.xml";
-    public static final String SCOPE_RESOURCE_PATH = "identity/config/scopes";
+    public static final String SCOPE_RESOURCE_PATH = "/oidc";
+
+    public static final String TENANT_NAME_FROM_CONTEXT = "TenantNameFromContext";
+
+    //Oauth2 sp expire time configuration.
+    public static final String TOKEN_EXPIRE_TIME_RESOURCE_PATH = "/identity/config/spTokenExpireTime";
 
     public static class GrantTypes {
         public static final String IMPLICIT = "implicit";
         public static final String TOKEN = "token";
+        public static final String CLIENT_CREDENTIALS = "client_credentials";
+        public static final String IWA_NTLM = "iwa:ntlm";
+        public static final String PASSWORD = "password";
+        public static final String AUTHORIZATION_CODE = "authorization_code";
 
         private GrantTypes() {
         }
@@ -259,6 +271,9 @@ public final class OAuthConstants {
     public static class UserType {
         public static final String APPLICATION = "APPLICATION";
         public static final String APPLICATION_USER = "APPLICATION_USER";
+        public static final String FEDERATED_USER_DOMAIN_PREFIX = "FEDERATED";
+        public static final String FEDERATED_USER_DOMAIN_SEPARATOR = ":";
+        public static final String LOCAL_USER_TYPE = "LOCAL";
 
         private UserType() {
 

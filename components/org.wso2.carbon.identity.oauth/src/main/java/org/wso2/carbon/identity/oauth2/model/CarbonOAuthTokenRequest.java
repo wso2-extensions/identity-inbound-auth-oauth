@@ -21,6 +21,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.as.request.OAuthTokenRequest;
 import org.apache.oltu.oauth2.common.OAuth;
+import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.utils.OAuthUtils;
@@ -98,7 +99,8 @@ public class CarbonOAuthTokenRequest extends OAuthTokenRequest {
                 log.debug("Unsupported Grant Type : " + requestTypeValue +
                         " for client id : " + getClientId());
             }
-            throw OAuthUtils.handleOAuthProblemException("Invalid grant_type parameter value");
+            throw OAuthProblemException.error(OAuthError.TokenResponse.UNSUPPORTED_GRANT_TYPE)
+                    .description("Unsupported grant_type value");
         }
 
         return OAuthUtils.instantiateClass(clazz);

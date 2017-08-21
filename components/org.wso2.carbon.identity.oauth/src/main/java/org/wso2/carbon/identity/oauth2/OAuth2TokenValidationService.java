@@ -27,7 +27,11 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientApplicationDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2IntrospectionResponseDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.TokenValidationHandler;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * This is the SOAP version of the OAuth validation service which will be used by the resource server.
@@ -67,31 +71,6 @@ public class OAuth2TokenValidationService extends AbstractAdmin {
         return responseDTO;
     }
 
-    private void triggerPreValidationListeners(OAuth2TokenValidationRequestDTO requestDTO)
-            throws IdentityOAuth2Exception {
-        OAuthEventInterceptor oAuthEventInterceptorProxy = OAuthComponentServiceHolder.getInstance()
-                .getOAuthEventInterceptorProxy();
-
-        if (oAuthEventInterceptorProxy != null && oAuthEventInterceptorProxy.isEnabled()) {
-            oAuthEventInterceptorProxy.onPreTokenValidation(requestDTO);
-        }
-    }
-
-    private void triggerPostValidationListeners(OAuth2TokenValidationRequestDTO requestDTO,
-                                                OAuth2TokenValidationResponseDTO responseDTO) {
-
-        OAuthEventInterceptor oAuthEventInterceptorProxy = OAuthComponentServiceHolder.getInstance()
-                .getOAuthEventInterceptorProxy();
-
-        if (oAuthEventInterceptorProxy != null && oAuthEventInterceptorProxy.isEnabled()) {
-            try {
-                oAuthEventInterceptorProxy.onPostTokenValidation(requestDTO, responseDTO);
-            } catch (IdentityOAuth2Exception e) {
-                log.error("Oauth post validation listener failed.", e);
-            }
-        }
-    }
-
     /**
      * @param validationReqDTO
      * @return
@@ -123,15 +102,66 @@ public class OAuth2TokenValidationService extends AbstractAdmin {
     public OAuth2IntrospectionResponseDTO buildIntrospectionResponse(OAuth2TokenValidationRequestDTO validationReq) {
 
         TokenValidationHandler validationHandler = TokenValidationHandler.getInstance();
-
+        OAuth2IntrospectionResponseDTO oAuth2IntrospectionResponseDTO = null;
         try {
-            return validationHandler.buildIntrospectionResponse(validationReq);
+            triggerPreValidationListeners(validationReq);
+            oAuth2IntrospectionResponseDTO = validationHandler.buildIntrospectionResponse(validationReq);
         } catch (IdentityOAuth2Exception e) {
             log.error("Error occurred while building the introspection response", e);
             OAuth2IntrospectionResponseDTO response = new OAuth2IntrospectionResponseDTO();
             response.setActive(false);
             response.setError(e.getMessage());
-            return response;
+        }
+        triggerPostIntrospectionValidationListeners(validationReq, oAuth2IntrospectionResponseDTO,
+                oAuth2IntrospectionResponseDTO.getProperties());
+        oAuth2IntrospectionResponseDTO.getProperties().remove(OAuth2Util.OAUTH2_VALIDATION_MESSAGE_CONTEXT);
+
+        return oAuth2IntrospectionResponseDTO;
+    }
+
+    private void triggerPreValidationListeners(OAuth2TokenValidationRequestDTO requestDTO)
+            throws IdentityOAuth2Exception {
+        OAuthEventInterceptor oAuthEventInterceptorProxy = OAuthComponentServiceHolder.getInstance()
+                .getOAuthEventInterceptorProxy();
+
+        if (oAuthEventInterceptorProxy != null && oAuthEventInterceptorProxy.isEnabled()) {
+            Map<String, Object> paramMap = new HashMap<>();
+            oAuthEventInterceptorProxy.onPreTokenValidation(requestDTO, paramMap);
+        }
+    }
+
+    private void triggerPostValidationListeners(OAuth2TokenValidationRequestDTO requestDTO,
+                                                OAuth2TokenValidationResponseDTO responseDTO) {
+
+        OAuthEventInterceptor oAuthEventInterceptorProxy = OAuthComponentServiceHolder.getInstance()
+                .getOAuthEventInterceptorProxy();
+
+        if (oAuthEventInterceptorProxy != null && oAuthEventInterceptorProxy.isEnabled()) {
+            try {
+                Map<String, Object> paramMap = new HashMap<>();
+                oAuthEventInterceptorProxy.onPostTokenValidation(requestDTO, responseDTO, paramMap);
+            } catch (IdentityOAuth2Exception e) {
+                log.error("Oauth post validation listener failed.", e);
+            }
+        }
+    }
+
+    private void triggerPostIntrospectionValidationListeners(OAuth2TokenValidationRequestDTO requestDTO,
+                                                             OAuth2IntrospectionResponseDTO responseDTO, Map<String,
+            Object> paramMap) {
+
+        OAuthEventInterceptor oAuthEventInterceptorProxy = OAuthComponentServiceHolder.getInstance()
+                .getOAuthEventInterceptorProxy();
+
+        if (oAuthEventInterceptorProxy != null && oAuthEventInterceptorProxy.isEnabled()) {
+            try {
+                if (paramMap == null) {
+                    paramMap = new HashMap<>();
+                }
+                oAuthEventInterceptorProxy.onPostTokenValidation(requestDTO, responseDTO, paramMap);
+            } catch (IdentityOAuth2Exception e) {
+                log.error("Oauth post validation listener failed.", e);
+            }
         }
     }
 }

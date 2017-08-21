@@ -37,14 +37,6 @@ import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import org.apache.commons.codec.binary.Base64;
-
 /**
  * Implements the AuthorizationGrantHandler for the Grant Type : authorization_code.
  */
@@ -83,7 +75,8 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
             authzCodeDO = (AuthzCodeDO) oauthCache.getValueFromCache(cacheKey);
         }
         oAuthAppDO = appInfoCache.getValueFromCache(clientId);
-        if (oAuthAppDO != null) {
+        if (oAuthAppDO == null) {
+            // we need to pull App info from the DB since it was not found in the cache.
             try {
                 oAuthAppDO = new OAuthAppDAO().getAppInformation(clientId);
             } catch (InvalidOAuthClientException e) {
@@ -106,18 +99,20 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
             authzCodeDO = tokenMgtDAO.validateAuthorizationCode(clientId, authorizationCode);
         }
 
-        if (authzCodeDO != null && OAuthConstants.AuthorizationCodeState.INACTIVE.equals(authzCodeDO.getState())){
-            String scope = OAuth2Util.buildScopeString(authzCodeDO.getScope());
-            String authorizedUser = authzCodeDO.getAuthorizedUser().toString();
-            boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authorizedUser);
-            String cacheKeyString;
-            if (isUsernameCaseSensitive) {
-                cacheKeyString = clientId + ":" + authorizedUser + ":" + scope;
-            } else {
-                cacheKeyString = clientId + ":" + authorizedUser.toLowerCase() + ":" + scope;
+        if (authzCodeDO != null && OAuthConstants.AuthorizationCodeState.INACTIVE.equals(authzCodeDO.getState())) {
+            if (cacheEnabled) {
+                String scope = OAuth2Util.buildScopeString(authzCodeDO.getScope());
+                String authorizedUser = authzCodeDO.getAuthorizedUser().toString();
+                boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authorizedUser);
+                String cacheKeyString;
+                if (isUsernameCaseSensitive) {
+                    cacheKeyString = clientId + ":" + authorizedUser + ":" + scope;
+                } else {
+                    cacheKeyString = clientId + ":" + authorizedUser.toLowerCase() + ":" + scope;
+                }
+                OAuthCacheKey cacheKey = new OAuthCacheKey(cacheKeyString);
+                oauthCache.clearCacheEntry(cacheKey);
             }
-            OAuthCacheKey cacheKey = new OAuthCacheKey(cacheKeyString);
-            oauthCache.clearCacheEntry(cacheKey);
             if (log.isDebugEnabled()) {
                 log.debug("Invalid access token request with inactive authorization code for Client Id : " + clientId);
             }
@@ -157,12 +152,11 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
         // Check whether the grant is expired
         long issuedTimeInMillis = authzCodeDO.getIssuedTime().getTime();
         long validityPeriodInMillis = authzCodeDO.getValidityPeriod();
-        long timestampSkew = OAuthServerConfiguration.getInstance()
-                .getTimeStampSkewInSeconds() * 1000;
+        long timestampSkew = OAuthServerConfiguration.getInstance().getTimeStampSkewInSeconds() * 1000;
         long currentTimeInMillis = System.currentTimeMillis();
 
-        // if authorization code is expired.
-        if ((currentTimeInMillis - timestampSkew) > (issuedTimeInMillis + validityPeriodInMillis)) {
+        // check if authorization code is expired.
+        if (OAuth2Util.calculateValidityInMillis(issuedTimeInMillis, validityPeriodInMillis) < 1000) {
             if (log.isDebugEnabled()) {
                 log.debug("Authorization Code is expired." +
                         " Issued Time(ms) : " + issuedTimeInMillis +
@@ -179,10 +173,11 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
                         " was removed from the database.");
             }
 
-            // remove the authorization code from the cache
-            oauthCache.clearCacheEntry(new OAuthCacheKey(
-                    OAuth2Util.buildCacheKeyStringForAuthzCode(clientId,
-                            authorizationCode)));
+            if (cacheEnabled) {
+                // remove the authorization code from the cache
+                oauthCache.clearCacheEntry(new OAuthCacheKey(
+                        OAuth2Util.buildCacheKeyStringForAuthzCode(clientId, authorizationCode)));
+            }
 
             if (log.isDebugEnabled()) {
                 log.debug("Expired Authorization code" +
@@ -282,4 +277,10 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
         }
     }
 
+    @Override
+    public boolean issueRefreshToken() throws IdentityOAuth2Exception {
+
+        return OAuthServerConfiguration.getInstance()
+                .getValueForIsRefreshTokenAllowed(OAuthConstants.GrantTypes.AUTHORIZATION_CODE);
+    }
 }

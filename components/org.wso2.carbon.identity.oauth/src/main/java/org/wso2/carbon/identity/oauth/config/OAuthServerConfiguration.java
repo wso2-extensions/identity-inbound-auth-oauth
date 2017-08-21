@@ -26,6 +26,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.as.issuer.OAuthIssuer;
 import org.apache.oltu.oauth2.as.issuer.OAuthIssuerImpl;
 import org.apache.oltu.oauth2.as.issuer.UUIDValueGenerator;
+import org.apache.oltu.oauth2.as.issuer.ValueGenerator;
 import org.apache.oltu.oauth2.as.validator.AuthorizationCodeValidator;
 import org.apache.oltu.oauth2.as.validator.ClientCredentialValidator;
 import org.apache.oltu.oauth2.as.validator.CodeValidator;
@@ -51,13 +52,11 @@ import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuerImpl;
 import org.wso2.carbon.identity.oauth2.token.handlers.clientauth.ClientAuthenticationHandler;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.saml.SAML2TokenCallbackHandler;
+import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeHandler;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeValidator;
 import org.wso2.carbon.identity.openidconnect.CustomClaimsCallbackHandler;
 import org.wso2.carbon.identity.openidconnect.IDTokenBuilder;
 import org.wso2.carbon.utils.CarbonUtils;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.xml.namespace.QName;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -69,6 +68,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import javax.servlet.http.HttpServletRequest;
+import javax.xml.namespace.QName;
 
 /**
  * Runtime representation of the OAuth Configuration as configured through
@@ -99,6 +100,10 @@ public class OAuthServerConfiguration {
     private static String oauth2TokenEPUrl = null;
     private static String oauth2UserInfoEPUrl = null;
     private static String oidcConsentPageUrl = null;
+    private static String oauth2DCREPUrl = null;
+    private static String oauth2JWKSPageUrl = null;
+    private static String oidcWebFingerEPUrl = null;
+    private static String oidcDiscoveryUrl = null;
     private static String oauth2ConsentPageUrl = null;
     private static String oauth2ErrorPageUrl = null;
     private long authorizationCodeValidityPeriodInSeconds = 300;
@@ -119,6 +124,9 @@ public class OAuthServerConfiguration {
     private TokenPersistenceProcessor persistenceProcessor = null;
     private Set<OAuthCallbackHandlerMetaData> callbackHandlerMetaData = new HashSet<>();
     private Map<String, String> supportedGrantTypeClassNames = new HashMap<>();
+    private Map<String, Boolean> refreshTokenAllowedGrantTypes = new HashMap<>();
+    private Map<String, String> idTokenAllowedForGrantTypesMap = new HashMap<>();
+    private Set<String> idTokenAllowedGrantTypesSet = new HashSet<>();
     private Map<String, AuthorizationGrantHandler> supportedGrantTypes;
     private Map<String, String> supportedGrantTypeValidatorNames = new HashMap<>();
     private Map<String, Class<? extends OAuthValidator<HttpServletRequest>>> supportedGrantTypeValidators;
@@ -130,6 +138,7 @@ public class OAuthServerConfiguration {
     private Map<String, Properties> supportedClientAuthHandlerData = new HashMap<>();
     private List<ClientAuthenticationHandler> supportedClientAuthHandlers;
     private String saml2TokenCallbackHandlerName = null;
+    private String saml2BearerTokenUserType;
     private SAML2TokenCallbackHandler saml2TokenCallbackHandler = null;
     private Map<String, String> tokenValidatorClassNames = new HashMap();
     private boolean isAuthContextTokGenEnabled = false;
@@ -137,6 +146,7 @@ public class OAuthServerConfiguration {
     private String claimsRetrieverImplClass = "org.wso2.carbon.identity.oauth2.token.DefaultClaimsRetriever";
     private String consumerDialectURI = "http://wso2.org/claims";
     private String signatureAlgorithm = "SHA256withRSA";
+    private String idTokenSignatureAlgorithm = "SHA256withRSA";
     private String authContextTTL = "15L";
     // property added to fix IDENTITY-4551 in backward compatible manner
     private boolean useMultiValueSeparatorForAuthContextToken = true;
@@ -156,10 +166,22 @@ public class OAuthServerConfiguration {
     private String openIDConnectUserInfoEndpointAccessTokenValidator = "org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoISAccessTokenValidator";
     private String openIDConnectUserInfoEndpointResponseBuilder = "org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoJSONResponseBuilder";
     private OAuth2ScopeValidator oAuth2ScopeValidator;
+    private Set<OAuth2ScopeValidator> oAuth2ScopeValidators = new HashSet<>();
+    private Set<OAuth2ScopeHandler> oAuth2ScopeHandlers = new HashSet<>();
     // property added to fix IDENTITY-4492 in backward compatible manner
     private boolean isJWTSignedWithSPKey = false;
     // property added to fix IDENTITY-4534 in backward compatible manner
     private boolean isImplicitErrorFragment = true;
+
+    // property added to fix IDENTITY-4112 in backward compatible manner
+    private boolean isRevokeResponseHeadersEnabled = true;
+
+    // Use the SP tenant domain instead of user domain.
+    private boolean useSPTenantDomainValue;
+
+    // Property added to customize the token valued generation method. (IDENTITY-6139)
+    private ValueGenerator tokenValueGenerator;
+    private String tokenValueGeneratorClassName;
 
     private OAuthServerConfiguration() {
         buildOAuthServerConfiguration();
@@ -195,11 +217,26 @@ public class OAuthServerConfiguration {
         parseTokenValidators(oauthElem.getFirstChildWithName(
                 getQNameWithIdentityNS(ConfigElements.TOKEN_VALIDATORS)));
 
-        // Get the configured scope validator
+        // Get the configured jdbc scope validator
         OMElement scopeValidatorElem = oauthElem.getFirstChildWithName(
                 getQNameWithIdentityNS(ConfigElements.SCOPE_VALIDATOR));
+
+        //Get the configured scope validators
+        OMElement scopeValidatorsElem = oauthElem.getFirstChildWithName(
+                getQNameWithIdentityNS(ConfigElements.SCOPE_VALIDATORS));
+
         if (scopeValidatorElem != null) {
             parseScopeValidator(scopeValidatorElem);
+        } else if (scopeValidatorsElem != null) {
+            parseScopeValidator(scopeValidatorsElem);
+        }
+
+        //Get the configured scope handlers
+        OMElement scopeHandlersElem = oauthElem.getFirstChildWithName(
+                getQNameWithIdentityNS(ConfigElements.SCOPE_HANDLERS));
+
+        if (scopeHandlersElem != null) {
+            parseScopeHandlers(scopeHandlersElem);
         }
 
         // read default timeout periods
@@ -253,6 +290,14 @@ public class OAuthServerConfiguration {
 
         // parse identity OAuth 2.0 token generator
         parseOAuthTokenIssuerConfig(oauthElem);
+
+        // Parse token value generator class name.
+        parseOAuthTokenValueGenerator(oauthElem);
+
+        // Read the value of UseSPTenantDomain config.
+        parseUseSPTenantDomainConfig(oauthElem);
+
+        parseRevokeResponseHeadersEnableConfig(oauthElem);
     }
 
     public Set<OAuthCallbackHandlerMetaData> getCallbackHandlerMetaData() {
@@ -279,6 +324,22 @@ public class OAuthServerConfiguration {
         return oauth2TokenEPUrl;
     }
 
+    public String getOAuth2DCREPUrl() {
+        return oauth2DCREPUrl;
+    }
+
+    public String getOAuth2JWKSPageUrl() {
+        return oauth2JWKSPageUrl;
+    }
+
+    public String getOidcDiscoveryUrl() {
+        return oidcDiscoveryUrl;
+    }
+
+    public String getOidcWebFingerEPUrl() {
+        return oidcWebFingerEPUrl;
+    }
+
     public String getOauth2UserInfoEPUrl() {
         return oauth2UserInfoEPUrl;
     }
@@ -299,21 +360,55 @@ public class OAuthServerConfiguration {
                             Class clazz = this.getClass().getClassLoader().loadClass(oauthTokenGeneratorClassName);
                             oauthTokenGenerator = (OAuthIssuer) clazz.newInstance();
                             log.info("An instance of " + oauthTokenGeneratorClassName
-                                + " is created for OAuth token generation.");
+                                    + " is created for OAuth token generation.");
                         } else {
-                            oauthTokenGenerator = new OAuthIssuerImpl(new UUIDValueGenerator());
+                            oauthTokenGenerator = new OAuthIssuerImpl(getTokenValueGenerator());
                             log.info("The default OAuth token issuer will be used. No custom token generator is set.");
                         }
                     } catch (Exception e) {
                         String errorMsg = "Error when instantiating the OAuthIssuer : "
-                            + tokenPersistenceProcessorClassName + ". Defaulting to OAuthIssuerImpl";
+                                + tokenPersistenceProcessorClassName + ". Defaulting to OAuthIssuerImpl";
                         log.error(errorMsg, e);
-                        oauthTokenGenerator = new OAuthIssuerImpl(new UUIDValueGenerator());
+                        oauthTokenGenerator = new OAuthIssuerImpl(getTokenValueGenerator());
                     }
                 }
             }
         }
         return oauthTokenGenerator;
+    }
+
+    /**
+     * Get the instance of the token value generator according to the identity xml configuration value.
+     * @return ValueGenerator object instance.
+     */
+    public ValueGenerator getTokenValueGenerator() {
+
+        if (tokenValueGenerator == null) {
+            synchronized (this) {
+                if (tokenValueGenerator == null) {
+                    try {
+                        if (tokenValueGeneratorClassName != null) {
+                            Class clazz = this.getClass().getClassLoader().loadClass(tokenValueGeneratorClassName);
+                            tokenValueGenerator = (ValueGenerator) clazz.newInstance();
+                            if (log.isDebugEnabled()) {
+                                log.debug("An instance of " + tokenValueGeneratorClassName + " is created.");
+                            }
+                        } else {
+                            tokenValueGenerator = new UUIDValueGenerator();
+                            if (log.isDebugEnabled()) {
+                                log.debug("Default token value generator UUIDValueGenerator will be used.");
+                            }
+                        }
+                    } catch (Exception e) {
+                        log.error("Error while initiating the token value generator :" + tokenValueGeneratorClassName +
+                                ". Defaulting to UUIDValueGenerator.", e);
+                        tokenValueGenerator = new UUIDValueGenerator();
+                    }
+                }
+            }
+        }
+
+        return tokenValueGenerator;
     }
 
     public OauthTokenIssuer getIdentityOauthTokenIssuer() {
@@ -388,7 +483,7 @@ public class OAuthServerConfiguration {
         if (supportedGrantTypes == null) {
             synchronized (this) {
                 if (supportedGrantTypes == null) {
-                    Map<String, AuthorizationGrantHandler> supportedGrantTypesTemp = new Hashtable<>();
+                    Map<String, AuthorizationGrantHandler> supportedGrantTypesTemp = new HashMap<>();
                     for (Map.Entry<String, String> entry : supportedGrantTypeClassNames.entrySet()) {
                         AuthorizationGrantHandler authzGrantHandler = null;
                         try {
@@ -403,9 +498,15 @@ public class OAuthServerConfiguration {
                         } catch (IdentityOAuth2Exception e) {
                             log.error("Error while initializing " + entry.getValue(), e);
                         }
-                        supportedGrantTypesTemp.put(entry.getKey(), authzGrantHandler);
-                        supportedGrantTypes = supportedGrantTypesTemp;
+
+                        if (authzGrantHandler != null) {
+                            supportedGrantTypesTemp.put(entry.getKey(), authzGrantHandler);
+                        } else {
+                            log.warn("Grant type : " + entry.getKey() + ", is not added as a supported grant type. "
+                                    + "Relevant grant handler failed to initiate properly.");
+                        }
                     }
+                    supportedGrantTypes = supportedGrantTypesTemp;
                 }
             }
         }
@@ -427,7 +528,7 @@ public class OAuthServerConfiguration {
         if (supportedGrantTypeValidators == null) {
             synchronized (this) {
                 if (supportedGrantTypeValidators == null) {
-                    Map<String,Class<? extends OAuthValidator<HttpServletRequest>>> supportedGrantTypeValidatorsTemp =
+                    Map<String, Class<? extends OAuthValidator<HttpServletRequest>>> supportedGrantTypeValidatorsTemp =
                             new Hashtable<>();
                     // Load default grant type validators
                     supportedGrantTypeValidatorsTemp
@@ -515,7 +616,7 @@ public class OAuthServerConfiguration {
         if (supportedResponseTypes == null) {
             synchronized (this) {
                 if (supportedResponseTypes == null) {
-                    Map<String,ResponseTypeHandler> supportedResponseTypesTemp = new Hashtable<>();
+                    Map<String, ResponseTypeHandler> supportedResponseTypesTemp = new Hashtable<>();
                     for (Map.Entry<String, String> entry : supportedResponseTypeClassNames.entrySet()) {
                         ResponseTypeHandler responseTypeHandler = null;
                         try {
@@ -539,6 +640,10 @@ public class OAuthServerConfiguration {
         return supportedResponseTypes;
     }
 
+    public Set<String> getSupportedResponseTypeNames() {
+        return supportedResponseTypeClassNames.keySet();
+    }
+
     public String[] getSupportedClaims() {
         return supportedClaims;
     }
@@ -557,8 +662,8 @@ public class OAuthServerConfiguration {
                             clientAuthenticationHandler.init(entry.getValue());
                             supportedClientAuthHandlersTemp.add(clientAuthenticationHandler);
 
-                        //Exceptions necessarily don't have to break the flow since there are cases
-                        //runnable without client auth handlers
+                            //Exceptions necessarily don't have to break the flow since there are cases
+                            //runnable without client auth handlers
                         } catch (InstantiationException e) {
                             log.error("Error instantiating " + entry, e);
                         } catch (IllegalAccessException e) {
@@ -610,6 +715,14 @@ public class OAuthServerConfiguration {
         return accessTokenPartitioningEnabled;
     }
 
+    public Map<String, String> getIdTokenAllowedForGrantTypesMap() {
+        return idTokenAllowedForGrantTypesMap;
+    }
+
+    public Set<String> getIdTokenAllowedGrantTypesSet() {
+        return idTokenAllowedGrantTypesSet;
+    }
+
     public boolean isUserNameAssertionEnabled() {
         return assertionsUserNameEnabled;
     }
@@ -632,6 +745,10 @@ public class OAuthServerConfiguration {
 
     public String getSignatureAlgorithm() {
         return signatureAlgorithm;
+    }
+
+    public String getIdTokenSignatureAlgorithm() {
+        return idTokenSignatureAlgorithm;
     }
 
     public String getConsumerDialectURI() {
@@ -787,6 +904,38 @@ public class OAuthServerConfiguration {
         return isImplicitErrorFragment;
     }
 
+    public boolean isRevokeResponseHeadersEnabled() {
+        return isRevokeResponseHeadersEnabled;
+    }
+
+    /**
+     * Return the value of whether the refresh token is allowed for this grant type. Null will be returned if there is
+     * no tag or empty tag.
+     * @param grantType Name of the Grant type.
+     * @return True or False if there is a value. Null otherwise.
+     */
+    public boolean getValueForIsRefreshTokenAllowed(String grantType) {
+
+        Boolean isRefreshTokenAllowed = refreshTokenAllowedGrantTypes.get(grantType);
+
+        // If this element is not present in the XML, we will send true to maintain the backward compatibility.
+        return isRefreshTokenAllowed == null ? true : isRefreshTokenAllowed;
+    }
+
+    /**
+     * Get the value of the property "UseSPTenantDomain". This property is used to decide whether to use SP tenant
+     * domain or user tenant domain.
+     * @return value of the "UseSPTenantDomain".
+     */
+    public boolean getUseSPTenantDomainValue() {
+
+        return useSPTenantDomainValue;
+    }
+
+    public String getSaml2BearerTokenUserType() {
+        return saml2BearerTokenUserType;
+    }
+
     private void parseOAuthCallbackHandlers(OMElement callbackHandlersElem) {
         if (callbackHandlersElem == null) {
             warnOnFaultyConfiguration("OAuthCallbackHandlers element is not available.");
@@ -836,25 +985,152 @@ public class OAuthServerConfiguration {
 
     private void parseScopeValidator(OMElement scopeValidatorElem) {
 
-        String scopeValidatorClazz = scopeValidatorElem.getAttributeValue(new QName(ConfigElements.SCOPE_CLASS_ATTR));
+        Set<OAuth2ScopeValidator> scopeValidators = new HashSet<>();
 
-        String scopesToSkipAttr = scopeValidatorElem.getAttributeValue(new QName(ConfigElements.SKIP_SCOPE_ATTR));
-        try {
-            Class clazz = Thread.currentThread().getContextClassLoader().loadClass(scopeValidatorClazz);
-            OAuth2ScopeValidator scopeValidator = (OAuth2ScopeValidator) clazz.newInstance();
-            if (scopesToSkipAttr != null && !"".equals(scopesToSkipAttr)) {
-                //Split the scopes attr by a -space- character and create the set (avoid duplicates).
-                Set<String> scopesToSkip = new HashSet<String>(Arrays.asList(scopesToSkipAttr.split(" ")));
-                scopeValidator.setScopesToSkip(scopesToSkip);
+        if (ConfigElements.SCOPE_VALIDATORS.equals(scopeValidatorElem.getLocalName())) {
+            Iterator scopeIterator = scopeValidatorElem
+                    .getChildrenWithName(getQNameWithIdentityNS(ConfigElements.SCOPE_VALIDATOR_ELEM));
+
+            while (scopeIterator.hasNext()) {
+                OMElement scopeValidatorElement = (OMElement) scopeIterator.next();
+                String validatorClazz = scopeValidatorElement.getAttributeValue(new QName(ConfigElements
+                        .SCOPE_CLASS_ATTR));
+                if (validatorClazz != null) {
+                    OAuth2ScopeValidator scopeValidator = getClassInstance(validatorClazz, OAuth2ScopeValidator.class);
+                    if (scopeValidator == null) {
+                        continue;
+                    }
+                    String scopesToSkipAttr = scopeValidatorElement.getAttributeValue(new QName(ConfigElements
+                            .SKIP_SCOPE_ATTR));
+                    scopeValidator.setScopesToSkip(getScopesToSkipSet(scopesToSkipAttr));
+
+                    Iterator propertyIterator = scopeValidatorElement.getChildrenWithName
+                            (getQNameWithIdentityNS(ConfigElements.SCOPE_VALIDATOR_PROPERTY));
+                    Map<String, String> properties = new HashMap<>();
+
+                    while (propertyIterator.hasNext()) {
+                        OMElement propertyElement = (OMElement) propertyIterator.next();
+                        String paramName = propertyElement.getAttributeValue(new QName(ConfigElements
+                                .SCOPE_VALIDATOR_PROPERTY_NAME_ATTR));
+                        String paramValue = propertyElement.getText();
+                        properties.put(paramName, paramValue);
+                        if (log.isDebugEnabled()) {
+                            log.debug(String.format("Property: %s with value: %s is set to ScopeValidator: %s.",
+                                    paramName, paramValue, validatorClazz));
+                        }
+                    }
+                    scopeValidator.setProperties(properties);
+                    scopeValidators.add(scopeValidator);
+
+                    if (log.isDebugEnabled()) {
+                        log.debug(String.format("ScopeValidator: %s is added to ScopeValidators list.", scopeValidator
+                                .getClass().getCanonicalName()));
+                    }
+                }
             }
-            setoAuth2ScopeValidator(scopeValidator);
+        } else {
+            String scopeValidatorClazz = scopeValidatorElem.getAttributeValue(new QName
+                    (ConfigElements.SCOPE_CLASS_ATTR));
+            String scopesToSkipAttr = scopeValidatorElem.getAttributeValue(new QName(ConfigElements.SKIP_SCOPE_ATTR));
+
+            if (scopeValidatorClazz != null) {
+                OAuth2ScopeValidator scopeValidator = getClassInstance(scopeValidatorClazz, OAuth2ScopeValidator.class);
+                if (scopeValidator != null) {
+                    scopeValidator.setScopesToSkip(getScopesToSkipSet(scopesToSkipAttr));
+                }
+                scopeValidators.add(scopeValidator);
+            }
+        }
+        setOAuth2ScopeValidators(scopeValidators);
+    }
+
+    private void parseScopeHandlers(OMElement scopeHandlersElem) {
+
+        Set<OAuth2ScopeHandler> scopeHandlers = new HashSet<>();
+
+        Iterator scopeHandlerIterator = scopeHandlersElem
+                .getChildrenWithName(getQNameWithIdentityNS(ConfigElements.SCOPE_HANDLER));
+
+        if (scopeHandlerIterator == null) {
+            return;
+        }
+
+        while (scopeHandlerIterator.hasNext()) {
+            OMElement scopeHandlerElem = (OMElement) scopeHandlerIterator.next();
+            String scopeHandlerClazz = scopeHandlerElem.getAttributeValue(new QName(ConfigElements
+                    .SCOPE_HANDLER_CLASS_ATTR));
+
+            if (scopeHandlerClazz != null) {
+                OAuth2ScopeHandler scopeHandler = getClassInstance(scopeHandlerClazz, OAuth2ScopeHandler.class);
+
+                if (scopeHandler == null) {
+                    continue;
+                }
+                Iterator propertyIterator = scopeHandlerElem.getChildrenWithName
+                        (getQNameWithIdentityNS(ConfigElements.SCOPE_HANDLER_PROPERTY));
+                Map<String, String> properties = new HashMap<>();
+
+                while (propertyIterator.hasNext()) {
+                    OMElement propertyElement = (OMElement) propertyIterator.next();
+                    String paramName = propertyElement.getAttributeValue(new QName(ConfigElements
+                            .SCOPE_HANDLER_PROPERTY_NAME_ATTR));
+                    String paramValue = propertyElement.getText();
+                    properties.put(paramName, paramValue);
+                    if (log.isDebugEnabled()) {
+                        log.debug(String.format("Property: %s with value: %s is set to ScopeHandler: %s.", paramName,
+                                paramValue, scopeHandlerClazz));
+                    }
+                }
+                scopeHandler.setProperties(properties);
+                scopeHandlers.add(scopeHandler);
+
+                if (log.isDebugEnabled()) {
+                    log.debug(String.format("ScopeHandler: %s is added to ScopeHandler list.", scopeHandler
+                            .getClass().getCanonicalName()));
+                }
+            }
+        }
+        setOAuth2ScopeHandlers(scopeHandlers);
+    }
+
+    /**
+     * Create an instance of a OAuth2ScopeValidator type class for a given class name.
+     *
+     * @param scopeValidatorClazz Canonical name of the OAuth2ScopeValidator class
+     * @return OAuth2ScopeValidator type class instance.
+     */
+    private <T> T getClassInstance(String scopeValidatorClazz, Class<T> type) {
+
+        try {
+
+            Class clazz = Thread.currentThread().getContextClassLoader().loadClass(scopeValidatorClazz);
+            return type.cast(clazz.newInstance());
         } catch (ClassNotFoundException e) {
             log.error("Class not found in build path " + scopeValidatorClazz, e);
         } catch (InstantiationException e) {
             log.error("Class initialization error " + scopeValidatorClazz, e);
         } catch (IllegalAccessException e) {
             log.error("Class access error " + scopeValidatorClazz, e);
+        } catch (ClassCastException e) {
+            log.error("Cannot cast the class: " + scopeValidatorClazz + " to type: " + type.getCanonicalName(), e);
         }
+        return null;
+    }
+
+    /**
+     * Parse space delimited scopes to a Set.
+     *
+     * @param scopesToSkip Space delimited scopes.
+     * @return
+     */
+    private Set<String> getScopesToSkipSet(String scopesToSkip) {
+
+        Set<String> scopes = new HashSet<>();
+        if (StringUtils.isNotEmpty(scopesToSkip)) {
+            // Split the scopes attr by a -space- character and create the set (avoid duplicates).
+            scopes = new HashSet<>(Arrays.asList(scopesToSkip.trim().split("\\s+")));
+        }
+        return scopes;
     }
 
     private void warnOnFaultyConfiguration(String logMsg) {
@@ -963,7 +1239,7 @@ public class OAuthServerConfiguration {
                 log.debug("\"Default Timestamp Skew\" element was not available "
                         + "in from identity.xml. Continuing with the default value.");
             }
-            if(log.isDebugEnabled()) {
+            if (log.isDebugEnabled()) {
                 log.debug("Authorization Code Default Timeout is set to : " +
                         authorizationCodeValidityPeriodInSeconds + "ms.");
                 log.debug("User Access Token Default Timeout is set to " + userAccessTokenValidityPeriodInSeconds +
@@ -981,63 +1257,91 @@ public class OAuthServerConfiguration {
         OMElement elem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
                 ConfigElements.OAUTH1_REQUEST_TOKEN_URL));
         if (elem != null) {
-            if(StringUtils.isNotBlank(elem.getText())) {
+            if (StringUtils.isNotBlank(elem.getText())) {
                 oauth1RequestTokenUrl = IdentityUtil.fillURLPlaceholders(elem.getText());
             }
         }
         elem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
                 ConfigElements.OAUTH1_AUTHORIZE_URL));
         if (elem != null) {
-            if(StringUtils.isNotBlank(elem.getText())) {
+            if (StringUtils.isNotBlank(elem.getText())) {
                 oauth1AuthorizeUrl = IdentityUtil.fillURLPlaceholders(elem.getText());
             }
         }
         elem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
                 ConfigElements.OAUTH1_ACCESS_TOKEN_URL));
         if (elem != null) {
-            if(StringUtils.isNotBlank(elem.getText())) {
+            if (StringUtils.isNotBlank(elem.getText())) {
                 oauth1AccessTokenUrl = IdentityUtil.fillURLPlaceholders(elem.getText());
             }
         }
         elem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
                 ConfigElements.OAUTH2_AUTHZ_EP_URL));
         if (elem != null) {
-            if(StringUtils.isNotBlank(elem.getText())) {
+            if (StringUtils.isNotBlank(elem.getText())) {
                 oauth2AuthzEPUrl = IdentityUtil.fillURLPlaceholders(elem.getText());
             }
         }
         elem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
                 ConfigElements.OAUTH2_TOKEN_EP_URL));
         if (elem != null) {
-            if(StringUtils.isNotBlank(elem.getText())) {
+            if (StringUtils.isNotBlank(elem.getText())) {
                 oauth2TokenEPUrl = IdentityUtil.fillURLPlaceholders(elem.getText());
             }
         }
         elem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
                 ConfigElements.OAUTH2_USERINFO_EP_URL));
         if (elem != null) {
-            if(StringUtils.isNotBlank(elem.getText())) {
+            if (StringUtils.isNotBlank(elem.getText())) {
                 oauth2UserInfoEPUrl = IdentityUtil.fillURLPlaceholders(elem.getText());
             }
         }
         elem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
                 ConfigElements.OAUTH2_CONSENT_PAGE_URL));
         if (elem != null) {
-            if(StringUtils.isNotBlank(elem.getText())) {
+            if (StringUtils.isNotBlank(elem.getText())) {
                 oauth2ConsentPageUrl = IdentityUtil.fillURLPlaceholders(elem.getText());
+            }
+        }
+        elem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
+                ConfigElements.OAUTH2_DCR_EP_URL));
+        if (elem != null) {
+            if (StringUtils.isNotBlank(elem.getText())) {
+                oauth2DCREPUrl = IdentityUtil.fillURLPlaceholders(elem.getText());
+            }
+        }
+        elem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
+                ConfigElements.OAUTH2_JWKS_PAGE_URL));
+        if (elem != null) {
+            if (StringUtils.isNotBlank(elem.getText())) {
+                oauth2JWKSPageUrl = IdentityUtil.fillURLPlaceholders(elem.getText());
+            }
+        }
+        elem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
+                ConfigElements.OIDC_DISCOVERY_EP_URL));
+        if (elem != null) {
+            if (StringUtils.isNotBlank(elem.getText())) {
+                oidcDiscoveryUrl = IdentityUtil.fillURLPlaceholders(elem.getText());
+            }
+        }
+        elem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
+                ConfigElements.OIDC_WEB_FINGER_EP_URL));
+        if (elem != null) {
+            if (StringUtils.isNotBlank(elem.getText())) {
+                oidcWebFingerEPUrl = IdentityUtil.fillURLPlaceholders(elem.getText());
             }
         }
         elem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
                 ConfigElements.OIDC_CONSENT_PAGE_URL));
         if (elem != null) {
-            if(StringUtils.isNotBlank(elem.getText())) {
+            if (StringUtils.isNotBlank(elem.getText())) {
                 oidcConsentPageUrl = IdentityUtil.fillURLPlaceholders(elem.getText());
             }
         }
         elem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
                 ConfigElements.OAUTH2_ERROR_PAGE_URL));
         if (elem != null) {
-            if(StringUtils.isNotBlank(elem.getText())) {
+            if (StringUtils.isNotBlank(elem.getText())) {
                 oauth2ErrorPageUrl = IdentityUtil.fillURLPlaceholders(elem.getText());
             }
         }
@@ -1127,22 +1431,23 @@ public class OAuthServerConfiguration {
     /**
      * parse the configuration to load the class name of the OAuth 2.0 token generator.
      * this is a global configuration at the moment.
+     *
      * @param oauthConfigElem
      */
     private void parseOAuthTokenGeneratorConfig(OMElement oauthConfigElem) {
 
-	OMElement tokenGeneratorClassConfigElem = oauthConfigElem
-		.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OAUTH_TOKEN_GENERATOR));
-	if (tokenGeneratorClassConfigElem != null && !"".equals(tokenGeneratorClassConfigElem.getText().trim())) {
-	    oauthTokenGeneratorClassName = tokenGeneratorClassConfigElem.getText().trim();
-	    if (log.isDebugEnabled()) {
-		log.debug("OAuth token generator is set to : " + oauthTokenGeneratorClassName);
-	    }
-	} else {
-	    if (log.isDebugEnabled()) {
-		log.debug("The default OAuth token issuer will be used. No custom token generator is set.");
-	    }
-	}
+        OMElement tokenGeneratorClassConfigElem = oauthConfigElem
+                .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OAUTH_TOKEN_GENERATOR));
+        if (tokenGeneratorClassConfigElem != null && !"".equals(tokenGeneratorClassConfigElem.getText().trim())) {
+            oauthTokenGeneratorClassName = tokenGeneratorClassConfigElem.getText().trim();
+            if (log.isDebugEnabled()) {
+                log.debug("OAuth token generator is set to : " + oauthTokenGeneratorClassName);
+            }
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug("The default OAuth token issuer will be used. No custom token generator is set.");
+            }
+        }
     }
 
     private void parseOAuthTokenIssuerConfig(OMElement oauthConfigElem) {
@@ -1185,7 +1490,23 @@ public class OAuthServerConfiguration {
                     authzGrantHandlerImplClass = authzGrantHandlerClassNameElement.getText();
                 }
 
-                if (!StringUtils.isEmpty(grantTypeName) && !StringUtils.isEmpty(authzGrantHandlerImplClass)) {
+                OMElement idTokenAllowedElement = supportedGrantTypeElement
+                        .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.ID_TOKEN_ALLOWED));
+                String idTokenAllowed = null;
+                if (idTokenAllowedElement != null) {
+                    idTokenAllowed = idTokenAllowedElement.getText();
+                }
+
+                if (StringUtils.isNotEmpty(grantTypeName) && StringUtils.isNotEmpty(idTokenAllowed)) {
+                    idTokenAllowedForGrantTypesMap.put(grantTypeName, idTokenAllowed);
+
+                    if (Boolean.parseBoolean(idTokenAllowed)) {
+                        idTokenAllowedGrantTypesSet.add(grantTypeName);
+                    }
+                }
+
+
+                if (StringUtils.isNotEmpty(grantTypeName) && StringUtils.isNotEmpty(authzGrantHandlerImplClass)) {
                     supportedGrantTypeClassNames.put(grantTypeName, authzGrantHandlerImplClass);
 
                     OMElement authzGrantValidatorClassNameElement = supportedGrantTypeElement.getFirstChildWithName(
@@ -1196,8 +1517,15 @@ public class OAuthServerConfiguration {
                         authzGrantValidatorImplClass = authzGrantValidatorClassNameElement.getText();
                     }
 
-                    if (!StringUtils.isEmpty(authzGrantValidatorImplClass)) {
+                    if (StringUtils.isNotEmpty(authzGrantValidatorImplClass)) {
                         supportedGrantTypeValidatorNames.put(grantTypeName, authzGrantValidatorImplClass);
+                    }
+
+                    OMElement refreshTokenAllowed = supportedGrantTypeElement
+                            .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.REFRESH_TOKEN_ALLOWED));
+                    if (refreshTokenAllowed != null && StringUtils.isNotBlank(refreshTokenAllowed.getText())) {
+                        boolean isRefreshAllowed = Boolean.parseBoolean(refreshTokenAllowed.getText());
+                        refreshTokenAllowedGrantTypes.put(grantTypeName, isRefreshAllowed);
                     }
                 }
             }
@@ -1345,12 +1673,18 @@ public class OAuthServerConfiguration {
 
         OMElement saml2GrantElement =
                 oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.SAML2_GRANT));
+        OMElement saml2BearerUserTypeElement = null;
         OMElement saml2TokenHandlerElement = null;
         if (saml2GrantElement != null) {
+            saml2BearerUserTypeElement = saml2GrantElement.getFirstChildWithName(getQNameWithIdentityNS
+                    (ConfigElements.SAML2_BEARER_USER_TYPE));
             saml2TokenHandlerElement = saml2GrantElement.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.SAML2_TOKEN_HANDLER));
         }
         if (saml2TokenHandlerElement != null && StringUtils.isNotBlank(saml2TokenHandlerElement.getText())) {
             saml2TokenCallbackHandlerName = saml2TokenHandlerElement.getText().trim();
+        }
+        if (saml2BearerUserTypeElement != null && StringUtils.isNotBlank(saml2BearerUserTypeElement.getText())) {
+            saml2BearerTokenUserType = saml2BearerUserTypeElement.getText().trim();
         }
     }
 
@@ -1421,6 +1755,32 @@ public class OAuthServerConfiguration {
         }
     }
 
+    private void parseRevokeResponseHeadersEnableConfig(OMElement oauthConfigElem) {
+        OMElement enableRevokeResponseHeadersElem =
+                oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.ENABLE_REVOKE_RESPONSE_HEADERS));
+        if (enableRevokeResponseHeadersElem != null) {
+            isRevokeResponseHeadersEnabled = Boolean.parseBoolean(enableRevokeResponseHeadersElem.getText());
+        }
+
+        if (log.isDebugEnabled()) {
+            log.debug("Enable revoke response headers : " + isRevokeResponseHeadersEnabled);
+        }
+    }
+
+    private void parseOAuthTokenValueGenerator(OMElement oauthElem) {
+
+        OMElement oauthTokenValueGeneratorElement = oauthElem
+                .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OAUTH_TOKEN_VALUE_GENERATOR));
+
+        if (oauthTokenValueGeneratorElement != null) {
+            tokenValueGeneratorClassName = oauthTokenValueGeneratorElement.getText().trim();
+        }
+
+        if (log.isDebugEnabled()) {
+            log.debug("Oauth token value generator class is set to: " + oauthTokenGeneratorClassName);
+        }
+    }
+
     private void parseOpenIDConnectConfig(OMElement oauthConfigElem) {
 
         OMElement openIDConnectConfigElem =
@@ -1432,6 +1792,13 @@ public class OAuthServerConfiguration {
                         openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_IDTOKEN_BUILDER))
                                 .getText().trim();
             }
+
+            if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.SIGNATURE_ALGORITHM)) != null) {
+                idTokenSignatureAlgorithm =
+                        openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.SIGNATURE_ALGORITHM))
+                                .getText().trim();
+            }
+
             if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_IDTOKEN_CUSTOM_CLAIM_CALLBACK_HANDLER)) != null) {
                 openIDConnectIDTokenCustomClaimsHanlderClassName =
                         openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_IDTOKEN_CUSTOM_CLAIM_CALLBACK_HANDLER))
@@ -1509,6 +1876,36 @@ public class OAuthServerConfiguration {
         this.oAuth2ScopeValidator = oAuth2ScopeValidator;
     }
 
+    public Set<OAuth2ScopeValidator> getOAuth2ScopeValidators() {
+        return oAuth2ScopeValidators;
+    }
+
+    public void setOAuth2ScopeValidators(Set<OAuth2ScopeValidator> oAuth2ScopeValidators) {
+        this.oAuth2ScopeValidators = oAuth2ScopeValidators;
+    }
+
+    public Set<OAuth2ScopeHandler> getOAuth2ScopeHandlers() {
+        return oAuth2ScopeHandlers;
+    }
+
+    public void setOAuth2ScopeHandlers(Set<OAuth2ScopeHandler> oAuth2ScopeHandlers) {
+        this.oAuth2ScopeHandlers = oAuth2ScopeHandlers;
+    }
+
+    private void parseUseSPTenantDomainConfig(OMElement oauthElem) {
+
+        OMElement useSPTenantDomainValueElement = oauthElem
+                .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OAUTH_USE_SP_TENANT_DOMAIN));
+
+        if (useSPTenantDomainValueElement != null) {
+            useSPTenantDomainValue = Boolean.parseBoolean(useSPTenantDomainValueElement.getText().trim());
+        }
+
+        if (log.isDebugEnabled()) {
+            log.debug("Use SP tenant domain value is set to: " + useSPTenantDomainValue);
+        }
+    }
+
     /**
      * Localpart names for the OAuth configuration in identity.xml.
      */
@@ -1522,6 +1919,10 @@ public class OAuthServerConfiguration {
         public static final String OAUTH2_TOKEN_EP_URL = "OAuth2TokenEPUrl";
         public static final String OAUTH2_USERINFO_EP_URL = "OAuth2UserInfoEPUrl";
         public static final String OAUTH2_CONSENT_PAGE_URL = "OAuth2ConsentPage";
+        public static final String OAUTH2_DCR_EP_URL = "OAuth2DCREPUrl";
+        public static final String OAUTH2_JWKS_PAGE_URL = "OAuth2JWKSPage";
+        public static final String OIDC_WEB_FINGER_EP_URL = "OIDCWebFingerEPUrl";
+        public static final String OIDC_DISCOVERY_EP_URL = "OIDCDiscoveryEPUrl";
         public static final String OAUTH2_ERROR_PAGE_URL = "OAuth2ErrorPage";
         public static final String OIDC_CONSENT_PAGE_URL = "OIDCConsentPage";
 
@@ -1566,7 +1967,16 @@ public class OAuthServerConfiguration {
         private static final String TOKEN_VALIDATOR = "TokenValidator";
         private static final String TOKEN_TYPE_ATTR = "type";
         private static final String TOKEN_CLASS_ATTR = "class";
+        private static final String SCOPE_HANDLERS = "ScopeHandlers";
+        private static final String SCOPE_HANDLER = "ScopeHandler";
+        private static final String SCOPE_HANDLER_CLASS_ATTR = "class";
+        private static final String SCOPE_HANDLER_PROPERTY = "Property";
+        private static final String SCOPE_HANDLER_PROPERTY_NAME_ATTR = "name";
         private static final String SCOPE_VALIDATOR = "OAuthScopeValidator";
+        private static final String SCOPE_VALIDATORS = "ScopeValidators";
+        private static final String SCOPE_VALIDATOR_ELEM = "ScopeValidator";
+        private static final String SCOPE_VALIDATOR_PROPERTY = "Property";
+        private static final String SCOPE_VALIDATOR_PROPERTY_NAME_ATTR = "name";
         private static final String SCOPE_CLASS_ATTR = "class";
         private static final String SKIP_SCOPE_ATTR = "scopesToSkip";
         private static final String IMPLICIT_ERROR_FRAGMENT = "ImplicitErrorFragment";
@@ -1592,6 +2002,7 @@ public class OAuthServerConfiguration {
         private static final String SUPPORTED_GRANT_TYPES = "SupportedGrantTypes";
         private static final String SUPPORTED_GRANT_TYPE = "SupportedGrantType";
         private static final String GRANT_TYPE_NAME = "GrantTypeName";
+        private static final String ID_TOKEN_ALLOWED = "IdTokenAllowed";
         private static final String GRANT_TYPE_HANDLER_IMPL_CLASS = "GrantTypeHandlerImplClass";
         private static final String GRANT_TYPE_VALIDATOR_IMPL_CLASS = "GrantTypeValidatorImplClass";
         private static final String RESPONSE_TYPE_VALIDATOR_IMPL_CLASS = "ResponseTypeValidatorImplClass";
@@ -1611,7 +2022,17 @@ public class OAuthServerConfiguration {
         // SAML2 assertion profile configurations
         private static final String SAML2_GRANT = "SAML2Grant";
         private static final String SAML2_TOKEN_HANDLER = "SAML2TokenHandler";
+        private static final String SAML2_BEARER_USER_TYPE = "UserType";
 
+        // To enable revoke response headers
+        private static final String ENABLE_REVOKE_RESPONSE_HEADERS = "EnableRevokeResponseHeaders";
+        private static final String REFRESH_TOKEN_ALLOWED = "IsRefreshTokenAllowed";
+
+        // Oauth access token value generator related.
+        private static final String OAUTH_TOKEN_VALUE_GENERATOR = "AccessTokenValueGenerator";
+
+        // Property to decide whether to pick the user tenant domain or SP tenant domain.
+        private static final String OAUTH_USE_SP_TENANT_DOMAIN = "UseSPTenantDomain";
     }
 
 }

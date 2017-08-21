@@ -28,6 +28,8 @@ import org.wso2.carbon.identity.application.common.IdentityApplicationManagement
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.base.IdentityRuntimeException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
@@ -64,10 +66,10 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
         String userTenantDomain = MultitenantUtils.getTenantDomain(username);
         String clientId = oAuth2AccessTokenReqDTO.getClientId();
         String spTenantDomain = oAuth2AccessTokenReqDTO.getTenantDomain();
-        ServiceProvider serviceProvider = null;
+        ServiceProvider serviceProvider;
         try {
             serviceProvider = OAuth2ServiceComponentHolder.getApplicationMgtService().getServiceProviderByClientId(
-                    clientId, "oauth2", spTenantDomain);
+                    clientId, OAuthConstants.Scope.OAUTH2, spTenantDomain);
         } catch (IdentityApplicationManagementException e) {
             throw new IdentityOAuth2Exception("Error occurred while retrieving OAuth2 application data for client id " +
                     clientId, e);
@@ -115,12 +117,26 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
                 username = UserCoreUtil.getDomainFromThreadLocal() + CarbonConstants.DOMAIN_SEPARATOR + username;
             }
             AuthenticatedUser user = OAuth2Util.getUserFromUserName(username);
-            user.setAuthenticatedSubjectIdentifier(user.toString());
+            if (user != null) {
+                user.setAuthenticatedSubjectIdentifier(user.toString(), serviceProvider);
+            }
             tokReqMsgCtx.setAuthorizedUser(user);
             tokReqMsgCtx.setScope(oAuth2AccessTokenReqDTO.getScope());
         } else {
+            if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equalsIgnoreCase(MultitenantUtils.getTenantDomain
+                    (username))) {
+                throw new IdentityOAuth2Exception("Authentication failed for " + MultitenantUtils
+                        .getTenantAwareUsername(username));
+            }
             throw new IdentityOAuth2Exception("Authentication failed for " + username);
         }
         return authStatus;
+    }
+
+    @Override
+    public boolean issueRefreshToken() throws IdentityOAuth2Exception {
+
+        return OAuthServerConfiguration.getInstance()
+                .getValueForIsRefreshTokenAllowed(OAuthConstants.GrantTypes.PASSWORD);
     }
 }

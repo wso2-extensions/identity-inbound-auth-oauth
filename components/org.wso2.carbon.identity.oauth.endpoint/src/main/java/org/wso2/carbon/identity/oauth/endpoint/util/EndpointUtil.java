@@ -19,6 +19,7 @@ package org.wso2.carbon.identity.oauth.endpoint.util;
 
 import org.apache.axiom.util.base64.Base64Utils;
 import org.apache.commons.io.Charsets;
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -26,7 +27,6 @@ import org.apache.oltu.oauth2.as.response.OAuthASResponse;
 import org.apache.oltu.oauth2.common.OAuth;
 import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
-import org.apache.oltu.oauth2.common.message.types.ResponseType;
 import org.wso2.carbon.base.ServerConfiguration;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationRequestCacheEntry;
@@ -34,6 +34,10 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.discovery.DefaultOIDCProcessor;
+import org.wso2.carbon.identity.discovery.OIDCProcessor;
+import org.wso2.carbon.identity.discovery.builders.DefaultOIDCProviderRequestBuilder;
+import org.wso2.carbon.identity.discovery.builders.OIDCProviderRequestBuilder;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCache;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheKey;
@@ -45,13 +49,19 @@ import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.webfinger.DefaultWebFingerProcessor;
+import org.wso2.carbon.identity.webfinger.WebFingerProcessor;
 
-import javax.servlet.http.HttpServletResponse;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.MultivaluedMap;
 
 public class EndpointUtil {
 
@@ -59,6 +69,36 @@ public class EndpointUtil {
 
     private EndpointUtil() {
 
+    }
+
+    /**
+     * Returns the {@code DefaultWebFingerProcessor} instance
+     *
+     * @return
+     */
+    public static DefaultWebFingerProcessor getWebFingerService() {
+        return (DefaultWebFingerProcessor) PrivilegedCarbonContext.getThreadLocalCarbonContext().getOSGiService
+                (WebFingerProcessor.class);
+    }
+
+    /**
+     * Returns the {@code OIDCProviderRequestBuilder} instance
+     *
+     * @return
+     */
+    public static DefaultOIDCProviderRequestBuilder getOIDProviderRequestValidator() {
+        return (DefaultOIDCProviderRequestBuilder) PrivilegedCarbonContext.getThreadLocalCarbonContext().getOSGiService
+                (OIDCProviderRequestBuilder.class);
+    }
+
+    /**
+     * Returns the {@code DefaultOIDCProcessor} instance
+     *
+     * @return
+     */
+    public static DefaultOIDCProcessor getOIDCService() {
+        return (DefaultOIDCProcessor) PrivilegedCarbonContext.getThreadLocalCarbonContext().getOSGiService
+                (OIDCProcessor.class);
     }
 
     /**
@@ -147,14 +187,18 @@ public class EndpointUtil {
     public static String[] extractCredentialsFromAuthzHeader(String authorizationHeader)
             throws OAuthClientException {
         String[] splitValues = authorizationHeader.trim().split(" ");
-        if(splitValues.length == 2) {
+        if (splitValues.length == 2) {
             byte[] decodedBytes = Base64Utils.decode(splitValues[1].trim());
             if (decodedBytes != null) {
                 String userNamePassword = new String(decodedBytes, Charsets.UTF_8);
-                return userNamePassword.split(":");
+                String[] credentials = userNamePassword.split(":");
+                if (ArrayUtils.isNotEmpty(credentials) && credentials.length == 2) {
+                    return credentials;
+                }
             }
         }
-        String errMsg = "Error decoding authorization header. Space delimited \"<authMethod> <base64Hash>\" format violated.";
+        String errMsg = "Error decoding authorization header. Space delimited \"<authMethod> <base64Hash>\" format " +
+                "violated.";
         throw new OAuthClientException(errMsg);
     }
 
@@ -224,11 +268,7 @@ public class EndpointUtil {
             if (log.isDebugEnabled()) {
                 log.debug("Server error occurred while building error redirect url", e);
             }
-            if(params != null) {
-                redirectURL = getErrorPageURL(ex.getError(), ex.getMessage(), params.getApplicationName());
-            } else {
-                redirectURL = getErrorPageURL(ex.getError(), ex.getMessage(), null);
-            }
+            redirectURL = getErrorPageURL(ex.getError(), ex.getMessage(), params.getApplicationName());
         }
         return redirectURL;
     }
@@ -374,7 +414,7 @@ public class EndpointUtil {
     public static String getScope(OAuth2Parameters params) {
         StringBuilder scopes = new StringBuilder();
         for (String scope : params.getScopes()) {
-            scopes.append(scope + " ");
+            scopes.append(scope).append(" ");
         }
         return scopes.toString().trim();
     }
@@ -387,4 +427,23 @@ public class EndpointUtil {
         return ServerConfiguration.getInstance().getFirstProperty("HostName");
     }
 
+    public static boolean validateParams(@Context HttpServletRequest request, @Context HttpServletResponse response,
+                                         MultivaluedMap<String, String> paramMap) {
+        if (paramMap != null) {
+            for (Map.Entry<String, List<String>> paramEntry : paramMap.entrySet()) {
+                if (paramEntry.getValue().size() > 1) {
+                    return false;
+                }
+            }
+        }
+        if (request.getParameterMap() != null) {
+            Map<String, String[]> map = request.getParameterMap();
+            for (Map.Entry<String, String[]> entry : map.entrySet()) {
+                if (entry.getValue().length > 1) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
 }

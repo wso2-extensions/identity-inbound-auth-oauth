@@ -1,50 +1,23 @@
-<wsdl:definitions xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" xmlns:ns1="http://org.apache.axis2/xsd" xmlns:wsaw="http://www.w3.org/2006/05/addressing/wsdl" xmlns:http="http://schemas.xmlsoap.org/wsdl/http/" xmlns:tns="http://oauth.identity.carbon.wso2.org" xmlns:ax2280="http://common.core.carbon.wso2.org/xsd" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:ax2283="http://dto.oauth.identity.carbon.wso2.org/xsd" xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:mime="http://schemas.xmlsoap.org/wsdl/mime/" xmlns:ax2276="http://oauth.identity.carbon.wso2.org/xsd" xmlns:ax2277="http://base.identity.carbon.wso2.org/xsd" xmlns:soap12="http://schemas.xmlsoap.org/wsdl/soap12/" targetNamespace="http://oauth.identity.carbon.wso2.org">
+
+<wsdl:definitions xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" xmlns:ax2384="http://common.core.carbon.wso2.org/xsd" xmlns:ns1="http://org.apache.axis2/xsd" xmlns:ax2386="http://oauth.identity.carbon.wso2.org/xsd" xmlns:ax2380="http://base.identity.carbon.wso2.org/xsd" xmlns:wsaw="http://www.w3.org/2006/05/addressing/wsdl" xmlns:http="http://schemas.xmlsoap.org/wsdl/http/" xmlns:tns="http://oauth.identity.carbon.wso2.org" xmlns:ax2382="http://dto.oauth.identity.carbon.wso2.org/xsd" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:mime="http://schemas.xmlsoap.org/wsdl/mime/" xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:soap12="http://schemas.xmlsoap.org/wsdl/soap12/" targetNamespace="http://oauth.identity.carbon.wso2.org">
     <wsdl:documentation>OAuthService</wsdl:documentation>
     <wsdl:types>
-        <xs:schema xmlns:ax2281="http://common.core.carbon.wso2.org/xsd" xmlns:ax2282="http://base.identity.carbon.wso2.org/xsd" xmlns:ns="http://org.apache.axis2/xsd" xmlns:ax2284="http://dto.oauth.identity.carbon.wso2.org/xsd" xmlns:ax2279="http://oauth.identity.carbon.wso2.org/xsd" attributeFormDefault="qualified" elementFormDefault="qualified" targetNamespace="http://org.apache.axis2/xsd">
-            <xs:import namespace="http://oauth.identity.carbon.wso2.org/xsd"/>
-            <xs:import namespace="http://common.core.carbon.wso2.org/xsd"/>
+        <xs:schema xmlns:ax2385="http://common.core.carbon.wso2.org/xsd" xmlns:ns="http://org.apache.axis2/xsd" xmlns:ax2388="http://oauth.identity.carbon.wso2.org/xsd" xmlns:ax2381="http://base.identity.carbon.wso2.org/xsd" xmlns:ax2383="http://dto.oauth.identity.carbon.wso2.org/xsd" attributeFormDefault="qualified" elementFormDefault="qualified" targetNamespace="http://org.apache.axis2/xsd">
             <xs:import namespace="http://base.identity.carbon.wso2.org/xsd"/>
             <xs:import namespace="http://dto.oauth.identity.carbon.wso2.org/xsd"/>
-            <xs:element name="OAuthServiceIdentityOAuthAdminException">
-                <xs:complexType>
-                    <xs:sequence>
-                        <xs:element minOccurs="0" name="IdentityOAuthAdminException" nillable="true" type="ax2279:IdentityOAuthAdminException"/>
-                    </xs:sequence>
-                </xs:complexType>
-            </xs:element>
-            <xs:element name="OAuthServiceAuthenticationException">
-                <xs:complexType>
-                    <xs:sequence>
-                        <xs:element minOccurs="0" name="AuthenticationException" nillable="true" type="ax2280:AuthenticationException"/>
-                    </xs:sequence>
-                </xs:complexType>
-            </xs:element>
-            <xs:element name="getAccessToken">
-                <xs:complexType>
-                    <xs:sequence>
-                        <xs:element minOccurs="0" name="params" nillable="true" type="ax2279:Parameters"/>
-                    </xs:sequence>
-                </xs:complexType>
-            </xs:element>
-            <xs:element name="getAccessTokenResponse">
-                <xs:complexType>
-                    <xs:sequence>
-                        <xs:element minOccurs="0" name="return" nillable="true" type="ax2279:Parameters"/>
-                    </xs:sequence>
-                </xs:complexType>
-            </xs:element>
+            <xs:import namespace="http://common.core.carbon.wso2.org/xsd"/>
+            <xs:import namespace="http://oauth.identity.carbon.wso2.org/xsd"/>
             <xs:element name="OAuthServiceIdentityException">
                 <xs:complexType>
                     <xs:sequence>
-                        <xs:element minOccurs="0" name="IdentityException" nillable="true" type="ax2282:IdentityException"/>
+                        <xs:element minOccurs="0" name="IdentityException" nillable="true" type="ax2380:IdentityException"/>
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
             <xs:element name="isOAuthConsumerValid">
                 <xs:complexType>
                     <xs:sequence>
-                        <xs:element minOccurs="0" name="oauthConsumer" nillable="true" type="ax2283:OAuthConsumerDTO"/>
+                        <xs:element minOccurs="0" name="oauthConsumer" nillable="true" type="ax2382:OAuthConsumerDTO"/>
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
@@ -55,17 +28,45 @@
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
+            <xs:element name="OAuthServiceAuthenticationException">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element minOccurs="0" name="AuthenticationException" nillable="true" type="ax2384:AuthenticationException"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="OAuthServiceIdentityOAuthAdminException">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element minOccurs="0" name="IdentityOAuthAdminException" nillable="true" type="ax2386:IdentityOAuthAdminException"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="getOauthRequestToken">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element minOccurs="0" name="params" nillable="true" type="ax2386:Parameters"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="getOauthRequestTokenResponse">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element minOccurs="0" name="return" nillable="true" type="ax2386:Parameters"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
             <xs:element name="authorizeOauthRequestToken">
                 <xs:complexType>
                     <xs:sequence>
-                        <xs:element minOccurs="0" name="params" nillable="true" type="ax2279:Parameters"/>
+                        <xs:element minOccurs="0" name="params" nillable="true" type="ax2386:Parameters"/>
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
             <xs:element name="authorizeOauthRequestTokenResponse">
                 <xs:complexType>
                     <xs:sequence>
-                        <xs:element minOccurs="0" name="return" nillable="true" type="ax2279:Parameters"/>
+                        <xs:element minOccurs="0" name="return" nillable="true" type="ax2386:Parameters"/>
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
@@ -91,35 +92,35 @@
             <xs:element name="getScopeAndAppNameResponse">
                 <xs:complexType>
                     <xs:sequence>
-                        <xs:element minOccurs="0" name="return" nillable="true" type="ax2279:Parameters"/>
+                        <xs:element minOccurs="0" name="return" nillable="true" type="ax2386:Parameters"/>
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
             <xs:element name="validateAuthenticationRequest">
                 <xs:complexType>
                     <xs:sequence>
-                        <xs:element minOccurs="0" name="params" nillable="true" type="ax2279:Parameters"/>
+                        <xs:element minOccurs="0" name="params" nillable="true" type="ax2386:Parameters"/>
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
             <xs:element name="validateAuthenticationRequestResponse">
                 <xs:complexType>
                     <xs:sequence>
-                        <xs:element minOccurs="0" name="return" nillable="true" type="ax2279:Parameters"/>
+                        <xs:element minOccurs="0" name="return" nillable="true" type="ax2386:Parameters"/>
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
-            <xs:element name="getOauthRequestToken">
+            <xs:element name="getAccessToken">
                 <xs:complexType>
                     <xs:sequence>
-                        <xs:element minOccurs="0" name="params" nillable="true" type="ax2279:Parameters"/>
+                        <xs:element minOccurs="0" name="params" nillable="true" type="ax2386:Parameters"/>
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
-            <xs:element name="getOauthRequestTokenResponse">
+            <xs:element name="getAccessTokenResponse">
                 <xs:complexType>
                     <xs:sequence>
-                        <xs:element minOccurs="0" name="return" nillable="true" type="ax2279:Parameters"/>
+                        <xs:element minOccurs="0" name="return" nillable="true" type="ax2386:Parameters"/>
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
@@ -133,14 +134,16 @@
         </xs:schema>
         <xs:schema attributeFormDefault="qualified" elementFormDefault="qualified" targetNamespace="http://base.identity.carbon.wso2.org/xsd">
             <xs:complexType name="IdentityException">
-                <xs:sequence/>
+                <xs:sequence>
+                    <xs:element minOccurs="0" name="errorCode" nillable="true" type="xs:string"/>
+                </xs:sequence>
             </xs:complexType>
         </xs:schema>
-        <xs:schema xmlns:ax2278="http://base.identity.carbon.wso2.org/xsd" attributeFormDefault="qualified" elementFormDefault="qualified" targetNamespace="http://oauth.identity.carbon.wso2.org/xsd">
+        <xs:schema xmlns:ax2387="http://base.identity.carbon.wso2.org/xsd" attributeFormDefault="qualified" elementFormDefault="qualified" targetNamespace="http://oauth.identity.carbon.wso2.org/xsd">
             <xs:import namespace="http://base.identity.carbon.wso2.org/xsd"/>
             <xs:complexType name="IdentityOAuthAdminException">
                 <xs:complexContent>
-                    <xs:extension base="ax2278:IdentityException">
+                    <xs:extension base="ax2387:IdentityException">
                         <xs:sequence/>
                     </xs:extension>
                 </xs:complexContent>
@@ -265,6 +268,7 @@
             <wsdl:output message="tns:getAccessTokenResponse" wsaw:Action="urn:getAccessTokenResponse"/>
             <wsdl:fault message="tns:OAuthServiceIdentityOAuthAdminException" name="OAuthServiceIdentityOAuthAdminException" wsaw:Action="urn:getAccessTokenOAuthServiceIdentityOAuthAdminException"/>
             <wsdl:fault message="tns:OAuthServiceAuthenticationException" name="OAuthServiceAuthenticationException" wsaw:Action="urn:getAccessTokenOAuthServiceAuthenticationException"/>
+            <wsdl:fault message="tns:OAuthServiceIdentityException" name="OAuthServiceIdentityException" wsaw:Action="urn:getAccessTokenOAuthServiceIdentityException"/>
         </wsdl:operation>
     </wsdl:portType>
     <wsdl:binding name="OAuthServiceSoap11Binding" type="tns:OAuthServicePortType">
@@ -352,6 +356,9 @@
             <wsdl:fault name="OAuthServiceIdentityOAuthAdminException">
                 <soap:fault use="literal" name="OAuthServiceIdentityOAuthAdminException"/>
             </wsdl:fault>
+            <wsdl:fault name="OAuthServiceIdentityException">
+                <soap:fault use="literal" name="OAuthServiceIdentityException"/>
+            </wsdl:fault>
         </wsdl:operation>
     </wsdl:binding>
     <wsdl:binding name="OAuthServiceSoap12Binding" type="tns:OAuthServicePortType">
@@ -438,6 +445,9 @@
             </wsdl:fault>
             <wsdl:fault name="OAuthServiceIdentityOAuthAdminException">
                 <soap12:fault use="literal" name="OAuthServiceIdentityOAuthAdminException"/>
+            </wsdl:fault>
+            <wsdl:fault name="OAuthServiceIdentityException">
+                <soap12:fault use="literal" name="OAuthServiceIdentityException"/>
             </wsdl:fault>
         </wsdl:operation>
     </wsdl:binding>

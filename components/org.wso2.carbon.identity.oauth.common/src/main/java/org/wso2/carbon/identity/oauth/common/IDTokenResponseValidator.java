@@ -24,6 +24,9 @@ import org.apache.oltu.oauth2.common.OAuth;
 import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
 
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.SCOPE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.NONCE;
+
 import javax.servlet.http.HttpServletRequest;
 
 public class IDTokenResponseValidator extends TokenValidator {
@@ -35,14 +38,14 @@ public class IDTokenResponseValidator extends TokenValidator {
 
         super.validateRequiredParameters(request);
 
-        String nonce = request.getParameter("nonce");
+        String nonce = request.getParameter(NONCE);
         if (StringUtils.isBlank(nonce)) {
             throw OAuthProblemException.error(OAuthError.TokenResponse.INVALID_REQUEST)
                     .description("\'response_type\' contains \'id_token\'; but \'nonce\' parameter not found");
         }
 
         // for id_token response type, the scope parameter should contain 'openid' as one of the scopes.
-        String openIdScope = request.getParameter("scope");
+        String openIdScope = request.getParameter(SCOPE);
         if (StringUtils.isBlank(openIdScope) || !containOIDCScope(openIdScope)) {
             throw OAuthProblemException.error(OAuthError.TokenResponse.INVALID_REQUEST)
                     .description("\'response_type\' contains \'id_token\'; but \'openid\' scope not found.");

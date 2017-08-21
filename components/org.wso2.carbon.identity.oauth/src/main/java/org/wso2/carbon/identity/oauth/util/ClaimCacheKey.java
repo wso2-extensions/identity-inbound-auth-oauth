@@ -18,20 +18,16 @@
 
 package org.wso2.carbon.identity.oauth.util;
 
+import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.oauth.cache.CacheKey;
-
-import java.util.ArrayList;
-import java.util.Arrays;
 
 public class ClaimCacheKey extends CacheKey {
 
     private static final long serialVersionUID = -1695934146647205833L;
-    private String endUserName;
-    private String[] requiredClaims;
+    private AuthenticatedUser authenticatedUser;
 
-    public ClaimCacheKey(String endUserName, String[] requiredClaims) {
-        this.endUserName = endUserName;
-        this.requiredClaims = requiredClaims;
+    public ClaimCacheKey(AuthenticatedUser authenticatedUser) {
+        this.authenticatedUser = authenticatedUser;
     }
 
     @Override
@@ -39,42 +35,28 @@ public class ClaimCacheKey extends CacheKey {
         if (!(o instanceof ClaimCacheKey)) {
             return false;
         }
-        if (!((ClaimCacheKey) o).getEndUserName().equals(getEndUserName())) {
+        if (!((ClaimCacheKey) o).getAuthenticatedUser().equals(getAuthenticatedUser())) {
             return false;
-        }
-        for (String requiredClaim : ((ClaimCacheKey) o).getRequiredClaims()) {
-            if (!new ArrayList<String>(Arrays.asList(getRequiredClaims())).contains(requiredClaim)) {
-                return false;
-            }
-        }
-        for (String requiredClaim : getRequiredClaims()) {
-            if (!new ArrayList<String>(Arrays.asList(((ClaimCacheKey) o).getRequiredClaims())).contains(requiredClaim)) {
-                return false;
-            }
         }
         return true;
     }
 
     @Override
     public int hashCode() {
-        int result = endUserName != null ? endUserName.hashCode() : 0;
-        result = 31 * result + (requiredClaims != null ? Arrays.hashCode(requiredClaims) : 0);
+        int result = authenticatedUser != null ? authenticatedUser.hashCode() : 0;
+        result = 31 * result;
         return result;
     }
 
-    public String getEndUserName() {
-        return endUserName;
-    }
-
-    public String[] getRequiredClaims() {
-        return requiredClaims;
+    public AuthenticatedUser getAuthenticatedUser() {
+        return authenticatedUser;
     }
 
     @Override
     public String toString() {
+        String result = authenticatedUser != null ? authenticatedUser.toString() : null;
         return "ClaimCacheKey{" +
-                "endUserName='" + endUserName + '\'' +
-                ", requiredClaims=" + Arrays.toString(requiredClaims) +
+                "authenticatedUser='" + result + '\'' +
                 '}';
     }
 }

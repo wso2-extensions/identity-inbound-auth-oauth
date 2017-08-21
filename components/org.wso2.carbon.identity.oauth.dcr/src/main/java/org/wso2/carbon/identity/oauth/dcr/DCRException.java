@@ -27,38 +27,19 @@ public class DCRException extends FrameworkException {
 
     private static final long serialVersionUID = -3151279311929070297L;
 
-    private String errorMessage;
+    public DCRException(String message) {
+        super(message);
+    }
 
-    public DCRException(String msg, Exception nestedEx) {
-        super(msg, nestedEx);
-        setErrorMessage(msg);
+    public DCRException(String errorCode, String message) {
+        super(errorCode, message);
     }
 
     public DCRException(String message, Throwable cause) {
         super(message, cause);
-        setErrorMessage(message);
     }
 
-    public DCRException(String msg) {
-        super(msg);
-        setErrorMessage(msg);
-    }
-
-    public DCRException(String message, String errorMessage) {
-        super(message);
-        this.errorMessage = errorMessage;
-    }
-
-    public DCRException(String message, Throwable cause, String errorMessage) {
-        super(message, cause);
-        this.errorMessage = errorMessage;
-    }
-
-    public String getErrorMessage() {
-        return errorMessage;
-    }
-
-    public void setErrorMessage(String errorMessage) {
-        this.errorMessage = errorMessage;
+    public DCRException(String errorCode, String message, Throwable cause) {
+        super(errorCode, message, cause);
     }
 }

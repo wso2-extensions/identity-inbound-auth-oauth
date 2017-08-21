@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oidc.dcr.model;
 
+import org.wso2.carbon.identity.application.authentication.framework.inbound.FrameworkClientException;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.FrameworkRuntimeException;
 import org.wso2.carbon.identity.oauth.dcr.model.RegistrationRequest;
 
@@ -29,7 +30,7 @@ import javax.servlet.http.HttpServletResponse;
  */
 public class OIDCRegistrationRequest extends RegistrationRequest {
 
-    public OIDCRegistrationRequest(OIDCRegistrationRequestBuilder builder) {
+    public OIDCRegistrationRequest(OIDCRegistrationRequestBuilder builder) throws FrameworkClientException {
         super(builder);
     }
 
@@ -41,7 +42,7 @@ public class OIDCRegistrationRequest extends RegistrationRequest {
         }
 
         @Override
-        public RegistrationRequest build() throws FrameworkRuntimeException {
+        public RegistrationRequest build() throws FrameworkRuntimeException, FrameworkClientException {
             return new OIDCRegistrationRequest(this);
         }
     }

@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth.dcr.model;
 
+import org.wso2.carbon.identity.application.authentication.framework.inbound.FrameworkClientException;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.FrameworkRuntimeException;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.IdentityRequest;
 
@@ -29,9 +30,10 @@ import javax.servlet.http.HttpServletResponse;
  */
 public class RegistrationRequest extends IdentityRequest {
 
+    private static final long serialVersionUID = -6698974259780031092L;
     private RegistrationRequestProfile registrationRequestProfile = null;
 
-    public RegistrationRequest(RegistrationRequestBuilder builder) {
+    public RegistrationRequest(RegistrationRequestBuilder builder) throws FrameworkClientException {
 
         super(builder);
         this.registrationRequestProfile = builder.registrationRequestProfile;
@@ -62,7 +64,7 @@ public class RegistrationRequest extends IdentityRequest {
         }
 
         @Override
-        public RegistrationRequest build() throws FrameworkRuntimeException {
+        public RegistrationRequest build() throws FrameworkRuntimeException, FrameworkClientException {
             return new RegistrationRequest(this);
         }
     }

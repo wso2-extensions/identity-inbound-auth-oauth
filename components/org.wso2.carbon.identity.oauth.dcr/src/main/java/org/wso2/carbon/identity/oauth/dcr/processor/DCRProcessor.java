@@ -25,6 +25,7 @@ import org.wso2.carbon.identity.application.authentication.framework.inbound.Ide
 import org.wso2.carbon.identity.application.authentication.framework.inbound.IdentityProcessor;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.IdentityRequest;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.IdentityResponse;
+import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.oauth.dcr.DCRException;
 import org.wso2.carbon.identity.oauth.dcr.context.DCRMessageContext;
 import org.wso2.carbon.identity.oauth.dcr.exception.RegistrationException;
@@ -34,7 +35,6 @@ import org.wso2.carbon.identity.oauth.dcr.handler.UnRegistrationHandler;
 import org.wso2.carbon.identity.oauth.dcr.model.RegistrationRequest;
 import org.wso2.carbon.identity.oauth.dcr.model.UnregistrationRequest;
 import org.wso2.carbon.identity.oauth.dcr.util.DCRConstants;
-import org.wso2.carbon.identity.oauth.dcr.util.DCRExceptionBuilder;
 import org.wso2.carbon.identity.oauth.dcr.util.ErrorCodes;
 import org.wso2.carbon.identity.oauth.dcr.util.HandlerManager;
 
@@ -70,6 +70,11 @@ public class DCRProcessor extends IdentityProcessor {
         return null;
     }
 
+    @Override
+    public String getRelyingPartyId(IdentityMessageContext identityMessageContext) {
+        return null;
+    }
+
     protected IdentityResponse.IdentityResponseBuilder registerOAuthApplication(DCRMessageContext dcrMessageContext)
             throws RegistrationException {
 
@@ -80,13 +85,12 @@ public class DCRProcessor extends IdentityProcessor {
                     HandlerManager.getInstance().getRegistrationHandler(dcrMessageContext);
             identityResponseBuilder = registrationHandler.handle(dcrMessageContext);
         } catch (DCRException e) {
-            if (e.getErrorInfoList().size() == 0) {
-                throw DCRExceptionBuilder
-                        .buildException(new RegistrationException(e.getErrorMessage()), ErrorCodes.BAD_REQUEST
-                                .toString(), e.getErrorMessage());
+            if (StringUtils.isBlank(e.getErrorCode())) {
+                throw IdentityException.error(RegistrationException.class,
+                    ErrorCodes.BAD_REQUEST.toString(), e.getMessage(), e);
             } else {
-                throw DCRExceptionBuilder.buildException(RegistrationException.class, e.getErrorInfoList()
-                        .get(e.getErrorInfoList().size() - 1));
+                throw  IdentityException.error(RegistrationException.class, e.getErrorCode(),
+                    e.getMessage(), e);
             }
         }
         return identityResponseBuilder;
@@ -100,13 +104,10 @@ public class DCRProcessor extends IdentityProcessor {
                     HandlerManager.getInstance().getUnRegistrationHandler(dcrMessageContext);
             identityResponseBuilder = unRegistrationHandler.handle(dcrMessageContext);
         } catch (DCRException e) {
-            if (StringUtils.isBlank(e.getCode())) {
-                throw DCRExceptionBuilder
-                        .buildException(new UnRegistrationException(e.getErrorMessage()), ErrorCodes.BAD_REQUEST
-                                .toString(), e.getErrorMessage());
+            if (StringUtils.isBlank(e.getErrorCode())) {
+                throw IdentityException.error(UnRegistrationException.class, ErrorCodes.BAD_REQUEST.toString(), e);
             } else {
-                throw DCRExceptionBuilder.buildException(UnRegistrationException.class, e.getErrorInfoList()
-                        .get(e.getErrorInfoList().size()));
+                throw  IdentityException.error(UnRegistrationException.class, e.getErrorCode(), e);
             }
         }
         return identityResponseBuilder;

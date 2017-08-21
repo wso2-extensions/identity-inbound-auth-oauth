@@ -24,5 +24,5 @@ import java.util.regex.Pattern;
  */
 public final class OIDCDCRConstants {
     public static final Pattern OIDC_DCR_ENDPOINT_REGISTER_URL_PATTERN =
-            Pattern.compile("/identity/connect/register/?");
+            Pattern.compile("(.*)/identity/connect/register/?");
 }

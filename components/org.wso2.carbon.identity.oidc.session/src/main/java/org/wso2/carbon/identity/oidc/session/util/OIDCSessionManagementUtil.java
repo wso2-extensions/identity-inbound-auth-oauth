@@ -281,6 +281,17 @@ public class OIDCSessionManagementUtil {
         return errorPageUrl;
     }
 
+
+    /**
+     * Returns the OpenIDConnect User Consent.
+     *
+     * @return
+     */
+    public static boolean getOpenIDConnectSkipeUserConsent() {
+
+        return OAuthServerConfiguration.getInstance().getOpenIDConnectSkipeUserConsentConfig();
+    }
+
     private static String generateSaltValue() throws NoSuchAlgorithmException {
 
         byte[] bytes = new byte[16];

@@ -17,7 +17,11 @@
 -->
 <Scopes>
     <Scope id="openid">
-        <Claim>sub</Claim>
+        <Claim>
+            sub,email,email_verified,name,family_name,given_name,middle_name,nickname,preferred_username,profile,picture,
+            website,gender,birthdate,zoneinfo,locale,updated_at,phone_number,phone_number_verified,address,street_address,
+            country,formatted,postal_code,locality,region
+        </Claim>
     </Scope>
     <Scope id="email">
         <Claim>email,email_verified</Claim>
@@ -31,6 +35,6 @@
         <Claim>phone_number,phone_number_verified</Claim>
     </Scope>
     <Scope id="address">
-        <Claim>address,street</Claim>
+        <Claim>address,street_address</Claim>
     </Scope>
 </Scopes>
