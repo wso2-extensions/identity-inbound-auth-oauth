@@ -191,6 +191,10 @@
 
                 function validate() {
                     var callbackUrl = document.getElementById('callback').value;
+                    if (callbackUrl.indexOf("#") !== -1) {
+                        CARBON.showWarningDialog('<fmt:message key="callback.is.fragment"/>');
+                        return false;
+                    }
                     var value = document.getElementsByName("application")[0].value;
                     if (value == '') {
                         CARBON.showWarningDialog('<fmt:message key="application.is.required"/>');
