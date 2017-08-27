@@ -88,6 +88,7 @@ public class SAMLAssertionClaimsCallback implements CustomClaimsCallbackHandler 
     private static final String UPDATED_AT = "updated_at";
     private static final String PHONE_NUMBER_VERIFIED = "phone_number_verified";
     private static final String EMAIL_VERIFIED = "email_verified";
+    private static final String ADDRESS_PREFIX = "address.";
 
     private static String userAttributeSeparator = IdentityCoreConstants.MULTI_ATTRIBUTE_SEPARATOR_DEFAULT;
 
@@ -277,6 +278,12 @@ public class SAMLAssertionClaimsCallback implements CustomClaimsCallbackHandler 
         Map<String, Object> mappedAppClaims = new HashMap<>();
 
         String spTenantDomain = (String) requestMsgCtx.getProperty(MultitenantConstants.TENANT_DOMAIN);
+
+        // There are certain flows where tenant domain is not added as a message context property.
+        if (spTenantDomain == null) {
+            spTenantDomain = requestMsgCtx.getOauth2AccessTokenReqDTO().getTenantDomain();
+        }
+
         ApplicationManagementService applicationMgtService = OAuth2ServiceComponentHolder.getApplicationMgtService();
         String spName = applicationMgtService
                 .getServiceProviderNameByClientId(requestMsgCtx.getOauth2AccessTokenReqDTO().getClientId(),
@@ -387,33 +394,27 @@ public class SAMLAssertionClaimsCallback implements CustomClaimsCallbackHandler 
      * @return
      */
     private static String getServiceProviderMappedUserRoles(ServiceProvider serviceProvider,
-            List<String> locallyMappedUserRoles, String claimSeparator) throws FrameworkException {
-        if (CollectionUtils.isNotEmpty(locallyMappedUserRoles)) {
+                                                            List<String> locallyMappedUserRoles,
+                                                            String claimSeparator) throws FrameworkException {
 
+        if (CollectionUtils.isNotEmpty(locallyMappedUserRoles)) {
+            // Get Local Role to Service Provider Role mappings
             RoleMapping[] localToSpRoleMapping = serviceProvider.getPermissionAndRoleConfig().getRoleMappings();
 
-            if (ArrayUtils.isEmpty(localToSpRoleMapping)) {
-                return null;
-            }
-
-            StringBuilder spMappedUserRoles = new StringBuilder();
-            for (RoleMapping roleMapping : localToSpRoleMapping) {
-                if (locallyMappedUserRoles.contains(roleMapping.getLocalRole().getLocalRoleName())) {
-                    spMappedUserRoles.append(roleMapping.getRemoteRole()).append(claimSeparator);
-                    locallyMappedUserRoles.remove(roleMapping.getLocalRole().getLocalRoleName());
+            if (ArrayUtils.isNotEmpty(localToSpRoleMapping)) {
+                for (RoleMapping roleMapping : localToSpRoleMapping) {
+                    // check whether a local role is mapped to service provider role
+                    if (locallyMappedUserRoles.contains(roleMapping.getLocalRole().getLocalRoleName())) {
+                        // remove the local role from the list of user roles
+                        locallyMappedUserRoles.remove(roleMapping.getLocalRole().getLocalRoleName());
+                        // add the service provider mapped role
+                        locallyMappedUserRoles.add(roleMapping.getRemoteRole());
+                    }
                 }
             }
-
-            for (String remainingRole : locallyMappedUserRoles) {
-                spMappedUserRoles.append(remainingRole).append(claimSeparator);
-            }
-
-            return spMappedUserRoles.length() > 0 ?
-                    spMappedUserRoles.toString().substring(0, spMappedUserRoles.length() - 1) :
-                    null;
         }
 
-        return null;
+        return StringUtils.join(locallyMappedUserRoles, claimSeparator);
     }
 
     private static Map<String, Object> getClaimsFromUserStore(OAuthAuthzReqMessageContext requestMsgCtx)
@@ -422,6 +423,12 @@ public class SAMLAssertionClaimsCallback implements CustomClaimsCallbackHandler 
         Map<String, Object> mappedAppClaims = new HashMap<>();
 
         String spTenantDomain = (String) requestMsgCtx.getProperty(MultitenantConstants.TENANT_DOMAIN);
+
+        // There are certain flows where tenant domain is not added as a message context property.
+        if (spTenantDomain == null) {
+            spTenantDomain = requestMsgCtx.getAuthorizationReqDTO().getTenantDomain();
+        }
+
         ApplicationManagementService applicationMgtService = OAuth2ServiceComponentHolder.getApplicationMgtService();
         String spName = applicationMgtService
                 .getServiceProviderNameByClientId(requestMsgCtx.getAuthorizationReqDTO().getConsumerKey(),
@@ -584,8 +591,9 @@ public class SAMLAssertionClaimsCallback implements CustomClaimsCallbackHandler 
      */
     private Map<String, Object> controlClaimsFromScope(String[] requestedScopes, String tenantDomain,
                                                        Map<String, Object> claims) {
-        Resource resource = null;
+        Resource oidcScopesResource = null;
         String requestedScopeClaims = null;
+        String addressValues = null;
         String[] arrRequestedScopeClaims = null;
         Map<String, Object> returnClaims = new HashMap<>();
         Map<String, Object> claimsforAddressScope = new HashMap<>();
@@ -596,19 +604,23 @@ public class SAMLAssertionClaimsCallback implements CustomClaimsCallbackHandler 
             carbonContext.setTenantId(tenantId);
             carbonContext.setTenantDomain(tenantDomain);
             RegistryService registry = OAuth2ServiceComponentHolder.getRegistryService();
-            resource = registry.getConfigSystemRegistry(tenantId).get(OAuthConstants.SCOPE_RESOURCE_PATH);
+            oidcScopesResource = registry.getConfigSystemRegistry(tenantId).get(OAuthConstants.SCOPE_RESOURCE_PATH);
         } catch (RegistryException e) {
             log.error("Error while obtaining registry collection from :" + OAuthConstants.SCOPE_RESOURCE_PATH, e);
         } finally {
             PrivilegedCarbonContext.endTenantFlow();
         }
+        if (oidcScopesResource != null && oidcScopesResource.getProperties() != null) {
+            addressValues = oidcScopesResource.getProperty("address");
+        }
+
         for (String requestedScope : requestedScopes) {
-            if (resource != null && resource.getProperties() != null) {
-                Enumeration supporetdScopes = resource.getProperties().propertyNames();
+            if (oidcScopesResource != null && oidcScopesResource.getProperties() != null) {
+                Enumeration supporetdScopes = oidcScopesResource.getProperties().propertyNames();
                 while (supporetdScopes.hasMoreElements()) {
                     String supportedScope = (String) supporetdScopes.nextElement();
                     if (supportedScope.equals(requestedScope)) {
-                        requestedScopeClaims = resource.getProperty(requestedScope);
+                        requestedScopeClaims = oidcScopesResource.getProperty(requestedScope);
                         if (requestedScopeClaims.contains(",")) {
                             arrRequestedScopeClaims = requestedScopeClaims.split(",");
                         } else {
@@ -618,13 +630,14 @@ public class SAMLAssertionClaimsCallback implements CustomClaimsCallbackHandler 
                         for (Map.Entry<String, Object> entry : claims.entrySet()) {
                             String requestedClaims = entry.getKey();
                             if (Arrays.asList(arrRequestedScopeClaims).contains(requestedClaims)) {
-                                returnClaims.put(entry.getKey(), claims.get(entry.getKey()));
-                                if (requestedScope.equals("address")) {
-                                    if (!requestedScope.equals("address")) {
-                                        returnClaims.put(entry.getKey(), claims.get(entry.getKey()));
-                                    } else {
-                                        claimsforAddressScope.put(entry.getKey(), claims.get(entry.getKey()));
-                                    }
+                                // Address claim is handled for both ways, where address claims are sent as "address."
+                                // prefix or in address scope.
+                                if (requestedClaims.contains(ADDRESS_PREFIX)) {
+                                    claimsforAddressScope.put(entry.getKey().substring(ADDRESS_PREFIX.length()), claims.get(entry.getKey()));
+                                } else if (addressValues.contains(requestedClaims)) {
+                                    claimsforAddressScope.put(entry.getKey(), claims.get(entry.getKey()));
+                                } else {
+                                    returnClaims.put(entry.getKey(), claims.get(entry.getKey()));
                                 }
                             }
                         }
@@ -636,7 +649,7 @@ public class SAMLAssertionClaimsCallback implements CustomClaimsCallbackHandler 
         if (claimsforAddressScope.size() > 0) {
             JSONObject jsonObject = new JSONObject();
             for (Map.Entry<String, Object> entry : claimsforAddressScope.entrySet()) {
-                jsonObject.put(entry.getKey(), claims.get(entry.getKey()));
+                jsonObject.put(entry.getKey(), entry.getValue());
             }
             returnClaims.put("address", jsonObject);
         }

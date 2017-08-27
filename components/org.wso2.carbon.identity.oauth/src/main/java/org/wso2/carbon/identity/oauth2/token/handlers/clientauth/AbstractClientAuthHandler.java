@@ -69,8 +69,8 @@ public abstract class AbstractClientAuthHandler implements ClientAuthenticationH
                 //If user has set strict validation to false, can authenticate without credentials
                 if (StringUtils.isNotEmpty(authConfig) && JavaUtils.isFalseExplicitly(authConfig)) {
                     if (log.isDebugEnabled()) {
-                        log.debug("Client auth credential validation set to : " + authConfig + ". " +
-                                "can authenticate without client secret");
+                        log.debug("Client auth credential validation set to : " + authConfig + ". Can authenticate " +
+                                "without client secret");
                     }
                     return true;
                 }
@@ -80,8 +80,7 @@ public abstract class AbstractClientAuthHandler implements ClientAuthenticationH
     }
 
     @Override
-    public boolean authenticateClient(OAuthTokenReqMessageContext tokReqMsgCtx)
-            throws IdentityOAuth2Exception {
+    public boolean authenticateClient(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
 
         OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO = tokReqMsgCtx.getOauth2AccessTokenReqDTO();
 
@@ -90,8 +89,8 @@ public abstract class AbstractClientAuthHandler implements ClientAuthenticationH
                 .GrantType.SAML20_BEARER.toString().equals(oAuth2AccessTokenReqDTO.getGrantType()) && JavaUtils
                 .isFalseExplicitly(authConfig)) {
             if (log.isDebugEnabled()) {
-                log.debug("Grant type : " + oAuth2AccessTokenReqDTO.getGrantType() + " " +
-                        "Strict client validation set to : " + authConfig + " Authenticating without client secret");
+                log.debug("Grant type : " + oAuth2AccessTokenReqDTO.getGrantType() + " Strict client validation set " +
+                        "to : " + authConfig + " Authenticating without client secret");
             }
             return true;
         }

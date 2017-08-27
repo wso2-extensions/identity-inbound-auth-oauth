@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth2.token;
 
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.error.OAuthError;
@@ -29,12 +30,14 @@ import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
+import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth2.IDTokenValidationFailureException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.ResponseHeader;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
@@ -136,8 +139,10 @@ public class AccessTokenIssuer {
         for (int i = 0; i < clientAuthenticationHandlers.size(); i++) {
             if (clientAuthenticationHandlers.get(i).canAuthenticate(tokReqMsgCtx)) {
                 if (authenticatorHandlerIndex > -1) {
-                    log.debug("Multiple Client Authentication Methods used for client id : " +
-                            tokenReqDTO.getClientId());
+                    if (log.isDebugEnabled()) {
+                        log.debug("Multiple Client Authentication Methods used for client id : " +
+                                tokenReqDTO.getClientId());
+                    }
                     tokenRespDTO = handleError(
                             OAuthError.TokenResponse.INVALID_REQUEST,
                             "Multiple Client Authentication Methods used for authenticating the client.",
@@ -162,8 +167,10 @@ public class AccessTokenIssuer {
         }
 
         if (authenticatorHandlerIndex < 0 && authzGrantHandler.isConfidentialClient()) {
-            log.debug("Confidential client cannot be authenticated for client id : " +
-                    tokenReqDTO.getClientId());
+            if (log.isDebugEnabled()) {
+                log.debug("Confidential client cannot be authenticated for client id : " +
+                        tokenReqDTO.getClientId());
+            }
             tokenRespDTO = handleError(
                     OAuthConstants.OAuthError.TokenResponse.UNSUPPORTED_CLIENT_AUTHENTICATION_METHOD,
                     "Unsupported Client Authentication Method!", tokenReqDTO);
@@ -213,7 +220,8 @@ public class AccessTokenIssuer {
         if (!isAuthorizedClient) {
 
             if (log.isDebugEnabled()) {
-                log.debug("Client Id: " + tokenReqDTO.getClientId() + " is not authorized to use grant type: " + tokenReqDTO.getGrantType());
+                log.debug("Client Id: " + tokenReqDTO.getClientId() + " is not authorized to use grant type: " +
+                        tokenReqDTO.getGrantType());
             }
             tokenRespDTO = handleError(OAuthError.TokenResponse.UNAUTHORIZED_CLIENT, error, tokenReqDTO);
             setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
@@ -304,8 +312,21 @@ public class AccessTokenIssuer {
         }
 
         if (tokReqMsgCtx.getScope() != null && OAuth2Util.isOIDCAuthzRequest(tokReqMsgCtx.getScope())) {
+            if (log.isDebugEnabled()) {
+                log.debug("Issuing ID token for client: " + tokenReqDTO.getClientId());
+            }
             IDTokenBuilder builder = OAuthServerConfiguration.getInstance().getOpenIDConnectIDTokenBuilder();
-            tokenRespDTO.setIDToken(builder.buildIDToken(tokReqMsgCtx, tokenRespDTO));
+            try {
+                String idToken = builder.buildIDToken(tokReqMsgCtx, tokenRespDTO);
+                tokenRespDTO.setIDToken(idToken);
+            } catch (IDTokenValidationFailureException e) {
+                log.error(e.getMessage());
+                tokenRespDTO = handleError(
+                        OAuth2ErrorCodes.SERVER_ERROR,
+                        "Server Error",
+                        tokenReqDTO);
+                return tokenRespDTO;
+            }
         }
 
         if (tokenReqDTO.getGrantType().equals(GrantType.AUTHORIZATION_CODE.toString())) {
@@ -324,8 +345,15 @@ public class AccessTokenIssuer {
         if (oAuthEventInterceptorProxy != null && oAuthEventInterceptorProxy.isEnabled()) {
             Map<String, Object> paramMap = new HashMap<>();
             if (isRefresh) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Triggering refresh token pre renewal listeners for client: "
+                            + tokenReqDTO.getClientId());
+                }
                 oAuthEventInterceptorProxy.onPreTokenRenewal(tokenReqDTO, tokReqMsgCtx, paramMap);
             } else {
+                if (log.isDebugEnabled()) {
+                    log.debug("Triggering access token pre issuer listeners for client: " + tokenReqDTO.getClientId());
+                }
                 oAuthEventInterceptorProxy.onPreTokenIssue(tokenReqDTO, tokReqMsgCtx, paramMap);
             }
         }
@@ -341,6 +369,10 @@ public class AccessTokenIssuer {
         if (isRefresh) {
             if (oAuthEventInterceptorProxy != null && oAuthEventInterceptorProxy.isEnabled()) {
                 try {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Triggering refresh token post renewal listeners for client: "
+                                + tokenReqDTO.getClientId());
+                    }
                     Map<String, Object> paramMap = new HashMap<>();
                     oAuthEventInterceptorProxy.onPostTokenRenewal(tokenReqDTO, tokenRespDTO, tokReqMsgCtx, paramMap);
                 } catch (IdentityOAuth2Exception e) {
@@ -350,6 +382,10 @@ public class AccessTokenIssuer {
         } else {
             if (oAuthEventInterceptorProxy != null && oAuthEventInterceptorProxy.isEnabled()) {
                 try {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Triggering access token post issuer listeners for client: "
+                                + tokenReqDTO.getClientId());
+                    }
                     Map<String, Object> paramMap = new HashMap<>();
                     oAuthEventInterceptorProxy.onPostTokenIssue(tokenReqDTO, tokenRespDTO, tokReqMsgCtx, paramMap);
                 } catch (IdentityOAuth2Exception e) {
@@ -376,10 +412,10 @@ public class AccessTokenIssuer {
             if (authorizationGrantCacheEntry != null) {
                 authorizationGrantCacheEntry.setTokenId(tokenRespDTO.getTokenId());
                 if (AuthorizationGrantCache.getInstance().getValueFromCacheByToken(newCacheKey) == null) {
-                    if (log.isDebugEnabled() && IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
-                        log.debug("No AuthorizationGrantCache entry found for the access token:" +
-                                newCacheKey.getUserAttributesId() +
-                                ", hence adding to cache");
+                    if (log.isDebugEnabled()
+                            && IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                        log.debug("No AuthorizationGrantCache entry found for the access token(hashed):" +
+                                DigestUtils.sha256Hex(newCacheKey.getUserAttributesId()) + ", hence adding to cache");
                     }
                     AuthorizationGrantCache.getInstance().addToCacheByToken(newCacheKey, authorizationGrantCacheEntry);
                     AuthorizationGrantCache.getInstance().clearCacheEntryByCode(oldCacheKey);

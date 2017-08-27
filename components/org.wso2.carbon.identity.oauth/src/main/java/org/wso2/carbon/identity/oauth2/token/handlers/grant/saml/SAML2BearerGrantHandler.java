@@ -40,26 +40,40 @@ import org.opensaml.xml.validation.ValidationException;
 import org.w3c.dom.NodeList;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.Property;
+import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AbstractAuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.util.X509CredentialImpl;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
+import org.wso2.carbon.user.api.UserStoreException;
+import org.wso2.carbon.user.api.UserStoreManager;
+import org.wso2.carbon.user.core.service.RealmService;
+import org.wso2.carbon.user.core.util.UserCoreUtil;
+import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * This implements SAML 2.0 Bearer Assertion Profile for OAuth 2.0 -
@@ -69,6 +83,7 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
 
     private static Log log = LogFactory.getLog(SAML2BearerGrantHandler.class);
     private static final String SAMLSSO_AUTHENTICATOR = "samlsso";
+    private static final String SAML2SSO_AUTHENTICATOR_NAME = "SAMLSSOAuthenticator";
 
     SAMLSignatureProfileValidator profileValidator = null;
 
@@ -126,8 +141,7 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
         // Logging the SAML token
         if (log.isDebugEnabled() && IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.SAML_ASSERTION)) {
             log.debug("Received SAML assertion : " +
-                            new String(Base64.decodeBase64(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getAssertion()))
-            );
+                            new String(Base64.decodeBase64(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getAssertion())));
         }
 
         try {
@@ -167,6 +181,7 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
           an authorized delegate).  Additional information identifying the subject/principal of the transaction
           MAY be included in an <AttributeStatement>.
          */
+
         if (assertion.getSubject() != null) {
             String subjectIdentifier = assertion.getSubject().getNameID().getValue();
             if (StringUtils.isBlank(subjectIdentifier)) {
@@ -175,12 +190,6 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
                 }
                 return false;
             }
-            AuthenticatedUser user =
-                    AuthenticatedUser.createFederateAuthenticatedUserFromSubjectIdentifier(subjectIdentifier);
-            user.setUserName(subjectIdentifier);
-            // we take a tenant domain of the authorized user to be the tenant domain of the OAuth app
-            user.setTenantDomain(tenantDomain);
-            tokReqMsgCtx.setAuthorizedUser(user);
         } else {
             if (log.isDebugEnabled()) {
                 log.debug("Cannot find a Subject in the Assertion");
@@ -195,12 +204,33 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
             return false;
         } else {
             try {
+
+                if (log.isDebugEnabled()) {
+                    log.debug("Retrieving identity provider : " + assertion.getIssuer().getValue() + " for " +
+                            "authenticator name " + SAMLSSO_AUTHENTICATOR);
+                }
                 identityProvider = IdentityProviderManager.getInstance().
                         getIdPByAuthenticatorPropertyValue("IdPEntityId",
                                 assertion.getIssuer().getValue(), tenantDomain, SAMLSSO_AUTHENTICATOR, false);
+
+                if (identityProvider == null) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Couldnt find an idp for samlsso authenticator. Hence retrieving " +
+                                "identity provider : " + assertion
+                                .getIssuer().getValue() + " for " +
+                                "authenticator name " + SAML2SSO_AUTHENTICATOR_NAME);
+                    }
+
+                    identityProvider = IdentityProviderManager.getInstance().
+                            getIdPByAuthenticatorPropertyValue("IdPEntityId",
+                                    assertion.getIssuer().getValue(), tenantDomain, SAML2SSO_AUTHENTICATOR_NAME, false);
+                }
                 // IF Federated IDP not found get the resident IDP and check,
                 // resident IDP entityID == issuer
                 if (identityProvider != null) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Found an idp with given information. IDP name : " + identityProvider.getIdentityProviderName());
+                    }
                     if (IdentityApplicationConstants.RESIDENT_IDP_RESERVED_NAME.equals(
                             identityProvider.getIdentityProviderName())) {
                         identityProvider = IdentityProviderManager.getInstance().getResidentIdP(tenantDomain);
@@ -259,6 +289,7 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
             }
         }
 
+        setUser(tokReqMsgCtx, identityProvider, assertion, tenantDomain);
         /*
           The Assertion MUST contain <Conditions> element with an <AudienceRestriction> element with an <Audience>
           element containing a URI reference that identifies the authorization server, or the service provider
@@ -268,7 +299,7 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
          */
 
         if (StringUtils.isBlank(tokenEndpointAlias)) {
-            if (log.isDebugEnabled()){
+            if (log.isDebugEnabled()) {
                 String errorMsg = "Token Endpoint alias has not been configured in the Identity Provider : "
                         + identityProvider.getIdentityProviderName() + " in tenant : " + tenantDomain;
                 log.debug(errorMsg);
@@ -440,7 +471,9 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
           that Bearer Assertions are not replayed, by maintaining the set of used ID values for the length of
           time for which the Assertion would be considered valid based on the applicable NotOnOrAfter instant.
          */
-        if (notOnOrAfterFromConditions != null && notOnOrAfterFromConditions.compareTo(new DateTime()) < 1) {
+        long timestampSkewInMillis = OAuthServerConfiguration.getInstance().getTimeStampSkewInSeconds() * 1000;
+        if (notOnOrAfterFromConditions != null && notOnOrAfterFromConditions.plus(timestampSkewInMillis).isBeforeNow
+                ()) {
             // notOnOrAfter is an expired timestamp
             if (log.isDebugEnabled()){
                 log.debug("NotOnOrAfter is having an expired timestamp in Conditions element");
@@ -448,7 +481,7 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
             return false;
         }
 
-        if (notBeforeConditions != null && notBeforeConditions.compareTo(new DateTime()) >= 1) {
+        if (notBeforeConditions != null && notBeforeConditions.minus(timestampSkewInMillis).isAfterNow()) {
             // notBefore is an early timestamp
             if (log.isDebugEnabled()){
                 log.debug("NotBefore is having an early timestamp in Conditions element");
@@ -460,14 +493,14 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
         DateTime notOnOrAfterFromSubjectConfirmations = null;
         if (!notOnOrAfterFromAndNotBeforeSubjectConfirmations.isEmpty()) {
             for (Map.Entry<DateTime, DateTime> entry : notOnOrAfterFromAndNotBeforeSubjectConfirmations.entrySet()) {
-                if (entry.getKey() != null) {
+                if (entry.getKey().plus(timestampSkewInMillis).isAfterNow()) {
                     notOnOrAfterFromSubjectConfirmations = entry.getKey();
                     if (entry.getKey().compareTo(new DateTime()) >= 1) {
                         validSubjectConfirmationDataExists = true;
                     }
                 }
                 if (entry.getValue() != null) {
-                    if (entry.getValue().compareTo(new DateTime()) < 1) {
+                    if (entry.getValue().minus(timestampSkewInMillis).isBeforeNow()) {
                         validSubjectConfirmationDataExists = true;
                     }
                 }
@@ -480,10 +513,9 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
             tokReqMsgCtx.setValidityPeriod(notOnOrAfterFromSubjectConfirmations.getMillis() - curTimeInMillis);
         }
 
-        if (notOnOrAfterFromConditions == null && notOnOrAfterFromAndNotBeforeSubjectConfirmations == null) {
+        if (notOnOrAfterFromConditions == null) {
             if (log.isDebugEnabled()) {
-                log.debug("No valid NotOnOrAfter element found in either Conditions or SubjectConfirmationData " +
-                        "element");
+                log.debug("No valid NotOnOrAfter element found");
             }
             return false;
         }
@@ -574,4 +606,147 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
         return OAuthServerConfiguration.getInstance()
                 .getValueForIsRefreshTokenAllowed(OAuthConstants.OAUTH_SAML2_BEARER_METHOD);
     }
+
+    /**
+     * Set the user identified from subject identifier from assertion
+     * @param tokReqMsgCtx Token Request Message Context
+     * @param identityProvider Identity Provider
+     * @param assertion Assertion
+     * @param spTenantDomain Service Provider Tenant Domain.
+     * @throws IdentityOAuth2Exception
+     */
+    protected void setUser(OAuthTokenReqMessageContext tokReqMsgCtx, IdentityProvider identityProvider, Assertion
+            assertion, String spTenantDomain) throws IdentityOAuth2Exception {
+        if (OAuthConstants.UserType.FEDERATED_USER_DOMAIN_PREFIX.equalsIgnoreCase(OAuthServerConfiguration.getInstance()
+                .getSaml2BearerTokenUserType())) {
+            setFederatedUser(tokReqMsgCtx, assertion, spTenantDomain);
+        } else if (OAuthConstants.UserType.LOCAL_USER_TYPE.equalsIgnoreCase(OAuthServerConfiguration.getInstance()
+                .getSaml2BearerTokenUserType())) {
+            try {
+                setLocalUser(tokReqMsgCtx, assertion, spTenantDomain);
+            } catch (UserStoreException e) {
+                throw new IdentityOAuth2Exception("Error while building local user from given assertion", e);
+            }
+        } else {
+            if (IdentityApplicationConstants.RESIDENT_IDP_RESERVED_NAME.equals(
+                    identityProvider.getIdentityProviderName())) {
+                try {
+                    setLocalUser(tokReqMsgCtx, assertion, spTenantDomain);
+                } catch (UserStoreException e) {
+                    throw new IdentityOAuth2Exception("Error while building local user from given assertion", e);
+                }
+            } else {
+                setFederatedUser(tokReqMsgCtx, assertion, spTenantDomain);
+            }
+        }
+    }
+
+    /**
+     * Build and set Federated User Object.
+     * @param tokReqMsgCtx Token request message context.
+     * @param assertion SAML2 Assertion.
+     * @param tenantDomain Tenant Domain.
+     */
+    protected void setFederatedUser(OAuthTokenReqMessageContext tokReqMsgCtx, Assertion assertion, String
+            tenantDomain) {
+
+        String subjectIdentifier = assertion.getSubject().getNameID().getValue();
+        if (log.isDebugEnabled()) {
+            log.debug("Setting federated user : " + subjectIdentifier + ". with SP tenant domain : " + tenantDomain);
+        }
+        AuthenticatedUser user =
+                AuthenticatedUser.createFederateAuthenticatedUserFromSubjectIdentifier(subjectIdentifier);
+        user.setUserName(subjectIdentifier);
+        tokReqMsgCtx.setAuthorizedUser(user);
+    }
+
+    /**
+     * Set the local user to the token req message context after validating the user.
+     *
+     * @param tokReqMsgCtx Token Request Message Context
+     * @param assertion SAML2 Assertion
+     * @param spTenantDomain Service Provider tenant domain
+     * @throws UserStoreException
+     * @throws IdentityOAuth2Exception
+     */
+    protected void setLocalUser(OAuthTokenReqMessageContext tokReqMsgCtx, Assertion assertion, String spTenantDomain)
+            throws UserStoreException, IdentityOAuth2Exception {
+
+        RealmService realmService = OAuthComponentServiceHolder.getInstance().getRealmService();
+        UserStoreManager userStoreManager = null;
+        ServiceProvider serviceProvider = null;
+
+        try {
+            if (log.isDebugEnabled()) {
+                log.debug("Retrieving service provider for client id : " + tokReqMsgCtx.getOauth2AccessTokenReqDTO()
+                        .getClientId() + ". Tenant domain : " + spTenantDomain);
+            }
+            serviceProvider = OAuth2ServiceComponentHolder.getApplicationMgtService().getServiceProviderByClientId(
+                    tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId(), OAuthConstants.Scope.OAUTH2,
+                    spTenantDomain);
+        } catch (IdentityApplicationManagementException e) {
+            throw new IdentityOAuth2Exception("Error while retrieving service provider for client id : " +
+                    tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId() + " in tenant domain " + spTenantDomain);
+        }
+
+        AuthenticatedUser authenticatedUser = buildLocalUser(tokReqMsgCtx, assertion, serviceProvider, spTenantDomain);
+        if (log.isDebugEnabled()) {
+            log.debug("Setting local user with username :" + authenticatedUser.getUserName() + ". User store domain :" +
+                    authenticatedUser.getUserStoreDomain() + ". Tenant domain : " + authenticatedUser.getTenantDomain
+                    () + " . Authenticated subjectIdentifier : " + authenticatedUser
+                    .getAuthenticatedSubjectIdentifier());
+        }
+
+        if (!spTenantDomain.equalsIgnoreCase(authenticatedUser.getTenantDomain()) && !serviceProvider.isSaasApp()) {
+            throw new IdentityOAuth2Exception("Non SaaS app tries to issue token for a different tenant domain. User " +
+                    "tenant domain : " + authenticatedUser.getTenantDomain() + ". SP tenant domain : " +
+                    spTenantDomain);
+        }
+
+        userStoreManager = realmService.getTenantUserRealm(IdentityTenantUtil.getTenantId(authenticatedUser
+                .getTenantDomain())).getUserStoreManager();
+
+        if (log.isDebugEnabled()) {
+            log.debug("Checking whether the user exists in local user store");
+        }
+        boolean isExistingUser = userStoreManager.isExistingUser(authenticatedUser.getUsernameAsSubjectIdentifier(true,
+                false));
+        if (!isExistingUser) {
+            throw new IdentityOAuth2Exception("User " + authenticatedUser.getUsernameAsSubjectIdentifier(true,
+                    false) + " doesn't exist in local user store.");
+        }
+        tokReqMsgCtx.setAuthorizedUser(authenticatedUser);
+    }
+
+    /**
+     * Build the local user using subject information in the assertion.
+     *
+     * @param tokReqMsgCtx   Token message context.
+     * @param assertion      SAML2 Assertion
+     * @param spTenantDomain Service provider tenant domain
+     * @return Authenticated User
+     */
+    protected AuthenticatedUser buildLocalUser(OAuthTokenReqMessageContext tokReqMsgCtx, Assertion assertion,
+                                               ServiceProvider serviceProvider, String spTenantDomain) {
+
+        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+        String subjectIdentifier = assertion.getSubject().getNameID().getValue();
+        String userTenantDomain = null;
+        if (log.isDebugEnabled()) {
+            log.debug("Building local user with assertion subject : " + subjectIdentifier);
+        }
+        authenticatedUser.setUserStoreDomain(UserCoreUtil.extractDomainFromName(subjectIdentifier));
+        authenticatedUser.setUserName(MultitenantUtils.getTenantAwareUsername(UserCoreUtil.removeDomainFromName
+                (subjectIdentifier)));
+
+        userTenantDomain = MultitenantUtils.getTenantDomain(subjectIdentifier);
+        if (StringUtils.isEmpty(userTenantDomain)) {
+            userTenantDomain = spTenantDomain;
+        }
+
+        authenticatedUser.setTenantDomain(userTenantDomain);
+        authenticatedUser.setAuthenticatedSubjectIdentifier(authenticatedUser.getUserName(), serviceProvider);
+        return authenticatedUser;
+    }
+
 }

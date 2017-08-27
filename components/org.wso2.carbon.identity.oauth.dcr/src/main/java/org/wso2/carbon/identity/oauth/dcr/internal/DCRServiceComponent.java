@@ -34,6 +34,7 @@ import org.wso2.carbon.identity.oauth.dcr.factory.UpdateRequestFactory;
 import org.wso2.carbon.identity.oauth.dcr.handler.RegistrationHandler;
 import org.wso2.carbon.identity.oauth.dcr.handler.UnRegistrationHandler;
 import org.wso2.carbon.identity.oauth.dcr.processor.DCRProcessor;
+import org.wso2.carbon.identity.oauth.dcr.service.DCRMService;
 
 /**
  * @scr.component name="identity.oauth.dcr" immediate="true"
@@ -85,6 +86,8 @@ public class DCRServiceComponent {
             componentContext.getBundleContext().registerService(UnRegistrationHandler.class.getName(),
                                                                 new UnRegistrationHandler(), null);
 
+            componentContext.getBundleContext().registerService(DCRMService.class.getName(),
+                                                                new DCRMService(), null);
         } catch (Throwable e) {
             log.error("Error occurred while activating DCRServiceComponent", e);
         }

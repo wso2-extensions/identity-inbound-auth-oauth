@@ -209,7 +209,6 @@ public class OAuthAdminService extends AbstractAdmin {
         String tenantAwareUser = CarbonContext.getThreadLocalCarbonContext().getUsername();
         if (tenantAwareUser != null) {
 
-            int tenantId = CarbonContext.getThreadLocalCarbonContext().getTenantId();
             String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
 
             OAuthAppDAO dao = new OAuthAppDAO();
@@ -293,7 +292,6 @@ public class OAuthAdminService extends AbstractAdmin {
 
         String userName = CarbonContext.getThreadLocalCarbonContext().getUsername();
         String tenantAwareUsername = MultitenantUtils.getTenantAwareUsername(userName);
-        int tenantId = CarbonContext.getThreadLocalCarbonContext().getTenantId();
         String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         OAuthAppDAO dao = new OAuthAppDAO();
         OAuthAppDO oauthappdo = new OAuthAppDO();
@@ -375,7 +373,6 @@ public class OAuthAdminService extends AbstractAdmin {
      */
     public void updateOauthSecretKey(String consumerKey) throws IdentityOAuthAdminException {
 
-        OAuthConsumerDAO oAuthConsumerDAO = new OAuthConsumerDAO();
         String newSecretKey = OAuthUtil.getRandomNumber();
         if (OAuthServerConfiguration.getInstance().isCacheEnabled()) {
             CacheEntry clientCredentialDO = new ClientCredentialDO(newSecretKey);

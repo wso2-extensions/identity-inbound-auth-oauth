@@ -87,6 +87,10 @@
 
                 function validate() {
                     var callbackUrl = document.getElementById('callback').value;
+                    if (callbackUrl.indexOf("#") !== -1) {
+                        CARBON.showWarningDialog('<fmt:message key="callback.is.fragment"/>');
+                        return false;
+                    }
                     if ($(jQuery("#grant_authorization_code"))[0].checked || $(jQuery("#grant_implicit"))[0].checked) {
                         // This is to support providing regex patterns for callback URLs
                         if (callbackUrl.startsWith("regexp=")) {

@@ -26,6 +26,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.wso2.carbon.identity.application.authentication.framework.exception.FrameworkException;
+import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.RoleMapping;
@@ -36,6 +37,7 @@ import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataHandler;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
@@ -80,12 +82,23 @@ public class ClaimUtil {
                 return new HashMap<>();
             }
 
-            Map<String, String> spToLocalClaimMappings;
-
-            UserStoreManager userstore = realm.getUserStoreManager();
-
             AccessTokenDO accessTokenDO = OAuth2Util.getAccessTokenDOfromTokenIdentifier(tokenResponse
                     .getAuthorizationContextToken().getTokenString());
+
+            // If the authenticated user is a federated user, no requirement to retrieve claims from local users tore.
+            if (accessTokenDO != null) {
+                AuthenticatedUser authenticatedUser = accessTokenDO.getAuthzUser();
+                if (StringUtils.isNotEmpty(authenticatedUser.getUserStoreDomain())) {
+                    String userstoreDomain = authenticatedUser.getUserStoreDomain();
+                    if (userstoreDomain.startsWith(OAuthConstants.UserType.FEDERATED_USER_DOMAIN_PREFIX) ||
+                            authenticatedUser.isFederatedUser()) {
+                        return new HashMap<>();
+                    }
+                }
+            }
+
+            Map<String, String> spToLocalClaimMappings;
+            UserStoreManager userstore = realm.getUserStoreManager();
             ApplicationManagementService applicationMgtService = OAuth2ServiceComponentHolder.getApplicationMgtService();
             String clientId;
             if (accessTokenDO != null) {

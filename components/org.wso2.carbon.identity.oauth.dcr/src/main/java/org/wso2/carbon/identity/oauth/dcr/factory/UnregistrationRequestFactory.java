@@ -72,25 +72,33 @@ public class UnregistrationRequestFactory extends HttpIdentityRequestFactory {
     @Override
     public void create(IdentityRequest.IdentityRequestBuilder builder, HttpServletRequest request,
                        HttpServletResponse response) throws FrameworkClientException {
-        UnregistrationRequest.DCRUnregisterRequestBuilder unregisterRequestBuilder =
-                (UnregistrationRequest.DCRUnregisterRequestBuilder) builder;
-        super.create(unregisterRequestBuilder, request, response);
 
-        Map<String, String> headers = new HashMap<>();
-        headers.put(HttpHeaders.AUTHORIZATION, request.getHeader(HttpHeaders.AUTHORIZATION));
+        UnregistrationRequest.DCRUnregisterRequestBuilder unregisterRequestBuilder = null;
+        if (builder instanceof UnregistrationRequest.DCRUnregisterRequestBuilder) {
+            unregisterRequestBuilder =
+                    (UnregistrationRequest.DCRUnregisterRequestBuilder) builder;
+            super.create(unregisterRequestBuilder, request, response);
 
-        unregisterRequestBuilder.setMethod(request.getMethod());
-        unregisterRequestBuilder.setHeaders(headers);
+            Map<String, String> headers = new HashMap<>();
+            headers.put(HttpHeaders.AUTHORIZATION, request.getHeader(HttpHeaders.AUTHORIZATION));
+            unregisterRequestBuilder.setMethod(request.getMethod());
+            unregisterRequestBuilder.setHeaders(headers);
 
-        String consumerKey = null;
-        Matcher matcher = DCRConstants.DCR_ENDPOINT_UNREGISTER_URL_PATTERN.matcher(request.getRequestURI());
-        if (matcher.find()) {
-            consumerKey = matcher.group(2);
+            String consumerKey = null;
+            Matcher matcher = DCRConstants.DCR_ENDPOINT_UNREGISTER_URL_PATTERN.matcher(request.getRequestURI());
+            if (matcher.find()) {
+                consumerKey = matcher.group(2);
+            }
+
+            unregisterRequestBuilder.setConsumerKey(consumerKey);
+            unregisterRequestBuilder.setUserId(CarbonContext.getThreadLocalCarbonContext()
+                                                                                        .getUsername());
+
+        } else {
+            // This else part will not be reached from application logic.
+            log.error("Can't create unregisterRequestBuilder. builder is not an instance of " +
+                    "UnregistrationRequest.DCRUnregisterRequestBuilder");
         }
-
-        unregisterRequestBuilder.setConsumerKey(consumerKey);
-        unregisterRequestBuilder.setUserId(CarbonContext.getThreadLocalCarbonContext()
-                                                                                    .getUsername());
     }
 
 }

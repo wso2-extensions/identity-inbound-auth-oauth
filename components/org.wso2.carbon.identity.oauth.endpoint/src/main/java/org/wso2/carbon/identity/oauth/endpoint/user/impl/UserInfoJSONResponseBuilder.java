@@ -30,7 +30,6 @@ import org.wso2.carbon.identity.application.common.util.IdentityApplicationConst
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
-import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
@@ -46,7 +45,6 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.registry.core.Resource;
 import org.wso2.carbon.registry.core.exceptions.RegistryException;
 import org.wso2.carbon.registry.core.service.RegistryService;
-import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.util.ArrayList;
@@ -61,12 +59,11 @@ import java.util.Map;
  */
 public class UserInfoJSONResponseBuilder implements UserInfoResponseBuilder {
     private static final Log log = LogFactory.getLog(UserInfoJSONResponseBuilder.class);
-    private ArrayList<String> lstEssential = new ArrayList<>();
+    private ArrayList<String> essentialClaims = new ArrayList<>();
     private static final String UPDATED_AT = "updated_at";
     private static final String PHONE_NUMBER_VERIFIED = "phone_number_verified";
     private static final String EMAIL_VERIFIED = "email_verified";
     private static final String ADDRESS = "address";
-    Map<String, Object> claimsforAddressScope = new HashMap<>();
 
     @Override
     public String getResponseString(OAuth2TokenValidationResponseDTO tokenResponse)
@@ -98,6 +95,7 @@ public class UserInfoJSONResponseBuilder implements UserInfoResponseBuilder {
         Map<ClaimMapping, String> userAttributes = getUserAttributesFromCache(tokenResponse);
         Map<String, Object> claims = null;
         Map<String, Object> returnClaims = new HashMap<>();
+        Map<String, Object> claimsforAddressScope = new HashMap<>();
         String requestedScopeClaims = null;
 
         if (userAttributes == null || userAttributes.isEmpty()) {
@@ -174,8 +172,8 @@ public class UserInfoJSONResponseBuilder implements UserInfoResponseBuilder {
         if (!returnClaims.containsKey("sub") || StringUtils.isBlank((String) claims.get("sub"))) {
             returnClaims.put("sub", tokenResponse.getAuthorizedUser());
         }
-        if (lstEssential != null) {
-            for (String key : lstEssential) {
+        if (essentialClaims != null) {
+            for (String key : essentialClaims) {
                 returnClaims.put(key, claims.get(key));
             }
         }
@@ -193,7 +191,9 @@ public class UserInfoJSONResponseBuilder implements UserInfoResponseBuilder {
         }
 
         if (StringUtils.isNotEmpty(cacheEntry.getEssentialClaims())) {
-            lstEssential = getEssentialClaims(cacheEntry.getEssentialClaims());
+            essentialClaims = getEssentialClaims(cacheEntry.getEssentialClaims());
+        } else {
+            essentialClaims = new ArrayList<>();
         }
         return cacheEntry.getUserAttributes();
     }
@@ -204,21 +204,21 @@ public class UserInfoJSONResponseBuilder implements UserInfoResponseBuilder {
         ArrayList essentailClaimslist = new ArrayList();
         if ((jsonObjectClaims != null) && jsonObjectClaims.toString().contains("userinfo")) {
             JSONObject newJSON = jsonObjectClaims.getJSONObject("userinfo");
-            Iterator<?> keys = newJSON.keys();
-            while (keys.hasNext()) {
-                key = (String) keys.next();
-                String value = null;
-                if (newJSON != null) {
+            if (newJSON != null) {
+                Iterator<?> keys = newJSON.keys();
+                while (keys.hasNext()) {
+                    key = (String) keys.next();
+                    String value;
                     value = newJSON.get(key).toString();
-                }
-                JSONObject jsonObjectValues = new JSONObject(value);
-                if (jsonObjectValues != null) {
-                    Iterator<?> claimKeyValues = jsonObjectValues.keys();
-                    while (claimKeyValues.hasNext()) {
-                        String claimKeys = (String) claimKeyValues.next();
-                        String claimValues = jsonObjectValues.get(claimKeys).toString();
-                        if (claimValues.equals("true") && claimKeys.equals("essential")) {
-                            essentailClaimslist.add(key);
+                    JSONObject jsonObjectValues = new JSONObject(value);
+                    if (jsonObjectValues != null) {
+                        Iterator<?> claimKeyValues = jsonObjectValues.keys();
+                        while (claimKeyValues.hasNext()) {
+                            String claimKeys = (String) claimKeyValues.next();
+                            String claimValues = jsonObjectValues.get(claimKeys).toString();
+                            if (claimValues.equals("true") && claimKeys.equals("essential")) {
+                                essentailClaimslist.add(key);
+                            }
                         }
                     }
                 }

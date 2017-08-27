@@ -20,6 +20,7 @@
 
 package org.wso2.carbon.identity.oauth2.token.handlers.grant;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -81,7 +82,7 @@ public abstract class AbstractValidator
 	}
 
 	protected void setNotAllowedParamsParams(List<String> params) {
-		this.notAllowedParams = notAllowedParams;
+		this.notAllowedParams = params == null ? new ArrayList() : params;
 	}
 
 	protected void addNotAllowedParamsParam(String param) {
