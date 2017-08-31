@@ -191,10 +191,6 @@
 
                 function validate() {
                     var callbackUrl = document.getElementById('callback').value;
-                    if (callbackUrl.indexOf("#") !== -1) {
-                        CARBON.showWarningDialog('<fmt:message key="callback.is.fragment"/>');
-                        return false;
-                    }
                     var value = document.getElementsByName("application")[0].value;
                     if (value == '') {
                         CARBON.showWarningDialog('<fmt:message key="application.is.required"/>');
@@ -208,14 +204,14 @@
                             // This is to support providing regex patterns for callback URLs
                             if (callbackUrl.startsWith("regexp=")) {
                                 // skip validation
-                            } else if (!isWhiteListed(callbackUrl, ["url"]) || !isNotBlackListed(callbackUrl,
+                            } else if (!isWhiteListed(callbackUrl, ["fragment-free-url"]) || !isNotBlackListed(callbackUrl,
                                             ["uri-unsafe-exists"])) {
                                 CARBON.showWarningDialog('<fmt:message key="callback.is.not.url"/>');
                                 return false;
                             }
                         }
                     } else {
-                        if (!isWhiteListed(callbackUrl, ["url"]) || !isNotBlackListed(callbackUrl,
+                        if (!isWhiteListed(callbackUrl, ["fragment-free-url"]) || !isNotBlackListed(callbackUrl,
                                         ["uri-unsafe-exists"])) {
                             CARBON.showWarningDialog('<fmt:message key="callback.is.not.url"/>');
                             return false;

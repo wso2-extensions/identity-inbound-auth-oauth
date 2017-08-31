@@ -87,15 +87,11 @@
 
                 function validate() {
                     var callbackUrl = document.getElementById('callback').value;
-                    if (callbackUrl.indexOf("#") !== -1) {
-                        CARBON.showWarningDialog('<fmt:message key="callback.is.fragment"/>');
-                        return false;
-                    }
                     if ($(jQuery("#grant_authorization_code"))[0].checked || $(jQuery("#grant_implicit"))[0].checked) {
                         // This is to support providing regex patterns for callback URLs
                         if (callbackUrl.startsWith("regexp=")) {
                             // skip validation
-                        } else if (!isWhiteListed(callbackUrl, ["url"]) || !isNotBlackListed(callbackUrl,
+                        } else if (!isWhiteListed(callbackUrl, ["fragment-free-url"]) || !isNotBlackListed(callbackUrl,
                                         ["uri-unsafe-exists"])) {
                             CARBON.showWarningDialog('<fmt:message key="callback.is.not.url"/>');
                             return false;
@@ -112,7 +108,7 @@
                             document.getElementsByName("callback")[0].value = '';
                         }
                     } else {
-                        if (!isWhiteListed(callbackUrl, ["url"]) || !isNotBlackListed(callbackUrl,
+                        if (!isWhiteListed(callbackUrl, ["fragment-free-url"]) || !isNotBlackListed(callbackUrl,
                                         ["uri-unsafe-exists"])) {
                             CARBON.showWarningDialog('<fmt:message key="callback.is.not.url"/>');
                             return false;
