@@ -25,9 +25,9 @@ import org.wso2.carbon.identity.application.authentication.framework.inbound.Ide
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.dcr.exception.UnRegistrationException;
 import org.wso2.carbon.identity.oauth.dcr.model.UnregistrationResponse;
+import org.wso2.carbon.identity.oauth.dcr.util.ErrorCodes;
 
 import javax.servlet.http.HttpServletResponse;
-import org.wso2.carbon.identity.oauth.dcr.util.ErrorCodes;
 
 /**
  * Http UnRegistration Response Factory.

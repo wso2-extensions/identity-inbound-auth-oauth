@@ -31,7 +31,7 @@ import org.wso2.carbon.identity.oauth.dcr.service.DCRManagementService;
 /**
  * UpdateHandler handles the request for DCRM update.
  */
-public class UpdateHandler extends AbstractDCRHandler{
+public class UpdateHandler extends AbstractDCRHandler {
 
     @Override
     public IdentityResponseBuilder handle(DCRMessageContext dcrMessageContext) throws DCRException {
