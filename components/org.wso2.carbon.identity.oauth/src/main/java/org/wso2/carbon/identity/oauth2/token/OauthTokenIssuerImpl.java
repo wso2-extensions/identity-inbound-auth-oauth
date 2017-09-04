@@ -23,30 +23,85 @@ import org.apache.oltu.oauth2.as.issuer.OAuthIssuer;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
+import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
+import org.wso2.carbon.identity.oauth2.model.HttpRequestHeader;
 
 public class OauthTokenIssuerImpl implements OauthTokenIssuer {
+    private static final String HttpTBprovidedHeaderName= "id";
+    private static final String HttpTBreferredHeaderName= "rid";
+
 
     private OAuthIssuer oAuthIssuerImpl = OAuthServerConfiguration.getInstance()
             .getOAuthTokenGenerator();
 
     public String accessToken(OAuthTokenReqMessageContext tokReqMsgCtx) throws OAuthSystemException {
+        String tokenBindingId = checkTB(tokReqMsgCtx,HttpTBreferredHeaderName);
+        if (!tokenBindingId.isEmpty()){
+            return tokenBindingId;
+        }
         return oAuthIssuerImpl.accessToken();
     }
 
     public String refreshToken(OAuthTokenReqMessageContext tokReqMsgCtx) throws OAuthSystemException {
+        String tokenBindingId = checkTB(tokReqMsgCtx,HttpTBprovidedHeaderName);
+        if (!tokenBindingId.isEmpty()){
+            return tokenBindingId;
+        }
         return oAuthIssuerImpl.refreshToken();
     }
 
     public String authorizationCode(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) throws OAuthSystemException {
+        String tokenBindingId = checkTB(oauthAuthzMsgCtx,HttpTBreferredHeaderName);
+        if (!tokenBindingId.isEmpty()){
+            return tokenBindingId;
+        }
         return oAuthIssuerImpl.authorizationCode();
     }
 
     public String accessToken(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) throws OAuthSystemException {
+        String tokenBindingId = checkTB(oauthAuthzMsgCtx,HttpTBreferredHeaderName);
+        if (!tokenBindingId.isEmpty()){
+            return tokenBindingId;
+        }
         return oAuthIssuerImpl.accessToken();
     }
 
     public String refreshToken(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) throws OAuthSystemException {
+        String tokenBindingId = checkTB(oauthAuthzMsgCtx,HttpTBprovidedHeaderName);
+        if (!tokenBindingId.isEmpty()){
+            return tokenBindingId;
+        }
         return oAuthIssuerImpl.refreshToken();
+    }
+    //check for token binding header in the request
+    private String checkTB(OAuthTokenReqMessageContext tokReqMsgCtx,String HttpTBheader) {
+        HttpRequestHeader[] httpRequestHeaders = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getHttpRequestHeaders();
+        String tokenBindingId = "";
+        if (httpRequestHeaders != null) {
+            for (HttpRequestHeader httpRequestHeader : httpRequestHeaders) {
+                if (httpRequestHeader.getName().equals(HttpTBheader)) {
+                    tokenBindingId = httpRequestHeader.getValue()[0];
+                    break;
+                }
+            }
+
+        }
+        return tokenBindingId;
+    }
+
+    private String checkTB(OAuthAuthzReqMessageContext oauthAuthzMsgCtx,String HttpTBheader) {
+        HttpRequestHeader[] httpRequestHeaders = oauthAuthzMsgCtx.getAuthorizationReqDTO().getHttpRequestHeaders();
+        String tokenBindingId = "";
+        if (httpRequestHeaders != null) {
+            for (HttpRequestHeader httpRequestHeader : httpRequestHeaders) {
+                if (httpRequestHeader.getName().equals(HttpTBheader)) {
+                    tokenBindingId = httpRequestHeader.getValue()[0];
+                    break;
+                }
+            }
+
+        }
+        return tokenBindingId;
     }
 
 }

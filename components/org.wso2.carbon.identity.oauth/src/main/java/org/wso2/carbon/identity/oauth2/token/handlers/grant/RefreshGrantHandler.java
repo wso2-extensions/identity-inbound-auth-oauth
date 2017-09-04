@@ -34,6 +34,7 @@ import org.wso2.carbon.identity.oauth2.dao.SQLQueries;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.model.HttpRequestHeader;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -50,6 +51,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
 
     private static final String PREV_ACCESS_TOKEN = "previousAccessToken";
     private static Log log = LogFactory.getLog(RefreshGrantHandler.class);
+    private static final String HttpTokenHeaderName= "id";
 
     @Override
     public boolean validateGrant(OAuthTokenReqMessageContext tokReqMsgCtx)
@@ -65,7 +67,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
 
         RefreshTokenValidationDataDO validationDataDO = tokenMgtDAO.validateRefreshToken(
                 tokenReqDTO.getClientId(), refreshToken);
-
+        String tokenBindingId =checkToken(tokenReqDTO); //token binding.
         if (validationDataDO.getAccessToken() == null) {
             log.debug("Invalid Refresh Token provided for Client with " +
                     "Client Id : " + tokenReqDTO.getClientId());
@@ -118,6 +120,15 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             }
             return false;
         }
+        if (!tokenBindingId.isEmpty()) {
+            String checkTokenValue = refreshToken;
+            if (OAuth2Util.checkUserNameAssertionEnabled()) {
+                checkTokenValue = (new String(Base64Utils.decode(refreshToken), (Charsets.UTF_8))).split(":")[0];
+            }
+            if (!tokenBindingId.equals(checkTokenValue)) {
+                return false;
+            }
+        }
 
         if (log.isDebugEnabled()) {
             log.debug("Refresh token validation successful for " +
@@ -141,7 +152,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         OAuth2AccessTokenRespDTO tokenRespDTO = new OAuth2AccessTokenRespDTO();
         OAuth2AccessTokenReqDTO oauth2AccessTokenReqDTO = tokReqMsgCtx.getOauth2AccessTokenReqDTO();
         String scope = OAuth2Util.buildScopeString(tokReqMsgCtx.getScope());
-
+//        String tokenBindingId =checkToken(oauth2AccessTokenReqDTO); //token binding.
         String tokenId;
         String accessToken;
         String refreshToken;
@@ -156,9 +167,16 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         try {
             accessToken = oauthIssuerImpl.accessToken(tokReqMsgCtx);
             refreshToken = oauthIssuerImpl.refreshToken(tokReqMsgCtx);
+//            if (!tokenBindingId.isEmpty()) {                                        //assign token-binding  id as refresh token
+//                refreshToken = tokenBindingId;
+//            } else {
+//                refreshToken = oauthIssuerImpl.refreshToken(tokReqMsgCtx);
+//            }
+
         } catch (OAuthSystemException e) {
             throw new IdentityOAuth2Exception("Error when generating the tokens.", e);
         }
+
 
         boolean renew = OAuthServerConfiguration.getInstance().isRefreshTokenRenewalEnabled();
 
@@ -368,5 +386,20 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         // Remove the old access token from the AccessTokenCache
         OAuthCacheKey accessTokenCacheKey = new OAuthCacheKey(accessToken);
         oauthCache.clearCacheEntry(accessTokenCacheKey);
+    }
+    //check for token binding header in the request
+    private String checkToken(OAuth2AccessTokenReqDTO tokenReqDTO) {
+        HttpRequestHeader[] httpRequestHeaders = tokenReqDTO.getHttpRequestHeaders();
+        String tokenBindingId = "";
+        if (httpRequestHeaders != null) {
+            for (HttpRequestHeader httpRequestHeader : httpRequestHeaders) {
+                if (httpRequestHeader.getName().equals(HttpTokenHeaderName)) {
+                    tokenBindingId = httpRequestHeader.getValue()[0];
+                    break;
+                }
+            }
+
+        }
+        return tokenBindingId;
     }
 }

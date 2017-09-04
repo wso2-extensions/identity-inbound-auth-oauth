@@ -762,7 +762,7 @@ public class OAuth2AuthzEndpoint {
         }
 
         // Now the client is valid, redirect him to the authorization page.
-        OAuthAuthzRequest oauthRequest = new CarbonOAuthAuthzRequest(req);
+        CarbonOAuthAuthzRequest oauthRequest = new CarbonOAuthAuthzRequest(req);
 
         OAuth2Parameters params = new OAuth2Parameters();
         params.setClientId(clientId);
@@ -770,6 +770,7 @@ public class OAuth2AuthzEndpoint {
         params.setResponseType(oauthRequest.getResponseType());
         params.setResponseMode(oauthRequest.getParam(RESPONSE_MODE));
         params.setScopes(oauthRequest.getScopes());
+        params.setHttpRequestHeaders(oauthRequest.getHttpRequestHeaders());
         if (params.getScopes() == null) { // to avoid null pointers
             Set<String> scopeSet = new HashSet<String>();
             scopeSet.add("");

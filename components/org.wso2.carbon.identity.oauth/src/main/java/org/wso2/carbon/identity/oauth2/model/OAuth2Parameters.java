@@ -47,6 +47,7 @@ public class OAuth2Parameters implements Serializable {
     private long authTime;
     private String responseMode;
     private String essentialClaims;
+    private HttpRequestHeader[] httpRequestHeaders;
 
     public String getEssentialClaims() {
         return essentialClaims;
@@ -220,5 +221,13 @@ public class OAuth2Parameters implements Serializable {
 
     public void setTenantDomain(String tenantDomain) {
         this.tenantDomain = tenantDomain;
+    }
+
+    public HttpRequestHeader[] getHttpRequestHeaders() {
+        return httpRequestHeaders;
+    }
+
+    public void setHttpRequestHeaders(HttpRequestHeader[] httpRequestHeaders) {
+        this.httpRequestHeaders = httpRequestHeaders;
     }
 }
