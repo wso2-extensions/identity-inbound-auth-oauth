@@ -18,6 +18,8 @@
 
 package org.wso2.carbon.identity.oauth2.validators;
 
+import org.apache.axiom.util.base64.Base64Utils;
+import org.apache.commons.io.Charsets;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.common.model.User;
@@ -279,6 +281,8 @@ public class TokenValidationHandler {
             introResp.setUsername(getAuthzUser(accessTokenDO));
             // add client id
             introResp.setClientId(accessTokenDO.getConsumerKey());
+            //add token binding hash tbh
+            introResp.setTbh(findtbh(accessTokenDO));
             // adding the AccessTokenDO as a context property for further use
             messageContext.addProperty("AccessTokenDO", accessTokenDO);
         }
@@ -458,6 +462,37 @@ public class TokenValidationHandler {
      */
     private AccessTokenDO findAccessToken(String tokenIdentifier) throws IdentityOAuth2Exception {
         return OAuth2Util.getAccessTokenDOfromTokenIdentifier(tokenIdentifier);
+    }
+///get the hash value of token binding id
+    private String findtbh(AccessTokenDO accessTokenDO) {
+//        if (accessTokenDO.gettBhashAccess() != null){
+//            return accessTokenDO.gettBhashAccess();
+//        }
+//        else{
+        String tbh;
+        String accesstoken = accessTokenDO.getAccessToken();
+        if (checkBas64TB(accesstoken)) {
+            tbh = new String(Base64Utils.decode(accesstoken), (Charsets.UTF_8));
+            if (tbh.contains(":")) {
+                tbh = tbh.split(":")[0];
+                tbh = new String(Base64Utils.decode(tbh), (Charsets.UTF_8));
+            }
+            tbh = tbh.split(";")[0];
+            return tbh;
+        }
+        return null;
+//        }
+    }
+///check whether token is base64 encode or not
+    private boolean checkBas64TB(String tokenID) {
+        String pattern1 = "^([A-Za-z0-9+/]{4})*[A-Za-z0-9+/]{4}$";
+        String pattern2 = "^([A-Za-z0-9+/]{4})*[A-Za-z0-9+/]{3}=$";
+        String pattern3 = "^([A-Za-z0-9+/]{4})*[A-Za-z0-9+/]{2}==$";
+        if (tokenID.matches(pattern1) || tokenID.matches(pattern2) || tokenID.matches(pattern3)) {
+            return true;
+        }
+        return false;
+
     }
 
 }

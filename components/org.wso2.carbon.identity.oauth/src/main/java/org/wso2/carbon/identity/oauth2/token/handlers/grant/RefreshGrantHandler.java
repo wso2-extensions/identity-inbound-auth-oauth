@@ -35,9 +35,11 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.ResponseHeader;
+import org.wso2.carbon.identity.oauth2.dao.SQLQueries;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.model.HttpRequestHeader;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -71,7 +73,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
 
         RefreshTokenValidationDataDO validationDataDO = tokenMgtDAO.validateRefreshToken(
                 tokenReqDTO.getClientId(), refreshToken);
-
+        String tokenBindingId =OAuth2Util.checkTB(tokReqMsgCtx,OAuthConstants.HTTP_TB_PROVIDED_HEADER_NAME); //token binding.
         if (validationDataDO.getAccessToken() == null) {
             if (log.isDebugEnabled()) {
                 log.debug("Invalid Refresh Token provided for Client with " +
@@ -136,6 +138,15 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
                 }
                 return false;
             }
+            if (!tokenBindingId.isEmpty()) {
+                String checkTokenValue=(new String(Base64Utils.decode(refreshToken), (Charsets.UTF_8))).split(":")[0];;
+                if (OAuth2Util.checkUserNameAssertionEnabled()) {
+                    checkTokenValue = (new String(Base64Utils.decode(checkTokenValue), (Charsets.UTF_8))).split(":")[0];
+                }
+                if (!checkTokenValue.equals(OAuth2Util.hashTB(tokenBindingId))) {
+                    return false;
+                }
+            }
 
             if (log.isDebugEnabled()) {
                 log.debug("Refresh token validation successful for Client id : " + tokenReqDTO.getClientId() +
@@ -159,6 +170,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         OAuth2AccessTokenRespDTO tokenRespDTO = new OAuth2AccessTokenRespDTO();
         OAuth2AccessTokenReqDTO oauth2AccessTokenReqDTO = tokReqMsgCtx.getOauth2AccessTokenReqDTO();
         String scope = OAuth2Util.buildScopeString(tokReqMsgCtx.getScope());
+//        String tokenBindingId =checkToken(oauth2AccessTokenReqDTO); //token binding.
         // loading the stored application data
         OAuthAppDO oAuthAppDO = null;
         try {
@@ -309,6 +321,9 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         accessTokenDO.setTokenId(tokenId);
         accessTokenDO.setAccessToken(accessToken);
         accessTokenDO.setGrantType(grantType);
+        if(!OAuth2Util.checkTB(tokReqMsgCtx,OAuthConstants.HTTP_TB_REFERRED_HEADER_NAME).isEmpty()){
+            accessTokenDO.settBhashAccess(OAuth2Util.hashTB(OAuth2Util.checkTB(tokReqMsgCtx,OAuthConstants.HTTP_TB_REFERRED_HEADER_NAME)));
+        }
 
         RefreshTokenValidationDataDO oldAccessToken =
                 (RefreshTokenValidationDataDO) tokReqMsgCtx.getProperty(PREV_ACCESS_TOKEN);
