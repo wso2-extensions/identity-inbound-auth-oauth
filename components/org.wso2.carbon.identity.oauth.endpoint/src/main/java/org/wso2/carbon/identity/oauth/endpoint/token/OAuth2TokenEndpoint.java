@@ -265,6 +265,10 @@ public class OAuth2TokenEndpoint {
         tokenReqDTO.setScope(oauthRequest.getScopes().toArray(new String[oauthRequest.getScopes().size()]));
         tokenReqDTO.setTenantDomain(oauthRequest.getTenantDomain());
         tokenReqDTO.setPkceCodeVerifier(oauthRequest.getPkceCodeVerifier());
+        // Set all request parameters to the OAuth2AccessTokenReqDTO
+        tokenReqDTO.setRequestParameters(oauthRequest.getRequestParameters());
+        // Set all request headers to the OAuth2AccessTokenReqDTO
+        tokenReqDTO.setHttpRequestHeaders(oauthRequest.getHttpRequestHeaders());
 
         // Check the grant type and set the corresponding parameters
         if (GrantType.AUTHORIZATION_CODE.toString().equals(grantType)) {

@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth2.dto;
 
+import org.wso2.carbon.identity.oauth2.model.HttpRequestHeader;
 import org.wso2.carbon.identity.oauth2.model.RequestParameter;
 
 public class OAuth2AccessTokenReqDTO {
@@ -37,6 +38,7 @@ public class OAuth2AccessTokenReqDTO {
     private String windows_token;
     private String pkceCodeVerifier;
     private RequestParameter[] requestParameters;
+    private HttpRequestHeader[] httpRequestHeaders;
 
     public String getClientId() {
         return clientId;
@@ -156,6 +158,14 @@ public class OAuth2AccessTokenReqDTO {
 
     public void setRequestParameters(RequestParameter[] requestParameters) {
         this.requestParameters = requestParameters;
+    }
+
+    public HttpRequestHeader[] getHttpRequestHeaders() {
+        return httpRequestHeaders;
+    }
+
+    public void setHttpRequestHeaders(HttpRequestHeader[] httpRequestHeaders) {
+        this.httpRequestHeaders = httpRequestHeaders;
     }
 
     public String getPkceCodeVerifier() {
