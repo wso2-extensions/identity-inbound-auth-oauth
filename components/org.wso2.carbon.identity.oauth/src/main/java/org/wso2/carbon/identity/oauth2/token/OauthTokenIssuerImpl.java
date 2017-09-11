@@ -21,21 +21,19 @@ package org.wso2.carbon.identity.oauth2.token;
 
 import org.apache.oltu.oauth2.as.issuer.OAuthIssuer;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
-import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.model.HttpRequestHeader;
 
 public class OauthTokenIssuerImpl implements OauthTokenIssuer {
-    private static final String HttpTBprovidedHeaderName= "id";
-    private static final String HttpTBreferredHeaderName= "rid";
 
 
     private OAuthIssuer oAuthIssuerImpl = OAuthServerConfiguration.getInstance()
             .getOAuthTokenGenerator();
 
     public String accessToken(OAuthTokenReqMessageContext tokReqMsgCtx) throws OAuthSystemException {
-        String tokenBindingId = checkTB(tokReqMsgCtx,HttpTBreferredHeaderName);
+        String tokenBindingId = checkTB(tokReqMsgCtx,OAuthConstants.HTTP_TB_REFERRED_HEADER_NAME);
         if (!tokenBindingId.isEmpty()){
             return tokenBindingId;
         }
@@ -43,7 +41,7 @@ public class OauthTokenIssuerImpl implements OauthTokenIssuer {
     }
 
     public String refreshToken(OAuthTokenReqMessageContext tokReqMsgCtx) throws OAuthSystemException {
-        String tokenBindingId = checkTB(tokReqMsgCtx,HttpTBprovidedHeaderName);
+        String tokenBindingId = checkTB(tokReqMsgCtx,OAuthConstants.HTTP_TB_PROVIDED_HEADER_NAME);
         if (!tokenBindingId.isEmpty()){
             return tokenBindingId;
         }
@@ -51,7 +49,7 @@ public class OauthTokenIssuerImpl implements OauthTokenIssuer {
     }
 
     public String authorizationCode(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) throws OAuthSystemException {
-        String tokenBindingId = checkTB(oauthAuthzMsgCtx,HttpTBreferredHeaderName);
+        String tokenBindingId = checkTB(oauthAuthzMsgCtx,OAuthConstants.HTTP_TB_REFERRED_HEADER_NAME);
         if (!tokenBindingId.isEmpty()){
             return tokenBindingId;
         }
@@ -59,7 +57,7 @@ public class OauthTokenIssuerImpl implements OauthTokenIssuer {
     }
 
     public String accessToken(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) throws OAuthSystemException {
-        String tokenBindingId = checkTB(oauthAuthzMsgCtx,HttpTBreferredHeaderName);
+        String tokenBindingId = checkTB(oauthAuthzMsgCtx, OAuthConstants.HTTP_TB_REFERRED_HEADER_NAME);
         if (!tokenBindingId.isEmpty()){
             return tokenBindingId;
         }
@@ -67,19 +65,19 @@ public class OauthTokenIssuerImpl implements OauthTokenIssuer {
     }
 
     public String refreshToken(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) throws OAuthSystemException {
-        String tokenBindingId = checkTB(oauthAuthzMsgCtx,HttpTBprovidedHeaderName);
+        String tokenBindingId = checkTB(oauthAuthzMsgCtx,OAuthConstants.HTTP_TB_PROVIDED_HEADER_NAME);
         if (!tokenBindingId.isEmpty()){
             return tokenBindingId;
         }
         return oAuthIssuerImpl.refreshToken();
     }
     //check for token binding header in the request
-    private String checkTB(OAuthTokenReqMessageContext tokReqMsgCtx,String HttpTBheader) {
+    private String checkTB(OAuthTokenReqMessageContext tokReqMsgCtx,String httpTBheader) {
         HttpRequestHeader[] httpRequestHeaders = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getHttpRequestHeaders();
         String tokenBindingId = "";
         if (httpRequestHeaders != null) {
             for (HttpRequestHeader httpRequestHeader : httpRequestHeaders) {
-                if (httpRequestHeader.getName().equals(HttpTBheader)) {
+                if (httpRequestHeader.getName().equals(httpTBheader)) {
                     tokenBindingId = httpRequestHeader.getValue()[0];
                     break;
                 }
@@ -89,12 +87,12 @@ public class OauthTokenIssuerImpl implements OauthTokenIssuer {
         return tokenBindingId;
     }
 
-    private String checkTB(OAuthAuthzReqMessageContext oauthAuthzMsgCtx,String HttpTBheader) {
+    private String checkTB(OAuthAuthzReqMessageContext oauthAuthzMsgCtx,String httpTBheader) {
         HttpRequestHeader[] httpRequestHeaders = oauthAuthzMsgCtx.getAuthorizationReqDTO().getHttpRequestHeaders();
         String tokenBindingId = "";
         if (httpRequestHeaders != null) {
             for (HttpRequestHeader httpRequestHeader : httpRequestHeaders) {
-                if (httpRequestHeader.getName().equals(HttpTBheader)) {
+                if (httpRequestHeader.getName().equals(httpTBheader)) {
                     tokenBindingId = httpRequestHeader.getValue()[0];
                     break;
                 }

@@ -30,7 +30,6 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.ResponseHeader;
-import org.wso2.carbon.identity.oauth2.dao.SQLQueries;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
@@ -51,7 +50,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
 
     private static final String PREV_ACCESS_TOKEN = "previousAccessToken";
     private static Log log = LogFactory.getLog(RefreshGrantHandler.class);
-    private static final String HttpTokenHeaderName= "id";
+//    private static final String HTTP_TOKEN_HEADER_NAME = "id";
 
     @Override
     public boolean validateGrant(OAuthTokenReqMessageContext tokReqMsgCtx)
@@ -167,12 +166,6 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         try {
             accessToken = oauthIssuerImpl.accessToken(tokReqMsgCtx);
             refreshToken = oauthIssuerImpl.refreshToken(tokReqMsgCtx);
-//            if (!tokenBindingId.isEmpty()) {                                        //assign token-binding  id as refresh token
-//                refreshToken = tokenBindingId;
-//            } else {
-//                refreshToken = oauthIssuerImpl.refreshToken(tokReqMsgCtx);
-//            }
-
         } catch (OAuthSystemException e) {
             throw new IdentityOAuth2Exception("Error when generating the tokens.", e);
         }
@@ -393,7 +386,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         String tokenBindingId = "";
         if (httpRequestHeaders != null) {
             for (HttpRequestHeader httpRequestHeader : httpRequestHeaders) {
-                if (httpRequestHeader.getName().equals(HttpTokenHeaderName)) {
+                if (httpRequestHeader.getName().equals(OAuthConstants.HTTP_TB_PROVIDED_HEADER_NAME)) {
                     tokenBindingId = httpRequestHeader.getValue()[0];
                     break;
                 }

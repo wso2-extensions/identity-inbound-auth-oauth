@@ -88,6 +88,7 @@ public final class OAuthConstants {
     public static final String OAUTH_PKCE_CODE_CHALLENGE_METHOD = "code_challenge_method";
     public static final String OAUTH_PKCE_S256_CHALLENGE = "S256";
     public static final String OAUTH_PKCE_PLAIN_CHALLENGE = "plain";
+    public static final String OAUTH_PKCE_REFERREDTB_CHALLENGE = "referred_tb";
     //Response types
     public static final String NONE = "none";
 
@@ -111,6 +112,10 @@ public final class OAuthConstants {
     public static final String SCOPE_RESOURCE_PATH = "/oidc";
 
     public static final String TENANT_NAME_FROM_CONTEXT = "TenantNameFromContext";
+
+    //TokenBinding headers
+    public static final String HTTP_TB_PROVIDED_HEADER_NAME = "id";
+    public static final String HTTP_TB_REFERRED_HEADER_NAME = "rid";
 
     public static class GrantTypes {
         public static final String IMPLICIT = "implicit";

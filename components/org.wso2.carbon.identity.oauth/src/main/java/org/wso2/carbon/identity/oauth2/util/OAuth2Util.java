@@ -1173,5 +1173,15 @@ public class OAuth2Util {
         log.error("Unsupported Signature Algorithm in identity.xml");
         throw new IdentityOAuth2Exception("Unsupported Signature Algorithm in identity.xml");
     }
+    //token binding methods
+    public static boolean doTBPKCEvalidation(String referenceCodeChallenge, String codeVerifier){
+        if (codeVerifier == null){
+            return false;
+        }
+        if (!referenceCodeChallenge.equals(codeVerifier)){
+            return false;
+        }
+        return true;
+    }
 
 }

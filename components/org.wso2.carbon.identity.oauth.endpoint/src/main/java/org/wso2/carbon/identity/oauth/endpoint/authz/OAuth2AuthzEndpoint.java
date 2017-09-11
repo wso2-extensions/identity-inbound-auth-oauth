@@ -61,6 +61,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.model.CarbonOAuthAuthzRequest;
+import org.wso2.carbon.identity.oauth2.model.HttpRequestHeader;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionState;
@@ -794,24 +795,33 @@ public class OAuth2AuthzEndpoint {
             //Check if the code challenge method value is neither "plain" or "s256", if so return error
             if (pkceChallengeCode != null && pkceChallengeMethod != null) {
                 if (!OAuthConstants.OAUTH_PKCE_PLAIN_CHALLENGE.equals(pkceChallengeMethod) &&
-                        !OAuthConstants.OAUTH_PKCE_S256_CHALLENGE.equals(pkceChallengeMethod)) {
+                        !OAuthConstants.OAUTH_PKCE_S256_CHALLENGE.equals(pkceChallengeMethod)&&
+                        !OAuthConstants.OAUTH_PKCE_REFERREDTB_CHALLENGE.equals(pkceChallengeMethod)) {
                     return EndpointUtil.getErrorPageURL(OAuth2ErrorCodes.INVALID_REQUEST, "Unsupported PKCE Challenge Method"
                             , null);
                 }
             }
 
             // Check if "plain" transformation algorithm is disabled for the application
-            if (pkceChallengeCode != null && !clientDTO.isPkceSupportPlain()) {
-                if (pkceChallengeMethod == null || OAuthConstants.OAUTH_PKCE_PLAIN_CHALLENGE.equals(pkceChallengeMethod)) {
+            if (pkceChallengeCode != null && !clientDTO.isPkceSupportPlain()&&
+                    !OAuthConstants.OAUTH_PKCE_REFERREDTB_CHALLENGE.equals(pkceChallengeMethod)) {
+                if (pkceChallengeMethod == null || OAuthConstants.OAUTH_PKCE_PLAIN_CHALLENGE.equals(pkceChallengeCode)) {
                     return EndpointUtil.getErrorPageURL(OAuth2ErrorCodes.INVALID_REQUEST, "This application does not " +
                             "support \"plain\" transformation algorithm.", null);
                 }
             }
 
             // If PKCE challenge code was sent, check if the code challenge is upto specifications
-            if (pkceChallengeCode != null && !OAuth2Util.validatePKCECodeChallenge(pkceChallengeCode, pkceChallengeMethod)) {
+            if (pkceChallengeCode != null && !OAuthConstants.OAUTH_PKCE_REFERREDTB_CHALLENGE.equals(pkceChallengeCode)
+                    && !OAuth2Util.validatePKCECodeChallenge(pkceChallengeCode, pkceChallengeMethod)) {
                 return EndpointUtil.getErrorPageURL(OAuth2ErrorCodes.INVALID_REQUEST, "Code challenge used is not up to " +
                                 "RFC 7636 specifications."
+                        , null);
+            }
+            log.debug("the pkce is :"+OAuthConstants.OAUTH_PKCE_REFERREDTB_CHALLENGE);
+            //check PKCE challenge for token binding
+            if (checkTB(oauthRequest.getHttpRequestHeaders()) && !OAuthConstants.OAUTH_PKCE_REFERREDTB_CHALLENGE.equals(pkceChallengeCode)){
+                return EndpointUtil.getErrorPageURL(OAuth2ErrorCodes.INVALID_REQUEST, "PKCE is mandatory for Token binding. "
                         , null);
             }
 
@@ -1077,6 +1087,7 @@ public class OAuth2AuthzEndpoint {
         authzReqDTO.setPkceCodeChallenge(oauth2Params.getPkceCodeChallenge());
         authzReqDTO.setPkceCodeChallengeMethod(oauth2Params.getPkceCodeChallengeMethod());
         authzReqDTO.setTenantDomain(oauth2Params.getTenantDomain());
+        authzReqDTO.setHttpRequestHeaders(oauth2Params.getHttpRequestHeaders());
         authzReqDTO.setAuthTime(oauth2Params.getAuthTime());
         authzReqDTO.setEssentialClaims(oauth2Params.getEssentialClaims());
         return EndpointUtil.getOAuth2Service().authorize(authzReqDTO);
@@ -1261,6 +1272,17 @@ public class OAuth2AuthzEndpoint {
         }
 
         return redirectURL;
+    }
+    private Boolean checkTB(HttpRequestHeader[] HttpRequestHeaders) {
+        HttpRequestHeader[] httpRequestHeaders = HttpRequestHeaders;
+        if (httpRequestHeaders != null) {
+            for (HttpRequestHeader httpRequestHeader : httpRequestHeaders) {
+                if (httpRequestHeader.getName().equals(OAuthConstants.HTTP_TB_PROVIDED_HEADER_NAME)) {
+                   return Boolean.TRUE;
+                }
+            }
+        }
+        return Boolean.FALSE;
     }
 
 }
