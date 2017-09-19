@@ -25,6 +25,7 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.model.HttpRequestHeader;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 public class OauthTokenIssuerImpl implements OauthTokenIssuer {
 
@@ -33,7 +34,7 @@ public class OauthTokenIssuerImpl implements OauthTokenIssuer {
             .getOAuthTokenGenerator();
 
     public String accessToken(OAuthTokenReqMessageContext tokReqMsgCtx) throws OAuthSystemException {
-        String tokenBindingId = checkTB(tokReqMsgCtx,OAuthConstants.HTTP_TB_REFERRED_HEADER_NAME);
+        String tokenBindingId = OAuth2Util.checkTB(tokReqMsgCtx,OAuthConstants.HTTP_TB_REFERRED_HEADER_NAME);
         if (!tokenBindingId.isEmpty()){
             return tokenBindingId;
         }
@@ -41,15 +42,16 @@ public class OauthTokenIssuerImpl implements OauthTokenIssuer {
     }
 
     public String refreshToken(OAuthTokenReqMessageContext tokReqMsgCtx) throws OAuthSystemException {
-        String tokenBindingId = checkTB(tokReqMsgCtx,OAuthConstants.HTTP_TB_PROVIDED_HEADER_NAME);
+        String tokenBindingId = OAuth2Util.checkTB(tokReqMsgCtx,OAuthConstants.HTTP_TB_PROVIDED_HEADER_NAME);
+        String refreshtoken=oAuthIssuerImpl.refreshToken();
         if (!tokenBindingId.isEmpty()){
-            return tokenBindingId;
+            refreshtoken=OAuth2Util.hashTB(tokenBindingId)+":"+refreshtoken;
         }
-        return oAuthIssuerImpl.refreshToken();
+        return refreshtoken;
     }
 
     public String authorizationCode(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) throws OAuthSystemException {
-        String tokenBindingId = checkTB(oauthAuthzMsgCtx,OAuthConstants.HTTP_TB_REFERRED_HEADER_NAME);
+        String tokenBindingId = OAuth2Util.checkTB(oauthAuthzMsgCtx,OAuthConstants.HTTP_TB_REFERRED_HEADER_NAME);
         if (!tokenBindingId.isEmpty()){
             return tokenBindingId;
         }
@@ -57,7 +59,7 @@ public class OauthTokenIssuerImpl implements OauthTokenIssuer {
     }
 
     public String accessToken(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) throws OAuthSystemException {
-        String tokenBindingId = checkTB(oauthAuthzMsgCtx, OAuthConstants.HTTP_TB_REFERRED_HEADER_NAME);
+        String tokenBindingId = OAuth2Util.checkTB(oauthAuthzMsgCtx, OAuthConstants.HTTP_TB_REFERRED_HEADER_NAME);
         if (!tokenBindingId.isEmpty()){
             return tokenBindingId;
         }
@@ -65,41 +67,12 @@ public class OauthTokenIssuerImpl implements OauthTokenIssuer {
     }
 
     public String refreshToken(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) throws OAuthSystemException {
-        String tokenBindingId = checkTB(oauthAuthzMsgCtx,OAuthConstants.HTTP_TB_PROVIDED_HEADER_NAME);
+        String tokenBindingId = OAuth2Util.checkTB(oauthAuthzMsgCtx,OAuthConstants.HTTP_TB_PROVIDED_HEADER_NAME);
         if (!tokenBindingId.isEmpty()){
             return tokenBindingId;
         }
         return oAuthIssuerImpl.refreshToken();
     }
-    //check for token binding header in the request
-    private String checkTB(OAuthTokenReqMessageContext tokReqMsgCtx,String httpTBheader) {
-        HttpRequestHeader[] httpRequestHeaders = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getHttpRequestHeaders();
-        String tokenBindingId = "";
-        if (httpRequestHeaders != null) {
-            for (HttpRequestHeader httpRequestHeader : httpRequestHeaders) {
-                if (httpRequestHeader.getName().equals(httpTBheader)) {
-                    tokenBindingId = httpRequestHeader.getValue()[0];
-                    break;
-                }
-            }
 
-        }
-        return tokenBindingId;
-    }
-
-    private String checkTB(OAuthAuthzReqMessageContext oauthAuthzMsgCtx,String httpTBheader) {
-        HttpRequestHeader[] httpRequestHeaders = oauthAuthzMsgCtx.getAuthorizationReqDTO().getHttpRequestHeaders();
-        String tokenBindingId = "";
-        if (httpRequestHeaders != null) {
-            for (HttpRequestHeader httpRequestHeader : httpRequestHeaders) {
-                if (httpRequestHeader.getName().equals(httpTBheader)) {
-                    tokenBindingId = httpRequestHeader.getValue()[0];
-                    break;
-                }
-            }
-
-        }
-        return tokenBindingId;
-    }
 
 }

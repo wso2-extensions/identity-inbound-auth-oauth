@@ -50,7 +50,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
 
     private static final String PREV_ACCESS_TOKEN = "previousAccessToken";
     private static Log log = LogFactory.getLog(RefreshGrantHandler.class);
-//    private static final String HTTP_TOKEN_HEADER_NAME = "id";
+
 
     @Override
     public boolean validateGrant(OAuthTokenReqMessageContext tokReqMsgCtx)
@@ -66,7 +66,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
 
         RefreshTokenValidationDataDO validationDataDO = tokenMgtDAO.validateRefreshToken(
                 tokenReqDTO.getClientId(), refreshToken);
-        String tokenBindingId =checkToken(tokenReqDTO); //token binding.
+        String tokenBindingId =OAuth2Util.checkTB(tokReqMsgCtx,OAuthConstants.HTTP_TB_PROVIDED_HEADER_NAME); //token binding.
         if (validationDataDO.getAccessToken() == null) {
             log.debug("Invalid Refresh Token provided for Client with " +
                     "Client Id : " + tokenReqDTO.getClientId());
@@ -120,11 +120,14 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             return false;
         }
         if (!tokenBindingId.isEmpty()) {
-            String checkTokenValue = refreshToken;
+            String checkTokenValue;
             if (OAuth2Util.checkUserNameAssertionEnabled()) {
                 checkTokenValue = (new String(Base64Utils.decode(refreshToken), (Charsets.UTF_8))).split(":")[0];
             }
-            if (!tokenBindingId.equals(checkTokenValue)) {
+            else{
+                checkTokenValue=refreshToken.split(":")[0];
+            }
+            if (!checkTokenValue.equals(OAuth2Util.hashTB(tokenBindingId))) {
                 return false;
             }
         }
@@ -380,19 +383,5 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         OAuthCacheKey accessTokenCacheKey = new OAuthCacheKey(accessToken);
         oauthCache.clearCacheEntry(accessTokenCacheKey);
     }
-    //check for token binding header in the request
-    private String checkToken(OAuth2AccessTokenReqDTO tokenReqDTO) {
-        HttpRequestHeader[] httpRequestHeaders = tokenReqDTO.getHttpRequestHeaders();
-        String tokenBindingId = "";
-        if (httpRequestHeaders != null) {
-            for (HttpRequestHeader httpRequestHeader : httpRequestHeaders) {
-                if (httpRequestHeader.getName().equals(OAuthConstants.HTTP_TB_PROVIDED_HEADER_NAME)) {
-                    tokenBindingId = httpRequestHeader.getValue()[0];
-                    break;
-                }
-            }
 
-        }
-        return tokenBindingId;
-    }
 }

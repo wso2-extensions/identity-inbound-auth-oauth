@@ -114,6 +114,8 @@ public final class OAuthConstants {
     public static final String TENANT_NAME_FROM_CONTEXT = "TenantNameFromContext";
 
     //TokenBinding headers
+//    public static final String HTTP_TB_PROVIDED_HEADER_NAME = "sec-provided-token-binding-id";
+//    public static final String HTTP_TB_REFERRED_HEADER_NAME = "sec-referred-token-binding-id";
     public static final String HTTP_TB_PROVIDED_HEADER_NAME = "id";
     public static final String HTTP_TB_REFERRED_HEADER_NAME = "rid";
 

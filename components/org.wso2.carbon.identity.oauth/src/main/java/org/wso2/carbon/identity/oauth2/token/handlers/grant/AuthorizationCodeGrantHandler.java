@@ -205,7 +205,7 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
             log.warn("Failed PKCE Verification for oAuth 2.0 request");
             return false;
         }
-        if (!OAuth2Util.doTBPKCEvalidation(PKCECodeChallenge, codeVerifier)){
+        if (!OAuth2Util.doTBPKCEvalidation(PKCECodeChallenge, codeVerifier,authzCodeDO.getAuthorizationCode())){
             log.warn("Failed PKCE Verification for oAuth 2.0 request with TokenBinding");
             return false;
         }
