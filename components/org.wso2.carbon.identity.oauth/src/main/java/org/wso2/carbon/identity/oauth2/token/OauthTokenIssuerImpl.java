@@ -19,6 +19,8 @@
 
 package org.wso2.carbon.identity.oauth2.token;
 
+import org.apache.axiom.util.base64.Base64Utils;
+import org.apache.commons.io.Charsets;
 import org.apache.oltu.oauth2.as.issuer.OAuthIssuer;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -46,6 +48,7 @@ public class OauthTokenIssuerImpl implements OauthTokenIssuer {
         String refreshtoken=oAuthIssuerImpl.refreshToken();
         if (!tokenBindingId.isEmpty()){
             refreshtoken=OAuth2Util.hashTB(tokenBindingId)+":"+refreshtoken;
+            refreshtoken=baseencodeTB(refreshtoken);
         }
         return refreshtoken;
     }
@@ -72,6 +75,10 @@ public class OauthTokenIssuerImpl implements OauthTokenIssuer {
             return tokenBindingId;
         }
         return oAuthIssuerImpl.refreshToken();
+    }
+    public String baseencodeTB(String token){
+        token = Base64Utils.encode(token.getBytes(Charsets.UTF_8));
+        return token;
     }
 
 

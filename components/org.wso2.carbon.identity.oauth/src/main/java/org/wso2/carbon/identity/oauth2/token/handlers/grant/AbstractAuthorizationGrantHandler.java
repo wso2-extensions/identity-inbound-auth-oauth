@@ -330,6 +330,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                     validityPeriodInMillis, refreshTokenValidityPeriodInMillis, tokenType);
             
             String newAccessToken;
+            String tBhashAccess;
 
             try {
                 String userName = tokReqMsgCtx.getAuthorizedUser().toString();
@@ -349,6 +350,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                 tokReqMsgCtx.setRefreshTokenIssuedTime(refreshTokenIssuedTime.getTime());
                 
                 newAccessToken = oauthIssuerImpl.accessToken(tokReqMsgCtx);
+                tBhashAccess=OAuth2Util.decodeSplitbase64TB(newAccessToken);
                 if (OAuth2Util.checkUserNameAssertionEnabled()) {
                     //use ':' for token & userStoreDomain separation
                     String accessTokenStrToEncode = newAccessToken + ":" + userName;
@@ -358,6 +360,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                 // regenerate only if refresh token is null
                 if (refreshToken == null) {
                     refreshToken = oauthIssuerImpl.refreshToken(tokReqMsgCtx);
+
                     if (OAuth2Util.checkUserNameAssertionEnabled()) {
                         //use ':' for token & userStoreDomain separation
                         String refreshTokenStrToEncode = refreshToken + ":" + userName;
@@ -369,7 +372,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                 throw new IdentityOAuth2Exception(
                         "Error occurred while generating access token and refresh token", e);
             }
-
+            newAccessTokenDO.settBhashAccess(tBhashAccess); //TB hash of new access token
             newAccessTokenDO.setAccessToken(newAccessToken);
             newAccessTokenDO.setRefreshToken(refreshToken);
             newAccessTokenDO.setTokenState(OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);

@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oauth2.util;
 import com.nimbusds.jose.JWSAlgorithm;
 import org.apache.axiom.om.OMElement;
 import org.apache.axiom.om.impl.builder.StAXOMBuilder;
+import org.apache.axiom.util.base64.Base64Utils;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.Charsets;
@@ -1235,6 +1236,12 @@ public class OAuth2Util {
         }
         return bindvalue;
     }
+    //decode base64 encoding and split it to get the first value
+    //used in token binding cases.
+    public static String decodeSplitbase64TB(String base64encode){
+        return (new String(Base64Utils.decode(base64encode), (Charsets.UTF_8))).split(":")[0];
+    }
+
 
 
 }

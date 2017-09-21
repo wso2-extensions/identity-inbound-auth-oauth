@@ -120,12 +120,9 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             return false;
         }
         if (!tokenBindingId.isEmpty()) {
-            String checkTokenValue;
+            String checkTokenValue=(new String(Base64Utils.decode(refreshToken), (Charsets.UTF_8))).split(":")[0];;
             if (OAuth2Util.checkUserNameAssertionEnabled()) {
-                checkTokenValue = (new String(Base64Utils.decode(refreshToken), (Charsets.UTF_8))).split(":")[0];
-            }
-            else{
-                checkTokenValue=refreshToken.split(":")[0];
+                checkTokenValue = (new String(Base64Utils.decode(checkTokenValue), (Charsets.UTF_8))).split(":")[0];
             }
             if (!checkTokenValue.equals(OAuth2Util.hashTB(tokenBindingId))) {
                 return false;
