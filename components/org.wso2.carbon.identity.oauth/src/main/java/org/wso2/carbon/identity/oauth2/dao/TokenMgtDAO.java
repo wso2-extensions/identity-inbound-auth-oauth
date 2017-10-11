@@ -1618,6 +1618,7 @@ public class TokenMgtDAO {
             ps.setString(1, consumerKey);
             ps.setString(2, OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
             rs = ps.executeQuery();
+            AuthenticatedUser user;
             while (rs.next()) {
                 String token = rs.getString(2);
                 if (tokenMap.containsKey(token)) {
@@ -1633,7 +1634,7 @@ public class TokenMgtDAO {
                     String userDomain = rs.getString(4);
                     String tokenSope = rs.getString(5);
                     String[] scope = OAuth2Util.buildScopeArray(tokenSope);
-                    AuthenticatedUser user = new AuthenticatedUser();
+                    user = new AuthenticatedUser();
                     user.setUserName(authzUser);
                     user.setTenantDomain(OAuth2Util.getTenantDomain(tenentId));
                     user.setUserStoreDomain(userDomain);
@@ -1732,15 +1733,15 @@ public class TokenMgtDAO {
 
         String accessTokenStoreTable = OAuthConstants.ACCESS_TOKEN_STORE_TABLE;
         PreparedStatement ps = null;
-        Connection connection = IdentityDatabaseUtil.getDBConnection();
         ResultSet rs = null;
         Set<String> distinctConsumerKeys = new HashSet<>();
         boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authzUser.toString());
         String tenantDomain = authzUser.getTenantDomain();
         String tenantAwareUsernameWithNoUserDomain = authzUser.getUserName();
         String userDomain = getSanitizedUserStoreDomain(authzUser.getUserStoreDomain());
-
+        Connection connection = null;
         try {
+            connection = IdentityDatabaseUtil.getDBConnection();
             int tenantId = OAuth2Util.getTenantId(tenantDomain);
             if (OAuth2Util.checkAccessTokenPartitioningEnabled() &&
                     OAuth2Util.checkUserNameAssertionEnabled()) {
@@ -1851,7 +1852,7 @@ public class TokenMgtDAO {
     }
 
     /**
-     * This method is used invalidate the existing token and generate a new toke within one DB transaction.
+     * This method is used to invalidate the existing token and generate a new token within one DB transaction.
      *
      * @param oldAccessTokenId access token need to be updated.
      * @param tokenState       token state before generating new token.
@@ -2861,7 +2862,7 @@ public class TokenMgtDAO {
             List<AccessTokenDO> accessTokenDOs = new ArrayList<>();
             int iterationCount = 0;
             while (resultSet.next()) {
-                long issuedTime = resultSet.getTimestamp(3, Calendar.getInstance(TimeZone.getTimeZone("UTC")))
+                long issuedTime = resultSet.getTimestamp(3, Calendar.getInstance(TimeZone.getTimeZone(UTC)))
                         .getTime();
                 if (iterationCount == 0) {
                     latestIssuedTime = issuedTime;
@@ -3029,7 +3030,7 @@ public class TokenMgtDAO {
                 if (resultSet.getString(2) != null) {
                     refreshToken = persistenceProcessor.getPreprocessedRefreshToken(resultSet.getString(2));
                 }
-                long issuedTime = resultSet.getTimestamp(3, Calendar.getInstance(TimeZone.getTimeZone("UTC")))
+                long issuedTime = resultSet.getTimestamp(3, Calendar.getInstance(TimeZone.getTimeZone(UTC)))
                         .getTime();
                 long refreshTokenIssuedTime = resultSet.getTimestamp(4, Calendar.getInstance(TimeZone.getTimeZone
                         ("UTC"))).getTime();
@@ -3129,8 +3130,9 @@ public class TokenMgtDAO {
     private static int getTokenPersistPoolSize () {
 
         int maxPoolSize = DEFAULT_POOL_SIZE;
+        String maxPoolSizeConfigValue = Integer.toString(DEFAULT_POOL_SIZE);
         try {
-            String maxPoolSizeConfigValue = IdentityUtil.getProperty(OAUTH_TOKEN_PERSISTENCE_POOLSIZE);
+            maxPoolSizeConfigValue = IdentityUtil.getProperty(OAUTH_TOKEN_PERSISTENCE_POOLSIZE);
             if (StringUtils.isNotBlank(maxPoolSizeConfigValue)) {
                 maxPoolSize = Integer.parseInt(maxPoolSizeConfigValue);
             } else {
@@ -3141,7 +3143,7 @@ public class TokenMgtDAO {
             }
         } catch (NumberFormatException e) {
             if (log.isDebugEnabled()) {
-                log.debug("Error while parsing OAuth Token Persistence PoolSize", e);
+                log.debug("Error while parsing OAuth Token Persistence PoolSize: " + maxPoolSizeConfigValue, e);
             }
             log.warn("OAuth Token Persistence Pool size is not configured. Using default value: " + maxPoolSize);
         }

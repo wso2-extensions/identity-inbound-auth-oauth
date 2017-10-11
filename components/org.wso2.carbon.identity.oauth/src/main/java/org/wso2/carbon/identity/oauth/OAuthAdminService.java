@@ -423,9 +423,9 @@ public class OAuthAdminService extends AbstractAdmin {
                 boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authorizedUser);
                 String cacheKeyString;
                 if (isUsernameCaseSensitive) {
-                    cacheKeyString = consumerKey + ":" + authorizedUser + ":" + scope;
+                    cacheKeyString = consumerKey.concat(":").concat(authorizedUser).concat(":").concat(scope);
                 } else {
-                    cacheKeyString = consumerKey + ":" + authorizedUser.toLowerCase() + ":" + scope;
+                    cacheKeyString = consumerKey.concat(":").concat(authorizedUser.toLowerCase()).concat(":").concat(scope);
                 }
                 OAuthCacheKey cacheKeyUser = new OAuthCacheKey(cacheKeyString);
                 OAuthCache.getInstance().clearCacheEntry(cacheKeyUser);
@@ -446,8 +446,7 @@ public class OAuthAdminService extends AbstractAdmin {
             }
 
             tokenMgtDAO.updateAppAndRevokeTokensAndAuthzCodes(consumerKey, properties,
-                    authorizationCodes.toArray(new String[authorizationCodes.size()]),
-                    accessTokens);
+                    authorizationCodes.toArray(new String[authorizationCodes.size()]), accessTokens);
 
         } catch (IdentityOAuth2Exception | IdentityApplicationManagementException e) {
             throw new IdentityOAuthAdminException("Error in updating oauth app & revoking access tokens and authz " +
