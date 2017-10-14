@@ -28,12 +28,18 @@ import org.wso2.carbon.identity.application.authentication.framework.inbound.Ide
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.oauth.dcr.DCRException;
 import org.wso2.carbon.identity.oauth.dcr.context.DCRMessageContext;
+import org.wso2.carbon.identity.oauth.dcr.exception.ReadException;
 import org.wso2.carbon.identity.oauth.dcr.exception.RegistrationException;
 import org.wso2.carbon.identity.oauth.dcr.exception.UnRegistrationException;
+import org.wso2.carbon.identity.oauth.dcr.exception.UpdateException;
+import org.wso2.carbon.identity.oauth.dcr.handler.ReadHandler;
 import org.wso2.carbon.identity.oauth.dcr.handler.RegistrationHandler;
 import org.wso2.carbon.identity.oauth.dcr.handler.UnRegistrationHandler;
+import org.wso2.carbon.identity.oauth.dcr.handler.UpdateHandler;
+import org.wso2.carbon.identity.oauth.dcr.model.ReadRequest;
 import org.wso2.carbon.identity.oauth.dcr.model.RegistrationRequest;
 import org.wso2.carbon.identity.oauth.dcr.model.UnregistrationRequest;
+import org.wso2.carbon.identity.oauth.dcr.model.UpdateRequest;
 import org.wso2.carbon.identity.oauth.dcr.util.DCRConstants;
 import org.wso2.carbon.identity.oauth.dcr.util.ErrorCodes;
 import org.wso2.carbon.identity.oauth.dcr.util.HandlerManager;
@@ -56,6 +62,10 @@ public class DCRProcessor extends IdentityProcessor {
             identityResponseBuilder = registerOAuthApplication(dcrMessageContext);
         } else if (identityRequest instanceof UnregistrationRequest) {
             identityResponseBuilder = unRegisterOAuthApplication(dcrMessageContext);
+        } else if (identityRequest instanceof ReadRequest) {
+            identityResponseBuilder = readOAuthApplication(dcrMessageContext);
+        } else if (identityRequest instanceof UpdateRequest) {
+          identityResponseBuilder = updateOAuthApplication(dcrMessageContext);
         }
         return identityResponseBuilder;
     }
@@ -105,12 +115,56 @@ public class DCRProcessor extends IdentityProcessor {
             identityResponseBuilder = unRegistrationHandler.handle(dcrMessageContext);
         } catch (DCRException e) {
             if (StringUtils.isBlank(e.getErrorCode())) {
-                throw IdentityException.error(UnRegistrationException.class, ErrorCodes.BAD_REQUEST.toString(), e);
+                throw IdentityException.error(UnRegistrationException.class,
+                    ErrorCodes.BAD_REQUEST.toString(), e.getMessage(), e);
             } else {
-                throw  IdentityException.error(UnRegistrationException.class, e.getErrorCode(), e);
+                throw  IdentityException.error(UnRegistrationException.class, e.getErrorCode(),
+                    e.getMessage(), e);
             }
         }
         return identityResponseBuilder;
+    }
+
+    protected IdentityResponse.IdentityResponseBuilder readOAuthApplication
+        (DCRMessageContext dcrMessageContext) throws ReadException {
+
+        IdentityResponse.IdentityResponseBuilder identityResponseBuilder;
+
+        ReadHandler readHandler = new ReadHandler();
+        try {
+            identityResponseBuilder = readHandler.handle(dcrMessageContext);
+        } catch (DCRException e) {
+            if (StringUtils.isBlank(e.getErrorCode())) {
+                throw IdentityException.error(ReadException.class,
+                    ErrorCodes.BAD_REQUEST.toString(), e.getMessage(), e);
+            } else {
+                throw  IdentityException.error(ReadException.class, e.getErrorCode(), e.getMessage()
+                    , e);
+            }
+        }
+
+        return identityResponseBuilder;
+    }
+
+    protected IdentityResponse.IdentityResponseBuilder updateOAuthApplication
+        (DCRMessageContext dcrMessageContext) throws UpdateException {
+
+        IdentityResponse.IdentityResponseBuilder identityResponseBuilder = null;
+
+        UpdateHandler updateHandler = new UpdateHandler();
+
+      try {
+        identityResponseBuilder = updateHandler.handle(dcrMessageContext);
+      } catch (DCRException e) {
+        if (StringUtils.isBlank(e.getErrorCode())) {
+          throw IdentityException.error(UpdateException.class,
+              ErrorCodes.BAD_REQUEST.toString(), e.getMessage(), e);
+        } else {
+          throw  IdentityException.error(UpdateException.class, e.getErrorCode(), e.getMessage()
+                                                                                              , e);
+        }
+      }
+      return identityResponseBuilder;
     }
 
     @Override

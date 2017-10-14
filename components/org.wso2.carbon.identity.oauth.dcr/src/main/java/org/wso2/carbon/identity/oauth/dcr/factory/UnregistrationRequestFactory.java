@@ -19,6 +19,7 @@ package org.wso2.carbon.identity.oauth.dcr.factory;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.FrameworkClientException;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.FrameworkRuntimeException;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.HttpIdentityRequestFactory;
@@ -80,27 +81,24 @@ public class UnregistrationRequestFactory extends HttpIdentityRequestFactory {
 
             Map<String, String> headers = new HashMap<>();
             headers.put(HttpHeaders.AUTHORIZATION, request.getHeader(HttpHeaders.AUTHORIZATION));
-
             unregisterRequestBuilder.setMethod(request.getMethod());
             unregisterRequestBuilder.setHeaders(headers);
 
-            String clientId = request.getParameter("userId");
-            String applicationName = request.getParameter("applicationName");
             String consumerKey = null;
             Matcher matcher = DCRConstants.DCR_ENDPOINT_UNREGISTER_URL_PATTERN.matcher(request.getRequestURI());
             if (matcher.find()) {
                 consumerKey = matcher.group(2);
             }
 
-            unregisterRequestBuilder.setApplicationName(applicationName);
-            unregisterRequestBuilder.setUserId(clientId);
             unregisterRequestBuilder.setConsumerKey(consumerKey);
+            unregisterRequestBuilder.setUserId(CarbonContext.getThreadLocalCarbonContext()
+                                                                                        .getUsername());
+
         } else {
             // This else part will not be reached from application logic.
             log.error("Can't create unregisterRequestBuilder. builder is not an instance of " +
                     "UnregistrationRequest.DCRUnregisterRequestBuilder");
         }
-
     }
 
 }

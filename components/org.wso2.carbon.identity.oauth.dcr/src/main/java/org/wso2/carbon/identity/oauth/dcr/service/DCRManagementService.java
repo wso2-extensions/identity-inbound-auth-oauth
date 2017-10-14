@@ -40,6 +40,7 @@ import org.wso2.carbon.identity.oauth.dcr.DCRException;
 import org.wso2.carbon.identity.oauth.dcr.internal.DCRDataHolder;
 import org.wso2.carbon.identity.oauth.dcr.model.RegistrationRequestProfile;
 import org.wso2.carbon.identity.oauth.dcr.model.RegistrationResponseProfile;
+import org.wso2.carbon.identity.oauth.dcr.model.UpdateRequestProfile;
 import org.wso2.carbon.identity.oauth.dcr.util.DCRConstants;
 import org.wso2.carbon.identity.oauth.dcr.util.ErrorCodes;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
@@ -279,19 +280,13 @@ public class DCRManagementService {
      * This method will unregister a created OAuth application.
      *
      * @param userId          - UserId of the owner
-     * @param applicationName - OAuth application name
      * @param consumerKey     - ConsumerKey of the OAuth application
      * @return The status of the operation
      * @throws DCRException
      */
-    public void unregisterOAuthApplication(String userId, String applicationName, String consumerKey)
-            throws DCRException {
+    public boolean unregisterOAuthApplication(String userId, String consumerKey)
+        throws DCRException {
 
-        if (!StringUtils.isNotEmpty(userId) || !StringUtils.isNotEmpty(applicationName) || !StringUtils
-                .isNotEmpty(consumerKey)) {
-            throw new DCRException(
-                    "Username, Application Name and Consumer Key cannot be null or empty");
-        }
         String tenantDomain = MultitenantUtils.getTenantDomain(userId);
         String userName = MultitenantUtils.getTenantAwareUsername(userId);
 
@@ -304,12 +299,10 @@ public class DCRManagementService {
         try {
             oAuthConsumerApp = oAuthAdminService.getOAuthApplicationData(consumerKey);
         } catch (Exception e) {
-            //We had to catch Exception here because getOAuthApplicationData can throw exceptions of java.lang.Exception
-            // class.
-            if(log.isDebugEnabled()) {
-                log.debug("Error occurred while oauth application data by consumer id.", e);
-            }
+            throw new DCRException("Error occurred while reading the existing service provider.", e);
         }
+
+        String applicationName = oAuthConsumerApp.getApplicationName();
 
         if (oAuthConsumerApp != null) {
             try {
@@ -328,6 +321,8 @@ public class DCRManagementService {
                 }
                 appMgtService.deleteApplication(applicationName, tenantDomain, userName);
 
+                return true;
+
             } catch (IdentityApplicationManagementException e) {
                 throw new DCRException(
                         "Error occurred while removing ServiceProvider for application '" + applicationName + "'", e);
@@ -337,7 +332,197 @@ public class DCRManagementService {
             } finally {
                 PrivilegedCarbonContext.endTenantFlow();
             }
+        } else {
+            return false;
         }
+    }
+
+    /**
+     * This method will read a registered OAuth application
+     *
+     * @param consumerKey   - consumer key of the application
+     * @param username      - user name of the owner
+     * @return an object which holds the registered metadata of the application
+     * @throws DCRException
+     */
+    public RegistrationResponseProfile readOAuthApplication(String consumerKey, String username)
+        throws DCRException {
+
+        String tenantDomain = MultitenantUtils.getTenantDomain(username);
+        String userName = MultitenantUtils.getTenantAwareUsername(username);
+
+        try {
+            PrivilegedCarbonContext.startTenantFlow();
+            PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                .setTenantDomain(tenantDomain, true);
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(userName);
+
+            OAuthAdminService oAuthAdminService = new OAuthAdminService();
+            OAuthConsumerAppDTO oAuthConsumerApp = null;
+
+            try {
+                oAuthConsumerApp = oAuthAdminService.getOAuthApplicationData(consumerKey);
+            } catch (IdentityOAuthAdminException e) {
+                throw new DCRException("Error occurred while reading the existing service provider."
+                                                                                              , e);
+            }
+
+            if (oAuthConsumerApp != null) {
+
+                RegistrationResponseProfile registrationResponseProfile =
+                    new RegistrationResponseProfile();
+                registrationResponseProfile.setClientId(oAuthConsumerApp.getOauthConsumerKey());
+                registrationResponseProfile.getRedirectUrls()
+                    .add(oAuthConsumerApp.getCallbackUrl());
+                registrationResponseProfile
+                    .setClientSecret(oAuthConsumerApp.getOauthConsumerSecret());
+                registrationResponseProfile.setClientName(oAuthConsumerApp.getApplicationName());
+                if (StringUtils.isNotBlank(oAuthConsumerApp.getGrantTypes())) {
+                    String[] split = oAuthConsumerApp.getGrantTypes().split(" ");
+                    registrationResponseProfile.setGrantTypes(Arrays.asList(split));
+                }
+                return registrationResponseProfile;
+            } else {
+                throw new DCRException("Service provider does not contain any information.");
+            }
+        } finally {
+            PrivilegedCarbonContext.endTenantFlow();
+        }
+    }
+
+  /**
+   * This method will update a registered OAuth application
+   *
+   * @param updateRequestProfile UpdateRequestProfile of the OAuth application.
+   * @return RegistrationResponseProfile with data of the updated application
+   * @throws DCRException
+   */
+    public RegistrationResponseProfile updateOAuthApplication
+        (UpdateRequestProfile updateRequestProfile) throws DCRException {
+
+      String userName = MultitenantUtils.getTenantAwareUsername(updateRequestProfile.getUsername());
+      String tenantDomain = updateRequestProfile.getTenantDomain();
+
+      try {
+        PrivilegedCarbonContext.startTenantFlow();
+        PrivilegedCarbonContext.getThreadLocalCarbonContext()
+            .setTenantDomain(tenantDomain, true);
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(userName);
+
+        ApplicationManagementService appMgtService = DCRDataHolder.getInstance().
+            getApplicationManagementService();
+        if (appMgtService == null) {
+          throw new IllegalStateException("Error occurred while retrieving Application "
+              + "Management Service");
+        }
+
+        OAuthAdminService oAuthAdminService = new OAuthAdminService();
+        OAuthConsumerAppDTO existingApp;
+
+        try {
+          existingApp = oAuthAdminService.getOAuthApplicationData(updateRequestProfile
+              .getConsumerKey());
+        } catch (IdentityOAuthAdminException e) {
+          throw new DCRException("Error occurred while reading the existing service provider.", e);
+        }
+
+        ServiceProvider existingServiceProvider;
+
+        try {
+          existingServiceProvider = appMgtService.getServiceProvider(existingApp
+              .getApplicationName(), tenantDomain);
+        } catch (IdentityApplicationManagementException e) {
+          throw new DCRException(e.getMessage(), e);
+        }
+
+        if (!updateRequestProfile.getClientId().equals(existingApp.getOauthConsumerKey())) {
+          throw new DCRException("The included client ID is not a valid value");
+        }
+
+        if (!updateRequestProfile.getClientSecret().equals(existingApp.getOauthConsumerSecret())) {
+          throw new DCRException("The included client secret is not a valid value");
+        }
+
+        OAuthConsumerAppDTO oAuthConsumerApp = new OAuthConsumerAppDTO();
+        oAuthConsumerApp.setOauthConsumerKey(updateRequestProfile.getClientId());
+        oAuthConsumerApp.setOauthConsumerSecret(updateRequestProfile.getClientSecret());
+        oAuthConsumerApp.setApplicationName(updateRequestProfile.getClientName());
+
+        if (updateRequestProfile.getRedirectUris().size() == 0) {
+          String errorMessage = "RedirectUris property must have at least one URI value.";
+          throw IdentityException.error(DCRException.class,
+              ErrorCodes.META_DATA_VALIDATION_FAILED.toString(), errorMessage);
+        }
+
+        oAuthConsumerApp.setCallbackUrl(updateRequestProfile.getRedirectUris().get(0));
+
+        String grantTypes = StringUtils.join(updateRequestProfile.getGrantTypes(), " ");
+        if (grantTypes.isEmpty()) {
+          grantTypes = DCRConstants.GrantTypes.AUTHORIZATION_CODE;
+        }
+
+        oAuthConsumerApp.setGrantTypes(grantTypes);
+        oAuthConsumerApp.setOAuthVersion(OAUTH_VERSION);
+
+        OAuthConsumerAppDTO updatedApp;
+        try {
+          oAuthAdminService.updateConsumerApplication(oAuthConsumerApp);
+          updatedApp = oAuthAdminService.getOAuthApplicationData(updateRequestProfile
+              .getConsumerKey());
+        } catch (IdentityOAuthAdminException e) {
+          throw new DCRException("Error occurred while reading the updated service provider", e);
+        }
+
+        existingServiceProvider.setApplicationName(updatedApp.getApplicationName());
+        existingServiceProvider.setDescription("Service Provider for application " +
+            updatedApp.getApplicationName());
+
+        InboundAuthenticationConfig inboundAuthenticationConfig = new InboundAuthenticationConfig();
+        List<InboundAuthenticationRequestConfig> inboundAuthenticationRequestConfigs =
+            new ArrayList<>();
+
+        InboundAuthenticationRequestConfig inboundAuthenticationRequestConfig =
+            new InboundAuthenticationRequestConfig();
+        inboundAuthenticationRequestConfig.setInboundAuthKey(updatedApp.getOauthConsumerKey());
+        inboundAuthenticationRequestConfig.setInboundAuthType(AUTH_TYPE_OAUTH_2);
+        String oauthConsumerSecret = updatedApp.getOauthConsumerSecret();
+
+        if (StringUtils.isNotBlank(oauthConsumerSecret)) {
+          Property property = new Property();
+          property.setName(OAUTH_CONSUMER_SECRET);
+          property.setValue(oauthConsumerSecret);
+          Property[] properties = {property};
+          inboundAuthenticationRequestConfig.setProperties(properties);
+        }
+
+        inboundAuthenticationRequestConfigs.add(inboundAuthenticationRequestConfig);
+        inboundAuthenticationConfig.setInboundAuthenticationRequestConfigs
+            (inboundAuthenticationRequestConfigs.toArray(new
+                InboundAuthenticationRequestConfig[inboundAuthenticationRequestConfigs.size()]));
+        existingServiceProvider.setInboundAuthenticationConfig(inboundAuthenticationConfig);
+
+        try {
+          appMgtService.updateApplication(existingServiceProvider, tenantDomain, userName);
+        } catch (IdentityApplicationManagementException e) {
+          throw IdentityException.error(DCRException.class, ErrorCodes.BAD_REQUEST.toString(),
+                                                                                    e.getMessage());
+        }
+
+        RegistrationResponseProfile updateResponseProfile = new RegistrationResponseProfile();
+        updateResponseProfile.setClientId(updatedApp.getOauthConsumerKey());
+        updateResponseProfile.setClientSecret(oauthConsumerSecret);
+        updateResponseProfile.setClientName(updatedApp.getApplicationName());
+        updateResponseProfile.getRedirectUrls().add(updatedApp.getCallbackUrl());
+
+        if (StringUtils.isNotBlank(updatedApp.getGrantTypes())) {
+          String[] grantType = updatedApp.getGrantTypes().split(" ");
+          updateResponseProfile.setGrantTypes(Arrays.asList(grantType));
+        }
+        return updateResponseProfile;
+
+      } finally {
+        PrivilegedCarbonContext.endTenantFlow();
+      }
     }
 
     /**
