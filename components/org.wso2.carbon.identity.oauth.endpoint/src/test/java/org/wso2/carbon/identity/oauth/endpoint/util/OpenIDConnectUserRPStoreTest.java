@@ -47,7 +47,7 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
 @PrepareForTest({ IdentityTenantUtil.class, IdentityDatabaseUtil.class, OAuthServerConfiguration.class})
-public class OpenIDConnectUserRPStoreTest extends TestOAuthEndpointBase {
+public class OpenIDConnectUserRPStoreTest extends TestOAthEndpointBase {
 
     private static final String RETRIEVE_PERSISTED_USER_SQL = "SELECT USER_NAME FROM IDN_OPENID_USER_RPS";
 
@@ -76,10 +76,9 @@ public class OpenIDConnectUserRPStoreTest extends TestOAuthEndpointBase {
 
     @BeforeTest
     public void setUp() throws Exception {
-        System.setProperty(
-                CarbonBaseConstants.CARBON_HOME,
-                Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString()
-        );
+        Path path = Paths.get("src", "test", "resources", "carbon_home");
+        System.setProperty(CarbonBaseConstants.CARBON_HOME, path.toString());
+
         clientId = "ca19a540f544777860e44e75f605d927";
         secret = "87n9a540f544777860e44e75f605d435";
         appName = "myApp";

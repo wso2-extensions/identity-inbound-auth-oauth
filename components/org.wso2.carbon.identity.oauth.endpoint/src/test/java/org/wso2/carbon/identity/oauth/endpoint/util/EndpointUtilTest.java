@@ -28,6 +28,7 @@ import org.mockito.Mock;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.Assert;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.DataProvider;
@@ -42,7 +43,6 @@ import org.wso2.carbon.identity.oauth.common.exception.OAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
-import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -70,7 +70,7 @@ import static org.powermock.api.mockito.PowerMockito.whenNew;
 
 @PrepareForTest ( {SessionDataCache.class, OAuthServerConfiguration.class, OAuth2Util.class, IdentityUtil.class,
         FrameworkUtils.class, OAuthASResponse.class, OAuthResponse.class})
-public class EndpointUtilTest extends PowerMockIdentityBaseTest {
+public class EndpointUtilTest extends PowerMockTestCase {
 
     @Mock
     Log mockedLog;

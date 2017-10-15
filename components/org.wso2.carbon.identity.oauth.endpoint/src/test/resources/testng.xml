@@ -19,17 +19,6 @@
 
 <suite name="Identity-Oauth-Endpoint-Test-Suite">
     <test name="Util-Tests" preserve-order="true" parallel="false">
-        <parameter name="log-level" value="info"/>
-        <classes>
-            <class name="org.wso2.carbon.identity.oauth.endpoint.util.ClaimUtilTest" />
-            <class name="org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtilTest" />
-            <class name="org.wso2.carbon.identity.oauth.endpoint.util.OpenIDConnectUserRPStoreTest" />
-            <class name="org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpointTest" />
-        </classes>
-    </test>
-
-    <test name="OAuth2EndpointTestsWithDebugEnabled" preserve-order="true" parallel="false">
-        <parameter name="log-level" value="debug"/>
         <classes>
             <class name="org.wso2.carbon.identity.oauth.endpoint.util.ClaimUtilTest" />
             <class name="org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtilTest" />

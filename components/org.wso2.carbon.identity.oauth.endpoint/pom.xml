@@ -147,12 +147,6 @@
             <scope>test</scope>
         </dependency>
 
-        <dependency>
-            <groupId>org.wso2.carbon.identity.framework</groupId>
-            <artifactId>org.wso2.carbon.identity.testutil</artifactId>
-            <version>${carbon.identity.framework.version}</version>
-        </dependency>
-
     </dependencies>
 
     <build>

@@ -50,7 +50,7 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.OpenIDConnectUserRPStore;
-import org.wso2.carbon.identity.oauth.endpoint.util.TestOAuthEndpointBase;
+import org.wso2.carbon.identity.oauth.endpoint.util.TestOAthEndpointBase;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
@@ -63,7 +63,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -97,7 +96,7 @@ import static org.testng.Assert.assertTrue;
 @PrepareForTest({ OAuth2Util.class, SessionDataCache.class, OAuthServerConfiguration.class, IdentityDatabaseUtil.class,
         EndpointUtil.class, FrameworkUtils.class, EndpointUtil.class, OpenIDConnectUserRPStore.class,
         CarbonOAuthAuthzRequest.class, IdentityTenantUtil.class, OAuthResponse.class})
-public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
+public class OAuth2AuthzEndpointTest extends TestOAthEndpointBase {
 
     @Mock
     HttpServletRequest httpServletRequest;
@@ -153,10 +152,9 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
     @BeforeTest
     public void setUp() throws Exception {
-        System.setProperty(
-                CarbonBaseConstants.CARBON_HOME,
-                Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString()
-        );
+        Path path = Paths.get("src", "test", "resources", "carbon_home");
+        System.setProperty(CarbonBaseConstants.CARBON_HOME, path.toString());
+
         oAuth2AuthzEndpoint = new OAuth2AuthzEndpoint();
 
         initiateInMemoryH2();
@@ -177,7 +175,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         list1.add("value2");
         paramMap1.put("paramName1", list1);
 
-        Map<String, String[]> requestParams1 = new HashMap<>();
+        Map<String, String[]> requestParams1 = new HashMap();
         requestParams1.put("reqParam1", new String[]{"val1", "val2"});
 
         MultivaluedMap<String, String> paramMap2 = new MultivaluedHashMap<String, String>();
@@ -185,7 +183,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         list2.add("value1");
         paramMap2.put("paramName1", list2);
 
-        Map<String, String[]> requestParams2 = new HashMap<>();
+        Map<String, String[]> requestParams2 = new HashMap();
         requestParams2.put("reqParam1", new String[]{"val1"});
 
         return new Object[][] {
@@ -277,8 +275,8 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                               String expectedError) throws Exception {
         AuthenticatorFlowStatus flowStatus = (AuthenticatorFlowStatus) flowStatusObject;
 
-        Map<String, String[]> requestParams = new HashMap<>();
-        Map<String, Object> requestAttributes = new HashMap<>();
+        Map<String, String[]> requestParams = new HashMap();
+        Map<String, Object> requestAttributes = new HashMap();
 
         if (clientId != null) {
             requestParams.put(CLIENT_ID, clientId);
@@ -311,7 +309,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         when(sessionDataCache.getValueFromCache(loginDataCacheKey)).thenReturn(loginCacheEntry);
         when(sessionDataCache.getValueFromCache(consentDataCacheKey)).thenReturn(consentCacheEntry);
         when(loginCacheEntry.getoAuth2Parameters()).thenReturn(setOAuth2Parameters(
-                new HashSet<>(Collections.singletonList(OAuthConstants.Scope.OPENID)), APP_NAME, null, null));
+                new HashSet<>(Arrays.asList(OAuthConstants.Scope.OPENID)), APP_NAME, null, null));
 
         mockStatic(OAuthServerConfiguration.class);
         when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
@@ -421,8 +419,8 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
             authResultCacheEntry.setResult(result);
         }
 
-        Map<String, String[]> requestParams = new HashMap<>();
-        Map<String, Object> requestAttributes = new HashMap<>();
+        Map<String, String[]> requestParams = new HashMap();
+        Map<String, Object> requestAttributes = new HashMap();
 
         requestParams.put(CLIENT_ID, new String[]{CLIENT_ID_VALUE});
         requestParams.put(FrameworkConstants.RequestParams.TO_COMMONAUTH, new String[]{"false"});
@@ -496,11 +494,11 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                                         int expectedStatus, String expectedError) throws Exception {
         mockStatic(SessionDataCache.class);
         when(SessionDataCache.getInstance()).thenReturn(sessionDataCache);
-        SessionDataCacheKey consentDataCacheKey = new SessionDataCacheKey(SESSION_DATA_KEY_CONSENT_VALUE);
+        SessionDataCacheKey consentDataCacheKey = new SessionDataCacheKey(this.SESSION_DATA_KEY_CONSENT_VALUE);
         when(sessionDataCache.getValueFromCache(consentDataCacheKey)).thenReturn(consentCacheEntry);
 
-        Map<String, String[]> requestParams = new HashMap<>();
-        Map<String, Object> requestAttributes = new HashMap<>();
+        Map<String, String[]> requestParams = new HashMap();
+        Map<String, Object> requestAttributes = new HashMap();
 
         requestParams.put(OAuthConstants.SESSION_DATA_KEY_CONSENT, new String[]{SESSION_DATA_KEY_CONSENT_VALUE});
         requestParams.put(FrameworkConstants.RequestParams.TO_COMMONAUTH, new String[]{"false"});
@@ -562,7 +560,8 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
             @Override
             public Object answer(InvocationOnMock invocation) throws Throwable {
                 String key = (String) invocation.getArguments()[0];
-                return requestParams.get(key) != null ? requestParams.get(key)[0]: null;
+                String value = requestParams.get(key) != null ? requestParams.get(key)[0]: null ;
+                return value;
             }
         }).when(httpServletRequest).getParameter(anyString());
 

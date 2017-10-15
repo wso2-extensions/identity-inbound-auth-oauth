@@ -19,12 +19,11 @@ package org.wso2.carbon.identity.oauth.endpoint.util;
 
 import org.apache.commons.dbcp.BasicDataSource;
 import org.powermock.modules.testng.PowerMockTestCase;
-import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 
-public class TestOAuthEndpointBase extends PowerMockIdentityBaseTest {
+public class TestOAthEndpointBase extends PowerMockTestCase {
 
     private static final String ADD_OAUTH_APP_SQL = "INSERT INTO IDN_OAUTH_CONSUMER_APPS " +
             "(CONSUMER_KEY, CONSUMER_SECRET, USERNAME, TENANT_ID, USER_DOMAIN, APP_NAME, OAUTH_VERSION," +
