@@ -30,7 +30,6 @@ import org.wso2.carbon.identity.application.common.util.IdentityApplicationConst
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
-import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
@@ -46,7 +45,6 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.registry.core.Resource;
 import org.wso2.carbon.registry.core.exceptions.RegistryException;
 import org.wso2.carbon.registry.core.service.RegistryService;
-import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.util.ArrayList;
@@ -61,17 +59,17 @@ import java.util.Map;
  */
 public class UserInfoJSONResponseBuilder implements UserInfoResponseBuilder {
     private static final Log log = LogFactory.getLog(UserInfoJSONResponseBuilder.class);
-    private ArrayList<String> lstEssential = new ArrayList<>();
+    private ArrayList<String> essentialClaims = new ArrayList<>();
     private static final String UPDATED_AT = "updated_at";
     private static final String PHONE_NUMBER_VERIFIED = "phone_number_verified";
     private static final String EMAIL_VERIFIED = "email_verified";
     private static final String ADDRESS = "address";
-    Map<String, Object> claimsforAddressScope = new HashMap<>();
+    private static final String ADDRESS_PREFIX = "address.";
 
     @Override
     public String getResponseString(OAuth2TokenValidationResponseDTO tokenResponse)
             throws UserInfoEndpointException {
-        Resource resource = null;
+        Resource oidcScopesResource = null;
         String tenantDomain = null;
         try {
             PrivilegedCarbonContext.startTenantFlow();
@@ -86,7 +84,7 @@ public class UserInfoJSONResponseBuilder implements UserInfoResponseBuilder {
             carbonContext.setTenantId(tenantId);
             carbonContext.setTenantDomain(tenantDomain);
             RegistryService registry = OAuth2ServiceComponentHolder.getRegistryService();
-            resource = registry.getConfigSystemRegistry(tenantId).get(OAuthConstants.SCOPE_RESOURCE_PATH);
+            oidcScopesResource = registry.getConfigSystemRegistry(tenantId).get(OAuthConstants.SCOPE_RESOURCE_PATH);
         } catch (RegistryException e) {
             log.error("Error while obtaining registry collection from :" + OAuthConstants.SCOPE_RESOURCE_PATH, e);
         } finally {
@@ -98,7 +96,10 @@ public class UserInfoJSONResponseBuilder implements UserInfoResponseBuilder {
         Map<ClaimMapping, String> userAttributes = getUserAttributesFromCache(tokenResponse);
         Map<String, Object> claims = null;
         Map<String, Object> returnClaims = new HashMap<>();
+        Map<String, Object> claimsforAddressScope = new HashMap<>();
         String requestedScopeClaims = null;
+        String addressValues = null;
+        String[] arrRequestedScopeClaims = null;
 
         if (userAttributes == null || userAttributes.isEmpty()) {
             if (log.isDebugEnabled()) {
@@ -116,14 +117,16 @@ public class UserInfoJSONResponseBuilder implements UserInfoResponseBuilder {
             claims.put(OAuth2Util.SUB, returnSubjectClaim(claims.get(OAuth2Util.SUB).toString(), tenantDomain,
                     tokenResponse));
         }
-        String[] arrRequestedScopeClaims = null;
+        if (oidcScopesResource != null && oidcScopesResource.getProperties() != null) {
+            addressValues = oidcScopesResource.getProperty(ADDRESS);
+        }
         for (String requestedScope : tokenResponse.getScope()) {
-            if (resource != null && resource.getProperties() != null) {
-                Enumeration supporetdScopes = resource.getProperties().propertyNames();
+            if (oidcScopesResource != null && oidcScopesResource.getProperties() != null) {
+                Enumeration supporetdScopes = oidcScopesResource.getProperties().propertyNames();
                 while (supporetdScopes.hasMoreElements()) {
                     String supportedScope = (String) supporetdScopes.nextElement();
                     if (supportedScope.equals(requestedScope)) {
-                        requestedScopeClaims = resource.getProperty(requestedScope);
+                        requestedScopeClaims = oidcScopesResource.getProperty(requestedScope);
                         if (requestedScopeClaims.contains(",")) {
                             arrRequestedScopeClaims = requestedScopeClaims.split("\\s*,\\s*");
                         } else {
@@ -133,13 +136,14 @@ public class UserInfoJSONResponseBuilder implements UserInfoResponseBuilder {
                         for (Map.Entry<String, Object> entry : claims.entrySet()) {
                             String requestedClaims = entry.getKey();
                             if (Arrays.asList(arrRequestedScopeClaims).contains(requestedClaims)) {
-                                returnClaims.put(entry.getKey(), claims.get(entry.getKey()));
-                                if (requestedScope.equals("address")) {
-                                    if (!requestedScope.equals(ADDRESS)) {
-                                        returnClaims.put(entry.getKey(), claims.get(entry.getKey()));
-                                    } else {
-                                        claimsforAddressScope.put(entry.getKey(), claims.get(entry.getKey()));
-                                    }
+                                // Address claim is handled for both ways, where address claims are sent as "address."
+                                // prefix or in address scope.
+                                if (requestedClaims.contains(ADDRESS_PREFIX)) {
+                                    claimsforAddressScope.put(entry.getKey().substring(ADDRESS_PREFIX.length()), claims.get(entry.getKey()));
+                                } else if (addressValues != null && addressValues.contains(requestedClaims)) {
+                                    claimsforAddressScope.put(entry.getKey(), claims.get(entry.getKey()));
+                                } else {
+                                    returnClaims.put(entry.getKey(), claims.get(entry.getKey()));
                                 }
                             }
                         }
@@ -167,15 +171,15 @@ public class UserInfoJSONResponseBuilder implements UserInfoResponseBuilder {
         if (claimsforAddressScope.size() > 0) {
             JSONObject jsonObject = new JSONObject();
             for (Map.Entry<String, Object> entry : claimsforAddressScope.entrySet()) {
-                jsonObject.put(entry.getKey(), claims.get(entry.getKey()));
+                jsonObject.put(entry.getKey(), entry.getValue());
             }
             returnClaims.put(ADDRESS, jsonObject);
         }
         if (!returnClaims.containsKey("sub") || StringUtils.isBlank((String) claims.get("sub"))) {
             returnClaims.put("sub", tokenResponse.getAuthorizedUser());
         }
-        if (lstEssential != null) {
-            for (String key : lstEssential) {
+        if (essentialClaims != null) {
+            for (String key : essentialClaims) {
                 returnClaims.put(key, claims.get(key));
             }
         }
@@ -193,39 +197,12 @@ public class UserInfoJSONResponseBuilder implements UserInfoResponseBuilder {
         }
 
         if (StringUtils.isNotEmpty(cacheEntry.getEssentialClaims())) {
-            lstEssential = getEssentialClaims(cacheEntry.getEssentialClaims());
+            essentialClaims = OAuth2Util.getEssentialClaims(cacheEntry.getEssentialClaims(),
+                    OAuthConstants.OAuth20Params.USERINFO);
+        } else {
+            essentialClaims = new ArrayList<>();
         }
         return cacheEntry.getUserAttributes();
-    }
-
-    private ArrayList<String> getEssentialClaims(String essentialClaims) {
-        JSONObject jsonObjectClaims = new JSONObject(essentialClaims);
-        String key;
-        ArrayList essentailClaimslist = new ArrayList();
-        if ((jsonObjectClaims != null) && jsonObjectClaims.toString().contains("userinfo")) {
-            JSONObject newJSON = jsonObjectClaims.getJSONObject("userinfo");
-            Iterator<?> keys = newJSON.keys();
-            while (keys.hasNext()) {
-                key = (String) keys.next();
-                String value = null;
-                if (newJSON != null) {
-                    value = newJSON.get(key).toString();
-                }
-                JSONObject jsonObjectValues = new JSONObject(value);
-                if (jsonObjectValues != null) {
-                    Iterator<?> claimKeyValues = jsonObjectValues.keys();
-                    while (claimKeyValues.hasNext()) {
-                        String claimKeys = (String) claimKeyValues.next();
-                        String claimValues = jsonObjectValues.get(claimKeys).toString();
-                        if (claimValues.equals("true") && claimKeys.equals("essential")) {
-                            essentailClaimslist.add(key);
-                        }
-                    }
-                }
-            }
-        }
-
-        return essentailClaimslist;
     }
 
     /**

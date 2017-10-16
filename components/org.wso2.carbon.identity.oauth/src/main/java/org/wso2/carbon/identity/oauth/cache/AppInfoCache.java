@@ -52,9 +52,4 @@ public class AppInfoCache extends BaseCache<String, OAuthAppDO> {
         }
         return instance;
     }
-
-    @Override
-    public boolean isEnabled() {
-        return super.isEnabled() && OAuthServerConfiguration.getInstance().isCacheEnabled();
-    }
 }

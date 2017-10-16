@@ -30,6 +30,33 @@ public class OAuthConsumerAppDTO {
     private boolean pkceSupportPlain;
     private boolean pkceMandatory;
     private String state;
+    private long userAccessTokenExpiryTime;
+    private long applicationAccessTokenExpiryTime;
+    private long refreshTokenExpiryTime;
+
+    public long getUserAccessTokenExpiryTime() {
+        return userAccessTokenExpiryTime;
+    }
+
+    public void setUserAccessTokenExpiryTime(long userAccessTokenExpiryTime) {
+        this.userAccessTokenExpiryTime = userAccessTokenExpiryTime;
+    }
+
+    public long getApplicationAccessTokenExpiryTime() {
+        return applicationAccessTokenExpiryTime;
+    }
+
+    public void setApplicationAccessTokenExpiryTime(long applicationAccessTokenExpiryTime) {
+        this.applicationAccessTokenExpiryTime = applicationAccessTokenExpiryTime;
+    }
+
+    public long getRefreshTokenExpiryTime() {
+        return refreshTokenExpiryTime;
+    }
+
+    public void setRefreshTokenExpiryTime(long refreshTokenExpiryTime) {
+        this.refreshTokenExpiryTime = refreshTokenExpiryTime;
+    }
 
     public String getApplicationName() {
         return applicationName;

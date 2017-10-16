@@ -76,8 +76,9 @@ public class ProviderConfigBuilder {
             throw new ServerConfigurationException("Error while retrieving OIDC claim dialect", e);
         }
         try {
-            providerConfig.setIdTokenSigningAlgValuesSupported(new String[]{OAuth2Util.mapSignatureAlgorithm
-                    (OAuthServerConfiguration.getInstance().getIdTokenSignatureAlgorithm())});
+            providerConfig.setIdTokenSigningAlgValuesSupported(new String[]{
+                OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm
+                        (OAuthServerConfiguration.getInstance().getIdTokenSignatureAlgorithm()).getName()});
         } catch (IdentityOAuth2Exception e) {
             throw new ServerConfigurationException("Unsupported signature algorithm configured.", e);
         }

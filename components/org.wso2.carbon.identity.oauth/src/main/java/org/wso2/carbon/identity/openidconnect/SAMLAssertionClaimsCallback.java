@@ -19,6 +19,7 @@ package org.wso2.carbon.identity.openidconnect;
 
 import com.nimbusds.jwt.JWTClaimsSet;
 import net.minidev.json.JSONArray;
+import net.minidev.json.JSONObject;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.ArrayUtils;
@@ -26,7 +27,6 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
-import org.json.JSONObject;
 import org.opensaml.saml2.core.Assertion;
 import org.opensaml.saml2.core.Attribute;
 import org.opensaml.saml2.core.AttributeStatement;
@@ -71,7 +71,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -88,6 +87,8 @@ public class SAMLAssertionClaimsCallback implements CustomClaimsCallbackHandler 
     private static final String UPDATED_AT = "updated_at";
     private static final String PHONE_NUMBER_VERIFIED = "phone_number_verified";
     private static final String EMAIL_VERIFIED = "email_verified";
+    private static final String ADDRESS_PREFIX = "address.";
+    private static final String ADDRESS = "address";
 
     private static String userAttributeSeparator = IdentityCoreConstants.MULTI_ATTRIBUTE_SEPARATOR_DEFAULT;
 
@@ -185,13 +186,19 @@ public class SAMLAssertionClaimsCallback implements CustomClaimsCallbackHandler 
     private Map<String, Object> getResponse(OAuthTokenReqMessageContext requestMsgCtx)
             throws OAuthSystemException {
 
-        Map<ClaimMapping, String> userAttributes =
-                getUserAttributesFromCache(requestMsgCtx.getProperty(OAuthConstants.ACCESS_TOKEN).toString());
+        Map<ClaimMapping, String> userAttributes = Collections.emptyMap();
         Map<String, Object> claims = Collections.emptyMap();
 
+        if (requestMsgCtx.getProperty(OAuthConstants.ACCESS_TOKEN) != null) {
+            // get the user claims cached against the access token if any
+            userAttributes = getUserAttributesFromCacheUsingToken(requestMsgCtx.getProperty(OAuthConstants
+                    .ACCESS_TOKEN).toString());
+        }
+
         if (MapUtils.isEmpty(userAttributes) && requestMsgCtx.getProperty(OAuthConstants.AUTHZ_CODE) != null) {
-            userAttributes = getUserAttributesFromCache(
-                    requestMsgCtx.getProperty(OAuthConstants.AUTHZ_CODE).toString());
+            // get the cached user claims against the authorization code if any
+            userAttributes =
+                    getUserAttributesFromCacheUsingCode(requestMsgCtx.getProperty(OAuthConstants.AUTHZ_CODE).toString());
         }
 
         if (MapUtils.isEmpty(userAttributes) && !requestMsgCtx.getAuthorizedUser().isFederatedUser()) {
@@ -214,9 +221,14 @@ public class SAMLAssertionClaimsCallback implements CustomClaimsCallbackHandler 
     private Map<String, Object> getResponse(OAuthAuthzReqMessageContext requestMsgCtx)
             throws OAuthSystemException {
 
-        Map<ClaimMapping, String> userAttributes =
-                getUserAttributesFromCache(requestMsgCtx.getProperty(OAuthConstants.ACCESS_TOKEN).toString());
+        Map<ClaimMapping, String> userAttributes = Collections.emptyMap();
         Map<String, Object> claims = Collections.emptyMap();
+
+        if (requestMsgCtx.getProperty(OAuthConstants.ACCESS_TOKEN) != null) {
+            // get the user claims cached against the access token if any
+            userAttributes = getUserAttributesFromCacheUsingToken(requestMsgCtx.getProperty(OAuthConstants
+                    .ACCESS_TOKEN).toString());
+        }
 
         if (MapUtils.isEmpty(userAttributes) && !(requestMsgCtx.getAuthorizationReqDTO().getUser().isFederatedUser())) {
             if (log.isDebugEnabled()) {
@@ -260,12 +272,18 @@ public class SAMLAssertionClaimsCallback implements CustomClaimsCallbackHandler 
      * @return Users claim map
      * @throws Exception
      */
-    private static Map<String, Object> getClaimsFromUserStore(OAuthTokenReqMessageContext requestMsgCtx)
+    private Map<String, Object> getClaimsFromUserStore(OAuthTokenReqMessageContext requestMsgCtx)
             throws UserStoreException, IdentityApplicationManagementException, IdentityException {
 
         Map<String, Object> mappedAppClaims = new HashMap<>();
 
         String spTenantDomain = (String) requestMsgCtx.getProperty(MultitenantConstants.TENANT_DOMAIN);
+
+        // There are certain flows where tenant domain is not added as a message context property.
+        if (spTenantDomain == null) {
+            spTenantDomain = requestMsgCtx.getOauth2AccessTokenReqDTO().getTenantDomain();
+        }
+
         ApplicationManagementService applicationMgtService = OAuth2ServiceComponentHolder.getApplicationMgtService();
         String spName = applicationMgtService
                 .getServiceProviderNameByClientId(requestMsgCtx.getOauth2AccessTokenReqDTO().getClientId(),
@@ -305,8 +323,11 @@ public class SAMLAssertionClaimsCallback implements CustomClaimsCallbackHandler 
                 .getUserStoreManager()).getSecondaryUserStoreManager(domain).getRealmConfiguration();
         String claimSeparator = realmConfiguration.getUserStoreProperty(
                 IdentityCoreConstants.MULTI_ATTRIBUTE_SEPARATOR);
+        if (StringUtils.isBlank(claimSeparator)) {
+            claimSeparator = IdentityCoreConstants.MULTI_ATTRIBUTE_SEPARATOR_DEFAULT;
+        }
 
-        Map<String, String> spToLocalClaimMappings = ClaimMetadataHandler.getInstance()
+        Map<String, String> oidcToLocalClaimMappings = ClaimMetadataHandler.getInstance()
                 .getMappingsMapFromOtherDialectToCarbon(SP_DIALECT, null, spTenantDomain, false);
         Map<String, String> userClaims = null;
         try {
@@ -336,28 +357,17 @@ public class SAMLAssertionClaimsCallback implements CustomClaimsCallbackHandler 
         }
 
         if (MapUtils.isEmpty(userClaims)) {
-	     if (log.isDebugEnabled()) {
-	         log.debug("Number of user claims retrieved from user store: none (userClaims is null");
-	    }
-            return new HashMap<>();
-        }
-        
-        if (log.isDebugEnabled()) {
-            log.debug("Number of user claims retrieved from user store: " + userClaims.size());
-        }
-
-
-        for (Iterator<Map.Entry<String, String>> iterator = spToLocalClaimMappings.entrySet().iterator(); iterator
-                .hasNext(); ) {
-            Map.Entry<String, String> entry = iterator.next();
-            String value = userClaims.get(entry.getValue());
-            if (value != null) {
-                mappedAppClaims.put(entry.getKey(), value);
-                if (log.isDebugEnabled() &&
-                        IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.USER_CLAIMS)) {
-                    log.debug("Mapped claim: key -  " + entry.getKey() + " value -" + value);
-                }
+            // User claims can be empty if user does not exist in user stores. Probably a federated user.
+            if (log.isDebugEnabled()) {
+                log.debug("No claims found for " + username + " from user store.");
             }
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug("Number of user claims retrieved for " + username + " from user store: " + userClaims.size());
+            }
+
+            // get user claims in OIDC dialect
+            mappedAppClaims.putAll(getUserClaimsInOidcDialect(oidcToLocalClaimMappings, userClaims));
         }
 
         if (StringUtils.isNotBlank(claimSeparator)) {
@@ -373,41 +383,41 @@ public class SAMLAssertionClaimsCallback implements CustomClaimsCallbackHandler 
      * @return
      */
     private static String getServiceProviderMappedUserRoles(ServiceProvider serviceProvider,
-            List<String> locallyMappedUserRoles, String claimSeparator) throws FrameworkException {
-        if (CollectionUtils.isNotEmpty(locallyMappedUserRoles)) {
+                                                            List<String> locallyMappedUserRoles,
+                                                            String claimSeparator) throws FrameworkException {
 
+        if (CollectionUtils.isNotEmpty(locallyMappedUserRoles)) {
+            // Get Local Role to Service Provider Role mappings
             RoleMapping[] localToSpRoleMapping = serviceProvider.getPermissionAndRoleConfig().getRoleMappings();
 
-            if (ArrayUtils.isEmpty(localToSpRoleMapping)) {
-                return null;
-            }
-
-            StringBuilder spMappedUserRoles = new StringBuilder();
-            for (RoleMapping roleMapping : localToSpRoleMapping) {
-                if (locallyMappedUserRoles.contains(roleMapping.getLocalRole().getLocalRoleName())) {
-                    spMappedUserRoles.append(roleMapping.getRemoteRole()).append(claimSeparator);
-                    locallyMappedUserRoles.remove(roleMapping.getLocalRole().getLocalRoleName());
+            if (ArrayUtils.isNotEmpty(localToSpRoleMapping)) {
+                for (RoleMapping roleMapping : localToSpRoleMapping) {
+                    // check whether a local role is mapped to service provider role
+                    if (locallyMappedUserRoles.contains(roleMapping.getLocalRole().getLocalRoleName())) {
+                        // remove the local role from the list of user roles
+                        locallyMappedUserRoles.remove(roleMapping.getLocalRole().getLocalRoleName());
+                        // add the service provider mapped role
+                        locallyMappedUserRoles.add(roleMapping.getRemoteRole());
+                    }
                 }
             }
-
-            for (String remainingRole : locallyMappedUserRoles) {
-                spMappedUserRoles.append(remainingRole).append(claimSeparator);
-            }
-
-            return spMappedUserRoles.length() > 0 ?
-                    spMappedUserRoles.toString().substring(0, spMappedUserRoles.length() - 1) :
-                    null;
         }
 
-        return null;
+        return StringUtils.join(locallyMappedUserRoles, claimSeparator);
     }
 
-    private static Map<String, Object> getClaimsFromUserStore(OAuthAuthzReqMessageContext requestMsgCtx)
+    private Map<String, Object> getClaimsFromUserStore(OAuthAuthzReqMessageContext requestMsgCtx)
             throws IdentityApplicationManagementException, IdentityException, UserStoreException {
 
         Map<String, Object> mappedAppClaims = new HashMap<>();
 
         String spTenantDomain = (String) requestMsgCtx.getProperty(MultitenantConstants.TENANT_DOMAIN);
+
+        // There are certain flows where tenant domain is not added as a message context property.
+        if (spTenantDomain == null) {
+            spTenantDomain = requestMsgCtx.getAuthorizationReqDTO().getTenantDomain();
+        }
+
         ApplicationManagementService applicationMgtService = OAuth2ServiceComponentHolder.getApplicationMgtService();
         String spName = applicationMgtService
                 .getServiceProviderNameByClientId(requestMsgCtx.getAuthorizationReqDTO().getConsumerKey(),
@@ -459,28 +469,19 @@ public class SAMLAssertionClaimsCallback implements CustomClaimsCallbackHandler 
                 throw e;
             }
         }
+
         if (MapUtils.isEmpty(userClaims)) {
- 	    if (log.isDebugEnabled()) {
-	        log.debug("Number of user claims retrieved from user store: none (userClaims is null");
-	    }
-            return new HashMap<>();
-        }
-        if (log.isDebugEnabled()) {
-            log.debug("Number of user claims retrieved from user store: " + userClaims.size());
-        }
-
-
-        for (Iterator<Map.Entry<String, String>> iterator = spToLocalClaimMappings.entrySet().iterator(); iterator
-                .hasNext(); ) {
-            Map.Entry<String, String> entry = iterator.next();
-            String value = userClaims.get(entry.getValue());
-            if (value != null) {
-                mappedAppClaims.put(entry.getKey(), value);
-                if (log.isDebugEnabled() &&
-                        IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.USER_CLAIMS)) {
-                    log.debug("Mapped claim: key -  " + entry.getKey() + " value -" + value);
-                }
+            // User claims can be empty if user does not exist in user stores. Probably a federated user.
+            if (log.isDebugEnabled()) {
+                log.debug("No claims found for " + username + " from user store.");
             }
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug("Number of user claims retrieved from user store: " + userClaims.size());
+            }
+
+            // get user claims in OIDC dialect
+            mappedAppClaims.putAll(getUserClaimsInOidcDialect(spToLocalClaimMappings, userClaims));
         }
 
         String domain = user.getUserStoreDomain();
@@ -496,20 +497,61 @@ public class SAMLAssertionClaimsCallback implements CustomClaimsCallbackHandler 
     }
 
     /**
-     * Get user attribute from cache
+     * Get user claims in OIDC claim dialect
+     *
+     * @param oidcToLocalClaimMappings OIDC dialect to Local dialect claim mappings
+     * @param userClaims             User claims in local dialect
+     * @return Map of user claim values in OIDC dialect.
+     */
+    private Map<String, Object> getUserClaimsInOidcDialect(Map<String, String> oidcToLocalClaimMappings,
+                                                           Map<String, String> userClaims) {
+
+        Map<String, Object> userClaimsInOidcDialect = new HashMap<>();
+        if (MapUtils.isNotEmpty(userClaims)) {
+            for (Map.Entry<String, String> claimMapping : oidcToLocalClaimMappings.entrySet()) {
+                String value = userClaims.get(claimMapping.getValue());
+                if (value != null) {
+                    userClaimsInOidcDialect.put(claimMapping.getKey(), value);
+                    if (log.isDebugEnabled() &&
+                            IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.USER_CLAIMS)) {
+                        log.debug("Mapped claim: key - " + claimMapping.getKey() + " value - " + value);
+                    }
+                }
+            }
+        }
+
+        return userClaimsInOidcDialect;
+    }
+
+    /**
+     * Get user attribute cached against the access token
      *
      * @param accessToken Access token
-     * @return User attributes
+     * @return User attributes cached against the access token
      */
-    private Map<ClaimMapping, String> getUserAttributesFromCache(String accessToken) {
+    private Map<ClaimMapping, String> getUserAttributesFromCacheUsingToken(String accessToken) {
 
         AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(accessToken);
-        AuthorizationGrantCacheEntry cacheEntry = (AuthorizationGrantCacheEntry) AuthorizationGrantCache.
-                getInstance().getValueFromCacheByToken(cacheKey);
-        if (cacheEntry == null) {
-            return new HashMap<ClaimMapping, String>();
-        }
-        return cacheEntry.getUserAttributes();
+        AuthorizationGrantCacheEntry cacheEntry = AuthorizationGrantCache.getInstance()
+                .getValueFromCacheByToken(cacheKey);
+
+        return cacheEntry == null ? new HashMap<ClaimMapping, String>() : cacheEntry.getUserAttributes();
+
+    }
+
+    /**
+     * Get user attributes cached against the authorization code
+     *
+     * @param authorizationCode Authorization Code
+     * @return User attributes cached against the authorization code
+     */
+    private Map<ClaimMapping, String> getUserAttributesFromCacheUsingCode(String authorizationCode) {
+
+        AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(authorizationCode);
+        AuthorizationGrantCacheEntry cacheEntry = AuthorizationGrantCache.getInstance()
+                .getValueFromCacheByCode(cacheKey);
+
+        return cacheEntry == null ? new HashMap<ClaimMapping, String>() : cacheEntry.getUserAttributes();
     }
 
     /**
@@ -518,7 +560,7 @@ public class SAMLAssertionClaimsCallback implements CustomClaimsCallbackHandler 
      * @param jwtClaimsSet JWTClaimsSet object
      */
     private void setClaimsToJwtClaimSet(Map<String, Object> claims, JWTClaimsSet jwtClaimsSet) {
-        JSONArray values;
+        JSONArray claimValues;
         Object claimSeparator = claims.get(IdentityCoreConstants.MULTI_ATTRIBUTE_SEPARATOR);
         if (claimSeparator != null) {
             String claimSeparatorString = (String) claimSeparator;
@@ -530,18 +572,18 @@ public class SAMLAssertionClaimsCallback implements CustomClaimsCallbackHandler 
 
         for (Map.Entry<String, Object> entry : claims.entrySet()) {
             String value = entry.getValue().toString();
-            values = new JSONArray();
+            claimValues = new JSONArray();
             if (userAttributeSeparator != null && value.contains(userAttributeSeparator)) {
                 StringTokenizer st = new StringTokenizer(value, userAttributeSeparator);
                 while (st.hasMoreElements()) {
                     String attributeValue = st.nextElement().toString();
                     if (StringUtils.isNotBlank(attributeValue)) {
-                        values.add(attributeValue);
+                        claimValues.add(attributeValue);
                     }
                 }
-                jwtClaimsSet.setClaim(entry.getKey(), values);
+                jwtClaimsSet.setClaim(entry.getKey(), claimValues);
             } else {
-                jwtClaimsSet.setClaim(entry.getKey(), value);
+                jwtClaimsSet.setClaim(entry.getKey(), entry.getValue());
             }
         }
     }
@@ -556,8 +598,9 @@ public class SAMLAssertionClaimsCallback implements CustomClaimsCallbackHandler 
      */
     private Map<String, Object> controlClaimsFromScope(String[] requestedScopes, String tenantDomain,
                                                        Map<String, Object> claims) {
-        Resource resource = null;
+        Resource oidcScopesResource = null;
         String requestedScopeClaims = null;
+        String addressScopeClaims = null;
         String[] arrRequestedScopeClaims = null;
         Map<String, Object> returnClaims = new HashMap<>();
         Map<String, Object> claimsforAddressScope = new HashMap<>();
@@ -568,19 +611,23 @@ public class SAMLAssertionClaimsCallback implements CustomClaimsCallbackHandler 
             carbonContext.setTenantId(tenantId);
             carbonContext.setTenantDomain(tenantDomain);
             RegistryService registry = OAuth2ServiceComponentHolder.getRegistryService();
-            resource = registry.getConfigSystemRegistry(tenantId).get(OAuthConstants.SCOPE_RESOURCE_PATH);
+            oidcScopesResource = registry.getConfigSystemRegistry(tenantId).get(OAuthConstants.SCOPE_RESOURCE_PATH);
         } catch (RegistryException e) {
             log.error("Error while obtaining registry collection from :" + OAuthConstants.SCOPE_RESOURCE_PATH, e);
         } finally {
             PrivilegedCarbonContext.endTenantFlow();
         }
+        if (oidcScopesResource != null && oidcScopesResource.getProperties() != null) {
+            addressScopeClaims = oidcScopesResource.getProperty(ADDRESS);
+        }
+
         for (String requestedScope : requestedScopes) {
-            if (resource != null && resource.getProperties() != null) {
-                Enumeration supporetdScopes = resource.getProperties().propertyNames();
+            if (oidcScopesResource != null && oidcScopesResource.getProperties() != null) {
+                Enumeration supporetdScopes = oidcScopesResource.getProperties().propertyNames();
                 while (supporetdScopes.hasMoreElements()) {
                     String supportedScope = (String) supporetdScopes.nextElement();
                     if (supportedScope.equals(requestedScope)) {
-                        requestedScopeClaims = resource.getProperty(requestedScope);
+                        requestedScopeClaims = oidcScopesResource.getProperty(requestedScope);
                         if (requestedScopeClaims.contains(",")) {
                             arrRequestedScopeClaims = requestedScopeClaims.split(",");
                         } else {
@@ -588,15 +635,16 @@ public class SAMLAssertionClaimsCallback implements CustomClaimsCallbackHandler 
                             arrRequestedScopeClaims[0] = requestedScopeClaims;
                         }
                         for (Map.Entry<String, Object> entry : claims.entrySet()) {
-                            String requestedClaims = entry.getKey();
-                            if (Arrays.asList(arrRequestedScopeClaims).contains(requestedClaims)) {
-                                returnClaims.put(entry.getKey(), claims.get(entry.getKey()));
-                                if (requestedScope.equals("address")) {
-                                    if (!requestedScope.equals("address")) {
-                                        returnClaims.put(entry.getKey(), claims.get(entry.getKey()));
-                                    } else {
-                                        claimsforAddressScope.put(entry.getKey(), claims.get(entry.getKey()));
-                                    }
+                            String requestedClaim = entry.getKey();
+                            if (Arrays.asList(arrRequestedScopeClaims).contains(requestedClaim)) {
+                                // Address claim is handled for both ways, where address claims are sent as "address."
+                                // prefix or in address scope.
+                                if (requestedClaim.contains(ADDRESS_PREFIX)) {
+                                    claimsforAddressScope.put(entry.getKey().substring(ADDRESS_PREFIX.length()), claims.get(entry.getKey()));
+                                } else if (addressScopeClaims != null && addressScopeClaims.contains(requestedClaim)) {
+                                    claimsforAddressScope.put(entry.getKey(), claims.get(entry.getKey()));
+                                } else {
+                                    returnClaims.put(entry.getKey(), claims.get(entry.getKey()));
                                 }
                             }
                         }
@@ -608,9 +656,9 @@ public class SAMLAssertionClaimsCallback implements CustomClaimsCallbackHandler 
         if (claimsforAddressScope.size() > 0) {
             JSONObject jsonObject = new JSONObject();
             for (Map.Entry<String, Object> entry : claimsforAddressScope.entrySet()) {
-                jsonObject.put(entry.getKey(), claims.get(entry.getKey()));
+                jsonObject.put(entry.getKey(), entry.getValue());
             }
-            returnClaims.put("address", jsonObject);
+            returnClaims.put(ADDRESS, jsonObject);
         }
         if (returnClaims.containsKey(UPDATED_AT) && returnClaims.get(UPDATED_AT) != null) {
             if (returnClaims.get(UPDATED_AT) instanceof String) {

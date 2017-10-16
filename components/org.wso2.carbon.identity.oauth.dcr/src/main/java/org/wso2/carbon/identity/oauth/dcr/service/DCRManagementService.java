@@ -31,6 +31,8 @@ import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.base.IdentityValidationException;
+import org.wso2.carbon.identity.base.IdentityValidationUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.OAuthAdminService;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -40,7 +42,6 @@ import org.wso2.carbon.identity.oauth.dcr.model.RegistrationRequestProfile;
 import org.wso2.carbon.identity.oauth.dcr.model.RegistrationResponseProfile;
 import org.wso2.carbon.identity.oauth.dcr.util.DCRConstants;
 import org.wso2.carbon.identity.oauth.dcr.util.ErrorCodes;
-import org.wso2.carbon.identity.oauth.dcr.util.DCRUtils;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.registry.core.Registry;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
@@ -183,11 +184,15 @@ public class DCRManagementService {
                         errorMessage);
             } else if (profile.getRedirectUris().size() == 1) {
                 String redirectUri = profile.getRedirectUris().get(0);
-                if (DCRUtils.isRedirectionUriValid(redirectUri)) {
+                try {
+                    //validate the redirect uri
+                    IdentityValidationUtil.getValidInputOverWhiteListPatterns(redirectUri,
+                            new String[]{IdentityValidationUtil.ValidatorPattern.URL_WITHOUT_FRAGMENT.name()});
                     oAuthConsumerApp.setCallbackUrl(redirectUri);
-                } else {
+                } catch (IdentityValidationException e) {
                     //TODO: need to add error code
-                    throw IdentityException.error(DCRException.class, "Redirect URI: " + redirectUri + ", is invalid");
+                    throw IdentityException.error(DCRException.class,
+                            "Redirect URI: " + redirectUri + ", is invalid", e);
                 }
 
             } else if (profile.getRedirectUris().size() > 1) {
@@ -203,7 +208,8 @@ public class DCRManagementService {
             try {
                 oAuthAdminService.registerOAuthApplicationData(oAuthConsumerApp);
             } catch (IdentityOAuthAdminException e) {
-                throw IdentityException.error(DCRException.class, ErrorCodes.META_DATA_VALIDATION_FAILED.toString(), e.getMessage());
+                throw IdentityException.error(DCRException.class,
+                        ErrorCodes.META_DATA_VALIDATION_FAILED.toString(), e.getMessage());
             }
 
             if (log.isDebugEnabled()) {
@@ -358,22 +364,21 @@ public class DCRManagementService {
         }
     }
 
-    private String replaceInvalidChars(String username) {
-        return username.replaceAll("@", "_AT_");
-    }
-
     private String createRegexPattern(List<String> redirectURIs) throws DCRException {
         StringBuilder regexPattern = new StringBuilder();
         for (String redirectURI : redirectURIs) {
-            if (DCRUtils.isRedirectionUriValid(redirectURI)) {
+            try {
+                //validate the redirect uri
+                IdentityValidationUtil.getValidInputOverWhiteListPatterns(redirectURI,
+                        new String[]{IdentityValidationUtil.ValidatorPattern.URL_WITHOUT_FRAGMENT.name()});
                 if (regexPattern.length() > 0) {
                     regexPattern.append("|").append(redirectURI);
                 } else {
                     regexPattern.append("(").append(redirectURI);
                 }
-            } else {
+            } catch (IdentityValidationException e) {
                 //TODO: need to add error code
-                throw IdentityException.error(DCRException.class, "Redirect URI: " + redirectURI + ", is invalid");
+                throw IdentityException.error(DCRException.class, "Redirect URI: " + redirectURI + ", is invalid", e);
             }
         }
         if (regexPattern.length() > 0) {

@@ -308,15 +308,15 @@ public class OAuth2Service extends AbstractAdmin {
                     }
 
                 } else {
-                    if (OAuthServerConfiguration.getInstance().isCacheEnabled()) {
-                        OAuthCache oauthCache = OAuthCache.getInstance();
-                        OAuthCacheKey cacheKey = new OAuthCacheKey(revokeRequestDTO.getToken());
-                        CacheEntry result = oauthCache.getValueFromCache(cacheKey);
-                        // cache hit, do the type check.
-                        if (result instanceof AccessTokenDO) {
-                            accessTokenDO = (AccessTokenDO) result;
-                        }
+
+                    OAuthCacheKey cacheKey = new OAuthCacheKey(revokeRequestDTO.getToken());
+                    CacheEntry result = OAuthCache.getInstance().getValueFromCache(cacheKey);
+
+                    // check cache hit, do the type check.
+                    if (result != null && result instanceof AccessTokenDO) {
+                        accessTokenDO = (AccessTokenDO) result;
                     }
+
                     if (accessTokenDO == null) {
                         accessTokenDO = tokenMgtDAO.retrieveAccessToken(revokeRequestDTO.getToken(), true);
                         if (accessTokenDO == null) {

@@ -123,6 +123,11 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
             tokReqMsgCtx.setAuthorizedUser(user);
             tokReqMsgCtx.setScope(oAuth2AccessTokenReqDTO.getScope());
         } else {
+            if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equalsIgnoreCase(MultitenantUtils.getTenantDomain
+                    (username))) {
+                throw new IdentityOAuth2Exception("Authentication failed for " + MultitenantUtils
+                        .getTenantAwareUsername(username));
+            }
             throw new IdentityOAuth2Exception("Authentication failed for " + username);
         }
         return authStatus;

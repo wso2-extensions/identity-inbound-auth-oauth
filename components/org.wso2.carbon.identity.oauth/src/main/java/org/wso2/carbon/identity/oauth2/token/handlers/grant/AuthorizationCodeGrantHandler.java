@@ -23,6 +23,7 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
@@ -46,13 +47,7 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
     private static final String AUTHZ_CODE = "AuthorizationCode";
 
     private static Log log = LogFactory.getLog(AuthorizationCodeGrantHandler.class);
-    private static AppInfoCache appInfoCache;
 
-
-
-    public AuthorizationCodeGrantHandler() {
-        appInfoCache = AppInfoCache.getInstance();
-    }
 
     @Override
     public boolean validateGrant(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
@@ -72,9 +67,9 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
         if (cacheEnabled) {
             OAuthCacheKey cacheKey = new OAuthCacheKey(OAuth2Util.buildCacheKeyStringForAuthzCode(
                     clientId, authorizationCode));
-            authzCodeDO = (AuthzCodeDO) oauthCache.getValueFromCache(cacheKey);
+            authzCodeDO = (AuthzCodeDO) OAuthCache.getInstance().getValueFromCache(cacheKey);
         }
-        oAuthAppDO = appInfoCache.getValueFromCache(clientId);
+        oAuthAppDO = AppInfoCache.getInstance().getValueFromCache(clientId);
         if (oAuthAppDO == null) {
             // we need to pull App info from the DB since it was not found in the cache.
             try {
@@ -82,7 +77,7 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
             } catch (InvalidOAuthClientException e) {
                 throw new IdentityOAuth2Exception("Invalid OAuth client", e);
             }
-            appInfoCache.addToCache(clientId, oAuthAppDO);
+            AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO);
         }
         if (log.isDebugEnabled()) {
             if (authzCodeDO != null) {
@@ -111,7 +106,7 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
                     cacheKeyString = clientId + ":" + authorizedUser.toLowerCase() + ":" + scope;
                 }
                 OAuthCacheKey cacheKey = new OAuthCacheKey(cacheKeyString);
-                oauthCache.clearCacheEntry(cacheKey);
+                OAuthCache.getInstance().clearCacheEntry(cacheKey);
             }
             if (log.isDebugEnabled()) {
                 log.debug("Invalid access token request with inactive authorization code for Client Id : " + clientId);
@@ -175,7 +170,7 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
 
             if (cacheEnabled) {
                 // remove the authorization code from the cache
-                oauthCache.clearCacheEntry(new OAuthCacheKey(
+                OAuthCache.getInstance().clearCacheEntry(new OAuthCacheKey(
                         OAuth2Util.buildCacheKeyStringForAuthzCode(clientId, authorizationCode)));
             }
 
@@ -245,7 +240,7 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
             String clientId = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId();
             OAuthCacheKey cacheKey = new OAuthCacheKey(OAuth2Util.buildCacheKeyStringForAuthzCode(
                     clientId, authzCode));
-            oauthCache.clearCacheEntry(cacheKey);
+            OAuthCache.getInstance().clearCacheEntry(cacheKey);
 
             if (log.isDebugEnabled()) {
                 log.debug("Cache was cleared for authorization code info for client id : " + clientId);

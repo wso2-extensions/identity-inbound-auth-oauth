@@ -75,9 +75,7 @@ public class NTLMAuthenticationGrantHandler extends AbstractAuthorizationGrantHa
 
             // Logging the windows authentication object
             if (log.isDebugEnabled() && IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.NTLM_TOKEN)) {
-                log.debug("Received NTLM Token : " +
-                          tokReqMsgCtx.getOauth2AccessTokenReqDTO().getWindowsToken()
-                );
+                log.debug("Received NTLM Token : " + tokReqMsgCtx.getOauth2AccessTokenReqDTO().getWindowsToken());
             }
 
             // client credentials handle

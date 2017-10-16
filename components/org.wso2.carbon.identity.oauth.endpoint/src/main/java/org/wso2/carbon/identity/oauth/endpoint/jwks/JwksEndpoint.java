@@ -37,6 +37,7 @@ import org.wso2.carbon.identity.core.util.IdentityIOStreamUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.utils.CarbonUtils;
 
 
@@ -51,7 +52,6 @@ public class JwksEndpoint {
     private static final char[] ENCODE_MAP = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_".toCharArray();
     private static final String alg = "RS256";
     private static final String use = "sig";
-    private static final String kid = "d0ec514a32b6f88c0abd12a2840699bdd3deba9d";
 
     @GET
     @Path(value = "/jwks")
@@ -59,6 +59,7 @@ public class JwksEndpoint {
     public String jwks() {
 
         String tenantDomain = null;
+        int tenantId = -1;
         Object tenantObj = IdentityUtil.threadLocalProperties.get().get(OAuthConstants.TENANT_NAME_FROM_CONTEXT);
         if (tenantObj != null){
             tenantDomain = (String) tenantObj;
@@ -71,6 +72,7 @@ public class JwksEndpoint {
         JSONObject jwksJson = new JSONObject();
         FileInputStream file = null;
         try {
+            tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
             if (tenantDomain.equals(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)) {
                 file = new FileInputStream(CarbonUtils.getServerConfiguration().getFirstProperty
                         ("Security.KeyStore.Location"));
@@ -86,7 +88,6 @@ public class JwksEndpoint {
                 publicKey = (RSAPublicKey) cert.getPublicKey();
             } else {
 
-                int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
                 if (tenantId < 1 && tenantId != -1234) {
                     String errorMesage = "The tenant is not existing";
                     log.error(errorMesage);
@@ -107,14 +108,14 @@ public class JwksEndpoint {
             jwksKeys.put("kty", kty);
             jwksKeys.put("alg", alg);
             jwksKeys.put("use", use);
-            jwksKeys.put("kid", kid);
+            jwksKeys.put("kid", OAuth2Util.getThumbPrint(tenantDomain, tenantId));
             jwksKeys.put("n", modulus);
             jwksKeys.put("e", exponent);
             jwksKeyArray.put(jwksKeys);
             jwksJson.put("keys", jwksKeyArray);
         } catch (Exception e) {
-            String errorMesage = "Error while generating the keyset";
-            log.error(errorMesage);
+            String errorMesage = "Error while generating the keyset for " + tenantDomain + " tenant domain.";
+            log.error(errorMesage, e);
             return errorMesage;
         } finally {
             IdentityIOStreamUtils.closeInputStream(file);

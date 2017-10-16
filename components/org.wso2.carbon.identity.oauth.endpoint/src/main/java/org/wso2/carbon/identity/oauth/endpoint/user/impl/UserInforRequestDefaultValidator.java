@@ -90,6 +90,9 @@ public class UserInforRequestDefaultValidator implements UserInfoRequestValidato
         if (!"Bearer".equals(authzHeaderInfo[0])) {
             throw new UserInfoEndpointException(OAuthError.ResourceResponse.INVALID_REQUEST, "Bearer token missing");
         }
+        if (authzHeaderInfo.length == 1) {
+            throw new UserInfoEndpointException(OAuthError.ResourceResponse.INVALID_REQUEST, "Access token missing");
+        }
         return authzHeaderInfo[1];
     }
 

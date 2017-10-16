@@ -24,6 +24,7 @@ public class OIDCSessionConstants {
 
     // Request Parameters
     public static final String OIDC_CLIENT_ID_PARAM = "client_id";
+    public static final String OIDC_REDIRECT_URI_PARAM = "redirect_uri";
     public static final String OIDC_SESSION_STATE_PARAM = "session_state";
     public static final String OIDC_LOGOUT_CONSENT_PARAM = "consent";
     public static final String OIDC_ID_TOKEN_HINT_PARAM = "id_token_hint";

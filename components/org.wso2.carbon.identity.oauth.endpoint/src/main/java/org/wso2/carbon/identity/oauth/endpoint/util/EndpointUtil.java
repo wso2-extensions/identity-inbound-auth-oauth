@@ -51,16 +51,16 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.webfinger.DefaultWebFingerProcessor;
 import org.wso2.carbon.identity.webfinger.WebFingerProcessor;
 
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpServletRequest;
-import javax.ws.rs.core.Context;
-import javax.ws.rs.core.MultivaluedMap;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.MultivaluedMap;
 
 public class EndpointUtil {
 
@@ -185,15 +185,21 @@ public class EndpointUtil {
      */
     public static String[] extractCredentialsFromAuthzHeader(String authorizationHeader)
             throws OAuthClientException {
+
+        if (authorizationHeader == null) {
+            throw new OAuthClientException("Authorization header value is null");
+        }
         String[] splitValues = authorizationHeader.trim().split(" ");
-        if(splitValues.length == 2) {
+        if (splitValues.length == 2) {
             byte[] decodedBytes = Base64Utils.decode(splitValues[1].trim());
-            if (decodedBytes != null) {
-                String userNamePassword = new String(decodedBytes, Charsets.UTF_8);
-                return userNamePassword.split(":");
+            String userNamePassword = new String(decodedBytes, Charsets.UTF_8);
+            String[] credentials = userNamePassword.split(":");
+            if (credentials.length == 2) {
+                return credentials;
             }
         }
-        String errMsg = "Error decoding authorization header. Space delimited \"<authMethod> <base64Hash>\" format violated.";
+        String errMsg = "Error decoding authorization header. Space delimited \"<authMethod> <base64Hash>\" format " +
+                "violated.";
         throw new OAuthClientException(errMsg);
     }
 
@@ -221,7 +227,7 @@ public class EndpointUtil {
 
         if (appName != null) {
             try {
-                errorPageUrl += "application" + "=" + URLEncoder.encode(appName, "UTF-8");
+                errorPageUrl += "&application" + "=" + URLEncoder.encode(appName, "UTF-8");
             } catch (UnsupportedEncodingException e) {
                 //ignore
                 if (log.isDebugEnabled()){
@@ -263,11 +269,7 @@ public class EndpointUtil {
             if (log.isDebugEnabled()) {
                 log.debug("Server error occurred while building error redirect url", e);
             }
-            if(params != null) {
-                redirectURL = getErrorPageURL(ex.getError(), ex.getMessage(), params.getApplicationName());
-            } else {
-                redirectURL = getErrorPageURL(ex.getError(), ex.getMessage(), null);
-            }
+            redirectURL = getErrorPageURL(ex.getError(), ex.getMessage(), params.getApplicationName());
         }
         return redirectURL;
     }
@@ -437,8 +439,8 @@ public class EndpointUtil {
         }
         if (request.getParameterMap() != null) {
             Map<String, String[]> map = request.getParameterMap();
-            for (String key : map.keySet()) {
-                if (map.get(key).length > 1) {
+            for (Map.Entry<String, String[]> entry : map.entrySet()) {
+                if (entry.getValue().length > 1) {
                     return false;
                 }
             }

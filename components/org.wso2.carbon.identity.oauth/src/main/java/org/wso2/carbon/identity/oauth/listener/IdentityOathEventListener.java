@@ -182,7 +182,7 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
         userStoreDomain = null;
         if (OAuth2Util.checkAccessTokenPartitioningEnabled() && OAuth2Util.checkUserNameAssertionEnabled()) {
             try {
-                userStoreDomain = OAuth2Util.getUserStoreDomainFromUserId(authenticatedUser.toString());
+                userStoreDomain = OAuth2Util.getUserStoreForFederatedUser(authenticatedUser);
             } catch (IdentityOAuth2Exception e) {
                 log.error("Error occurred while getting user store domain for User ID : " + authenticatedUser, e);
                 return true;

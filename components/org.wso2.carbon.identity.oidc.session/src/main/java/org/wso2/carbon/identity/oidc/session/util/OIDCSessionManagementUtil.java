@@ -147,14 +147,15 @@ public class OIDCSessionManagementUtil {
      * Returns the browser state cookie
      *
      * @param request
-     * @return Cookie
+     * @return CookieString url, String clientId, String rpCallBackUrl,
+                                              Cookie opBrowserStateCookie, String responseType
      */
     public static Cookie getOPBrowserStateCookie(HttpServletRequest request) {
 
         Cookie[] cookies = request.getCookies();
         if (cookies != null) {
             for (Cookie cookie : cookies) {
-                if (cookie.getName().equals(OIDCSessionConstants.OPBS_COOKIE_ID)) {
+                if (cookie != null && cookie.getName().equals(OIDCSessionConstants.OPBS_COOKIE_ID)) {
                     return cookie;
                 }
             }

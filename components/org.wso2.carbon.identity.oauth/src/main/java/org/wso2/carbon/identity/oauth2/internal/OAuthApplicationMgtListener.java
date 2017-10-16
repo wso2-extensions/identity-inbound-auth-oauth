@@ -62,7 +62,7 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
 
     public boolean doPreUpdateApplication(ServiceProvider serviceProvider, String tenantDomain, String userName)
             throws IdentityApplicationManagementException {
-        storeSaaSPropertyValue(serviceProvider, tenantDomain);
+        storeSaaSPropertyValue(serviceProvider);
         removeClientSecret(serviceProvider);
         return true;
     }
@@ -89,9 +89,7 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
         revokeAccessTokensWhenSaaSDisabled(serviceProvider, tenantDomain);
         addClientSecret(serviceProvider);
         updateAuthApplication(serviceProvider);
-        if (OAuthServerConfiguration.getInstance().isCacheEnabled()) {
-            removeEntriesFromCache(serviceProvider, tenantDomain, userName);
-        }
+        removeEntriesFromCache(serviceProvider, tenantDomain, userName);
         return true;
     }
 
@@ -105,9 +103,7 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
     public boolean doPreDeleteApplication(String applicationName, String tenantDomain, String userName) throws IdentityApplicationManagementException {
         ApplicationManagementService applicationMgtService = OAuth2ServiceComponentHolder.getApplicationMgtService();
         ServiceProvider serviceProvider = applicationMgtService.getApplicationExcludingFileBasedSPs(applicationName, tenantDomain);
-        if (OAuthServerConfiguration.getInstance().isCacheEnabled()) {
-            removeEntriesFromCache(serviceProvider, tenantDomain, userName);
-        }
+        removeEntriesFromCache(serviceProvider, tenantDomain, userName);
         return true;
     }
 
@@ -296,13 +292,12 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
      * Stores the value of SaaS property before application is updated.
      *
      * @param serviceProvider Service Provider
-     * @param tenantDomain    Application tenant domain
      * @throws IdentityApplicationManagementException
      */
-    private void storeSaaSPropertyValue(ServiceProvider serviceProvider, String tenantDomain) throws IdentityApplicationManagementException {
+    private void storeSaaSPropertyValue(ServiceProvider serviceProvider) throws IdentityApplicationManagementException {
 
         ServiceProvider sp = OAuth2ServiceComponentHolder.getApplicationMgtService()
-                .getServiceProvider(serviceProvider.getApplicationName(), tenantDomain);
+                .getServiceProvider(serviceProvider.getApplicationID());
         IdentityUtil.threadLocalProperties.get().put(SAAS_PROPERTY, sp.isSaasApp());
     }
 

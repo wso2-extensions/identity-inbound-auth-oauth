@@ -190,13 +190,6 @@ public class SAML1BearerGrantHandler extends AbstractAuthorizationGrantHandler {
             return false;
         }
 
-        if (assertion == null) {
-            if (log.isDebugEnabled()) {
-                log.debug("Assertion is null, cannot continue");
-            }
-            return false;
-        }
-
         /**
          * The Assertion MUST contain a <Subject> element.  The subject MAY identify the resource owner for whom
          * the access token is being requested.  For client authentication, the Subject MUST be the "client_id"
@@ -400,32 +393,24 @@ public class SAML1BearerGrantHandler extends AbstractAuthorizationGrantHandler {
             notOnOrAfterFromConditions = assertion.getConditions().getNotOnOrAfter();
         }
 
-        if (subject != null) {
-            SubjectConfirmation subjectConfirmation = subject.getSubjectConfirmation();
-            List<ConfirmationMethod> confirmationMethods = subjectConfirmation.getConfirmationMethods();
-            for (ConfirmationMethod confirmationMethod : confirmationMethods) {
-                if (OAuthConstants.OAUTH_SAML1_BEARER_METHOD.equals(confirmationMethod.getConfirmationMethod())) {
-                    bearerFound = true;
-                }
-
-            }
-            if (!bearerFound) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Cannot find Method attribute in SubjectConfirmation " + subject.getSubjectConfirmation());
-                }
-                return false;
+        SubjectConfirmation subjectConfirmation = subject.getSubjectConfirmation();
+        List<ConfirmationMethod> confirmationMethods = subjectConfirmation.getConfirmationMethods();
+        for (ConfirmationMethod confirmationMethod : confirmationMethods) {
+            if (OAuthConstants.OAUTH_SAML1_BEARER_METHOD.equals(confirmationMethod.getConfirmationMethod())) {
+                bearerFound = true;
             }
 
-            XMLObject confirmationData = subject.getSubjectConfirmation().getSubjectConfirmationData();
-            if (confirmationData == null) {
-                log.warn("Subject confirmation data is missing.");
-            }
-
-        } else {
+        }
+        if (!bearerFound) {
             if (log.isDebugEnabled()) {
-                log.debug("No SubjectConfirmation exist in Assertion");
+                log.debug("Cannot find Method attribute in SubjectConfirmation " + subject.getSubjectConfirmation());
             }
             return false;
+        }
+
+        XMLObject confirmationData = subject.getSubjectConfirmation().getSubjectConfirmationData();
+        if (confirmationData == null) {
+            log.warn("Subject confirmation data is missing.");
         }
 
         if (!bearerFound) {
@@ -445,7 +430,9 @@ public class SAML1BearerGrantHandler extends AbstractAuthorizationGrantHandler {
          * that Bearer Assertions are not replayed, by maintaining the set of used ID values for the length of
          * time for which the Assertion would be considered valid based on the applicable NotOnOrAfter instant.
          */
-        if (notOnOrAfterFromConditions != null && notOnOrAfterFromConditions.compareTo(new DateTime()) < 1) {
+        long timestampSkewInMillis = OAuthServerConfiguration.getInstance().getTimeStampSkewInSeconds() * 1000;
+        if (notOnOrAfterFromConditions != null && notOnOrAfterFromConditions.plus(timestampSkewInMillis).isBeforeNow
+                ()) {
             // notOnOrAfter is an expired timestamp
             if (log.isDebugEnabled()) {
                 log.debug("NotOnOrAfter is having an expired timestamp in Conditions element");
@@ -455,7 +442,7 @@ public class SAML1BearerGrantHandler extends AbstractAuthorizationGrantHandler {
         boolean validSubjectConfirmationDataExists = false;
         if (!notOnOrAfterFromSubjectConfirmations.isEmpty()) {
             for (DateTime entry : notOnOrAfterFromSubjectConfirmations) {
-                if (entry.compareTo(new DateTime()) >= 1) {
+                if (entry.plus(timestampSkewInMillis).isAfterNow()) {
                     validSubjectConfirmationDataExists = true;
                 }
             }

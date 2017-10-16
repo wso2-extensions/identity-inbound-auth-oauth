@@ -22,18 +22,21 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.component.ComponentContext;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.annotations.ReferenceCardinality;
+import org.osgi.service.component.annotations.ReferencePolicy;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.discovery.DefaultOIDCProcessor;
 import org.wso2.carbon.identity.discovery.OIDCProcessor;
 
 /**
- * @scr.component name="identity.discovery.component" immediate="true"
- * @scr.reference name="claim.manager.listener.service"
- * interface="org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService"
- * cardinality="0..n" policy="dynamic"
- * bind="setClaimManagementService"
- * unbind="unsetClaimManagementService"
+ * Service component for OpenID Connect Discovery.
  */
+@Component(
+        name = "identity.discovery.component",
+        immediate = true
+)
 public class OIDCDiscoveryServiceComponent {
     private static Log log = LogFactory.getLog(OIDCDiscoveryServiceComponent.class);
     private static BundleContext bundleContext = null;
@@ -55,6 +58,13 @@ public class OIDCDiscoveryServiceComponent {
         }
     }
 
+    @Reference(
+            name = "claim.manager.listener.service",
+            service = ClaimMetadataManagementService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetClaimManagementService"
+    )
     protected void setClaimManagementService(ClaimMetadataManagementService registryService) {
         OIDCDiscoveryDataHolder.getInstance().setClaimManagementService(registryService);
         if (log.isDebugEnabled()) {

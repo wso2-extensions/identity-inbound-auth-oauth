@@ -47,6 +47,9 @@
     String applicationName = request.getParameter("application");
     String callback = request.getParameter("callback");
     String oauthVersion = request.getParameter("oauthVersion");
+    String userAccessTokenExpiryTime = request.getParameter("userAccessTokenExpiryTime");
+    String applicationAccessTokenExpiryTime = request.getParameter("applicationAccessTokenExpiryTime");
+    String refreshTokenExpiryTime = request.getParameter("refreshTokenExpiryTime");
 
 	boolean pkceMandatory = false;
 	boolean pkceSupportPlain = false;
@@ -57,8 +60,6 @@
 	if(request.getParameter("pkce_plain") != null) {
 		pkceSupportPlain = true;
 	}
-
-
 
 
 	String forwardTo = "index.jsp";
@@ -82,6 +83,9 @@
 		app.setApplicationName(applicationName);
 		app.setCallbackUrl(callback);
 		app.setOAuthVersion(oauthVersion);
+		app.setUserAccessTokenExpiryTime(Long.parseLong(userAccessTokenExpiryTime));
+		app.setApplicationAccessTokenExpiryTime(Long.parseLong(applicationAccessTokenExpiryTime));
+		app.setRefreshTokenExpiryTime(Long.parseLong(refreshTokenExpiryTime));
 
         String grants;
         StringBuffer buff = new StringBuffer();

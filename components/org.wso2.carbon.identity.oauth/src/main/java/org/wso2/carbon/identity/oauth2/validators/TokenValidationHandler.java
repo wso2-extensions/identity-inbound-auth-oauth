@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oauth2.validators;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.common.model.User;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -337,7 +338,15 @@ public class TokenValidationHandler {
      */
     private String getAuthzUser(AccessTokenDO accessTokenDO) {
         User user = accessTokenDO.getAuthzUser();
-        String authzUser = UserCoreUtil.addDomainToName(user.getUserName(), user.getUserStoreDomain());
+        String userStore = user.getUserStoreDomain();
+        if (!OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && userStore != null && userStore
+                .startsWith(OAuthConstants.UserType.FEDERATED_USER_DOMAIN_PREFIX)) {
+            if (log.isDebugEnabled()) {
+                log.debug("User store name : " + userStore + " has federated prefix. Hence removing it");
+            }
+            userStore = null;
+        }
+        String authzUser = IdentityUtil.addDomainToName(user.getUserName(), userStore);
         return UserCoreUtil.addTenantDomainToEntry(authzUser, user.getTenantDomain());
     }
 

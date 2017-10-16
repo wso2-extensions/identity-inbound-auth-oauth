@@ -28,7 +28,6 @@ import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
-import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.registry.core.utils.UUIDGenerator;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
@@ -102,11 +101,9 @@ public final class OAuthUtil {
     }
 
     public static void clearOAuthCache(String oauthCacheKey) {
-        if (OAuthServerConfiguration.getInstance().isCacheEnabled()) {
-            OAuthCache oauthCache = OAuthCache.getInstance();
-            OAuthCacheKey cacheKey = new OAuthCacheKey(oauthCacheKey);
-            oauthCache.clearCacheEntry(cacheKey);
-        }
+
+        OAuthCacheKey cacheKey = new OAuthCacheKey(oauthCacheKey);
+        OAuthCache.getInstance().clearCacheEntry(cacheKey);
     }
 
     public static AuthenticatedUser getAuthenticatedUser(String fullyQualifiedUserName) {
