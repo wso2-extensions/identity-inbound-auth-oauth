@@ -21,7 +21,6 @@ import org.apache.commons.collections.map.HashedMap;
 import org.apache.commons.logging.Log;
 import org.mockito.Mock;
 import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
@@ -47,6 +46,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 import org.wso2.carbon.user.api.RealmConfiguration;
 import org.wso2.carbon.user.core.UserRealm;
 import org.wso2.carbon.user.core.UserStoreException;
@@ -70,7 +70,7 @@ import static org.powermock.api.mockito.PowerMockito.when;
 
 @PrepareForTest ( {IdentityTenantUtil.class, OAuth2Util.class, OAuthServerConfiguration.class,
         OAuth2ServiceComponentHolder.class, ClaimMetadataHandler.class, IdentityUtil.class})
-public class ClaimUtilTest extends PowerMockTestCase {
+public class ClaimUtilTest extends PowerMockIdentityBaseTest {
 
     @Mock
     OAuth2TokenValidationResponseDTO mockedValidationTokenResponseDTO;

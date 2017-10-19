@@ -18,11 +18,8 @@
 
 package org.wso2.carbon.identity.oauth2.token.handlers.grant;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.mockito.Mock;
 import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.testng.Assert;
 import org.testng.IObjectFactory;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.ObjectFactory;
@@ -37,7 +34,6 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
-import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.user.core.UserRealm;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.service.RealmService;
@@ -47,17 +43,22 @@ import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
-import static org.powermock.api.mockito.PowerMockito.doNothing;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
-import static org.testng.Assert.*;
+import static org.testng.Assert.assertTrue;
 
-@PrepareForTest({MultitenantUtils.class, OAuth2ServiceComponentHolder.class, IdentityTenantUtil.class, UserCoreUtil
-        .class, OAuthComponentServiceHolder.class, OAuthServerConfiguration.class, LogFactory.class})
+@PrepareForTest(
+        {
+                MultitenantUtils.class,
+                OAuth2ServiceComponentHolder.class,
+                IdentityTenantUtil.class,
+                UserCoreUtil.class,
+                OAuthComponentServiceHolder.class,
+                OAuthServerConfiguration.class
+        }
+)
 public class PasswordGrantHandlerTest {
 
-    @Mock
-    private Log log;
     @Mock
     private OAuthTokenReqMessageContext tokReqMsgCtx;
     @Mock
@@ -86,22 +87,20 @@ public class PasswordGrantHandlerTest {
     @DataProvider(name = "ValidateGrantDataProvider")
     public Object[][] buildScopeString() {
         return new Object[][]{
-                {"randomUser", "wso2.com", "wso2.com", 1, true, "randomPassword", true, "DOMAIN", true, true},
-                {"randomUser", "wso2.com", "wso2.com", 1, true, "randomPassword", true, "DOMAIN", true, false}
+                {"randomUser", "wso2.com", "wso2.com", 1, true, "randomPassword", true, "DOMAIN", true},
         };
     }
 
     @Test(dataProvider = "ValidateGrantDataProvider")
-    public void testValidateGrant(String username, String appTenant, String userTenant, int userTenantId, boolean
-            isSaas, String resourceOwnerPassword, boolean authenticate, String domain, boolean result, boolean
-            debugEnabled) throws Exception {
-
-        mockStatic(LogFactory.class);
-        when(LogFactory.getLog(any(Class.class))).thenReturn(log);
-
-        when(log.isDebugEnabled()).thenReturn(debugEnabled);
-        doNothing().when(log).debug(any());
-        doNothing().when(log).debug(any(), any(Throwable.class));
+    public void testValidateGrant(String username,
+                                  String appTenant,
+                                  String userTenant,
+                                  int userTenantId,
+                                  boolean isSaas,
+                                  String resourceOwnerPassword,
+                                  boolean authenticate,
+                                  String domain,
+                                  boolean result) throws Exception {
 
         when(tokReqMsgCtx.getOauth2AccessTokenReqDTO()).thenReturn(oAuth2AccessTokenReqDTO);
         when(oAuth2AccessTokenReqDTO.getResourceOwnerUsername()).thenReturn(username + userTenant);
@@ -136,8 +135,8 @@ public class PasswordGrantHandlerTest {
         when(userRealm.getUserStoreManager()).thenReturn(userStoreManager);
         when(userStoreManager.authenticate(anyString(), any())).thenReturn(authenticate);
 
-        when(applicationManagementService.getServiceProviderByClientId(anyString(), anyString(), anyString())).thenReturn
-                (serviceProvider);
+        when(applicationManagementService.getServiceProviderByClientId(anyString(), anyString(), anyString()))
+                .thenReturn(serviceProvider);
         when(serviceProvider.isSaasApp()).thenReturn(isSaas);
         when(serviceProvider.getLocalAndOutBoundAuthenticationConfig()).thenReturn(localAndOutboundAuthenticationConfig);
 

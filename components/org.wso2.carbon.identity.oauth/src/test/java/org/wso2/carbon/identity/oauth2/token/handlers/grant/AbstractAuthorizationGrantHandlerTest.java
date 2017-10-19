@@ -50,7 +50,6 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyString;
 import static org.powermock.api.mockito.PowerMockito.doCallRealMethod;
-import static org.powermock.api.mockito.PowerMockito.doNothing;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE;
@@ -59,8 +58,6 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenStates.T
 @PrepareForTest({OAuth2Util.class, IdentityUtil.class, OAuthServerConfiguration.class, OAuthCache.class})
 public class AbstractAuthorizationGrantHandlerTest {
 
-    @Mock
-    private Log log;
     @Mock
     private AbstractAuthorizationGrantHandler handler;
     @Mock
@@ -137,14 +134,16 @@ public class AbstractAuthorizationGrantHandlerTest {
     }
 
     @Test(dataProvider = "IssueDataProvider")
-    public void testIssue(boolean cacheEnabled, boolean cacheEntryAvailable, boolean debugEnabled, long
-            cachedTokenValidity, long cachedRefreshTokenValidity, long dbTokenValidity, long dbRefreshTokenValidity,
-                          boolean dbEntryAvailable, String dbTokenState, boolean tokenLoggable)
-            throws Exception {
-
-        when(log.isDebugEnabled()).thenReturn(debugEnabled);
-        doNothing().when(log).debug(any());
-        doNothing().when(log).debug(any(), any(Throwable.class));
+    public void testIssue(boolean cacheEnabled,
+                          boolean cacheEntryAvailable,
+                          boolean debugEnabled,
+                          long cachedTokenValidity,
+                          long cachedRefreshTokenValidity,
+                          long dbTokenValidity,
+                          long dbRefreshTokenValidity,
+                          boolean dbEntryAvailable,
+                          String dbTokenState,
+                          boolean tokenLoggable) throws Exception {
 
         Field field = AbstractAuthorizationGrantHandler.class.getDeclaredField("tokenMgtDAO");
         field.setAccessible(true);
@@ -169,11 +168,6 @@ public class AbstractAuthorizationGrantHandlerTest {
         field = AbstractAuthorizationGrantHandler.class.getDeclaredField("oauthIssuerImpl");
         field.setAccessible(true);
         field.set(handler, oauthIssuer);
-        field.setAccessible(false);
-
-        field = AbstractAuthorizationGrantHandler.class.getDeclaredField("log");
-        field.setAccessible(true);
-        field.set(handler, log);
         field.setAccessible(false);
 
         mockStatic(OAuthCache.class);

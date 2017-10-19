@@ -73,9 +73,9 @@ public class UserInforRequestDefaultValidator implements UserInfoRequestValidato
                             "Body contains non ASCII characters");
                 }
                 if (requestBody.contains("access_token=")) {
-                    arrAccessToken = requestBody.trim().split("=");
+                    arrAccessToken = requestBody.trim().split("access_token=");
                     if (arrAccessToken[1].contains("&")) {
-                        arrAccessTokenNew = arrAccessToken[1].split("&", 1);
+                        arrAccessTokenNew = arrAccessToken[1].split("&");
                         return arrAccessTokenNew[0];
                     }
                 }

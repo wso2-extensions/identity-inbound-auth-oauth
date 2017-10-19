@@ -22,6 +22,10 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.eclipse.equinox.http.helper.ContextPathServletAdaptor;
 import org.osgi.service.component.ComponentContext;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.annotations.ReferenceCardinality;
+import org.osgi.service.component.annotations.ReferencePolicy;
 import org.osgi.service.http.HttpService;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
 import org.wso2.carbon.identity.oidc.session.servlet.OIDCLogoutServlet;
@@ -30,15 +34,10 @@ import org.wso2.carbon.user.core.service.RealmService;
 
 import javax.servlet.Servlet;
 
-/**
- * @scr.component name="identity.oidc.session.component" immediate="true"
- * @scr.reference name="osgi.httpservice" interface="org.osgi.service.http.HttpService"
- * cardinality="1..1" policy="dynamic" bind="setHttpService"
- * unbind="unsetHttpService"
- * @scr.reference name="user.realmservice.default"
- * interface="org.wso2.carbon.user.core.service.RealmService" cardinality="1..1"
- * policy="dynamic" bind="setRealmService" unbind="unsetRealmService"
- */
+@Component(
+        name = "identity.oidc.session.component",
+        immediate = true
+)
 public class OIDCSessionManagementComponent {
     private static final Log log = LogFactory.getLog(OIDCSessionManagementComponent.class);
 
@@ -48,10 +47,10 @@ public class OIDCSessionManagementComponent {
 
         // Register Session IFrame Servlet
         Servlet sessionIFrameServlet = new ContextPathServletAdaptor(new OIDCSessionIFrameServlet(),
-                                                                     OIDCSessionConstants.OIDCEndpoints.OIDC_SESSION_IFRAME_ENDPOINT);
+                OIDCSessionConstants.OIDCEndpoints.OIDC_SESSION_IFRAME_ENDPOINT);
         try {
             httpService.registerServlet(OIDCSessionConstants.OIDCEndpoints.OIDC_SESSION_IFRAME_ENDPOINT,
-                                        sessionIFrameServlet, null, null);
+                    sessionIFrameServlet, null, null);
         } catch (Exception e) {
             String msg = "Error when registering OIDC Session IFrame Servlet via the HttpService.";
             log.error(msg, e);
@@ -59,10 +58,10 @@ public class OIDCSessionManagementComponent {
         }
 
         Servlet logoutServlet = new ContextPathServletAdaptor(new OIDCLogoutServlet(),
-                                                              OIDCSessionConstants.OIDCEndpoints.OIDC_LOGOUT_ENDPOINT);
+                OIDCSessionConstants.OIDCEndpoints.OIDC_LOGOUT_ENDPOINT);
         try {
             httpService.registerServlet(OIDCSessionConstants.OIDCEndpoints.OIDC_LOGOUT_ENDPOINT, logoutServlet, null,
-                                        null);
+                    null);
         } catch (Exception e) {
             String msg = "Error when registering OIDC Logout Servlet via the HttpService.";
             log.error(msg, e);
@@ -80,6 +79,13 @@ public class OIDCSessionManagementComponent {
         }
     }
 
+    @Reference(
+            name = "osgi.http.service",
+            service = HttpService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetHttpService"
+    )
     protected void setHttpService(HttpService httpService) {
 
         if (log.isDebugEnabled()) {
@@ -95,10 +101,18 @@ public class OIDCSessionManagementComponent {
         }
         OIDCSessionManagementComponentServiceHolder.setHttpService(null);
     }
+
+    @Reference(
+            name = "realm.service",
+            service = RealmService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetRealmService"
+    )
     protected void setRealmService(RealmService realmService) {
 
         if (log.isDebugEnabled()) {
-            log.debug("Setting the Realm Service");
+            log.debug("Setting the Realm Service.");
         }
         OIDCSessionManagementComponentServiceHolder.setRealmService(realmService);
     }
@@ -106,7 +120,7 @@ public class OIDCSessionManagementComponent {
     protected void unsetRealmService(RealmService realmService) {
 
         if (log.isDebugEnabled()) {
-            log.debug("Unsetting the Realm Service");
+            log.debug("Unsetting the Realm Service.");
         }
         OIDCSessionManagementComponentServiceHolder.setRealmService(null);
     }

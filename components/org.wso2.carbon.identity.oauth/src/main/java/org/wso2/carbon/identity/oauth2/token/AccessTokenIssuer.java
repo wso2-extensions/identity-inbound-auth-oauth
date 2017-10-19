@@ -160,7 +160,7 @@ public class AccessTokenIssuer {
                 log.debug("Unsupported grant type for client Id : " + tokenReqDTO.getClientId());
             }
             tokenRespDTO = handleError(OAuthError.TokenResponse.UNSUPPORTED_GRANT_TYPE,
-                    "Unsupported grant type " + grantType + "is used.", tokenReqDTO);
+                    "Unsupported grant type " + grantType + " is used.", tokenReqDTO);
             setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
             triggerPostListeners(tokenReqDTO, tokenRespDTO, tokReqMsgCtx, isRefreshRequest);
             return tokenRespDTO;
@@ -284,7 +284,7 @@ public class AccessTokenIssuer {
             if (tokenRespDTO.isError()) {
                 setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
                 return tokenRespDTO;
-            }    
+            }
         } finally {
             triggerPostListeners(tokenReqDTO, tokenRespDTO, tokReqMsgCtx, isRefreshRequest);
             // clears the token request context.
@@ -321,10 +321,7 @@ public class AccessTokenIssuer {
                 tokenRespDTO.setIDToken(idToken);
             } catch (IDTokenValidationFailureException e) {
                 log.error(e.getMessage());
-                tokenRespDTO = handleError(
-                        OAuth2ErrorCodes.SERVER_ERROR,
-                        "Server Error",
-                        tokenReqDTO);
+                tokenRespDTO = handleError(OAuth2ErrorCodes.SERVER_ERROR, "Server Error", tokenReqDTO);
                 return tokenRespDTO;
             }
         }

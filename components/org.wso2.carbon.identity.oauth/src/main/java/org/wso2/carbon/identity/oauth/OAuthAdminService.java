@@ -495,9 +495,9 @@ public class OAuthAdminService extends AbstractAdmin {
         String userStoreDomain = null;
         if (OAuth2Util.checkAccessTokenPartitioningEnabled() && OAuth2Util.checkUserNameAssertionEnabled()) {
             try {
-                userStoreDomain = OAuth2Util.getUserStoreDomainFromUserId(username);
+                userStoreDomain = OAuth2Util.getUserStoreForFederatedUser(authenticatedUser);
             } catch (IdentityOAuth2Exception e) {
-                String errorMsg = "Error occurred while getting user store domain for User ID : " + username;
+                String errorMsg = "Error occurred while getting user store domain for User ID : " + authenticatedUser;
                 log.error(errorMsg, e);
                 throw new IdentityOAuthAdminException(errorMsg, e);
             }
@@ -594,10 +594,10 @@ public class OAuthAdminService extends AbstractAdmin {
             if (OAuth2Util.checkAccessTokenPartitioningEnabled() &&
                     OAuth2Util.checkUserNameAssertionEnabled()) {
                 try {
-                    userStoreDomain = OAuth2Util.getUserStoreDomainFromUserId(userName);
+                    userStoreDomain = OAuth2Util.getUserStoreForFederatedUser(user);
                 } catch (IdentityOAuth2Exception e) {
                     throw new IdentityOAuthAdminException(
-                            "Error occurred while getting user store domain from User ID : " + userName, e);
+                            "Error occurred while getting user store domain from User ID : " + user, e);
                 }
             }
             OAuthConsumerAppDTO[] appDTOs = getAppsAuthorizedByUser();

@@ -178,6 +178,8 @@ public class OAuthServerConfiguration {
 
     // property added to fix IDENTITY-4112 in backward compatible manner
     private boolean isRevokeResponseHeadersEnabled = true;
+    // property to make DisplayName property to be used in consent page
+    private boolean showDisplayNameInConsentPage=false;
 
     // Use the SP tenant domain instead of user domain.
     private boolean useSPTenantDomainValue;
@@ -298,10 +300,29 @@ public class OAuthServerConfiguration {
         parseUseSPTenantDomainConfig(oauthElem);
 
         parseRevokeResponseHeadersEnableConfig(oauthElem);
+        parseShowDisplayNameInConsentPage(oauthElem);
+    }
+
+    private void parseShowDisplayNameInConsentPage(OMElement oauthElem) {
+        OMElement showApplicationNameInConsentPageElement = oauthElem
+                .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements
+                        .IDENTITY_OAUTH_SHOW_DISPLAY_NAME_IN_CONSENT_PAGE));
+        if (showApplicationNameInConsentPageElement != null) {
+            showDisplayNameInConsentPage = Boolean.parseBoolean(showApplicationNameInConsentPageElement.getText());
+        }
     }
 
     public Set<OAuthCallbackHandlerMetaData> getCallbackHandlerMetaData() {
         return callbackHandlerMetaData;
+    }
+
+    /**
+     * Returns the value of ShowDisplayNameInConsentPage configuration.
+     *
+     * @return
+     */
+    public boolean isShowDisplayNameInConsentPage() {
+        return showDisplayNameInConsentPage;
     }
 
     public String getOAuth1RequestTokenUrl() {
@@ -667,8 +688,8 @@ public class OAuthServerConfiguration {
                             clientAuthenticationHandler.init(entry.getValue());
                             supportedClientAuthHandlersTemp.add(clientAuthenticationHandler);
 
-                            //Exceptions necessarily don't have to break the flow since there are cases
-                            //runnable without client auth handlers
+                        //Exceptions necessarily don't have to break the flow since there are cases
+                        //runnable without client auth handlers
                         } catch (InstantiationException e) {
                             log.error("Error instantiating " + entry, e);
                         } catch (IllegalAccessException e) {
@@ -2047,6 +2068,7 @@ public class OAuthServerConfiguration {
 
         // To enable revoke response headers
         private static final String ENABLE_REVOKE_RESPONSE_HEADERS = "EnableRevokeResponseHeaders";
+        private static final String IDENTITY_OAUTH_SHOW_DISPLAY_NAME_IN_CONSENT_PAGE = "ShowDisplayNameInConsentPage";
         private static final String REFRESH_TOKEN_ALLOWED = "IsRefreshTokenAllowed";
 
         // Oauth access token value generator related.

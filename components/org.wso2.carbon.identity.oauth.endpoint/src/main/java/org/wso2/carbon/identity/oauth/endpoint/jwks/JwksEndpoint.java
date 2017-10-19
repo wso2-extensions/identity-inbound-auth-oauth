@@ -18,14 +18,6 @@
 package org.wso2.carbon.identity.oauth.endpoint.jwks;
 
 
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.math.BigInteger;
-import java.security.KeyStore;
-import java.security.cert.Certificate;
-import java.security.interfaces.RSAPublicKey;
-
-
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -40,7 +32,11 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.utils.CarbonUtils;
 
-
+import java.io.FileInputStream;
+import java.math.BigInteger;
+import java.security.KeyStore;
+import java.security.cert.Certificate;
+import java.security.interfaces.RSAPublicKey;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
@@ -77,10 +73,10 @@ public class JwksEndpoint {
                 file = new FileInputStream(CarbonUtils.getServerConfiguration().getFirstProperty
                         ("Security.KeyStore.Location"));
                 KeyStore keystore = KeyStore.getInstance(KeyStore.getDefaultType());
-                String password = CarbonUtils.getServerConfiguration().getInstance().getFirstProperty
+                String password = CarbonUtils.getServerConfiguration().getFirstProperty
                         ("Security.KeyStore.Password");
                 keystore.load(file, password.toCharArray());
-                String alias = CarbonUtils.getServerConfiguration().getInstance().getFirstProperty
+                String alias = CarbonUtils.getServerConfiguration().getFirstProperty
                         ("Security.KeyStore.KeyAlias");
                 // Get certificate of public key
                 Certificate cert = keystore.getCertificate(alias);

@@ -43,8 +43,12 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Commo
 import org.wso2.carbon.identity.application.authentication.framework.model.CommonAuthResponseWrapper;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
+import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.Claim;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
+import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
+import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
@@ -55,7 +59,9 @@ import org.wso2.carbon.identity.oauth.cache.SessionDataCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.endpoint.OAuthRequestWrapper;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.OpenIDConnectUserRPStore;
@@ -116,6 +122,7 @@ public class OAuth2AuthzEndpoint {
     private static final String RESPONSE_MODE = "response_mode";
 
     private static final String formPostRedirectPage = getFormPostRedirectPage();
+    private static final String DISPLAY_NAME = "DisplayName";
 
     private static String getFormPostRedirectPage() {
 
@@ -815,6 +822,16 @@ public class OAuth2AuthzEndpoint {
         OAuthAuthzRequest oauthRequest = new CarbonOAuthAuthzRequest(req);
 
         OAuth2Parameters params = new OAuth2Parameters();
+        if (EndpointUtil.getOAuthServerConfiguration().isShowDisplayNameInConsentPage()) {
+            ServiceProvider serviceProvider = getServiceProvider(clientId);
+            ServiceProviderProperty[] serviceProviderProperties = serviceProvider.getSpProperties();
+            for (ServiceProviderProperty serviceProviderProperty : serviceProviderProperties) {
+                if (DISPLAY_NAME.equals(serviceProviderProperty.getName())) {
+                    params.setDisplayName(serviceProviderProperty.getValue());
+                    break;
+                }
+            }
+        }
         params.setClientId(clientId);
         params.setRedirectURI(clientDTO.getCallbackURL());
         params.setResponseType(oauthRequest.getResponseType());
@@ -1010,6 +1027,25 @@ public class OAuth2AuthzEndpoint {
     }
 
     /**
+     * Return ServiceProvider for the given clientId
+     *
+     * @param clientId
+     * @return
+     * @throws OAuthSystemException if couldn't retrieve ServiceProvider Information
+     */
+    private ServiceProvider getServiceProvider(String clientId) throws OAuthSystemException {
+        ApplicationManagementService applicationManagementService = EndpointUtil.getApplicationManagementService();
+        try {
+            OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
+            String tenantDomain = OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
+            return applicationManagementService.getServiceProvider(oAuthAppDO.getApplicationName(), tenantDomain);
+        } catch (IdentityOAuth2Exception | InvalidOAuthClientException | IdentityApplicationManagementException e) {
+            String msg = "Couldn't retrieve Service Provider for clientId:" + clientId;
+            log.error(msg, e);
+            throw new OAuthSystemException(msg, e);
+        }
+    }
+    /**
      * prompt : none
      * The Authorization Server MUST NOT display any authentication
      * or consent user interface pages. An error is returned if the
@@ -1061,7 +1097,7 @@ public class OAuth2AuthzEndpoint {
             prompts = oauth2Params.getPrompt().trim().split("\\s");
         }
 
-        //Skip the consent page if User has provided approve always or skip consent from file
+        // Return the consent page if prompts contain "consent"
         if (prompts != null && Arrays.asList(prompts).contains(OAuthConstants.Prompt.CONSENT)) {
             return consentUrl;
 

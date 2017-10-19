@@ -21,6 +21,10 @@ package org.wso2.carbon.identity.oauth.dcr.internal;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.osgi.service.component.ComponentContext;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.annotations.ReferenceCardinality;
+import org.osgi.service.component.annotations.ReferencePolicy;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.HttpIdentityRequestFactory;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.HttpIdentityResponseFactory;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.IdentityProcessor;
@@ -34,21 +38,10 @@ import org.wso2.carbon.identity.oauth.dcr.handler.UnRegistrationHandler;
 import org.wso2.carbon.identity.oauth.dcr.processor.DCRProcessor;
 import org.wso2.carbon.identity.oauth.dcr.service.DCRMService;
 
-/**
- * @scr.component name="identity.oauth.dcr" immediate="true"
- * @scr.reference name="identity.application.management.service"
- * interface="org.wso2.carbon.identity.application.mgt.ApplicationManagementService"
- * cardinality="1..1" policy="dynamic"
- * bind="setApplicationManagementService" unbind="unsetApplicationManagementService"
- * @scr.reference name="identity.oauth.dcr.handler.register"
- * interface="org.wso2.carbon.identity.oauth.dcr.handler.RegistrationHandler"
- * cardinality="0..n" policy="dynamic"
- * bind="setRegistrationHandler" unbind="unsetRegistrationHandler"
- * @scr.reference name="identity.oauth.dcr.handler.unregister"
- * interface="org.wso2.carbon.identity.oauth.dcr.handler.UnRegistrationHandler"
- * cardinality="0..n" policy="dynamic"
- * bind="setUnRegistrationHandler" unbind="unsetUnRegistrationHandler"
- */
+@Component(
+        name = "identity.oauth.dcr",
+        immediate = true
+)
 public class DCRServiceComponent {
 
     private static final Log log = LogFactory.getLog(DCRServiceComponent.class);
@@ -59,26 +52,26 @@ public class DCRServiceComponent {
         try {
 
             componentContext.getBundleContext().registerService(IdentityProcessor.class.getName(),
-                                                                new DCRProcessor(), null);
+                    new DCRProcessor(), null);
 
             componentContext.getBundleContext().registerService(HttpIdentityRequestFactory.class.getName(),
-                                                                new RegistrationRequestFactory(), null);
+                    new RegistrationRequestFactory(), null);
 
             componentContext.getBundleContext().registerService(HttpIdentityResponseFactory.class.getName(),
-                                                                new HttpRegistrationResponseFactory(), null);
+                    new HttpRegistrationResponseFactory(), null);
 
             componentContext.getBundleContext().registerService(HttpIdentityRequestFactory.class.getName(),
-                                                                new UnregistrationRequestFactory(), null);
+                    new UnregistrationRequestFactory(), null);
             componentContext.getBundleContext().registerService(HttpIdentityResponseFactory.class.getName(),
-                                                                new HttpUnregistrationResponseFactory(), null);
+                    new HttpUnregistrationResponseFactory(), null);
 
             componentContext.getBundleContext().registerService(RegistrationHandler.class.getName(),
-                                                                new RegistrationHandler(), null);
+                    new RegistrationHandler(), null);
 
             componentContext.getBundleContext().registerService(UnRegistrationHandler.class.getName(),
-                                                                new UnRegistrationHandler(), null);
+                    new UnRegistrationHandler(), null);
             componentContext.getBundleContext().registerService(DCRMService.class.getName(),
-                                                                new DCRMService(), null);
+                    new DCRMService(), null);
         } catch (Throwable e) {
             log.error("Error occurred while activating DCRServiceComponent", e);
         }
@@ -97,6 +90,13 @@ public class DCRServiceComponent {
      *
      * @param registrationHandler An instance of RegistrationHandler
      */
+    @Reference(
+            name = "identity.oauth.dcr.handler.register",
+            service = RegistrationHandler.class,
+            cardinality = ReferenceCardinality.MULTIPLE,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetRegistrationHandler"
+    )
     protected void setRegistrationHandler(RegistrationHandler registrationHandler) {
 
         if (log.isDebugEnabled()) {
@@ -125,6 +125,13 @@ public class DCRServiceComponent {
      *
      * @param unRegistrationHandler An instance of DCRManagementService
      */
+    @Reference(
+            name = "identity.oauth.dcr.handler.unregister",
+            service = UnRegistrationHandler.class,
+            cardinality = ReferenceCardinality.MULTIPLE,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetUnRegistrationHandler"
+    )
     protected void setUnRegistrationHandler(UnRegistrationHandler
                                                     unRegistrationHandler) {
 
@@ -153,6 +160,13 @@ public class DCRServiceComponent {
      *
      * @param applicationManagementService An instance of ApplicationManagementService
      */
+    @Reference(
+            name = "application.mgt.service",
+            service = ApplicationManagementService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetApplicationManagementService"
+    )
     protected void setApplicationManagementService(ApplicationManagementService applicationManagementService) {
 
         if (log.isDebugEnabled()) {

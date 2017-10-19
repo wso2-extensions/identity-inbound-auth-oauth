@@ -18,10 +18,55 @@
 <!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd" >
 
 <suite name="Identity-Oauth-Endpoint-Test-Suite">
+
     <test name="Util-Tests" preserve-order="true" parallel="false">
+        <parameter name="log-level" value="info"/>
         <classes>
             <class name="org.wso2.carbon.identity.oauth.endpoint.util.ClaimUtilTest" />
             <class name="org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtilTest" />
+            <class name="org.wso2.carbon.identity.oauth.endpoint.util.OpenIDConnectUserRPStoreTest" />
+            <class name="org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpointTest" />
+            <class name="org.wso2.carbon.identity.oauth.endpoint.introspection.IntrospectionResponseBuilderTest" />
+        </classes>
+    </test>
+
+    <test name="OAuth2EndpointTestsWithDebugEnabled" preserve-order="true" parallel="false">
+        <parameter name="log-level" value="debug"/>
+        <classes>
+            <class name="org.wso2.carbon.identity.oauth.endpoint.util.ClaimUtilTest" />
+            <class name="org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtilTest" />
+            <class name="org.wso2.carbon.identity.oauth.endpoint.util.OpenIDConnectUserRPStoreTest" />
+            <class name="org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpointTest" />
+        </classes>
+    </test>
+
+    <test name="endpoint.jwts-tests" preserve-order="true" parallel="false">
+        <!-- there are no debug logs in the class -->
+        <parameter name="log-level" value="info"/>
+        <classes>
+            <class name="org.wso2.carbon.identity.oauth.endpoint.jwks.JwksEndpointTest" />
+        </classes>
+    </test>
+
+    <test name="endpoint.token-tests-info" preserve-order="true" parallel="false">
+        <parameter name="log-level" value="info"/>
+        <classes>
+            <class name="org.wso2.carbon.identity.oauth.endpoint.token.OAuth2TokenEndpointTest" />
+        </classes>
+    </test>
+
+    <test name="endpoint.token-tests-debug" preserve-order="true" parallel="false">
+        <parameter name="log-level" value="debug"/>
+        <classes>
+            <class name="org.wso2.carbon.identity.oauth.endpoint.token.OAuth2TokenEndpointTest" />
+        </classes>
+    </test>
+
+    <test name="endpoint.user.impl-tests" preserve-order="true" parallel="false">
+        <classes>
+            <class name="org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoEndpointConfigTest"/>
+            <class name="org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoISAccessTokenValidatorTest"/>
+            <class name="org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoJSONResponseBuilderTest"/>
         </classes>
     </test>
 </suite>

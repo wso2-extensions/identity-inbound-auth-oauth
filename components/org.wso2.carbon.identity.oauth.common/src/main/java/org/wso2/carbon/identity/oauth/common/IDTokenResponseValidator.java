@@ -73,10 +73,6 @@ public class IDTokenResponseValidator extends TokenValidator {
      * @return
      */
     private static boolean containOIDCScope(String scope) {
-        if (StringUtils.isBlank(scope)) {
-            return false;
-        }
-
         String[] scopeArray = scope.split("\\s+");
         for (String openidscope : scopeArray) {
             if (openidscope.equals(OAuthConstants.Scope.OPENID)) {

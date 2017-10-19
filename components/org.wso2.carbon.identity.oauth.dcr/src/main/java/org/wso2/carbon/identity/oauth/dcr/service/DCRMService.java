@@ -164,12 +164,6 @@ public class DCRMService {
         String grantType = StringUtils.join(registrationRequest.getGrantTypes(), " ");
         ServiceProvider clientSP;
 
-        ApplicationManagementService appMgtService = DCRDataHolder.getInstance().
-                getApplicationManagementService();
-        if (appMgtService == null) {
-            throw new IllegalStateException("Error occurred while retrieving Application Management Service");
-        }
-
         // Check for existing service providers
         if (!isServiceProviderExist(spName, tenantDomain)) {
             // Create the Service Provider
@@ -181,7 +175,7 @@ public class DCRMService {
             sp.setOwner(user);
             sp.setDescription("Service Provider for application " + spName);
 
-            createServiceProvider(sp, tenantDomain, applicationOwner);
+            createServiceProvider(sp, applicationOwner, tenantDomain);
 
             // Get created service provider, to update with OAuth/OIDC application information.
             clientSP = getServiceProvider(spName, tenantDomain);
@@ -283,7 +277,7 @@ public class DCRMService {
             log.error("Error while retriving service provider: " + serviceProviderName + " in tenant: " + tenantDomain);
         }
 
-        return serviceProvider == null ? false : true;
+        return serviceProvider != null;
     }
 
     private ServiceProvider getServiceProvider(String applicationName, String tenantDomain) throws DCRMException {
@@ -308,7 +302,8 @@ public class DCRMService {
 
     private void createServiceProvider(ServiceProvider serviceProvider, String applicationName, String tenantDomain) throws DCRMException {
         try {
-            DCRDataHolder.getInstance().getApplicationManagementService().createApplication(serviceProvider, applicationName, tenantDomain);
+            DCRDataHolder.getInstance().getApplicationManagementService().createApplication(serviceProvider, tenantDomain,
+                    applicationName);
         } catch (IdentityApplicationManagementException e) {
             String errorMessage = "Error while creating service provider: " + applicationName + " in tenant: " + tenantDomain;
             throw new DCRMException(ErrorCodes.BAD_REQUEST.toString(), errorMessage, e);

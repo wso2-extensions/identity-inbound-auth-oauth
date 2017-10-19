@@ -18,8 +18,6 @@
 
 package org.wso2.carbon.identity.oauth2.authz.handlers;
 
-import org.apache.axiom.util.base64.Base64Utils;
-import org.apache.commons.io.Charsets;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -113,7 +111,7 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
         // Select the user store domain when multiple user stores are configured.
         if (OAuth2Util.checkAccessTokenPartitioningEnabled() &&
                 OAuth2Util.checkUserNameAssertionEnabled()) {
-            userStoreDomain = OAuth2Util.getUserStoreDomainFromUserId(authorizedUser);
+            userStoreDomain = OAuth2Util.getUserStoreForFederatedUser(authorizationReqDTO.getUser());
         }
         if (log.isDebugEnabled()) {
             log.debug("Service Provider specific expiry time enabled for application : " + consumerKey +
@@ -354,13 +352,8 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
             }
 
             if (OAuth2Util.checkUserNameAssertionEnabled()) {
-                String userName = oauthAuthzMsgCtx.getAuthorizationReqDTO().getUser().toString();
-                //use ':' for token & userStoreDomain separation
-                String accessTokenStrToEncode = accessToken + ":" + userName;
-                accessToken = Base64Utils.encode(accessTokenStrToEncode.getBytes(Charsets.UTF_8));
-
-                String refreshTokenStrToEncode = refreshToken + ":" + userName;
-                refreshToken = Base64Utils.encode(refreshTokenStrToEncode.getBytes(Charsets.UTF_8));
+                accessToken = OAuth2Util.addUsernameToToken(authorizationReqDTO.getUser(), accessToken);
+                refreshToken = OAuth2Util.addUsernameToToken(authorizationReqDTO.getUser(), refreshToken);
             }
 
             AccessTokenDO newAccessTokenDO =

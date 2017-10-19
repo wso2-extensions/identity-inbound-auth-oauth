@@ -113,11 +113,11 @@ public final class OAuthUtil {
         }
 
         AuthenticatedUser authenticatedUser = new AuthenticatedUser();
-        authenticatedUser.setUserName(IdentityUtil.extractDomainFromName(fullyQualifiedUserName));
+        authenticatedUser.setUserStoreDomain(IdentityUtil.extractDomainFromName(fullyQualifiedUserName));
         authenticatedUser.setTenantDomain(MultitenantUtils.getTenantDomain(fullyQualifiedUserName));
 
         String username = fullyQualifiedUserName;
-        if(fullyQualifiedUserName.startsWith(authenticatedUser.getUserStoreDomain())) {
+        if (fullyQualifiedUserName.startsWith(authenticatedUser.getUserStoreDomain())) {
             username = UserCoreUtil.removeDomainFromName(fullyQualifiedUserName);
         }
         authenticatedUser.setUserName(MultitenantUtils.getTenantAwareUsername(username));

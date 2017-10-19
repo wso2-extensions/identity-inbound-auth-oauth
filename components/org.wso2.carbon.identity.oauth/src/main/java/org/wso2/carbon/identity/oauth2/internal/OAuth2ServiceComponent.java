@@ -23,6 +23,10 @@ import org.apache.commons.logging.LogFactory;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceRegistration;
 import org.osgi.service.component.ComponentContext;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.annotations.ReferenceCardinality;
+import org.osgi.service.component.annotations.ReferencePolicy;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.application.mgt.listener.ApplicationMgtListener;
@@ -45,21 +49,10 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-/**
- * @scr.component name="identity.oauth2.component" immediate="true"
- * @scr.reference name="identity.application.management.component"
- * interface=
- * "org.wso2.carbon.identity.application.mgt.ApplicationManagementService"
- * cardinality="1..1" policy="dynamic"
- * bind="setApplicationMgtService"
- * unbind="unsetApplicationMgtService"
- * @scr.reference name="identityCoreInitializedEventService"
- * interface="org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent" cardinality="1..1"
- * policy="dynamic" bind="setIdentityCoreInitializedEventService" unbind="unsetIdentityCoreInitializedEventService"
- * @scr.reference name="registry.service"
- * interface="org.wso2.carbon.registry.core.service.RegistryService" cardinality="1..1"
- * policy="dynamic" bind="setRegistryService" unbind="unsetRegistryService"
- */
+@Component(
+        name = "identity.oauth2.component",
+        immediate = true
+)
 public class OAuth2ServiceComponent {
     private static Log log = LogFactory.getLog(OAuth2ServiceComponent.class);
     private static BundleContext bundleContext;
@@ -121,7 +114,7 @@ public class OAuth2ServiceComponent {
         } else {
             log.error("OAuth - ApplicationMgtListener could not be registered.");
         }
-        if(checkPKCESupport()) {
+        if (checkPKCESupport()) {
             OAuth2ServiceComponentHolder.setPkceEnabled(true);
             log.info("PKCE Support enabled.");
         } else {
@@ -135,6 +128,13 @@ public class OAuth2ServiceComponent {
      *
      * @param applicationMgtService Application management service
      */
+    @Reference(
+            name = "application.mgt.service",
+            service = ApplicationManagementService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetApplicationMgtService"
+    )
     protected void setApplicationMgtService(ApplicationManagementService applicationMgtService) {
         if (log.isDebugEnabled()) {
             log.debug("ApplicationManagementService set in Identity OAuth2ServiceComponent bundle");
@@ -159,6 +159,13 @@ public class OAuth2ServiceComponent {
          is started */
     }
 
+    @Reference(
+            name = "identity.core.init.event.service",
+            service = IdentityCoreInitializedEvent.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetIdentityCoreInitializedEventService"
+    )
     protected void setIdentityCoreInitializedEventService(IdentityCoreInitializedEvent identityCoreInitializedEvent) {
         /* reference IdentityCoreInitializedEvent service to guarantee that this component will wait until identity core
          is started */
@@ -199,6 +206,13 @@ public class OAuth2ServiceComponent {
 
     }
 
+    @Reference(
+            name = "registry.service",
+            service = RegistryService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetRegistryService"
+    )
     protected void setRegistryService(RegistryService registryService) {
         if (log.isDebugEnabled()) {
             log.debug("Setting the Registry Service");

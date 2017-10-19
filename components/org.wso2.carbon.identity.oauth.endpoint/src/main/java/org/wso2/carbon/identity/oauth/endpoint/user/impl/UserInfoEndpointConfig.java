@@ -39,7 +39,7 @@ public class UserInfoEndpointConfig {
     private UserInfoClaimRetriever claimRetriever;
 
     private UserInfoEndpointConfig() {
-        if (log.isDebugEnabled()){
+        if (log.isDebugEnabled()) {
             log.debug("Initializing the UserInfoEndpointConfig singleton");
         }
     }

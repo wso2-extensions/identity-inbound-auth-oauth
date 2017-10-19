@@ -32,6 +32,7 @@ import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import org.apache.axiom.om.OMElement;
 import org.apache.axiom.om.impl.builder.StAXOMBuilder;
+import org.apache.axiom.util.base64.Base64Utils;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.Charsets;
@@ -71,6 +72,7 @@ import org.wso2.carbon.registry.core.Registry;
 import org.wso2.carbon.registry.core.Resource;
 import org.wso2.carbon.registry.core.exceptions.RegistryException;
 import org.wso2.carbon.user.api.UserStoreException;
+import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.CarbonUtils;
@@ -326,15 +328,8 @@ public class OAuth2Util {
      */
     public static String buildScopeString(String[] scopes) {
         if (scopes != null) {
-            StringBuilder scopeString = new StringBuilder("");
             Arrays.sort(scopes);
-            for (int i = 0; i < scopes.length; i++) {
-                scopeString.append(scopes[i].trim());
-                if (i != scopes.length - 1) {
-                    scopeString.append(" ");
-                }
-            }
-            return scopeString.toString();
+            return StringUtils.join(scopes, " ");
         }
         return null;
     }
@@ -549,21 +544,173 @@ public class OAuth2Util {
         return userStoreDomainMap;
     }
 
-    public static String getUserStoreDomainFromUserId(String userId)
+    /**
+     * Returns the mapped user store if a mapping is defined for this user store in AccessTokenPartitioningDomains
+     * element in identity.xml, or the original userstore domain if the mapping is not available.
+     *
+     * @param userStoreDomain
+     * @return
+     * @throws IdentityOAuth2Exception
+     */
+    public static String getMappedUserStoreDomain(String userStoreDomain) throws IdentityOAuth2Exception {
+
+        String mappedUserStoreDomain = userStoreDomain;
+
+        Map<String, String> availableDomainMappings = OAuth2Util.getAvailableUserStoreDomainMappings();
+        if (userStoreDomain != null && availableDomainMappings.containsKey(userStoreDomain)) {
+            mappedUserStoreDomain = availableDomainMappings.get(userStoreDomain);
+        }
+
+        return mappedUserStoreDomain;
+    }
+
+    /**
+     * Returns the updated table name using user store domain if a mapping is defined for this users store in
+     * AccessTokenPartitioningDomains element in identity.xml,
+     * or the original table name if the mapping is not available.
+     *
+     * Updated table name derived by appending a underscore and mapped user store domain name to the origin table name.
+     *
+     * @param userStoreDomain
+     * @return
+     * @throws IdentityOAuth2Exception
+     */
+    public static String getPartitionedTableByUserStore(String tableName, String userStoreDomain)
             throws IdentityOAuth2Exception {
-        String userStore = null;
-        if (userId != null) {
-            String[] strArr = userId.split("/");
-            if (strArr != null && strArr.length > 1) {
-                userStore = strArr[0];
-                Map<String, String> availableDomainMappings = getAvailableUserStoreDomainMappings();
-                if (availableDomainMappings != null &&
-                        availableDomainMappings.containsKey(userStore)) {
-                    userStore = getAvailableUserStoreDomainMappings().get(userStore);
-                }
+
+        if (StringUtils.isNotBlank(tableName) && StringUtils.isNotBlank(userStoreDomain) &&
+                !IdentityUtil.getPrimaryDomainName().equalsIgnoreCase(userStoreDomain)) {
+            String mappedUserStoreDomain = OAuth2Util.getMappedUserStoreDomain(userStoreDomain);
+            tableName = tableName + "_" + mappedUserStoreDomain;
+        }
+
+        return tableName;
+    }
+
+    /**
+     * Returns the updated sql using user store domain if access token partitioning enabled & username assertion enabled
+     * or the original sql otherwise.
+     *
+     * Updated sql derived by replacing original table names IDN_OAUTH2_ACCESS_TOKEN & IDN_OAUTH2_ACCESS_TOKEN_SCOPE
+     * with the updated table names which derived using {@code getPartitionedTableByUserStore()} method.
+     *
+     * @param sql
+     * @param userStoreDomain
+     * @return
+     * @throws IdentityOAuth2Exception
+     */
+    public static String getTokenPartitionedSqlByUserStore(String sql, String userStoreDomain)
+            throws IdentityOAuth2Exception {
+
+        String partitionedSql = sql;
+
+        if (OAuth2Util.checkAccessTokenPartitioningEnabled() && OAuth2Util.checkUserNameAssertionEnabled()) {
+
+            String partitionedAccessTokenTable = OAuth2Util.getPartitionedTableByUserStore(OAuthConstants.
+                    ACCESS_TOKEN_STORE_TABLE, userStoreDomain);
+
+            String accessTokenScopeTable = "IDN_OAUTH2_ACCESS_TOKEN_SCOPE";
+            String partitionedAccessTokenScopeTable = OAuth2Util.getPartitionedTableByUserStore(accessTokenScopeTable,
+                    userStoreDomain);
+
+            if (log.isDebugEnabled()) {
+                log.debug("PartitionedAccessTokenTable: " + partitionedAccessTokenTable +
+                        " & PartitionedAccessTokenScopeTable: " + partitionedAccessTokenScopeTable +
+                        " for user store domain: " + userStoreDomain);
+            }
+
+            String wordBoundaryRegex = "\\b";
+            partitionedSql = sql.replaceAll(wordBoundaryRegex + OAuthConstants.ACCESS_TOKEN_STORE_TABLE
+                    + wordBoundaryRegex, partitionedAccessTokenTable);
+            partitionedSql = partitionedSql.replaceAll(wordBoundaryRegex + accessTokenScopeTable + wordBoundaryRegex,
+                    partitionedAccessTokenScopeTable);
+
+            if (log.isDebugEnabled()) {
+                log.debug("Original SQL: " + sql);
+                log.debug("Partitioned SQL: " + partitionedSql);
             }
         }
-        return userStore;
+
+        return partitionedSql;
+    }
+
+    /**
+     * Returns the updated sql using username.
+     *
+     * If the username contains the domain separator, updated sql derived using
+     * {@code getTokenPartitionedSqlByUserStore()} method. Returns the original sql otherwise.
+     *
+     * @param sql
+     * @param username
+     * @return
+     * @throws IdentityOAuth2Exception
+     */
+    public static String getTokenPartitionedSqlByUserId(String sql, String username) throws IdentityOAuth2Exception {
+
+        String partitionedSql = sql;
+
+        if (OAuth2Util.checkAccessTokenPartitioningEnabled() && OAuth2Util.checkUserNameAssertionEnabled()) {
+            if (log.isDebugEnabled()) {
+                log.debug("Calculating partitioned sql for username: " + username);
+            }
+
+            String userStore = null;
+            if (username != null) {
+                String[] strArr = username.split(UserCoreConstants.DOMAIN_SEPARATOR);
+                if (strArr != null && strArr.length > 1) {
+                    userStore = strArr[0];
+                }
+            }
+
+            partitionedSql = OAuth2Util.getTokenPartitionedSqlByUserStore(sql, userStore);
+        }
+
+        return partitionedSql;
+    }
+
+    /**
+     * Returns the updated sql using token.
+     *
+     * If the token contains the username appended, updated sql derived using
+     * {@code getTokenPartitionedSqlByUserId()} method. Returns the original sql otherwise.
+     *
+     * @param sql
+     * @param token
+     * @return
+     * @throws IdentityOAuth2Exception
+     */
+    public static String getTokenPartitionedSqlByToken(String sql, String token) throws IdentityOAuth2Exception {
+
+        String partitionedSql = sql;
+
+        if (OAuth2Util.checkAccessTokenPartitioningEnabled() && OAuth2Util.checkUserNameAssertionEnabled()) {
+            if (log.isDebugEnabled()) {
+                if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                    log.debug("Calculating partitioned sql for token: " + token);
+                } else {
+                    // Avoid logging token since its a sensitive information.
+                    log.debug("Calculating partitioned sql for token");
+                }
+            }
+
+            String userId = OAuth2Util.getUserIdFromAccessToken(token); //i.e: 'foo.com/admin' or 'admin'
+            partitionedSql =  OAuth2Util.getTokenPartitionedSqlByUserId(sql, userId);
+        }
+
+        return partitionedSql;
+    }
+
+    public static String getUserStoreDomainFromUserId(String userId)
+            throws IdentityOAuth2Exception {
+        String userStoreDomain = null;
+
+        if (userId != null) {
+            String[] strArr = userId.split(UserCoreConstants.DOMAIN_SEPARATOR);
+            if (strArr != null && strArr.length > 1) {
+                userStoreDomain = getMappedUserStoreDomain(strArr[0]);
+            }
+        }
+        return userStoreDomain;
     }
 
     public static String getUserStoreDomainFromAccessToken(String apiKey)
@@ -581,36 +728,34 @@ public class OAuth2Util {
         return userStoreDomain;
     }
 
+    @Deprecated
     public static String getAccessTokenStoreTableFromUserId(String userId)
             throws IdentityOAuth2Exception {
         String accessTokenStoreTable = OAuthConstants.ACCESS_TOKEN_STORE_TABLE;
         String userStore;
         if (userId != null) {
-            String[] strArr = userId.split("/");
+            String[] strArr = userId.split(UserCoreConstants.DOMAIN_SEPARATOR);
             if (strArr != null && strArr.length > 1) {
                 userStore = strArr[0];
-                Map<String, String> availableDomainMappings = getAvailableUserStoreDomainMappings();
-                if (availableDomainMappings != null &&
-                        availableDomainMappings.containsKey(userStore)) {
-                    accessTokenStoreTable = accessTokenStoreTable + "_" +
-                            availableDomainMappings.get(userStore);
-                }
+                accessTokenStoreTable = OAuth2Util.getPartitionedTableByUserStore(OAuthConstants.ACCESS_TOKEN_STORE_TABLE,
+                        userStore);
             }
         }
         return accessTokenStoreTable;
     }
 
+    @Deprecated
     public static String getAccessTokenStoreTableFromAccessToken(String apiKey)
             throws IdentityOAuth2Exception {
         String userId = getUserIdFromAccessToken(apiKey); //i.e: 'foo.com/admin' or 'admin'
-        return getAccessTokenStoreTableFromUserId(userId);
+        return OAuth2Util.getAccessTokenStoreTableFromUserId(userId);
     }
 
     public static String getUserIdFromAccessToken(String apiKey) {
         String userId = null;
         String decodedKey = new String(Base64.decodeBase64(apiKey.getBytes(Charsets.UTF_8)), Charsets.UTF_8);
         String[] tmpArr = decodedKey.split(":");
-        if (tmpArr != null) {
+        if (tmpArr != null && tmpArr.length > 1) {
             userId = tmpArr[1];
         }
         return userId;
@@ -1675,6 +1820,74 @@ public class OAuth2Util {
         }
 
         return essentailClaimslist;
+    }
+
+    /**
+     * Returns the domain name convert to upper case if the domain is not not empty, else return primary domain name.
+     *
+     * @param userStoreDomain
+     * @return
+     */
+    public static String getSanitizedUserStoreDomain(String userStoreDomain) {
+        if (StringUtils.isNotBlank(userStoreDomain)) {
+            userStoreDomain = userStoreDomain.toUpperCase();
+        } else {
+            userStoreDomain = IdentityUtil.getPrimaryDomainName();
+        }
+        return userStoreDomain;
+    }
+
+    /**
+     * Returns the mapped user store domain representation federated users according to the MapFederatedUsersToLocal
+     * configuration in the identity.xml file.
+     *
+     * @param authenticatedUser
+     * @return
+     * @throws IdentityOAuth2Exception
+     */
+    public static String getUserStoreForFederatedUser(AuthenticatedUser authenticatedUser) throws
+            IdentityOAuth2Exception {
+
+        if (authenticatedUser == null) {
+            throw new IllegalArgumentException("Authenticated user cannot be null");
+        }
+
+        String userStoreDomain = OAuth2Util.getUserStoreDomainFromUserId(authenticatedUser.toString());
+        if (!OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && authenticatedUser.
+                isFederatedUser()) {
+            userStoreDomain = OAuth2Util.getFederatedUserDomain(authenticatedUser.getFederatedIdPName());
+        }
+        return userStoreDomain;
+    }
+
+    /**
+     * Returns Base64 encoded token which have username appended.
+     *
+     * @param authenticatedUser
+     * @param token
+     * @return
+     */
+    public static String addUsernameToToken(AuthenticatedUser authenticatedUser, String token) {
+
+        if (authenticatedUser == null) {
+            throw new IllegalArgumentException("Authenticated user cannot be null");
+        }
+
+        if (StringUtils.isBlank(token)) {
+            throw new IllegalArgumentException("Token cannot be blank");
+        }
+
+        String usernameForToken = authenticatedUser.toString();
+        if (!OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && authenticatedUser.
+                isFederatedUser()) {
+            usernameForToken = OAuth2Util.getFederatedUserDomain(authenticatedUser.getFederatedIdPName());
+            usernameForToken = usernameForToken + UserCoreConstants.DOMAIN_SEPARATOR + authenticatedUser.
+                    getAuthenticatedSubjectIdentifier();
+        }
+
+        //use ':' for token & userStoreDomain separation
+        String tokenStrToEncode = token + ":" + usernameForToken;
+        return Base64Utils.encode(tokenStrToEncode.getBytes(Charsets.UTF_8));
     }
 
 }
