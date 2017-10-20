@@ -43,9 +43,12 @@ public class IntrospectionResponseBuilderTest {
     @DataProvider(name = "provideBuilderData")
     public Object[][] provideBuilderData() {
         return new Object[][] {
-                {true, 7343678, 1452173776},
-                {false, 7343678, 1452173776},
-                {true, 0, 0},
+                // Token is active and none zero expiration and notBefore values will be added by builder
+                {true, 7343678, 1452173776, true},
+                // Expiration and notBefore values will not be saved since the token is not active
+                {false, 7343678, 1452173776, false},
+                // Expiration and notBefore values will not be saved since the values are zero
+                {true, 0, 0, false},
         };
     }
 
@@ -53,7 +56,7 @@ public class IntrospectionResponseBuilderTest {
      * This method does unit test for build response with values
      */
     @Test(dataProvider = "provideBuilderData")
-    public void testResposeBuilderWithVal(boolean isActive, int notBefore, int expiration) {
+    public void testResposeBuilderWithVal(boolean isActive, int notBefore, int expiration, boolean timesSetInJson) {
 
         String id_token = "eyJhbGciOiJSUzI1NiJ9.eyJhdXRoX3RpbWUiOjE0NTIxNzAxNzYsImV4cCI6MTQ1MjE3Mzc3Niwic3ViI" +
                 "joidXNlQGNhcmJvbi5zdXBlciIsImF6cCI6IjF5TDFfZnpuekdZdXRYNWdCMDNMNnRYR3lqZ2EiLCJhdF9oYXNoI" +
@@ -79,20 +82,8 @@ public class IntrospectionResponseBuilderTest {
 
         JSONObject jsonObject = new JSONObject(introspectionResponseBuilder1.build());
 
-        if (!isActive && notBefore > 0 && expiration > 0) {
-            // If the token is not active we do not want to return back the expiration time.
-            assertFalse(jsonObject.has(IntrospectionResponse.EXP), "EXP already exists in the response builder");
-            // If the token is not active we do not want to return back the nbf time.
-            assertFalse(jsonObject.has(IntrospectionResponse.NBF), "NBF already exists in the response builder");
-        } else {
-            if (notBefore > 0) {
-                assertEquals(jsonObject.get(IntrospectionResponse.NBF), notBefore);
-            }
-            if (expiration > 0) {
-                assertEquals(jsonObject.get(IntrospectionResponse.EXP), expiration);
-            }
-        }
-
+        assertEquals(jsonObject.has(IntrospectionResponse.EXP), timesSetInJson, "Unexpected exp value");
+        assertEquals(jsonObject.has(IntrospectionResponse.NBF), timesSetInJson, "Unexpected nbf value");
         assertEquals(jsonObject.get(IntrospectionResponse.IAT), 1452170176, "IAT values are not equal");
         assertEquals(jsonObject.get(IntrospectionResponse.JTI), id_token, "JTI values are not equal");
         assertEquals(jsonObject.get(IntrospectionResponse.SUB), "admin@carbon.super",
