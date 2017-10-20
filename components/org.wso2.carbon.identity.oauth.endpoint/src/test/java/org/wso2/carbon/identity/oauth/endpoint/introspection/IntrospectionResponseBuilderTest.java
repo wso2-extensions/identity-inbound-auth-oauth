@@ -19,6 +19,7 @@ package org.wso2.carbon.identity.oauth.endpoint.introspection;
 
 import org.json.JSONObject;
 import org.testng.annotations.BeforeTest;
+import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import static org.testng.Assert.assertEquals;
@@ -39,11 +40,20 @@ public class IntrospectionResponseBuilderTest {
         introspectionResponseBuilder2 = new IntrospectionResponseBuilder();
     }
 
+    @DataProvider(name = "provideBuilderData")
+    public Object[][] provideBuilderData() {
+        return new Object[][] {
+                {true, 7343678, 1452173776},
+                {false, 7343678, 1452173776},
+                {true, 0, 0},
+        };
+    }
+
     /**
      * This method does unit test for build response with values
      */
-    @Test
-    public void testResposeBuilderWithVal() {
+    @Test(dataProvider = "provideBuilderData")
+    public void testResposeBuilderWithVal(boolean isActive, int notBefore, int expiration) {
 
         String id_token = "eyJhbGciOiJSUzI1NiJ9.eyJhdXRoX3RpbWUiOjE0NTIxNzAxNzYsImV4cCI6MTQ1MjE3Mzc3Niwic3ViI" +
                 "joidXNlQGNhcmJvbi5zdXBlciIsImF6cCI6IjF5TDFfZnpuekdZdXRYNWdCMDNMNnRYR3lqZ2EiLCJhdF9oYXNoI" +
@@ -52,14 +62,14 @@ public class IntrospectionResponseBuilderTest {
                 "YvQYi7uqEtzWf6wgDv5sJq2UIQRC4OJGjn_fTqftIWerZc7rIMRYXi7jzuHxX_GabUhuj7m1iRzi1wgxbI9yQn825lDVF4Lt9DMUTB" +
                 "fKLk81KIy6uB_ECtyxumoX3372yRgC7R56_L_hAElflgBsclEUwEH9psE";
 
-        introspectionResponseBuilder1.setActive(false);
+        introspectionResponseBuilder1.setActive(isActive);
         introspectionResponseBuilder1.setIssuedAt(1452170176);
         introspectionResponseBuilder1.setJwtId(id_token);
         introspectionResponseBuilder1.setSubject("admin@carbon.super");
-        introspectionResponseBuilder1.setExpiration(1452173776);
+        introspectionResponseBuilder1.setExpiration(expiration);
         introspectionResponseBuilder1.setUsername("admin@carbon.super");
         introspectionResponseBuilder1.setTokenType("Bearer");
-        introspectionResponseBuilder1.setNotBefore(7343678);
+        introspectionResponseBuilder1.setNotBefore(notBefore);
         introspectionResponseBuilder1.setAudience("1yL1_fznzGYutX5gB03L6tXGyjga");
         introspectionResponseBuilder1.setIssuer("https:\\/\\/localhost:9443\\/oauth2\\/token");
         introspectionResponseBuilder1.setScope("test");
@@ -68,10 +78,20 @@ public class IntrospectionResponseBuilderTest {
         introspectionResponseBuilder1.setErrorDescription("error_discription");
 
         JSONObject jsonObject = new JSONObject(introspectionResponseBuilder1.build());
-        // Here,if the token is not active we do not want to return back the expiration time.
-        assertFalse(jsonObject.has(IntrospectionResponse.EXP), "EXP already exists in the response builder");
-        // Here,if the token is not active we do not want to return back the nbf time.
-        assertFalse(jsonObject.has(IntrospectionResponse.NBF), "NBF already exists in the response builder");
+
+        if (!isActive && notBefore > 0 && expiration > 0) {
+            // If the token is not active we do not want to return back the expiration time.
+            assertFalse(jsonObject.has(IntrospectionResponse.EXP), "EXP already exists in the response builder");
+            // If the token is not active we do not want to return back the nbf time.
+            assertFalse(jsonObject.has(IntrospectionResponse.NBF), "NBF already exists in the response builder");
+        } else {
+            if (notBefore > 0) {
+                assertEquals(jsonObject.get(IntrospectionResponse.NBF), notBefore);
+            }
+            if (expiration > 0) {
+                assertEquals(jsonObject.get(IntrospectionResponse.EXP), expiration);
+            }
+        }
 
         assertEquals(jsonObject.get(IntrospectionResponse.IAT), 1452170176);
         assertEquals(jsonObject.get(IntrospectionResponse.JTI), id_token);
@@ -84,6 +104,7 @@ public class IntrospectionResponseBuilderTest {
         assertEquals(jsonObject.get(IntrospectionResponse.CLIENT_ID), "rgfKVdnMQnJSSr_pKFTxj3apiwYa");
         assertEquals(jsonObject.get(IntrospectionResponse.Error.ERROR), "Invalid input");
         assertEquals(jsonObject.get(IntrospectionResponse.Error.ERROR_DESCRIPTION), "error_discription");
+        assertEquals(jsonObject.get(IntrospectionResponse.ACTIVE), isActive);
     }
 
     /**
