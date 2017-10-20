@@ -68,13 +68,13 @@ public class TestOAuthDAOBase extends PowerMockIdentityBaseTest {
 
     public static String getFilePath(String fileName) {
         if (StringUtils.isNotBlank(fileName)) {
-            return Paths.get(System.getProperty("user.dir"), "src", "test", "resources", "dbscripts", fileName)
+            return Paths.get(System.getProperty("user.dir"), "src", "test", "resources", "dbScripts", fileName)
                     .toString();
         }
         return null;
     }
 
-    protected int createBase(String clientId, String secret, String username, String appName, String appState)
+    protected int createBase(String clientId, String secret, String username, String appName, String callback, String appState)
             throws Exception {
 
         PreparedStatement statement = null;
@@ -87,7 +87,7 @@ public class TestOAuthDAOBase extends PowerMockIdentityBaseTest {
             statement.setString(5, "PRIMARY");
             statement.setString(6, appName);
             statement.setString(7, "OAuth-2.0");
-            statement.setString(8, "http://localhost:8080/redirect");
+            statement.setString(8, callback);
             statement.setString(9, "password");
             statement.setString(10, appState);
             statement.execute();
@@ -105,7 +105,7 @@ public class TestOAuthDAOBase extends PowerMockIdentityBaseTest {
     }
 
     protected void createReqTokenTable(int consumerId, String req_tok, String req_tok_secret,
-                                       String scope, String authz_user) throws Exception {
+                                       String scope, String callback, String oauth_verifier, String authz_user) throws Exception {
 
         PreparedStatement statementReq = null;
         try (Connection connection2 = this.getConnection(DB_Name)) {
@@ -113,10 +113,10 @@ public class TestOAuthDAOBase extends PowerMockIdentityBaseTest {
             statementReq.setString(1, req_tok);
             statementReq.setString(2, req_tok_secret);
             statementReq.setInt(3, consumerId);
-            statementReq.setString(4, "http://localhost:8080/redirect");
+            statementReq.setString(4, callback);
             statementReq.setString(5, scope);
             statementReq.setString(6, "fakeAuthorized");
-            statementReq.setString(7, "fakeOauthVerifier");
+            statementReq.setString(7, oauth_verifier);
             statementReq.setString(8, authz_user);
             statementReq.setInt(9, -1234);
             statementReq.execute();
