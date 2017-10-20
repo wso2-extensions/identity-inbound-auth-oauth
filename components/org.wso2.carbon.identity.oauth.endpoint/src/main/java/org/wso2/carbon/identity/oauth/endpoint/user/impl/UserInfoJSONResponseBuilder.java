@@ -51,7 +51,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 
 /**
@@ -110,8 +109,8 @@ public class UserInfoJSONResponseBuilder implements UserInfoResponseBuilder {
             UserInfoClaimRetriever retriever = UserInfoEndpointConfig.getInstance().getUserInfoClaimRetriever();
             claims = retriever.getClaimsMap(userAttributes);
         }
-        if(claims == null){
-            claims = new HashMap<String,Object>();
+        if (claims == null) {
+            claims = new HashMap<String, Object>();
         }
         if (claims.get(OAuth2Util.SUB) != null) {
             claims.put(OAuth2Util.SUB, returnSubjectClaim(claims.get(OAuth2Util.SUB).toString(), tenantDomain,
@@ -122,9 +121,9 @@ public class UserInfoJSONResponseBuilder implements UserInfoResponseBuilder {
         }
         for (String requestedScope : tokenResponse.getScope()) {
             if (oidcScopesResource != null && oidcScopesResource.getProperties() != null) {
-                Enumeration supporetdScopes = oidcScopesResource.getProperties().propertyNames();
-                while (supporetdScopes.hasMoreElements()) {
-                    String supportedScope = (String) supporetdScopes.nextElement();
+                Enumeration supportedScopes = oidcScopesResource.getProperties().propertyNames();
+                while (supportedScopes.hasMoreElements()) {
+                    String supportedScope = (String) supportedScopes.nextElement();
                     if (supportedScope.equals(requestedScope)) {
                         requestedScopeClaims = oidcScopesResource.getProperty(requestedScope);
                         if (requestedScopeClaims.contains(",")) {

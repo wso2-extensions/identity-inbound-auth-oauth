@@ -20,13 +20,14 @@ package org.wso2.carbon.identity.oauth.tokenprocessor;
 
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.testutil.IdentityBaseTest;
 
 import static org.testng.Assert.assertEquals;
 
 /**
  * Test Class for the PlainTextPersistenceProcessor.
  */
-public class PlainTextPersistenceProcessorTest {
+public class PlainTextPersistenceProcessorTest extends IdentityBaseTest {
 
     PlainTextPersistenceProcessor testclass = new PlainTextPersistenceProcessor();
 

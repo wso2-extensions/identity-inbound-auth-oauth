@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oauth.util;
 import org.testng.annotations.Test;
 
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNotNull;
 
 /**
  * Test Class for the ClaimMetaDataCache.
@@ -31,7 +32,9 @@ public class ClaimMetaDataCacheTest {
     public void testGetInstance() throws Exception {
 
         ClaimMetaDataCache testclass = ClaimMetaDataCache.getInstance();
+        assertNotNull(testclass);
         ClaimMetaDataCache testclass2 = ClaimMetaDataCache.getInstance();
+        assertNotNull(testclass2);
         assertEquals(testclass, testclass2);
     }
 

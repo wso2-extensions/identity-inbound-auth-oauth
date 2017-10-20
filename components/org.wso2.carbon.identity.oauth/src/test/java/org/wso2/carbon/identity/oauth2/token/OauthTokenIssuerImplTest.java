@@ -20,11 +20,11 @@ import org.apache.oltu.oauth2.as.issuer.OAuthIssuerImpl;
 import org.apache.oltu.oauth2.as.issuer.UUIDValueGenerator;
 import org.mockito.Mock;
 import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
+import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
 import java.util.UUID;
 
@@ -34,7 +34,7 @@ import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertNotNull;
 
 @PrepareForTest(OAuthServerConfiguration.class)
-public class OauthTokenIssuerImplTest extends PowerMockTestCase {
+public class OauthTokenIssuerImplTest extends PowerMockIdentityBaseTest {
 
     @Mock
     private OAuthServerConfiguration oAuthServerConfiguration;

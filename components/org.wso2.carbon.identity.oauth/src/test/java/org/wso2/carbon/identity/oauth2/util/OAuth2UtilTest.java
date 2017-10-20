@@ -20,7 +20,6 @@ package org.wso2.carbon.identity.oauth2.util;
 
 import org.mockito.Mock;
 import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
@@ -38,6 +37,7 @@ import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.ClientCredentialDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
+import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
 import java.sql.Timestamp;
 
@@ -53,7 +53,7 @@ import static org.testng.Assert.assertTrue;
 
 @PrepareForTest({OAuthServerConfiguration.class, OAuthCache.class, IdentityUtil.class, OAuthConsumerDAO.class,
         OAuth2Util.class})
-public class OAuth2UtilTest extends PowerMockTestCase {
+public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
 
     String scopeArr[] = new String[]{"scope1", "scope2", "scope3"};
     String scopeStr = "scope1 scope2 scope3";

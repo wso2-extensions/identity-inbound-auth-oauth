@@ -19,7 +19,6 @@ package org.wso2.carbon.identity.oauth2;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -32,6 +31,7 @@ import org.wso2.carbon.identity.oauth.cache.OAuthScopeCacheKey;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.dao.ScopeMgtDAO;
 import org.wso2.carbon.identity.oauth2.test.utils.CommonTestUtils;
+import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
 import java.lang.reflect.Field;
 import java.util.Set;
@@ -48,7 +48,7 @@ import static org.testng.Assert.assertNotNull;
 
 @PrepareForTest({IdentityUtil.class, IdentityDatabaseUtil.class, OAuth2ScopeService.class, ScopeMgtDAO.class,
         OAuthScopeCache.class})
-public class OAuth2ScopeServiceTest extends PowerMockTestCase {
+public class OAuth2ScopeServiceTest extends PowerMockIdentityBaseTest {
 
     @Mock
     Scope mockedScope;

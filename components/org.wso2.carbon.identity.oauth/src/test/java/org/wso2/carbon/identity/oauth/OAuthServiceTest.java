@@ -28,7 +28,6 @@ import org.apache.commons.lang.StringUtils;
 import org.mockito.Mock;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.MultitenantConstants;
@@ -39,6 +38,7 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dao.OAuthConsumerDAO;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerDTO;
+import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 import org.wso2.carbon.user.core.UserRealm;
 import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
@@ -63,8 +63,8 @@ import static org.testng.Assert.assertTrue;
  */
 @PowerMockIgnore({"javax.net.*", "javax.security.*", "javax.crypto.*"})
 @PrepareForTest({OAuthConsumerDAO.class, OAuthService.class, MessageContext.class, MultitenantUtils.class,
-IdentityTenantUtil.class, OAuthAppDAO.class})
-public class OAuthServiceTest extends PowerMockTestCase {
+        IdentityTenantUtil.class, OAuthAppDAO.class})
+public class OAuthServiceTest extends PowerMockIdentityBaseTest {
 
     private static final Long LATEST_TIMESTAMP = new Timestamp(System.currentTimeMillis()).getTime();
     private static final Long GREATER_THAN_LATEST_TIMESTAMP = LATEST_TIMESTAMP + 10000;
@@ -91,7 +91,7 @@ public class OAuthServiceTest extends PowerMockTestCase {
 
     @DataProvider(name = "testIsOAuthConsumerValid")
     public Object[][] isOAuthConsumerValidFlows() {
-        return new Object[][] {{true, true}, {true, false}, {false, true}, {false, false}};
+        return new Object[][]{{true, true}, {true, false}, {false, true}, {false, false}};
     }
 
     @Test(dataProvider = "testIsOAuthConsumerValid")
@@ -120,7 +120,7 @@ public class OAuthServiceTest extends PowerMockTestCase {
 
     @DataProvider(name = "consumerSecretValidSignature")
     public Object[][] consumerSecretValidSignature() {
-        return new Object[][] {{"consumer-secret", false}, {null, true}};
+        return new Object[][]{{"consumer-secret", false}, {null, true}};
     }
 
     @Test(dataProvider = "consumerSecretValidSignature", expectedExceptions = IdentityException.class)
@@ -203,7 +203,7 @@ public class OAuthServiceTest extends PowerMockTestCase {
 
     @DataProvider(name = "testAuthorizeOauthRequestTokenException")
     public Object[][] AuthorizeOauthRequestTokenExceptionFlows() {
-        return new Object[][] {{false, true}, {false, false}};
+        return new Object[][]{{false, true}, {false, false}};
     }
 
     @Test(dataProvider = "testAuthorizeOauthRequestTokenException",
@@ -381,7 +381,7 @@ public class OAuthServiceTest extends PowerMockTestCase {
 
     @DataProvider(name = "testGetAccessTokenException")
     public Object[][] getAccessTokenExceptionFlows() {
-        return new Object[][] {{"consumer-secret", false}, {null, false}, {"consumer-secret", true}};
+        return new Object[][]{{"consumer-secret", false}, {null, false}, {"consumer-secret", true}};
     }
 
     @Test(dataProvider = "testGetAccessTokenException", expectedExceptions = AuthenticationException.class)
@@ -440,8 +440,7 @@ public class OAuthServiceTest extends PowerMockTestCase {
 
     private void prepareForauthorizeOauthRequestToken(String tenantAwareUserName,
                                                       boolean shouldMakeAuthenticated,
-                                                      boolean shouldThrow) throws IdentityException, UserStoreException
-    {
+                                                      boolean shouldThrow) throws IdentityException, UserStoreException {
 
         mockStatic(MultitenantUtils.class);
         when(MultitenantUtils.getTenantAwareUsername(anyString())).thenReturn(tenantAwareUserName);
@@ -457,9 +456,9 @@ public class OAuthServiceTest extends PowerMockTestCase {
         }
     }
 
-    private String getConsumerSignature (Parameters parameters,
-                                         String consumerSecret,
-                                         String tokenSecret) throws OAuthException {
+    private String getConsumerSignature(Parameters parameters,
+                                        String consumerSecret,
+                                        String tokenSecret) throws OAuthException {
 
         GoogleOAuthParameters oauthParameters = new GoogleOAuthParameters();
         oauthParameters.setOAuthConsumerKey(parameters.getOauthConsumerKey());

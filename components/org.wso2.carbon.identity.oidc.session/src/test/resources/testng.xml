@@ -19,6 +19,7 @@
 
 <suite name="Identity-Oidc-Session">
 <test name="OIDCSessionMgt-Tests-with-debug-logs" preserve-order="true" parallel="false">
+    <parameter name="log-level" value="debug"/>
     <classes>
         <class name="org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtilTest" />
         <class name="org.wso2.carbon.identity.oidc.session.servlet.OIDCLogoutServletTest" />
@@ -26,6 +27,19 @@
         <class name="org.wso2.carbon.identity.oidc.session.OIDCSessionManagerTest"/>
         <class name="org.wso2.carbon.identity.oidc.session.OIDCSessionStateTest"/>
         <class name="org.wso2.carbon.identity.oidc.session.cache.OIDCSessionParticipantCacheTest"/>
+        <class name="org.wso2.carbon.identity.oidc.session.config.OIDCSessionManagementConfigurationTest" />
     </classes>
 </test>
+    <test name="OIDCSessionMgt-Tests-with-info-logs" preserve-order="true" parallel="false">
+        <parameter name="log-level" value="info"/>
+        <classes>
+            <class name="org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtilTest" />
+            <class name="org.wso2.carbon.identity.oidc.session.servlet.OIDCLogoutServletTest" />
+            <class name="org.wso2.carbon.identity.oidc.session.servlet.OIDCSessionIFrameServletTest" />
+            <class name="org.wso2.carbon.identity.oidc.session.OIDCSessionManagerTest"/>
+            <class name="org.wso2.carbon.identity.oidc.session.OIDCSessionStateTest"/>
+            <class name="org.wso2.carbon.identity.oidc.session.cache.OIDCSessionParticipantCacheTest"/>
+            <class name="org.wso2.carbon.identity.oidc.session.config.OIDCSessionManagementConfigurationTest" />
+        </classes>
+    </test>
 </suite>

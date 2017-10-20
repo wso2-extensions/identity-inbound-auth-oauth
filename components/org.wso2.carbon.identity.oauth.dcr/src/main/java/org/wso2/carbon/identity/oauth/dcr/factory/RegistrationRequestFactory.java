@@ -94,7 +94,7 @@ public class RegistrationRequestFactory extends HttpIdentityRequestFactory {
     public void create(IdentityRequest.IdentityRequestBuilder builder, HttpServletRequest request,
             HttpServletResponse response) throws FrameworkClientException {
 
-        RegistrationRequest.RegistrationRequestBuilder registerRequestBuilder = null;
+        RegistrationRequest.RegistrationRequestBuilder registerRequestBuilder;
         if (builder instanceof RegistrationRequest.RegistrationRequestBuilder) {
             registerRequestBuilder = (RegistrationRequest.RegistrationRequestBuilder) builder;
             super.create(registerRequestBuilder, request, response);
@@ -150,9 +150,9 @@ public class RegistrationRequestFactory extends HttpIdentityRequestFactory {
 
                 obj = jsonData.get(RegistrationRequest.RegisterRequestConstant.RESPONSE_TYPES);
                 if (obj instanceof JSONArray) {
-                    JSONArray redirectUris = (JSONArray) obj;
-                    for (int i = 0; i < redirectUris.size(); i++) {
-                        registrationRequestProfile.getResponseTypes().add(redirectUris.get(i).toString());
+                    JSONArray responseTypes = (JSONArray) obj;
+                    for (int i = 0; i < responseTypes.size(); i++) {
+                        registrationRequestProfile.getResponseTypes().add(responseTypes.get(i).toString());
                     }
                 } else if (obj instanceof String) {
                     registrationRequestProfile.getResponseTypes().add((String) obj);
@@ -173,9 +173,9 @@ public class RegistrationRequestFactory extends HttpIdentityRequestFactory {
 
                 obj = jsonData.get(RegistrationRequest.RegisterRequestConstant.SCOPE);
                 if (obj instanceof JSONArray) {
-                    JSONArray redirectUris = (JSONArray) obj;
-                    for (int i = 0; i < redirectUris.size(); i++) {
-                        registrationRequestProfile.getScopes().add(redirectUris.get(i).toString());
+                    JSONArray scopes = (JSONArray) obj;
+                    for (int i = 0; i < scopes.size(); i++) {
+                        registrationRequestProfile.getScopes().add(scopes.get(i).toString());
                     }
                 } else if (obj instanceof String) {
                     registrationRequestProfile.getScopes().add((String) obj);

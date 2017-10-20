@@ -19,7 +19,6 @@
 package org.wso2.carbon.identity.oauth2.token.handlers.clientauth;
 
 import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
@@ -29,6 +28,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
 import java.util.Properties;
 
@@ -48,7 +48,7 @@ import static org.testng.AssertJUnit.assertTrue;
 		OAuthServerConfiguration.class
 }
 )
-public class BasicAuthClientAuthHandlerTest extends PowerMockTestCase {
+public class BasicAuthClientAuthHandlerTest extends PowerMockIdentityBaseTest {
 
 	BasicAuthClientAuthHandler testclass = new BasicAuthClientAuthHandler();
 

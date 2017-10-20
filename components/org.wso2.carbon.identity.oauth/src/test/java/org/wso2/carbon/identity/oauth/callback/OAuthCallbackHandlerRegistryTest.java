@@ -21,13 +21,13 @@ package org.wso2.carbon.identity.oauth.callback;
 import org.apache.commons.lang.StringUtils;
 import org.mockito.Mock;
 import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.oauth.config.OAuthCallbackHandlerMetaData;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
 import java.lang.reflect.Field;
 import java.util.HashSet;
@@ -43,7 +43,7 @@ import static org.testng.Assert.assertNull;
  * Unit tests for OAuthCallbackHandlerRegistryTest.
  */
 @PrepareForTest({OAuthServerConfiguration.class})
-public class OAuthCallbackHandlerRegistryTest extends PowerMockTestCase {
+public class OAuthCallbackHandlerRegistryTest extends PowerMockIdentityBaseTest {
 
     private static final int ZERO = 0;
     private static final int TWO = 2;

@@ -51,6 +51,7 @@ import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHa
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.PasswordGrantHandler;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.IDTokenBuilder;
+import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 import org.wso2.carbon.utils.CarbonUtils;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
@@ -84,7 +85,7 @@ import static org.testng.Assert.assertTrue;
                 CarbonUtils.class
         }
 )
-public class AccessTokenIssuerTest {
+public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
 
     @Mock
     private OAuthServerConfiguration oAuthServerConfiguration;

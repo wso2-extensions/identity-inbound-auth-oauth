@@ -18,23 +18,27 @@
 
 package org.wso2.carbon.identity.oauth.config;
 
+import org.apache.commons.lang.ArrayUtils;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.Assert;
-import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
 import java.io.File;
 import java.lang.reflect.Field;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 
-
+/**
+ * Unit test covering OAuthServerConfiguration
+ */
 @PrepareForTest({IdentityUtil.class})
-public class OAuthServerConfigurationTest extends PowerMockTestCase {
+public class OAuthServerConfigurationTest extends PowerMockIdentityBaseTest {
 
     public static final String oAuth1RequestTokenUrl
             = "${carbon.protocol}://${carbon.host}:${carbon.management.port}" +
@@ -114,13 +118,9 @@ public class OAuthServerConfigurationTest extends PowerMockTestCase {
         instance.set(null, null);
     }
 
-    @AfterMethod
-    public void tearDown() throws Exception {
-    }
-
     @Test
     public void testGetInstance() throws Exception {
-        Assert.assertNotNull(OAuthServerConfiguration.getInstance());
+        Assert.assertNotNull(OAuthServerConfiguration.getInstance(), "Instance is not created");
     }
 
     @Test
@@ -129,7 +129,8 @@ public class OAuthServerConfigurationTest extends PowerMockTestCase {
                 OAuthServerConfiguration.getInstance().getCallbackHandlerMetaData();
         Assert.assertEquals(metadataSet.toArray()[0]
                         .getClass().getName(),
-                "org.wso2.carbon.identity.oauth.config.OAuthCallbackHandlerMetaData");
+                "org.wso2.carbon.identity.oauth.config.OAuthCallbackHandlerMetaData",
+                "Wrong class type set for metadata class path");
     }
 
     @Test
@@ -137,7 +138,8 @@ public class OAuthServerConfigurationTest extends PowerMockTestCase {
         PowerMockito.when(IdentityUtil.fillURLPlaceholders(oAuth1RequestTokenUrl))
                 .thenReturn(fillURLPlaceholdersForTest(oAuth1RequestTokenUrl));
         Assert.assertEquals(OAuthServerConfiguration.getInstance()
-                .getOAuth1RequestTokenUrl(), fillURLPlaceholdersForTest(oAuth1RequestTokenUrl));
+                        .getOAuth1RequestTokenUrl(), fillURLPlaceholdersForTest(oAuth1RequestTokenUrl),
+                "Expected value not returned from getter");
     }
 
     @Test
@@ -145,7 +147,8 @@ public class OAuthServerConfigurationTest extends PowerMockTestCase {
         PowerMockito.when(IdentityUtil.fillURLPlaceholders(oAuth1AuthorizeUrl))
                 .thenReturn(fillURLPlaceholdersForTest(oAuth1AuthorizeUrl));
         Assert.assertEquals(OAuthServerConfiguration.getInstance()
-                .getOAuth1AuthorizeUrl(), fillURLPlaceholdersForTest(oAuth1AuthorizeUrl));
+                        .getOAuth1AuthorizeUrl(), fillURLPlaceholdersForTest(oAuth1AuthorizeUrl),
+                "Expected value not returned from getter");
     }
 
     @Test
@@ -153,7 +156,8 @@ public class OAuthServerConfigurationTest extends PowerMockTestCase {
         PowerMockito.when(IdentityUtil.fillURLPlaceholders(oAuth1AccessTokenUrl))
                 .thenReturn(fillURLPlaceholdersForTest(oAuth1AccessTokenUrl));
         Assert.assertEquals(OAuthServerConfiguration.getInstance()
-                .getOAuth1AccessTokenUrl(), fillURLPlaceholdersForTest(oAuth1AccessTokenUrl));
+                        .getOAuth1AccessTokenUrl(), fillURLPlaceholdersForTest(oAuth1AccessTokenUrl),
+                "Expected value not returned from getter");
     }
 
     @Test
@@ -161,7 +165,8 @@ public class OAuthServerConfigurationTest extends PowerMockTestCase {
         PowerMockito.when(IdentityUtil.fillURLPlaceholders(oAuth2AuthzEPUrl))
                 .thenReturn(fillURLPlaceholdersForTest(oAuth2AuthzEPUrl));
         Assert.assertEquals(OAuthServerConfiguration.getInstance()
-                .getOAuth2AuthzEPUrl(), fillURLPlaceholdersForTest(oAuth2AuthzEPUrl));
+                        .getOAuth2AuthzEPUrl(), fillURLPlaceholdersForTest(oAuth2AuthzEPUrl),
+                "Expected value not returned from getter");
     }
 
     @Test
@@ -169,7 +174,7 @@ public class OAuthServerConfigurationTest extends PowerMockTestCase {
         PowerMockito.when(IdentityUtil.fillURLPlaceholders(oAuth2TokenEPUrl))
                 .thenReturn(oAuth2TokenEPUrl);
         Assert.assertEquals(OAuthServerConfiguration.getInstance()
-                .getOAuth2TokenEPUrl(), oAuth2TokenEPUrl);
+                .getOAuth2TokenEPUrl(), oAuth2TokenEPUrl, "Expected value not returned from getter");
     }
 
     @Test
@@ -177,7 +182,7 @@ public class OAuthServerConfigurationTest extends PowerMockTestCase {
         PowerMockito.when(IdentityUtil.fillURLPlaceholders(oAuth2DCREPUrl))
                 .thenReturn(oAuth2DCREPUrl);
         Assert.assertEquals(OAuthServerConfiguration.getInstance()
-                .getOAuth2DCREPUrl(), oAuth2DCREPUrl);
+                .getOAuth2DCREPUrl(), oAuth2DCREPUrl, "Expected value not returned from getter");
     }
 
     @Test
@@ -185,7 +190,8 @@ public class OAuthServerConfigurationTest extends PowerMockTestCase {
         PowerMockito.when(IdentityUtil.fillURLPlaceholders(oAuth2JWKSPage))
                 .thenReturn(oAuth2JWKSPage);
         Assert.assertEquals(OAuthServerConfiguration.getInstance()
-                .getOAuth2JWKSPageUrl(), oAuth2JWKSPage);
+                        .getOAuth2JWKSPageUrl(), oAuth2JWKSPage,
+                "Expected value not returned from getter");
     }
 
     @Test
@@ -193,7 +199,7 @@ public class OAuthServerConfigurationTest extends PowerMockTestCase {
         PowerMockito.when(IdentityUtil.fillURLPlaceholders(oIDCDiscoveryEPUrl))
                 .thenReturn(oIDCDiscoveryEPUrl);
         Assert.assertEquals(OAuthServerConfiguration.getInstance()
-                .getOidcDiscoveryUrl(), oIDCDiscoveryEPUrl);
+                .getOidcDiscoveryUrl(), oIDCDiscoveryEPUrl, "Expected value not returned from getter");
     }
 
     @Test
@@ -201,7 +207,8 @@ public class OAuthServerConfigurationTest extends PowerMockTestCase {
         PowerMockito.when(IdentityUtil.fillURLPlaceholders(oIDCWebFingerEPUrl))
                 .thenReturn(oIDCWebFingerEPUrl);
         Assert.assertEquals(OAuthServerConfiguration.getInstance()
-                .getOidcWebFingerEPUrl(), oIDCWebFingerEPUrl);
+                        .getOidcWebFingerEPUrl(), oIDCWebFingerEPUrl,
+                "Expected value not returned from getter");
     }
 
     @Test
@@ -209,7 +216,8 @@ public class OAuthServerConfigurationTest extends PowerMockTestCase {
         PowerMockito.when(IdentityUtil.fillURLPlaceholders(oAuth2UserInfoEPUrl))
                 .thenReturn(oAuth2UserInfoEPUrl);
         Assert.assertEquals(OAuthServerConfiguration.getInstance()
-                .getOauth2UserInfoEPUrl(), oAuth2UserInfoEPUrl);
+                        .getOauth2UserInfoEPUrl(), oAuth2UserInfoEPUrl,
+                "Expected value not returned from getter");
     }
 
     @Test
@@ -217,7 +225,8 @@ public class OAuthServerConfigurationTest extends PowerMockTestCase {
         PowerMockito.when(IdentityUtil.fillURLPlaceholders(oIDCConsentPage))
                 .thenReturn(oIDCConsentPage);
         Assert.assertEquals(OAuthServerConfiguration.getInstance()
-                .getOIDCConsentPageUrl(), oIDCConsentPage);
+                        .getOIDCConsentPageUrl(), oIDCConsentPage,
+                "Expected value not returned from getter");
     }
 
     @Test
@@ -225,7 +234,8 @@ public class OAuthServerConfigurationTest extends PowerMockTestCase {
         PowerMockito.when(IdentityUtil.fillURLPlaceholders(oAuth2ConsentPage))
                 .thenReturn(oAuth2ConsentPage);
         Assert.assertEquals(OAuthServerConfiguration.getInstance()
-                .getOauth2ConsentPageUrl(), oAuth2ConsentPage);
+                        .getOauth2ConsentPageUrl(), oAuth2ConsentPage,
+                "Expected value not returned from getter");
     }
 
     @Test
@@ -233,89 +243,149 @@ public class OAuthServerConfigurationTest extends PowerMockTestCase {
         PowerMockito.when(IdentityUtil.fillURLPlaceholders(oAuth2ErrorPage))
                 .thenReturn(oAuth2ErrorPage);
         Assert.assertEquals(OAuthServerConfiguration.getInstance()
-                .getOauth2ErrorPageUrl(), oAuth2ErrorPage);
+                        .getOauth2ErrorPageUrl(), oAuth2ErrorPage,
+                "Expected value not returned from getter");
     }
 
     @Test
     public void testGetOAuthTokenGenerator() throws Exception {
         Assert.assertNotNull(OAuthServerConfiguration.getInstance()
-                .getOAuthTokenGenerator().accessToken());
+                        .getOAuthTokenGenerator().accessToken(),
+                "Expected value not returned from getter");
     }
 
     @Test
     public void testGetTokenValueGenerator() throws Exception {
         Assert.assertNotNull(OAuthServerConfiguration.getInstance()
-                .getTokenValueGenerator().generateValue());
+                        .getTokenValueGenerator().generateValue(),
+                "Expected value not returned from getter");
     }
 
     @Test
     public void testGetIdentityOauthTokenIssuer() throws Exception {
-        Assert.assertNotNull(OAuthServerConfiguration.getInstance().getIdentityOauthTokenIssuer());
+        Assert.assertNotNull(OAuthServerConfiguration.getInstance().getIdentityOauthTokenIssuer(),
+                "Instance is set as null");
     }
 
     @Test
     public void testGetAuthorizationCodeValidityPeriodInSeconds() throws Exception {
         Assert.assertEquals(OAuthServerConfiguration.getInstance()
-                .getAuthorizationCodeValidityPeriodInSeconds(), 300);
+                        .getAuthorizationCodeValidityPeriodInSeconds(), 300
+                , "Expected value not returned from getter");
     }
 
     @Test
     public void testGetUserAccessTokenValidityPeriodInSeconds() throws Exception {
         Assert.assertEquals(OAuthServerConfiguration.getInstance()
-                .getUserAccessTokenValidityPeriodInSeconds(), 3600);
+                        .getUserAccessTokenValidityPeriodInSeconds(), 3600,
+                "Expected value not returned from getter");
     }
 
     @Test
     public void testGetApplicationAccessTokenValidityPeriodInSeconds() throws Exception {
         Assert.assertEquals(OAuthServerConfiguration.getInstance()
-                .getApplicationAccessTokenValidityPeriodInSeconds(), 3600);
+                        .getApplicationAccessTokenValidityPeriodInSeconds(), 3600,
+                "Expected value not returned from getter");
     }
 
     @Test
     public void testGetRefreshTokenValidityPeriodInSeconds() throws Exception {
         Assert.assertEquals(OAuthServerConfiguration.getInstance()
-                .getRefreshTokenValidityPeriodInSeconds(), 84600);
+                        .getRefreshTokenValidityPeriodInSeconds(), 84600,
+                "Expected value not returned from getter");
     }
 
     @Test
     public void testGetTimeStampSkewInSeconds() throws Exception {
         Assert.assertEquals(OAuthServerConfiguration.getInstance()
-                .getTimeStampSkewInSeconds(), 300);
+                        .getTimeStampSkewInSeconds(), 300,
+                "Expected value not returned from getter");
     }
 
     @Test
     public void testIsCacheEnabled() throws Exception {
-        Assert.assertFalse(OAuthServerConfiguration.getInstance().isCacheEnabled());
+        Assert.assertFalse(OAuthServerConfiguration.getInstance().isCacheEnabled(),
+                "Expected value not returned from getter");
     }
 
     @Test
     public void testIsRefreshTokenRenewalEnabled() throws Exception {
         Assert.assertTrue(OAuthServerConfiguration.getInstance()
-                .isRefreshTokenRenewalEnabled());
+                .isRefreshTokenRenewalEnabled(), "Expected value not returned from getter");
     }
 
     @Test
     public void testGetSupportedGrantTypeValidators() throws Exception {
         Assert.assertTrue(OAuthServerConfiguration.getInstance()
-                .getSupportedGrantTypeValidators().size() == 5);
+                .getSupportedGrantTypeValidators().size() == 5, "Expected value not returned from getter");
     }
 
     @Test
     public void testGetSupportedResponseTypeValidators() throws Exception {
         Assert.assertTrue(OAuthServerConfiguration.getInstance()
-                .getSupportedResponseTypeValidators().size() == 4);
+                .getSupportedResponseTypeValidators().size() == 4, "Expected value not returned from getter");
     }
 
     @Test
     public void testGetSupportedResponseTypes() throws Exception {
         Assert.assertTrue(OAuthServerConfiguration.getInstance()
-                .getSupportedResponseTypes().size() == 4);
+                .getSupportedResponseTypes().size() == 4, "Expected value not returned from getter");
     }
 
     @Test
     public void testGetSupportedResponseTypeNames() throws Exception {
-        OAuthServerConfiguration.getInstance()
-                .getSupportedResponseTypeNames();
+        Assert.assertTrue(OAuthServerConfiguration.getInstance()
+                .getSupportedResponseTypeNames().size() == 4, "Expected value not returned from getter");
+    }
+
+    @Test
+    public void testGetSupportedClaims() throws Exception {
+        Field claim = OAuthServerConfiguration.class.getDeclaredField("supportedClaims");
+        claim.setAccessible(true);
+        claim.set(OAuthServerConfiguration.getInstance(), new String[]{"claim1", "claim2"});
+        String[] assertClaims = OAuthServerConfiguration.getInstance()
+                .getSupportedClaims();
+        Assert.assertTrue(ArrayUtils.contains(assertClaims, "claim1") &&
+                        ArrayUtils.contains(assertClaims, "claim2"),
+                "Set claim does not return properly");
+    }
+
+    @Test
+    public void testGetSupportedClientAuthHandlers() throws Exception {
+        Assert.assertFalse(OAuthServerConfiguration.getInstance()
+                .getSupportedClientAuthHandlers().isEmpty());
+    }
+
+    @Test
+    public void testGetSAML2TokenCallbackHandler() throws Exception {
+        Field callBackHandler = OAuthServerConfiguration.class
+                .getDeclaredField("saml2TokenCallbackHandlerName");
+        callBackHandler.setAccessible(true);
+        callBackHandler.set(OAuthServerConfiguration.getInstance(),
+                "org.wso2.carbon.identity.artifacts.SampleTokenCallbackHandler");
+        Assert.assertEquals(OAuthServerConfiguration.getInstance()
+                        .getSAML2TokenCallbackHandler()
+                        .getClass()
+                        .getName(),
+                "org.wso2.carbon.identity.artifacts.SampleTokenCallbackHandler");
+    }
+
+    @Test
+    public void testGetTokenValidatorClassNames() throws Exception {
+        Map<String, String> tokenClassMap = new HashMap<>();
+        tokenClassMap.put("clazz1", "sample.clazz1");
+        tokenClassMap.put("clazz2", "sample.clazz2");
+        Field callBackHandler = OAuthServerConfiguration.class
+                .getDeclaredField("tokenValidatorClassNames");
+        callBackHandler.setAccessible(true);
+        callBackHandler.set(OAuthServerConfiguration.getInstance(), tokenClassMap);
+        Assert.assertEquals(OAuthServerConfiguration.getInstance().getTokenValidatorClassNames(), tokenClassMap);
+    }
+
+    @Test
+    public void testIsAccessTokenPartitioningEnabled() throws Exception {
+        Assert.assertFalse(OAuthServerConfiguration.getInstance()
+                .isAccessTokenPartitioningEnabled());
     }
 
     private String fillURLPlaceholdersForTest(String url) {
@@ -324,3 +394,4 @@ public class OAuthServerConfigurationTest extends PowerMockTestCase {
                 .replace("${carbon.management.port}", "9443");
     }
 }
+

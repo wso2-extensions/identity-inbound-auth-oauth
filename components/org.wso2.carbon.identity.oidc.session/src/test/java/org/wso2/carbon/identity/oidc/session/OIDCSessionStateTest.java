@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oidc.session;
 import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
+import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -30,7 +31,7 @@ import static org.testng.Assert.assertTrue;
 /**
  * Unit test coverage for OIDCSessionState class.
  */
-public class OIDCSessionStateTest extends PowerMockTestCase {
+public class OIDCSessionStateTest extends PowerMockIdentityBaseTest {
 
     private static final String USERNAME = "user1";
     private static final String CLIENT_ID_VALUE = "3T9l2uUf8AzNOfmGS9lPEIsdrR8a";
