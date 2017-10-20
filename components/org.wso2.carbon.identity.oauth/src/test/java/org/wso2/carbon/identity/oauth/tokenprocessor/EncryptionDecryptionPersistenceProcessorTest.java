@@ -20,13 +20,13 @@ package org.wso2.carbon.identity.oauth.tokenprocessor;
 
 import org.apache.commons.logging.LogFactory;
 import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.api.ServerConfigurationService;
 import org.wso2.carbon.core.internal.CarbonCoreDataHolder;
 import org.wso2.carbon.core.util.CryptoException;
 import org.wso2.carbon.core.util.CryptoUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 import org.wso2.carbon.registry.core.service.RegistryService;
 
 import static org.mockito.Matchers.any;
@@ -44,7 +44,7 @@ import static org.testng.Assert.assertEquals;
         LogFactory.class,
         CarbonCoreDataHolder.class
 })
-public class EncryptionDecryptionPersistenceProcessorTest extends PowerMockTestCase {
+public class EncryptionDecryptionPersistenceProcessorTest extends PowerMockIdentityBaseTest {
 
     EncryptionDecryptionPersistenceProcessor testclass = new EncryptionDecryptionPersistenceProcessor();
 

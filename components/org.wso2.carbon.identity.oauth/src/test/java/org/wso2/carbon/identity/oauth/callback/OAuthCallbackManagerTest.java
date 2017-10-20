@@ -28,8 +28,8 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import static org.mockito.Matchers.any;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
-import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertTrue;
 
 /**
  * Unit tests for OAuthCallbackManager.

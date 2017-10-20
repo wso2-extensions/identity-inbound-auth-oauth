@@ -23,7 +23,6 @@ import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.mockito.Mock;
 import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
@@ -43,6 +42,7 @@ import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
 import java.sql.Timestamp;
 import java.util.Arrays;
@@ -69,7 +69,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.UNASSIGNED_VA
  */
 @PrepareForTest({OAuthServerConfiguration.class, TokenMgtDAO.class, IdentityUtil.class, OAuth2Util.class,
         AbstractAuthorizationGrantHandler.class})
-public class RefreshGrantHandlerTest extends PowerMockTestCase {
+public class RefreshGrantHandlerTest extends PowerMockIdentityBaseTest {
 
     @Mock
     private TokenMgtDAO mockTokenMgtDAO;

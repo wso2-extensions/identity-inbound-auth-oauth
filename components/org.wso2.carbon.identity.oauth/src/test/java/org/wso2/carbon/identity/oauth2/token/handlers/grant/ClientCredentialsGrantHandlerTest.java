@@ -20,7 +20,6 @@ package org.wso2.carbon.identity.oauth2.token.handlers.grant;
 
 import org.mockito.Mock;
 import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -28,6 +27,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.TokenMgtDAO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
+import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
 import static org.mockito.Matchers.anyString;
 import static org.mockito.MockitoAnnotations.initMocks;
@@ -41,7 +41,7 @@ import static org.testng.Assert.assertTrue;
  * Test class for ClientCredentialsGrantHandler test cases.
  */
 @PrepareForTest({OAuthServerConfiguration.class, AbstractAuthorizationGrantHandler.class})
-public class ClientCredentialsGrantHandlerTest extends PowerMockTestCase {
+public class ClientCredentialsGrantHandlerTest extends PowerMockIdentityBaseTest {
 
     @Mock
     private TokenMgtDAO mockTokenMgtDAO;

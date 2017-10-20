@@ -19,7 +19,7 @@ package org.wso2.carbon.identity.oauth.dao;
 
 import org.apache.commons.dbcp.BasicDataSource;
 import org.apache.commons.lang.StringUtils;
-import org.powermock.modules.testng.PowerMockTestCase;
+import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
 import java.nio.file.Paths;
 import java.sql.Connection;
@@ -29,7 +29,7 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 
-public class TestOAuthDAOBase extends PowerMockTestCase {
+public class TestOAuthDAOBase extends PowerMockIdentityBaseTest {
 
     private static Map<String, BasicDataSource> dataSourceMap = new HashMap<>();
     private static final String DB_Name = "testDB";
@@ -93,7 +93,7 @@ public class TestOAuthDAOBase extends PowerMockTestCase {
             statement.execute();
 
             ResultSet resultSet = statement.getGeneratedKeys();
-            if(resultSet.next()) {
+            if (resultSet.next()) {
                 return resultSet.getInt(1);
             }
         } finally {

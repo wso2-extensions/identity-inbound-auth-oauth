@@ -24,8 +24,8 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 
 import javax.security.auth.callback.Callback;
 
-
-import static org.testng.Assert.*;
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertTrue;
 
 /**
  * Unit tests for DefaultCallbackHandlerTest.
@@ -34,7 +34,7 @@ public class DefaultCallbackHandlerTest {
 
     @DataProvider(name = "testHandle")
     public Object[][] callBackType() {
-        return new Object[][] {
+        return new Object[][]{
                 {OAuthCallback.OAuthCallbackType.ACCESS_DELEGATION_AUTHZ},
                 {OAuthCallback.OAuthCallbackType.ACCESS_DELEGATION_TOKEN},
                 {OAuthCallback.OAuthCallbackType.SCOPE_VALIDATION_AUTHZ},

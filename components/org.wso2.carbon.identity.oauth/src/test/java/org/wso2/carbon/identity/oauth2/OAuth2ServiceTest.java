@@ -19,9 +19,8 @@ package org.wso2.carbon.identity.oauth2;
 
 import org.mockito.Mock;
 import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
-import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.AfterMethod;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -35,22 +34,23 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
 import static org.mockito.Matchers.anyObject;
 import static org.mockito.Matchers.anyString;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.powermock.api.mockito.PowerMockito.whenNew;
-import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertNotNull;
 
 /**
  * This class tests the OAuth2Service class.
  */
 @PrepareForTest({OAuth2Util.class, AuthorizationHandlerManager.class, OAuth2Service.class, IdentityTenantUtil.class,
         OAuthServerConfiguration.class})
-public class OAuth2ServiceTest extends PowerMockTestCase {
+public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
 
     @Mock
     private OAuth2AuthorizeReqDTO oAuth2AuthorizeReqDTO;
@@ -79,6 +79,8 @@ public class OAuth2ServiceTest extends PowerMockTestCase {
     @BeforeMethod
     public void setUp() throws Exception {
         oAuth2Service = new OAuth2Service();
+        mockStatic(OAuthServerConfiguration.class);
+        when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
     }
 
     @AfterMethod
@@ -107,6 +109,7 @@ public class OAuth2ServiceTest extends PowerMockTestCase {
         when(AuthorizationHandlerManager.getInstance()).thenReturn(authorizationHandlerManager);
         when(authorizationHandlerManager.handleAuthorization((OAuth2AuthorizeReqDTO) anyObject())).
                 thenReturn(mockedOAuth2AuthorizeRespDTO);
+        when(oAuthServerConfiguration.getTimeStampSkewInSeconds()).thenReturn(300L);
         OAuth2AuthorizeRespDTO oAuth2AuthorizeRespDTO = oAuth2Service.authorize(oAuth2AuthorizeReqDTO);
         assertNotNull(oAuth2AuthorizeRespDTO);
     }

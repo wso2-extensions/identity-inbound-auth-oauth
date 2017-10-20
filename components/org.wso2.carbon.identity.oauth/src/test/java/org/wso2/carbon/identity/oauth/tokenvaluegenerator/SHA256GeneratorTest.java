@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth.tokenvaluegenerator;
 
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.testng.annotations.Test;
+
 import static org.testng.Assert.assertNotNull;
 
 /**

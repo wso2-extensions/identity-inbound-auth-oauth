@@ -19,11 +19,11 @@
 package org.wso2.carbon.identity.oauth.event;
 
 import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.core.model.IdentityEventListenerConfig;
 import org.wso2.carbon.identity.core.model.IdentityEventListenerConfigKey;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
 import java.util.Properties;
 
@@ -37,7 +37,7 @@ import static org.testng.AssertJUnit.assertTrue;
  * Test Class for the AbstractOauthEventInterceptor.
  */
 @PrepareForTest({IdentityUtil.class})
-public class AbstractOAuthEventInterceptorTest extends PowerMockTestCase {
+public class AbstractOAuthEventInterceptorTest extends PowerMockIdentityBaseTest {
 
     AbstractOAuthEventInterceptor testclass = new AbstractOAuthEventInterceptor();
 

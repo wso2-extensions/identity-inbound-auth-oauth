@@ -20,13 +20,13 @@ package org.wso2.carbon.identity.oauth.config;
 
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
 import java.io.File;
 import java.lang.reflect.Field;
@@ -34,7 +34,7 @@ import java.util.Set;
 
 
 @PrepareForTest({IdentityUtil.class})
-public class OAuthServerConfigurationTest extends PowerMockTestCase {
+public class OAuthServerConfigurationTest extends PowerMockIdentityBaseTest {
 
     public static final String oAuth1RequestTokenUrl
             = "${carbon.protocol}://${carbon.host}:${carbon.management.port}" +

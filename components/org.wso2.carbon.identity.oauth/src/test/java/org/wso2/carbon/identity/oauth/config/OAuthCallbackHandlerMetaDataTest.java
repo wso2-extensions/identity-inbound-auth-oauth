@@ -21,9 +21,11 @@ package org.wso2.carbon.identity.oauth.config;
 import org.testng.Assert;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
+import org.wso2.carbon.identity.testutil.IdentityBaseTest;
+
 import java.util.Properties;
 
-public class OAuthCallbackHandlerMetaDataTest {
+public class OAuthCallbackHandlerMetaDataTest extends IdentityBaseTest {
     OAuthCallbackHandlerMetaData oAuthCallbackHandlerMetaData;
 
     @Test

@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oauth2.dao;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
+import org.wso2.carbon.identity.testutil.IdentityBaseTest;
 
 import java.net.SocketException;
 
@@ -29,7 +30,7 @@ import static org.testng.Assert.assertTrue;
 /**
  * Unit tests for AuthContextTokenDO.
  */
-public class AuthContextTokenDOTest {
+public class AuthContextTokenDOTest extends IdentityBaseTest {
 
     private static final String AUTHZ_CODE = "authzCode";
 
