@@ -39,18 +39,6 @@ public class CommonTestUtils {
         PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(userName);
     }
 
-    public static void initPrivilegedCarbonContext(String tenantDomain, String userName) throws Exception {
-        int tenantID = MultitenantConstants.SUPER_TENANT_ID;
-        initPrivilegedCarbonContext(tenantDomain, tenantID, userName);
-    }
-
-    public static void initPrivilegedCarbonContext(String tenantDomain) throws Exception {
-        int tenantID = MultitenantConstants.SUPER_TENANT_ID;
-        String userName = "testUser";
-
-        initPrivilegedCarbonContext(tenantDomain, tenantID, userName);
-    }
-
     public static void initPrivilegedCarbonContext() throws Exception {
         String tenantDomain = MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
         int tenantID = MultitenantConstants.SUPER_TENANT_ID;

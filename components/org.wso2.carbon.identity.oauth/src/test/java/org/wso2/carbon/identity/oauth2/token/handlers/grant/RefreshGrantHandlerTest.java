@@ -230,7 +230,7 @@ public class RefreshGrantHandlerTest extends PowerMockIdentityBaseTest {
         if (isValidToken) {
             when(OAuth2Util.calculateValidityInMillis(anyLong(), anyLong())).thenReturn(new Long(5000));
         } else {
-            when(OAuth2Util.calculateValidityInMillis(anyLong(), anyLong())).thenReturn(new Long(0));
+            when(OAuth2Util.calculateValidityInMillis(anyLong(), anyLong())).thenReturn(Long.valueOf(0));
         }
         when(mockOAuthServerConfiguration.isRefreshTokenRenewalEnabled()).thenReturn(isRenew);
         when(IdentityUtil.isUserStoreInUsernameCaseSensitive(anyString())).thenReturn(isUsernameCaseSensitive);
@@ -282,7 +282,7 @@ public class RefreshGrantHandlerTest extends PowerMockIdentityBaseTest {
     }
 
     @DataProvider(name = "GetValidateGrantData")
-    public Object[][] ValidateGrantData() {
+    public Object[][] validateGrantData() {
 
         return new Object[][]{
                 {"clientId1", "refreshToken1", "accessToken1", TOKEN_STATE_ACTIVE, false, true},
@@ -298,7 +298,7 @@ public class RefreshGrantHandlerTest extends PowerMockIdentityBaseTest {
     }
 
     @DataProvider(name = "GetTokenIssuerData")
-    public Object[][] TokenIssuerData() {
+    public Object[][] tokenIssuerData() {
 
         return new Object[][]{
                 {0L, UNASSIGNED_VALIDITY_PERIOD, true, true, true, false, false},
@@ -309,7 +309,7 @@ public class RefreshGrantHandlerTest extends PowerMockIdentityBaseTest {
     }
 
     @DataProvider(name = "GetValidateScopeData")
-    public Object[][] ValidateScopeData() {
+    public Object[][] validateScopeData() {
 
         String[] requestedScopes = new String[2];
         requestedScopes[0] = "scope1";

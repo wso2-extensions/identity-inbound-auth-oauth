@@ -29,7 +29,7 @@ import static org.testng.Assert.assertEquals;
  */
 public class PlainTextPersistenceProcessorTest extends IdentityBaseTest {
 
-    PlainTextPersistenceProcessor testclass = new PlainTextPersistenceProcessor();
+    private PlainTextPersistenceProcessor testclass = new PlainTextPersistenceProcessor();
 
     @Test
     public void testGetProcessedClientId() throws IdentityOAuth2Exception {

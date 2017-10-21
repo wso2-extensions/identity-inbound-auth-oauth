@@ -40,61 +40,43 @@ import java.util.Set;
 @PrepareForTest({IdentityUtil.class})
 public class OAuthServerConfigurationTest extends PowerMockIdentityBaseTest {
 
-    public static final String oAuth1RequestTokenUrl
+    private static final String oAuth1RequestTokenUrl
             = "${carbon.protocol}://${carbon.host}:${carbon.management.port}" +
             "/oauth/request-token";
-    public static final String oAuth1AuthorizeUrl
+    private static final String oAuth1AuthorizeUrl
             = "${carbon.protocol}://${carbon.host}:${carbon.management.port}" +
             "/oauth/authorize-url";
-    public static final String oAuth1AccessTokenUrl
+    private static final String oAuth1AccessTokenUrl
             = "${carbon.protocol}://${carbon.host}:${carbon.management.port}" +
             "/oauth/access-token";
-    public static final String oAuth2AuthzEPUrl
+    private static final String oAuth2AuthzEPUrl
             = "${carbon.protocol}://${carbon.host}:${carbon.management.port}" +
             "/oauth2/authorize";
-    public static final String oAuth2TokenEPUrl
+    private static final String oAuth2TokenEPUrl
             = "${carbon.protocol}://${carbon.host}:${carbon.management.port}" +
             "/oauth2/token";
-    public static final String oAuth2RevokeEPUrll
-            = "${carbon.protocol}://${carbon.host}:${carbon.management.port}" +
-            "/oauth2/revoke";
-    public static final String oAuth2IntrospectEPUrl
-            = "${carbon.protocol}://${carbon.host}:${carbon.management.port}" +
-            "/oauth2/introspect";
-    public static final String oAuth2UserInfoEPUrl
+    private static final String oAuth2UserInfoEPUrl
             = "${carbon.protocol}://${carbon.host}:${carbon.management.port}" +
             "/oauth2/userinfo";
-    public static final String oIDCCheckSessionEPUrl
-            = "${carbon.protocol}://${carbon.host}:${carbon.management.port}" +
-            "/oidc/checksession";
-    public static final String oIDCLogoutEPUrl
-            = "${carbon.protocol}://${carbon.host}:${carbon.management.port}" +
-            "/oidc/logout";
-    public static final String oAuth2ConsentPage
+    private static final String oAuth2ConsentPage
             = "${carbon.protocol}://${carbon.host}:${carbon.management.port}" +
             "/authenticationendpoint/oauth2_authz.do";
-    public static final String oAuth2ErrorPage
+    private static final String oAuth2ErrorPage
             = "${carbon.protocol}://${carbon.host}:${carbon.management.port}" +
             "/authenticationendpoint/oauth2_error.do";
-    public static final String oIDCConsentPage
+    private static final String oIDCConsentPage
             = "${carbon.protocol}://${carbon.host}:${carbon.management.port}" +
             "/authenticationendpoint/oauth2_consent.do";
-    public static final String oIDCLogoutConsentPage
-            = "${carbon.protocol}://${carbon.host}:${carbon.management.port}" +
-            "/authenticationendpoint/oauth2_logout_consent.do";
-    public static final String oIDCLogoutPage
-            = "${carbon.protocol}://${carbon.host}:${carbon.management.port}" +
-            "/authenticationendpoint/oauth2_logout.do";
-    public static final String oIDCWebFingerEPUrl
+    private static final String oIDCWebFingerEPUrl
             = "${carbon.protocol}://${carbon.host}:${carbon.management.port}" +
             "/.well-known/webfinger";
-    public static final String oAuth2DCREPUrl
+    private static final String oAuth2DCREPUrl
             = "${carbon.protocol}://${carbon.host}:${carbon.management.port}" +
             "/identity/connect/register";
-    public static final String oAuth2JWKSPage
+    private static final String oAuth2JWKSPage
             = "${carbon.protocol}://${carbon.host}:${carbon.management.port}" +
             "/oauth2/jwks";
-    public static final String oIDCDiscoveryEPUrl
+    private static final String oIDCDiscoveryEPUrl
             = "${carbon.protocol}://${carbon.host}:${carbon.management.port}" +
             "/oauth2/oidcdiscovery";
 

@@ -40,6 +40,7 @@ import static org.powermock.api.mockito.PowerMockito.spy;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.powermock.api.mockito.PowerMockito.whenNew;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNotNull;
 
 /*
  * Unit tests for OAuthConsumerDAO
@@ -217,6 +218,7 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
         when(mockedServerConfig.getPersistenceProcessor()).thenReturn(processor);
 
         try(Connection connection = getConnection(DB_NAME)) {
+            assertNotNull(connection, DB_NAME + " doesn't has a connection");
             Connection connection1 = spy(connection);
             doThrow(new SQLException()).when(connection1).commit();
             mockStatic(IdentityDatabaseUtil.class);
@@ -272,7 +274,7 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
 
         String GET_ID_SQL = "SELECT ID FROM IDN_OAUTH_CONSUMER_APPS WHERE CONSUMER_KEY=?";
         String REQ_ID_SQL = "SELECT REQUEST_TOKEN FROM IDN_OAUTH1A_REQUEST_TOKEN WHERE CONSUMER_KEY_ID=?";
-        Integer ID = null;
+        int ID = 0;
         String req_Token = null;
         PreparedStatement statement1 = null;
         PreparedStatement statement2 = null;

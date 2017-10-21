@@ -26,7 +26,7 @@ import org.wso2.carbon.identity.testutil.IdentityBaseTest;
 import java.util.Properties;
 
 public class OAuthCallbackHandlerMetaDataTest extends IdentityBaseTest {
-    OAuthCallbackHandlerMetaData oAuthCallbackHandlerMetaData;
+    private OAuthCallbackHandlerMetaData oAuthCallbackHandlerMetaData;
 
     @Test
     public void testGetPriority() throws Exception {

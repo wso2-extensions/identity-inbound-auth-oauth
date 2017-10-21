@@ -25,10 +25,12 @@ import org.wso2.carbon.identity.oauth.dcr.exception.DCRMClientException;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMServerException;
 import org.wso2.carbon.identity.testutil.IdentityBaseTest;
 
+import static org.testng.Assert.fail;
+
 public class DCRMUtilsTest extends IdentityBaseTest{
 
     @DataProvider(name = "BuildRedirectUrl")
-    public Object[][] BuildRedirectUrl() {
+    public Object[][] buildRedirectUrl() {
         return new Object[][] {
                 {"http://example.com/", true},
                 {null, false},
@@ -42,7 +44,7 @@ public class DCRMUtilsTest extends IdentityBaseTest{
     }
 
     @DataProvider(name = "BuildServerException")
-    public Object[][] BuildServerException() {
+    public Object[][] buildServerException() {
         return new Object[][] {
                 {DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_INPUT,""},
                 {DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_INPUT,"error from bad request"}

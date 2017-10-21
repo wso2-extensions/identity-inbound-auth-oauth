@@ -72,8 +72,6 @@ import static org.testng.Assert.assertEquals;
         IdentityConfigParser.class,
         OAuth2ServiceComponentHolder.class})
 public class DefaultIDTokenBuilderTest extends IdentityBaseTest {
-    @Mock
-    private Log log;
 
     @Mock
     private IdentityProvider identityProvider;
@@ -106,9 +104,6 @@ public class DefaultIDTokenBuilderTest extends IdentityBaseTest {
     private AuthenticatedUser authenticatedUser;
 
     @Mock
-    private Property property;
-
-    @Mock
     private MessageDigest messageDigest;
 
     @Mock
@@ -138,19 +133,15 @@ public class DefaultIDTokenBuilderTest extends IdentityBaseTest {
     }
 
     private String SUBJECT_IDENTIFIER = "Subjectdentifier1";
-    private String CLIENT_NAME = "ClientName1";
     private String ACCESSTOKEN_NAME = "AccessToken1";
     private String ALGORITHM = "Algorithm1";
-    private String RESPONSE = "Response1";
-    private String CONSUMERKEY = "Key1";
-    private String TENANT_DOMAIN = "Tenant1";
-    private String NONCE = "Nonce1";
 
     @Test(expectedExceptions = IdentityOAuth2Exception.class)
     public void testBuildIDToken() throws Exception {
         request1 = mock(OAuthTokenReqMessageContext.class);
         tokenReqDTO = mock(OAuth2AccessTokenReqDTO.class);
         when(request1.getOauth2AccessTokenReqDTO()).thenReturn(tokenReqDTO);
+        String TENANT_DOMAIN = "Tenant1";
         when(tokenReqDTO.getTenantDomain()).thenReturn(TENANT_DOMAIN);
         identityProvider = mock(IdentityProvider.class);
         mockStatic(IdentityProviderManager.class);
@@ -203,6 +194,7 @@ public class DefaultIDTokenBuilderTest extends IdentityBaseTest {
 
         when(applicationManagementService.getServiceProviderByClientId(anyString(), anyString(), anyString()))
                 .thenReturn(serviceProvider);
+        String CLIENT_NAME = "ClientName1";
         when(tokenReqDTO.getClientId()).thenReturn(CLIENT_NAME);
 
         JWSAlgorithm jwsAlgorithm1 = new JWSAlgorithm(ALGORITHM);
@@ -262,12 +254,13 @@ public class DefaultIDTokenBuilderTest extends IdentityBaseTest {
         mockStatic(OAuth2Util.class);
         when(oAuthServerConfiguration.getOpenIDConnectIDTokenExpiration()).thenReturn(String.valueOf((int) 78383));
 
+        String NONCE = "Nonce1";
         when(oAuth2AuthorizeReqDTO.getNonce()).thenReturn(NONCE);
         LinkedHashSet set1 = new LinkedHashSet(10);
         when(oAuth2AuthorizeReqDTO.getACRValues()).thenReturn(set1);
+        String RESPONSE = "Response1";
         when(oAuth2AuthorizeReqDTO.getResponseType()).thenReturn(RESPONSE);
 
-        JWSAlgorithm jwsAlgorithm = new JWSAlgorithm(ALGORITHM);
         when(OAuth2Util.mapDigestAlgorithm(any(JWSAlgorithm.class))).thenReturn("SHA-256");
         when(oAuthServerConfiguration.getIdTokenSignatureAlgorithm()).thenReturn(ALGORITHM);
         mockStatic(FederatedAuthenticatorConfig.class);
@@ -278,6 +271,7 @@ public class DefaultIDTokenBuilderTest extends IdentityBaseTest {
         mockStatic(MessageDigest.class);
         when(MessageDigest.getInstance(String.valueOf(JWSAlgorithm.RS256))).thenReturn(messageDigest);
         when(oAuth2AuthorizeRespDTO.getAccessToken()).thenReturn(ACCESSTOKEN_NAME);
+        String CONSUMERKEY = "Key1";
         when(oAuth2AuthorizeReqDTO.getConsumerKey()).thenReturn(CONSUMERKEY);
         mockStatic(IdentityConfigParser.class);
         when(IdentityConfigParser.getInstance()).thenReturn(identityConfigParser);

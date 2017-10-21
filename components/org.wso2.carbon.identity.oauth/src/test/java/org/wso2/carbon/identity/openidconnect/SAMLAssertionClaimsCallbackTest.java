@@ -100,8 +100,7 @@ public class SAMLAssertionClaimsCallbackTest {
     private static final String SAMPLE_TENANT_DOMAIN = "dummy_domain";
     private static final String SAMPLE_CLIENT_ID = "u5FIfG5xzLvBGiamoAYzzcqpBqga";
     private static final String SAMPLE_SERVICE_PROVIDER = "sampleSP";
-    private static final String carbonHome = Paths.get(System.getProperty("user.dir"),
-            "target").toString();
+    private static final String carbonHome = Paths.get(System.getProperty("user.dir"), "target").toString();
     private JWTClaimsSet jwtClaimsSet;
 
     @ObjectFactory
@@ -111,8 +110,6 @@ public class SAMLAssertionClaimsCallbackTest {
 
     @Spy
     private SAMLAssertionClaimsCallback samlAssertionClaimsCallback;
-
-    private OAuthComponentServiceHolder oAuthComponentServiceHolder;
 
     @Spy
     private AuthorizationGrantCache authorizationGrantCache;
@@ -163,7 +160,7 @@ public class SAMLAssertionClaimsCallbackTest {
     public void setUp() throws Exception {
         System.setProperty(CarbonBaseConstants.CARBON_HOME, carbonHome);
 
-        oAuthComponentServiceHolder = OAuthComponentServiceHolder.getInstance();
+        OAuthComponentServiceHolder oAuthComponentServiceHolder = OAuthComponentServiceHolder.getInstance();
         realmService = mock(RealmService.class);
         oAuthComponentServiceHolder.setRealmService(realmService);
         userRealm = mock(UserRealm.class);

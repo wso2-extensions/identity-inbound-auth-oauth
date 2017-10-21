@@ -265,7 +265,6 @@ public class OAuthAppDAO {
             prepStmt.setString(1, persistenceProcessor.getProcessedClientId(consumerKey));
 
             rSet = prepStmt.executeQuery();
-            List<OAuthAppDO> oauthApps = new ArrayList<>();
             /**
              * We need to determine whether the result set has more than 1 row. Meaning, we found an application for
              * the given consumer key. There can be situations where a user passed a key which doesn't yet have an
@@ -300,7 +299,6 @@ public class OAuthAppDAO {
                         oauthApp.setApplicationAccessTokenExpiryTime(rSet.getLong(11));
                         oauthApp.setRefreshTokenExpiryTime(rSet.getLong(12));
                     }
-                    oauthApps.add(oauthApp);
                 }
             }
             if (!rSetHasRows) {
@@ -339,7 +337,6 @@ public class OAuthAppDAO {
             prepStmt.setInt(2, tenantID);
 
             rSet = prepStmt.executeQuery();
-            List<OAuthAppDO> oauthApps = new ArrayList<>();
             oauthApp = new OAuthAppDO();
             oauthApp.setApplicationName(appName);
             AuthenticatedUser user = new AuthenticatedUser();
@@ -375,7 +372,6 @@ public class OAuthAppDAO {
                         oauthApp.setApplicationAccessTokenExpiryTime(rSet.getLong(10));
                         oauthApp.setRefreshTokenExpiryTime(rSet.getLong(11));
                     }
-                    oauthApps.add(oauthApp);
                 }
             }
             if (!rSetHasRows) {

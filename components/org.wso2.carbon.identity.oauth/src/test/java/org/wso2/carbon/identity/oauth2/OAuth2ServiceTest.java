@@ -124,9 +124,9 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
     @Mock
     private OAuthCache oAuthCache;
 
-    OAuth2Service oAuth2Service;
-    static final String clientId = "IbWwXLf5MnKSY6x6gnR_7gd7f1wa";
-    TokenPersistenceProcessor persistenceProcessor = new PlainTextPersistenceProcessor();
+    private OAuth2Service oAuth2Service;
+    private static final String clientId = "IbWwXLf5MnKSY6x6gnR_7gd7f1wa";
+    private TokenPersistenceProcessor persistenceProcessor = new PlainTextPersistenceProcessor();
 
     @BeforeMethod
     public void setUp() {

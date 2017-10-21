@@ -97,7 +97,6 @@ public class AbstractAuthorizationGrantHandlerTest extends PowerMockIdentityBase
     @Mock
     private AuthenticatedUser authenticatedUser;
 
-    private String accessToken = "654564654646456456456456487987";
     private static final String clientId = "IbWwXLf5MnKSY6x6gnR_7gd7f1wa";
     private static final String tokenId = "435fgd3535343535353453453453";
 
@@ -184,6 +183,7 @@ public class AbstractAuthorizationGrantHandlerTest extends PowerMockIdentityBase
         when(oAuthCache.isEnabled()).thenReturn(false);
         when(oAuthCache.getValueFromCache(any(OAuthCacheKey.class))).thenReturn(cacheEntry);
 
+        String accessToken = "654564654646456456456456487987";
         when(cacheEntry.getAccessToken()).thenReturn(accessToken);
         when(cacheEntry.getTokenId()).thenReturn(tokenId);
         when(cacheEntry.getValidityPeriod()).thenReturn(cachedTokenValidity);

@@ -482,7 +482,6 @@ public class TokenMgtDAO {
         String tenantDomain = authzUser.getTenantDomain();
         int tenantId = OAuth2Util.getTenantId(tenantDomain);
         String tenantAwareUsernameWithNoUserDomain = authzUser.getUserName();
-        userStoreDomain = OAuth2Util.getSanitizedUserStoreDomain(userStoreDomain);
 
         String userDomain;
         if (!OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && authzUser.isFederatedUser()) {
@@ -3011,7 +3010,6 @@ public class TokenMgtDAO {
         String tenantDomain = authzUser.getTenantDomain();
         int tenantId = OAuth2Util.getTenantId(tenantDomain);
         String tenantAwareUsernameWithNoUserDomain = authzUser.getUserName();
-        userStoreDomain = OAuth2Util.getSanitizedUserStoreDomain(userStoreDomain);
 
         String userDomain;
         if (!OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && authzUser.isFederatedUser()) {

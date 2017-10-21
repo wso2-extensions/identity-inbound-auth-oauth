@@ -24,7 +24,6 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
-import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
@@ -55,54 +54,38 @@ import static org.testng.Assert.assertTrue;
         OAuth2Util.class})
 public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
 
-    String scopeArr[] = new String[]{"scope1", "scope2", "scope3"};
-    String scopeStr = "scope1 scope2 scope3";
-    String clientId = "dummyClientId";
-    String clientSecret = "dummyClientSecret";
-    String authzCode = "testAuthzCode";
-    AuthenticatedUser authzUser = new AuthenticatedUser();
-    String tokenState = "testState";
-    String refreshToken = "dummyRefreshToken";
-    String tokenId = "testTokenID";
-    String accessToken = "dummyAccessToken";
-    String authorizationCode;
-    String grantType = "testGrantType";
-    Timestamp issuedTime = new Timestamp(System.currentTimeMillis());
-    Timestamp refreshTokenIssuedTime = new Timestamp(System.currentTimeMillis());
-    long validityPeriod = 3600L;
-    long validityPeriodInMillis = 3600000L;
-    long refreshTokenValidityPeriod = 3600L;
-    long refreshTokenValidityPeriodInMillis = 3600000L;
-    int tenantID = MultitenantConstants.SUPER_TENANT_ID;
-    String tokenType = "testTokenType";
-    long timestampSkew = 3600L;
-    Integer clientTenatId = 1;
+    private String scopeArr[] = new String[]{"scope1", "scope2", "scope3"};
+    private String scopeStr = "scope1 scope2 scope3";
+    private String clientId = "dummyClientId";
+    private String clientSecret = "dummyClientSecret";
+    private AuthenticatedUser authzUser = new AuthenticatedUser();
+    private Timestamp issuedTime = new Timestamp(System.currentTimeMillis());
+    private Timestamp refreshTokenIssuedTime = new Timestamp(System.currentTimeMillis());
+    private Integer clientTenantId = 1;
 
     @Mock
-    OAuthServerConfiguration oauthServerConfigurationMock;
+    private OAuthServerConfiguration oauthServerConfigurationMock;
 
     @Mock
-    OAuthAuthzReqMessageContext authAuthzReqMessageContextMock;
+    private OAuthAuthzReqMessageContext authAuthzReqMessageContextMock;
 
     @Mock
-    OAuthTokenReqMessageContext oAuthTokenReqMessageContextMock;
+    private OAuthTokenReqMessageContext oAuthTokenReqMessageContextMock;
 
     @Mock
-    OAuthCache oAuthCacheMock;
+    private OAuthCache oAuthCacheMock;
 
     @Mock
-    CacheEntry cacheEntryMock;
+    private CacheEntry cacheEntryMock;
 
     @Mock
-    TokenPersistenceProcessor tokenPersistenceProcessorMock;
-
-    @Mock
-    AccessTokenDO accessTokenDO;
+    private TokenPersistenceProcessor tokenPersistenceProcessorMock;
 
     @BeforeMethod
     public void setUp() throws Exception {
         mockStatic(OAuthServerConfiguration.class);
         when(OAuthServerConfiguration.getInstance()).thenReturn(oauthServerConfigurationMock);
+        long timestampSkew = 3600L;
         when(oauthServerConfigurationMock.getTimeStampSkewInSeconds()).thenReturn(timestampSkew);
     }
 
@@ -189,21 +172,21 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
     }
 
     @Test
-    public void testGetClientTenatId() throws Exception {
-        OAuth2Util.setClientTenatId(clientTenatId);
-        assertEquals(OAuth2Util.getClientTenatId(), clientTenatId.intValue());
+    public void testGetClientTenantId() throws Exception {
+        OAuth2Util.setClientTenatId(clientTenantId);
+        assertEquals(OAuth2Util.getClientTenatId(), clientTenantId.intValue());
     }
 
     @Test
-    public void testSetClientTenatId() throws Exception {
-        OAuth2Util.setClientTenatId(clientTenatId);
-        assertEquals(OAuth2Util.getClientTenatId(), clientTenatId.intValue());
+    public void testSetClientTenantId() throws Exception {
+        OAuth2Util.setClientTenatId(clientTenantId);
+        assertEquals(OAuth2Util.getClientTenatId(), clientTenantId.intValue());
     }
 
     @Test
     public void testClearClientTenantId() throws Exception {
-        OAuth2Util.setClientTenatId(clientTenatId);
-        assertEquals(OAuth2Util.getClientTenatId(), clientTenatId.intValue());
+        OAuth2Util.setClientTenatId(clientTenantId);
+        assertEquals(OAuth2Util.getClientTenatId(), clientTenantId.intValue());
         OAuth2Util.clearClientTenantId();
         assertEquals(OAuth2Util.getClientTenatId(), -1);
     }
@@ -237,28 +220,27 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
 
     @DataProvider(name = "AuthenticateClient")
     public Object[][] authenticateClient() {
-        CacheEntry cacheResult1 = null;
-        CacheEntry cacheResult2 = cacheEntryMock;
-        CacheEntry cacheResult3 = new ClientCredentialDO(null);
-        CacheEntry cacheResult4 = new ClientCredentialDO(clientSecret);
-        CacheEntry cacheResult5 = new ClientCredentialDO("7_EsdLmABh_cPdmmYxCTwRdyDG6c");
+        CacheEntry cacheResult1 = cacheEntryMock;
+        CacheEntry cacheResult2 = new ClientCredentialDO(null);
+        CacheEntry cacheResult3 = new ClientCredentialDO(clientSecret);
+        CacheEntry cacheResult4 = new ClientCredentialDO("7_EsdLmABh_cPdmmYxCTwRdyDG6c");
 
         return new Object[][]{
+                {null, null, false},
+                {null, "4_EedLmABh_cPdmmYxCTwRdyDG5b", false},
+                {null, clientSecret, true},
                 {cacheResult1, null, false},
                 {cacheResult1, "4_EedLmABh_cPdmmYxCTwRdyDG5b", false},
                 {cacheResult1, clientSecret, true},
                 {cacheResult2, null, false},
                 {cacheResult2, "4_EedLmABh_cPdmmYxCTwRdyDG5b", false},
                 {cacheResult2, clientSecret, true},
-                {cacheResult3, null, false},
-                {cacheResult3, "4_EedLmABh_cPdmmYxCTwRdyDG5b", false},
+                {cacheResult3, null, true},
+                {cacheResult3, "4_EedLmABh_cPdmmYxCTwRdyDG5b", true},
                 {cacheResult3, clientSecret, true},
-                {cacheResult4, null, true},
-                {cacheResult4, "4_EedLmABh_cPdmmYxCTwRdyDG5b", true},
-                {cacheResult4, clientSecret, true},
-                {cacheResult5, null, false},
-                {cacheResult5, "4_EedLmABh_cPdmmYxCTwRdyDG5b", false},
-                {cacheResult5, clientSecret, false}
+                {cacheResult4, null, false},
+                {cacheResult4, "4_EedLmABh_cPdmmYxCTwRdyDG5b", false},
+                {cacheResult4, clientSecret, false}
         };
     }
 
@@ -314,12 +296,19 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
 
     @Test
     public void testBuildCacheKeyStringForAuthzCode() throws Exception {
+
+        String authzCode = "testAuthzCode";
         String testAuthzCode = clientId + ":" + authzCode;
         assertEquals(OAuth2Util.buildCacheKeyStringForAuthzCode(clientId, authzCode), testAuthzCode);
     }
 
     @Test
     public void testValidateAccessTokenDO() throws Exception {
+
+        String tokenType = "testTokenType";
+        long validityPeriodInMillis = 3600000L;
+        long refreshTokenValidityPeriodInMillis = 3600000L;
+        String authorizationCode = "dummyCode";
         AccessTokenDO accessTokenDO = new AccessTokenDO(clientId, authzUser, scopeArr, issuedTime,
                 refreshTokenIssuedTime, validityPeriodInMillis, refreshTokenValidityPeriodInMillis, tokenType,
                 authorizationCode);

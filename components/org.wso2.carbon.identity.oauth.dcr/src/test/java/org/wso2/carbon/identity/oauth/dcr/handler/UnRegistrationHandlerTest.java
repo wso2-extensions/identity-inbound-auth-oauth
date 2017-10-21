@@ -36,24 +36,22 @@ import static org.powermock.api.mockito.PowerMockito.whenNew;
 import static org.powermock.api.mockito.PowerMockito.doAnswer;
 import static org.testng.Assert.assertEquals;
 
+/**
+ * Unit test covering UnRegistrationHandler
+ */
 @PrepareForTest({UnRegistrationHandler.class, DCRManagementService.class})
 public class UnRegistrationHandlerTest extends PowerMockIdentityBaseTest {
 
     private UnRegistrationHandler unRegistrationHandler;
-    private String dummyUserId = "1234";
-    private String dummyApplicationName = "testApplicationname";
-    private String dummyConsumerKey = "testConsumerKey";
-    private UnregistrationRequest.DCRUnregisterRequestBuilder dCRUnregisterRequestBuilder;
-    private UnregistrationRequest unregistrationRequest;
 
     @Mock
-    DCRMessageContext mockDcrMessageContext;
+    private DCRMessageContext mockDcrMessageContext;
 
     @Mock
-    UnregistrationRequest mockUnregistrationRequest;
+    private UnregistrationRequest mockUnregistrationRequest;
 
     @Mock
-    DCRManagementService mockDCRManagementService;
+    private DCRManagementService mockDCRManagementService;
 
     @BeforeMethod
     public void setUp() {
@@ -65,15 +63,18 @@ public class UnRegistrationHandlerTest extends PowerMockIdentityBaseTest {
 
         when(mockDcrMessageContext.getIdentityRequest()).thenReturn(mockUnregistrationRequest);
 
-        dCRUnregisterRequestBuilder = new UnregistrationRequest.DCRUnregisterRequestBuilder();
+        UnregistrationRequest.DCRUnregisterRequestBuilder dCRUnregisterRequestBuilder = new UnregistrationRequest.DCRUnregisterRequestBuilder();
 
         UnregistrationResponse.DCUnregisterResponseBuilder dCUnregisterResponseBuilder =
                 new UnregistrationResponse.DCUnregisterResponseBuilder();
         whenNew(UnregistrationResponse.DCUnregisterResponseBuilder.class).withNoArguments().
                 thenReturn(dCUnregisterResponseBuilder);
 
+        String dummyUserId = "1234";
         dCRUnregisterRequestBuilder.setUserId(dummyUserId);
+        String dummyApplicationName = "testApplicationname";
         dCRUnregisterRequestBuilder.setApplicationName(dummyApplicationName);
+        String dummyConsumerKey = "testConsumerKey";
         dCRUnregisterRequestBuilder.setConsumerKey(dummyConsumerKey);
         UnregistrationRequest requestBuilder = dCRUnregisterRequestBuilder.build();
 
@@ -96,8 +97,8 @@ public class UnRegistrationHandlerTest extends PowerMockIdentityBaseTest {
 
         assertEquals(unRegistrationHandler.handle(mockDcrMessageContext), dCUnregisterResponseBuilder,
                 "Expected response builder is different from the actual");
-        assertEquals(params[0],  dummyUserId, "Expected tenant user Id is not equal to the actual");
-        assertEquals(params[1],  dummyApplicationName, "Expected application name is not equal to the actual");
-        assertEquals(params[2],  dummyConsumerKey, "Expected consumer key is not equal to the actual");
+        assertEquals(params[0], dummyUserId, "Expected tenant user Id is not equal to the actual");
+        assertEquals(params[1], dummyApplicationName, "Expected application name is not equal to the actual");
+        assertEquals(params[2], dummyConsumerKey, "Expected consumer key is not equal to the actual");
     }
 }

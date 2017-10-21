@@ -624,7 +624,7 @@ public class SAML2BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
     private void initAssertion() throws Exception {
 
         String assertionString = SAMLSSOUtil.marshall(assertion);
-        assertionString = new String(Base64.encodeBase64(assertionString.getBytes(Charsets.UTF_8)));
+        assertionString = new String(Base64.encodeBase64(assertionString.getBytes(Charsets.UTF_8)), Charsets.UTF_8);
         oAuth2AccessTokenReqDTO.setAssertion(assertionString);
         when(IdentityUtil.unmarshall(anyString())).thenReturn(assertion);
         when(IdentityUtil.isTokenLoggable(anyString())).thenReturn(true);

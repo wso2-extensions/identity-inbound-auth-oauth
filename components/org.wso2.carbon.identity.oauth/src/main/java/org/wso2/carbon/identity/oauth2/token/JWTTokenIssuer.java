@@ -358,7 +358,6 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         }
 
         String issuer = OAuth2Util.getIDTokenIssuer();
-        int tenantId = OAuth2Util.getTenantId(user.getTenantDomain());
         long curTimeInMillis = Calendar.getInstance().getTimeInMillis();
 
         // Set the default claims.

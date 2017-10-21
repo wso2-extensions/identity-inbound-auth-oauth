@@ -34,24 +34,25 @@ import static org.powermock.api.mockito.PowerMockito.when;
 import static org.powermock.api.mockito.PowerMockito.whenNew;
 import static org.testng.Assert.assertEquals;
 
+/**
+ * Unit test covering RegistrationHandler
+ */
 @PrepareForTest({DCRManagementService.class, RegistrationHandler.class})
 public class RegistrationHandlerTest extends PowerMockIdentityBaseTest {
 
     private RegistrationHandler registrationHandler;
-    private RegistrationRequestProfile mockRegistrationRequestProfile;
-    private String testTenantDomain = "testTenantDomain";
 
     @Mock
-    RegistrationRequest mockRegisterRequest;
+    private RegistrationRequest mockRegisterRequest;
 
     @Mock
-    DCRMessageContext mockDcrMessageContext;
+    private DCRMessageContext mockDcrMessageContext;
 
     @Mock
-    RegistrationResponseProfile mockRegistrationResponseProfile;
+    private RegistrationResponseProfile mockRegistrationResponseProfile;
 
     @Mock
-    DCRManagementService mockDCRManagementService;
+    private DCRManagementService mockDCRManagementService;
 
     @BeforeMethod
     public void setUp() {
@@ -60,10 +61,12 @@ public class RegistrationHandlerTest extends PowerMockIdentityBaseTest {
 
     @Test
     public void testHandle() throws Exception {
-        mockRegistrationRequestProfile = new RegistrationRequestProfile();
+
+        RegistrationRequestProfile mockRegistrationRequestProfile = new RegistrationRequestProfile();
 
         when(mockDcrMessageContext.getIdentityRequest()).thenReturn(mockRegisterRequest);
         when(mockRegisterRequest.getRegistrationRequestProfile()).thenReturn(mockRegistrationRequestProfile);
+        String testTenantDomain = "testTenantDomain";
         when(mockRegisterRequest.getTenantDomain()).thenReturn(testTenantDomain);
 
         mockStatic(DCRManagementService.class);

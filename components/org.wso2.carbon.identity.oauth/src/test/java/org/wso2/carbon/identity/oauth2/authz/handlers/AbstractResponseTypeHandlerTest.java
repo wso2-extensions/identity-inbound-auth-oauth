@@ -46,7 +46,7 @@ import java.lang.reflect.Field;
 @PrepareForTest({IdentityUtil.class})
 @PowerMockIgnore({"javax.net.*", "javax.security.*", "javax.crypto.*"})
 public class AbstractResponseTypeHandlerTest extends PowerMockTestCase {
-    AbstractResponseTypeHandler abstractResponseTypeHandler;
+    private AbstractResponseTypeHandler abstractResponseTypeHandler;
 
     @BeforeClass
     public void setUp() throws Exception {

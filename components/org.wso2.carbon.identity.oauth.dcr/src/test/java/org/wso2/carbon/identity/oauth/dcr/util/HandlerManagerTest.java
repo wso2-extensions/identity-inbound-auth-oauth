@@ -42,7 +42,7 @@ public class HandlerManagerTest {
     private DCRDataHolder dataHolder;
 
     @DataProvider(name = "BuildRegistrationHandlers")
-    public Object[][] BuildRegistrationHandlers() {
+    public Object[][] buildRegistrationHandlers() {
         Map<String,String> param = new HashMap<String, String>();
         param.put("client_id","N2QqQluzQuL5X6CtM3KZwqzLQhUa");
         param.put("client_secret","4AXWrN88aEfMvq2h_G0dN05KRsUa");
@@ -77,7 +77,7 @@ public class HandlerManagerTest {
     }
 
     @DataProvider(name = "BuildUnRegistrationHandlers")
-    public Object[][] BuildUnRegistrationHandlers() {
+    public Object[][] buildUnRegistrationHandlers() {
         Map<String,String> param = new HashMap<String, String>();
         param.put("client_id","N2QqQluzQuL5X6CtM3KZwqzLQhUa");
         param.put("client_secret","4AXWrN88aEfMvq2h_G0dN05KRsUa");

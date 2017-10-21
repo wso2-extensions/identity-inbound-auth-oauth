@@ -29,15 +29,16 @@ import static org.testng.Assert.assertTrue;
 
 @PrepareForTest(StringBuilder.class)
 public class ScopeTest {
-    Scope scope1;
-    Scope scope2;
-    String name = "readClaims";
-    String description = "Test cases to test scope";
+    private Scope scope1;
+    private Scope scope2;
+    private String name = "readClaims";
 
-    ArrayList<String> bindings = new ArrayList<>(Arrays.asList("scope1", "scope2"));
+    private ArrayList<String> bindings = new ArrayList<>(Arrays.asList("scope1", "scope2"));
 
     @BeforeTest
     public void setUp() throws IllegalAccessException, InstantiationException {
+
+        String description = "Test cases to test scope";
         scope1 = new Scope(name, description);
         scope2 = new Scope(name, description, bindings);
     }
@@ -88,8 +89,8 @@ public class ScopeTest {
 
     @Test
     public void testAddBinding() throws Exception {
-        scope2.addBindings(Arrays.asList(new String[]{"scope3", "scope4"}));
-        assertTrue(scope2.getBindings().containsAll(Arrays.asList(new String[]{"scope3", "scope4"})));
+        scope2.addBindings(Arrays.asList("scope3", "scope4"));
+        assertTrue(scope2.getBindings().containsAll(Arrays.asList("scope3", "scope4")));
     }
 
     @Test

@@ -48,6 +48,9 @@ import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.fail;
 import static org.testng.Assert.assertNull;
 
+/**
+ * Unit test covering DCRProcessor
+ */
 @PrepareForTest({HandlerManager.class, DCRProcessor.class})
 public class DCRProcessorTest extends PowerMockIdentityBaseTest {
 
