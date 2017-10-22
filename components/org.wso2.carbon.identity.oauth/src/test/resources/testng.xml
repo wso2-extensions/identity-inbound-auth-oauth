@@ -68,6 +68,7 @@
             <class name="org.wso2.carbon.identity.oauth.listener.IdentityOathEventListenerTest"/>
             <class name="org.wso2.carbon.identity.oauth.listener.OAuthCacheRemoveListenerTest"/>
             <class name="org.wso2.carbon.identity.oauth2.internal.OAuthApplicationMgtListenerTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.util.OAuth2UtilTest"/>
         </classes>
     </test>
     <test name="org.wso2.carbon.identity.oauth.debug.enabled">

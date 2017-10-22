@@ -18,12 +18,15 @@
 
 package org.wso2.carbon.identity.oauth2.util;
 
+import org.apache.commons.codec.digest.DigestUtils;
 import org.mockito.Mock;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
+import org.wso2.carbon.CarbonConstants;
+import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
@@ -31,62 +34,107 @@ import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthConsumerDAO;
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.ClientCredentialDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
+import org.wso2.carbon.user.api.UserStoreException;
+import org.wso2.carbon.user.core.service.RealmService;
+import org.wso2.carbon.user.core.tenant.TenantManager;
 
 import java.sql.Timestamp;
+import java.util.Map;
 
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyBoolean;
+import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
 import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.powermock.api.mockito.PowerMockito.whenNew;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 
 @PrepareForTest({OAuthServerConfiguration.class, OAuthCache.class, IdentityUtil.class, OAuthConsumerDAO.class,
-        OAuth2Util.class})
+        OAuth2Util.class, OAuthComponentServiceHolder.class})
 public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
 
-    private String scopeArr[] = new String[]{"scope1", "scope2", "scope3"};
-    private String scopeStr = "scope1 scope2 scope3";
+    private String scopeArraySorted[] = new String[]{"scope1", "scope2", "scope3"};
+    private String scopeArrayUnSorted[] = new String[]{"scope2", "scope3", "scope1"};
+    private String scopeString = "scope1 scope2 scope3";
     private String clientId = "dummyClientId";
     private String clientSecret = "dummyClientSecret";
-    private AuthenticatedUser authzUser = new AuthenticatedUser();
-    private Timestamp issuedTime = new Timestamp(System.currentTimeMillis());
-    private Timestamp refreshTokenIssuedTime = new Timestamp(System.currentTimeMillis());
-    private Integer clientTenantId = 1;
+    private String authzCode = "testAuthzCode";
+    private String tokenState = "testState";
+    private String refreshToken = "dummyRefreshToken";
+    private String tokenId = "testTokenID";
+    private String accessToken = "dummyAccessToken";
+    private String authorizationCode = "testAuthorizationCode";
+    private String grantType = "testGrantType";
+    private String tokenType = "testTokenType";
+    private AuthenticatedUser authzUser;
+    private int tenantID = MultitenantConstants.SUPER_TENANT_ID;
+    private Integer clientTenatId = 1;
+    private Timestamp issuedTime;
+    private Timestamp refreshTokenIssuedTime;
+    private long validityPeriod;
+    private long validityPeriodInMillis;
+    private long refreshTokenValidityPeriod;
+    private long refreshTokenValidityPeriodInMillis;
+    private long timestampSkew;
 
     @Mock
-    private OAuthServerConfiguration oauthServerConfigurationMock;
+    OAuthServerConfiguration oauthServerConfigurationMock;
 
     @Mock
-    private OAuthAuthzReqMessageContext authAuthzReqMessageContextMock;
+    OAuthAuthzReqMessageContext authAuthzReqMessageContextMock;
 
     @Mock
-    private OAuthTokenReqMessageContext oAuthTokenReqMessageContextMock;
+    OAuthTokenReqMessageContext oAuthTokenReqMessageContextMock;
 
     @Mock
-    private OAuthCache oAuthCacheMock;
+    OAuthCache oAuthCacheMock;
 
     @Mock
-    private CacheEntry cacheEntryMock;
+    CacheEntry cacheEntryMock;
 
     @Mock
-    private TokenPersistenceProcessor tokenPersistenceProcessorMock;
+    TokenPersistenceProcessor tokenPersistenceProcessorMock;
+
+    @Mock
+    AccessTokenDO accessTokenDOMock;
+
+    @Mock
+    OAuthComponentServiceHolder oAuthComponentServiceHolderMock;
+
+    @Mock
+    RealmService realmServiceMock;
+
+    @Mock
+    TenantManager tenantManagerMock;
 
     @BeforeMethod
     public void setUp() throws Exception {
+        authzUser = new AuthenticatedUser();
+        issuedTime = new Timestamp(System.currentTimeMillis());
+        refreshTokenIssuedTime = new Timestamp(System.currentTimeMillis());
+        validityPeriod = 3600L;
+        validityPeriodInMillis = 3600000L;
+        refreshTokenValidityPeriod = 3600L;
+        refreshTokenValidityPeriodInMillis = 3600000L;
+        timestampSkew = 3600L;
         mockStatic(OAuthServerConfiguration.class);
         when(OAuthServerConfiguration.getInstance()).thenReturn(oauthServerConfigurationMock);
-        long timestampSkew = 3600L;
         when(oauthServerConfigurationMock.getTimeStampSkewInSeconds()).thenReturn(timestampSkew);
+        mockStatic(OAuthComponentServiceHolder.class);
+        when(OAuthComponentServiceHolder.getInstance()).thenReturn(oAuthComponentServiceHolderMock);
     }
 
     @AfterMethod
@@ -94,37 +142,12 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
 
     }
 
-    @DataProvider(name = "TestGetPartitionedTableByUserStoreDataProvider")
-    public Object[][] getPartitionedTableByUserStoreData() {
-        return new Object[][]{
-                {"IDN_OAUTH2_ACCESS_TOKEN", "H2", "IDN_OAUTH2_ACCESS_TOKEN_A"},
-                {"IDN_OAUTH2_ACCESS_TOKEN", "AD", "IDN_OAUTH2_ACCESS_TOKEN_B"},
-                {"IDN_OAUTH2_ACCESS_TOKEN", "PRIMARY", "IDN_OAUTH2_ACCESS_TOKEN"},
-                {"IDN_OAUTH2_ACCESS_TOKEN", "LDAP", "IDN_OAUTH2_ACCESS_TOKEN_LDAP"},
-                {"IDN_OAUTH2_ACCESS_TOKEN_SCOPE", "H2", "IDN_OAUTH2_ACCESS_TOKEN_SCOPE_A"},
-                {null, "H2", null},
-                {"IDN_OAUTH2_ACCESS_TOKEN", null, "IDN_OAUTH2_ACCESS_TOKEN"}
-        };
-    }
-
-    @Test(dataProvider = "TestGetPartitionedTableByUserStoreDataProvider")
-    public void testGetPartitionedTableByUserStore(String tableName, String userstoreDomain, String partionedTableName)
-            throws Exception {
-        when(oauthServerConfigurationMock.getAccessTokenPartitioningDomains()).thenReturn("A:H2,B:AD");
-        mockStatic(IdentityUtil.class);
-        when(IdentityUtil.getPrimaryDomainName()).thenReturn("PRIMARY");
-
-        assertEquals(OAuth2Util.getPartitionedTableByUserStore(tableName, userstoreDomain), partionedTableName);
-    }
-
     @Test
     public void testAuthenticateClientCacheHit() throws Exception {
         OAuthCache mockOAuthCache = mock(OAuthCache.class);
         ClientCredentialDO mockCacheEntry = mock(ClientCredentialDO.class);
         when(mockCacheEntry.getClientSecret()).thenReturn(clientSecret);
-
         when(mockOAuthCache.getValueFromCache(any(OAuthCacheKey.class))).thenReturn(mockCacheEntry);
-
         mockStatic(OAuthCache.class);
         when(OAuthCache.getInstance()).thenReturn(mockOAuthCache);
 
@@ -172,21 +195,21 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
     }
 
     @Test
-    public void testGetClientTenantId() throws Exception {
-        OAuth2Util.setClientTenatId(clientTenantId);
-        assertEquals(OAuth2Util.getClientTenatId(), clientTenantId.intValue());
+    public void testGetClientTenatId() throws Exception {
+        OAuth2Util.setClientTenatId(clientTenatId);
+        assertEquals(OAuth2Util.getClientTenatId(), clientTenatId.intValue());
     }
 
     @Test
-    public void testSetClientTenantId() throws Exception {
-        OAuth2Util.setClientTenatId(clientTenantId);
-        assertEquals(OAuth2Util.getClientTenatId(), clientTenantId.intValue());
+    public void testSetClientTenatId() throws Exception {
+        OAuth2Util.setClientTenatId(clientTenatId);
+        assertEquals(OAuth2Util.getClientTenatId(), clientTenatId.intValue());
     }
 
     @Test
     public void testClearClientTenantId() throws Exception {
-        OAuth2Util.setClientTenatId(clientTenantId);
-        assertEquals(OAuth2Util.getClientTenatId(), clientTenantId.intValue());
+        OAuth2Util.setClientTenatId(clientTenatId);
+        assertEquals(OAuth2Util.getClientTenatId(), clientTenatId.intValue());
         OAuth2Util.clearClientTenantId();
         assertEquals(OAuth2Util.getClientTenatId(), -1);
     }
@@ -194,53 +217,62 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
     @DataProvider(name = "BuildScopeString")
     public Object[][] buildScopeString() {
         return new Object[][]{
-                {scopeArr, scopeStr},
+                // scope array
+                // scope string
+                {scopeArraySorted, scopeString},
+                {scopeArrayUnSorted, scopeString},
                 {null, null},
                 {new String[0], ""}
         };
     }
 
     @Test(dataProvider = "BuildScopeString")
-    public void testBuildScopeString(String arr[], String response) throws Exception {
-        assertEquals(OAuth2Util.buildScopeString(arr), response);
+    public void testBuildScopeString(String[] scopeArray, String scopeString) throws Exception {
+        assertEquals(OAuth2Util.buildScopeString(scopeArray), scopeString);
     }
 
     @DataProvider(name = "BuildScopeArray")
     public Object[][] buildScopeArray() {
         return new Object[][]{
-                {scopeStr, scopeArr},
+                // scopes
+                // response
+                {scopeString, scopeArraySorted},
                 {null, new String[0]}
         };
     }
 
     @Test(dataProvider = "BuildScopeArray")
-    public void testBuildScopeArray(String scopes, String response[]) throws Exception {
+    public void testBuildScopeArray(String scopes, String[] response) throws Exception {
         assertEquals(OAuth2Util.buildScopeArray(scopes), response);
     }
 
     @DataProvider(name = "AuthenticateClient")
     public Object[][] authenticateClient() {
-        CacheEntry cacheResult1 = cacheEntryMock;
-        CacheEntry cacheResult2 = new ClientCredentialDO(null);
-        CacheEntry cacheResult3 = new ClientCredentialDO(clientSecret);
-        CacheEntry cacheResult4 = new ClientCredentialDO("7_EsdLmABh_cPdmmYxCTwRdyDG6c");
+        CacheEntry cacheResult1 = null;
+        CacheEntry cacheResult2 = cacheEntryMock;
+        CacheEntry cacheResult3 = new ClientCredentialDO(null);
+        CacheEntry cacheResult4 = new ClientCredentialDO(clientSecret);
+        CacheEntry cacheResult5 = new ClientCredentialDO("7_EsdLmABh_cPdmmYxCTwRdyDG6c");
 
+        // cacheResult
+        // dummyClientSecret
+        // expectedResult
         return new Object[][]{
-                {null, null, false},
-                {null, "4_EedLmABh_cPdmmYxCTwRdyDG5b", false},
-                {null, clientSecret, true},
                 {cacheResult1, null, false},
                 {cacheResult1, "4_EedLmABh_cPdmmYxCTwRdyDG5b", false},
                 {cacheResult1, clientSecret, true},
                 {cacheResult2, null, false},
                 {cacheResult2, "4_EedLmABh_cPdmmYxCTwRdyDG5b", false},
                 {cacheResult2, clientSecret, true},
-                {cacheResult3, null, true},
-                {cacheResult3, "4_EedLmABh_cPdmmYxCTwRdyDG5b", true},
+                {cacheResult3, null, false},
+                {cacheResult3, "4_EedLmABh_cPdmmYxCTwRdyDG5b", false},
                 {cacheResult3, clientSecret, true},
-                {cacheResult4, null, false},
-                {cacheResult4, "4_EedLmABh_cPdmmYxCTwRdyDG5b", false},
-                {cacheResult4, clientSecret, false}
+                {cacheResult4, null, true},
+                {cacheResult4, "4_EedLmABh_cPdmmYxCTwRdyDG5b", true},
+                {cacheResult4, clientSecret, true},
+                {cacheResult5, null, false},
+                {cacheResult5, "4_EedLmABh_cPdmmYxCTwRdyDG5b", false},
+                {cacheResult5, clientSecret, false}
         };
     }
 
@@ -263,6 +295,11 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         CacheEntry cacheResult1 = new ClientCredentialDO(null);
         CacheEntry cacheResult2 = cacheEntryMock;
 
+        // isUsernameCaseSensitive
+        // cacheResult
+        // dummyClientSecret
+        // dummyUserName
+        // expectedResult
         return new Object[][]{
                 {false, cacheResult1, "4_EedLmABh_cPdmmYxCTwRdyDG5b", "testUser", null},
                 {false, cacheResult1, clientSecret, "testUser", "testUser"},
@@ -296,20 +333,13 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
 
     @Test
     public void testBuildCacheKeyStringForAuthzCode() throws Exception {
-
-        String authzCode = "testAuthzCode";
         String testAuthzCode = clientId + ":" + authzCode;
         assertEquals(OAuth2Util.buildCacheKeyStringForAuthzCode(clientId, authzCode), testAuthzCode);
     }
 
     @Test
     public void testValidateAccessTokenDO() throws Exception {
-
-        String tokenType = "testTokenType";
-        long validityPeriodInMillis = 3600000L;
-        long refreshTokenValidityPeriodInMillis = 3600000L;
-        String authorizationCode = "dummyCode";
-        AccessTokenDO accessTokenDO = new AccessTokenDO(clientId, authzUser, scopeArr, issuedTime,
+        AccessTokenDO accessTokenDO = new AccessTokenDO(clientId, authzUser, scopeArraySorted, issuedTime,
                 refreshTokenIssuedTime, validityPeriodInMillis, refreshTokenValidityPeriodInMillis, tokenType,
                 authorizationCode);
         assertEquals(OAuth2Util.validateAccessTokenDO(accessTokenDO), accessTokenDO);
@@ -337,8 +367,566 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
 
     @Test
     public void testGetAccessTokenPartitioningDomains() throws Exception {
-        when(oauthServerConfigurationMock.getAccessTokenPartitioningDomains()).thenReturn
-                ("testAccessTokenPartitioningDomains");
-        assertEquals(OAuth2Util.getAccessTokenPartitioningDomains(), "testAccessTokenPartitioningDomains");
+        String accessTokenPartitioningDomains = "A:foo.com , B:bar.com";
+        when(oauthServerConfigurationMock.getAccessTokenPartitioningDomains()).thenReturn(accessTokenPartitioningDomains);
+        assertEquals(OAuth2Util.getAccessTokenPartitioningDomains(), accessTokenPartitioningDomains);
     }
+
+    @DataProvider(name = "accessTokenPartitioningDomainsData")
+    public Object[][] accessTokenPartitioningDomainsData() {
+        return new Object[][]{
+                // accessTokenPartitioningDomains
+                // expectedResult
+                {"A:foo.com , B:bar.com", 2},
+                {null, 0}
+        };
+    }
+
+    @Test(dataProvider = "accessTokenPartitioningDomainsData")
+    public void testGetAvailableUserStoreDomainMappings(String accessTokenPartitioningDomains, int expectedResult)
+            throws Exception {
+        when(oauthServerConfigurationMock.getAccessTokenPartitioningDomains()).thenReturn(accessTokenPartitioningDomains);
+        Map<String, String> userStoreDomainMap = OAuth2Util.getAvailableUserStoreDomainMappings();
+        assertEquals(userStoreDomainMap.size(), expectedResult);
+    }
+
+    @Test(expectedExceptions = IdentityOAuth2Exception.class)
+    public void testGetAvailableUserStoreDomainMappings1() throws Exception {
+        String accessTokenPartitioningDomains = "A: , B:bar.com";
+        when(oauthServerConfigurationMock.getAccessTokenPartitioningDomains()).thenReturn(accessTokenPartitioningDomains);
+        OAuth2Util.getAvailableUserStoreDomainMappings();
+    }
+
+    @DataProvider(name = "accessMappedUserStoreDomainData")
+    public Object[][] accessMappedUserStoreDomainData() {
+        return new Object[][]{
+                // accessTokenPartitioningDomains
+                // userStoreDomain
+                // expectedResult
+                {"A:foo.com, B:bar.com", "foo.com", "A"},
+                {"A:foo.com , B:bar.com", "bar.com", "B"},
+                {"A:foo.com , B:bar.com", null, null},
+                {"A:foo.com , B:bar.com", "test.com", "test.com"}
+        };
+    }
+
+    @Test(dataProvider = "accessMappedUserStoreDomainData")
+    public void testGetMappedUserStoreDomain(String accessTokenPartitioningDomains, String userStoreDomain,
+                                             String expectedResult) throws Exception {
+        when(oauthServerConfigurationMock.getAccessTokenPartitioningDomains()).thenReturn(accessTokenPartitioningDomains);
+        assertEquals(OAuth2Util.getMappedUserStoreDomain(userStoreDomain), expectedResult);
+    }
+
+    @DataProvider(name = "TestGetPartitionedTableByUserStoreDataProvider")
+    public Object[][] getPartitionedTableByUserStoreData() {
+        return new Object[][]{
+                // tableName
+                // userstoreDomain
+                // partionedTableName
+                {"IDN_OAUTH2_ACCESS_TOKEN", "H2", "IDN_OAUTH2_ACCESS_TOKEN_A"},
+                {"IDN_OAUTH2_ACCESS_TOKEN", "AD", "IDN_OAUTH2_ACCESS_TOKEN_B"},
+                {"IDN_OAUTH2_ACCESS_TOKEN", "PRIMARY", "IDN_OAUTH2_ACCESS_TOKEN"},
+                {"IDN_OAUTH2_ACCESS_TOKEN", "LDAP", "IDN_OAUTH2_ACCESS_TOKEN_LDAP"},
+                {"IDN_OAUTH2_ACCESS_TOKEN_SCOPE", "H2", "IDN_OAUTH2_ACCESS_TOKEN_SCOPE_A"},
+                {null, "H2", null},
+                {"IDN_OAUTH2_ACCESS_TOKEN", null, "IDN_OAUTH2_ACCESS_TOKEN"}
+        };
+    }
+
+    @Test(dataProvider = "TestGetPartitionedTableByUserStoreDataProvider")
+    public void testGetPartitionedTableByUserStore(String tableName, String userstoreDomain, String partionedTableName)
+            throws Exception {
+        when(oauthServerConfigurationMock.getAccessTokenPartitioningDomains()).thenReturn("A:H2, B:AD");
+        mockStatic(IdentityUtil.class);
+        when(IdentityUtil.getPrimaryDomainName()).thenReturn("PRIMARY");
+
+        assertEquals(OAuth2Util.getPartitionedTableByUserStore(tableName, userstoreDomain), partionedTableName);
+    }
+
+    @DataProvider(name = "TokenPartitionedSqlByUserStoreData")
+    public Object[][] tokenPartitionedSqlByUserStoreData() {
+        String sql = "SELECT TOKEN_ID FROM IDN_OAUTH2_ACCESS_TOKEN WHERE ACCESS_TOKEN = ?";
+        String partitionedSql = "SELECT TOKEN_ID FROM IDN_OAUTH2_ACCESS_TOKEN_A WHERE ACCESS_TOKEN = ?";
+        return new Object[][]{
+                // accessTokenPartitioningEnabled
+                // assertionsUserNameEnabled
+                // sql
+                // partitionedSql
+                {false, false, sql, sql},
+                {true, false, sql, sql},
+                {false, true, sql, sql},
+                {true, true, sql, partitionedSql}
+        };
+    }
+
+    @Test(dataProvider = "TokenPartitionedSqlByUserStoreData")
+    public void testGetTokenPartitionedSqlByUserStore(boolean accessTokenPartitioningEnabled,
+                                                      boolean assertionsUserNameEnabled, String sql,
+                                                      String partitionedSql) throws Exception {
+        when(oauthServerConfigurationMock.isAccessTokenPartitioningEnabled()).thenReturn(accessTokenPartitioningEnabled);
+        when(oauthServerConfigurationMock.isUserNameAssertionEnabled()).thenReturn(assertionsUserNameEnabled);
+        when(oauthServerConfigurationMock.getAccessTokenPartitioningDomains()).thenReturn("A:H2, B:AD");
+        mockStatic(IdentityUtil.class);
+        when(IdentityUtil.getPrimaryDomainName()).thenReturn("PRIMARY");
+        assertEquals(OAuth2Util.getTokenPartitionedSqlByUserStore(sql, "H2"), partitionedSql);
+    }
+
+    @DataProvider(name = "TokenPartitionedSqlByUserIdData")
+    public Object[][] tokenPartitionedSqlByUserIdData() {
+        String sql = "SELECT TOKEN_ID FROM IDN_OAUTH2_ACCESS_TOKEN WHERE ACCESS_TOKEN = ?";
+        String partitionedSql = "SELECT TOKEN_ID FROM IDN_OAUTH2_ACCESS_TOKEN_A WHERE ACCESS_TOKEN = ?";
+        return new Object[][]{
+                // accessTokenPartitioningEnabled
+                // assertionsUserNameEnabled
+                // sql
+                // username
+                // partitionedSql
+                {false, false, sql, null, sql},
+                {true, false, sql, "H2/testUser", sql},
+                {false, true, sql, null, sql},
+                {true, true, sql, "H2/testUser", partitionedSql},
+                {true, true, sql, null, sql},
+
+        };
+    }
+
+    @Test(dataProvider = "TokenPartitionedSqlByUserIdData")
+    public void testGetTokenPartitionedSqlByUserId(boolean accessTokenPartitioningEnabled,
+                                                   boolean assertionsUserNameEnabled, String sql,
+                                                   String username, String partitionedSql) throws Exception {
+        when(oauthServerConfigurationMock.isAccessTokenPartitioningEnabled()).thenReturn(accessTokenPartitioningEnabled);
+        when(oauthServerConfigurationMock.isUserNameAssertionEnabled()).thenReturn(assertionsUserNameEnabled);
+        when(oauthServerConfigurationMock.getAccessTokenPartitioningDomains()).thenReturn("A:H2, B:AD");
+        mockStatic(IdentityUtil.class);
+        when(IdentityUtil.getPrimaryDomainName()).thenReturn("PRIMARY");
+        assertEquals(OAuth2Util.getTokenPartitionedSqlByUserId(sql, username), partitionedSql);
+    }
+
+    @DataProvider(name = "TokenPartitionedSqlByTokenData")
+    public Object[][] tokenPartitionedSqlByTokenData() {
+        String sql = "SELECT TOKEN_ID FROM IDN_OAUTH2_ACCESS_TOKEN WHERE ACCESS_TOKEN = ?";
+        String partitionedSql = "SELECT TOKEN_ID FROM IDN_OAUTH2_ACCESS_TOKEN_A WHERE ACCESS_TOKEN = ?";
+        String apiKey = "NDk1MmI0NjctODZiMi0zMWRmLWI2M2MtMGJmMjVjZWM0Zjg2OkgyL2FkbWlu";
+
+        return new Object[][]{
+                // accessTokenPartitioningEnabled
+                // assertionsUserNameEnabled
+                // isTokenLoggable
+                // sql
+                // apiKey
+                // partitionedSql
+                {false, false, true, sql, null, sql},
+                {true, false, false, sql, apiKey, sql},
+                {false, true, true, sql, null, sql},
+                {true, true, false, sql, apiKey, partitionedSql},
+                {true, true, true, sql, apiKey, partitionedSql},
+        };
+    }
+
+    @Test(dataProvider = "TokenPartitionedSqlByTokenData")
+    public void testGetTokenPartitionedSqlByToken(boolean accessTokenPartitioningEnabled,
+                                                  boolean assertionsUserNameEnabled, boolean isTokenLoggable, String
+                                                          sql,
+                                                  String apiKey, String partitionedSql) throws Exception {
+        when(oauthServerConfigurationMock.isAccessTokenPartitioningEnabled()).thenReturn(accessTokenPartitioningEnabled);
+        when(oauthServerConfigurationMock.isUserNameAssertionEnabled()).thenReturn(assertionsUserNameEnabled);
+        when(oauthServerConfigurationMock.getAccessTokenPartitioningDomains()).thenReturn("A:H2, B:AD");
+        mockStatic(IdentityUtil.class);
+        when(IdentityUtil.getPrimaryDomainName()).thenReturn("PRIMARY");
+        when(IdentityUtil.isTokenLoggable(anyString())).thenReturn(isTokenLoggable);
+        assertEquals(OAuth2Util.getTokenPartitionedSqlByToken(sql, apiKey), partitionedSql);
+    }
+
+    @DataProvider(name = "UserStoreDomainFromUserIdData")
+    public Object[][] userStoreDomainFromUserIdData() {
+        return new Object[][]{
+                // userId
+                // userStoreDomain
+                {"H2/admin", "A"},
+                {"admin", null}
+        };
+    }
+
+    @Test(dataProvider = "UserStoreDomainFromUserIdData")
+    public void testGetUserStoreDomainFromUserId(String userId, String userStoreDomain) throws Exception {
+        when(oauthServerConfigurationMock.getAccessTokenPartitioningDomains()).thenReturn("A:H2, B:AD");
+        assertEquals(OAuth2Util.getUserStoreDomainFromUserId(userId), userStoreDomain);
+    }
+
+    @DataProvider(name = "UserStoreDomainFromAccessTokenData")
+    public Object[][] userStoreDomainFromAccessTokenData() {
+        String apiKey1 = "NDk1MmI0NjctODZiMi0zMWRmLWI2M2MtMGJmMjVjZWM0Zjg2OkgyL2FkbWlu";
+        String apiKey2 = "NDk1MmI0NjctODZiMi0zMWRmLWI2M2MtMGJmMjVjZWM0Zjg2OmFkbWlu";
+
+        return new Object[][]{
+                // apiKey
+                // userStoreDomain
+                {apiKey1, "H2"},
+                {apiKey2, null}
+        };
+    }
+
+    @Test(dataProvider = "UserStoreDomainFromAccessTokenData")
+    public void testGetUserStoreDomainFromAccessToken(String apiKey, String userStoreDomain) throws Exception {
+        assertEquals(OAuth2Util.getUserStoreDomainFromAccessToken(apiKey), userStoreDomain);
+    }
+
+    @DataProvider(name = "AccessTokenStoreTableFromUserIdData")
+    public Object[][] accessTokenStoreTableFromUserIdData() {
+        return new Object[][]{
+                // userId
+                // accessTokenStoreTable
+                {"H2/admin", "IDN_OAUTH2_ACCESS_TOKEN_A"},
+                {"admin", "IDN_OAUTH2_ACCESS_TOKEN"},
+                {null, "IDN_OAUTH2_ACCESS_TOKEN"}
+        };
+    }
+
+    @Test(dataProvider = "AccessTokenStoreTableFromUserIdData")
+    public void testGetAccessTokenStoreTableFromUserId(String userId, String accessTokenStoreTable) throws Exception {
+        when(oauthServerConfigurationMock.getAccessTokenPartitioningDomains()).thenReturn("A:H2, B:AD");
+        mockStatic(IdentityUtil.class);
+        when(IdentityUtil.getPrimaryDomainName()).thenReturn("PRIMARY");
+        assertEquals(OAuth2Util.getAccessTokenStoreTableFromUserId(userId), accessTokenStoreTable);
+    }
+
+    @Test
+    public void testGetAccessTokenStoreTableFromAccessToken() throws Exception {
+        String apiKey = "NDk1MmI0NjctODZiMi0zMWRmLWI2M2MtMGJmMjVjZWM0Zjg2OmFkbWlu";
+        String accessTokenStoreTable = "IDN_OAUTH2_ACCESS_TOKEN";
+        assertEquals(OAuth2Util.getAccessTokenStoreTableFromAccessToken(apiKey), accessTokenStoreTable);
+    }
+
+    @DataProvider(name = "UserIdFromAccessTokenData")
+    public Object[][] userIdFromAccessTokenData() {
+        String apiKey1 = "NDk1MmI0NjctODZiMi0zMWRmLWI2M2MtMGJmMjVjZWM0Zjg2OmFkbWlu";
+        String apiKey2 = "NDk1MmI0NjctODZiMi0zMWRmLWI2M2MtMGJmMjVjZWM0Zjg2";
+
+        return new Object[][]{
+                // apiKey
+                // userId
+                {apiKey1, "admin"},
+                {apiKey2, null}
+        };
+    }
+
+    @Test(dataProvider = "UserIdFromAccessTokenData")
+    public void testGetUserIdFromAccessToken(String apiKey, String userId) throws Exception {
+        assertEquals(OAuth2Util.getUserIdFromAccessToken(apiKey), userId);
+    }
+
+    @Test
+    public void testGetTokenExpireTimeMillis() throws Exception {
+        AccessTokenDO accessTokenDO = new AccessTokenDO(clientId, authzUser, scopeArraySorted, issuedTime,
+                refreshTokenIssuedTime, validityPeriodInMillis, refreshTokenValidityPeriodInMillis, tokenType,
+                authorizationCode);
+        assertTrue(OAuth2Util.getTokenExpireTimeMillis(accessTokenDO) > 1000);
+    }
+
+    @Test(expectedExceptions = IllegalArgumentException.class)
+    public void testGetTokenExpireTimeMillis2() throws Exception {
+        AccessTokenDO accessTokenDO = null;
+        OAuth2Util.getTokenExpireTimeMillis(accessTokenDO);
+    }
+
+    @Test
+    public void testGetRefreshTokenExpireTimeMillis() throws Exception {
+        AccessTokenDO accessTokenDO = new AccessTokenDO(clientId, authzUser, scopeArraySorted, issuedTime,
+                refreshTokenIssuedTime, validityPeriodInMillis, refreshTokenValidityPeriodInMillis, tokenType,
+                authorizationCode);
+        assertTrue(OAuth2Util.getRefreshTokenExpireTimeMillis(accessTokenDO) > 1000);
+    }
+
+    @Test
+    public void testGetRefreshTokenExpireTimeMillis2() throws Exception {
+        refreshTokenValidityPeriodInMillis = -100;
+        AccessTokenDO accessTokenDO = new AccessTokenDO(clientId, authzUser, scopeArraySorted, issuedTime,
+                refreshTokenIssuedTime, validityPeriodInMillis, refreshTokenValidityPeriodInMillis, tokenType,
+                authorizationCode);
+        assertEquals(OAuth2Util.getRefreshTokenExpireTimeMillis(accessTokenDO), -1);
+    }
+
+    @Test(expectedExceptions = IllegalArgumentException.class)
+    public void testGetRefreshTokenExpireTimeMillis3() throws Exception {
+        AccessTokenDO accessTokenDO = null;
+        OAuth2Util.getRefreshTokenExpireTimeMillis(accessTokenDO);
+    }
+
+    @Test
+    public void testGetAccessTokenExpireMillis() throws Exception {
+        AccessTokenDO accessTokenDO = new AccessTokenDO(clientId, authzUser, scopeArraySorted, issuedTime,
+                refreshTokenIssuedTime, validityPeriodInMillis, refreshTokenValidityPeriodInMillis, tokenType,
+                authorizationCode);
+        assertTrue(OAuth2Util.getAccessTokenExpireMillis(accessTokenDO) > 1000);
+    }
+
+    @DataProvider(name = "BooleanData2")
+    public Object[][] booleanData2() {
+        return new Object[][]{
+                // isTokenLoggable
+                {true},
+                {false}
+        };
+    }
+
+    @Test(dataProvider = "BooleanData2")
+    public void testGetAccessTokenExpireMillis2(boolean isTokenLoggable) throws Exception {
+        validityPeriodInMillis = -100;
+        AccessTokenDO accessTokenDO = new AccessTokenDO(clientId, authzUser, scopeArraySorted, issuedTime,
+                refreshTokenIssuedTime, validityPeriodInMillis, refreshTokenValidityPeriodInMillis, tokenType,
+                authorizationCode);
+        accessTokenDO.setAccessToken(accessToken);
+        mockStatic(IdentityUtil.class);
+        when(IdentityUtil.getPrimaryDomainName()).thenReturn("PRIMARY");
+        when(IdentityUtil.isTokenLoggable(anyString())).thenReturn(isTokenLoggable);
+        assertEquals(OAuth2Util.getAccessTokenExpireMillis(accessTokenDO), -1);
+    }
+
+    @Test(expectedExceptions = IllegalArgumentException.class)
+    public void testGetAccessTokenExpireMillis3() throws Exception {
+        AccessTokenDO accessTokenDO = null;
+        OAuth2Util.getAccessTokenExpireMillis(accessTokenDO);
+    }
+
+    @Test
+    public void testCalculateValidityInMillis() throws Exception {
+        long issuedTimeInMillis = System.currentTimeMillis() - 5000;
+        long validityPeriodMillis = 100000;
+        assertTrue(OAuth2Util.calculateValidityInMillis(issuedTimeInMillis, validityPeriodMillis) > 0);
+    }
+
+    @Test
+    public void testGetTenantId() throws Exception {
+        when(oAuthComponentServiceHolderMock.getRealmService()).thenReturn(realmServiceMock);
+        when(realmServiceMock.getTenantManager()).thenReturn(tenantManagerMock);
+        when(tenantManagerMock.getTenantId(anyString())).thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+
+        assertEquals(OAuth2Util.getTenantId(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME),
+                MultitenantConstants.SUPER_TENANT_ID);
+    }
+
+    @Test(expectedExceptions = IdentityOAuth2Exception.class)
+    public void testGetTenantId1() throws Exception {
+        when(oAuthComponentServiceHolderMock.getRealmService()).thenReturn(realmServiceMock);
+        when(realmServiceMock.getTenantManager()).thenReturn(tenantManagerMock);
+        when(tenantManagerMock.getTenantId(anyString())).thenThrow(new UserStoreException());
+
+        OAuth2Util.getTenantId(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+    }
+
+    @Test
+    public void testGetTenantDomain() throws Exception {
+        when(oAuthComponentServiceHolderMock.getRealmService()).thenReturn(realmServiceMock);
+        when(realmServiceMock.getTenantManager()).thenReturn(tenantManagerMock);
+        when(tenantManagerMock.getDomain(anyInt())).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+
+        assertEquals(OAuth2Util.getTenantDomain(MultitenantConstants.SUPER_TENANT_ID),
+                MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+    }
+
+    @Test(expectedExceptions = IdentityOAuth2Exception.class)
+    public void testGetTenantDomain1() throws Exception {
+        when(oAuthComponentServiceHolderMock.getRealmService()).thenReturn(realmServiceMock);
+        when(realmServiceMock.getTenantManager()).thenReturn(tenantManagerMock);
+        when(tenantManagerMock.getDomain(anyInt())).thenThrow(new UserStoreException());
+
+        OAuth2Util.getTenantDomain(MultitenantConstants.SUPER_TENANT_ID);
+    }
+
+    @Test
+    public void testGetTenantIdFromUserName() throws Exception {
+        String userName = "admin" + CarbonConstants.ROLE_TENANT_DOMAIN_SEPARATOR + MultitenantConstants
+                .SUPER_TENANT_DOMAIN_NAME;
+        when(oAuthComponentServiceHolderMock.getRealmService()).thenReturn(realmServiceMock);
+        when(realmServiceMock.getTenantManager()).thenReturn(tenantManagerMock);
+        when(tenantManagerMock.getTenantId(anyString())).thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+
+        assertEquals(OAuth2Util.getTenantIdFromUserName(userName), MultitenantConstants.SUPER_TENANT_ID);
+    }
+
+    @Test
+    public void testHashScopes() throws Exception {
+        String hashScopes = DigestUtils.md5Hex(scopeString);
+        assertEquals(OAuth2Util.hashScopes(scopeArraySorted), hashScopes);
+    }
+
+    @DataProvider(name = "ScopesData")
+    public Object[][] scopesData() {
+        String scope = "testScope";
+        String hashScope = DigestUtils.md5Hex(scope);
+
+        return new Object[][]{
+                // scope
+                // hashScope
+                {scope, hashScope},
+                {null, null}
+        };
+    }
+
+    @Test(dataProvider = "ScopesData")
+    public void testHashScopes1(String scope, String hashScope) throws Exception {
+        assertEquals(OAuth2Util.hashScopes(scope), hashScope);
+    }
+
+    @Test
+    public void testGetUserFromUserName() throws Exception {
+        AuthenticatedUser user = OAuth2Util.getUserFromUserName("H2/testUser");
+        assertNotNull(user, "User should be not null.");
+        assertEquals(user.getUserName(), "testUser");
+        assertEquals(user.getTenantDomain(), MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        assertEquals(user.getUserStoreDomain(), "H2");
+    }
+
+    @Test(expectedExceptions = IllegalArgumentException.class)
+    public void testGetUserFromUserName1() throws Exception {
+        OAuth2Util.getUserFromUserName("");
+    }
+
+    @DataProvider(name = "IDTokenIssuerData")
+    public Object[][] idTokenIssuerData() {
+        return new Object[][]{
+                // oidcIDTokenIssuer
+                // oauth2TokenEPUrl
+                // issuer
+                {"testIssuer", "", "testIssuer"},
+                {"", "testIssuer", "testIssuer"},
+                {"", "", "https://localhost:9443/oauth2/token"}
+        };
+    }
+
+    @Test(dataProvider = "IDTokenIssuerData")
+    public void testGetIDTokenIssuer(String oidcIDTokenIssuer, String oauth2TokenEPUrl, String issuer) throws Exception {
+        when(oauthServerConfigurationMock.getOpenIDConnectIDTokenIssuerIdentifier()).thenReturn(oidcIDTokenIssuer);
+        when(oauthServerConfigurationMock.getOAuth2TokenEPUrl()).thenReturn(oauth2TokenEPUrl);
+        mockStatic(IdentityUtil.class);
+        when(IdentityUtil.getServerURL(anyString(), anyBoolean(), anyBoolean())).
+                thenReturn("https://localhost:9443/oauth2/token");
+
+        assertEquals(OAuth2Util.getIDTokenIssuer(), issuer);
+    }
+
+    @DataProvider(name = "OAuthURLData")
+    public Object[][] oauthURLData() {
+        return new Object[][]{
+                // configUrl
+                // serverUrl
+                // oauthUrl
+                {"/testUrl", "https://localhost:9443/testUrl", "/testUrl"},
+                {"", "https://localhost:9443/testUrl", "https://localhost:9443/testUrl"}
+        };
+    }
+
+    @Test(dataProvider = "OAuthURLData")
+    public void testGetOAuth1RequestTokenUrl(String configUrl, String serverUrl, String oauthUrl) throws Exception {
+        when(oauthServerConfigurationMock.getOAuth1RequestTokenUrl()).thenReturn(configUrl);
+        getOAuthURL(serverUrl);
+        assertEquals(OAuth2Util.OAuthURL.getOAuth1RequestTokenUrl(), oauthUrl);
+    }
+
+    @Test(dataProvider = "OAuthURLData")
+    public void testGetOAuth1AuthorizeUrl(String configUrl, String serverUrl, String oauthUrl) throws Exception {
+        when(oauthServerConfigurationMock.getOAuth1AuthorizeUrl()).thenReturn(configUrl);
+        getOAuthURL(serverUrl);
+        assertEquals(OAuth2Util.OAuthURL.getOAuth1AuthorizeUrl(), oauthUrl);
+    }
+
+    @Test(dataProvider = "OAuthURLData")
+    public void testGetOAuth1AccessTokenUrl(String configUrl, String serverUrl, String oauthUrl) throws Exception {
+        when(oauthServerConfigurationMock.getOAuth1AccessTokenUrl()).thenReturn(configUrl);
+        getOAuthURL(serverUrl);
+        assertEquals(OAuth2Util.OAuthURL.getOAuth1AccessTokenUrl(), oauthUrl);
+    }
+
+    @Test(dataProvider = "OAuthURLData")
+    public void testGetOAuth2AuthzEPUrl(String configUrl, String serverUrl, String oauthUrl) throws Exception {
+        when(oauthServerConfigurationMock.getOAuth2AuthzEPUrl()).thenReturn(configUrl);
+        getOAuthURL(serverUrl);
+        assertEquals(OAuth2Util.OAuthURL.getOAuth2AuthzEPUrl(), oauthUrl);
+    }
+
+    @Test(dataProvider = "OAuthURLData")
+    public void testGetOAuth2TokenEPUrl(String configUrl, String serverUrl, String oauthUrl) throws Exception {
+        when(oauthServerConfigurationMock.getOAuth2TokenEPUrl()).thenReturn(configUrl);
+        getOAuthURL(serverUrl);
+        assertEquals(OAuth2Util.OAuthURL.getOAuth2TokenEPUrl(), oauthUrl);
+    }
+
+    @DataProvider(name = "OAuthURLData2")
+    public Object[][] oauthURLData2() {
+        return new Object[][]{
+                // configUrl
+                // serverUrl
+                // tenantDomain
+                // oauthUrl
+                {"/testUrl", "https://localhost:9443/testUrl", "testDomain", "/t/testDomain/testUrl"},
+                {"/testUrl", "https://localhost:9443/testUrl", MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
+                        "/testUrl"},
+                {"", "https://localhost:9443/testUrl", "testDomain", "https://localhost:9443/t/testDomain/testUrl"}
+        };
+    }
+
+    @Test(dataProvider = "OAuthURLData2")
+    public void testGetOAuth2DCREPUrl(String configUrl, String serverUrl, String tenantDomain, String oauthUrl)
+            throws Exception {
+        when(oauthServerConfigurationMock.getOAuth2DCREPUrl()).thenReturn(configUrl);
+        getOAuthURL(serverUrl);
+        assertEquals(OAuth2Util.OAuthURL.getOAuth2DCREPUrl(tenantDomain), oauthUrl);
+    }
+
+    @Test(dataProvider = "OAuthURLData2")
+    public void testGetOAuth2JWKSPageUrl(String configUrl, String serverUrl, String tenantDomain, String oauthUrl)
+            throws Exception {
+        when(oauthServerConfigurationMock.getOAuth2JWKSPageUrl()).thenReturn(configUrl);
+        getOAuthURL(serverUrl);
+        assertEquals(OAuth2Util.OAuthURL.getOAuth2JWKSPageUrl(tenantDomain), oauthUrl);
+    }
+
+    @Test(dataProvider = "OAuthURLData")
+    public void testGetOidcWebFingerEPUrl(String configUrl, String serverUrl, String oauthUrl) throws Exception {
+        when(oauthServerConfigurationMock.getOidcWebFingerEPUrl()).thenReturn(configUrl);
+        getOAuthURL(serverUrl);
+        assertEquals(OAuth2Util.OAuthURL.getOidcWebFingerEPUrl(), oauthUrl);
+    }
+
+    @Test(dataProvider = "OAuthURLData2")
+    public void testGetOidcDiscoveryEPUrl(String configUrl, String serverUrl, String tenantDomain, String oauthUrl)
+            throws Exception {
+        when(oauthServerConfigurationMock.getOidcDiscoveryUrl()).thenReturn(configUrl);
+        getOAuthURL(serverUrl);
+        assertEquals(OAuth2Util.OAuthURL.getOidcDiscoveryEPUrl(tenantDomain), oauthUrl);
+    }
+
+    @Test(dataProvider = "OAuthURLData")
+    public void testGetOAuth2UserInfoEPUrl(String configUrl, String serverUrl, String oauthUrl) throws Exception {
+        when(oauthServerConfigurationMock.getOauth2UserInfoEPUrl()).thenReturn(configUrl);
+        getOAuthURL(serverUrl);
+        assertEquals(OAuth2Util.OAuthURL.getOAuth2UserInfoEPUrl(), oauthUrl);
+    }
+
+    @Test(dataProvider = "OAuthURLData")
+    public void testGetOIDCConsentPageUrl(String configUrl, String serverUrl, String oauthUrl) throws Exception {
+        when(oauthServerConfigurationMock.getOIDCConsentPageUrl()).thenReturn(configUrl);
+        getOAuthURL(serverUrl);
+        assertEquals(OAuth2Util.OAuthURL.getOIDCConsentPageUrl(), oauthUrl);
+    }
+
+    @Test(dataProvider = "OAuthURLData")
+    public void testGetOAuth2ConsentPageUrl(String configUrl, String serverUrl, String oauthUrl) throws Exception {
+        when(oauthServerConfigurationMock.getOauth2ConsentPageUrl()).thenReturn(configUrl);
+        getOAuthURL(serverUrl);
+        assertEquals(OAuth2Util.OAuthURL.getOAuth2ConsentPageUrl(), oauthUrl);
+    }
+
+    @Test(dataProvider = "OAuthURLData")
+    public void testGetOAuth2ErrorPageUrl(String configUrl, String serverUrl, String oauthUrl) throws Exception {
+        when(oauthServerConfigurationMock.getOauth2ErrorPageUrl()).thenReturn(configUrl);
+        getOAuthURL(serverUrl);
+        assertEquals(OAuth2Util.OAuthURL.getOAuth2ErrorPageUrl(), oauthUrl);
+    }
+
+    private void getOAuthURL(String serverUrl) {
+        mockStatic(IdentityUtil.class);
+        when(IdentityUtil.getServerURL(anyString(), anyBoolean(), anyBoolean())).thenReturn(serverUrl);
+    }
+
 }
