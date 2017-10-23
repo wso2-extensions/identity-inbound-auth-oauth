@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oauth2.dao;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.testutil.IdentityBaseTest;
 
 import java.net.SocketException;
 
@@ -29,7 +30,7 @@ import static org.testng.Assert.assertTrue;
 /**
  * Unit tests for AccessContextTokenDO.
  */
-public class AccessContextTokenDOTest {
+public class AccessContextTokenDOTest extends IdentityBaseTest {
 
     private AccessContextTokenDO accessContextTokenDO;
 

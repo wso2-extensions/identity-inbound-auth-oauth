@@ -50,6 +50,9 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
+import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
+import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCache;
@@ -111,6 +114,7 @@ import static org.powermock.api.mockito.PowerMockito.doAnswer;
 import static org.powermock.api.mockito.PowerMockito.doNothing;
 import static org.powermock.api.mockito.PowerMockito.doReturn;
 import static org.powermock.api.mockito.PowerMockito.doThrow;
+import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.spy;
 import static org.powermock.api.mockito.PowerMockito.when;
@@ -118,11 +122,12 @@ import static org.powermock.api.mockito.PowerMockito.whenNew;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
+import static org.testng.FileAssert.fail;
 
 @PrepareForTest({ OAuth2Util.class, SessionDataCache.class, OAuthServerConfiguration.class, IdentityDatabaseUtil.class,
         EndpointUtil.class, FrameworkUtils.class, EndpointUtil.class, OpenIDConnectUserRPStore.class,
         CarbonOAuthAuthzRequest.class, IdentityTenantUtil.class, OAuthResponse.class, SignedJWT.class,
-        OIDCSessionManagementUtil.class, CarbonUtils.class})
+        OIDCSessionManagementUtil.class, CarbonUtils.class, SessionDataCache.class})
 public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
     @Mock
@@ -173,6 +178,9 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
     @Mock
     OIDCSessionManager oidcSessionManager;
 
+    @Mock
+    ApplicationManagementService applicationManagementService;
+
     private static final String ERROR_PAGE_URL = "https://localhost:9443/authenticationendpoint/oauth2_error.do";
     private static final String LOGIN_PAGE_URL = "https://localhost:9443/authenticationendpoint/login.do";
     private static final String USER_CONSENT_URL =
@@ -190,6 +198,8 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
     private static final String USERNAME = "user1";
     private static final String APP_REDIRECT_URL = "http://localhost:8080/redirect";
     private static final String APP_REDIRECT_URL_JSON = "{\"url\":\"http://localhost:8080/redirect\"}";
+    private static final String SP_DISPLAY_NAME = "DisplayName";
+    private static final String SP_NAME = "Name";
 
     private OAuth2AuthzEndpoint oAuth2AuthzEndpoint;
     private Object authzEndpointObject;
@@ -317,7 +327,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         };
     }
 
-    @Test (dataProvider = "provideParams")
+    @Test (dataProvider = "provideParams", groups = "testWithConnection")
     public void testAuthorize(Object flowStatusObject, String[] clientId, String sessionDataKayConsent,
                               String toCommonAuth, String scope, String sessionDataKey, Exception e, int expectedStatus,
                               String expectedError) throws Exception {
@@ -436,7 +446,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         };
     }
 
-    @Test(dataProvider = "provideAuthenticatedData")
+    @Test(dataProvider = "provideAuthenticatedData", groups = "testWithConnection")
     public void testAuthorizeForAuthenticationResponse(boolean isResultInRequest, boolean isAuthenticated,
                                                        Map<ClaimMapping, String> attributes, String errorCode,
                                                        String errorMsg, String errorUri, Set<String> scopes,
@@ -521,7 +531,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         };
     }
 
-    @Test(dataProvider = "provideConsentData")
+    @Test(dataProvider = "provideConsentData", groups = "testWithConnection")
     public void testUserConsentResponse(String consent, String redirectUrl, Set<String> scopes,
                                         int expectedStatus, String expectedError) throws Exception {
         mockStatic(SessionDataCache.class);
@@ -685,7 +695,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
      *
      * Tests the scenario of authorization request from the client
      */
-    @Test(dataProvider = "provideAuthzRequestData")
+    @Test(dataProvider = "provideAuthzRequestData", groups = "testWithConnection")
     public void testHandleOAuthAuthorizationRequest(String clientId, String redirectUri, String pkceChallengeCode,
                                                      String pkceChallengeMethod, String prompt, boolean clientValid,
                                                      boolean pkceEnabled, boolean supportPlainPkce,
@@ -821,7 +831,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         };
     }
 
-    @Test(dataProvider = "provideUserConsentData")
+    @Test(dataProvider = "provideUserConsentData", groups = "testWithConnection")
     public void testHandleUserConsent(boolean isRespDTONull, String consent, boolean skipConsent, String errorCode,
                                       String authCode, String accessToken, String idToken, String responseType,
                                       String responseMode, String authenticatedIdps, String state, int expectedStatus,
@@ -921,7 +931,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         };
     }
 
-    @Test(dataProvider = "provideDataForUserAuthz")
+    @Test(dataProvider = "provideDataForUserAuthz", groups = "testWithConnection")
     public void testDoUserAuthz(String prompt, String idTokenHint, boolean hasUserApproved, boolean skipConsent,
                                 boolean idTokenHintValid, String loggedInUser, String idTokenHintSubject,
                                 String errorCode) throws Exception {
@@ -1021,7 +1031,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         };
     }
 
-    @Test (dataProvider = "provideOidcSessionData")
+    @Test (dataProvider = "provideOidcSessionData", groups = "testWithConnection")
     public void testManageOIDCSessionState(Object cookieObject, Object sessionStateObject, String callbackUrl,
                                            String responseMode, int expectedStatus, String expectedResult)
             throws Exception {
@@ -1233,6 +1243,155 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
             assertEquals(timestamp, Long.parseLong(createdTimeStamp.toString()),
                     "session context created time should be equal to the authenticated time");
         }
+    }
+
+    @DataProvider(name = "provideGetServiceProviderData")
+    public Object[][] provideGetServiceProviderData() {
+        return new Object[][] {
+                {CLIENT_ID_VALUE, null},
+                {CLIENT_ID_VALUE, new IdentityOAuth2Exception("Error")},
+                {"invalidId", null},
+        };
+    }
+
+    @Test(dataProvider = "provideGetServiceProviderData", groups = "testWithConnection")
+    public void testGetServiceProvider(String clientId, Exception e) throws Exception {
+        Method getServiceProvider = authzEndpointObject.getClass().getDeclaredMethod(
+                "getServiceProvider", String.class);
+        getServiceProvider.setAccessible(true);
+
+        ServiceProvider sp = new ServiceProvider();
+        sp.setApplicationName(APP_NAME);
+        mockOAuthServerConfiguration();
+        mockEndpointUtil();
+        doReturn(applicationManagementService).when(EndpointUtil.class, "getApplicationManagementService");
+        when(applicationManagementService.getServiceProvider(anyString(), anyString())).thenReturn(sp);
+
+        mockStatic(IdentityTenantUtil.class);
+        when(IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+
+        mockStatic(IdentityDatabaseUtil.class);
+        when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+
+        if (e instanceof IdentityOAuth2Exception) {
+            when(tokenPersistenceProcessor.getPreprocessedClientSecret(anyString())).thenThrow(e);
+        }
+        try {
+            ServiceProvider result = (ServiceProvider) getServiceProvider.invoke(authzEndpointObject, clientId);
+            assertEquals(result.getApplicationName(), APP_NAME);
+        } catch (Exception e1) {
+            if (e == null && CLIENT_ID_VALUE.equals(clientId)) {
+                fail("Unexpected Exception");
+            }
+        }
+    }
+
+    @DataProvider(name = "provideHandleOAuthAuthorizationRequest1Data")
+    public Object[][] provideHandleOAuthAuthorizationRequest1Data() {
+        ServiceProvider sp1 = new ServiceProvider();
+        ServiceProvider sp2 = new ServiceProvider();
+        ServiceProvider sp3 = new ServiceProvider();
+        ServiceProviderProperty property1 = new ServiceProviderProperty();
+        property1.setName(SP_DISPLAY_NAME);
+        property1.setValue("myApplication");
+        ServiceProviderProperty property2 = new ServiceProviderProperty();
+        property2.setName(SP_NAME);
+        property2.setValue(APP_NAME);
+
+        ServiceProviderProperty[] properties1 = new ServiceProviderProperty[]{property1, property2};
+        sp1.setSpProperties(properties1);
+        ServiceProviderProperty[] properties2 = new ServiceProviderProperty[]{property2};
+        sp2.setSpProperties(properties2);
+
+        return new Object[][] {
+                { true, sp1, "myApplication"},
+                { true, sp2, null},
+                { true, sp3, null},
+                { false, sp1, null},
+        };
+    }
+
+    @Test(dataProvider = "provideHandleOAuthAuthorizationRequest1Data", groups = "testWithConnection")
+    public void testHandleOAuthAuthorizationRequest1(boolean showDisplayName, Object spObj, String savedDisplayName)
+            throws Exception {
+        ServiceProvider sp = (ServiceProvider) spObj;
+        sp.setApplicationName(APP_NAME);
+
+        mockOAuthServerConfiguration();
+        mockEndpointUtil();
+        doReturn(applicationManagementService).when(EndpointUtil.class, "getApplicationManagementService");
+        when(applicationManagementService.getServiceProvider(anyString(), anyString())).thenReturn(sp);
+        doReturn(applicationManagementService).when(EndpointUtil.class, "getApplicationManagementService");
+
+        mockStatic(IdentityTenantUtil.class);
+        when(IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+
+        mockStatic(IdentityDatabaseUtil.class);
+        when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+
+        Map<String, String[]> requestParams = new HashMap();
+        Map<String, Object> requestAttributes = new HashMap();
+
+        requestParams.put(CLIENT_ID, new String[] {CLIENT_ID_VALUE});
+
+        requestParams.put(REDIRECT_URI, new String[]{APP_REDIRECT_URL});
+        requestParams.put(OAuth.OAUTH_RESPONSE_TYPE, new String[]{ResponseType.TOKEN.toString()});
+
+        mockHttpRequest(requestParams, requestAttributes, HttpMethod.POST);
+
+        OAuth2ClientValidationResponseDTO validationResponseDTO = new OAuth2ClientValidationResponseDTO();
+        validationResponseDTO.setValidClient(true);
+        validationResponseDTO.setCallbackURL(APP_REDIRECT_URL);
+        when(oAuth2Service.validateClientInfo(anyString(), anyString())).thenReturn(validationResponseDTO);
+
+        Map<String, Class<? extends OAuthValidator<HttpServletRequest>>> responseTypeValidators = new Hashtable<>();
+        responseTypeValidators.put(ResponseType.CODE.toString(), CodeValidator.class);
+        responseTypeValidators.put(ResponseType.TOKEN.toString(), TokenValidator.class);
+
+        when(oAuthServerConfiguration.getSupportedResponseTypeValidators()).thenReturn(responseTypeValidators);
+        when(oAuthServerConfiguration.isShowDisplayNameInConsentPage()).thenReturn(showDisplayName);
+
+        Method handleOAuthAuthorizationRequest = authzEndpointObject.getClass().getDeclaredMethod(
+                "handleOAuthAuthorizationRequest", String.class, HttpServletRequest.class);
+        handleOAuthAuthorizationRequest.setAccessible(true);
+
+        SessionDataCache sessionDataCache = mock(SessionDataCache.class);
+        mockStatic(SessionDataCache.class);
+        when(SessionDataCache.getInstance()).thenReturn(sessionDataCache);
+        final SessionDataCacheEntry[] cacheEntry = new SessionDataCacheEntry[1];
+        doAnswer(new Answer<Object>(){
+            @Override
+            public Object answer(InvocationOnMock invocation) throws Throwable {
+                cacheEntry[0] = (SessionDataCacheEntry) invocation.getArguments()[1];
+                return null;
+            }
+        }).when(sessionDataCache).addToCache(any(SessionDataCacheKey.class), any(SessionDataCacheEntry.class));
+
+        handleOAuthAuthorizationRequest.invoke(authzEndpointObject, CLIENT_ID_VALUE, httpServletRequest);
+        assertNotNull(cacheEntry[0], "Parameters not saved in cache");
+        assertEquals(cacheEntry[0].getoAuth2Parameters().getDisplayName(), savedDisplayName);
+    }
+
+    @Test(dependsOnGroups = "testWithConnection")
+    public void testIdentityOAuthAdminException() throws Exception {
+        Map<String, String[]> requestParams = new HashMap<>();
+        Map<String, Object> requestAttributes = new HashMap<>();
+
+        requestParams.put(CLIENT_ID, new String[]{CLIENT_ID_VALUE});
+        requestParams.put(FrameworkConstants.RequestParams.TO_COMMONAUTH, new String[]{"false"});
+        requestAttributes.put(FrameworkConstants.RequestParams.FLOW_STATUS, AuthenticatorFlowStatus.SUCCESS_COMPLETED);
+        mockHttpRequest(requestParams, requestAttributes, HttpMethod.POST);
+
+        mockOAuthServerConfiguration();
+        mockStatic(IdentityDatabaseUtil.class);
+        when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+
+        connection.close(); // Closing connection to create SQLException
+        Response response = oAuth2AuthzEndpoint.authorize(httpServletRequest, httpServletResponse);
+        assertEquals(response.getStatus(), HttpServletResponse.SC_NOT_FOUND);
+        assertNotNull(response.getEntity(), "Response entity is null");
+        assertTrue(response.getEntity().toString().contains(OAuth2ErrorCodes.SERVER_ERROR),
+                "Expected OAuth2 error code not found");
     }
 
     private void mockHttpRequest(final Map<String, String[]> requestParams,

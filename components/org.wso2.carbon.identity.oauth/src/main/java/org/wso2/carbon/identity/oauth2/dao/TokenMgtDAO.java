@@ -1479,7 +1479,7 @@ public class TokenMgtDAO {
 
             while (rs.next()){
                 long validityPeriodInMillis = rs.getLong(3);
-                Timestamp timeCreated = rs.getTimestamp(2);
+                Timestamp timeCreated = rs.getTimestamp(2, Calendar.getInstance(TimeZone.getTimeZone(UTC)));
                 long issuedTimeInMillis = timeCreated.getTime();
 
                 // if authorization code is not expired.
@@ -2099,6 +2099,7 @@ public class TokenMgtDAO {
                     dataDO.setAccessToken(accessToken);
                     dataDO.setRefreshToken(refreshToken);
                     dataDO.setTokenId(tokenId);
+                    dataDO.setTenantID(tenantId);
                     accessTokenDOMap.put(accessToken, dataDO);
                 } else {
                     String scope = resultSet.getString(8).trim();
@@ -2167,6 +2168,7 @@ public class TokenMgtDAO {
                     dataDO.setAccessToken(accessToken);
                     dataDO.setRefreshToken(refreshToken);
                     dataDO.setTokenId(tokenId);
+                    dataDO.setTenantID(tenantId);
                     accessTokenDOMap.put(accessToken, dataDO);
                 } else {
                     String scope = resultSet.getString(8).trim();

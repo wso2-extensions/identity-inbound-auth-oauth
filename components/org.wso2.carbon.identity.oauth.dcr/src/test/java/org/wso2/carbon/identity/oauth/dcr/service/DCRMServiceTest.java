@@ -50,6 +50,7 @@ import static org.powermock.api.mockito.PowerMockito.whenNew;
 import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.doThrow;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
+import static org.powermock.api.mockito.PowerMockito.doNothing;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AParams.OAUTH_VERSION;
 
 import java.nio.file.Paths;
@@ -562,7 +563,9 @@ public class DCRMServiceTest extends PowerMockTestCase {
     public void updateApplicationTestWithException()
             throws DCRMException, IdentityOAuthAdminException, IdentityApplicationManagementException {
 
-        startTenantFlow();
+        List<String> redirectUri = new ArrayList<>();
+        dummyGrantTypes.add("dummyVal");
+        redirectUri.add("dummyUri");
         mockApplicationUpdateRequest = mock(ApplicationUpdateRequest.class);
         mockApplicationManagementService = mock(ApplicationManagementService.class);
 
@@ -578,17 +581,23 @@ public class DCRMServiceTest extends PowerMockTestCase {
         when(mockApplicationManagementService.getServiceProvider(dummyClientName, dummyTenantDomain)).thenReturn
                 (serviceProvider);
 
-        OAuthConsumerAppDTO appDTO = new OAuthConsumerAppDTO();
-        appDTO.setApplicationName(dummyClientName);
+        when(mockApplicationUpdateRequest.getClientName()).thenReturn(dummyClientName);
+        doNothing().when(mockApplicationManagementService).updateApplication(serviceProvider, dummyTenantDomain,
+                dummyUserName);
+        when(mockApplicationUpdateRequest.getGrantTypes()).thenReturn(dummyGrantTypes);
+        when(mockApplicationUpdateRequest.getRedirectUris()).thenReturn(redirectUri);
 
         doThrow(new IdentityOAuthAdminException("")).when(mockOAuthAdminService).updateConsumerApplication(any
                 (OAuthConsumerAppDTO.class));
 
         try {
+            startTenantFlow();
             dcrmService.updateApplication(mockApplicationUpdateRequest, dummyClientId);
         } catch (IdentityException ex) {
             assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.FAILED_TO_UPDATE_APPLICATION.toString());
             return;
+        } finally {
+            PrivilegedCarbonContext.endTenantFlow();
         }
         fail("Expected exception IdentityException not thrown by updateApplication method");
     }

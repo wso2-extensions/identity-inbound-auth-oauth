@@ -611,11 +611,11 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         if (tokReqMsgCtx.getOauth2AccessTokenReqDTO().getGrantType().equals(
                 org.wso2.carbon.identity.oauth.common.GrantType.SAML20_BEARER.toString())) {
             authzCallback.setCarbonGrantType(org.wso2.carbon.identity.oauth.common.GrantType.valueOf(
-                    OAuthConstants.OAUTH_SAML2_BEARER_GRANT_ENUM.toString()));
+                    OAuthConstants.OAUTH_SAML2_BEARER_GRANT_ENUM));
         } else if (tokReqMsgCtx.getOauth2AccessTokenReqDTO().getGrantType().equals(
                 org.wso2.carbon.identity.oauth.common.GrantType.IWA_NTLM.toString())) {
             authzCallback.setCarbonGrantType(org.wso2.carbon.identity.oauth.common.GrantType.valueOf(
-                    OAuthConstants.OAUTH_IWA_NTLM_GRANT_ENUM.toString()));
+                    OAuthConstants.OAUTH_IWA_NTLM_GRANT_ENUM));
         } else {
             authzCallback.setGrantType(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getGrantType());
         }
@@ -678,6 +678,13 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
 
         OAuthAppDO oAuthAppDO = (OAuthAppDO)tokReqMsgCtx.getProperty("OAuthAppDO");
 
+        if (oAuthAppDO == null) {
+            if (log.isDebugEnabled()) {
+                log.debug("OAuthAppDO is not available in OAuthTokenReqMessageContext for client id: " + tokenReqDTO
+                        .getClientId());
+            }
+            return false;
+        }
         if (StringUtils.isBlank(oAuthAppDO.getGrantTypes())) {
             if (log.isDebugEnabled()) {
                 log.debug("Could not find authorized grant types for client id: " + tokenReqDTO.getClientId());

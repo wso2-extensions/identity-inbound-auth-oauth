@@ -27,6 +27,8 @@
             <class name="org.wso2.carbon.identity.oauth.endpoint.util.OpenIDConnectUserRPStoreTest" />
             <class name="org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpointTest" />
             <class name="org.wso2.carbon.identity.oauth.endpoint.introspection.IntrospectionResponseBuilderTest" />
+            <class name="org.wso2.carbon.identity.oauth.endpoint.user.OpenIDConnectUserEndpointTest" />
+
         </classes>
     </test>
 
@@ -37,6 +39,7 @@
             <class name="org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtilTest" />
             <class name="org.wso2.carbon.identity.oauth.endpoint.util.OpenIDConnectUserRPStoreTest" />
             <class name="org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpointTest" />
+            <class name="org.wso2.carbon.identity.oauth.endpoint.user.OpenIDConnectUserEndpointTest" />
         </classes>
     </test>
 
@@ -62,11 +65,21 @@
         </classes>
     </test>
 
+    <test name="endpoint.revoke-tests-info" preserve-order="true" parallel="false">
+        <!-- there are no debug logs in the class -->
+        <parameter name="log-level" value="info"/>
+        <classes>
+            <class name="org.wso2.carbon.identity.oauth.endpoint.revoke.OAuthRevocationEndpointTest" />
+            <class name="org.wso2.carbon.identity.oauth.endpoint.revoke.CarbonOAuthASResponseTest" />
+        </classes>
+    </test>
+
     <test name="endpoint.user.impl-tests" preserve-order="true" parallel="false">
         <classes>
             <class name="org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoEndpointConfigTest"/>
             <class name="org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoISAccessTokenValidatorTest"/>
             <class name="org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoJSONResponseBuilderTest"/>
+            <class name="org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoJWTResponseTest"/>
         </classes>
     </test>
 </suite>

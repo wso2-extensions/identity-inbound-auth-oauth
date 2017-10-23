@@ -25,12 +25,23 @@ import org.wso2.carbon.context.PrivilegedCarbonContext;
 
 import java.nio.file.Paths;
 
+import static org.testng.Assert.assertEquals;
+import static org.testng.AssertJUnit.assertNotNull;
+
 public class CommonTestUtils {
 
     private CommonTestUtils() {
     }
 
-    public static void initPrivilegedCarbonContext(String tenantDomain, int tenantID, String userName) throws Exception {
+    public static void testSingleton(Object instance, Object anotherInstance) {
+        assertNotNull(instance);
+        assertNotNull(anotherInstance);
+        assertEquals(instance, anotherInstance);
+    }
+
+    public static void initPrivilegedCarbonContext(String tenantDomain,
+                                                   int tenantID,
+                                                   String userName) throws Exception {
         String carbonHome = Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString();
         System.setProperty(CarbonBaseConstants.CARBON_HOME, carbonHome);
         PrivilegedCarbonContext.startTenantFlow();

@@ -131,7 +131,7 @@ public class OAuthRevocationEndpoint {
                 if (StringUtils.isNotEmpty(token)) {
                     revokeRequest.setToken(token);
                 } else {
-                    handleClientFailure(callback);
+                    return handleClientFailure(callback);
                 }
                 if (StringUtils.isNotEmpty(tokenType)) {
                     revokeRequest.setToken_type(tokenType);

@@ -73,17 +73,26 @@ public class IntrospectionResponseBuilderTest {
         // Here,if the token is not active we do not want to return back the nbf time.
         assertFalse(jsonObject.has(IntrospectionResponse.NBF), "NBF already exists in the response builder");
 
-        assertEquals(jsonObject.get(IntrospectionResponse.IAT), 1452170176);
-        assertEquals(jsonObject.get(IntrospectionResponse.JTI), id_token);
-        assertEquals(jsonObject.get(IntrospectionResponse.SUB), "admin@carbon.super");
-        assertEquals(jsonObject.get(IntrospectionResponse.USERNAME), "admin@carbon.super");
-        assertEquals(jsonObject.get(IntrospectionResponse.TOKEN_TYPE), "Bearer");
-        assertEquals(jsonObject.get(IntrospectionResponse.AUD), "1yL1_fznzGYutX5gB03L6tXGyjga");
-        assertEquals(jsonObject.get(IntrospectionResponse.ISS), "https:\\/\\/localhost:9443\\/oauth2\\/token");
-        assertEquals(jsonObject.get(IntrospectionResponse.SCOPE), "test");
-        assertEquals(jsonObject.get(IntrospectionResponse.CLIENT_ID), "rgfKVdnMQnJSSr_pKFTxj3apiwYa");
-        assertEquals(jsonObject.get(IntrospectionResponse.Error.ERROR), "Invalid input");
-        assertEquals(jsonObject.get(IntrospectionResponse.Error.ERROR_DESCRIPTION), "error_discription");
+        assertEquals(jsonObject.get(IntrospectionResponse.IAT), 1452170176, "IAT values are not equal");
+        assertEquals(jsonObject.get(IntrospectionResponse.JTI), id_token, "JTI values are not equal");
+        assertEquals(jsonObject.get(IntrospectionResponse.SUB), "admin@carbon.super",
+                "SUBJECT values are not equal");
+        assertEquals(jsonObject.get(IntrospectionResponse.USERNAME), "admin@carbon.super",
+                "USERNAME values are not equal");
+        assertEquals(jsonObject.get(IntrospectionResponse.TOKEN_TYPE), "Bearer",
+                "TOKEN_TYPE values are not equal");
+        assertEquals(jsonObject.get(IntrospectionResponse.AUD), "1yL1_fznzGYutX5gB03L6tXGyjga",
+                "AUD values are not equal");
+        assertEquals(jsonObject.get(IntrospectionResponse.ISS), "https:\\/\\/localhost:9443\\/oauth2\\/token",
+                "ISS values are not equal");
+        assertEquals(jsonObject.get(IntrospectionResponse.SCOPE), "test",
+                "SCOPE values are not equal");
+        assertEquals(jsonObject.get(IntrospectionResponse.CLIENT_ID), "rgfKVdnMQnJSSr_pKFTxj3apiwYa",
+                "CLIENT_ID values are not equal");
+        assertEquals(jsonObject.get(IntrospectionResponse.Error.ERROR), "Invalid input",
+                "ERROR messages are not equal");
+        assertEquals(jsonObject.get(IntrospectionResponse.Error.ERROR_DESCRIPTION), "error_discription",
+                "ERROR_DESCRIPTION messages are not equal");
     }
 
     /**

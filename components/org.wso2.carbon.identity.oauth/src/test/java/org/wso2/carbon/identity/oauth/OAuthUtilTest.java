@@ -21,7 +21,6 @@ package org.wso2.carbon.identity.oauth;
 import org.apache.commons.lang.StringUtils;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
@@ -30,6 +29,7 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
+import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
 import java.nio.file.Paths;
 
@@ -37,8 +37,8 @@ import static org.mockito.Matchers.anyString;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 
 /**
@@ -46,11 +46,11 @@ import static org.testng.Assert.assertTrue;
  */
 @PowerMockIgnore({"javax.net.*", "javax.security.*", "javax.crypto.*"})
 @PrepareForTest({IdentityUtil.class})
-public class OAuthUtilTest extends PowerMockTestCase {
+public class OAuthUtilTest extends PowerMockIdentityBaseTest {
 
     @DataProvider(name = "testGetAuthenticatedUser")
     public Object[][] fullQualifiedUserName() {
-        return new Object[][] {
+        return new Object[][]{
                 {"JDBC/siripala@is.com", "siripala"},
                 {"JDBC/siripala", "siripala"},
                 {"siripala@is.com", "siripala"},
@@ -60,7 +60,7 @@ public class OAuthUtilTest extends PowerMockTestCase {
 
     @DataProvider(name = "testClearOAuthCache")
     public Object[][] isUserStoreCaseSensitive() {
-        return new Object[][] {{true},{false}};
+        return new Object[][]{{true}, {false}};
     }
 
     @Test
@@ -201,11 +201,11 @@ public class OAuthUtilTest extends PowerMockTestCase {
 
         private String identifier;
 
-        DummyOAuthCacheEntry(String identifier){
+        DummyOAuthCacheEntry(String identifier) {
             this.identifier = identifier;
         }
 
-        public String getIdentifier () {
+        public String getIdentifier() {
             return identifier;
         }
     }
