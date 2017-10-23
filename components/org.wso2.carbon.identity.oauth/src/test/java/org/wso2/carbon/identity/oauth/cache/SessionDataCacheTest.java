@@ -18,53 +18,53 @@
 
 package org.wso2.carbon.identity.oauth.cache;
 
-import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.IObjectFactory;
 import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
-import org.wso2.carbon.identity.application.common.cache.BaseCache;
-import org.wso2.carbon.utils.CarbonUtils;
 
 import static org.mockito.Mockito.mock;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
-import static org.testng.Assert.*;
+import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertNull;
 
-@PrepareForTest({CarbonUtils.class})
-public class SessionDataCacheTest {
-    @Mock
-    BaseCache baseCache;
-
-    @Mock
-    SessionDataCache sessionDataCache;
-
+public class SessionDataCacheTest extends PowerMockTestCase {
     @ObjectFactory
     public IObjectFactory getObjectFactory() {
         return new org.powermock.modules.testng.PowerMockObjectFactory();
     }
 
+    private String sessionDataId = "835434_263277_7722";
+
     @Test
     public void testGetInstance() throws Exception {
-        mockStatic(CarbonUtils.class);
-        CarbonUtils carbonUtils = new CarbonUtils();
-        assertNotEquals(SessionDataCache.getInstance(),carbonUtils,"Message not equal");
+        assertNotNull(SessionDataCache.getInstance(), "Message not equal");
     }
 
     @Test
     public void testAddToCache() throws Exception {
-        mockStatic(SessionDataCache.class);
-        when(SessionDataCache.getInstance()).thenReturn(sessionDataCache);
-        baseCache = mock(BaseCache.class);
-
+        System.setProperty("carbon.home", "");
+        SessionDataCacheKey key = mock(SessionDataCacheKey.class);
+        SessionDataCacheEntry entry = mock(SessionDataCacheEntry.class);
+        when(key.getSessionDataId()).thenReturn(sessionDataId);
+        SessionDataCache.getInstance().addToCache(key, entry);
+        assertNotNull(SessionDataCache.getInstance().getValueFromCache(key), "SessionDataCache is null");
     }
 
     @Test
     public void testGetValueFromCache() throws Exception {
+        System.setProperty("carbon.home", "");
+        SessionDataCacheKey key = mock(SessionDataCacheKey.class);
+        when(key.getSessionDataId()).thenReturn(sessionDataId);
+        assertNull(SessionDataCache.getInstance().getValueFromCache(key));
     }
 
     @Test
     public void testClearCacheEntry() throws Exception {
+        System.setProperty("carbon.home", "");
+        SessionDataCacheKey key = mock(SessionDataCacheKey.class);
+        when(key.getSessionDataId()).thenReturn(sessionDataId);
+        SessionDataCache.getInstance().clearCacheEntry(key);
+        assertNull(SessionDataCache.getInstance().getValueFromCache(key), "SessionDataCacheEntry is not null");
     }
-
 }

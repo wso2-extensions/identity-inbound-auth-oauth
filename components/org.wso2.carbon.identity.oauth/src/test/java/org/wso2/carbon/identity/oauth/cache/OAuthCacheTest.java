@@ -38,6 +38,6 @@ public class OAuthCacheTest {
     public void testGetInstance() throws Exception {
         mockStatic(CarbonUtils.class);
         CarbonUtils carbonUtils = new CarbonUtils();
-        assertNotEquals(OAuthCache.getInstance(),carbonUtils,"Message not equal");
+        assertNotEquals(OAuthCache.getInstance(), carbonUtils, "Message not equal");
     }
 }

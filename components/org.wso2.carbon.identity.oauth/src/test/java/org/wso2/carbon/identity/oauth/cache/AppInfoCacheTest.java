@@ -25,7 +25,8 @@ import org.testng.annotations.Test;
 import org.wso2.carbon.utils.CarbonUtils;
 
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.testng.Assert.*;
+import static org.testng.Assert.assertNotEquals;
+
 @PrepareForTest({CarbonUtils.class})
 public class AppInfoCacheTest {
     @ObjectFactory
@@ -37,6 +38,6 @@ public class AppInfoCacheTest {
     public void testGetInstance() throws Exception {
         mockStatic(CarbonUtils.class);
         CarbonUtils carbonUtils = new CarbonUtils();
-        assertNotEquals(AppInfoCache.getInstance(),carbonUtils,"Message not equal");
+        assertNotEquals(AppInfoCache.getInstance(), carbonUtils, "Message not equal");
     }
 }

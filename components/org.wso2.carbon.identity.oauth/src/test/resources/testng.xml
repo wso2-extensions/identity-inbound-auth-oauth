@@ -53,10 +53,18 @@
             <class name="org.wso2.carbon.identity.oauth.util.ClaimMetaDataCacheEntryTest"/>
             <class name="org.wso2.carbon.identity.oauth.util.ClaimMetaDataCacheKeyTest"/>
             <class name="org.wso2.carbon.identity.oauth.util.ClaimMetaDataCacheTest"/>
+            <class name="org.wso2.carbon.identity.oauth.cache.AppInfoCacheTest"/>
+            <class name="org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKeyTest"/>
+            <class name="org.wso2.carbon.identity.oauth.cache.OAuthCacheKeyTest"/>
+            <class name="org.wso2.carbon.identity.oauth.cache.OAuthCacheTest"/>
+            <class name="org.wso2.carbon.identity.oauth.cache.OAuthScopeCacheKeyTest"/>
+            <class name="org.wso2.carbon.identity.oauth.cache.SessionDataCacheKeyTest"/>
+            <class name="org.wso2.carbon.identity.oauth.cache.SessionDataCacheTest"/>
+            <class name="org.wso2.carbon.identity.oauth.cache.TestUtil"/>
             <class name="org.wso2.carbon.identity.oauth.util.UserClaimsTest"/>
             <class name="org.wso2.carbon.identity.oauth2.token.handlers.clientauth.BasicAuthClientAuthHandlerTest"/>
             <class name="org.wso2.carbon.identity.oauth2.token.handlers.grant.RefreshGrantHandlerTest"/>
-            <class name="org.wso2.carbon.identity.openidconnect.DefaultIDTokenBuilderTest" />
+
         </classes>
     </test>
 </suite>
