@@ -19,7 +19,9 @@
 package org.wso2.carbon.identity.oauth2.token.handlers.grant;
 
 
+import org.apache.axiom.util.base64.Base64Utils;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.io.Charsets;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
