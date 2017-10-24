@@ -73,12 +73,16 @@ public class NTLMAuthenticationGrantHandlerTest extends PowerMockIdentityBaseTes
     @BeforeMethod
     public void setUp() throws Exception {
         mockStatic(OAuthServerConfiguration.class);
+        MockitoAnnotations.initMocks(this);
+
         when(OAuthServerConfiguration.getInstance()).thenReturn(serverConfiguration);
     }
 
     @Test
     public void testIssueRefreshToken() throws Exception {
-
+        NTLMAuthenticationGrantHandler ntlmAuthenticationGrantHandler = new NTLMAuthenticationGrantHandler();
+        boolean ret = ntlmAuthenticationGrantHandler.issueRefreshToken();
+        Assert.assertEquals(ret, false);
     }
 
     @Test(dataProvider = "getValidateGrantTypeHandlerData")
@@ -88,7 +92,7 @@ public class NTLMAuthenticationGrantHandlerTest extends PowerMockIdentityBaseTes
         mockStatic(WindowsCredentialsHandleImpl.class);
         mockStatic(WindowsAccountImpl.class);
 
-        MockitoAnnotations.initMocks(this);
+
 
         whenNew(WindowsAuthProviderImpl.class).withAnyArguments().thenReturn(windowsAuthProvider);
         when(WindowsCredentialsHandleImpl.getCurrent(SECURITY_PACKAGE)).thenReturn(windowsCredentialsHandle);
