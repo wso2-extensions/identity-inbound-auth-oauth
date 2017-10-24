@@ -185,4 +185,10 @@
             <class name="org.wso2.carbon.identity.oauth2.internal.OAuthTenantMgtListenerImplTest"/>
         </classes>
     </test>
+    <test name="org.wso2.carbon.identity.oauth2.config">
+        <parameter name="log-level" value="info"/>
+        <classes>
+            <class name="org.wso2.carbon.identity.oauth2.config.SpOAuth2ExpiryTimeConfigurationTest"/>
+        </classes>
+    </test>
 </suite>
