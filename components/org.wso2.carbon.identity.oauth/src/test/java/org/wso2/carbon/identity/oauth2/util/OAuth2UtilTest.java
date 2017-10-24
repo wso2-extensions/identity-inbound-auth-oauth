@@ -71,65 +71,50 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
     private String scopeString = "scope1 scope2 scope3";
     private String clientId = "dummyClientId";
     private String clientSecret = "dummyClientSecret";
-    private String authzCode = "testAuthzCode";
-    private String tokenState = "testState";
-    private String refreshToken = "dummyRefreshToken";
-    private String tokenId = "testTokenID";
-    private String accessToken = "dummyAccessToken";
     private String authorizationCode = "testAuthorizationCode";
-    private String grantType = "testGrantType";
     private String tokenType = "testTokenType";
     private AuthenticatedUser authzUser;
-    private int tenantID = MultitenantConstants.SUPER_TENANT_ID;
     private Integer clientTenatId = 1;
     private Timestamp issuedTime;
     private Timestamp refreshTokenIssuedTime;
-    private long validityPeriod;
     private long validityPeriodInMillis;
-    private long refreshTokenValidityPeriod;
     private long refreshTokenValidityPeriodInMillis;
-    private long timestampSkew;
 
     @Mock
-    OAuthServerConfiguration oauthServerConfigurationMock;
+    private OAuthServerConfiguration oauthServerConfigurationMock;
 
     @Mock
-    OAuthAuthzReqMessageContext authAuthzReqMessageContextMock;
+    private OAuthAuthzReqMessageContext authAuthzReqMessageContextMock;
 
     @Mock
-    OAuthTokenReqMessageContext oAuthTokenReqMessageContextMock;
+    private OAuthTokenReqMessageContext oAuthTokenReqMessageContextMock;
 
     @Mock
-    OAuthCache oAuthCacheMock;
+    private OAuthCache oAuthCacheMock;
 
     @Mock
-    CacheEntry cacheEntryMock;
+    private CacheEntry cacheEntryMock;
 
     @Mock
-    TokenPersistenceProcessor tokenPersistenceProcessorMock;
+    private TokenPersistenceProcessor tokenPersistenceProcessorMock;
 
     @Mock
-    AccessTokenDO accessTokenDOMock;
+    private OAuthComponentServiceHolder oAuthComponentServiceHolderMock;
 
     @Mock
-    OAuthComponentServiceHolder oAuthComponentServiceHolderMock;
+    private RealmService realmServiceMock;
 
     @Mock
-    RealmService realmServiceMock;
-
-    @Mock
-    TenantManager tenantManagerMock;
+    private TenantManager tenantManagerMock;
 
     @BeforeMethod
     public void setUp() throws Exception {
         authzUser = new AuthenticatedUser();
         issuedTime = new Timestamp(System.currentTimeMillis());
         refreshTokenIssuedTime = new Timestamp(System.currentTimeMillis());
-        validityPeriod = 3600L;
         validityPeriodInMillis = 3600000L;
-        refreshTokenValidityPeriod = 3600L;
         refreshTokenValidityPeriodInMillis = 3600000L;
-        timestampSkew = 3600L;
+        long timestampSkew = 3600L;
         mockStatic(OAuthServerConfiguration.class);
         when(OAuthServerConfiguration.getInstance()).thenReturn(oauthServerConfigurationMock);
         when(oauthServerConfigurationMock.getTimeStampSkewInSeconds()).thenReturn(timestampSkew);
@@ -333,6 +318,8 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
 
     @Test
     public void testBuildCacheKeyStringForAuthzCode() throws Exception {
+
+        String authzCode = "testAuthzCode";
         String testAuthzCode = clientId + ":" + authzCode;
         assertEquals(OAuth2Util.buildCacheKeyStringForAuthzCode(clientId, authzCode), testAuthzCode);
     }
@@ -625,8 +612,7 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
 
     @Test(expectedExceptions = IllegalArgumentException.class)
     public void testGetTokenExpireTimeMillis2() throws Exception {
-        AccessTokenDO accessTokenDO = null;
-        OAuth2Util.getTokenExpireTimeMillis(accessTokenDO);
+        OAuth2Util.getTokenExpireTimeMillis(null);
     }
 
     @Test
@@ -648,8 +634,7 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
 
     @Test(expectedExceptions = IllegalArgumentException.class)
     public void testGetRefreshTokenExpireTimeMillis3() throws Exception {
-        AccessTokenDO accessTokenDO = null;
-        OAuth2Util.getRefreshTokenExpireTimeMillis(accessTokenDO);
+        OAuth2Util.getRefreshTokenExpireTimeMillis(null);
     }
 
     @Test
@@ -675,6 +660,7 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         AccessTokenDO accessTokenDO = new AccessTokenDO(clientId, authzUser, scopeArraySorted, issuedTime,
                 refreshTokenIssuedTime, validityPeriodInMillis, refreshTokenValidityPeriodInMillis, tokenType,
                 authorizationCode);
+        String accessToken = "dummyAccessToken";
         accessTokenDO.setAccessToken(accessToken);
         mockStatic(IdentityUtil.class);
         when(IdentityUtil.getPrimaryDomainName()).thenReturn("PRIMARY");
@@ -684,8 +670,7 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
 
     @Test(expectedExceptions = IllegalArgumentException.class)
     public void testGetAccessTokenExpireMillis3() throws Exception {
-        AccessTokenDO accessTokenDO = null;
-        OAuth2Util.getAccessTokenExpireMillis(accessTokenDO);
+        OAuth2Util.getAccessTokenExpireMillis(null);
     }
 
     @Test
