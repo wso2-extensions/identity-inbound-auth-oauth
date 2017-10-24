@@ -67,7 +67,6 @@
             <class name="org.wso2.carbon.identity.oauth.listener.ClaimMetaDataCacheRemoveListenerTest"/>
             <class name="org.wso2.carbon.identity.oauth.listener.IdentityOathEventListenerTest"/>
             <class name="org.wso2.carbon.identity.oauth.listener.OAuthCacheRemoveListenerTest"/>
-            <class name="org.wso2.carbon.identity.oauth2.internal.OAuthApplicationMgtListenerTest"/>
             <class name="org.wso2.carbon.identity.oauth2.util.OAuth2UtilTest"/>
         </classes>
     </test>
@@ -150,5 +149,12 @@
             <class name="org.wso2.carbon.identity.oauth2.authz.handlers.AbstractResponseTypeHandlerTest"/>
         </classes>
     </test>
-
+    <test name="org.wso2.carbon.identity.oauth2.internal">
+        <parameter name="log-level" value="info"/>
+        <classes>
+            <class name="org.wso2.carbon.identity.oauth2.internal.OAuthApplicationMgtListenerTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.internal.OAuthUserStoreConfigListenerImplTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.internal.OAuthTenantMgtListenerImplTest"/>
+        </classes>
+    </test>
 </suite>

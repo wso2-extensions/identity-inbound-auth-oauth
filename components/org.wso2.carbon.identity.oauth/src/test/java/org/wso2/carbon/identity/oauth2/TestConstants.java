@@ -34,4 +34,5 @@ public class TestConstants {
     public static final String USERSTORE_DOMAIN = "user_store_domain";
     public static final String NEW_ACCESS_TOKEN = "123456789";
     public static final String ERROR = "Error";
+    public static final int TENANT_ID = 1234;
 }
