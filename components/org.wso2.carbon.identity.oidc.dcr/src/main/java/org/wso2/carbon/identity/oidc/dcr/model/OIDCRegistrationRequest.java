@@ -26,7 +26,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 /**
- * DCR Request data for Register a oauth application
+ * DCR Request data for Register a oauth application.
  */
 public class OIDCRegistrationRequest extends RegistrationRequest {
 
@@ -49,24 +49,22 @@ public class OIDCRegistrationRequest extends RegistrationRequest {
 
     public static class OIDCRegistrationRequestConstants extends RegisterRequestConstant {
 
-        public final static String SECTOR_IDENTIFIER_URI = "sector_identifier_uri";
-        public final static String SUBJECT_TYPE = "subject_type";
-        public final static String ID_TOKEN_SIGNED_RESPONSE_ALG = "id_token_signed_response_alg";
-        public final static String ID_TOKEN_ENCRYPTED_RESPONSE_ALG = "id_token_encrypted_response_alg";
-        public final static String ID_TOKEN_ENCRYPTED_RESPONSE_ENC = "id_token_encrypted_response_enc";
-        public final static String USERINFO_SIGNED_RESPONSE_ALG = "userinfo_signed_response_alg";
-        public final static String USERINFO_ENCRYPTED_RESPONSE_ALG = "userinfo_encrypted_response_alg";
-        public final static String USERINFO_ENCRYPTED_RESPONSE_ENC = "userinfo_encrypted_response_enc";
-        public final static String REQUEST_OBJECT_SIGNING_ALG = "request_object_signing_alg";
-        public final static String REQUEST_OBJECT_ENCRYPTION_ALG = "request_object_encryption_alg";
-        public final static String REQUEST_OBJECT_ENCRYPTION_ENC = "request_object_encryption_enc";
-        public final static String TOKEN_ENDPOINT_AUTH_SIGNING_ALG = "token_endpoint_auth_signing_alg";
-        public final static String DEFAULT_MAX_AGE = "default_max_age";
-        public final static String REQUIRE_AUTH_TIME = "require_auth_time";
-        public final static String DEFAULT_ACR_VALUES = "default_acr_values";
-        public final static String INITIATE_LOGIN_URI = "initiate_login_uri";
-        public final static String REQUEST_URIS = "request_uris";
-
-
+        public static final String SECTOR_IDENTIFIER_URI = "sector_identifier_uri";
+        public static final String SUBJECT_TYPE = "subject_type";
+        public static final String ID_TOKEN_SIGNED_RESPONSE_ALG = "id_token_signed_response_alg";
+        public static final String ID_TOKEN_ENCRYPTED_RESPONSE_ALG = "id_token_encrypted_response_alg";
+        public static final String ID_TOKEN_ENCRYPTED_RESPONSE_ENC = "id_token_encrypted_response_enc";
+        public static final String USERINFO_SIGNED_RESPONSE_ALG = "userinfo_signed_response_alg";
+        public static final String USERINFO_ENCRYPTED_RESPONSE_ALG = "userinfo_encrypted_response_alg";
+        public static final String USERINFO_ENCRYPTED_RESPONSE_ENC = "userinfo_encrypted_response_enc";
+        public static final String REQUEST_OBJECT_SIGNING_ALG = "request_object_signing_alg";
+        public static final String REQUEST_OBJECT_ENCRYPTION_ALG = "request_object_encryption_alg";
+        public static final String REQUEST_OBJECT_ENCRYPTION_ENC = "request_object_encryption_enc";
+        public static final String TOKEN_ENDPOINT_AUTH_SIGNING_ALG = "token_endpoint_auth_signing_alg";
+        public static final String DEFAULT_MAX_AGE = "default_max_age";
+        public static final String REQUIRE_AUTH_TIME = "require_auth_time";
+        public static final String DEFAULT_ACR_VALUES = "default_acr_values";
+        public static final String INITIATE_LOGIN_URI = "initiate_login_uri";
+        public static final String REQUEST_URIS = "request_uris";
     }
 }

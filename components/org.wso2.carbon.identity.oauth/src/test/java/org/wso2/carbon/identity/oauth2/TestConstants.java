@@ -30,4 +30,9 @@ public class TestConstants {
     public static final String CLAIM_URI2 = "http://wso2.org/claimuri2";
     public static final String CLAIM_VALUE1 = "ClaimValue1";
     public static final String CLAIM_VALUE2 = "ClaimValue2";
+
+    public static final String USERSTORE_DOMAIN = "user_store_domain";
+    public static final String NEW_ACCESS_TOKEN = "123456789";
+    public static final String ERROR = "Error";
+    public static final int TENANT_ID = 1234;
 }

@@ -52,7 +52,6 @@ public class OauthTokenIssuerImplTest extends PowerMockIdentityBaseTest {
         initMocks(this);
         mockStatic(OAuthServerConfiguration.class);
         when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
-
         when(oAuthServerConfiguration.getOAuthTokenGenerator())
                 .thenReturn(new OAuthIssuerImpl(new UUIDValueGenerator()));
 

@@ -137,7 +137,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         JWTClaimsSet jwtClaimsSet = createJWTClaimSet(null, request, request.getOauth2AccessTokenReqDTO()
                 .getClientId());
 
-        if (Arrays.asList((request.getScope())).contains(AUDIENCE)) {
+        if (request.getScope() != null && Arrays.asList((request.getScope())).contains(AUDIENCE)) {
             jwtClaimsSet.setAudience(Arrays.asList(request.getScope()));
         }
 
@@ -160,7 +160,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         // Set claims to jwt token.
         JWTClaimsSet jwtClaimsSet = createJWTClaimSet(request, null, request.getAuthorizationReqDTO().getConsumerKey());
 
-        if (Arrays.asList((request.getApprovedScope())).contains(AUDIENCE)) {
+        if (request.getApprovedScope() != null && Arrays.asList((request.getApprovedScope())).contains(AUDIENCE)) {
             jwtClaimsSet.setAudience(Arrays.asList(request.getApprovedScope()));
         }
 

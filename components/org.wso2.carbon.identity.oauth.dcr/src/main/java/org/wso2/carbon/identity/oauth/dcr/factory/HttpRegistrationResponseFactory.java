@@ -34,7 +34,6 @@ import org.wso2.carbon.identity.oauth.dcr.util.ErrorCodes;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
-import java.util.List;
 
 /**
  * Http Registration Response Factory.
@@ -60,7 +59,7 @@ public class HttpRegistrationResponseFactory extends HttpIdentityResponseFactory
     @Override
     public void create(HttpIdentityResponse.HttpIdentityResponseBuilder httpIdentityResponseBuilder,
                        IdentityResponse identityResponse) {
-        RegistrationResponse registrationResponse=null;
+        RegistrationResponse registrationResponse = null;
         if (identityResponse instanceof RegistrationResponse) {
             registrationResponse = (RegistrationResponse) identityResponse;
             httpIdentityResponseBuilder.setBody(generateSuccessfulResponse(registrationResponse).toJSONString());
@@ -89,9 +88,9 @@ public class HttpRegistrationResponseFactory extends HttpIdentityResponseFactory
         builder.setBody(errorMessage);
         builder.setStatusCode(HttpServletResponse.SC_BAD_REQUEST);
         builder.addHeader(OAuthConstants.HTTP_RESP_HEADER_CACHE_CONTROL,
-                          OAuthConstants.HTTP_RESP_HEADER_VAL_CACHE_CONTROL_NO_STORE);
+                OAuthConstants.HTTP_RESP_HEADER_VAL_CACHE_CONTROL_NO_STORE);
         builder.addHeader(OAuthConstants.HTTP_RESP_HEADER_PRAGMA,
-                          OAuthConstants.HTTP_RESP_HEADER_VAL_PRAGMA_NO_CACHE);
+                OAuthConstants.HTTP_RESP_HEADER_VAL_PRAGMA_NO_CACHE);
         builder.addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON);
         return builder;
     }
