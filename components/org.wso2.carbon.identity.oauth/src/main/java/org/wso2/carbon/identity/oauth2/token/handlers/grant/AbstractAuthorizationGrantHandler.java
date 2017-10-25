@@ -450,7 +450,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                 throw new IdentityOAuth2Exception(
                         "Error occurred while generating access token and refresh token", e);
             }
-            newAccessTokenDO.settBhashAccess(tBhashAccess); //TB hash of new access token
+//            newAccessTokenDO.settBhashAccess(tBhashAccess); //TB hash of new access token
             newAccessTokenDO.setAccessToken(newAccessToken);
             newAccessTokenDO.setRefreshToken(refreshToken);
             newAccessTokenDO.setTokenState(OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);

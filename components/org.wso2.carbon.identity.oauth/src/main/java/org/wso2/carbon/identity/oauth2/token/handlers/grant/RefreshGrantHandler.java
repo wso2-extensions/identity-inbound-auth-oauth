@@ -323,9 +323,9 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         accessTokenDO.setTokenId(tokenId);
         accessTokenDO.setAccessToken(accessToken);
         accessTokenDO.setGrantType(grantType);
-        if(!OAuth2Util.checkTB(tokReqMsgCtx,OAuthConstants.HTTP_TB_REFERRED_HEADER_NAME).isEmpty()){
-            accessTokenDO.settBhashAccess(OAuth2Util.hashTB(OAuth2Util.checkTB(tokReqMsgCtx,OAuthConstants.HTTP_TB_REFERRED_HEADER_NAME)));
-        }
+//        if(!OAuth2Util.checkTB(tokReqMsgCtx,OAuthConstants.HTTP_TB_REFERRED_HEADER_NAME).isEmpty()){
+//            accessTokenDO.settBhashAccess(OAuth2Util.hashTB(OAuth2Util.checkTB(tokReqMsgCtx,OAuthConstants.HTTP_TB_REFERRED_HEADER_NAME)));
+//        }
 
         RefreshTokenValidationDataDO oldAccessToken =
                 (RefreshTokenValidationDataDO) tokReqMsgCtx.getProperty(PREV_ACCESS_TOKEN);
