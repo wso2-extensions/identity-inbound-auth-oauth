@@ -1267,6 +1267,7 @@ public class OAuth2Util {
      * @param tenantId
      * @return A SpOAuth2ExpiryTimeConfiguration Object
      * @deprecated due to UI implementation
+     * @see #getAppInformationByClientId(String clientId)
      */
     @Deprecated
     public static SpOAuth2ExpiryTimeConfiguration getSpTokenExpiryTimeConfig(String consumerKey, int tenantId) {
@@ -1361,7 +1362,6 @@ public class OAuth2Util {
         }
         return spTokenTimeObject;
     }
-
 
     private static Map<String, String> loadScopeConfigFile() {
         Map<String, String> scopes = new HashMap<>();

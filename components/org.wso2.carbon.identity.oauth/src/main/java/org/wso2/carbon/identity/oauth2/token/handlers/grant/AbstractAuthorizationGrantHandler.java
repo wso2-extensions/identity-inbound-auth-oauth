@@ -108,8 +108,8 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         if (log.isDebugEnabled()) {
             log.debug("Service Provider specific expiry time enabled for application : " + consumerKey +
                     ". Application access token expiry time : " + oAuthAppDO.getApplicationAccessTokenExpiryTime()
-                    + ", User access token expiry time : " + oAuthAppDO.getUserAccessTokenExpiryTime() +
-                    ", Refresh token expiry time : " + oAuthAppDO.getRefreshTokenExpiryTime());
+                    + " seconds, User access token expiry time : " + oAuthAppDO.getUserAccessTokenExpiryTime() +
+                    " seconds, Refresh token expiry time : " + oAuthAppDO.getRefreshTokenExpiryTime() + " seconds.");
         }
         String cacheKeyString;
         if (isUsernameCaseSensitive) {
