@@ -64,9 +64,11 @@ import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dao.TokenMgtDAO;
+import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.ClientCredentialDO;
+import org.wso2.carbon.identity.oauth2.model.HttpRequestHeader;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.registry.core.Registry;
 import org.wso2.carbon.registry.core.Resource;
@@ -1889,5 +1891,77 @@ public class OAuth2Util {
         String tokenStrToEncode = token + ":" + usernameForToken;
         return Base64Utils.encode(tokenStrToEncode.getBytes(Charsets.UTF_8));
     }
+
+    //token binding methods
+    //PCKE validation for TokenBinding
+    public static boolean doTBPKCEvalidation(String referenceCodeChallenge, String codeVerifier, String oauthcode) {
+        if (codeVerifier == null) {
+            return false;
+        }
+        String authcode =decodeSplitbase64TB(oauthcode);
+        if (!authcode.equals(hashTB(codeVerifier))) {
+            return false;
+        }
+        return true;
+    }
+
+    //check for TokenBinding header in request headers
+    //check for token binding header in the request
+    public static String checkTB(OAuthTokenReqMessageContext tokReqMsgCtx,String httpTBheader) {
+        HttpRequestHeader[] httpRequestHeaders = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getHttpRequestHeaders();
+        String tokenBindingId = "";
+        if (httpRequestHeaders != null) {
+            for (HttpRequestHeader httpRequestHeader : httpRequestHeaders) {
+                if (httpRequestHeader.getName().equals(httpTBheader)) {
+                    tokenBindingId = httpRequestHeader.getValue()[0];
+                    break;
+                }
+            }
+
+        }
+        return tokenBindingId;
+    }
+
+    public static String checkTB(OAuthAuthzReqMessageContext oauthAuthzMsgCtx,String httpTBheader) {
+        HttpRequestHeader[] httpRequestHeaders = oauthAuthzMsgCtx.getAuthorizationReqDTO().getHttpRequestHeaders();
+        String tokenBindingId = "";
+        if (httpRequestHeaders != null) {
+            for (HttpRequestHeader httpRequestHeader : httpRequestHeaders) {
+                if (httpRequestHeader.getName().equals(httpTBheader)) {
+                    tokenBindingId = httpRequestHeader.getValue()[0];
+                    break;
+                }
+            }
+
+        }
+        return tokenBindingId;
+    }
+
+    //Hash the tokenbinding ID in SHA256
+    public static String hashTB(String tBID) {
+        String bindvalue="";
+        try {
+            MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = messageDigest.digest(tBID.getBytes(StandardCharsets.US_ASCII));
+            //Trim the base64 string to remove trailing CR LF characters.
+            bindvalue = new String(Base64.encodeBase64URLSafe(hash),
+                    StandardCharsets.UTF_8).trim();
+
+        } catch (NoSuchAlgorithmException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Failed to create SHA256 Message Digest.");
+            }
+
+        }
+        return bindvalue;
+    }
+
+    //decode base64 encoding and split it to get the first value
+    //used in token binding cases.
+    public static String decodeSplitbase64TB(String base64encode){
+        return (new String(Base64Utils.decode(base64encode), (Charsets.UTF_8))).split(";")[0];
+    }
+
+
 
 }

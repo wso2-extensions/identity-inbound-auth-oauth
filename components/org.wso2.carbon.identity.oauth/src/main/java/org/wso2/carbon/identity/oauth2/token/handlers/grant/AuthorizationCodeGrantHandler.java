@@ -188,11 +188,16 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
         String PKCECodeChallenge = authzCodeDO.getPkceCodeChallenge();
         String PKCECodeChallengeMethod = authzCodeDO.getPkceCodeChallengeMethod();
         String codeVerifier = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getPkceCodeVerifier();
-        if (!OAuth2Util.doPKCEValidation(PKCECodeChallenge, codeVerifier, PKCECodeChallengeMethod, oAuthAppDO)) {
+        if (!OAuthConstants.OAUTH_PKCE_REFERREDTB_CHALLENGE.equals(PKCECodeChallenge) && !OAuth2Util.doPKCEValidation(PKCECodeChallenge, codeVerifier, PKCECodeChallengeMethod, oAuthAppDO)) {
             //possible malicious oAuthRequest
             log.warn("Failed PKCE Verification for oAuth 2.0 request");
             return false;
         }
+        if (!OAuth2Util.doTBPKCEvalidation(PKCECodeChallenge, codeVerifier,authzCodeDO.getAuthorizationCode())){
+            log.warn("Failed PKCE Verification for oAuth 2.0 request with TokenBinding");
+            return false;
+        }
+
 
         if (log.isDebugEnabled()) {
             log.debug("Found an Authorization Code, " +

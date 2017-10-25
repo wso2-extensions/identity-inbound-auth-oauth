@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth.endpoint.introspection;
 import org.apache.commons.lang.StringUtils;
 import org.apache.oltu.oauth2.common.utils.JSONUtils;
 import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -198,4 +199,17 @@ public class IntrospectionResponseBuilder {
         parameters.put(IntrospectionResponse.Error.ERROR_DESCRIPTION, description);
         return this;
     }
+
+    public IntrospectionResponseBuilder settbh(String tbh) {
+        if (StringUtils.isNotBlank(tbh)) {
+//            IntrospectionResponseBuilder tbIntro = new IntrospectionResponseBuilder();
+            JSONObject  tbIntro= new JSONObject();
+            tbIntro.put(IntrospectionResponse.TBH,tbh);
+           parameters.put(IntrospectionResponse.CNF,tbIntro);
+
+        }
+        return this;
+    }
+
+
 }
