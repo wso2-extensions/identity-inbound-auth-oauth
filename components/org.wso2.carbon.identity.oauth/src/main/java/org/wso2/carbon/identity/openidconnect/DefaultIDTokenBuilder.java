@@ -291,6 +291,20 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
             jwtClaimsSet.setClaim("acr", "urn:mace:incommon:iap:silver");
         }
 
+        List<ClaimAdder> claimAdders = OAuth2ServiceComponentHolder.getClaimAdders();
+        if (claimAdders != null) {
+            for (ClaimAdder claimAdder : claimAdders) {
+                Map<String, Object> additionalJWTClaimsSet = claimAdder.getAdditionalClaims(request, tokenRespDTO);
+                if (log.isDebugEnabled()) {
+                    log.debug("New claim found" + claimAdder.toString());
+                }
+                if (additionalJWTClaimsSet != null) {
+                    jwtClaimsSet.setAllClaims(additionalJWTClaimsSet);
+                }
+            }
+        }
+
+
         request.addProperty(OAuthConstants.ACCESS_TOKEN, tokenRespDTO.getAccessToken());
         request.addProperty(MultitenantConstants.TENANT_DOMAIN, request.getOauth2AccessTokenReqDTO().getTenantDomain());
         CustomClaimsCallbackHandler claimsCallBackHandler =
@@ -415,6 +429,19 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         }
         if (acrValue != null) {
             jwtClaimsSet.setClaim("acr", "urn:mace:incommon:iap:silver");
+        }
+
+        List<ClaimAdder> claimAdders = OAuth2ServiceComponentHolder.getClaimAdders();
+        if (claimAdders != null) {
+            for (ClaimAdder claimAdder : claimAdders) {
+                Map<String, Object> additionalJWTClaimsSet = claimAdder.getAdditionalClaims(request, tokenRespDTO);
+                if (log.isDebugEnabled()) {
+                    log.debug("New claim found" + claimAdder.toString());
+                }
+                if (additionalJWTClaimsSet != null) {
+                    jwtClaimsSet.setAllClaims(additionalJWTClaimsSet);
+                }
+            }
         }
 
         request.addProperty(OAuthConstants.ACCESS_TOKEN, tokenRespDTO.getAccessToken());
