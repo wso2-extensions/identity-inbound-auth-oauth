@@ -243,6 +243,11 @@
             <artifactId>opensaml</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon</groupId>
+            <artifactId>org.wso2.carbon.tomcat.ext</artifactId>
+            <scope>test</scope>
+        </dependency>
 
     </dependencies>
 
