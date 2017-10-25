@@ -24,16 +24,19 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
 import java.util.UUID;
 
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyString;
 import static org.mockito.MockitoAnnotations.initMocks;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertNotNull;
 
-@PrepareForTest(OAuthServerConfiguration.class)
+@PrepareForTest({OAuthServerConfiguration.class,OAuth2Util.class})
 public class OauthTokenIssuerImplTest extends PowerMockIdentityBaseTest {
 
     @Mock
@@ -56,6 +59,11 @@ public class OauthTokenIssuerImplTest extends PowerMockIdentityBaseTest {
                 .thenReturn(new OAuthIssuerImpl(new UUIDValueGenerator()));
 
         accessTokenIssuer = new OauthTokenIssuerImpl();
+        when(oAuthServerConfiguration.getTimeStampSkewInSeconds()).thenReturn(3600L);
+        mockStatic(OAuth2Util.class);
+        when(OAuth2Util.checkTB(any(OAuthTokenReqMessageContext.class),anyString())).thenReturn("");
+        when(OAuth2Util.checkTB(any(OAuthAuthzReqMessageContext.class),anyString())).thenReturn("");
+
     }
 
     @Test
