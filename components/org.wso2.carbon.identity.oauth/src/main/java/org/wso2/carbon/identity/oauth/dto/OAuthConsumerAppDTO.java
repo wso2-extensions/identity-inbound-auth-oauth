@@ -33,6 +33,15 @@ public class OAuthConsumerAppDTO {
     private long userAccessTokenExpiryTime;
     private long applicationAccessTokenExpiryTime;
     private long refreshTokenExpiryTime;
+    private boolean tbMandatory;
+
+    public boolean isTbMandatory() {
+        return tbMandatory;
+    }
+
+    public void setTbMandatory(boolean tbMandatory) {
+        this.tbMandatory = tbMandatory;
+    }
 
     public long getUserAccessTokenExpiryTime() {
         return userAccessTokenExpiryTime;

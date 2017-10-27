@@ -20,18 +20,20 @@
 package org.wso2.carbon.identity.oauth2.token;
 
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
+import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 
 public interface OauthTokenIssuer {
 
-    String accessToken(OAuthTokenReqMessageContext tokReqMsgCtx) throws OAuthSystemException;
+    String accessToken(OAuthTokenReqMessageContext tokReqMsgCtx) throws OAuthSystemException, IdentityOAuth2Exception;
 
-    String refreshToken(OAuthTokenReqMessageContext tokReqMsgCtx) throws OAuthSystemException;
+    String refreshToken(OAuthTokenReqMessageContext tokReqMsgCtx) throws OAuthSystemException, IdentityOAuth2Exception;
 
-    String authorizationCode(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) throws OAuthSystemException;
+    String authorizationCode(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) throws OAuthSystemException, IdentityOAuth2Exception, InvalidOAuthClientException;
 
-    String accessToken(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) throws OAuthSystemException;
+    String accessToken(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) throws OAuthSystemException, IdentityOAuth2Exception, InvalidOAuthClientException;
 
-    String refreshToken(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) throws OAuthSystemException;
+    String refreshToken(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) throws OAuthSystemException, IdentityOAuth2Exception, InvalidOAuthClientException;
 
 }

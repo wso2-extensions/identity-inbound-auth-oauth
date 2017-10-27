@@ -1114,7 +1114,7 @@ public class OAuth2Util {
             if (OAuthConstants.OAUTH_PKCE_PLAIN_CHALLENGE.equals(challenge_method)) {
                 //if the current application explicitly doesn't support plain, throw exception
                 if(!oAuthAppDO.isPkceSupportPlain()) {
-                    throw new IdentityOAuth2Exception("This application does not allow 'plain' transformation algorithm.");
+                    throw new IdentityOAuth2Exception("This application does not allow 'plain' transformati algorithm.");
                 }
                 if (!referenceCodeChallenge.equals(codeVerifier)) {
                     return false;
@@ -1907,14 +1907,25 @@ public class OAuth2Util {
 
     //check for TokenBinding header in request headers
     //check for token binding header in the request
-    public static String checkTB(OAuthTokenReqMessageContext tokReqMsgCtx,String httpTBheader) {
+    public static String checkTB(OAuthTokenReqMessageContext tokReqMsgCtx, String httpTBheader) {
         HttpRequestHeader[] httpRequestHeaders = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getHttpRequestHeaders();
         String tokenBindingId = "";
         if (httpRequestHeaders != null) {
-            for (HttpRequestHeader httpRequestHeader : httpRequestHeaders) {
-                if (httpRequestHeader.getName().equals(httpTBheader)) {
-                    tokenBindingId = httpRequestHeader.getValue()[0];
-                    break;
+            OAuthAppDO oAuthAppDO = null;
+            try {
+                oAuthAppDO = getAppInformationByClientId(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId());
+            } catch (InvalidOAuthClientException e) {
+//                throw new IdentityOAuth2Exception("Error while retrieving app information for clientId");
+                log.debug("Error while retrieving app information for clientId");
+            } catch (IdentityOAuth2Exception e) {
+                log.debug("Error while retrieving app information for clientId");
+            }
+            if (oAuthAppDO != null && oAuthAppDO.isTbMandatory()) {
+                for (HttpRequestHeader httpRequestHeader : httpRequestHeaders) {
+                    if (httpRequestHeader.getName().equals(httpTBheader)) {
+                        tokenBindingId = httpRequestHeader.getValue()[0];
+                        break;
+                    }
                 }
             }
 
@@ -1922,17 +1933,26 @@ public class OAuth2Util {
         return tokenBindingId;
     }
 
-    public static String checkTB(OAuthAuthzReqMessageContext oauthAuthzMsgCtx,String httpTBheader) {
+    public static String checkTB(OAuthAuthzReqMessageContext oauthAuthzMsgCtx, String httpTBheader) {
         HttpRequestHeader[] httpRequestHeaders = oauthAuthzMsgCtx.getAuthorizationReqDTO().getHttpRequestHeaders();
         String tokenBindingId = "";
         if (httpRequestHeaders != null) {
-            for (HttpRequestHeader httpRequestHeader : httpRequestHeaders) {
-                if (httpRequestHeader.getName().equals(httpTBheader)) {
-                    tokenBindingId = httpRequestHeader.getValue()[0];
-                    break;
+            OAuthAppDO oAuthAppDO = null;
+            try {
+                oAuthAppDO = new OAuthAppDAO().getAppInformation(oauthAuthzMsgCtx.getAuthorizationReqDTO().getConsumerKey());
+            } catch (InvalidOAuthClientException e) {
+                log.debug("Error while retrieving app information for ConsumerKey");
+            } catch (IdentityOAuth2Exception e) {
+                log.debug("Error while retrieving app information for ConsumerKey");
+            }
+            if (oAuthAppDO != null && oAuthAppDO.isTbMandatory()) {
+                for (HttpRequestHeader httpRequestHeader : httpRequestHeaders) {
+                    if (httpRequestHeader.getName().equals(httpTBheader)) {
+                        tokenBindingId = httpRequestHeader.getValue()[0];
+                        break;
+                    }
                 }
             }
-
         }
         return tokenBindingId;
     }

@@ -349,6 +349,8 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
 
             } catch (OAuthSystemException e) {
                 throw new IdentityOAuth2Exception("Error occurred while generating access token and refresh token", e);
+            } catch (InvalidOAuthClientException e) {
+                throw new IdentityOAuth2Exception("Error occurred while generating access token and refresh token", e);
             }
 
             if (OAuth2Util.checkUserNameAssertionEnabled()) {
