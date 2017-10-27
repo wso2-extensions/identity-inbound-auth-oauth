@@ -63,6 +63,7 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
     private static final String OAUTH_VERIFIER = "fakeOauthVerifier";
     private static final String NEW_SECRET = "a459a540f544777860e44e75f605d875";
     private static final String DB_NAME = "testOAuthConsumerDAO";
+    private static final String BACKCHANNELLOGOUT_URL = "http://localhost:8080/bclogout";
 
     @Mock
     private OAuthServerConfiguration mockedServerConfig;
@@ -75,7 +76,7 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
 
         initiateH2Base(DB_NAME, getFilePath("h2.sql"));
 
-        int consumer_ID = createBaseOAuthApp(DB_NAME, CLIENT_ID, SECRET, USER_NAME, APP_NAME, CALLBACK, APP_STATE);
+        int consumer_ID = createBaseOAuthApp(DB_NAME, CLIENT_ID, SECRET, USER_NAME, APP_NAME, CALLBACK, APP_STATE, BACKCHANNELLOGOUT_URL);
         createAccessTokenTable(DB_NAME, consumer_ID, ACC_TOKEN, ACC_TOKEN_SECRET, SCOPE, AUTHZ_USER);
         createReqTokenTable(DB_NAME, consumer_ID, REQ_TOKEN, REQ_TOKEN_SECRET, SCOPE, CALLBACK, OAUTH_VERIFIER,
                 AUTHZ_USER);

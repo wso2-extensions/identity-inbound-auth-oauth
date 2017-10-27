@@ -33,6 +33,7 @@ public class OAuthConsumerAppDTO {
     private long userAccessTokenExpiryTime;
     private long applicationAccessTokenExpiryTime;
     private long refreshTokenExpiryTime;
+    private String backChannelLogoutUrl;
 
     public long getUserAccessTokenExpiryTime() {
         return userAccessTokenExpiryTime;
@@ -138,6 +139,14 @@ public class OAuthConsumerAppDTO {
 
     public String getState() {
         return state;
+    }
+
+    public void setBackChannelLogoutUrl(String backChannelLogoutUrl) {
+        this.backChannelLogoutUrl = backChannelLogoutUrl;
+    }
+
+    public String getBackChannelLogoutUrl() {
+        return backChannelLogoutUrl;
     }
 }
 

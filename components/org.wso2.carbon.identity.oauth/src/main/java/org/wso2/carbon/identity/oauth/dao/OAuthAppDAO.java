@@ -90,6 +90,7 @@ public class OAuthAppDAO {
                     prepStmt.setLong(12, consumerAppDO.getUserAccessTokenExpiryTime());
                     prepStmt.setLong(13, consumerAppDO.getApplicationAccessTokenExpiryTime());
                     prepStmt.setLong(14, consumerAppDO.getRefreshTokenExpiryTime());
+                    prepStmt.setString(15, consumerAppDO.getBackChannelLogoutUrl());
                     prepStmt.execute();
                     connection.commit();
                 } else {
@@ -106,6 +107,7 @@ public class OAuthAppDAO {
                     prepStmt.setLong(10, consumerAppDO.getUserAccessTokenExpiryTime());
                     prepStmt.setLong(11, consumerAppDO.getApplicationAccessTokenExpiryTime());
                     prepStmt.setLong(12, consumerAppDO.getRefreshTokenExpiryTime());
+                    prepStmt.setString(13, consumerAppDO.getBackChannelLogoutUrl());
                     prepStmt.execute();
                     connection.commit();
                 }
@@ -294,10 +296,12 @@ public class OAuthAppDAO {
                         oauthApp.setUserAccessTokenExpiryTime(rSet.getLong(12));
                         oauthApp.setApplicationAccessTokenExpiryTime(rSet.getLong(13));
                         oauthApp.setRefreshTokenExpiryTime(rSet.getLong(14));
+                        oauthApp.setBackChannelLogoutUrl(rSet.getString(15));
                     } else {
                         oauthApp.setUserAccessTokenExpiryTime(rSet.getLong(10));
                         oauthApp.setApplicationAccessTokenExpiryTime(rSet.getLong(11));
                         oauthApp.setRefreshTokenExpiryTime(rSet.getLong(12));
+                        oauthApp.setBackChannelLogoutUrl(rSet.getString(13));
                     }
                 }
             }
@@ -366,11 +370,13 @@ public class OAuthAppDAO {
                         oauthApp.setUserAccessTokenExpiryTime(rSet.getLong(11));
                         oauthApp.setApplicationAccessTokenExpiryTime(rSet.getLong(12));
                         oauthApp.setRefreshTokenExpiryTime(rSet.getLong(13));
+                        oauthApp.setBackChannelLogoutUrl(rSet.getString(14));
 
                     } else {
                         oauthApp.setUserAccessTokenExpiryTime(rSet.getLong(9));
                         oauthApp.setApplicationAccessTokenExpiryTime(rSet.getLong(10));
                         oauthApp.setRefreshTokenExpiryTime(rSet.getLong(11));
+                        oauthApp.setBackChannelLogoutUrl(rSet.getString(12));
                     }
                 }
             }
@@ -415,15 +421,21 @@ public class OAuthAppDAO {
                 prepStmt.setLong(6, oauthAppDO.getUserAccessTokenExpiryTime());
                 prepStmt.setLong(7, oauthAppDO.getApplicationAccessTokenExpiryTime());
                 prepStmt.setLong(8, oauthAppDO.getRefreshTokenExpiryTime());
+                prepStmt.setString(9,oauthAppDO.getBackChannelLogoutUrl());
 
-                prepStmt.setString(9, persistenceProcessor.getProcessedClientId(oauthAppDO.getOauthConsumerKey()));
-                prepStmt.setString(10, persistenceProcessor.getProcessedClientSecret(oauthAppDO.getOauthConsumerSecret()));
+                prepStmt.setString(10, persistenceProcessor.getProcessedClientId(oauthAppDO.getOauthConsumerKey()));
+                prepStmt.setString(11, persistenceProcessor.getProcessedClientSecret(oauthAppDO
+                        .getOauthConsumerSecret()));
+
             } else {
                 prepStmt.setLong(4, oauthAppDO.getUserAccessTokenExpiryTime());
                 prepStmt.setLong(5, oauthAppDO.getApplicationAccessTokenExpiryTime());
                 prepStmt.setLong(6, oauthAppDO.getRefreshTokenExpiryTime());
-                prepStmt.setString(7, persistenceProcessor.getProcessedClientId(oauthAppDO.getOauthConsumerKey()));
-                prepStmt.setString(8, persistenceProcessor.getProcessedClientSecret(oauthAppDO.getOauthConsumerSecret()));
+                prepStmt.setString(7,oauthAppDO.getBackChannelLogoutUrl());
+                prepStmt.setString(8, persistenceProcessor.getProcessedClientId(oauthAppDO.getOauthConsumerKey()));
+                prepStmt.setString(9, persistenceProcessor.getProcessedClientSecret(oauthAppDO
+                        .getOauthConsumerSecret()));
+
             }
 
             int count = prepStmt.executeUpdate();
