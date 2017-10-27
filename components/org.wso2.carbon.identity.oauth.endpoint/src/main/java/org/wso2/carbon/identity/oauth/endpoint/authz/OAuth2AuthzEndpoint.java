@@ -887,8 +887,16 @@ public class OAuth2AuthzEndpoint {
             }
             log.debug("the pkce is :"+OAuthConstants.OAUTH_PKCE_REFERREDTB_CHALLENGE);
             //check PKCE challenge for token binding
-            if (checkTB(oauthRequest.getHttpRequestHeaders()) && !OAuthConstants.OAUTH_PKCE_REFERREDTB_CHALLENGE.equals(pkceChallengeCode)){
-                return EndpointUtil.getErrorPageURL(OAuth2ErrorCodes.INVALID_REQUEST, "PKCE is mandatory for Token binding. "
+            Boolean TbMandatory=false;
+            try {
+                TbMandatory = OAuth2Util.getAppInformationByClientId(clientId).isTbMandatory();
+            } catch (IdentityOAuth2Exception e) {
+                TbMandatory=false;
+            } catch (InvalidOAuthClientException e) {
+                TbMandatory=false;
+            }
+            if (TbMandatory && checkTB(oauthRequest.getHttpRequestHeaders()) && !OAuthConstants.OAUTH_PKCE_REFERREDTB_CHALLENGE.equals(pkceChallengeCode)){
+                return EndpointUtil.getErrorPageURL(OAuth2ErrorCodes.INVALID_REQUEST, "PKCE is different for Token binding. "
                         , null);
             }
 
