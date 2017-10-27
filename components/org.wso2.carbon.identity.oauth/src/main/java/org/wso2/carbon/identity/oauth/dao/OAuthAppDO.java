@@ -39,6 +39,7 @@ public class OAuthAppDO implements Serializable {
     private long userAccessTokenExpiryTime;
     private long applicationAccessTokenExpiryTime;
     private long refreshTokenExpiryTime;
+    private String backChannelLogoutUrl;
 
     public AuthenticatedUser getUser() {
         return user;
@@ -150,5 +151,11 @@ public class OAuthAppDO implements Serializable {
 
     public void setRefreshTokenExpiryTime(long refreshTokenExpiryTime) {
         this.refreshTokenExpiryTime = refreshTokenExpiryTime;
+    }
+    public void setBackChannelLogoutUrl(String backChannelLogoutUrl) {
+        this.backChannelLogoutUrl = backChannelLogoutUrl;
+    }
+    public String getBackChannelLogoutUrl() {
+        return backChannelLogoutUrl;
     }
 }
