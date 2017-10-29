@@ -46,6 +46,7 @@ import org.wso2.carbon.registry.core.Resource;
 import org.wso2.carbon.registry.core.exceptions.RegistryException;
 import org.wso2.carbon.registry.core.service.RegistryService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
+import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -243,14 +244,14 @@ public class UserInfoJSONResponseBuilder implements UserInfoResponseBuilder {
                     .isUseTenantDomainInLocalSubjectIdentifier();
             boolean isUseUserStoreDomainInLocalSubject = serviceProvider.getLocalAndOutBoundAuthenticationConfig()
                     .isUseUserstoreDomainInLocalSubjectIdentifier();
-
+            String tenantAwareUsername = MultitenantUtils.getTenantAwareUsername(sub);
             if (StringUtils.isNotEmpty(sub)) {
                 // building subject in accordance with Local and Outbound Authentication Configuration preferences
+                if (isUseTenantDomainInLocalSubject) {
+                    sub = UserCoreUtil.addTenantDomainToEntry(tenantAwareUsername, tenantDomain);
+                }
                 if (isUseUserStoreDomainInLocalSubject) {
                     sub = UserCoreUtil.addDomainToName(sub, userStoreDomain);
-                }
-                if (isUseTenantDomainInLocalSubject) {
-                    sub = UserCoreUtil.addTenantDomainToEntry(sub, tenantDomain);
                 }
             }
         }
