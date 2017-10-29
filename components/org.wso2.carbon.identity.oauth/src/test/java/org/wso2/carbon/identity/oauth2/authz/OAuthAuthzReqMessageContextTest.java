@@ -18,17 +18,20 @@ package org.wso2.carbon.identity.oauth2.authz;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
+
 import static org.testng.Assert.assertEquals;
+
 import java.lang.String;
 
 public class OAuthAuthzReqMessageContextTest {
-    OAuth2AuthorizeReqDTO authorizationReqDTON = new OAuth2AuthorizeReqDTO();
+    private OAuth2AuthorizeReqDTO authorizationReqDTON;
 
     private OAuthAuthzReqMessageContext oauthAuthzReqMessageContext;
     private OAuth2AuthorizeReqDTO authorizationReqDTO;
 
     @BeforeTest
     public void setUp() {
+        authorizationReqDTON = new OAuth2AuthorizeReqDTO();
         OAuth2AuthorizeReqDTO authorizationReqDTON = new OAuth2AuthorizeReqDTO();
         oauthAuthzReqMessageContext = new OAuthAuthzReqMessageContext(authorizationReqDTON);
         this.authorizationReqDTO = authorizationReqDTON;
@@ -39,36 +42,20 @@ public class OAuthAuthzReqMessageContextTest {
         OAuth2AuthorizeReqDTO authorizationReqDTON = new OAuth2AuthorizeReqDTO();
         authorizationReqDTON.setEssentialClaims("https://www.wso2.org/name");
         assertEquals(authorizationReqDTON.getEssentialClaims(),
-                "https://www.wso2.org/name" , "Valid claim value.");
+                "https://www.wso2.org/name", "Valid claim value.");
 
         authorizationReqDTON.setConsumerKey("0289");
         assertEquals(authorizationReqDTON.getConsumerKey(),
-                "0289" , "Valid consumer key.");
-    }
-
-    @Test
-    public void testGetApprovedScope() throws Exception {
-        String[] approvedScope = {"scope1", "scope2"};
-
-        oauthAuthzReqMessageContext.setApprovedScope(approvedScope);
-        assertEquals(oauthAuthzReqMessageContext.getApprovedScope(),
-                approvedScope , "Valid Scope.");
+                "0289", "Valid consumer key.");
     }
 
     @Test
     public void testSetApprovedScope() throws Exception {
-       String[] approvedScope = {"scope1", "scope2"};
+        String[] approvedScope = {"scope1", "scope2"};
 
         oauthAuthzReqMessageContext.setApprovedScope(approvedScope);
         assertEquals(oauthAuthzReqMessageContext.getApprovedScope(),
-                approvedScope , "Valid Scope.");
-    }
-
-    @Test
-    public void testGetValidityPeriod() throws Exception {
-        oauthAuthzReqMessageContext.setValidityPeriod(120);
-        assertEquals(oauthAuthzReqMessageContext.getValidityPeriod(),
-                120, "Valid validity period.");
+                approvedScope, "Valid Scope.");
     }
 
     @Test
@@ -80,64 +67,43 @@ public class OAuthAuthzReqMessageContextTest {
 
     @Test
     public void testAddProperty() throws Exception {
-        oauthAuthzReqMessageContext.addProperty(authorizationReqDTON,2);
+        oauthAuthzReqMessageContext.addProperty(authorizationReqDTON, 2);
         assertEquals(oauthAuthzReqMessageContext.getProperty(authorizationReqDTON),
-                2 , "Valid property value.");
+                2, "Valid property value.");
     }
 
     @Test
     public void testGetProperty() throws Exception {
-        oauthAuthzReqMessageContext.addProperty(authorizationReqDTON,2);
+        oauthAuthzReqMessageContext.addProperty(authorizationReqDTON, 2);
         assertEquals(oauthAuthzReqMessageContext.getProperty(authorizationReqDTON),
-                2 , "Valid property value.");
+                2, "Valid property value.");
     }
 
     @Test
     public void testSetRefreshTokenvalidityPeriod() throws Exception {
         oauthAuthzReqMessageContext.setRefreshTokenvalidityPeriod(100);
         assertEquals(oauthAuthzReqMessageContext.getRefreshTokenvalidityPeriod(),
-                100 , "Valid refresh token validity period.");
-    }
-
-    @Test
-    public void testGetAccessTokenIssuedTime() throws Exception {
-        oauthAuthzReqMessageContext.setAccessTokenIssuedTime(10);
-        assertEquals(oauthAuthzReqMessageContext.getAccessTokenIssuedTime(),
-                10 , "Valid access token issued time.");
+                100, "Valid refresh token validity period.");
     }
 
     @Test
     public void testSetAccessTokenIssuedTime() throws Exception {
         oauthAuthzReqMessageContext.setAccessTokenIssuedTime(10);
         assertEquals(oauthAuthzReqMessageContext.getAccessTokenIssuedTime(),
-                10 , "Valid access token issued time.");
-    }
-
-    @Test
-    public void testGetRefreshTokenIssuedTime() throws Exception {
-        oauthAuthzReqMessageContext.setRefreshTokenIssuedTime(10);
-        assertEquals(oauthAuthzReqMessageContext.getRefreshTokenIssuedTime(),
-                10 , "Valid refresh token issued time.");
+                10, "Valid access token issued time.");
     }
 
     @Test
     public void testSetRefreshTokenIssuedTime() throws Exception {
         oauthAuthzReqMessageContext.setRefreshTokenIssuedTime(10);
         assertEquals(oauthAuthzReqMessageContext.getRefreshTokenIssuedTime(),
-                10 , "Valid refresh token issued time.");
-    }
-
-    @Test
-    public void testGetCodeIssuedTime() throws Exception {
-        oauthAuthzReqMessageContext.setCodeIssuedTime(10);
-        assertEquals(oauthAuthzReqMessageContext.getCodeIssuedTime(),
-                10 , "Valid code issued time.");
+                10, "Valid refresh token issued time.");
     }
 
     @Test
     public void testSetCodeIssuedTime() throws Exception {
         oauthAuthzReqMessageContext.setCodeIssuedTime(10);
         assertEquals(oauthAuthzReqMessageContext.getCodeIssuedTime(),
-                10 , "Valid code issued time.");
+                10, "Valid code issued time.");
     }
 }

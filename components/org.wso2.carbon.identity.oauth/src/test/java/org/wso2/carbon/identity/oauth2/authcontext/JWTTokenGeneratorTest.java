@@ -26,13 +26,14 @@ import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+
 import static org.mockito.Mockito.when;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 
 @PrepareForTest({OAuthServerConfiguration.class, OAuth2Util.class})
 public class JWTTokenGeneratorTest extends PowerMockTestCase {
 
-    JWTTokenGenerator jwtTokenGenerator;
+    private JWTTokenGenerator jwtTokenGenerator;
     private boolean includeClaims = true;
     private boolean enableSigning = true;
     private String consumerDialectURI = "http://wso2.org/claims";
