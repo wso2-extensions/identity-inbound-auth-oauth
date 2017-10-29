@@ -34,4 +34,11 @@ public class TestConstants {
     public static final String USERSTORE_DOMAIN = "user_store_domain";
     public static final String NEW_ACCESS_TOKEN = "123456789";
     public static final String ERROR = "Error";
+    public static final int TENANT_ID = 1234;
+    public static final String CARBON_PROTOCOL = "carbon.protocol";
+    public static final String CARBON_HOST = "carbon.host";
+    public static final String CARBON_MANAGEMENT_PORT = "carbon.management.port";
+    public static final String CARBON_PROTOCOL_HTTPS = "https";
+    public static final String CARBON_HOST_LOCALHOST = "localhost";
+    public static final String CARBON_DEFAULT_HTTPS_PORT = "9443";
 }

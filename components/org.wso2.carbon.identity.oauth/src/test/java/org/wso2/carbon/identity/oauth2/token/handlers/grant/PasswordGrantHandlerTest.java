@@ -170,7 +170,7 @@ public class PasswordGrantHandlerTest extends PowerMockIdentityBaseTest {
     }
 
     @DataProvider(name = "GetValidateGrantForExceptionDataProvider")
-    public Object[][] ValidateGrantForExceptionDataProvider() {
+    public Object[][] validateGrantForExceptionDataProvider() {
 
         return new Object[][]{
                 {"password", null, "carbon.super"},

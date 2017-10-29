@@ -39,7 +39,7 @@ import static org.powermock.api.mockito.PowerMockito.when;
 public class ClaimMetaDataCacheRemoveListenerTest {
 
     @Mock
-    ClaimCache mockedClaimCache;
+    private ClaimCache mockedClaimCache;
 
     @DataProvider(name = "provideParams")
     public Object[][] providePostParams() {

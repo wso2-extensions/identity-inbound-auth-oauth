@@ -216,7 +216,7 @@ public class OAuthApplicationMgtListenerTest extends TestOAuthDAOBase {
     }
 
     @DataProvider(name = "GetPostUpdateApplicationData")
-    public Object[][] PostUpdateApplicationData() {
+    public Object[][] postUpdateApplicationData() {
 
         return new Object[][]{
                 // Test the saas-token revocation and cache entry removal for an oauth application. If saas property

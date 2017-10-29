@@ -66,29 +66,28 @@ import static org.testng.AssertJUnit.assertTrue;
 public class IdentityOathEventListenerTest extends IdentityBaseTest {
 
     private IdentityOathEventListener identityOathEventListener = new IdentityOathEventListener();
-    private IdentityOathEventListener spiedIdentityEventListener;
     private String username = "USER_NAME";
     private String claimUri = "CLAIM_URI";
     private String claimValue = "CLAIM_VALUE";
     private String profileName = "PROFILE_NAME";
 
     @Mock
-    UserStoreManager userStoreManager;
+    private UserStoreManager userStoreManager;
 
     @Mock
-    TokenMgtDAO tokenMgtDAO;
+    private TokenMgtDAO tokenMgtDAO;
 
     @Mock
-    AuthenticatedUser authenticatedUser;
+    private AuthenticatedUser authenticatedUser;
 
     @Mock
-    Map<String, String> mockedMapClaims;
+    private Map<String, String> mockedMapClaims;
 
     @Mock
-    ClaimMetaDataCache claimMetaDataCache;
+    private ClaimMetaDataCache claimMetaDataCache;
 
     @Mock
-    OAuthServerConfiguration oauthServerConfigurationMock;
+    private OAuthServerConfiguration oauthServerConfigurationMock;
 
     @BeforeMethod
     public void setUp() throws Exception {
@@ -119,7 +118,6 @@ public class IdentityOathEventListenerTest extends IdentityBaseTest {
     @Test(dataProvider = "testGetExecutionOrderIdData")
     public void testGetExecutionOrderId(int orderId, int expected) throws Exception {
         IdentityEventListenerConfig identityEventListenerConfig = mock(IdentityEventListenerConfig.class);
-        spiedIdentityEventListener = spy(new IdentityOathEventListener());
         when(IdentityUtil.readEventListenerProperty(anyString(), anyString())).thenReturn(identityEventListenerConfig);
         when(identityOathEventListener.getOrderId()).thenReturn(orderId);
         assertEquals(identityOathEventListener.getExecutionOrderId(), expected, "asserting exec. order id");

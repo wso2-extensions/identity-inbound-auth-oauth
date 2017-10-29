@@ -49,10 +49,7 @@ import static org.testng.Assert.assertEquals;
 public class OAuthCacheRemoveListenerTest extends PowerMockTestCase {
 
     @Mock
-    IdentityUtil mockedIdentityUtil;
-
-    @Mock
-    OAuthServerConfiguration oauthServerConfigurationMock;
+    private OAuthServerConfiguration oauthServerConfigurationMock;
 
     @BeforeMethod
     public void setUp() throws Exception {

@@ -60,28 +60,29 @@ import java.util.List;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.fail;
 
+/**
+ * Unit test covering DCRMService
+ */
 @PrepareForTest({DCRMService.class, ServiceProvider.class, IdentityProviderManager.class})
 public class DCRMServiceTest extends PowerMockTestCase {
 
     private DCRMService dcrmService;
 
     private OAuthAdminService mockOAuthAdminService;
-    private String dummyConsumerSecret = "dummyConsumerSecret";
     private String dummyConsumerKey = "dummyConsumerKey";
-    private String dummyCallbackUrl = "dummyCallbackUrl";
-    private ApplicationRegistrationRequest mockApplicationRegistrationRequest;
+    private ApplicationRegistrationRequest applicationRegistrationRequest;
     private String dummyClientName = "dummyClientName";
     private List<String> dummyGrantTypes = new ArrayList<>();
     private String dummyUserName = "dummyUserName";
     private String dummyTenantDomain = "dummyTenantDomain";
     private ApplicationManagementService mockApplicationManagementService;
-    private ApplicationUpdateRequest mockApplicationUpdateRequest;
-    private String dummyClientId = "dummyClientId";
 
     @BeforeMethod
     public void setUp() {
 
         mockOAuthAdminService = mock(OAuthAdminService.class);
+        applicationRegistrationRequest = new ApplicationRegistrationRequest();
+        applicationRegistrationRequest.setClientName(dummyClientName);
         dcrmService = new DCRMService();
     }
 
@@ -162,8 +163,10 @@ public class DCRMServiceTest extends PowerMockTestCase {
 
         OAuthConsumerAppDTO dto = new OAuthConsumerAppDTO();
         dto.setApplicationName(dummyClientName);
+        String dummyConsumerSecret = "dummyConsumerSecret";
         dto.setOauthConsumerSecret(dummyConsumerSecret);
         dto.setOauthConsumerKey(dummyConsumerKey);
+        String dummyCallbackUrl = "dummyCallbackUrl";
         dto.setCallbackUrl(dummyCallbackUrl);
 
         when(mockOAuthAdminService.getOAuthApplicationData(dummyConsumerKey)).thenReturn(dto);
@@ -180,13 +183,10 @@ public class DCRMServiceTest extends PowerMockTestCase {
     @Test
     public void registerApplicationTestWithExistSP() throws DCRMException, IdentityApplicationManagementException {
 
-        mockApplicationRegistrationRequest = mock(ApplicationRegistrationRequest.class);
-
         dummyGrantTypes.add("dummy1");
         dummyGrantTypes.add("dummy2");
 
-        when(mockApplicationRegistrationRequest.getClientName()).thenReturn(dummyClientName);
-        when(mockApplicationRegistrationRequest.getGrantTypes()).thenReturn(dummyGrantTypes);
+        applicationRegistrationRequest.setGrantTypes(dummyGrantTypes);
 
         startTenantFlow();
 
@@ -197,7 +197,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
                 ServiceProvider());
 
         try {
-            dcrmService.registerApplication(mockApplicationRegistrationRequest);
+            dcrmService.registerApplication(applicationRegistrationRequest);
         } catch (IdentityException ex) {
             assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.CONFLICT_EXISTING_APPLICATION.toString());
             return;
@@ -209,13 +209,10 @@ public class DCRMServiceTest extends PowerMockTestCase {
     public void registerApplicationTestWithFailedToGetSP() throws DCRMException,
             IdentityApplicationManagementException {
 
-        mockApplicationRegistrationRequest = mock(ApplicationRegistrationRequest.class);
-
         dummyGrantTypes.add("dummy1");
         dummyGrantTypes.add("dummy2");
 
-        when(mockApplicationRegistrationRequest.getClientName()).thenReturn(dummyClientName);
-        when(mockApplicationRegistrationRequest.getGrantTypes()).thenReturn(dummyGrantTypes);
+        applicationRegistrationRequest.setGrantTypes(dummyGrantTypes);
 
         startTenantFlow();
 
@@ -227,7 +224,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
                 .getServiceProvider(dummyClientName, dummyTenantDomain);
 
         try {
-            dcrmService.registerApplication(mockApplicationRegistrationRequest);
+            dcrmService.registerApplication(applicationRegistrationRequest);
         } catch (IdentityException ex) {
             assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.FAILED_TO_GET_SP.toString());
             return;
@@ -238,13 +235,10 @@ public class DCRMServiceTest extends PowerMockTestCase {
     @Test
     public void registerApplicationTestWithFailedToRegisterSP() throws Exception {
 
-        mockApplicationRegistrationRequest = mock(ApplicationRegistrationRequest.class);
-
         dummyGrantTypes.add("dummy1");
         dummyGrantTypes.add("dummy2");
 
-        when(mockApplicationRegistrationRequest.getClientName()).thenReturn(dummyClientName);
-        when(mockApplicationRegistrationRequest.getGrantTypes()).thenReturn(dummyGrantTypes);
+        applicationRegistrationRequest.setGrantTypes(dummyGrantTypes);
 
         startTenantFlow();
 
@@ -253,7 +247,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
         dcrDataHolder.setApplicationManagementService(mockApplicationManagementService);
 
         try {
-            dcrmService.registerApplication(mockApplicationRegistrationRequest);
+            dcrmService.registerApplication(applicationRegistrationRequest);
         } catch (IdentityException ex) {
             assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.FAILED_TO_REGISTER_SP.toString());
             return;
@@ -265,15 +259,9 @@ public class DCRMServiceTest extends PowerMockTestCase {
     public Object[][] getListSizeAndGrantType() {
 
         List<String> redirectUri1 = new ArrayList<>();
-        List<String> redirectUri2 = new ArrayList<>();
-        redirectUri2.add("redirectUri1");
-        List<String> redirectUri3 = new ArrayList<>();
-        redirectUri3.add("redirectUri1");
-        redirectUri3.add("redirectUri2");
         return new Object[][]{
-                {"implicit", redirectUri2},
-                {"dummy", redirectUri3},
-                {"dummy", redirectUri1}
+                {"implicit", redirectUri1},
+                {"authorization_code", redirectUri1},
         };
     }
 
@@ -281,19 +269,16 @@ public class DCRMServiceTest extends PowerMockTestCase {
     public void registerApplicationTestWithSPWithFailCallback(String grantTypeVal, List<String> redirectUri)
             throws Exception {
 
-        mockApplicationRegistrationRequest = mock(ApplicationRegistrationRequest.class);
         mockApplicationManagementService = mock(ApplicationManagementService.class);
 
         Whitebox.setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
 
         startTenantFlow();
 
-        when(mockApplicationRegistrationRequest.getClientName()).thenReturn(dummyClientName);
-
         dummyGrantTypes.add(grantTypeVal);
-        when(mockApplicationRegistrationRequest.getGrantTypes()).thenReturn(dummyGrantTypes);
+        applicationRegistrationRequest.setGrantTypes(dummyGrantTypes);
 
-        String grantType = StringUtils.join(mockApplicationRegistrationRequest.getGrantTypes(), " ");
+        String grantType = StringUtils.join(applicationRegistrationRequest.getGrantTypes(), " ");
 
         ServiceProvider serviceProvider = new ServiceProvider();
 
@@ -302,7 +287,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
         when(mockApplicationManagementService.getServiceProvider(dummyClientName, dummyTenantDomain)).thenReturn
                 (null, serviceProvider);
 
-        mockApplicationRegistrationRequest.setRedirectUris(redirectUri);
+        applicationRegistrationRequest.setRedirectUris(redirectUri);
 
         OAuthConsumerAppDTO oAuthConsumerApp = new OAuthConsumerAppDTO();
         oAuthConsumerApp.setApplicationName(dummyClientName);
@@ -314,7 +299,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
                 .getOAuthApplicationDataByAppName(dummyClientName)).thenReturn(oAuthConsumerApp);
 
         try {
-            dcrmService.registerApplication(mockApplicationRegistrationRequest);
+            dcrmService.registerApplication(applicationRegistrationRequest);
         } catch (IdentityException ex) {
             assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_INPUT.toString());
             return;
@@ -339,19 +324,16 @@ public class DCRMServiceTest extends PowerMockTestCase {
     @Test(dataProvider = "redirectUriProvider")
     public void registerApplicationTestWithSP(List<String> redirectUri) throws Exception {
 
-        mockApplicationRegistrationRequest = mock(ApplicationRegistrationRequest.class);
         mockApplicationManagementService = mock(ApplicationManagementService.class);
 
         Whitebox.setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
 
         startTenantFlow();
 
-        when(mockApplicationRegistrationRequest.getClientName()).thenReturn(dummyClientName);
-
         dummyGrantTypes.add("implicit");
-        when(mockApplicationRegistrationRequest.getGrantTypes()).thenReturn(dummyGrantTypes);
+        applicationRegistrationRequest.setGrantTypes(dummyGrantTypes);
 
-        String grantType = StringUtils.join(mockApplicationRegistrationRequest.getGrantTypes(), " ");
+        String grantType = StringUtils.join(applicationRegistrationRequest.getGrantTypes(), " ");
 
         ServiceProvider serviceProvider = new ServiceProvider();
 
@@ -360,7 +342,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
         when(mockApplicationManagementService.getServiceProvider(dummyClientName, dummyTenantDomain)).thenReturn
                 (null, serviceProvider);
 
-        when(mockApplicationRegistrationRequest.getRedirectUris()).thenReturn(redirectUri);
+        applicationRegistrationRequest.setRedirectUris(redirectUri);
 
         OAuthConsumerAppDTO oAuthConsumerApp = new OAuthConsumerAppDTO();
         oAuthConsumerApp.setApplicationName(dummyClientName);
@@ -371,27 +353,21 @@ public class DCRMServiceTest extends PowerMockTestCase {
         when(mockOAuthAdminService
                 .getOAuthApplicationDataByAppName(dummyClientName)).thenReturn(oAuthConsumerApp);
 
-        Application application = dcrmService.registerApplication(mockApplicationRegistrationRequest);
+        Application application = dcrmService.registerApplication(applicationRegistrationRequest);
         assertEquals(application.getClient_name(), dummyClientName);
     }
 
     @Test
     public void registerApplicationTestWithBadRequestSP() throws Exception {
 
-        mockApplicationRegistrationRequest = mock(ApplicationRegistrationRequest.class);
         mockApplicationManagementService = mock(ApplicationManagementService.class);
 
         Whitebox.setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
 
-        String carbonHome = Paths.get(System.getProperty("user.dir"), "target").toString();
-        System.setProperty(CarbonBaseConstants.CARBON_HOME, carbonHome);
-        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(dummyTenantDomain);
-        PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(dummyUserName);
-
-        when(mockApplicationRegistrationRequest.getClientName()).thenReturn(dummyClientName);
+        startTenantFlow();
 
         dummyGrantTypes.add("implicit");
-        when(mockApplicationRegistrationRequest.getGrantTypes()).thenReturn(dummyGrantTypes);
+        applicationRegistrationRequest.setGrantTypes(dummyGrantTypes);
 
         ServiceProvider serviceProvider = mock(ServiceProvider.class);
 
@@ -406,7 +382,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
                 dummyUserName);
 
         try {
-            dcrmService.registerApplication(mockApplicationRegistrationRequest);
+            dcrmService.registerApplication(applicationRegistrationRequest);
         } catch (IdentityException ex) {
             assertEquals(ex.getErrorCode(), ErrorCodes.BAD_REQUEST.toString());
             return;
@@ -419,19 +395,16 @@ public class DCRMServiceTest extends PowerMockTestCase {
 
         mockStatic(IdentityProviderManager.class);
 
-        mockApplicationRegistrationRequest = mock(ApplicationRegistrationRequest.class);
         mockApplicationManagementService = mock(ApplicationManagementService.class);
 
         Whitebox.setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
 
         startTenantFlow();
 
-        when(mockApplicationRegistrationRequest.getClientName()).thenReturn(dummyClientName);
-
         dummyGrantTypes.add("implicit");
-        when(mockApplicationRegistrationRequest.getGrantTypes()).thenReturn(dummyGrantTypes);
+        applicationRegistrationRequest.setGrantTypes(dummyGrantTypes);
 
-        String grantType = StringUtils.join(mockApplicationRegistrationRequest.getGrantTypes(), " ");
+        String grantType = StringUtils.join(applicationRegistrationRequest.getGrantTypes(), " ");
 
         ServiceProvider serviceProvider = new ServiceProvider();
 
@@ -440,7 +413,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
         when(mockApplicationManagementService.getServiceProvider(dummyClientName, dummyTenantDomain)).thenReturn
                 (null, serviceProvider);
 
-        when(mockApplicationRegistrationRequest.getRedirectUris()).thenReturn(redirectUri);
+        applicationRegistrationRequest.setRedirectUris(redirectUri);
 
         OAuthConsumerAppDTO oAuthConsumerApp = new OAuthConsumerAppDTO();
         oAuthConsumerApp.setApplicationName(dummyClientName);
@@ -454,7 +427,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
                 .registerOAuthApplicationData(oAuthConsumerApp);
 
         try {
-            dcrmService.registerApplication(mockApplicationRegistrationRequest);
+            dcrmService.registerApplication(applicationRegistrationRequest);
         } catch (IdentityException ex) {
             assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.FAILED_TO_REGISTER_APPLICATION.toString());
             return;
@@ -467,19 +440,16 @@ public class DCRMServiceTest extends PowerMockTestCase {
 
         mockStatic(IdentityProviderManager.class);
 
-        mockApplicationRegistrationRequest = mock(ApplicationRegistrationRequest.class);
         mockApplicationManagementService = mock(ApplicationManagementService.class);
 
         Whitebox.setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
 
         startTenantFlow();
 
-        when(mockApplicationRegistrationRequest.getClientName()).thenReturn(dummyClientName);
-
         dummyGrantTypes.add("implicit");
-        when(mockApplicationRegistrationRequest.getGrantTypes()).thenReturn(dummyGrantTypes);
+        applicationRegistrationRequest.setGrantTypes(dummyGrantTypes);
 
-        String grantType = StringUtils.join(mockApplicationRegistrationRequest.getGrantTypes(), " ");
+        String grantType = StringUtils.join(applicationRegistrationRequest.getGrantTypes(), " ");
 
         ServiceProvider serviceProvider = new ServiceProvider();
 
@@ -488,7 +458,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
         when(mockApplicationManagementService.getServiceProvider(dummyClientName, dummyTenantDomain)).thenReturn
                 (null, serviceProvider);
 
-        when(mockApplicationRegistrationRequest.getRedirectUris()).thenReturn(redirectUri);
+        applicationRegistrationRequest.setRedirectUris(redirectUri);
 
         OAuthConsumerAppDTO oAuthConsumerApp = new OAuthConsumerAppDTO();
         oAuthConsumerApp.setApplicationName(dummyClientName);
@@ -504,7 +474,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
                 .deleteApplication(dummyClientName, dummyTenantDomain, dummyUserName);
 
         try {
-            dcrmService.registerApplication(mockApplicationRegistrationRequest);
+            dcrmService.registerApplication(applicationRegistrationRequest);
         } catch (IdentityException ex) {
             assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.FAILED_TO_DELETE_SP.toString());
             return;
@@ -515,19 +485,16 @@ public class DCRMServiceTest extends PowerMockTestCase {
     @Test(dataProvider = "redirectUriProvider")
     public void registerApplicationTestWithFailedToUpdateSP(List<String> redirectUri) throws Exception {
 
-        mockApplicationRegistrationRequest = mock(ApplicationRegistrationRequest.class);
         mockApplicationManagementService = mock(ApplicationManagementService.class);
 
         Whitebox.setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
 
         startTenantFlow();
 
-        when(mockApplicationRegistrationRequest.getClientName()).thenReturn(dummyClientName);
-
         dummyGrantTypes.add("implicit");
-        when(mockApplicationRegistrationRequest.getGrantTypes()).thenReturn(dummyGrantTypes);
+        applicationRegistrationRequest.setGrantTypes(dummyGrantTypes);
 
-        String grantType = StringUtils.join(mockApplicationRegistrationRequest.getGrantTypes(), " ");
+        String grantType = StringUtils.join(applicationRegistrationRequest.getGrantTypes(), " ");
 
         ServiceProvider serviceProvider = new ServiceProvider();
         serviceProvider.setApplicationName(dummyClientName);
@@ -537,7 +504,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
         when(mockApplicationManagementService.getServiceProvider(dummyClientName, dummyTenantDomain)).thenReturn
                 (null, serviceProvider);
 
-        when(mockApplicationRegistrationRequest.getRedirectUris()).thenReturn(redirectUri);
+        applicationRegistrationRequest.setRedirectUris(redirectUri);
 
         OAuthConsumerAppDTO oAuthConsumerApp = new OAuthConsumerAppDTO();
         oAuthConsumerApp.setApplicationName(dummyClientName);
@@ -551,7 +518,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
         doThrow(new IdentityApplicationManagementException("ehweh")).when(mockApplicationManagementService)
                 .updateApplication(serviceProvider, dummyTenantDomain, dummyUserName);
         try {
-            dcrmService.registerApplication(mockApplicationRegistrationRequest);
+            dcrmService.registerApplication(applicationRegistrationRequest);
         } catch (IdentityException ex) {
             assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.FAILED_TO_UPDATE_SP.toString());
             return;
@@ -566,13 +533,17 @@ public class DCRMServiceTest extends PowerMockTestCase {
         List<String> redirectUri = new ArrayList<>();
         dummyGrantTypes.add("dummyVal");
         redirectUri.add("dummyUri");
-        mockApplicationUpdateRequest = mock(ApplicationUpdateRequest.class);
+        ApplicationUpdateRequest applicationUpdateRequest = mock(ApplicationUpdateRequest.class);
+        applicationUpdateRequest.setClientName(dummyClientName);
+        applicationUpdateRequest.setGrantTypes(dummyGrantTypes);
+        applicationUpdateRequest.setRedirectUris(redirectUri);
         mockApplicationManagementService = mock(ApplicationManagementService.class);
 
         Whitebox.setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
 
         OAuthConsumerAppDTO dto = new OAuthConsumerAppDTO();
         dto.setApplicationName(dummyClientName);
+        String dummyClientId = "dummyClientId";
         when(mockOAuthAdminService.getOAuthApplicationData(dummyClientId)).thenReturn(dto);
 
         ServiceProvider serviceProvider = new ServiceProvider();
@@ -581,18 +552,15 @@ public class DCRMServiceTest extends PowerMockTestCase {
         when(mockApplicationManagementService.getServiceProvider(dummyClientName, dummyTenantDomain)).thenReturn
                 (serviceProvider);
 
-        when(mockApplicationUpdateRequest.getClientName()).thenReturn(dummyClientName);
         doNothing().when(mockApplicationManagementService).updateApplication(serviceProvider, dummyTenantDomain,
                 dummyUserName);
-        when(mockApplicationUpdateRequest.getGrantTypes()).thenReturn(dummyGrantTypes);
-        when(mockApplicationUpdateRequest.getRedirectUris()).thenReturn(redirectUri);
 
         doThrow(new IdentityOAuthAdminException("")).when(mockOAuthAdminService).updateConsumerApplication(any
                 (OAuthConsumerAppDTO.class));
 
         try {
             startTenantFlow();
-            dcrmService.updateApplication(mockApplicationUpdateRequest, dummyClientId);
+            dcrmService.updateApplication(applicationUpdateRequest, dummyClientId);
         } catch (IdentityException ex) {
             assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.FAILED_TO_UPDATE_APPLICATION.toString());
             return;

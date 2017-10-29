@@ -68,6 +68,7 @@ import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
+import java.nio.charset.StandardCharsets;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
@@ -142,7 +143,8 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
         // Logging the SAML token
         if (log.isDebugEnabled() && IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.SAML_ASSERTION)) {
             log.debug("Received SAML assertion : " +
-                            new String(Base64.decodeBase64(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getAssertion())));
+                            new String(Base64.decodeBase64(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getAssertion()),
+                                    StandardCharsets.UTF_8));
         }
 
         try {
@@ -523,7 +525,7 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
             return false;
         }
 
-        if (notBeforeConditions == null && !validSubjectConfirmationDataExists) {
+        if (notBeforeConditions == null) {
             if (log.isDebugEnabled()){
                 log.debug("No valid NotBefore element found in SubjectConfirmations");
             }

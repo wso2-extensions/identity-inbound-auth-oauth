@@ -72,22 +72,22 @@ public class OAuthServiceTest extends PowerMockIdentityBaseTest {
     private static final String OAUTH_NONCE_STORE = "OAUTH_NONCE_STORE";
 
     @Mock
-    OAuthConsumerDAO oAuthConsumerDAO;
+    private OAuthConsumerDAO oAuthConsumerDAO;
 
     @Mock
-    ServiceContext serviceContext;
+    private ServiceContext serviceContext;
 
     @Mock
-    MessageContext messageContext;
+    private MessageContext messageContext;
 
     @Mock
-    UserRealm userRealm;
+    private UserRealm userRealm;
 
     @Mock
-    UserStoreManager userStoreManager;
+    private UserStoreManager userStoreManager;
 
     @Mock
-    OAuthAppDAO oAuthAppDAO;
+    private OAuthAppDAO oAuthAppDAO;
 
     @DataProvider(name = "testIsOAuthConsumerValid")
     public Object[][] isOAuthConsumerValidFlows() {
@@ -202,7 +202,7 @@ public class OAuthServiceTest extends PowerMockIdentityBaseTest {
     }
 
     @DataProvider(name = "testAuthorizeOauthRequestTokenException")
-    public Object[][] AuthorizeOauthRequestTokenExceptionFlows() {
+    public Object[][] authorizeOauthRequestTokenExceptionFlows() {
         return new Object[][]{{false, true}, {false, false}};
     }
 

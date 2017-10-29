@@ -62,6 +62,7 @@ import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.HashSet;
@@ -164,7 +165,7 @@ public class SAML1BearerGrantHandler extends AbstractAuthorizationGrantHandler {
 
         if (log.isDebugEnabled() && IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.SAML_ASSERTION)) {
             log.debug("Received SAML assertion : " +
-                      new String(Base64.decodeBase64(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getAssertion())));
+                      new String(Base64.decodeBase64(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getAssertion()), StandardCharsets.UTF_8));
         }
 
         try {

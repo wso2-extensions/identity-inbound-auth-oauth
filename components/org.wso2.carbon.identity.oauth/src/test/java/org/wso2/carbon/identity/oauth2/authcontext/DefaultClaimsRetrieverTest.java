@@ -50,7 +50,7 @@ import static org.testng.Assert.assertNotNull;
         OAuthComponentServiceHolder.class, UserRealm.class})
 public class DefaultClaimsRetrieverTest extends PowerMockTestCase {
 
-    DefaultClaimsRetriever defaultClaimsRetriever;
+    private DefaultClaimsRetriever defaultClaimsRetriever;
 
     @Mock
     private OAuthServerConfiguration mockedOAuthServerConfiguration;
@@ -69,9 +69,6 @@ public class DefaultClaimsRetrieverTest extends PowerMockTestCase {
 
     @Mock
     private ClaimManager mockedClaimManager;
-
-    @Mock
-    private ClaimMapping mockedClaimMapping;
 
     @BeforeTest
     public void setUp() {
@@ -116,8 +113,7 @@ public class DefaultClaimsRetrieverTest extends PowerMockTestCase {
         ClaimMapping cMap2 = new ClaimMapping(claim2, testMappedAttributesCore2);
         ClaimMapping cMap3 = new ClaimMapping(claim3, testMappedAttributesUser1);
         ClaimMapping cMap4 = new ClaimMapping(claim4, testMappedAttributesUser2);
-        ClaimMapping[] coreClaims = new ClaimMapping[]{cMap1, cMap2, cMap3, cMap4};
-        return coreClaims;
+        return new ClaimMapping[]{cMap1, cMap2, cMap3, cMap4};
     }
 
     @Test
@@ -176,7 +172,6 @@ public class DefaultClaimsRetrieverTest extends PowerMockTestCase {
         mockedUserRealm = mock(UserRealm.class);
         when(mockedRealmService.getTenantUserRealm(anyInt())).thenReturn(mockedUserRealm);
         when(mockedUserRealm.getUserStoreManager()).thenThrow(new UserStoreException("UserStoreException"));
-        Map<String, String> expectedMappingTrue = new HashMap<>();
         when(mockedUserStoreManager.getUserClaimValue(anyString(), anyString(), anyString())).
                 thenThrow(new UserStoreException("UserStoreException"));
 
@@ -202,7 +197,6 @@ public class DefaultClaimsRetrieverTest extends PowerMockTestCase {
         when(mockedRealmService.getTenantUserRealm(anyInt())).thenReturn(mockedUserRealm);
         mockedClaimManager = mock(ClaimManager.class);
         when(mockedUserRealm.getClaimManager()).thenReturn(mockedClaimManager);
-        mockedClaimMapping = mock(ClaimMapping.class);
         when(mockedClaimManager.getAllClaimMappings(anyString())).thenReturn(this.getSampleClaimMapping());
         assertNotNull(defaultClaimsRetriever.getDefaultClaims("admin"));
 
@@ -225,15 +219,10 @@ public class DefaultClaimsRetrieverTest extends PowerMockTestCase {
         when(mockedRealmService.getTenantUserRealm(anyInt())).thenReturn(mockedUserRealm);
         mockedClaimManager = mock(ClaimManager.class);
         when(mockedUserRealm.getClaimManager()).thenReturn(mockedClaimManager);
-        mockedClaimMapping = mock(ClaimMapping.class);
 
         when(mockedClaimManager.getAllClaimMappings(anyString())).
                 thenThrow(new UserStoreException("UserStoreException"));
         assertNotNull(defaultClaimsRetriever.getDefaultClaims("admin"));
     }
 
-    @ObjectFactory
-    public IObjectFactory getObjectFactory() {
-        return new PowerMockObjectFactory();
-    }
 }

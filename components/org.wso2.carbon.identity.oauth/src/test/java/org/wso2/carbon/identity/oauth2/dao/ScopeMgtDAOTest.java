@@ -135,11 +135,10 @@ public class ScopeMgtDAOTest extends IdentityBaseTest {
             mockStatic(IdentityDatabaseUtil.class);
             ScopeMgtDAO scopeMgtDAO = new ScopeMgtDAO();
 
-            addScopes(scopeMgtDAO, scopes, tenantId);
-
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
-            Set<Scope> scopesList = scopeMgtDAO.getAllScopes(tenantId);
             assertTrue(scopes != null && !scopes.isEmpty(), "Failed to retrieve scopes.");
+
+            addScopes(scopeMgtDAO, scopes, tenantId);
 
             // Clean after test
             deleteScopes(scopeMgtDAO, scopes, tenantId);

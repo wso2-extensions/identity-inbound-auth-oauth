@@ -24,12 +24,12 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.apache.oltu.oauth2.common.message.types.ResponseType;
-import org.wso2.carbon.identity.oauth.common.OAuthConstants;
-import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.callback.OAuthCallback;
 import org.wso2.carbon.identity.oauth.callback.OAuthCallbackManager;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dao.TokenMgtDAO;
@@ -69,7 +69,7 @@ public abstract class AbstractResponseTypeHandler implements ResponseTypeHandler
         OAuth2AuthorizeReqDTO authzReqDTO = oauthAuthzMsgCtx.getAuthorizationReqDTO();
         String responseType = authzReqDTO.getResponseType();
 
-        OAuthAppDO oAuthAppDO = (OAuthAppDO)oauthAuthzMsgCtx.getProperty("OAuthAppDO");
+        OAuthAppDO oAuthAppDO = (OAuthAppDO) oauthAuthzMsgCtx.getProperty("OAuthAppDO");
         // If the application has defined a limited set of grant types, then check the grant
         if (oAuthAppDO.getGrantTypes() != null) {
             if (ResponseType.CODE.toString().equals(responseType)) {
@@ -130,7 +130,7 @@ public abstract class AbstractResponseTypeHandler implements ResponseTypeHandler
         OAuth2AuthorizeReqDTO authzReqDTO = authzReqMsgCtx.getAuthorizationReqDTO();
         String consumerKey = authzReqDTO.getConsumerKey();
 
-        OAuthAppDO oAuthAppDO = (OAuthAppDO)authzReqMsgCtx.getProperty("OAuthAppDO");
+        OAuthAppDO oAuthAppDO = (OAuthAppDO) authzReqMsgCtx.getProperty("OAuthAppDO");
         if (StringUtils.isBlank(oAuthAppDO.getGrantTypes())) {
             if (log.isDebugEnabled()) {
                 log.debug("Could not find authorized grant types for client id: " + consumerKey);

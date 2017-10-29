@@ -40,7 +40,7 @@ public class ClaimMetaDataCacheEntryTest {
         assertEquals(testclass.getClaimCacheKey(), claimCacheKey2);
     }
 
-    class DummyAuthenticatedUser extends AuthenticatedUser {
+    static class DummyAuthenticatedUser extends AuthenticatedUser {
 
         @Override
         public String toString() {

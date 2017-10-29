@@ -23,12 +23,12 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
+import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -222,7 +222,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             }
         } else {
             // todo add proper error message/error code
-            return handleError(OAuthError.TokenResponse.INVALID_REQUEST, "Refresh token is expired.", oauth2AccessTokenReqDTO);
+            return handleError(OAuth2ErrorCodes.INVALID_GRANT, "Refresh token is expired.", oauth2AccessTokenReqDTO);
         }
 
         Timestamp timestamp = new Timestamp(new Date().getTime());

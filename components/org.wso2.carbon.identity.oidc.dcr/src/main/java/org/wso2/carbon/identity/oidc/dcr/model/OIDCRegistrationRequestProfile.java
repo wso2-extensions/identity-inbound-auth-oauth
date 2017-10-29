@@ -19,26 +19,29 @@ package org.wso2.carbon.identity.oidc.dcr.model;
 
 import org.wso2.carbon.identity.oauth.dcr.model.RegistrationRequestProfile;
 
+import java.util.ArrayList;
+import java.util.List;
+
 
 public class OIDCRegistrationRequestProfile extends RegistrationRequestProfile {
 
-    public String sectorIdentifierUri;
-    public String subjectType;
-    public String idTokenSignedResponseAlg;
-    public String idTokenEncryptedResponseAlg;
-    public String idTokenEncryptedResponseEnc;
-    public String userinfoSignedResponseAlg;
-    public String userinfoencryptedResponseAlg;
-    public String userinfoEncryptedResponseEnc;
-    public String requestObjectSigningAlg;
-    public String requestObjectEncryptionAlg;
-    public String requestObjectEncryptionEnc;
-    public String tokenEndpointAuthSigningAlg;
-    public String defaultMaxAge;
-    public String requireAuthTime;
-    public String defaultAcrValues;
-    public String initiateLoginUri;
-    public String requestUris;
+    private String sectorIdentifierUri;
+    private String subjectType;
+    private String idTokenSignedResponseAlg;
+    private String idTokenEncryptedResponseAlg;
+    private String idTokenEncryptedResponseEnc;
+    private String userinfoSignedResponseAlg;
+    private String userinfoencryptedResponseAlg;
+    private String userinfoEncryptedResponseEnc;
+    private String requestObjectSigningAlg;
+    private String requestObjectEncryptionAlg;
+    private String requestObjectEncryptionEnc;
+    private String tokenEndpointAuthSigningAlg;
+    private String defaultMaxAge;
+    private String requireAuthTime;
+    private String defaultAcrValues;
+    private String initiateLoginUri;
+    private List<String> requestUris = new ArrayList<>();
 
     public String getSectorIdentifierUri() {
         return sectorIdentifierUri;
@@ -168,11 +171,7 @@ public class OIDCRegistrationRequestProfile extends RegistrationRequestProfile {
         this.initiateLoginUri = initiateLoginUri;
     }
 
-    public String getRequestUris() {
+    public List<String> getRequestUris() {
         return requestUris;
-    }
-
-    public void setRequestUris(String requestUris) {
-        this.requestUris = requestUris;
     }
 }

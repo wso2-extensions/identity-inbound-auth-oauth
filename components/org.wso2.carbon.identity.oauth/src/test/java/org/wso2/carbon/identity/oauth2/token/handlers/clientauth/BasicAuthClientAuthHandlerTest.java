@@ -50,7 +50,7 @@ import static org.testng.AssertJUnit.assertTrue;
 )
 public class BasicAuthClientAuthHandlerTest extends PowerMockIdentityBaseTest {
 
-	BasicAuthClientAuthHandler testclass = new BasicAuthClientAuthHandler();
+	private BasicAuthClientAuthHandler testclass = new BasicAuthClientAuthHandler();
 
 	@DataProvider(name = "provideOAuthTokenReqMessageContext")
 	public Object[][] createOAuthTokenReqMessageContext() {

@@ -51,19 +51,19 @@ import static org.testng.Assert.assertNotNull;
 public class OAuth2ScopeServiceTest extends PowerMockIdentityBaseTest {
 
     @Mock
-    Scope mockedScope;
+    private Scope mockedScope;
 
     @Mock
-    IdentityCacheConfig mockedIdentityCacheConfig;
+    private IdentityCacheConfig mockedIdentityCacheConfig;
 
     @Mock
-    ScopeMgtDAO mockedScopeMgtDAO;
+    private ScopeMgtDAO mockedScopeMgtDAO;
 
     @Mock
-    Set<Scope> mockedScopeSet;
+    private Set<Scope> mockedScopeSet;
 
     @Mock
-    OAuthScopeCache mockedOAuthScopeCache;
+    private OAuthScopeCache mockedOAuthScopeCache;
 
     @InjectMocks
     private OAuth2ScopeService oAuth2ScopeService;
