@@ -1,6 +1,8 @@
 package org.wso2.carbon.identity.test.common.testNg;
 
 import org.apache.commons.dbcp.BasicDataSource;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.mockito.Matchers;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
@@ -22,6 +24,7 @@ import javax.naming.spi.InitialContextFactory;
 public class MockInitialContextFactory implements InitialContextFactory {
 
     private static ThreadLocal<Map<String, Object>> jndiContextData = new ThreadLocal<>();
+    private static Log log = LogFactory.getLog(MockInitialContextFactory.class);
 
     @Override
     public Context getInitialContext(Hashtable<?, ?> environment) throws NamingException {
@@ -79,7 +82,7 @@ public class MockInitialContextFactory implements InitialContextFactory {
             try {
                 ((BasicDataSource) old).close();
             } catch (Exception e) {
-                e.printStackTrace();
+                log.error("Error while closing the in-memory H2 Database.", e);
             }
         }
     }
@@ -95,7 +98,7 @@ public class MockInitialContextFactory implements InitialContextFactory {
             try {
                 ((BasicDataSource) old).close();
             } catch (Exception e) {
-                e.printStackTrace();
+                log.error("Error while closing the in-memory H2 Database.", e);
             }
         }
         context.put(name, object);
@@ -133,7 +136,7 @@ public class MockInitialContextFactory implements InitialContextFactory {
                 connection.createStatement().executeUpdate("RUNSCRIPT FROM '" + scriptPath + "'");
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("Error while creating the in-memory H2 Database.", e);
         }
         return dataSource;
     }

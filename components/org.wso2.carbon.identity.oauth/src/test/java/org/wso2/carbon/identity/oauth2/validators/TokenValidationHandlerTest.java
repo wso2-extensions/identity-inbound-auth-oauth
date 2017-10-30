@@ -14,7 +14,7 @@ import static org.testng.Assert.assertNotNull;
 
 @WithCarbonHome
 @WithAxisConfiguration
-@WithH2Database(jndiName = "jdbc/WSO2IdentityDB", files = {"dbscripts/token.sql"})
+@WithH2Database(jndiName = "jdbc/WSO2IdentityDB", files = {"dbScripts/token.sql"})
 public class TokenValidationHandlerTest {
 
     @Mock

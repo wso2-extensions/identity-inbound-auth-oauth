@@ -48,7 +48,6 @@
             <class name="org.wso2.carbon.identity.oauth2.dao.TokenMgtDAOTest"/>
             <class name="org.wso2.carbon.identity.oauth.dao.OAuthConsumerDAOTest"/>
             <class name="org.wso2.carbon.identity.oauth.dao.OAuthAppDAOTest"/>
-            <!--class name="org.wso2.carbon.identity.oauth2.validators.TokenValidationHandlerTest"/-->
         </classes>
     </test>
     <test name="org.wso2.carbon.identity.oauth">
@@ -146,7 +145,7 @@
             <class name="org.wso2.carbon.identity.oauth2.OAuth2ScopeServiceTest"/>
 
             <class name="org.wso2.carbon.identity.oauth2.token.handlers.grant.iwa.ntlm.NTLMAuthenticationGrantHandlerTest"/>
-            <!--<class name="org.wso2.carbon.identity.oauth2.validators.TokenValidationHandlerTest"/>-->
+            <class name="org.wso2.carbon.identity.oauth2.validators.TokenValidationHandlerTest"/>
         </classes>
     </test>
     <test name="org.wso2.carbon.identity.oauth2.token.debug">
@@ -168,7 +167,7 @@
             <class name="org.wso2.carbon.identity.oauth2.OAuth2ScopeServiceTest"/>
 
             <class name="org.wso2.carbon.identity.oauth2.token.handlers.grant.iwa.ntlm.NTLMAuthenticationGrantHandlerTest"/>
-            <!--<class name="org.wso2.carbon.identity.oauth2.validators.TokenValidationHandlerTest"/>-->
+            <class name="org.wso2.carbon.identity.oauth2.validators.TokenValidationHandlerTest"/>
 
             <class name="org.wso2.carbon.identity.oauth2.bean.ScopeTest"/>
 

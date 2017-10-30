@@ -5,7 +5,8 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 
-import static org.testng.Assert.*;
+import static org.testng.Assert.assertEquals;
+
 
 /**
  * Tests JDBCScopeValidator.
