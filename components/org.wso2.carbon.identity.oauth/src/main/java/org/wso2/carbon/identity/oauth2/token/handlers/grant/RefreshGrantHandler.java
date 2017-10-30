@@ -140,20 +140,19 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
                 }
                 return false;
             }
-            if (!tokenBindingId.isEmpty()) {
-                String checkTokenValue=(new String(Base64Utils.decode(refreshToken), (Charsets.UTF_8))).split(":")[0];;
-                if (OAuth2Util.checkUserNameAssertionEnabled()) {
-                    checkTokenValue = (new String(Base64Utils.decode(checkTokenValue), (Charsets.UTF_8))).split(":")[0];
-                }
-                if (!checkTokenValue.equals(OAuth2Util.hashTB(tokenBindingId))) {
-                    return false;
-                }
-            }
 
-            if (log.isDebugEnabled()) {
-                log.debug("Refresh token validation successful for Client id : " + tokenReqDTO.getClientId() +
-                          ", Authorized User : " + validationDataDO.getAuthorizedUser() +
-                          ", Token Scope : " + OAuth2Util.buildScopeString(validationDataDO.getScope()));
+        }
+        if (!tokenBindingId.isEmpty()) {
+            String checkTokenValue = (new String(Base64Utils.decode(refreshToken), (Charsets.UTF_8))).split(":")[0];
+            ;
+            if (OAuth2Util.checkUserNameAssertionEnabled()) {
+                checkTokenValue = (new String(Base64Utils.decode(checkTokenValue), (Charsets.UTF_8))).split(":")[0];
+            }
+            if (!checkTokenValue.equals(OAuth2Util.hashTB(tokenBindingId))) {
+                if (log.isDebugEnabled()) {
+                    log.debug("TB validation failed for refresh token");
+                }
+                return false;
             }
         }
 
