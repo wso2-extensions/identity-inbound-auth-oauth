@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oauth2.internal;
 import org.apache.commons.lang.StringUtils;
 import org.mockito.Mock;
 import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
@@ -104,6 +105,11 @@ public class OAuthApplicationMgtListenerTest extends TestOAuthDAOBase {
         //initialize in-memory H2 DB.
         initiateH2Base(DB_NAME, getFilePath("h2.sql"));
         oAuthApplicationMgtListener = new OAuthApplicationMgtListener();
+    }
+
+    @AfterClass
+    public void tearDown() throws Exception {
+        closeH2Base(DB_NAME);
     }
 
     @BeforeMethod

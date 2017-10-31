@@ -30,6 +30,8 @@ import static org.testng.AssertJUnit.assertNotNull;
 
 public class CommonTestUtils {
 
+    public static final String JDBC_SUBCONTEXT = "jdbc";
+
     private CommonTestUtils() {
     }
 

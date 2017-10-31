@@ -21,6 +21,7 @@ import org.apache.commons.lang.StringUtils;
 import org.mockito.Mock;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
@@ -117,8 +118,13 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
         initiateH2Base(DB_NAME, getFilePath("h2.sql"));
     }
 
-    @AfterMethod
+    @AfterClass
     public void tearDown() throws Exception {
+        closeH2Base(DB_NAME);
+    }
+
+    @AfterMethod
+    public void tearDownMethod() throws Exception {
         // Clean all OAuth apps from IDN_OAUTH_CONSUMER_APPS after a test is completed
         cleanUpOAuthConsumerApps(DB_NAME);
     }
@@ -634,7 +640,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
      */
     private void cleanUpOAuthConsumerApps(String databaseName) throws Exception {
         try (Connection connection = getConnection(databaseName);
-             PreparedStatement preparedStatement = connection.prepareStatement((DELETE_ALL_CONSUMER_APPS))) {
+                PreparedStatement preparedStatement = connection.prepareStatement((DELETE_ALL_CONSUMER_APPS))) {
             preparedStatement.executeUpdate();
         }
     }

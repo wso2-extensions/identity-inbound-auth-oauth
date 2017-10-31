@@ -19,6 +19,7 @@ package org.wso2.carbon.identity.oauth.dao;
 
 import org.mockito.Mock;
 import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -78,6 +79,11 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
         createAccessTokenTable(DB_NAME, consumer_ID, ACC_TOKEN, ACC_TOKEN_SECRET, SCOPE, AUTHZ_USER);
         createReqTokenTable(DB_NAME, consumer_ID, REQ_TOKEN, REQ_TOKEN_SECRET, SCOPE, CALLBACK, OAUTH_VERIFIER,
                 AUTHZ_USER);
+    }
+
+    @AfterClass
+    public void tearDown() throws Exception {
+        closeH2Base(DB_NAME);
     }
 
     @Test

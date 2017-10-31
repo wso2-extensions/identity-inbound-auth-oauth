@@ -18,6 +18,7 @@
 package org.wso2.carbon.identity.openidconnect;
 
 import com.nimbusds.jwt.JWTClaimsSet;
+import org.apache.commons.lang.StringUtils;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.opensaml.saml2.core.Assertion;
@@ -26,11 +27,13 @@ import org.opensaml.saml2.core.AttributeStatement;
 import org.opensaml.saml2.core.NameID;
 import org.opensaml.saml2.core.Subject;
 import org.opensaml.saml2.core.impl.AttributeBuilder;
+import org.opensaml.xml.ConfigurationException;
 import org.opensaml.xml.XMLObject;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.IObjectFactory;
 import org.testng.annotations.BeforeTest;
+import org.testng.annotations.DataProvider;
 import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
 import org.w3c.dom.Element;
@@ -79,7 +82,9 @@ import static org.mockito.Mockito.mock;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertTrue;
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertNotNull;
+import static org.wso2.carbon.identity.core.util.IdentityCoreConstants.MULTI_ATTRIBUTE_SEPARATOR_DEFAULT;
 
 /**
  * Class which tests SAMLAssertionClaimsCallback.
@@ -156,6 +161,8 @@ public class SAMLAssertionClaimsCallbackTest {
     @Mock
     private ApplicationManagementService applicationManagementService;
 
+    private static final String CUSTOM_ATTRIBUTE_NAME = "CustomAttributeName";
+
     @BeforeTest
     public void setUp() throws Exception {
         System.setProperty(CarbonBaseConstants.CARBON_HOME, carbonHome);
@@ -173,46 +180,50 @@ public class SAMLAssertionClaimsCallbackTest {
         when(userStoreManager.getRealmConfiguration()).thenReturn(realmConfiguration);
 
         when(realmConfiguration.getUserStoreProperty(IdentityCoreConstants.MULTI_ATTRIBUTE_SEPARATOR)).
-                thenReturn(IdentityCoreConstants.MULTI_ATTRIBUTE_SEPARATOR_DEFAULT);
+                thenReturn(MULTI_ATTRIBUTE_SEPARATOR_DEFAULT);
 
         samlAssertionClaimsCallback = new SAMLAssertionClaimsCallback();
     }
 
-    @Test
-    public void testHandleCustomClaims() throws Exception {
-        jwtClaimsSet = new JWTClaimsSet();
-        requestMsgCtx = mock(OAuthTokenReqMessageContext.class);
-        Assertion assertion = mock(Assertion.class);
-        when(requestMsgCtx.getProperty(OAuthConstants.OAUTH_SAML2_ASSERTION)).thenReturn(assertion);
-        samlAssertionClaimsCallback.handleCustomClaims(jwtClaimsSet, requestMsgCtx);
-        assertTrue(!jwtClaimsSet.getAllClaims().isEmpty(), "Claims are successfully set.");
+    @DataProvider(name = "samlAttributeValueProvider")
+    public Object[][] provideSamlAssertion() {
+        return new Object[][]{
+                // Empty attribute value
+                {new String[]{""}},
+                // Single attribute value
+                {new String[]{"value1"}},
+                // Multiple attribute values
+                {new String[]{"value1", "value2"}}
+        };
     }
 
-    @Test
-    public void testCustomClaimForOAuthTokenReqMessageContext() throws Exception {
+    @Test(dataProvider = "samlAttributeValueProvider")
+    public void testCustomClaimForOAuthTokenReqMessageContext(String[] attributeValues) throws Exception {
+
         jwtClaimsSet = new JWTClaimsSet();
         requestMsgCtx = mock(OAuthTokenReqMessageContext.class);
-        Assertion assertion = mock(Assertion.class);
+
+        List<Attribute> attributesList = new ArrayList<>();
+        Attribute attribute = buildAttribute(CUSTOM_ATTRIBUTE_NAME, attributeValues);
+        attributesList.add(attribute);
 
         AttributeStatement statement = mock(AttributeStatement.class);
         List<AttributeStatement> attributeStatementList = new ArrayList<>();
         attributeStatementList.add(statement);
+        when(statement.getAttributes()).thenReturn(attributesList);
+
+        Assertion assertion = mock(Assertion.class);
         when(assertion.getAttributeStatements()).thenReturn(attributeStatementList);
 
-        List<Attribute> attributesList = new ArrayList<>();
-        Attribute attribute = new AttributeBuilder().buildObject("urn:oasis:names:tc:SAML:2.0:assertion",
-                "Attribute", "saml2");
-        XMLObject obj = mock(XMLObject.class);
-        attribute.getAttributeValues().add(obj);
-
-        Element ele = mock(Element.class);
-        when(obj.getDOM()).thenReturn(ele);
-        attributesList.add(attribute);
-
-        when(statement.getAttributes()).thenReturn(attributesList);
         when(requestMsgCtx.getProperty(OAuthConstants.OAUTH_SAML2_ASSERTION)).thenReturn(assertion);
         samlAssertionClaimsCallback.handleCustomClaims(jwtClaimsSet, requestMsgCtx);
-        assertEquals(jwtClaimsSet.getAllClaims().size(), 9, "Claims are not successfully set.");
+
+        // Assert whether the custom attribute from SAML Assertion was set as a claim.
+        assertFalse(jwtClaimsSet.getCustomClaims().isEmpty());
+        assertNotNull(jwtClaimsSet.getCustomClaim(CUSTOM_ATTRIBUTE_NAME));
+        // Assert whether multi value attribute values were joined correctly.
+        assertEquals(jwtClaimsSet.getCustomClaim(CUSTOM_ATTRIBUTE_NAME),
+                StringUtils.join(attributeValues, MULTI_ATTRIBUTE_SEPARATOR_DEFAULT));
     }
 
     @Test
@@ -430,5 +441,23 @@ public class SAMLAssertionClaimsCallbackTest {
 
         when(newRegistry.getConfigSystemRegistry(anyInt())).thenReturn(userRegistry);
         when(userRegistry.get(OAuthConstants.SCOPE_RESOURCE_PATH)).thenReturn(resource);
+    }
+
+    private Attribute buildAttribute(String attributeName, String[] attributeValues) throws ConfigurationException {
+        Attribute attribute = new AttributeBuilder().buildObject(Attribute.DEFAULT_ELEMENT_NAME);
+        attribute.setName(attributeName);
+
+        for (String attributeValue : attributeValues) {
+            // Build an attribute value object.
+            Element element = mock(Element.class);
+            when(element.getTextContent()).thenReturn(attributeValue);
+
+            XMLObject attributeValueObject = mock(XMLObject.class);
+            when(attributeValueObject.getDOM()).thenReturn(element);
+
+            attribute.getAttributeValues().add(attributeValueObject);
+        }
+
+        return attribute;
     }
 }

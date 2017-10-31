@@ -58,6 +58,14 @@ public class TestOAuthDAOBase extends PowerMockIdentityBaseTest {
         dataSourceMap.put(databaseName, dataSource);
     }
 
+
+    protected void closeH2Base(String databaseName) throws Exception {
+        BasicDataSource dataSource =  dataSourceMap.get(databaseName);
+        if(dataSource != null) {
+            dataSource.close();
+        }
+    }
+
     public static Connection getConnection(String database) throws SQLException {
         if (dataSourceMap.get(database) != null) {
             return dataSourceMap.get(database).getConnection();
@@ -71,6 +79,13 @@ public class TestOAuthDAOBase extends PowerMockIdentityBaseTest {
                     .toString();
         }
         throw new IllegalArgumentException("DB Script file name cannot be empty.");
+    }
+
+    public static BasicDataSource getDatasource(String datasourceName){
+        if (dataSourceMap.get(datasourceName) != null) {
+            return dataSourceMap.get(datasourceName);
+        }
+        throw new RuntimeException("No datasource initiated for database: " + datasourceName);
     }
 
     protected int createBaseOAuthApp(String databaseName,

@@ -19,42 +19,35 @@ import org.mockito.Mock;
 import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
-import org.wso2.carbon.base.CarbonBaseConstants;
-import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.TestConstants;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.test.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 import org.wso2.carbon.registry.core.Resource;
 import org.wso2.carbon.registry.core.ResourceImpl;
 import org.wso2.carbon.registry.core.service.RegistryService;
 import org.wso2.carbon.registry.core.session.UserRegistry;
 import org.wso2.carbon.stratos.common.beans.TenantInfoBean;
+import org.wso2.carbon.stratos.common.exception.StratosException;
 
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+@WithCarbonHome
 public class TenantCreationEventListenerTest extends PowerMockIdentityBaseTest {
 
     private TenantCreationEventListener tenantCreationEventListener = new TenantCreationEventListener();
 
     @Mock
-    RegistryService registryService;
+    private RegistryService registryService;
 
     @Mock
-    UserRegistry registry;
-
-    @Mock
-    IdentityConfigParser identityConfigParser;
+    private UserRegistry registry;
 
     @BeforeMethod
-    public void setUp() throws Exception {
-        String carbonHome = getClass().getResource("/").getFile();
-        System.setProperty(CarbonBaseConstants.CARBON_HOME, carbonHome);
-        System.setProperty(TestConstants.CARBON_PROTOCOL, TestConstants.CARBON_PROTOCOL_HTTPS);
-        System.setProperty(TestConstants.CARBON_HOST, TestConstants.CARBON_HOST_LOCALHOST);
-        System.setProperty(TestConstants.CARBON_MANAGEMENT_PORT, TestConstants.CARBON_DEFAULT_HTTPS_PORT);
+    public void setUpRegistryService() {
         OAuth2ServiceComponentHolder.setRegistryService(registryService);
     }
 
@@ -74,6 +67,32 @@ public class TenantCreationEventListenerTest extends PowerMockIdentityBaseTest {
     public void testGetListenerOrder() {
         int listenerOrder = tenantCreationEventListener.getListenerOrder();
         Assert.assertEquals(listenerOrder, 0, "Listener order is different from expected.");
+    }
+
+    /**
+     * Unit tests for empty methods
+     * @throws StratosException
+     */
+    @Test
+    public void testDummyMethod() throws StratosException {
+        TenantInfoBean tenantInfoBean = new TenantInfoBean();
+        tenantInfoBean.setTenantId(TestConstants.TENANT_ID);
+        boolean triggeredAllMethods = false;
+        try {
+            tenantCreationEventListener.onTenantUpdate(tenantInfoBean);
+            tenantCreationEventListener.onTenantDelete(TestConstants.TENANT_ID);
+            tenantCreationEventListener
+                    .onTenantRename(TestConstants.TENANT_ID, TestConstants.TENANT_DOMAIN, TestConstants.TENANT_DOMAIN);
+            tenantCreationEventListener.onTenantInitialActivation(TestConstants.TENANT_ID);
+            tenantCreationEventListener.onTenantActivation(TestConstants.TENANT_ID);
+            tenantCreationEventListener.onTenantDeactivation(TestConstants.TENANT_ID);
+            tenantCreationEventListener.onSubscriptionPlanChange(TestConstants.TENANT_ID, TestConstants.TENANT_DOMAIN,
+                                                                 TestConstants.TENANT_DOMAIN);
+            tenantCreationEventListener.onPreDelete(TestConstants.TENANT_ID);
+            triggeredAllMethods = true;
+        } finally {
+            Assert.assertTrue(triggeredAllMethods);
+        }
     }
 
 }

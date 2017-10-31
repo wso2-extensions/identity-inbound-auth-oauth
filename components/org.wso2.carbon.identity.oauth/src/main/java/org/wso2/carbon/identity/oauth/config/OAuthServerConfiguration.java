@@ -145,7 +145,7 @@ public class OAuthServerConfiguration {
     private Map<String, String> tokenValidatorClassNames = new HashMap();
     private boolean isAuthContextTokGenEnabled = false;
     private String tokenGeneratorImplClass = "org.wso2.carbon.identity.oauth2.token.JWTTokenGenerator";
-    private String claimsRetrieverImplClass = "org.wso2.carbon.identity.oauth2.token.DefaultClaimsRetriever";
+    private String claimsRetrieverImplClass = "org.wso2.carbon.identity.oauth2.authcontext.DefaultClaimsRetriever";
     private String consumerDialectURI = "http://wso2.org/claims";
     private String signatureAlgorithm = "SHA256withRSA";
     private String idTokenSignatureAlgorithm = "SHA256withRSA";
