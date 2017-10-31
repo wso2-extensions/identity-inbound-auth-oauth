@@ -44,6 +44,7 @@ import org.wso2.carbon.identity.oauth.cache.SessionDataCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.OAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
@@ -66,6 +67,10 @@ import javax.ws.rs.core.MultivaluedMap;
 public class EndpointUtil {
 
     private static final Log log = LogFactory.getLog(EndpointUtil.class);
+    public static final String OAUTH2 = "oauth2";
+    public static final String OPENID = "openid";
+    public static final String OIDC = "oidc";
+    public static final String OAUTH2_AUTHORIZE = "/oauth2/authorize";
 
     private EndpointUtil() {
 
@@ -108,7 +113,7 @@ public class EndpointUtil {
      */
     public static OAuth2Service getOAuth2Service() {
         return (OAuth2Service) PrivilegedCarbonContext.getThreadLocalCarbonContext()
-                .getOSGiService(OAuth2Service.class);
+                .getOSGiService(OAuth2Service.class, null);
     }
 
     /**
@@ -118,7 +123,7 @@ public class EndpointUtil {
      */
     public static OAuthServerConfiguration getOAuthServerConfiguration() {
         return (OAuthServerConfiguration) PrivilegedCarbonContext.getThreadLocalCarbonContext()
-                .getOSGiService(OAuthServerConfiguration.class);
+                .getOSGiService(OAuthServerConfiguration.class, null);
     }
 
     /**
@@ -128,7 +133,7 @@ public class EndpointUtil {
      */
     public static OAuth2TokenValidationService getOAuth2TokenValidationService() {
         return (OAuth2TokenValidationService) PrivilegedCarbonContext.getThreadLocalCarbonContext()
-                .getOSGiService(OAuth2TokenValidationService.class);
+                .getOSGiService(OAuth2TokenValidationService.class, null);
     }
 
     /**
@@ -316,47 +321,65 @@ public class EndpointUtil {
 
         try {
 
-            String type = "oauth2";
-
-            if (scopes != null && scopes.contains("openid")) {
-                type = "oidc";
-            }
-            String commonAuthURL = IdentityUtil.getServerURL(FrameworkConstants.COMMONAUTH, false, true);
-            String selfPath = "/oauth2/authorize";
-            AuthenticationRequest authenticationRequest = new AuthenticationRequest();
-
-            int tenantId = OAuth2Util.getClientTenatId();
-
-            //Build the authentication request context.
-            authenticationRequest.setCommonAuthCallerPath(selfPath);
-            authenticationRequest.setForceAuth(forceAuthenticate);
-            authenticationRequest.setPassiveAuth(checkAuthentication);
-            authenticationRequest.setRelyingParty(clientId);
-            authenticationRequest.setTenantDomain(OAuth2Util.getTenantDomain(tenantId));
-            authenticationRequest.setRequestQueryParams(reqParams);
-
-            //Build an AuthenticationRequestCacheEntry which wraps AuthenticationRequestContext
-            AuthenticationRequestCacheEntry authRequest = new AuthenticationRequestCacheEntry
-                    (authenticationRequest);
+            AuthenticationRequestCacheEntry authRequest = buildAuthenticationRequestCacheEntry(clientId,
+                    forceAuthenticate, checkAuthentication, reqParams);
             FrameworkUtils.addAuthenticationRequestToCache(sessionDataKey, authRequest);
             // Build new query param with only type and session data key
-            StringBuilder queryStringBuilder = new StringBuilder();
-            queryStringBuilder.append(commonAuthURL).
-                    append("?").
-                    append(FrameworkConstants.SESSION_DATA_KEY).
-                    append("=").
-                    append(URLEncoder.encode(sessionDataKey, "UTF-8")).
-                    append("&").
-                    append(FrameworkConstants.RequestParams.TYPE).
-                    append("=").
-                    append(type);
-
-            return queryStringBuilder.toString();
+            return buildQueryString(sessionDataKey, scopes);
         } catch (UnsupportedEncodingException e) {
             throw new IdentityOAuth2Exception("Error encoding the session key : ", e);
         } finally {
             OAuth2Util.clearClientTenantId();
         }
+    }
+
+    private static String buildQueryString(String sessionDataKey, Set<String> scopes) throws UnsupportedEncodingException {
+
+        String type = getProtocolType(scopes);
+        String commonAuthURL = IdentityUtil.getServerURL(FrameworkConstants.COMMONAUTH, false, true);
+
+        StringBuilder queryStringBuilder = new StringBuilder();
+        queryStringBuilder.append(commonAuthURL).
+                append("?").
+                append(FrameworkConstants.SESSION_DATA_KEY).
+                append("=").
+                append(URLEncoder.encode(sessionDataKey, "UTF-8")).
+                append("&").
+                append(FrameworkConstants.RequestParams.TYPE).
+                append("=").
+                append(type);
+
+        return queryStringBuilder.toString();
+    }
+
+    private static AuthenticationRequestCacheEntry buildAuthenticationRequestCacheEntry(String clientId,
+                 boolean forceAuthenticate, boolean checkAuthentication, Map<String, String[]> reqParams)
+            throws IdentityOAuth2Exception {
+
+        String selfPath = OAUTH2_AUTHORIZE;
+        AuthenticationRequest authenticationRequest = new AuthenticationRequest();
+
+        int tenantId = OAuth2Util.getClientTenatId();
+
+        //Build the authentication request context.
+        authenticationRequest.setCommonAuthCallerPath(selfPath);
+        authenticationRequest.setForceAuth(forceAuthenticate);
+        authenticationRequest.setPassiveAuth(checkAuthentication);
+        authenticationRequest.setRelyingParty(clientId);
+        authenticationRequest.setTenantDomain(OAuth2Util.getTenantDomain(tenantId));
+        authenticationRequest.setRequestQueryParams(reqParams);
+
+        //Build an AuthenticationRequestCacheEntry which wraps AuthenticationRequestContext
+        return new AuthenticationRequestCacheEntry(authenticationRequest);
+    }
+
+    private static String getProtocolType(Set<String> scopes) {
+        String type = OAUTH2;
+
+        if (scopes != null && scopes.contains(OPENID)) {
+            type = OIDC;
+        }
+        return type;
     }
 
     /**
@@ -444,8 +467,14 @@ public class EndpointUtil {
         return ServerConfiguration.getInstance().getFirstProperty("HostName");
     }
 
+    @Deprecated
     public static boolean validateParams(@Context HttpServletRequest request, @Context HttpServletResponse response,
                                          MultivaluedMap<String, String> paramMap) {
+        return validateParams(request, paramMap);
+    }
+
+    public static boolean validateParams(@Context HttpServletRequest request, MultivaluedMap<String, String> paramMap) {
+
         if (paramMap != null) {
             for (Map.Entry<String, List<String>> paramEntry : paramMap.entrySet()) {
                 if (paramEntry.getValue().size() > 1) {
@@ -455,6 +484,25 @@ public class EndpointUtil {
         }
         if (request.getParameterMap() != null) {
             Map<String, String[]> map = request.getParameterMap();
+            for (Map.Entry<String, String[]> entry : map.entrySet()) {
+                if (entry.getValue().length > 1) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    public static boolean validateParams(OAuthMessage oAuthMessage, MultivaluedMap<String, String> paramMap) {
+        if (paramMap != null) {
+            for (Map.Entry<String, List<String>> paramEntry : paramMap.entrySet()) {
+                if (paramEntry.getValue().size() > 1) {
+                    return false;
+                }
+            }
+        }
+        if (oAuthMessage.getRequest().getParameterMap() != null) {
+            Map<String, String[]> map = oAuthMessage.getRequest().getParameterMap();
             for (Map.Entry<String, String[]> entry : map.entrySet()) {
                 if (entry.getValue().length > 1) {
                     return false;

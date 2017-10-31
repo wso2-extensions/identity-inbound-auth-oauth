@@ -16,7 +16,7 @@
  *  under the License.
  */
 
-package org.wso2.carbon.identity.oauth.endpoint.exception.mapper;
+package org.wso2.carbon.identity.oauth.endpoint.expmapper;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -28,6 +28,7 @@ import org.wso2.carbon.identity.oauth.endpoint.exception.AccessDeniedException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.BadRequestException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidApplicationClientException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidApplicationServerException;
+import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidClientException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestException;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 
@@ -91,6 +92,18 @@ public class InvalidRequestExceptionMapper implements ExceptionMapper<InvalidReq
                 }
                 return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
             }
+        } else if (exception instanceof InvalidClientException) {
+
+            try {
+                Response.status(HttpServletResponse.SC_FOUND).location(new URI(EndpointUtil.getErrorPageURL(
+                        OAuth2ErrorCodes.INVALID_REQUEST, exception.getMessage(), null))).build();
+            } catch (URISyntaxException e) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Error while getting endpoint error page URL", e);
+                }
+                return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+            }
+
         } else {
             try {
                 return Response.status(HttpServletResponse.SC_FOUND).location(new URI(EndpointUtil.getErrorPageURL(

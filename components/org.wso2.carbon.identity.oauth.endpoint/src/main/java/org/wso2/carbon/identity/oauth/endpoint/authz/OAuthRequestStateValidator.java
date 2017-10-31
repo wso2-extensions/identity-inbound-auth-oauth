@@ -21,89 +21,67 @@ package org.wso2.carbon.identity.oauth.endpoint.authz;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
-import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
-import org.wso2.carbon.identity.oauth.cache.SessionDataCache;
-import org.wso2.carbon.identity.oauth.cache.SessionDataCacheEntry;
-import org.wso2.carbon.identity.oauth.cache.SessionDataCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
-import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
+import org.wso2.carbon.identity.oauth.endpoint.OAuthRequestWrapper;
 import org.wso2.carbon.identity.oauth.endpoint.exception.AccessDeniedException;
+import org.wso2.carbon.identity.oauth.endpoint.exception.BadRequestException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidApplicationClientException;
-import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidApplicationServerException;
+import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidClientException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestException;
-import javax.servlet.http.HttpServletRequest;
+import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
+import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
+
+import static org.wso2.carbon.identity.oauth.endpoint.authz.OAuthAuthorizeState.AUTHENTICATION_RESPONSE;
+import static org.wso2.carbon.identity.oauth.endpoint.authz.OAuthAuthorizeState.INITIAL_REQUEST;
+import static org.wso2.carbon.identity.oauth.endpoint.authz.OAuthAuthorizeState.USER_CONSENT_RESPONSE;
 
 public class OAuthRequestStateValidator {
 
     private static final Log log = LogFactory.getLog(OAuthRequestStateValidator.class);
+    private static final String REDIRECT_URI = "redirect_uri";
 
+    public OAuthAuthorizeState validateAndGetState(OAuthMessage oAuthMessage) throws InvalidRequestException {
 
-    public OAuthAuthorizeState getAndValidateCurrentState(HttpServletRequest request) throws InvalidRequestException {
-
-        String clientId = request.getParameter("client_id");
-
-        String sessionDataKeyFromLogin = getSessionDataKey(request);
-        String sessionDataKeyFromConsent = request.getParameter(OAuthConstants.SESSION_DATA_KEY_CONSENT);
-        SessionDataCacheKey cacheKey;
-        SessionDataCacheEntry resultFromLogin = null;
-        SessionDataCacheEntry resultFromConsent = null;
-
-        Object flowStatus = request.getAttribute(FrameworkConstants.RequestParams.FLOW_STATUS);
-        String isToCommonOauth = request.getParameter(FrameworkConstants.RequestParams.TO_COMMONAUTH);
-
-        if (Boolean.TRUE.toString().equalsIgnoreCase(isToCommonOauth) && flowStatus == null) {
-            return OAuthAuthorizeState.TO_COMMONAUTH;
+        if (handleToCommonauthState(oAuthMessage)) {
+            return OAuthAuthorizeState.PASSTHROUGH_TO_COMMONAUTH;
         }
 
-        if (StringUtils.isNotEmpty(sessionDataKeyFromLogin)) {
-            cacheKey = new SessionDataCacheKey(sessionDataKeyFromLogin);
-            resultFromLogin = SessionDataCache.getInstance().getValueFromCache(cacheKey);
-        }
-        if (StringUtils.isNotEmpty(sessionDataKeyFromConsent)) {
-            cacheKey = new SessionDataCacheKey(sessionDataKeyFromConsent);
-            resultFromConsent = SessionDataCache.getInstance().getValueFromCache(cacheKey);
-        }
+        validateRequest(oAuthMessage);
 
-        validateRequest(clientId, sessionDataKeyFromLogin, sessionDataKeyFromConsent, resultFromLogin, resultFromConsent);
-
-        // if the sessionDataKeyFromConsent parameter present in the login request, skip it and allow login since
-        // result from login is there
-        if (sessionDataKeyFromConsent != null && resultFromConsent == null && resultFromLogin != null) {
-            sessionDataKeyFromConsent = null;
-        }
-
-        if (StringUtils.isNotEmpty(clientId)) {
-            validateOauthApplication(clientId);
-        }
-
-        if (clientId != null && sessionDataKeyFromLogin == null && sessionDataKeyFromConsent == null) {
-            // Authz request from client
-            return OAuthAuthorizeState.INITIAL_AUTHORIZATION_REQUEST;
-
-        } else if (resultFromLogin != null) {
-            // Authentication response
-            return OAuthAuthorizeState.AUTHENTICATION_RESPONSE;
-
-        } else if (resultFromConsent != null) {
-            // Consent submission
-            return OAuthAuthorizeState.USER_CONSENT_RESPONSE;
-
+        if (oAuthMessage.isInitialRequest()) {
+            validateOauthApplication(oAuthMessage);
+            return INITIAL_REQUEST;
+        } else if (oAuthMessage.isAuthResponseFromFramework()) {
+            return AUTHENTICATION_RESPONSE;
+        } else if (oAuthMessage.isConsentResponseFromUser()) {
+            return USER_CONSENT_RESPONSE;
         } else {
-            // Invalid request
-            if (log.isDebugEnabled()) {
-                log.debug("Invalid authorization request");
-            }
-
-            throw new InvalidRequestException("Invalid authorization request");
+            return handleInvalidRequest();
         }
     }
 
-    private void validateRequest(String clientId, String sessionDataKeyFromLogin, String sessionDataKeyFromConsent,
-                                 SessionDataCacheEntry resultFromLogin, SessionDataCacheEntry resultFromConsent)
+    private OAuthAuthorizeState handleInvalidRequest() throws InvalidRequestException {
+        // Invalid request
+        if (log.isDebugEnabled()) {
+            log.debug("Invalid authorization request");
+        }
+
+        throw new InvalidRequestException("Invalid authorization request");
+    }
+
+    private boolean handleToCommonauthState(OAuthMessage oAuthMessage) {
+        if (oAuthMessage.isRequestToCommonauth() && oAuthMessage.getFlowStatus() == null) {
+            return true;
+        }
+        return false;
+    }
+
+    private void validateRequest(OAuthMessage oAuthMessage)
             throws InvalidRequestException {
 
-        if (resultFromLogin != null && resultFromConsent != null) {
+        validateRepeatedParameters(oAuthMessage);
+
+        if (oAuthMessage.getResultFromLogin() != null && oAuthMessage.getResultFromConsent() != null) {
 
             if (log.isDebugEnabled()) {
                 log.debug("Invalid authorization request.\'SessionDataKey\' found in request as parameter and " +
@@ -111,7 +89,8 @@ public class OAuthRequestStateValidator {
             }
             throw new InvalidRequestException("Invalid authorization request");
 
-        } else if (clientId == null && resultFromLogin == null && resultFromConsent == null) {
+        } else if (oAuthMessage.getClientId() == null && oAuthMessage.getResultFromLogin() == null && oAuthMessage
+                .getResultFromConsent() == null) {
 
             if (log.isDebugEnabled()) {
                 log.debug("Invalid authorization request.\'SessionDataKey\' not found in request as parameter or " +
@@ -119,18 +98,19 @@ public class OAuthRequestStateValidator {
             }
             throw new InvalidRequestException("Invalid authorization request");
 
-        } else if (sessionDataKeyFromLogin != null && resultFromLogin == null) {
+        } else if (oAuthMessage.getSessionDataKeyFromLogin() != null && oAuthMessage.getResultFromLogin() == null) {
 
             if (log.isDebugEnabled()) {
-                log.debug("Session data not found in SessionDataCache for " + sessionDataKeyFromLogin);
+                log.debug("Session data not found in SessionDataCache for " + oAuthMessage.getSessionDataKeyFromLogin());
             }
             throw new AccessDeniedException("Session Timed Out");
 
-        } else if (sessionDataKeyFromConsent != null && resultFromConsent == null) {
+        } else if (oAuthMessage.getSessionDataKeyFromConsent() != null && oAuthMessage.getResultFromConsent() == null) {
 
-            if (resultFromLogin == null) {
+            if (oAuthMessage.getResultFromLogin() == null) {
                 if (log.isDebugEnabled()) {
-                    log.debug("Session data not found in SessionDataCache for " + sessionDataKeyFromConsent);
+                    log.debug("Session data not found in SessionDataCache for " + oAuthMessage
+                            .getSessionDataKeyFromConsent());
                 }
                 throw new AccessDeniedException("Session Timed Out");
             }
@@ -138,49 +118,53 @@ public class OAuthRequestStateValidator {
         }
     }
 
+    private void validateOauthApplication(OAuthMessage oAuthMessage) throws InvalidRequestException {
 
-    private void validateOauthApplication(String clientId) throws InvalidRequestException {
+        validateInputParameters(oAuthMessage);
+        String appState = EndpointUtil.getOAuth2Service().getOauthApplicationState(oAuthMessage.getClientId());
 
-        OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
-
-        try {
-            String appState = oAuthAppDAO.getConsumerAppState(clientId);
-            if (StringUtils.isEmpty(appState)) {
-                if (log.isDebugEnabled()) {
-                    log.debug("A valid OAuth client could not be found for client_id: " + clientId);
-                }
-
-                throw new InvalidApplicationClientException("A valid OAuth client could not be found for client_id: " + clientId);
-            }
-
-            if (!OAuthConstants.OauthAppStates.APP_STATE_ACTIVE.equalsIgnoreCase(appState)) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Oauth App is not in active state for client ID : " + clientId);
-                }
-
-                throw new InvalidApplicationClientException("Oauth application is not in active state");
-            }
-        } catch (IdentityOAuthAdminException e) {
+        if (StringUtils.isEmpty(appState)) {
             if (log.isDebugEnabled()) {
-                log.debug("Error in getting oauth app state.", e);
+                log.debug("A valid OAuth client could not be found for client_id: " + oAuthMessage.getClientId());
             }
 
-            throw new InvalidApplicationServerException("Error in getting oauth app state");
+            throw new InvalidApplicationClientException("A valid OAuth client could not be found for client_id: "
+                    + oAuthMessage.getClientId());
+        }
+
+        if (!OAuthConstants.OauthAppStates.APP_STATE_ACTIVE.equalsIgnoreCase(appState)) {
+            if (log.isDebugEnabled()) {
+                log.debug("Oauth App is not in active state for client ID : " + oAuthMessage.getClientId());
+            }
+
+            throw new InvalidApplicationClientException("Oauth application is not in active state");
         }
     }
 
-    /**
-     * In federated and multi steps scenario there is a redirection from commonauth to samlsso so have to get
-     * session data key from query parameter
-     *
-     * @param req Http servlet request
-     * @return Session data key
-     */
-    private String getSessionDataKey(HttpServletRequest req) {
-        String sessionDataKey = (String) req.getAttribute(OAuthConstants.SESSION_DATA_KEY);
-        if (sessionDataKey == null) {
-            sessionDataKey = req.getParameter(OAuthConstants.SESSION_DATA_KEY);
+    private void validateInputParameters(OAuthMessage oAuthMessage) throws InvalidClientException {
+        if (StringUtils.isBlank(oAuthMessage.getClientId())) {
+            if (log.isDebugEnabled()) {
+                log.debug("Client Id is not present in the authorization request");
+            }
+            throw new InvalidClientException("Client Id is not present in the " +
+                    "authorization request");
         }
-        return sessionDataKey;
+
+        if (StringUtils.isBlank(oAuthMessage.getRequest().getParameter(REDIRECT_URI))) {
+            if (log.isDebugEnabled()) {
+                log.debug("Redirect URI is not present in the authorization request");
+            }
+            throw new InvalidClientException("Redirect URI is not present in the" +
+                    " authorization request");
+        }
+    }
+
+    public void validateRepeatedParameters(OAuthMessage oAuthMessage) throws
+            BadRequestException {
+        if (!(oAuthMessage.getRequest() instanceof OAuthRequestWrapper)) {
+            if (!EndpointUtil.validateParams(oAuthMessage, null)) {
+                throw new BadRequestException("Invalid authorization request with repeated parameters");
+            }
+        }
     }
 }

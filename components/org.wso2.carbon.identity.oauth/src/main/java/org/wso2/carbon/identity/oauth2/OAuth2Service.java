@@ -25,6 +25,7 @@ import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.wso2.carbon.core.AbstractAdmin;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
@@ -559,6 +560,17 @@ public class OAuth2Service extends AbstractAdmin {
             allClaims[i] = claimsList.get(i);
         }
         return allClaims;
+    }
+
+    public String getOauthApplicationState(String consumerKey) {
+
+        OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
+        try {
+            return oAuthAppDAO.getConsumerAppState(consumerKey);
+        } catch (IdentityOAuthAdminException e) {
+            log.error("Error while getting oauth app state", e);
+            return null;
+        }
     }
 
     public boolean isPKCESupportEnabled() {
