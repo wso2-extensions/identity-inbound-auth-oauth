@@ -32,6 +32,7 @@ import org.wso2.carbon.identity.test.common.testng.WithAxisConfiguration;
 import org.wso2.carbon.identity.test.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.test.common.testng.WithH2Database;
 import org.wso2.carbon.identity.test.common.testng.WithRealmService;
+import org.wso2.carbon.identity.testutil.IdentityBaseTest;
 
 import java.sql.Timestamp;
 

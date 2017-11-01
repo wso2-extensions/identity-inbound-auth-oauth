@@ -222,6 +222,11 @@
                 <GrantTypeName>iwa:ntlm</GrantTypeName>
                 <GrantTypeHandlerImplClass>org.wso2.carbon.identity.oauth2.token.handlers.grant.iwa.ntlm.NTLMAuthenticationGrantHandler</GrantTypeHandlerImplClass>
             </SupportedGrantType>
+            <SupportedGrantType>
+                <GrantTypeName>idTokenNotAllowedGrantType</GrantTypeName>
+                <GrantTypeHandlerImplClass>org.wso2.carbon.identity.oauth2.token.handlers.grant.idTokenNotAllowedGrantHandler</GrantTypeHandlerImplClass>
+                <IdTokenAllowed>false</IdTokenAllowed>
+            </SupportedGrantType>
         </SupportedGrantTypes>
         <OAuthCallbackHandlers>
             <OAuthCallbackHandler Class="org.wso2.carbon.identity.oauth.callback.DefaultCallbackHandler"/>

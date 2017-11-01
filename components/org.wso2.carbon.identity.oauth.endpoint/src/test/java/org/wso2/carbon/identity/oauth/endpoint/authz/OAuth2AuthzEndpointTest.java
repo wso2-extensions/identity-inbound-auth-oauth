@@ -631,34 +631,8 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                 {CLIENT_ID_VALUE, null, null, null, null, true, false, true, LOGIN_PAGE_URL},
 
                 // Valid client, ACR value is "null". Correctly considers it as a null ACR.
-//                // PKCE not enabled. Request sent to framework for authentication
-//                {CLIENT_ID_VALUE, "null", null, null, null, true, false, true, LOGIN_PAGE_URL},
-//
-//                // Invalid client. Redirected to error page.
-//                {CLIENT_ID_VALUE, APP_REDIRECT_URL, null, null, null, false, false, true, ERROR_PAGE_URL},
-//
-//                // Valid client, PKCE is enabled and mandatory, PKCE code is null.
-//                // Redirected to error page with invalid_request error
-//                {CLIENT_ID_VALUE, APP_REDIRECT_URL, null, null, null, true, true, true, ERROR_PAGE_URL},
-//
-//                // Valid client, PKCE is enabled but not mandatory, PKCE code is null.
-//                // Request sent to framework for authentication
-//                {CLIENT_ID_VALUE, APP_REDIRECT_URL, null, null, null, true, true, false, LOGIN_PAGE_URL},
-//
-//                // Valid client, PKCE is enabled and mandatory, valid PKCE code, plain PKCE challenge method,
-//                // plain PKCE is supported. Request sent to framework for authentication
-//                {CLIENT_ID_VALUE, APP_REDIRECT_URL, validPKCEChallenge, OAuthConstants.OAUTH_PKCE_PLAIN_CHALLENGE, null,
-//                        true, true, true, LOGIN_PAGE_URL},
-//
-//                // Valid client, PKCE is enabled and mandatory, invalid PKCE code, plain PKCE challenge method,
-//                // plain PKCE is supported. Redirected to error page with invalid_request error
-//                {CLIENT_ID_VALUE, APP_REDIRECT_URL, "dummmyPkceChallenge", OAuthConstants.OAUTH_PKCE_PLAIN_CHALLENGE,
-//                        null, true, true, true, ERROR_PAGE_URL},
-//
-//                // Valid client, PKCE is enabled but not mandatory, valid plain PKCE code, un supported PKCE challenge method,
-//                // plain PKCE is not supported. Redirected to error page with invalid_request error
-//                {CLIENT_ID_VALUE, APP_REDIRECT_URL, validPKCEChallenge, "invalidMethod", null, true, true, false,
-//                        ERROR_PAGE_URL},
+                // PKCE not enabled. Request sent to framework for authentication
+                {CLIENT_ID_VALUE, "null", null, null, null, true, false, true, LOGIN_PAGE_URL},
 
                 // Invalid client. Redirected to error page.
                 {CLIENT_ID_VALUE, APP_REDIRECT_URL, null, null, null, false, false, true, ERROR_PAGE_URL},

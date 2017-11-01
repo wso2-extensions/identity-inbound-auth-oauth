@@ -18,41 +18,72 @@
 
 package org.wso2.carbon.identity.oauth2.validators;
 
-import org.testng.annotations.BeforeTest;
+import org.apache.commons.lang.StringUtils;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
+import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.oauth.cache.OAuthCache;
+import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.model.ResourceScopeCacheEntry;
+import org.wso2.carbon.identity.test.common.testng.WithCarbonHome;
+import org.wso2.carbon.identity.test.common.testng.WithH2Database;
+import org.wso2.carbon.identity.testutil.IdentityBaseTest;
 
 import static org.testng.Assert.assertEquals;
-
 
 /**
  * Tests JDBCScopeValidator.
  */
-public class JDBCScopeValidatorTest {
+@WithCarbonHome
+@WithH2Database(jndiName = "jdbc/WSO2IdentityDB", files = {"dbScripts/scope.sql"})
+public class JDBCScopeValidatorTest extends IdentityBaseTest {
 
     private JDBCScopeValidator validator;
 
-    @BeforeTest
+    @BeforeMethod
     public void setUp() {
         validator = new JDBCScopeValidator();
     }
 
-    @Test(dataProvider = "validatingDOs")
-    public void testValidateScope(AccessTokenDO accessTokenDO, String scope, boolean expectedResult) throws Exception {
-        boolean result = validator.validateScope(accessTokenDO, scope);
-        assertEquals(result, expectedResult);
-    }
-
-
-    @DataProvider(name = "validatingDOs")
-    public Object[][] createValidateTokenDo() {
-
-        AccessTokenDO accessTokenDO = new AccessTokenDO();
+    @DataProvider(name = "ValidateScopeData")
+    public Object[][] validateScopeData() {
+        String[] scopeArray1 = new String[]{"scope1", "scope2", "scope3"};
 
         return new Object[][]{
-                {accessTokenDO, "scope1", true}
+                // scopes
+                // scope
+                // resource
+                // expectedResult
+                {scopeArray1, "scope1", null, true},
+                {null, "scope2", "testResource", true},
+                {new String[0], "scope3", "testResource", true},
+                {scopeArray1, null, "testResource", true},
+                {scopeArray1, "scope4", "testResource", false},
+                {scopeArray1, "scope1", "testResource", true}
         };
+    }
+
+    @Test(dataProvider = "ValidateScopeData")
+    public void testValidateScope(String[] scopes, String scope, String resource, boolean expectedResult) throws
+            Exception {
+        AccessTokenDO accessTokenDO = new AccessTokenDO();
+        accessTokenDO.setScope(scopes);
+        accessTokenDO.setAuthzUser(new AuthenticatedUser());
+        ResourceScopeCacheEntry result = new ResourceScopeCacheEntry(scope);
+        result.setTenantId(1);
+        OAuthCache oAuthCache = OAuthCache.getInstance();
+        OAuthCacheKey oAuthCacheKey;
+        if (StringUtils.isNotEmpty(resource)) {
+            oAuthCacheKey = new OAuthCacheKey(resource);
+        } else {
+            oAuthCacheKey = new OAuthCacheKey("testResource");
+        }
+        oAuthCache.addToCache(oAuthCacheKey, result);
+
+        assertEquals(validator.validateScope(accessTokenDO, resource), expectedResult);
+        oAuthCache.clearCacheEntry(oAuthCacheKey);
     }
 
 }
