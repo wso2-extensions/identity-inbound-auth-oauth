@@ -61,7 +61,7 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.endpoint.OAuthRequestWrapper;
-import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestException;
+import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.OpenIDConnectUserRPStore;
@@ -109,10 +109,10 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 
-import static org.wso2.carbon.identity.oauth.endpoint.authz.OAuthAuthorizeState.AUTHENTICATION_RESPONSE;
-import static org.wso2.carbon.identity.oauth.endpoint.authz.OAuthAuthorizeState.INITIAL_REQUEST;
-import static org.wso2.carbon.identity.oauth.endpoint.authz.OAuthAuthorizeState.PASSTHROUGH_TO_COMMONAUTH;
-import static org.wso2.carbon.identity.oauth.endpoint.authz.OAuthAuthorizeState.USER_CONSENT_RESPONSE;
+import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.AUTHENTICATION_RESPONSE;
+import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.INITIAL_REQUEST;
+import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.PASSTHROUGH_TO_COMMONAUTH;
+import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.USER_CONSENT_RESPONSE;
 
 @Path("/authorize")
 public class OAuth2AuthzEndpoint {
@@ -135,7 +135,7 @@ public class OAuth2AuthzEndpoint {
     @Consumes("application/x-www-form-urlencoded")
     @Produces("text/html")
     public Response authorize(@Context HttpServletRequest request, @Context HttpServletResponse response)
-            throws URISyntaxException, InvalidRequestException {
+            throws URISyntaxException, InvalidRequestParentException {
 
         startSuperTenantFlow();
         OAuthMessage oAuthMessage = buildOAuthMessage(request, response);
@@ -167,7 +167,7 @@ public class OAuth2AuthzEndpoint {
     @Consumes("application/x-www-form-urlencoded")
     @Produces("text/html")
     public Response authorizePost(@Context HttpServletRequest request, @Context HttpServletResponse response, MultivaluedMap paramMap)
-            throws URISyntaxException, InvalidRequestException {
+            throws URISyntaxException, InvalidRequestParentException {
 
         // Validate repeated parameters
         if (!EndpointUtil.validateParams(request, paramMap)) {
@@ -220,7 +220,7 @@ public class OAuth2AuthzEndpoint {
     }
 
     private OAuthMessage buildOAuthMessage(@Context HttpServletRequest request, @Context HttpServletResponse response)
-            throws InvalidRequestException {
+            throws InvalidRequestParentException {
         return new OAuthMessage.OAuthMessageBuilder()
                 .setRequest(request)
                 .setResponse(response)
@@ -513,12 +513,12 @@ public class OAuth2AuthzEndpoint {
     }
 
     private Response handleInitialAuthorizationRequest(OAuthMessage oAuthMessage) throws OAuthSystemException,
-            OAuthProblemException, URISyntaxException, InvalidRequestException {
+            OAuthProblemException, URISyntaxException, InvalidRequestParentException {
 
         String redirectURL = handleOAuthAuthorizationRequest(oAuthMessage);
         String type = getRequestProtocolType(oAuthMessage);
 
-        if (AuthenticatorFlowStatus.SUCCESS_COMPLETED.toString().equals(oAuthMessage.getFlowStatus())) {
+        if (AuthenticatorFlowStatus.SUCCESS_COMPLETED == oAuthMessage.getFlowStatus()) {
             return handleAuthFlowThroughFramework(oAuthMessage, type);
         } else {
             return Response.status(HttpServletResponse.SC_FOUND).location(new URI(redirectURL)).build();
@@ -852,7 +852,6 @@ public class OAuth2AuthzEndpoint {
 
         OAuth2ClientValidationResponseDTO validationResponse = validateClient(oAuthMessage);
 
-        //TODO handle exception
         if (!validationResponse.isValidClient()) {
             return EndpointUtil.getErrorPageURL(validationResponse.getErrorCode(), validationResponse.getErrorMsg(), null);
         }
@@ -1329,7 +1328,7 @@ public class OAuth2AuthzEndpoint {
         return (AuthenticationResult) request.getAttribute(FrameworkConstants.RequestAttribute.AUTH_RESULT);
     }
 
-    private Response handleAuthFlowThroughFramework(OAuthMessage oAuthMessage) throws URISyntaxException, InvalidRequestException {
+    private Response handleAuthFlowThroughFramework(OAuthMessage oAuthMessage) throws URISyntaxException, InvalidRequestParentException {
 
         try {
             CommonAuthResponseWrapper responseWrapper = new CommonAuthResponseWrapper(oAuthMessage.getResponse());
@@ -1344,7 +1343,7 @@ public class OAuth2AuthzEndpoint {
 
 
     private Response processAuthResponseFromFramework(OAuthMessage oAuthMessage, CommonAuthResponseWrapper
-            responseWrapper) throws IOException, InvalidRequestException, URISyntaxException {
+            responseWrapper) throws IOException, InvalidRequestParentException, URISyntaxException {
 
         if (isAuthFlowStateExists(oAuthMessage)) {
             if (isFlowStateIncomplete(oAuthMessage)) {
@@ -1358,18 +1357,18 @@ public class OAuth2AuthzEndpoint {
         return null;
     }
 
-    private Response handleUnknownFlowState(OAuthMessage oAuthMessage) throws URISyntaxException, InvalidRequestException {
+    private Response handleUnknownFlowState(OAuthMessage oAuthMessage) throws URISyntaxException, InvalidRequestParentException {
         oAuthMessage.getRequest().setAttribute(FrameworkConstants.RequestParams.FLOW_STATUS, AuthenticatorFlowStatus
                 .UNKNOWN);
         return authorize(oAuthMessage.getRequest(), oAuthMessage.getResponse());
     }
 
-    private Response handleSuccessfullyCompletedFlow(OAuthMessage oAuthMessage) throws URISyntaxException, InvalidRequestException {
+    private Response handleSuccessfullyCompletedFlow(OAuthMessage oAuthMessage) throws URISyntaxException, InvalidRequestParentException {
         return authorize(oAuthMessage.getRequest(), oAuthMessage.getResponse());
     }
 
     private boolean isFlowStateIncomplete(OAuthMessage oAuthMessage) {
-        return AuthenticatorFlowStatus.INCOMPLETE.toString().equals(oAuthMessage.getFlowStatus());
+        return AuthenticatorFlowStatus.INCOMPLETE.equals(oAuthMessage.getFlowStatus());
     }
 
     private Response handleIncomplateFlow(OAuthMessage oAuthMessage, CommonAuthResponseWrapper responseWrapper) throws IOException {
@@ -1402,7 +1401,7 @@ public class OAuth2AuthzEndpoint {
      * @Param type OAuthMessage
      */
     private Response handleAuthFlowThroughFramework(OAuthMessage oAuthMessage, String type) throws URISyntaxException,
-            InvalidRequestException {
+            InvalidRequestParentException {
 
         try {
             String sessionDataKey = (String) oAuthMessage.getRequest().getAttribute(FrameworkConstants.SESSION_DATA_KEY);

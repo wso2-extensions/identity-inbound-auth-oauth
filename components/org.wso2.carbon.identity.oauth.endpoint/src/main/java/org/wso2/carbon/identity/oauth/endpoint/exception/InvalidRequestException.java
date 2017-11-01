@@ -1,10 +1,6 @@
 package org.wso2.carbon.identity.oauth.endpoint.exception;
 
-public class InvalidRequestException extends Exception {
-
-    protected String errorCode = null;
-    protected String errorMessage = null;
-
+public class InvalidRequestException extends InvalidRequestParentException {
 
     public InvalidRequestException(String message) {
         super(message);
@@ -16,15 +12,7 @@ public class InvalidRequestException extends Exception {
     }
 
     public InvalidRequestException(String message, String errorCode, Throwable cause) {
-        super(message, cause);
+        super(message, errorCode, cause);
         this.errorCode = errorCode;
-    }
-
-    public String getErrorCode() {
-        return errorCode;
-    }
-
-    public String getErrorMessage() {
-        return errorMessage;
     }
 }

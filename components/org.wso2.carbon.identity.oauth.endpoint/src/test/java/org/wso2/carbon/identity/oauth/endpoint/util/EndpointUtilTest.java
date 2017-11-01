@@ -530,7 +530,7 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
     private void mockPrivilegedCarbonContext() {
         mockStatic(PrivilegedCarbonContext.class);
         when(PrivilegedCarbonContext.getThreadLocalCarbonContext()).thenReturn(mockedPrivilegedCarbonContext);
-        when(mockedPrivilegedCarbonContext.getOSGiService(OAuthServerConfiguration.class)).
+        when(mockedPrivilegedCarbonContext.getOSGiService(OAuthServerConfiguration.class, null)).
                 thenReturn(mockedOAuthServerConfiguration);
         when(mockedPrivilegedCarbonContext.getOSGiService(WebFingerProcessor.class)).
                 thenReturn(DefaultWebFingerProcessor.getInstance());
@@ -538,8 +538,8 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
                 thenReturn(new DefaultOIDCProviderRequestBuilder());
         when(mockedPrivilegedCarbonContext.getOSGiService(OIDCProcessor.class)).
                 thenReturn(DefaultOIDCProcessor.getInstance());
-        when(mockedPrivilegedCarbonContext.getOSGiService(OAuth2Service.class)).thenReturn(new OAuth2Service());
-        when(mockedPrivilegedCarbonContext.getOSGiService(OAuth2TokenValidationService.class)).
+        when(mockedPrivilegedCarbonContext.getOSGiService(OAuth2Service.class, null)).thenReturn(new OAuth2Service());
+        when(mockedPrivilegedCarbonContext.getOSGiService(OAuth2TokenValidationService.class, null)).
                 thenReturn(new OAuth2TokenValidationService());
     }
 

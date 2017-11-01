@@ -16,7 +16,7 @@
  * under the License.
  */
 
-package org.wso2.carbon.identity.oauth.endpoint.authz;
+package org.wso2.carbon.identity.oauth.endpoint.state;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -26,21 +26,21 @@ import org.wso2.carbon.identity.oauth.endpoint.OAuthRequestWrapper;
 import org.wso2.carbon.identity.oauth.endpoint.exception.AccessDeniedException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.BadRequestException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidApplicationClientException;
-import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidClientException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestException;
+import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 
-import static org.wso2.carbon.identity.oauth.endpoint.authz.OAuthAuthorizeState.AUTHENTICATION_RESPONSE;
-import static org.wso2.carbon.identity.oauth.endpoint.authz.OAuthAuthorizeState.INITIAL_REQUEST;
-import static org.wso2.carbon.identity.oauth.endpoint.authz.OAuthAuthorizeState.USER_CONSENT_RESPONSE;
+import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.AUTHENTICATION_RESPONSE;
+import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.INITIAL_REQUEST;
+import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.USER_CONSENT_RESPONSE;
 
 public class OAuthRequestStateValidator {
 
     private static final Log log = LogFactory.getLog(OAuthRequestStateValidator.class);
     private static final String REDIRECT_URI = "redirect_uri";
 
-    public OAuthAuthorizeState validateAndGetState(OAuthMessage oAuthMessage) throws InvalidRequestException {
+    public OAuthAuthorizeState validateAndGetState(OAuthMessage oAuthMessage) throws InvalidRequestParentException {
 
         if (handleToCommonauthState(oAuthMessage)) {
             return OAuthAuthorizeState.PASSTHROUGH_TO_COMMONAUTH;
@@ -49,7 +49,7 @@ public class OAuthRequestStateValidator {
         validateRequest(oAuthMessage);
 
         if (oAuthMessage.isInitialRequest()) {
-            validateOauthApplication(oAuthMessage);
+            validateInputParameters(oAuthMessage);
             return INITIAL_REQUEST;
         } else if (oAuthMessage.isAuthResponseFromFramework()) {
             return AUTHENTICATION_RESPONSE;
@@ -77,7 +77,7 @@ public class OAuthRequestStateValidator {
     }
 
     private void validateRequest(OAuthMessage oAuthMessage)
-            throws InvalidRequestException {
+            throws InvalidRequestParentException {
 
         validateRepeatedParameters(oAuthMessage);
 
@@ -113,40 +113,48 @@ public class OAuthRequestStateValidator {
                             .getSessionDataKeyFromConsent());
                 }
                 throw new AccessDeniedException("Session Timed Out");
+            } else {
+                // if the sessionDataKeyFromConsent parameter present in the login request, skip it and allow login since
+                // result from login is there
+                oAuthMessage.setSessionDataKeyFromConsent(null);
+            }
+        }
+
+        validateOauthApplication(oAuthMessage);
+
+    }
+
+    private void validateOauthApplication(OAuthMessage oAuthMessage) throws InvalidRequestParentException {
+
+        if (StringUtils.isNotBlank(oAuthMessage.getClientId())) {
+            String appState = EndpointUtil.getOAuth2Service().getOauthApplicationState(oAuthMessage.getClientId());
+
+            if (StringUtils.isEmpty(appState)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("A valid OAuth client could not be found for client_id: " + oAuthMessage.getClientId());
+                }
+
+                throw new InvalidApplicationClientException("A valid OAuth client could not be found for client_id: "
+                        + oAuthMessage.getClientId());
             }
 
+            if (!OAuthConstants.OauthAppStates.APP_STATE_ACTIVE.equalsIgnoreCase(appState)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Oauth App is not in active state for client ID : " + oAuthMessage.getClientId());
+                }
+
+                throw new InvalidApplicationClientException("Oauth application is not in active state");
+            }
         }
     }
 
-    private void validateOauthApplication(OAuthMessage oAuthMessage) throws InvalidRequestException {
+    private void validateInputParameters(OAuthMessage oAuthMessage) throws InvalidRequestException {
 
-        validateInputParameters(oAuthMessage);
-        String appState = EndpointUtil.getOAuth2Service().getOauthApplicationState(oAuthMessage.getClientId());
-
-        if (StringUtils.isEmpty(appState)) {
-            if (log.isDebugEnabled()) {
-                log.debug("A valid OAuth client could not be found for client_id: " + oAuthMessage.getClientId());
-            }
-
-            throw new InvalidApplicationClientException("A valid OAuth client could not be found for client_id: "
-                    + oAuthMessage.getClientId());
-        }
-
-        if (!OAuthConstants.OauthAppStates.APP_STATE_ACTIVE.equalsIgnoreCase(appState)) {
-            if (log.isDebugEnabled()) {
-                log.debug("Oauth App is not in active state for client ID : " + oAuthMessage.getClientId());
-            }
-
-            throw new InvalidApplicationClientException("Oauth application is not in active state");
-        }
-    }
-
-    private void validateInputParameters(OAuthMessage oAuthMessage) throws InvalidClientException {
         if (StringUtils.isBlank(oAuthMessage.getClientId())) {
             if (log.isDebugEnabled()) {
                 log.debug("Client Id is not present in the authorization request");
             }
-            throw new InvalidClientException("Client Id is not present in the " +
+            throw new InvalidRequestException("Client Id is not present in the " +
                     "authorization request");
         }
 
@@ -154,7 +162,7 @@ public class OAuthRequestStateValidator {
             if (log.isDebugEnabled()) {
                 log.debug("Redirect URI is not present in the authorization request");
             }
-            throw new InvalidClientException("Redirect URI is not present in the" +
+            throw new InvalidRequestException("Redirect URI is not present in the" +
                     " authorization request");
         }
     }

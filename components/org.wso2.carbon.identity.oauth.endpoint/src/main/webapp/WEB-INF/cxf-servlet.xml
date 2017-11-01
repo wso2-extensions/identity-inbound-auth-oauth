@@ -26,7 +26,6 @@
     <jaxrs:server id="tokEP" address="/">
         <jaxrs:serviceBeans>
             <ref bean="authzEndpointBean"/>
-            <ref bean="newAuthzEndpointBean"/>
             <ref bean="tokenEndpointBean"/>
             <ref bean="introspectionEndpointBean"/>
             <ref bean="revokeEndpointBean"/>
@@ -34,9 +33,13 @@
             <ref bean="jwksEndpointBean"/>
             <ref bean="oidcdiscoveryEndpointBean"/>
         </jaxrs:serviceBeans>
+
+        <jaxrs:providers>
+            <bean class="org.wso2.carbon.identity.oauth.endpoint.expmapper.InvalidRequestExceptionMapper"/>
+        </jaxrs:providers>
     </jaxrs:server>
 
-    <bean id="newAuthzEndpointBean" class="org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpoint"/>
+    <bean id="authzEndpointBean" class="org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpoint"/>
     <bean id="tokenEndpointBean" class="org.wso2.carbon.identity.oauth.endpoint.token.OAuth2TokenEndpoint"/>
     <bean id="introspectionEndpointBean" class="org.wso2.carbon.identity.oauth.endpoint.introspection.OAuth2IntrospectionEndpoint"/>
     <bean id="revokeEndpointBean" class="org.wso2.carbon.identity.oauth.endpoint.revoke.OAuthRevocationEndpoint"/>

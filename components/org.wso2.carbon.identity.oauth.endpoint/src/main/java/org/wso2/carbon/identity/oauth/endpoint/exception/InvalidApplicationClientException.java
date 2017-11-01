@@ -1,6 +1,6 @@
 package org.wso2.carbon.identity.oauth.endpoint.exception;
 
-public class InvalidApplicationClientException extends InvalidRequestException {
+public class InvalidApplicationClientException extends InvalidRequestParentException {
 
     public InvalidApplicationClientException(String message) {
         super(message);

@@ -23,9 +23,9 @@ import org.wso2.carbon.identity.oauth.cache.SessionDataCache;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
-import org.wso2.carbon.identity.oauth.endpoint.authz.OAuthAuthorizeState;
-import org.wso2.carbon.identity.oauth.endpoint.authz.OAuthRequestStateValidator;
-import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestException;
+import org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState;
+import org.wso2.carbon.identity.oauth.endpoint.state.OAuthRequestStateValidator;
+import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 import java.util.HashMap;
 import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
@@ -62,12 +62,6 @@ public class OAuthMessage {
             cacheKey = new SessionDataCacheKey(sessionDataKeyFromConsent);
             resultFromConsent = SessionDataCache.getInstance().getValueFromCache(cacheKey);
             SessionDataCache.getInstance().clearCacheEntry(cacheKey);
-        }
-
-        // if the sessionDataKeyFromConsent parameter present in the login request, skip it and allow login since
-        // result from login is there
-        if (sessionDataKeyFromConsent != null && resultFromConsent == null && resultFromLogin != null) {
-            sessionDataKeyFromConsent = null;
         }
     }
 
@@ -122,6 +116,10 @@ public class OAuthMessage {
 
     public String getSessionDataKeyFromConsent() {
         return sessionDataKeyFromConsent;
+    }
+
+    public void setSessionDataKeyFromConsent(String sessionDataKeyFromConsent) {
+        this.sessionDataKeyFromConsent = sessionDataKeyFromConsent;
     }
 
     public SessionDataCacheEntry getResultFromLogin() {
@@ -192,8 +190,8 @@ public class OAuthMessage {
                 && request.getParameter(OAuthConstants.SESSION_DATA_KEY_CONSENT) == null;
     }
 
-    public String getFlowStatus() {
-        return request.getParameter(FrameworkConstants.RequestParams.FLOW_STATUS);
+    public Object getFlowStatus() {
+        return request.getAttribute(FrameworkConstants.RequestParams.FLOW_STATUS);
     }
 
     public boolean isRequestToCommonauth() {
@@ -244,7 +242,7 @@ public class OAuthMessage {
             return this;
         }
 
-        public OAuthMessage build() throws InvalidRequestException {
+        public OAuthMessage build() throws InvalidRequestParentException {
 
             OAuthMessage oAuthMessage = new OAuthMessage(request, response);
             OAuthRequestStateValidator validator = new OAuthRequestStateValidator();

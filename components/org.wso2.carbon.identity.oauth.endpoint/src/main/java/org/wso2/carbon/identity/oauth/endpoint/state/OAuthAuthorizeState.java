@@ -1,4 +1,4 @@
-package org.wso2.carbon.identity.oauth.endpoint.authz;
+package org.wso2.carbon.identity.oauth.endpoint.state;
 
 
 public enum OAuthAuthorizeState {

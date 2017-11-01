@@ -27,9 +27,8 @@ import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.endpoint.exception.AccessDeniedException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.BadRequestException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidApplicationClientException;
-import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidApplicationServerException;
-import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidClientException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestException;
+import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 
 
@@ -39,17 +38,27 @@ import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
 
-public class InvalidRequestExceptionMapper implements ExceptionMapper<InvalidRequestException> {
+public class InvalidRequestExceptionMapper implements ExceptionMapper<InvalidRequestParentException> {
 
     private final Log log = LogFactory.getLog(InvalidRequestExceptionMapper.class);
 
     @Override
-    public Response toResponse(InvalidRequestException exception) {
+    public Response toResponse(InvalidRequestParentException exception) {
 
-        if (exception instanceof AccessDeniedException) {
+        if (exception instanceof InvalidRequestException) {
             try {
                 return Response.status(HttpServletResponse.SC_FOUND).location(new URI(EndpointUtil.getErrorPageURL
                         (OAuth2ErrorCodes.INVALID_REQUEST, exception.getMessage(), null))).build();
+            } catch (URISyntaxException e) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Error while getting endpoint error page URL", e);
+                }
+                return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+            }
+        } else if (exception instanceof AccessDeniedException) {
+            try {
+                return Response.status(HttpServletResponse.SC_FOUND).location(new URI(EndpointUtil.getErrorPageURL
+                        (OAuth2ErrorCodes.ACCESS_DENIED, exception.getMessage(), null))).build();
             } catch (URISyntaxException e) {
                 if (log.isDebugEnabled()) {
                     log.debug("Error while getting endpoint error page URL", e);
@@ -69,22 +78,9 @@ public class InvalidRequestExceptionMapper implements ExceptionMapper<InvalidReq
                 }
                 return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
             }
-        } else if (exception instanceof InvalidApplicationServerException) {
+        }  else if (exception instanceof BadRequestException) {
             try {
-                OAuthResponse oAuthResponse = OAuthASResponse.errorResponse(HttpServletResponse.SC_NOT_FOUND)
-                        .setError(OAuth2ErrorCodes.SERVER_ERROR)
-                        .setErrorDescription(exception.getMessage()).buildJSONMessage();
-
-                return Response.status(oAuthResponse.getResponseStatus()).entity(oAuthResponse.getBody()).build();
-            } catch (OAuthSystemException e) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Error while getting endpoint error page URL", e);
-                }
-                return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
-            }
-        } else if (exception instanceof BadRequestException) {
-            try {
-                Response.status(HttpServletResponse.SC_BAD_REQUEST).location(new URI(EndpointUtil.getErrorPageURL(
+                return Response.status(HttpServletResponse.SC_BAD_REQUEST).location(new URI(EndpointUtil.getErrorPageURL(
                         OAuth2ErrorCodes.INVALID_REQUEST, exception.getMessage(), null))).build();
             } catch (URISyntaxException e) {
                 if (log.isDebugEnabled()) {
@@ -92,29 +88,8 @@ public class InvalidRequestExceptionMapper implements ExceptionMapper<InvalidReq
                 }
                 return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
             }
-        } else if (exception instanceof InvalidClientException) {
-
-            try {
-                Response.status(HttpServletResponse.SC_FOUND).location(new URI(EndpointUtil.getErrorPageURL(
-                        OAuth2ErrorCodes.INVALID_REQUEST, exception.getMessage(), null))).build();
-            } catch (URISyntaxException e) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Error while getting endpoint error page URL", e);
-                }
-                return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
-            }
-
         } else {
-            try {
-                return Response.status(HttpServletResponse.SC_FOUND).location(new URI(EndpointUtil.getErrorPageURL(
-                        OAuth2ErrorCodes.ACCESS_DENIED, exception.getMessage(), null))).build();
-            } catch (URISyntaxException e) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Error while getting endpoint error page URL", e);
-                }
-                return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
-            }
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
         }
-        return null;
     }
 }
