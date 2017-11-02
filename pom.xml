@@ -27,7 +27,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
     <artifactId>identity-inbound-auth-oauth</artifactId>
-    <version>5.5.93-SNAPSHOT</version>
+    <version>5.5.95-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>WSO2 Carbon OAuth module</name>
     <url>http://wso2.org</url>
@@ -40,6 +40,7 @@
     </scm>
 
     <modules>
+        <module>test-utils/org.wso2.carbon.identity.common.testng</module>
         <module>components/org.wso2.carbon.identity.oauth</module>
         <module>components/org.wso2.carbon.identity.oauth.common</module>
         <module>components/org.wso2.carbon.identity.oauth.endpoint</module>

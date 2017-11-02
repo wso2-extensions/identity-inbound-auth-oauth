@@ -22,9 +22,9 @@ import org.apache.oltu.oauth2.common.message.types.ResponseType;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
+import org.testng.annotations.BeforeTest;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -36,6 +36,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
+import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
 import java.io.File;
 import java.lang.reflect.Field;
@@ -44,11 +45,11 @@ import java.lang.reflect.Field;
  * Unit test cases covering AbstractResponseTypeHandler
  */
 @PrepareForTest({IdentityUtil.class})
-@PowerMockIgnore({"javax.net.*", "javax.security.*", "javax.crypto.*"})
-public class AbstractResponseTypeHandlerTest extends PowerMockTestCase {
+@PowerMockIgnore({"javax.xml.*", "javax.net.*", "javax.security.*", "javax.crypto.*"})
+public class AbstractResponseTypeHandlerTest extends PowerMockIdentityBaseTest {
     private AbstractResponseTypeHandler abstractResponseTypeHandler;
 
-    @BeforeClass
+    @BeforeTest
     public void setUp() throws Exception {
         abstractResponseTypeHandler = new AbstractResponseTypeHandler() {
             @Override
@@ -81,15 +82,6 @@ public class AbstractResponseTypeHandlerTest extends PowerMockTestCase {
         abstractResponseTypeHandler.init();
     }
 
-    @Test
-    public void testInit() throws Exception {
-        Field field = abstractResponseTypeHandler
-                .getClass().getSuperclass().getDeclaredField("cacheEnabled");
-        abstractResponseTypeHandler.init();
-        field.setAccessible(true);
-        Assert.assertTrue(field.getBoolean(abstractResponseTypeHandler),
-                "AbstractResponseTypeHandler not set");
-    }
 
     @Test(dataProvider = "grantTypeProvider")
     public void testValidateAccessDelegation(String grantType, boolean result) throws Exception {

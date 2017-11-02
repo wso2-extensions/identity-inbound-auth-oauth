@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
 <!--
- Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ Copyright (c) 2015, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
 
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@
     <!--
        Product Version
     -->
-    <Version>5.4.0-alpha2</Version>
+    <Version>5.3.0</Version>
 
     <!--
        Host name or IP address of the machine hosting this server
@@ -124,7 +124,7 @@
          the define value + Offset.
          e.g. Offset=2 and HTTPS port=9443 will set the effective HTTPS port to 9445
          -->
-        <Offset>0</Offset>
+        <Offset>0 </Offset>
 
         <!-- The JMX Ports -->
         <JMX>
@@ -322,7 +322,7 @@
          calling to BE server -->
         <clientAxis2XmlLocation>${carbon.home}/repository/conf/axis2/axis2_client.xml</clientAxis2XmlLocation>
         <!-- If this parameter is set, the ?wsdl on an admin service will not give the admin service wsdl. -->
-        <HideAdminServiceWSDLs>true</HideAdminServiceWSDLs>
+        <HideAdminServiceWSDLs>false</HideAdminServiceWSDLs>
 	
 	<!--WARNING-Use With Care! Uncommenting bellow parameter would expose all AdminServices in HTTP transport.
 	With HTTP transport your credentials and data routed in public channels are vulnerable for sniffing attacks. 
@@ -349,7 +349,7 @@
     <!-- 
       Enable following config to allow Emails as usernames. 	
     -->	    	
-    <!--EnableEmailUserName>true</EnableEmailUserName-->	
+    <EnableEmailUserName>true</EnableEmailUserName>	
 
     <!--
       Security configurations

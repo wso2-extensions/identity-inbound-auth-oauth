@@ -166,7 +166,7 @@
         <!-- Timestamp skew in seconds -->
         <TimestampSkew>300</TimestampSkew>
         <!-- Enable OAuth caching -->
-        <EnableOAuthCache>true</EnableOAuthCache>
+        <EnableOAuthCache>false</EnableOAuthCache>
         <!-- Enable renewal of refresh token for refresh_token grant -->
         <RenewRefreshTokenForRefreshGrant>true</RenewRefreshTokenForRefreshGrant>
         <!-- Process the token before storing it in database, e.g. encrypting -->
@@ -459,13 +459,13 @@
 
     <CacheConfig>
         <CacheManager name="IdentityApplicationManagementCacheManager">
-            <Cache name="AppAuthFrameworkSessionContextCache" enable="true" timeout="1" capacity="5000" isDistributed="false"/>
+            <Cache name="AppAuthFrameworkSessionContextCache" enable="false" timeout="1" capacity="5000" isDistributed="false"/>
             <Cache name="AuthenticationContextCache" enable="false" timeout="1" capacity="5000" isDistributed="false"/>
             <Cache name="AuthenticationRequestCache" enable="false" timeout="1" capacity="5000" isDistributed="false"/>
             <Cache name="AuthenticationResultCache" enable="false" timeout="1" capacity="5000" isDistributed="false"/>
             <Cache name="AppInfoCache" enable="true" timeout="1" capacity="5000" isDistributed="false"/>
             <Cache name="AuthorizationGrantCache" enable="false" timeout="1" capacity="5000" isDistributed="false"/>
-            <Cache name="OAuthCache" enable="true" timeout="1" capacity="5000" isDistributed="false"/>
+            <Cache name="OAuthCache" enable="false" timeout="1" capacity="5000" isDistributed="false"/>
             <Cache name="OAuthSessionDataCache" enable="false" timeout="1" capacity="5000" isDistributed="false"/>
             <Cache name="SAMLSSOParticipantCache" enable="false" timeout="1" capacity="5000" isDistributed="false"/>
             <Cache name="SAMLSSOSessionIndexCache" enable="false" timeout="1" capacity="5000" isDistributed="false"/>

@@ -43,7 +43,7 @@
             <class name="org.wso2.carbon.identity.oauth.listener.OAuthCacheRemoveListenerTest"/>
             <class name="org.wso2.carbon.identity.oauth.OAuthAdminServiceTest"/>
             <class name="org.wso2.carbon.identity.oauth.OAuthServiceTest"/>
-            <class name="org.wso2.carbon.identity.oauth.OAuthUtilTest"/>
+            <!--<class name="org.wso2.carbon.identity.oauth.OAuthUtilTest"/>-->
             <class name="org.wso2.carbon.identity.oauth.tokenprocessor.EncryptionDecryptionPersistenceProcessorTest"/>
             <class name="org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessorTest"/>
             <class name="org.wso2.carbon.identity.oauth.tokenvaluegenerator.SHA256GeneratorTest"/>
@@ -91,6 +91,8 @@
             <class name="org.wso2.carbon.identity.openidconnect.DefaultIDTokenBuilderTest"/>
             <class name="org.wso2.carbon.identity.openidconnect.SAMLAssertionClaimsCallbackTest"/>
             <class name="org.wso2.carbon.identity.oauth2.authz.AuthorizationHandlerManagerTest"/>
+            <!--<class name="org.wso2.carbon.identity.oauth2.authz.handlers.CodeResponseTypeHandlerTest"/>-->
+            <class name="org.wso2.carbon.identity.oauth2.validators.DefaultOAuth2TokenValidatorTest"/>
         </classes>
     </test>
 
@@ -120,7 +122,7 @@
             <class name="org.wso2.carbon.identity.oauth.listener.OAuthCacheRemoveListenerTest"/>
             <class name="org.wso2.carbon.identity.oauth.OAuthAdminServiceTest"/>
             <class name="org.wso2.carbon.identity.oauth.OAuthServiceTest"/>
-            <class name="org.wso2.carbon.identity.oauth.OAuthUtilTest"/>
+            <!--<class name="org.wso2.carbon.identity.oauth.OAuthUtilTest"/>-->
             <class name="org.wso2.carbon.identity.oauth.tokenprocessor.EncryptionDecryptionPersistenceProcessorTest"/>
             <class name="org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessorTest"/>
             <class name="org.wso2.carbon.identity.oauth.tokenvaluegenerator.SHA256GeneratorTest"/>
@@ -167,6 +169,8 @@
             <class name="org.wso2.carbon.identity.openidconnect.DefaultIDTokenBuilderTest"/>
             <class name="org.wso2.carbon.identity.openidconnect.SAMLAssertionClaimsCallbackTest"/>
             <class name="org.wso2.carbon.identity.oauth2.authz.AuthorizationHandlerManagerTest"/>
+            <!--<class name="org.wso2.carbon.identity.oauth2.authz.handlers.CodeResponseTypeHandlerTest"/>-->
+            <class name="org.wso2.carbon.identity.oauth2.validators.DefaultOAuth2TokenValidatorTest"/>
         </classes>
     </test>
 </suite>

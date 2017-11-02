@@ -51,7 +51,7 @@ public class MockInitialContextFactory implements InitialContextFactory {
 
             @Override
             public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
-                String name = invocationOnMock.getArgumentAt(0, String.class);
+                String name = (String) invocationOnMock.getArguments()[0];
                 return getDatasource(name);
             }
         }).when(context).lookup(Matchers.anyString());

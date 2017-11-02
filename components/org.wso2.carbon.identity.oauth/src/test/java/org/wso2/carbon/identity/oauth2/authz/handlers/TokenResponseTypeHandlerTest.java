@@ -20,12 +20,14 @@ package org.wso2.carbon.identity.oauth2.authz.handlers;
 
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
+
 import org.testng.Assert;
-import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
@@ -38,6 +40,9 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
+import org.wso2.carbon.user.core.service.RealmService;
+import org.wso2.carbon.user.core.tenant.TenantManager;
 
 import java.io.File;
 import java.lang.reflect.Field;
@@ -49,9 +54,10 @@ import static org.mockito.Matchers.eq;
 /**
  * Unit test covering TokenResponseTypeHandler class
  */
-@PrepareForTest({OAuthComponentServiceHolder.class, OAuthEventInterceptor.class, IdentityUtil.class, OAuth2Util.class})
-public class TokenResponseTypeHandlerTest extends PowerMockTestCase {
-    @BeforeMethod
+@PrepareForTest({OAuthComponentServiceHolder.class, IdentityUtil.class, OAuthEventInterceptor.class, OAuth2Util.class,
+        IdentityTenantUtil.class})
+public class TokenResponseTypeHandlerTest extends PowerMockIdentityBaseTest {
+    @BeforeTest
     public void setUp() throws Exception {
         System.setProperty("carbon.home", System.getProperty("user.dir")
                 + File.separator + "target");
@@ -59,11 +65,22 @@ public class TokenResponseTypeHandlerTest extends PowerMockTestCase {
         PowerMockito.when(IdentityUtil.getIdentityConfigDirPath())
                 .thenReturn(System.getProperty("user.dir") + File.separator + "src" + File.separator + "test"
                         + File.separator + "resources" + File.separator + "conf");
+
         OAuthComponentServiceHolder oAuthComponentServiceHolder
                 = PowerMockito.mock(OAuthComponentServiceHolder.class);
         OAuthEventInterceptor interceptor = PowerMockito.mock(OAuthEventInterceptor.class);
         OAuthServerConfiguration oAuthServerConfiguration = PowerMockito.mock(OAuthServerConfiguration.class);
         PowerMockito.when(oAuthComponentServiceHolder.getOAuthEventInterceptorProxy()).thenReturn(interceptor);
+
+        RealmService realmService = PowerMockito.mock(RealmService.class);
+        TenantManager manager = PowerMockito.mock(TenantManager.class);
+        PowerMockito.when(realmService.getTenantManager()).thenReturn(manager);
+
+        PowerMockito.when(manager.getTenantId(anyString())).thenReturn(-1);
+
+        Field relamServiceObj = IdentityTenantUtil.class.getDeclaredField("realmService");
+        relamServiceObj.setAccessible(true);
+        relamServiceObj.set(null, realmService);
 
         Field f1 = OAuthComponentServiceHolder.class.getDeclaredField("instance");
         f1.setAccessible(true);
@@ -78,6 +95,14 @@ public class TokenResponseTypeHandlerTest extends PowerMockTestCase {
                 OAuthServerConfiguration.class.getDeclaredField("instance");
         oAuthServerConfigInstance.setAccessible(true);
         oAuthServerConfigInstance.set(null, oAuthServerConfiguration);
+
+        AuthorizationGrantCache authorizationGrantCache =
+                PowerMockito.mock(AuthorizationGrantCache.class);
+
+        Field authorizationGrantCacheInstance =
+                AuthorizationGrantCache.class.getDeclaredField("instance");
+        authorizationGrantCacheInstance.setAccessible(true);
+        authorizationGrantCacheInstance.set(null, authorizationGrantCache);
     }
 
     @Test
@@ -95,7 +120,8 @@ public class TokenResponseTypeHandlerTest extends PowerMockTestCase {
         authorizationReqDTO.setResponseType(OAuthConstants.GrantTypes.TOKEN);
         OAuthAuthzReqMessageContext authAuthzReqMessageContext
                 = new OAuthAuthzReqMessageContext(authorizationReqDTO);
-        authAuthzReqMessageContext.setApprovedScope(new String[]{"scope1", "scope2"});
+        authAuthzReqMessageContext
+                .setApprovedScope(new String[]{"scope1", "scope2", OAuthConstants.Scope.OPENID});
 
         OAuthAppDO oAuthAppDO = new OAuthAppDO();
         oAuthAppDO.setGrantTypes("implicit");
@@ -113,10 +139,19 @@ public class TokenResponseTypeHandlerTest extends PowerMockTestCase {
         PowerMockito.when(OAuth2Util
                 .getAppInformationByClientId(anyString())).thenReturn(oAuthAppDO);
 
+        PowerMockito.when(OAuth2Util
+                .isOIDCAuthzRequest(new String[]{"scope1", "scope2",
+                        OAuthConstants.Scope.OPENID})).thenReturn(true);
+
         Object baseClass = tokenResponseTypeHandler;
         Field f2 = baseClass.getClass().getSuperclass().getDeclaredField("tokenMgtDAO");
         f2.setAccessible(true);
         f2.set(baseClass, tokenMgtDAO);
+
+        Field cachenabledField = baseClass.getClass().getSuperclass()
+                .getDeclaredField("cacheEnabled");
+        cachenabledField.setAccessible(true);
+        cachenabledField.set(baseClass, Boolean.TRUE);
 
         PowerMockito.when(tokenMgtDAO.retrieveLatestAccessToken(anyString(),
                 eq(authenticatedUser), anyString(), anyString(), anyBoolean())).thenReturn(accessTokenDO);

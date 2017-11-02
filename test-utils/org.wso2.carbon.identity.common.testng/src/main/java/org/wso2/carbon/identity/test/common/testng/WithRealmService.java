@@ -30,5 +30,6 @@ import java.lang.annotation.Target;
 public @interface WithRealmService {
     int tenantId() default MultitenantConstants.SUPER_TENANT_ID;
     String tenantDomain() default MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
+    Class[] injectToSingletons() default {};
     boolean initUserStoreManager() default false;
 }
