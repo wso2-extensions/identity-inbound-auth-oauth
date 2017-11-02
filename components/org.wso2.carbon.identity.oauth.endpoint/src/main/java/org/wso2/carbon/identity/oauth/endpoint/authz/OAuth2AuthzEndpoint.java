@@ -851,47 +851,40 @@ public class OAuth2AuthzEndpoint {
         pkceChallengeMethod = req.getParameter(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE_METHOD);
         // Validate PKCE parameters
         if (isPKCESupportEnabled) {
-            // Check if PKCE is mandatory for the application
-            if (clientDTO.isPkceMandatory()) {
-                if (pkceChallengeCode == null || !OAuth2Util.validatePKCECodeChallenge(pkceChallengeCode, pkceChallengeMethod)) {
-                    return EndpointUtil.getErrorPageURL(OAuth2ErrorCodes.INVALID_REQUEST, "PKCE is mandatory for this application. " +
-                            "PKCE Challenge is not provided " +
-                            "or is not upto RFC 7636 specification.", null);
-                }
-            }
-            //Check if the code challenge method value is neither "plain" or "s256", if so return error
-            if (pkceChallengeCode != null && pkceChallengeMethod != null) {
-                if (!OAuthConstants.OAUTH_PKCE_PLAIN_CHALLENGE.equals(pkceChallengeMethod) &&
-                        !OAuthConstants.OAUTH_PKCE_S256_CHALLENGE.equals(pkceChallengeMethod)&&
-                        !OAuthConstants.OAUTH_PKCE_REFERREDTB_CHALLENGE.equals(pkceChallengeMethod)) {
-                    return EndpointUtil.getErrorPageURL(OAuth2ErrorCodes.INVALID_REQUEST, "Unsupported PKCE Challenge Method"
-                            , null);
-                }
-            }
-
-            // Check if "plain" transformation algorithm is disabled for the application
-            if (pkceChallengeCode != null && !clientDTO.isPkceSupportPlain()&&
-                    !OAuthConstants.OAUTH_PKCE_REFERREDTB_CHALLENGE.equals(pkceChallengeMethod)) {
-                if (pkceChallengeMethod == null || OAuthConstants.OAUTH_PKCE_PLAIN_CHALLENGE.equals(pkceChallengeCode)) {
-                    return EndpointUtil.getErrorPageURL(OAuth2ErrorCodes.INVALID_REQUEST, "This application does not " +
-                            "support \"plain\" transformation algorithm.", null);
-                }
-            }
-
-            // If PKCE challenge code was sent, check if the code challenge is upto specifications
-            if (pkceChallengeCode != null && !OAuthConstants.OAUTH_PKCE_REFERREDTB_CHALLENGE.equals(pkceChallengeCode)
-                    && !OAuth2Util.validatePKCECodeChallenge(pkceChallengeCode, pkceChallengeMethod)) {
-                return EndpointUtil.getErrorPageURL(OAuth2ErrorCodes.INVALID_REQUEST, "Code challenge used is not up to " +
-                                "RFC 7636 specifications."
-                        , null);
-            }
-            log.debug("the pkce is :"+OAuthConstants.OAUTH_PKCE_REFERREDTB_CHALLENGE);
             //check PKCE challenge for token binding
-            if (checkTB(oauthRequest.getHttpRequestHeaders()) && !OAuthConstants.OAUTH_PKCE_REFERREDTB_CHALLENGE.equals(pkceChallengeCode)){
-                return EndpointUtil.getErrorPageURL(OAuth2ErrorCodes.INVALID_REQUEST, "PKCE is mandatory for Token binding. "
-                        , null);
+            if (!checkTokenBindingHeader(oauthRequest.getHttpRequestHeaders()).isEmpty()) {
+                if(notvalidTokenBindingPkce(pkceChallengeMethod,pkceChallengeCode)) {
+                    return EndpointUtil.getErrorPageURL(OAuth2ErrorCodes.INVALID_REQUEST,
+                            "This PKCE is not suitable for Token binding. ", null);
+                }
             }
-
+            else {
+                // Check if PKCE is mandatory for the application
+                if (clientDTO.isPkceMandatory()) {
+                    if (pkceChallengeCode == null || !OAuth2Util.validatePKCECodeChallenge(pkceChallengeCode, pkceChallengeMethod)) {
+                        return EndpointUtil.getErrorPageURL(OAuth2ErrorCodes.INVALID_REQUEST, "PKCE is mandatory for this application. " +
+                                "PKCE Challenge is not provided " +
+                                "or is not upto RFC 7636 specification.", null);
+                    }
+                }
+                if (pkceChallengeCode != null) {
+                    //Check if the code challenge method value is neither "plain" or "s256", if so return error
+                    if (notValidCodeChallengeMethod(pkceChallengeMethod)) {
+                        return EndpointUtil.getErrorPageURL(OAuth2ErrorCodes.INVALID_REQUEST, "Unsupported PKCE Challenge Method"
+                                , null);
+                    }
+                    // Check if "plain" transformation algorithm is disabled for the application
+                    if (!clientDTO.isPkceSupportPlain() && OAuthConstants.OAUTH_PKCE_PLAIN_CHALLENGE.equals(pkceChallengeCode)) {
+                        return EndpointUtil.getErrorPageURL(OAuth2ErrorCodes.INVALID_REQUEST, "This application does not " +
+                                "support \"plain\" transformation algorithm.", null);
+                    }
+                    // If PKCE challenge code was sent, check if the code challenge is upto specifications
+                    if (!OAuth2Util.validatePKCECodeChallenge(pkceChallengeCode, pkceChallengeMethod)) {
+                        return EndpointUtil.getErrorPageURL(OAuth2ErrorCodes.INVALID_REQUEST,
+                                "Code challenge used is not up to RFC 7636 specifications.", null);
+                    }
+                }
+            }
 
         }
         params.setPkceCodeChallenge(pkceChallengeCode);
@@ -1397,16 +1390,35 @@ public class OAuth2AuthzEndpoint {
 
         return redirectURL;
     }
-    private Boolean checkTB(HttpRequestHeader[] HttpRequestHeaders) {
-        HttpRequestHeader[] httpRequestHeaders = HttpRequestHeaders;
+
+    private String checkTokenBindingHeader(HttpRequestHeader[] httpRequestHeaders) {
+        String tokenBindingId = "";
         if (httpRequestHeaders != null) {
             for (HttpRequestHeader httpRequestHeader : httpRequestHeaders) {
-                if (httpRequestHeader.getName().equals(OAuthConstants.HTTP_TB_PROVIDED_HEADER_NAME)) {
-                   return Boolean.TRUE;
+                if (httpRequestHeader.getName().equalsIgnoreCase(OAuthConstants.HTTP_TB_REFERRED_HEADER_NAME)) {
+                    tokenBindingId = httpRequestHeader.getValue()[0];
+                    break;
                 }
             }
         }
-        return Boolean.FALSE;
+        return tokenBindingId;
+    }
+
+    private boolean notValidCodeChallengeMethod(String pkceChallengeMethod) {
+        if (pkceChallengeMethod != null && !OAuthConstants.OAUTH_PKCE_PLAIN_CHALLENGE.equals(pkceChallengeMethod) &&
+                !OAuthConstants.OAUTH_PKCE_S256_CHALLENGE.equals(pkceChallengeMethod)) {
+            return true;
+        }
+        return false;
+
+    }
+
+    private boolean notvalidTokenBindingPkce(String pkceChallengeCodeMethod, String pkceChallengeCode) {
+        if (!OAuthConstants.OAUTH_PKCE_REFERREDTB_CHALLENGE.equals(pkceChallengeCodeMethod) || !OAuthConstants
+                .OAUTH_PKCE_REFERREDTB_CHALLENGE.equals(pkceChallengeCode)) {
+            return true;
+        }
+        return false;
     }
 
     private String appendAuthenticatedIDPs(SessionDataCacheEntry sessionDataCacheEntry, String redirectURL) {

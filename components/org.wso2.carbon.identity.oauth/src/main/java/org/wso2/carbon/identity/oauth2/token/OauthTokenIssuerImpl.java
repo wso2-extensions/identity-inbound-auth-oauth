@@ -26,7 +26,6 @@ import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
-import org.wso2.carbon.identity.oauth2.model.HttpRequestHeader;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 public class OauthTokenIssuerImpl implements OauthTokenIssuer {
@@ -36,58 +35,63 @@ public class OauthTokenIssuerImpl implements OauthTokenIssuer {
             .getOAuthTokenGenerator();
 
     public String accessToken(OAuthTokenReqMessageContext tokReqMsgCtx) throws OAuthSystemException {
-        String tokenBindingId = OAuth2Util.checkTB(tokReqMsgCtx,OAuthConstants.HTTP_TB_REFERRED_HEADER_NAME);
-        String accesstoken=oAuthIssuerImpl.accessToken();
-        if (!tokenBindingId.isEmpty()){
-            accesstoken=OAuth2Util.hashTB(tokenBindingId)+";"+accesstoken;
-            accesstoken=baseencodeTB(accesstoken);
+        String tokenBindingId = OAuth2Util.checkTokenBindingHeader(tokReqMsgCtx,
+                OAuthConstants.HTTP_TB_REFERRED_HEADER_NAME);
+        String accesstoken = oAuthIssuerImpl.accessToken();
+        if (!tokenBindingId.isEmpty()) {
+            accesstoken = OAuth2Util.hashTB(tokenBindingId) + ";" + accesstoken;
+            accesstoken = baseEncodeTB(accesstoken);
         }
-        return accesstoken ;
+        return accesstoken;
     }
 
     public String refreshToken(OAuthTokenReqMessageContext tokReqMsgCtx) throws OAuthSystemException {
-        String tokenBindingId = OAuth2Util.checkTB(tokReqMsgCtx,OAuthConstants.HTTP_TB_PROVIDED_HEADER_NAME);
-        String refreshtoken=oAuthIssuerImpl.refreshToken();
-        if (!tokenBindingId.isEmpty()){
-            refreshtoken=OAuth2Util.hashTB(tokenBindingId)+":"+refreshtoken;
-            refreshtoken=baseencodeTB(refreshtoken);
+        String tokenBindingId = OAuth2Util.checkTokenBindingHeader(tokReqMsgCtx,
+                OAuthConstants.HTTP_TB_PROVIDED_HEADER_NAME);
+        String refreshtoken = oAuthIssuerImpl.refreshToken();
+        if (!tokenBindingId.isEmpty()) {
+            refreshtoken = OAuth2Util.hashTB(tokenBindingId) + ":" + refreshtoken;
+            refreshtoken = baseEncodeTB(refreshtoken);
         }
         return refreshtoken;
     }
 
     public String authorizationCode(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) throws OAuthSystemException {
-        String tokenBindingId = OAuth2Util.checkTB(oauthAuthzMsgCtx,OAuthConstants.HTTP_TB_REFERRED_HEADER_NAME);
-        String authorizationcode=oAuthIssuerImpl.authorizationCode();
-        if (!tokenBindingId.isEmpty()){
-            authorizationcode=OAuth2Util.hashTB(tokenBindingId)+";"+authorizationcode;
-            authorizationcode=baseencodeTB(authorizationcode);
+        String tokenBindingId = OAuth2Util.checkTokenBindingHeader(oauthAuthzMsgCtx,
+                OAuthConstants.HTTP_TB_REFERRED_HEADER_NAME);
+        String authorizationCode = oAuthIssuerImpl.authorizationCode();
+        if (!tokenBindingId.isEmpty()) {
+            authorizationCode = OAuth2Util.hashTB(tokenBindingId) + ";" + authorizationCode;
+            authorizationCode = baseEncodeTB(authorizationCode);
         }
-        return authorizationcode;
+        return authorizationCode;
     }
 
     public String accessToken(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) throws OAuthSystemException {
-        String tokenBindingId = OAuth2Util.checkTB(oauthAuthzMsgCtx, OAuthConstants.HTTP_TB_REFERRED_HEADER_NAME);
-        String accesstoken=oAuthIssuerImpl.accessToken();
-        if (!tokenBindingId.isEmpty()){
-            accesstoken=OAuth2Util.hashTB(tokenBindingId)+";"+accesstoken;
-            accesstoken=baseencodeTB(accesstoken);
+        String tokenBindingId = OAuth2Util.checkTokenBindingHeader(oauthAuthzMsgCtx,
+                OAuthConstants.HTTP_TB_REFERRED_HEADER_NAME);
+        String accessToken = oAuthIssuerImpl.accessToken();
+        if (!tokenBindingId.isEmpty()) {
+            accessToken = OAuth2Util.hashTB(tokenBindingId) + ";" + accessToken;
+            accessToken = baseEncodeTB(accessToken);
         }
-        return accesstoken ;
+        return accessToken;
     }
 
     public String refreshToken(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) throws OAuthSystemException {
-        String tokenBindingId = OAuth2Util.checkTB(oauthAuthzMsgCtx,OAuthConstants.HTTP_TB_PROVIDED_HEADER_NAME);
-        String refreshtoken=oAuthIssuerImpl.refreshToken();
-        if (!tokenBindingId.isEmpty()){
-            refreshtoken=OAuth2Util.hashTB(tokenBindingId)+":"+refreshtoken;
-            refreshtoken=baseencodeTB(refreshtoken);
+        String tokenBindingId = OAuth2Util.checkTokenBindingHeader(oauthAuthzMsgCtx,
+                OAuthConstants.HTTP_TB_PROVIDED_HEADER_NAME);
+        String refreshToken = oAuthIssuerImpl.refreshToken();
+        if (!tokenBindingId.isEmpty()) {
+            refreshToken = OAuth2Util.hashTB(tokenBindingId) + ":" + refreshToken;
+            refreshToken = baseEncodeTB(refreshToken);
         }
-        return refreshtoken;
+        return refreshToken;
     }
-    public String baseencodeTB(String token){
+
+    public String baseEncodeTB(String token) {
         token = Base64Utils.encode(token.getBytes(Charsets.UTF_8));
         return token;
     }
-
 
 }

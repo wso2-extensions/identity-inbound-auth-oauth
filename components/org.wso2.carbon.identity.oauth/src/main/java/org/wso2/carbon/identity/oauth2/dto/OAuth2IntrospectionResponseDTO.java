@@ -102,17 +102,18 @@ public class OAuth2IntrospectionResponseDTO {
     private Map<String, Object> properties = new HashMap<String, Object>();
 
     private String error;
+
     /*
-       tbh used for token binding
-       it contains the hash value of the binded ID.
+     * tbh used for token binding
+     * it contains the hash value of the binding ID.
      */
     private String tbh;
 
-    public String getTbh() {
+    public String getTokenBindingHash() {
         return tbh;
     }
 
-    public void setTbh(String tbh) {
+    public void setTokenBindingHash(String tbh) {
         this.tbh = tbh;
     }
 

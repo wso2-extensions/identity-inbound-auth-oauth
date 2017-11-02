@@ -101,7 +101,7 @@ public class OAuth2IntrospectionEndpoint {
                 .setScope(introspectionResponse.getScope())
                 .setUsername(introspectionResponse.getUsername())
                 .setTokenType(DEFAULT_TOKEN_TYPE)
-                .settbh(introspectionResponse.getTbh())
+                .setTokenBindingHash(introspectionResponse.getTokenBindingHash())
                 .setClientId(introspectionResponse.getClientId())
                 .setIssuedAt(introspectionResponse.getIat())
                 .setExpiration(introspectionResponse.getExp());

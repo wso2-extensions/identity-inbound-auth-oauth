@@ -39,7 +39,7 @@ public class SQLQueries {
     public static final String VALIDATE_AUTHZ_CODE_WITH_PKCE = "SELECT AUTHZ_USER, USER_DOMAIN, TENANT_ID, SCOPE, " +
             "CALLBACK_URL, TIME_CREATED,VALIDITY_PERIOD, STATE, TOKEN_ID, AUTHORIZATION_CODE, CODE_ID, SUBJECT_IDENTIFIER, " +
             "PKCE_CODE_CHALLENGE, PKCE_CODE_CHALLENGE_METHOD FROM IDN_OAUTH2_AUTHORIZATION_CODE WHERE " +
-            "CONSUMER_KEY_ID = (SELECT ID FROM IDN_OAUTH_CONSUMER_APPS WHERE CONSUMER_KEY = ?) AND AUTHORIZATION_CODE = ? ORDER BY TIME_CREATED DESC";
+            "CONSUMER_KEY_ID = (SELECT ID FROM IDN_OAUTH_CONSUMER_APPS WHERE CONSUMER_KEY = ?) AND AUTHORIZATION_CODE = ?";
 
     public static final String RETRIEVE_CODE_ID_BY_AUTHORIZATION_CODE = "SELECT CODE_ID FROM " +
             "IDN_OAUTH2_AUTHORIZATION_CODE WHERE AUTHORIZATION_CODE = ?";
@@ -54,24 +54,24 @@ public class SQLQueries {
             "IDN_OAUTH2_ACCESS_TOKEN WHERE TOKEN_ID = ?";
 
     public static final String UPDATE_TOKEN_AGAINST_AUTHZ_CODE = "UPDATE IDN_OAUTH2_AUTHORIZATION_CODE SET " +
-            "TOKEN_ID=? WHERE AUTHORIZATION_CODE=?";
+                                                                 "TOKEN_ID=? WHERE AUTHORIZATION_CODE=?";
 
     public static final String GET_ACCESS_TOKEN_BY_AUTHZ_CODE = "SELECT AUTHORIZATION_CODE FROM " +
-            "IDN_OAUTH2_AUTHORIZATION_CODE WHERE " +
-            "TOKEN_ID=?";
+                                                                "IDN_OAUTH2_AUTHORIZATION_CODE WHERE " +
+                                                                "TOKEN_ID=?";
 
     public static final String UPDATE_NEW_TOKEN_AGAINST_AUTHZ_CODE = "UPDATE IDN_OAUTH2_AUTHORIZATION_CODE SET " +
             "TOKEN_ID=? WHERE TOKEN_ID=?";
 
     public static final String DEACTIVATE_AUTHZ_CODE = "UPDATE IDN_OAUTH2_AUTHORIZATION_CODE SET " +
-            "STATE='INACTIVE' WHERE AUTHORIZATION_CODE= ?";
+                                                   "STATE='INACTIVE' WHERE AUTHORIZATION_CODE= ?";
 
     public static final String EXPIRE_AUTHZ_CODE = "UPDATE IDN_OAUTH2_AUTHORIZATION_CODE SET " +
             "STATE='EXPIRED' WHERE AUTHORIZATION_CODE= ?";
 
     public static final String DEACTIVATE_AUTHZ_CODE_AND_INSERT_CURRENT_TOKEN = "UPDATE IDN_OAUTH2_AUTHORIZATION_CODE SET " +
-            "STATE='INACTIVE', TOKEN_ID=?" +
-            " WHERE AUTHORIZATION_CODE= ?";
+                                                                           "STATE='INACTIVE', TOKEN_ID=?" +
+                                                                            " WHERE AUTHORIZATION_CODE= ?";
 
     public static final String RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_ORACLE = "SELECT * FROM (SELECT " +
             "ACCESS_TOKEN, REFRESH_TOKEN, TIME_CREATED, REFRESH_TOKEN_TIME_CREATED, VALIDITY_PERIOD, " +

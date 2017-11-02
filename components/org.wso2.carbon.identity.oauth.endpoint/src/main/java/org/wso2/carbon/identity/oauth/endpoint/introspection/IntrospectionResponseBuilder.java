@@ -200,16 +200,14 @@ public class IntrospectionResponseBuilder {
         return this;
     }
 
-    public IntrospectionResponseBuilder settbh(String tbh) {
-        if (StringUtils.isNotBlank(tbh)) {
-//            IntrospectionResponseBuilder tbIntro = new IntrospectionResponseBuilder();
-            JSONObject  tbIntro= new JSONObject();
-            tbIntro.put(IntrospectionResponse.TBH,tbh);
-           parameters.put(IntrospectionResponse.CNF,tbIntro);
+    public IntrospectionResponseBuilder setTokenBindingHash(String tokenBindingHash) {
+        if (StringUtils.isNotBlank(tokenBindingHash)) {
+            JSONObject tokenBindingHashJSONObject = new JSONObject();
+            tokenBindingHashJSONObject.put(IntrospectionResponse.TBH, tokenBindingHash);
+            parameters.put(IntrospectionResponse.CNF, tokenBindingHashJSONObject);
 
         }
         return this;
     }
-
-
+    
 }

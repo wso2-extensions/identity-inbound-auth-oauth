@@ -48,7 +48,6 @@ public class OAuth2Parameters implements Serializable {
     private String responseMode;
     private String essentialClaims;
     private HttpRequestHeader[] httpRequestHeaders;
-
     private String displayName;
     public String getEssentialClaims() {
         return essentialClaims;

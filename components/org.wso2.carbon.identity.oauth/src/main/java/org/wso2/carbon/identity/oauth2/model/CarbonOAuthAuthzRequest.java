@@ -82,6 +82,7 @@ public class CarbonOAuthAuthzRequest extends OAuthAuthzRequest {
 
         return OAuthUtils.instantiateClass(clazz);
     }
+
     public HttpRequestHeader[] getHttpRequestHeaders() {
         return httpRequestHeaders;
     }

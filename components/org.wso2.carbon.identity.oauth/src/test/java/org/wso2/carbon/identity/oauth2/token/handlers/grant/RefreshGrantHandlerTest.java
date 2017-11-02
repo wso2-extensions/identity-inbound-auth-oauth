@@ -135,7 +135,7 @@ public class RefreshGrantHandlerTest extends PowerMockIdentityBaseTest {
                 isUsernameCaseSensitive);
         when(mockTokenMgtDAO.validateRefreshToken(anyString(), anyString())).thenReturn(validationDataDO);
         when(IdentityUtil.isUserStoreInUsernameCaseSensitive(anyString())).thenReturn(isUsernameCaseSensitive);
-        when(OAuth2Util.checkTB(any(OAuthTokenReqMessageContext.class),anyString())).thenReturn("");
+        when(OAuth2Util.checkTokenBindingHeader(any(OAuthTokenReqMessageContext.class),anyString())).thenReturn("");
 
         if ((StringUtils.equals(tokenState, TOKEN_STATE_EXPIRED) || StringUtils.equals(tokenState,
                 TOKEN_STATE_ACTIVE)) && StringUtils.equals(clientId, "clientId2")) {

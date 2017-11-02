@@ -62,26 +62,6 @@ public class AccessTokenDO extends CacheEntry {
 
     private String tokenType;
 
-    private String tBhashAccess;
-
-//    private String tBhashRefresh;
-//
-//    public String gettBhashRefresh() {
-//        return tBhashRefresh;
-//    }
-//
-//    public void settBhashRefresh(String tBhashRefresh) {
-//        this.tBhashRefresh = tBhashRefresh;
-//    }
-
-//    public String gettBhashAccess() {
-//        return tBhashAccess;
-//    }
-//
-//    public void settBhashAccess(String tBhashAccess) {
-//        this.tBhashAccess = tBhashAccess;
-//    }
-
     public AccessTokenDO(String consumerKey, AuthenticatedUser authzUser, String[] scope, Timestamp issuedTime, Timestamp
             refreshTokenIssuedTime, long validityPeriodInMillis, long refreshTokenValidityPeriodInMillis, String
                                  tokenType) {

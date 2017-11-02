@@ -188,16 +188,18 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
         String PKCECodeChallenge = authzCodeDO.getPkceCodeChallenge();
         String PKCECodeChallengeMethod = authzCodeDO.getPkceCodeChallengeMethod();
         String codeVerifier = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getPkceCodeVerifier();
-        if (!OAuthConstants.OAUTH_PKCE_REFERREDTB_CHALLENGE.equals(PKCECodeChallenge) && !OAuth2Util.doPKCEValidation(PKCECodeChallenge, codeVerifier, PKCECodeChallengeMethod, oAuthAppDO)) {
+        //PKCE validation without Token Binding
+        if (normalPkceValidationFails(PKCECodeChallenge, PKCECodeChallengeMethod, codeVerifier, oAuthAppDO)) {
             //possible malicious oAuthRequest
             log.warn("Failed PKCE Verification for oAuth 2.0 request");
             return false;
         }
-        if (!OAuth2Util.doTBPKCEvalidation(PKCECodeChallenge, codeVerifier,authzCodeDO.getAuthorizationCode())){
+        //PKCE validation with Token Binding
+        if (!OAuth2Util.doTokenBindingPKCEValidation(PKCECodeChallenge,codeVerifier, authzCodeDO.getAuthorizationCode
+                ())) {
             log.warn("Failed PKCE Verification for oAuth 2.0 request with TokenBinding");
             return false;
         }
-
 
         if (log.isDebugEnabled()) {
             log.debug("Found an Authorization Code, " +
@@ -283,4 +285,14 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
         return OAuthServerConfiguration.getInstance()
                 .getValueForIsRefreshTokenAllowed(OAuthConstants.GrantTypes.AUTHORIZATION_CODE);
     }
+
+    private boolean normalPkceValidationFails(String PKCECodeChallenge, String PKCECodeChallengeMethod, String
+            codeVerifier, OAuthAppDO oAuthAppDO) throws IdentityOAuth2Exception {
+        if (!OAuthConstants.OAUTH_PKCE_REFERREDTB_CHALLENGE.equals(PKCECodeChallenge)
+                && !OAuth2Util.doPKCEValidation(PKCECodeChallenge, codeVerifier, PKCECodeChallengeMethod, oAuthAppDO)) {
+            return true;
+        }
+        return false;
+    }
+
 }

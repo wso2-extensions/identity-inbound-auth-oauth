@@ -345,7 +345,6 @@ public class TokenMgtDAO {
             insertTokenPrepStmt.setString(13, accessTokenDO.getTokenId());
             insertTokenPrepStmt.setString(14, accessTokenDO.getGrantType());
             insertTokenPrepStmt.setString(15, accessTokenDO.getAuthzUser().getAuthenticatedSubjectIdentifier());
-//            insertTokenPrepStmt.setString(16, accessTokenDO.gettBhashAccess());
             insertTokenPrepStmt.setString(16, persistenceProcessor.getProcessedClientId(consumerKey));
             insertTokenPrepStmt.execute();
 
@@ -584,7 +583,6 @@ public class TokenMgtDAO {
                     String userType = resultSet.getString(8);
                     String tokenId = resultSet.getString(9);
                     String subjectIdentifier = resultSet.getString(10);
-//                    String tokenBindingHash=resultSet.getString(11);
                     // data loss at dividing the validity period but can be neglected
                     AuthenticatedUser user = new AuthenticatedUser();
                     user.setUserName(tenantAwareUsernameWithNoUserDomain);
@@ -611,7 +609,6 @@ public class TokenMgtDAO {
                         log.debug("Retrieved latest access token(hashed): " + DigestUtils.sha256Hex(accessToken) +
                                 " for client: " + consumerKey + " user: " + authzUser.toString() + " scope: " + scope);
                     }
-//                    accessTokenDO.settBhashAccess(tokenBindingHash);
                     return accessTokenDO;
                 }
             }
@@ -1163,7 +1160,6 @@ public class TokenMgtDAO {
                     String refreshToken = resultSet.getString(11);
                     String tokenId = resultSet.getString(12);
                     String grantType = resultSet.getString(13);
-//                    String tbHash=resultSet.getString(14);
                     String subjectIdentifier = resultSet.getString(14);
 
                     AuthenticatedUser user = new AuthenticatedUser();
@@ -1194,7 +1190,6 @@ public class TokenMgtDAO {
                     dataDO.setAccessToken(accessTokenIdentifier);
                     dataDO.setRefreshToken(refreshToken);
                     dataDO.setTokenId(tokenId);
-//                    dataDO.settBhashAccess(tbHash);
                     dataDO.setGrantType(grantType);
                     dataDO.setTenantID(tenantId);
 

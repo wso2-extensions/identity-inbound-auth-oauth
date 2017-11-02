@@ -282,7 +282,7 @@ public class TokenValidationHandler {
             // add client id
             introResp.setClientId(accessTokenDO.getConsumerKey());
             //add token binding hash tbh
-            introResp.setTbh(findtbh(accessTokenDO));
+            introResp.setTokenBindingHash(findTokenBindingHash(accessTokenDO));
             // adding the AccessTokenDO as a context property for further use
             messageContext.addProperty("AccessTokenDO", accessTokenDO);
         }
@@ -463,15 +463,12 @@ public class TokenValidationHandler {
     private AccessTokenDO findAccessToken(String tokenIdentifier) throws IdentityOAuth2Exception {
         return OAuth2Util.getAccessTokenDOfromTokenIdentifier(tokenIdentifier);
     }
-///get the hash value of token binding id
-    private String findtbh(AccessTokenDO accessTokenDO) {
-//        if (accessTokenDO.gettBhashAccess() != null){
-//            return accessTokenDO.gettBhashAccess();
-//        }
-//        else{
+
+    //get the hash value of token binding id
+    private String findTokenBindingHash(AccessTokenDO accessTokenDO) {
         String tbh;
         String accesstoken = accessTokenDO.getAccessToken();
-        if (checkBas64TB(accesstoken)) {
+        if (checkBase64Encode(accesstoken)) {
             tbh = new String(Base64Utils.decode(accesstoken), (Charsets.UTF_8));
             if (tbh.contains(":")) {
                 tbh = tbh.split(":")[0];
@@ -481,10 +478,10 @@ public class TokenValidationHandler {
             return tbh;
         }
         return null;
-//        }
     }
-///check whether token is base64 encode or not
-    private boolean checkBas64TB(String tokenID) {
+
+    //check whether token is base64 encode or not
+    private boolean checkBase64Encode(String tokenID) {
         String pattern1 = "^([A-Za-z0-9+/]{4})*[A-Za-z0-9+/]{4}$";
         String pattern2 = "^([A-Za-z0-9+/]{4})*[A-Za-z0-9+/]{3}=$";
         String pattern3 = "^([A-Za-z0-9+/]{4})*[A-Za-z0-9+/]{2}==$";
@@ -492,7 +489,6 @@ public class TokenValidationHandler {
             return true;
         }
         return false;
-
     }
 
 }
