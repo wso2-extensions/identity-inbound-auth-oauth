@@ -117,10 +117,8 @@ public final class OAuthConstants {
     public static final String TENANT_NAME_FROM_CONTEXT = "TenantNameFromContext";
 
     //TokenBinding headers
-    public static final String HTTP_TB_PROVIDED_HEADER_NAME = "sec-provided-token-binding-id";
-    public static final String HTTP_TB_REFERRED_HEADER_NAME = "sec-referred-token-binding-id";
-//    public static final String HTTP_TB_PROVIDED_HEADER_NAME = "id";
-//    public static final String HTTP_TB_REFERRED_HEADER_NAME = "rid";
+    public static final String HTTP_TB_PROVIDED_HEADER_NAME = "SEC-PROVIDED-TOKEN-BINDING-ID";
+    public static final String HTTP_TB_REFERRED_HEADER_NAME = "SEC-REFERRED-TOKEN-BINDING-ID";
 
     //Oauth2 sp expire time configuration.
     public static final String TOKEN_EXPIRE_TIME_RESOURCE_PATH = "/identity/config/spTokenExpireTime";
