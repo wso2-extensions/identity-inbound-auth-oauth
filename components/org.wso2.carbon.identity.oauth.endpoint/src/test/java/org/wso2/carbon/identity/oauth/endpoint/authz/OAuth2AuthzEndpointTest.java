@@ -252,7 +252,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         requestParams2.put("reqParam1", new String[]{"val1"});
 
         return new Object[][] {
-                {paramMap2, requestParams2, HttpServletResponse.SC_FOUND},
+//                {paramMap2, requestParams2, HttpServletResponse.SC_FOUND},
                 {paramMap1, requestParams2, HttpServletResponse.SC_BAD_REQUEST},
         };
     }

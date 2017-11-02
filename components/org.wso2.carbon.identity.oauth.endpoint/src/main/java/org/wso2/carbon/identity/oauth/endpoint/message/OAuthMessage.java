@@ -33,23 +33,25 @@ import javax.servlet.http.HttpServletResponse;
 
 public class OAuthMessage {
 
-    private HttpServletRequest request;
-    private HttpServletResponse response;
-    private Map<String, Object> properties = new HashMap();
-    private OAuthAuthorizeState requestType;
+    private static final String CLIENT_ID = "client_id";
+    protected HttpServletRequest request;
+    protected HttpServletResponse response;
+    protected Map<String, Object> properties = new HashMap();
+    protected OAuthAuthorizeState requestType;
 
-    private SessionDataCacheKey cacheKey;
-    private SessionDataCacheEntry resultFromLogin = null;
-    private SessionDataCacheEntry resultFromConsent = null;
-    private SessionDataCacheEntry sessionDataCacheEntry = null;
+    protected SessionDataCacheEntry resultFromLogin = null;
+    protected SessionDataCacheEntry resultFromConsent = null;
+    protected SessionDataCacheEntry sessionDataCacheEntry = null;
 
-    private boolean forceAuthenticate = false;
-    private boolean isPassiveAuthentication = false;
-    String sessionDataKeyFromConsent;
+    protected boolean forceAuthenticate = false;
+    protected boolean isPassiveAuthentication = false;
+    protected String sessionDataKeyFromConsent;
 
-    private OAuthMessage(HttpServletRequest request, HttpServletResponse response) {
+    protected OAuthMessage(HttpServletRequest request, HttpServletResponse response) {
+
         this.request = request;
         this.response = response;
+        SessionDataCacheKey cacheKey;
 
         String sessionDataKeyFromLogin = getSessionDataKey(request);
         sessionDataKeyFromConsent = request.getParameter(OAuthConstants.SESSION_DATA_KEY_CONSENT);
@@ -107,7 +109,7 @@ public class OAuthMessage {
     }
 
     public String getClientId() {
-        return request.getParameter("client_id");
+        return request.getParameter(CLIENT_ID);
     }
 
     public String getSessionDataKeyFromLogin() {
@@ -169,7 +171,7 @@ public class OAuthMessage {
      * @param req Http servlet request
      * @return Session data key
      */
-    private String getSessionDataKey(HttpServletRequest req) {
+    protected String getSessionDataKey(HttpServletRequest req) {
         String sessionDataKey = (String) req.getAttribute(OAuthConstants.SESSION_DATA_KEY);
         if (sessionDataKey == null) {
             sessionDataKey = req.getParameter(OAuthConstants.SESSION_DATA_KEY);
@@ -186,7 +188,7 @@ public class OAuthMessage {
     }
 
     public boolean isInitialRequest() {
-        return request.getParameter("client_id") != null && getSessionDataKey(request) == null
+        return request.getParameter(CLIENT_ID) != null && getSessionDataKey(request) == null
                 && request.getParameter(OAuthConstants.SESSION_DATA_KEY_CONSENT) == null;
     }
 
@@ -211,14 +213,14 @@ public class OAuthMessage {
         return "OAuthMessage{" +
                 "properties=" + properties +
                 ", requestType=" + requestType +
+                ", sessionDataKeyFromConsent='" + sessionDataKeyFromConsent + '\'' +
                 '}';
     }
 
-
     public static class OAuthMessageBuilder {
 
-        private HttpServletRequest request;
-        private HttpServletResponse response;
+        protected HttpServletRequest request;
+        protected HttpServletResponse response;
 
         public HttpServletRequest getRequest() {
 

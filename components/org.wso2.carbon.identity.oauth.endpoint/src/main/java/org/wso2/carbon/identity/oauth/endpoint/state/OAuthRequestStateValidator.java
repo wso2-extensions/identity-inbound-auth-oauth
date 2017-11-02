@@ -70,10 +70,7 @@ public class OAuthRequestStateValidator {
     }
 
     private boolean handleToCommonauthState(OAuthMessage oAuthMessage) {
-        if (oAuthMessage.isRequestToCommonauth() && oAuthMessage.getFlowStatus() == null) {
-            return true;
-        }
-        return false;
+        return (oAuthMessage.isRequestToCommonauth() && oAuthMessage.getFlowStatus() == null) ;
     }
 
     private void validateRequest(OAuthMessage oAuthMessage)
