@@ -21,7 +21,6 @@ package org.wso2.carbon.identity.openidconnect;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jwt.JWT;
 import com.nimbusds.jwt.JWTClaimsSet;
-import org.apache.commons.logging.Log;
 import org.mockito.Mock;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.IObjectFactory;
@@ -38,6 +37,9 @@ import org.wso2.carbon.identity.application.common.util.IdentityApplicationConst
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
@@ -57,9 +59,7 @@ import java.util.LinkedHashSet;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.doNothing;
-import static org.powermock.api.mockito.PowerMockito.mock;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
+import static org.powermock.api.mockito.PowerMockito.*;
 import static org.testng.Assert.assertEquals;
 
 @PrepareForTest({
@@ -70,7 +70,10 @@ import static org.testng.Assert.assertEquals;
         JWTClaimsSet.class, FederatedAuthenticatorConfig.class,
         MessageDigest.class,
         IdentityConfigParser.class,
-        OAuth2ServiceComponentHolder.class})
+        OAuth2ServiceComponentHolder.class,
+        AuthorizationGrantCacheKey.class,
+        AuthorizationGrantCache.class,
+        AuthorizationGrantCacheEntry.class})
 public class DefaultIDTokenBuilderTest extends IdentityBaseTest {
 
     @Mock
@@ -126,6 +129,15 @@ public class DefaultIDTokenBuilderTest extends IdentityBaseTest {
 
     @Mock
     private ServiceProvider serviceProvider;
+
+    @Mock
+    private AuthorizationGrantCacheKey authorizationGrantCacheKey;
+
+    @Mock
+    private AuthorizationGrantCache authorizationGrantCache;
+
+    @Mock
+    private AuthorizationGrantCacheEntry authorizationGrantCacheEntry;
 
     @ObjectFactory
     public IObjectFactory getObjectFactory() {
@@ -278,6 +290,13 @@ public class DefaultIDTokenBuilderTest extends IdentityBaseTest {
         when(oAuthServerConfiguration.getOpenIDConnectCustomClaimsCallbackHandler())
                 .thenReturn(customClaimsCallbackHandler);
         doNothing().when(customClaimsCallbackHandler).handleCustomClaims(jwtClaimsSet, request);
+
+        mockStatic(AuthorizationGrantCache.class);
+        whenNew(AuthorizationGrantCacheKey.class).withAnyArguments().thenReturn(authorizationGrantCacheKey);
+        when(AuthorizationGrantCache.getInstance()).thenReturn(authorizationGrantCache);
+        when(authorizationGrantCache.getValueFromCacheByToken(any(AuthorizationGrantCacheKey.class))).
+                thenReturn(authorizationGrantCacheEntry);
+        when(authorizationGrantCacheEntry.getEssentialClaims()).thenReturn("auth_time");
 
         when(OAuth2Util.signJWT(any(JWTClaimsSet.class), any(JWSAlgorithm.class), anyString())).thenReturn(jwt);
         DefaultIDTokenBuilder defaultIDTokenBuilder = new DefaultIDTokenBuilder();

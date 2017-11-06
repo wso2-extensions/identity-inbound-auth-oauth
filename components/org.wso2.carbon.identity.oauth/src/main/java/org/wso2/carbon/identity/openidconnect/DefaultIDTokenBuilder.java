@@ -394,8 +394,18 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         jwtClaimsSet.setClaim("azp", request.getAuthorizationReqDTO().getConsumerKey());
         jwtClaimsSet.setExpirationTime(new Date(curTimeInMillis + lifetimeInMillis));
         jwtClaimsSet.setIssueTime(new Date(curTimeInMillis));
-        if (request.getAuthorizationReqDTO().getAuthTime() != 0) {
-            jwtClaimsSet.setClaim("auth_time", request.getAuthorizationReqDTO().getAuthTime() / 1000);
+        long authTime = 0;
+        if (StringUtils.isNotEmpty(tokenRespDTO.getAccessToken())) {
+            AuthorizationGrantCacheEntry authorizationGrantCacheEntry = getAuthorizationGrantCacheEntry(tokenRespDTO);
+            if (StringUtils.isNotBlank(authorizationGrantCacheEntry.getEssentialClaims())) {
+                if (OAuth2Util.getEssentialClaims(authorizationGrantCacheEntry.getEssentialClaims()
+                        , OAuthConstants.ID_TOKEN).contains(OAuthConstants.OAuth20Params.AUTH_TIME)) {
+                    authTime = request.getAuthorizationReqDTO().getAuthTime();
+                }
+            }
+        }
+        if (authTime != 0) {
+            jwtClaimsSet.setClaim("auth_time", authTime / 1000);
         }
         if(atHash != null){
             jwtClaimsSet.setClaim("at_hash", atHash);
@@ -482,6 +492,14 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         AuthorizationGrantCacheEntry authorizationGrantCacheEntry =
                 (AuthorizationGrantCacheEntry) AuthorizationGrantCache.getInstance().
                         getValueFromCacheByCode(authorizationGrantCacheKey);
+        return authorizationGrantCacheEntry;
+    }
+
+    private AuthorizationGrantCacheEntry getAuthorizationGrantCacheEntry(OAuth2AuthorizeRespDTO respDTO) {
+        AuthorizationGrantCacheKey authorizationGrantCacheKey = new AuthorizationGrantCacheKey(respDTO.getAccessToken());
+        AuthorizationGrantCacheEntry authorizationGrantCacheEntry =
+                (AuthorizationGrantCacheEntry) AuthorizationGrantCache.getInstance().
+                        getValueFromCacheByToken(authorizationGrantCacheKey);
         return authorizationGrantCacheEntry;
     }
 
