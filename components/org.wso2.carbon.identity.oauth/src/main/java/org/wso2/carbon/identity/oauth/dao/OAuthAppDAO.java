@@ -426,15 +426,19 @@ public class OAuthAppDAO {
                 prepStmt.setLong(6, oauthAppDO.getUserAccessTokenExpiryTime());
                 prepStmt.setLong(7, oauthAppDO.getApplicationAccessTokenExpiryTime());
                 prepStmt.setLong(8, oauthAppDO.getRefreshTokenExpiryTime());
+                prepStmt.setString(9, oauthAppDO.isTbMandatory() ? "1" : "0");
 
-                prepStmt.setString(9, persistenceProcessor.getProcessedClientId(oauthAppDO.getOauthConsumerKey()));
-                prepStmt.setString(10, persistenceProcessor.getProcessedClientSecret(oauthAppDO.getOauthConsumerSecret()));
+                prepStmt.setString(10, persistenceProcessor.getProcessedClientId(oauthAppDO.getOauthConsumerKey()));
+                prepStmt.setString(11, persistenceProcessor.getProcessedClientSecret(oauthAppDO
+                        .getOauthConsumerSecret()));
             } else {
                 prepStmt.setLong(4, oauthAppDO.getUserAccessTokenExpiryTime());
                 prepStmt.setLong(5, oauthAppDO.getApplicationAccessTokenExpiryTime());
                 prepStmt.setLong(6, oauthAppDO.getRefreshTokenExpiryTime());
-                prepStmt.setString(7, persistenceProcessor.getProcessedClientId(oauthAppDO.getOauthConsumerKey()));
-                prepStmt.setString(8, persistenceProcessor.getProcessedClientSecret(oauthAppDO.getOauthConsumerSecret()));
+                prepStmt.setString(7, oauthAppDO.isTbMandatory() ? "1" : "0");
+                prepStmt.setString(8, persistenceProcessor.getProcessedClientId(oauthAppDO.getOauthConsumerKey()));
+                prepStmt.setString(9, persistenceProcessor.getProcessedClientSecret(oauthAppDO
+                        .getOauthConsumerSecret()));
             }
 
             int count = prepStmt.executeUpdate();
