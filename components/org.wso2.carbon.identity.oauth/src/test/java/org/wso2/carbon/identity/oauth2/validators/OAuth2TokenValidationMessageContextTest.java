@@ -22,11 +22,10 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
-import org.wso2.carbon.identity.testutil.IdentityBaseTest;
 
 import static org.testng.Assert.assertEquals;
 
-public class OAuth2TokenValidationMessageContextTest extends IdentityBaseTest {
+public class OAuth2TokenValidationMessageContextTest {
 
     private OAuth2TokenValidationMessageContext oAuth2TokenValidationMessageContext;
     private OAuth2TokenValidationRequestDTO requestDTO;

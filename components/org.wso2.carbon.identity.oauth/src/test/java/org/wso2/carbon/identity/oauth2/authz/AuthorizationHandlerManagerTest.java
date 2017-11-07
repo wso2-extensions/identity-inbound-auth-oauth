@@ -20,6 +20,7 @@ import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.TestConstants;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
@@ -31,8 +32,8 @@ import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 @WithCarbonHome
 @WithH2Database(jndiName = "jdbc/WSO2IdentityDB", files = { "dbScripts/h2_with_application_and_token.sql" })
 @WithRealmService(tenantId = TestConstants.TENANT_ID, tenantDomain = TestConstants.TENANT_DOMAIN,
-        initUserStoreManager = true)
-public class AuthorizationHandlerManagerTest extends PowerMockIdentityBaseTest {
+        initUserStoreManager = true, injectToSingletons = OAuthComponentServiceHolder.class)
+public class AuthorizationHandlerManagerTest {
 
     private AuthorizationHandlerManager authorizationHandlerManager;
     private OAuth2AuthorizeReqDTO authzReqDTO = new OAuth2AuthorizeReqDTO();

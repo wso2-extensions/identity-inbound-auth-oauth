@@ -29,22 +29,23 @@ import org.testng.ITestContext;
 import org.testng.ITestListener;
 import org.testng.ITestResult;
 import org.wso2.carbon.base.CarbonBaseConstants;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.core.internal.IdentityCoreServiceComponent;
+import org.wso2.carbon.identity.core.persistence.JDBCPersistenceManager;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.test.common.testng.realm.InMemoryRealmService;
 import org.wso2.carbon.user.api.RealmConfiguration;
-import org.wso2.carbon.user.api.UserRealm;
 import org.wso2.carbon.user.api.UserStoreException;
-import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.tenant.TenantManager;
 import org.wso2.carbon.utils.ConfigurationContextService;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
-import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -58,17 +59,14 @@ public class CarbonBasedTestListener implements ITestListener, IClassListener {
 
     @Override
     public void onTestStart(ITestResult iTestResult) {
-
     }
 
     @Override
     public void onTestSuccess(ITestResult iTestResult) {
-
     }
 
     @Override
     public void onTestFailure(ITestResult iTestResult) {
-
     }
 
     @Override
@@ -87,7 +85,6 @@ public class CarbonBasedTestListener implements ITestListener, IClassListener {
 
     @Override
     public void onFinish(ITestContext iTestContext) {
-
     }
 
     private boolean annotationPresent(Class c, Class clazz) {
@@ -158,52 +155,68 @@ public class CarbonBasedTestListener implements ITestListener, IClassListener {
             WithH2Database withH2Database = (WithH2Database) annotation;
             MockInitialContextFactory
                     .initializeDatasource(withH2Database.jndiName(), realClass, withH2Database.files());
+            setInternalState(JDBCPersistenceManager.class, "instance", null);
         }
         if (annotationPresent(realClass, WithRealmService.class)) {
             Annotation annotation = realClass.getAnnotation(WithRealmService.class);
             WithRealmService withRealmService = (WithRealmService) annotation;
             try {
-                RealmService realmService = mock(RealmService.class);
-                RealmConfiguration realmConfiguration = mock(RealmConfiguration.class);
-                TenantManager tenantManager = mock(TenantManager.class);
-                UserStoreManager userStoreManager = mock(UserStoreManager.class);
-                UserRealm userRealm = mock(UserRealm.class);
-                when(realmService.getTenantManager()).thenReturn(tenantManager);
-                when(realmService.getBootstrapRealmConfiguration()).thenReturn(realmConfiguration);
-                when(tenantManager.getTenantId(anyString())).thenReturn(withRealmService.tenantId());
-                when(tenantManager.getDomain(anyInt())).thenReturn(withRealmService.tenantDomain());
-                boolean initRealmService = withRealmService.initUserStoreManager();
-                if (initRealmService) {
-                    when(realmService.getTenantUserRealm(withRealmService.tenantId())).thenReturn(userRealm);
-                    when(userRealm.getUserStoreManager()).thenReturn(userStoreManager);
-                    when(userStoreManager.getSecondaryUserStoreManager()).thenReturn(userStoreManager);
-                    when(userStoreManager.getRealmConfiguration()).thenReturn(realmConfiguration);
-                    when(userStoreManager.getRealmConfiguration().getUserStoreProperty("CaseInsensitiveUsername"))
-                            .thenReturn(Boolean.TRUE.toString());
-                }
-                setInternalState(OAuthComponentServiceHolder.getInstance(), "realmService", realmService);
+                int tenantId = withRealmService.tenantId();
+                String tenantDomain = withRealmService.tenantDomain();
+
+                PrivilegedCarbonContext.startTenantFlow();
+                PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(tenantId);
+                PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(tenantDomain);
+                RealmService realmService = new InMemoryRealmService(tenantId);
                 IdentityTenantUtil.setRealmService(realmService);
 
                 Class[] singletonClasses = withRealmService.injectToSingletons();
                 for (Class singletonClass : singletonClasses) {
-                    for (Field field1 : singletonClass.getDeclaredFields()) {
-                        if (field1.getType().isAssignableFrom(RealmService.class)) {
-                            field1.setAccessible(true);
-                            try {
-                                field1.set(null, realmService);
-                            } catch (IllegalAccessException e) {
-                                log.error("Could not set the realm service in class : " + singletonClass + " field : "
-                                        + field1.getName(), e);
-                            }
-                        }
+                    Object instance = getSingletonInstance(singletonClass);
+                    if (instance != null) {
+                        setInstanceValue(realmService, singletonClass, instance);
+                    } else {
+                        setInstanceValue(realmService, singletonClass, null);
                     }
+
                 }
             } catch (UserStoreException e) {
-                log.error("Error in getting the tenant id.", e);
+                log.error("Error setting the realm.", e);
+            } finally {
+                PrivilegedCarbonContext.endTenantFlow();
             }
         }
         Field[] fields = realClass.getDeclaredFields();
         processFields(fields, iMethodInstance.getInstance());
+    }
+
+    private Object getSingletonInstance(Class singletonClass) {
+        for (Method m : singletonClass.getDeclaredMethods()) {
+            if (m.getName().equals("getInstance")) {
+                try {
+                    return m.invoke(null, null);
+                } catch (IllegalAccessException e) {
+                    log.error("Error in invoking singleton class", e);
+                } catch (InvocationTargetException e) {
+                    log.error("Error getting singleton class", e);
+                }
+            }
+        }
+        return null;
+    }
+
+    private void setInstanceValue(Object value, Class clazz, Object instance) {
+        for (Field field1 : clazz.getDeclaredFields()) {
+            if (field1.getType().isAssignableFrom(RealmService.class)) {
+                field1.setAccessible(true);
+
+                if (java.lang.reflect.Modifier.isStatic(field1.getModifiers())) {
+                    setInternalState(clazz, field1.getName(), value);
+                } else if (instance != null) {
+                    setInternalState(instance, field1.getName(), value);
+                }
+            }
+        }
     }
 
     @Override

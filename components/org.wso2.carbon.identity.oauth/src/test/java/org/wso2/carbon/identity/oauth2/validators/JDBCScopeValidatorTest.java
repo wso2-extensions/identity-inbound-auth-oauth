@@ -38,7 +38,7 @@ import static org.testng.Assert.assertEquals;
  */
 @WithCarbonHome
 @WithH2Database(jndiName = "jdbc/WSO2IdentityDB", files = {"dbScripts/scope.sql"})
-public class JDBCScopeValidatorTest extends IdentityBaseTest {
+public class JDBCScopeValidatorTest {
 
     private JDBCScopeValidator validator;
 

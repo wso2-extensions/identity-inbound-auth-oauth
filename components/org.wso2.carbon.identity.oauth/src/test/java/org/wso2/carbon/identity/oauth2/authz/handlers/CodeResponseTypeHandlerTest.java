@@ -26,6 +26,7 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.TestConstants;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
@@ -46,7 +47,7 @@ import java.util.concurrent.ThreadLocalRandom;
         files = {"dbScripts/h2_with_application_and_token.sql", "dbScripts/identity.sql"})
 @WithRealmService(tenantId = TestConstants.TENANT_ID,
         tenantDomain = TestConstants.TENANT_DOMAIN,
-        initUserStoreManager = true)
+        initUserStoreManager = true, injectToSingletons = OAuthComponentServiceHolder.class)
 public class CodeResponseTypeHandlerTest {
 
     private final String TEST_CONSUMER_KEY =  UUID.randomUUID().toString();

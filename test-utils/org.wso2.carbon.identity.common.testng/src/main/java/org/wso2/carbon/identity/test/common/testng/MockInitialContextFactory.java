@@ -65,10 +65,11 @@ public class MockInitialContextFactory implements InitialContextFactory {
     public static void destroy() {
         Map<String, Object> jndiObjectsMap = jndiContextData.get();
         if (jndiObjectsMap != null) {
-            for (Object object : jndiObjectsMap.entrySet()) {
-                if (object instanceof BasicDataSource) {
+            for (Map.Entry entry : jndiObjectsMap.entrySet()) {
+                Object value = entry.getValue();
+                if (value != null && value instanceof BasicDataSource) {
                     try {
-                        ((BasicDataSource) object).close();
+                        ((BasicDataSource) value).close();
                     } catch (SQLException e) {
                         //Just Ignore for now.
                     }

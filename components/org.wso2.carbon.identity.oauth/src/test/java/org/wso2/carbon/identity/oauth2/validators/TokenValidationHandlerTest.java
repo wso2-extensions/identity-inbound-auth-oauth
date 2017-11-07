@@ -23,6 +23,7 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.dao.TokenMgtDAO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientApplicationDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
@@ -41,7 +42,7 @@ import static org.testng.Assert.assertNotNull;
 @WithCarbonHome
 @WithAxisConfiguration
 @WithH2Database(jndiName = "jdbc/WSO2IdentityDB", files = {"dbScripts/token.sql"})
-@WithRealmService(tenantId = MultitenantConstants.SUPER_TENANT_ID)
+@WithRealmService(injectToSingletons = OAuthComponentServiceHolder.class)
 public class TokenValidationHandlerTest {
 
     private String scopeArraySorted[] = new String[]{"scope1", "scope2", "scope3"};

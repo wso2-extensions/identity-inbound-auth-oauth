@@ -23,10 +23,24 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+/**
+ * Use this annotation to create a in-memory database for testing.
+ * e.g.
+ * <pre>
+ * {@code
+ * @WithCarbonHome
+ * @WithH2Database(jndiName = "jdbc/WSO2IdentityDB", files = {"dbScripts/scope.sql"})
+ * public class JDBCScopeValidatorTest {...}
+ * }
+ * </pre>
+ */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 public @interface WithH2Database {
-    String jndiName();
+
+    String jndiName() default "jdbc/WSO2IdentityDB";
+
     String dbName() default "test";
+
     String[] files();
 }
