@@ -254,7 +254,6 @@
             <version>5.5.103-SNAPSHOT</version>
             <scope>test</scope>
         </dependency>
-
     </dependencies>
 
     <build>

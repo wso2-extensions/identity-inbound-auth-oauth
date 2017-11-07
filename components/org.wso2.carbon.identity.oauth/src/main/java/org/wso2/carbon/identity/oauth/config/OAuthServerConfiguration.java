@@ -188,6 +188,9 @@ public class OAuthServerConfiguration {
     private ValueGenerator tokenValueGenerator;
     private String tokenValueGeneratorClassName;
 
+    // Property added to determine the expiration of logout token in oidc back-channel logout
+    private String openIDConnectBCLogoutTokenExpiration="200";
+
     private OAuthServerConfiguration() {
         buildOAuthServerConfiguration();
     }
@@ -904,6 +907,14 @@ public class OAuthServerConfiguration {
      */
     public String getOpenIDConnectIDTokenExpiration() {
         return openIDConnectIDTokenExpiration;
+    }
+
+    /**
+     * Returns expiration time of logout token in oidc back-channel logout.
+     * @return
+     */
+    public String getOpenIDConnectBCLogoutTokenExpiration(){
+        return openIDConnectBCLogoutTokenExpiration;
     }
 
     public String getOpenIDConnectUserInfoEndpointClaimDialect() {
