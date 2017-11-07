@@ -485,7 +485,7 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         AuthorizationGrantCacheEntry cacheEntry = AuthorizationGrantCache.getInstance()
                 .getValueFromCacheByToken(cacheKey);
 
-        return cacheEntry == null ? new HashMap<>() : cacheEntry.getUserAttributes();
+        return cacheEntry == null ? new HashMap<ClaimMapping, String>() : cacheEntry.getUserAttributes();
     }
 
     /**
@@ -507,7 +507,7 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         AuthorizationGrantCacheEntry cacheEntry = AuthorizationGrantCache.getInstance()
                 .getValueFromCacheByCode(cacheKey);
 
-        return cacheEntry == null ? new HashMap<>() : cacheEntry.getUserAttributes();
+        return cacheEntry == null ? new HashMap<ClaimMapping, String>() : cacheEntry.getUserAttributes();
     }
 
     /**

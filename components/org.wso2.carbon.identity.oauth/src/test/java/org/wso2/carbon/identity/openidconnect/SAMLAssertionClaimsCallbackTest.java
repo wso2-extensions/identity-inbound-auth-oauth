@@ -376,7 +376,7 @@ public class SAMLAssertionClaimsCallbackTest {
         ServiceProvider serviceProvider = getSpWithDefaultRequestedClaimsMappings();
         mockApplicationManagementService(serviceProvider);
 
-        UserRealm userRealm = getUserRealmWithUserClaims(Collections.emptyMap());
+        UserRealm userRealm = getUserRealmWithUserClaims(Collections.<String, String>emptyMap());
         mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm);
 
         samlAssertionClaimsCallback.handleCustomClaims(jwtClaimsSet, requestMsgCtx);
@@ -662,7 +662,7 @@ public class SAMLAssertionClaimsCallbackTest {
 
     private UserRealm getExceptionThrowingUserRealm(UserStoreException e) throws UserStoreException {
         UserStoreManager userStoreManager = mock(UserStoreManager.class);
-        when(userStoreManager.getUserClaimValues(eq(TENANT_AWARE_USERNAME), any(), eq(null)))
+        when(userStoreManager.getUserClaimValues(eq(TENANT_AWARE_USERNAME), (String[]) any(), (String) eq(null)))
                 .thenThrow(e);
 
         UserRealm userRealm = mock(UserRealm.class);
@@ -672,7 +672,8 @@ public class SAMLAssertionClaimsCallbackTest {
 
     private UserRealm getUserRealmWithUserClaims(Map<String, String> userClaims) throws UserStoreException {
         UserStoreManager userStoreManager = mock(UserStoreManager.class);
-        when(userStoreManager.getUserClaimValues(eq(TENANT_AWARE_USERNAME), any(), eq(null))).thenReturn(userClaims);
+        when(userStoreManager.getUserClaimValues(eq(TENANT_AWARE_USERNAME), (String[]) any(), (String) eq(null)))
+                .thenReturn(userClaims);
 
         UserRealm userRealm = mock(UserRealm.class);
         when(userRealm.getUserStoreManager()).thenReturn(userStoreManager);
