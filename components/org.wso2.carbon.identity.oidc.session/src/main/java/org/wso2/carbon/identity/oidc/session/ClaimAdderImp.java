@@ -7,6 +7,9 @@ import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
+import org.wso2.carbon.identity.oidc.session.cache.OIDCBackChannelAuthCodeCache;
+import org.wso2.carbon.identity.oidc.session.cache.OIDCBackChannelAuthCodeCacheEntry;
+import org.wso2.carbon.identity.oidc.session.cache.OIDCBackChannelAuthCodeCacheKey;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
 import org.wso2.carbon.identity.openidconnect.ClaimAdder;
 
@@ -53,17 +56,29 @@ public class ClaimAdderImp implements ClaimAdder {
     public Map<String, Object> getAdditionalClaims(OAuthTokenReqMessageContext oAuthTokenReqMessageContext,
                                                    OAuth2AccessTokenRespDTO oAuth2AccessTokenRespDTO)
             throws IdentityOAuth2Exception {
+        // Adding sid claim to ID token for authorization code flow.
+        Map<String, Object> addtionalClaims = new HashMap<>();
+        String accessCode = oAuthTokenReqMessageContext.getOauth2AccessTokenReqDTO().getAuthorizationCode();
+        OIDCBackChannelAuthCodeCacheEntry cacheEntry = getSessionIdFromCache(accessCode);
+        if (cacheEntry != null) {
+            claimValue = cacheEntry.getSessionId();
+        }
+        if (claimValue != null) {
+            if (log.isDebugEnabled()) {
+                log.debug("sid claim found for Back channel Authorization code flow ");
+            }
+
+            addtionalClaims.put("sid", claimValue);
+            return addtionalClaims;
+        }
 
         return null;
-
     }
-
 
     private OIDCSessionState getSessionState(OAuthAuthzReqMessageContext oAuthAuthzReqMessageContext) {
 
         Cookie[] cookies = oAuthAuthzReqMessageContext.getAuthorizationReqDTO().getCookie();
         for (Cookie cookie : cookies) {
-
             if (cookie.getName().equals(OIDCSessionConstants.OPBS_COOKIE_ID)) {
                 OIDCSessionState previousSessionState = OIDCSessionManagementUtil.getSessionManager()
                         .getOIDCSessionState(cookie.getValue());
@@ -73,5 +88,13 @@ public class ClaimAdderImp implements ClaimAdder {
 
         }
         return null;
+    }
+
+    private OIDCBackChannelAuthCodeCacheEntry getSessionIdFromCache(String authCode) {
+
+        OIDCBackChannelAuthCodeCacheKey cacheKey = new OIDCBackChannelAuthCodeCacheKey(authCode);
+        OIDCBackChannelAuthCodeCacheEntry cacheEntry = OIDCBackChannelAuthCodeCache.getInstance().getValueFromCache
+                (cacheKey);
+        return cacheEntry;
     }
 }
