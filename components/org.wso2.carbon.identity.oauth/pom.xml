@@ -358,7 +358,6 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>${maven.surefire.plugin.version}</version>
                 <configuration>
-                    <!--<argLine>${jacocoArgLine} -Xmx3g</argLine>-->
                     <suiteXmlFiles>
                         <suiteXmlFile>src/test/resources/testng.xml</suiteXmlFile>
                     </suiteXmlFiles>
@@ -386,20 +385,20 @@
                         </goals>
                     </execution>
                     <execution>
-                        <id>report</id>
+                        <id>default-report</id>
                         <phase>prepare-package</phase>
                         <goals>
                             <goal>report</goal>
                         </goals>
                     </execution>
                     <execution>
-                        <id>report-integration</id>
+                        <id>default-report-integration</id>
                         <goals>
                             <goal>report-integration</goal>
                         </goals>
                     </execution>
                     <execution>
-                        <id>check</id>
+                        <id>default-check</id>
                         <goals>
                             <goal>check</goal>
                         </goals>
