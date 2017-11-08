@@ -18,6 +18,7 @@
 package org.wso2.carbon.identity.oauth.endpoint.authz;
 
 import com.nimbusds.jwt.SignedJWT;
+import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.ArrayUtils;
@@ -70,6 +71,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.model.CarbonOAuthAuthzRequest;
+import org.wso2.carbon.identity.oauth2.model.HttpRequestHeaderHandler;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionState;
@@ -616,8 +618,9 @@ public class OAuth2AuthzEndpoint {
         storeUserConsent(oAuthMessage, consent);
         OAuthResponse oauthResponse;
         String responseType = oauth2Params.getResponseType();
+        HttpRequestHeaderHandler httpRequestHeaderHandler = new HttpRequestHeaderHandler(oAuthMessage.getRequest());
         // authorizing the request
-        OAuth2AuthorizeRespDTO authzRespDTO = authorize(oauth2Params, oAuthMessage.getSessionDataCacheEntry());
+        OAuth2AuthorizeRespDTO authzRespDTO = authorize(oauth2Params, oAuthMessage.getSessionDataCacheEntry(), httpRequestHeaderHandler);
 
         if (isSucessAuthorization(authzRespDTO)) {
             oauthResponse = handleSuccessAuthorization(oAuthMessage, sessionState, oauth2Params, responseType, authzRespDTO);
@@ -1262,13 +1265,14 @@ public class OAuth2AuthzEndpoint {
      * @return
      */
     private OAuth2AuthorizeRespDTO authorize(OAuth2Parameters oauth2Params
-            , SessionDataCacheEntry sessionDataCacheEntry) {
+            , SessionDataCacheEntry sessionDataCacheEntry, HttpRequestHeaderHandler httpRequestHeaderHandler) {
 
-        OAuth2AuthorizeReqDTO authzReqDTO = buildAuthRequest(oauth2Params, sessionDataCacheEntry);
+        OAuth2AuthorizeReqDTO authzReqDTO = buildAuthRequest(oauth2Params, sessionDataCacheEntry, httpRequestHeaderHandler);
         return EndpointUtil.getOAuth2Service().authorize(authzReqDTO);
     }
 
-    private OAuth2AuthorizeReqDTO buildAuthRequest(OAuth2Parameters oauth2Params, SessionDataCacheEntry sessionDataCacheEntry) {
+    private OAuth2AuthorizeReqDTO buildAuthRequest(OAuth2Parameters oauth2Params, SessionDataCacheEntry
+            sessionDataCacheEntry, HttpRequestHeaderHandler httpRequestHeaderHandler) {
 
         OAuth2AuthorizeReqDTO authzReqDTO = new OAuth2AuthorizeReqDTO();
         authzReqDTO.setCallbackUrl(oauth2Params.getRedirectURI());
@@ -1283,6 +1287,9 @@ public class OAuth2AuthzEndpoint {
         authzReqDTO.setTenantDomain(oauth2Params.getTenantDomain());
         authzReqDTO.setAuthTime(oauth2Params.getAuthTime());
         authzReqDTO.setEssentialClaims(oauth2Params.getEssentialClaims());
+        // Adding Httprequest headers and cookies in AuthzDTO.
+        authzReqDTO.setHttpRequestHeaders(httpRequestHeaderHandler.getHttpRequestHeaders());
+        authzReqDTO.setCookie(httpRequestHeaderHandler.getCookies());
         return authzReqDTO;
     }
 
@@ -1448,6 +1455,42 @@ public class OAuth2AuthzEndpoint {
                     log.debug("User authenticated. Initiate OIDC browser session.");
                 }
                 opBrowserStateCookie = OIDCSessionManagementUtil.addOPBrowserStateCookie(response);
+                // Adding sid claim in the IDtoken to OIDCSessionState class
+                if (redirectURL != null) {
+                    if (redirectURL.contains("id_token")) {
+                        byte[] decodedBytes = null;
+                        if (redirectURL.contains("access_token")) {
+                            // Extracting id_token for response_type=id_token token.
+                            String[] idtoken = redirectURL.split("=")[2].split("&")[0].split("\\.");
+                            decodedBytes = Base64.decodeBase64(idtoken[1]);
+                        } else {
+                            // Extracting id_token for response_type=id_token.
+                            String[] idtoken = redirectURL.split("=")[1].split("\\.");
+                            decodedBytes = Base64.decodeBase64(idtoken[1]);
+                        }
+                        String idToken = new String(decodedBytes);
+                        JSONObject token = new JSONObject(idToken);
+                        if (token.has("sid")) {
+                            String sid = token.getString("sid");
+                            if (sid != null) {
+                                sessionStateObj.setSidClaim(sid);
+                                if (log.isDebugEnabled()) {
+                                    log.debug("Sid claim found in ID token for OIDC back-channel " +
+                                            "logout implicit flow");
+                                }
+                            } else {
+                                if (log.isDebugEnabled()) {
+                                    log.debug("sid claim is null");
+                                }
+                            }
+                        } else {
+                            if (log.isDebugEnabled()) {
+                                log.debug("ID token does not contain sid claim in OIDC back-channel logout " +
+                                        "inplicit flow");
+                            }
+                        }
+                    }
+                }
 
                 sessionStateObj.setAuthenticatedUser(authenticatedUser);
                 sessionStateObj.addSessionParticipant(oAuth2Parameters.getClientId());

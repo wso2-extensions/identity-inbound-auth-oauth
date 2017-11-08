@@ -27,9 +27,11 @@ import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
 import org.osgi.service.http.HttpService;
+import org.wso2.carbon.identity.oidc.session.ClaimAdderImp;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
 import org.wso2.carbon.identity.oidc.session.servlet.OIDCLogoutServlet;
 import org.wso2.carbon.identity.oidc.session.servlet.OIDCSessionIFrameServlet;
+import org.wso2.carbon.identity.openidconnect.ClaimAdder;
 import org.wso2.carbon.user.core.service.RealmService;
 
 import javax.servlet.Servlet;
@@ -69,6 +71,19 @@ public class OIDCSessionManagementComponent {
         }
         if (log.isDebugEnabled()) {
             log.info("OIDC Session Management bundle is activated");
+        }
+
+        ClaimAdderImp claimAdderImp = new ClaimAdderImp();
+        try {
+            context.getBundleContext().registerService(ClaimAdder.class.getName(), claimAdderImp, null);
+        } catch (Exception e) {
+            String msg = "Error when registering ClaimAdder service";
+            log.error(msg, e);
+            throw new RuntimeException(msg, e);
+        }
+
+        if (log.isDebugEnabled()) {
+            log.debug("ClaimAdder bundle is activated");
         }
     }
 
