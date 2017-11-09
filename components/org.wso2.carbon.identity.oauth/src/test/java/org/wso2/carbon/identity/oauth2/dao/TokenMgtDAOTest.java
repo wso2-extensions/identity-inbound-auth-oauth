@@ -89,6 +89,8 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
 
     private static final String INVALID_SCOPE = "INVALID_SCOPE";
 
+    private static final String BACKCHANNEL_LOGOUT="https://localhost:8090/playground2/bclogout";
+
     private TokenMgtDAO tokenMgtDAO;
 
     @Mock
@@ -2261,6 +2263,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
             prepStmt.setLong(10, 3600L);
             prepStmt.setLong(11, 3600L);
             prepStmt.setLong(12, 84600L);
+            prepStmt.setString(13, BACKCHANNEL_LOGOUT );
             prepStmt.execute();
             connection.commit();
         }
