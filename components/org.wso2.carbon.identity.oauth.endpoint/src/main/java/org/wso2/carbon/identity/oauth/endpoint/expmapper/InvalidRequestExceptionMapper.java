@@ -41,10 +41,11 @@ import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import java.net.URI;
 import java.net.URISyntaxException;
 import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
 
-import static org.apache.commons.lang.StringUtils.*;
+import static org.apache.commons.lang.StringUtils.isBlank;
 
 public class InvalidRequestExceptionMapper implements ExceptionMapper<InvalidRequestParentException> {
 
@@ -95,7 +96,7 @@ public class InvalidRequestExceptionMapper implements ExceptionMapper<InvalidReq
                 return buildErrorResponse(HttpServletResponse.SC_BAD_REQUEST, exception, OAuth2ErrorCodes.INVALID_REQUEST);
             } catch (OAuthSystemException e) {
                 if (log.isDebugEnabled()) {
-                    log.debug("OAuth System error while token invoking token endpoint", e);
+                    log.debug("OAuth System error while token invoking token/revoke endpoints", e);
                 }
                 return handleInternalServerError();
             }
@@ -111,12 +112,13 @@ public class InvalidRequestExceptionMapper implements ExceptionMapper<InvalidReq
             }
         } else if (exception instanceof RevokeEndpointAccessDeniedException) {
             try {
-                return buildRevokeUnAuthorizedErrorResponse(exception);
+                return buildRevokeUnauthorizedErrorResponse(exception);
             } catch (OAuthSystemException e) {
                 if (log.isDebugEnabled()) {
                     log.debug("OAuth System error while revoke invoking revoke endpoint", e);
                 }
-                return handleInternalServerError();            }
+                return handleInternalServerError();
+            }
         } else {
             return handleInternalServerError();
         }
@@ -169,7 +171,7 @@ public class InvalidRequestExceptionMapper implements ExceptionMapper<InvalidReq
         }
     }
 
-    private Response buildRevokeUnAuthorizedErrorResponse(InvalidRequestParentException exception) throws OAuthSystemException {
+    private Response buildRevokeUnauthorizedErrorResponse(InvalidRequestParentException exception) throws OAuthSystemException {
 
         String callback = ((RevokeEndpointAccessDeniedException) exception).getCallback();
         if (isBlank(callback)) {
@@ -179,14 +181,14 @@ public class InvalidRequestExceptionMapper implements ExceptionMapper<InvalidReq
 
             return Response.status(response.getResponseStatus())
                     .header(OAuthConstants.HTTP_RESP_HEADER_AUTHENTICATE, EndpointUtil.getRealmInfo())
-                    .header("Content-Type", "text/html")
+                    .header(HttpHeaders.CONTENT_TYPE, "text/html")
                     .entity(response.getBody()).build();
         } else {
             OAuthResponse response = OAuthASResponse.errorResponse(HttpServletResponse.SC_UNAUTHORIZED)
                     .setError(OAuth2ErrorCodes.INVALID_CLIENT).buildJSONMessage();
             return Response.status(response.getResponseStatus())
                     .header(OAuthConstants.HTTP_RESP_HEADER_AUTHENTICATE, EndpointUtil.getRealmInfo())
-                    .header("Content-Type", "application/javascript")
+                    .header(HttpHeaders.CONTENT_TYPE, "application/javascript")
                     .entity(callback + "(" + response.getBody() + ");").build();
         }
     }

@@ -16,6 +16,7 @@
 package org.wso2.carbon.identity.oauth2.authcontext;
 
 
+import com.nimbusds.jose.JWSAlgorithm;
 import org.powermock.api.support.membermodification.MemberModifier;
 import org.powermock.reflect.Whitebox;
 import org.testng.Assert;
@@ -28,6 +29,7 @@ import org.wso2.carbon.core.internal.CarbonCoreDataHolder;
 import org.wso2.carbon.core.util.KeyStoreManager;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.util.ClaimCache;
@@ -160,9 +162,57 @@ public class JWTTokenGeneratorTest {
 
         MemberModifier.method(JWTTokenGenerator.class, "generateToken",
                 OAuth2TokenValidationMessageContext.class);
-        Assert.assertNotNull(oAuth2TokenValidationMessageContext.getResponseDTO().getAuthorizationContextToken().getTokenString(), "JWT Token not set");
-        Assert.assertEquals(oAuth2TokenValidationMessageContext.getResponseDTO().getAuthorizationContextToken().getTokenType(), "JWT");
+        Assert.assertNotNull(oAuth2TokenValidationMessageContext.getResponseDTO().getAuthorizationContextToken()
+                                                                .getTokenString(), "JWT Token not set");
+        Assert.assertEquals(oAuth2TokenValidationMessageContext.getResponseDTO().getAuthorizationContextToken()
+                                                               .getTokenType(), "JWT");
 
+    }
+
+    @Test(dependsOnMethods = "testGenerateToken")
+    public void testInitEmptyClaimsRetriever() throws Exception {
+        jwtTokenGenerator = new JWTTokenGenerator(includeClaims, enableSigning);
+        org.mockito.internal.util.reflection.Whitebox
+                .setInternalState(OAuthServerConfiguration.getInstance(), "claimsRetrieverImplClass", null);
+        jwtTokenGenerator.init();
+        ClaimsRetriever claimsRetriever =
+                (ClaimsRetriever) org.mockito.internal.util.reflection.Whitebox
+                        .getInternalState(jwtTokenGenerator, "claimsRetriever");
+        Assert.assertNull(claimsRetriever);
+    }
+
+    @Test(dependsOnMethods = "testGenerateToken")
+    public void testInitIncludeClaimsFalse() throws Exception {
+        jwtTokenGenerator = new JWTTokenGenerator(false, enableSigning);
+        jwtTokenGenerator.init();
+        ClaimsRetriever claimsRetriever =
+                (ClaimsRetriever) org.mockito.internal.util.reflection.Whitebox
+                        .getInternalState(jwtTokenGenerator, "claimsRetriever");
+        Assert.assertNull(claimsRetriever);
+    }
+
+    @Test(dependsOnMethods = "testGenerateToken")
+    public void testInitEnableSigningFalse() throws Exception {
+        jwtTokenGenerator = new JWTTokenGenerator(includeClaims, false);
+        jwtTokenGenerator.init();
+        ClaimsRetriever claimsRetriever =
+                (ClaimsRetriever) org.mockito.internal.util.reflection.Whitebox
+                        .getInternalState(jwtTokenGenerator, "claimsRetriever");
+        Assert.assertNull(claimsRetriever);
+    }
+
+    @Test(dependsOnMethods = "testGenerateToken")
+    public void testInitEmptySignatureAlg() throws Exception {
+        jwtTokenGenerator = new JWTTokenGenerator(includeClaims, enableSigning);
+        org.mockito.internal.util.reflection.Whitebox
+                .setInternalState(OAuthServerConfiguration.getInstance(), "signatureAlgorithm", null);
+        jwtTokenGenerator.init();
+        JWSAlgorithm signatureAlgorithm =
+                (JWSAlgorithm) org.mockito.internal.util.reflection.Whitebox
+                        .getInternalState(jwtTokenGenerator, "signatureAlgorithm");
+        Assert.assertNotNull(signatureAlgorithm);
+        Assert.assertNotNull(signatureAlgorithm.getName());
+        Assert.assertEquals(signatureAlgorithm.getName(), "none");
     }
 
     private void addSampleOauth2Application() throws IdentityOAuthAdminException {

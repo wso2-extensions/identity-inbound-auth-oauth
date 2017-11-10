@@ -229,77 +229,77 @@ public class DefaultIDTokenBuilderTest extends IdentityBaseTest {
                 "Default token binder generated successfully.");
     }
 
-    @Test
-    public void testBuildIDTokenAuthorize() throws Exception {
-        request = mock(OAuthAuthzReqMessageContext.class);
-        identityProvider = mock(IdentityProvider.class);
-        identityProviderManager = mock(IdentityProviderManager.class);
-        authenticatedUser = mock(AuthenticatedUser.class);
-        when(request.getAuthorizationReqDTO()).thenReturn(oAuth2AuthorizeReqDTO);
-        when(oAuth2AuthorizeReqDTO.getTenantDomain()).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
-        mockStatic(IdentityProviderManager.class);
-        when(IdentityProviderManager.getInstance()).thenReturn(identityProviderManager);
-        when(identityProviderManager.getResidentIdP(anyString())).thenReturn(identityProvider);
-
-        Property[] properties = new Property[1];
-        Property property = new Property();
-        property.setName("IdPEntityId");
-        property.setValue("localhost");
-        properties[0] = property;
-
-        federatedAuthenticatorConfig.setProperties(properties);
-        FederatedAuthenticatorConfig[] federatedAuthenticatorConfigs = new FederatedAuthenticatorConfig[10];
-        when(identityProvider.getFederatedAuthenticatorConfigs()).thenReturn(federatedAuthenticatorConfigs);
-
-        mockStatic(IdentityApplicationManagementUtil.class);
-        when(IdentityApplicationManagementUtil.
-                getFederatedAuthenticator(federatedAuthenticatorConfigs, IdentityApplicationConstants
-                        .Authenticator.OIDC.NAME)).thenReturn(federatedAuthenticatorConfig);
-        when(IdentityApplicationManagementUtil.getProperty(any(Property[].class), anyString())).thenCallRealMethod();
-        when(federatedAuthenticatorConfig.getProperties()).thenReturn(properties);
-
-        when(oAuth2AuthorizeReqDTO.getUser()).thenReturn(authenticatedUser);
-        when(authenticatedUser.getAuthenticatedSubjectIdentifier()).thenReturn(SUBJECT_IDENTIFIER);
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
-        when(oAuthServerConfiguration.getTimeStampSkewInSeconds()).thenReturn((long) 3);
-        mockStatic(OAuth2Util.class);
-        when(oAuthServerConfiguration.getOpenIDConnectIDTokenExpiration()).thenReturn(String.valueOf((int) 78383));
-
-        String NONCE = "Nonce1";
-        when(oAuth2AuthorizeReqDTO.getNonce()).thenReturn(NONCE);
-        LinkedHashSet set1 = new LinkedHashSet(10);
-        when(oAuth2AuthorizeReqDTO.getACRValues()).thenReturn(set1);
-        String RESPONSE = "Response1";
-        when(oAuth2AuthorizeReqDTO.getResponseType()).thenReturn(RESPONSE);
-
-        when(OAuth2Util.mapDigestAlgorithm(any(JWSAlgorithm.class))).thenReturn("SHA-256");
-        when(oAuthServerConfiguration.getIdTokenSignatureAlgorithm()).thenReturn(ALGORITHM);
-        mockStatic(FederatedAuthenticatorConfig.class);
-
-        JWSAlgorithm jwsAlgorithm1 = new JWSAlgorithm(ALGORITHM);
-        when(OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(anyString())).thenReturn(jwsAlgorithm1);
-
-        mockStatic(MessageDigest.class);
-        when(MessageDigest.getInstance(String.valueOf(JWSAlgorithm.RS256))).thenReturn(messageDigest);
-        when(oAuth2AuthorizeRespDTO.getAccessToken()).thenReturn(ACCESSTOKEN_NAME);
-        String CONSUMERKEY = "Key1";
-        when(oAuth2AuthorizeReqDTO.getConsumerKey()).thenReturn(CONSUMERKEY);
-        mockStatic(IdentityConfigParser.class);
-        when(IdentityConfigParser.getInstance()).thenReturn(identityConfigParser);
-        when(oAuthServerConfiguration.getOpenIDConnectCustomClaimsCallbackHandler())
-                .thenReturn(customClaimsCallbackHandler);
-        doNothing().when(customClaimsCallbackHandler).handleCustomClaims(jwtClaimsSet, request);
-
-        mockStatic(AuthorizationGrantCache.class);
-        whenNew(AuthorizationGrantCacheKey.class).withAnyArguments().thenReturn(authorizationGrantCacheKey);
-        when(AuthorizationGrantCache.getInstance()).thenReturn(authorizationGrantCache);
-        when(authorizationGrantCache.getValueFromCacheByToken(any(AuthorizationGrantCacheKey.class))).
-                thenReturn(authorizationGrantCacheEntry);
-        when(authorizationGrantCacheEntry.getEssentialClaims()).thenReturn("auth_time");
-
-        when(OAuth2Util.signJWT(any(JWTClaimsSet.class), any(JWSAlgorithm.class), anyString())).thenReturn(jwt);
-        DefaultIDTokenBuilder defaultIDTokenBuilder = new DefaultIDTokenBuilder();
-        assertEquals(defaultIDTokenBuilder.buildIDToken(request, oAuth2AuthorizeRespDTO), null, "Successfully authorized token");
-    }
+//    @Test
+//    public void testBuildIDTokenAuthorize() throws Exception {
+//        request = mock(OAuthAuthzReqMessageContext.class);
+//        identityProvider = mock(IdentityProvider.class);
+//        identityProviderManager = mock(IdentityProviderManager.class);
+//        authenticatedUser = mock(AuthenticatedUser.class);
+//        when(request.getAuthorizationReqDTO()).thenReturn(oAuth2AuthorizeReqDTO);
+//        when(oAuth2AuthorizeReqDTO.getTenantDomain()).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+//        mockStatic(IdentityProviderManager.class);
+//        when(IdentityProviderManager.getInstance()).thenReturn(identityProviderManager);
+//        when(identityProviderManager.getResidentIdP(anyString())).thenReturn(identityProvider);
+//
+//        Property[] properties = new Property[1];
+//        Property property = new Property();
+//        property.setName("IdPEntityId");
+//        property.setValue("localhost");
+//        properties[0] = property;
+//
+//        federatedAuthenticatorConfig.setProperties(properties);
+//        FederatedAuthenticatorConfig[] federatedAuthenticatorConfigs = new FederatedAuthenticatorConfig[10];
+//        when(identityProvider.getFederatedAuthenticatorConfigs()).thenReturn(federatedAuthenticatorConfigs);
+//
+//        mockStatic(IdentityApplicationManagementUtil.class);
+//        when(IdentityApplicationManagementUtil.
+//                getFederatedAuthenticator(federatedAuthenticatorConfigs, IdentityApplicationConstants
+//                        .Authenticator.OIDC.NAME)).thenReturn(federatedAuthenticatorConfig);
+//        when(IdentityApplicationManagementUtil.getProperty(any(Property[].class), anyString())).thenCallRealMethod();
+//        when(federatedAuthenticatorConfig.getProperties()).thenReturn(properties);
+//
+//        when(oAuth2AuthorizeReqDTO.getUser()).thenReturn(authenticatedUser);
+//        when(authenticatedUser.getAuthenticatedSubjectIdentifier()).thenReturn(SUBJECT_IDENTIFIER);
+//        mockStatic(OAuthServerConfiguration.class);
+//        when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
+//        when(oAuthServerConfiguration.getTimeStampSkewInSeconds()).thenReturn((long) 3);
+//        mockStatic(OAuth2Util.class);
+//        when(oAuthServerConfiguration.getOpenIDConnectIDTokenExpiration()).thenReturn(String.valueOf((int) 78383));
+//
+//        String NONCE = "Nonce1";
+//        when(oAuth2AuthorizeReqDTO.getNonce()).thenReturn(NONCE);
+//        LinkedHashSet set1 = new LinkedHashSet(10);
+//        when(oAuth2AuthorizeReqDTO.getACRValues()).thenReturn(set1);
+//        String RESPONSE = "Response1";
+//        when(oAuth2AuthorizeReqDTO.getResponseType()).thenReturn(RESPONSE);
+//
+//        when(OAuth2Util.mapDigestAlgorithm(any(JWSAlgorithm.class))).thenReturn("SHA-256");
+//        when(oAuthServerConfiguration.getIdTokenSignatureAlgorithm()).thenReturn(ALGORITHM);
+//        mockStatic(FederatedAuthenticatorConfig.class);
+//
+//        JWSAlgorithm jwsAlgorithm1 = new JWSAlgorithm(ALGORITHM);
+//        when(OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(anyString())).thenReturn(jwsAlgorithm1);
+//
+//        mockStatic(MessageDigest.class);
+//        when(MessageDigest.getInstance(String.valueOf(JWSAlgorithm.RS256))).thenReturn(messageDigest);
+//        when(oAuth2AuthorizeRespDTO.getAccessToken()).thenReturn(ACCESSTOKEN_NAME);
+//        String CONSUMERKEY = "Key1";
+//        when(oAuth2AuthorizeReqDTO.getConsumerKey()).thenReturn(CONSUMERKEY);
+//        mockStatic(IdentityConfigParser.class);
+//        when(IdentityConfigParser.getInstance()).thenReturn(identityConfigParser);
+//        when(oAuthServerConfiguration.getOpenIDConnectCustomClaimsCallbackHandler())
+//                .thenReturn(customClaimsCallbackHandler);
+//        doNothing().when(customClaimsCallbackHandler).handleCustomClaims(jwtClaimsSet, request);
+//
+//        mockStatic(AuthorizationGrantCache.class);
+//        whenNew(AuthorizationGrantCacheKey.class).withAnyArguments().thenReturn(authorizationGrantCacheKey);
+//        when(AuthorizationGrantCache.getInstance()).thenReturn(authorizationGrantCache);
+//        when(authorizationGrantCache.getValueFromCacheByToken(any(AuthorizationGrantCacheKey.class))).
+//                thenReturn(authorizationGrantCacheEntry);
+//        when(authorizationGrantCacheEntry.getEssentialClaims()).thenReturn("auth_time");
+//
+//        when(OAuth2Util.signJWT(any(JWTClaimsSet.class), any(JWSAlgorithm.class), anyString())).thenReturn(jwt);
+//        DefaultIDTokenBuilder defaultIDTokenBuilder = new DefaultIDTokenBuilder();
+//        assertEquals(defaultIDTokenBuilder.buildIDToken(request, oAuth2AuthorizeRespDTO), null, "Successfully authorized token");
+//    }
 }

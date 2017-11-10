@@ -27,7 +27,6 @@ import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.message.OAuthResponse;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
-import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.OAuthClientException;
 import org.wso2.carbon.identity.oauth.endpoint.OAuthRequestWrapper;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
@@ -43,6 +42,7 @@ import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.core.Context;
+import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
@@ -50,6 +50,12 @@ import javax.ws.rs.core.Response.ResponseBuilder;
 import static org.apache.commons.lang.StringUtils.isBlank;
 import static org.apache.commons.lang.StringUtils.isEmpty;
 import static org.apache.commons.lang.StringUtils.isNotEmpty;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.HTTP_REQ_HEADER_AUTHZ;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.HTTP_RESP_HEADER_AUTHENTICATE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.HTTP_RESP_HEADER_CACHE_CONTROL;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.HTTP_RESP_HEADER_PRAGMA;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.HTTP_RESP_HEADER_VAL_CACHE_CONTROL_NO_STORE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.HTTP_RESP_HEADER_VAL_PRAGMA_NO_CACHE;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.extractCredentialsFromAuthzHeader;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuth2Service;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getRealmInfo;
@@ -63,6 +69,8 @@ public class OAuthRevocationEndpoint {
     private static final String TOKEN_PARAM = "token";
     private static final String TOKEN_TYPE_HINT_PARAM = "token_type_hint";
     private static final String CALLBACK_PARAM = "callback";
+    private static final String APPLICATION_JAVASCRIPT = "application/javascript";
+    private static final String TEXT_HTML = "text/html";
 
     @POST
     @Path("/")
@@ -88,7 +96,7 @@ public class OAuthRevocationEndpoint {
 
             OAuthRevocationRequestDTO revokeRequest = buildOAuthRevocationRequest(paramMap, token, tokenType);
             OAuthRevocationResponseDTO oauthRevokeResp = revokeTokens(revokeRequest);
-            // if there BE has returned an error
+
             if (oauthRevokeResp.getErrorMsg() != null) {
                 return handleErrorResponse(callback, oauthRevokeResp);
             } else {
@@ -109,41 +117,48 @@ public class OAuthRevocationEndpoint {
         } else {
             response = CarbonOAuthASResponse.revokeResponse(HttpServletResponse.SC_OK).buildBodyMessage();
         }
+
         ResponseHeader[] headers = oauthRevokeResp.getResponseHeaders();
         ResponseBuilder respBuilder = Response
                 .status(response.getResponseStatus())
-                .header(OAuthConstants.HTTP_RESP_HEADER_CACHE_CONTROL,
-                        OAuthConstants.HTTP_RESP_HEADER_VAL_CACHE_CONTROL_NO_STORE)
-                .header(HTTPConstants.HEADER_CONTENT_LENGTH,
-                        "0")
-                .header(OAuthConstants.HTTP_RESP_HEADER_PRAGMA,
-                        OAuthConstants.HTTP_RESP_HEADER_VAL_PRAGMA_NO_CACHE);
-        if (headers != null && headers.length > 0) {
-            for (int i = 0; i < headers.length; i++) {
-                if (headers[i] != null) {
-                    respBuilder.header(headers[i].getKey(), headers[i].getValue());
+                .header(HTTP_RESP_HEADER_CACHE_CONTROL, HTTP_RESP_HEADER_VAL_CACHE_CONTROL_NO_STORE)
+                .header(HTTPConstants.HEADER_CONTENT_LENGTH, "0")
+                .header(HTTP_RESP_HEADER_PRAGMA, HTTP_RESP_HEADER_VAL_PRAGMA_NO_CACHE);
+
+        if (headers != null) {
+            for (ResponseHeader header : headers) {
+                if (header != null) {
+                    respBuilder.header(header.getKey(), header.getValue());
                 }
             }
         }
-        if (isNotEmpty(callback)) {
-            respBuilder.header("Content-Type", "application/javascript");
-        } else {
-            respBuilder.header("Content-Type", "text/html");
-        }
 
+        if (isNotEmpty(callback)) {
+            respBuilder.header(HttpHeaders.CONTENT_TYPE, APPLICATION_JAVASCRIPT);
+        } else {
+            respBuilder.header(HttpHeaders.CONTENT_TYPE, TEXT_HTML);
+        }
         return respBuilder.entity(response.getBody()).build();
     }
 
     private Response handleErrorResponse(String callback, OAuthRevocationResponseDTO oauthRevokeResp)
             throws RevokeEndpointAccessDeniedException, OAuthSystemException {
         // if there is an auth failure, HTTP 401 Status Code should be sent back to the client.
-        if (OAuth2ErrorCodes.INVALID_CLIENT.equals(oauthRevokeResp.getErrorCode())) {
+        if (isErrorInvalidClient(oauthRevokeResp)) {
             throw new RevokeEndpointAccessDeniedException("Client Authentication failed.", null, callback);
-        } else if (OAuth2ErrorCodes.UNAUTHORIZED_CLIENT.equals(oauthRevokeResp.getErrorCode())) {
+        } else if (isErrorUnauthorizedClient(oauthRevokeResp)) {
             return handleAuthorizationFailure(callback);
         }
         // Otherwise send back HTTP 400 Status Code
         return handleClientFailure(callback, oauthRevokeResp);
+    }
+
+    private boolean isErrorUnauthorizedClient(OAuthRevocationResponseDTO oauthRevokeResp) {
+        return OAuth2ErrorCodes.UNAUTHORIZED_CLIENT.equals(oauthRevokeResp.getErrorCode());
+    }
+
+    private boolean isErrorInvalidClient(OAuthRevocationResponseDTO oauthRevokeResp) {
+        return OAuth2ErrorCodes.INVALID_CLIENT.equals(oauthRevokeResp.getErrorCode());
     }
 
     private OAuthRevocationRequestDTO buildOAuthRevocationRequest(
@@ -157,7 +172,6 @@ public class OAuthRevocationEndpoint {
             revokeRequest.setConsumerSecret(paramMap.getFirst(OAuth.OAUTH_CLIENT_SECRET));
         }
         revokeRequest.setToken(token);
-
         if (isNotEmpty(tokenType)) {
             revokeRequest.setTokenType(tokenType);
         }
@@ -178,15 +192,19 @@ public class OAuthRevocationEndpoint {
         try {
             // The client MUST NOT use more than one authentication method in each request
             if (isClientCredentialsExistsAsParams(paramMap)) {
-                log.error("Authorization header is already present. Client MUST NOT use more than one "
-                        + "authentication method in each request ");
+                if (log.isDebugEnabled()) {
+                    log.debug("Client Id and Client Secret found in request body and Authorization header" +
+                            ". Credentials should be sent in either request body or Authorization header, not both");
+                }
                 throw new RevokeEndpointAccessDeniedException("Client Authentication failed.", null, callback);
             }
             String[] credentials = getClientCredentials(request);
             // add the credentials available in Authorization header to the parameter map
             paramMap.add(OAuth.OAUTH_CLIENT_ID, credentials[0]);
             paramMap.add(OAuth.OAUTH_CLIENT_SECRET, credentials[1]);
-
+            if (log.isDebugEnabled()) {
+                log.debug("Client credentials extracted from the Authorization Header");
+            }
         } catch (OAuthClientException e) {
             // malformed credential string is considered as an auth failure.
             if (log.isDebugEnabled()) {
@@ -202,11 +220,11 @@ public class OAuthRevocationEndpoint {
     }
 
     private String[] getClientCredentials(HttpServletRequest request) throws OAuthClientException {
-        return extractCredentialsFromAuthzHeader(request.getHeader(OAuthConstants.HTTP_REQ_HEADER_AUTHZ));
+        return extractCredentialsFromAuthzHeader(request.getHeader(HTTP_REQ_HEADER_AUTHZ));
     }
 
     private boolean isAuthorizationHeaderExists(@Context HttpServletRequest request) {
-        return request.getHeader(OAuthConstants.HTTP_REQ_HEADER_AUTHZ) != null;
+        return request.getHeader(HTTP_REQ_HEADER_AUTHZ) != null;
     }
 
     private String getCallback(MultivaluedMap<String, String> paramMap, HttpServletRequestWrapper httpRequest) {
@@ -227,6 +245,10 @@ public class OAuthRevocationEndpoint {
         String tokenType = httpRequest.getParameter(TOKEN_TYPE_HINT_PARAM);
         if (isBlank(tokenType) && isTokenTypeExistsAsParam(paramMap)) {
             tokenType = paramMap.getFirst(TOKEN_TYPE_HINT_PARAM);
+        }
+
+        if (log.isDebugEnabled()) {
+            log.debug("Token Type is :" + tokenType);
         }
         return tokenType;
     }
@@ -250,20 +272,20 @@ public class OAuthRevocationEndpoint {
 
     private Response handleAuthorizationFailure(String callback)
             throws OAuthSystemException {
-        if (callback == null || "".equals(callback)) {
+        if (isBlank(callback)) {
             OAuthResponse response = OAuthASResponse.errorResponse(HttpServletResponse.SC_UNAUTHORIZED)
                     .setError(OAuth2ErrorCodes.UNAUTHORIZED_CLIENT)
                     .setErrorDescription("Client Authentication failed.").buildJSONMessage();
             return Response.status(response.getResponseStatus())
-                    .header(OAuthConstants.HTTP_RESP_HEADER_AUTHENTICATE, getRealmInfo())
-                    .header("Content-Type", "text/html")
+                    .header(HTTP_RESP_HEADER_AUTHENTICATE, getRealmInfo())
+                    .header(HttpHeaders.CONTENT_TYPE, TEXT_HTML)
                     .entity(response.getBody()).build();
         } else {
             OAuthResponse response = OAuthASResponse.errorResponse(HttpServletResponse.SC_UNAUTHORIZED)
                     .setError(OAuth2ErrorCodes.UNAUTHORIZED_CLIENT).buildJSONMessage();
             return Response.status(response.getResponseStatus())
-                    .header(OAuthConstants.HTTP_RESP_HEADER_AUTHENTICATE, getRealmInfo())
-                    .header("Content-Type", "application/javascript")
+                    .header(HTTP_RESP_HEADER_AUTHENTICATE, getRealmInfo())
+                    .header(HttpHeaders.CONTENT_TYPE, APPLICATION_JAVASCRIPT)
                     .entity(callback + "(" + response.getBody() + ");").build();
         }
     }
@@ -271,36 +293,41 @@ public class OAuthRevocationEndpoint {
     private Response handleClientFailure(String callback)
             throws OAuthSystemException {
 
+        if (log.isDebugEnabled()) {
+            log.debug("Token parameter is missing in the revoke request");
+        }
+
         if (isBlank(callback)) {
             OAuthResponse response = OAuthASResponse.errorResponse(HttpServletResponse.SC_BAD_REQUEST)
                     .setError(OAuth2ErrorCodes.INVALID_REQUEST)
                     .setErrorDescription("Invalid revocation request").buildJSONMessage();
             return Response.status(response.getResponseStatus())
-                    .header("Content-Type", "text/html")
+                    .header(HttpHeaders.CONTENT_TYPE, TEXT_HTML)
                     .entity(response.getBody()).build();
         } else {
             OAuthResponse response = OAuthASResponse.errorResponse(HttpServletResponse.SC_BAD_REQUEST)
                     .setError(OAuth2ErrorCodes.INVALID_REQUEST).buildJSONMessage();
             return Response.status(response.getResponseStatus())
-                    .header("Content-Type", "application/javascript")
+                    .header(HttpHeaders.CONTENT_TYPE, APPLICATION_JAVASCRIPT)
                     .entity(callback + "(" + response.getBody() + ");").build();
         }
     }
 
     private Response handleClientFailure(String callback, OAuthRevocationResponseDTO dto)
             throws OAuthSystemException {
-        if (callback == null || "".equals(callback)) {
+
+        if (isBlank(callback)) {
             OAuthResponse response = OAuthASResponse.errorResponse(HttpServletResponse.SC_BAD_REQUEST)
                     .setError(dto.getErrorCode())
                     .setErrorDescription(dto.getErrorMsg()).buildJSONMessage();
             return Response.status(response.getResponseStatus())
-                    .header("Content-Type", "text/html")
+                    .header(HttpHeaders.CONTENT_TYPE, TEXT_HTML)
                     .entity(response.getBody()).build();
         } else {
             OAuthResponse response = OAuthASResponse.errorResponse(HttpServletResponse.SC_BAD_REQUEST)
                     .setError(dto.getErrorCode()).buildJSONMessage();
             return Response.status(response.getResponseStatus())
-                    .header("Content-Type", "application/javascript")
+                    .header(HttpHeaders.CONTENT_TYPE, APPLICATION_JAVASCRIPT)
                     .entity(callback + "(" + response.getBody() + ");").build();
         }
     }
