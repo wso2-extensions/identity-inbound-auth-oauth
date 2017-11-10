@@ -49,6 +49,8 @@ import static org.apache.commons.lang.StringUtils.isBlank;
 
 public class InvalidRequestExceptionMapper implements ExceptionMapper<InvalidRequestParentException> {
 
+    private static final String TEXT_HTML = "text/html";
+    private static final String APPLICATION_JAVASCRIPT = "application/javascript";
     private final Log log = LogFactory.getLog(InvalidRequestExceptionMapper.class);
 
     @Override
@@ -181,14 +183,14 @@ public class InvalidRequestExceptionMapper implements ExceptionMapper<InvalidReq
 
             return Response.status(response.getResponseStatus())
                     .header(OAuthConstants.HTTP_RESP_HEADER_AUTHENTICATE, EndpointUtil.getRealmInfo())
-                    .header(HttpHeaders.CONTENT_TYPE, "text/html")
+                    .header(HttpHeaders.CONTENT_TYPE, TEXT_HTML)
                     .entity(response.getBody()).build();
         } else {
             OAuthResponse response = OAuthASResponse.errorResponse(HttpServletResponse.SC_UNAUTHORIZED)
                     .setError(OAuth2ErrorCodes.INVALID_CLIENT).buildJSONMessage();
             return Response.status(response.getResponseStatus())
                     .header(OAuthConstants.HTTP_RESP_HEADER_AUTHENTICATE, EndpointUtil.getRealmInfo())
-                    .header(HttpHeaders.CONTENT_TYPE, "application/javascript")
+                    .header(HttpHeaders.CONTENT_TYPE, APPLICATION_JAVASCRIPT)
                     .entity(callback + "(" + response.getBody() + ");").build();
         }
     }

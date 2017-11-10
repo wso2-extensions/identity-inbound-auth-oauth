@@ -333,17 +333,7 @@ public class OAuthRevocationEndpoint {
     }
 
     private OAuthRevocationResponseDTO revokeTokens(OAuthRevocationRequestDTO oauthRequest) {
-        OAuthRevocationRequestDTO revokeReqDTO = getoAuthRevocationRequestDTO(oauthRequest);
-        return getOAuth2Service().revokeTokenByOAuthClient(revokeReqDTO);
-    }
-
-    private OAuthRevocationRequestDTO getoAuthRevocationRequestDTO(OAuthRevocationRequestDTO oauthRequest) {
-        OAuthRevocationRequestDTO revokeReqDTO = new OAuthRevocationRequestDTO();
-        revokeReqDTO.setConsumerKey(oauthRequest.getConsumerKey());
-        revokeReqDTO.setConsumerSecret(oauthRequest.getConsumerSecret());
-        revokeReqDTO.setToken(oauthRequest.getToken());
-        revokeReqDTO.setTokenType(oauthRequest.getTokenType());
-        return revokeReqDTO;
+        return getOAuth2Service().revokeTokenByOAuthClient(oauthRequest);
     }
 
     private void validateRepeatedParams(HttpServletRequest request, MultivaluedMap<String, String> paramMap)
