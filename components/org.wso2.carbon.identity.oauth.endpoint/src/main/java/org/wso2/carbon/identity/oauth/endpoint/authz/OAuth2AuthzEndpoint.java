@@ -851,11 +851,22 @@ public class OAuth2AuthzEndpoint {
         pkceChallengeMethod = req.getParameter(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE_METHOD);
         // Validate PKCE parameters
         if (isPKCESupportEnabled) {
+            Boolean TbMandatory=false;
+            try {
+                TbMandatory = OAuth2Util.getAppInformationByClientId(clientId).isTbMandatory();
+            } catch (IdentityOAuth2Exception e) {
+                TbMandatory=false;
+            } catch (InvalidOAuthClientException e) {
+                TbMandatory=false;
+            }
+
             //check PKCE challenge for token binding
             if (!checkTokenBindingHeader(oauthRequest.getHttpRequestHeaders()).isEmpty()) {
-                if(notvalidTokenBindingPkce(pkceChallengeMethod,pkceChallengeCode)) {
-                    return EndpointUtil.getErrorPageURL(OAuth2ErrorCodes.INVALID_REQUEST,
-                            "This PKCE is not suitable for Token binding. ", null);
+                if (TbMandatory) {
+                    if (notvalidTokenBindingPkce(pkceChallengeMethod, pkceChallengeCode)) {
+                        return EndpointUtil.getErrorPageURL(OAuth2ErrorCodes.INVALID_REQUEST,
+                                "This PKCE is not suitable for Token binding. ", null);
+                    }
                 }
             }
             else {
@@ -885,7 +896,6 @@ public class OAuth2AuthzEndpoint {
                     }
                 }
             }
-
         }
         params.setPkceCodeChallenge(pkceChallengeCode);
         params.setPkceCodeChallengeMethod(pkceChallengeMethod);

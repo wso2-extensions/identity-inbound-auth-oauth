@@ -37,6 +37,7 @@ import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IDTokenValidationFailureException;
@@ -510,7 +511,7 @@ public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
 
 
     private AuthorizationGrantHandler getMockGrantHandlerForSuccess(boolean isOfTypeApplicationUser)
-            throws IdentityOAuth2Exception {
+            throws IdentityOAuth2Exception, InvalidOAuthClientException {
         AuthorizationGrantHandler dummyGrantHandler = mock(AuthorizationGrantHandler.class);
         // Not a confidential client
         when(dummyGrantHandler.isConfidentialClient()).thenReturn(false);
@@ -533,7 +534,7 @@ public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
 
 
     private void setupOIDCScopeTest(String grantType,
-                                    boolean success) throws IdentityOAuth2Exception {
+                                    boolean success) throws IdentityOAuth2Exception, InvalidOAuthClientException {
 
         AuthorizationGrantHandler grantHandler = getMockGrantHandlerForSuccess(false);
 

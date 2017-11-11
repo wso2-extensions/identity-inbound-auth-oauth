@@ -1913,10 +1913,21 @@ public class OAuth2Util {
         HttpRequestHeader[] httpRequestHeaders = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getHttpRequestHeaders();
         String tokenBindingId = "";
         if (httpRequestHeaders != null) {
-            for (HttpRequestHeader httpRequestHeader : httpRequestHeaders) {
-                if (httpRequestHeader.getName().equalsIgnoreCase(httpTBheader)) {
-                    tokenBindingId = httpRequestHeader.getValue()[0];
-                    break;
+            OAuthAppDO oAuthAppDO = null;
+            try {
+                oAuthAppDO = getAppInformationByClientId(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId());
+            } catch (InvalidOAuthClientException e) {
+//                throw new IdentityOAuth2Exception("Error while retrieving app information for clientId");
+                log.debug("Error while retrieving app information for clientId");
+            } catch (IdentityOAuth2Exception e) {
+                log.debug("Error while retrieving app information for clientId");
+            }
+            if (oAuthAppDO != null && oAuthAppDO.isTbMandatory()) {
+                for (HttpRequestHeader httpRequestHeader : httpRequestHeaders) {
+                    if (httpRequestHeader.getName().equalsIgnoreCase(httpTBheader)) {
+                        tokenBindingId = httpRequestHeader.getValue()[0];
+                        break;
+                    }
                 }
             }
 
@@ -1928,13 +1939,22 @@ public class OAuth2Util {
         HttpRequestHeader[] httpRequestHeaders = oauthAuthzMsgCtx.getAuthorizationReqDTO().getHttpRequestHeaders();
         String tokenBindingId = "";
         if (httpRequestHeaders != null) {
-            for (HttpRequestHeader httpRequestHeader : httpRequestHeaders) {
-                if (httpRequestHeader.getName().equalsIgnoreCase(httpTBheader)) {
-                    tokenBindingId = httpRequestHeader.getValue()[0];
-                    break;
+            OAuthAppDO oAuthAppDO = null;
+            try {
+                oAuthAppDO = new OAuthAppDAO().getAppInformation(oauthAuthzMsgCtx.getAuthorizationReqDTO().getConsumerKey());
+            } catch (InvalidOAuthClientException e) {
+                log.debug("Error while retrieving app information for ConsumerKey");
+            } catch (IdentityOAuth2Exception e) {
+                log.debug("Error while retrieving app information for ConsumerKey");
+            }
+            if (oAuthAppDO != null && oAuthAppDO.isTbMandatory()) {
+                for (HttpRequestHeader httpRequestHeader : httpRequestHeaders) {
+                    if (httpRequestHeader.getName().equalsIgnoreCase(httpTBheader)) {
+                        tokenBindingId = httpRequestHeader.getValue()[0];
+                        break;
+                    }
                 }
             }
-
         }
         return tokenBindingId;
     }

@@ -39,6 +39,15 @@ public class OAuthAppDO implements Serializable {
     private long userAccessTokenExpiryTime;
     private long applicationAccessTokenExpiryTime;
     private long refreshTokenExpiryTime;
+    private boolean tbMandatory;
+
+    public boolean isTbMandatory() {
+        return tbMandatory;
+    }
+
+    public void setTbMandatory(boolean tbMandatory) {
+        this.tbMandatory = tbMandatory;
+    }
 
     public AuthenticatedUser getUser() {
         return user;

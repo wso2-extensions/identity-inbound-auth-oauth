@@ -53,6 +53,7 @@
 
 	boolean pkceMandatory = false;
 	boolean pkceSupportPlain = false;
+	boolean tokenBinding = false;
 
 	if(request.getParameter("pkce") != null) {
 		pkceMandatory = true;
@@ -60,6 +61,9 @@
 	if(request.getParameter("pkce_plain") != null) {
 		pkceSupportPlain = true;
 	}
+	if(request.getParameter("tb") !=null){
+	    tokenBinding = true;
+    }
 
 
 	String forwardTo = "index.jsp";
@@ -104,6 +108,7 @@
         }
 		app.setPkceMandatory(pkceMandatory);
 		app.setPkceSupportPlain(pkceSupportPlain);
+		app.setTbMandatory(tokenBinding);
 
 		client.registerOAuthApplicationData(app);
 		

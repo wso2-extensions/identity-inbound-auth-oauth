@@ -535,6 +535,9 @@ public class SQLQueries {
                     "LEFT JOIN IDN_OAUTH2_SCOPE_BINDING AS ScopeBindings ON Scopes.SCOPE_ID=ScopeBindings.SCOPE_ID " +
                     "WHERE Scopes.NAME = ? AND TENANT_ID = ?";
 
+    public static final String RETRIEVE_TB_TABLE_MYSQL = "SELECT TB_MANDATORY FROM " +
+            "IDN_OAUTH_CONSUMER_APPS LIMIT 1";
+
     private SQLQueries() {
 
     }
