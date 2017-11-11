@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  ~ Copyright (c) 2015, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+  ~ Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
   ~
   ~  WSO2 Inc. licenses this file to you under the Apache License,
   ~  Version 2.0 (the "License"); you may not use this file except
@@ -20,18 +20,17 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
     <parent>
-        <groupId>org.wso2</groupId>
-        <artifactId>wso2</artifactId>
-        <version>1</version>
+        <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
+        <artifactId>identity-inbound-auth-oauth</artifactId>
+        <relativePath>../../pom.xml</relativePath>
+        <version>5.5.115-SNAPSHOT</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
-    <groupId>org.wso2.carbon.identity</groupId>
-    <artifactId>org.wso2.carbon.identity.common.testng</artifactId>
-    <version>5.5.115-SNAPSHOT</version>
+    <artifactId>org.wso2.carbon.identity.oauth.common.testng</artifactId>
     <packaging>jar</packaging>
-    <name>WSO2 Carbon - Identity Common Test</name>
-    <description>Common Test utilities for Identity Unit Tests</description>
+    <name>WSO2 Carbon - OAuth</name>
+    <description>A custom wso2 products or solution</description>
     <url>http://wso2.org</url>
 
     <dependencies>

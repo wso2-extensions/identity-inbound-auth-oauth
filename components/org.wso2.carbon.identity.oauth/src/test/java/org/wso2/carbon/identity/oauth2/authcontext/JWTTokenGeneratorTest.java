@@ -28,10 +28,14 @@ import org.wso2.carbon.base.api.ServerConfigurationService;
 import org.wso2.carbon.core.internal.CarbonCoreDataHolder;
 import org.wso2.carbon.core.util.KeyStoreManager;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.common.testng.WithCarbonHome;
+import org.wso2.carbon.identity.common.testng.WithH2Database;
+import org.wso2.carbon.identity.common.testng.WithRealmService;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.util.ClaimCache;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
@@ -39,9 +43,6 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.DefaultOAuth2TokenValidator;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2TokenValidationMessageContext;
-import org.wso2.carbon.identity.test.common.testng.WithCarbonHome;
-import org.wso2.carbon.identity.test.common.testng.WithH2Database;
-import org.wso2.carbon.identity.test.common.testng.WithRealmService;
 import org.wso2.carbon.identity.test.common.testng.utils.ReadCertStoreSampleUtil;
 import org.wso2.carbon.registry.core.service.RegistryService;
 
@@ -52,14 +53,13 @@ import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static org.powermock.api.mockito.PowerMockito.mock;
+import static org.mockito.Mockito.mock;
 
 @WithCarbonHome
 @WithRealmService(tenantId = MultitenantConstants.SUPER_TENANT_ID,
         tenantDomain = MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-        initUserStoreManager = true)
-@WithH2Database(jndiName = "jdbc/WSO2IdentityDB",
-        files = {"dbScripts/h2_with_application_and_token.sql", "dbScripts/identity.sql"})
+        initUserStoreManager = true, injectToSingletons = {OAuthComponentServiceHolder.class})
+@WithH2Database(files = {"dbScripts/h2_with_application_and_token.sql", "dbScripts/identity.sql"})
 public class JWTTokenGeneratorTest {
 
     private DefaultOAuth2TokenValidator defaultOAuth2TokenValidator;

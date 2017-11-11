@@ -23,12 +23,12 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.common.testng.WithCarbonHome;
+import org.wso2.carbon.identity.common.testng.WithH2Database;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.ResourceScopeCacheEntry;
-import org.wso2.carbon.identity.test.common.testng.WithCarbonHome;
-import org.wso2.carbon.identity.test.common.testng.WithH2Database;
 import org.wso2.carbon.identity.testutil.IdentityBaseTest;
 
 import static org.testng.Assert.assertEquals;
@@ -37,7 +37,7 @@ import static org.testng.Assert.assertEquals;
  * Tests JDBCScopeValidator.
  */
 @WithCarbonHome
-@WithH2Database(jndiName = "jdbc/WSO2IdentityDB", files = {"dbScripts/scope.sql"})
+@WithH2Database(files = {"dbScripts/scope.sql"})
 public class JDBCScopeValidatorTest extends IdentityBaseTest {
 
     private JDBCScopeValidator validator;

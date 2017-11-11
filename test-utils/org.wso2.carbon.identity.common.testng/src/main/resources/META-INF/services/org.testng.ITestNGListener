@@ -1,2 +1,0 @@
-org.wso2.carbon.identity.test.common.testng.LogLevelChangeListener
-org.wso2.carbon.identity.test.common.testng.CarbonBasedTestListener

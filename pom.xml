@@ -40,7 +40,7 @@
     </scm>
 
     <modules>
-        <module>test-utils/org.wso2.carbon.identity.common.testng</module>
+        <module>test-utils/org.wso2.carbon.identity.oauth.common.testng</module>
         <module>components/org.wso2.carbon.identity.oauth</module>
         <module>components/org.wso2.carbon.identity.oauth.common</module>
         <module>components/org.wso2.carbon.identity.oauth.endpoint</module>
@@ -348,6 +348,12 @@
             </dependency>
             <dependency>
                 <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
+                <artifactId>org.wso2.carbon.identity.oauth.common.testng</artifactId>
+                <version>${project.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
                 <artifactId>org.wso2.carbon.identity.oauth.endpoint</artifactId>
                 <version>${project.version}</version>
                 <type>war</type>
@@ -489,7 +495,6 @@
                 <version>${carbon.identity.sso.saml.version}</version>
                 <scope>test</scope>
             </dependency>
-
 
             <dependency>
                 <groupId>commons-codec</groupId>
@@ -683,7 +688,7 @@
         <carbon.kernel.registry.imp.pkg.version.range>[1.0.1, 2.0.0)</carbon.kernel.registry.imp.pkg.version.range>
 
         <!-- Carbon Identity Framework version -->
-        <carbon.identity.framework.version>5.10.20</carbon.identity.framework.version>
+        <carbon.identity.framework.version>5.10.25</carbon.identity.framework.version>
         <carbon.identity.framework.imp.pkg.version.range>[5.0.0, 6.0.0)
         </carbon.identity.framework.imp.pkg.version.range>
 

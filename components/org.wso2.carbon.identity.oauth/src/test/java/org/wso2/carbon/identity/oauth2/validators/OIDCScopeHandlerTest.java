@@ -22,11 +22,12 @@ import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
+import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
-import org.wso2.carbon.identity.test.common.testng.WithCarbonHome;
+
 import org.wso2.carbon.identity.testutil.IdentityBaseTest;
 
 import static org.testng.Assert.assertEquals;
