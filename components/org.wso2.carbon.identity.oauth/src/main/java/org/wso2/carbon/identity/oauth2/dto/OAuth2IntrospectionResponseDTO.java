@@ -109,11 +109,11 @@ public class OAuth2IntrospectionResponseDTO {
      */
     private String tbh;
 
-    public String getTokenBindingHash() {
+    public String getTbh() {
         return tbh;
     }
 
-    public void setTokenBindingHash(String tbh) {
+    public void setTbh(String tbh) {
         this.tbh = tbh;
     }
 

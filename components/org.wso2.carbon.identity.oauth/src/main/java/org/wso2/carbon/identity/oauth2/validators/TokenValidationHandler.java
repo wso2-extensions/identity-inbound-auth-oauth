@@ -282,7 +282,7 @@ public class TokenValidationHandler {
             // add client id
             introResp.setClientId(accessTokenDO.getConsumerKey());
             //add token binding hash tbh
-            introResp.setTokenBindingHash(findTokenBindingHash(accessTokenDO));
+            introResp.setTbh(findTokenBindingHash(accessTokenDO));
             // adding the AccessTokenDO as a context property for further use
             messageContext.addProperty("AccessTokenDO", accessTokenDO);
         }

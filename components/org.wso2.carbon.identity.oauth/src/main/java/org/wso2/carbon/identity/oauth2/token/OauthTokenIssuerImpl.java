@@ -24,11 +24,10 @@ import org.apache.commons.io.Charsets;
 import org.apache.oltu.oauth2.as.issuer.OAuthIssuer;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
-import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
-import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.utils.xml.StringUtils;
 
 public class OauthTokenIssuerImpl implements OauthTokenIssuer {
 
@@ -37,61 +36,75 @@ public class OauthTokenIssuerImpl implements OauthTokenIssuer {
             .getOAuthTokenGenerator();
 
     public String accessToken(OAuthTokenReqMessageContext tokReqMsgCtx) throws OAuthSystemException {
-        String tokenBindingId = OAuth2Util.checkTokenBindingHeader(tokReqMsgCtx,
+        String tokenBindingId = OAuth2Util.findTokenBindingHeader(tokReqMsgCtx,
                 OAuthConstants.HTTP_TB_REFERRED_HEADER_NAME);
-        String accesstoken = oAuthIssuerImpl.accessToken();
-        if (!tokenBindingId.isEmpty()) {
-            accesstoken = OAuth2Util.hashTB(tokenBindingId) + ";" + accesstoken;
-            accesstoken = baseEncodeTB(accesstoken);
-        }
-        return accesstoken;
+        String accessToken = oAuthIssuerImpl.accessToken();
+        return bindToken(tokenBindingId, accessToken, ";");
+//        if (!StringUtils.isEmpty(tokenBindingId)) {
+//            accessToken = OAuth2Util.hashOfString(tokenBindingId) + ";" + accessToken;
+//            accessToken = base64Encode(accessToken);
+//        }
+//        return accessToken;
     }
 
     public String refreshToken(OAuthTokenReqMessageContext tokReqMsgCtx) throws OAuthSystemException {
-        String tokenBindingId = OAuth2Util.checkTokenBindingHeader(tokReqMsgCtx,
+        String tokenBindingId = OAuth2Util.findTokenBindingHeader(tokReqMsgCtx,
                 OAuthConstants.HTTP_TB_PROVIDED_HEADER_NAME);
-        String refreshtoken = oAuthIssuerImpl.refreshToken();
-        if (!tokenBindingId.isEmpty()) {
-            refreshtoken = OAuth2Util.hashTB(tokenBindingId) + ":" + refreshtoken;
-            refreshtoken = baseEncodeTB(refreshtoken);
-        }
-        return refreshtoken;
+        String refreshToken = oAuthIssuerImpl.refreshToken();
+        return bindToken(tokenBindingId, refreshToken, ";");
+//        if (!tokenBindingId.isEmpty()) {
+//            refreshToken = OAuth2Util.hashOfString(tokenBindingId) + ":" + refreshToken;
+//            refreshToken = base64Encode(refreshToken);
+//        }
+//        return refreshToken;
     }
 
     public String authorizationCode(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) throws OAuthSystemException {
-        String tokenBindingId = OAuth2Util.checkTokenBindingHeader(oauthAuthzMsgCtx,
+        String tokenBindingId = OAuth2Util.findTokenBindingHeader(oauthAuthzMsgCtx,
                 OAuthConstants.HTTP_TB_REFERRED_HEADER_NAME);
         String authorizationCode = oAuthIssuerImpl.authorizationCode();
-        if (!tokenBindingId.isEmpty()) {
-            authorizationCode = OAuth2Util.hashTB(tokenBindingId) + ";" + authorizationCode;
-            authorizationCode = baseEncodeTB(authorizationCode);
-        }
-        return authorizationCode;
+        return bindToken(tokenBindingId, authorizationCode, ";");
+//        if (!tokenBindingId.isEmpty()) {
+//            authorizationCode = OAuth2Util.hashOfString(tokenBindingId) + ";" + authorizationCode;
+//            authorizationCode = base64Encode(authorizationCode);
+//        }
+//        return authorizationCode;
     }
 
     public String accessToken(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) throws OAuthSystemException {
-        String tokenBindingId = OAuth2Util.checkTokenBindingHeader(oauthAuthzMsgCtx,
+        String tokenBindingId = OAuth2Util.findTokenBindingHeader(oauthAuthzMsgCtx,
                 OAuthConstants.HTTP_TB_REFERRED_HEADER_NAME);
         String accessToken = oAuthIssuerImpl.accessToken();
-        if (!tokenBindingId.isEmpty()) {
-            accessToken = OAuth2Util.hashTB(tokenBindingId) + ";" + accessToken;
-            accessToken = baseEncodeTB(accessToken);
-        }
-        return accessToken;
+        return bindToken(tokenBindingId, accessToken, ";");
+//        if (!tokenBindingId.isEmpty()) {
+//            accessToken = OAuth2Util.hashOfString(tokenBindingId) + ";" + accessToken;
+//            accessToken = base64Encode(accessToken);
+//        }
+//        return accessToken;
     }
 
     public String refreshToken(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) throws OAuthSystemException {
-        String tokenBindingId = OAuth2Util.checkTokenBindingHeader(oauthAuthzMsgCtx,
+        String tokenBindingId = OAuth2Util.findTokenBindingHeader(oauthAuthzMsgCtx,
                 OAuthConstants.HTTP_TB_PROVIDED_HEADER_NAME);
         String refreshToken = oAuthIssuerImpl.refreshToken();
-        if (!tokenBindingId.isEmpty()) {
-            refreshToken = OAuth2Util.hashTB(tokenBindingId) + ":" + refreshToken;
-            refreshToken = baseEncodeTB(refreshToken);
-        }
-        return refreshToken;
+        return bindToken(tokenBindingId, refreshToken, ":");
+//        if (!tokenBindingId.isEmpty()) {
+//            refreshToken = OAuth2Util.hashOfString(tokenBindingId) + ":" + refreshToken;
+//            refreshToken = base64Encode(refreshToken);
+//        }
+//        return refreshToken;
     }
 
-    public String baseEncodeTB(String token) {
+    private String bindToken(String tokenBindingID, String token, String delimiter) {
+        if (!StringUtils.isEmpty(tokenBindingID)) {
+            String newToken = OAuth2Util.hashOfString(tokenBindingID) + delimiter + token;
+            String encodedToken = base64Encode(newToken);
+            return encodedToken;
+        }
+        return token;
+    }
+
+    private String base64Encode(String token) {
         token = Base64Utils.encode(token.getBytes(Charsets.UTF_8));
         return token;
     }
