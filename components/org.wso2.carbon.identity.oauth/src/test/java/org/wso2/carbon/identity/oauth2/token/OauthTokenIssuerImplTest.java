@@ -61,8 +61,8 @@ public class OauthTokenIssuerImplTest extends PowerMockIdentityBaseTest {
         accessTokenIssuer = new OauthTokenIssuerImpl();
         when(oAuthServerConfiguration.getTimeStampSkewInSeconds()).thenReturn(3600L);
         mockStatic(OAuth2Util.class);
-        when(OAuth2Util.checkTokenBindingHeader(any(OAuthTokenReqMessageContext.class),anyString())).thenReturn("");
-        when(OAuth2Util.checkTokenBindingHeader(any(OAuthAuthzReqMessageContext.class),anyString())).thenReturn("");
+        when(OAuth2Util.findTokenBindingHeader(any(OAuthTokenReqMessageContext.class),anyString())).thenReturn("");
+        when(OAuth2Util.findTokenBindingHeader(any(OAuthAuthzReqMessageContext.class),anyString())).thenReturn("");
 
     }
 

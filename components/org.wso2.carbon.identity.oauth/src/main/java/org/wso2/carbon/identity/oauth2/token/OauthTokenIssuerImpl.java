@@ -40,11 +40,6 @@ public class OauthTokenIssuerImpl implements OauthTokenIssuer {
                 OAuthConstants.HTTP_TB_REFERRED_HEADER_NAME);
         String accessToken = oAuthIssuerImpl.accessToken();
         return bindToken(tokenBindingId, accessToken, ";");
-//        if (!StringUtils.isEmpty(tokenBindingId)) {
-//            accessToken = OAuth2Util.hashOfString(tokenBindingId) + ";" + accessToken;
-//            accessToken = base64Encode(accessToken);
-//        }
-//        return accessToken;
     }
 
     public String refreshToken(OAuthTokenReqMessageContext tokReqMsgCtx) throws OAuthSystemException {
@@ -52,11 +47,6 @@ public class OauthTokenIssuerImpl implements OauthTokenIssuer {
                 OAuthConstants.HTTP_TB_PROVIDED_HEADER_NAME);
         String refreshToken = oAuthIssuerImpl.refreshToken();
         return bindToken(tokenBindingId, refreshToken, ";");
-//        if (!tokenBindingId.isEmpty()) {
-//            refreshToken = OAuth2Util.hashOfString(tokenBindingId) + ":" + refreshToken;
-//            refreshToken = base64Encode(refreshToken);
-//        }
-//        return refreshToken;
     }
 
     public String authorizationCode(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) throws OAuthSystemException {
@@ -64,11 +54,6 @@ public class OauthTokenIssuerImpl implements OauthTokenIssuer {
                 OAuthConstants.HTTP_TB_REFERRED_HEADER_NAME);
         String authorizationCode = oAuthIssuerImpl.authorizationCode();
         return bindToken(tokenBindingId, authorizationCode, ";");
-//        if (!tokenBindingId.isEmpty()) {
-//            authorizationCode = OAuth2Util.hashOfString(tokenBindingId) + ";" + authorizationCode;
-//            authorizationCode = base64Encode(authorizationCode);
-//        }
-//        return authorizationCode;
     }
 
     public String accessToken(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) throws OAuthSystemException {
@@ -76,11 +61,6 @@ public class OauthTokenIssuerImpl implements OauthTokenIssuer {
                 OAuthConstants.HTTP_TB_REFERRED_HEADER_NAME);
         String accessToken = oAuthIssuerImpl.accessToken();
         return bindToken(tokenBindingId, accessToken, ";");
-//        if (!tokenBindingId.isEmpty()) {
-//            accessToken = OAuth2Util.hashOfString(tokenBindingId) + ";" + accessToken;
-//            accessToken = base64Encode(accessToken);
-//        }
-//        return accessToken;
     }
 
     public String refreshToken(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) throws OAuthSystemException {
@@ -88,11 +68,6 @@ public class OauthTokenIssuerImpl implements OauthTokenIssuer {
                 OAuthConstants.HTTP_TB_PROVIDED_HEADER_NAME);
         String refreshToken = oAuthIssuerImpl.refreshToken();
         return bindToken(tokenBindingId, refreshToken, ":");
-//        if (!tokenBindingId.isEmpty()) {
-//            refreshToken = OAuth2Util.hashOfString(tokenBindingId) + ":" + refreshToken;
-//            refreshToken = base64Encode(refreshToken);
-//        }
-//        return refreshToken;
     }
 
     private String bindToken(String tokenBindingID, String token, String delimiter) {

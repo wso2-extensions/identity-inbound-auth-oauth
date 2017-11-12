@@ -206,18 +206,6 @@ public class OAuth2ServiceComponent {
 
     }
 
-//    private boolean checkTB(){
-//        try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
-//            String sql;
-//            if (connection.getMetaData().getDriverName().contains("MySQL")
-//                    || connection.getMetaData().getDriverName().contains("H2")) {
-//                sql = SQLQueries.RETRIEVE_PKCE_TABLE_MYSQL;
-//            }
-//        } catch (SQLException e) {
-//            e.printStackTrace();
-//        }
-//    }
-
     @Reference(
             name = "registry.service",
             service = RegistryService.class,
