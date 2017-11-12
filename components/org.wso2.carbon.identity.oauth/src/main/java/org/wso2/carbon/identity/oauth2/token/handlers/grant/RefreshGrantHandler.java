@@ -19,9 +19,7 @@
 package org.wso2.carbon.identity.oauth2.token.handlers.grant;
 
 
-import org.apache.axiom.util.base64.Base64Utils;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.commons.io.Charsets;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -146,11 +144,9 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         if (!StringUtils.isEmpty(tokenBindingId)) {
             String TokenHashValue = refreshToken;
             if (OAuth2Util.checkUserNameAssertionEnabled()) {
-//                TokenHashValue = (new String(Base64Utils.decode(TokenHashValue), (Charsets.UTF_8))).split(":")[0];
-                TokenHashValue = OAuth2Util.decodeBase64ThenSplit(TokenHashValue,":");
+                TokenHashValue = OAuth2Util.decodeBase64ThenSplit(TokenHashValue, ":");
             }
-//            TokenHashValue = (new String(Base64Utils.decode(TokenHashValue), (Charsets.UTF_8))).split(":")[0];
-            TokenHashValue = OAuth2Util.decodeBase64ThenSplit(TokenHashValue,":");
+            TokenHashValue = OAuth2Util.decodeBase64ThenSplit(TokenHashValue, ":");
             if (!TokenHashValue.equals(OAuth2Util.hashOfString(tokenBindingId))) {
                 if (log.isDebugEnabled()) {
                     log.debug("Token Binding validation failed for refresh token");
