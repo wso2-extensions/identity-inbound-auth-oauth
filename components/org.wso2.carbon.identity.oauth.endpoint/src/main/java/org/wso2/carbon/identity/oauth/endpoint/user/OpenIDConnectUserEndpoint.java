@@ -73,14 +73,6 @@ public class OpenIDConnectUserEndpoint {
                     UserInfoEndpointConfig.getInstance().getUserInfoAccessTokenValidator();
             OAuth2TokenValidationResponseDTO tokenResponse = tokenValidator.validateToken(accessToken);
 
-            /*
-               We need to pass the SP's tenantId to the UserInfoResponseBuilder to retrieve the correct OIDC scope
-               configurations. We can't do this currently as OAuth2TokenValidationResponseDTO does not contain any
-               contextual information that could be used to derive the tenantId of the SP. Therefore we are setting
-               the tenantId in a thread local variable.
-             */
-            setServiceProviderTenantIdInThreadLocal(accessToken);
-
             // build the claims
             //ToDO - Validate the grant type to be implicit or authorization_code before retrieving claims
             UserInfoResponseBuilder userInfoResponseBuilder =
@@ -92,13 +84,6 @@ public class OpenIDConnectUserEndpoint {
         } catch (OAuthSystemException e) {
             log.error("UserInfoEndpoint Failed", e);
             throw new OAuthSystemException("UserInfoEndpoint Failed");
-        } finally {
-            // Remove the thread local set to pass the Service Provider tenantID to downstream user info response
-            // builders.
-            OAuth2Util.clearClientTenantId();
-            if (log.isDebugEnabled()) {
-                log.debug("Service Provider tenantID thread local variable cleared.");
-            }
         }
 
         ResponseBuilder respBuilder = getResponseBuilderWithCacheControlHeaders();
@@ -176,31 +161,4 @@ public class OpenIDConnectUserEndpoint {
                 .entity(res.getBody())
                 .build();
     }
-
-    /**
-     * Derive the tenantId of the SP from the accessToken identifier and set a threadLocal variable to be used by
-     * the UserInfoResponseBuilder.
-     *
-     * @param accessToken Access Token used in the user info call
-     * @throws OAuthSystemException
-     */
-    private void setServiceProviderTenantIdInThreadLocal(String accessToken) throws OAuthSystemException {
-        try {
-            // Get client id of OAuth app from the introspection.
-            String clientId = OAuth2Util.getClientIdForAccessToken(accessToken);
-            if (StringUtils.isBlank(clientId)) {
-                throw new OAuthSystemException("Cannot find the clientID of the SP that issued the token.");
-            }
-            OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(clientId);
-            int spTenantId = OAuth2Util.getTenantId(OAuth2Util.getTenantDomainOfOauthApp(appDO));
-            // Set the tenant id in the thread local variable.
-            OAuth2Util.setClientTenatId(spTenantId);
-            if (log.isDebugEnabled()) {
-                log.debug("Service Provider tenantID: " + spTenantId + " set in the thread local variable.");
-            }
-        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
-            throw new OAuthSystemException("Error when obtaining the tenant information of SP.", e);
-        }
-    }
-
 }
