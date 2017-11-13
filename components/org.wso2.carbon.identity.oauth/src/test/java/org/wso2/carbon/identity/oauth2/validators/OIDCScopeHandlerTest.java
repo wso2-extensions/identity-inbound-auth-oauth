@@ -34,7 +34,7 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
 @WithCarbonHome
-public class OIDCScopeHandlerTest extends IdentityBaseTest {
+public class OIDCScopeHandlerTest {
 
     private OIDCScopeHandler oidcScopeHandler;
 
