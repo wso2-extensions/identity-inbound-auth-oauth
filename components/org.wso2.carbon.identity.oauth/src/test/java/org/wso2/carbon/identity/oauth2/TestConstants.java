@@ -59,6 +59,7 @@ public class TestConstants {
     public static final String CALLBACK = "http://localhost:8080/redirect";
     public static final String USER_DOMAIN_PRIMARY = "PRIMARY";
     public static final String SCOPE_STRING = "default";
+    public static final String OPENID_SCOPE_STRING = "openid";
     public static final String GRANT_TYPES_STRING =
             "refresh_token implicit password iwa:ntlm client_credentials authorization_code";
     public static final String ACCESS_OKEN = "d43e8da324a33bdc941b9b95cad6a6a2";
