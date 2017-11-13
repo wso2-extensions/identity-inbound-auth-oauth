@@ -97,7 +97,7 @@ public class OIDCClaimUtil {
                     }
                     // Requested scope is an registered OIDC scope. Filter and return the claims belonging to the scope.
                     Map<String, Object> filteredClaims =
-                            handleRequestedOIDCSCope(userClaims, addressScopeClaims, oidcScopeProperties,
+                            handleRequestedOIDCScope(userClaims, addressScopeClaims, oidcScopeProperties,
                                     addressScopeClaimUris, requestedScope);
                     claimsToBeReturned.putAll(filteredClaims);
                 } else {
@@ -130,7 +130,7 @@ public class OIDCClaimUtil {
         return claimsToBeReturned != null && !claimsToBeReturned.isEmpty();
     }
 
-    private static Map<String, Object> handleRequestedOIDCSCope(Map<String, Object> userClaimsInOIDCDialect,
+    private static Map<String, Object> handleRequestedOIDCScope(Map<String, Object> userClaimsInOIDCDialect,
                                                                 Map<String, Object> addressScopeClaims,
                                                                 Properties oidcScopeProperties,
                                                                 List<String> addressScopeClaimUris,
@@ -168,7 +168,7 @@ public class OIDCClaimUtil {
                 StringUtils.substringBefore(scopeClaim, SCOPE_CLAIM_PREFIX);
     }
 
-    protected static boolean isNotEmpty(Properties properties) {
+    private static boolean isNotEmpty(Properties properties) {
         return properties != null && !properties.isEmpty();
     }
 

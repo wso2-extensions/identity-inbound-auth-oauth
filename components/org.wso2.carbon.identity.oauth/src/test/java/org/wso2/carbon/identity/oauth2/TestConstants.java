@@ -21,7 +21,9 @@ package org.wso2.carbon.identity.oauth2;
 public class TestConstants {
     public static final String CARBON_TENANT_DOMAIN = "carbon.super";
     public static final String LOACALHOST_DOMAIN = "localhost";
-    public static final String TEST_USER_NAME = "testUser";
+    public static final String OAUTH2_TOKEN_EP = "https://localhost:9443/oauth2/token";
+    public static final String TEST_USER_NAME = "testUser@tenant.com";
+    public static final String TENANT_AWARE_USER_NAME = "testUser";
     public static final String ATTRIBUTE_CONSUMER_INDEX = "1234567890";
     public static final String SAMPLE_NAME_ID_FORMAT = "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress";
     public static final String SESSION_ID = "sessionId4567890";
