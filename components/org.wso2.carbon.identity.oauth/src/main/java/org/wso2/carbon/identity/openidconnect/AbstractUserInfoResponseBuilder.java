@@ -55,7 +55,7 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
     private static final Log log = LogFactory.getLog(AbstractUserInfoResponseBuilder.class);
 
     @Override
-    public final String getResponseString(OAuth2TokenValidationResponseDTO tokenResponse)
+    public String getResponseString(OAuth2TokenValidationResponseDTO tokenResponse)
             throws UserInfoEndpointException, OAuthSystemException {
 
         String clientId = getClientId(tokenResponse);
