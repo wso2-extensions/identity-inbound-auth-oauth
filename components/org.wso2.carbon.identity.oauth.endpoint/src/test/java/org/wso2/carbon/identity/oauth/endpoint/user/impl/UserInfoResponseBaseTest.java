@@ -24,6 +24,8 @@ import org.wso2.carbon.identity.oauth.user.UserInfoClaimRetriever;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImpl;
+import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.registry.core.Resource;
 import org.wso2.carbon.registry.core.ResourceImpl;
 import org.wso2.carbon.registry.core.service.RegistryService;
@@ -113,6 +115,9 @@ public class UserInfoResponseBaseTest extends PowerMockTestCase {
 
     @BeforeClass
     public void setUp() {
+        OpenIDConnectServiceComponentHolder.getInstance()
+                .addOpenIDConnectClaimFilter(new OpenIDConnectClaimFilterImpl());
+
         userInfoJSONResponseBuilder = new UserInfoJSONResponseBuilder();
         resource = new ResourceImpl();
     }

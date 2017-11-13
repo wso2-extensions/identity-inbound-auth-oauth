@@ -28,12 +28,15 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
+import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
 import org.wso2.carbon.identity.oauth.user.UserInfoResponseBuilder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
@@ -55,13 +58,14 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
     public final String getResponseString(OAuth2TokenValidationResponseDTO tokenResponse)
             throws UserInfoEndpointException, OAuthSystemException {
 
+        String clientId = getClientId(tokenResponse);
         String spTenantDomain = getServiceProviderTenantDomain(tokenResponse);
         // Retrieve user claims.
         Map<String, Object> userClaims = retrieveUserClaims(tokenResponse);
 
         // Filter user claims based on the requested scopes
         Map<String, Object> filteredUserClaims =
-                getUserClaimsFilteredByScope(tokenResponse.getScope(), spTenantDomain, userClaims);
+                getUserClaimsFilteredByScope(userClaims, tokenResponse.getScope(), clientId, spTenantDomain);
 
         // Handle subject claim.
         String subjectClaim = getSubjectClaim(userClaims, spTenantDomain, tokenResponse);
@@ -92,28 +96,29 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
         return buildSubjectClaim(subjectClaim, spTenantDomain, tokenResponse);
     }
 
-    protected Map<String, Object> getUserClaimsFilteredByScope(String[] requestedScopes,
-                                                               String tenantDomain,
-                                                               Map<String, Object> userClaims) {
-
-        return OIDCClaimUtil.getClaimsFilteredByOIDCScopes(tenantDomain, requestedScopes, userClaims);
+    protected Map<String, Object> getUserClaimsFilteredByScope(Map<String, Object> userClaims,
+                                                               String[] requestedScopes,
+                                                               String clientId,
+                                                               String tenantDomain) {
+        return OpenIDConnectServiceComponentHolder.getInstance()
+                .getOpenIDConnectClaimFilter()
+                .getClaimsFilteredByOIDCScopes(userClaims, requestedScopes, clientId,tenantDomain);
     }
 
-    protected String getServiceProviderTenantDomain(OAuth2TokenValidationResponseDTO tokenResponse)
+    private String getServiceProviderTenantDomain(OAuth2TokenValidationResponseDTO tokenResponse)
             throws UserInfoEndpointException {
-        /*
-           We can't get any information related to SP tenantDomain using the tokenResponse directly or indirectly.
-           Therefore we make use of the thread local variable set at the UserInfo endpoint to get the tenantId
-           of the service provider
-        */
-        int tenantId = OAuth2Util.getClientTenatId();
-        return IdentityTenantUtil.getTenantDomain(tenantId);
-
+        String clientId = getClientId(tokenResponse);
+        OAuthAppDO oAuthAppDO;
+        try {
+            oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
+        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+            throw new UserInfoEndpointException("Error while retrieving OAuth app information for clientId: " + clientId);
+        }
+        return OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
     }
 
     protected Map<String, Object> getEssentialClaims(OAuth2TokenValidationResponseDTO tokenResponse,
                                                      Map<String, Object> claims) throws UserInfoEndpointException {
-
         Map<String, Object> essentialClaimMap = new HashMap<>();
         List<String> essentialClaims = getEssentialClaimUris(tokenResponse);
         if (isNotEmpty(essentialClaims)) {
@@ -134,7 +139,7 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
      *                           about the access token used for user info call.
      * @param spTenantDomain     Service Provider tenant domain.
      * @param filteredUserClaims Filtered user claims based on the requested scopes.
-     * @return                   UserInfo Response String to be sent in the response.
+     * @return UserInfo Response String to be sent in the response.
      * @throws UserInfoEndpointException
      */
     protected abstract String buildResponse(OAuth2TokenValidationResponseDTO tokenResponse,
@@ -144,7 +149,6 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
     private String buildSubjectClaim(String sub,
                                      String tenantDomain,
                                      OAuth2TokenValidationResponseDTO tokenResponse) throws UserInfoEndpointException {
-
         String clientId = getClientId(tokenResponse);
         ServiceProvider serviceProvider = getServiceProvider(tenantDomain, clientId);
 
@@ -182,7 +186,7 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
         ApplicationManagementService applicationMgtService = OAuth2ServiceComponentHolder.getApplicationMgtService();
         ServiceProvider serviceProvider;
         try {
-            // Getting the Service Provider
+            // Get the Service Provider.
             serviceProvider = applicationMgtService.getServiceProviderByClientId(
                     clientId, IdentityApplicationConstants.OAuth2.NAME, tenantDomain);
         } catch (IdentityApplicationManagementException e) {

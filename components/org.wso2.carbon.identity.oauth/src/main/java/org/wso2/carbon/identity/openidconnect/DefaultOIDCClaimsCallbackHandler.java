@@ -45,6 +45,7 @@ import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
+import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.user.api.UserRealm;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
@@ -106,10 +107,13 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
      * @param userClaims                  Map of user claims
      * @return
      */
-    protected Map<String, Object> filterClaimsByScope(String[] requestedScopes,
-                                                      String serviceProviderTenantDomain,
-                                                      Map<String, Object> userClaims) {
-        return OIDCClaimUtil.getClaimsFilteredByOIDCScopes(serviceProviderTenantDomain, requestedScopes, userClaims);
+    protected Map<String, Object> filterClaimsByScope(Map<String, Object> userClaims,
+                                                      String[] requestedScopes,
+                                                      String clientId,
+                                                      String serviceProviderTenantDomain) {
+        return OpenIDConnectServiceComponentHolder.getInstance()
+                .getOpenIDConnectClaimFilter()
+                .getClaimsFilteredByOIDCScopes(userClaims, requestedScopes, clientId, serviceProviderTenantDomain);
     }
 
     /**
@@ -135,10 +139,11 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
             userAttributes = getUserAttributesCachedAgainstAuthorizationCode(getAuthorizationCode(requestMsgCtx));
         }
         // Map<"email", "peter@example.com">
-        Map<String, Object> claims = getClaimMapForUserInOIDCDialect(requestMsgCtx, userAttributes);
+        Map<String, Object> userClaimsInOIDCDialect = getClaimMapForUserInOIDCDialect(requestMsgCtx, userAttributes);
+        String clientId = requestMsgCtx.getOauth2AccessTokenReqDTO().getClientId();
         String spTenantDomain = requestMsgCtx.getOauth2AccessTokenReqDTO().getTenantDomain();
         // Restrict Claims going into the token based on the scope
-        return filterClaimsByScope(requestMsgCtx.getScope(), spTenantDomain, claims);
+        return filterClaimsByScope(userClaimsInOIDCDialect, requestMsgCtx.getScope(), clientId, spTenantDomain);
     }
 
     private String getAuthorizationCode(OAuthTokenReqMessageContext requestMsgCtx) {
@@ -196,7 +201,7 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
     private Map<String, Object> getUserClaimsInOIDCDialect(OAuthAuthzReqMessageContext authzReqMessageContext)
             throws OAuthSystemException {
 
-        Map<String, Object> claims;
+        Map<String, Object> userClaimsInOIDCDialect;
         Map<ClaimMapping, String> userAttributes =
                 getUserAttributesCachedAgainstToken(getAccessToken(authzReqMessageContext));
 
@@ -205,13 +210,15 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
                 log.debug("User attributes not found in cache. Trying to retrieve attribute for local user: " +
                         authzReqMessageContext.getAuthorizationReqDTO().getUser());
             }
-            claims = getClaimsForLocalUserInOIDCDialect(authzReqMessageContext);
+            userClaimsInOIDCDialect = getClaimsForLocalUserInOIDCDialect(authzReqMessageContext);
         } else {
-            claims = getUserClaimsMapInOIDCDialect(userAttributes);
+            userClaimsInOIDCDialect = getUserClaimsMapInOIDCDialect(userAttributes);
         }
 
+        String clientId = authzReqMessageContext.getAuthorizationReqDTO().getConsumerKey();
         String spTenantDomain = authzReqMessageContext.getAuthorizationReqDTO().getTenantDomain();
-        return filterClaimsByScope(authzReqMessageContext.getApprovedScope(), spTenantDomain, claims);
+        String[] approvedScopes = authzReqMessageContext.getApprovedScope();
+        return filterClaimsByScope(userClaimsInOIDCDialect, approvedScopes, clientId, spTenantDomain);
     }
 
     private Map<String, Object> getClaimsForLocalUserInOIDCDialect(OAuthAuthzReqMessageContext authzReqMessageContext) {

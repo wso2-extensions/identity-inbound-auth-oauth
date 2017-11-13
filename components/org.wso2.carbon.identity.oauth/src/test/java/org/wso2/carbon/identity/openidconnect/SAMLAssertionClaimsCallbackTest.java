@@ -63,6 +63,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
+import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.registry.api.RegistryException;
 import org.wso2.carbon.registry.core.Resource;
 import org.wso2.carbon.registry.core.ResourceImpl;
@@ -119,6 +120,7 @@ public class SAMLAssertionClaimsCallbackTest {
 
     @Spy
     private SAMLAssertionClaimsCallback samlAssertionClaimsCallback;
+
     @Spy
     private AuthorizationGrantCache authorizationGrantCache;
 
@@ -213,6 +215,9 @@ public class SAMLAssertionClaimsCallbackTest {
 
         mockStatic(FrameworkUtils.class);
         when(FrameworkUtils.getMultiAttributeSeparator()).thenReturn(MULTI_ATTRIBUTE_SEPARATOR_DEFAULT);
+
+        OpenIDConnectServiceComponentHolder.getInstance()
+                .addOpenIDConnectClaimFilter(new OpenIDConnectClaimFilterImpl());
 
         samlAssertionClaimsCallback = new SAMLAssertionClaimsCallback();
     }

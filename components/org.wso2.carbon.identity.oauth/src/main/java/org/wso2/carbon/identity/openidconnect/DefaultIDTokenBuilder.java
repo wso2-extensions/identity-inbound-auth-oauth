@@ -73,6 +73,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import javax.xml.namespace.QName;
 
+import static org.apache.commons.lang.StringUtils.isNotBlank;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.AT_HASH;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.AUTH_TIME;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.AZP;
@@ -136,7 +137,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
 
         String atHash = null;
         String accessToken = tokenRespDTO.getAccessToken();
-        if (isIDTokenSigned()) {
+        if (isIDTokenSigned() && isNotBlank(accessToken)) {
             atHash = getAtHash(accessToken);
         }
 
@@ -175,7 +176,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
             throw new IDTokenValidationFailureException("Error while validating ID Token token for required claims");
         }
 
-        if (isIDTokenNotSigned()) {
+        if (isUnsignedIDToken()) {
             return new PlainJWT(jwtClaimsSet).serialize();
         }
 
@@ -223,7 +224,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         }
 
         String responseType = authzReqMessageContext.getAuthorizationReqDTO().getResponseType();
-        if (isIDTokenSigned() && isAccessTokenHashApplicable(responseType)) {
+        if (isIDTokenSigned() && isAccessTokenHashApplicable(responseType) && isNotBlank(accessToken)) {
             String atHash = getAtHash(accessToken);
             jwtClaimsSet.setClaim(AT_HASH, atHash);
         }
@@ -241,7 +242,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         handleCustomOIDCClaims(authzReqMessageContext, jwtClaimsSet);
         jwtClaimsSet.setSubject(subject);
 
-        if (isIDTokenNotSigned()) {
+        if (isUnsignedIDToken()) {
             return new PlainJWT(jwtClaimsSet).serialize();
         }
 
@@ -312,7 +313,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
                 .contains(oidcClaimUri);
     }
 
-    private boolean isIDTokenNotSigned() {
+    private boolean isUnsignedIDToken() {
         return JWSAlgorithm.NONE.getName().equals(signatureAlgorithm.getName());
     }
 
@@ -391,7 +392,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
     private String getSubjectClaimUriInLocalDialect(ServiceProvider serviceProvider) {
         String subjectClaimUri = serviceProvider.getLocalAndOutBoundAuthenticationConfig().getSubjectClaimUri();
         if (log.isDebugEnabled()) {
-            if (StringUtils.isNotBlank(subjectClaimUri)) {
+            if (isNotBlank(subjectClaimUri)) {
                 log.debug(subjectClaimUri + " is defined as subject claim for service provider: " +
                         serviceProvider.getApplicationName());
             } else {
@@ -433,7 +434,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
     }
 
     private String getSubjectClaimUriInLocalDialect(ServiceProvider serviceProvider, String subjectClaimUri) {
-        if (StringUtils.isNotBlank(subjectClaimUri)) {
+        if (isNotBlank(subjectClaimUri)) {
             ClaimConfig claimConfig = serviceProvider.getClaimConfig();
             if (claimConfig != null) {
                 boolean isLocalClaimDialect = claimConfig.isLocalClaimDialect();
@@ -508,7 +509,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         long authTime = 0;
         if (StringUtils.isNotEmpty(accessToken)) {
             AuthorizationGrantCacheEntry authorizationGrantCacheEntry = getAuthorizationGrantCacheEntry(accessToken);
-            if (StringUtils.isNotBlank(authorizationGrantCacheEntry.getEssentialClaims())) {
+            if (isNotBlank(authorizationGrantCacheEntry.getEssentialClaims())) {
                 if (isEssentialClaim(authorizationGrantCacheEntry, AUTH_TIME)) {
                     authTime = authzReqMessageContext.getAuthorizationReqDTO().getAuthTime();
                 }
@@ -702,7 +703,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
             String supportedAudienceName;
             if (supportedAudience != null) {
                 supportedAudienceName = IdentityUtil.fillURLPlaceholders(supportedAudience.getText());
-                if (StringUtils.isNotBlank(supportedAudienceName)) {
+                if (isNotBlank(supportedAudienceName)) {
                     audiences.add(supportedAudienceName);
                 }
             }

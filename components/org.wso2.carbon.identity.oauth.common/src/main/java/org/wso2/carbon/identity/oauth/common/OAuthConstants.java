@@ -299,6 +299,24 @@ public final class OAuthConstants {
         private OIDCClaims() {}
     }
 
+    public static class SignatureAlgorithms {
+        public static final String NONE = "NONE";
+        public static final String SHA256_WITH_RSA = "SHA256withRSA";
+        public static final String SHA384_WITH_RSA = "SHA384withRSA";
+        public static final String SHA512_WITH_RSA = "SHA512withRSA";
+        public static final String SHA256_WITH_HMAC = "SHA256withHMAC";
+        public static final String SHA384_WITH_HMAC = "SHA384withHMAC";
+        public static final String SHA512_WITH_HMAC = "SHA512withHMAC";
+        public static final String SHA256_WITH_EC = "SHA256withEC";
+        public static final String SHA384_WITH_EC = "SHA384withEC";
+        public static final String SHA512_WITH_EC = "SHA512withEC";
+        public static final String SHA256 = "SHA-256";
+        public static final String SHA384 = "SHA-384";
+        public static final String SHA512 = "SHA-512";
+
+        private SignatureAlgorithms() {}
+    }
+
     private OAuthConstants() {
 
     }
