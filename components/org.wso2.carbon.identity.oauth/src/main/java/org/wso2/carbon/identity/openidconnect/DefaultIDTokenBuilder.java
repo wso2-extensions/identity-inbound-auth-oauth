@@ -35,6 +35,8 @@ import org.wso2.carbon.identity.application.common.model.ClaimConfig;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
+import org.wso2.carbon.identity.application.common.model.InboundAuthenticationRequestConfig;
+import org.wso2.carbon.identity.application.common.model.Property;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
@@ -180,7 +182,8 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         }
 
         String signingTenantDomain = getSigningTenantDomain(tokenReqMsgCtxt);
-        return OAuth2Util.signJWT(jwtClaimsSet, signatureAlgorithm, signingTenantDomain).serialize();
+        return OAuth2Util.signJWT(jwtClaimsSet, signatureAlgorithm, signingTenantDomain,
+                getClientSecret(signingTenantDomain, clientId)).serialize();
     }
 
     @Override
@@ -246,7 +249,8 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         }
 
         String signingTenantDomain = getSigningTenantDomain(authzReqMessageContext);
-        return OAuth2Util.signJWT(jwtClaimsSet, signatureAlgorithm, signingTenantDomain).serialize();
+        return OAuth2Util.signJWT(jwtClaimsSet, signatureAlgorithm, signingTenantDomain,
+                getClientSecret(signingTenantDomain, clientId)).serialize();
     }
 
     protected String getSubjectClaim(OAuthTokenReqMessageContext tokenReqMessageContext,
@@ -758,6 +762,48 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         }
         // All mandatory claims are present.
         return true;
+    }
+
+    private String getClientSecret(String tenatDomain, String clientId) throws IdentityOAuth2Exception {
+        String clientSecret = null;
+        try {
+            clientSecret = getHMACSharedSecret(getServiceProvider(tenatDomain, clientId));
+        } catch (IdentityOAuth2Exception e) {
+            final String ERROR_GET_HMAC_SECRET = "Error while getting HMAC shared secret.";
+            String errorMsg = String.format(ERROR_GET_HMAC_SECRET);
+            throw new IdentityOAuth2Exception(errorMsg, e);
+        }
+        return clientSecret;
+    }
+
+    private String getHMACSharedSecret(ServiceProvider serviceProvider) {
+        String oauthConsumerSecret = null;
+
+        if (serviceProvider.getInboundAuthenticationConfig() != null
+                && serviceProvider.getInboundAuthenticationConfig()
+                .getInboundAuthenticationRequestConfigs() != null
+                && serviceProvider.getInboundAuthenticationConfig()
+                .getInboundAuthenticationRequestConfigs().length > 0) {
+
+            InboundAuthenticationRequestConfig[] authReqConfigs = serviceProvider
+                    .getInboundAuthenticationConfig().getInboundAuthenticationRequestConfigs();
+
+            for (InboundAuthenticationRequestConfig authReqConfig : authReqConfigs) {
+                if ((IdentityApplicationConstants.OAuth2.NAME).equals(authReqConfig.getInboundAuthType())) {
+                    if (authReqConfig.getProperties() != null) {
+                        for (Property property : authReqConfig.getProperties()) {
+                            if ((IdentityApplicationConstants.OAuth2.OAUTH_CONSUMER_SECRET)
+                                    .equalsIgnoreCase(property.getName())) {
+                                oauthConsumerSecret = property.getValue();
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+        }
+        return oauthConsumerSecret;
     }
 }
 

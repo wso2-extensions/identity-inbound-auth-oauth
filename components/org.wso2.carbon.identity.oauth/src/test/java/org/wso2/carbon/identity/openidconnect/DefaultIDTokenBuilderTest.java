@@ -26,7 +26,6 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.IObjectFactory;
 import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
-import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
@@ -54,7 +53,6 @@ import org.wso2.carbon.identity.testutil.IdentityBaseTest;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 
 import java.security.MessageDigest;
-import java.util.LinkedHashSet;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
@@ -223,7 +221,7 @@ public class DefaultIDTokenBuilderTest extends IdentityBaseTest {
                 .thenReturn(customClaimsCallbackHandler);
         doNothing().when(customClaimsCallbackHandler).handleCustomClaims(jwtClaimsSet, request);
 
-        when(OAuth2Util.signJWT(any(JWTClaimsSet.class), any(JWSAlgorithm.class), anyString())).thenReturn(jwt);
+        when(OAuth2Util.signJWT(any(JWTClaimsSet.class), any(JWSAlgorithm.class), anyString(), anyString())).thenReturn(jwt);
         DefaultIDTokenBuilder defaultIDTokenBuilder1 = new DefaultIDTokenBuilder();
         assertEquals(defaultIDTokenBuilder1.buildIDToken(request1, oAuth2AccessTokenRespDTO), null,
                 "Default token binder generated successfully.");

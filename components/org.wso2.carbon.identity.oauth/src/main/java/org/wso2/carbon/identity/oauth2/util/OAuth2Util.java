@@ -24,6 +24,7 @@ import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSSigner;
 import com.nimbusds.jose.JWSVerifier;
+import com.nimbusds.jose.crypto.MACSigner;
 import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jose.util.Base64URL;
@@ -227,72 +228,68 @@ public class OAuth2Util {
     private static final String SHA384 = "SHA-384";
     private static final String SHA512 = "SHA-512";
 
-    private OAuth2Util(){
+    private OAuth2Util() {
 
     }
 
     /**
-     *
      * @return
      */
     public static OAuthAuthzReqMessageContext getAuthzRequestContext() {
-	if (log.isDebugEnabled()) {
-	    log.debug("Retreived OAuthAuthzReqMessageContext from threadlocal");
-	}
-	return authzRequestContext.get();
+        if (log.isDebugEnabled()) {
+            log.debug("Retreived OAuthAuthzReqMessageContext from threadlocal");
+        }
+        return authzRequestContext.get();
     }
 
     /**
-     *
      * @param context
      */
     public static void setAuthzRequestContext(OAuthAuthzReqMessageContext context) {
-	authzRequestContext.set(context);
-	if (log.isDebugEnabled()) {
-	    log.debug("Added OAuthAuthzReqMessageContext to threadlocal");
-	}
+        authzRequestContext.set(context);
+        if (log.isDebugEnabled()) {
+            log.debug("Added OAuthAuthzReqMessageContext to threadlocal");
+        }
     }
 
     /**
      *
      */
     public static void clearAuthzRequestContext() {
-	authzRequestContext.remove();
-	if (log.isDebugEnabled()) {
-	    log.debug("Cleared OAuthAuthzReqMessageContext");
-	}
+        authzRequestContext.remove();
+        if (log.isDebugEnabled()) {
+            log.debug("Cleared OAuthAuthzReqMessageContext");
+        }
     }
 
     /**
-     *
      * @return
      */
     public static OAuthTokenReqMessageContext getTokenRequestContext() {
-	if (log.isDebugEnabled()) {
-	    log.debug("Retreived OAuthTokenReqMessageContext from threadlocal");
-	}
-	return tokenRequestContext.get();
+        if (log.isDebugEnabled()) {
+            log.debug("Retreived OAuthTokenReqMessageContext from threadlocal");
+        }
+        return tokenRequestContext.get();
     }
 
     /**
-     *
      * @param context
      */
     public static void setTokenRequestContext(OAuthTokenReqMessageContext context) {
-	tokenRequestContext.set(context);
-	if (log.isDebugEnabled()) {
-	    log.debug("Added OAuthTokenReqMessageContext to threadlocal");
-	}
+        tokenRequestContext.set(context);
+        if (log.isDebugEnabled()) {
+            log.debug("Added OAuthTokenReqMessageContext to threadlocal");
+        }
     }
 
     /**
      *
      */
     public static void clearTokenRequestContext() {
-	tokenRequestContext.remove();
-	if (log.isDebugEnabled()) {
-	    log.debug("Cleared OAuthTokenReqMessageContext");
-	}
+        tokenRequestContext.remove();
+        if (log.isDebugEnabled()) {
+            log.debug("Cleared OAuthTokenReqMessageContext");
+        }
     }
 
     /**
@@ -414,16 +411,13 @@ public class OAuth2Util {
     }
 
     /**
-     * @deprecated
-     *
-     * Authenticate the OAuth consumer and return the username of user which own the provided client id and client
-     * secret.
-     *
      * @param clientId             Consumer Key/Id
      * @param clientSecretProvided Consumer Secret issued during the time of registration
      * @return Username of the user which own client id and client secret if authentication is
      * successful. Empty string otherwise.
      * @throws IdentityOAuthAdminException Error when looking up the credentials from the database
+     * @deprecated Authenticate the OAuth consumer and return the username of user which own the provided client id and client
+     * secret.
      */
     public static String getAuthenticatedUsername(String clientId, String clientSecretProvided)
             throws IdentityOAuthAdminException, IdentityOAuth2Exception, InvalidOAuthClientException {
@@ -512,7 +506,7 @@ public class OAuth2Util {
         long issuedTime = accessTokenDO.getIssuedTime().getTime();
 
         //check the validity of cached OAuth2AccessToken Response
-        long accessTokenValidityMillis = getTimeToExpire(issuedTime,validityPeriodMillis);
+        long accessTokenValidityMillis = getTimeToExpire(issuedTime, validityPeriodMillis);
 
         if (accessTokenValidityMillis > 1000) {
             long refreshValidityPeriodMillis = OAuthServerConfiguration.getInstance()
@@ -585,7 +579,7 @@ public class OAuth2Util {
      * Returns the updated table name using user store domain if a mapping is defined for this users store in
      * AccessTokenPartitioningDomains element in identity.xml,
      * or the original table name if the mapping is not available.
-     *
+     * <p>
      * Updated table name derived by appending a underscore and mapped user store domain name to the origin table name.
      *
      * @param userStoreDomain
@@ -607,7 +601,7 @@ public class OAuth2Util {
     /**
      * Returns the updated sql using user store domain if access token partitioning enabled & username assertion enabled
      * or the original sql otherwise.
-     *
+     * <p>
      * Updated sql derived by replacing original table names IDN_OAUTH2_ACCESS_TOKEN & IDN_OAUTH2_ACCESS_TOKEN_SCOPE
      * with the updated table names which derived using {@code getPartitionedTableByUserStore()} method.
      *
@@ -653,7 +647,7 @@ public class OAuth2Util {
 
     /**
      * Returns the updated sql using username.
-     *
+     * <p>
      * If the username contains the domain separator, updated sql derived using
      * {@code getTokenPartitionedSqlByUserStore()} method. Returns the original sql otherwise.
      *
@@ -687,7 +681,7 @@ public class OAuth2Util {
 
     /**
      * Returns the updated sql using token.
-     *
+     * <p>
      * If the token contains the username appended, updated sql derived using
      * {@code getTokenPartitionedSqlByUserId()} method. Returns the original sql otherwise.
      *
@@ -711,7 +705,7 @@ public class OAuth2Util {
             }
 
             String userId = OAuth2Util.getUserIdFromAccessToken(token); //i.e: 'foo.com/admin' or 'admin'
-            partitionedSql =  OAuth2Util.getTokenPartitionedSqlByUserId(sql, userId);
+            partitionedSql = OAuth2Util.getTokenPartitionedSqlByUserId(sql, userId);
         }
 
         return partitionedSql;
@@ -928,7 +922,7 @@ public class OAuth2Util {
 
         public static String getOAuth1RequestTokenUrl() {
             String oauth1RequestTokenUrl = OAuthServerConfiguration.getInstance().getOAuth1RequestTokenUrl();
-            if(StringUtils.isBlank(oauth1RequestTokenUrl)){
+            if (StringUtils.isBlank(oauth1RequestTokenUrl)) {
                 oauth1RequestTokenUrl = IdentityUtil.getServerURL("oauth/request-token", true, true);
             }
             return oauth1RequestTokenUrl;
@@ -936,7 +930,7 @@ public class OAuth2Util {
 
         public static String getOAuth1AuthorizeUrl() {
             String oauth1AuthorizeUrl = OAuthServerConfiguration.getInstance().getOAuth1AuthorizeUrl();
-            if(StringUtils.isBlank(oauth1AuthorizeUrl)){
+            if (StringUtils.isBlank(oauth1AuthorizeUrl)) {
                 oauth1AuthorizeUrl = IdentityUtil.getServerURL("oauth/authorize-url", true, true);
             }
             return oauth1AuthorizeUrl;
@@ -944,7 +938,7 @@ public class OAuth2Util {
 
         public static String getOAuth1AccessTokenUrl() {
             String oauth1AccessTokenUrl = OAuthServerConfiguration.getInstance().getOAuth1AccessTokenUrl();
-            if(StringUtils.isBlank(oauth1AccessTokenUrl)){
+            if (StringUtils.isBlank(oauth1AccessTokenUrl)) {
                 oauth1AccessTokenUrl = IdentityUtil.getServerURL("oauth/access-token", true, true);
             }
             return oauth1AccessTokenUrl;
@@ -952,7 +946,7 @@ public class OAuth2Util {
 
         public static String getOAuth2AuthzEPUrl() {
             String oauth2AuthzEPUrl = OAuthServerConfiguration.getInstance().getOAuth2AuthzEPUrl();
-            if(StringUtils.isBlank(oauth2AuthzEPUrl)){
+            if (StringUtils.isBlank(oauth2AuthzEPUrl)) {
                 oauth2AuthzEPUrl = IdentityUtil.getServerURL("oauth2/authorize", true, false);
             }
             return oauth2AuthzEPUrl;
@@ -960,7 +954,7 @@ public class OAuth2Util {
 
         public static String getOAuth2TokenEPUrl() {
             String oauth2TokenEPUrl = OAuthServerConfiguration.getInstance().getOAuth2TokenEPUrl();
-            if(StringUtils.isBlank(oauth2TokenEPUrl)){
+            if (StringUtils.isBlank(oauth2TokenEPUrl)) {
                 oauth2TokenEPUrl = IdentityUtil.getServerURL("oauth2/token", true, false);
             }
             return oauth2TokenEPUrl;
@@ -1012,7 +1006,7 @@ public class OAuth2Util {
 
         public static String getOAuth2UserInfoEPUrl() {
             String oauth2UserInfoEPUrl = OAuthServerConfiguration.getInstance().getOauth2UserInfoEPUrl();
-            if(StringUtils.isBlank(oauth2UserInfoEPUrl)){
+            if (StringUtils.isBlank(oauth2UserInfoEPUrl)) {
                 oauth2UserInfoEPUrl = IdentityUtil.getServerURL("oauth2/userinfo", true, false);
             }
             return oauth2UserInfoEPUrl;
@@ -1020,7 +1014,7 @@ public class OAuth2Util {
 
         public static String getOIDCConsentPageUrl() {
             String OIDCConsentPageUrl = OAuthServerConfiguration.getInstance().getOIDCConsentPageUrl();
-            if(StringUtils.isBlank(OIDCConsentPageUrl)){
+            if (StringUtils.isBlank(OIDCConsentPageUrl)) {
                 OIDCConsentPageUrl = IdentityUtil.getServerURL("/authenticationendpoint/oauth2_consent.do", false,
                         false);
             }
@@ -1029,7 +1023,7 @@ public class OAuth2Util {
 
         public static String getOAuth2ConsentPageUrl() {
             String oAuth2ConsentPageUrl = OAuthServerConfiguration.getInstance().getOauth2ConsentPageUrl();
-            if(StringUtils.isBlank(oAuth2ConsentPageUrl)){
+            if (StringUtils.isBlank(oAuth2ConsentPageUrl)) {
                 oAuth2ConsentPageUrl = IdentityUtil.getServerURL("/authenticationendpoint/oauth2_authz.do", false,
                         false);
             }
@@ -1038,7 +1032,7 @@ public class OAuth2Util {
 
         public static String getOAuth2ErrorPageUrl() {
             String oAuth2ErrorPageUrl = OAuthServerConfiguration.getInstance().getOauth2ErrorPageUrl();
-            if(StringUtils.isBlank(oAuth2ErrorPageUrl)){
+            if (StringUtils.isBlank(oAuth2ErrorPageUrl)) {
                 oAuth2ErrorPageUrl = IdentityUtil.getServerURL("/authenticationendpoint/oauth2_error.do", false, false);
             }
             return oAuth2ErrorPageUrl;
@@ -1057,7 +1051,7 @@ public class OAuth2Util {
     }
 
     public static boolean isOIDCAuthzRequest(String[] scope) {
-        for(String openidscope : scope) {
+        for (String openidscope : scope) {
             if (openidscope.equals(OAuthConstants.Scope.OPENID)) {
                 return true;
             }
@@ -1067,12 +1061,13 @@ public class OAuth2Util {
 
     /**
      * Verifies if the PKCE code verifier is upto specification as per RFC 7636
+     *
      * @param codeVerifier PKCE Code Verifier sent with the token request
      * @return
      */
     public static boolean validatePKCECodeVerifier(String codeVerifier) {
         Matcher pkceCodeVerifierMatcher = pkceCodeVerifierPattern.matcher(codeVerifier);
-        if(!pkceCodeVerifierMatcher.matches() || (codeVerifier.length() < 43 || codeVerifier.length() > 128)) {
+        if (!pkceCodeVerifierMatcher.matches() || (codeVerifier.length() < 43 || codeVerifier.length() > 128)) {
             return false;
         }
         return true;
@@ -1080,18 +1075,18 @@ public class OAuth2Util {
 
     /**
      * Verifies if the codeChallenge is upto specification as per RFC 7636
+     *
      * @param codeChallenge
      * @param codeChallengeMethod
      * @return
      */
     public static boolean validatePKCECodeChallenge(String codeChallenge, String codeChallengeMethod) {
-        if(codeChallengeMethod == null || OAuthConstants.OAUTH_PKCE_PLAIN_CHALLENGE.equals(codeChallengeMethod)) {
+        if (codeChallengeMethod == null || OAuthConstants.OAUTH_PKCE_PLAIN_CHALLENGE.equals(codeChallengeMethod)) {
             return validatePKCECodeVerifier(codeChallenge);
-        }
-        else if (OAuthConstants.OAUTH_PKCE_S256_CHALLENGE.equals(codeChallengeMethod)) {
+        } else if (OAuthConstants.OAUTH_PKCE_S256_CHALLENGE.equals(codeChallengeMethod)) {
             // SHA256 code challenge is 256 bits that is 256 / 6 ~= 43
             // See https://tools.ietf.org/html/rfc7636#section-3
-            if(codeChallenge != null && codeChallenge.trim().length() == 43) {
+            if (codeChallenge != null && codeChallenge.trim().length() == 43) {
                 return true;
             }
         }
@@ -1108,25 +1103,25 @@ public class OAuth2Util {
     public static boolean validatePKCE(String referenceCodeChallenge, String verificationCode, String challenge_method,
                                        OAuthAppDO oAuthApp) throws IdentityOAuth2Exception {
         //ByPass PKCE validation if PKCE Support is disabled
-        if(!isPKCESupportEnabled()) {
+        if (!isPKCESupportEnabled()) {
             return true;
         }
         if (oAuthApp != null && oAuthApp.isPkceMandatory() || referenceCodeChallenge != null) {
 
             //As per RFC 7636 Fallback to 'plain' if no code_challenge_method parameter is sent
-            if(challenge_method == null || challenge_method.trim().length() == 0) {
+            if (challenge_method == null || challenge_method.trim().length() == 0) {
                 challenge_method = "plain";
             }
 
             //if app with no PKCE code verifier arrives
             if ((verificationCode == null || verificationCode.trim().length() == 0)) {
                 //if pkce is mandatory, throw error
-                if(oAuthApp.isPkceMandatory()) {
+                if (oAuthApp.isPkceMandatory()) {
                     throw new IdentityOAuth2Exception("No PKCE code verifier found.PKCE is mandatory for this " +
                             "oAuth 2.0 application.");
                 } else {
                     //PKCE is optional, see if the authz code was requested with a PKCE challenge
-                    if(referenceCodeChallenge == null || referenceCodeChallenge.trim().length() == 0) {
+                    if (referenceCodeChallenge == null || referenceCodeChallenge.trim().length() == 0) {
                         //since no PKCE challenge was provided
                         return true;
                     } else {
@@ -1136,12 +1131,12 @@ public class OAuth2Util {
                 }
             }
             //verify that the code verifier is upto spec as per RFC 7636
-            if(!validatePKCECodeVerifier(verificationCode)) {
+            if (!validatePKCECodeVerifier(verificationCode)) {
                 throw new IdentityOAuth2Exception("Code verifier used is not up to RFC 7636 specifications.");
             }
             if (OAuthConstants.OAUTH_PKCE_PLAIN_CHALLENGE.equals(challenge_method)) {
                 //if the current application explicitly doesn't support plain, throw exception
-                if(!oAuthApp.isPkceSupportPlain()) {
+                if (!oAuthApp.isPkceSupportPlain()) {
                     throw new IdentityOAuth2Exception("This application does not allow 'plain' transformation algorithm.");
                 }
                 if (!referenceCodeChallenge.equals(verificationCode)) {
@@ -1180,7 +1175,7 @@ public class OAuth2Util {
     }
 
     public static boolean isImplicitResponseType(String responseType) {
-        if(StringUtils.isNotBlank(responseType) && (responseType.contains(ResponseType.TOKEN.toString()) ||
+        if (StringUtils.isNotBlank(responseType) && (responseType.contains(ResponseType.TOKEN.toString()) ||
                 responseType.contains(OAuthConstants.ID_TOKEN))) {
             return true;
         }
@@ -1279,7 +1274,7 @@ public class OAuth2Util {
      */
     @Deprecated
     public static void initTokenExpiryTimesOfSps(int tenantId) {
-        try{
+        try {
             Registry registry = OAuth2ServiceComponentHolder.getRegistryService().getConfigSystemRegistry(tenantId);
             if (!registry.resourceExists(OAuthConstants.TOKEN_EXPIRE_TIME_RESOURCE_PATH)) {
                 Resource resource = registry.newResource();
@@ -1445,7 +1440,7 @@ public class OAuth2Util {
             OMElement element = (OMElement) it.next();
             if ("Claim".equals(element.getLocalName())) {
                 String commaSeparatedClaimNames = element.getText();
-                if(StringUtils.isNotBlank(commaSeparatedClaimNames)){
+                if (StringUtils.isNotBlank(commaSeparatedClaimNames)) {
                     claimConfig.append(commaSeparatedClaimNames.trim());
                 }
             }
@@ -1630,13 +1625,15 @@ public class OAuth2Util {
     /**
      * Generic Signing function
      *
-     * @param jwtClaimsSet contains JWT body
+     * @param jwtClaimsSet       contains JWT body
      * @param signatureAlgorithm JWT signing algorithm
-     * @param tenantDomain tenant domain
+     * @param tenantDomain       tenant domain
+     * @param clientSecret
      * @return signed JWT token
      * @throws IdentityOAuth2Exception
      */
-    public static JWT signJWT(JWTClaimsSet jwtClaimsSet, JWSAlgorithm signatureAlgorithm, String tenantDomain)
+    public static JWT signJWT(JWTClaimsSet jwtClaimsSet, JWSAlgorithm signatureAlgorithm,
+                              String tenantDomain, String clientSecret)
             throws IdentityOAuth2Exception {
 
         if (JWSAlgorithm.RS256.equals(signatureAlgorithm) || JWSAlgorithm.RS384.equals(signatureAlgorithm) ||
@@ -1644,7 +1641,32 @@ public class OAuth2Util {
             return signJWTWithRSA(jwtClaimsSet, signatureAlgorithm, tenantDomain);
         } else if (JWSAlgorithm.HS256.equals(signatureAlgorithm) || JWSAlgorithm.HS384.equals(signatureAlgorithm) ||
                 JWSAlgorithm.HS512.equals(signatureAlgorithm)) {
-            // return signWithHMAC(jwtClaimsSet,jwsAlgorithm,request); implementation need to be done
+            return signWithHMAC(jwtClaimsSet, signatureAlgorithm, clientSecret);
+        } else {
+            // return signWithEC(jwtClaimsSet,jwsAlgorithm,request); implementation need to be done
+            throw new RuntimeException("Provided signature algorithm: " + signatureAlgorithm +
+                    " is not supported");
+        }
+    }
+
+    /**
+     * Generic Signing function
+     *
+     * @param jwtClaimsSet       contains JWT body
+     * @param signatureAlgorithm JWT signing algorithm
+     * @param tenantDomain       tenant domain
+     * @return signed JWT token
+     * @throws IdentityOAuth2Exception
+     */
+    public static JWT signJWT(JWTClaimsSet jwtClaimsSet, JWSAlgorithm signatureAlgorithm,
+                              String tenantDomain)
+            throws IdentityOAuth2Exception {
+
+        if (JWSAlgorithm.RS256.equals(signatureAlgorithm) || JWSAlgorithm.RS384.equals(signatureAlgorithm) ||
+                JWSAlgorithm.RS512.equals(signatureAlgorithm)) {
+            return signJWTWithRSA(jwtClaimsSet, signatureAlgorithm, tenantDomain);
+        } else if (JWSAlgorithm.HS256.equals(signatureAlgorithm) || JWSAlgorithm.HS384.equals(signatureAlgorithm) ||
+                JWSAlgorithm.HS512.equals(signatureAlgorithm)) {
             throw new RuntimeException("Provided signature algorithm: " + signatureAlgorithm +
                     " is not supported");
         } else {
@@ -1657,9 +1679,9 @@ public class OAuth2Util {
     /**
      * sign JWT token from RSA algorithm
      *
-     * @param jwtClaimsSet contains JWT body
+     * @param jwtClaimsSet       contains JWT body
      * @param signatureAlgorithm JWT signing algorithm
-     * @param tenantDomain tenant domain
+     * @param tenantDomain       tenant domain
      * @return signed JWT token
      * @throws IdentityOAuth2Exception
      */
@@ -1690,6 +1712,23 @@ public class OAuth2Util {
             return signedJWT;
         } catch (JOSEException e) {
             throw new IdentityOAuth2Exception("Error occurred while signing JWT", e);
+        }
+    }
+
+    public static JWT signWithHMAC(JWTClaimsSet jwtClaimsSet, JWSAlgorithm signatureAlgorithm, String sharedSecret)
+            throws IdentityOAuth2Exception {
+        try {
+            JWSSigner signer = new MACSigner(sharedSecret);
+            JWSHeader header = new JWSHeader((JWSAlgorithm) signatureAlgorithm);
+            SignedJWT signedJWT = new SignedJWT(header, jwtClaimsSet);
+            signedJWT.sign(signer);
+            return signedJWT;
+        } catch (JOSEException e) {
+            log.error("Error in obtaining tenant's keystore", e);
+            throw new IdentityOAuth2Exception("Error in obtaining tenant's keystore", e);
+        } catch (Exception e) {
+            log.error("Error in obtaining tenant's keystore", e);
+            throw new IdentityOAuth2Exception("Error in obtaining tenant's keystore", e);
         }
     }
 
