@@ -61,7 +61,6 @@ import org.wso2.carbon.identity.oauth.cache.SessionDataCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
-import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 import org.wso2.carbon.identity.oauth.endpoint.expmapper.InvalidRequestExceptionMapper;
 import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
@@ -81,7 +80,6 @@ import org.wso2.carbon.identity.oidc.session.OIDCSessionManager;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionState;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
 import org.wso2.carbon.utils.CarbonUtils;
-
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -252,7 +250,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         requestParams2.put("reqParam1", new String[]{"val1"});
 
         return new Object[][] {
-//                {paramMap2, requestParams2, HttpServletResponse.SC_FOUND},
+                {paramMap2, requestParams2, HttpServletResponse.SC_FOUND},
                 {paramMap1, requestParams2, HttpServletResponse.SC_BAD_REQUEST},
         };
     }

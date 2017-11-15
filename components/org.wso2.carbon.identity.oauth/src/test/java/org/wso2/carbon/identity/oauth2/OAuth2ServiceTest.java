@@ -293,7 +293,7 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
         OAuthRevocationRequestDTO revokeRequestDTO = new OAuthRevocationRequestDTO();
         revokeRequestDTO.setConsumerKey("testConsumerKey");
         revokeRequestDTO.setToken("testToken");
-        revokeRequestDTO.setToken_type(grantType);
+        revokeRequestDTO.setTokenType(grantType);
         assertFalse(oAuth2Service.revokeTokenByOAuthClient(revokeRequestDTO).isError());
     }
 
@@ -315,7 +315,7 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
         OAuthRevocationRequestDTO revokeRequestDTO = new OAuthRevocationRequestDTO();
         revokeRequestDTO.setConsumerKey("testConsumerKey");
         revokeRequestDTO.setToken("testToken");
-        revokeRequestDTO.setToken_type(GrantType.CLIENT_CREDENTIALS.toString());
+        revokeRequestDTO.setTokenType(GrantType.CLIENT_CREDENTIALS.toString());
 
         when(oAuthCache.getValueFromCache(any(OAuthCacheKey.class))).thenReturn(accessTokenDO);
         mockStatic(OAuthCache.class);
@@ -370,7 +370,7 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
             revokeRequestDTO.setConsumerKey("testConsumerKey");
             revokeRequestDTO.setToken("testToken");
         }
-        revokeRequestDTO.setToken_type(GrantType.REFRESH_TOKEN.toString());
+        revokeRequestDTO.setTokenType(GrantType.REFRESH_TOKEN.toString());
 
         when(oAuthCache.getValueFromCache(any(OAuthCacheKey.class))).thenReturn(accessTokenDO);
         mockStatic(OAuthCache.class);

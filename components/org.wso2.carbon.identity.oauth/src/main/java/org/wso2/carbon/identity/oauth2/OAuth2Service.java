@@ -289,7 +289,7 @@ public class OAuth2Service extends AbstractAdmin {
                     StringUtils.isNotEmpty(revokeRequestDTO.getToken())) {
 
                 boolean refreshTokenFirst = false;
-                if (StringUtils.equals(GrantType.REFRESH_TOKEN.toString(), revokeRequestDTO.getToken_type())) {
+                if (isRefreshTokenType(revokeRequestDTO)) {
                     refreshTokenFirst = true;
                 }
 
@@ -420,6 +420,10 @@ public class OAuth2Service extends AbstractAdmin {
             invokePostRevocationListeners(revokeRequestDTO, revokeResponseDTO, accessTokenDO, refreshTokenDO);
             return revokeRespDTO;
         }
+    }
+
+    private boolean isRefreshTokenType(OAuthRevocationRequestDTO revokeRequestDTO) {
+        return StringUtils.equals(GrantType.REFRESH_TOKEN.toString(), revokeRequestDTO.getTokenType());
     }
 
     private void invokePostRevocationListeners(OAuthRevocationRequestDTO revokeRequestDTO, OAuthRevocationResponseDTO

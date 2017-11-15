@@ -18,7 +18,6 @@
 package org.wso2.carbon.identity.oauth.endpoint.revoke;
 
 import org.apache.axiom.util.base64.Base64Utils;
-import org.apache.axis2.transport.http.HTTPConstants;
 import org.apache.commons.collections.iterators.IteratorEnumeration;
 import org.apache.commons.lang.StringUtils;
 import org.apache.oltu.oauth2.common.OAuth;
@@ -30,11 +29,12 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
-import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
-import org.wso2.carbon.identity.oauth.common.exception.OAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
+import org.wso2.carbon.identity.oauth.endpoint.expmapper.InvalidRequestExceptionMapper;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
@@ -42,8 +42,7 @@ import org.wso2.carbon.identity.oauth2.ResponseHeader;
 import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationResponseDTO;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
-
-import java.lang.reflect.Method;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
@@ -56,9 +55,7 @@ import javax.ws.rs.core.Response;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.powermock.api.mockito.PowerMockito.doAnswer;
-import static org.powermock.api.mockito.PowerMockito.doNothing;
 import static org.powermock.api.mockito.PowerMockito.doReturn;
-import static org.powermock.api.mockito.PowerMockito.doThrow;
 import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.spy;
 import static org.powermock.api.mockito.PowerMockito.when;
@@ -66,7 +63,7 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 
-@PrepareForTest({EndpointUtil.class, PrivilegedCarbonContext.class})
+@PrepareForTest({EndpointUtil.class})
 public class OAuthRevocationEndpointTest extends PowerMockIdentityBaseTest {
 
     @Mock
@@ -96,6 +93,10 @@ public class OAuthRevocationEndpointTest extends PowerMockIdentityBaseTest {
 
     @BeforeTest
     public void setUp() {
+        System.setProperty(
+                CarbonBaseConstants.CARBON_HOME,
+                Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString()
+        );
         revocationEndpoint = new OAuthRevocationEndpoint();
     }
 
@@ -122,17 +123,11 @@ public class OAuthRevocationEndpointTest extends PowerMockIdentityBaseTest {
                         null, HttpServletResponse.SC_UNAUTHORIZED, OAuth2ErrorCodes.INVALID_CLIENT},
 
                 // Invalid authz header. Will return unauthorized error response.
-                { inCorrectAuthzHeader, true, null, null, "", null, null, null, null, null,
+                { inCorrectAuthzHeader, true, ACCESS_TOKEN, null, "", null, null, null, null, null,
                         HttpServletResponse.SC_UNAUTHORIZED, OAuth2ErrorCodes.INVALID_CLIENT},
 
-                // Exception thrown while extracting credentials from authz header.
-                // Will return unauthorized error response.
-                { AUTHORIZATION_HEADER, true, null, null, null, CLIENT_ID_VALUE, null, null, null,
-                        new OAuthClientException("Error!"), HttpServletResponse.SC_UNAUTHORIZED,
-                        OAuth2ErrorCodes.INVALID_CLIENT},
-
-                // Token not found in the request (with callback). Will return bad request error response.
-                { AUTHORIZATION_HEADER, false, null, null, APP_REDIRECT_URL, null, null, null, null, null,
+                // Will return bad request when the tocken is empty in the request
+                { AUTHORIZATION_HEADER, true, null, null, "", null, null, null, null, null,
                         HttpServletResponse.SC_BAD_REQUEST, OAuth2ErrorCodes.INVALID_REQUEST},
 
                 // Token not found in the request (callback is empty). Will return bad request error response.
@@ -235,18 +230,13 @@ public class OAuthRevocationEndpointTest extends PowerMockIdentityBaseTest {
         when(oAuthRevocationResponseDTO.getErrorMsg()).thenReturn(respError);
         when(oAuthRevocationResponseDTO.getResponseHeaders()).thenReturn(responseHeaders);
 
-        // Incorrect authorization header
-        if (authzHeader != null && authzHeader.split(" ").length != 2) {
-            doReturn(authzHeader.split(" ")).when(EndpointUtil.class, "extractCredentialsFromAuthzHeader", anyString());
-        } else if (e instanceof OAuthClientException) {
-            doThrow(e).when(EndpointUtil.class, "extractCredentialsFromAuthzHeader", anyString());
+        Response response;
+        try {
+             response = revocationEndpoint.revokeAccessToken(request, parameterMap);
+        } catch (InvalidRequestParentException ire) {
+            InvalidRequestExceptionMapper invalidRequestExceptionMapper = new InvalidRequestExceptionMapper();
+            response = invalidRequestExceptionMapper.toResponse(ire);
         }
-
-        spy(PrivilegedCarbonContext.class);
-        doNothing().when(PrivilegedCarbonContext.class, "startTenantFlow");
-        doNothing().when(PrivilegedCarbonContext.class, "endTenantFlow");
-
-        Response response = revocationEndpoint.revokeAccessToken(request, parameterMap);
         assertNotNull(response, "Token response is null");
         assertEquals(response.getStatus(), expectedStatus, "Unexpected HTTP response status");
 
@@ -257,34 +247,6 @@ public class OAuthRevocationEndpointTest extends PowerMockIdentityBaseTest {
                 assertTrue(response.getEntity().toString().contains(callback), "Callback is not added to the response");
             }
         }
-    }
-
-    @DataProvider(name = "testHandleServerFailureData")
-    public Object[][] testHandleServerFailureData() {
-        // Data to test behavior of handleServerFailure private method
-        return new Object[][] {
-                {APP_REDIRECT_URL, "application/javascript"},
-                {null, "text/html"},
-                {"", "text/html"}
-        };
-    }
-
-    @Test(dataProvider = "testHandleServerFailureData")
-    public void testHandleServerFailure(String callback, String content) throws Exception {
-        OAuthClientException ex = new OAuthClientException("OAuth client error!");
-
-        Class<?> clazz = OAuthRevocationEndpoint.class;
-        Object revokeEndpointObj = clazz.newInstance();
-        Method handleServerFailure = revokeEndpointObj.getClass().
-                getDeclaredMethod("handleServerFailure", String.class, Exception.class);
-        handleServerFailure.setAccessible(true);
-        Response response = (Response) handleServerFailure.invoke(revokeEndpointObj, callback, ex);
-        assertNotNull(response, "Error response is null");
-        assertEquals(response.getStatus(), HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-
-        MultivaluedMap<String, Object> responseMetadata = response.getMetadata();
-        assertNotNull(responseMetadata, "HTTP response metadata is null");
-        assertTrue(responseMetadata.get(HTTPConstants.HEADER_CONTENT_TYPE).contains(content), "Content type is wrong");
     }
 
     private HttpServletRequest mockHttpRequest(final Map<String, String[]> requestParams,

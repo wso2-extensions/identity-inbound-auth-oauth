@@ -21,7 +21,9 @@ package org.wso2.carbon.identity.oauth2;
 public class TestConstants {
     public static final String CARBON_TENANT_DOMAIN = "carbon.super";
     public static final String LOACALHOST_DOMAIN = "localhost";
-    public static final String TEST_USER_NAME = "testUser";
+    public static final String OAUTH2_TOKEN_EP = "https://localhost:9443/oauth2/token";
+    public static final String TEST_USER_NAME = "testUser@tenant.com";
+    public static final String TENANT_AWARE_USER_NAME = "testUser";
     public static final String ATTRIBUTE_CONSUMER_INDEX = "1234567890";
     public static final String SAMPLE_NAME_ID_FORMAT = "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress";
     public static final String SESSION_ID = "sessionId4567890";
@@ -47,6 +49,7 @@ public class TestConstants {
     public static final String AUTHORIZATION_HANDLER_RESPONSE_TYPE_TOKEN = "token";
     public static final String AUTHORIZATION_HANDLER_RESPONSE_TYPE_CODE = "code";
     public static final String AUTHORIZATION_HANDLER_RESPONSE_TYPE_ID_TOKEN = "id_token";
+    public static final String AUTHORIZATION_HANDLER_RESPONSE_TYPE_INVALID = "invalid";
 
     //Authorized Client
     public static final String CLIENT_ID = "ca19a540f544777860e44e75f605d927";
@@ -66,7 +69,8 @@ public class TestConstants {
     //UnAuthorized Client for Implicit Grant
     public static final String CLIENT_ID_UNAUTHORIZED_CLIENT = "dabfba9390aa423f8b04332794d83614";
     public static final String SECRET_UNAUTHORIZED_CLIENT = "5dcae004fba64e3a8a7cbebfdf02fcde";
-    public static final String SCOPE_UNAUTHORIZED_STRING = "abc xyz";
+    public static final String SCOPE_UNAUTHORIZED_SCOPE = "unauthorized_scope";
+    public static final String SCOPE_UNAUTHORIZED_ACCESS = "unauthorized_access_delegation";
 
     public static final String DB_TYPE_H2_SQL = "h2.sql";
     public static final String DB_SCRIPTS_FOLDER_NAME = "dbScripts";

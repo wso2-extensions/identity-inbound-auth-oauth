@@ -21,8 +21,6 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 
 import static org.testng.Assert.assertEquals;
 
-import java.lang.String;
-
 public class OAuthAuthzReqMessageContextTest {
     private OAuth2AuthorizeReqDTO authorizationReqDTON;
 
@@ -41,11 +39,12 @@ public class OAuthAuthzReqMessageContextTest {
     public void testSetAuthorizationReqDTO() throws Exception {
         OAuth2AuthorizeReqDTO authorizationReqDTON = new OAuth2AuthorizeReqDTO();
         authorizationReqDTON.setEssentialClaims("https://www.wso2.org/name");
-        assertEquals(authorizationReqDTON.getEssentialClaims(),
+        oauthAuthzReqMessageContext.setAuthorizationReqDTO(authorizationReqDTON);
+        assertEquals(oauthAuthzReqMessageContext.getAuthorizationReqDTO().getEssentialClaims(),
                 "https://www.wso2.org/name", "Valid claim value.");
 
         authorizationReqDTON.setConsumerKey("0289");
-        assertEquals(authorizationReqDTON.getConsumerKey(),
+        assertEquals(oauthAuthzReqMessageContext.getAuthorizationReqDTO().getConsumerKey(),
                 "0289", "Valid consumer key.");
     }
 

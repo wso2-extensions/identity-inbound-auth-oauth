@@ -21,11 +21,9 @@ package org.wso2.carbon.identity.oauth.endpoint.state;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.endpoint.OAuthRequestWrapper;
 import org.wso2.carbon.identity.oauth.endpoint.exception.AccessDeniedException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.BadRequestException;
-import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidApplicationClientException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
@@ -118,30 +116,12 @@ public class OAuthRequestStateValidator {
         }
 
         validateOauthApplication(oAuthMessage);
-
     }
 
     private void validateOauthApplication(OAuthMessage oAuthMessage) throws InvalidRequestParentException {
 
         if (StringUtils.isNotBlank(oAuthMessage.getClientId())) {
-            String appState = EndpointUtil.getOAuth2Service().getOauthApplicationState(oAuthMessage.getClientId());
-
-            if (StringUtils.isEmpty(appState)) {
-                if (log.isDebugEnabled()) {
-                    log.debug("A valid OAuth client could not be found for client_id: " + oAuthMessage.getClientId());
-                }
-
-                throw new InvalidApplicationClientException("A valid OAuth client could not be found for client_id: "
-                        + oAuthMessage.getClientId());
-            }
-
-            if (!OAuthConstants.OauthAppStates.APP_STATE_ACTIVE.equalsIgnoreCase(appState)) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Oauth App is not in active state for client ID : " + oAuthMessage.getClientId());
-                }
-
-                throw new InvalidApplicationClientException("Oauth application is not in active state");
-            }
+            EndpointUtil.validateOauthApplication(oAuthMessage.getClientId());
         }
     }
 

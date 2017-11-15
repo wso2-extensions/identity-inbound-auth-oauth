@@ -229,7 +229,7 @@
             </SupportedGrantType>
         </SupportedGrantTypes>
         <OAuthCallbackHandlers>
-            <OAuthCallbackHandler Class="org.wso2.carbon.identity.oauth.callback.DefaultCallbackHandler"/>
+            <OAuthCallbackHandler Class="org.wso2.carbon.identity.oauth2.test.utils.TestDefaultCallbackHandler"/>
         </OAuthCallbackHandlers>
         <!--TokenValidators>
             <TokenValidator type="bearer" class="org.wso2.carbon.identity.oauth2.validators.DefaultOAuth2TokenValidator"/>

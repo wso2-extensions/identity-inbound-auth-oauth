@@ -21,74 +21,53 @@ package org.wso2.carbon.identity.oauth.endpoint.user.impl;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.PlainJWT;
-import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.error.OAuthError;
-import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
-import org.wso2.carbon.identity.application.common.model.ClaimMapping;
-import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
-import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
-import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
-import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
-import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
-import org.wso2.carbon.identity.oauth.endpoint.util.ClaimUtil;
-import org.wso2.carbon.identity.oauth.user.UserInfoClaimRetriever;
 import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
-import org.wso2.carbon.identity.oauth.user.UserInfoResponseBuilder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
-import java.util.HashMap;
 import java.util.Map;
 
-public class UserInfoJWTResponse implements UserInfoResponseBuilder {
+import static org.apache.commons.lang.StringUtils.isNotBlank;
+
+/**
+ * Builds user info response as a JWT according to http://openid.net/specs/openid-connect-core-1_0.html#UserInfoResponse
+ */
+public class UserInfoJWTResponse extends UserInfoJSONResponseBuilder {
 
     private static final Log log = LogFactory.getLog(UserInfoJWTResponse.class);
-    private static final JWSAlgorithm DEFAULT_SIGNATURE_ALGO = new JWSAlgorithm(JWSAlgorithm.NONE.getName());
+    private static final JWSAlgorithm DEFAULT_SIGNATURE_ALGORITHM = new JWSAlgorithm(JWSAlgorithm.NONE.getName());
 
     @Override
-    public String getResponseString(OAuth2TokenValidationResponseDTO tokenResponse)
-            throws UserInfoEndpointException, OAuthSystemException {
-
-        JWSAlgorithm signatureAlgorithm = DEFAULT_SIGNATURE_ALGO;
-
-        Map<ClaimMapping, String> userAttributes = getUserAttributesFromCache(tokenResponse);
-
-        Map<String, Object> claims = null;
-        if (userAttributes.isEmpty()) {
-            if (log.isDebugEnabled()) {
-                log.debug("User attributes not found in cache. Trying to retrieve from user store.");
-            }
-            claims = ClaimUtil.getClaimsFromUserStore(tokenResponse);
-        } else {
-            UserInfoClaimRetriever retriever = UserInfoEndpointConfig.getInstance().getUserInfoClaimRetriever();
-            claims = retriever.getClaimsMap(userAttributes);
-        }
-        if(claims == null){
-            claims = new HashMap<String,Object>();
-        }
-        if(!claims.containsKey("sub") || StringUtils.isBlank((String) claims.get("sub"))) {
-            claims.put("sub", tokenResponse.getAuthorizedUser());
-        }
+    protected String buildResponse(OAuth2TokenValidationResponseDTO tokenResponse,
+                                   String spTenantDomain,
+                                   Map<String, Object> filteredUserClaims) throws UserInfoEndpointException {
 
         JWTClaimsSet jwtClaimsSet = new JWTClaimsSet();
-        jwtClaimsSet.setAllClaims(claims);
+        jwtClaimsSet.setAllClaims(filteredUserClaims);
+        return buildJWTResponse(tokenResponse, spTenantDomain, jwtClaimsSet);
+    }
 
+    private String buildJWTResponse(OAuth2TokenValidationResponseDTO tokenResponse,
+                                    String spTenantDomain,
+                                    JWTClaimsSet jwtClaimsSet) throws UserInfoEndpointException {
+
+        JWSAlgorithm signatureAlgorithm = DEFAULT_SIGNATURE_ALGORITHM;
         String sigAlg = OAuthServerConfiguration.getInstance().getUserInfoJWTSignatureAlgorithm();
-        if (StringUtils.isNotBlank(sigAlg)) {
+        if (isNotBlank(sigAlg)) {
             try {
                 signatureAlgorithm = OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(sigAlg);
             } catch (IdentityOAuth2Exception e) {
-                throw new UserInfoEndpointException("Provided signature algorithm : " + sigAlg + " is not supported.",
-                        e);
+                throw new UserInfoEndpointException("Provided signature algorithm : " + sigAlg + " is not supported.", e);
             }
         }
 
-        if (JWSAlgorithm.NONE.getName().equals(signatureAlgorithm.getName())) {
+        if (JWSAlgorithm.NONE.equals(signatureAlgorithm)) {
             if (log.isDebugEnabled()) {
                 log.debug("User Info JWT Signature algorithm is not defined. Returning unsigned JWT.");
             }
@@ -97,6 +76,21 @@ public class UserInfoJWTResponse implements UserInfoResponseBuilder {
 
         boolean isJWTSignedWithSPKey = OAuthServerConfiguration.getInstance().isJWTSignedWithSPKey();
         String signingTenantDomain;
+        if (isJWTSignedWithSPKey) {
+            signingTenantDomain = spTenantDomain;
+        } else {
+            AccessTokenDO accessTokenDO = getAccessTokenDO(tokenResponse);
+            signingTenantDomain = accessTokenDO.getAuthzUser().getTenantDomain();
+        }
+
+        try {
+            return OAuth2Util.signJWT(jwtClaimsSet, signatureAlgorithm, signingTenantDomain).serialize();
+        } catch (IdentityOAuth2Exception e) {
+            throw new UserInfoEndpointException("Error occurred while signing JWT", e);
+        }
+    }
+
+    private AccessTokenDO getAccessTokenDO(OAuth2TokenValidationResponseDTO tokenResponse) throws UserInfoEndpointException {
         AccessTokenDO accessTokenDO;
         try {
             accessTokenDO = OAuth2Util.getAccessTokenDOfromTokenIdentifier(tokenResponse
@@ -107,40 +101,8 @@ public class UserInfoJWTResponse implements UserInfoResponseBuilder {
 
         if (accessTokenDO == null) {
             // this means the token is not active so we can't proceed further
-            throw new UserInfoEndpointException(OAuthError.ResourceResponse.INVALID_TOKEN,
-                    "Invalid Access Token.");
+            throw new UserInfoEndpointException(OAuthError.ResourceResponse.INVALID_TOKEN, "Invalid Access Token.");
         }
-        signingTenantDomain = accessTokenDO.getAuthzUser().getTenantDomain();
-
-        if (isJWTSignedWithSPKey || StringUtils.isBlank(signingTenantDomain)) {
-            String clientId = null;
-            try {
-                clientId = accessTokenDO.getConsumerKey();
-                OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
-                signingTenantDomain = OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
-            } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
-                throw new UserInfoEndpointException("Error occurred while retrieving SP with client ID: " + clientId, e);
-            }
-        }
-
-        try {
-            return OAuth2Util.signJWT(jwtClaimsSet, signatureAlgorithm, signingTenantDomain).serialize();
-        } catch (IdentityOAuth2Exception e) {
-            throw new UserInfoEndpointException("Error occurred while signing JWT", e);
-        }
+        return accessTokenDO;
     }
-
-    private Map<ClaimMapping, String> getUserAttributesFromCache(OAuth2TokenValidationResponseDTO tokenResponse) {
-
-        Map<ClaimMapping,String> claims = new HashMap<ClaimMapping,String>();
-        AuthorizationGrantCacheKey cacheKey =
-                new AuthorizationGrantCacheKey(tokenResponse.getAuthorizationContextToken().getTokenString());
-        AuthorizationGrantCacheEntry cacheEntry =
-                (AuthorizationGrantCacheEntry) AuthorizationGrantCache.getInstance().getValueFromCacheByToken(cacheKey);
-        if (cacheEntry != null) {
-            claims = cacheEntry.getUserAttributes();
-        }
-        return claims;
-    }
-
 }

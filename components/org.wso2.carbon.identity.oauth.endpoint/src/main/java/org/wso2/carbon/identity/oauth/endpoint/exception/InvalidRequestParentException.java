@@ -27,6 +27,10 @@ public class InvalidRequestParentException extends Exception {
         super(message);
     }
 
+    public InvalidRequestParentException(Throwable cause) {
+        super(cause);
+    }
+
     public InvalidRequestParentException(String message, String errorCode) {
         super(message);
         this.errorCode = errorCode;

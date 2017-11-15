@@ -163,7 +163,13 @@ public class OAuthServerConfiguration {
     private String openIDConnectIDTokenSubClaim = "http://wso2.org/claims/fullname";
     private String openIDConnectSkipUserConsent = "true";
     private String openIDConnectIDTokenExpiration = "300";
+
+    private long DEFAULT_ID_TOKEN_EXPIRY_IN_SECONDS = 300L;
+    private long openIDConnectIDTokenExpiryTimeInMillis = DEFAULT_ID_TOKEN_EXPIRY_IN_SECONDS * 1000L;
+
     private String openIDConnectUserInfoEndpointClaimDialect = "http://wso2.org/claims";
+
+
     private String openIDConnectUserInfoEndpointClaimRetriever = "org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoUserStoreClaimRetriever";
     private String openIDConnectUserInfoEndpointRequestValidator = "org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInforRequestDefaultValidator";
     private String openIDConnectUserInfoEndpointAccessTokenValidator = "org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoISAccessTokenValidator";
@@ -175,19 +181,18 @@ public class OAuthServerConfiguration {
     private boolean isJWTSignedWithSPKey = false;
     // property added to fix IDENTITY-4534 in backward compatible manner
     private boolean isImplicitErrorFragment = true;
-
     // property added to fix IDENTITY-4112 in backward compatible manner
     private boolean isRevokeResponseHeadersEnabled = true;
+
     // property to make DisplayName property to be used in consent page
     private boolean showDisplayNameInConsentPage=false;
-
     // Use the SP tenant domain instead of user domain.
     private boolean useSPTenantDomainValue;
 
     // Property added to customize the token valued generation method. (IDENTITY-6139)
     private ValueGenerator tokenValueGenerator;
-    private String tokenValueGeneratorClassName;
 
+    private String tokenValueGeneratorClassName;
     private OAuthServerConfiguration() {
         buildOAuthServerConfiguration();
     }
@@ -866,11 +871,7 @@ public class OAuthServerConfiguration {
                                 Thread.currentThread().getContextClassLoader()
                                         .loadClass(openIDConnectIDTokenCustomClaimsHanlderClassName);
                         openidConnectIDTokenCustomClaimsCallbackHandler = (CustomClaimsCallbackHandler) clazz.newInstance();
-                    } catch (ClassNotFoundException e) {
-                        log.error("Error while instantiating the IDTokenBuilder ", e);
-                    } catch (InstantiationException e) {
-                        log.error("Error while instantiating the IDTokenBuilder ", e);
-                    } catch (IllegalAccessException e) {
+                    } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
                         log.error("Error while instantiating the IDTokenBuilder ", e);
                     }
                 }
@@ -900,10 +901,21 @@ public class OAuthServerConfiguration {
     }
 
     /**
+     * @deprecated use {@link #getOpenIDConnectIDTokenExpiryTimeInMillis()} instead
+     *
      * @return the openIDConnectIDTokenExpiration
      */
     public String getOpenIDConnectIDTokenExpiration() {
         return openIDConnectIDTokenExpiration;
+    }
+
+    /**
+     *
+     *
+     * @return ID Token expiry time in milliseconds.
+     */
+    public long getOpenIDConnectIDTokenExpiryTimeInMillis() {
+        return openIDConnectIDTokenExpiryTimeInMillis;
     }
 
     public String getOpenIDConnectUserInfoEndpointClaimDialect() {
@@ -1859,6 +1871,15 @@ public class OAuthServerConfiguration {
                 openIDConnectIDTokenExpiration =
                         openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_IDTOKEN_EXPIRATION))
                                 .getText().trim();
+
+                try {
+                    openIDConnectIDTokenExpiryTimeInMillis = Long.parseLong(openIDConnectIDTokenExpiration);
+                } catch (NumberFormatException ex) {
+                    log.warn("Invalid value: " + openIDConnectIDTokenExpiration + " set for ID Token Expiry Time in " +
+                            "Seconds. Value should be an integer. Setting expiry time to default value: " +
+                            DEFAULT_ID_TOKEN_EXPIRY_IN_SECONDS + " seconds.");
+                }
+
             }
             if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_USERINFO_ENDPOINT_CLAIM_DIALECT)) != null) {
                 openIDConnectUserInfoEndpointClaimDialect =

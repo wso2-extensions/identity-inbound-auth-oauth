@@ -42,8 +42,9 @@ import org.wso2.carbon.identity.oauth.common.NTLMAuthenticationValidator;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.SAML2GrantValidator;
-import org.wso2.carbon.identity.oauth.common.exception.OAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
+import org.wso2.carbon.identity.oauth.endpoint.expmapper.InvalidRequestExceptionMapper;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.TestOAuthEndpointBase;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
@@ -72,7 +73,6 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.powermock.api.mockito.PowerMockito.doAnswer;
 import static org.powermock.api.mockito.PowerMockito.doReturn;
-import static org.powermock.api.mockito.PowerMockito.doThrow;
 import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.spy;
@@ -149,7 +149,7 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
         mapWithCredentials.put(OAuth.OAUTH_CLIENT_ID, clientId);
         mapWithCredentials.put(OAuth.OAUTH_CLIENT_SECRET, secret);
 
-        MultivaluedMap<String, String> mapWithClientId = new MultivaluedHashMap<String, String>();
+        MultivaluedMap<String, String> mapWithClientId = new MultivaluedHashMap<>();
         mapWithClientId.put(OAuth.OAUTH_CLIENT_ID, clientId);
 
         String inactiveClientHeader =
@@ -179,11 +179,6 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
                 // Request with invalid authorization header. Will return unauthorized error
                 {CLIENT_ID_VALUE, inCorrectAuthzHeader, mapWithClientId, GrantType.PASSWORD.toString(), null, null,
                         null, HttpServletResponse.SC_UNAUTHORIZED, OAuth2ErrorCodes.INVALID_CLIENT },
-
-                // Exception while extracting credentials from authz header. Will return unauthorized error
-                {CLIENT_ID_VALUE, AUTHORIZATION_HEADER, new MultivaluedHashMap<String, String>(),
-                        GrantType.PASSWORD.toString(), null, null, new OAuthClientException("error"),
-                        HttpServletResponse.SC_UNAUTHORIZED, OAuth2ErrorCodes.INVALID_CLIENT },
 
                 // Request from inactive client. Will give unauthorized error
                 {INACTIVE_CLIENT_ID_VALUE, inactiveClientHeader, new MultivaluedHashMap<String, String>(),
@@ -260,13 +255,6 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
         when(oAuth2AccessTokenRespDTO.getIDToken()).thenReturn(idToken);
         when(oAuth2AccessTokenRespDTO.getResponseHeaders()).thenReturn(responseHeaders);
 
-        // Incorrect authorization header
-        if (authzHeader != null && authzHeader.split(" ").length != 2) {
-            doReturn(authzHeader.split(" ")).when(EndpointUtil.class, "extractCredentialsFromAuthzHeader", anyString());
-        } else if (e instanceof OAuthClientException) {
-            doThrow(e).when(EndpointUtil.class, "extractCredentialsFromAuthzHeader", anyString());
-        }
-
         mockOAuthServerConfiguration();
         mockStatic(IdentityDatabaseUtil.class);
         when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
@@ -275,8 +263,15 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
         grantTypeValidators.put(GrantType.PASSWORD.toString(), PasswordValidator.class);
 
         when(oAuthServerConfiguration.getSupportedGrantTypeValidators()).thenReturn(grantTypeValidators);
+        when(oAuth2Service.getOauthApplicationState(CLIENT_ID_VALUE)).thenReturn("ACTIVE");
 
-        Response response = oAuth2TokenEndpoint.issueAccessToken(request, paramMap);
+        Response response;
+        try {
+            response = oAuth2TokenEndpoint.issueAccessToken(request, paramMap);
+        } catch (InvalidRequestParentException ire) {
+            InvalidRequestExceptionMapper invalidRequestExceptionMapper = new InvalidRequestExceptionMapper();
+            response = invalidRequestExceptionMapper.toResponse(ire);
+        }
 
         assertNotNull(response, "Token response is null");
         assertEquals(response.getStatus(), expectedStatus, "Unexpected HTTP response status");
@@ -347,8 +342,15 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
         grantTypeValidators.put(GrantType.PASSWORD.toString(), PasswordValidator.class);
 
         when(oAuthServerConfiguration.getSupportedGrantTypeValidators()).thenReturn(grantTypeValidators);
+        when(oAuth2Service.getOauthApplicationState(CLIENT_ID_VALUE)).thenReturn("ACTIVE");
 
-        Response response = oAuth2TokenEndpoint.issueAccessToken(request, new MultivaluedHashMap<String, String>());
+        Response response;
+        try {
+            response = oAuth2TokenEndpoint.issueAccessToken(request, new MultivaluedHashMap<String, String>());
+        } catch (InvalidRequestParentException ire) {
+            InvalidRequestExceptionMapper invalidRequestExceptionMapper = new InvalidRequestExceptionMapper();
+            response = invalidRequestExceptionMapper.toResponse(ire);
+        }
 
         assertNotNull(response, "Token response is null");
         assertEquals(response.getStatus(), expectedStatus, "Unexpected HTTP response status");
@@ -434,7 +436,7 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
         Class<?> clazz = OAuth2TokenEndpoint.class;
         Object tokenEndpointObj = clazz.newInstance();
         Method getAccessToken = tokenEndpointObj.getClass().
-                getDeclaredMethod("getAccessToken", CarbonOAuthTokenRequest.class);
+                getDeclaredMethod("issueAccessToken", CarbonOAuthTokenRequest.class);
         getAccessToken.setAccessible(true);
         OAuth2AccessTokenRespDTO tokenRespDTO = (OAuth2AccessTokenRespDTO)
                 getAccessToken.invoke(tokenEndpointObj, oauthRequest);
@@ -445,27 +447,6 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
             assertNotNull(parametersSetToRequest.get(param), "Required parameter " + param + " is not set for " +
                     grantType + "grant type");
         }
-    }
-
-    @Test(dependsOnGroups = "testWithConnection")
-    public void testExceptionFromOAuthAppDAO() throws Exception {
-        Map<String, String[]> requestParams = new HashMap<>();
-        requestParams.put(OAuth.OAUTH_CLIENT_ID, new String[]{CLIENT_ID_VALUE});
-        requestParams.put(OAuth.OAUTH_GRANT_TYPE, new String[]{GrantType.PASSWORD.toString()});
-
-        HttpServletRequest request = mockHttpRequest(requestParams, new HashMap<String, Object>());
-        when(request.getHeader(OAuthConstants.HTTP_REQ_HEADER_AUTHZ)).thenReturn(AUTHORIZATION_HEADER);
-
-        mockOAuthServerConfiguration();
-        mockStatic(IdentityDatabaseUtil.class);
-        when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
-
-        connection.close(); // Closing connection to manipulate SQLException
-        Response response = oAuth2TokenEndpoint.issueAccessToken(request, new MultivaluedHashMap<String, String>());
-        assertNotNull(response, "Token response is null");
-        assertEquals(response.getStatus(), HttpServletResponse.SC_NOT_FOUND,
-                "Incorrect response for IdentityOAuthAdminException");
-        assertTrue(response.getEntity().toString().contains(OAuth2ErrorCodes.SERVER_ERROR), "Error code not found");
     }
 
     private HttpServletRequest mockHttpRequest(final Map<String, String[]> requestParams,
