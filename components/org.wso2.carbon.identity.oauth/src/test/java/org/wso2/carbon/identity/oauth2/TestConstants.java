@@ -57,6 +57,9 @@ public class TestConstants {
     public static final String SECRET = "87n9a540f544777860e44e75f605d435";
     public static final String APP_NAME = "myApp";
     public static final String USER_NAME = "user1";
+    public static final String PASSWORD = "password";
+    public static final String USER_STORE_DOMAIN = "PRIMARY";
+    public static final String DEFAULT_PROFILE = "default";
     public static final String APP_STATE = "ACTIVE";
     public static final String CALLBACK = "http://localhost:8080/redirect";
     public static final String USER_DOMAIN_PRIMARY = "PRIMARY";
@@ -64,8 +67,9 @@ public class TestConstants {
     public static final String OPENID_SCOPE_STRING = "openid";
     public static final String GRANT_TYPES_STRING =
             "refresh_token implicit password iwa:ntlm client_credentials authorization_code";
-    public static final String ACCESS_OKEN = "d43e8da324a33bdc941b9b95cad6a6a2";
-    public static final String REFRESH_OKEN = "2881c5a375d03dc0ba12787386451b29";
+    public static final String ACCESS_TOKEN = "d43e8da324a33bdc941b9b95cad6a6a2";
+    public static final String REFRESH_TOKEN = "2881c5a375d03dc0ba12787386451b29";
+    public static final String APP_TYPE = "oauth2";
 
     //UnAuthorized Client for Implicit Grant
     public static final String CLIENT_ID_UNAUTHORIZED_CLIENT = "dabfba9390aa423f8b04332794d83614";

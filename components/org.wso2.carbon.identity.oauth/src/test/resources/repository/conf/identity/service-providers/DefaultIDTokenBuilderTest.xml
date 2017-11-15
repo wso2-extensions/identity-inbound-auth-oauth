@@ -39,6 +39,7 @@
             </AuthenticationStep>
         </AuthenticationSteps>
         <UseUserstoreDomainInUsername>true</UseUserstoreDomainInUsername>
+        <subjectClaimUri>http://wso2.org/claims/username</subjectClaimUri>
         <UseTenantDomainInUsername>true</UseTenantDomainInUsername>
     </LocalAndOutBoundAuthenticationConfig>
     <RequestPathAuthenticatorConfigs></RequestPathAuthenticatorConfigs>
