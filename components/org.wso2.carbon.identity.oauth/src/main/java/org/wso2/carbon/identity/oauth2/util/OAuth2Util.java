@@ -1724,11 +1724,11 @@ public class OAuth2Util {
             signedJWT.sign(signer);
             return signedJWT;
         } catch (JOSEException e) {
-            log.error("Error in obtaining tenant's keystore", e);
-            throw new IdentityOAuth2Exception("Error in obtaining tenant's keystore", e);
+            log.error("Error while signing from HMAC", e);
+            throw new IdentityOAuth2Exception("Error while signing from HMAC", e);
         } catch (Exception e) {
-            log.error("Error in obtaining tenant's keystore", e);
-            throw new IdentityOAuth2Exception("Error in obtaining tenant's keystore", e);
+            log.error("Error while signing from HMAC", e);
+            throw new IdentityOAuth2Exception("Error while signing from HMAC", e);
         }
     }
 

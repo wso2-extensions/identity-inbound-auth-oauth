@@ -24,10 +24,7 @@ import com.nimbusds.jwt.PlainJWT;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.error.OAuthError;
-import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
-import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
-import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
@@ -107,21 +104,5 @@ public class UserInfoJWTResponse extends UserInfoJSONResponseBuilder {
             throw new UserInfoEndpointException(OAuthError.ResourceResponse.INVALID_TOKEN, "Invalid Access Token.");
         }
         return accessTokenDO;
-    }
-
-    private OAuthAppDO getAppDo(String clientId) throws IdentityOAuth2Exception {
-        OAuthAppDAO appDAO = new OAuthAppDAO();
-        OAuthAppDO appDO;
-        try {
-            appDO = appDAO.getAppInformation(clientId);
-            // Adding the OAuthAppDO as a context property for further use
-        } catch (IdentityOAuth2Exception e) {
-            log.debug(e.getMessage(), e);
-            throw new IdentityOAuth2Exception(e.getMessage());
-        } catch (InvalidOAuthClientException e) {
-            log.debug(e.getMessage(), e);
-            throw new IdentityOAuth2Exception(e.getMessage());
-        }
-        return appDO;
     }
 }
