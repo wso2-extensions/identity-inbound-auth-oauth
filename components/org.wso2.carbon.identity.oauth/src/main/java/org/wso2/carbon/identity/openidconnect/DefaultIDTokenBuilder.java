@@ -110,7 +110,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         String spTenantDomain = getSpTenantDomain(tokenReqMsgCtxt);
         String idTokenIssuer = getIdTokenIssuer(spTenantDomain);
 
-        long idTokenValidityInMillis = OAuthServerConfiguration.getInstance().getOpenIDConnectIDTokenExpiryTimeInMillis();
+        long idTokenValidityInMillis = getIDTokenExpiryInMillis();
         long currentTimeInMillis = Calendar.getInstance().getTimeInMillis();
 
         AuthenticatedUser authorizedUser = tokenReqMsgCtxt.getAuthorizedUser();
@@ -199,7 +199,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         String nonceValue = authzReqMessageContext.getAuthorizationReqDTO().getNonce();
         LinkedHashSet acrValue = authzReqMessageContext.getAuthorizationReqDTO().getACRValues();
 
-        long idTokenLifeTimeInMillis = OAuthServerConfiguration.getInstance().getOpenIDConnectIDTokenExpiryTimeInMillis();
+        long idTokenLifeTimeInMillis = getIDTokenExpiryInMillis();
         long currentTimeInMillis = Calendar.getInstance().getTimeInMillis();
 
         if (log.isDebugEnabled()) {
@@ -758,6 +758,10 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         }
         // All mandatory claims are present.
         return true;
+    }
+
+    private long getIDTokenExpiryInMillis() {
+        return OAuthServerConfiguration.getInstance().getOpenIDConnectIDTokenExpiryTimeInSeconds() * 1000L;
     }
 }
 
