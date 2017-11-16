@@ -112,7 +112,7 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
                                                       String clientId,
                                                       String serviceProviderTenantDomain) {
         return OpenIDConnectServiceComponentHolder.getInstance()
-                .getOpenIDConnectClaimFilter()
+                .getHighestPriorityOpenIDConnectClaimFilter()
                 .getClaimsFilteredByOIDCScopes(userClaims, requestedScopes, clientId, serviceProviderTenantDomain);
     }
 
