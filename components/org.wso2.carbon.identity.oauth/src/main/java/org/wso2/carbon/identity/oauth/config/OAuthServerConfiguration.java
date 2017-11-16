@@ -164,7 +164,7 @@ public class OAuthServerConfiguration {
     private String openIDConnectSkipUserConsent = "true";
     private String openIDConnectIDTokenExpiration = "300";
 
-    private long DEFAULT_ID_TOKEN_EXPIRY_IN_SECONDS = 300L;
+    private long DEFAULT_ID_TOKEN_EXPIRY_IN_SECONDS = 300;
     private long openIDConnectIDTokenExpiryTimeInMillis = DEFAULT_ID_TOKEN_EXPIRY_IN_SECONDS * 1000L;
 
     private String openIDConnectUserInfoEndpointClaimDialect = "http://wso2.org/claims";
@@ -1873,7 +1873,7 @@ public class OAuthServerConfiguration {
                                 .getText().trim();
 
                 try {
-                    openIDConnectIDTokenExpiryTimeInMillis = Long.parseLong(openIDConnectIDTokenExpiration);
+                    openIDConnectIDTokenExpiryTimeInMillis = Long.parseLong(openIDConnectIDTokenExpiration) * 1000L;
                 } catch (NumberFormatException ex) {
                     log.warn("Invalid value: " + openIDConnectIDTokenExpiration + " set for ID Token Expiry Time in " +
                             "Seconds. Value should be an integer. Setting expiry time to default value: " +

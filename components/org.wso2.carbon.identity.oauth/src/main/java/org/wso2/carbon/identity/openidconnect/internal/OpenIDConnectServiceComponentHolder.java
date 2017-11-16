@@ -33,19 +33,11 @@ public class OpenIDConnectServiceComponentHolder {
         return instance;
     }
 
-    public void addOpenIDConnectClaimFilter(OpenIDConnectClaimFilter openIDConnectClaimFilter) {
-        openIDConnectClaimFilters.add(openIDConnectClaimFilter);
-    }
-
-    public void removeOpenIDConnectClaimFilter(OpenIDConnectClaimFilter openIDConnectClaimFilter) {
-        openIDConnectClaimFilters.remove(openIDConnectClaimFilter);
-    }
-
     /**
      *
      * @return The OIDC Claim Filter with the highest priority.
      */
-    public OpenIDConnectClaimFilter getOpenIDConnectClaimFilter() {
+    public OpenIDConnectClaimFilter getHighestPriorityOpenIDConnectClaimFilter() {
         if (openIDConnectClaimFilters.isEmpty()) {
             throw new RuntimeException("No OpenIDConnect Claim Filters available.");
         }

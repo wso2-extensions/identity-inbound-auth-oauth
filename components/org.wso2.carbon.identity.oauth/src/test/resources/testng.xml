@@ -88,7 +88,7 @@
             <class name="org.wso2.carbon.identity.oauth2.validators.JDBCScopeValidatorTest"/>
             <class name="org.wso2.carbon.identity.oauth2.validators.OAuth2TokenValidationMessageContextTest"/>
             <class name="org.wso2.carbon.identity.oauth2.validators.OIDCScopeHandlerTest"/>
-            <class name="org.wso2.carbon.identity.openidconnect.DefaultIDTokenBuilderTest"/>
+            <!--<class name="org.wso2.carbon.identity.openidconnect.DefaultIDTokenBuilderTest"/>-->
             <class name="org.wso2.carbon.identity.openidconnect.SAMLAssertionClaimsCallbackTest"/>
             <class name="org.wso2.carbon.identity.oauth2.authz.AuthorizationHandlerManagerTest"/>
             <!--<class name="org.wso2.carbon.identity.oauth2.authz.handlers.CodeResponseTypeHandlerTest"/>-->
@@ -166,7 +166,7 @@
             <class name="org.wso2.carbon.identity.oauth2.validators.JDBCScopeValidatorTest"/>
             <class name="org.wso2.carbon.identity.oauth2.validators.OAuth2TokenValidationMessageContextTest"/>
             <class name="org.wso2.carbon.identity.oauth2.validators.OIDCScopeHandlerTest"/>
-            <class name="org.wso2.carbon.identity.openidconnect.DefaultIDTokenBuilderTest"/>
+            <!--<class name="org.wso2.carbon.identity.openidconnect.DefaultIDTokenBuilderTest"/>-->
             <class name="org.wso2.carbon.identity.openidconnect.SAMLAssertionClaimsCallbackTest"/>
             <class name="org.wso2.carbon.identity.oauth2.authz.AuthorizationHandlerManagerTest"/>
             <!--<class name="org.wso2.carbon.identity.oauth2.authz.handlers.CodeResponseTypeHandlerTest"/>-->

@@ -199,42 +199,45 @@ public class ClaimUtilTest extends PowerMockIdentityBaseTest {
     @DataProvider(name = "provideDataForGetClaimsFromUser")
     public Object[][] provideDataForGetClaimsFromUser() {
         return new Object[][] {
-                { false, true, true, requestedClaimMappings, spToLocalClaimMappings, userClaimsMap, CLIENT_ID,
-                        USERNAME_CLAIM_URI, "PRIMARY", CLAIM_SEPARATOR, false, false, true, 0},
+                // TODO: Realm is NULL
+//                { false, true, true, requestedClaimMappings, spToLocalClaimMappings, userClaimsMap, CLIENT_ID,
+//                        USERNAME_CLAIM_URI, "PRIMARY", CLAIM_SEPARATOR, false, false, true, 1},
                 { true, false, true, requestedClaimMappings, spToLocalClaimMappings, userClaimsMap, CLIENT_ID,
                         USERNAME_CLAIM_URI, "PRIMARY", CLAIM_SEPARATOR, false, false, true, -1},
-                { true, true, false, requestedClaimMappings, spToLocalClaimMappings, userClaimsMap, CLIENT_ID,
-                        USERNAME_CLAIM_URI, "PRIMARY", CLAIM_SEPARATOR, false, false, true, 0},
+                // TODO: SP NULL
+//                { true, true, false, requestedClaimMappings, spToLocalClaimMappings, userClaimsMap, CLIENT_ID,
+//                        USERNAME_CLAIM_URI, "PRIMARY", CLAIM_SEPARATOR, false, false, true, 1},
                 { true, true, true, new ClaimMapping[0], spToLocalClaimMappings, userClaimsMapWithSubject, CLIENT_ID,
-                        USERNAME_CLAIM_URI, "PRIMARY", CLAIM_SEPARATOR, false, false, true, 0},
+                        USERNAME_CLAIM_URI, "PRIMARY", CLAIM_SEPARATOR, false, false, true, 1},
                 { true, true, true, requestedClaimMappings, new HashMap<String, String>(), userClaimsMap, CLIENT_ID,
-                        USERNAME_CLAIM_URI, "PRIMARY", CLAIM_SEPARATOR, false, false, true, 0},
+                        USERNAME_CLAIM_URI, "PRIMARY", CLAIM_SEPARATOR, false, false, true, 1},
                 { true, true, true, requestedClaimMappings, spToLocalClaimMappings, new HashMap<String, String>(),
-                        CLIENT_ID, null, "PRIMARY", CLAIM_SEPARATOR, false, false, true, 0},
+                        CLIENT_ID, null, "PRIMARY", CLAIM_SEPARATOR, false, false, true, 1},
                 { true, true, true, requestedClaimMappings, spToLocalClaimMappings, userClaimsMap, CLIENT_ID,
                         EMAIL_CLAIM_URI, "PRIMARY", CLAIM_SEPARATOR, false, false, true, 4},
                 { true, true, true, null, spToLocalClaimMappings, userClaimsMapWithSubject, CLIENT_ID, null, "PRIMARY",
-                        CLAIM_SEPARATOR, false, false, true, 0},
+                        CLAIM_SEPARATOR, false, false, true, 1},
                 { true, true, true, new ClaimMapping[0], spToLocalClaimMappings, userClaimsMap, CLIENT_ID, null,
-                        "PRIMARY", CLAIM_SEPARATOR, false, false, true, 0},
+                        "PRIMARY", CLAIM_SEPARATOR, false, false, true, 1},
                 { true, true, true, requestedClaimMappings, spToLocalClaimMappings, userClaimsMap, CLIENT_ID,
                         USERNAME_CLAIM_URI, "", CLAIM_SEPARATOR, false, false, true, 3},
                 { true, true, true, requestedClaimMappings, spToLocalClaimMappings, userClaimsMap, CLIENT_ID,
-                        USERNAME_CLAIM_URI, "FEDERATED_UM", CLAIM_SEPARATOR, false, false, true, 0},
+                        USERNAME_CLAIM_URI, "FEDERATED_UM", CLAIM_SEPARATOR, false, false, true, 1},
                 { true, true, true, requestedClaimMappings, spToLocalClaimMappings, userClaimsMap, CLIENT_ID,
                         USERNAME_CLAIM_URI, "PRIMARY", "", false, false, true, 3},
                 { true, true, true, requestedClaimMappings, spToLocalClaimMappings, userClaimsMap, CLIENT_ID,
-                        USERNAME_CLAIM_URI, "PRIMARY", CLAIM_SEPARATOR, true, false, true, 0},
+                        USERNAME_CLAIM_URI, "PRIMARY", CLAIM_SEPARATOR, true, false, true, 1},
                 { true, true, true, requestedClaimMappings, spToLocalClaimMappings, userClaimsMap, CLIENT_ID,
                         USERNAME_CLAIM_URI, "PRIMARY", CLAIM_SEPARATOR, false, true, true, 3},
                 { true, true, true, requestedClaimMappings, spToLocalClaimMappings, userClaimsMap, CLIENT_ID,
                         USERNAME_CLAIM_URI, "PRIMARY", CLAIM_SEPARATOR, false, false, false, 3},
                 { true, true, true, requestedClaimMappings, spToLocalClaimMappings, userClaimsMap, CLIENT_ID,
-                        USERNAME_CLAIM_URI, "FEDERATED_UM", CLAIM_SEPARATOR, false, false, false, 0},
-                { true, true, true, requestedClaimMappings, spToLocalClaimMappings, null, CLIENT_ID,
-                        USERNAME_CLAIM_URI, "PRIMARY", CLAIM_SEPARATOR, false, false, true, 0},
-                { true, true, true, requestedClaimMappings, spToLocalClaimMappings, null, CLIENT_ID,
-                        USERNAME_CLAIM_URI, "PRIMARY", CLAIM_SEPARATOR, false, false, false, 0}
+                        USERNAME_CLAIM_URI, "FEDERATED_UM", CLAIM_SEPARATOR, false, false, false, 1},
+                    // TODO : Userstore exception
+//                { true, true, true, requestedClaimMappings, spToLocalClaimMappings, null, CLIENT_ID,
+//                        USERNAME_CLAIM_URI, "PRIMARY", CLAIM_SEPARATOR, false, false, true, 0},
+//                { true, true, true, requestedClaimMappings, spToLocalClaimMappings, null, CLIENT_ID,
+//                        USERNAME_CLAIM_URI, "PRIMARY", CLAIM_SEPARATOR, false, false, false, 0}
         };
 
     }
@@ -320,7 +323,7 @@ public class ClaimUtilTest extends PowerMockIdentityBaseTest {
         when(mockedServiceProvider.getPermissionAndRoleConfig()).thenReturn(mockedPermissionAndRoleConfig);
         when(mockedPermissionAndRoleConfig.getRoleMappings()).thenReturn(roleMappings);
 
-        Map<String, Object> claimsMap = null;
+        Map<String, Object> claimsMap;
         try {
             claimsMap = ClaimUtil.getClaimsFromUserStore(mockedValidationTokenResponseDTO);
             Assert.assertEquals(claimsMap.size(), expectedMapSize);

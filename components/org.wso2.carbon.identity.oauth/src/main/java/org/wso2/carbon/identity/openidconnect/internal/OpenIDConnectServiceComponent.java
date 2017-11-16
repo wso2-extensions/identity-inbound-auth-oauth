@@ -53,7 +53,7 @@ public class OpenIDConnectServiceComponent {
             log.debug("OpenIDConnectClaimFilter: " + openIDConnectClaimFilter.getClass().getName() + " set in " +
                     "OpenIDConnectServiceComponent.");
         }
-        OpenIDConnectServiceComponentHolder.getInstance().addOpenIDConnectClaimFilter(openIDConnectClaimFilter);
+        OpenIDConnectServiceComponentHolder.getInstance().getOpenIDConnectClaimFilters().add(openIDConnectClaimFilter);
         Collections.sort(OpenIDConnectServiceComponentHolder.getInstance().getOpenIDConnectClaimFilters(),
                 getOIDCClaimFilterComparator());
     }
@@ -73,7 +73,9 @@ public class OpenIDConnectServiceComponent {
             log.debug("OpenIDConnectClaimFilter: " + openIDConnectClaimFilter.getClass().getName() + " unset in " +
                     "OpenIDConnectServiceComponent.");
         }
-        OpenIDConnectServiceComponentHolder.getInstance().removeOpenIDConnectClaimFilter(openIDConnectClaimFilter);
+        OpenIDConnectServiceComponentHolder.getInstance().getOpenIDConnectClaimFilters().remove(openIDConnectClaimFilter);
+        Collections.sort(OpenIDConnectServiceComponentHolder.getInstance().getOpenIDConnectClaimFilters(),
+                getOIDCClaimFilterComparator());
     }
 
     @Reference(

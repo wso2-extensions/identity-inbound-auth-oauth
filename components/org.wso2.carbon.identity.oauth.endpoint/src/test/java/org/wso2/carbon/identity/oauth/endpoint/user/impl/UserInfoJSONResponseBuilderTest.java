@@ -19,15 +19,20 @@
 package org.wso2.carbon.identity.oauth.endpoint.user.impl;
 
 import org.apache.oltu.oauth2.common.utils.JSONUtils;
+import org.mockito.Mockito;
+import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.testng.annotations.BeforeTest;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.endpoint.util.ClaimUtil;
+import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.registry.core.service.RegistryService;
 
@@ -36,7 +41,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
+import static org.mockito.Mockito.*;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
@@ -50,6 +57,13 @@ import static org.testng.Assert.assertTrue;
 @PrepareForTest({OAuthServerConfiguration.class, OAuth2Util.class, IdentityTenantUtil.class, RegistryService.class,
         AuthorizationGrantCache.class, ClaimUtil.class, IdentityUtil.class, UserInfoEndpointConfig.class})
 public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
+
+    private UserInfoJSONResponseBuilder userInfoJSONResponseBuilder;
+
+    @BeforeTest
+    public void setUpTest() {
+        userInfoJSONResponseBuilder = new UserInfoJSONResponseBuilder();
+    }
 
     @DataProvider(name = "responseStringInputs")
     public Object[][] responseStringInputs() {
@@ -170,14 +184,19 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
 
     @Test(dataProvider = "subjectClaimDataProvider")
     public void testSubjectClaim(Map<String, Object> inputClaims,
-                                 String authorizedUsername,
+                                 Object authorizedUsername,
                                  boolean appendTenantDomain,
                                  boolean appendUserStoreDomain,
                                  String expectedSubjectValue) throws Exception {
         try {
-            prepareForSubjectClaimTest(inputClaims, appendTenantDomain, appendUserStoreDomain);
+            AuthenticatedUser authzUser = (AuthenticatedUser) authorizedUsername;
+            prepareForSubjectClaimTest(authzUser, inputClaims, appendTenantDomain, appendUserStoreDomain);
+
+            when(userInfoJSONResponseBuilder.retrieveUserClaims(any(OAuth2TokenValidationResponseDTO.class)))
+                    .thenReturn(inputClaims);
+
             String responseString =
-                    userInfoJSONResponseBuilder.getResponseString(getTokenResponseDTO(authorizedUsername));
+                    userInfoJSONResponseBuilder.getResponseString(getTokenResponseDTO((authzUser).toFullQualifiedUsername()));
 
             Map<String, Object> claimsInResponse = JSONUtils.parseJSON(responseString);
             assertSubjectClaimPresent(claimsInResponse);

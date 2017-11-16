@@ -21,16 +21,22 @@ package org.wso2.carbon.identity.oauth.endpoint.user.impl;
 import com.nimbusds.jwt.JWT;
 import com.nimbusds.jwt.JWTParser;
 import com.nimbusds.jwt.ReadOnlyJWTClaimsSet;
+import org.mockito.Spy;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
+import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 
 import java.util.List;
 import java.util.Map;
 
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
@@ -47,7 +53,6 @@ public class UserInfoJWTResponseTest extends UserInfoResponseBaseTest {
     public void setup() {
         userInfoJWTResponse = new UserInfoJWTResponse();
     }
-
     @DataProvider(name = "subjectClaimDataProvider")
     public Object[][] provideSubjectData() {
         return getSubjectClaimTestData();
@@ -55,14 +60,20 @@ public class UserInfoJWTResponseTest extends UserInfoResponseBaseTest {
 
     @Test(dataProvider = "subjectClaimDataProvider")
     public void testSubjectClaim(Map<String, Object> inputClaims,
-                                 String authorizedUser,
+                                 Object authorizedUser,
                                  boolean appendTenantDomain,
                                  boolean appendUserStoreDomain,
                                  String expectedSubjectValue) throws Exception {
         try {
-            prepareForSubjectClaimTest(inputClaims, appendTenantDomain, appendUserStoreDomain);
+            AuthenticatedUser authenticatedUser = (AuthenticatedUser) authorizedUser;
+            prepareForSubjectClaimTest(authenticatedUser, inputClaims, appendTenantDomain, appendUserStoreDomain);
+
+            userInfoJWTResponse = spy(new UserInfoJWTResponse());
+            when(userInfoJWTResponse.retrieveUserClaims(any(OAuth2TokenValidationResponseDTO.class)))
+                    .thenReturn(inputClaims);
+
             String responseString =
-                    userInfoJWTResponse.getResponseString(getTokenResponseDTO(authorizedUser));
+                    userInfoJWTResponse.getResponseString(getTokenResponseDTO(authenticatedUser.toFullQualifiedUsername()));
 
             JWT jwt = JWTParser.parse(responseString);
             assertNotNull(jwt);

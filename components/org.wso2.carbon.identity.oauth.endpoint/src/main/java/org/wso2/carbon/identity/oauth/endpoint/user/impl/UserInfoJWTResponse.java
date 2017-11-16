@@ -25,11 +25,13 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.endpoint.util.ClaimUtil;
 import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.openidconnect.AbstractUserInfoResponseBuilder;
 
 import java.util.Map;
 
@@ -38,10 +40,16 @@ import static org.apache.commons.lang.StringUtils.isNotBlank;
 /**
  * Builds user info response as a JWT according to http://openid.net/specs/openid-connect-core-1_0.html#UserInfoResponse
  */
-public class UserInfoJWTResponse extends UserInfoJSONResponseBuilder {
+public class UserInfoJWTResponse extends AbstractUserInfoResponseBuilder {
 
     private static final Log log = LogFactory.getLog(UserInfoJWTResponse.class);
     private static final JWSAlgorithm DEFAULT_SIGNATURE_ALGORITHM = new JWSAlgorithm(JWSAlgorithm.NONE.getName());
+
+    @Override
+    protected Map<String, Object> retrieveUserClaims(OAuth2TokenValidationResponseDTO tokenResponse)
+            throws UserInfoEndpointException {
+        return ClaimUtil.getClaimsFromUserStore(tokenResponse);
+    }
 
     @Override
     protected String buildResponse(OAuth2TokenValidationResponseDTO tokenResponse,

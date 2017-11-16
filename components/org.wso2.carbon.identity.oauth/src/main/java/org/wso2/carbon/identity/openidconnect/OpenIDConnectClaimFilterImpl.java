@@ -59,6 +59,7 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
 
     private static final String SCOPE_CLAIM_PREFIX = ".";
     private static final Log log = LogFactory.getLog(OpenIDConnectClaimFilterImpl.class);
+    private static final int DEFAULT_PRIORITY = 100;
 
     @Override
     public Map<String, Object> getClaimsFilteredByOIDCScopes(Map<String, Object> userClaims,
@@ -121,7 +122,7 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
 
     @Override
     public int getPriority() {
-        return 100;
+        return DEFAULT_PRIORITY;
     }
 
     private Properties getOIDCScopeProperties(String spTenantDomain) {

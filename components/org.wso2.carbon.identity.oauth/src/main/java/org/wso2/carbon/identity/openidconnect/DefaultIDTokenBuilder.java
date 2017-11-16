@@ -39,6 +39,7 @@ import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
@@ -115,7 +116,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         long currentTimeInMillis = Calendar.getInstance().getTimeInMillis();
 
         AuthenticatedUser authorizedUser = tokenReqMsgCtxt.getAuthorizedUser();
-        String subjectClaim = getSubjectClaim(tokenReqMsgCtxt, clientId, spTenantDomain, authorizedUser);
+        String subjectClaim = getSubjectClaim(tokenReqMsgCtxt, tokenRespDTO, clientId, spTenantDomain, authorizedUser);
 
         String nonceValue = null;
         long authTime = 0;
@@ -123,13 +124,13 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
 
         // AuthorizationCode only available for authorization code grant type
         if (getAuthorizationCode(tokenReqMsgCtxt) != null) {
-            AuthorizationGrantCacheEntry authorizationGrantCacheEntry = getAuthorizationGrantCacheEntry(tokenReqMsgCtxt);
-            if (authorizationGrantCacheEntry != null) {
-                nonceValue = authorizationGrantCacheEntry.getNonceValue();
-                acrValue = authorizationGrantCacheEntry.getAcrValue();
-                if (authorizationGrantCacheEntry.getEssentialClaims() != null) {
-                    if (isEssentialClaim(authorizationGrantCacheEntry, AUTH_TIME)) {
-                        authTime = authorizationGrantCacheEntry.getAuthTime();
+            AuthorizationGrantCacheEntry authzGrantCacheEntry = getAuthorizationGrantCacheEntry(tokenReqMsgCtxt);
+            if (authzGrantCacheEntry != null) {
+                nonceValue = authzGrantCacheEntry.getNonceValue();
+                acrValue = authzGrantCacheEntry.getAcrValue();
+                if (authzGrantCacheEntry.getEssentialClaims() != null) {
+                    if (isEssentialClaim(authzGrantCacheEntry, AUTH_TIME)) {
+                        authTime = authzGrantCacheEntry.getAuthTime();
                     }
                 }
             }
@@ -195,7 +196,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
 
         // Get subject from Authenticated Subject Identifier
         AuthenticatedUser authorizedUser = authzReqMessageContext.getAuthorizationReqDTO().getUser();
-        String subject = getSubjectClaim(authzReqMessageContext, clientId, spTenantDomain, authorizedUser);
+        String subject = getSubjectClaim(authzReqMessageContext, tokenRespDTO, clientId, spTenantDomain, authorizedUser);
 
         String nonceValue = authzReqMessageContext.getAuthorizationReqDTO().getNonce();
         LinkedHashSet acrValue = authzReqMessageContext.getAuthorizationReqDTO().getACRValues();
@@ -251,16 +252,44 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
     }
 
     protected String getSubjectClaim(OAuthTokenReqMessageContext tokenReqMessageContext,
+                                     OAuth2AccessTokenRespDTO tokenRespDTO,
                                      String clientId,
                                      String spTenantDomain,
                                      AuthenticatedUser authorizedUser) throws IdentityOAuth2Exception {
+        String accessToken = tokenRespDTO.getAccessToken();
+        String subjectClaim = OIDCClaimUtil.getSubjectClaimCachedAgainstAccessToken(accessToken);
+        if (isNotBlank(subjectClaim)) {
+            if (log.isDebugEnabled()) {
+                if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.USER_CLAIMS)) {
+                    log.debug("Subject claim cached against the access token found for user: " + authorizedUser);
+                } else {
+                    log.debug("Subject claim: " + subjectClaim + " cached against the access token found for user: " +
+                            authorizedUser);
+                }
+            }
+            return subjectClaim;
+        }
         return getSubjectClaim(clientId, spTenantDomain, authorizedUser);
     }
 
     protected String getSubjectClaim(OAuthAuthzReqMessageContext authzReqMessageContext,
+                                     OAuth2AuthorizeRespDTO authorizeRespDTO,
                                      String clientId,
                                      String spTenantDomain,
                                      AuthenticatedUser authorizedUser) throws IdentityOAuth2Exception {
+        String accessToken = authorizeRespDTO.getAccessToken();
+        String subjectClaim = OIDCClaimUtil.getSubjectClaimCachedAgainstAccessToken(accessToken);
+        if (isNotBlank(subjectClaim)) {
+            if (log.isDebugEnabled()) {
+                if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.USER_CLAIMS)) {
+                    log.debug("Subject claim cached against the authz code found for user: " + authorizedUser);
+                } else {
+                    log.debug("Subject claim: " + subjectClaim + " cached against the authz code found for user: " +
+                            authorizedUser);
+                }
+            }
+            return subjectClaim;
+        }
         return getSubjectClaim(clientId, spTenantDomain, authorizedUser);
     }
 
@@ -508,10 +537,14 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
     private long getAuthTime(OAuthAuthzReqMessageContext authzReqMessageContext, String accessToken) {
         long authTime = 0;
         if (StringUtils.isNotEmpty(accessToken)) {
-            AuthorizationGrantCacheEntry authorizationGrantCacheEntry = getAuthorizationGrantCacheEntry(accessToken);
-            if (isNotBlank(authorizationGrantCacheEntry.getEssentialClaims())) {
-                if (isEssentialClaim(authorizationGrantCacheEntry, AUTH_TIME)) {
-                    authTime = authzReqMessageContext.getAuthorizationReqDTO().getAuthTime();
+            AuthorizationGrantCacheKey authzGrantCacheKey = new AuthorizationGrantCacheKey(accessToken);
+            AuthorizationGrantCacheEntry authzGrantCacheEntry =
+                    AuthorizationGrantCache.getInstance().getValueFromCacheByToken(authzGrantCacheKey);
+            if (authzGrantCacheEntry != null) {
+                if (isNotBlank(authzGrantCacheEntry.getEssentialClaims())) {
+                    if (isEssentialClaim(authzGrantCacheEntry, AUTH_TIME)) {
+                        authTime = authzReqMessageContext.getAuthorizationReqDTO().getAuthTime();
+                    }
                 }
             }
         }
@@ -588,11 +621,6 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         String authorizationCode = getAuthorizationCode(request);
         AuthorizationGrantCacheKey authorizationGrantCacheKey = new AuthorizationGrantCacheKey(authorizationCode);
         return AuthorizationGrantCache.getInstance().getValueFromCacheByCode(authorizationGrantCacheKey);
-    }
-
-    private AuthorizationGrantCacheEntry getAuthorizationGrantCacheEntry(String accessToken) {
-        AuthorizationGrantCacheKey authorizationGrantCacheKey = new AuthorizationGrantCacheKey(accessToken);
-        return AuthorizationGrantCache.getInstance().getValueFromCacheByToken(authorizationGrantCacheKey);
     }
 
     /**

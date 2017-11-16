@@ -16,14 +16,15 @@
 
 package org.wso2.carbon.identity.openidconnect;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
+import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
-import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
@@ -35,18 +36,19 @@ import org.wso2.carbon.identity.oauth.user.UserInfoResponseBuilder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
-import static org.apache.commons.lang.StringUtils.isBlank;
 import static org.apache.commons.lang.StringUtils.isNotEmpty;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.USERINFO;
 
@@ -58,7 +60,7 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
     public String getResponseString(OAuth2TokenValidationResponseDTO tokenResponse)
             throws UserInfoEndpointException, OAuthSystemException {
 
-        String clientId = getClientId(tokenResponse);
+        String clientId = getClientId(getAccessToken(tokenResponse));
         String spTenantDomain = getServiceProviderTenantDomain(tokenResponse);
         // Retrieve user claims.
         Map<String, Object> userClaims = retrieveUserClaims(tokenResponse);
@@ -68,7 +70,7 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
                 getUserClaimsFilteredByScope(userClaims, tokenResponse.getScope(), clientId, spTenantDomain);
 
         // Handle subject claim.
-        String subjectClaim = getSubjectClaim(userClaims, spTenantDomain, tokenResponse);
+        String subjectClaim = getSubjectClaim(userClaims, clientId, spTenantDomain, tokenResponse);
         filteredUserClaims.put(OAuth2Util.SUB, subjectClaim);
 
         // Handle essential claims
@@ -79,21 +81,54 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
     }
 
     protected String getSubjectClaim(Map<String, Object> userClaims,
+                                     String clientId,
                                      String spTenantDomain,
-                                     OAuth2TokenValidationResponseDTO tokenResponse) throws UserInfoEndpointException {
+                                     OAuth2TokenValidationResponseDTO tokenResponse)
+            throws UserInfoEndpointException, OAuthSystemException {
+        // Get sub claim from AuthorizationGrantCache.
+        String subjectClaim = OIDCClaimUtil.getSubjectClaimCachedAgainstAccessToken(getAccessToken(tokenResponse));
+        if (StringUtils.isNotBlank(subjectClaim)) {
+            // We expect the subject claim cached to have the correct format.
+            return subjectClaim;
+        }
 
-        String subjectClaim = (String) userClaims.get(OAuth2Util.SUB);
-        if (isBlank(subjectClaim)) {
-            // We need to send the tenant aware and user store domain removed name and then build the subject claim
-            // to honour the Local and Outbound Authentication Configuration preferences of the SP.
-            String tenantAwareUsername = MultitenantUtils.getTenantAwareUsername(tokenResponse.getAuthorizedUser());
-            subjectClaim = UserCoreUtil.removeDomainFromName(tenantAwareUsername);
-            if (log.isDebugEnabled()) {
-                log.debug("Subject claim not found among user claims. Defaulting to username: " + subjectClaim + " as" +
-                        " the subject claim to be sent in the userinfo response.");
+        AuthenticatedUser authenticatedUser = getAuthenticatedUser(getAccessToken(tokenResponse));
+        // Subject claim returned among claims user claims.
+        subjectClaim = (String) userClaims.get(OAuth2Util.SUB);
+        if (StringUtils.isBlank(subjectClaim)) {
+            // Subject claim was not found among user claims too. Let's send back some sensible defaults.
+            if (authenticatedUser.isFederatedUser()) {
+                subjectClaim = authenticatedUser.getAuthenticatedSubjectIdentifier();
+            } else {
+                subjectClaim = authenticatedUser.getUserName();
             }
         }
-        return buildSubjectClaim(subjectClaim, spTenantDomain, tokenResponse);
+
+        if (isLocalUser(authenticatedUser)) {
+            // For a local user we need to do format the subject claim to honour the SP configurations to append
+            // userStoreDomain and tenantDomain.
+            subjectClaim = buildSubjectClaim(subjectClaim, authenticatedUser.getTenantDomain(),
+                    authenticatedUser.getUserStoreDomain(), clientId, spTenantDomain);
+        }
+        return subjectClaim;
+    }
+
+    private boolean isLocalUser(AuthenticatedUser authenticatedUser) {
+        return !authenticatedUser.isFederatedUser();
+    }
+
+    private String getAccessToken(OAuth2TokenValidationResponseDTO tokenResponse) {
+        return tokenResponse.getAuthorizationContextToken().getTokenString();
+    }
+
+    private AuthenticatedUser getAuthenticatedUser(String accessToken) throws OAuthSystemException {
+        AccessTokenDO accessTokenDO;
+        try {
+            accessTokenDO = OAuth2Util.getAccessTokenDOfromTokenIdentifier(accessToken);
+            return OAuth2Util.getAuthenticatedUser(accessTokenDO);
+        } catch (IdentityOAuth2Exception e) {
+            throw new OAuthSystemException();
+        }
     }
 
     protected Map<String, Object> getUserClaimsFilteredByScope(Map<String, Object> userClaims,
@@ -101,13 +136,13 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
                                                                String clientId,
                                                                String tenantDomain) {
         return OpenIDConnectServiceComponentHolder.getInstance()
-                .getOpenIDConnectClaimFilter()
+                .getHighestPriorityOpenIDConnectClaimFilter()
                 .getClaimsFilteredByOIDCScopes(userClaims, requestedScopes, clientId,tenantDomain);
     }
 
     private String getServiceProviderTenantDomain(OAuth2TokenValidationResponseDTO tokenResponse)
             throws UserInfoEndpointException {
-        String clientId = getClientId(tokenResponse);
+        String clientId = getClientId(getAccessToken(tokenResponse));
         OAuthAppDO oAuthAppDO;
         try {
             oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
@@ -147,13 +182,11 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
                                             Map<String, Object> filteredUserClaims) throws UserInfoEndpointException;
 
     private String buildSubjectClaim(String sub,
-                                     String tenantDomain,
-                                     OAuth2TokenValidationResponseDTO tokenResponse) throws UserInfoEndpointException {
-        String clientId = getClientId(tokenResponse);
-        ServiceProvider serviceProvider = getServiceProvider(tenantDomain, clientId);
-
-        String userTenantDomain = MultitenantUtils.getTenantDomain(tokenResponse.getAuthorizedUser());
-        String userStoreDomain = IdentityUtil.extractDomainFromName(tokenResponse.getAuthorizedUser());
+                                     String userTenantDomain,
+                                     String userStoreDomain,
+                                     String clientId,
+                                     String spTenantDomain) throws UserInfoEndpointException {
+        ServiceProvider serviceProvider = getServiceProvider(spTenantDomain, clientId);
 
         if (serviceProvider != null) {
             boolean isUseTenantDomainInLocalSubject = serviceProvider.getLocalAndOutBoundAuthenticationConfig()
@@ -174,9 +207,9 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
         return sub;
     }
 
-    private String getClientId(OAuth2TokenValidationResponseDTO tokenResponse) throws UserInfoEndpointException {
+    private String getClientId(String accessToken) throws UserInfoEndpointException {
         try {
-            return OAuth2Util.getClientIdForAccessToken(tokenResponse.getAuthorizationContextToken().getTokenString());
+            return OAuth2Util.getClientIdForAccessToken(accessToken);
         } catch (IdentityOAuth2Exception e) {
             throw new UserInfoEndpointException("Error while obtaining the client_id from accessToken.", e);
         }
@@ -197,9 +230,7 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
 
     private List<String> getEssentialClaimUris(OAuth2TokenValidationResponseDTO tokenResponse) {
 
-        AuthorizationGrantCacheKey cacheKey =
-                new AuthorizationGrantCacheKey(tokenResponse.getAuthorizationContextToken().getTokenString());
-
+        AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(getAccessToken(tokenResponse));
         AuthorizationGrantCacheEntry cacheEntry = AuthorizationGrantCache.getInstance()
                 .getValueFromCacheByToken(cacheKey);
 
@@ -208,6 +239,6 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
                 return OAuth2Util.getEssentialClaims(cacheEntry.getEssentialClaims(), USERINFO);
             }
         }
-        return Collections.emptyList();
+        return new ArrayList<>();
     }
 }

@@ -1251,7 +1251,8 @@ public class OAuth2Util {
         }
 
         if (accessTokenDO == null) {
-            throw new IllegalArgumentException("Invalid access token");
+            // this means the token is not active so we can't proceed further
+            throw new IdentityOAuth2Exception("Invalid Access Token. Access token is not ACTIVE.");
         }
 
         // add the token back to the cache in the case of a cache miss
@@ -1877,7 +1878,7 @@ public class OAuth2Util {
         }
 
         String userStoreDomain = OAuth2Util.getUserStoreDomainFromUserId(authenticatedUser.toString());
-        if (!OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && authenticatedUser.
+        if (federatedUsersNotMappedToLocal() && authenticatedUser.
                 isFederatedUser()) {
             userStoreDomain = OAuth2Util.getFederatedUserDomain(authenticatedUser.getFederatedIdPName());
         }
@@ -1902,8 +1903,7 @@ public class OAuth2Util {
         }
 
         String usernameForToken = authenticatedUser.toString();
-        if (!OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && authenticatedUser.
-                isFederatedUser()) {
+        if (federatedUsersNotMappedToLocal() && authenticatedUser.isFederatedUser()) {
             usernameForToken = OAuth2Util.getFederatedUserDomain(authenticatedUser.getFederatedIdPName());
             usernameForToken = usernameForToken + UserCoreConstants.DOMAIN_SEPARATOR + authenticatedUser.
                     getAuthenticatedSubjectIdentifier();
@@ -1912,6 +1912,28 @@ public class OAuth2Util {
         //use ':' for token & userStoreDomain separation
         String tokenStrToEncode = token + ":" + usernameForToken;
         return Base64Utils.encode(tokenStrToEncode.getBytes(Charsets.UTF_8));
+    }
+
+    public static AuthenticatedUser getAuthenticatedUser(AccessTokenDO accessTokenDO) {
+        AuthenticatedUser authenticatedUser = accessTokenDO.getAuthzUser();
+        if (authenticatedUser != null && isFederatedUser(authenticatedUser)) {
+            authenticatedUser.setFederatedUser(true);
+        }
+        return authenticatedUser;
+    }
+
+    public static boolean isFederatedUser(AuthenticatedUser authenticatedUser) {
+        String userStoreDomain = authenticatedUser.getUserStoreDomain();
+        return isExplicitlyFederatedUser(authenticatedUser, userStoreDomain) && federatedUsersNotMappedToLocal();
+    }
+
+    private static boolean federatedUsersNotMappedToLocal() {
+        return !OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal();
+    }
+
+    private static boolean isExplicitlyFederatedUser(AuthenticatedUser authenticatedUser, String userStoreDomain) {
+        return StringUtils.startsWith(userStoreDomain, OAuthConstants.UserType.FEDERATED_USER_DOMAIN_PREFIX) ||
+                authenticatedUser.isFederatedUser();
     }
 
 }

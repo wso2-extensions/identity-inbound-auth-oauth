@@ -914,4 +914,47 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         when(IdentityUtil.getServerURL(anyString(), anyBoolean(), anyBoolean())).thenReturn(serverUrl);
     }
 
+    @DataProvider(name="accessTokenDoAuthzUserProvider")
+    public Object[][] provideAccessTokenDOAuthzUser() {
+        return new Object[][] {
+                {null, null}
+        };
+    }
+
+    @Test(dataProvider = "accessTokenDoAuthzUserProvider")
+    public void testGetAuthenticatedUser(Object authenticatedUser, Object expectedAuthzUser) throws Exception {
+        AccessTokenDO accessTokenDO = new AccessTokenDO();
+        accessTokenDO.setAuthzUser((AuthenticatedUser) authenticatedUser);
+
+        AuthenticatedUser authzUser = OAuth2Util.getAuthenticatedUser(accessTokenDO);
+        assertEquals(authzUser, expectedAuthzUser);
+    }
+
+    @DataProvider(name="authzUserProvider")
+    public Object[][] providerAuthzUser() {
+        AuthenticatedUser federatedDomainUser = new AuthenticatedUser();
+        federatedDomainUser.setUserStoreDomain("FEDERATED");
+
+        AuthenticatedUser federatedUser = new AuthenticatedUser();
+        federatedUser.setUserStoreDomain("FEDERATED");
+
+        return new Object[][] {
+                {AuthenticatedUser.createFederateAuthenticatedUserFromSubjectIdentifier("DUMMY"), false, true},
+                {AuthenticatedUser.createFederateAuthenticatedUserFromSubjectIdentifier("DUMMY"), true, false},
+                {federatedDomainUser, false, true},
+                {federatedDomainUser, true, false},
+                {federatedUser, false, true},
+                {federatedUser, true, false}
+        };
+    }
+
+    @Test(dataProvider = "authzUserProvider")
+    public void testIsFederatedUser(Object authzUser,
+                                    boolean mapFederatdUserToLocal,
+                                    boolean expected) throws Exception {
+        when(oauthServerConfigurationMock.isMapFederatedUsersToLocal()).thenReturn(mapFederatdUserToLocal);
+        boolean isFederated = OAuth2Util.isFederatedUser((AuthenticatedUser) authzUser);
+        assertEquals(isFederated, expected);
+    }
+
 }
