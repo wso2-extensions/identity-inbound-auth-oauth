@@ -84,7 +84,7 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
         String grantType;
 
         // Loading the stored application data.
-        OAuthAppDO oAuthAppDO = null;
+        OAuthAppDO oAuthAppDO;
         try {
             oAuthAppDO = OAuth2Util.getAppInformationByClientId(consumerKey);
         } catch (InvalidOAuthClientException e) {
@@ -474,7 +474,8 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
         }
     }
 
-    private void addUserAttributesToCache(String accessToken, OAuthAuthzReqMessageContext msgCtx) {
+    private void addUserAttributesToCache(String accessToken,
+                                          OAuthAuthzReqMessageContext msgCtx) throws IdentityOAuth2Exception {
 
         OAuth2AuthorizeReqDTO authorizeReqDTO = msgCtx.getAuthorizationReqDTO();
         Map<ClaimMapping, String> userAttributes = authorizeReqDTO.getUser().getUserAttributes();
@@ -493,17 +494,17 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
         AccessTokenDO accessTokenDO = (AccessTokenDO)msgCtx.getProperty(OAuth2Util.ACCESS_TOKEN_DO);
         if (accessTokenDO != null && StringUtils.isNotBlank(accessTokenDO.getTokenId())) {
             authorizationGrantCacheEntry.setTokenId(accessTokenDO.getTokenId());
+            if (StringUtils.isBlank(sub)) {
+                sub = authorizeReqDTO.getUser().getAuthenticatedSubjectIdentifier();
+            }
+            if (StringUtils.isNotBlank(sub)) {
+                if (log.isDebugEnabled() && IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.USER_CLAIMS)) {
+                    log.debug("Setting subject: " + sub + " as the sub claim in cache against the access token.");
+                }
+                authorizationGrantCacheEntry.setSubjectClaim(sub);
+            }
+            AuthorizationGrantCache.getInstance().addToCacheByToken(authorizationGrantCacheKey,
+                    authorizationGrantCacheEntry);
         }
-
-        if (StringUtils.isBlank(sub)) {
-            sub = authorizeReqDTO.getUser().getAuthenticatedSubjectIdentifier();
-        }
-
-        if (StringUtils.isNotBlank(sub)) {
-            userAttributes.put(key, sub);
-        }
-
-        AuthorizationGrantCache.getInstance().addToCacheByToken(authorizationGrantCacheKey,
-                                                                authorizationGrantCacheEntry);
     }
 }

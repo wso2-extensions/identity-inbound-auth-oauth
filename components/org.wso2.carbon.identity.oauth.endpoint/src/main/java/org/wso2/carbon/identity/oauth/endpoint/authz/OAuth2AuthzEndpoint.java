@@ -49,6 +49,7 @@ import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
@@ -799,7 +800,10 @@ public class OAuth2AuthzEndpoint {
             sub = sessionDataCacheEntry.getLoggedInUser().getAuthenticatedSubjectIdentifier();
         }
         if (StringUtils.isNotBlank(sub)) {
-            sessionDataCacheEntry.getLoggedInUser().getUserAttributes().put(key, sub);
+            if (log.isDebugEnabled() && IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.USER_CLAIMS)) {
+                log.debug("Setting subject: " + sub + " as the sub claim in cache against the authorization code.");
+            }
+            authorizationGrantCacheEntry.setSubjectClaim(sub);
         }
         //PKCE
         String[] pkceCodeChallengeArray = sessionDataCacheEntry.getParamMap().get(
