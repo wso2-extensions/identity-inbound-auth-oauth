@@ -18,6 +18,10 @@ package org.wso2.carbon.identity.openidconnect;
 
 import java.util.Map;
 
+/**
+ * This extension can be used to control how claims are filtered based on requested claims in id_token and user info
+ * response.
+ */
 public interface OpenIDConnectClaimFilter {
 
     /**
@@ -42,7 +46,7 @@ public interface OpenIDConnectClaimFilter {
      * Priority of the Claim Filter. Claims filters will be sorted based on their priority value and by default only
      * the claim filter with the highest priority will be executed.
      *
-     * @return
+     * @return priority of the filter.
      */
     int getPriority();
 }
