@@ -62,6 +62,16 @@
         <url-pattern>*</url-pattern>
     </filter-mapping>
 
+    <filter>
+        <filter-name>AuthorizationHeaderFilter</filter-name>
+        <filter-class>org.wso2.carbon.webapp.mgt.filter.AuthorizationHeaderFilter</filter-class>
+    </filter>
+
+    <filter-mapping>
+        <filter-name>AuthorizationHeaderFilter</filter-name>
+        <url-pattern>/*</url-pattern>
+    </filter-mapping>
+
     <servlet>
         <servlet-name>OAuth2Endpoints</servlet-name>
         <servlet-class>org.apache.cxf.transport.servlet.CXFServlet</servlet-class>

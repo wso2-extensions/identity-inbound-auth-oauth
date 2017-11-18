@@ -19,23 +19,18 @@
 package org.wso2.carbon.identity.oauth;
 
 import org.apache.commons.lang.StringUtils;
-import org.powermock.core.classloader.annotations.PowerMockIgnore;
-import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.identity.application.common.model.User;
-import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.common.testng.WithCarbonHome;
+import org.wso2.carbon.identity.common.testng.WithRealmService;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
-import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
 import java.nio.file.Paths;
 
-import static org.mockito.Matchers.anyString;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
@@ -44,23 +39,19 @@ import static org.testng.Assert.assertTrue;
 /**
  * Unit tests for OAuthUtil class.
  */
-@PowerMockIgnore({"javax.net.*", "javax.security.*", "javax.crypto.*"})
-@PrepareForTest({IdentityUtil.class})
-public class OAuthUtilTest extends PowerMockIdentityBaseTest {
+@WithCarbonHome
+@WithRealmService
+public class OAuthUtilTest {
 
     @DataProvider(name = "testGetAuthenticatedUser")
     public Object[][] fullQualifiedUserName() {
-        return new Object[][]{
-                {"JDBC/siripala@is.com", "siripala"},
-                {"JDBC/siripala", "siripala"},
-                {"siripala@is.com", "siripala"},
-                {"siripala", "siripala"}
-        };
+        return new Object[][] { { "JDBC/siripala@is.com", "siripala" }, { "JDBC/siripala", "siripala" },
+                { "siripala@is.com", "siripala" }, { "siripala", "siripala" } };
     }
 
     @DataProvider(name = "testClearOAuthCache")
     public Object[][] isUserStoreCaseSensitive() {
-        return new Object[][]{{true}, {false}};
+        return new Object[][] { { true }, { false } };
     }
 
     @Test
@@ -91,9 +82,6 @@ public class OAuthUtilTest extends PowerMockIdentityBaseTest {
         OAuthCacheKey oAuthCacheKey = new OAuthCacheKey(consumerKey + ":" + authorizedUser);
         OAuthCache oAuthCache = getOAuthCache(oAuthCacheKey);
 
-        mockStatic(IdentityUtil.class);
-        when(IdentityUtil.isUserStoreInUsernameCaseSensitive(anyString())).thenReturn(isUserStoreCaseSensitive);
-
         assertNotNull(oAuthCache.getValueFromCache(oAuthCacheKey), "Should give the cached value before cleaning it.");
         OAuthUtil.clearOAuthCache(consumerKey, authorizedUser);
         assertNull(oAuthCache.getValueFromCache(oAuthCacheKey), "Should clear the cached value against the cache key.");
@@ -114,9 +102,6 @@ public class OAuthUtilTest extends PowerMockIdentityBaseTest {
         OAuthCacheKey oAuthCacheKey = new OAuthCacheKey(consumerKey + ":" + authorizedUser.toString());
         OAuthCache oAuthCache = getOAuthCache(oAuthCacheKey);
 
-        mockStatic(IdentityUtil.class);
-        when(IdentityUtil.isUserStoreInUsernameCaseSensitive(anyString())).thenReturn(true);
-
         assertNotNull(oAuthCache.getValueFromCache(oAuthCacheKey), "Should give the cached value before cleaning it.");
         OAuthUtil.clearOAuthCache(consumerKey, authorizedUser);
         assertNull(oAuthCache.getValueFromCache(oAuthCacheKey), "Should clear the cached value against the cache key.");
@@ -133,9 +118,6 @@ public class OAuthUtilTest extends PowerMockIdentityBaseTest {
         String scope = "scope";
         OAuthCacheKey oAuthCacheKey = new OAuthCacheKey(consumerKey + ":" + authorizedUser + ":" + scope);
         OAuthCache oAuthCache = getOAuthCache(oAuthCacheKey);
-
-        mockStatic(IdentityUtil.class);
-        when(IdentityUtil.isUserStoreInUsernameCaseSensitive(anyString())).thenReturn(isUserStoreCaseSensitive);
 
         assertNotNull(oAuthCache.getValueFromCache(oAuthCacheKey), "Should give the cached value before cleaning it.");
         OAuthUtil.clearOAuthCache(consumerKey, authorizedUser, scope);
@@ -157,9 +139,6 @@ public class OAuthUtilTest extends PowerMockIdentityBaseTest {
         OAuthCacheKey oAuthCacheKey = new OAuthCacheKey(consumerKey + ":" + authorizedUser.toString() + ":" + scope);
         OAuthCache oAuthCache = getOAuthCache(oAuthCacheKey);
 
-        mockStatic(IdentityUtil.class);
-        when(IdentityUtil.isUserStoreInUsernameCaseSensitive(anyString())).thenReturn(true);
-
         assertNotNull(oAuthCache.getValueFromCache(oAuthCacheKey), "Should give the cached value before cleaning it.");
         OAuthUtil.clearOAuthCache(consumerKey, authorizedUser, scope);
         assertNull(oAuthCache.getValueFromCache(oAuthCacheKey), "Should clear the cached value against the cache key.");
@@ -170,13 +149,8 @@ public class OAuthUtilTest extends PowerMockIdentityBaseTest {
 
     @Test(dataProvider = "testGetAuthenticatedUser")
     public void testGetAuthenticatedUser(String fullQualifiedName, String username) throws Exception {
-
-        mockStatic(IdentityUtil.class);
-        when(IdentityUtil.extractDomainFromName(anyString())).thenCallRealMethod();
-        when(IdentityUtil.getPrimaryDomainName()).thenReturn("PRIMARY");
-
-        assertEquals(OAuthUtil.getAuthenticatedUser(fullQualifiedName).getUserName(), username, "Should set the " +
-                "cleared username from fullyQualifiedName.");
+        assertEquals(OAuthUtil.getAuthenticatedUser(fullQualifiedName).getUserName(), username,
+                "Should set the " + "cleared username from fullyQualifiedName.");
     }
 
     @Test(expectedExceptions = RuntimeException.class)

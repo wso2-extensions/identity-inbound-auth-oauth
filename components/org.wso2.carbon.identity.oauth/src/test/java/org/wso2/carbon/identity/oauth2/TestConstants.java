@@ -21,7 +21,9 @@ package org.wso2.carbon.identity.oauth2;
 public class TestConstants {
     public static final String CARBON_TENANT_DOMAIN = "carbon.super";
     public static final String LOACALHOST_DOMAIN = "localhost";
-    public static final String TEST_USER_NAME = "testUser";
+    public static final String OAUTH2_TOKEN_EP = "https://localhost:9443/oauth2/token";
+    public static final String TEST_USER_NAME = "testUser@tenant.com";
+    public static final String TENANT_AWARE_USER_NAME = "testUser";
     public static final String ATTRIBUTE_CONSUMER_INDEX = "1234567890";
     public static final String SAMPLE_NAME_ID_FORMAT = "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress";
     public static final String SESSION_ID = "sessionId4567890";
@@ -55,14 +57,19 @@ public class TestConstants {
     public static final String SECRET = "87n9a540f544777860e44e75f605d435";
     public static final String APP_NAME = "myApp";
     public static final String USER_NAME = "user1";
+    public static final String PASSWORD = "password";
+    public static final String USER_STORE_DOMAIN = "PRIMARY";
+    public static final String DEFAULT_PROFILE = "default";
     public static final String APP_STATE = "ACTIVE";
     public static final String CALLBACK = "http://localhost:8080/redirect";
     public static final String USER_DOMAIN_PRIMARY = "PRIMARY";
     public static final String SCOPE_STRING = "default";
+    public static final String OPENID_SCOPE_STRING = "openid";
     public static final String GRANT_TYPES_STRING =
             "refresh_token implicit password iwa:ntlm client_credentials authorization_code";
-    public static final String ACCESS_OKEN = "d43e8da324a33bdc941b9b95cad6a6a2";
-    public static final String REFRESH_OKEN = "2881c5a375d03dc0ba12787386451b29";
+    public static final String ACCESS_TOKEN = "d43e8da324a33bdc941b9b95cad6a6a2";
+    public static final String REFRESH_TOKEN = "2881c5a375d03dc0ba12787386451b29";
+    public static final String APP_TYPE = "oauth2";
 
     //UnAuthorized Client for Implicit Grant
     public static final String CLIENT_ID_UNAUTHORIZED_CLIENT = "dabfba9390aa423f8b04332794d83614";

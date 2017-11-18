@@ -62,7 +62,6 @@ import java.util.Set;
 import java.util.UUID;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MultivaluedMap;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
@@ -70,11 +69,11 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppState
 public class EndpointUtil {
 
     private static final Log log = LogFactory.getLog(EndpointUtil.class);
-    public static final String OAUTH2 = "oauth2";
-    public static final String OPENID = "openid";
-    public static final String OIDC = "oidc";
-    public static final String OAUTH2_AUTHORIZE = "/oauth2/authorize";
-    public static final String UTF_8 = "UTF-8";
+    private static final String OAUTH2 = "oauth2";
+    private static final String OPENID = "openid";
+    private static final String OIDC = "oidc";
+    private static final String OAUTH2_AUTHORIZE = "/oauth2/authorize";
+    private static final String UTF_8 = "UTF-8";
 
     private EndpointUtil() {
 
@@ -236,7 +235,7 @@ public class EndpointUtil {
 
         if (appName != null) {
             try {
-                errorPageUrl += "&application" + "=" + URLEncoder.encode(appName, "UTF-8");
+                errorPageUrl += "&application" + "=" + URLEncoder.encode(appName, UTF_8);
             } catch (UnsupportedEncodingException e) {
                 //ignore
                 if (log.isDebugEnabled()){
@@ -346,7 +345,7 @@ public class EndpointUtil {
                 append("?").
                 append(FrameworkConstants.SESSION_DATA_KEY).
                 append("=").
-                append(URLEncoder.encode(sessionDataKey, "UTF-8")).
+                append(URLEncoder.encode(sessionDataKey, UTF_8)).
                 append("&").
                 append(FrameworkConstants.RequestParams.TYPE).
                 append("=").
@@ -413,7 +412,7 @@ public class EndpointUtil {
             } else {
                 sessionDataCache.addToCache(new SessionDataCacheKey(sessionDataKeyConsent),entry);
                 if (entry.getQueryString() != null) {
-                    queryString = URLEncoder.encode(entry.getQueryString(), "UTF-8");
+                    queryString = URLEncoder.encode(entry.getQueryString(), UTF_8);
                 }
             }
 
@@ -425,16 +424,16 @@ public class EndpointUtil {
             }
             if (params != null) {
                 consentPage += "?" + OAuthConstants.OIDC_LOGGED_IN_USER + "=" + URLEncoder.encode(loggedInUser,
-                        "UTF-8") + "&application=";
+                        UTF_8) + "&application=";
 
                 if (StringUtils.isNotEmpty(params.getDisplayName())) {
-                    consentPage += URLEncoder.encode(params.getDisplayName(), "UTF-8");
+                    consentPage += URLEncoder.encode(params.getDisplayName(), UTF_8);
                 } else {
-                    consentPage += URLEncoder.encode(params.getApplicationName(), "UTF-8");
+                    consentPage += URLEncoder.encode(params.getApplicationName(), UTF_8);
                 }
                 consentPage = consentPage + "&" + OAuthConstants.OAuth20Params.SCOPE + "=" + URLEncoder.encode
-                        (EndpointUtil.getScope(params), "UTF-8") + "&" + OAuthConstants.SESSION_DATA_KEY_CONSENT
-                        + "=" + URLEncoder.encode(sessionDataKeyConsent, "UTF-8") + "&spQueryParams=" + queryString;
+                        (EndpointUtil.getScope(params), UTF_8) + "&" + OAuthConstants.SESSION_DATA_KEY_CONSENT
+                        + "=" + URLEncoder.encode(sessionDataKeyConsent, UTF_8) + "&spQueryParams=" + queryString;
             } else {
                 throw new OAuthSystemException("Error while retrieving the application name");
             }
@@ -471,12 +470,12 @@ public class EndpointUtil {
     }
 
     @Deprecated
-    public static boolean validateParams(@Context HttpServletRequest request, @Context HttpServletResponse response,
+    public static boolean validateParams(HttpServletRequest request, HttpServletResponse response,
                                          MultivaluedMap<String, String> paramMap) {
         return validateParams(request, paramMap);
     }
 
-    public static boolean validateParams(@Context HttpServletRequest request, MultivaluedMap<String, String> paramMap) {
+    public static boolean validateParams(HttpServletRequest request, MultivaluedMap<String, String> paramMap) {
 
         if (paramMap != null) {
             for (Map.Entry<String, List<String>> paramEntry : paramMap.entrySet()) {

@@ -17,11 +17,8 @@ package org.wso2.carbon.identity.oauth2.authcontext;
 
 import org.mockito.Mock;
 import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockObjectFactory;
 import org.powermock.modules.testng.PowerMockTestCase;
-import org.testng.IObjectFactory;
 import org.testng.annotations.BeforeTest;
-import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;

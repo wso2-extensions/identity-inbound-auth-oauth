@@ -99,7 +99,6 @@ public class OAuth2TokenEndpoint {
         } finally {
             PrivilegedCarbonContext.endTenantFlow();
         }
-
     }
 
     private CarbonOAuthTokenRequest buildCarbonOAuthTokenRequest(HttpServletRequestWrapper httpRequest)

@@ -17,10 +17,7 @@
  */
 package org.wso2.carbon.identity.oidc.session.servlet;
 
-import org.apache.commons.io.FileUtils;
 import org.mockito.Mock;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.DataProvider;
@@ -31,17 +28,14 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.io.File;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 import static org.mockito.Matchers.anyString;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
-import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
 @PrepareForTest({OAuthServerConfiguration.class, IdentityDatabaseUtil.class, IdentityTenantUtil.class,
@@ -113,6 +107,8 @@ public class OIDCSessionIFrameServletTest extends TestOIDCSessionBase {
 
     @Test(dataProvider = "provideDataForTestDoGet")
     public void testDoGet(String clientId, String redirectUri, String expected) throws Exception {
+        mockStatic(IdentityDatabaseUtil.class);
+        when(IdentityDatabaseUtil.getDBConnection()).thenAnswer(invocationOnMock -> dataSource.getConnection());
         oidcSessionIFrameServlet.init();
 
         when(request.getParameter("client_id")).thenReturn(clientId);
@@ -121,23 +117,13 @@ public class OIDCSessionIFrameServletTest extends TestOIDCSessionBase {
         mockStatic(OAuthServerConfiguration.class);
         when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
         when(oAuthServerConfiguration.getPersistenceProcessor()).thenReturn(tokenPersistenceProcessor);
-        when(tokenPersistenceProcessor.getProcessedClientId(anyString())).thenAnswer(new Answer<Object>() {
-
-            @Override
-            public Object answer(InvocationOnMock invocation) throws Throwable {
-                return invocation.getArguments()[0];
-            }
-        });
+        when(tokenPersistenceProcessor.getProcessedClientId(anyString())).thenAnswer(invocation -> invocation.getArguments()[0]);
 
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(TENANT_ID);
 
         mockStatic(OIDCSessionManagementUtil.class);
         when(OIDCSessionManagementUtil.getOrigin((CALLBACK_URL))).thenReturn("http://localhost:8080/playground2");
-
-        mockStatic(IdentityDatabaseUtil.class);
-        when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
-
         StringWriter outStringwriter = new StringWriter();
         PrintWriter out = new PrintWriter(outStringwriter);
         when(response.getWriter()).thenReturn(out);

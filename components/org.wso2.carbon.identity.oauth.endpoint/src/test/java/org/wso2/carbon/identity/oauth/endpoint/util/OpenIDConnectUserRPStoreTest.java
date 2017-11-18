@@ -22,6 +22,8 @@ import org.mockito.Mock;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.testng.annotations.AfterClass;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.AfterTest;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.DataProvider;
@@ -34,8 +36,6 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
-
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -112,21 +112,14 @@ public class OpenIDConnectUserRPStoreTest extends TestOAuthEndpointBase {
 
     @Test(dataProvider = "provideStoreDataToPut")
     public void testPutUserRPToStore(String usernameValue, String consumerKey) throws Exception {
-        mockStatic(IdentityDatabaseUtil.class);
-        when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
-
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(MultitenantConstants.SUPER_TENANT_ID);
-
+        mockStatic(IdentityDatabaseUtil.class);
+        when(IdentityDatabaseUtil.getDBConnection()).thenAnswer(invocationOnMock -> dataSource.getConnection());
         mockStatic(OAuthServerConfiguration.class);
         when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
         when(oAuthServerConfiguration.getPersistenceProcessor()).thenReturn(tokenPersistenceProcessor);
-        when(tokenPersistenceProcessor.getProcessedClientId(anyString())).thenAnswer(new Answer<Object>(){
-            @Override
-            public Object answer(InvocationOnMock invocation) throws Throwable {
-                return (String) invocation.getArguments()[0];
-            }
-        });
+        when(tokenPersistenceProcessor.getProcessedClientId(anyString())).thenAnswer(invocation -> invocation.getArguments()[0]);
 
         user.setUserName(usernameValue);
         try {
@@ -161,8 +154,8 @@ public class OpenIDConnectUserRPStoreTest extends TestOAuthEndpointBase {
         return new Object[][] {
                 { username, clientId, appName, true },
                 { null, clientId, appName, true },
-                { null, clientId, "dummyAppName", false },
-                { null, "dummyClientId", appName, false}
+                { null, "dummyClientId", appName, false},
+                { null, clientId, "dummyAppName", false }
         };
     }
 
@@ -171,19 +164,12 @@ public class OpenIDConnectUserRPStoreTest extends TestOAuthEndpointBase {
             throws Exception {
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
-
         mockStatic(IdentityDatabaseUtil.class);
-        when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
-
+        when(IdentityDatabaseUtil.getDBConnection()).thenAnswer(invocationOnMock -> dataSource.getConnection());
         mockStatic(OAuthServerConfiguration.class);
         when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
         when(oAuthServerConfiguration.getPersistenceProcessor()).thenReturn(tokenPersistenceProcessor);
-        when(tokenPersistenceProcessor.getProcessedClientId(anyString())).thenAnswer(new Answer<Object>(){
-            @Override
-            public Object answer(InvocationOnMock invocation) throws Throwable {
-                return (String) invocation.getArguments()[0];
-            }
-        });
+        when(tokenPersistenceProcessor.getProcessedClientId(anyString())).thenAnswer(invocation -> invocation.getArguments()[0]);
 
         user.setUserName(usernameValue);
         boolean result;

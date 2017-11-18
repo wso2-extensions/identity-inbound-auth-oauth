@@ -19,7 +19,7 @@
 
 package org.wso2.carbon.identity.test.common.testng.utils;
 
-import waffle.util.Base64;
+import org.apache.commons.codec.binary.Base64;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -37,12 +37,9 @@ import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
 import java.security.SecureRandom;
-import java.security.Signature;
 import java.security.SignatureException;
 import java.security.cert.CertificateException;
-import java.security.cert.X509Certificate;
 import java.security.spec.PKCS8EncodedKeySpec;
-import java.util.Date;
 
 public class ReadCertStoreSampleUtil {
 
@@ -93,7 +90,7 @@ public class ReadCertStoreSampleUtil {
 
         // Base64 decode the result
 
-        byte[] pkcs8EncodedBytes = Base64.decode(pkcs8Pem);
+        byte[] pkcs8EncodedBytes = Base64.decodeBase64(pkcs8Pem);
 
         // extract the private key
 

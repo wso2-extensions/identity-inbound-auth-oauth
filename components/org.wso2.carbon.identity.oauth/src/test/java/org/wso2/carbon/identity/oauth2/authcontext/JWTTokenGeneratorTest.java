@@ -15,19 +15,18 @@
  */
 package org.wso2.carbon.identity.oauth2.authcontext;
 
-
 import com.nimbusds.jose.JWSAlgorithm;
-import org.powermock.api.support.membermodification.MemberModifier;
-import org.powermock.reflect.Whitebox;
+import org.mockito.internal.util.reflection.Whitebox;
 import org.testng.Assert;
 import org.testng.annotations.AfterTest;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.MultitenantConstants;
-import org.wso2.carbon.base.api.ServerConfigurationService;
-import org.wso2.carbon.core.internal.CarbonCoreDataHolder;
-import org.wso2.carbon.core.util.KeyStoreManager;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.common.testng.WithCarbonHome;
+import org.wso2.carbon.identity.common.testng.WithH2Database;
+import org.wso2.carbon.identity.common.testng.WithKeyStore;
+import org.wso2.carbon.identity.common.testng.WithRealmService;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
@@ -39,12 +38,11 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.DefaultOAuth2TokenValidator;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2TokenValidationMessageContext;
-import org.wso2.carbon.identity.test.common.testng.WithCarbonHome;
-import org.wso2.carbon.identity.test.common.testng.WithH2Database;
-import org.wso2.carbon.identity.test.common.testng.WithRealmService;
-import org.wso2.carbon.identity.test.common.testng.utils.ReadCertStoreSampleUtil;
-import org.wso2.carbon.registry.core.service.RegistryService;
+import org.wso2.carbon.identity.testutil.ReadCertStoreSampleUtil;
+import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.security.Key;
 import java.security.cert.Certificate;
 import java.sql.Timestamp;
@@ -52,7 +50,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static org.powermock.api.mockito.PowerMockito.mock;
+import static org.mockito.Mockito.mock;
 
 @WithCarbonHome
 @WithRealmService(tenantId = MultitenantConstants.SUPER_TENANT_ID,
@@ -60,7 +58,8 @@ import static org.powermock.api.mockito.PowerMockito.mock;
         initUserStoreManager = true)
 @WithH2Database(jndiName = "jdbc/WSO2IdentityDB",
         files = {"dbScripts/h2_with_application_and_token.sql", "dbScripts/identity.sql"})
-public class JWTTokenGeneratorTest {
+@WithKeyStore
+public class JWTTokenGeneratorTest extends PowerMockIdentityBaseTest {
 
     private DefaultOAuth2TokenValidator defaultOAuth2TokenValidator;
     private OAuth2TokenValidationRequestDTO oAuth2TokenValidationRequestDTO;
@@ -82,7 +81,8 @@ public class JWTTokenGeneratorTest {
 
         defaultOAuth2TokenValidator = new DefaultOAuth2TokenValidator();
         oAuth2TokenValidationRequestDTO = new OAuth2TokenValidationRequestDTO();
-        OAuth2TokenValidationRequestDTO.TokenValidationContextParam tokenValidationContextParam = mock(OAuth2TokenValidationRequestDTO.TokenValidationContextParam.class);
+        OAuth2TokenValidationRequestDTO.TokenValidationContextParam tokenValidationContextParam =
+                mock(OAuth2TokenValidationRequestDTO.TokenValidationContextParam.class);
         tokenValidationContextParam.setKey("sampleKey");
         tokenValidationContextParam.setValue("sampleValue");
 
@@ -115,53 +115,27 @@ public class JWTTokenGeneratorTest {
     @Test
     public void testInit() throws Exception {
         jwtTokenGenerator.init();
-        Assert.assertNotNull((ClaimsRetriever)
-                (MemberModifier.field(JWTTokenGenerator.class,
-                        "claimsRetriever").get(jwtTokenGenerator)), "Init method invoked");
+        ClaimsRetriever claimsRetriever =
+                (ClaimsRetriever) Whitebox.getInternalState(jwtTokenGenerator, "claimsRetriever");
+        Assert.assertNotNull(claimsRetriever);
     }
 
     @Test(dependsOnMethods = "testInit")
     public void testGenerateToken() throws Exception {
-        Whitebox.setInternalState(JWTTokenGenerator.class, "ttl", 15L);
+        Whitebox.setInternalState(jwtTokenGenerator, "ttl", 15L);
         addSampleOauth2Application();
-        KeyStoreManager keyStoreManager = mock(KeyStoreManager.class);
-        ServerConfigurationService serverConfigurationService = mock(ServerConfigurationService.class);
-        RegistryService registryService = mock(RegistryService.class);
-        keyStoreManager.updateKeyStore("-1234", ReadCertStoreSampleUtil.createKeyStore(getClass()));
-
-        ConcurrentHashMap<String, KeyStoreManager> mtKeyStoreManagers = new ConcurrentHashMap();
-        mtKeyStoreManagers.put("-1234", keyStoreManager);
-        Whitebox.setInternalState(KeyStoreManager.class, "mtKeyStoreManagers", mtKeyStoreManagers);
-        MemberModifier
-                .field(KeyStoreManager.class, "primaryKeyStore")
-                .set(keyStoreManager, ReadCertStoreSampleUtil.createKeyStore(getClass()));
-        MemberModifier
-                .field(KeyStoreManager.class, "registryKeyStore")
-                .set(keyStoreManager, ReadCertStoreSampleUtil.createKeyStore(getClass()));
-        Map<Integer, Certificate> publicCerts = new ConcurrentHashMap<Integer, Certificate>();
-        publicCerts.put(-1234, ReadCertStoreSampleUtil.createKeyStore(getClass())
-                .getCertificate("wso2carbon"));
-        Whitebox.setInternalState(OAuth2Util.class, "publicCerts", publicCerts);
-        Map<Integer, Key> privateKeys = new ConcurrentHashMap<Integer, Key>();
-        privateKeys.put(-1234, ReadCertStoreSampleUtil.createKeyStore(getClass())
-                .getKey("wso2carbon", "wso2carbon".toCharArray()));
-        Whitebox.setInternalState(OAuth2Util.class, "privateKeys", privateKeys);
         ClaimCache claimsLocalCache = ClaimCache.getInstance();
-        MemberModifier
-                .field(JWTTokenGenerator.class, "claimsLocalCache")
-                .set(jwtTokenGenerator, claimsLocalCache);
-
-        CarbonCoreDataHolder carbonCoreDataHolder = mock(CarbonCoreDataHolder.class);
-
-        CarbonCoreDataHolder.getInstance().setRegistryService(registryService);
-        CarbonCoreDataHolder.getInstance().setServerConfigurationService(serverConfigurationService);
-
-        carbonCoreDataHolder.setServerConfigurationService(serverConfigurationService);
-        carbonCoreDataHolder.setRegistryService(registryService);
+        Whitebox.setInternalState(jwtTokenGenerator, "claimsLocalCache", claimsLocalCache);
+        Map<Integer, Certificate> publicCerts = new ConcurrentHashMap<>();
+        publicCerts.put(-1234, ReadCertStoreSampleUtil.createKeyStore(getClass())
+                                                      .getCertificate("wso2carbon"));
+        setFinalStatic(OAuth2Util.class.getDeclaredField("publicCerts"), publicCerts);
+        Map<Integer, Key> privateKeys = new ConcurrentHashMap<>();
+        privateKeys.put(-1234, ReadCertStoreSampleUtil.createKeyStore(getClass())
+                                                      .getKey("wso2carbon", "wso2carbon".toCharArray()));
+        setFinalStatic(OAuth2Util.class.getDeclaredField("privateKeys"), privateKeys);
         jwtTokenGenerator.generateToken(oAuth2TokenValidationMessageContext);
 
-        MemberModifier.method(JWTTokenGenerator.class, "generateToken",
-                OAuth2TokenValidationMessageContext.class);
         Assert.assertNotNull(oAuth2TokenValidationMessageContext.getResponseDTO().getAuthorizationContextToken()
                                                                 .getTokenString(), "JWT Token not set");
         Assert.assertEquals(oAuth2TokenValidationMessageContext.getResponseDTO().getAuthorizationContextToken()
@@ -172,12 +146,10 @@ public class JWTTokenGeneratorTest {
     @Test(dependsOnMethods = "testGenerateToken")
     public void testInitEmptyClaimsRetriever() throws Exception {
         jwtTokenGenerator = new JWTTokenGenerator(includeClaims, enableSigning);
-        org.mockito.internal.util.reflection.Whitebox
-                .setInternalState(OAuthServerConfiguration.getInstance(), "claimsRetrieverImplClass", null);
+        Whitebox.setInternalState(OAuthServerConfiguration.getInstance(), "claimsRetrieverImplClass", null);
         jwtTokenGenerator.init();
         ClaimsRetriever claimsRetriever =
-                (ClaimsRetriever) org.mockito.internal.util.reflection.Whitebox
-                        .getInternalState(jwtTokenGenerator, "claimsRetriever");
+                (ClaimsRetriever) Whitebox.getInternalState(jwtTokenGenerator, "claimsRetriever");
         Assert.assertNull(claimsRetriever);
     }
 
@@ -186,8 +158,7 @@ public class JWTTokenGeneratorTest {
         jwtTokenGenerator = new JWTTokenGenerator(false, enableSigning);
         jwtTokenGenerator.init();
         ClaimsRetriever claimsRetriever =
-                (ClaimsRetriever) org.mockito.internal.util.reflection.Whitebox
-                        .getInternalState(jwtTokenGenerator, "claimsRetriever");
+                (ClaimsRetriever) Whitebox.getInternalState(jwtTokenGenerator, "claimsRetriever");
         Assert.assertNull(claimsRetriever);
     }
 
@@ -196,20 +167,17 @@ public class JWTTokenGeneratorTest {
         jwtTokenGenerator = new JWTTokenGenerator(includeClaims, false);
         jwtTokenGenerator.init();
         ClaimsRetriever claimsRetriever =
-                (ClaimsRetriever) org.mockito.internal.util.reflection.Whitebox
-                        .getInternalState(jwtTokenGenerator, "claimsRetriever");
+                (ClaimsRetriever) Whitebox.getInternalState(jwtTokenGenerator, "claimsRetriever");
         Assert.assertNull(claimsRetriever);
     }
 
     @Test(dependsOnMethods = "testGenerateToken")
     public void testInitEmptySignatureAlg() throws Exception {
         jwtTokenGenerator = new JWTTokenGenerator(includeClaims, enableSigning);
-        org.mockito.internal.util.reflection.Whitebox
-                .setInternalState(OAuthServerConfiguration.getInstance(), "signatureAlgorithm", null);
+        Whitebox.setInternalState(OAuthServerConfiguration.getInstance(), "signatureAlgorithm", null);
         jwtTokenGenerator.init();
         JWSAlgorithm signatureAlgorithm =
-                (JWSAlgorithm) org.mockito.internal.util.reflection.Whitebox
-                        .getInternalState(jwtTokenGenerator, "signatureAlgorithm");
+                (JWSAlgorithm) Whitebox.getInternalState(jwtTokenGenerator, "signatureAlgorithm");
         Assert.assertNotNull(signatureAlgorithm);
         Assert.assertNotNull(signatureAlgorithm.getName());
         Assert.assertEquals(signatureAlgorithm.getName(), "none");
@@ -233,5 +201,13 @@ public class JWTTokenGeneratorTest {
         authAppDAO.addOAuthConsumer("testUser", -1234, "PRIMARY");
         authAppDAO.addOAuthApplication(oAuthAppDO);
         authAppDAO.getConsumerAppState("sampleConsumerKey");
+    }
+
+    private void setFinalStatic(Field field, Object newValue) throws Exception {
+        field.setAccessible(true);
+        Field modifiersField = Field.class.getDeclaredField("modifiers");
+        modifiersField.setAccessible(true);
+        modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
+        field.set(null, newValue);
     }
 }

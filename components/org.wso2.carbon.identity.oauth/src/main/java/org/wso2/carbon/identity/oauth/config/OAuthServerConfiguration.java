@@ -162,10 +162,8 @@ public class OAuthServerConfiguration {
     private String openIDConnectIDTokenIssuerIdentifier = null;
     private String openIDConnectIDTokenSubClaim = "http://wso2.org/claims/fullname";
     private String openIDConnectSkipUserConsent = "true";
-    private String openIDConnectIDTokenExpiration = "300";
-
-    private long DEFAULT_ID_TOKEN_EXPIRY_IN_SECONDS = 300;
-    private long openIDConnectIDTokenExpiryTimeInMillis = DEFAULT_ID_TOKEN_EXPIRY_IN_SECONDS * 1000L;
+    private String openIDConnectIDTokenExpiration = "3600";
+    private long openIDConnectIDTokenExpiryTimeInSeconds = 3600;
 
     private String openIDConnectUserInfoEndpointClaimDialect = "http://wso2.org/claims";
 
@@ -901,9 +899,9 @@ public class OAuthServerConfiguration {
     }
 
     /**
-     * @deprecated use {@link #getOpenIDConnectIDTokenExpiryTimeInMillis()} instead
+     * @deprecated use {@link #getOpenIDConnectIDTokenExpiryTimeInSeconds()} instead
      *
-     * @return the openIDConnectIDTokenExpiration
+     * @return the openIDConnectIDTokenExpirationInSeconds
      */
     public String getOpenIDConnectIDTokenExpiration() {
         return openIDConnectIDTokenExpiration;
@@ -914,8 +912,8 @@ public class OAuthServerConfiguration {
      *
      * @return ID Token expiry time in milliseconds.
      */
-    public long getOpenIDConnectIDTokenExpiryTimeInMillis() {
-        return openIDConnectIDTokenExpiryTimeInMillis;
+    public long getOpenIDConnectIDTokenExpiryTimeInSeconds() {
+        return openIDConnectIDTokenExpiryTimeInSeconds;
     }
 
     public String getOpenIDConnectUserInfoEndpointClaimDialect() {
@@ -1873,11 +1871,11 @@ public class OAuthServerConfiguration {
                                 .getText().trim();
 
                 try {
-                    openIDConnectIDTokenExpiryTimeInMillis = Long.parseLong(openIDConnectIDTokenExpiration) * 1000L;
+                    openIDConnectIDTokenExpiryTimeInSeconds = Long.parseLong(openIDConnectIDTokenExpiration);
                 } catch (NumberFormatException ex) {
-                    log.warn("Invalid value: " + openIDConnectIDTokenExpiration + " set for ID Token Expiry Time in " +
+                    log.warn("Invalid value: '" + openIDConnectIDTokenExpiration + "' set for ID Token Expiry Time in " +
                             "Seconds. Value should be an integer. Setting expiry time to default value: " +
-                            DEFAULT_ID_TOKEN_EXPIRY_IN_SECONDS + " seconds.");
+                            openIDConnectIDTokenExpiryTimeInSeconds + " seconds.");
                 }
 
             }

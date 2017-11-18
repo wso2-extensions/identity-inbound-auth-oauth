@@ -18,12 +18,22 @@
 
 package org.wso2.carbon.identity.oauth2.test.utils;
 
-
+import org.apache.axiom.om.OMElement;
+import org.apache.axiom.om.impl.builder.StAXOMBuilder;
 import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.utils.CarbonUtils;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.nio.file.Paths;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.AssertJUnit.assertNotNull;
@@ -31,6 +41,7 @@ import static org.testng.AssertJUnit.assertNotNull;
 public class CommonTestUtils {
 
     public static final String JDBC_SUBCONTEXT = "jdbc";
+    private static Map<String, ServiceProvider> fileBasedSPs = null;
 
     private CommonTestUtils() {
     }
@@ -58,6 +69,53 @@ public class CommonTestUtils {
         String userName = "testUser";
 
         initPrivilegedCarbonContext(tenantDomain, tenantID, userName);
+    }
+
+    public static Map<String, ServiceProvider> getFileBasedSPs() throws Exception {
+        if (fileBasedSPs == null) {
+            buildFileBasedSPList();
+        }
+        return Collections.unmodifiableMap(fileBasedSPs);
+    }
+
+    private static void buildFileBasedSPList() throws Exception {
+        fileBasedSPs = new HashMap();
+        String spConfigDirPath = CarbonUtils.getCarbonConfigDirPath() + File.separator + "identity" +
+                                 File.separator + "service-providers";
+        FileInputStream fileInputStream = null;
+        File spConfigDir = new File(spConfigDirPath);
+        if (spConfigDir.exists()) {
+            File[] arr$ = spConfigDir.listFiles();
+            int len$ = arr$.length;
+
+            for (int i$ = 0; i$ < len$; ++i$) {
+                File fileEntry = arr$[i$];
+
+                try {
+                    if (!fileEntry.isDirectory()) {
+                        fileInputStream = new FileInputStream(new File(fileEntry.getAbsolutePath()));
+                        OMElement documentElement = (new StAXOMBuilder(fileInputStream)).getDocumentElement();
+                        ServiceProvider e = ServiceProvider.build(documentElement);
+                        if (e != null) {
+                            fileBasedSPs.put(e.getApplicationName(), e);
+                        }
+                    }
+                } finally {
+                    if (fileInputStream != null) {
+                        fileInputStream.close();
+                    }
+
+                }
+            }
+        }
+    }
+
+    public static void setFinalStatic(Field field, Object newValue) throws Exception {
+        field.setAccessible(true);
+        Field modifiersField = Field.class.getDeclaredField("modifiers");
+        modifiersField.setAccessible(true);
+        modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
+        field.set(null, newValue);
     }
 
 }

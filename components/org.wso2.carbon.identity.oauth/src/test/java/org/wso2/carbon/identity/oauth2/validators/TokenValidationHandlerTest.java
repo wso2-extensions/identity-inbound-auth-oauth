@@ -23,15 +23,16 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.common.testng.WithAxisConfiguration;
+import org.wso2.carbon.identity.common.testng.WithCarbonHome;
+import org.wso2.carbon.identity.common.testng.WithH2Database;
+import org.wso2.carbon.identity.common.testng.WithRealmService;
 import org.wso2.carbon.identity.oauth2.dao.TokenMgtDAO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientApplicationDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
-import org.wso2.carbon.identity.test.common.testng.WithAxisConfiguration;
-import org.wso2.carbon.identity.test.common.testng.WithCarbonHome;
-import org.wso2.carbon.identity.test.common.testng.WithH2Database;
-import org.wso2.carbon.identity.test.common.testng.WithRealmService;
+
 import org.wso2.carbon.identity.testutil.IdentityBaseTest;
 
 import java.sql.Timestamp;

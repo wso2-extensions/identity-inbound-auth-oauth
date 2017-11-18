@@ -42,7 +42,6 @@ import org.wso2.carbon.identity.oauth.common.NTLMAuthenticationValidator;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.SAML2GrantValidator;
-import org.wso2.carbon.identity.oauth.common.exception.OAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 import org.wso2.carbon.identity.oauth.endpoint.expmapper.InvalidRequestExceptionMapper;
@@ -150,7 +149,7 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
         mapWithCredentials.put(OAuth.OAUTH_CLIENT_ID, clientId);
         mapWithCredentials.put(OAuth.OAUTH_CLIENT_SECRET, secret);
 
-        MultivaluedMap<String, String> mapWithClientId = new MultivaluedHashMap<String, String>();
+        MultivaluedMap<String, String> mapWithClientId = new MultivaluedHashMap<>();
         mapWithClientId.put(OAuth.OAUTH_CLIENT_ID, clientId);
 
         String inactiveClientHeader =

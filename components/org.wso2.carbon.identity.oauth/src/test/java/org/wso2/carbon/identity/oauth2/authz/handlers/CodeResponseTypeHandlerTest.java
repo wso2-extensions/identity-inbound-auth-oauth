@@ -23,30 +23,28 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.common.testng.WithCarbonHome;
+import org.wso2.carbon.identity.common.testng.WithH2Database;
+import org.wso2.carbon.identity.common.testng.WithRealmService;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.TestConstants;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
-import org.wso2.carbon.identity.test.common.testng.WithCarbonHome;
-import org.wso2.carbon.identity.test.common.testng.WithH2Database;
-import org.wso2.carbon.identity.test.common.testng.WithRealmService;
-
-import java.util.UUID;
-import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Test class covering CodeResponseTypeHandler
  */
 
 @WithCarbonHome
-@WithH2Database(jndiName = "jdbc/WSO2IdentityDB",
-        files = {"dbScripts/h2.sql", "dbScripts/identity.sql"})
+@WithH2Database(files = {"dbScripts/h2.sql", "dbScripts/identity.sql"})
 @WithRealmService(tenantId = TestConstants.TENANT_ID,
         tenantDomain = TestConstants.TENANT_DOMAIN,
-        initUserStoreManager = true)
+        initUserStoreManager = true,
+        injectToSingletons = {OAuthComponentServiceHolder.class})
 public class CodeResponseTypeHandlerTest {
 
     private final String TEST_CONSUMER_KEY =  "testconsumenrkey";

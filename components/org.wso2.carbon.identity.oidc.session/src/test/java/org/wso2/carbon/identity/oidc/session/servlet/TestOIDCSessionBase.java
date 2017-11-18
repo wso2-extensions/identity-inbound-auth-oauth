@@ -18,11 +18,13 @@
 package org.wso2.carbon.identity.oidc.session.servlet;
 
 import org.apache.commons.dbcp.BasicDataSource;
-import org.powermock.modules.testng.PowerMockTestCase;
+import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
-
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+
+import static org.powermock.api.mockito.PowerMockito.mockStatic;
+import static org.powermock.api.mockito.PowerMockito.when;
 
 public class TestOIDCSessionBase extends PowerMockIdentityBaseTest {
 
@@ -31,10 +33,10 @@ public class TestOIDCSessionBase extends PowerMockIdentityBaseTest {
             " CALLBACK_URL, GRANT_TYPES, APP_STATE) VALUES (?,?,?,?,?,?,?,?,?,?) ";
 
     protected Connection connection;
+    protected BasicDataSource dataSource;
 
     protected void initiateInMemoryH2() throws Exception {
-        BasicDataSource dataSource = new BasicDataSource();
-
+        dataSource = new BasicDataSource();
         dataSource.setDriverClassName("org.h2.Driver");
         dataSource.setUsername("username");
         dataSource.setPassword("password");
@@ -42,6 +44,8 @@ public class TestOIDCSessionBase extends PowerMockIdentityBaseTest {
 
         connection = dataSource.getConnection();
         connection.createStatement().executeUpdate("RUNSCRIPT FROM 'src/test/resources/dbScripts/h2.sql'");
+        mockStatic(IdentityDatabaseUtil.class);
+        when(IdentityDatabaseUtil.getDBConnection()).thenAnswer(invocationOnMock -> dataSource.getConnection());
     }
 
     protected void createOAuthApp(String clientId, String secret, String username, String appName, String appState,
@@ -63,13 +67,13 @@ public class TestOIDCSessionBase extends PowerMockIdentityBaseTest {
             statement.setString(10, appState);
             statement.execute();
         } finally {
-            if (statement != null){
+            if (statement != null) {
                 statement.close();
             }
         }
     }
 
     public void cleanData() throws Exception {
-        connection.close();
+        dataSource.close();
     }
 }

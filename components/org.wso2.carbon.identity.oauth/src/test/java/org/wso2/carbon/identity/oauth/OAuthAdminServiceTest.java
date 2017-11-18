@@ -2,6 +2,7 @@ package org.wso2.carbon.identity.oauth;
 
 import org.apache.axis2.context.ConfigurationContext;
 import org.apache.axis2.engine.AxisConfiguration;
+import org.apache.commons.lang.StringUtils;
 import org.mockito.Matchers;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -182,7 +183,15 @@ public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
         whenNew(OAuthAppDAO.class).withNoArguments().thenReturn(oAtuhAppDAO);
         doNothing().when(oAtuhAppDAO).addOAuthApplication(Matchers.any(OAuthAppDO.class));
 
-        oAuthAdminService.registerOAuthApplicationData(oAuthConsumerAppDTO);
+        try {
+            oAuthAdminService.registerOAuthApplicationData(oAuthConsumerAppDTO);
+        } catch (IdentityOAuthAdminException e) {
+            if (StringUtils.isBlank(userName)) {
+                Assert.assertEquals("No authenticated user found. Failed to register OAuth App", e.getMessage());
+                return;
+            }
+            Assert.fail("Error while registering OAuth APP");
+        }
     }
 
 

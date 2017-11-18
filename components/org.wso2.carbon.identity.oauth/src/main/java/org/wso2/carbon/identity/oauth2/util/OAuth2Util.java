@@ -969,7 +969,7 @@ public class OAuth2Util {
         public static String getOAuth2DCREPUrl(String tenantDomain) throws URISyntaxException {
             String oauth2TokenEPUrl = OAuthServerConfiguration.getInstance().getOAuth2DCREPUrl();
             if (StringUtils.isBlank(oauth2TokenEPUrl)) {
-                oauth2TokenEPUrl = IdentityUtil.getServerURL("/identity/connect/register", true, false);
+                oauth2TokenEPUrl = IdentityUtil.getServerURL("/api/identity/oauth2/dcr/v1.0/register", true, false);
             }
             if (StringUtils.isNotBlank(tenantDomain) && !MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals
                     (tenantDomain)) {

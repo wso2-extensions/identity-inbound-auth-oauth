@@ -51,6 +51,7 @@ import java.sql.SQLException;
 import java.util.UUID;
 
 import static org.mockito.MockitoAnnotations.initMocks;
+import static org.powermock.api.mockito.PowerMockito.doNothing;
 import static org.powermock.api.mockito.PowerMockito.doThrow;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.spy;
@@ -142,7 +143,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
         setupMocksForTest(isPkceEnabled);
         OAuthAppDO appDO = getDefaultOAuthAppDO();
         try (Connection connection = getConnection(DB_NAME)) {
-            mockIdentityDataBaseUtilConnection(connection);
+            mockIdentityUtilDataBaseConnection(connection);
             addOAuthApplication(appDO);
         }
     }
@@ -174,7 +175,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
         OAuthAppDO appDO = getDefaultOAuthAppDO();
         OAuthAppDAO appDAO = new OAuthAppDAO();
         try (Connection connection = getConnection(DB_NAME)) {
-            mockIdentityDataBaseUtilConnection(connection);
+            mockIdentityUtilDataBaseConnection(connection);
             addOAuthApplication(appDO);
             // This should throw an exception
             appDAO.addOAuthApplication(appDO);
@@ -200,7 +201,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
     public void testAddOAuthConsumer() throws Exception {
         setupMocksForTest();
         try (Connection connection = getConnection(DB_NAME)) {
-            mockIdentityDataBaseUtilConnection(connection);
+            mockIdentityUtilDataBaseConnection(connection);
 
             OAuthAppDAO AppDAO = new OAuthAppDAO();
             String[] consumerKeySecretPair = AppDAO.addOAuthConsumer(USER_NAME, TENANT_ID, TENANT_DOMAIN);
@@ -241,7 +242,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
         setupMocksForTest(isPkceEnabled);
         try (Connection connection = getConnection(DB_NAME);
              PreparedStatement preparedStatement = connection.prepareStatement(GET_APP_FIELDS)) {
-            mockIdentityDataBaseUtilConnection(connection);
+            mockIdentityUtilDataBaseConnection(connection);
 
             OAuthAppDAO appDAO = new OAuthAppDAO();
             OAuthAppDO appDO = getDefaultOAuthAppDO();
@@ -301,7 +302,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
 
         setupMocksForTest(isPkceEnabled);
         try (Connection connection = getConnection(DB_NAME)) {
-            mockIdentityDataBaseUtilConnection(connection);
+            mockIdentityUtilDataBaseConnection(connection);
             OAuthAppDO oAuthAppDO = getDefaultOAuthAppDO();
             addOAuthApplication(oAuthAppDO);
 
@@ -321,8 +322,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
         final String GET_SECRET_SQL = "SELECT * FROM IDN_OAUTH_CONSUMER_APPS WHERE CONSUMER_KEY=?";
         setupMocksForTest();
         try (Connection connection = getConnection(DB_NAME)) {
-            mockStatic(IdentityDatabaseUtil.class);
-            when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+            mockIdentityUtilDataBaseConnection(connection);
 
             OAuthAppDAO AppDAO = new OAuthAppDAO();
             AppDAO.removeConsumerApplication(CONSUMER_KEY);
@@ -357,7 +357,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
 
         setupMocksForTest();
         try (Connection connection = getConnection(DB_NAME)) {
-            mockIdentityDataBaseUtilConnection(connection);
+            mockIdentityUtilDataBaseConnection(connection);
 
             OAuthAppDAO AppDAO = new OAuthAppDAO();
             AppDAO.updateOAuthConsumerApp(APP_NAME, CONSUMER_KEY);
@@ -400,7 +400,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
 
         setupMocksForTest();
         try (Connection connection = getConnection(DB_NAME)) {
-            mockIdentityDataBaseUtilConnection(connection);
+            mockIdentityUtilDataBaseConnection(connection);
 
             OAuthAppDO oAuthAppDO = getDefaultOAuthAppDO();
             oAuthAppDO.setState(appState);
@@ -435,7 +435,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
         setupMocksForTest();
         try (Connection connection = getConnection(DB_NAME);
              PreparedStatement statement = connection.prepareStatement(GET_APP_STATE_SQL)) {
-            mockIdentityDataBaseUtilConnection(connection);
+            mockIdentityUtilDataBaseConnection(connection);
             // Add an OAuth app. The app state will be ACTIVE always
             addOAuthApplication(getDefaultOAuthAppDO());
 
@@ -468,7 +468,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
 
         setupMocksForTest(enablePKCE, isSensitive);
         try (Connection connection = getConnection(DB_NAME)) {
-            mockIdentityDataBaseUtilConnection(connection);
+            mockIdentityUtilDataBaseConnection(connection);
 
             OAuthAppDO appDO = getDefaultOAuthAppDO();
             addOAuthApplication(appDO);
@@ -480,7 +480,8 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
             addOAuthApplication(anotherAppDO);
 
             OAuthAppDAO AppDAO = new OAuthAppDAO();
-            OAuthAppDO[] oAuthConsumerAppsOfUser = AppDAO.getOAuthConsumerAppsOfUser(USER_NAME, TENANT_ID);
+            String username = IdentityUtil.addDomainToName(USER_NAME, USER_STORE_DOMAIN);
+            OAuthAppDO[] oAuthConsumerAppsOfUser = AppDAO.getOAuthConsumerAppsOfUser(username, TENANT_ID);
             assertNotNull(oAuthConsumerAppsOfUser);
             assertEquals(oAuthConsumerAppsOfUser.length, 2);
         }
@@ -504,7 +505,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
     public void testGetAppInformation(Boolean isPkceEnabled) throws Exception {
         setupMocksForTest(isPkceEnabled);
         try (Connection connection = getConnection(DB_NAME)) {
-            mockIdentityDataBaseUtilConnection(connection);
+            mockIdentityUtilDataBaseConnection(connection);
             addOAuthApplication(getDefaultOAuthAppDO());
 
             OAuthAppDAO appDAO = new OAuthAppDAO();
@@ -517,7 +518,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
 
         setupMocksForTest(isPkceEnabled);
         try (Connection connection = getConnection(DB_NAME)) {
-            mockIdentityDataBaseUtilConnection(connection);
+            mockIdentityUtilDataBaseConnection(connection);
             addOAuthApplication(getDefaultOAuthAppDO());
 
             Connection exceptionThrowingConnection = getExceptionThrowingConnection(connection);
@@ -533,7 +534,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
 
         setupMocksForTest(isPkceEnabled);
         try (Connection connection = getConnection(DB_NAME)) {
-            mockIdentityDataBaseUtilConnection(connection);
+            mockIdentityUtilDataBaseConnection(connection);
 
             OAuthAppDO oAuthAppDO = getDefaultOAuthAppDO();
             addOAuthApplication(oAuthAppDO);
@@ -552,7 +553,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
         setupMocksForTest(isPkceEnabled);
         try (Connection connection = getConnection(DB_NAME)) {
 
-            mockIdentityDataBaseUtilConnection(connection);
+            mockIdentityUtilDataBaseConnection(connection);
             OAuthAppDO oAuthAppDO = getDefaultOAuthAppDO();
             addOAuthApplication(oAuthAppDO);
 
@@ -588,6 +589,9 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
         setupMocksForTest(isPkceEnabled);
         mockStatic(IdentityUtil.class);
         when(IdentityUtil.isUserStoreInUsernameCaseSensitive(USER_NAME)).thenReturn(isUsernameCaseSensitive);
+        when(IdentityUtil.addDomainToName(USER_NAME, USER_STORE_DOMAIN)).thenReturn(USER_STORE_DOMAIN + "/" +
+                USER_NAME);
+        when(IdentityUtil.extractDomainFromName(USER_STORE_DOMAIN + "/" + USER_NAME)).thenReturn(USER_STORE_DOMAIN);
 
         mockStatic(OAuthComponentServiceHolder.class);
         when(OAuthComponentServiceHolder.getInstance()).thenReturn(mockedOAuthComponentServiceHolder);
@@ -618,6 +622,9 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
 
         mockStatic(IdentityUtil.class);
         when(IdentityUtil.isUserStoreInUsernameCaseSensitive(USER_NAME, TENANT_ID)).thenReturn(false);
+        when(IdentityUtil.addDomainToName(USER_NAME, USER_STORE_DOMAIN)).thenReturn(USER_STORE_DOMAIN + "/" +
+                USER_NAME);
+        when(IdentityUtil.extractDomainFromName(USER_STORE_DOMAIN + "/" + USER_NAME)).thenReturn(USER_STORE_DOMAIN);
     }
 
     private void mockIdentityDataBaseUtilConnection(Connection connection) {
@@ -625,9 +632,17 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
         when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
     }
 
+    private void mockIdentityUtilDataBaseConnection(Connection connection) throws SQLException {
+        Connection connection1 = spy(connection);
+        doNothing().when(connection1).close();
+        mockStatic(IdentityDatabaseUtil.class);
+        when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection1);
+    }
+
     private Connection getExceptionThrowingConnection(Connection connection) throws SQLException {
         // Spy the original connection to throw an exception during commit
         Connection exceptionThrowingConnection = spy(connection);
+        doNothing().when(exceptionThrowingConnection).close();
         doThrow(new SQLException()).when(exceptionThrowingConnection).commit();
         return exceptionThrowingConnection;
     }

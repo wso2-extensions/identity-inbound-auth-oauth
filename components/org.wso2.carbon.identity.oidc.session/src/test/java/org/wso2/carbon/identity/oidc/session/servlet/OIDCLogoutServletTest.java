@@ -23,12 +23,9 @@ import org.mockito.Mock;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockObjectFactory;
-import org.testng.IObjectFactory;
 import org.testng.annotations.AfterTest;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.DataProvider;
-import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.core.internal.CarbonCoreDataHolder;
@@ -46,15 +43,13 @@ import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionManager;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
-
+import java.security.KeyStore;
+import java.util.Collections;
 import javax.servlet.ServletException;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
-import java.io.IOException;
-import java.security.KeyStore;
-import java.util.Collections;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
@@ -62,7 +57,6 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
-
 import static org.testng.Assert.assertTrue;
 
 @PrepareForTest({OIDCSessionManagementUtil.class, OIDCSessionManager.class, FrameworkUtils.class,
@@ -322,20 +316,10 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
         mockStatic(OAuthServerConfiguration.class);
         when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
         when(oAuthServerConfiguration.getPersistenceProcessor()).thenReturn(tokenPersistenceProcessor);
-        when(tokenPersistenceProcessor.getProcessedClientId(anyString())).thenAnswer(new Answer<Object>() {
-
-            @Override
-            public Object answer(InvocationOnMock invocation) throws Throwable {
-
-                return invocation.getArguments()[0];
-            }
-        });
-
-        mockStatic(IdentityDatabaseUtil.class);
-        when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
-
+        when(tokenPersistenceProcessor.getProcessedClientId(anyString())).thenAnswer(invocation -> invocation.getArguments()[0]);
         when(request.getParameter("post_logout_redirect_uri")).thenReturn(postLogoutUrl);
-
+        mockStatic(IdentityDatabaseUtil.class);
+        when(IdentityDatabaseUtil.getDBConnection()).thenAnswer(invocationOnMock -> dataSource.getConnection());
         mockStatic(OAuth2Util.class);
         when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(oAuthAppDO);
         when(OAuth2Util.getTenantDomainOfOauthApp(any(oAuthAppDO.getClass()))).thenReturn("wso2.com");
@@ -346,7 +330,6 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
         logoutServlet.doGet(request, response);
         verify(response).sendRedirect(captor.capture());
         assertTrue(captor.getValue().contains(expected));
-
     }
 
     @AfterTest

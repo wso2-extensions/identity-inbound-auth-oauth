@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  ~ Copyright (c) 2015, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+  ~ Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
   ~
   ~  WSO2 Inc. licenses this file to you under the Apache License,
   ~  Version 2.0 (the "License"); you may not use this file except
@@ -20,18 +20,17 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
     <parent>
-        <groupId>org.wso2</groupId>
-        <artifactId>wso2</artifactId>
-        <version>1</version>
+        <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
+        <artifactId>identity-inbound-auth-oauth</artifactId>
+        <relativePath>../../pom.xml</relativePath>
+        <version>5.5.130-SNAPSHOT</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
-    <groupId>org.wso2.carbon.identity</groupId>
-    <artifactId>org.wso2.carbon.identity.common.testng</artifactId>
-    <version>5.5.109-SNAPSHOT</version>
+    <artifactId>org.wso2.carbon.identity.oauth.common.testng</artifactId>
     <packaging>jar</packaging>
-    <name>WSO2 Carbon - Identity Common Test</name>
-    <description>Common Test utilities for Identity Unit Tests</description>
+    <name>WSO2 Carbon - OAuth Test Common utilities</name>
+    <description>A custom wso2 products or solution</description>
     <url>http://wso2.org</url>
 
     <dependencies>
@@ -42,20 +41,9 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>org.powermock</groupId>
-            <artifactId>powermock-module-testng</artifactId>
-            <version>1.6.6</version>
-        </dependency>
-        <dependency>
             <groupId>log4j</groupId>
             <artifactId>log4j</artifactId>
             <version>1.2.17</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.powermock</groupId>
-            <artifactId>powermock-api-mockito</artifactId>
-            <version>1.5.6</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -65,16 +53,18 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>org.wso2.carbon.identity</groupId>
+            <groupId>org.wso2.carbon.identity.framework</groupId>
             <artifactId>org.wso2.carbon.identity.core</artifactId>
-            <version>5.2.2</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
-            <artifactId>org.wso2.carbon.identity.oauth</artifactId>
-            <version>5.3.20</version>
+            <groupId>org.wso2.carbon.identity.framework</groupId>
+            <artifactId>org.wso2.carbon.identity.application.authentication.framework</artifactId>
             <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>commons-codec.wso2</groupId>
+            <artifactId>commons-codec</artifactId>
         </dependency>
     </dependencies>
 

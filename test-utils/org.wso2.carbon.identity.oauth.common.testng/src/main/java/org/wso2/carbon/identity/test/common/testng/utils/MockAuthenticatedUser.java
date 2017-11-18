@@ -11,20 +11,27 @@
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
 
-package org.wso2.carbon.identity.test.common.testng;
+package org.wso2.carbon.identity.test.common.testng.utils;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 
-@Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.TYPE)
-public @interface WithAxisConfiguration {
+/**
+ * A mock authenticated user can be used for unit tests.
+ */
+public class MockAuthenticatedUser extends AuthenticatedUser {
+
+    public MockAuthenticatedUser(String userName) {
+        this.userName = userName;
+    }
+
+    @Override
+    public String toString() {
+        return userName;
+    }
 
 }
