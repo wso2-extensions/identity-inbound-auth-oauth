@@ -1914,14 +1914,27 @@ public class OAuth2Util {
         return Base64Utils.encode(tokenStrToEncode.getBytes(Charsets.UTF_8));
     }
 
+    /**
+     * Get authorized user from the {@link AccessTokenDO}. When getting authorized user we also make sure flag to
+     * determine whether the user is federated or not is set.
+     *
+     * @param accessTokenDO
+     * @return
+     */
     public static AuthenticatedUser getAuthenticatedUser(AccessTokenDO accessTokenDO) {
         AuthenticatedUser authenticatedUser = accessTokenDO.getAuthzUser();
-        if (authenticatedUser != null && isFederatedUser(authenticatedUser)) {
-            authenticatedUser.setFederatedUser(true);
+        if (authenticatedUser != null) {
+            authenticatedUser.setFederatedUser(isFederatedUser(authenticatedUser));
         }
         return authenticatedUser;
     }
 
+    /**
+     * Determine whether the user represented by {@link AuthenticatedUser} object is a federated user.
+     *
+     * @param authenticatedUser
+     * @return true if user is federated, false otherwise.
+     */
     public static boolean isFederatedUser(AuthenticatedUser authenticatedUser) {
         String userStoreDomain = authenticatedUser.getUserStoreDomain();
 
