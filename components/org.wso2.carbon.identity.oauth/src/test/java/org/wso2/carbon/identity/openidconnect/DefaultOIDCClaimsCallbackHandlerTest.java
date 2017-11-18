@@ -116,10 +116,10 @@ import static org.wso2.carbon.user.core.UserCoreConstants.DOMAIN_SEPARATOR;
         UserCoreUtil.class,
         FrameworkUtils.class
 })
-public class SAMLAssertionClaimsCallbackTest {
+public class DefaultOIDCClaimsCallbackHandlerTest {
 
     @Spy
-    private SAMLAssertionClaimsCallback samlAssertionClaimsCallback;
+    private DefaultOIDCClaimsCallbackHandler defaultOIDCClaimsCallbackHandler;
 
     @Spy
     private AuthorizationGrantCache authorizationGrantCache;
@@ -220,7 +220,7 @@ public class SAMLAssertionClaimsCallbackTest {
                 .getOpenIDConnectClaimFilters()
                 .add(new OpenIDConnectClaimFilterImpl());
 
-        samlAssertionClaimsCallback = new SAMLAssertionClaimsCallback();
+        defaultOIDCClaimsCallbackHandler = new DefaultOIDCClaimsCallbackHandler();
     }
 
     @DataProvider(name = "samlAttributeValueProvider")
@@ -240,6 +240,8 @@ public class SAMLAssertionClaimsCallbackTest {
     @Test(dataProvider = "samlAttributeValueProvider")
     public void testCustomClaimForOAuthTokenReqMessageContext(String[] attributeValues,
                                                               String expectedClaimValue) throws Exception {
+        mockStatic(FrameworkUtils.class);
+        when(FrameworkUtils.getMultiAttributeSeparator()).thenReturn(MULTI_ATTRIBUTE_SEPARATOR_DEFAULT);
 
         JWTClaimsSet jwtClaimsSet = new JWTClaimsSet();
         Assertion assertion = getAssertion(attributeValues);
@@ -250,7 +252,7 @@ public class SAMLAssertionClaimsCallbackTest {
         OAuthTokenReqMessageContext requestMsgCtx = new OAuthTokenReqMessageContext(accessTokenReqDTO);
         requestMsgCtx.addProperty(OAuthConstants.OAUTH_SAML2_ASSERTION, assertion);
 
-        samlAssertionClaimsCallback.handleCustomClaims(jwtClaimsSet, requestMsgCtx);
+        defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSet, requestMsgCtx);
 
         // Assert whether the custom attribute from SAML Assertion was set as a claim.
         assertFalse(jwtClaimsSet.getCustomClaims().isEmpty());
@@ -271,7 +273,7 @@ public class SAMLAssertionClaimsCallbackTest {
         serviceProvider.setApplicationName(SERVICE_PROVIDER_NAME);
         mockApplicationManagementService();
 
-        samlAssertionClaimsCallback.handleCustomClaims(jwtClaimsSet, requestMsgCtx);
+        defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSet, requestMsgCtx);
         assertNotNull(jwtClaimsSet);
         assertTrue(jwtClaimsSet.getCustomClaims().isEmpty());
     }
@@ -287,7 +289,7 @@ public class SAMLAssertionClaimsCallbackTest {
         ServiceProvider serviceProvider = getSpWithDefaultRequestedClaimsMappings();
         mockApplicationManagementService(serviceProvider);
 
-        samlAssertionClaimsCallback.handleCustomClaims(jwtClaimsSet, requestMsgCtx);
+        defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSet, requestMsgCtx);
         assertNotNull(jwtClaimsSet);
         assertTrue(jwtClaimsSet.getCustomClaims().isEmpty());
     }
@@ -319,7 +321,7 @@ public class SAMLAssertionClaimsCallbackTest {
         serviceProvider.setApplicationName(SERVICE_PROVIDER_NAME);
         mockApplicationManagementService(serviceProvider);
 
-        samlAssertionClaimsCallback.handleCustomClaims(jwtClaimsSet, requestMsgCtx);
+        defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSet, requestMsgCtx);
         assertNotNull(jwtClaimsSet);
         assertTrue(jwtClaimsSet.getCustomClaims().isEmpty());
     }
@@ -337,7 +339,7 @@ public class SAMLAssertionClaimsCallbackTest {
 
         mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm);
 
-        samlAssertionClaimsCallback.handleCustomClaims(jwtClaimsSet, requestMsgCtx);
+        defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSet, requestMsgCtx);
         assertNotNull(jwtClaimsSet);
         assertTrue(jwtClaimsSet.getCustomClaims().isEmpty());
     }
@@ -353,7 +355,7 @@ public class SAMLAssertionClaimsCallbackTest {
         UserRealm userRealm = getExceptionThrowingUserRealm(new UserStoreException(USER_NOT_FOUND));
         mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm);
 
-        samlAssertionClaimsCallback.handleCustomClaims(jwtClaimsSet, requestMsgCtx);
+        defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSet, requestMsgCtx);
         assertNotNull(jwtClaimsSet);
         assertTrue(jwtClaimsSet.getCustomClaims().isEmpty());
     }
@@ -369,7 +371,7 @@ public class SAMLAssertionClaimsCallbackTest {
         UserRealm userRealm = getExceptionThrowingUserRealm(new UserStoreException(""));
         mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm);
 
-        samlAssertionClaimsCallback.handleCustomClaims(jwtClaimsSet, requestMsgCtx);
+        defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSet, requestMsgCtx);
         assertNotNull(jwtClaimsSet);
         assertTrue(jwtClaimsSet.getCustomClaims().isEmpty());
     }
@@ -385,7 +387,7 @@ public class SAMLAssertionClaimsCallbackTest {
         UserRealm userRealm = getUserRealmWithUserClaims(Collections.emptyMap());
         mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm);
 
-        samlAssertionClaimsCallback.handleCustomClaims(jwtClaimsSet, requestMsgCtx);
+        defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSet, requestMsgCtx);
         assertNotNull(jwtClaimsSet);
         assertTrue(jwtClaimsSet.getCustomClaims().isEmpty());
     }
@@ -405,7 +407,7 @@ public class SAMLAssertionClaimsCallbackTest {
 
             mockClaimHandler();
 
-            samlAssertionClaimsCallback.handleCustomClaims(jwtClaimsSet, requestMsgCtx);
+            defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSet, requestMsgCtx);
             assertNotNull(jwtClaimsSet);
             assertTrue(jwtClaimsSet.getCustomClaims().isEmpty());
         } finally {
@@ -429,7 +431,7 @@ public class SAMLAssertionClaimsCallbackTest {
             mockClaimHandler();
             mockOIDCScopeResource();
 
-            samlAssertionClaimsCallback.handleCustomClaims(jwtClaimsSet, requestMsgCtx);
+            defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSet, requestMsgCtx);
             assertNotNull(jwtClaimsSet);
             assertTrue(jwtClaimsSet.getCustomClaims().isEmpty());
         } finally {
@@ -457,7 +459,7 @@ public class SAMLAssertionClaimsCallbackTest {
             oidcProperties.setProperty(OIDC_SCOPE, StringUtils.join(oidcScopeClaims, ","));
             mockOIDCScopeResource(oidcProperties);
 
-            samlAssertionClaimsCallback.handleCustomClaims(jwtClaimsSet, requestMsgCtx);
+            defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSet, requestMsgCtx);
             assertNotNull(jwtClaimsSet);
             assertNull(jwtClaimsSet.getCustomClaim(EMAIL));
 
@@ -501,7 +503,7 @@ public class SAMLAssertionClaimsCallbackTest {
             oidcProperties.setProperty(OIDC_SCOPE, StringUtils.join(oidcScopeClaims, ","));
             mockOIDCScopeResource(oidcProperties);
 
-            samlAssertionClaimsCallback.handleCustomClaims(jwtClaimsSet, requestMsgCtx);
+            defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSet, requestMsgCtx);
 
             assertNotNull(jwtClaimsSet);
             assertNull(jwtClaimsSet.getCustomClaim(EMAIL));
@@ -555,7 +557,7 @@ public class SAMLAssertionClaimsCallbackTest {
             oidcProperties.setProperty(OIDC_SCOPE, StringUtils.join(oidcScopeClaims, ","));
             mockOIDCScopeResource(oidcProperties);
 
-            samlAssertionClaimsCallback.handleCustomClaims(jwtClaimsSet, requestMsgCtx);
+            defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSet, requestMsgCtx);
 
             assertNotNull(jwtClaimsSet);
             assertNotNull(jwtClaimsSet.getCustomClaim(UPDATED_AT));
@@ -616,7 +618,7 @@ public class SAMLAssertionClaimsCallbackTest {
             mockOIDCScopeResource(oidcProperties);
             mockClaimHandler();
 
-            samlAssertionClaimsCallback.handleCustomClaims(jwtClaimsSet, requestMsgCtx);
+            defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSet, requestMsgCtx);
 
             assertNotNull(jwtClaimsSet);
             assertNotNull(jwtClaimsSet.getCustomClaim(ADDRESS));
@@ -719,7 +721,7 @@ public class SAMLAssertionClaimsCallbackTest {
 
             mockOIDCScopeResource();
 
-            samlAssertionClaimsCallback.handleCustomClaims(jwtClaimsSet, oAuthAuthzReqMessageContext);
+            defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSet, oAuthAuthzReqMessageContext);
             assertEquals(jwtClaimsSet.getAllClaims().size(), 8, "Claims are not successfully set.");
         } finally {
             PrivilegedCarbonContext.endTenantFlow();
@@ -786,7 +788,7 @@ public class SAMLAssertionClaimsCallbackTest {
         when(statement.getAttributes()).thenReturn(attributesList);
 
         when(requestMsgCtx.getProperty(OAuthConstants.OAUTH_SAML2_ASSERTION)).thenReturn(assertion);
-        samlAssertionClaimsCallback.handleCustomClaims(jwtClaimsSet, requestMsgCtx);
+        defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSet, requestMsgCtx);
 
         assertEquals(jwtClaimsSet.getAllClaims().size(), 8, "Claims are not successfully set.");
     }
@@ -814,7 +816,7 @@ public class SAMLAssertionClaimsCallbackTest {
         mockApplicationManagementService();
         getMockOIDCScopeResource();
 
-        samlAssertionClaimsCallback.handleCustomClaims(jwtClaimsSet, requestMsgCtx);
+        defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSet, requestMsgCtx);
         assertEquals(jwtClaimsSet.getAllClaims().size(), 8, "Claims are not successfully set.");
     }
 
@@ -857,7 +859,7 @@ public class SAMLAssertionClaimsCallbackTest {
 
         mockApplicationManagementService(serviceProvider);
 
-        samlAssertionClaimsCallback.handleCustomClaims(jwtClaimsSet, authzReqMessageContext);
+        defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSet, authzReqMessageContext);
         assertEquals(jwtClaimsSet.getAllClaims().size(), 8, "Claims are not successfully set.");
     }
 

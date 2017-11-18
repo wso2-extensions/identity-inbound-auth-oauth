@@ -22,6 +22,7 @@ import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.endpoint.util.ClaimUtil;
 import org.wso2.carbon.identity.oauth.user.UserInfoClaimRetriever;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
@@ -45,7 +46,6 @@ import java.util.Map;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
-import static org.powermock.api.mockito.PowerMockito.doCallRealMethod;
 import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.spy;
@@ -124,7 +124,8 @@ public class UserInfoResponseBaseTest extends PowerMockTestCase {
     @BeforeClass
     public void setUp() {
         OpenIDConnectServiceComponentHolder.getInstance()
-                .addOpenIDConnectClaimFilter(new OpenIDConnectClaimFilterImpl());
+                .getOpenIDConnectClaimFilters()
+                .add(new OpenIDConnectClaimFilterImpl());
         resource = new ResourceImpl();
     }
 
@@ -183,15 +184,15 @@ public class UserInfoResponseBaseTest extends PowerMockTestCase {
         when(authorizationGrantCacheEntry.getUserAttributes()).thenReturn(userAttributes);
     }
 
-    protected void prepareClaimUtil(Map claims) throws Exception {
+    protected void prepareClaimUtil(Map<String, Object> claims) throws Exception {
         mockStatic(ClaimUtil.class);
-        when(ClaimUtil.getClaimsFromUserStore(any(OAuth2TokenValidationResponseDTO.class))).thenReturn(claims);
+        when(ClaimUtil.getUserClaimsUsingTokenResponse(any(OAuth2TokenValidationResponseDTO.class))).thenReturn(claims);
     }
 
     protected void prepareOAuth2Util() throws Exception {
         mockStatic(OAuth2Util.class);
         when(OAuth2Util.getClientIdForAccessToken(anyString())).thenReturn("mock_client_id");
-        ArrayList userAttributesFromCache = new ArrayList();
+        ArrayList<String> userAttributesFromCache = new ArrayList<>();
         userAttributesFromCache.add("cachedClaim1");
         userAttributesFromCache.add("cachedClaim2");
         when(OAuth2Util.getEssentialClaims(anyString(), anyString())).thenReturn(userAttributesFromCache);
@@ -285,11 +286,7 @@ public class UserInfoResponseBaseTest extends PowerMockTestCase {
 
         prepareOAuth2Util();
         // Create an accessTokenDO
-        AccessTokenDO accessTokenDO = new AccessTokenDO();
-        accessTokenDO.setAuthzUser(authorizedUser);
-        when(OAuth2Util.getAccessTokenDOfromTokenIdentifier(ACCESS_TOKEN)).thenReturn(accessTokenDO);
-
-        when(OAuth2Util.getAuthenticatedUser(any(AccessTokenDO.class))).thenCallRealMethod();
+        mockAccessTokenDOInOAuth2Util(authorizedUser);
 
         prepareUserInfoEndpointConfig();
         prepareApplicationManagementService(appendTenantDomain, appendUserStoreDomain);
@@ -297,6 +294,14 @@ public class UserInfoResponseBaseTest extends PowerMockTestCase {
         prepareRegistry(Collections.<String, List<String>>emptyMap());
         prepareAuthorizationGrantCache(false);
         prepareClaimUtil(inputClaims);
+    }
+
+    private void mockAccessTokenDOInOAuth2Util(AuthenticatedUser authorizedUser) throws IdentityOAuth2Exception {
+        AccessTokenDO accessTokenDO = new AccessTokenDO();
+        accessTokenDO.setAuthzUser(authorizedUser);
+        when(OAuth2Util.getAccessTokenDOfromTokenIdentifier(ACCESS_TOKEN)).thenReturn(accessTokenDO);
+
+        when(OAuth2Util.getAuthenticatedUser(any(AccessTokenDO.class))).thenCallRealMethod();
     }
 
     protected void prepareForResponseClaimTest(Map<String, Object> inputClaims,
@@ -310,7 +315,11 @@ public class UserInfoResponseBaseTest extends PowerMockTestCase {
         spy(OAuth2Util.class);
 
         prepareOAuth2Util();
-//        prepareIdentityUtil();
+
+        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+        authenticatedUser.setUserName(AUTHORIZED_USER_FULL_QUALIFIED);
+        mockAccessTokenDOInOAuth2Util(authenticatedUser);
+
         prepareUserInfoEndpointConfig();
         prepareApplicationManagementService(true, true);
 
