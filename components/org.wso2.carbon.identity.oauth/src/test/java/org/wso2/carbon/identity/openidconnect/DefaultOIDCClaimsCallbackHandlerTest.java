@@ -217,7 +217,8 @@ public class SAMLAssertionClaimsCallbackTest {
         when(FrameworkUtils.getMultiAttributeSeparator()).thenReturn(MULTI_ATTRIBUTE_SEPARATOR_DEFAULT);
 
         OpenIDConnectServiceComponentHolder.getInstance()
-                .addOpenIDConnectClaimFilter(new OpenIDConnectClaimFilterImpl());
+                .getOpenIDConnectClaimFilters()
+                .add(new OpenIDConnectClaimFilterImpl());
 
         samlAssertionClaimsCallback = new SAMLAssertionClaimsCallback();
     }

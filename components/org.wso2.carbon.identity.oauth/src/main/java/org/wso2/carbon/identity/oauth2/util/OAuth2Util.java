@@ -1878,7 +1878,7 @@ public class OAuth2Util {
         }
 
         String userStoreDomain = OAuth2Util.getUserStoreDomainFromUserId(authenticatedUser.toString());
-        if (federatedUsersNotMappedToLocal() && authenticatedUser.
+        if (!OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && authenticatedUser.
                 isFederatedUser()) {
             userStoreDomain = OAuth2Util.getFederatedUserDomain(authenticatedUser.getFederatedIdPName());
         }
@@ -1903,7 +1903,7 @@ public class OAuth2Util {
         }
 
         String usernameForToken = authenticatedUser.toString();
-        if (federatedUsersNotMappedToLocal() && authenticatedUser.isFederatedUser()) {
+        if (!OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && authenticatedUser.isFederatedUser()) {
             usernameForToken = OAuth2Util.getFederatedUserDomain(authenticatedUser.getFederatedIdPName());
             usernameForToken = usernameForToken + UserCoreConstants.DOMAIN_SEPARATOR + authenticatedUser.
                     getAuthenticatedSubjectIdentifier();
@@ -1924,16 +1924,18 @@ public class OAuth2Util {
 
     public static boolean isFederatedUser(AuthenticatedUser authenticatedUser) {
         String userStoreDomain = authenticatedUser.getUserStoreDomain();
-        return isExplicitlyFederatedUser(authenticatedUser, userStoreDomain) && federatedUsersNotMappedToLocal();
-    }
 
-    private static boolean federatedUsersNotMappedToLocal() {
-        return !OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal();
-    }
-
-    private static boolean isExplicitlyFederatedUser(AuthenticatedUser authenticatedUser, String userStoreDomain) {
-        return StringUtils.startsWith(userStoreDomain, OAuthConstants.UserType.FEDERATED_USER_DOMAIN_PREFIX) ||
+        // We consider a user federated if the flag for federated user is set or the user store domain contain the
+        // federated user store domain prefix.
+        boolean isExplicitlyFederatedUser =
+                StringUtils.startsWith(userStoreDomain, OAuthConstants.UserType.FEDERATED_USER_DOMAIN_PREFIX) ||
                 authenticatedUser.isFederatedUser();
+
+        // Flag to make sure federated user is not mapped to local users.
+        boolean isFederatedUserNotMappedToLocalUser =
+                !OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal();
+
+        return isExplicitlyFederatedUser && isFederatedUserNotMappedToLocalUser;
     }
 
 }
