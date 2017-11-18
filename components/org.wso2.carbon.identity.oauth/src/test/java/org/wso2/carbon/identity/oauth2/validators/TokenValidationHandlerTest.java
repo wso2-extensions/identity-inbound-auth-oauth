@@ -22,22 +22,25 @@ import org.mockito.Mock;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.common.testng.WithAxisConfiguration;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithH2Database;
 import org.wso2.carbon.identity.common.testng.WithRealmService;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.dao.TokenMgtDAO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientApplicationDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
-
-import org.wso2.carbon.identity.testutil.IdentityBaseTest;
+import org.wso2.carbon.user.core.service.RealmService;
 
 import java.sql.Timestamp;
 
 import static org.testng.Assert.assertNotNull;
+import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_ID;
 
 @WithCarbonHome
 @WithAxisConfiguration
@@ -100,6 +103,11 @@ public class TokenValidationHandlerTest {
 
     @Test
     public void testBuildIntrospectionResponse() throws Exception {
+        RealmService realmService = IdentityTenantUtil.getRealmService();
+        PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                .setUserRealm(realmService.getTenantUserRealm(SUPER_TENANT_ID));
+        OAuthComponentServiceHolder.getInstance().setRealmService(IdentityTenantUtil.getRealmService());
+
         OAuth2TokenValidationRequestDTO oAuth2TokenValidationRequestDTO = new OAuth2TokenValidationRequestDTO();
         OAuth2TokenValidationRequestDTO.OAuth2AccessToken accessToken = oAuth2TokenValidationRequestDTO.new
                 OAuth2AccessToken();

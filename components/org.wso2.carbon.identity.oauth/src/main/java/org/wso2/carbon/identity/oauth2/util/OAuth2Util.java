@@ -1252,7 +1252,7 @@ public class OAuth2Util {
 
         if (accessTokenDO == null) {
             // this means the token is not active so we can't proceed further
-            throw new IdentityOAuth2Exception("Invalid Access Token. Access token is not ACTIVE.");
+            throw new IllegalArgumentException("Invalid Access Token. Access token is not ACTIVE.");
         }
 
         // add the token back to the cache in the case of a cache miss

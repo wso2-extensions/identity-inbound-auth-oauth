@@ -81,12 +81,6 @@ public class ClaimUtilTest extends PowerMockIdentityBaseTest {
     private OAuthServerConfiguration mockedOAuthServerConfiguration;
 
     @Mock
-    private AccessTokenDO mockedAccessTokenDO;
-
-//    @Mock
-//    private AuthenticatedUser mockedAuthenticatedUser;
-
-    @Mock
     private UserStoreManager mockedUserStoreManager;
 
     @Mock
@@ -259,7 +253,6 @@ public class ClaimUtilTest extends PowerMockIdentityBaseTest {
 
         mockOAuth2Util();
 
-
         AccessTokenDO accessTokenDO = getAccessTokenDO(clientId, userStoreDomain, isFederated);
         if (mockAccessTokenDO) {
             when(OAuth2Util.getAccessTokenDOfromTokenIdentifier(anyString())).thenReturn(accessTokenDO);
@@ -299,10 +292,8 @@ public class ClaimUtilTest extends PowerMockIdentityBaseTest {
                     thenThrow(new UserStoreException("UserNotFound"));
         }
 
-
         mockStatic(IdentityUtil.class);
         when(IdentityUtil.extractDomainFromName(anyString())).thenReturn(userStoreDomain);
-//        when(IdentityUtil.isTokenLoggable(anyString())).thenReturn(isDebugEnabled);
 
         when(mockedUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
         when(mockedUserStoreManager.getSecondaryUserStoreManager(anyString())).thenReturn(mockedUserStoreManager);
