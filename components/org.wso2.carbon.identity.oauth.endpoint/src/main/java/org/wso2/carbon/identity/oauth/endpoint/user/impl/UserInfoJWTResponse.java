@@ -46,9 +46,9 @@ public class UserInfoJWTResponse extends AbstractUserInfoResponseBuilder {
     private static final JWSAlgorithm DEFAULT_SIGNATURE_ALGORITHM = new JWSAlgorithm(JWSAlgorithm.NONE.getName());
 
     @Override
-    protected Map<String, Object> retrieveUserClaims(OAuth2TokenValidationResponseDTO tokenResponse)
+    protected Map<String, Object> retrieveUserClaims(OAuth2TokenValidationResponseDTO tokenValidationResponse)
             throws UserInfoEndpointException {
-        return ClaimUtil.getClaimsFromUserStore(tokenResponse);
+        return ClaimUtil.getUserClaimsUsingTokenResponse(tokenValidationResponse);
     }
 
     @Override
@@ -64,7 +64,24 @@ public class UserInfoJWTResponse extends AbstractUserInfoResponseBuilder {
     private String buildJWTResponse(OAuth2TokenValidationResponseDTO tokenResponse,
                                     String spTenantDomain,
                                     JWTClaimsSet jwtClaimsSet) throws UserInfoEndpointException {
+        JWSAlgorithm signatureAlgorithm = getJWTSignatureAlgorithm();
+        if (JWSAlgorithm.NONE.equals(signatureAlgorithm)) {
+            if (log.isDebugEnabled()) {
+                log.debug("User Info JWT Signature algorithm is not defined. Returning unsigned JWT.");
+            }
+            return new PlainJWT(jwtClaimsSet).serialize();
+        }
 
+        // Tenant domain to which the signing key belongs to.
+        String signingTenantDomain = getSigningTenantDomain(tokenResponse, spTenantDomain);
+        try {
+            return OAuth2Util.signJWT(jwtClaimsSet, signatureAlgorithm, signingTenantDomain).serialize();
+        } catch (IdentityOAuth2Exception e) {
+            throw new UserInfoEndpointException("Error occurred while signing JWT", e);
+        }
+    }
+
+    private JWSAlgorithm getJWTSignatureAlgorithm() throws UserInfoEndpointException {
         JWSAlgorithm signatureAlgorithm = DEFAULT_SIGNATURE_ALGORITHM;
         String sigAlg = OAuthServerConfiguration.getInstance().getUserInfoJWTSignatureAlgorithm();
         if (isNotBlank(sigAlg)) {
@@ -74,35 +91,26 @@ public class UserInfoJWTResponse extends AbstractUserInfoResponseBuilder {
                 throw new UserInfoEndpointException("Provided signature algorithm : " + sigAlg + " is not supported.", e);
             }
         }
+        return signatureAlgorithm;
+    }
 
-        if (JWSAlgorithm.NONE.equals(signatureAlgorithm)) {
-            if (log.isDebugEnabled()) {
-                log.debug("User Info JWT Signature algorithm is not defined. Returning unsigned JWT.");
-            }
-            return new PlainJWT(jwtClaimsSet).serialize();
-        }
-
+    private String getSigningTenantDomain(OAuth2TokenValidationResponseDTO tokenResponse,
+                                          String spTenantDomain) throws UserInfoEndpointException {
         boolean isJWTSignedWithSPKey = OAuthServerConfiguration.getInstance().isJWTSignedWithSPKey();
         String signingTenantDomain;
         if (isJWTSignedWithSPKey) {
             signingTenantDomain = spTenantDomain;
         } else {
-            AccessTokenDO accessTokenDO = getAccessTokenDO(tokenResponse);
+            AccessTokenDO accessTokenDO = getAccessTokenDO(tokenResponse.getAuthorizationContextToken().getTokenString());
             signingTenantDomain = accessTokenDO.getAuthzUser().getTenantDomain();
         }
-
-        try {
-            return OAuth2Util.signJWT(jwtClaimsSet, signatureAlgorithm, signingTenantDomain).serialize();
-        } catch (IdentityOAuth2Exception e) {
-            throw new UserInfoEndpointException("Error occurred while signing JWT", e);
-        }
+        return signingTenantDomain;
     }
 
-    private AccessTokenDO getAccessTokenDO(OAuth2TokenValidationResponseDTO tokenResponse) throws UserInfoEndpointException {
+    private AccessTokenDO getAccessTokenDO(String accessToken) throws UserInfoEndpointException {
         AccessTokenDO accessTokenDO;
         try {
-            accessTokenDO = OAuth2Util.getAccessTokenDOfromTokenIdentifier(tokenResponse
-                    .getAuthorizationContextToken().getTokenString());
+            accessTokenDO = OAuth2Util.getAccessTokenDOfromTokenIdentifier(accessToken);
         } catch (IdentityOAuth2Exception e) {
             throw new UserInfoEndpointException("Error occurred while signing JWT", e);
         }

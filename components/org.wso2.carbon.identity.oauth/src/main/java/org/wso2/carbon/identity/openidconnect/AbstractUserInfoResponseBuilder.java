@@ -40,10 +40,8 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
-import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -80,6 +78,18 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
         return buildResponse(tokenResponse, spTenantDomain, filteredUserClaims);
     }
 
+    /**
+     * Get the 'sub' claim. By append the userStoreDomain or tenantDomain for local users based on the Service
+     * Provider's local and outbound authentication configurations.
+     *
+     * @param userClaims
+     * @param clientId
+     * @param spTenantDomain
+     * @param tokenResponse
+     * @return
+     * @throws UserInfoEndpointException
+     * @throws OAuthSystemException
+     */
     protected String getSubjectClaim(Map<String, Object> userClaims,
                                      String clientId,
                                      String spTenantDomain,
@@ -113,43 +123,22 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
         return subjectClaim;
     }
 
-    private boolean isLocalUser(AuthenticatedUser authenticatedUser) {
-        return !authenticatedUser.isFederatedUser();
-    }
-
-    private String getAccessToken(OAuth2TokenValidationResponseDTO tokenResponse) {
-        return tokenResponse.getAuthorizationContextToken().getTokenString();
-    }
-
-    private AuthenticatedUser getAuthenticatedUser(String accessToken) throws OAuthSystemException {
-        AccessTokenDO accessTokenDO;
-        try {
-            accessTokenDO = OAuth2Util.getAccessTokenDOfromTokenIdentifier(accessToken);
-            return OAuth2Util.getAuthenticatedUser(accessTokenDO);
-        } catch (IdentityOAuth2Exception e) {
-            throw new OAuthSystemException();
-        }
-    }
-
+    /**
+     * Filter user claims requested by the Service Provider based on the requested scopes.
+     *
+     * @param userClaims
+     * @param requestedScopes
+     * @param clientId
+     * @param tenantDomain
+     * @return
+     */
     protected Map<String, Object> getUserClaimsFilteredByScope(Map<String, Object> userClaims,
                                                                String[] requestedScopes,
                                                                String clientId,
                                                                String tenantDomain) {
         return OpenIDConnectServiceComponentHolder.getInstance()
                 .getHighestPriorityOpenIDConnectClaimFilter()
-                .getClaimsFilteredByOIDCScopes(userClaims, requestedScopes, clientId,tenantDomain);
-    }
-
-    private String getServiceProviderTenantDomain(OAuth2TokenValidationResponseDTO tokenResponse)
-            throws UserInfoEndpointException {
-        String clientId = getClientId(getAccessToken(tokenResponse));
-        OAuthAppDO oAuthAppDO;
-        try {
-            oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
-        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
-            throw new UserInfoEndpointException("Error while retrieving OAuth app information for clientId: " + clientId);
-        }
-        return OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
+                .getClaimsFilteredByOIDCScopes(userClaims, requestedScopes, clientId, tenantDomain);
     }
 
     protected Map<String, Object> getEssentialClaims(OAuth2TokenValidationResponseDTO tokenResponse,
@@ -164,6 +153,13 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
         return essentialClaimMap;
     }
 
+    /**
+     * Retrieve User claims in OIDC Dialect.
+     *
+     * @param tokenValidationResponse
+     * @return Map of user claims, Map<"oidc_claim_uri", "claimValue">
+     * @throws UserInfoEndpointException
+     */
     protected abstract Map<String, Object> retrieveUserClaims(OAuth2TokenValidationResponseDTO tokenValidationResponse)
             throws UserInfoEndpointException;
 
@@ -180,6 +176,28 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
     protected abstract String buildResponse(OAuth2TokenValidationResponseDTO tokenResponse,
                                             String spTenantDomain,
                                             Map<String, Object> filteredUserClaims) throws UserInfoEndpointException;
+
+    private AuthenticatedUser getAuthenticatedUser(String accessToken) throws OAuthSystemException {
+        AccessTokenDO accessTokenDO;
+        try {
+            accessTokenDO = OAuth2Util.getAccessTokenDOfromTokenIdentifier(accessToken);
+            return OAuth2Util.getAuthenticatedUser(accessTokenDO);
+        } catch (IdentityOAuth2Exception e) {
+            throw new OAuthSystemException();
+        }
+    }
+
+    private String getServiceProviderTenantDomain(OAuth2TokenValidationResponseDTO tokenResponse)
+            throws UserInfoEndpointException {
+        String clientId = getClientId(getAccessToken(tokenResponse));
+        OAuthAppDO oAuthAppDO;
+        try {
+            oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
+        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+            throw new UserInfoEndpointException("Error while retrieving OAuth app information for clientId: " + clientId);
+        }
+        return OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
+    }
 
     private String buildSubjectClaim(String sub,
                                      String userTenantDomain,
@@ -223,13 +241,13 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
             serviceProvider = applicationMgtService.getServiceProviderByClientId(
                     clientId, IdentityApplicationConstants.OAuth2.NAME, tenantDomain);
         } catch (IdentityApplicationManagementException e) {
-            throw new UserInfoEndpointException("Error while obtaining the service provider.", e);
+            throw new UserInfoEndpointException("Error while obtaining the service provider for client_id: " +
+                    clientId + " of tenantDomain: " + tenantDomain, e);
         }
         return serviceProvider;
     }
 
     private List<String> getEssentialClaimUris(OAuth2TokenValidationResponseDTO tokenResponse) {
-
         AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(getAccessToken(tokenResponse));
         AuthorizationGrantCacheEntry cacheEntry = AuthorizationGrantCache.getInstance()
                 .getValueFromCacheByToken(cacheKey);
@@ -240,5 +258,13 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
             }
         }
         return new ArrayList<>();
+    }
+
+    private boolean isLocalUser(AuthenticatedUser authenticatedUser) {
+        return !authenticatedUser.isFederatedUser();
+    }
+
+    private String getAccessToken(OAuth2TokenValidationResponseDTO tokenResponse) {
+        return tokenResponse.getAuthorizationContextToken().getTokenString();
     }
 }

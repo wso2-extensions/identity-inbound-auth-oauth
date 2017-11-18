@@ -17,8 +17,6 @@
  */
 package org.wso2.carbon.identity.oauth.endpoint.user.impl;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.utils.JSONUtils;
 import org.wso2.carbon.identity.oauth.endpoint.util.ClaimUtil;
 import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
@@ -36,7 +34,7 @@ public class UserInfoJSONResponseBuilder extends AbstractUserInfoResponseBuilder
     @Override
     protected Map<String, Object> retrieveUserClaims(OAuth2TokenValidationResponseDTO tokenValidationResponse)
             throws UserInfoEndpointException {
-        return ClaimUtil.getUserClaimsFromTokenResponse(tokenValidationResponse);
+        return ClaimUtil.getUserClaimsUsingTokenResponse(tokenValidationResponse);
     }
 
     @Override
