@@ -164,7 +164,7 @@ public class AuthorizationCodeGrantHandlerTest extends PowerMockTestCase {
         }
         when(tokenMgtDAO.validateAuthorizationCode(anyString(), anyString())).thenReturn(authzCodeDO);
 
-        assertEquals(authorizationCodeGrantHandler.validateGrant(tokReqMsgCtx), expectedResult);
+        assertEquals(expectedResult,authorizationCodeGrantHandler.validateGrant(tokReqMsgCtx));
     }
 
     @DataProvider(name = "buildErrorTokenRequestMessageContext")

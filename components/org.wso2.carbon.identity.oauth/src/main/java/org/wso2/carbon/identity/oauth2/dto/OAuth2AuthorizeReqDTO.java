@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth2.dto;
 
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.oauth2.model.HttpRequestHeader;
 
 import java.util.LinkedHashSet;
 import java.util.Properties;
@@ -37,6 +38,15 @@ public class OAuth2AuthorizeReqDTO {
     private String tenantDomain;
     private long authTime;
     private String essentialClaims;
+    private HttpRequestHeader[] httpRequestHeaders;
+
+    public HttpRequestHeader[] getHttpRequestHeaders() {
+        return httpRequestHeaders;
+    }
+
+    public void setHttpRequestHeaders(HttpRequestHeader[] httpRequestHeaders) {
+        this.httpRequestHeaders = httpRequestHeaders;
+    }
 
     public String getEssentialClaims() {
         return essentialClaims;

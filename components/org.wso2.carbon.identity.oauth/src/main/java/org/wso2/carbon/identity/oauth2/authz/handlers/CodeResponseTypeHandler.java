@@ -95,6 +95,8 @@ public class CodeResponseTypeHandler extends AbstractResponseTypeHandler {
             codeId = UUID.randomUUID().toString();
         } catch (OAuthSystemException e) {
             throw new IdentityOAuth2Exception(e.getMessage(), e);
+        } catch (InvalidOAuthClientException e) {
+            throw new IdentityOAuth2Exception(e.getMessage(), e);
         }
 
         AuthzCodeDO authzCodeDO = new AuthzCodeDO(authorizationReqDTO.getUser(),

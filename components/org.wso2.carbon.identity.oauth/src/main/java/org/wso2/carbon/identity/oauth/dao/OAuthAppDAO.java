@@ -93,26 +93,27 @@ public class OAuthAppDAO {
                         prepStmt.setLong(12, consumerAppDO.getUserAccessTokenExpiryTime());
                         prepStmt.setLong(13, consumerAppDO.getApplicationAccessTokenExpiryTime());
                         prepStmt.setLong(14, consumerAppDO.getRefreshTokenExpiryTime());
+                        prepStmt.setString(15, consumerAppDO.isTbMandatory() ? "1" : "0");
                         prepStmt.execute();
                         connection.commit();
                     }
                 } else {
-                    try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.ADD_OAUTH_APP)) {
-                        prepStmt.setString(1, persistenceProcessor.getProcessedClientId(consumerAppDO.getOauthConsumerKey()));
-                        prepStmt.setString(2, persistenceProcessor.getProcessedClientSecret(consumerAppDO.getOauthConsumerSecret()));
-                        prepStmt.setString(3, consumerAppDO.getUser().getUserName());
-                        prepStmt.setInt(4, IdentityTenantUtil.getTenantId(consumerAppDO.getUser().getTenantDomain()));
-                        prepStmt.setString(5, consumerAppDO.getUser().getUserStoreDomain());
-                        prepStmt.setString(6, consumerAppDO.getApplicationName());
-                        prepStmt.setString(7, consumerAppDO.getOauthVersion());
-                        prepStmt.setString(8, consumerAppDO.getCallbackUrl());
-                        prepStmt.setString(9, consumerAppDO.getGrantTypes());
-                        prepStmt.setLong(10, consumerAppDO.getUserAccessTokenExpiryTime());
-                        prepStmt.setLong(11, consumerAppDO.getApplicationAccessTokenExpiryTime());
-                        prepStmt.setLong(12, consumerAppDO.getRefreshTokenExpiryTime());
-                        prepStmt.execute();
-                        connection.commit();
-                    }
+                    prepStmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.ADD_OAUTH_APP);
+                    prepStmt.setString(1, persistenceProcessor.getProcessedClientId(consumerAppDO.getOauthConsumerKey()));
+                    prepStmt.setString(2, persistenceProcessor.getProcessedClientSecret(consumerAppDO.getOauthConsumerSecret()));
+                    prepStmt.setString(3, consumerAppDO.getUser().getUserName());
+                    prepStmt.setInt(4, IdentityTenantUtil.getTenantId(consumerAppDO.getUser().getTenantDomain()));
+                    prepStmt.setString(5, consumerAppDO.getUser().getUserStoreDomain());
+                    prepStmt.setString(6, consumerAppDO.getApplicationName());
+                    prepStmt.setString(7, consumerAppDO.getOauthVersion());
+                    prepStmt.setString(8, consumerAppDO.getCallbackUrl());
+                    prepStmt.setString(9, consumerAppDO.getGrantTypes());
+                    prepStmt.setLong(10, consumerAppDO.getUserAccessTokenExpiryTime());
+                    prepStmt.setLong(11, consumerAppDO.getApplicationAccessTokenExpiryTime());
+                    prepStmt.setLong(12, consumerAppDO.getRefreshTokenExpiryTime());
+                    prepStmt.setString(13, consumerAppDO.isTbMandatory() ? "1" : "0");
+                    prepStmt.execute();
+                    connection.commit();
                 }
             } catch (SQLException e) {
                 throw handleError("Error when executing the SQL : " + SQLQueries.OAuthAppDAOSQLQueries.ADD_OAUTH_APP, e);
@@ -212,10 +213,12 @@ public class OAuthAppDAO {
                                 oauthApp.setUserAccessTokenExpiryTime(rSet.getLong(13));
                                 oauthApp.setApplicationAccessTokenExpiryTime(rSet.getLong(14));
                                 oauthApp.setRefreshTokenExpiryTime(rSet.getLong(15));
+                                oauthApp.setTbMandatory("0".equals(rSet.getString(16)) ? false : true);
                             } else {
                                 oauthApp.setUserAccessTokenExpiryTime(rSet.getLong(11));
                                 oauthApp.setApplicationAccessTokenExpiryTime(rSet.getLong(12));
                                 oauthApp.setRefreshTokenExpiryTime(rSet.getLong(13));
+                                oauthApp.setTbMandatory("0".equals(rSet.getString(14)) ? false : true);
                             }
                             oauthApp.setUser(authenticatedUser);
                             oauthApps.add(oauthApp);
@@ -281,10 +284,12 @@ public class OAuthAppDAO {
                                 oauthApp.setUserAccessTokenExpiryTime(rSet.getLong(12));
                                 oauthApp.setApplicationAccessTokenExpiryTime(rSet.getLong(13));
                                 oauthApp.setRefreshTokenExpiryTime(rSet.getLong(14));
+                                oauthApp.setTbMandatory("0".equals(rSet.getString(15)) ? false : true);
                             } else {
                                 oauthApp.setUserAccessTokenExpiryTime(rSet.getLong(10));
                                 oauthApp.setApplicationAccessTokenExpiryTime(rSet.getLong(11));
                                 oauthApp.setRefreshTokenExpiryTime(rSet.getLong(12));
+                                oauthApp.setTbMandatory("0".equals(rSet.getString(13)) ? false : true);
                             }
                         }
                     }
@@ -357,11 +362,12 @@ public class OAuthAppDAO {
                                 oauthApp.setUserAccessTokenExpiryTime(rSet.getLong(11));
                                 oauthApp.setApplicationAccessTokenExpiryTime(rSet.getLong(12));
                                 oauthApp.setRefreshTokenExpiryTime(rSet.getLong(13));
-
+                                oauthApp.setTbMandatory("0".equals(rSet.getString(14)) ? false : true);
                             } else {
                                 oauthApp.setUserAccessTokenExpiryTime(rSet.getLong(9));
                                 oauthApp.setApplicationAccessTokenExpiryTime(rSet.getLong(10));
                                 oauthApp.setRefreshTokenExpiryTime(rSet.getLong(11));
+                                oauthApp.setTbMandatory("0".equals(rSet.getString(12)) ? false : true);
                             }
                         }
                     }
@@ -406,15 +412,18 @@ public class OAuthAppDAO {
                     prepStmt.setLong(6, oauthAppDO.getUserAccessTokenExpiryTime());
                     prepStmt.setLong(7, oauthAppDO.getApplicationAccessTokenExpiryTime());
                     prepStmt.setLong(8, oauthAppDO.getRefreshTokenExpiryTime());
-
-                    prepStmt.setString(9, persistenceProcessor.getProcessedClientId(oauthAppDO.getOauthConsumerKey()));
-                    prepStmt.setString(10, persistenceProcessor.getProcessedClientSecret(oauthAppDO.getOauthConsumerSecret()));
+                    prepStmt.setString(9, oauthAppDO.isTbMandatory() ? "1" : "0");
+                    prepStmt.setString(10, persistenceProcessor.getProcessedClientId(oauthAppDO.getOauthConsumerKey()));
+                    prepStmt.setString(11, persistenceProcessor.getProcessedClientSecret(oauthAppDO
+                            .getOauthConsumerSecret()));
                 } else {
                     prepStmt.setLong(4, oauthAppDO.getUserAccessTokenExpiryTime());
                     prepStmt.setLong(5, oauthAppDO.getApplicationAccessTokenExpiryTime());
                     prepStmt.setLong(6, oauthAppDO.getRefreshTokenExpiryTime());
-                    prepStmt.setString(7, persistenceProcessor.getProcessedClientId(oauthAppDO.getOauthConsumerKey()));
-                    prepStmt.setString(8, persistenceProcessor.getProcessedClientSecret(oauthAppDO.getOauthConsumerSecret()));
+                    prepStmt.setString(7, oauthAppDO.isTbMandatory() ? "1" : "0");
+                    prepStmt.setString(8, persistenceProcessor.getProcessedClientId(oauthAppDO.getOauthConsumerKey()));
+                    prepStmt.setString(9, persistenceProcessor.getProcessedClientSecret(oauthAppDO
+                            .getOauthConsumerSecret()));
                 }
 
                 int count = prepStmt.executeUpdate();
