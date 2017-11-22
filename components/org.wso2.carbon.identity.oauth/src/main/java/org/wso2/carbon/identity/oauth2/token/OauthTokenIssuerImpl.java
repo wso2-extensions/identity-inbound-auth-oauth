@@ -19,15 +19,14 @@
 
 package org.wso2.carbon.identity.oauth2.token;
 
-import org.apache.axiom.util.base64.Base64Utils;
-import org.apache.commons.io.Charsets;
 import org.apache.oltu.oauth2.as.issuer.OAuthIssuer;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
-import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
-import org.wso2.carbon.utils.xml.StringUtils;
+import org.wso2.carbon.identity.oauth2.tokenBinding.TokenBinding;
+import org.wso2.carbon.identity.oauth2.tokenBinding.TokenBindingContext;
+import org.wso2.carbon.identity.oauth2.tokenBinding.TokenBindingHandler;
 
 public class OauthTokenIssuerImpl implements OauthTokenIssuer {
 
@@ -36,52 +35,58 @@ public class OauthTokenIssuerImpl implements OauthTokenIssuer {
             .getOAuthTokenGenerator();
 
     public String accessToken(OAuthTokenReqMessageContext tokReqMsgCtx) throws OAuthSystemException {
-        String tokenBindingId = OAuth2Util.findTokenBindingHeader(tokReqMsgCtx,
-                OAuthConstants.HTTP_TB_REFERRED_HEADER_NAME);
         String accessToken = oAuthIssuerImpl.accessToken();
-        return bindToken(tokenBindingId, accessToken, ";");
+        String boundAccessToken = bindToken(tokReqMsgCtx, OAuthConstants.HTTP_TB_REFERRED_HEADER_NAME, accessToken)
+                .getBoundToken();
+        return boundAccessToken;
     }
 
     public String refreshToken(OAuthTokenReqMessageContext tokReqMsgCtx) throws OAuthSystemException {
-        String tokenBindingId = OAuth2Util.findTokenBindingHeader(tokReqMsgCtx,
-                OAuthConstants.HTTP_TB_PROVIDED_HEADER_NAME);
         String refreshToken = oAuthIssuerImpl.refreshToken();
-        return bindToken(tokenBindingId, refreshToken, ";");
+        String boundRefreshToken = bindToken(tokReqMsgCtx, OAuthConstants.HTTP_TB_PROVIDED_HEADER_NAME, refreshToken)
+                .getBoundToken();
+        return boundRefreshToken;
     }
 
     public String authorizationCode(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) throws OAuthSystemException {
-        String tokenBindingId = OAuth2Util.findTokenBindingHeader(oauthAuthzMsgCtx,
-                OAuthConstants.HTTP_TB_REFERRED_HEADER_NAME);
         String authorizationCode = oAuthIssuerImpl.authorizationCode();
-        return bindToken(tokenBindingId, authorizationCode, ";");
+        String boundAuthorizationCode = bindToken(oauthAuthzMsgCtx, OAuthConstants.HTTP_TB_REFERRED_HEADER_NAME,
+                authorizationCode).getBoundToken();
+        return boundAuthorizationCode;
     }
 
     public String accessToken(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) throws OAuthSystemException {
-        String tokenBindingId = OAuth2Util.findTokenBindingHeader(oauthAuthzMsgCtx,
-                OAuthConstants.HTTP_TB_REFERRED_HEADER_NAME);
         String accessToken = oAuthIssuerImpl.accessToken();
-        return bindToken(tokenBindingId, accessToken, ";");
+        String boundAccessToken = bindToken(oauthAuthzMsgCtx, OAuthConstants.HTTP_TB_REFERRED_HEADER_NAME, accessToken)
+                .getBoundToken();
+        return boundAccessToken;
     }
 
     public String refreshToken(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) throws OAuthSystemException {
-        String tokenBindingId = OAuth2Util.findTokenBindingHeader(oauthAuthzMsgCtx,
-                OAuthConstants.HTTP_TB_PROVIDED_HEADER_NAME);
         String refreshToken = oAuthIssuerImpl.refreshToken();
-        return bindToken(tokenBindingId, refreshToken, ":");
+        String boundRefreshToken = bindToken(oauthAuthzMsgCtx, OAuthConstants.HTTP_TB_PROVIDED_HEADER_NAME, refreshToken)
+                .getBoundToken();
+        return boundRefreshToken;
     }
 
-    private String bindToken(String tokenBindingID, String token, String delimiter) {
-        if (!StringUtils.isEmpty(tokenBindingID)) {
-            String newToken = OAuth2Util.hashOfString(tokenBindingID) + delimiter + token;
-            String encodedToken = base64Encode(newToken);
-            return encodedToken;
-        }
-        return token;
+    private TokenBindingContext bindToken(OAuthTokenReqMessageContext tokReqMsgCtx, String tokenBindingType, String
+            normalToken) {
+        TokenBindingContext tokenBindingContext = new TokenBindingContext();
+        tokenBindingContext.setTokenBindingType(tokenBindingType);
+        tokenBindingContext.setTokReqMsgCtx(tokReqMsgCtx);
+        tokenBindingContext.setNormalToken(normalToken);
+        TokenBinding tokenBinding = new TokenBindingHandler();
+        return tokenBinding.doTokenBinding(tokenBindingContext);
     }
 
-    private String base64Encode(String token) {
-        token = Base64Utils.encode(token.getBytes(Charsets.UTF_8));
-        return token;
+    private TokenBindingContext bindToken(OAuthAuthzReqMessageContext oauthAuthzMsgCtx, String tokenBindingType, String
+            normalToken) {
+        TokenBindingContext tokenBindingContext = new TokenBindingContext();
+        tokenBindingContext.setTokenBindingType(tokenBindingType);
+        tokenBindingContext.setOauthAuthzMsgCtx(oauthAuthzMsgCtx);
+        tokenBindingContext.setNormalToken(normalToken);
+        TokenBinding tokenBinding = new TokenBindingHandler();
+        return tokenBinding.doTokenBinding(tokenBindingContext);
     }
 
 }

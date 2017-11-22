@@ -343,13 +343,13 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
         String PKCECodeChallenge = authzCodeBean.getPkceCodeChallenge();
         String PKCECodeChallengeMethod = authzCodeBean.getPkceCodeChallengeMethod();
         OAuthAppDO oAuthApp = getOAuthAppDO(authzCodeBean.getConsumerKey());
-        if (PkceValidationFails(PKCECodeChallenge, PKCECodeChallengeMethod, codeVerifier, oAuthAppDO,
-                authzCodeDO.getAuthorizationCode())) {
-            //possible malicious oAuthRequest
-            log.warn("Failed PKCE Verification for oAuth 2.0 request");
-            return false;
-        }
-        if (!validatePKCE(PKCECodeChallenge, verificationCode, PKCECodeChallengeMethod, oAuthApp)) {
+//        if (PkceValidationFails(PKCECodeChallenge, PKCECodeChallengeMethod, codeVerifier, oAuthAppDO,
+//                authzCodeDO.getAuthorizationCode())) {
+//            //possible malicious oAuthRequest
+//            log.warn("Failed PKCE Verification for oAuth 2.0 request");
+//            return false;
+//        }
+        if (!validatePKCE(PKCECodeChallenge, verificationCode, PKCECodeChallengeMethod, oAuthApp,authzCodeBean.getAuthorizationCode())) {
             //possible malicious oAuthRequest
             log.warn("Failed PKCE Verification for oAuth 2.0 request");
             if (log.isDebugEnabled()) {

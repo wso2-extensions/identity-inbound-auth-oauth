@@ -97,23 +97,24 @@ public class OAuthAppDAO {
                         prepStmt.execute();
                         connection.commit();
                     }
-                } else {
-                    prepStmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.ADD_OAUTH_APP);
-                    prepStmt.setString(1, persistenceProcessor.getProcessedClientId(consumerAppDO.getOauthConsumerKey()));
-                    prepStmt.setString(2, persistenceProcessor.getProcessedClientSecret(consumerAppDO.getOauthConsumerSecret()));
-                    prepStmt.setString(3, consumerAppDO.getUser().getUserName());
-                    prepStmt.setInt(4, IdentityTenantUtil.getTenantId(consumerAppDO.getUser().getTenantDomain()));
-                    prepStmt.setString(5, consumerAppDO.getUser().getUserStoreDomain());
-                    prepStmt.setString(6, consumerAppDO.getApplicationName());
-                    prepStmt.setString(7, consumerAppDO.getOauthVersion());
-                    prepStmt.setString(8, consumerAppDO.getCallbackUrl());
-                    prepStmt.setString(9, consumerAppDO.getGrantTypes());
-                    prepStmt.setLong(10, consumerAppDO.getUserAccessTokenExpiryTime());
-                    prepStmt.setLong(11, consumerAppDO.getApplicationAccessTokenExpiryTime());
-                    prepStmt.setLong(12, consumerAppDO.getRefreshTokenExpiryTime());
-                    prepStmt.setString(13, consumerAppDO.isTbMandatory() ? "1" : "0");
-                    prepStmt.execute();
-                    connection.commit();
+                }else {
+                    try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.ADD_OAUTH_APP)) {
+                        prepStmt.setString(1, persistenceProcessor.getProcessedClientId(consumerAppDO.getOauthConsumerKey()));
+                        prepStmt.setString(2, persistenceProcessor.getProcessedClientSecret(consumerAppDO.getOauthConsumerSecret()));
+                        prepStmt.setString(3, consumerAppDO.getUser().getUserName());
+                        prepStmt.setInt(4, IdentityTenantUtil.getTenantId(consumerAppDO.getUser().getTenantDomain()));
+                        prepStmt.setString(5, consumerAppDO.getUser().getUserStoreDomain());
+                        prepStmt.setString(6, consumerAppDO.getApplicationName());
+                        prepStmt.setString(7, consumerAppDO.getOauthVersion());
+                        prepStmt.setString(8, consumerAppDO.getCallbackUrl());
+                        prepStmt.setString(9, consumerAppDO.getGrantTypes());
+                        prepStmt.setLong(10, consumerAppDO.getUserAccessTokenExpiryTime());
+                        prepStmt.setLong(11, consumerAppDO.getApplicationAccessTokenExpiryTime());
+                        prepStmt.setLong(12, consumerAppDO.getRefreshTokenExpiryTime());
+                        prepStmt.setString(13, consumerAppDO.isTbMandatory() ? "1" : "0");
+                        prepStmt.execute();
+                        connection.commit();
+                    }
                 }
             } catch (SQLException e) {
                 throw handleError("Error when executing the SQL : " + SQLQueries.OAuthAppDAOSQLQueries.ADD_OAUTH_APP, e);

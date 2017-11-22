@@ -33,6 +33,8 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2IntrospectionResponseDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.tokenBinding.TokenBinding;
+import org.wso2.carbon.identity.oauth2.tokenBinding.TokenBindingHandler;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 
@@ -464,31 +466,17 @@ public class TokenValidationHandler {
         return OAuth2Util.getAccessTokenDOfromTokenIdentifier(tokenIdentifier);
     }
 
-    //get the hash value of token binding id
+    /**
+     * This method finds token binding hash from the requested access token.
+     *
+     * @param accessTokenDO
+     * @return
+     */
     private String findTokenBindingHash(AccessTokenDO accessTokenDO) {
-        String tbh;
-        String accesstoken = accessTokenDO.getAccessToken();
-        if (checkBase64Encode(accesstoken)) {
-            tbh = new String(Base64Utils.decode(accesstoken), (Charsets.UTF_8));
-            if (tbh.contains(":")) {
-                tbh = tbh.split(":")[0];
-                tbh = new String(Base64Utils.decode(tbh), (Charsets.UTF_8));
-            }
-            tbh = tbh.split(";")[0];
-            return tbh;
-        }
-        return null;
+        TokenBinding tokenBinding = new TokenBindingHandler();
+        String tokenBindingHash = tokenBinding.validateAccessToken(accessTokenDO);
+        return tokenBindingHash;
     }
 
-    //check whether token is base64 encode or not
-    private boolean checkBase64Encode(String tokenID) {
-        String pattern1 = "^([A-Za-z0-9+/]{4})*[A-Za-z0-9+/]{4}$";
-        String pattern2 = "^([A-Za-z0-9+/]{4})*[A-Za-z0-9+/]{3}=$";
-        String pattern3 = "^([A-Za-z0-9+/]{4})*[A-Za-z0-9+/]{2}==$";
-        if (tokenID.matches(pattern1) || tokenID.matches(pattern2) || tokenID.matches(pattern3)) {
-            return true;
-        }
-        return false;
-    }
 
 }
