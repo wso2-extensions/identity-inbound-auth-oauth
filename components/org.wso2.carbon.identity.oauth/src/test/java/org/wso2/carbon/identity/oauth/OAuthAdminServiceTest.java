@@ -331,7 +331,27 @@ public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
 
     @Test
     public void testUpdateConsumerApplication() throws Exception {
+        String consumerKey = "some-consumer-key";
 
+        OAuthAppDO app = getDummyOAuthApp("some-user-name");
+        when(oAtuhAppDAO.getAppInformation(consumerKey)).thenReturn(app);
+        whenNew(OAuthAppDAO.class).withAnyArguments().thenReturn(oAtuhAppDAO);
+
+        OAuthAdminService oAuthAdminService = new OAuthAdminService();
+        OAuthConsumerAppDTO consumerAppDTO = new OAuthConsumerAppDTO();
+        consumerAppDTO.setApplicationName("new-application-name");
+        consumerAppDTO.setCallbackUrl("http://new-call-back-url.com");
+        consumerAppDTO.setOauthConsumerKey("some-consumer-key");
+        consumerAppDTO.setOauthConsumerSecret("some-consumer-secret");
+        consumerAppDTO.setOAuthVersion("new-oauth-version");
+        consumerAppDTO.setUsername("new-user-name");
+        oAuthAdminService.updateConsumerApplication(consumerAppDTO);
+        OAuthConsumerAppDTO updatedOAuthConsumerApp = oAuthAdminService.getOAuthApplicationData(consumerKey);
+        Assert.assertEquals(updatedOAuthConsumerApp.getApplicationName(), consumerAppDTO.getApplicationName(),
+                "Updated Application name should be same as the application name in consumerAppDTO data object.");
+        Assert.assertEquals(updatedOAuthConsumerApp.getCallbackUrl(), consumerAppDTO.getCallbackUrl(),
+                "Updated Application callbackUrl should be same as the callbackUrl in consumerAppDTO data object.");
+        Assert.assertNull(updatedOAuthConsumerApp.getUsername(), "Application update should not set username.");
     }
 
     @Test

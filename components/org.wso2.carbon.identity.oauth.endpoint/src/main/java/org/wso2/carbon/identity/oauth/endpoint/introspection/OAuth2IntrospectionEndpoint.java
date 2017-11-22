@@ -110,6 +110,7 @@ public class OAuth2IntrospectionEndpoint {
             respBuilder.setAudience(introspectionResponse.getAud())
                     .setJwtId(introspectionResponse.getJti())
                     .setSubject(introspectionResponse.getSub())
+                    .setTokenType(JWT_TOKEN_TYPE)
                     .setIssuer(introspectionResponse.getIss());
         }
 

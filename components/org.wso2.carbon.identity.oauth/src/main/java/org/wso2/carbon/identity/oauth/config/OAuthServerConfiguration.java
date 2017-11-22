@@ -468,7 +468,7 @@ public class OAuthServerConfiguration {
         return oauthIdentityTokenGenerator;
     }
 
-    public boolean usePersistAccessTokenHash() {
+    public boolean usePersistedAccessTokenAlias() {
         return persistAccessTokenAlias != null ? Boolean.TRUE.toString().equalsIgnoreCase(persistAccessTokenAlias) : true;
     }
 
