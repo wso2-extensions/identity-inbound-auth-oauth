@@ -23,7 +23,8 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.stub.dto.OAuthConsumerAppDTO;
-
+import java.net.URI;
+import java.net.URISyntaxException;
 import javax.servlet.http.HttpServletRequest;
 
 /**
@@ -48,7 +49,7 @@ public class OAuthUIUtil {
     public static String getAbsoluteEndpointURL(String endpointType, String oauthVersion, HttpServletRequest request) {
 
         String endpointURL = null;
-        if(oauthVersion.equals(OAuthConstants.OAuthVersions.VERSION_1A)){
+        if (oauthVersion.equals(OAuthConstants.OAuthVersions.VERSION_1A)) {
             endpointURL = IdentityUtil.getServerURL("/oauth" + endpointType, true, true);
         } else {
             endpointURL = IdentityUtil.getServerURL("/oauth2" + endpointType, true, false);
@@ -74,6 +75,23 @@ public class OAuthUIUtil {
         }
 
         return returnedOAuthConsumerSet;
+    }
+
+    /**
+     * This is used to verify the given URL is a valid or not
+     * @param uri URI to validate
+     * @return true if the uri is valid
+     */
+    public static boolean isValidURI(String uri) {
+        try {
+            new URI(uri);
+            return true;
+        } catch (URISyntaxException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Malformed URL: " + uri, e);
+            }
+            return false;
+        }
     }
 
 }

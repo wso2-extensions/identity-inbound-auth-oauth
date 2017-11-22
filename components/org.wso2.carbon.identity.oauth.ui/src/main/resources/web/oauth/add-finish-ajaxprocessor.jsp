@@ -27,6 +27,7 @@
 <%@ page import="org.wso2.carbon.utils.ServerConstants"%>
 
 <%@ page import="java.util.ResourceBundle" %>
+<%@ page import="org.wso2.carbon.identity.oauth.ui.util.OAuthUIUtil" %>
 
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt"%>
 <%@ taglib uri="http://wso2.org/projects/carbon/taglibs/carbontags.jar" prefix="carbon"%>
@@ -73,50 +74,55 @@
 	OAuthConsumerAppDTO consumerApp = null;
 
 	try {
+        if (OAuthUIUtil.isValidURI(callback)) {
+            String cookie = (String) session.getAttribute(ServerConstants.ADMIN_SERVICE_COOKIE);
+            String backendServerURL = CarbonUIUtil.getServerURL(config.getServletContext(), session);
+            ConfigurationContext configContext =
+                    (ConfigurationContext) config.getServletContext()
+                            .getAttribute(CarbonConstants.CONFIGURATION_CONTEXT);
+            OAuthAdminClient client = new OAuthAdminClient(cookie, backendServerURL, configContext);
+            app.setApplicationName(applicationName);
+            app.setCallbackUrl(callback);
+            app.setOAuthVersion(oauthVersion);
+            app.setUserAccessTokenExpiryTime(Long.parseLong(userAccessTokenExpiryTime));
+            app.setApplicationAccessTokenExpiryTime(Long.parseLong(applicationAccessTokenExpiryTime));
+            app.setRefreshTokenExpiryTime(Long.parseLong(refreshTokenExpiryTime));
 
-		String cookie = (String) session.getAttribute(ServerConstants.ADMIN_SERVICE_COOKIE);
-		String backendServerURL = CarbonUIUtil.getServerURL(config.getServletContext(), session);
-		ConfigurationContext configContext =
-		                                     (ConfigurationContext) config.getServletContext()
-		                                                                  .getAttribute(CarbonConstants.CONFIGURATION_CONTEXT);
-		OAuthAdminClient client = new OAuthAdminClient(cookie, backendServerURL, configContext);
-		app.setApplicationName(applicationName);
-		app.setCallbackUrl(callback);
-		app.setOAuthVersion(oauthVersion);
-		app.setUserAccessTokenExpiryTime(Long.parseLong(userAccessTokenExpiryTime));
-		app.setApplicationAccessTokenExpiryTime(Long.parseLong(applicationAccessTokenExpiryTime));
-		app.setRefreshTokenExpiryTime(Long.parseLong(refreshTokenExpiryTime));
-
-        String grants;
-        StringBuffer buff = new StringBuffer();
-        String[] grantTypes = client.getAllowedOAuthGrantTypes();
-        for (String grantType : grantTypes) {
-            String grant = request.getParameter("grant_" + grantType);
-            if (grant != null) {
-                buff.append(grantType + " ");
+            String grants;
+            StringBuffer buff = new StringBuffer();
+            String[] grantTypes = client.getAllowedOAuthGrantTypes();
+            for (String grantType : grantTypes) {
+                String grant = request.getParameter("grant_" + grantType);
+                if (grant != null) {
+                    buff.append(grantType + " ");
+                }
             }
+
+            grants = buff.toString();
+
+            if (OAuthConstants.OAuthVersions.VERSION_2.equals(oauthVersion)) {
+                app.setGrantTypes(grants);
+            }
+            app.setPkceMandatory(pkceMandatory);
+            app.setPkceSupportPlain(pkceSupportPlain);
+
+            client.registerOAuthApplicationData(app);
+
+            consumerApp = client.getOAuthApplicationDataByAppName(applicationName);
+
+            String message = resourceBundle.getString("app.added.successfully");
+            CarbonUIMessage.sendCarbonUIMessage(message, CarbonUIMessage.INFO, request);
+        } else {
+            isError = true;
+            String message = resourceBundle.getString("callback.is.not.url");
+            CarbonUIMessage.sendCarbonUIMessage(message, CarbonUIMessage.ERROR, request);
         }
 
-        grants = buff.toString();
-
-        if(OAuthConstants.OAuthVersions.VERSION_2.equals(oauthVersion)){
-            app.setGrantTypes(grants);
-        }
-		app.setPkceMandatory(pkceMandatory);
-		app.setPkceSupportPlain(pkceSupportPlain);
-
-		client.registerOAuthApplicationData(app);
-		
-		consumerApp = client.getOAuthApplicationDataByAppName(applicationName);
-		
-		String message = resourceBundle.getString("app.added.successfully");
-		CarbonUIMessage.sendCarbonUIMessage(message, CarbonUIMessage.INFO, request);
-
-	} catch (Exception e) {
-		isError = true;
-		String message = resourceBundle.getString("error.while.adding.app") + " : " + e.getMessage();
-		CarbonUIMessage.sendCarbonUIMessage(message, CarbonUIMessage.ERROR, request, e);
-	}
+    } catch (Exception e) {
+        isError = true;
+        String message = resourceBundle.getString("error.while.adding.app") + " : " + e.getMessage();
+        CarbonUIMessage.sendCarbonUIMessage(message, CarbonUIMessage.ERROR, request, e);
+    }
 %>
 
 <script>
@@ -131,7 +137,7 @@ if (qpplicationComponentFound) {
     location.href = '../application/configure-service-provider.jsp?action=update&display=oauthapp&spName=<%=Encode.forUriComponent(spName)%>&oauthapp=<%=Encode.forUriComponent(consumerApp.getOauthConsumerKey())%>';
 <% } else { %>
     location.href = '../application/configure-service-provider.jsp?display=oauthapp&spName=<%=Encode.forUriComponent(spName)%>&action=cancel';
-<% } 
+<% }
 } else {%>
     location.href = 'index.jsp';
 <% } %>
