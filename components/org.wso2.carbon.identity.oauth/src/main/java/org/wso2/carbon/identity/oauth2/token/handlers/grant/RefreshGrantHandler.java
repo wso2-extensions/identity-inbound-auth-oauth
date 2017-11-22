@@ -40,7 +40,10 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
+import org.wso2.carbon.identity.oauth2.tokenBinding.TokenBinding;
+import org.wso2.carbon.identity.oauth2.tokenBinding.TokenBindingHandler;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.utils.xml.StringUtils;
 
 import java.sql.Timestamp;
 import java.util.Arrays;
@@ -68,7 +71,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
                 tokenReq.getClientId(), tokenReq.getRefreshToken());
 
         validatePersistedAccessToken(validationBean, tokenReq.getClientId());
-        validateRefreshTokenInRequest(tokenReq, validationBean);
+        validateRefreshTokenInRequest(tokReqMsgCtx,tokenReq, validationBean);
 
         if (log.isDebugEnabled()) {
             log.debug("Refresh token validation successful for Client id : " + tokenReq.getClientId() +
@@ -78,6 +81,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         setPropertiesForTokenGeneration(tokReqMsgCtx, validationBean);
         return true;
     }
+
 
     @Override
     public OAuth2AccessTokenRespDTO issue(OAuthTokenReqMessageContext tokReqMsgCtx)
@@ -151,15 +155,20 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         tokReqMsgCtx.addProperty(PREV_ACCESS_TOKEN, validationBean);
     }
 
-    private boolean validateRefreshTokenInRequest(OAuth2AccessTokenReqDTO tokenReq,
-                                                  RefreshTokenValidationDataDO validationBean)
-            throws IdentityOAuth2Exception {
+    private boolean validateRefreshTokenInRequest(OAuthTokenReqMessageContext tokReqMsgCtx,OAuth2AccessTokenReqDTO
+            tokenReq,RefreshTokenValidationDataDO validationBean) throws IdentityOAuth2Exception {
         validateRefreshTokenStatus(validationBean, tokenReq.getClientId());
-        if (isLatestRefreshToken(tokenReq, validationBean)) {
-            return true;
-        } else {
+        if (!isLatestRefreshToken(tokenReq, validationBean)) {
             throw new IdentityOAuth2Exception("Invalid refresh token value in the request");
         }
+        TokenBinding tokenBinding = new TokenBindingHandler();
+        if(!tokenBinding.validateRefreshToken(tokReqMsgCtx)){
+            if (log.isDebugEnabled()) {
+                log.debug("Token Binding validation failed for refresh token");
+            }
+            return false;
+        }
+        return true;
     }
 
     private boolean isLatestRefreshToken(OAuth2AccessTokenReqDTO tokenReq,

@@ -582,6 +582,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
         appDO.setApplicationAccessTokenExpiryTime(APPLICATION_ACCESS_TOKEN_EXPIRY_TIME);
         appDO.setUserAccessTokenExpiryTime(USER_ACCESS_TOKEN_EXPIRY_TIME);
         appDO.setRefreshTokenExpiryTime(REFRESH_TOKEN_EXPIRY_TIME);
+        appDO.setTbMandatory(false);
         return appDO;
     }
 

@@ -33,6 +33,8 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2IntrospectionResponseDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.tokenBinding.TokenBinding;
+import org.wso2.carbon.identity.oauth2.tokenBinding.TokenBindingHandler;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
@@ -283,6 +285,8 @@ public class TokenValidationHandler {
             introResp.setUsername(getAuthzUser(accessTokenDO));
             // add client id
             introResp.setClientId(accessTokenDO.getConsumerKey());
+            //add token binding hash tbh
+            introResp.setTbh(findTokenBindingHash(accessTokenDO));
             // adding the AccessTokenDO as a context property for further use
             messageContext.addProperty("AccessTokenDO", accessTokenDO);
         }
@@ -478,5 +482,18 @@ public class TokenValidationHandler {
             throw new IdentityOAuth2Exception("Error while getting access token hash.", e);
         }
     }
+
+    /**
+     * This method finds token binding hash from the requested access token.
+     *
+     * @param accessTokenDO
+     * @return
+     */
+    private String findTokenBindingHash(AccessTokenDO accessTokenDO) {
+        TokenBinding tokenBinding = new TokenBindingHandler();
+        String tokenBindingHash = tokenBinding.validateAccessToken(accessTokenDO);
+        return tokenBindingHash;
+    }
+
 
 }

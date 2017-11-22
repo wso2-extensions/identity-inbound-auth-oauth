@@ -403,6 +403,17 @@
                                         </div>
                                     </td>
                                 </tr>
+                      <tr id="tb_enable">
+                        <td class="leftCol-med">
+                            <fmt:message key='tb.mandatory'/>
+                        </td>
+                        <td>
+                            <input type="checkbox" name="tb" value="mandatory" <%=(app.getTbMandatory() ? "checked" : "")%>/>Enable
+                            <div class="sectionHelp">
+                                <fmt:message key='tb.mandatory.hint'/>
+                            </div>
+                        </td>
+                    </tr>
                                 <% } %>
                             <% } %>
 

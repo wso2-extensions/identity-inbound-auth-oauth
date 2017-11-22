@@ -47,6 +47,7 @@ public class OAuth2Parameters implements Serializable {
     private long authTime;
     private String responseMode;
     private String essentialClaims;
+    private HttpRequestHeader[] httpRequestHeaders;
     private String displayName;
     public String getEssentialClaims() {
         return essentialClaims;
@@ -228,5 +229,13 @@ public class OAuth2Parameters implements Serializable {
 
     public void setDisplayName(String displayName) {
         this.displayName = displayName;
+    }
+
+    public HttpRequestHeader[] getHttpRequestHeaders() {
+        return httpRequestHeaders;
+    }
+
+    public void setHttpRequestHeaders(HttpRequestHeader[] httpRequestHeaders) {
+        this.httpRequestHeaders = httpRequestHeaders;
     }
 }

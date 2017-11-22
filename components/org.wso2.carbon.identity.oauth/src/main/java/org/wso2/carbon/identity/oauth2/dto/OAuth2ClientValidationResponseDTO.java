@@ -27,6 +27,16 @@ public class OAuth2ClientValidationResponseDTO {
     private boolean pkceMandatory;
     private boolean pkceSupportPlain;
 
+    public boolean isTbMandatory() {
+        return tbMandatory;
+    }
+
+    public void setTbMandatory(boolean tbMandatory) {
+        this.tbMandatory = tbMandatory;
+    }
+
+    private boolean tbMandatory;
+
     public boolean isValidClient() {
         return validClient;
     }

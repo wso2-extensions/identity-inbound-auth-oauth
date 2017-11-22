@@ -50,6 +50,7 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
+import org.wso2.carbon.identity.oauth2.config.SpOAuth2ExpiryTimeConfiguration;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
@@ -67,7 +68,10 @@ import org.wso2.carbon.identity.oauth2.dao.TokenMgtDAO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.ClientCredentialDO;
+import org.wso2.carbon.identity.oauth2.model.HttpRequestHeader;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
+import org.wso2.carbon.identity.oauth2.tokenBinding.TokenBinding;
+import org.wso2.carbon.identity.oauth2.tokenBinding.TokenBindingHandler;
 import org.wso2.carbon.registry.core.Registry;
 import org.wso2.carbon.registry.core.Resource;
 import org.wso2.carbon.registry.core.exceptions.RegistryException;
@@ -1101,74 +1105,82 @@ public class OAuth2Util {
 
     @Deprecated
     public static boolean doPKCEValidation(String referenceCodeChallenge, String codeVerifier, String challenge_method,
-                                           OAuthAppDO oAuthAppDO) throws IdentityOAuth2Exception {
-        return validatePKCE(referenceCodeChallenge, codeVerifier, challenge_method, oAuthAppDO);
+                                           OAuthAppDO oAuthAppDO,String authorizationCode) throws IdentityOAuth2Exception {
+        return validatePKCE(referenceCodeChallenge, codeVerifier, challenge_method, oAuthAppDO,authorizationCode);
     }
 
     public static boolean validatePKCE(String referenceCodeChallenge, String verificationCode, String challenge_method,
-                                       OAuthAppDO oAuthApp) throws IdentityOAuth2Exception {
+                                       OAuthAppDO oAuthApp, String authorizationCode) throws IdentityOAuth2Exception {
         //ByPass PKCE validation if PKCE Support is disabled
-        if(!isPKCESupportEnabled()) {
+        if (!isPKCESupportEnabled()) {
             return true;
         }
-        if (oAuthApp != null && oAuthApp.isPkceMandatory() || referenceCodeChallenge != null) {
+        if (oAuthApp != null) {
+            if (OAuthConstants.OAUTH_PKCE_REFERREDTB_CHALLENGE.equals(referenceCodeChallenge)) {
+                if (oAuthApp.isTbMandatory()) {
+                    TokenBinding tokenBinding = new TokenBindingHandler();
+                    return tokenBinding.validateAuthorizationCode(referenceCodeChallenge, verificationCode,
+                            authorizationCode);
+                }
+            } else if (oAuthApp.isPkceMandatory() || referenceCodeChallenge != null) {
 
-            //As per RFC 7636 Fallback to 'plain' if no code_challenge_method parameter is sent
-            if(challenge_method == null || challenge_method.trim().length() == 0) {
-                challenge_method = "plain";
-            }
+                //As per RFC 7636 Fallback to 'plain' if no code_challenge_method parameter is sent
+                if (challenge_method == null || challenge_method.trim().length() == 0) {
+                    challenge_method = "plain";
+                }
 
-            //if app with no PKCE code verifier arrives
-            if ((verificationCode == null || verificationCode.trim().length() == 0)) {
-                //if pkce is mandatory, throw error
-                if(oAuthApp.isPkceMandatory()) {
-                    throw new IdentityOAuth2Exception("No PKCE code verifier found.PKCE is mandatory for this " +
-                            "oAuth 2.0 application.");
-                } else {
-                    //PKCE is optional, see if the authz code was requested with a PKCE challenge
-                    if(referenceCodeChallenge == null || referenceCodeChallenge.trim().length() == 0) {
-                        //since no PKCE challenge was provided
-                        return true;
+                //if app with no PKCE code verifier arrives
+                if ((verificationCode == null || verificationCode.trim().length() == 0)) {
+                    //if pkce is mandatory, throw error
+                    if (oAuthApp.isPkceMandatory()) {
+                        throw new IdentityOAuth2Exception("No PKCE code verifier found.PKCE is mandatory for this " +
+                                "oAuth 2.0 application.");
                     } else {
-                        throw new IdentityOAuth2Exception("Empty PKCE code_verifier sent. This authorization code " +
-                                "requires a PKCE verification to obtain an access token.");
+                        //PKCE is optional, see if the authz code was requested with a PKCE challenge
+                        if (referenceCodeChallenge == null || referenceCodeChallenge.trim().length() == 0) {
+                            //since no PKCE challenge was provided
+                            return true;
+                        } else {
+                            throw new IdentityOAuth2Exception("Empty PKCE code_verifier sent. This authorization code " +
+                                    "requires a PKCE verification to obtain an access token.");
+                        }
                     }
                 }
-            }
-            //verify that the code verifier is upto spec as per RFC 7636
-            if(!validatePKCECodeVerifier(verificationCode)) {
-                throw new IdentityOAuth2Exception("Code verifier used is not up to RFC 7636 specifications.");
-            }
-            if (OAuthConstants.OAUTH_PKCE_PLAIN_CHALLENGE.equals(challenge_method)) {
-                //if the current application explicitly doesn't support plain, throw exception
-                if(!oAuthApp.isPkceSupportPlain()) {
-                    throw new IdentityOAuth2Exception("This application does not allow 'plain' transformation algorithm.");
+                //verify that the code verifier is upto spec as per RFC 7636
+                if (!validatePKCECodeVerifier(verificationCode)) {
+                    throw new IdentityOAuth2Exception("Code verifier used is not up to RFC 7636 specifications.");
                 }
-                if (!referenceCodeChallenge.equals(verificationCode)) {
-                    return false;
-                }
-            } else if (OAuthConstants.OAUTH_PKCE_S256_CHALLENGE.equals(challenge_method)) {
-
-                try {
-                    MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
-
-                    byte[] hash = messageDigest.digest(verificationCode.getBytes(StandardCharsets.US_ASCII));
-                    //Trim the base64 string to remove trailing CR LF characters.
-                    String referencePKCECodeChallenge = new String(Base64.encodeBase64URLSafe(hash),
-                            StandardCharsets.UTF_8).trim();
-                    if (!referencePKCECodeChallenge.equals(referenceCodeChallenge)) {
+                if (OAuthConstants.OAUTH_PKCE_PLAIN_CHALLENGE.equals(challenge_method)) {
+                    //if the current application explicitly doesn't support plain, throw exception
+                    if (!oAuthApp.isPkceSupportPlain()) {
+                        throw new IdentityOAuth2Exception("This application does not allow 'plain' transformation algorithm.");
+                    }
+                    if (!referenceCodeChallenge.equals(verificationCode)) {
                         return false;
                     }
-                } catch (NoSuchAlgorithmException e) {
-                    if (log.isDebugEnabled()) {
-                        log.debug("Failed to create SHA256 Message Digest.");
+                } else if (OAuthConstants.OAUTH_PKCE_S256_CHALLENGE.equals(challenge_method)) {
+
+                    try {
+                        MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
+
+                        byte[] hash = messageDigest.digest(verificationCode.getBytes(StandardCharsets.US_ASCII));
+                        //Trim the base64 string to remove trailing CR LF characters.
+                        String referencePKCECodeChallenge = new String(Base64.encodeBase64URLSafe(hash),
+                                StandardCharsets.UTF_8).trim();
+                        if (!referencePKCECodeChallenge.equals(referenceCodeChallenge)) {
+                            return false;
+                        }
+                    } catch (NoSuchAlgorithmException e) {
+                        if (log.isDebugEnabled()) {
+                            log.debug("Failed to create SHA256 Message Digest.");
+                        }
+                        return false;
                     }
-                    return false;
+                } else {
+                    //Invalid OAuth2 token response
+                    throw new IdentityOAuth2Exception("Invalid OAuth2 Token Response. Invalid PKCE Code Challenge Method '"
+                            + challenge_method + "'");
                 }
-            } else {
-                //Invalid OAuth2 token response
-                throw new IdentityOAuth2Exception("Invalid OAuth2 Token Response. Invalid PKCE Code Challenge Method '"
-                        + challenge_method + "'");
             }
         }
         //pkce validation successful
@@ -1949,6 +1961,129 @@ public class OAuth2Util {
                 !OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal();
 
         return isExplicitlyFederatedUser && isFederatedUserNotMappedToLocalUser;
+    }
+
+    /**
+     * perform PCKE validation for TokenBinding
+     *
+     * @param PKCECodeChallenge
+     * @param codeVerifier
+     * @param oauthorizationCode
+     * @return
+     */
+    public static boolean doTokenBindingPKCEValidation(String PKCECodeChallenge, String codeVerifier, String
+            oauthorizationCode) {
+        if (OAuthConstants.OAUTH_PKCE_REFERREDTB_CHALLENGE.equals(PKCECodeChallenge)) {
+            if (codeVerifier == null) {
+                return false;
+            }
+            String authorizationCode = decodeBase64ThenSplit(oauthorizationCode,";");
+            if (!authorizationCode.equals(hashOfString(codeVerifier))) {
+                if (log.isDebugEnabled()) {
+                    log.debug("PKCE validation failed due to Token binding Value of Authorization Code is not equal " +
+                            "to current token binding value of connection");
+                }
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * find TokenBinding header in request headers
+     *
+     * @param tokReqMsgCtx
+     * @param httpTBheader
+     * @return
+     */
+    public static String findTokenBindingHeader(OAuthTokenReqMessageContext tokReqMsgCtx, String httpTBheader) {
+        HttpRequestHeader[] httpRequestHeaders = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getHttpRequestHeaders();
+        String tokenBindingId =null;
+        if (httpRequestHeaders != null) {
+            OAuthAppDO oAuthAppDO = null;
+            try {
+                oAuthAppDO = getAppInformationByClientId(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId());
+            } catch (InvalidOAuthClientException e) {
+                log.debug("Error while retrieving app information for clientId");
+            } catch (IdentityOAuth2Exception e) {
+                log.debug("Error while retrieving app information for clientId");
+            }
+            for (HttpRequestHeader httpRequestHeader : httpRequestHeaders) {
+                if (httpRequestHeader.getName().equalsIgnoreCase(httpTBheader)) {
+                    if (oAuthAppDO != null && oAuthAppDO.isTbMandatory()) {
+                        tokenBindingId = httpRequestHeader.getValue()[0];
+                    }
+                    break;
+                }
+            }
+        }
+        return tokenBindingId;
+    }
+
+    /**
+     * find TokenBinding header in request headers
+     *
+     * @param oauthAuthzMsgCtx
+     * @param httpTBheader
+     * @return
+     */
+    public static String findTokenBindingHeader(OAuthAuthzReqMessageContext oauthAuthzMsgCtx, String httpTBheader) {
+        HttpRequestHeader[] httpRequestHeaders = oauthAuthzMsgCtx.getAuthorizationReqDTO().getHttpRequestHeaders();
+        String tokenBindingId = null;
+        if (httpRequestHeaders != null) {
+            OAuthAppDO oAuthAppDO = null;
+            try {
+                oAuthAppDO = new OAuthAppDAO().getAppInformation(oauthAuthzMsgCtx.getAuthorizationReqDTO().getConsumerKey());
+            } catch (InvalidOAuthClientException e) {
+                log.debug("Error while retrieving app information for ConsumerKey");
+            } catch (IdentityOAuth2Exception e) {
+                log.debug("Error while retrieving app information for ConsumerKey");
+            }
+            for (HttpRequestHeader httpRequestHeader : httpRequestHeaders) {
+                if (httpRequestHeader.getName().equalsIgnoreCase(httpTBheader)) {
+                    if (oAuthAppDO != null && oAuthAppDO.isTbMandatory()) {
+                        tokenBindingId = httpRequestHeader.getValue()[0];
+                    }
+                    break;
+                }
+            }
+        }
+        return tokenBindingId;
+    }
+
+    /**
+     * Use to hash token binding ID
+     *
+     * @param tokenBindingID
+     * @return
+     */
+    public static String hashOfString(String tokenBindingID) {
+        String hashValue ="";
+        try {
+            MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = messageDigest.digest(tokenBindingID.getBytes(StandardCharsets.US_ASCII));
+            //Trim the base64 string to remove trailing CR LF characters.
+            hashValue = new String(Base64.encodeBase64URLSafe(hash),
+                    StandardCharsets.UTF_8).trim();
+        } catch (NoSuchAlgorithmException e) {
+            log.error("NoSuchAlgorithmException while calculating SHA-256 of "+tokenBindingID+".");
+            if (log.isDebugEnabled()) {
+                log.debug("Failed to create SHA256 Message Digest.");
+            }
+        }
+        return hashValue;
+    }
+
+    /**
+     * Decode base64 encoding and split it to get the first value/
+     * used in token binding cases.
+     *
+     * @param base64encode
+     * @param delimiter
+     * @return
+     */
+    public static String decodeBase64ThenSplit(String base64encode,String delimiter) {
+        return (new String(Base64Utils.decode(base64encode), (Charsets.UTF_8))).split(delimiter)[0];
     }
 
 }

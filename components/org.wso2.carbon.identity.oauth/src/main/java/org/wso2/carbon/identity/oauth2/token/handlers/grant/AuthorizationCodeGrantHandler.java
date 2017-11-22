@@ -343,7 +343,7 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
         String PKCECodeChallenge = authzCodeBean.getPkceCodeChallenge();
         String PKCECodeChallengeMethod = authzCodeBean.getPkceCodeChallengeMethod();
         OAuthAppDO oAuthApp = getOAuthAppDO(authzCodeBean.getConsumerKey());
-        if (!validatePKCE(PKCECodeChallenge, verificationCode, PKCECodeChallengeMethod, oAuthApp)) {
+        if (!validatePKCE(PKCECodeChallenge, verificationCode, PKCECodeChallengeMethod, oAuthApp,authzCodeBean.getAuthorizationCode())) {
             //possible malicious oAuthRequest
             log.warn("Failed PKCE Verification for oAuth 2.0 request");
             if (log.isDebugEnabled()) {
@@ -361,4 +361,16 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
             throw new IdentityOAuth2Exception("Error while retrieving app information for client: " + clientId);
         }
     }
+
+    private boolean PkceValidationFails(String PKCECodeChallenge, String PKCECodeChallengeMethod, String
+            codeVerifier, OAuthAppDO oAuthAppDO, String authorizationCode) throws IdentityOAuth2Exception {
+        if (!OAuthConstants.OAUTH_PKCE_REFERREDTB_CHALLENGE.equals(PKCECodeChallenge)
+                && !OAuth2Util.doPKCEValidation(PKCECodeChallenge, codeVerifier, PKCECodeChallengeMethod, oAuthAppDO,
+                authorizationCode)) {
+
+            return true;
+        }
+        return false;
+    }
+
 }

@@ -152,6 +152,7 @@ public class OAuth2Service extends AbstractAdmin {
                 validationResponseDTO.setApplicationName(appDO.getApplicationName());
                 validationResponseDTO.setPkceMandatory(appDO.isPkceMandatory());
                 validationResponseDTO.setPkceSupportPlain(appDO.isPkceSupportPlain());
+                validationResponseDTO.setTbMandatory(appDO.isTbMandatory());
                 return validationResponseDTO;
             }
 
@@ -178,6 +179,7 @@ public class OAuth2Service extends AbstractAdmin {
                 validationResponseDTO.setValidClient(true);
                 validationResponseDTO.setApplicationName(appDO.getApplicationName());
                 validationResponseDTO.setCallbackURL(callbackURI);
+                validationResponseDTO.setTbMandatory(appDO.isTbMandatory());
                 validationResponseDTO.setPkceMandatory(appDO.isPkceMandatory());
                 validationResponseDTO.setPkceSupportPlain(appDO.isPkceSupportPlain());
                 return validationResponseDTO;
