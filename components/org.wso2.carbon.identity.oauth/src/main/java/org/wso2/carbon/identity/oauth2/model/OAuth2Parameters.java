@@ -50,6 +50,15 @@ public class OAuth2Parameters implements Serializable {
     private String responseMode;
     private String essentialClaims;
     private String displayName;
+    private HttpRequestHeader[] httpRequestHeaders;
+
+    public HttpRequestHeader[] getHttpRequestHeaders() {
+        return httpRequestHeaders;
+    }
+
+    public void setHttpRequestHeaders(HttpRequestHeader[] httpRequestHeaders) {
+        this.httpRequestHeaders = httpRequestHeaders;
+    }
     private RequestObject requestObject;
 
     public RequestObject getRequestObject() {

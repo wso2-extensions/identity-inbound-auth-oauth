@@ -57,12 +57,16 @@
    	StringBuffer buff = new StringBuffer();
     boolean pkceMandatory = false;
     boolean pkceSupportPlain = false;
+    boolean tokenBinding = false;
 
     if(request.getParameter("pkce") != null) {
         pkceMandatory = true;
     }
     if(request.getParameter("pkce_plain") != null) {
         pkceSupportPlain = true;
+    }
+    if(request.getParameter("tb") !=null){
+        tokenBinding = true;
     }
 
 	String forwardTo = "index.jsp";
@@ -91,6 +95,7 @@
             app.setUserAccessTokenExpiryTime(Long.parseLong(userAccessTokenExpiryTime));
             app.setApplicationAccessTokenExpiryTime(Long.parseLong(applicationAccessTokenExpiryTime));
             app.setRefreshTokenExpiryTime(Long.parseLong(refreshTokenExpiryTime));
+            app.setTbMandatory(tokenBinding);
             String[] grantTypes = client.getAllowedOAuthGrantTypes();
             for (String grantType : grantTypes) {
                 String grant = request.getParameter("grant_" + grantType);

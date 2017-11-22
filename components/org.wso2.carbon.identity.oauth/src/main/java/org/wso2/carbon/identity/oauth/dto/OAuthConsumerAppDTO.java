@@ -29,10 +29,19 @@ public class OAuthConsumerAppDTO {
     private String grantTypes = "";
     private boolean pkceSupportPlain;
     private boolean pkceMandatory;
+    private boolean tbMandatory;
     private String state;
     private long userAccessTokenExpiryTime;
     private long applicationAccessTokenExpiryTime;
     private long refreshTokenExpiryTime;
+
+    public boolean getTbMandatory() {
+        return tbMandatory;
+    }
+
+    public void setTbMandatory(boolean tbMandatory) {
+        this.tbMandatory = tbMandatory;
+    }
 
     public long getUserAccessTokenExpiryTime() {
         return userAccessTokenExpiryTime;

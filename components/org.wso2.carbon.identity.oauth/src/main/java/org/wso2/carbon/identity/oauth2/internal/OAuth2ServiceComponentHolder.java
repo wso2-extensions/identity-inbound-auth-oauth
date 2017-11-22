@@ -28,9 +28,18 @@ public class OAuth2ServiceComponentHolder {
 
     private static ApplicationManagementService applicationMgtService;
     private static boolean pkceEnabled = false;
+    private static boolean tbEnabled = false;
     private static RegistryService registryService;
     private OAuth2ServiceComponentHolder(){
 
+    }
+
+    public static boolean isTbEnabled() {
+        return tbEnabled;
+    }
+
+    public static void setTbEnabled(boolean tbEnabled) {
+        OAuth2ServiceComponentHolder.tbEnabled = tbEnabled;
     }
 
     /**

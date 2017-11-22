@@ -70,6 +70,8 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.ClientCredentialDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.openidconnect.model.Claim;
+import org.wso2.carbon.identity.oauth2.tokenBinding.TokenBinding;
+import org.wso2.carbon.identity.oauth2.tokenBinding.TokenBindingHandler;
 import org.wso2.carbon.registry.core.Registry;
 import org.wso2.carbon.registry.core.Resource;
 import org.wso2.carbon.registry.core.exceptions.RegistryException;
@@ -1104,74 +1106,82 @@ public class OAuth2Util {
 
     @Deprecated
     public static boolean doPKCEValidation(String referenceCodeChallenge, String codeVerifier, String challenge_method,
-                                           OAuthAppDO oAuthAppDO) throws IdentityOAuth2Exception {
-        return validatePKCE(referenceCodeChallenge, codeVerifier, challenge_method, oAuthAppDO);
+                                           OAuthAppDO oAuthAppDO,String authorizationCode) throws IdentityOAuth2Exception {
+        return validatePKCE(referenceCodeChallenge, codeVerifier, challenge_method, oAuthAppDO,authorizationCode);
     }
 
     public static boolean validatePKCE(String referenceCodeChallenge, String verificationCode, String challenge_method,
-                                       OAuthAppDO oAuthApp) throws IdentityOAuth2Exception {
+                                       OAuthAppDO oAuthApp, String authorizationCode) throws IdentityOAuth2Exception {
         //ByPass PKCE validation if PKCE Support is disabled
-        if(!isPKCESupportEnabled()) {
+        if (!isPKCESupportEnabled()) {
             return true;
         }
-        if (oAuthApp != null && oAuthApp.isPkceMandatory() || referenceCodeChallenge != null) {
+        if (oAuthApp != null) {
+            if (OAuthConstants.OAUTH_PKCE_REFERRED_TB_CHALLENGE.equals(referenceCodeChallenge)) {
+                if (oAuthApp.isTbMandatory()) {
+                    TokenBinding tokenBinding = new TokenBindingHandler();
+                    return tokenBinding.validateAuthorizationCode(referenceCodeChallenge, verificationCode,
+                            authorizationCode);
+                }
+            } else if (oAuthApp.isPkceMandatory() || referenceCodeChallenge != null) {
 
-            //As per RFC 7636 Fallback to 'plain' if no code_challenge_method parameter is sent
-            if(challenge_method == null || challenge_method.trim().length() == 0) {
-                challenge_method = "plain";
-            }
+                //As per RFC 7636 Fallback to 'plain' if no code_challenge_method parameter is sent
+                if (challenge_method == null || challenge_method.trim().length() == 0) {
+                    challenge_method = "plain";
+                }
 
-            //if app with no PKCE code verifier arrives
-            if ((verificationCode == null || verificationCode.trim().length() == 0)) {
-                //if pkce is mandatory, throw error
-                if(oAuthApp.isPkceMandatory()) {
-                    throw new IdentityOAuth2Exception("No PKCE code verifier found.PKCE is mandatory for this " +
-                            "oAuth 2.0 application.");
-                } else {
-                    //PKCE is optional, see if the authz code was requested with a PKCE challenge
-                    if(referenceCodeChallenge == null || referenceCodeChallenge.trim().length() == 0) {
-                        //since no PKCE challenge was provided
-                        return true;
+                //if app with no PKCE code verifier arrives
+                if ((verificationCode == null || verificationCode.trim().length() == 0)) {
+                    //if pkce is mandatory, throw error
+                    if (oAuthApp.isPkceMandatory()) {
+                        throw new IdentityOAuth2Exception("No PKCE code verifier found.PKCE is mandatory for this " +
+                                "oAuth 2.0 application.");
                     } else {
-                        throw new IdentityOAuth2Exception("Empty PKCE code_verifier sent. This authorization code " +
-                                "requires a PKCE verification to obtain an access token.");
+                        //PKCE is optional, see if the authz code was requested with a PKCE challenge
+                        if (referenceCodeChallenge == null || referenceCodeChallenge.trim().length() == 0) {
+                            //since no PKCE challenge was provided
+                            return true;
+                        } else {
+                            throw new IdentityOAuth2Exception("Empty PKCE code_verifier sent. This authorization code " +
+                                    "requires a PKCE verification to obtain an access token.");
+                        }
                     }
                 }
-            }
-            //verify that the code verifier is upto spec as per RFC 7636
-            if(!validatePKCECodeVerifier(verificationCode)) {
-                throw new IdentityOAuth2Exception("Code verifier used is not up to RFC 7636 specifications.");
-            }
-            if (OAuthConstants.OAUTH_PKCE_PLAIN_CHALLENGE.equals(challenge_method)) {
-                //if the current application explicitly doesn't support plain, throw exception
-                if(!oAuthApp.isPkceSupportPlain()) {
-                    throw new IdentityOAuth2Exception("This application does not allow 'plain' transformation algorithm.");
+                //verify that the code verifier is upto spec as per RFC 7636
+                if (!validatePKCECodeVerifier(verificationCode)) {
+                    throw new IdentityOAuth2Exception("Code verifier used is not up to RFC 7636 specifications.");
                 }
-                if (!referenceCodeChallenge.equals(verificationCode)) {
-                    return false;
-                }
-            } else if (OAuthConstants.OAUTH_PKCE_S256_CHALLENGE.equals(challenge_method)) {
-
-                try {
-                    MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
-
-                    byte[] hash = messageDigest.digest(verificationCode.getBytes(StandardCharsets.US_ASCII));
-                    //Trim the base64 string to remove trailing CR LF characters.
-                    String referencePKCECodeChallenge = new String(Base64.encodeBase64URLSafe(hash),
-                            StandardCharsets.UTF_8).trim();
-                    if (!referencePKCECodeChallenge.equals(referenceCodeChallenge)) {
+                if (OAuthConstants.OAUTH_PKCE_PLAIN_CHALLENGE.equals(challenge_method)) {
+                    //if the current application explicitly doesn't support plain, throw exception
+                    if (!oAuthApp.isPkceSupportPlain()) {
+                        throw new IdentityOAuth2Exception("This application does not allow 'plain' transformation algorithm.");
+                    }
+                    if (!referenceCodeChallenge.equals(verificationCode)) {
                         return false;
                     }
-                } catch (NoSuchAlgorithmException e) {
-                    if (log.isDebugEnabled()) {
-                        log.debug("Failed to create SHA256 Message Digest.");
+                } else if (OAuthConstants.OAUTH_PKCE_S256_CHALLENGE.equals(challenge_method)) {
+
+                    try {
+                        MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
+
+                        byte[] hash = messageDigest.digest(verificationCode.getBytes(StandardCharsets.US_ASCII));
+                        //Trim the base64 string to remove trailing CR LF characters.
+                        String referencePKCECodeChallenge = new String(Base64.encodeBase64URLSafe(hash),
+                                StandardCharsets.UTF_8).trim();
+                        if (!referencePKCECodeChallenge.equals(referenceCodeChallenge)) {
+                            return false;
+                        }
+                    } catch (NoSuchAlgorithmException e) {
+                        if (log.isDebugEnabled()) {
+                            log.debug("Failed to create SHA256 Message Digest.");
+                        }
+                        return false;
                     }
-                    return false;
+                } else {
+                    //Invalid OAuth2 token response
+                    throw new IdentityOAuth2Exception("Invalid OAuth2 Token Response. Invalid PKCE Code Challenge Method '"
+                            + challenge_method + "'");
                 }
-            } else {
-                //Invalid OAuth2 token response
-                throw new IdentityOAuth2Exception("Invalid OAuth2 Token Response. Invalid PKCE Code Challenge Method '"
-                        + challenge_method + "'");
             }
         }
         //pkce validation successful

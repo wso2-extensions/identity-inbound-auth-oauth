@@ -103,6 +103,20 @@ public class OAuth2IntrospectionResponseDTO {
 
     private String error;
 
+    /**
+     * tbh used for token binding
+     * it contains the hash value of the binding ID.
+     */
+    private String tbh;
+
+    public String getTbh() {
+        return tbh;
+    }
+
+    public void setTbh(String tbh) {
+        this.tbh = tbh;
+    }
+
     public boolean isActive() {
 	return active;
     }

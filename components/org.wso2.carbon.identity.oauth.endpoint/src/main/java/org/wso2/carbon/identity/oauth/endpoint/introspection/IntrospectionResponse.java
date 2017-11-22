@@ -68,6 +68,14 @@ public final class IntrospectionResponse {
     // time-stamp to indicate when this token was originally issued
     public static final String IAT = "iat";
 
+    // OPTIONAL
+    // hash of token binding id
+    public static final String TBH = "tbh";
+
+    // OPTIONAL
+    // confirmation used to contain tbh
+    public static final String CNF = "cnf";
+
     class Error {
 
         public static final String INVALID_REQUEST = "invalid_request";

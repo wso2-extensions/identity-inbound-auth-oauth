@@ -403,7 +403,18 @@
                                 </tr>
                                 <% } %>
                             <% } %>
-
+                    <tr id="tb_enable">
+                        <td class="leftCol-med">
+                            <fmt:message key='tb.enable'/>
+                        </td>
+                        <td>
+                            <input type="checkbox" name="tb"
+                                   value="mandatory" <%=(app.getTbMandatory() ? "checked" : "")%>/>Enable
+                            <div class="sectionHelp">
+                                <fmt:message key='tb.enable.hint'/>
+                            </div>
+                        </td>
+                    </tr>
                         <tr>
                             <td class="leftCol-med"><fmt:message key='user.access.token.expiry.time'/></td>
                             <td><input id="userAccessTokenExpiryTime" name="userAccessTokenExpiryTime"

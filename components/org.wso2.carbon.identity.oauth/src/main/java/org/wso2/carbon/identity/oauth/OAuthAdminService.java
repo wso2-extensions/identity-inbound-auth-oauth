@@ -201,6 +201,7 @@ public class OAuthAdminService extends AbstractAdmin {
                 dto.setGrantTypes(app.getGrantTypes());
                 dto.setPkceMandatory(app.isPkceMandatory());
                 dto.setPkceSupportPlain(app.isPkceSupportPlain());
+                dto.setTbMandatory(app.isTbMandatory());
                 dto.setUserAccessTokenExpiryTime(app.getUserAccessTokenExpiryTime());
                 dto.setApplicationAccessTokenExpiryTime(app.getApplicationAccessTokenExpiryTime());
                 dto.setRefreshTokenExpiryTime(app.getRefreshTokenExpiryTime());
@@ -286,6 +287,7 @@ public class OAuthAdminService extends AbstractAdmin {
                     app.setUserAccessTokenExpiryTime(application.getUserAccessTokenExpiryTime());
                     app.setApplicationAccessTokenExpiryTime(application.getApplicationAccessTokenExpiryTime());
                     app.setRefreshTokenExpiryTime(application.getRefreshTokenExpiryTime());
+                    app.setTbMandatory(application.getTbMandatory());
                 }
                 dao.addOAuthApplication(app);
                 AppInfoCache.getInstance().addToCache(app.getOauthConsumerKey(), app);
@@ -368,6 +370,7 @@ public class OAuthAdminService extends AbstractAdmin {
         oauthappdo.setUserAccessTokenExpiryTime(consumerAppDTO.getUserAccessTokenExpiryTime());
         oauthappdo.setApplicationAccessTokenExpiryTime(consumerAppDTO.getApplicationAccessTokenExpiryTime());
         oauthappdo.setRefreshTokenExpiryTime(consumerAppDTO.getRefreshTokenExpiryTime());
+        oauthappdo.setTbMandatory(consumerAppDTO.getTbMandatory());
         if (OAuthConstants.OAuthVersions.VERSION_2.equals(consumerAppDTO.getOAuthVersion())) {
             List<String> allowedGrantsTypes = new ArrayList<>(Arrays.asList(getAllowedGrantTypes()));
             String[] requestGrants = consumerAppDTO.getGrantTypes().split("\\s");
