@@ -1641,13 +1641,9 @@ public class OAuth2AuthzEndpoint {
             String sessionContextKey = DigestUtils.sha256Hex(cookie.getValue());
             SessionContext sessionContext = FrameworkUtils.getSessionContextFromCache(sessionContextKey);
             if (sessionContext != null) {
-                if (sessionContext.getProperty(FrameworkConstants.UPDATED_TIMESTAMP) != null) {
-                    authTime = Long.parseLong(
-                            sessionContext.getProperty(FrameworkConstants.UPDATED_TIMESTAMP).toString());
-                } else {
-                    authTime = Long.parseLong(
+                // Auth_time should be the first time user authenticated giving credentials.
+                authTime = Long.parseLong(
                             sessionContext.getProperty(FrameworkConstants.CREATED_TIMESTAMP).toString());
-                }
             }
         }
         return authTime;
