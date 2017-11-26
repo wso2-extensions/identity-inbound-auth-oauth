@@ -207,7 +207,7 @@ public class TokenBindingHandler implements TokenBinding {
         String tokenBindingId = findTokenBindingHeader(tokReqMsgCtx, OAuthConstants.HTTP_TB_PROVIDED_HEADER_NAME);
         String tokenHashValue = refreshToken;
         if (OAuth2Util.checkUserNameAssertionEnabled()) {
-            tokenHashValue = getFirstValue(tokenHashValue, delimiter);
+            tokenHashValue = getFirstValue(tokenHashValue, ":");
         }
         tokenHashValue = getFirstValue(tokenHashValue, delimiter);
         if (!tokenHashValue.equals(hashOfString(tokenBindingId))) {
