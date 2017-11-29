@@ -16,6 +16,8 @@
 
 package org.wso2.carbon.identity.openidconnect.internal;
 
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.openidconnect.ClaimProvider;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilter;
 
 import java.util.ArrayList;
@@ -25,6 +27,7 @@ public class OpenIDConnectServiceComponentHolder {
 
     private static OpenIDConnectServiceComponentHolder instance = new OpenIDConnectServiceComponentHolder();
     private List<OpenIDConnectClaimFilter> openIDConnectClaimFilters = new ArrayList<>();
+    private List<ClaimProvider> claimProviders = new ArrayList<>();
 
     private OpenIDConnectServiceComponentHolder() {
     }
@@ -46,5 +49,14 @@ public class OpenIDConnectServiceComponentHolder {
 
     public List<OpenIDConnectClaimFilter> getOpenIDConnectClaimFilters() {
         return openIDConnectClaimFilters;
+    }
+
+    /**
+     * Get ClaimProvider Service
+     *
+     * @return all ID Token ClaimProviders who insert additional claims.
+     */
+    public List<ClaimProvider> getClaimProviders() {
+        return claimProviders;
     }
 }

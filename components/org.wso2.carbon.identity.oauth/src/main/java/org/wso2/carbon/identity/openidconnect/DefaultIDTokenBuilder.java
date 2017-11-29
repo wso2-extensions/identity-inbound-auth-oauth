@@ -23,6 +23,7 @@ import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.PlainJWT;
 import org.apache.axiom.om.OMElement;
 import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
@@ -58,6 +59,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 import org.wso2.carbon.user.core.UserStoreException;
@@ -68,10 +70,12 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import javax.xml.namespace.QName;
 
 import static org.apache.commons.lang.StringUtils.isNotBlank;
@@ -85,6 +89,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.NO
  * This IDToken Generator utilizes the Nimbus SDK to build the IDToken.
  */
 public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidconnect.IDTokenBuilder {
+
     private static final String SHA384 = "SHA-384";
     private static final String SHA512 = "SHA-512";
     private static final String AUTHORIZATION_CODE = "AuthorizationCode";
@@ -143,7 +148,8 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         }
 
         if (log.isDebugEnabled()) {
-            log.debug(buildDebugMessage(idTokenIssuer, subjectClaim, nonceValue, idTokenValidityInMillis, currentTimeInMillis));
+            log.debug(buildDebugMessage(idTokenIssuer, subjectClaim, nonceValue, idTokenValidityInMillis,
+                    currentTimeInMillis));
         }
 
         List<String> audience = getOIDCAudience(clientId);
@@ -166,6 +172,8 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         if (acrValue != null) {
             jwtClaimsSet.setClaim(OAuthConstants.OIDCClaims.ACR, "urn:mace:incommon:iap:silver");
         }
+
+        setAdditionalClaims(tokenReqMsgCtxt, tokenRespDTO, jwtClaimsSet);
 
         tokenReqMsgCtxt.addProperty(OAuthConstants.ACCESS_TOKEN, accessToken);
         tokenReqMsgCtxt.addProperty(MultitenantConstants.TENANT_DOMAIN, getSpTenantDomain(tokenReqMsgCtxt));
@@ -196,7 +204,8 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
 
         // Get subject from Authenticated Subject Identifier
         AuthenticatedUser authorizedUser = authzReqMessageContext.getAuthorizationReqDTO().getUser();
-        String subject = getSubjectClaim(authzReqMessageContext, tokenRespDTO, clientId, spTenantDomain, authorizedUser);
+        String subject =
+                getSubjectClaim(authzReqMessageContext, tokenRespDTO, clientId, spTenantDomain, authorizedUser);
 
         String nonceValue = authzReqMessageContext.getAuthorizationReqDTO().getNonce();
         LinkedHashSet acrValue = authzReqMessageContext.getAuthorizationReqDTO().getACRValues();
@@ -237,9 +246,11 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
             jwtClaimsSet.setClaim(OAuthConstants.OIDCClaims.ACR, "urn:mace:incommon:iap:silver");
         }
 
-        authzReqMessageContext.addProperty(OAuthConstants.ACCESS_TOKEN, accessToken);
-        authzReqMessageContext.addProperty(MultitenantConstants.TENANT_DOMAIN, getSpTenantDomain(authzReqMessageContext));
+        setAdditionalClaims(authzReqMessageContext, tokenRespDTO, jwtClaimsSet);
 
+        authzReqMessageContext.addProperty(OAuthConstants.ACCESS_TOKEN, accessToken);
+        authzReqMessageContext
+                .addProperty(MultitenantConstants.TENANT_DOMAIN, getSpTenantDomain(authzReqMessageContext));
         handleCustomOIDCClaims(authzReqMessageContext, jwtClaimsSet);
         jwtClaimsSet.setSubject(subject);
 
@@ -389,7 +400,8 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
                 // Get the subject claim in the correct format (ie. tenantDomain or userStoreDomain appended)
                 subject = getFormattedSubjectClaim(serviceProvider, subject, userStoreDomain, userTenantDomain);
             } catch (IdentityException e) {
-                String error = "Error occurred while getting user claim for user: " + authorizedUser + ", claim: " + subjectClaimUri;
+                String error = "Error occurred while getting user claim for user: " + authorizedUser + ", claim: " +
+                        subjectClaimUri;
                 throw new IdentityOAuth2Exception(error, e);
             } catch (UserStoreException e) {
                 String error = "Error occurred while getting subject claim: " + subjectClaimUri + " for user: "
@@ -515,7 +527,8 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         ApplicationManagementService applicationMgtService = OAuth2ServiceComponentHolder.getApplicationMgtService();
         try {
             String spName =
-                    applicationMgtService.getServiceProviderNameByClientId(clientId, INBOUND_AUTH2_TYPE, spTenantDomain);
+                    applicationMgtService
+                            .getServiceProviderNameByClientId(clientId, INBOUND_AUTH2_TYPE, spTenantDomain);
             return applicationMgtService.getApplicationExcludingFileBasedSPs(spName, spTenantDomain);
         } catch (IdentityApplicationManagementException e) {
             throw new IdentityOAuth2Exception("Error while getting service provider information for client_id: "
@@ -792,5 +805,66 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
     private long getIDTokenExpiryInMillis() {
         return OAuthServerConfiguration.getInstance().getOpenIDConnectIDTokenExpiryTimeInSeconds() * 1000L;
     }
-}
 
+    /**
+     * Adding new claims into ID Token using ClaimProvider Service.
+     *
+     * @param tokenReqMsgCtxt OAuthTokenReqMessageContext
+     * @param tokenRespDTO OAuth2AccessTokenRespDTO
+     * @param jwtClaimsSet contains JWT body
+     * @throws IdentityOAuth2Exception
+     */
+    private void setAdditionalClaims(OAuthTokenReqMessageContext tokenReqMsgCtxt,
+                                     OAuth2AccessTokenRespDTO tokenRespDTO, JWTClaimsSet jwtClaimsSet)
+            throws IdentityOAuth2Exception {
+        List<ClaimProvider> claimProviders = getClaimProviders();
+        if (CollectionUtils.isNotEmpty(claimProviders)) {
+            for (ClaimProvider claimProvider : claimProviders) {
+                Map<String, Object> additionalIdTokenClaims =
+                        claimProvider.getAdditionalClaims(tokenReqMsgCtxt, tokenRespDTO);
+                setAdditionalClaimSet(jwtClaimsSet, additionalIdTokenClaims);
+            }
+        }
+    }
+
+    /**
+     * Adding new claims into ID Token using ClaimProvider Service.
+     *
+     * @param authzReqMessageContext OAuthAuthzReqMessageContext
+     * @param authorizeRespDTO OAuth2AuthorizeRespDTO
+     * @param jwtClaimsSet contains JWT body
+     * @throws IdentityOAuth2Exception
+     */
+    private void setAdditionalClaims(OAuthAuthzReqMessageContext authzReqMessageContext,
+                                     OAuth2AuthorizeRespDTO authorizeRespDTO, JWTClaimsSet jwtClaimsSet)
+            throws IdentityOAuth2Exception {
+        List<ClaimProvider> claimProviders = getClaimProviders();
+        if (CollectionUtils.isNotEmpty(claimProviders)) {
+            for (ClaimProvider claimProvider : claimProviders) {
+                Map<String, Object>  additionalIdTokenClaims =
+                        claimProvider.getAdditionalClaims(authzReqMessageContext, authorizeRespDTO);
+                setAdditionalClaimSet(jwtClaimsSet,  additionalIdTokenClaims);
+            }
+        }
+    }
+
+    private List<ClaimProvider> getClaimProviders() {
+        return OpenIDConnectServiceComponentHolder.getInstance().getClaimProviders();
+    }
+
+    /**
+     * A map with claim names and corresponding claim values is passed and all are inserted into jwtClaimSet.
+     *
+     * @param jwtClaimsSet contains JWT body
+     * @param additionalIdTokenClaims a map with claim names and corresponding claim values
+     */
+    private void setAdditionalClaimSet(JWTClaimsSet jwtClaimsSet, Map<String, Object> additionalIdTokenClaims) {
+        jwtClaimsSet.setAllClaims(additionalIdTokenClaims);
+        if (log.isDebugEnabled()) {
+            for (Map.Entry<String, Object> entry : additionalIdTokenClaims.entrySet()) {
+                log.debug("Additional claim added to JWTClaimSet, key: " + entry.getKey() + ", value: " +
+                        entry.getValue());
+            }
+        }
+    }
+}

@@ -24,6 +24,8 @@ import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.openidconnect.ClaimProvider;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilter;
 
 import java.util.Comparator;
@@ -93,5 +95,25 @@ public class OpenIDConnectServiceComponent {
     protected void unsetIdentityCoreInitializedEventService(IdentityCoreInitializedEvent identityCoreInitializedEvent) {
         /* reference IdentityCoreInitializedEvent service to guarantee that this component will wait until identity core
          is started */
+    }
+    @Reference(
+            name = "ClaimProvider",
+            service = ClaimProvider.class,
+            cardinality = ReferenceCardinality.OPTIONAL,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetClaimProvider"
+    )
+    protected void setClaimProvider(ClaimProvider claimProvider) {
+        if (log.isDebugEnabled()) {
+            log.debug("Setting ClaimProvider Service " + claimProvider.getClass().getName());
+        }
+        OpenIDConnectServiceComponentHolder.getInstance().getClaimProviders().add(claimProvider);
+    }
+
+    protected void unsetClaimProvider(ClaimProvider claimProvider) {
+        if (log.isDebugEnabled()) {
+            log.debug("Unsetting ClaimProvider Service " + claimProvider.getClass().getName());
+        }
+        OpenIDConnectServiceComponentHolder.getInstance().getClaimProviders().remove(claimProvider);
     }
 }
