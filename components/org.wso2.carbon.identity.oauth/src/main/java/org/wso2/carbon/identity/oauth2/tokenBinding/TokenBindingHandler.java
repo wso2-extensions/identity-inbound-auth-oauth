@@ -120,9 +120,11 @@ public class TokenBindingHandler implements TokenBinding {
                 tbh = tbh.split(":")[0];
                 tbh = new String(Base64.decodeBase64(tbh), (Charsets.UTF_8));
             }
-            if (tbh.contains(delimiter))
+            if (tbh.contains(delimiter)) {
                 tbh = tbh.split(delimiter)[0];
-            return tbh;
+                return tbh;
+            }
+            return null;
         }
         return null;
     }

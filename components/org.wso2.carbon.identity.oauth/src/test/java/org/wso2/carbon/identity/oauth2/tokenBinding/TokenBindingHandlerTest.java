@@ -25,9 +25,11 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
@@ -47,6 +49,8 @@ import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.powermock.api.mockito.PowerMockito.whenNew;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertNotNull;
 
 /**
  * This class tests the TokenBindingHandler class.
@@ -119,6 +123,8 @@ public class TokenBindingHandlerTest extends PowerMockIdentityBaseTest {
         String refreshToken2 = bindToken("Test1", "test");
         String refreshToken3 = bindToken("Test12", "test");
         String refreshToken4 = new String(Base64.encodeBase64((refreshToken1 + ":" + "assertion").getBytes(Charsets.UTF_8)));
+        String refreshToken5 = new String(Base64.encodeBase64(("test" + ":" + "assertion").getBytes(Charsets
+                .UTF_8)));
 
         String hash1 = hashOfString("Test");
         String hash2 = hashOfString("Test1");
@@ -130,6 +136,7 @@ public class TokenBindingHandlerTest extends PowerMockIdentityBaseTest {
                 {refreshToken2, hash2},
                 {refreshToken3, hash3},
                 {refreshToken4, hash1},
+                {refreshToken5, null},
         };
     }
 
@@ -176,9 +183,21 @@ public class TokenBindingHandlerTest extends PowerMockIdentityBaseTest {
         tokenBindingContext2.setOauthAuthzMsgCtx(oAuthAuthzReqMessageContext);
         tokenBindingContext2.setNormalToken(normalToken);
 
+        TokenBindingContext tokenBindingContext3 = new TokenBindingContext();
+        tokenBindingContext3.setTokenBindingType("testType");
+
+        TokenBindingContext tokenBindingContext4 = new TokenBindingContext();
+        tokenBindingContext4.setTokenBindingType("testType");
+        tokenBindingContext4.setNormalToken("testNormalToken");
+
+        TokenBindingContext tokenBindingContext5 = new TokenBindingContext();
+
         return new Object[][]{
                 {tokenBindingContext1},
                 {tokenBindingContext2},
+                {tokenBindingContext3},
+                {tokenBindingContext4},
+                {tokenBindingContext5}
         };
     }
 
@@ -186,7 +205,7 @@ public class TokenBindingHandlerTest extends PowerMockIdentityBaseTest {
     public void testDoTokenBinding(Object tokenBindingContext) throws Exception {
         TokenBindingHandler tokenBindingHandler = new TokenBindingHandler();
         tokenBindingHandler.settBSupportEnabled(true);
-        tokenBindingHandler.doTokenBinding((TokenBindingContext) tokenBindingContext);
+        assertNotNull(tokenBindingHandler.doTokenBinding((TokenBindingContext) tokenBindingContext));
     }
 
     /**
@@ -274,6 +293,46 @@ public class TokenBindingHandlerTest extends PowerMockIdentityBaseTest {
         String actualValue = tokenBindingHandler.checkTokenBindingHeader((HttpRequestHeader[]) httpRequestHeaders,
                 headerName);
         assertEquals(actualValue, expectedValue);
+    }
+
+    @Test
+    public void testInvalidOAuthClientExceptionForCheckTokenBindingSupportEnabled() throws IdentityOAuth2Exception, InvalidOAuthClientException {
+        when(OAuth2Util.getAppInformationByClientId(anyString())).thenThrow(new InvalidOAuthClientException(""));
+        TokenBindingHandler tokenBindingHandler = new TokenBindingHandler();
+        tokenBindingHandler.checkTokenBindingSupportEnabled("testClientID");
+        assertFalse(tokenBindingHandler.istBSupportEnabled());
+    }
+
+    @Test
+    public void testIdentityOAuth2ExceptionForCheckTokenBindingSupportEnabled() throws IdentityOAuth2Exception, InvalidOAuthClientException {
+        when(OAuth2Util.getAppInformationByClientId(anyString())).thenThrow(new IdentityOAuth2Exception(""));
+        TokenBindingHandler tokenBindingHandler = new TokenBindingHandler();
+        tokenBindingHandler.checkTokenBindingSupportEnabled("testClientID");
+        assertFalse(tokenBindingHandler.istBSupportEnabled());
+    }
+
+    @Test
+    public void testIdentityOAuth2ExceptionForCheckTokenBindingSupportEnabled2() throws IdentityOAuth2Exception,
+            InvalidOAuthClientException {
+        when(authAppDAO.getAppInformation(anyString())).thenThrow(new IdentityOAuth2Exception(""));
+        TokenBindingHandler tokenBindingHandler = new TokenBindingHandler();
+        OAuth2AuthorizeReqDTO oAuth2AuthorizeReqDTO = new OAuth2AuthorizeReqDTO();
+        oAuth2AuthorizeReqDTO.setConsumerKey("testConsumerKey");
+        OAuthAuthzReqMessageContext oAuthAuthzReqMessageContext = new OAuthAuthzReqMessageContext(oAuth2AuthorizeReqDTO);
+        tokenBindingHandler.checkTokenBindingSupportEnabled(oAuthAuthzReqMessageContext);
+        assertFalse(tokenBindingHandler.istBSupportEnabled());
+    }
+
+    @Test
+    public void testInvalidOAuthClientExceptionForCheckTokenBindingSupportEnabled2() throws IdentityOAuth2Exception,
+            InvalidOAuthClientException {
+        when(authAppDAO.getAppInformation(anyString())).thenThrow(new InvalidOAuthClientException(""));
+        TokenBindingHandler tokenBindingHandler = new TokenBindingHandler();
+        OAuth2AuthorizeReqDTO oAuth2AuthorizeReqDTO = new OAuth2AuthorizeReqDTO();
+        oAuth2AuthorizeReqDTO.setConsumerKey("testConsumerKey");
+        OAuthAuthzReqMessageContext oAuthAuthzReqMessageContext = new OAuthAuthzReqMessageContext(oAuth2AuthorizeReqDTO);
+        tokenBindingHandler.checkTokenBindingSupportEnabled(oAuthAuthzReqMessageContext);
+        assertFalse(tokenBindingHandler.istBSupportEnabled());
     }
 
     private String hashOfString(String tokenBindingID) {
