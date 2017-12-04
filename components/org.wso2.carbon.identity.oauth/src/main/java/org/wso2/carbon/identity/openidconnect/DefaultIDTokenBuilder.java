@@ -387,7 +387,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         String userTenantDomain = authorizedUser.getTenantDomain();
 
         String subjectClaimUri = getSubjectClaimUriInLocalDialect(serviceProvider);
-        if (subjectClaimUri != null) {
+        if (StringUtils.isNotBlank(subjectClaimUri)) {
             String fullQualifiedUsername = authorizedUser.toFullQualifiedUsername();
             try {
                 subject = getSubjectClaimFromUserStore(subjectClaimUri, authorizedUser);
