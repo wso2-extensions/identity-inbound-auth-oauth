@@ -167,7 +167,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             if (log.isDebugEnabled()) {
                 log.debug("Token Binding validation failed for refresh token");
             }
-            return false;
+            throw new IdentityOAuth2Exception("Token Binding validation failed for refresh token");
         }
         return true;
     }
