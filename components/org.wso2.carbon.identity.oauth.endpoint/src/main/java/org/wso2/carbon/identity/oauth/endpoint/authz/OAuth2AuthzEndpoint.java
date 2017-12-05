@@ -997,37 +997,35 @@ public class OAuth2AuthzEndpoint {
         tokenBindingContext.setTokenBindingSupportExists(tokenBinding.istBSupportExist());
 
         //check PKCE challenge for token binding
-        if (tokenBindingContext.isTokenBindingSupportExists()) {
-            if (tokenBindingContext.isTokenBindingSupportEnabled()) {
-                if (notvalidTokenBindingPkce(pkceChallengeMethod, pkceChallengeCode)) {
+        if (tokenBindingContext.isTokenBindingSupportExists() && tokenBindingContext.isTokenBindingSupportEnabled()) {
+            if (notvalidTokenBindingPkce(pkceChallengeMethod, pkceChallengeCode)) {
+                return EndpointUtil.getErrorPageURL(OAuth2ErrorCodes.INVALID_REQUEST,
+                        "This PKCE is not suitable for Token binding. ", null);
+            }
+        } else {
+            // Check if PKCE is mandatory for the application
+            if (validationResponse.isPkceMandatory()) {
+                if (pkceChallengeCode == null || !OAuth2Util.validatePKCECodeChallenge(pkceChallengeCode, pkceChallengeMethod)) {
+                    return EndpointUtil.getErrorPageURL(OAuth2ErrorCodes.INVALID_REQUEST, "PKCE is mandatory for this application. " +
+                            "PKCE Challenge is not provided " +
+                            "or is not upto RFC 7636 specification.", null);
+                }
+            }
+            if (pkceChallengeCode != null) {
+                //Check if the code challenge method value is neither "plain" or "s256", if so return error
+                if (notValidCodeChallengeMethod(pkceChallengeMethod)) {
+                    return EndpointUtil.getErrorPageURL(OAuth2ErrorCodes.INVALID_REQUEST, "Unsupported PKCE Challenge Method"
+                            , null);
+                }
+                // Check if "plain" transformation algorithm is disabled for the application
+                if (!validationResponse.isPkceSupportPlain() && OAuthConstants.OAUTH_PKCE_PLAIN_CHALLENGE.equals(pkceChallengeCode)) {
+                    return EndpointUtil.getErrorPageURL(OAuth2ErrorCodes.INVALID_REQUEST, "This application does not " +
+                            "support \"plain\" transformation algorithm.", null);
+                }
+                // If PKCE challenge code was sent, check if the code challenge is upto specifications
+                if (!OAuth2Util.validatePKCECodeChallenge(pkceChallengeCode, pkceChallengeMethod)) {
                     return EndpointUtil.getErrorPageURL(OAuth2ErrorCodes.INVALID_REQUEST,
-                            "This PKCE is not suitable for Token binding. ", null);
-                }
-            } else {
-                // Check if PKCE is mandatory for the application
-                if (validationResponse.isPkceMandatory()) {
-                    if (pkceChallengeCode == null || !OAuth2Util.validatePKCECodeChallenge(pkceChallengeCode, pkceChallengeMethod)) {
-                        return EndpointUtil.getErrorPageURL(OAuth2ErrorCodes.INVALID_REQUEST, "PKCE is mandatory for this application. " +
-                                "PKCE Challenge is not provided " +
-                                "or is not upto RFC 7636 specification.", null);
-                    }
-                }
-                if (pkceChallengeCode != null) {
-                    //Check if the code challenge method value is neither "plain" or "s256", if so return error
-                    if (notValidCodeChallengeMethod(pkceChallengeMethod)) {
-                        return EndpointUtil.getErrorPageURL(OAuth2ErrorCodes.INVALID_REQUEST, "Unsupported PKCE Challenge Method"
-                                , null);
-                    }
-                    // Check if "plain" transformation algorithm is disabled for the application
-                    if (!validationResponse.isPkceSupportPlain() && OAuthConstants.OAUTH_PKCE_PLAIN_CHALLENGE.equals(pkceChallengeCode)) {
-                        return EndpointUtil.getErrorPageURL(OAuth2ErrorCodes.INVALID_REQUEST, "This application does not " +
-                                "support \"plain\" transformation algorithm.", null);
-                    }
-                    // If PKCE challenge code was sent, check if the code challenge is upto specifications
-                    if (!OAuth2Util.validatePKCECodeChallenge(pkceChallengeCode, pkceChallengeMethod)) {
-                        return EndpointUtil.getErrorPageURL(OAuth2ErrorCodes.INVALID_REQUEST,
-                                "Code challenge used is not up to RFC 7636 specifications.", null);
-                    }
+                            "Code challenge used is not up to RFC 7636 specifications.", null);
                 }
             }
         }
