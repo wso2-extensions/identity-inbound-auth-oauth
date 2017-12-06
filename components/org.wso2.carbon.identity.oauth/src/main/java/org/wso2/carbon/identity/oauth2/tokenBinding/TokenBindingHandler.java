@@ -47,13 +47,13 @@ public class TokenBindingHandler implements TokenBinding {
     private static Log log = LogFactory.getLog(TokenBindingHandler.class);
     private static String delimiter = "&#%";
 
-    private boolean tBSupportExist = false;
+    private boolean tbSupportExist = false;
 
-    public void settBSupportEnabled(boolean tBSupportEnabled) {
-        this.tBSupportEnabled = tBSupportEnabled;
+    public void setTbSupportEnabled(boolean tbSupportEnabled) {
+        this.tbSupportEnabled = tbSupportEnabled;
     }
 
-    private boolean tBSupportEnabled = false;
+    private boolean tbSupportEnabled = false;
 
 
     public static void setDelimiter(String delimiter) {
@@ -62,12 +62,12 @@ public class TokenBindingHandler implements TokenBinding {
         }
     }
 
-    public boolean istBSupportExist() {
-        return tBSupportExist;
+    public boolean isTbSupportExist() {
+        return tbSupportExist;
     }
 
-    public boolean istBSupportEnabled() {
-        return tBSupportEnabled;
+    public boolean isTbSupportEnabled() {
+        return tbSupportEnabled;
     }
 
     public static String getDelimiter() {
@@ -146,6 +146,7 @@ public class TokenBindingHandler implements TokenBinding {
     }
 
     //Token binding for access token& refresh token
+
     /**
      * This method binds the token to token binding ID
      *
@@ -205,7 +206,7 @@ public class TokenBindingHandler implements TokenBinding {
      */
     @Override
     public boolean validateRefreshToken(OAuthTokenReqMessageContext tokReqMsgCtx) {
-        String refreshToken =tokReqMsgCtx.getOauth2AccessTokenReqDTO().getRefreshToken();
+        String refreshToken = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getRefreshToken();
         String tokenBindingId = findTokenBindingHeader(tokReqMsgCtx, OAuthConstants.HTTP_TB_PROVIDED_HEADER_NAME);
         String tokenHashValue = refreshToken;
         if (OAuth2Util.checkUserNameAssertionEnabled()) {
@@ -232,7 +233,7 @@ public class TokenBindingHandler implements TokenBinding {
                 if (httpRequestHeader.getName().equalsIgnoreCase(httpTBheader)) {
                     tokenBindingId = httpRequestHeader.getValue()[0];
                     if (!StringUtils.isEmpty(tokenBindingId)) {
-                        tBSupportExist = true;
+                        tbSupportExist = true;
                     }
                     break;
                 }
@@ -280,12 +281,12 @@ public class TokenBindingHandler implements TokenBinding {
         try {
             oAuthAppDO = getAppInformationByClientId(ClientId);
         } catch (InvalidOAuthClientException e) {
-            log.debug("Error while retrieving app information for clientId :"+ClientId);
+            log.debug("Error while retrieving app information for clientId :" + ClientId);
         } catch (IdentityOAuth2Exception e) {
-            log.debug("Error while retrieving app information for clientId :"+ClientId);
+            log.debug("Error while retrieving app information for clientId :" + ClientId);
         }
         if (oAuthAppDO != null && oAuthAppDO.isTbMandatory()) {
-            this.tBSupportEnabled = true;
+            this.tbSupportEnabled = true;
         }
     }
 
@@ -299,10 +300,10 @@ public class TokenBindingHandler implements TokenBinding {
         try {
             oAuthAppDO = new OAuthAppDAO().getAppInformation(oauthAuthzMsgCtx.getAuthorizationReqDTO().getConsumerKey());
         } catch (InvalidOAuthClientException | IdentityOAuth2Exception e) {
-            log.debug("Error while retrieving app information for ConsumerKey :"+oauthAuthzMsgCtx.getAuthorizationReqDTO().getConsumerKey());
+            log.debug("Error while retrieving app information for ConsumerKey :" + oauthAuthzMsgCtx.getAuthorizationReqDTO().getConsumerKey());
         }
         if (oAuthAppDO != null && oAuthAppDO.isTbMandatory()) {
-            this.tBSupportEnabled = true;
+            this.tbSupportEnabled = true;
         }
     }
 
@@ -349,8 +350,8 @@ public class TokenBindingHandler implements TokenBinding {
      */
     private String returnTBHeadervalue(HttpRequestHeader[] httpRequestHeaders, String httpTBheader) {
         String tokenBindingId = checkTokenBindingHeader(httpRequestHeaders, httpTBheader);
-        if (tBSupportExist) {
-            if (!tBSupportEnabled) {
+        if (tbSupportExist) {
+            if (!tbSupportEnabled) {
                 return null;
             }
         }

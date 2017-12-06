@@ -204,7 +204,7 @@ public class TokenBindingHandlerTest extends PowerMockIdentityBaseTest {
     @Test(dataProvider = "provideTokenBindingContext")
     public void testDoTokenBinding(Object tokenBindingContext) throws Exception {
         TokenBindingHandler tokenBindingHandler = new TokenBindingHandler();
-        tokenBindingHandler.settBSupportEnabled(true);
+        tokenBindingHandler.setTbSupportEnabled(true);
         assertNotNull(tokenBindingHandler.doTokenBinding((TokenBindingContext) tokenBindingContext));
     }
 
@@ -257,7 +257,7 @@ public class TokenBindingHandlerTest extends PowerMockIdentityBaseTest {
             when(OAuth2Util.checkUserNameAssertionEnabled()).thenReturn(false);
         }
         TokenBindingHandler tokenBindingHandler = new TokenBindingHandler();
-        tokenBindingHandler.settBSupportEnabled(true);
+        tokenBindingHandler.setTbSupportEnabled(true);
         boolean actualValue = tokenBindingHandler.validateRefreshToken((OAuthTokenReqMessageContext) oAuthTokenReqMessageContext);
 
         assertEquals(actualValue, expectedValue);
@@ -300,7 +300,7 @@ public class TokenBindingHandlerTest extends PowerMockIdentityBaseTest {
         when(OAuth2Util.getAppInformationByClientId(anyString())).thenThrow(new InvalidOAuthClientException(""));
         TokenBindingHandler tokenBindingHandler = new TokenBindingHandler();
         tokenBindingHandler.checkTokenBindingSupportEnabled("testClientID");
-        assertFalse(tokenBindingHandler.istBSupportEnabled());
+        assertFalse(tokenBindingHandler.isTbSupportEnabled());
     }
 
     @Test
@@ -308,7 +308,7 @@ public class TokenBindingHandlerTest extends PowerMockIdentityBaseTest {
         when(OAuth2Util.getAppInformationByClientId(anyString())).thenThrow(new IdentityOAuth2Exception(""));
         TokenBindingHandler tokenBindingHandler = new TokenBindingHandler();
         tokenBindingHandler.checkTokenBindingSupportEnabled("testClientID");
-        assertFalse(tokenBindingHandler.istBSupportEnabled());
+        assertFalse(tokenBindingHandler.isTbSupportEnabled());
     }
 
     @Test
@@ -320,7 +320,7 @@ public class TokenBindingHandlerTest extends PowerMockIdentityBaseTest {
         oAuth2AuthorizeReqDTO.setConsumerKey("testConsumerKey");
         OAuthAuthzReqMessageContext oAuthAuthzReqMessageContext = new OAuthAuthzReqMessageContext(oAuth2AuthorizeReqDTO);
         tokenBindingHandler.checkTokenBindingSupportEnabled(oAuthAuthzReqMessageContext);
-        assertFalse(tokenBindingHandler.istBSupportEnabled());
+        assertFalse(tokenBindingHandler.isTbSupportEnabled());
     }
 
     @Test
@@ -332,7 +332,7 @@ public class TokenBindingHandlerTest extends PowerMockIdentityBaseTest {
         oAuth2AuthorizeReqDTO.setConsumerKey("testConsumerKey");
         OAuthAuthzReqMessageContext oAuthAuthzReqMessageContext = new OAuthAuthzReqMessageContext(oAuth2AuthorizeReqDTO);
         tokenBindingHandler.checkTokenBindingSupportEnabled(oAuthAuthzReqMessageContext);
-        assertFalse(tokenBindingHandler.istBSupportEnabled());
+        assertFalse(tokenBindingHandler.isTbSupportEnabled());
     }
 
     private String hashOfString(String tokenBindingID) {

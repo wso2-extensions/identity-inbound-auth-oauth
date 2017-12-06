@@ -989,12 +989,12 @@ public class OAuth2AuthzEndpoint {
 
         //Iniate Token binding parameters
         TokenBindingHandler tokenBinding = new TokenBindingHandler();
-        tokenBinding.settBSupportEnabled(validationResponse.isTbMandatory());
+        tokenBinding.setTbSupportEnabled(validationResponse.isTbMandatory());
         tokenBinding.checkTokenBindingHeader(httpRequestHeaders, OAuthConstants
                 .HTTP_TB_REFERRED_HEADER_NAME);
         TokenBindingContext tokenBindingContext = new TokenBindingContext();
-        tokenBindingContext.setTokenBindingSupportEnabled(tokenBinding.istBSupportEnabled());
-        tokenBindingContext.setTokenBindingSupportExists(tokenBinding.istBSupportExist());
+        tokenBindingContext.setTokenBindingSupportEnabled(tokenBinding.isTbSupportEnabled());
+        tokenBindingContext.setTokenBindingSupportExists(tokenBinding.isTbSupportExist());
 
         //check PKCE challenge for token binding
         if (tokenBindingContext.isTokenBindingSupportExists() && tokenBindingContext.isTokenBindingSupportEnabled()) {
