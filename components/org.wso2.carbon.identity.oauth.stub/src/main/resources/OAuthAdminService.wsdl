@@ -941,13 +941,13 @@
     </wsdl:binding>
     <wsdl:service name="OAuthAdminService">
         <wsdl:port name="OAuthAdminServiceHttpsSoap11Endpoint" binding="tns:OAuthAdminServiceSoap11Binding">
-            <soap:address location="https://localhost:9444/services/OAuthAdminService.OAuthAdminServiceHttpsSoap11Endpoint/"/>
+            <soap:address location="https://localhost:9443/services/OAuthAdminService.OAuthAdminServiceHttpsSoap11Endpoint/"/>
         </wsdl:port>
         <wsdl:port name="OAuthAdminServiceHttpsSoap12Endpoint" binding="tns:OAuthAdminServiceSoap12Binding">
-            <soap12:address location="https://localhost:9444/services/OAuthAdminService.OAuthAdminServiceHttpsSoap12Endpoint/"/>
+            <soap12:address location="https://localhost:9443/services/OAuthAdminService.OAuthAdminServiceHttpsSoap12Endpoint/"/>
         </wsdl:port>
         <wsdl:port name="OAuthAdminServiceHttpsEndpoint" binding="tns:OAuthAdminServiceHttpBinding">
-            <http:address location="https://localhost:9444/services/OAuthAdminService.OAuthAdminServiceHttpsEndpoint/"/>
+            <http:address location="https://localhost:9443/services/OAuthAdminService.OAuthAdminServiceHttpsEndpoint/"/>
         </wsdl:port>
     </wsdl:service>
 </wsdl:definitions>
