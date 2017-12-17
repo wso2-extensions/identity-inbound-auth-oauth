@@ -104,7 +104,7 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
         ApplicationManagementService applicationMgtService = OAuth2ServiceComponentHolder.getApplicationMgtService();
         ServiceProvider serviceProvider = applicationMgtService.getApplicationExcludingFileBasedSPs(applicationName, tenantDomain);
         removeEntriesFromCache(serviceProvider, tenantDomain, userName);
-        if(OAuth2ServiceComponentHolder.isAudienceEnabled()) {
+        if (OAuth2ServiceComponentHolder.isAudienceEnabled()) {
             removeOauthConsumerAppProperties(serviceProvider, tenantDomain);
         }
         return true;
