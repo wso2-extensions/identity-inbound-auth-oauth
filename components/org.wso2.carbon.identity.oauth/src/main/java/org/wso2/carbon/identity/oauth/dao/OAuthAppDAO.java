@@ -281,10 +281,12 @@ public class OAuthAppDAO {
                                 oauthApp.setUserAccessTokenExpiryTime(rSet.getLong(12));
                                 oauthApp.setApplicationAccessTokenExpiryTime(rSet.getLong(13));
                                 oauthApp.setRefreshTokenExpiryTime(rSet.getLong(14));
+                                oauthApp.setState(rSet.getString(15));
                             } else {
                                 oauthApp.setUserAccessTokenExpiryTime(rSet.getLong(10));
                                 oauthApp.setApplicationAccessTokenExpiryTime(rSet.getLong(11));
                                 oauthApp.setRefreshTokenExpiryTime(rSet.getLong(12));
+                                oauthApp.setState(rSet.getString(13));
                             }
                         }
                     }
