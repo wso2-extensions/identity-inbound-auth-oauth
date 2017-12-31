@@ -151,7 +151,7 @@ public class AccessTokenIssuer {
         }
 
         if (authzGrantHandler == null) {
-            String errorMsg = "Unsupported grant type " + grantType + " is used.";
+            String errorMsg = "Unsupported grant type : " + grantType + ", is used.";
             if (log.isDebugEnabled()) {
                 log.debug(errorMsg);
             }
