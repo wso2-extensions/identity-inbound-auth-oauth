@@ -191,11 +191,11 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
         Claim claim = new Claim();
         claim.setName(claimName);
         if (jsonObjectClaimAttributes != null) {
-
+            Map<String, String> claimAttributesMap = new HashMap<>();
             //To iterate claim attributes object to fetch the attribute key and value for the fetched
             // requested claim in the fetched claim requestor
             for (Map.Entry<String, Object> claimAttributes : jsonObjectClaimAttributes.entrySet()) {
-                Map<String, String> claimAttributesMap = new HashMap<>();
+
                 if (jsonObjectClaimAttributes.get(claimAttributes.getKey()) != null) {
                     claimAttributeValue = jsonObjectClaimAttributes.get(claimAttributes.getKey()).toString();
                 }
