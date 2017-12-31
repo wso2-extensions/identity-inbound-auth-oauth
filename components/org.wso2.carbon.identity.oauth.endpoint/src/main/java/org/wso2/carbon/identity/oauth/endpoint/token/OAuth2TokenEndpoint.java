@@ -85,8 +85,6 @@ public class OAuth2TokenEndpoint {
             }
 
             HttpServletRequestWrapper httpRequest = new OAuthRequestWrapper(request, paramMap);
-            String consumerKey = getConsumerKey(httpRequest);
-            validateOAuthApplication(consumerKey);
 
             CarbonOAuthTokenRequest oauthRequest = buildCarbonOAuthTokenRequest(httpRequest);
             OAuth2AccessTokenRespDTO oauth2AccessTokenResp = issueAccessToken(oauthRequest);
@@ -251,8 +249,6 @@ public class OAuth2TokenEndpoint {
             if (log.isDebugEnabled()) {
                 log.error("Error while extracting credentials from authorization header", e);
             }
-
-            throw new TokenEndpointAccessDeniedException("Client Authentication failed. Invalid Authorization Header");
         }
     }
 
