@@ -294,8 +294,7 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
         RequestObject requestObject = null;
 
         if (cacheEntry != null) {
-            cacheEntry.getRequestObject();
-            return cacheEntry.getRequestObject();
+            requestObject = cacheEntry.getRequestObject();
         }
         return requestObject;
     }
