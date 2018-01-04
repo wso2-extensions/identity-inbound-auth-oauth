@@ -296,9 +296,8 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
         if (cacheEntry != null) {
             cacheEntry.getRequestObject();
             return cacheEntry.getRequestObject();
-        } else {
-            return requestObject;
         }
+        return requestObject;
     }
 
     private boolean isLocalUser(AuthenticatedUser authenticatedUser) {
