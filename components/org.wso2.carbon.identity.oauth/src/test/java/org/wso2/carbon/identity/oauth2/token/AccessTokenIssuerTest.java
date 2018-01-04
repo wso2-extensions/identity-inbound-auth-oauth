@@ -197,6 +197,7 @@ public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
         when(passwordGrantHandler.validateScope(any(OAuthTokenReqMessageContext.class))).thenReturn(isValidScope);
         when(passwordGrantHandler.issue(any(OAuthTokenReqMessageContext.class))).thenReturn(mockOAuth2AccessTokenRespDTO);
         authzGrantHandlers.put("password", passwordGrantHandler);
+        when(passwordGrantHandler.isConfidentialClient()).thenReturn(true);
 
         when(oAuthServerConfiguration.getSupportedGrantTypes()).thenReturn(authzGrantHandlers);
 
