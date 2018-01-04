@@ -30,6 +30,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.identity.application.authentication.framework.AuthenticationMethodNameTranslator;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ClaimConfig;
@@ -71,11 +72,14 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import javax.xml.namespace.QName;
 
 import static org.apache.commons.lang.StringUtils.isNotBlank;
@@ -125,18 +129,24 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
 
         String nonceValue = null;
         long authTime = 0;
-        LinkedHashSet acrValue = new LinkedHashSet();
+        String acrValue = null;
+        List<String> amrValues = Collections.emptyList();
+        Set<String> requestedAcrValues = Collections.emptySet();
 
         // AuthorizationCode only available for authorization code grant type
         if (getAuthorizationCode(tokenReqMsgCtxt) != null) {
             AuthorizationGrantCacheEntry authzGrantCacheEntry = getAuthorizationGrantCacheEntry(tokenReqMsgCtxt);
             if (authzGrantCacheEntry != null) {
                 nonceValue = authzGrantCacheEntry.getNonceValue();
-                acrValue = authzGrantCacheEntry.getAcrValue();
+                acrValue = authzGrantCacheEntry.getSelectedAcrValue();
+                requestedAcrValues = authzGrantCacheEntry.getAcrValue();
                 if (isAuthTimeRequired(authzGrantCacheEntry)) {
                     authTime = authzGrantCacheEntry.getAuthTime();
                 }
+                amrValues = authzGrantCacheEntry.getAmrList();
             }
+        } else {
+            amrValues = tokenReqMsgCtxt.getOauth2AccessTokenReqDTO().getAuthenticationMethodReferences();
         }
 
         String atHash = null;
@@ -167,8 +177,11 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         if (nonceValue != null) {
             jwtClaimsSet.setClaim(NONCE, nonceValue);
         }
-        if (acrValue != null) {
-            jwtClaimsSet.setClaim(OAuthConstants.OIDCClaims.ACR, "urn:mace:incommon:iap:silver");
+        if (acrValue != null && !acrValue.isEmpty()) {
+            jwtClaimsSet.setClaim(OAuthConstants.ACR, translateAcrToResponse(acrValue, requestedAcrValues));
+        }
+        if (amrValues != null) {
+            jwtClaimsSet.setClaim(OAuthConstants.AMR, translateAmrToResponse(amrValues));
         }
 
         setAdditionalClaims(tokenReqMsgCtxt, tokenRespDTO, jwtClaimsSet);
@@ -206,7 +219,9 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
                 getSubjectClaim(authzReqMessageContext, tokenRespDTO, clientId, spTenantDomain, authorizedUser);
 
         String nonceValue = authzReqMessageContext.getAuthorizationReqDTO().getNonce();
-        LinkedHashSet acrValue = authzReqMessageContext.getAuthorizationReqDTO().getACRValues();
+        LinkedHashSet requestedAcrValueSet = authzReqMessageContext.getAuthorizationReqDTO().getACRValues();
+        String acrValue = authzReqMessageContext.getAuthorizationReqDTO().getSelectedAcr();
+        List<String> amrValues = Collections.emptyList(); //TODO:
 
         long idTokenLifeTimeInMillis = getIDTokenExpiryInMillis();
         long currentTimeInMillis = Calendar.getInstance().getTimeInMillis();
@@ -240,8 +255,11 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         if (nonceValue != null) {
             jwtClaimsSet.setClaim(OAuthConstants.OIDCClaims.NONCE, nonceValue);
         }
-        if (acrValue != null) {
-            jwtClaimsSet.setClaim(OAuthConstants.OIDCClaims.ACR, "urn:mace:incommon:iap:silver");
+        if (acrValue != null && !acrValue.isEmpty()) {
+            jwtClaimsSet.setClaim("acr", translateAcrToResponse(acrValue, requestedAcrValueSet));
+        }
+        if (amrValues != null) {
+            jwtClaimsSet.setClaim("amr", translateAmrToResponse(amrValues));
         }
 
         setAdditionalClaims(authzReqMessageContext, tokenRespDTO, jwtClaimsSet);
@@ -879,5 +897,60 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
                         entry.getValue());
             }
         }
+    }
+
+    /**
+     * +     * Converts the internal representation to external (response) form.
+     * +     * The resultant list will not have any duplicate values.
+     * +     * @param internalList
+     * +     * @return a list of amr values to be sent via ID token. May be empty, but not null.
+     * +
+     */
+    private List<String> translateAmrToResponse(List<String> internalList) {
+        Set<String> result = new HashSet<>();
+        for (String internalValue : internalList) {
+            result.addAll(translateToResponse(internalValue));
+        }
+        return new ArrayList<>(result);
+    }
+
+    /**
+     * Converts the internal representation to external (response) form.
+     * The resultant list will not have any duplicate values.
+     *
+     * @param internalAcr
+     * @return the ACR value to be sent via ID token. Can be null.
+     */
+    private String translateAcrToResponse(String internalAcr, Set<String> requestedAcrValueSet) {
+        String result = internalAcr;
+        AuthenticationMethodNameTranslator authenticationMethodNameTranslator = OAuth2ServiceComponentHolder
+                .getAuthenticationMethodNameTranslator();
+        if (authenticationMethodNameTranslator != null) {
+            Set<String> externalAcrSet = authenticationMethodNameTranslator
+                    .translateToExternalAcr(internalAcr, INBOUND_AUTH2_TYPE);
+            result = externalAcrSet.stream().filter(e -> requestedAcrValueSet.contains(e)).findFirst().orElse(result);
+        }
+        return result;
+    }
+
+    private List<String> translateToResponse(String internalValue) {
+        List<String> result = null;
+        AuthenticationMethodNameTranslator authenticationMethodNameTranslator = OAuth2ServiceComponentHolder
+                .getAuthenticationMethodNameTranslator();
+        if (authenticationMethodNameTranslator != null) {
+            Set<String> externalAmrSet = authenticationMethodNameTranslator
+                    .translateToExternalAmr(internalValue, INBOUND_AUTH2_TYPE);
+            if (externalAmrSet == null || externalAmrSet.isEmpty()) {
+                if (log.isDebugEnabled()) {
+                    log.debug("There was no mapping found to translate AMR from internal to external URI. Internal " +
+                            "Method Reference : " + internalValue);
+                }
+                result = new ArrayList<>();
+                result.add(internalValue);
+            } else {
+                result = new ArrayList<>(externalAmrSet);
+            }
+        }
+        return result;
     }
 }

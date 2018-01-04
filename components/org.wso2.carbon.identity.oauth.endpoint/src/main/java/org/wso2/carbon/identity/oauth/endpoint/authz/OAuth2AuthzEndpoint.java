@@ -36,6 +36,7 @@ import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticatorFlowStatus;
 import org.wso2.carbon.identity.application.authentication.framework.CommonAuthenticationHandler;
 import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationResultCacheEntry;
+import org.wso2.carbon.identity.application.authentication.framework.context.AuthHistory;
 import org.wso2.carbon.identity.application.authentication.framework.context.SessionContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticationResult;
@@ -82,6 +83,7 @@ import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.registry.core.utils.UUIDGenerator;
 import org.wso2.carbon.utils.CarbonUtils;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
+
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
@@ -91,6 +93,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.text.ParseException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -123,7 +126,7 @@ import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getError
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getLoginPageURL;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuth2Service;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuthServerConfiguration;
-import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.startSuperTenantFlow;   
+import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.startSuperTenantFlow;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.validateParams;
 
 @Path("/authorize")
@@ -514,6 +517,8 @@ public class OAuth2AuthzEndpoint {
         if (authTime > 0) {
             oAuthMessage.getSessionDataCacheEntry().setAuthTime(authTime);
         }
+
+        associateAuthenticationHistory(oAuthMessage.getSessionDataCacheEntry(), cookie);
     }
 
     private boolean isFormPostResponseMode(OAuthMessage oAuthMessage, String redirectURL) {
@@ -836,6 +841,20 @@ public class OAuth2AuthzEndpoint {
         authorizationGrantCacheEntry.setMaxAge(sessionDataCacheEntry.getoAuth2Parameters().getMaxAge());
         authorizationGrantCacheEntry.setRequestObject(sessionDataCacheEntry.getoAuth2Parameters().
                 getRequestObject());
+        String[] sessionIds = sessionDataCacheEntry.getParamMap().get(FrameworkConstants.SESSION_DATA_KEY);
+        if (ArrayUtils.isNotEmpty(sessionIds)) {
+            String commonAuthSessionId = sessionIds[0];
+            SessionContext sessionContext = FrameworkUtils.getSessionContextFromCache(commonAuthSessionId);
+            String selectedAcr = sessionContext.getSessionAuthHistory().getSelectedAcrValue();
+            authorizationGrantCacheEntry.setSelectedAcrValue(selectedAcr);
+        }
+
+        String[] amrEntries = sessionDataCacheEntry.getParamMap().get(OAuthConstants.AMR);
+        if (amrEntries != null) {
+            for (String amrEntry : amrEntries) {
+                authorizationGrantCacheEntry.addAmr(amrEntry);
+            }
+        }
         AuthorizationGrantCache.getInstance().addToCacheByCode(
                 authorizationGrantCacheKey, authorizationGrantCacheEntry);
     }
@@ -1651,6 +1670,40 @@ public class OAuth2AuthzEndpoint {
             }
         }
         return redirectURL;
+    }
+
+    /**
+     * Associates the authentication method references done while logged into the session (if any) to the OAuth cache.
+     * The SessionDataCacheEntry then will be used when getting "AuthenticationMethodReferences". Please see
+     * <a href="https://tools.ietf.org/html/draft-ietf-oauth-amr-values-02" >draft-ietf-oauth-amr-values-02</a>.
+     *
+     * @param resultFromLogin
+     * @param cookie
+     */
+    private void associateAuthenticationHistory(SessionDataCacheEntry resultFromLogin, Cookie cookie) {
+        SessionContext sessionContext = getSessionContext(cookie);
+        if (sessionContext != null && sessionContext.getSessionAuthHistory() != null
+                && sessionContext.getSessionAuthHistory().getHistory() != null) {
+            List<String> authMethods = new ArrayList<>();
+            for (AuthHistory authHistory : sessionContext.getSessionAuthHistory().getHistory()) {
+                authMethods.add(authHistory.toTranslatableString());
+            }
+            resultFromLogin.getParamMap().put(OAuthConstants.AMR, authMethods.toArray(new String[authMethods.size()]));
+        }
+    }
+
+    /**
+     * Returns the SessionContext associated with the cookie, if there is a one.
+     *
+     * @param cookie
+     * @return the associate SessionContext or null.
+     */
+    private SessionContext getSessionContext(Cookie cookie) {
+        if (cookie != null) {
+            String sessionContextKey = DigestUtils.sha256Hex(cookie.getValue());
+            return FrameworkUtils.getSessionContextFromCache(sessionContextKey);
+        }
+        return null;
     }
 
 
