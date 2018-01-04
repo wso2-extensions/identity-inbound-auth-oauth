@@ -291,11 +291,14 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
         AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(getAccessToken(tokenResponse));
         AuthorizationGrantCacheEntry cacheEntry = AuthorizationGrantCache.getInstance()
                 .getValueFromCacheByToken(cacheKey);
+        RequestObject requestObject = null;
 
         if (cacheEntry != null) {
             cacheEntry.getRequestObject();
+            return cacheEntry.getRequestObject();
+        } else {
+            return requestObject;
         }
-        return cacheEntry.getRequestObject();
     }
 
     private boolean isLocalUser(AuthenticatedUser authenticatedUser) {
