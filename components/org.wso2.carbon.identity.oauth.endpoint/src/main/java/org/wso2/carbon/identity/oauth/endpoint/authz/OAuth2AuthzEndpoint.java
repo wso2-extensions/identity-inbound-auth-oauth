@@ -305,6 +305,8 @@ public class OAuth2AuthzEndpoint {
             URISyntaxException {
 
         updateAuthTimeInSessionDataCacheEntry(oAuthMessage);
+        addSessionDataKeyToSessionDataCacheEntry(oAuthMessage);
+
         String consent = getConsentFromRequest(oAuthMessage);
 
         if (consent != null) {
@@ -323,6 +325,15 @@ public class OAuth2AuthzEndpoint {
             return Response.status(HttpServletResponse.SC_FOUND).location(new URI(redirectURL)).build();
         } else {
             return handleEmptyConsent(oAuthMessage);
+        }
+    }
+
+    private void addSessionDataKeyToSessionDataCacheEntry(OAuthMessage oAuthMessage) {
+        Cookie cookie = FrameworkUtils.getAuthCookie(oAuthMessage.getRequest());
+        if (cookie != null) {
+            String sessionContextKey = DigestUtils.sha256Hex(cookie.getValue());
+            oAuthMessage.getSessionDataCacheEntry().getParamMap().put(FrameworkConstants.SESSION_DATA_KEY, new String[]
+                    {sessionContextKey});
         }
     }
 
@@ -402,6 +413,7 @@ public class OAuth2AuthzEndpoint {
     private Response handleAuthenticationResponse(OAuthMessage oAuthMessage) throws OAuthSystemException, URISyntaxException {
 
         updateAuthTimeInSessionDataCacheEntry(oAuthMessage);
+        addSessionDataKeyToSessionDataCacheEntry(oAuthMessage);
 
         OAuth2Parameters oauth2Params = oAuthMessage.getSessionDataCacheEntry().getoAuth2Parameters();
         AuthenticationResult authnResult = getAuthenticationResult(oAuthMessage, oAuthMessage.getSessionDataKeyFromLogin());
