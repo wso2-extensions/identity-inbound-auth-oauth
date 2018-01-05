@@ -21,6 +21,10 @@ package org.wso2.carbon.identity.oauth2.dto;
 import org.wso2.carbon.identity.oauth2.model.HttpRequestHeader;
 import org.wso2.carbon.identity.oauth2.model.RequestParameter;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 public class OAuth2AccessTokenReqDTO {
     private String clientId;
     private String clientSecret;
@@ -39,6 +43,7 @@ public class OAuth2AccessTokenReqDTO {
     private String pkceCodeVerifier;
     private RequestParameter[] requestParameters;
     private HttpRequestHeader[] httpRequestHeaders;
+    private List<String> authenticationMethodReferences = new ArrayList<>();
 
     public String getClientId() {
         return clientId;
@@ -174,5 +179,13 @@ public class OAuth2AccessTokenReqDTO {
 
     public void setPkceCodeVerifier(String pkceCodeVerifier) {
         this.pkceCodeVerifier = pkceCodeVerifier;
+    }
+
+    public void addAuthenticationMethodReference(String reference) {
+        authenticationMethodReferences.add(reference);
+    }
+
+    public List<String> getAuthenticationMethodReferences() {
+        return Collections.unmodifiableList(authenticationMethodReferences);
     }
 }
