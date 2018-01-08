@@ -28,6 +28,7 @@ import org.apache.oltu.oauth2.as.issuer.OAuthIssuerImpl;
 import org.apache.oltu.oauth2.as.issuer.UUIDValueGenerator;
 import org.apache.oltu.oauth2.as.issuer.ValueGenerator;
 import org.apache.oltu.oauth2.as.validator.ClientCredentialValidator;
+import org.apache.oltu.oauth2.as.validator.CodeTokenValidator;
 import org.apache.oltu.oauth2.as.validator.CodeValidator;
 import org.apache.oltu.oauth2.as.validator.TokenValidator;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
@@ -631,9 +632,11 @@ public class OAuthServerConfiguration {
                             .put(ResponseType.CODE.toString(), CodeValidator.class);
                     supportedResponseTypeValidatorsTemp.put(ResponseType.TOKEN.toString(),
                             TokenValidator.class);
-                    supportedResponseTypeValidatorsTemp.put("id_token", IDTokenResponseValidator.class);
-                    supportedResponseTypeValidatorsTemp.put("id_token token", IDTokenTokenResponseValidator.class);
-
+                    supportedResponseTypeValidatorsTemp.put(OAuthConstants.ID_TOKEN, IDTokenResponseValidator.class);
+                    supportedResponseTypeValidatorsTemp.put(OAuthConstants.IDTOKEN_TOKEN, IDTokenTokenResponseValidator.class);
+                    supportedResponseTypeValidatorsTemp.put(OAuthConstants.CODE_TOKEN, CodeTokenValidator.class);
+                    supportedResponseTypeValidatorsTemp.put(OAuthConstants.CODE_IDTOKEN, CodeTokenValidator.class);
+                    supportedResponseTypeValidatorsTemp.put(OAuthConstants.CODE_IDTOKEN_TOKEN, CodeTokenValidator.class);
 
                     if (supportedResponseTypeValidatorNames != null) {
                         // Load configured grant type validators
@@ -1778,12 +1781,14 @@ public class OAuthServerConfiguration {
             // if this element is not present, assume the default case.
             log.warn("\'SupportedResponseTypes\' element not configured in identity.xml. " +
                     "Therefore instantiating default response type handlers");
-
-            Map<String, String> defaultResponseTypes = new HashMap<>(4);
+            Map<String, String> defaultResponseTypes = new HashMap<>();
             defaultResponseTypes.put(ResponseType.CODE.toString(), "org.wso2.carbon.identity.oauth2.authz.handlers.CodeResponseTypeHandler");
-            defaultResponseTypes.put(ResponseType.TOKEN.toString(), "org.wso2.carbon.identity.oauth2.authz.handlers.TokenResponseTypeHandler");
-            defaultResponseTypes.put("id_token", "org.wso2.carbon.identity.oauth2.authz.handlers.TokenResponseTypeHandler");
-            defaultResponseTypes.put("id_token token", "org.wso2.carbon.identity.oauth2.authz.handlers.TokenResponseTypeHandler");
+            defaultResponseTypes.put(ResponseType.TOKEN.toString(), "org.wso2.carbon.identity.oauth2.authz.handlers.AccessTokenResponseTypeHandler");
+            defaultResponseTypes.put(OAuthConstants.ID_TOKEN, "org.wso2.carbon.identity.oauth2.authz.handlers.IDTokenResponseTypeHandler");
+            defaultResponseTypes.put(OAuthConstants.IDTOKEN_TOKEN, "org.wso2.carbon.identity.oauth2.authz.handlers.IDTokenTokenResponseTypeHandler");
+            defaultResponseTypes.put(OAuthConstants.CODE_TOKEN, "org.wso2.carbon.identity.oauth2.authz.handlers.HybridResponseTypeHandler");
+            defaultResponseTypes.put(OAuthConstants.CODE_IDTOKEN, "org.wso2.carbon.identity.oauth2.authz.handlers.HybridResponseTypeHandler");
+            defaultResponseTypes.put(OAuthConstants.CODE_IDTOKEN_TOKEN, "org.wso2.carbon.identity.oauth2.authz.handlers.HybridResponseTypeHandler");
             supportedResponseTypeClassNames.putAll(defaultResponseTypes);
         }
 
