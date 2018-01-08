@@ -16,11 +16,26 @@ import javax.validation.constraints.NotNull;
 public class ScopeToUpdateDTO  {
   
   
+  @NotNull
+  private String displayName = null;
+  
   
   private String description = null;
   
   
   private List<String> bindings = new ArrayList<String>();
+
+  
+  /**
+   **/
+  @ApiModelProperty(required = true, value = "")
+  @JsonProperty("displayName")
+  public String getDisplayName() {
+    return displayName;
+  }
+  public void setDisplayName(String displayName) {
+    this.displayName = displayName;
+  }
 
   
   /**
@@ -53,6 +68,7 @@ public class ScopeToUpdateDTO  {
     StringBuilder sb = new StringBuilder();
     sb.append("class ScopeToUpdateDTO {\n");
     
+    sb.append("  displayName: ").append(displayName).append("\n");
     sb.append("  description: ").append(description).append("\n");
     sb.append("  bindings: ").append(bindings).append("\n");
     sb.append("}\n");

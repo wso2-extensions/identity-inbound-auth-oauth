@@ -49,6 +49,8 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
 
     private long authTime;
 
+    private long maxAge;
+
     private RequestObject requestObject;
 
     /*
@@ -95,6 +97,14 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
 
     public void setAuthTime(long authTime) {
         this.authTime = authTime;
+    }
+
+    public long getMaxAge() {
+        return maxAge;
+    }
+
+    public void setMaxAge(long maxAge) {
+        this.maxAge = maxAge;
     }
 
     public AuthorizationGrantCacheEntry(Map<ClaimMapping, String> userAttributes) {

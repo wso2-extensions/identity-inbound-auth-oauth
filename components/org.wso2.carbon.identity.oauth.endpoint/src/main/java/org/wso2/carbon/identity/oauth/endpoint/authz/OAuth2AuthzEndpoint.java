@@ -62,6 +62,7 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.endpoint.OAuthRequestWrapper;
+import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
@@ -832,6 +833,7 @@ public class OAuth2AuthzEndpoint {
         authorizationGrantCacheEntry.setEssentialClaims(
                 sessionDataCacheEntry.getoAuth2Parameters().getEssentialClaims());
         authorizationGrantCacheEntry.setAuthTime(sessionDataCacheEntry.getAuthTime());
+        authorizationGrantCacheEntry.setMaxAge(sessionDataCacheEntry.getoAuth2Parameters().getMaxAge());
         authorizationGrantCacheEntry.setRequestObject(sessionDataCacheEntry.getoAuth2Parameters().
                 getRequestObject());
         AuthorizationGrantCache.getInstance().addToCacheByCode(
@@ -861,7 +863,7 @@ public class OAuth2AuthzEndpoint {
      * @throws OAuthProblemException OAuthProblemException
      */
     private String handleOAuthAuthorizationRequest(OAuthMessage oAuthMessage)
-            throws OAuthSystemException, OAuthProblemException {
+            throws OAuthSystemException, OAuthProblemException, InvalidRequestException {
 
         OAuth2ClientValidationResponseDTO validationResponse = validateClient(oAuthMessage);
 
@@ -1035,7 +1037,7 @@ public class OAuth2AuthzEndpoint {
 
     private String populateOauthParameters(OAuth2Parameters params, OAuthMessage oAuthMessage,
                                            OAuth2ClientValidationResponseDTO validationResponse,
-                                           OAuthAuthzRequest oauthRequest) throws OAuthSystemException {
+                                           OAuthAuthzRequest oauthRequest) throws OAuthSystemException, InvalidRequestException {
 
         addSPDisplayNameParam(oAuthMessage.getClientId(), params);
         params.setClientId(oAuthMessage.getClientId());
@@ -1076,15 +1078,20 @@ public class OAuth2AuthzEndpoint {
         if (StringUtils.isNotBlank(oauthRequest.getParam(ACR_VALUES)) && !"null".equals(oauthRequest.getParam
                 (ACR_VALUES))) {
             String[] acrValues = oauthRequest.getParam(ACR_VALUES).split(" ");
-            LinkedHashSet list = new LinkedHashSet();
-            for (String acrValue : acrValues) {
-                list.add(acrValue);
-            }
+            LinkedHashSet<String> list = new LinkedHashSet<>();
+            list.addAll(Arrays.asList(acrValues));
             params.setACRValues(list);
         }
         if (StringUtils.isNotBlank(oauthRequest.getParam(CLAIMS))) {
             params.setEssentialClaims(oauthRequest.getParam(CLAIMS));
         }
+
+        handleMaxAgeParameter(oauthRequest, params);
+
+        /*
+            OIDC Request object will supersede parameters sent in the OAuth Authorization request. So handling the
+            OIDC Request object needs to done after processing all request parameters.
+         */
         try {
             handleOIDCRequestObject(oauthRequest, params);
         } catch (RequestObjectException e) {
@@ -1092,6 +1099,20 @@ public class OAuth2AuthzEndpoint {
             return EndpointUtil.getErrorPageURL(e.getErrorCode(), e.getErrorMessage(), null);
         }
         return null;
+    }
+
+    private void handleMaxAgeParameter(OAuthAuthzRequest oauthRequest,
+                                       OAuth2Parameters params) throws InvalidRequestException {
+        // Set max_age parameter sent in the authorization request.
+        String maxAgeParam = oauthRequest.getParam(OAuthConstants.OIDCClaims.MAX_AGE);
+        if (StringUtils.isNotBlank(maxAgeParam)) {
+            try {
+                params.setMaxAge(Long.parseLong(maxAgeParam));
+            } catch (NumberFormatException ex) {
+                log.error("Invalid max_age parameter: '" + maxAgeParam + "' sent in the authorization request.");
+                throw new InvalidRequestException("Invalid max_age parameter value sent in the authorization request.");
+            }
+        }
     }
 
     private void handleOIDCRequestObject(OAuthAuthzRequest oauthRequest, OAuth2Parameters parameters)
@@ -1125,9 +1146,9 @@ public class OAuth2AuthzEndpoint {
                         "request object instance is null.");
             }
             validateSignatureAndContent(parameters, requestObject);
-            /**
-             * When the request parameter is used, the OpenID Connect request parameter values contained in the JWT supersede
-             * those passed using the OAuth 2.0 request syntax
+            /*
+              When the request parameter is used, the OpenID Connect request parameter values contained in the JWT supersede
+              those passed using the OAuth 2.0 request syntax
              */
             overrideAuthzParameters(parameters, oauthRequest.getParam(REQUEST), oauthRequest.getParam(REQUEST_URI),
                     requestObject);
@@ -1174,6 +1195,9 @@ public class OAuth2AuthzEndpoint {
             }
             if (ArrayUtils.isNotEmpty(requestObject.getScopes())) {
                 params.setScopes(new HashSet<>(Arrays.asList(requestObject.getScopes())));
+            }
+            if (requestObject.getMaxAge() != 0 ) {
+                params.setMaxAge(requestObject.getMaxAge());
             }
         }
     }
@@ -1370,8 +1394,8 @@ public class OAuth2AuthzEndpoint {
      * @param oauth2Params
      * @return
      */
-    private OAuth2AuthorizeRespDTO authorize(OAuth2Parameters oauth2Params
-            , SessionDataCacheEntry sessionDataCacheEntry) {
+    private OAuth2AuthorizeRespDTO authorize(OAuth2Parameters oauth2Params,
+                                             SessionDataCacheEntry sessionDataCacheEntry) {
 
         OAuth2AuthorizeReqDTO authzReqDTO = buildAuthRequest(oauth2Params, sessionDataCacheEntry);
         return getOAuth2Service().authorize(authzReqDTO);
@@ -1390,7 +1414,8 @@ public class OAuth2AuthzEndpoint {
         authzReqDTO.setPkceCodeChallenge(oauth2Params.getPkceCodeChallenge());
         authzReqDTO.setPkceCodeChallengeMethod(oauth2Params.getPkceCodeChallengeMethod());
         authzReqDTO.setTenantDomain(oauth2Params.getTenantDomain());
-        authzReqDTO.setAuthTime(oauth2Params.getAuthTime());
+        authzReqDTO.setAuthTime(sessionDataCacheEntry.getAuthTime());
+        authzReqDTO.setMaxAge(oauth2Params.getMaxAge());
         authzReqDTO.setEssentialClaims(oauth2Params.getEssentialClaims());
         return authzReqDTO;
     }

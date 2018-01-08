@@ -54,6 +54,7 @@ import org.wso2.carbon.identity.oauth2.token.handlers.grant.saml.SAML2TokenCallb
 import org.wso2.carbon.identity.oauth2.validators.grant.AuthorizationCodeGrantValidator;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeHandler;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeValidator;
+import org.wso2.carbon.identity.oauth2.validators.grant.ClientCredentialGrantValidator;
 import org.wso2.carbon.identity.oauth2.validators.grant.PasswordGrantValidator;
 import org.wso2.carbon.identity.oauth2.validators.grant.RefreshTokenGrantValidator;
 import org.wso2.carbon.identity.openidconnect.CustomClaimsCallbackHandler;
@@ -584,7 +585,7 @@ public class OAuthServerConfiguration {
                     supportedGrantTypeValidatorsTemp
                             .put(GrantType.PASSWORD.toString(), PasswordGrantValidator.class);
                     supportedGrantTypeValidatorsTemp.put(GrantType.CLIENT_CREDENTIALS.toString(),
-                            ClientCredentialValidator.class);
+                            ClientCredentialGrantValidator.class);
                     supportedGrantTypeValidatorsTemp.put(GrantType.AUTHORIZATION_CODE.toString(),
                             AuthorizationCodeGrantValidator.class);
                     supportedGrantTypeValidatorsTemp.put(GrantType.REFRESH_TOKEN.toString(),
@@ -1809,9 +1810,8 @@ public class OAuthServerConfiguration {
                 OMElement supportedClientAuthHandler = iterator.next();
                 Iterator<OMElement> confProperties = supportedClientAuthHandler
                         .getChildrenWithLocalName(ConfigElements.CLIENT_AUTH_PROPERTY);
-                Properties properties = null;
+                Properties properties = new Properties();
                 while (confProperties.hasNext()) {
-                    properties = new Properties();
                     OMElement paramElem = confProperties.next();
                     String paramName = paramElem.getAttributeValue(
                             new QName(ConfigElements.CLIENT_AUTH_NAME));
@@ -1829,12 +1829,7 @@ public class OAuthServerConfiguration {
                             + "ClientAuthHandler element. ");
                     return;
                 }
-                if (properties != null) {
-                    supportedClientAuthHandlerData.put(clientAuthHandlerImplClass, properties);
-                } else {
-                    supportedClientAuthHandlerData.put(clientAuthHandlerImplClass, new Properties());
-                }
-
+                supportedClientAuthHandlerData.put(clientAuthHandlerImplClass, properties);
             }
 
         } else {
@@ -1972,7 +1967,11 @@ public class OAuthServerConfiguration {
                 oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT));
 
         if (openIDConnectConfigElem != null) {
-            parseRequestObjectConfig(oauthConfigElem);
+
+            // Get <RequestObjectBuilders> element defined under <OpenIDConnect> config.
+            parseRequestObjectConfig(openIDConnectConfigElem.getFirstChildWithName(
+                    getQNameWithIdentityNS(ConfigElements.REQUEST_OBJECT_BUILDERS)));
+
             if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.
                     REQUEST_OBJECT_VALIDATOR)) != null) {
                 defaultRequestValidatorClassName =

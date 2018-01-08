@@ -32,7 +32,9 @@ import org.wso2.carbon.registry.api.RegistryException;
 import org.wso2.carbon.registry.api.Resource;
 import org.wso2.carbon.registry.core.service.RegistryService;
 
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -252,10 +254,20 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
     }
 
     private void handleUpdateAtClaim(Map<String, Object> returnClaims) {
-        if (returnClaims.containsKey(UPDATED_AT) && returnClaims.get(UPDATED_AT) != null) {
-            if (returnClaims.get(UPDATED_AT) instanceof String) {
-                returnClaims.put(UPDATED_AT, Long.parseLong((String) (returnClaims.get(UPDATED_AT))));
+
+        if (returnClaims.containsKey(UPDATED_AT) && returnClaims.get(UPDATED_AT) != null &&
+                returnClaims.get(UPDATED_AT) instanceof String) {
+
+            // We should pass the updated_at claim in number of seconds from 1970-01-01T00:00:00Z as measured in UTC
+            // until the date/time. So we have to convert the date (If stored in that format) value in to this format.
+            long timeInMillis;
+            Date date = getDateIfValidDateString((String) (returnClaims.get(UPDATED_AT)));
+            if (date != null) {
+                timeInMillis = date.getTime();
+            } else {
+                timeInMillis = Long.parseLong((String) (returnClaims.get(UPDATED_AT)));
             }
+            returnClaims.put(UPDATED_AT, timeInMillis);
         }
     }
 
@@ -290,5 +302,24 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
 
     private boolean isNotEmpty(Properties properties) {
         return properties != null && !properties.isEmpty();
+    }
+
+    /**
+     * Return a Date object if the given string is a valid date string.
+     * @param dateString date string in yyyy-MM-dd'T'HH:mm:ss format.
+     * @return Date object if success null otherwise.
+     */
+    private Date getDateIfValidDateString(String dateString) {
+
+        Date date;
+        try {
+            date = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss").parse(dateString);
+        } catch (Exception ex) {
+            if (log.isDebugEnabled()) {
+                log.debug("The given date string: " + dateString  + " is not in correct date time format.");
+            }
+            return null;
+        }
+        return date;
     }
 }

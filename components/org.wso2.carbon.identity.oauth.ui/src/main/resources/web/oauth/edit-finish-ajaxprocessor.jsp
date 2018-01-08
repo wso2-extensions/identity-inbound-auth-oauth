@@ -75,7 +75,7 @@
 	boolean isError = false;
 	
     try {
-        if (OAuthUIUtil.isValidURI(callback)) {
+        if (OAuthUIUtil.isValidURI(callback) || callback.startsWith(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX)) {
             String cookie = (String) session.getAttribute(ServerConstants.ADMIN_SERVICE_COOKIE);
             String backendServerURL = CarbonUIUtil.getServerURL(config.getServletContext(), session);
             ConfigurationContext configContext =

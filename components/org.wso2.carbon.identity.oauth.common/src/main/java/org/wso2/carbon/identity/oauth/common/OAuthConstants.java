@@ -305,6 +305,7 @@ public final class OAuthConstants {
         public static final String AT_HASH = "at_hash";
         public static final String NONCE = "nonce";
         public static final String ACR = "acr";
+        public static final String MAX_AGE = "max_age";
         // OIDC Specification : http://openid.net/specs/openid-connect-core-1_0.html
         public static final String C_HASH = "c_hash";
 

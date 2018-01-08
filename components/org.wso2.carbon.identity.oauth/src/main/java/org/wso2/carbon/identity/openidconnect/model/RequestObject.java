@@ -16,6 +16,7 @@
 package org.wso2.carbon.identity.openidconnect.model;
 
 
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,7 +25,9 @@ import java.util.Map;
  *  This class is used to model the request object which comes as a parameter of the OIDC authorization request
  *
  */
-public class RequestObject {
+public class RequestObject implements Serializable {
+
+    private static final long serialVersionUID = 7180827153818376043L;
 
     private String clientId;
     private String redirectUri;
@@ -34,7 +37,7 @@ public class RequestObject {
     private String iss;
     private String aud;
     private String responseType;
-    private String maxAge;
+    private long maxAge;
     private boolean isSignatureValid = true;
     private boolean isValidRequestURI = true;
     // This is used for extensions.
@@ -109,11 +112,11 @@ public class RequestObject {
         this.responseType = responseType;
     }
 
-    public String getMaxAge() {
+    public long getMaxAge() {
         return maxAge;
     }
 
-    public void setMaxAge(String maxAge) {
+    public void setMaxAge(long maxAge) {
         this.maxAge = maxAge;
     }
 

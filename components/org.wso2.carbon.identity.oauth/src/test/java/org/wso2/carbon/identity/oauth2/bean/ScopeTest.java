@@ -39,8 +39,8 @@ public class ScopeTest {
     public void setUp() throws IllegalAccessException, InstantiationException {
 
         String description = "Test cases to test scope";
-        scope1 = new Scope(name, description);
-        scope2 = new Scope(name, description, bindings);
+        scope1 = new Scope(name, name, description);
+        scope2 = new Scope(name, name, description, bindings);
     }
 
 

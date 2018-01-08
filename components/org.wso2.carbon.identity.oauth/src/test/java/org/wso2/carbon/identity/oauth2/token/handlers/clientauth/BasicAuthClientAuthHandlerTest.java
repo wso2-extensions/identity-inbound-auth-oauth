@@ -121,6 +121,7 @@ public class BasicAuthClientAuthHandlerTest extends PowerMockIdentityBaseTest {
 		mockStatic(OAuth2Util.class);
 		when(OAuth2Util.authenticateClient(anyString(), anyString()))
 				.thenThrow(new IdentityOAuthAdminException(""));
+		tokReqMsgCtx1.getOauth2AccessTokenReqDTO().setClientId("CLIENT_ID");
 		testclass.authenticateClient(tokReqMsgCtx1);
 	}
 
@@ -139,6 +140,7 @@ public class BasicAuthClientAuthHandlerTest extends PowerMockIdentityBaseTest {
 		mockStatic(OAuth2Util.class);
 		when(OAuth2Util.authenticateClient(anyString(), anyString()))
 				.thenThrow(new InvalidOAuthClientException(""));
+		tokReqMsgCtx1.getOauth2AccessTokenReqDTO().setClientId("CLIENT_ID");
 		testclass.authenticateClient(tokReqMsgCtx1);
 	}
 

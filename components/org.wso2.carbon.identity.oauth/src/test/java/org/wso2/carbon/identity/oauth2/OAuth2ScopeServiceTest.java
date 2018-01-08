@@ -70,7 +70,7 @@ public class OAuth2ScopeServiceTest extends PowerMockIdentityBaseTest {
     @Test
     public void testRegisterScope() throws Exception {
 
-        Scope dummyScope = new Scope(SCOPE_NAME, SCOPE_DESCRIPTION);
+        Scope dummyScope = new Scope(SCOPE_NAME, SCOPE_NAME, SCOPE_DESCRIPTION);
         Scope scope = oAuth2ScopeService.registerScope(dummyScope);
         assertEquals(scope.getName(), SCOPE_NAME, "Expected name did not received");
         assertEquals(scope.getDescription(), SCOPE_DESCRIPTION, "Expected description did not received");
@@ -81,15 +81,16 @@ public class OAuth2ScopeServiceTest extends PowerMockIdentityBaseTest {
     public void testRegisterScopeWithNoScopeName() throws Exception {
         String name = "";
         String description = "dummyScopeDescription";
-        Scope scope = new Scope(name, description);
+        Scope scope = new Scope(name, name, description);
         oAuth2ScopeService.registerScope(scope);
     }
 
     @Test(expectedExceptions = IdentityException.class)
-    public void testRegisterScopeWithNoScopeDescription() throws Exception {
+    public void testRegisterScopeWithNoDisplayName() throws Exception {
         String name = "dummyScopeName";
+        String displayName = "";
         String description = "";
-        Scope scope = new Scope(name, description);
+        Scope scope = new Scope(name, displayName, description);
         oAuth2ScopeService.registerScope(scope);
     }
 
@@ -113,7 +114,7 @@ public class OAuth2ScopeServiceTest extends PowerMockIdentityBaseTest {
 
     @Test(dataProvider = "ProvideCacheConfigurations")
     public void testGetScope(boolean existWithinCache) throws Exception {
-        Scope dummyScope = new Scope(SCOPE_NAME, SCOPE_DESCRIPTION);
+        Scope dummyScope = new Scope(SCOPE_NAME, SCOPE_NAME, SCOPE_DESCRIPTION);
         oAuth2ScopeService.registerScope(dummyScope);
         if (!existWithinCache) {
             OAuthScopeCache.getInstance().clearCacheEntry(new OAuthScopeCacheKey(SCOPE_NAME, Integer.toString(
@@ -126,23 +127,23 @@ public class OAuth2ScopeServiceTest extends PowerMockIdentityBaseTest {
 
     @Test
     public void testUpdateScope() throws Exception {
-        Scope dummyScope = new Scope(SCOPE_NAME, SCOPE_DESCRIPTION);
+        Scope dummyScope = new Scope(SCOPE_NAME, SCOPE_NAME, SCOPE_DESCRIPTION);
         oAuth2ScopeService.registerScope(dummyScope);
-        Scope updatedDummyScope = new Scope(SCOPE_NAME, StringUtils.EMPTY);
+        Scope updatedDummyScope = new Scope(SCOPE_NAME, SCOPE_NAME, StringUtils.EMPTY);
         assertEquals(oAuth2ScopeService.updateScope(updatedDummyScope).getDescription(), StringUtils.EMPTY);
         oAuth2ScopeService.deleteScope(SCOPE_NAME);
     }
 
     @Test(expectedExceptions = IdentityOAuth2ScopeException.class)
     public void testUpdateScopeWithExceptions() throws Exception {
-        Scope updatedDummyScope = new Scope(SCOPE_NAME, StringUtils.EMPTY);
+        Scope updatedDummyScope = new Scope(SCOPE_NAME, SCOPE_NAME, StringUtils.EMPTY);
         oAuth2ScopeService.updateScope(updatedDummyScope);
         oAuth2ScopeService.deleteScope(SCOPE_NAME);
     }
 
     @Test(expectedExceptions = IdentityOAuth2ScopeException.class)
     public void testDeleteScope() throws Exception {
-        Scope dummyScope = new Scope(SCOPE_NAME, SCOPE_DESCRIPTION);
+        Scope dummyScope = new Scope(SCOPE_NAME, SCOPE_NAME, SCOPE_DESCRIPTION);
         oAuth2ScopeService.registerScope(dummyScope);
         oAuth2ScopeService.deleteScope(SCOPE_NAME);
         oAuth2ScopeService.getScope(SCOPE_NAME);

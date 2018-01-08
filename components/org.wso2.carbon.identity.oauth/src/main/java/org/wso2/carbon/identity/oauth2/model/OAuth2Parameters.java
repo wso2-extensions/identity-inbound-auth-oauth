@@ -47,10 +47,19 @@ public class OAuth2Parameters implements Serializable {
     private LinkedHashSet acrValues;
     private String tenantDomain;
     private long authTime;
+    private long maxAge;
     private String responseMode;
     private String essentialClaims;
     private String displayName;
     private RequestObject requestObject;
+
+    public long getMaxAge() {
+        return maxAge;
+    }
+
+    public void setMaxAge(long maxAge) {
+        this.maxAge = maxAge;
+    }
 
     public RequestObject getRequestObject() {
         return requestObject;

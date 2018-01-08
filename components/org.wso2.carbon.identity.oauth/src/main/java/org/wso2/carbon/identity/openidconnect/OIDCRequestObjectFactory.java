@@ -44,23 +44,28 @@ public class OIDCRequestObjectFactory {
      * @param oauthRequest authorization request
      * @throws RequestObjectException
      */
-    public static void buildRequestObject(OAuthAuthzRequest oauthRequest, OAuth2Parameters oAuth2Parameters,
+    public static void buildRequestObject(OAuthAuthzRequest oauthRequest,
+                                          OAuth2Parameters oAuth2Parameters,
                                           RequestObject requestObject) throws RequestObjectException {
-
-        /**
-         * So that the request is a valid OAuth 2.0 Authorization Request, values for the response_type and client_id
-         * parameters MUST be included using the OAuth 2.0 request syntax, since they are REQUIRED by OAuth 2.0.
-         * The values for these parameters MUST match those in the Request Object, if present
+        /*
+          So that the request is a valid OAuth 2.0 Authorization Request, values for the response_type and client_id
+          parameters MUST be included using the OAuth 2.0 request syntax, since they are REQUIRED by OAuth 2.0.
+          The values for these parameters MUST match those in the Request Object, if present
          */
-        if (getBuildRequestObject(REQUEST_URI_PARAM_VALUE_BUILDER) != null) {
-            if (isRequestParameter(oauthRequest.getParam(REQUEST))) {
-                getBuildRequestObject(REQUEST_PARAM_VALUE_BUILDER).buildRequestObject(oauthRequest.getParam(REQUEST),
-                        oAuth2Parameters, requestObject);
+        RequestObjectBuilder requestObjectBuilder;
+        if (isRequestParameter(oauthRequest)) {
+             requestObjectBuilder = getRequestObjectBuilder(REQUEST_PARAM_VALUE_BUILDER);
+            if (requestObjectBuilder != null) {
+                requestObjectBuilder.buildRequestObject(oauthRequest.getParam(REQUEST), oAuth2Parameters, requestObject);
                 validateClientIdAndResponseType(oauthRequest, requestObject);
-            } else if (isRequestUri(REQUEST_URI)) {
-                getBuildRequestObject(REQUEST_URI_PARAM_VALUE_BUILDER).buildRequestObject(oauthRequest.
-                        getParam(REQUEST_URI), oAuth2Parameters, requestObject);
             }
+        } else if (isRequestUri(oauthRequest)) {
+            requestObjectBuilder = getRequestObjectBuilder(REQUEST_URI_PARAM_VALUE_BUILDER);
+            if (requestObjectBuilder != null) {
+                requestObjectBuilder.buildRequestObject(oauthRequest.getParam(REQUEST_URI), oAuth2Parameters, requestObject);
+            }
+        } else {
+            // Unsupported request object type.
         }
     }
 
@@ -74,18 +79,15 @@ public class OIDCRequestObjectFactory {
         }
     }
 
-    private static RequestObjectBuilder getBuildRequestObject(String requestParamValueBuilder) {
-
+    private static RequestObjectBuilder getRequestObjectBuilder(String requestParamValueBuilder) {
         return OAuthServerConfiguration.getInstance().getRequestObjectBuilders().get(requestParamValueBuilder);
     }
 
-    private static boolean isRequestUri(String param) {
-
-        return StringUtils.isNotBlank(param);
+    private static boolean isRequestUri(OAuthAuthzRequest oAuthAuthzRequest) {
+        return StringUtils.isNotBlank(oAuthAuthzRequest.getParam(REQUEST_URI));
     }
 
-    private static boolean isRequestParameter(String param) {
-
-        return StringUtils.isNotBlank(param);
+    private static boolean isRequestParameter(OAuthAuthzRequest oAuthAuthzRequest) {
+        return StringUtils.isNotBlank(oAuthAuthzRequest.getParam(REQUEST));
     }
 }

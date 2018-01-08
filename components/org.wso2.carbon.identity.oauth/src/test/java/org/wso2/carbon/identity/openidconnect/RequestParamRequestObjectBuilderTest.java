@@ -76,7 +76,6 @@ public class RequestParamRequestObjectBuilderTest extends PowerMockTestCase {
         when((requestObjectValidatorImplMock.getPayload())).thenReturn(requestObject,requestObjectforTests.
                 getRequestJson());
         requestObjectBuilder.buildRequestObject(requestObject, oAuth2Parameters, requestObjectInstance);
-        requestObjectInstance.getClaimsforRequestParameter();
         Assert.assertEquals(requestObjectInstance.getClaimsforRequestParameter().size(), 2);
 
     }

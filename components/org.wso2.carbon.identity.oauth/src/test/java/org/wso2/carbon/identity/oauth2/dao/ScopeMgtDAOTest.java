@@ -67,19 +67,19 @@ public class ScopeMgtDAOTest extends IdentityBaseTest {
 
         return new Object[][]{
                 {
-                        new Scope("scope1", "scope1"),
+                        new Scope("scope1", "scope1", "scope1"),
                         MultitenantConstants.SUPER_TENANT_ID
                 },
                 {
-                        new Scope("scope2", "scope2", Arrays.asList("sampleBinding1", "sampleBinding2")),
+                        new Scope("scope2", "scope2", "scope2", Arrays.asList("sampleBinding1", "sampleBinding2")),
                         MultitenantConstants.SUPER_TENANT_ID
                 },
                 {
-                        new Scope("scope1", "scope1"),
+                        new Scope("scope1", "scope1", "scope1"),
                         SAMPLE_TENANT_ID
                 },
                 {
-                        new Scope("scope2", "scope2", Arrays.asList("sampleBinding1", "sampleBinding2")),
+                        new Scope("scope2", "scope2", "scope2", Arrays.asList("sampleBinding1", "sampleBinding2")),
                         SAMPLE_TENANT_ID
                 },
         };
@@ -112,15 +112,16 @@ public class ScopeMgtDAOTest extends IdentityBaseTest {
         return new Object[][]{
                 {
                         Arrays.asList(
-                                new Scope("scope3", "scope3"),
-                                new Scope("scope4", "scope4", Arrays.asList("sampleBinding3", "sampleBinding4"))
+                                new Scope("scope3", "scope3", "scope3"),
+                                new Scope("scope4", "scope4", "scope4", Arrays.asList("sampleBinding3", "sampleBinding4"))
                         ),
                         MultitenantConstants.SUPER_TENANT_ID
                 },
                 {
                         Arrays.asList(
-                                new Scope("scope5", "scope5"),
-                                new Scope("scope6", "scope6", Arrays.asList("sampleBinding3", "sampleBinding4"))
+                                new Scope("scope5", "scope5", "scope5"),
+                                new Scope("scope6", "scope6", "scope6", Arrays.asList("sampleBinding3",
+                                        "sampleBinding4"))
                         ),
                         SAMPLE_TENANT_ID
                 },
@@ -151,17 +152,17 @@ public class ScopeMgtDAOTest extends IdentityBaseTest {
         return new Object[][]{
                 {
                         Arrays.asList(
-                                new Scope("scope7", "scope7"),
-                                new Scope("scope8", "scope8", Arrays.asList("sampleBinding5", "sampleBinding6")),
-                                new Scope("scope9", "scope9", Arrays.asList("sampleBinding7", "sampleBinding8"))
+                                new Scope("scope7", "scope7", "scope7"),
+                                new Scope("scope8", "scope8", "scope8", Arrays.asList("sampleBinding5", "sampleBinding6")),
+                                new Scope("scope9", "scope9", "scope9", Arrays.asList("sampleBinding7", "sampleBinding8"))
                         ),
                         MultitenantConstants.SUPER_TENANT_ID
                 },
                 {
                         Arrays.asList(
-                                new Scope("scope10", "scope10"),
-                                new Scope("scope11", "scope11", Arrays.asList("sampleBinding5", "sampleBinding6")),
-                                new Scope("scope12", "scope12", Arrays.asList("sampleBinding7", "sampleBinding8"))
+                                new Scope("scope10", "scope10", "scope10"),
+                                new Scope("scope11", "scope11", "scope11", Arrays.asList("sampleBinding5", "sampleBinding6")),
+                                new Scope("scope12", "scope12", "scope12", Arrays.asList("sampleBinding7", "sampleBinding8"))
                         ),
                         SAMPLE_TENANT_ID
                 },
@@ -192,11 +193,11 @@ public class ScopeMgtDAOTest extends IdentityBaseTest {
 
         return new Object[][]{
                 {
-                        new Scope("scope13", "scope13"),
+                        new Scope("scope13", "scope13", "scope13"),
                         MultitenantConstants.SUPER_TENANT_ID
                 },
                 {
-                        new Scope("scope14", "scope14"),
+                        new Scope("scope14", "scope14", "scope14"),
                         SAMPLE_TENANT_ID
                 },
         };
@@ -225,11 +226,11 @@ public class ScopeMgtDAOTest extends IdentityBaseTest {
 
         return new Object[][]{
                 {
-                        new Scope("scope15", "scope15"),
+                        new Scope("scope15", "scope15", "scope15"),
                         MultitenantConstants.SUPER_TENANT_ID
                 },
                 {
-                        new Scope("scope16", "scope16"),
+                        new Scope("scope16", "scope16", "scope16"),
                         SAMPLE_TENANT_ID
                 },
         };
@@ -262,11 +263,11 @@ public class ScopeMgtDAOTest extends IdentityBaseTest {
 
         return new Object[][]{
                 {
-                        new Scope("scope17", "scope17"),
+                        new Scope("scope17", "scope17", "scope17"),
                         MultitenantConstants.SUPER_TENANT_ID
                 },
                 {
-                        new Scope("scope18", "scope18"),
+                        new Scope("scope18", "scope18", "scope18"),
                         SAMPLE_TENANT_ID
                 },
         };
@@ -298,11 +299,11 @@ public class ScopeMgtDAOTest extends IdentityBaseTest {
 
         return new Object[][]{
                 {
-                        new Scope("scope19", "scope19"),
+                        new Scope("scope19", "scope19", "scope19"),
                         MultitenantConstants.SUPER_TENANT_ID
                 },
                 {
-                        new Scope("scope20", "scope20"),
+                        new Scope("scope20", "scope20", "scope20"),
                         SAMPLE_TENANT_ID
                 },
         };
@@ -332,11 +333,11 @@ public class ScopeMgtDAOTest extends IdentityBaseTest {
 
         return new Object[][]{
                 {
-                        new Scope("scope21", "scope21"),
+                        new Scope("scope21", "scope21", "scope21"),
                         MultitenantConstants.SUPER_TENANT_ID
                 },
                 {
-                        new Scope("scope22", "scope22"),
+                        new Scope("scope22", "scope22", "scope22"),
                         SAMPLE_TENANT_ID
                 },
         };

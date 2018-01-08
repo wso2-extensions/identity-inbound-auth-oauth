@@ -135,17 +135,16 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
     private void deactivateAuthzCode(OAuthTokenReqMessageContext tokReqMsgCtx, String tokenId,
                                      String authzCode) throws IdentityOAuth2Exception {
         try {
-            if (isExistingTokenUsed(tokReqMsgCtx)){
-                // has given an already issued access token. So the authorization code is not deactivated yet
-                AuthzCodeDO authzCodeDO = new AuthzCodeDO();
-                authzCodeDO.setAuthorizationCode(authzCode);
-                authzCodeDO.setOauthTokenId(tokenId);
-                OAuthTokenPersistenceFactory.getInstance().getAuthorizationCodeDAO()
-                        .deactivateAuthorizationCode(authzCodeDO);
-                if(log.isDebugEnabled()
-                        && IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.AUTHORIZATION_CODE)) {
-                    log.debug("Deactivated authorization code : " + authzCode);
-                }
+            // Here we deactivate the authorization and in the process update the tokenId against the authorization
+            // code so that we can correlate the current access token that is valid against the authorization code.
+            AuthzCodeDO authzCodeDO = new AuthzCodeDO();
+            authzCodeDO.setAuthorizationCode(authzCode);
+            authzCodeDO.setOauthTokenId(tokenId);
+            OAuthTokenPersistenceFactory.getInstance().getAuthorizationCodeDAO()
+                    .deactivateAuthorizationCode(authzCodeDO);
+            if (log.isDebugEnabled()
+                    && IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.AUTHORIZATION_CODE)) {
+                log.debug("Deactivated authorization code : " + authzCode);
             }
         } catch (IdentityException e) {
             throw new IdentityOAuth2Exception("Error occurred while deactivating authorization code", e);
@@ -250,9 +249,9 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
                 .getAuthorizationCodeDAO().validateAuthorizationCode(tokenReqDTO.getClientId(),
                         tokenReqDTO.getAuthorizationCode());
         if (validationResult != null) {
-            //revoking access token issued for authorization code as per RFC 6749 Section 4.1.2
             if (!validationResult.isActiveCode()) {
-                revokeExsistingAccessTokens(validationResult.getTokenId(), validationResult.getAuthzCodeDO());
+                //revoking access token issued for authorization code as per RFC 6749 Section 4.1.2
+                revokeExistingAccessTokens(validationResult.getTokenId(), validationResult.getAuthzCodeDO());
             }
             return validationResult.getAuthzCodeDO();
         } else {
@@ -262,19 +261,18 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
         }
     }
 
-    private void revokeExsistingAccessTokens(String tokenId, AuthzCodeDO authzCodeDO) throws IdentityOAuth2Exception {
-        //revoking access token issued for authorization code as per RFC 6749 Section 4.1.2
+    private void revokeExistingAccessTokens(String tokenId, AuthzCodeDO authzCodeDO) throws IdentityOAuth2Exception {
         OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO().revokeAccessToken(tokenId, authzCodeDO
-                .getAuthorizedUser().getUserName());
+                .getAuthorizedUser().toString());
+
         if (log.isDebugEnabled()) {
             if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.AUTHORIZATION_CODE)) {
-                log.debug("Validated authorization code(hashed): " + DigestUtils.sha256Hex
-                        (authzCodeDO.getAuthorizationCode()) + " for client: " + authzCodeDO.getConsumerKey() + " is not active. " +
-                        "So " +
-                        "revoking the access tokens issued for the authorization code.");
+                log.debug("Validated authorization code(hashed): " + DigestUtils.sha256Hex(authzCodeDO
+                        .getAuthorizationCode()) + " for client: " + authzCodeDO.getConsumerKey() + " is not active. " +
+                        "So revoking the access tokens issued for the authorization code.");
             } else {
-                log.debug("Validated authorization code for client: " + authzCodeDO.getConsumerKey() + " is not active" +
-                        ". So revoking the access tokens issued for the authorization code.");
+                log.debug("Validated authorization code for client: " + authzCodeDO.getConsumerKey() + " is not " +
+                        "active. So revoking the access tokens issued for the authorization code.");
             }
         }
     }

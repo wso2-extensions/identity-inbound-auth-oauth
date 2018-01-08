@@ -61,9 +61,8 @@ import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENA
 
 @WithCarbonHome
 @WithAxisConfiguration
-@WithH2Database(jndiName = "jdbc/WSO2IdentityDB", files = { "dbScripts/identity.sql" })
-@WithRealmService(tenantId = SUPER_TENANT_ID, tenantDomain = SUPER_TENANT_DOMAIN_NAME,
-        injectToSingletons = {ApplicationManagementServiceComponentHolder.class})
+@WithH2Database(files = { "dbScripts/identity.sql" })
+@WithRealmService(injectToSingletons = {ApplicationManagementServiceComponentHolder.class})
 @WithKeyStore
 public class DefaultIDTokenBuilderTest extends IdentityBaseTest {
 

@@ -112,11 +112,13 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
                     while (rs.next()) {
                         int scopeID = rs.getInt(1);
                         String name = rs.getString(2);
-                        String description = rs.getString(3);
-                        final String binding = rs.getString(4);
+                        String displayName = rs.getString(3);
+                        String description = rs.getString(4);
+                        final String binding = rs.getString(5);
                         if (scopeMap.containsKey(scopeID) && scopeMap.get(scopeID) != null) {
                             scopeMap.get(scopeID).setName(name);
                             scopeMap.get(scopeID).setDescription(description);
+                            scopeMap.get(scopeID).setDisplayName(displayName);
                             if (binding != null) {
                                 if (scopeMap.get(scopeID).getBindings() != null) {
                                     scopeMap.get(scopeID).addBinding(binding);
@@ -127,7 +129,7 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
                                 }
                             }
                         } else {
-                            scopeMap.put(scopeID, new Scope(name, description, new ArrayList<String>()));
+                            scopeMap.put(scopeID, new Scope(name, displayName, description, new ArrayList<String>()));
                             if (binding != null) {
                                 scopeMap.get(scopeID).addBinding(binding);
                             }
@@ -196,11 +198,13 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
                     while (rs.next()) {
                         int scopeID = rs.getInt(1);
                         String name = rs.getString(2);
-                        String description = rs.getString(3);
-                        final String binding = rs.getString(4);
+                        String displayName = rs.getString(3);
+                        String description = rs.getString(4);
+                        final String binding = rs.getString(5);
                         if (scopeMap.containsKey(scopeID) && scopeMap.get(scopeID) != null) {
                             scopeMap.get(scopeID).setName(name);
                             scopeMap.get(scopeID).setDescription(description);
+                            scopeMap.get(scopeID).setDisplayName(displayName);
                             if (binding != null) {
                                 if (scopeMap.get(scopeID).getBindings() != null) {
                                     scopeMap.get(scopeID).addBinding(binding);
@@ -211,7 +215,7 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
                                 }
                             }
                         } else {
-                            scopeMap.put(scopeID, new Scope(name, description, new ArrayList<String>()));
+                            scopeMap.put(scopeID, new Scope(name, displayName, description, new ArrayList<String>()));
                             if (binding != null) {
                                 scopeMap.get(scopeID).addBinding(binding);
 
@@ -256,19 +260,23 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
                 try (ResultSet rs = ps.executeQuery()) {
 
                     String description = null;
+                    String displayName = null;
                     List<String> bindings = new ArrayList<>();
 
                     while (rs.next()) {
                         if (StringUtils.isBlank(description)) {
                             description = rs.getString(2);
                         }
-                        if (StringUtils.isNotBlank(rs.getString(3))) {
-                            bindings.add(rs.getString(3));
+                        if (StringUtils.isBlank(displayName)) {
+                            displayName = rs.getString(3);
+                        }
+                        if (StringUtils.isNotBlank(rs.getString(4))) {
+                            bindings.add(rs.getString(4));
                         }
                     }
 
                     if (StringUtils.isNotBlank(name) && StringUtils.isNotBlank(description)) {
-                        scope = new Scope(name, description, bindings);
+                        scope = new Scope(name, displayName, description, bindings);
                     }
                 }
             }
@@ -390,8 +398,9 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
             int scopeID = 0;
             try (PreparedStatement ps = conn.prepareStatement(SQLQueries.ADD_SCOPE)) {
                 ps.setString(1, scope.getName());
-                ps.setString(2, scope.getDescription());
-                ps.setInt(3, tenantID);
+                ps.setString(2, scope.getDisplayName());
+                ps.setString(3, scope.getDescription());
+                ps.setInt(4, tenantID);
                 ps.execute();
 
                 try (ResultSet rs = ps.getGeneratedKeys()) {

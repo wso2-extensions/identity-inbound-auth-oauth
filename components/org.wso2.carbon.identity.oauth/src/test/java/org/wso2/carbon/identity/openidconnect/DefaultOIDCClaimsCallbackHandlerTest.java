@@ -521,8 +521,18 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
         }
     }
 
-    @Test
-    public void testHandleCustomClaimsWithOAuthTokenReqMsgCtxtWithSpecialFormattedClaims() throws Exception {
+    @DataProvider(name="customSpecialClaimsProvider")
+    public Object[][] provideCustomSpecialClaims() {
+
+        return new Object[][] {
+                {new String [] { "12343454", "false", "true"}},
+                {new String [] { "2017-12-06T16:52:12", "false", "true"}}
+        };
+    }
+
+    @Test(dataProvider = "customSpecialClaimsProvider")
+    public void testHandleCustomClaimsWithOAuthTokenReqMsgCtxtWithSpecialFormattedClaims(String [] customClaims)
+            throws Exception {
         try {
             PrivilegedCarbonContext.startTenantFlow();
             JWTClaimsSet jwtClaimsSet = new JWTClaimsSet();
@@ -542,9 +552,9 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
             mockApplicationManagementService(serviceProvider);
 
             Map<String, String> userClaims = new HashMap<>();
-            userClaims.put(LOCAL_UPDATED_AT_CLAIM_URI, "12343454");
-            userClaims.put(LOCAL_EMAIL_VERIFIED_CLAIM_URI, "false");
-            userClaims.put(LOCAL_PHONE_VERIFIED_CLAIM_URI, "true");
+            userClaims.put(LOCAL_UPDATED_AT_CLAIM_URI, customClaims[0]);
+            userClaims.put(LOCAL_EMAIL_VERIFIED_CLAIM_URI, customClaims[1]);
+            userClaims.put(LOCAL_PHONE_VERIFIED_CLAIM_URI, customClaims[2]);
 
             UserRealm userRealm = getUserRealmWithUserClaims(userClaims);
             mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm);

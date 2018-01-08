@@ -245,32 +245,17 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                         serviceProvider = OAuth2ServiceComponentHolder.getApplicationMgtService().
                                 getServiceProviderByClientId(consumerKey, OAuthConstants.Scope.OAUTH2, tenantDomain);
                     } catch (IdentityApplicationManagementException e) {
-                        throw new IdentityOAuth2Exception("Error occurred while retrieving OAuth2 application data for " +
-                                "client id " + consumerKey, e);
+                        throw new IdentityOAuth2Exception("Error occurred while retrieving OAuth2 application data " +
+                                "for client id " + consumerKey, e);
                     }
                     user.setAuthenticatedSubjectIdentifier(subjectIdentifier, serviceProvider);
-                    authorizedUser = UserCoreUtil.addDomainToName(authorizedUser, userstoreDomain);
-                    authorizedUser = UserCoreUtil.addTenantDomainToEntry(authorizedUser, tenantDomain);
 
-                    if (!OAuthConstants.AuthorizationCodeState.ACTIVE.equals(codeState)) {
-                        //revoking access token issued for authorization code as per RFC 6749 Section 4.1.2
-                        if (log.isDebugEnabled()) {
-                            if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.AUTHORIZATION_CODE)) {
-                                log.debug("Validated authorization code(hashed): " + DigestUtils.sha256Hex
-                                        (authorizationKey) + " for client: " + consumerKey + " is not active. So " +
-                                        "revoking the access tokens issued for the authorization code.");
-                            } else {
-                                log.debug("Validated authorization code for client: " + consumerKey + " is not active" +
-                                        ". So revoking the access tokens issued for the authorization code.");
-                            }
-                        }
-                        String tokenId = resultSet.getString(9);
-                        AuthzCodeDO codeDo = createAuthzCodeDo(consumerKey, authorizationKey, user,
-                                codeState, scopeString, callbackUrl, codeId, pkceCodeChallenge,
-                                pkceCodeChallengeMethod, issuedTime, validityPeriod);
-                        result = new AuthorizationCodeValidationResult(codeDo, tokenId);
+                    String tokenId = resultSet.getString(9);
+                    AuthzCodeDO codeDo = createAuthzCodeDo(consumerKey, authorizationKey, user, codeState,
+                            scopeString, callbackUrl, codeId, pkceCodeChallenge, pkceCodeChallengeMethod, issuedTime,
+                            validityPeriod);
+                    result = new AuthorizationCodeValidationResult(codeDo, tokenId);
 
-                    }
                 }
             } else {
                 prepStmt = connection.prepareStatement(SQLQueries.VALIDATE_AUTHZ_CODE);
@@ -300,32 +285,16 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                         serviceProvider = OAuth2ServiceComponentHolder.getApplicationMgtService().
                                 getServiceProviderByClientId(consumerKey, OAuthConstants.Scope.OAUTH2, tenantDomain);
                     } catch (IdentityApplicationManagementException e) {
-                        throw new IdentityOAuth2Exception("Error occurred while retrieving OAuth2 application data for " +
-                                "client id " + consumerKey, e);
+                        throw new IdentityOAuth2Exception("Error occurred while retrieving OAuth2 application data " +
+                                "for client id " + consumerKey, e);
                     }
                     user.setAuthenticatedSubjectIdentifier(subjectIdentifier, serviceProvider);
-                    authorizedUser = UserCoreUtil.addDomainToName(authorizedUser, userstoreDomain);
-                    authorizedUser = UserCoreUtil.addTenantDomainToEntry(authorizedUser, tenantDomain);
 
-                    if (!OAuthConstants.AuthorizationCodeState.ACTIVE.equals(codeState)) {
-                        if (log.isDebugEnabled()) {
-                            if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.AUTHORIZATION_CODE)) {
-                                log.debug("Validated authorization code(hashed): " + DigestUtils.sha256Hex
-                                        (authorizationKey) + " for client: " + consumerKey + " is not active. So " +
-                                        "revoking the access tokens issued for the authorization code.");
-                            } else {
-                                log.debug("Validated authorization code for client: " + consumerKey + " is not active" +
-                                        ". So revoking the access tokens issued for the authorization code.");
-                            }
-                        }
-
-                        //revoking access token issued for authorization code as per RFC 6749 Section 4.1.2
-                        String tokenId = resultSet.getString(9);
-                        AuthzCodeDO codeDo = createAuthzCodeDo(consumerKey, authorizationKey, user,
-                                codeState, scopeString, callbackUrl, codeId, pkceCodeChallenge,
-                                pkceCodeChallengeMethod, issuedTime, validityPeriod);
-                        result = new AuthorizationCodeValidationResult(codeDo, tokenId);
-                    }
+                    String tokenId = resultSet.getString(9);
+                    AuthzCodeDO codeDo = createAuthzCodeDo(consumerKey, authorizationKey, user, codeState,
+                            scopeString, callbackUrl, codeId, pkceCodeChallenge, pkceCodeChallengeMethod, issuedTime,
+                            validityPeriod);
+                    result = new AuthorizationCodeValidationResult(codeDo, tokenId);
                 }
 
             }

@@ -102,17 +102,19 @@ public class ScopeUtils {
     public static Scope getScope(ScopeDTO scopeDTO) {
         return new Scope(
                 scopeDTO.getName(),
+                scopeDTO.getDisplayName(),
                 scopeDTO.getDescription(),
                 scopeDTO.getBindings());
     }
 
     public static Scope getUpdatedScope(ScopeToUpdateDTO scopeDTO, String name) {
-        return new Scope(name, scopeDTO.getDescription(), scopeDTO.getBindings());
+        return new Scope(name, scopeDTO.getDisplayName(), scopeDTO.getDescription(), scopeDTO.getBindings());
     }
 
     public static ScopeDTO getScopeDTO(Scope scope) {
         ScopeDTO scopeDTO = new ScopeDTO();
         scopeDTO.setName(scope.getName());
+        scopeDTO.setDisplayName(scope.getDisplayName());
         scopeDTO.setDescription(scope.getDescription());
         scopeDTO.setBindings(scope.getBindings());
         return scopeDTO;
@@ -123,6 +125,7 @@ public class ScopeUtils {
         for (Scope scope : scopes) {
             ScopeDTO scopeDTO = new ScopeDTO();
             scopeDTO.setName(scope.getName());
+            scopeDTO.setDisplayName(scope.getDisplayName());
             scopeDTO.setDescription(scope.getDescription());
             scopeDTO.setBindings(scope.getBindings());
             scopeDTOs.add(scopeDTO);

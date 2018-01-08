@@ -55,6 +55,7 @@ import org.wso2.carbon.identity.oauth2.IDTokenValidationFailureException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
+import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
@@ -68,7 +69,6 @@ import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Collections;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
@@ -130,10 +130,8 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
             if (authzGrantCacheEntry != null) {
                 nonceValue = authzGrantCacheEntry.getNonceValue();
                 acrValue = authzGrantCacheEntry.getAcrValue();
-                if (authzGrantCacheEntry.getEssentialClaims() != null) {
-                    if (isEssentialClaim(authzGrantCacheEntry, AUTH_TIME)) {
-                        authTime = authzGrantCacheEntry.getAuthTime();
-                    }
+                if (isAuthTimeRequired(authzGrantCacheEntry)) {
+                    authTime = authzGrantCacheEntry.getAuthTime();
                 }
             }
         }
@@ -216,7 +214,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         jwtClaimsSet.setExpirationTime(getIdTokenExpiryInMillis(idTokenLifeTimeInMillis, currentTimeInMillis));
         jwtClaimsSet.setIssueTime(new Date(currentTimeInMillis));
 
-        long authTime = getAuthTime(authzReqMessageContext, accessToken);
+        long authTime = getAuthTime(authzReqMessageContext);
         if (authTime != 0) {
             jwtClaimsSet.setClaim(AUTH_TIME, authTime / 1000);
         }
@@ -328,10 +326,17 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         return !isValidIdToken(jwtClaimsSet);
     }
 
-    private boolean isEssentialClaim(AuthorizationGrantCacheEntry authorizationGrantCacheEntry,
-                                     String oidcClaimUri) {
-        return OAuth2Util.getEssentialClaims(authorizationGrantCacheEntry.getEssentialClaims(), OAuthConstants.ID_TOKEN)
-                .contains(oidcClaimUri);
+    private boolean isEssentialClaim(AuthorizationGrantCacheEntry authorizationGrantCacheEntry, String oidcClaimUri) {
+        return isEssentialClaim(authorizationGrantCacheEntry.getEssentialClaims(), oidcClaimUri);
+    }
+
+    private boolean isEssentialClaim(String essentialClaims, String oidcClaimUri) {
+        return StringUtils.isNotBlank(essentialClaims) &&
+                OAuth2Util.getEssentialClaims(essentialClaims, OAuthConstants.ID_TOKEN).contains(oidcClaimUri);
+    }
+
+    private boolean isMaxAgePresentInAuthzRequest(AuthorizationGrantCacheEntry authorizationGrantCacheEntry) {
+        return authorizationGrantCacheEntry.getMaxAge() != 0;
     }
 
     private boolean isUnsignedIDToken() {
@@ -368,7 +373,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         String userTenantDomain = authorizedUser.getTenantDomain();
 
         String subjectClaimUri = getSubjectClaimUriInLocalDialect(serviceProvider);
-        if (subjectClaimUri != null) {
+        if (StringUtils.isNotBlank(subjectClaimUri)) {
             String fullQualifiedUsername = authorizedUser.toFullQualifiedUsername();
             try {
                 subject = getSubjectClaimFromUserStore(subjectClaimUri, authorizedUser);
@@ -506,26 +511,34 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
                 OPENID_IDP_ENTITY_ID).getValue();
     }
 
-    private long getAuthTime(OAuthAuthzReqMessageContext authzReqMessageContext, String accessToken) {
+    private long getAuthTime(OAuthAuthzReqMessageContext authzReqMessageContext) {
         long authTime = 0;
-        if (StringUtils.isNotEmpty(accessToken)) {
-            AuthorizationGrantCacheKey authzGrantCacheKey = new AuthorizationGrantCacheKey(accessToken);
-            AuthorizationGrantCacheEntry authzGrantCacheEntry =
-                    AuthorizationGrantCache.getInstance().getValueFromCacheByToken(authzGrantCacheKey);
-            if (authzGrantCacheEntry != null) {
-                if (isNotBlank(authzGrantCacheEntry.getEssentialClaims())) {
-                    if (isEssentialClaim(authzGrantCacheEntry, AUTH_TIME)) {
-                        authTime = authzReqMessageContext.getAuthorizationReqDTO().getAuthTime();
-                    }
-                }
-            }
+        if (isAuthTimeRequired(authzReqMessageContext.getAuthorizationReqDTO())) {
+            authTime = authzReqMessageContext.getAuthorizationReqDTO().getAuthTime();
         }
         return authTime;
     }
 
+    /**
+     * Checks whether 'auth_time' claim is required to be sent in the id_token response. 'auth_time' needs to be sent
+     * in the id_token if it is requested as an essential claim or when max_age parameter is sent in the
+     * authorization request. Refer: http://openid.net/specs/openid-connect-core-1_0.html#IDToken
+     *
+     * @param authzGrantCacheEntry
+     * @return whether auth_time needs to be sent in the id_token response.
+     */
+    private boolean isAuthTimeRequired(AuthorizationGrantCacheEntry authzGrantCacheEntry) {
+        return isMaxAgePresentInAuthzRequest(authzGrantCacheEntry) || isEssentialClaim(authzGrantCacheEntry, AUTH_TIME);
+    }
+
+    private boolean isAuthTimeRequired(OAuth2AuthorizeReqDTO oAuth2AuthorizeReqDTO) {
+        return oAuth2AuthorizeReqDTO.getMaxAge() != 0 ||
+                isEssentialClaim(oAuth2AuthorizeReqDTO.getEssentialClaims(), AUTH_TIME);
+    }
+
     private boolean isAccessTokenHashApplicable(String responseType) {
         // At_hash is generated on an access token. Therefore check whether the response type returns an access_token.
-        // id_token and none response types don't return and access token
+        // id_token and none response types don't return and access token.
         return !OAuthConstants.ID_TOKEN.equalsIgnoreCase(responseType) &&
                 !OAuthConstants.NONE.equalsIgnoreCase(responseType);
     }

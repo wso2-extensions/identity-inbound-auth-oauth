@@ -36,7 +36,7 @@ each purpose  and factory class to get instance of each DAO classes were introdu
 public interface AccessTokenDAO {
 
     void insertAccessToken(String accessToken, String consumerKey, AccessTokenDO accessTokenDO,
-                           String userStoreDomain, int retryAttempt) throws IdentityOAuth2Exception;
+                           String userStoreDomain) throws IdentityOAuth2Exception;
 
     boolean insertAccessToken(String accessToken, String consumerKey,
                               AccessTokenDO newAccessTokenDO, AccessTokenDO existingAccessTokenDO,

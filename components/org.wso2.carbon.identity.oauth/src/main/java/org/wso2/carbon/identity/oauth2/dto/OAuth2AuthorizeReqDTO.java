@@ -38,8 +38,17 @@ public class OAuth2AuthorizeReqDTO {
     private String tenantDomain;
     private long authTime;
     private String essentialClaims;
+    private long maxAge;
     private RequestObject requestObject;
     private String requestUriParamClaims;
+
+    public long getMaxAge() {
+        return maxAge;
+    }
+
+    public void setMaxAge(long maxAge) {
+        this.maxAge = maxAge;
+    }
 
     public RequestObject getRequestObject() {
         return requestObject;

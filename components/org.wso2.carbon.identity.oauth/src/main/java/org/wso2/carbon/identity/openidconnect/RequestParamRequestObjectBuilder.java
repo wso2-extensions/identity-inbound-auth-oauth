@@ -28,13 +28,13 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
-import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.identity.openidconnect.model.Claim;
+import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.ArrayList;
 
 /**
  * This class is used to build request object parameter value which comes with the OIDC authorization request as an optional
@@ -131,7 +131,8 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
             requestObjectInstance.setResponseType(jsonObjectRequestedClaims.get(RESPONSE_TYPE).toString());
         }
         if (jsonObjectRequestedClaims.get(MAX_AGE) != null) {
-            requestObjectInstance.setMaxAge(jsonObjectRequestedClaims.get(MAX_AGE).toString());
+            Object maxAge = jsonObjectRequestedClaims.get(MAX_AGE);
+            requestObjectInstance.setMaxAge(new Long(maxAge.toString()));
         }
     }
 
@@ -190,11 +191,11 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
         Claim claim = new Claim();
         claim.setName(claimName);
         if (jsonObjectClaimAttributes != null) {
-
+            Map<String, String> claimAttributesMap = new HashMap<>();
             //To iterate claim attributes object to fetch the attribute key and value for the fetched
             // requested claim in the fetched claim requestor
             for (Map.Entry<String, Object> claimAttributes : jsonObjectClaimAttributes.entrySet()) {
-                Map<String, String> claimAttributesMap = new HashMap<>();
+
                 if (jsonObjectClaimAttributes.get(claimAttributes.getKey()) != null) {
                     claimAttributeValue = jsonObjectClaimAttributes.get(claimAttributes.getKey()).toString();
                 }
