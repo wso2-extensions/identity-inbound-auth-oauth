@@ -87,7 +87,7 @@
 
                 function validate() {
                     var callbackUrl = document.getElementById('callback').value;
-                    var backChannelLogoutUrl = document.getElementById('backChannelLogout').value;
+                    var backChannelLogoutUrl = document.getElementById('bclogout').value;
                     var userTokenExpiryTime = document.getElementById("userAccessTokenExpiryTime").value;
                     var applicationTokenExpiryTime = document.getElementById("userAccessTokenExpiryTime").value;
                     var refreshTokenExpiryTime = document.getElementById("refreshTokenExpiryTime").value;
