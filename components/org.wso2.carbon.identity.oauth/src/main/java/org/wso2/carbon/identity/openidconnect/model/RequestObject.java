@@ -124,10 +124,6 @@ public class RequestObject implements Serializable {
         return isSignatureValid;
     }
 
-    public void setIsSignatureValid(boolean isSignatureValid) {
-        this.isSignatureValid = isSignatureValid;
-    }
-
     public boolean isValidRequestURI() {
         return isValidRequestURI;
     }
