@@ -194,7 +194,7 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
         headerValue = new String(base64Url.decode(jwtTokenValues[0].getBytes()));
         jwtSignature = base64Url.decode(jwtTokenValues[2].getBytes());
         jwtAssertion = jwtTokenValues[0] + "." + jwtTokenValues[1];
-        if(StringUtils.isNotBlank(jwtTokenValues[1])) {
+        if (StringUtils.isNotBlank(jwtTokenValues[1])) {
             setPayload(new String(base64Url.decode(jwtTokenValues[1].getBytes())));
         }
     }
