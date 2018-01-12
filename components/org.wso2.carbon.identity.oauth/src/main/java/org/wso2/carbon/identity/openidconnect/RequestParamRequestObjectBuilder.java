@@ -17,6 +17,7 @@
  */
 package org.wso2.carbon.identity.openidconnect;
 
+import com.nimbusds.jwt.SignedJWT;
 import net.minidev.json.JSONObject;
 import net.minidev.json.parser.JSONParser;
 import net.minidev.json.parser.ParseException;
@@ -25,6 +26,8 @@ import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.oltu.oauth2.as.request.OAuthAuthzRequest;
+import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
@@ -35,6 +38,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import static org.apache.commons.lang.StringUtils.isEmpty;
 
 /**
  * This class is used to build request object parameter value which comes with the OIDC authorization request as an optional
@@ -61,151 +66,171 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
     /**
      * Builds request object which comes as the value of the request query parameter of OIDC authorization request
      *
-     * @param requestObject request object
+     * @param requestObjectParamValue request object
      * @throws RequestObjectException
      */
     @Override
-    public void buildRequestObject(String requestObject, OAuth2Parameters oAuth2Parameters,
+    public void buildRequestObject(String requestObjectParamValue, OAuth2Parameters oAuth2Parameters,
                                    RequestObject requestObjectInstance) throws RequestObjectException {
 
-        JSONParser parser = new JSONParser();
-        try {
-            OAuthServerConfiguration.getInstance().getRequestObjectValidator().validateRequestObject(requestObject,
-                    oAuth2Parameters);
-            if (StringUtils.isNotBlank(OAuthServerConfiguration.getInstance().getRequestObjectValidator().getPayload())) {
-                requestObject = OAuthServerConfiguration.getInstance().getRequestObjectValidator().getPayload();
-            }
-            JSONObject jsonObjectRequestedClaims = (JSONObject) parser.parse(requestObject);
-            processClaims(jsonObjectRequestedClaims, requestObjectInstance);
-
-        } catch (ParseException e) {
-            throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST, "Error occured while " +
-                    "processing the request parameter value json object.");
+        RequestObjectValidator requestObjectValidator = OAuthServerConfiguration.getInstance()
+                .getRequestObjectValidator();
+        if (requestObjectValidator.isEncrypted(requestObjectParamValue)){
+            requestObjectParamValue = requestObjectValidator.decrypt(requestObjectParamValue, oAuth2Parameters);
         }
-    }
 
-    private void processClaims(JSONObject jsonObjectRequestedClaims, RequestObject requestObjectInstance)
-            throws RequestObjectException {
-
-        //To process the basic claims which comes with the request parameter.
-        processBasicClaims(jsonObjectRequestedClaims, requestObjectInstance);
-        try {
-            //To process the claim object which comes with the request parameter.
-            processClaimObject(jsonObjectRequestedClaims, requestObjectInstance);
-        } catch (ParseException e) {
-            throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST, "Error occured while " +
-                    "processing the request parameter value json object.");
-        }
-    }
-
-    /**
-     * To process the basic claims as client_id ,redirect_url with in the request object.
-     *
-     * @param jsonObjectRequestedClaims requested claims from the json object
-     * @param requestObjectInstance     instance of request object
-     */
-    private void processBasicClaims(JSONObject jsonObjectRequestedClaims, RequestObject requestObjectInstance) {
-
-        if (jsonObjectRequestedClaims.get(CLIENT_ID) != null) {
-            requestObjectInstance.setClientId(jsonObjectRequestedClaims.get(CLIENT_ID).toString());
-        }
-        if (jsonObjectRequestedClaims.get(REDIRECT_URI) != null) {
-            requestObjectInstance.setRedirectUri(jsonObjectRequestedClaims.get(REDIRECT_URI).toString());
-        }
-        if (jsonObjectRequestedClaims.get(SCOPE) != null) {
-            requestObjectInstance.setScopes(jsonObjectRequestedClaims.get(SCOPE).toString().split(" "));
-        }
-        if (jsonObjectRequestedClaims.get(STATE) != null) {
-            requestObjectInstance.setState(jsonObjectRequestedClaims.get(STATE).toString());
-        }
-        if (jsonObjectRequestedClaims.get(NONCE) != null) {
-            requestObjectInstance.setNonce(jsonObjectRequestedClaims.get(NONCE).toString());
-        }
-        if (jsonObjectRequestedClaims.get(ISS) != null) {
-            requestObjectInstance.setIss(jsonObjectRequestedClaims.get(ISS).toString());
-        }
-        if (jsonObjectRequestedClaims.get(AUD) != null) {
-            requestObjectInstance.setAud(jsonObjectRequestedClaims.get(AUD).toString());
-        }
-        if (jsonObjectRequestedClaims.get(RESPONSE_TYPE) != null) {
-            requestObjectInstance.setResponseType(jsonObjectRequestedClaims.get(RESPONSE_TYPE).toString());
-        }
-        if (jsonObjectRequestedClaims.get(MAX_AGE) != null) {
-            Object maxAge = jsonObjectRequestedClaims.get(MAX_AGE);
-            requestObjectInstance.setMaxAge(new Long(maxAge.toString()));
-        }
-    }
-
-    /**
-     * To process the claim object which comes with the request object.
-     *
-     * @param jsonObjectRequestedClaims requested claims of the request object
-     * @throws ParseException
-     */
-    private void processClaimObject(JSONObject jsonObjectRequestedClaims, RequestObject requestObjectInstance)
-            throws ParseException {
-
-        if (jsonObjectRequestedClaims.get(CLAIMS) != null) {
-            String allRequestedClaims = null;
-            String claimAttributeValue = null;
-            JSONParser parser = new JSONParser();
-            JSONObject jsonObjectClaim = (JSONObject) parser.parse(jsonObjectRequestedClaims.get(CLAIMS).
-                    toString());
-            //To iterate the claims json object to fetch the claim requestor and all requested claims.
-
-            for (Map.Entry<String, Object> requesterClaimMap : jsonObjectClaim.entrySet()) {
-                List<Claim> essentialClaimsRequestParam = new ArrayList();
-                if (jsonObjectClaim.get(requesterClaimMap.getKey()) != null) {
-                    allRequestedClaims = jsonObjectClaim.get(requesterClaimMap.getKey()).toString();
-                }
-                if (log.isDebugEnabled()) {
-                    log.debug("The " + requesterClaimMap.getKey() + " requests " + allRequestedClaims + " set of claims.");
-                }
-                JSONObject jsonObjectAllRequestedClaims = (JSONObject) parser.parse(allRequestedClaims);
-
-                //To iterate all requested claims object to fetch the claim attributes and values for the fetched claim
-                // requestor.
-                for (Map.Entry<String, Object> requestedClaims : jsonObjectAllRequestedClaims.entrySet()) {
-                    JSONObject jsonObjectClaimAttributes = null;
-                    if (jsonObjectAllRequestedClaims.get(requestedClaims.getKey()) != null) {
-                        jsonObjectClaimAttributes = (JSONObject) parser.parse(jsonObjectAllRequestedClaims.get
-                                (requestedClaims.getKey()).toString());
-                    }
-                    if (log.isDebugEnabled()) {
-                        log.debug("The attributes " + jsonObjectAllRequestedClaims + "for the requested claim: " +
-                                requestedClaims.getKey());
-                    }
-                    //To maintain a claim - claim attribute mapping.
-                    addClaimAttributes(claimAttributeValue, essentialClaimsRequestParam, jsonObjectClaimAttributes,
-                            requestedClaims.getKey());
-                }
-                claimsforClaimRequestor.put(requesterClaimMap.getKey(), essentialClaimsRequestParam);
-            }
-            requestObjectInstance.setClaimsforRequestParameter(claimsforClaimRequestor);
-        }
-    }
-
-    private void addClaimAttributes(String claimAttributeValue, List<Claim> essentialClaimsRequestParam,
-                                    JSONObject jsonObjectClaimAttributes, String claimName) {
-
-        Claim claim = new Claim();
-        claim.setName(claimName);
-        if (jsonObjectClaimAttributes != null) {
-            Map<String, String> claimAttributesMap = new HashMap<>();
-            //To iterate claim attributes object to fetch the attribute key and value for the fetched
-            // requested claim in the fetched claim requestor
-            for (Map.Entry<String, Object> claimAttributes : jsonObjectClaimAttributes.entrySet()) {
-
-                if (jsonObjectClaimAttributes.get(claimAttributes.getKey()) != null) {
-                    claimAttributeValue = jsonObjectClaimAttributes.get(claimAttributes.getKey()).toString();
-                }
-                claimAttributesMap.put(claimAttributes.getKey(), claimAttributeValue);
-                claim.setClaimAttributesMap(claimAttributesMap);
-                essentialClaimsRequestParam.add(claim);
-            }
+        SignedJWT signedJWT = getSignedJWT(requestObjectParamValue);
+        if (signedJWT!= null) {
+            requestObjectInstance.setSignedJWT(signedJWT);
         } else {
-            claim.setClaimAttributesMap(MapUtils.EMPTY_MAP);
-            essentialClaimsRequestParam.add(claim);
+            throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST,
+                    "Unable to build a valid Request Object from the request.");
         }
     }
+
+
+    private SignedJWT getSignedJWT(String requestObjectString) throws RequestObjectException {
+        SignedJWT signedJWT;
+        if (isEmpty(requestObjectString)) {
+            return null;
+        }
+        try {
+            signedJWT = SignedJWT.parse(requestObjectString);
+        } catch (java.text.ParseException e) {
+            String errorMessage = "Error while parsing the Request Object JWT.";
+            log.error(errorMessage, e);
+            throw new RequestObjectException(OAuth2ErrorCodes.SERVER_ERROR, errorMessage);
+        }
+        if (signedJWT == null) {
+            String errorMessage = "No Valid Request Object is found in request.";
+            log.error(errorMessage);
+            throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST, errorMessage);
+        }
+        return signedJWT;
+    }
+
+//    private void processClaims(JSONObject jsonObjectRequestedClaims, RequestObject requestObjectInstance)
+//            throws RequestObjectException {
+//
+//        //To process the basic claims which comes with the request parameter.
+//        processBasicClaims(jsonObjectRequestedClaims, requestObjectInstance);
+//        try {
+//            //To process the claim object which comes with the request parameter.
+//            processClaimObject(jsonObjectRequestedClaims, requestObjectInstance);
+//        } catch (ParseException e) {
+//            throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST, "Error occured while " +
+//                    "processing the request parameter value json object.");
+//        }
+//    }
+
+//    /**
+//     * To process the basic claims as client_id ,redirect_url with in the request object.
+//     *
+//     * @param jsonObjectRequestedClaims requested claims from the json object
+//     * @param requestObjectInstance     instance of request object
+//     */
+//    private void processBasicClaims(JSONObject jsonObjectRequestedClaims, RequestObject requestObjectInstance) {
+//
+//        if (jsonObjectRequestedClaims.get(CLIENT_ID) != null) {
+//            requestObjectInstance.setClientId(jsonObjectRequestedClaims.get(CLIENT_ID).toString());
+//        }
+//        if (jsonObjectRequestedClaims.get(REDIRECT_URI) != null) {
+//            requestObjectInstance.setRedirectUri(jsonObjectRequestedClaims.get(REDIRECT_URI).toString());
+//        }
+//        if (jsonObjectRequestedClaims.get(SCOPE) != null) {
+//            requestObjectInstance.setScopes(jsonObjectRequestedClaims.get(SCOPE).toString().split(" "));
+//        }
+//        if (jsonObjectRequestedClaims.get(STATE) != null) {
+//            requestObjectInstance.setState(jsonObjectRequestedClaims.get(STATE).toString());
+//        }
+//        if (jsonObjectRequestedClaims.get(NONCE) != null) {
+//            requestObjectInstance.setNonce(jsonObjectRequestedClaims.get(NONCE).toString());
+//        }
+//        if (jsonObjectRequestedClaims.get(ISS) != null) {
+//            requestObjectInstance.setIss(jsonObjectRequestedClaims.get(ISS).toString());
+//        }
+//        if (jsonObjectRequestedClaims.get(AUD) != null) {
+//            requestObjectInstance.setAud(jsonObjectRequestedClaims.get(AUD).toString());
+//        }
+//        if (jsonObjectRequestedClaims.get(RESPONSE_TYPE) != null) {
+//            requestObjectInstance.setResponseType(jsonObjectRequestedClaims.get(RESPONSE_TYPE).toString());
+//        }
+//        if (jsonObjectRequestedClaims.get(MAX_AGE) != null) {
+//            Object maxAge = jsonObjectRequestedClaims.get(MAX_AGE);
+//            requestObjectInstance.setMaxAge(new Long(maxAge.toString()));
+//        }
+//    }
+
+//    /**
+//     * To process the claim object which comes with the request object.
+//     *
+//     * @param jsonObjectRequestedClaims requested claims of the request object
+//     * @throws ParseException
+//     */
+//    private void processClaimObject(JSONObject jsonObjectRequestedClaims, RequestObject requestObjectInstance)
+//            throws ParseException {
+//
+//        if (jsonObjectRequestedClaims.get(CLAIMS) != null) {
+//            String allRequestedClaims = null;
+//            String claimAttributeValue = null;
+//            JSONParser parser = new JSONParser();
+//            JSONObject jsonObjectClaim = (JSONObject) parser.parse(jsonObjectRequestedClaims.get(CLAIMS).
+//                    toString());
+//            //To iterate the claims json object to fetch the claim requestor and all requested claims.
+//
+//            for (Map.Entry<String, Object> requesterClaimMap : jsonObjectClaim.entrySet()) {
+//                List<Claim> essentialClaimsRequestParam = new ArrayList();
+//                if (jsonObjectClaim.get(requesterClaimMap.getKey()) != null) {
+//                    allRequestedClaims = jsonObjectClaim.get(requesterClaimMap.getKey()).toString();
+//                }
+//                if (log.isDebugEnabled()) {
+//                    log.debug("The " + requesterClaimMap.getKey() + " requests " + allRequestedClaims + " set of claims.");
+//                }
+//                JSONObject jsonObjectAllRequestedClaims = (JSONObject) parser.parse(allRequestedClaims);
+//
+//                //To iterate all requested claims object to fetch the claim attributes and values for the fetched claim
+//                // requestor.
+//                for (Map.Entry<String, Object> requestedClaims : jsonObjectAllRequestedClaims.entrySet()) {
+//                    JSONObject jsonObjectClaimAttributes = null;
+//                    if (jsonObjectAllRequestedClaims.get(requestedClaims.getKey()) != null) {
+//                        jsonObjectClaimAttributes = (JSONObject) parser.parse(jsonObjectAllRequestedClaims.get
+//                                (requestedClaims.getKey()).toString());
+//                    }
+//                    if (log.isDebugEnabled()) {
+//                        log.debug("The attributes " + jsonObjectAllRequestedClaims + "for the requested claim: " +
+//                                requestedClaims.getKey());
+//                    }
+//                    //To maintain a claim - claim attribute mapping.
+//                    addClaimAttributes(claimAttributeValue, essentialClaimsRequestParam, jsonObjectClaimAttributes,
+//                            requestedClaims.getKey());
+//                }
+//                claimsforClaimRequestor.put(requesterClaimMap.getKey(), essentialClaimsRequestParam);
+//            }
+//            requestObjectInstance.setClaimsforRequestParameter(claimsforClaimRequestor);
+//        }
+//    }
+
+//    private void addClaimAttributes(String claimAttributeValue, List<Claim> essentialClaimsRequestParam,
+//                                    JSONObject jsonObjectClaimAttributes, String claimName) {
+//
+//        Claim claim = new Claim();
+//        claim.setName(claimName);
+//        if (jsonObjectClaimAttributes != null) {
+//
+//            //To iterate claim attributes object to fetch the attribute key and value for the fetched
+//            // requested claim in the fetched claim requestor
+//            for (Map.Entry<String, Object> claimAttributes : jsonObjectClaimAttributes.entrySet()) {
+//                Map<String, String> claimAttributesMap = new HashMap<>();
+//                if (jsonObjectClaimAttributes.get(claimAttributes.getKey()) != null) {
+//                    claimAttributeValue = jsonObjectClaimAttributes.get(claimAttributes.getKey()).toString();
+//                }
+//                claimAttributesMap.put(claimAttributes.getKey(), claimAttributeValue);
+//                claim.setClaimAttributesMap(claimAttributesMap);
+//                essentialClaimsRequestParam.add(claim);
+//            }
+//        } else {
+//            claim.setClaimAttributesMap(MapUtils.EMPTY_MAP);
+//            essentialClaimsRequestParam.add(claim);
+//        }
+//    }
 }

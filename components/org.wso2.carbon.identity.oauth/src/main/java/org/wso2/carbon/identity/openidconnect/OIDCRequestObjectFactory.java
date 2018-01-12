@@ -17,12 +17,20 @@
  */
 package org.wso2.carbon.identity.openidconnect;
 
+import com.nimbusds.jwt.SignedJWT;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.as.request.OAuthAuthzRequest;
+import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
+
+import java.text.ParseException;
+
+import static org.apache.commons.lang.StringUtils.isEmpty;
 
 /**
  * According to the OIDC spec requestObject is passed as a query param value of request/request_uri parameters. This is
@@ -31,6 +39,7 @@ import org.wso2.carbon.identity.openidconnect.model.RequestObject;
  */
 public class OIDCRequestObjectFactory {
 
+    private static final Log log = LogFactory.getLog(OIDCRequestObjectFactory.class);
     private static final String REQUEST = "request";
     private static final String REQUEST_URI = "request_uri";
     private static final String CLIENT_ID = "client_id";
@@ -54,10 +63,9 @@ public class OIDCRequestObjectFactory {
          */
         RequestObjectBuilder requestObjectBuilder;
         if (isRequestParameter(oauthRequest)) {
-             requestObjectBuilder = getRequestObjectBuilder(REQUEST_PARAM_VALUE_BUILDER);
+            requestObjectBuilder = getRequestObjectBuilder(REQUEST_PARAM_VALUE_BUILDER);
             if (requestObjectBuilder != null) {
                 requestObjectBuilder.buildRequestObject(oauthRequest.getParam(REQUEST), oAuth2Parameters, requestObject);
-                validateClientIdAndResponseType(oauthRequest, requestObject);
             }
         } else if (isRequestUri(oauthRequest)) {
             requestObjectBuilder = getRequestObjectBuilder(REQUEST_URI_PARAM_VALUE_BUILDER);
@@ -67,17 +75,16 @@ public class OIDCRequestObjectFactory {
         } else {
             // Unsupported request object type.
         }
-    }
-
-    private static void validateClientIdAndResponseType(OAuthAuthzRequest oauthRequest, RequestObject requestObject)
-            throws RequestObjectException {
-
-        if (!oauthRequest.getParam(CLIENT_ID).equals(requestObject.getClientId()) ||
-                !oauthRequest.getParam(RESPONSE_TYPE).equals(requestObject.getResponseType())) {
-            throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST, "Request Object and " +
-                    "Authorization request contains unmatched client_id or response_type");
+        RequestObjectValidator requestObjectValidator = OAuthServerConfiguration.getInstance()
+                .getRequestObjectValidator();
+        if (requestObjectValidator.isSigned(requestObject)){
+            requestObject.setSigned(true);
+            requestObjectValidator.validateSignature(requestObject, oAuth2Parameters.getClientId());
         }
+        requestObjectValidator.validateRequestObject(requestObject, oAuth2Parameters);
     }
+
+
 
     private static RequestObjectBuilder getRequestObjectBuilder(String requestParamValueBuilder) {
         return OAuthServerConfiguration.getInstance().getRequestObjectBuilders().get(requestParamValueBuilder);

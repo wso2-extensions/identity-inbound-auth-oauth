@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.openidconnect;
 
+import com.nimbusds.jwt.SignedJWT;
 import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
@@ -34,6 +35,7 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -62,10 +64,12 @@ public class RequestObjectValidatorImplTest extends PowerMockTestCase {
         return new PowerMockObjectFactory();
     }
 
-    @Test(expectedExceptions = RequestObjectException.class)
+    @Test()
     public void validateRequestObjectTest() throws Exception {
         RequestObjectTest requestObjectInstance = new RequestObjectTest();
         String requestObject = requestObjectInstance.getEncodeRequestObject();
+        RequestObject requestObject1 = new RequestObject();
+        requestObject1.setSignedJWT(SignedJWT.parse(requestObject));
         RequestObjectValidator requestObjectValidator = new RequestObjectValidatorImpl();
         OAuth2Parameters oAuth2Parameters = new OAuth2Parameters();
         oAuth2Parameters.setTenantDomain("carbon.super");
@@ -87,14 +91,16 @@ public class RequestObjectValidatorImplTest extends PowerMockTestCase {
                 "./repository/conf/identity/EndpointConfig.properties");
         PowerMockito.doReturn(clientStorePath.toString()).when(RequestObjectValidatorImpl.class, "buildFilePath",
                 "./repository/resources/security/client-truststore.jks");
-        requestObjectValidator.validateRequestObject(requestObject, oAuth2Parameters);
-        Assert.assertNotNull(requestObjectValidator.getPayload(), "Payload should not a null value.");
+        Assert.assertFalse(requestObjectValidator.isEncrypted(requestObject), "Payload is encrypted.");
+        requestObject1.setSigned(requestObjectValidator.isSigned(requestObject1));
+        requestObjectValidator.validateRequestObject(requestObject1, oAuth2Parameters);
     }
 
     @Test(expectedExceptions = RequestObjectException.class)
     public void DecryptTest() throws Exception {
         RequestObjectTest requestObjectInstance = new RequestObjectTest();
         String requestObject = requestObjectInstance.getEncryptedRequestObject();
+        RequestObject requestObject1 = new RequestObject();
         RequestObjectValidator requestObjectValidator = new RequestObjectValidatorImpl();
         OAuth2Parameters oAuth2Parameters = new OAuth2Parameters();
         oAuth2Parameters.setTenantDomain("carbon.super");
@@ -116,9 +122,8 @@ public class RequestObjectValidatorImplTest extends PowerMockTestCase {
         when(OAuth2Util.isValidJson(requestObject)).thenReturn(false);
         when(OAuth2Util.getTenantId("carbon.super")).thenReturn(-1234);
         when((OAuth2Util.getPrivateKey(anyString(), anyInt()))).thenReturn(rsaPrivateKey);
-
-        requestObjectValidator.validateRequestObject(requestObject, oAuth2Parameters);
-        Assert.assertNotNull(requestObjectValidator.getPayload(), "Failed to decrypt the request object.");
-
+        Assert.assertTrue(requestObjectValidator.isEncrypted(requestObject), "Payload is not encrypted.");
+        requestObject1.setSignedJWT(SignedJWT.parse(requestObjectValidator.decrypt(requestObject, oAuth2Parameters)));
+        requestObjectValidator.validateRequestObject(requestObject1, oAuth2Parameters);
     }
 }
