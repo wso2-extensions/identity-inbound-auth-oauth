@@ -53,7 +53,7 @@
         <module>components/org.wso2.carbon.identity.oauth.scope.endpoint</module>
         <module>components/org.wso2.carbon.identity.webfinger</module>
         <module>components/org.wso2.carbon.identity.oauth.dcr.endpoint</module>
-
+        <module>components/org.wso2.carbon.identity.oauth.client.authn.filter</module>
         <module>features/org.wso2.carbon.identity.oauth.common.feature</module>
         <module>features/org.wso2.carbon.identity.oauth.feature</module>
         <module>features/org.wso2.carbon.identity.oauth.server.feature</module>

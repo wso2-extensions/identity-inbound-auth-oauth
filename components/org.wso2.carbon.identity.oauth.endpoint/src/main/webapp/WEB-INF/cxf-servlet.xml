@@ -24,6 +24,14 @@
          http://cxf.apache.org/jaxrs http://cxf.apache.org/schemas/jaxrs.xsd">
 
     <jaxrs:server id="tokEP" address="/">
+
+        <jaxrs:inInterceptors>
+            <ref bean="oauthClientAuthnBean"/>
+        </jaxrs:inInterceptors>
+        <jaxrs:outInterceptors>
+            <ref bean="oauthClientAuthnBean"/>
+        </jaxrs:outInterceptors>
+
         <jaxrs:serviceBeans>
             <ref bean="authzEndpointBean"/>
             <ref bean="tokenEndpointBean"/>
@@ -39,6 +47,7 @@
         </jaxrs:providers>
     </jaxrs:server>
 
+    <bean id="oauthClientAuthnBean" class="org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthnInterceptorProxy"/>
     <bean id="authzEndpointBean" class="org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpoint"/>
     <bean id="tokenEndpointBean" class="org.wso2.carbon.identity.oauth.endpoint.token.OAuth2TokenEndpoint"/>
     <bean id="introspectionEndpointBean" class="org.wso2.carbon.identity.oauth.endpoint.introspection.OAuth2IntrospectionEndpoint"/>
