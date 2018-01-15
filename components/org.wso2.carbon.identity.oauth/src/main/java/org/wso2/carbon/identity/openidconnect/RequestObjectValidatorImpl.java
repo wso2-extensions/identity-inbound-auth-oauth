@@ -86,7 +86,7 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
     @Override
     public boolean isEncrypted(String requestObject) {
         try {
-            EncryptedJWT encryptedJWT = EncryptedJWT.parse(requestObject);
+            EncryptedJWT.parse(requestObject);
             return true;
         } catch (ParseException e) {
             return false;

@@ -156,7 +156,7 @@ public class RequestObjectValidatorImplTest extends PowerMockTestCase {
         PowerMockito.doReturn(clientStorePath.toString()).when(RequestObjectValidatorImpl.class, "buildFilePath",
                 "./repository/resources/security/client-truststore.jks");
 
-        PowerMockito.doReturn("some-server-url".toString()).when(RequestObjectValidatorImpl.class, "getTokenEpURL",
+        PowerMockito.doReturn(SOME_SERVER_URL.toString()).when(RequestObjectValidatorImpl.class, "getTokenEpURL",
                 anyString());
 
 

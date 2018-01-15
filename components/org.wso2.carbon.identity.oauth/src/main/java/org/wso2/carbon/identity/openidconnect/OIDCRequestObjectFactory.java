@@ -58,20 +58,12 @@ public class OIDCRequestObjectFactory {
         RequestObjectBuilder requestObjectBuilder;
         if (isRequestParameter(oauthRequest)) {
             requestObjectBuilder = getRequestObjectBuilder(REQUEST_PARAM_VALUE_BUILDER);
-            if (requestObjectBuilder != null) {
-                requestObjectBuilder.buildRequestObject(oauthRequest.getParam(REQUEST), oAuth2Parameters, requestObject);
-                if (log.isDebugEnabled()) {
-                    log.info("Request Object extracted from the request: " + oauthRequest.getParam(REQUEST));
-                }
-            }
+            buildRequestObject(oauthRequest, oAuth2Parameters, requestObject, requestObjectBuilder, REQUEST);
         } else if (isRequestUri(oauthRequest)) {
             requestObjectBuilder = getRequestObjectBuilder(REQUEST_URI_PARAM_VALUE_BUILDER);
-            if (requestObjectBuilder != null) {
-                requestObjectBuilder.buildRequestObject(oauthRequest.getParam(REQUEST_URI), oAuth2Parameters, requestObject);
-                if (log.isDebugEnabled()) {
-                    log.info("Request Object extracted from the request_uri: " + oauthRequest.getParam(REQUEST_URI));
-                }
-            }
+            buildRequestObject(oauthRequest, oAuth2Parameters, requestObject, requestObjectBuilder,
+                    REQUEST_URI);
+
         } else {
             // Unsupported request object type.
             return;
@@ -89,6 +81,21 @@ public class OIDCRequestObjectFactory {
             throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST, "Invalid Request Object parameters " +
                     "found  in the request.");
 
+        }
+    }
+
+    private static void buildRequestObject(OAuthAuthzRequest oauthRequest, OAuth2Parameters oAuth2Parameters,
+                                           RequestObject requestObject, RequestObjectBuilder requestObjectBuilder,
+                                           String requestObjParam) throws RequestObjectException {
+        String error = "Unable to build the OIDC Request Object from:";
+        if (requestObjectBuilder != null) {
+            requestObjectBuilder.buildRequestObject(oauthRequest.getParam(requestObjParam), oAuth2Parameters,
+                    requestObject);
+            if (log.isDebugEnabled()) {
+                log.info("Request Object extracted from the request: " + oauthRequest.getParam(requestObjParam));
+            }
+        } else {
+            throw new RequestObjectException(OAuth2ErrorCodes.SERVER_ERROR, error + requestObjParam);
         }
     }
 

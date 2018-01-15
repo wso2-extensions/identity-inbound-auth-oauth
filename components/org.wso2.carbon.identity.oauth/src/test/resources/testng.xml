@@ -36,6 +36,7 @@
             <class name="org.wso2.carbon.identity.openidconnect.RememberMeStoreTest"/>
             <class name="org.wso2.carbon.identity.openidconnect.RequestObjectValidatorImplTest"/>
             <class name="org.wso2.carbon.identity.openidconnect.RequestParamRequestObjectBuilderTest"/>
+            <class name="org.wso2.carbon.identity.openidconnect.OIDCRequestObjectFactoryTest"/>
         </classes>
     </test>
     <test name="oauth.tests.with.debug.disabled" preserve-order="false" parallel="false">
