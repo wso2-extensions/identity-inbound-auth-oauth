@@ -18,18 +18,27 @@
 
 package org.wso2.carbon.identity.openidconnect.util;
 
+import com.nimbusds.jose.EncryptionMethod;
 import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JWEAlgorithm;
+import com.nimbusds.jose.JWEHeader;
+import com.nimbusds.jose.JWEObject;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSSigner;
+import com.nimbusds.jose.Payload;
+import com.nimbusds.jose.crypto.DirectEncrypter;
+import com.nimbusds.jose.crypto.RSAEncrypter;
 import com.nimbusds.jose.crypto.RSASSASigner;
+import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.PlainJWT;
 import com.nimbusds.jwt.SignedJWT;
 import org.testng.Assert;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.oauth.dao.SQLQueries;
-import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.RequestObjectException;
+import org.wso2.carbon.identity.oauth2.authcontext.JWTTokenGenerator;
 import org.wso2.carbon.user.core.UserCoreConstants;
 
 import java.io.FileInputStream;
@@ -37,13 +46,16 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.Key;
 import java.security.KeyStore;
+import java.security.PublicKey;
 import java.security.interfaces.RSAPrivateKey;
+import java.security.interfaces.RSAPublicKey;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.Map;
 
 public class TestUtils {
 
@@ -58,12 +70,21 @@ public class TestUtils {
      * @param privateKey
      * @param notBeforeMillis
      * @return
-     * @throws org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception
+     * @throws org.wso2.carbon.identity.oauth2.RequestObjectException
      */
     public static String buildJWT(String issuer, String subject, String jti, String audience, String algorythm,
-                                  Key privateKey, long notBeforeMillis)
-            throws IdentityOAuth2Exception {
+                                  Key privateKey, long notBeforeMillis, Map<String,Object> claims)
+            throws RequestObjectException {
 
+        JWTClaimsSet jwtClaimsSet = getJwtClaimsSet(issuer, subject, jti, audience, notBeforeMillis, claims);
+        if (JWSAlgorithm.NONE.getName().equals(algorythm)) {
+            return new PlainJWT(jwtClaimsSet).serialize();
+        }
+
+        return signJWTWithRSA(jwtClaimsSet, privateKey);
+    }
+
+    private static JWTClaimsSet getJwtClaimsSet(String issuer, String subject, String jti, String audience, long notBeforeMillis, Map<String, Object> claims) {
         long lifetimeInMillis = 3600 * 1000;
         long curTimeInMillis = Calendar.getInstance().getTimeInMillis();
 
@@ -79,16 +100,17 @@ public class TestUtils {
         if (notBeforeMillis > 0) {
             jwtClaimsSet.setNotBeforeTime(new Date(curTimeInMillis + notBeforeMillis));
         }
-        if (JWSAlgorithm.NONE.getName().equals(algorythm)) {
-            return new PlainJWT(jwtClaimsSet).serialize();
+        if (claims != null && claims.isEmpty()) {
+            for (Map.Entry entry : claims.entrySet()) {
+                jwtClaimsSet.setClaim(entry.getKey().toString(), entry.getValue());
+            }
         }
-
-        return signJWTWithRSA(jwtClaimsSet, privateKey);
+        return jwtClaimsSet;
     }
 
     public static String buildJWT(String issuer, String subject, String jti, String audience, String algorythm,
                                   Key privateKey, long notBeforeMillis, long lifetimeInMillis, long issuedTime)
-            throws IdentityOAuth2Exception {
+            throws RequestObjectException {
 
         long curTimeInMillis = Calendar.getInstance().getTimeInMillis();
         if (issuedTime < 0) {
@@ -122,17 +144,22 @@ public class TestUtils {
      * @param jwtClaimsSet contains JWT body
      * @param privateKey
      * @return signed JWT token
-     * @throws IdentityOAuth2Exception
+     * @throws RequestObjectException
      */
     public static String signJWTWithRSA(JWTClaimsSet jwtClaimsSet, Key privateKey)
-            throws IdentityOAuth2Exception {
+            throws RequestObjectException {
+        SignedJWT signedJWT = getSignedJWT(jwtClaimsSet, (RSAPrivateKey) privateKey);
+        return signedJWT.serialize();
+    }
+
+    private static SignedJWT getSignedJWT(JWTClaimsSet jwtClaimsSet, RSAPrivateKey privateKey) throws RequestObjectException {
         try {
-            JWSSigner signer = new RSASSASigner((RSAPrivateKey) privateKey);
-            SignedJWT signedJWT = new SignedJWT(new JWSHeader(JWSAlgorithm.RS256), jwtClaimsSet);
-            signedJWT.sign(signer);
-            return signedJWT.serialize();
+        JWSSigner signer = new RSASSASigner(privateKey);
+        SignedJWT signedJWT = new SignedJWT(new JWSHeader(JWSAlgorithm.RS256), jwtClaimsSet);
+        signedJWT.sign(signer);
+        return signedJWT;
         } catch (JOSEException e) {
-            throw new IdentityOAuth2Exception("Error occurred while signing JWT", e);
+            throw new RequestObjectException("error_signing_jwt","Error occurred while signing JWT.");
         }
     }
 
@@ -183,4 +210,56 @@ public class TestUtils {
         return keystore;
     }
 
+
+    public static String buildJWE(String issuer, String subject, String jti, String audience, String algorythm,
+                                  Key privateKey,Key publicKey, long notBeforeMillis, Map<String,
+            Object> claims) throws RequestObjectException {
+        JWTClaimsSet jwtClaimsSet = getJwtClaimsSet(issuer, subject, jti, audience, notBeforeMillis, claims);
+
+        if (JWSAlgorithm.NONE.getName().equals(algorythm)) {
+            return getEncryptedJWT((RSAPublicKey) publicKey, jwtClaimsSet);
+        } else {
+            return getSignedAndEncryptedJWT(publicKey, (RSAPrivateKey) privateKey, jwtClaimsSet);
+
+        }
+
+
+    }
+
+    private static String getSignedAndEncryptedJWT(Key publicKey, RSAPrivateKey privateKey, JWTClaimsSet jwtClaimsSet) throws RequestObjectException {
+        SignedJWT signedJWT = getSignedJWT(jwtClaimsSet, privateKey);
+        // Create JWE object with signed JWT as payload
+        JWEHeader jweHeader = new JWEHeader(JWEAlgorithm.RSA_OAEP_256, EncryptionMethod.A256GCM);
+//        jweHeader.setContentType("JWT");
+        JWEObject jweObject = new JWEObject(jweHeader, new Payload(signedJWT.serialize()));
+        // Perform encryption
+        try {
+            jweObject.encrypt(new RSAEncrypter((RSAPublicKey) publicKey));
+            return jweObject.serialize();
+        } catch (JOSEException e) {
+            System.out.print(e);
+            e.printStackTrace();
+            throw new RequestObjectException("error_building_jwd","Error occurred while creating JWE.");
+        }
+    }
+
+    private static String getEncryptedJWT(RSAPublicKey publicKey, JWTClaimsSet jwtClaimsSet) throws
+            RequestObjectException {
+        // Request JWT encrypted with RSA-OAEP-256 and 128-bit AES/GCM
+        JWEHeader header = new JWEHeader(JWEAlgorithm.RSA_OAEP, EncryptionMethod.A128GCM);
+
+        // Create the encrypted JWT object
+        EncryptedJWT jwt = new EncryptedJWT(header, jwtClaimsSet);
+
+        try {
+        // Create an encrypter with the specified public RSA key
+            RSAEncrypter encrypter = new RSAEncrypter(publicKey);
+            // Do the actual encryption
+            jwt.encrypt(encrypter);
+        } catch (JOSEException e) {
+            throw new RequestObjectException("error_building_jwd","Error occurred while creating JWE JWT.");
+
+        }
+        return jwt.serialize();
+    }
 }

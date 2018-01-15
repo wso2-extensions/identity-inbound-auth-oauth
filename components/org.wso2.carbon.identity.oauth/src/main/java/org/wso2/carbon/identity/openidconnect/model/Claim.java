@@ -15,6 +15,8 @@
  */
 package org.wso2.carbon.identity.openidconnect.model;
 
+import net.minidev.json.JSONObject;
+
 import java.io.Serializable;
 import java.util.Map;
 
@@ -27,7 +29,11 @@ public class Claim implements Serializable {
     private static final long serialVersionUID = 6372165740005867083L;
 
     private String name;
-    private Map<String, String> claimAttributesMap;
+    private Map<String, JSONObject> claimAttributesMap;
+    private boolean isUserInfo;
+    private boolean isEssential;
+    private String value;
+    private String[] values;
 
     public String getName() {
         return name;
@@ -37,11 +43,12 @@ public class Claim implements Serializable {
         this.name = name;
     }
 
-    public Map<String, String> getClaimAttributesMap() {
+    public Map<String, JSONObject> getClaimAttributesMap() {
         return claimAttributesMap;
     }
 
-    public void setClaimAttributesMap(Map<String, String> claimAttributesMap) {
+    public void setClaimAttributesMap(Map<String, JSONObject> claimAttributesMap) {
         this.claimAttributesMap = claimAttributesMap;
     }
+
 }

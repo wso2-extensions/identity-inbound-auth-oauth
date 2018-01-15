@@ -1956,17 +1956,18 @@ public class OAuth2Util {
     public static List<String> essentialClaimsFromRequestParam(String claimRequestor, Map<String, List<Claim>>
             requestedClaimsFromRequestParam) {
 
-        String attributeValue = null;
+        net.minidev.json.JSONObject attributeValue = null;
         List<String> essentialClaimsfromRequestParam = new ArrayList<>();
         List<Claim> claimsforClaimRequestor = requestedClaimsFromRequestParam.get(claimRequestor);
         for (Claim claimforClaimRequestor : claimsforClaimRequestor) {
             String claim = claimforClaimRequestor.getName();
-            Map<String, String> attributesMap = claimforClaimRequestor.getClaimAttributesMap();
+            Map<String, net.minidev.json.JSONObject> attributesMap = claimforClaimRequestor.getClaimAttributesMap();
             if (attributesMap != null) {
-                for (Map.Entry<String, String> attributesEntryMap : attributesMap.entrySet()) {
-                    attributeValue = attributesMap.get(attributesEntryMap.getKey());
+                for (Map.Entry<String, net.minidev.json.JSONObject> attributesEntry: attributesMap.entrySet()) {
+//                    attributeValue = attributesMap.get(attributesEntryMap.getKey());
 
-                    if (ESSENTAIL.equals(attributesEntryMap.getKey()) && Boolean.parseBoolean(attributeValue)) {
+                    if (ESSENTAIL.equals(attributesEntry.getKey()) && Boolean.parseBoolean(attributesEntry.getValue()
+                            .toString())) {
                         essentialClaimsfromRequestParam.add(claim);
                     }
                 }

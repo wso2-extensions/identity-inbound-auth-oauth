@@ -17,7 +17,6 @@
  */
 package org.wso2.carbon.identity.openidconnect;
 
-import com.nimbusds.jwt.SignedJWT;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -27,10 +26,6 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
-
-import java.text.ParseException;
-
-import static org.apache.commons.lang.StringUtils.isEmpty;
 
 /**
  * According to the OIDC spec requestObject is passed as a query param value of request/request_uri parameters. This is
@@ -42,13 +37,12 @@ public class OIDCRequestObjectFactory {
     private static final Log log = LogFactory.getLog(OIDCRequestObjectFactory.class);
     private static final String REQUEST = "request";
     private static final String REQUEST_URI = "request_uri";
-    private static final String CLIENT_ID = "client_id";
-    private static final String RESPONSE_TYPE = "response_type";
     private static final String REQUEST_PARAM_VALUE_BUILDER = "request_param_value_builder";
     private static final String REQUEST_URI_PARAM_VALUE_BUILDER = "request_uri_param_value_builder";
 
     /**
      * Fetch and invoke the matched request builder class based on the identity.xml configurations.
+     * Build and validate the Request Object extracted from request information
      *
      * @param oauthRequest authorization request
      * @throws RequestObjectException
@@ -66,24 +60,37 @@ public class OIDCRequestObjectFactory {
             requestObjectBuilder = getRequestObjectBuilder(REQUEST_PARAM_VALUE_BUILDER);
             if (requestObjectBuilder != null) {
                 requestObjectBuilder.buildRequestObject(oauthRequest.getParam(REQUEST), oAuth2Parameters, requestObject);
+                if (log.isDebugEnabled()) {
+                    log.info("Request Object extracted from the request: " + oauthRequest.getParam(REQUEST));
+                }
             }
         } else if (isRequestUri(oauthRequest)) {
             requestObjectBuilder = getRequestObjectBuilder(REQUEST_URI_PARAM_VALUE_BUILDER);
             if (requestObjectBuilder != null) {
                 requestObjectBuilder.buildRequestObject(oauthRequest.getParam(REQUEST_URI), oAuth2Parameters, requestObject);
+                if (log.isDebugEnabled()) {
+                    log.info("Request Object extracted from the request_uri: " + oauthRequest.getParam(REQUEST_URI));
+                }
             }
         } else {
             // Unsupported request object type.
+            return;
         }
         RequestObjectValidator requestObjectValidator = OAuthServerConfiguration.getInstance()
                 .getRequestObjectValidator();
-        if (requestObjectValidator.isSigned(requestObject)){
-            requestObject.setSigned(true);
-            requestObjectValidator.validateSignature(requestObject, oAuth2Parameters.getClientId());
-        }
-        requestObjectValidator.validateRequestObject(requestObject, oAuth2Parameters);
-    }
+        if (requestObject.isSigned()) {
+            if (!requestObjectValidator.validateSignature(requestObject, oAuth2Parameters.getClientId())) {
+                throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST,
+                        "Request Object signature verification failed.");
 
+            }
+        }
+        if (!requestObjectValidator.validateRequestObject(requestObject, oAuth2Parameters)) {
+            throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST, "Invalid Request Object parameters " +
+                    "found  in the request.");
+
+        }
+    }
 
 
     private static RequestObjectBuilder getRequestObjectBuilder(String requestParamValueBuilder) {

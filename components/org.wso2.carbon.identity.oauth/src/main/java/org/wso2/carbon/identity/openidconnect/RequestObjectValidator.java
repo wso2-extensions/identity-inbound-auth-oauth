@@ -33,7 +33,7 @@ public interface RequestObjectValidator {
      *
      * @param requestObject
      */
-    public void validateSignature(RequestObject requestObject, String alias) throws RequestObjectException;
+    public boolean validateSignature(RequestObject requestObject, String alias) throws RequestObjectException;
 
     /**
      * To decrypt the request objected by using IS primary key
