@@ -20,8 +20,8 @@ import com.nimbusds.jose.ReadOnlyJWSHeader;
 import com.nimbusds.jwt.PlainJWT;
 import com.nimbusds.jwt.ReadOnlyJWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
-import org.apache.commons.collections.MapUtils;
 
 import java.io.Serializable;
 import java.text.ParseException;
@@ -39,6 +39,9 @@ public class RequestObject implements Serializable {
     public static final String CLAIMS = "claims";
     public static final String USERINFO = "userinfo";
     public static final String ID_TOKEN = "id_token";
+    public static final String ESSENTIAL = "essential";
+    public static final String VALUE = "value";
+    public static final String VALUES = "values";
     private boolean isSignatureValid;
     private boolean isSigned;
     private String signatureAlgorythm;
@@ -48,11 +51,12 @@ public class RequestObject implements Serializable {
     ReadOnlyJWTClaimsSet claimsSet;
     ReadOnlyJWSHeader jwsHeader;
 
-    /**To store the claims requestor and the the requested claim list. claim requestor can be either userinfo or
+    /**
+     * To store the claims requestor and the the requested claim list. claim requestor can be either userinfo or
      * id_token or any custom member. Sample set of values that can be exist in this map is as below.
      * Map<"id_token", ("username, firstname, lastname")>
-     **/
-    private Map<String, List<Claim>> claimsforRequestParameter = new HashMap<>();
+     */
+    private Map<String, List<RequestedClaim>> claimsforRequestParameter = new HashMap<>();
 
     public boolean isSignatureValid() {
         return isSignatureValid;
@@ -76,6 +80,7 @@ public class RequestObject implements Serializable {
 
     /**
      * Extract jwtclaimset from plain jwt and extract claimsforClaimRequestor
+     *
      * @param plainJWT
      * @throws ParseException
      */
@@ -100,11 +105,11 @@ public class RequestObject implements Serializable {
         this.signatureAlgorythm = signatureAlgorythm;
     }
 
-    public Map<String, List<Claim>> getClaimsforRequestParameter() {
+    public Map<String, List<RequestedClaim>> getClaimsforRequestParameter() {
         return claimsforRequestParameter;
     }
 
-    public void setClaimsforRequestParameter(Map<String, List<Claim>> claimsforRequestParameter) {
+    public void setClaimsforRequestParameter(Map<String, List<RequestedClaim>> claimsforRequestParameter) {
         this.claimsforRequestParameter = claimsforRequestParameter;
     }
 
@@ -115,6 +120,7 @@ public class RequestObject implements Serializable {
     /**
      * Mark the object as signed.
      * Extract jwtclaimset from signed jwt and extract claimsforClaimRequestor
+     *
      * @param signedJWT
      * @throws ParseException
      */
@@ -144,62 +150,71 @@ public class RequestObject implements Serializable {
      */
     private void processClaimObject(net.minidev.json.JSONObject jsonObjectRequestedClaims) {
 
-        Map<String, List<Claim>> claimsforClaimRequestor = new HashMap<>();
+        Map<String, List<RequestedClaim>> claimsforClaimRequestor = new HashMap<>();
         if (jsonObjectRequestedClaims.get(CLAIMS) != null) {
-//            String claimAttributeValue = null;
             JSONObject jsonObjectClaim = (JSONObject) jsonObjectRequestedClaims.get(CLAIMS);
             //To iterate the claims json object to fetch the claim requestor and all requested claims.
 
-            for (Map.Entry<String, Object> requesterClaimMap : jsonObjectClaim.entrySet()) {
-                List<Claim> essentialClaimsRequestParam = new ArrayList();
+            for (Map.Entry<String, Object> requesterClaimsMap : jsonObjectClaim.entrySet()) {
+                List<RequestedClaim> requestedClaimsList = new ArrayList();
                 JSONObject jsonObjectAllRequestedClaims;
-                if (jsonObjectClaim.get(requesterClaimMap.getKey()) != null) {
-                    jsonObjectAllRequestedClaims = (JSONObject) jsonObjectClaim.get(requesterClaimMap.getKey());
+                if (jsonObjectClaim.get(requesterClaimsMap.getKey()) != null) {
+                    jsonObjectAllRequestedClaims = (JSONObject) jsonObjectClaim.get(requesterClaimsMap.getKey());
 
                     for (Map.Entry<String, Object> requestedClaims : jsonObjectAllRequestedClaims.entrySet()) {
                         JSONObject jsonObjectClaimAttributes = null;
                         if (jsonObjectAllRequestedClaims.get(requestedClaims.getKey()) != null) {
                             jsonObjectClaimAttributes = (JSONObject) jsonObjectAllRequestedClaims.get(requestedClaims.getKey());
                         }
-                        addClaimAttributes(essentialClaimsRequestParam, jsonObjectClaimAttributes,
-                                requestedClaims.getKey());
+                        populateRequestedClaimValues(requestedClaimsList, jsonObjectClaimAttributes,
+                                requestedClaims.getKey(), requesterClaimsMap.getKey());
                     }
                 }
-                claimsforClaimRequestor.put(requesterClaimMap.getKey(), essentialClaimsRequestParam);
+                claimsforClaimRequestor.put(requesterClaimsMap.getKey(), requestedClaimsList);
             }
             this.setClaimsforRequestParameter(claimsforClaimRequestor);
         }
     }
 
-    private void addClaimAttributes(List<Claim> essentialClaimsRequestParam,
-                                    JSONObject jsonObjectClaimAttributes, String claimName) {
+    private void populateRequestedClaimValues(List<RequestedClaim> requestedClaims,
+                                              JSONObject jsonObjectClaimAttributes, String claimName, String claimType) {
 
-        Claim claim = new Claim();
+        RequestedClaim claim = new RequestedClaim();
         claim.setName(claimName);
+        claim.setType(claimType);
         if (jsonObjectClaimAttributes != null) {
 
             //To iterate claim attributes object to fetch the attribute key and value for the fetched
             // requested claim in the fetched claim requester
-
-            JSONObject claimAttributeValue = null;
             for (Map.Entry<String, Object> claimAttributes : jsonObjectClaimAttributes.entrySet()) {
-                Map<String, JSONObject> claimAttributesMap = new HashMap<>();
                 if (jsonObjectClaimAttributes.get(claimAttributes.getKey()) != null) {
-                    claimAttributeValue = (JSONObject) jsonObjectClaimAttributes.get(claimAttributes.getKey());
+                    Object value = jsonObjectClaimAttributes.get(claimAttributes.getKey());
+                    if (ESSENTIAL.equals(claimAttributes.getKey())) {
+                        claim.setEssential((Boolean) value);
+                    } else if (VALUE.equals(claimAttributes.getKey())) {
+                        claim.setValue((String) value);
+                    } else if (VALUES.equals(claimAttributes.getKey())) {
+                        JSONArray jsonArray = (JSONArray) value;
+                        if (jsonArray != null && jsonArray.size() > 0) {
+                            ArrayList<String> values = new ArrayList<>();
+                            for (Object aJsonArray : jsonArray) {
+                                values.add(aJsonArray.toString());
+                            }
+                            claim.setValues(values);
+                        }
+                    }
                 }
-                claimAttributesMap.put(claimAttributes.getKey(), claimAttributeValue);
-                claim.setClaimAttributesMap(claimAttributesMap);
-                essentialClaimsRequestParam.add(claim);
+                requestedClaims.add(claim);
             }
         } else {
-            claim.setClaimAttributesMap(MapUtils.EMPTY_MAP);
-            essentialClaimsRequestParam.add(claim);
+            requestedClaims.add(claim);
         }
     }
 
     /**
      * Return the String claim value which matches the given claimName, from jwtClaimset
      * return null if not found, or unable to parse
+     *
      * @param claimName
      * @return
      */
@@ -213,6 +228,7 @@ public class RequestObject implements Serializable {
 
     /**
      * Return the claim value which matches the given claimName, from jwtClaimset
+     *
      * @param claimName
      * @return
      */

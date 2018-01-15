@@ -100,7 +100,7 @@ public class TestUtils {
         if (notBeforeMillis > 0) {
             jwtClaimsSet.setNotBeforeTime(new Date(curTimeInMillis + notBeforeMillis));
         }
-        if (claims != null && claims.isEmpty()) {
+        if (claims != null && !claims.isEmpty()) {
             for (Map.Entry entry : claims.entrySet()) {
                 jwtClaimsSet.setClaim(entry.getKey().toString(), entry.getValue());
             }

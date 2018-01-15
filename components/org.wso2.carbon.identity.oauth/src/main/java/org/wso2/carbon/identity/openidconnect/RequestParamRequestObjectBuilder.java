@@ -21,19 +21,13 @@ import com.nimbusds.jose.JOSEObject;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jwt.PlainJWT;
 import com.nimbusds.jwt.SignedJWT;
-import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
-import org.wso2.carbon.identity.openidconnect.model.Claim;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
-
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 import static org.apache.commons.lang.StringUtils.isEmpty;
 

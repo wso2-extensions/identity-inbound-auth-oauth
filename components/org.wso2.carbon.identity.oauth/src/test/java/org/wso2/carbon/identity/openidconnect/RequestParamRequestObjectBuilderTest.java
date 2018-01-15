@@ -85,15 +85,18 @@ public class RequestParamRequestObjectBuilderTest extends PowerMockTestCase {
     @DataProvider(name = "TestBuildRequestObjectTest")
     public Object[][] buildRequestObjectData() throws Exception {
         Key privateKey = clientKeyStore.getKey("wso2carbon", "wso2carbon".toCharArray());
+        Key privateKey2 = wso2KeyStore.getKey("wso2carbon", "wso2carbon".toCharArray());
         PublicKey publicKey = wso2KeyStore.getCertificate("wso2carbon").getPublicKey();
         String audience = SOME_SERVER_URL;
 
-        HashMap claims1 = new HashMap<>();
-        HashMap claims2 = new HashMap<>();
+        Map<String,Object> claims1 = new HashMap<>();
+        Map<String,Object> claims2 = new HashMap<>();
+        Map<String,Object> claims3 = new HashMap<>();
+        Map<String,Object> claims4 = new HashMap<>();
+
         claims1.put(Constants.STATE, "af0ifjsldkj");
         claims1.put(Constants.CLIENT_ID, TEST_CLIENT_ID_1);
 
-        JSONObject json1 = new JSONObject();
         JSONObject userInfoClaims = new JSONObject();
         userInfoClaims.put("essential", true);
         userInfoClaims.put("value", "some-value");
@@ -101,13 +104,35 @@ public class RequestParamRequestObjectBuilderTest extends PowerMockTestCase {
         valuesArray.add("value1");
         valuesArray.add("value2");
         userInfoClaims.put("values", valuesArray);
-        json1.put("user_info", userInfoClaims);
-        claims2.put("claims", json1);
+        JSONObject userInfoClaim = new JSONObject();
+        userInfoClaim.put("user_info", userInfoClaims);
+        JSONObject acr = new JSONObject();
+        acr.put("acr", userInfoClaim);
+        claims2.put("claims", acr);
+
+        claims3.put(Constants.CLIENT_ID, "some-string");
+
+        JSONObject givenName = new JSONObject();
+        givenName.put("given_name", null);
+
+        JSONObject idTokenClaim = new JSONObject();
+        idTokenClaim.put("id_token", givenName);
+        claims4.put("claims", idTokenClaim);
 
         String jsonWebToken1 = buildJWT(TEST_CLIENT_ID_1, TEST_CLIENT_ID_1, "1000", audience, "RSA265", privateKey, 0,
                 claims1);
         String jsonWebToken2 = buildJWT(TEST_CLIENT_ID_1, TEST_CLIENT_ID_1, "1001", audience, "none", privateKey, 0,
                 claims1);
+        String jsonWebToken3 = buildJWT(TEST_CLIENT_ID_1, TEST_CLIENT_ID_1, "1002", audience, "RSA265", privateKey, 0,
+                claims2);
+        String jsonWebToken4 = buildJWT(TEST_CLIENT_ID_1, TEST_CLIENT_ID_1, "1003", audience, "none", privateKey, 0,
+                claims2);
+        String jsonWebToken5 = buildJWT(TEST_CLIENT_ID_1, TEST_CLIENT_ID_1, "1004", audience, "none", privateKey, 0,
+                claims3);
+        String jsonWebToken6 = buildJWT(TEST_CLIENT_ID_1, TEST_CLIENT_ID_1, "1005", audience, "RSA265", privateKey2, 0,
+                claims2);
+        String jsonWebToken7 = buildJWT(TEST_CLIENT_ID_1, TEST_CLIENT_ID_1, "1000", audience, "RSA265", privateKey, 0,
+                claims4);
         String jsonWebEncryption1 = buildJWE(TEST_CLIENT_ID_1, TEST_CLIENT_ID_1, "2000", audience,
                 JWSAlgorithm.NONE.getName(), privateKey, publicKey, 0, claims1);
         String jsonWebEncryption2 = buildJWE(TEST_CLIENT_ID_1, TEST_CLIENT_ID_1, "2001", audience,
@@ -115,17 +140,25 @@ public class RequestParamRequestObjectBuilderTest extends PowerMockTestCase {
         return new Object[][]{
                 {jsonWebToken1, claims1, true, false, true, "Valid Request Object, signed, not encrypted."},
                 {jsonWebToken2, claims1, false, false, true, "Valid Request Object, not signed, not encrypted."},
-                {jsonWebToken2, claims2, false, false, true, "Valid Request Object, not signed, not encrypted."},
-                {"some-request-object", null, false, false, false, "Invalid Request Object, signed not encrypted."},
+                {jsonWebToken3, claims2, true, false, true, "Valid Request Object, signed, not encrypted."},
+                {jsonWebToken4, claims2, false, false, true, "Valid Request Object, not signed, not encrypted."},
+                {jsonWebToken5, claims3, false, false, false, "Invalid Request Object, not signed, not encrypted, " +
+                        "mismatching client_id."},
+                {jsonWebToken6, claims2, true, false, false, "Invalid Request Object, signed but with different key, " +
+                        "not encrypted."},
+                {jsonWebToken7, claims4, true, false, true, "Valid Request Object, signed, not encrypted."},
+                {"some-request-object", null, false, false, false, "Invalid Request Object string, " +
+                        "signed not encrypted."},
                 {"", null, false, false, false, "Invalid Request Object, signed not encrypted."},
                 {jsonWebEncryption1, claims1, false, true, true, "Valid Request Object, signed and encrypted."},
-                {jsonWebEncryption2, claims1, true, true, true, "Valid Request Object, signed and encrypted."}};
+                {jsonWebEncryption2, claims1, true, true, true, "Valid Request Object, signed and encrypted."}
+        };
     }
 
     @Test(dataProvider = "TestBuildRequestObjectTest")
     public void buildRequestObjectTest(String requestObjectString, Map<String, Object> claims, boolean isSigned,
                                        boolean isEncrypted,
-                                       boolean expected,
+                                       boolean exceptionNotExpected,
                                        String errorMsg) throws Exception {
 
         mockStatic(IdentityUtil.class);
@@ -156,15 +189,14 @@ public class RequestParamRequestObjectBuilderTest extends PowerMockTestCase {
         try {
             requestParamRequestObjectBuilder.buildRequestObject(requestObjectString, oAuth2Parameters, requestObject);
             Assert.assertEquals(requestObject.isSigned(), isSigned, errorMsg);
-            if (claims != null && claims.isEmpty()) {
+            if (claims != null && !claims.isEmpty()) {
                 for (Map.Entry entry : claims.entrySet()) {
                     Assert.assertEquals(requestObject.getClaim(entry.getKey().toString()), entry.getValue(),
-                            "Request object claims is not properly set.");
+                            "Request object claim:" + entry.getKey() + " is not properly set.");
                 }
             }
         } catch (RequestObjectException e) {
-            Assert.assertFalse(expected, errorMsg + "Building failed.");
+            Assert.assertFalse(exceptionNotExpected, errorMsg + "Building failed due to " + e.getMessage());
         }
-
     }
 }

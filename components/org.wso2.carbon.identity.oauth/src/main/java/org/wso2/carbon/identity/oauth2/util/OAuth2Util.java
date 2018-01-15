@@ -69,7 +69,7 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.ClientCredentialDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
-import org.wso2.carbon.identity.openidconnect.model.Claim;
+import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.registry.core.Registry;
 import org.wso2.carbon.registry.core.Resource;
 import org.wso2.carbon.registry.core.exceptions.RegistryException;
@@ -1953,24 +1953,15 @@ public class OAuth2Util {
      * @param requestedClaimsFromRequestParam claims defined in the value of the request parameter
      * @return the claim list which have attribute vale essentail :true
      */
-    public static List<String> essentialClaimsFromRequestParam(String claimRequestor, Map<String, List<Claim>>
+    public static List<String> essentialClaimsFromRequestParam(String claimRequestor, Map<String, List<RequestedClaim>>
             requestedClaimsFromRequestParam) {
 
-        net.minidev.json.JSONObject attributeValue = null;
         List<String> essentialClaimsfromRequestParam = new ArrayList<>();
-        List<Claim> claimsforClaimRequestor = requestedClaimsFromRequestParam.get(claimRequestor);
-        for (Claim claimforClaimRequestor : claimsforClaimRequestor) {
+        List<RequestedClaim> claimsforClaimRequestor = requestedClaimsFromRequestParam.get(claimRequestor);
+        for (RequestedClaim claimforClaimRequestor : claimsforClaimRequestor) {
             String claim = claimforClaimRequestor.getName();
-            Map<String, net.minidev.json.JSONObject> attributesMap = claimforClaimRequestor.getClaimAttributesMap();
-            if (attributesMap != null) {
-                for (Map.Entry<String, net.minidev.json.JSONObject> attributesEntry: attributesMap.entrySet()) {
-//                    attributeValue = attributesMap.get(attributesEntryMap.getKey());
-
-                    if (ESSENTAIL.equals(attributesEntry.getKey()) && Boolean.parseBoolean(attributesEntry.getValue()
-                            .toString())) {
-                        essentialClaimsfromRequestParam.add(claim);
-                    }
-                }
+            if (claimforClaimRequestor.isEssential()) {
+                essentialClaimsfromRequestParam.add(claim);
             }
         }
         return essentialClaimsfromRequestParam;

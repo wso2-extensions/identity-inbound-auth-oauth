@@ -23,10 +23,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
-import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
-import org.wso2.carbon.identity.openidconnect.model.Claim;
+import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.registry.api.RegistryException;
 import org.wso2.carbon.registry.api.Resource;
@@ -144,7 +143,7 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
             return new HashMap<>();
         }
         if (requestObject != null) {
-            Map<String, List<Claim>> requestParamClaims = requestObject.getClaimsforRequestParameter();
+            Map<String, List<RequestedClaim>> requestParamClaims = requestObject.getClaimsforRequestParameter();
             List<String> essentialClaimsfromRequestParam = OAuth2Util.essentialClaimsFromRequestParam(type,
                     requestParamClaims);
             for (String essentialClaim : essentialClaimsfromRequestParam) {
