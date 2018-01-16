@@ -18,9 +18,6 @@
 
 package org.wso2.carbon.identity.openidconnect;
 
-import com.nimbusds.jose.JWSAlgorithm;
-import net.minidev.json.JSONArray;
-import net.minidev.json.JSONObject;
 import org.apache.oltu.oauth2.as.request.OAuthAuthzRequest;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
@@ -53,8 +50,6 @@ import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
-import static org.wso2.carbon.identity.openidconnect.util.TestUtils.buildJWE;
-import static org.wso2.carbon.identity.openidconnect.util.TestUtils.buildJWT;
 import static org.wso2.carbon.identity.openidconnect.util.TestUtils.getKeyStoreFromFile;
 import static org.wso2.carbon.identity.openidconnect.util.TestUtils.getRequestObjects;
 

@@ -143,7 +143,7 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
             return new HashMap<>();
         }
         if (requestObject != null) {
-            Map<String, List<RequestedClaim>> requestParamClaims = requestObject.getClaimsforRequestParameter();
+            Map<String, List<RequestedClaim>> requestParamClaims = requestObject.getRequestedClaims();
             List<String> essentialClaimsfromRequestParam = OAuth2Util.essentialClaimsFromRequestParam(type,
                     requestParamClaims);
             for (String essentialClaim : essentialClaimsfromRequestParam) {
