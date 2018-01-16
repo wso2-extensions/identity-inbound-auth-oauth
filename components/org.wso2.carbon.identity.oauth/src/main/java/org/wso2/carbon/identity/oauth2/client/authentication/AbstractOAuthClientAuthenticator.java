@@ -16,6 +16,8 @@
 
 package org.wso2.carbon.identity.oauth2.client.authentication;
 
+import org.wso2.carbon.identity.core.handler.AbstractIdentityMessageHandler;
+
 import javax.servlet.http.HttpServletRequest;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -25,7 +27,7 @@ import java.util.Map;
 /**
  * Abstract OAuth2 client authenticator.
  */
-public abstract class AbstractOAuthClientAuthenticator implements OAuthClientAuthenticator {
+public abstract class AbstractOAuthClientAuthenticator extends AbstractIdentityMessageHandler implements OAuthClientAuthenticator {
 
     /**
      * Get the set of body parameters.

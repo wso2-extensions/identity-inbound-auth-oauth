@@ -18,7 +18,8 @@
 
 package org.wso2.carbon.identity.oauth2.client.authentication;
 
-import java.util.ArrayList;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+
 import java.util.List;
 
 /**
@@ -28,11 +29,10 @@ public class OAuthClientAuthnService {
 
     /**
      * Retrieve OAuth2 client authenticators which are reigstered dynamically.
+     *
      * @return List of OAuth2 client authenticators.
      */
     public List<OAuthClientAuthenticator> getClientAuthenticators() {
-        ArrayList<OAuthClientAuthenticator> authenticators = new ArrayList<OAuthClientAuthenticator>();
-        authenticators.add(new BasicAuthClientAuthenticator());
-        return authenticators;
+        return OAuth2ServiceComponentHolder.getAuthenticationHandlers();
     }
 }

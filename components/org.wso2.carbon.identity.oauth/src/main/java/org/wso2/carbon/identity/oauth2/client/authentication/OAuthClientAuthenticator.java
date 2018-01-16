@@ -18,13 +18,14 @@
 
 package org.wso2.carbon.identity.oauth2.client.authentication;
 
+import org.wso2.carbon.identity.core.handler.IdentityMessageHandler;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.Map;
 
-public interface OAuthClientAuthenticator {
+public interface OAuthClientAuthenticator extends IdentityMessageHandler {
 
     /**
      * Get the position of execution in the sequence of execution of OAuth Client Authenticators.

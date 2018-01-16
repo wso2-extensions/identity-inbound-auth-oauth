@@ -37,6 +37,8 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
+import org.wso2.carbon.identity.oauth2.client.authentication.BasicAuthClientAuthenticator;
+import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnService;
 import org.wso2.carbon.identity.oauth2.dao.SQLQueries;
 import org.wso2.carbon.identity.oauth2.listener.TenantCreationEventListener;
@@ -87,6 +89,9 @@ public class OAuth2ServiceComponent {
             bundleContext.registerService(OAuth2TokenValidationService.class.getName(), tokenValidationService, null);
             OAuthClientAuthnService clientAuthnService = new OAuthClientAuthnService();
             bundleContext.registerService(OAuthClientAuthnService.class.getName(), clientAuthnService, null);
+            BasicAuthClientAuthenticator basicAuthClientAuthenticator = new BasicAuthClientAuthenticator();
+            bundleContext.registerService(OAuthClientAuthenticator.class.getName(), basicAuthClientAuthenticator,
+                    null);
             if (log.isDebugEnabled()) {
                 log.debug("Identity OAuth bundle is activated");
             }
@@ -222,7 +227,7 @@ public class OAuth2ServiceComponent {
     }
 
     @Reference(
-            name = "registry.service",
+            name = "registry.serviceesss",
             service = RegistryService.class,
             cardinality = ReferenceCardinality.MANDATORY,
             policy = ReferencePolicy.DYNAMIC,
@@ -240,5 +245,26 @@ public class OAuth2ServiceComponent {
             log.debug("UnSetting the Registry Service");
         }
         OAuth2ServiceComponentHolder.setRegistryService(null);
+    }
+
+    @Reference(
+            name = "oauth.client.authenticator",
+            service = OAuthClientAuthenticator.class,
+            cardinality = ReferenceCardinality.OPTIONAL,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetOAuthClientAuthenticator"
+    )
+    protected void setOAuthClientAuthenticator(OAuthClientAuthenticator oAuthClientAuthenticator) {
+        if (log.isDebugEnabled()) {
+            log.debug("Adding OAuth client authentication handler : " + oAuthClientAuthenticator.getName());
+        }
+        OAuth2ServiceComponentHolder.addAuthenticationHandler(oAuthClientAuthenticator);
+    }
+
+    protected void unsetOAuthClientAuthenticator(OAuthClientAuthenticator oAuthClientAuthenticator) {
+        if (log.isDebugEnabled()) {
+            log.debug("UnSetting the Registry Service");
+        }
+        OAuth2ServiceComponentHolder.getAuthenticationHandlers().remove(oAuthClientAuthenticator);
     }
 }
