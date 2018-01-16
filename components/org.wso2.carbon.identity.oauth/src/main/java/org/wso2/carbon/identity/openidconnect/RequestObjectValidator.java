@@ -17,7 +17,6 @@
  */
 package org.wso2.carbon.identity.openidconnect;
 
-import com.nimbusds.jwt.SignedJWT;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
@@ -33,7 +32,7 @@ public interface RequestObjectValidator {
      *
      * @param requestObject
      */
-    public boolean validateSignature(RequestObject requestObject, String alias) throws RequestObjectException;
+    boolean validateSignature(RequestObject requestObject, String alias) throws RequestObjectException;
 
     /**
      * To decrypt the request objected by using IS primary key
@@ -42,7 +41,7 @@ public interface RequestObjectValidator {
      * @param oAuth2Parameters oAuth2Parameters
      * @throws RequestObjectException
      */
-    public String decrypt(String requestObject, OAuth2Parameters oAuth2Parameters) throws RequestObjectException;
+    String decrypt(String requestObject, OAuth2Parameters oAuth2Parameters) throws RequestObjectException;
 
     /**
      * To validate request object
@@ -51,7 +50,7 @@ public interface RequestObjectValidator {
      * @param oAuth2Parameters oAuth2Parameters
      * @throws RequestObjectException
      */
-    public boolean validateRequestObject(RequestObject requestObject, OAuth2Parameters oAuth2Parameters)
+    boolean validateRequestObject(RequestObject requestObject, OAuth2Parameters oAuth2Parameters)
             throws RequestObjectException;
 
     /**
@@ -59,14 +58,14 @@ public interface RequestObjectValidator {
      * @param requestObject
      * @return
      */
-    public boolean isEncrypted(String requestObject);
+    boolean isEncrypted(String requestObject);
 
     /**
      * Check whether the Request Object is signed
      * @param requestObject
      * @return
      */
-    public boolean isSigned(RequestObject requestObject);
+    boolean isSigned(RequestObject requestObject);
 
 }
 

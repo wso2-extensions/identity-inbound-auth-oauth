@@ -92,7 +92,7 @@ public class OIDCRequestObjectFactory {
             requestObjectBuilder.buildRequestObject(oauthRequest.getParam(requestObjParam), oAuth2Parameters,
                     requestObject);
             if (log.isDebugEnabled()) {
-                log.info("Request Object extracted from the request: " + oauthRequest.getParam(requestObjParam));
+                log.debug("Request Object extracted from the request: " + oauthRequest.getParam(requestObjParam));
             }
         } else {
             throw new RequestObjectException(OAuth2ErrorCodes.SERVER_ERROR, error + requestObjParam);

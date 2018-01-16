@@ -30,7 +30,7 @@ public interface RequestObjectBuilder {
     /**
      * To build the request object
      */
-    public void buildRequestObject(String requestObject, OAuth2Parameters oAuth2Parameters, RequestObject
+    void buildRequestObject(String requestObject, OAuth2Parameters oAuth2Parameters, RequestObject
             requestObjectInstance) throws RequestObjectException;
 
 }

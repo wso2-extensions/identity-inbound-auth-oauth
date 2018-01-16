@@ -71,7 +71,9 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
             }
         } catch (java.text.ParseException e) {
             String errorMessage = "No Valid Request Object is found in the request.";
-            log.error(errorMessage);
+            if(log.isDebugEnabled()){
+                log.debug(errorMessage, e);
+            }
             throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST, errorMessage);
         }
     }

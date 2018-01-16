@@ -1,13 +1,13 @@
 /*
  * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
- * 
+ *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -136,8 +136,11 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
             }
 
         } catch (JOSEException | IdentityOAuth2Exception | java.text.ParseException e) {
-            throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST, "Failed to decrypt " +
-                    "request object.");
+            String errorMessage = "Failed to decrypt request object.";
+            if (log.isDebugEnabled()) {
+                log.debug(errorMessage, e);
+            }
+            throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST, errorMessage);
         }
     }
 
@@ -205,7 +208,7 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
      * @throws IdentityOAuth2Exception
      */
     public static String getTokenEpURL(String tenantDomain) throws RequestObjectException {
-        String audience = null;
+        String audience;
         IdentityProvider residentIdP;
         try {
             residentIdP = IdentityProviderManager.getInstance()
@@ -215,6 +218,9 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
                             IdentityApplicationConstants.Authenticator.OIDC.NAME);
             audience = IdentityApplicationManagementUtil.getProperty(oidcFedAuthn.getProperties(),
                     IdentityApplicationConstants.Authenticator.OIDC.OAUTH2_TOKEN_URL).getValue();
+            if (log.isDebugEnabled()) {
+                log.debug("Found Token Endpoint URL: " + audience);
+            }
         } catch (IdentityProviderManagementException e) {
             log.error("Error while loading OAuth2TokenEPUrl of the resident IDP of tenant:" + tenantDomain, e);
             throw new RequestObjectException(OAuth2ErrorCodes.SERVER_ERROR, "Server Error while validating audience " +
@@ -269,6 +275,7 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
 
     /**
      * Get the certificate which matches the given alias from client-truststore
+     *
      * @param alias
      * @return
      * @throws RequestObjectException
@@ -292,6 +299,7 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
 
     /**
      * Validate the signedJWT signature with given certificate
+     *
      * @param signedJWT
      * @param x509Certificate
      * @return
