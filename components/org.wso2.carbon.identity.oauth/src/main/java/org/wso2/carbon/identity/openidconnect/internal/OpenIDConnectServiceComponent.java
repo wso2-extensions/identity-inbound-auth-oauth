@@ -16,7 +16,6 @@
 
 package org.wso2.carbon.identity.openidconnect.internal;
 
-import edu.emory.mathcs.backport.java.util.Collections;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.osgi.framework.BundleContext;
@@ -31,6 +30,7 @@ import org.wso2.carbon.identity.openidconnect.ClaimProvider;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilter;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectSystemClaimImpl;
 
+import java.util.Collections;
 import java.util.Comparator;
 
 @Component(
@@ -69,8 +69,8 @@ public class OpenIDConnectServiceComponent {
                     "OpenIDConnectServiceComponent.");
         }
         OpenIDConnectServiceComponentHolder.getInstance().getOpenIDConnectClaimFilters().add(openIDConnectClaimFilter);
-        Collections.sort(OpenIDConnectServiceComponentHolder.getInstance().getOpenIDConnectClaimFilters(),
-                getOIDCClaimFilterComparator());
+        OpenIDConnectServiceComponentHolder.getInstance().getOpenIDConnectClaimFilters()
+                .sort(getOIDCClaimFilterComparator());
     }
 
     private Comparator<OpenIDConnectClaimFilter> getOIDCClaimFilterComparator() {
@@ -88,9 +88,10 @@ public class OpenIDConnectServiceComponent {
             log.debug("OpenIDConnectClaimFilter: " + openIDConnectClaimFilter.getClass().getName() + " unset in " +
                     "OpenIDConnectServiceComponent.");
         }
-        OpenIDConnectServiceComponentHolder.getInstance().getOpenIDConnectClaimFilters().remove(openIDConnectClaimFilter);
-        Collections.sort(OpenIDConnectServiceComponentHolder.getInstance().getOpenIDConnectClaimFilters(),
-                getOIDCClaimFilterComparator());
+        OpenIDConnectServiceComponentHolder.getInstance().getOpenIDConnectClaimFilters()
+                .remove(openIDConnectClaimFilter);
+        OpenIDConnectServiceComponentHolder.getInstance().getOpenIDConnectClaimFilters()
+                .sort(getOIDCClaimFilterComparator());
     }
 
     @Reference(
