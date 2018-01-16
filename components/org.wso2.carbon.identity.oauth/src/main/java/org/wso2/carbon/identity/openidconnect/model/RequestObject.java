@@ -196,7 +196,7 @@ public class RequestObject implements Serializable {
                     } else if (VALUES.equals(claimAttributes.getKey())) {
                         JSONArray jsonArray = (JSONArray) value;
                         if (jsonArray != null && jsonArray.size() > 0) {
-                            ArrayList<String> values = new ArrayList<>();
+                            List<String> values = new ArrayList<>();
                             for (Object aJsonArray : jsonArray) {
                                 values.add(aJsonArray.toString());
                             }
