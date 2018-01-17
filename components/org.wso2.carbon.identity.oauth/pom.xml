@@ -256,6 +256,7 @@
     </dependencies>
 
     <build>
+        <finalName>org.wso2.carbon.identity.oauth_5.5.168</finalName>
         <plugins>
             <plugin>
                 <groupId>org.apache.felix</groupId>
