@@ -192,4 +192,8 @@ public class CarbonOAuthTokenRequest extends OAuthTokenRequest {
     public HttpRequestHeader[] getHttpRequestHeaders() {
         return httpRequestHeaders;
     }
+
+    public HttpServletRequest getHttpRequest() {
+        return this.request;
+    }
 }

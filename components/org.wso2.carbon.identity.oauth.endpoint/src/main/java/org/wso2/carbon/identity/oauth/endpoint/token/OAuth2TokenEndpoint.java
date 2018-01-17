@@ -34,12 +34,12 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.OAuthClientException;
 import org.wso2.carbon.identity.oauth.endpoint.OAuthRequestWrapper;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidApplicationClientException;
-import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.TokenEndpointAccessDeniedException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.TokenEndpointBadRequestException;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth2.ResponseHeader;
+import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.model.CarbonOAuthTokenRequest;
@@ -74,16 +74,11 @@ public class OAuth2TokenEndpoint {
     @Produces("application/json")
     public Response issueAccessToken(@Context HttpServletRequest request,
                                      MultivaluedMap<String, String> paramMap)
-            throws OAuthSystemException, InvalidRequestParentException{
+            throws OAuthSystemException, InvalidRequestParentException {
 
         try {
             startSuperTenantFlow();
             validateRepeatedParams(request, paramMap);
-
-            if (isAuthorizationHeaderExists(request)) {
-                validateAuthorizationHeader(request, paramMap);
-            }
-
             HttpServletRequestWrapper httpRequest = new OAuthRequestWrapper(request, paramMap);
 
             CarbonOAuthTokenRequest oauthRequest = buildCarbonOAuthTokenRequest(httpRequest);
@@ -328,6 +323,11 @@ public class OAuth2TokenEndpoint {
             tokenReqDTO.setAssertion(oauthRequest.getAssertion());
         } else if (org.wso2.carbon.identity.oauth.common.GrantType.IWA_NTLM.toString().equals(grantType)) {
             tokenReqDTO.setWindowsToken(oauthRequest.getWindowsToken());
+        }
+        Object oauthClientAuthnContextObj = oauthRequest.getHttpRequest().getAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT);
+        if (oauthClientAuthnContextObj instanceof OAuthClientAuthnContext) {
+            tokenReqDTO.setoAuthClientAuthnContext((OAuthClientAuthnContext) oauthClientAuthnContextObj);
+            tokenReqDTO.setClientId(tokenReqDTO.getoAuthClientAuthnContext().getClientId());
         }
         return tokenReqDTO;
     }

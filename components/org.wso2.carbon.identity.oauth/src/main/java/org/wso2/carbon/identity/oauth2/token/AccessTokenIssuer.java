@@ -41,6 +41,7 @@ import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IDTokenValidationFailureException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.ResponseHeader;
+import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.token.handlers.clientauth.ClientAuthenticationHandler;
@@ -129,26 +130,26 @@ public class AccessTokenIssuer {
 
         triggerPreListeners(tokenReqDTO, tokReqMsgCtx, isRefreshRequest);
 
-        // If multiple client authentication methods have been used the authorization server must reject the request
-        int authenticatorHandlerIndex = -1;
-        for (int i = 0; i < clientAuthenticationHandlers.size(); i++) {
-            if (clientAuthenticationHandlers.get(i).canAuthenticate(tokReqMsgCtx)) {
-                if (authenticatorHandlerIndex > -1) {
-                    if (log.isDebugEnabled()) {
-                        log.debug("Multiple Client Authentication Methods used for client id : " +
-                                tokenReqDTO.getClientId());
-                    }
-                    tokenRespDTO = handleError(
-                            OAuthError.TokenResponse.INVALID_REQUEST,
-                            "Multiple Client Authentication Methods used for authenticating the client.",
-                            tokenReqDTO);
-                    setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
-                    triggerPostListeners(tokenReqDTO, tokenRespDTO, tokReqMsgCtx, isRefreshRequest);
-                    return tokenRespDTO;
-                }
-                authenticatorHandlerIndex = i;
-            }
+        OAuthClientAuthnContext oAuthClientAuthnContext = tokenReqDTO.getoAuthClientAuthnContext();
+
+        if(oAuthClientAuthnContext == null) {
+           oAuthClientAuthnContext = new OAuthClientAuthnContext();
+           oAuthClientAuthnContext.setAuthenticated(false);
+           oAuthClientAuthnContext.setErrorMessage("Client Authentication Failed");
+           oAuthClientAuthnContext.setErrorCode(OAuthError.TokenResponse.INVALID_REQUEST);
         }
+
+        // Will return an invalid request response if multiple authentication mechanisms are engaged irrespective of
+        // whether the grant type is confidential or not.
+        if (oAuthClientAuthnContext.getExecutedAuthenticators().size() > 1) {
+            tokenRespDTO = handleError(OAuth2ErrorCodes.INVALID_REQUEST, "The client MUST NOT use more than one " +
+                    "authentication method in each", tokenReqDTO);
+            setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
+            triggerPostListeners(tokenReqDTO, tokenRespDTO, tokReqMsgCtx, isRefreshRequest);
+            return tokenRespDTO;
+        }
+
+        boolean isAuthenticated = oAuthClientAuthnContext.isAuthenticated();
 
         if (authzGrantHandler == null) {
             String errorMsg = "Unsupported grant type : " + grantType + ", is used.";
@@ -162,28 +163,13 @@ public class AccessTokenIssuer {
             return tokenRespDTO;
         }
 
-        ClientAuthenticationHandler clientAuthHandler = null;
-        if (authenticatorHandlerIndex > -1) {
-            clientAuthHandler = clientAuthenticationHandlers.get(authenticatorHandlerIndex);
-        }
-        boolean isAuthenticated = false;
         // If the client is not confidential then there is no need to authenticate the client.
-        if (clientAuthHandler != null && authzGrantHandler.isConfidentialClient()) {
-            isAuthenticated = clientAuthHandler.authenticateClient(tokReqMsgCtx);
-        } else if (!authzGrantHandler.isConfidentialClient()) {
-            if (StringUtils.isEmpty(tokenReqDTO.getClientId())) {
-                if (clientAuthHandler != null) {
-                    tokenReqDTO.setClientId(clientAuthHandler.getClientId(tokReqMsgCtx));
-                }
-            }
+        if (!authzGrantHandler.isConfidentialClient() && StringUtils.isNotEmpty
+                (oAuthClientAuthnContext.getClientId())) {
             isAuthenticated = true;
         }
 
-        if (authenticatorHandlerIndex < 0 && authzGrantHandler.isConfidentialClient()) {
-            if (log.isDebugEnabled()) {
-                log.debug("Confidential client cannot be authenticated for client id : " +
-                        tokenReqDTO.getClientId());
-            }
+        if (!isAuthenticated && oAuthClientAuthnContext.getExecutedAuthenticators().size() == 0) {
             tokenRespDTO = handleError(
                     OAuthConstants.OAuthError.TokenResponse.UNSUPPORTED_CLIENT_AUTHENTICATION_METHOD,
                     "Unsupported Client Authentication Method!", tokenReqDTO);
@@ -191,13 +177,24 @@ public class AccessTokenIssuer {
             triggerPostListeners(tokenReqDTO, tokenRespDTO, tokReqMsgCtx, isRefreshRequest);
             return tokenRespDTO;
         }
-
         if (!isAuthenticated) {
+            tokenRespDTO = handleError(
+                    oAuthClientAuthnContext.getErrorCode(),
+                    oAuthClientAuthnContext.getErrorMessage(), tokenReqDTO);
+            setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
+            triggerPostListeners(tokenReqDTO, tokenRespDTO, tokReqMsgCtx, isRefreshRequest);
+            return tokenRespDTO;
+        }
+
+        if (oAuthClientAuthnContext.getExecutedAuthenticators().size() < 1 && authzGrantHandler.isConfidentialClient
+                ()) {
             if (log.isDebugEnabled()) {
-                log.debug("Client Authentication failed for client Id: " + tokenReqDTO.getClientId());
+                log.debug("Confidential client cannot be authenticated for client id : " +
+                        tokenReqDTO.getClientId());
             }
-            tokenRespDTO = handleError(OAuthError.TokenResponse.INVALID_CLIENT,
-                    "Client credentials are invalid.", tokenReqDTO);
+            tokenRespDTO = handleError(
+                    OAuthConstants.OAuthError.TokenResponse.UNSUPPORTED_CLIENT_AUTHENTICATION_METHOD,
+                    "Unsupported Client Authentication Method!", tokenReqDTO);
             setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
             triggerPostListeners(tokenReqDTO, tokenRespDTO, tokReqMsgCtx, isRefreshRequest);
             return tokenRespDTO;

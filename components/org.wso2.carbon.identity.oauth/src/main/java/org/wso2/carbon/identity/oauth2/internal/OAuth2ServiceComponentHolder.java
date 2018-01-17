@@ -19,7 +19,7 @@
 package org.wso2.carbon.identity.oauth2.internal;
 
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
-import org.wso2.carbon.identity.core.handler.MessageHandlerComparator;
+import org.wso2.carbon.identity.core.handler.HandlerComparator;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
 import org.wso2.carbon.registry.core.service.RegistryService;
 
@@ -37,7 +37,8 @@ public class OAuth2ServiceComponentHolder {
     private static boolean pkceEnabled = false;
     private static RegistryService registryService;
     private static List<OAuthClientAuthenticator> authenticationHandlers = new ArrayList<>();
-    private OAuth2ServiceComponentHolder(){
+
+    private OAuth2ServiceComponentHolder() {
 
     }
 
@@ -77,7 +78,7 @@ public class OAuth2ServiceComponentHolder {
 
     public static void addAuthenticationHandler(OAuthClientAuthenticator clientAuthenticator) {
         authenticationHandlers.add(clientAuthenticator);
-        sort(authenticationHandlers, new MessageHandlerComparator(null));
+        sort(authenticationHandlers, new HandlerComparator());
     }
 
     public static List<OAuthClientAuthenticator> getAuthenticationHandlers() {

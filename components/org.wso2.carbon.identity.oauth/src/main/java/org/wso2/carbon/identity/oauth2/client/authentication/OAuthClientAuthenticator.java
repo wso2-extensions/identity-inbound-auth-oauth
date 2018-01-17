@@ -18,21 +18,14 @@
 
 package org.wso2.carbon.identity.oauth2.client.authentication;
 
-import org.wso2.carbon.identity.core.handler.IdentityMessageHandler;
+import org.wso2.carbon.identity.core.handler.IdentityHandler;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.Map;
 
-public interface OAuthClientAuthenticator extends IdentityMessageHandler {
-
-    /**
-     * Get the position of execution in the sequence of execution of OAuth Client Authenticators.
-     *
-     * @return The execution order.
-     */
-    public int getExecutionOrder();
+public interface OAuthClientAuthenticator extends IdentityHandler {
 
     /**
      * Authenticate OAuth2 Client.
@@ -56,13 +49,6 @@ public interface OAuthClientAuthenticator extends IdentityMessageHandler {
      */
     public boolean canAuthenticate(HttpServletRequest request, Map<String, List> content, OAuthClientAuthnContext
             oAuthClientAuthnContext);
-
-    /**
-     * Get the name of the authenticator.
-     *
-     * @return The name of the authenticator.
-     */
-    public String getName();
 
     /**
      * Extracts the OAuth client id from the incoming request.

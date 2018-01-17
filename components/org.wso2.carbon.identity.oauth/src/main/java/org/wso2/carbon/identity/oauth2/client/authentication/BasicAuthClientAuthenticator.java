@@ -51,7 +51,7 @@ public class BasicAuthClientAuthenticator extends AbstractOAuthClientAuthenticat
      * @return Execution place within the order
      */
     @Override
-    public int getExecutionOrder() {
+    public int getPriority() {
         return 100;
     }
 
