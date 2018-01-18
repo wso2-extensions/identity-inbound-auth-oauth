@@ -31,12 +31,13 @@ import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientExcepti
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
-import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
-import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
+import org.wso2.carbon.identity.oauth2.authz.handlers.util.ResponseTypeHandlerUtil;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
+
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.OIDCConstants;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
@@ -46,98 +47,36 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.UUID;
 
+
+/**
+ * CodeResponseTypeHandler class generates an authorization code.
+ */
 public class CodeResponseTypeHandler extends AbstractResponseTypeHandler {
 
     private static Log log = LogFactory.getLog(CodeResponseTypeHandler.class);
 
+    /**
+     * Issue an authorization code and return the OAuth2AuthorizeRespDTO.
+     * First the respDTO must be initialized using initResponse method in abstract class.
+     * @param oauthAuthzMsgCtx
+     * @return
+     * @throws IdentityOAuth2Exception
+     */
     @Override
     public OAuth2AuthorizeRespDTO issue(OAuthAuthzReqMessageContext oauthAuthzMsgCtx)
             throws IdentityOAuth2Exception {
-        OAuth2AuthorizeRespDTO respDTO = new OAuth2AuthorizeRespDTO();
-        String authorizationCode;
-        String codeId;
-        OAuth2AuthorizeReqDTO authorizationReqDTO = oauthAuthzMsgCtx.getAuthorizationReqDTO();
+        AuthzCodeDO authorizationCode = ResponseTypeHandlerUtil.generateAuthorizationCode(oauthAuthzMsgCtx, cacheEnabled
+                , oauthIssuerImpl);
+        postIssueCode(authorizationCode.getAuthzCodeId(), oauthAuthzMsgCtx.getAuthorizationReqDTO().getSessionDataKey());
+        return buildResponseDTO(oauthAuthzMsgCtx, authorizationCode);
+    }
 
-        OAuthAppDO oAuthAppDO = AppInfoCache.getInstance().getValueFromCache(authorizationReqDTO.getConsumerKey());
-        if (oAuthAppDO == null) {
-            try {
-                oAuthAppDO = new OAuthAppDAO().getAppInformation(authorizationReqDTO.getConsumerKey());
-            } catch (InvalidOAuthClientException e) {
-                throw new IdentityOAuth2Exception("Invalid consumer application. Failed to issue Grant token.", e);
-            }
-            AppInfoCache.getInstance().addToCache(oAuthAppDO.getOauthConsumerKey(), oAuthAppDO);
-        }
-
-        Timestamp timestamp = new Timestamp(new Date().getTime());
-
-        long validityPeriod = OAuthServerConfiguration.getInstance()
-                .getAuthorizationCodeValidityPeriodInSeconds();
-
-        // if a VALID callback is set through the callback handler, use
-        // it instead of the default one
-        long callbackValidityPeriod = oauthAuthzMsgCtx.getValidityPeriod();
-
-        if ((callbackValidityPeriod != OAuthConstants.UNASSIGNED_VALIDITY_PERIOD)
-                && callbackValidityPeriod > 0) {
-            validityPeriod = callbackValidityPeriod;
-        }
-        // convert to milliseconds
-        validityPeriod = validityPeriod * 1000;
-        
-        // set the validity period. this is needed by downstream handlers.
-        // if this is set before - then this will override it by the calculated new value.
-        oauthAuthzMsgCtx.setValidityPeriod(validityPeriod);
-    
-        // set code issued time.this is needed by downstream handlers.
-        oauthAuthzMsgCtx.setCodeIssuedTime(timestamp.getTime());
-
-        if (authorizationReqDTO.getUser() != null && authorizationReqDTO.getUser().isFederatedUser()) {
-            //if a federated user, treat the tenant domain as similar to application domain.
-            authorizationReqDTO.getUser().setTenantDomain(authorizationReqDTO.getTenantDomain());
-        }
-
-        try {
-            authorizationCode = oauthIssuerImpl.authorizationCode(oauthAuthzMsgCtx);
-            codeId = UUID.randomUUID().toString();
-        } catch (OAuthSystemException e) {
-            throw new IdentityOAuth2Exception(e.getMessage(), e);
-        }
-
-        AuthzCodeDO authzCodeDO = new AuthzCodeDO(authorizationReqDTO.getUser(),
-                oauthAuthzMsgCtx.getApprovedScope(),timestamp, validityPeriod, authorizationReqDTO.getCallbackUrl(),
-                authorizationReqDTO.getConsumerKey(), authorizationCode, codeId,
-                authorizationReqDTO.getPkceCodeChallenge(), authorizationReqDTO.getPkceCodeChallengeMethod());
-
-        OAuthTokenPersistenceFactory.getInstance().getAuthorizationCodeDAO()
-                .insertAuthorizationCode(authorizationCode, authorizationReqDTO.getConsumerKey(),
-                        authorizationReqDTO.getCallbackUrl(), authzCodeDO);
-
-        if (cacheEnabled) {
-            // Cache the authz Code, here we prepend the client_key to avoid collisions with
-            // AccessTokenDO instances. In database level, these are in two databases. But access
-            // tokens and authorization codes are in a single cache.
-            String cacheKeyString = OAuth2Util.buildCacheKeyStringForAuthzCode(
-                    authorizationReqDTO.getConsumerKey(), authorizationCode);
-            OAuthCache.getInstance().addToCache(new OAuthCacheKey(cacheKeyString), authzCodeDO);
-            if (log.isDebugEnabled()) {
-                log.debug("Authorization Code info was added to the cache for client id : " +
-                        authorizationReqDTO.getConsumerKey());
-            }
-        }
-
-        if (log.isDebugEnabled()) {
-            log.debug("Issued Authorization Code to user : " + authorizationReqDTO.getUser() +
-                    ", Using the redirect url : " + authorizationReqDTO.getCallbackUrl() +
-                    ", Scope : " + OAuth2Util.buildScopeString(oauthAuthzMsgCtx.getApprovedScope()) +
-                    ", validity period : " + validityPeriod);
-        }
-
-        respDTO.setCallbackURI(authorizationReqDTO.getCallbackUrl());
-        respDTO.setAuthorizationCode(authorizationCode);
-        respDTO.setCodeId(codeId);
-        //This is used to trigger a notification to update the request object reference table with the issued code.
-        postIssueCode(codeId, authorizationReqDTO.getSessionDataKey());
-        return respDTO;
+    private OAuth2AuthorizeRespDTO buildResponseDTO(OAuthAuthzReqMessageContext oauthAuthzMsgCtx, AuthzCodeDO authzCodeDO)
+            throws IdentityOAuth2Exception {
+        // Initializing the response.
+        OAuth2AuthorizeRespDTO respDTO = initResponse(oauthAuthzMsgCtx);
+        // Add authorization code details to the response.
+        return ResponseTypeHandlerUtil.buildAuthorizationCodeResponseDTO(respDTO, authzCodeDO);
     }
 
     private void postIssueCode(String codeId, String sessionDataKey) throws IdentityOAuth2Exception {

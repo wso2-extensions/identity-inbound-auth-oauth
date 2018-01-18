@@ -16,26 +16,21 @@
 
 package org.wso2.carbon.identity.openidconnect.internal;
 
-import edu.emory.mathcs.backport.java.util.Collections;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.osgi.framework.ServiceRegistration;
 import org.osgi.service.component.ComponentContext;
-import org.osgi.service.component.annotations.Activate;
+import org.osgi.framework.BundleContext;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
-import org.wso2.carbon.identity.oauth.cache.OAuthCache;
-import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
-import org.wso2.carbon.identity.oauth.listener.IdentityOathEventListener;
 import org.wso2.carbon.identity.openidconnect.ClaimProvider;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilter;
 import org.wso2.carbon.identity.openidconnect.RequestObjectService;
 import org.wso2.carbon.identity.openidconnect.handlers.RequestObjectPersistanceHandler;
-import org.wso2.carbon.user.core.listener.UserOperationEventListener;
+import org.wso2.carbon.identity.openidconnect.OpenIDConnectSystemClaimImpl;
 
 import java.util.Comparator;
 
@@ -46,6 +41,16 @@ import java.util.Comparator;
 public class OpenIDConnectServiceComponent {
 
     private Log log = LogFactory.getLog(OpenIDConnectServiceComponent.class);
+    private BundleContext bundleContext;
+
+    protected void activate(ComponentContext context) {
+        try {
+            bundleContext = context.getBundleContext();
+            bundleContext.registerService(ClaimProvider.class.getName(), new OpenIDConnectSystemClaimImpl(), null);
+        } catch (Throwable e) {
+        log.error("Error while activating OpenIDConnectServiceComponent.", e);
+        }
+    }
 
     /**
      * Set {@link OpenIDConnectClaimFilter} implementation
@@ -65,8 +70,8 @@ public class OpenIDConnectServiceComponent {
                     "OpenIDConnectServiceComponent.");
         }
         OpenIDConnectServiceComponentHolder.getInstance().getOpenIDConnectClaimFilters().add(openIDConnectClaimFilter);
-        Collections.sort(OpenIDConnectServiceComponentHolder.getInstance().getOpenIDConnectClaimFilters(),
-                getOIDCClaimFilterComparator());
+        OpenIDConnectServiceComponentHolder.getInstance().getOpenIDConnectClaimFilters()
+                .sort(getOIDCClaimFilterComparator());
     }
 
     private Comparator<OpenIDConnectClaimFilter> getOIDCClaimFilterComparator() {
@@ -84,9 +89,10 @@ public class OpenIDConnectServiceComponent {
             log.debug("OpenIDConnectClaimFilter: " + openIDConnectClaimFilter.getClass().getName() + " unset in " +
                     "OpenIDConnectServiceComponent.");
         }
-        OpenIDConnectServiceComponentHolder.getInstance().getOpenIDConnectClaimFilters().remove(openIDConnectClaimFilter);
-        Collections.sort(OpenIDConnectServiceComponentHolder.getInstance().getOpenIDConnectClaimFilters(),
-                getOIDCClaimFilterComparator());
+        OpenIDConnectServiceComponentHolder.getInstance().getOpenIDConnectClaimFilters()
+                .remove(openIDConnectClaimFilter);
+        OpenIDConnectServiceComponentHolder.getInstance().getOpenIDConnectClaimFilters()
+                .sort(getOIDCClaimFilterComparator());
     }
 
     @Reference(

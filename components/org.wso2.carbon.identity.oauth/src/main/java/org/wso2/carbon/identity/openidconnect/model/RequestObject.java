@@ -37,26 +37,22 @@ public class RequestObject implements Serializable {
 
     private static final long serialVersionUID = 7180827153818376043L;
     public static final String CLAIMS = "claims";
-    public static final String USERINFO = "userinfo";
-    public static final String ID_TOKEN = "id_token";
     public static final String ESSENTIAL = "essential";
     public static final String VALUE = "value";
     public static final String VALUES = "values";
     private boolean isSignatureValid;
     private boolean isSigned;
-    private String signatureAlgorythm;
 
     private SignedJWT signedJWT;
     private PlainJWT plainJWT;
     ReadOnlyJWTClaimsSet claimsSet;
-    ReadOnlyJWSHeader jwsHeader;
 
     /**
      * To store the claims requestor and the the requested claim list. claim requestor can be either userinfo or
      * id_token or any custom member. Sample set of values that can be exist in this map is as below.
      * Map<"id_token", ("username, firstname, lastname")>
      */
-    private Map<String, List<RequestedClaim>> claimsforRequestParameter = new HashMap<>();
+    private Map<String, List<RequestedClaim>> requestedClaims = new HashMap<>();
 
     public boolean isSignatureValid() {
         return isSignatureValid;
@@ -93,24 +89,12 @@ public class RequestObject implements Serializable {
         }
     }
 
-    public ReadOnlyJWSHeader getJwsHeader() {
-        return jwsHeader;
+    public Map<String, List<RequestedClaim>> getRequestedClaims() {
+        return requestedClaims;
     }
 
-    public String getSignatureAlgorythm() {
-        return signatureAlgorythm;
-    }
-
-    public void setSignatureAlgorythm(String signatureAlgorythm) {
-        this.signatureAlgorythm = signatureAlgorythm;
-    }
-
-    public Map<String, List<RequestedClaim>> getClaimsforRequestParameter() {
-        return claimsforRequestParameter;
-    }
-
-    public void setClaimsforRequestParameter(Map<String, List<RequestedClaim>> claimsforRequestParameter) {
-        this.claimsforRequestParameter = claimsforRequestParameter;
+    public void setRequestedClaims(Map<String, List<RequestedClaim>> claimsforRequestParameter) {
+        this.requestedClaims = claimsforRequestParameter;
     }
 
     public SignedJWT getSignedJWT() {
@@ -172,7 +156,7 @@ public class RequestObject implements Serializable {
                 }
                 claimsforClaimRequestor.put(requesterClaimsMap.getKey(), requestedClaimsList);
             }
-            this.setClaimsforRequestParameter(claimsforClaimRequestor);
+            this.setRequestedClaims(claimsforClaimRequestor);
         }
     }
 
@@ -196,7 +180,7 @@ public class RequestObject implements Serializable {
                     } else if (VALUES.equals(claimAttributes.getKey())) {
                         JSONArray jsonArray = (JSONArray) value;
                         if (jsonArray != null && jsonArray.size() > 0) {
-                            ArrayList<String> values = new ArrayList<>();
+                            List<String> values = new ArrayList<>();
                             for (Object aJsonArray : jsonArray) {
                                 values.add(aJsonArray.toString());
                             }
@@ -235,5 +219,4 @@ public class RequestObject implements Serializable {
     public Object getClaim(String claimName) {
         return claimsSet.getClaim(claimName);
     }
-
 }

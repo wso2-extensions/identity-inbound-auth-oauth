@@ -968,7 +968,7 @@ public class OAuth2AuthzEndpoint {
         try {
             if (EndpointUtil.getRequestObjectService() != null) {
                 EndpointUtil.getRequestObjectService().addRequestObject(params.getClientId(), null, null, sessionDataKey,
-                        new ArrayList(getRequestObject(oauthRequest, params).getClaimsforRequestParameter().values()));
+                        new ArrayList(getRequestObject(oauthRequest, params).getRequestedClaims().values()));
             }
         } catch (RequestObjectException e) {
             throw new RequestObjectException(e.getErrorMessage());
