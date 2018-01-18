@@ -53,6 +53,16 @@ public class OAuth2Parameters implements Serializable {
     private String displayName;
     private RequestObject requestObject;
 
+    public String getSessionDataKey() {
+        return sessionDataKey;
+    }
+
+    public void setSessionDataKey(String sessionDataKey) {
+        this.sessionDataKey = sessionDataKey;
+    }
+
+    private String sessionDataKey;
+
     public long getMaxAge() {
         return maxAge;
     }

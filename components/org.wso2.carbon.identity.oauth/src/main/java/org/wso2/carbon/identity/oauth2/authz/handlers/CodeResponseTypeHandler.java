@@ -21,6 +21,8 @@ package org.wso2.carbon.identity.oauth2.authz.handlers;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
+import org.wso2.carbon.identity.event.IdentityEventException;
+import org.wso2.carbon.identity.event.event.Event;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
@@ -36,9 +38,12 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.openidconnect.OIDCConstants;
+import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 
 import java.sql.Timestamp;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.UUID;
 
 public class CodeResponseTypeHandler extends AbstractResponseTypeHandler {
@@ -130,8 +135,28 @@ public class CodeResponseTypeHandler extends AbstractResponseTypeHandler {
         respDTO.setCallbackURI(authorizationReqDTO.getCallbackUrl());
         respDTO.setAuthorizationCode(authorizationCode);
         respDTO.setCodeId(codeId);
+        //This is used to trigger a notification to update the request object reference table with the issued code.
+        postIssueCode(codeId, authorizationReqDTO.getSessionDataKey());
         return respDTO;
     }
 
+    private void postIssueCode(String codeId, String sessionDataKey) throws IdentityOAuth2Exception {
 
+        String eventName = OIDCConstants.Event.POST_ISSUE_CODE;
+        HashMap<String, Object> properties = new HashMap<>();
+        properties.put(OIDCConstants.Event.CODE_ID, codeId);
+        properties.put(OIDCConstants.Event.SESSION_DATA_KEY, sessionDataKey);
+        Event requestObjectPersistanceEvent = new Event(eventName, properties);
+        try {
+            if (OpenIDConnectServiceComponentHolder.getInstance().getIdentityEventService() != null) {
+                OpenIDConnectServiceComponentHolder.getInstance().getIdentityEventService().handleEvent
+                        (requestObjectPersistanceEvent);
+                if (log.isDebugEnabled()) {
+                    log.debug("The event " + eventName + " triggered after the code is issued.");
+                }
+            }
+        } catch (IdentityEventException e) {
+            throw new IdentityOAuth2Exception("Error while invoking the request object persistance handler.");
+        }
+    }
 }

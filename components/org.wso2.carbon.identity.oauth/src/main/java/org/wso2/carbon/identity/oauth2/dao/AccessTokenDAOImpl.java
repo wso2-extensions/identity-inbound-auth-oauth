@@ -40,6 +40,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.openidconnect.util.OIDCUtil;
 
 import java.sql.Connection;
 import java.sql.DataTruncation;
@@ -797,6 +798,12 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             prepStmt.setString(2, tokenStateId);
             prepStmt.setString(3, tokenId);
             prepStmt.executeUpdate();
+            //if the access token state is updated to inactive or expired request object which is persisted against the code
+            // should be removed..
+            if(OAuthConstants.TokenStates.TOKEN_STATE_EXPIRED.equals(tokenState) || OAuthConstants.TokenStates.
+                    TOKEN_STATE_INACTIVE.equals(tokenState) ){
+                OIDCUtil.postRevokeAccessToken(tokenId, null);
+            }
         } catch (SQLException e) {
             IdentityDatabaseUtil.rollBack(connection);
             throw new IdentityOAuth2Exception("Error while updating Access Token with ID : " +
@@ -853,6 +860,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 }
                 ps.executeBatch();
                 connection.commit();
+                //to revoke request objects which have persisted against the access token.
+                OIDCUtil.postRevokeAccessToken(null, Arrays.asList(tokens));
             } catch (SQLException e) {
                 IdentityDatabaseUtil.rollBack(connection);
                 throw new IdentityOAuth2Exception("Error occurred while revoking Access Tokens : " +
@@ -871,6 +880,9 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 ps.setString(2, UUID.randomUUID().toString());
                 ps.setString(3, getPersistenceProcessor().getProcessedAccessTokenIdentifier(tokens[0]));
                 ps.executeUpdate();
+
+                //To revoke request objects which have persisted against the access token.
+                OIDCUtil.postRevokeAccessToken(null, Arrays.asList(tokens));
             } catch (SQLException e) {
                 //IdentityDatabaseUtil.rollBack(connection);
                 throw new IdentityOAuth2Exception("Error occurred while revoking Access Token : " +
@@ -883,7 +895,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
 
     @Override
     public void revokeAccessTokensIndividually(String[] tokens) throws IdentityOAuth2Exception {
-
+        List<String> accessTokenId = new ArrayList<>();
         if (log.isDebugEnabled()) {
             if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
                 StringBuilder stringBuilder = new StringBuilder();
@@ -911,9 +923,14 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 if (log.isDebugEnabled()) {
                     log.debug("Number of rows being updated : " + count);
                 }
+                accessTokenId.add(getTokenIdByAccessToken(token));
             }
 
             connection.commit();
+            //To revoke request objects which have persisted against the access token.
+            if (accessTokenId.size() > 0) {
+                OIDCUtil.postRevokeAccessToken(null, accessTokenId);
+            }
         } catch (SQLException e) {
             IdentityDatabaseUtil.rollBack(connection);
             throw new IdentityOAuth2Exception("Error occurred while revoking Access Token : " +
@@ -949,6 +966,9 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 log.debug("Number of rows being updated : " + count);
             }
             connection.commit();
+
+            //to revoke the tokens from Request Object table.
+            OIDCUtil.postRevokeAccessToken(tokenId, null);
         } catch (SQLException e) {
             IdentityDatabaseUtil.rollBack(connection);
             throw new IdentityOAuth2Exception("Error occurred while revoking Access Token with ID : " + tokenId, e);

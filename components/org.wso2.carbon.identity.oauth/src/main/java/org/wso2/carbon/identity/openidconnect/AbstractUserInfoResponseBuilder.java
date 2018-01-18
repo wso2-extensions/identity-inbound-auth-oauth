@@ -16,7 +16,6 @@
 
 package org.wso2.carbon.identity.openidconnect;
 
-import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -30,12 +29,12 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
-import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
 import org.wso2.carbon.identity.oauth.user.UserInfoResponseBuilder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
@@ -79,12 +78,30 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
         filteredUserClaims.putAll(essentialClaims);
 
         //Handle essential claims of the request object
-        if (getRequestObject(tokenResponse) != null) {
-            filteredUserClaims.putAll(getUserClaimsFilteredByEssentialClaims(userClaims, USERINFO,
-                    getRequestObject(tokenResponse)));
-        }
+        filterEssentialClaimsFromRequestObject(tokenResponse, userClaims, filteredUserClaims);
 
         return buildResponse(tokenResponse, spTenantDomain, filteredUserClaims);
+    }
+
+    private void filterEssentialClaimsFromRequestObject(OAuth2TokenValidationResponseDTO tokenResponse,
+                                                        Map<String, Object> userClaims,
+                                                        Map<String, Object> filteredUserClaims)
+            throws UserInfoEndpointException {
+
+        List<String> essentialClaimsFromRequestObject;
+        try {
+            essentialClaimsFromRequestObject = OpenIDConnectServiceComponentHolder.getRequestObjectService().
+                    getEssentialClaims(getAccessToken(tokenResponse), null);
+        } catch (RequestObjectException e) {
+            throw new UserInfoEndpointException(e.getErrorMessage());
+        }
+        for (String essentialClaim : essentialClaimsFromRequestObject) {
+            filteredUserClaims.put(essentialClaim, userClaims.get(essentialClaim));
+            if (log.isDebugEnabled()) {
+                log.debug("The " + essentialClaim + " is marked as an essentialClaim for userinfo in the OIDC Request" +
+                        " Object.");
+            }
+        }
     }
 
     /**
@@ -148,23 +165,6 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
         return OpenIDConnectServiceComponentHolder.getInstance()
                 .getHighestPriorityOpenIDConnectClaimFilter()
                 .getClaimsFilteredByOIDCScopes(userClaims, requestedScopes, clientId, tenantDomain);
-    }
-
-    /**
-     * Filter user claims based on the essential claims of the request object which comes with the oidc authz request.
-     *
-     * @param type             id_token or userinfo
-     * @param requestObject     request object
-     * @param userClaims        Map of user claims
-     * @return essential claims
-     */
-    protected Map<String, Object> getUserClaimsFilteredByEssentialClaims(Map<String, Object> userClaims,
-                                                                String type,
-                                                                RequestObject requestObject) {
-
-        return OpenIDConnectServiceComponentHolder.getInstance()
-                .getHighestPriorityOpenIDConnectClaimFilter().getClaimsFilteredByEssentialClaims(userClaims, type,
-                        requestObject);
     }
 
     protected Map<String, Object> getEssentialClaims(OAuth2TokenValidationResponseDTO tokenResponse,

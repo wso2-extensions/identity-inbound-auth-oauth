@@ -28,6 +28,8 @@ import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.event.IdentityEventException;
+import org.wso2.carbon.identity.event.event.Event;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
@@ -48,6 +50,8 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.IDTokenBuilder;
+import org.wso2.carbon.identity.openidconnect.OIDCConstants;
+import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 
 import java.sql.Timestamp;
 import java.util.Date;
@@ -123,6 +127,7 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
         }
 
         String refreshToken = null;
+        String tokenId;
         Timestamp refreshTokenIssuedTime = null;
         long refreshTokenValidityPeriodInMillis = 0;
 
@@ -369,7 +374,7 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
             newAccessTokenDO.setTokenState(OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
             newAccessTokenDO.setGrantType(grantType);
 
-            String tokenId = UUID.randomUUID().toString();
+            tokenId = UUID.randomUUID().toString();
             newAccessTokenDO.setTokenId(tokenId);
             oauthAuthzMsgCtx.addProperty(OAuth2Util.ACCESS_TOKEN_DO, newAccessTokenDO);
 
@@ -434,6 +439,8 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
         }
 
         triggerPostListeners(oauthAuthzMsgCtx, tokenDO, respDTO);
+        //Trigger this to notify to update the request object reference table with the issued access token.
+        postIssueAccessToken(tokenId,authorizationReqDTO.getSessionDataKey());
         return respDTO;
     }
 
@@ -537,6 +544,27 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
             }
             AuthorizationGrantCache.getInstance().addToCacheByToken(authorizationGrantCacheKey,
                     authorizationGrantCacheEntry);
+        }
+    }
+
+    private void postIssueAccessToken(String tokenId, String sessionDataKey) throws
+            IdentityOAuth2Exception {
+
+        String eventName = OIDCConstants.Event.POST_ISSUE_ACCESS_TOKEN;
+        HashMap<String, Object> properties = new HashMap<>();
+        properties.put(OIDCConstants.Event.TOKEN_ID, tokenId);
+        properties.put(OIDCConstants.Event.SESSION_DATA_KEY, sessionDataKey);
+        Event requestObjectPersistanceEvent = new Event(eventName, properties);
+        try {
+            if (OpenIDConnectServiceComponentHolder.getInstance().getIdentityEventService() != null) {
+                OpenIDConnectServiceComponentHolder.getInstance().getIdentityEventService().handleEvent
+                        (requestObjectPersistanceEvent);
+                if (log.isDebugEnabled()) {
+                    log.debug("The event " + eventName + " triggered after the access token is issued.");
+                }
+            }
+        } catch (IdentityEventException e) {
+            throw new IdentityOAuth2Exception("Error while invoking the request object persistance handler.");
         }
     }
 }
