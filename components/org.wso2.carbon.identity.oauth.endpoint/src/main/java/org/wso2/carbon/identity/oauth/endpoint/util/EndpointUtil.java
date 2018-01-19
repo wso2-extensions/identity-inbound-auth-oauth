@@ -121,7 +121,7 @@ public class EndpointUtil {
             return (RequestObjectService) PrivilegedCarbonContext.getThreadLocalCarbonContext().getOSGiService
                     (RequestObjectService.class, null);
         } else {
-            return null
+            return null;
         }
     }
 
