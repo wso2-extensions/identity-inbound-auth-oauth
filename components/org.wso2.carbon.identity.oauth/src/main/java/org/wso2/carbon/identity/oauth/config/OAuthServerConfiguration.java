@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth.config;
 
 import org.apache.axiom.om.OMElement;
 import org.apache.axis2.util.JavaUtils;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -694,10 +695,10 @@ public class OAuthServerConfiguration {
     }
 
     private void parseRequestObjectConfig(OMElement requestObjectBuildersElem) {
-
         if (requestObjectBuildersElem != null) {
             Iterator<OMElement> iterator = requestObjectBuildersElem
                     .getChildrenWithName(getQNameWithIdentityNS(ConfigElements.REQUEST_OBJECT_BUILDER));
+
             while (iterator.hasNext()) {
                 OMElement requestObjectBuildersElement = iterator.next();
                 OMElement builderNameElement = requestObjectBuildersElement
@@ -715,7 +716,19 @@ public class OAuthServerConfiguration {
                 }
                 requestObjectBuilderClassNames.put(builderName, requestObjectImplClass);
             }
-        } else {
+        }
+        setDefaultRequestObjectBuilderClasses();
+        if (log.isDebugEnabled()) {
+            for (Map.Entry entry : requestObjectBuilderClassNames.entrySet()) {
+                String builderName = entry.getKey().toString();
+                String requestObjectBuilderImplClass = entry.getValue().toString();
+                log.debug(builderName + " is associated with " + requestObjectBuilderImplClass);
+            }
+        }
+    }
+
+    private void setDefaultRequestObjectBuilderClasses() {
+        if (MapUtils.isEmpty(requestObjectBuilderClassNames)) {
             // if this element is not present, assume the default case.
             log.info("\'RequestObjectBuilders\' element not configured in identity.xml. " +
                     "Therefore instantiating default request object builders");
@@ -723,14 +736,6 @@ public class OAuthServerConfiguration {
             Map<String, String> defaultRequestObjectBuilders = new HashMap<>();
             defaultRequestObjectBuilders.put(REQUEST_PARAM_VALUE_BUILDER, REQUEST_PARAM_VALUE_BUILDER_CLASS);
             requestObjectBuilderClassNames.putAll(defaultRequestObjectBuilders);
-        }
-
-        if (log.isDebugEnabled()) {
-            for (Map.Entry entry : requestObjectBuilderClassNames.entrySet()) {
-                String builderName = entry.getKey().toString();
-                String requestObjectBuilderImplClass = entry.getValue().toString();
-                log.debug(builderName + " is associated with " + requestObjectBuilderImplClass);
-            }
         }
     }
 
