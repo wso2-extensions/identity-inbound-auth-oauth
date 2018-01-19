@@ -36,7 +36,7 @@ public interface OAuthClientAuthenticator extends IdentityHandler {
      * @return Client authentication status. True if the client authentication is success. Else false.
      * @throws OAuthClientAuthnException
      */
-    public boolean authenticateClient(HttpServletRequest request, Map<String, List> content, OAuthClientAuthnContext
+    boolean authenticateClient(HttpServletRequest request, Map<String, List> content, OAuthClientAuthnContext
             oAuthClientAuthnContext) throws OAuthClientAuthnException;
 
     /**
@@ -47,7 +47,7 @@ public interface OAuthClientAuthenticator extends IdentityHandler {
      * @param oAuthClientAuthnContext OAuth Client Authentication context.
      * @return Whether the OAuth client can be authenticated or not by this authenticator.
      */
-    public boolean canAuthenticate(HttpServletRequest request, Map<String, List> content, OAuthClientAuthnContext
+    boolean canAuthenticate(HttpServletRequest request, Map<String, List> content, OAuthClientAuthnContext
             oAuthClientAuthnContext);
 
     /**
@@ -59,6 +59,6 @@ public interface OAuthClientAuthenticator extends IdentityHandler {
      * @return Client ID
      * @throws OAuthClientAuthnException
      */
-    public String getClientId(HttpServletRequest request, Map<String, List> content, OAuthClientAuthnContext
+    String getClientId(HttpServletRequest request, Map<String, List> content, OAuthClientAuthnContext
             oAuthClientAuthnContext) throws OAuthClientAuthnException;
 }

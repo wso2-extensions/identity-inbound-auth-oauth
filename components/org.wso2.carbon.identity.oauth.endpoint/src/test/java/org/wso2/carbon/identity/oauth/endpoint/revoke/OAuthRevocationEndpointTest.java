@@ -30,6 +30,7 @@ import org.testng.annotations.BeforeTest;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
+import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -39,6 +40,7 @@ import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.ResponseHeader;
+import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationResponseDTO;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
@@ -114,20 +116,22 @@ public class OAuthRevocationEndpointTest extends PowerMockIdentityBaseTest {
         return new Object[][] {
                 // Client id and secret in both header and request params.
                 // Will return unauthorized error since multiple methods of authentication
-                { AUTHORIZATION_HEADER, true, ACCESS_TOKEN, TOKEN_HINT, APP_REDIRECT_URL, CLIENT_ID_VALUE, SECRET, null,
-                        null, null, HttpServletResponse.SC_UNAUTHORIZED, OAuth2ErrorCodes.INVALID_CLIENT},
+                { AUTHORIZATION_HEADER, true, ACCESS_TOKEN, TOKEN_HINT, APP_REDIRECT_URL, CLIENT_ID_VALUE, SECRET,
+                        OAuth2ErrorCodes.INVALID_CLIENT, null, null, HttpServletResponse.SC_UNAUTHORIZED,
+                        OAuth2ErrorCodes.INVALID_CLIENT},
 
                 // Client id and secret in both header and request params.
                 // Will return unauthorized error since multiple methods of authentication
-                { AUTHORIZATION_HEADER, false, ACCESS_TOKEN, TOKEN_HINT, null, CLIENT_ID_VALUE, SECRET, null, null,
-                        null, HttpServletResponse.SC_UNAUTHORIZED, OAuth2ErrorCodes.INVALID_CLIENT},
+                { AUTHORIZATION_HEADER, false, ACCESS_TOKEN, TOKEN_HINT, null, CLIENT_ID_VALUE, SECRET,
+                        OAuth2ErrorCodes.INVALID_CLIENT, null, null, HttpServletResponse.SC_UNAUTHORIZED,
+                        OAuth2ErrorCodes.INVALID_CLIENT},
 
                 // Invalid authz header. Will return unauthorized error response.
-                { inCorrectAuthzHeader, true, ACCESS_TOKEN, null, "", null, null, null, null, null,
-                        HttpServletResponse.SC_UNAUTHORIZED, OAuth2ErrorCodes.INVALID_CLIENT},
+                { inCorrectAuthzHeader, true, ACCESS_TOKEN, null, "", null, null, OAuth2ErrorCodes.INVALID_CLIENT,
+                        null, null, HttpServletResponse.SC_UNAUTHORIZED, OAuth2ErrorCodes.INVALID_CLIENT},
 
                 // Will return bad request when the tocken is empty in the request
-                { AUTHORIZATION_HEADER, true, null, null, "", null, null, null, null, null,
+                { AUTHORIZATION_HEADER, true, null, null, "", null, null, OAuth2ErrorCodes.INVALID_CLIENT, null, null,
                         HttpServletResponse.SC_BAD_REQUEST, OAuth2ErrorCodes.INVALID_REQUEST},
 
                 // Token not found in the request (callback is empty). Will return bad request error response.
@@ -194,12 +198,6 @@ public class OAuthRevocationEndpointTest extends PowerMockIdentityBaseTest {
             throws Exception {
         MultivaluedMap<String, String> parameterMap = new MultivaluedHashMap<String, String>();
         ResponseHeader[] responseHeaders = (ResponseHeader[]) headerObj;
-        if (clientId != null) {
-            parameterMap.add(OAuth.OAUTH_CLIENT_ID, clientId);
-        }
-        if (secret != null) {
-            parameterMap.add(OAuth.OAUTH_CLIENT_SECRET, secret);
-        }
         parameterMap.add(TOKEN_PARAM, token);
         parameterMap.add(TOKEN_TYPE_HINT_PARAM, tokenHint);
         parameterMap.add(CALLBACK_PARAM, callback);

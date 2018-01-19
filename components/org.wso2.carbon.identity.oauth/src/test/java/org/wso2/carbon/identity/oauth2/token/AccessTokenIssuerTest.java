@@ -258,7 +258,9 @@ public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
 
         OAuth2AccessTokenReqDTO reqDTO = new OAuth2AccessTokenReqDTO();
         reqDTO.setGrantType(DUMMY_GRANT_TYPE);
-        reqDTO.setClientId(SOME_CLIENT_ID);
+        OAuthClientAuthnContext oAuthClientAuthnContext = new OAuthClientAuthnContext();
+        oAuthClientAuthnContext.setAuthenticated(true);
+        reqDTO.setoAuthClientAuthnContext(oAuthClientAuthnContext);
 
         OAuth2AccessTokenRespDTO tokenRespDTO = AccessTokenIssuer.getInstance().issue(reqDTO);
         assertNotNull(tokenRespDTO);

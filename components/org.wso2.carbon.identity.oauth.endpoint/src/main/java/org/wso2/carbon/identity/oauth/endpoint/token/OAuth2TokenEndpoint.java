@@ -82,6 +82,7 @@ public class OAuth2TokenEndpoint {
             HttpServletRequestWrapper httpRequest = new OAuthRequestWrapper(request, paramMap);
 
             CarbonOAuthTokenRequest oauthRequest = buildCarbonOAuthTokenRequest(httpRequest);
+            validateOAuthApplication(oauthRequest.getoAuthClientAuthnContext());
             OAuth2AccessTokenRespDTO oauth2AccessTokenResp = issueAccessToken(oauthRequest);
 
             if (oauth2AccessTokenResp.getErrorMsg() != null) {
@@ -132,16 +133,10 @@ public class OAuth2TokenEndpoint {
         }
     }
 
-    private void validateOAuthApplication(String consumerKey) throws InvalidApplicationClientException,
-            TokenEndpointBadRequestException {
+    private void validateOAuthApplication(OAuthClientAuthnContext oAuthClientAuthnContext) throws InvalidApplicationClientException, TokenEndpointBadRequestException {
 
-        if (isNotBlank(consumerKey)) {
-            validateOauthApplication(consumerKey);
-        } else {
-            if (log.isDebugEnabled()) {
-                log.debug("Missing parameters on the request: client_id");
-            }
-            throw new TokenEndpointBadRequestException("Missing parameters on the request: client_id");
+        if (isNotBlank(oAuthClientAuthnContext.getClientId())) {
+            validateOauthApplication(oAuthClientAuthnContext.getClientId());
         }
     }
 
@@ -183,7 +178,7 @@ public class OAuth2TokenEndpoint {
 
         // if there is an auth failure, HTTP 401 Status Code should be sent back to the client.
         if (OAuth2ErrorCodes.INVALID_CLIENT.equals(oauth2AccessTokenResp.getErrorCode())) {
-            return handleBasicAuthFailure();
+            return handleBasicAuthFailure(oauth2AccessTokenResp.getErrorCode(), oauth2AccessTokenResp.getErrorMsg());
         } else if (SQL_ERROR.equals(oauth2AccessTokenResp.getErrorCode())) {
             return handleSQLError();
         } else if (OAuth2ErrorCodes.SERVER_ERROR.equals(oauth2AccessTokenResp.getErrorCode())) {
@@ -260,7 +255,7 @@ public class OAuth2TokenEndpoint {
         return request.getHeader(OAuthConstants.HTTP_REQ_HEADER_AUTHZ) != null;
     }
 
-    private Response handleBasicAuthFailure() throws OAuthSystemException {
+    private Response handleBasicAuthFailure(String errorCode, String errorMessage) throws OAuthSystemException {
         OAuthResponse response = OAuthASResponse.errorResponse(HttpServletResponse.SC_UNAUTHORIZED)
                 .setError(OAuth2ErrorCodes.INVALID_CLIENT)
                 .setErrorDescription("Client Authentication failed.").buildJSONMessage();
@@ -297,9 +292,11 @@ public class OAuth2TokenEndpoint {
     private OAuth2AccessTokenReqDTO buildAccessTokenReqDTO(CarbonOAuthTokenRequest oauthRequest) {
 
         OAuth2AccessTokenReqDTO tokenReqDTO = new OAuth2AccessTokenReqDTO();
+        OAuthClientAuthnContext oauthClientAuthnContext = oauthRequest.getoAuthClientAuthnContext();
+        tokenReqDTO.setoAuthClientAuthnContext(oauthClientAuthnContext);
         String grantType = oauthRequest.getGrantType();
         tokenReqDTO.setGrantType(grantType);
-        tokenReqDTO.setClientId(oauthRequest.getClientId());
+        tokenReqDTO.setClientId(oauthClientAuthnContext.getClientId());
         tokenReqDTO.setClientSecret(oauthRequest.getClientSecret());
         tokenReqDTO.setCallbackURI(oauthRequest.getRedirectURI());
         tokenReqDTO.setScope(oauthRequest.getScopes().toArray(new String[oauthRequest.getScopes().size()]));
@@ -323,11 +320,6 @@ public class OAuth2TokenEndpoint {
             tokenReqDTO.setAssertion(oauthRequest.getAssertion());
         } else if (org.wso2.carbon.identity.oauth.common.GrantType.IWA_NTLM.toString().equals(grantType)) {
             tokenReqDTO.setWindowsToken(oauthRequest.getWindowsToken());
-        }
-        Object oauthClientAuthnContextObj = oauthRequest.getHttpRequest().getAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT);
-        if (oauthClientAuthnContextObj instanceof OAuthClientAuthnContext) {
-            tokenReqDTO.setoAuthClientAuthnContext((OAuthClientAuthnContext) oauthClientAuthnContextObj);
-            tokenReqDTO.setClientId(tokenReqDTO.getoAuthClientAuthnContext().getClientId());
         }
         return tokenReqDTO;
     }

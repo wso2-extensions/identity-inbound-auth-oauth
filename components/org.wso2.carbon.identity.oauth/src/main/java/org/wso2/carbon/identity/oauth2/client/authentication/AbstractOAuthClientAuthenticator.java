@@ -28,7 +28,8 @@ import java.util.Map;
 /**
  * Abstract OAuth2 client authenticator.
  */
-public abstract class AbstractOAuthClientAuthenticator extends AbstractIdentityHandler implements OAuthClientAuthenticator {
+public abstract class AbstractOAuthClientAuthenticator extends AbstractIdentityHandler implements
+        OAuthClientAuthenticator {
 
     /**
      * Get the set of body parameters.

@@ -115,4 +115,12 @@ public class OAuthClientAuthnContext extends MessageContext {
     public void addAuthenticator(String authenticatorName) {
         this.executedAuthenticators.add(authenticatorName);
     }
+
+    /**
+     * Checks whether a previous authenticator is engaged towards this request.
+     * @return true if another authenticator is engaged previously. False if not.
+     */
+    public boolean isPreviousAuthenticatorEngaged () {
+        return (this.executedAuthenticators.size() > 1);
+    }
 }

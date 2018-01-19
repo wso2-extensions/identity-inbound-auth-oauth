@@ -169,7 +169,8 @@ public class AccessTokenIssuer {
             isAuthenticated = true;
         }
 
-        if (!isAuthenticated && oAuthClientAuthnContext.getExecutedAuthenticators().size() == 0) {
+        if (!isAuthenticated && oAuthClientAuthnContext.getExecutedAuthenticators().size() == 0 && authzGrantHandler
+                .isConfidentialClient()) {
             tokenRespDTO = handleError(
                     OAuthConstants.OAuthError.TokenResponse.UNSUPPORTED_CLIENT_AUTHENTICATION_METHOD,
                     "Unsupported Client Authentication Method!", tokenReqDTO);
@@ -181,20 +182,6 @@ public class AccessTokenIssuer {
             tokenRespDTO = handleError(
                     oAuthClientAuthnContext.getErrorCode(),
                     oAuthClientAuthnContext.getErrorMessage(), tokenReqDTO);
-            setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
-            triggerPostListeners(tokenReqDTO, tokenRespDTO, tokReqMsgCtx, isRefreshRequest);
-            return tokenRespDTO;
-        }
-
-        if (oAuthClientAuthnContext.getExecutedAuthenticators().size() < 1 && authzGrantHandler.isConfidentialClient
-                ()) {
-            if (log.isDebugEnabled()) {
-                log.debug("Confidential client cannot be authenticated for client id : " +
-                        tokenReqDTO.getClientId());
-            }
-            tokenRespDTO = handleError(
-                    OAuthConstants.OAuthError.TokenResponse.UNSUPPORTED_CLIENT_AUTHENTICATION_METHOD,
-                    "Unsupported Client Authentication Method!", tokenReqDTO);
             setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
             triggerPostListeners(tokenReqDTO, tokenRespDTO, tokReqMsgCtx, isRefreshRequest);
             return tokenRespDTO;

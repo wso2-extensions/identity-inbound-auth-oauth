@@ -92,11 +92,7 @@ public class OAuthRevocationEndpoint {
             }
             String tokenType = getTokenType(paramMap, httpRequest);
 
-            if (isAuthorizationHeaderExists(request)) {
-                validateAuthorizationHeader(request, paramMap, callback);
-            }
-
-            OAuthRevocationRequestDTO revokeRequest = buildOAuthRevocationRequest(httpRequest,paramMap, token,
+            OAuthRevocationRequestDTO revokeRequest = buildOAuthRevocationRequest(httpRequest, paramMap, token,
                     tokenType);
             OAuthRevocationResponseDTO oauthRevokeResp = revokeTokens(revokeRequest);
 

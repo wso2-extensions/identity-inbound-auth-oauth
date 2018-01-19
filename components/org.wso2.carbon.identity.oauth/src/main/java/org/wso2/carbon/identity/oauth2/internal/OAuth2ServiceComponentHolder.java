@@ -26,8 +26,6 @@ import org.wso2.carbon.registry.core.service.RegistryService;
 import java.util.ArrayList;
 import java.util.List;
 
-import static java.util.Collections.sort;
-
 /**
  * OAuth2 Service component data holder
  */
@@ -78,7 +76,7 @@ public class OAuth2ServiceComponentHolder {
 
     public static void addAuthenticationHandler(OAuthClientAuthenticator clientAuthenticator) {
         authenticationHandlers.add(clientAuthenticator);
-        sort(authenticationHandlers, new HandlerComparator());
+        authenticationHandlers.sort(new HandlerComparator());
     }
 
     public static List<OAuthClientAuthenticator> getAuthenticationHandlers() {
