@@ -79,6 +79,7 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionManager;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionState;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
+import org.wso2.carbon.identity.openidconnect.RequestObjectService;
 import org.wso2.carbon.utils.CarbonUtils;
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -152,6 +153,9 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
     @Mock
     OAuth2Service oAuth2Service;
+
+    @Mock
+    RequestObjectService requestObjectService;
 
     @Mock
     HttpSession httpSession;
@@ -1532,6 +1536,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                 anyString(), anyString(), anyBoolean());
         doReturn(LOGIN_PAGE_URL).when(EndpointUtil.class, "getLoginPageURL", anyString(), anyString(), anyBoolean(),
                 anyBoolean(), anySet(), anyMap());
+        doReturn(requestObjectService).when(EndpointUtil.class, "getRequestObjectService");
     }
 
     private AuthenticationResult setAuthenticationResult(boolean isAuthenticated, Map<ClaimMapping, String> attributes,
