@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth2.internal;
 
+import org.wso2.carbon.identity.application.authentication.framework.AuthenticationMethodNameTranslator;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.handler.HandlerComparator;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
@@ -34,6 +35,8 @@ public class OAuth2ServiceComponentHolder {
     private static ApplicationManagementService applicationMgtService;
     private static boolean pkceEnabled = false;
     private static RegistryService registryService;
+    private static AuthenticationMethodNameTranslator authenticationMethodNameTranslator;
+    private OAuth2ServiceComponentHolder(){
     private static List<OAuthClientAuthenticator> authenticationHandlers = new ArrayList<>();
 
     private OAuth2ServiceComponentHolder() {
@@ -81,5 +84,14 @@ public class OAuth2ServiceComponentHolder {
 
     public static List<OAuthClientAuthenticator> getAuthenticationHandlers() {
         return authenticationHandlers;
+    }
+
+    public static AuthenticationMethodNameTranslator getAuthenticationMethodNameTranslator() {
+        return authenticationMethodNameTranslator;
+    }
+
+    public static void setAuthenticationMethodNameTranslator(
+            AuthenticationMethodNameTranslator authenticationMethodNameTranslator) {
+        OAuth2ServiceComponentHolder.authenticationMethodNameTranslator = authenticationMethodNameTranslator;
     }
 }

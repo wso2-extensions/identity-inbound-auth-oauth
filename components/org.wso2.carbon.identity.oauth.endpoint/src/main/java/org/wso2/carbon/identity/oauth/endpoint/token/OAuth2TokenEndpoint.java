@@ -321,6 +321,7 @@ public class OAuth2TokenEndpoint {
         } else if (org.wso2.carbon.identity.oauth.common.GrantType.IWA_NTLM.toString().equals(grantType)) {
             tokenReqDTO.setWindowsToken(oauthRequest.getWindowsToken());
         }
+        tokenReqDTO.addAuthenticationMethodReference(grantType);
         return tokenReqDTO;
     }
 }
