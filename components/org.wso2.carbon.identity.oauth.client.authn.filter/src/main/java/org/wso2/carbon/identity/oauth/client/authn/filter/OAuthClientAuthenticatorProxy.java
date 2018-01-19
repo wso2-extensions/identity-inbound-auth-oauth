@@ -25,6 +25,7 @@ import org.apache.cxf.message.Message;
 import org.apache.cxf.phase.AbstractPhaseInterceptor;
 import org.apache.cxf.phase.Phase;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnService;
@@ -62,6 +63,10 @@ public class OAuthClientAuthenticatorProxy extends AbstractPhaseInterceptor<Mess
         HttpServletRequest request = ((HttpServletRequest) message.get(HTTP_REQUEST));
         OAuthClientAuthnContext oAuthClientAuthnContext = oAuthClientAuthnService.authenticateClient(request,
                 bodyContentParams);
+        if(!oAuthClientAuthnContext.isPreviousAuthenticatorEngaged()) {
+            oAuthClientAuthnContext.setErrorCode(OAuth2ErrorCodes.INVALID_CLIENT);
+            oAuthClientAuthnContext.setErrorMessage("Unsupported client authentication mechanism");
+        }
         setContextToRequest(request, oAuthClientAuthnContext);
     }
 

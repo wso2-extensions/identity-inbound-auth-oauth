@@ -400,8 +400,8 @@ public class OAuth2Service extends AbstractAdmin {
 
             } else {
                 revokeResponseDTO.setError(true);
-                revokeResponseDTO.setErrorCode(OAuth2ErrorCodes.INVALID_REQUEST);
-                revokeResponseDTO.setErrorMsg("Invalid revocation request");
+                revokeResponseDTO.setErrorCode(oAuthClientAuthnContext.getErrorCode());
+                revokeResponseDTO.setErrorMsg(oAuthClientAuthnContext.getErrorMessage());
                 invokePostRevocationListeners(revokeRequestDTO, revokeResponseDTO, accessTokenDO, refreshTokenDO);
                 return revokeResponseDTO;
             }
@@ -607,7 +607,7 @@ public class OAuth2Service extends AbstractAdmin {
 
     private boolean isClientAuthenticated(OAuthClientAuthnContext oAuthClientAuthnContext, String grantType) {
         return oAuthClientAuthnContext != null && !StringUtils.equals(OAuthConstants.GrantTypes.IMPLICIT, grantType) &&
-                !oAuthClientAuthnContext.isAuthenticated();
+                oAuthClientAuthnContext.isAuthenticated();
     }
 
     private String getErrorMessage(OAuthClientAuthnContext oAuthClientAuthnContext) {

@@ -290,7 +290,7 @@ public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
         assertNotNull(tokenRespDTO);
         assertTrue(tokenRespDTO.isError());
         assertEquals(tokenRespDTO.getErrorCode(),
-                OAuthConstants.OAuthError.TokenResponse.UNSUPPORTED_CLIENT_AUTHENTICATION_METHOD);
+                OAuth2ErrorCodes.INVALID_REQUEST);
     }
 
     @DataProvider(name = "unauthorizedClientErrorConditionProvider")

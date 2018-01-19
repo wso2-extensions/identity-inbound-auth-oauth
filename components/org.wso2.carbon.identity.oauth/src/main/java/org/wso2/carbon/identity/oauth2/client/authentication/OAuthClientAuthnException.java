@@ -32,10 +32,6 @@ public class OAuthClientAuthnException extends IdentityOAuth2Exception {
         super(message);
     }
 
-    public OAuthClientAuthnException(String message, Throwable e) {
-        super(message, e);
-    }
-
     public OAuthClientAuthnException(String message, String errorCode, Throwable e) {
         super(message, e);
         this.errorCode = errorCode;

@@ -86,15 +86,16 @@ public class OAuthClientAuthnService {
             if (log.isDebugEnabled()) {
                 log.debug(oAuthClientAuthenticator.getName() + " authenticator can handle incoming request.");
             }
-            addAuthenticatorToContext(oAuthClientAuthenticator, oAuthClientAuthnContext);
             // If multiple authenticators are engaged, there is no point in evaluating them.
             if (oAuthClientAuthnContext.isPreviousAuthenticatorEngaged()) {
                 if (log.isDebugEnabled()) {
                     log.debug("Previously an authenticator is evaluated. Hence authenticator " +
                             oAuthClientAuthenticator.getName() + " is not evaluating");
                 }
+                addAuthenticatorToContext(oAuthClientAuthenticator, oAuthClientAuthnContext);
                 return;
             }
+            addAuthenticatorToContext(oAuthClientAuthenticator, oAuthClientAuthnContext);
             try {
                 // Client ID should be retrieved first since it's a must to have. If it fails authentication fails.
                 oAuthClientAuthnContext.setClientId(oAuthClientAuthenticator.getClientId(request, bodyContentMap,

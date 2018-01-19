@@ -121,6 +121,6 @@ public class OAuthClientAuthnContext extends MessageContext {
      * @return true if another authenticator is engaged previously. False if not.
      */
     public boolean isPreviousAuthenticatorEngaged () {
-        return (this.executedAuthenticators.size() > 1);
+        return (this.executedAuthenticators.size() > 0);
     }
 }
