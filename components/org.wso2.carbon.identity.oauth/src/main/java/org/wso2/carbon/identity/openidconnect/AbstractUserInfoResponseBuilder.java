@@ -88,11 +88,11 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
                                                         Map<String, Object> filteredUserClaims)
             throws UserInfoEndpointException {
 
-        List<String> essentialClaimsFromRequestObject =new ArrayList<>();
+        List<String> essentialClaimsFromRequestObject = new ArrayList<>();
         try {
             if (OpenIDConnectServiceComponentHolder.getRequestObjectService() != null) {
                 essentialClaimsFromRequestObject = OpenIDConnectServiceComponentHolder.getRequestObjectService().
-                        getEssentialClaims(getAccessToken(tokenResponse), null);
+                        getEssentialClaims(getAccessToken(tokenResponse), null, true);
             }
         } catch (RequestObjectException e) {
             throw new UserInfoEndpointException(e.getErrorMessage());

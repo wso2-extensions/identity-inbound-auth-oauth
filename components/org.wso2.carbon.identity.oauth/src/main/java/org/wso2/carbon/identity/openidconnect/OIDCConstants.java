@@ -21,6 +21,11 @@ package org.wso2.carbon.identity.openidconnect;
  */
 public class OIDCConstants {
 
+    public static final String USERINFO = "userinfo";
+    public static final String ID_TOKEN = "id_token";
+    public static final String IDN_OIDC_REQ_OBJECT_REFERENCE = "IDN_OIDC_REQ_OBJECT_REFERENCE";
+    public static final String IDN_OIDC_REQ_OBJECT_CLAIMS = "STORE_IDN_OIDC_REQ_OBJECT_CLAIMS";
+
     public class Event {
 
         public static final String CODE_ID = "CODE_ID";

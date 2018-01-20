@@ -32,6 +32,7 @@ import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilter;
 import org.wso2.carbon.identity.openidconnect.RequestObjectService;
 import org.wso2.carbon.identity.openidconnect.handlers.RequestObjectPersistanceHandler;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectSystemClaimImpl;
+import org.wso2.carbon.identity.openidconnect.handlers.RequestObjectRevokeHandler;
 
 import java.util.Comparator;
 
@@ -45,6 +46,7 @@ public class OpenIDConnectServiceComponent {
     private BundleContext bundleContext;
 
     protected void activate(ComponentContext context) {
+
         try {
             bundleContext = context.getBundleContext();
             bundleContext.registerService(ClaimProvider.class.getName(), new OpenIDConnectSystemClaimImpl(), null);
@@ -53,7 +55,7 @@ public class OpenIDConnectServiceComponent {
             bundleContext.registerService(RequestObjectService.class.getName(),
                     new RequestObjectService(), null);
         } catch (Throwable e) {
-        log.error("Error while activating OpenIDConnectServiceComponent.", e);
+            log.error("Error while activating OpenIDConnectServiceComponent.", e);
         }
     }
 
@@ -70,6 +72,7 @@ public class OpenIDConnectServiceComponent {
             unbind = "unsetOpenIDConnectClaimFilter"
     )
     protected void setOpenIDConnectClaimFilter(OpenIDConnectClaimFilter openIDConnectClaimFilter) {
+
         if (log.isDebugEnabled()) {
             log.debug("OpenIDConnectClaimFilter: " + openIDConnectClaimFilter.getClass().getName() + " set in " +
                     "OpenIDConnectServiceComponent.");
@@ -90,6 +93,7 @@ public class OpenIDConnectServiceComponent {
      * @param openIDConnectClaimFilter registerd implementation of {@link OpenIDConnectClaimFilter}
      */
     protected void unsetOpenIDConnectClaimFilter(OpenIDConnectClaimFilter openIDConnectClaimFilter) {
+
         if (log.isDebugEnabled()) {
             log.debug("OpenIDConnectClaimFilter: " + openIDConnectClaimFilter.getClass().getName() + " unset in " +
                     "OpenIDConnectServiceComponent.");
@@ -116,6 +120,7 @@ public class OpenIDConnectServiceComponent {
         /* reference IdentityCoreInitializedEvent service to guarantee that this component will wait until identity core
          is started */
     }
+
     @Reference(
             name = "ClaimProvider",
             service = ClaimProvider.class,
@@ -124,6 +129,7 @@ public class OpenIDConnectServiceComponent {
             unbind = "unsetClaimProvider"
     )
     protected void setClaimProvider(ClaimProvider claimProvider) {
+
         if (log.isDebugEnabled()) {
             log.debug("Setting ClaimProvider Service " + claimProvider.getClass().getName());
         }
@@ -131,6 +137,7 @@ public class OpenIDConnectServiceComponent {
     }
 
     protected void unsetClaimProvider(ClaimProvider claimProvider) {
+
         if (log.isDebugEnabled()) {
             log.debug("Unsetting ClaimProvider Service " + claimProvider.getClass().getName());
         }
@@ -145,6 +152,7 @@ public class OpenIDConnectServiceComponent {
             unbind = "unsetIdentityEventService"
     )
     protected void setIdentityEventService(IdentityEventService identityEventService) {
+
         if (log.isDebugEnabled()) {
             log.debug("IdentityEventService set in OpenIDConnectServiceComponent bundle");
         }
@@ -152,6 +160,7 @@ public class OpenIDConnectServiceComponent {
     }
 
     protected void unsetIdentityEventService(IdentityEventService identityEventService) {
+
         if (log.isDebugEnabled()) {
             log.debug("IdentityEventService unset in OpenIDConnectServiceComponent bundle");
         }
@@ -166,6 +175,7 @@ public class OpenIDConnectServiceComponent {
             unbind = "unsetRequestObjectService"
     )
     protected void setRequestObjectService(RequestObjectService requestObjectService) {
+
         if (log.isDebugEnabled()) {
             log.debug("Setting RequestObjectService in OpenIDConnectServiceComponent bundle.");
         }
@@ -173,12 +183,12 @@ public class OpenIDConnectServiceComponent {
     }
 
     protected void unsetRequestObjectService(RequestObjectService requestObjectService) {
+
         if (log.isDebugEnabled()) {
             log.debug("Unsetting RequestObjectService in OpenIDConnectServiceComponent bundle.");
         }
         OpenIDConnectServiceComponentHolder.setRequestObjectService(null);
     }
-
 
     @Reference(
             name = "identity.openidconnect.handlers.register",
@@ -188,6 +198,7 @@ public class OpenIDConnectServiceComponent {
             unbind = "unsetRequestObjectPersistanceHandler"
     )
     protected void setRequestObjectPersistanceHandler(RequestObjectPersistanceHandler requestObjectPersistanceHandler) {
+
         if (log.isDebugEnabled()) {
             log.debug("RequestObjectPersistanceHandler set in OpenIDConnectServiceComponent bundle");
         }
@@ -195,9 +206,33 @@ public class OpenIDConnectServiceComponent {
     }
 
     protected void unsetRequestObjectPersistanceHandler(RequestObjectPersistanceHandler requestObjectPersistanceHandler) {
+
         if (log.isDebugEnabled()) {
             log.debug("RequestObjectPersistanceHandler unset in OpenIDConnectServiceComponent bundle");
         }
         OpenIDConnectServiceComponentHolder.setRequestObjectPersistanceHandler(null);
+    }
+
+    @Reference(
+            name = "identity.openidconnect.handlers",
+            service = RequestObjectRevokeHandler.class,
+            cardinality = ReferenceCardinality.OPTIONAL,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetRequestObjectRevokeHandler"
+    )
+    protected void setRequestObjectRevokeHandler(RequestObjectRevokeHandler requestObjectRevokeHandler) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("RequestObjectRevokeHandler set in OpenIDConnectServiceComponent bundle");
+        }
+        OpenIDConnectServiceComponentHolder.setRequestObjectRevokeHandler(requestObjectRevokeHandler);
+    }
+
+    protected void unsetRequestObjectRevokeHandler(RequestObjectRevokeHandler requestObjectRevokeHandler) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("RequestObjectRevokeHandler unset in OpenIDConnectServiceComponent bundle");
+        }
+        OpenIDConnectServiceComponentHolder.setRequestObjectRevokeHandler(null);
     }
 }

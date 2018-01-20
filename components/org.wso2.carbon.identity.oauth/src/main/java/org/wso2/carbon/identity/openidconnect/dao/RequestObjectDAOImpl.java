@@ -31,6 +31,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.AuthorizationCodeDAOImpl;
 
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
+import org.wso2.carbon.identity.openidconnect.OIDCConstants;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.utils.DBUtils;
 
@@ -49,8 +50,6 @@ import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
 public class RequestObjectDAOImpl implements RequestObjectDAO {
 
     private final Log log = LogFactory.getLog(AuthorizationCodeDAOImpl.class);
-    private static final String IDN_OIDC_REQ_OBJECT_REFERENCE = "IDN_OIDC_REQ_OBJECT_REFERENCE";
-    private static final String IDN_OIDC_REQ_OBJECT_CLAIMS = "STORE_IDN_OIDC_REQ_OBJECT_CLAIMS";
 
     /**
      * Store request object related data into related db tables.
@@ -88,8 +87,8 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
             connection.commit();
             if (requestObjectId != -1) {
                 if (log.isDebugEnabled()) {
-                    log.debug("Successfully stored the request object reference in " + IDN_OIDC_REQ_OBJECT_REFERENCE
-                            + "table.");
+                    log.debug("Successfully stored the request object reference in " + OIDCConstants.
+                            IDN_OIDC_REQ_OBJECT_REFERENCE + "table.");
                 }
                 insertRequestObjectClaims(requestObjectId, claims, connection);
             }
@@ -117,9 +116,9 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
                     prepStmt.setString(2, claim.getValue());
                     prepStmt.setBoolean(3, claim.isEssential());
                     prepStmt.setString(4, claim.getValue());
-                    if ("userinfo".equals(claim.getType())) {
+                    if (OIDCConstants.USERINFO.equals(claim.getType())) {
                         prepStmt.setBoolean(5, true);
-                    } else if ("id_token".equals(claim.getType())) {
+                    } else if (OIDCConstants.ID_TOKEN.equals(claim.getType())) {
                         prepStmt.setBoolean(5, false);
                     }
                     prepStmt.addBatch();
@@ -131,8 +130,8 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
                     connection.commit();
                     if (requestObjectClaimId > -1) {
                         if (log.isDebugEnabled()) {
-                            log.debug("Successfully stored the request object claims in " + IDN_OIDC_REQ_OBJECT_CLAIMS
-                                    + "table.");
+                            log.debug("Successfully stored the request object claims in " + OIDCConstants.
+                                    IDN_OIDC_REQ_OBJECT_CLAIMS + "table.");
                         }
                         if (CollectionUtils.isNotEmpty(claim.getValues()) && claim.getValues().size() > 0) {
                             insertRequestObjectClaimValues(requestObjectClaimId, claim.getValues(), connection);
@@ -213,7 +212,7 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
     }
 
     @Override
-    public List<String> getEssentialClaims(String token, String code) throws IdentityOAuth2Exception {
+    public List<String> getEssentialClaims(String token, String code, boolean isUserinfo) throws IdentityOAuth2Exception {
 
         Connection connection = IdentityDatabaseUtil.getDBConnection();
         PreparedStatement prepStmt = null;
@@ -226,7 +225,7 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
             prepStmt = connection.prepareStatement(sql);
             prepStmt.setString(1, tokenId);
             prepStmt.setBoolean(2, true);
-            prepStmt.setBoolean(3, true);
+            prepStmt.setBoolean(3, isUserinfo);
             resultSet = prepStmt.executeQuery();
 
             while (resultSet.next()) {

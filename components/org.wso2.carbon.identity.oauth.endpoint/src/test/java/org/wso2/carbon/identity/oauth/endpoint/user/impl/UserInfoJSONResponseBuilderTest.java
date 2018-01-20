@@ -174,7 +174,7 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
 
         initSingleClaimTest(claimUri, claimValue);
         List<String> essentialClaims = Collections.singletonList(EMAIL);
-        when(requestObjectService.getEssentialClaims(anyString(), anyString())).thenReturn(essentialClaims);
+        when(requestObjectService.getEssentialClaims(anyString(), anyString(),anyBoolean())).thenReturn(essentialClaims);
         String responseString =
                 userInfoJSONResponseBuilder.getResponseString(getTokenResponseDTO(AUTHORIZED_USER_FULL_QUALIFIED));
 

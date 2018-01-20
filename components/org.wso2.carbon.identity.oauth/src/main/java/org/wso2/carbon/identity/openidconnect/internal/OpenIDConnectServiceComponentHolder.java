@@ -22,6 +22,7 @@ import org.wso2.carbon.identity.openidconnect.ClaimProvider;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilter;
 import org.wso2.carbon.identity.openidconnect.RequestObjectService;
 import org.wso2.carbon.identity.openidconnect.handlers.RequestObjectPersistanceHandler;
+import org.wso2.carbon.identity.openidconnect.handlers.RequestObjectRevokeHandler;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -34,12 +35,25 @@ public class OpenIDConnectServiceComponentHolder {
     private static RequestObjectService requestObjectService;
     private static IdentityEventService identityEventService;
     private static RequestObjectPersistanceHandler requestObjectPersistanceHandler;
+    private static RequestObjectRevokeHandler requestObjectRevokeHandler;
+
+    public static RequestObjectRevokeHandler getRequestObjectRevokeHandler() {
+
+        return requestObjectRevokeHandler;
+    }
+
+    public static void setRequestObjectRevokeHandler(RequestObjectRevokeHandler requestObjectRevokeHandler) {
+
+        OpenIDConnectServiceComponentHolder.requestObjectRevokeHandler = requestObjectRevokeHandler;
+    }
 
     public static RequestObjectPersistanceHandler getRequestObjectPersistanceHandler() {
+
         return requestObjectPersistanceHandler;
     }
 
     public static void setRequestObjectPersistanceHandler(RequestObjectPersistanceHandler requestObjectPersistanceHandler) {
+
         OpenIDConnectServiceComponentHolder.requestObjectPersistanceHandler = requestObjectPersistanceHandler;
     }
 
@@ -59,9 +73,8 @@ public class OpenIDConnectServiceComponentHolder {
         OpenIDConnectServiceComponentHolder.requestObjectService = requestObjectService;
     }
 
-
-
     private OpenIDConnectServiceComponentHolder() {
+
     }
 
     public static OpenIDConnectServiceComponentHolder getInstance() {
@@ -69,10 +82,10 @@ public class OpenIDConnectServiceComponentHolder {
     }
 
     /**
-     *
      * @return The OIDC Claim Filter with the highest priority.
      */
     public OpenIDConnectClaimFilter getHighestPriorityOpenIDConnectClaimFilter() {
+
         if (openIDConnectClaimFilters.isEmpty()) {
             throw new RuntimeException("No OpenIDConnect Claim Filters available.");
         }

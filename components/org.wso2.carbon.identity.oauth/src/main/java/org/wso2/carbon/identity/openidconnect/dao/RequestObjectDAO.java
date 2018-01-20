@@ -41,5 +41,5 @@ public interface RequestObjectDAO {
     void deleteRequestObjectReference(String tokenId, String codeId) throws IdentityOAuth2Exception,
             IdentityOAuthAdminException;
 
-    List<String> getEssentialClaims(String tokenId, String codeId) throws IdentityOAuth2Exception;
+    List<String> getEssentialClaims(String tokenId, String codeId, boolean isUserInfo) throws IdentityOAuth2Exception;
 }

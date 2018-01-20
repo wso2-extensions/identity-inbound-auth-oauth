@@ -260,10 +260,10 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
             try {
                 if (authzReqMessageContext != null) {
                     essentialClaimsFromRequestObject = OpenIDConnectServiceComponentHolder.getRequestObjectService().
-                            getEssentialClaims(getAccessToken(authzReqMessageContext), null);
+                            getEssentialClaims(getAccessToken(authzReqMessageContext), null, false);
                 } else if (requestMsgCtx != null) {
                     essentialClaimsFromRequestObject = OpenIDConnectServiceComponentHolder.getRequestObjectService().
-                            getEssentialClaims(getAccessToken(requestMsgCtx), null);
+                            getEssentialClaims(getAccessToken(requestMsgCtx), null, false);
                 }
             } catch (RequestObjectException e) {
                 throw new OAuthSystemException(e.getMessage());

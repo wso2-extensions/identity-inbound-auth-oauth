@@ -35,11 +35,11 @@ public class RequestObjectService {
     /**
      * To invoke the RequestObjectPersistenceFactory to insert request object.
      *
-     * @param consumerKey clientKey
-     * @param codeId codeId
-     * @param accessTokenId access token Id
+     * @param consumerKey    clientKey
+     * @param codeId         codeId
+     * @param accessTokenId  access token Id
      * @param sessionDataKey sessionDataKey
-     * @param claims list of claims
+     * @param claims         list of claims
      * @throws RequestObjectException
      */
     public void addRequestObject(String consumerKey, String codeId, String accessTokenId,
@@ -63,11 +63,12 @@ public class RequestObjectService {
      * To invoke the RequestObjectPersistenceFactory to retrieve request object.
      *
      * @param tokenId access token Id
-     * @param codeId code Id
+     * @param codeId  code Id
      * @return list of claims which have marked as essential in the request object.
      * @throws RequestObjectException
      */
-    public List<String> getEssentialClaims(String tokenId, String codeId) throws RequestObjectException {
+    public List<String> getEssentialClaims(String tokenId, String codeId, boolean isUserInfo)
+            throws RequestObjectException {
 
         List<String> essentialClaims;
         if (log.isDebugEnabled()) {
@@ -76,7 +77,7 @@ public class RequestObjectService {
 
         try {
             essentialClaims = RequestObjectPersistenceFactory.getInstance().getRequestObjectDAO()
-                    .getEssentialClaims(tokenId, codeId);
+                    .getEssentialClaims(tokenId, codeId, isUserInfo);
         } catch (IdentityOAuth2Exception e) {
             throw new RequestObjectException(e.getMessage());
         }
