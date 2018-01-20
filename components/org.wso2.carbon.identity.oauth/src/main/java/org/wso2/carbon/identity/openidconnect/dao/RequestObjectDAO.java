@@ -32,7 +32,7 @@ import java.util.List;
 public interface RequestObjectDAO {
 
     void insertRequestObjectData(String consumerKeyId, String codeId,
-                                 String accessTokenId, String sessionDataKey, List<RequestedClaim> claim)
+                                 String accessTokenId, String sessionDataKey, List<List<RequestedClaim>> claims)
             throws IdentityOAuth2Exception;
 
     void updateRequestObjectReference(String sessionDataKey, String codeId, String accessTokenId)

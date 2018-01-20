@@ -51,7 +51,7 @@ public class OAuth2Parameters implements Serializable {
     private String responseMode;
     private String essentialClaims;
     private String displayName;
-    private RequestObject requestObject;
+   // private RequestObject requestObject;
 
     public String getSessionDataKey() {
         return sessionDataKey;
@@ -71,13 +71,13 @@ public class OAuth2Parameters implements Serializable {
         this.maxAge = maxAge;
     }
 
-    public RequestObject getRequestObject() {
+    /*public RequestObject getRequestObject() {
         return requestObject;
-    }
+    }*/
 
-    public void setRequestObject(RequestObject requestObject) {
+  /*  public void setRequestObject(RequestObject requestObject) {
         this.requestObject = requestObject;
-    }
+    }*/
 
     public String getEssentialClaims() {
         return essentialClaims;

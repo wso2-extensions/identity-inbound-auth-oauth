@@ -28,8 +28,8 @@ public class OIDCConstants {
         public static final String SESSION_DATA_KEY = "SESSION_DATA_KEY";
         public static final String POST_ISSUE_CODE = "POST_ISSUE_CODE";
         public static final String POST_ISSUE_ACCESS_TOKEN = "POST_ISSUE_ACCESS_TOKEN";
-        public static final String PERSIST_REQUEST_OBJECT = "PERSIST REQUEST OBJECT";
-        public static final String REVOKE_REQUEST_OBJECT = "REVOKE REQUEST OBJECT";
+        public static final String PERSIST_REQUEST_OBJECT = "persistRequestObject";
+        public static final String REVOKE_REQUEST_OBJECT = "revokeRequestObject";
         public static final String POST_REVOKE_ACESS_TOKEN = "POST_REVOKE_ACESS_TOKEN";
         public static final String POST_REVOKE_ACESS_TOKEN_BY_ID = "POST_REVOKE_ACESS_TOKEN_BY_ID";
         public static final String POST_REVOKE_CODE_BY_ID = "POST_REVOKE_CODE_BY_ID";

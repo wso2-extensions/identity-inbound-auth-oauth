@@ -43,7 +43,7 @@ public class RequestObjectService {
      * @throws RequestObjectException
      */
     public void addRequestObject(String consumerKey, String codeId, String accessTokenId,
-                                 String sessionDataKey, List<RequestedClaim> claims) throws RequestObjectException {
+                                 String sessionDataKey, List<List<RequestedClaim>> claims) throws RequestObjectException {
 
         if (log.isDebugEnabled()) {
             log.debug("Invoking the RequestObjectPersistenceFactory to persist the request object claims against" +

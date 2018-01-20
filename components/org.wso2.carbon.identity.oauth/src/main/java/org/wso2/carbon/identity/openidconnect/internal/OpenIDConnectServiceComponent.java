@@ -25,6 +25,7 @@ import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
+import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.openidconnect.ClaimProvider;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilter;
@@ -47,6 +48,10 @@ public class OpenIDConnectServiceComponent {
         try {
             bundleContext = context.getBundleContext();
             bundleContext.registerService(ClaimProvider.class.getName(), new OpenIDConnectSystemClaimImpl(), null);
+            bundleContext.registerService(AbstractEventHandler.class.getName(),
+                    new RequestObjectPersistanceHandler(), null);
+            bundleContext.registerService(RequestObjectService.class.getName(),
+                    new RequestObjectService(), null);
         } catch (Throwable e) {
         log.error("Error while activating OpenIDConnectServiceComponent.", e);
         }

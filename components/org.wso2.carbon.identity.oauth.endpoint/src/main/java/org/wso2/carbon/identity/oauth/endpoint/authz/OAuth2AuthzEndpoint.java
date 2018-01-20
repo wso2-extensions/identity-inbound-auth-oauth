@@ -875,8 +875,6 @@ public class OAuth2AuthzEndpoint {
                 sessionDataCacheEntry.getoAuth2Parameters().getEssentialClaims());
         authorizationGrantCacheEntry.setAuthTime(sessionDataCacheEntry.getAuthTime());
         authorizationGrantCacheEntry.setMaxAge(sessionDataCacheEntry.getoAuth2Parameters().getMaxAge());
-        authorizationGrantCacheEntry.setRequestObject(sessionDataCacheEntry.getoAuth2Parameters().
-                getRequestObject());
         String[] sessionIds = sessionDataCacheEntry.getParamMap().get(FrameworkConstants.SESSION_DATA_KEY);
         if (ArrayUtils.isNotEmpty(sessionIds)) {
             String commonAuthSessionId = sessionIds[0];
@@ -1235,7 +1233,6 @@ public class OAuth2AuthzEndpoint {
             RequestObjectException {
 
         if (requestObject.isSignatureValid()) {
-            params.setRequestObject(requestObject);
             if (log.isDebugEnabled()) {
                 log.debug("The request Object is valid. Hence storing the request object value in oauth params.");
             }
