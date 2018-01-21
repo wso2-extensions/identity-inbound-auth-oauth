@@ -19,15 +19,19 @@
 package org.wso2.carbon.identity.openidconnect;
 
 import org.apache.oltu.oauth2.as.request.OAuthAuthzRequest;
+import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.testng.PowerMockTestCase;
+import org.powermock.reflect.internal.WhiteboxImpl;
 import org.testng.Assert;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
+import org.wso2.carbon.core.util.KeyStoreManager;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
@@ -44,6 +48,7 @@ import java.security.PublicKey;
 import java.security.interfaces.RSAPrivateKey;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
@@ -52,16 +57,17 @@ import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.wso2.carbon.identity.openidconnect.util.TestUtils.getKeyStoreFromFile;
 import static org.wso2.carbon.identity.openidconnect.util.TestUtils.getRequestObjects;
+import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_ID;
 
 @PrepareForTest({OAuth2Util.class, IdentityUtil.class, OAuthServerConfiguration.class, OAuthAuthzRequest.class,
-        RequestObjectValidatorImpl.class})
+        RequestObjectValidatorImpl.class, IdentityTenantUtil.class})
 @PowerMockIgnore({"javax.crypto.*"})
 public class OIDCRequestObjectFactoryTest extends PowerMockTestCase {
 
     private RSAPrivateKey rsaPrivateKey;
     private KeyStore clientKeyStore;
     private KeyStore wso2KeyStore;
-    public static final String TEST_CLIENT_ID_1 = "wso2test";
+    public static final String TEST_CLIENT_ID_1 = "test-client-id";
     public static final String SOME_SERVER_URL = "some-server-url";
     private static final String REQUEST_PARAM_VALUE_BUILDER = "request_param_value_builder";
     private static final String REQUEST_URI_PARAM_VALUE_BUILDER = "request_uri_param_value_builder";
@@ -73,6 +79,8 @@ public class OIDCRequestObjectFactoryTest extends PowerMockTestCase {
         clientKeyStore = getKeyStoreFromFile("testkeystore.jks", "wso2carbon", System.getProperty(CarbonBaseConstants.CARBON_HOME));
         wso2KeyStore = getKeyStoreFromFile("wso2carbon.jks", "wso2carbon", System.getProperty(CarbonBaseConstants
                 .CARBON_HOME));
+        rsaPrivateKey = (RSAPrivateKey) wso2KeyStore.getKey("wso2carbon", "wso2carbon".toCharArray());
+
     }
 
     @DataProvider(name = "TestBuildRequestObjectTest")
@@ -102,22 +110,23 @@ public class OIDCRequestObjectFactoryTest extends PowerMockTestCase {
         mockStatic(RequestObjectValidatorImpl.class);
         PowerMockito.spy(RequestObjectValidatorImpl.class);
 
-        rsaPrivateKey = (RSAPrivateKey) wso2KeyStore.getKey("wso2carbon", "wso2carbon".toCharArray());
         mockStatic(OAuth2Util.class);
         when(OAuth2Util.getTenantId("carbon.super")).thenReturn(-1234);
         when((OAuth2Util.getPrivateKey(anyString(), anyInt()))).thenReturn(rsaPrivateKey);
 
+        mockStatic(IdentityTenantUtil.class);
+        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
+
+        KeyStoreManager keyStoreManager = Mockito.mock(KeyStoreManager.class);
+        ConcurrentHashMap<String, KeyStoreManager> mtKeyStoreManagers = new ConcurrentHashMap();
+        mtKeyStoreManagers.put(String.valueOf(SUPER_TENANT_ID), keyStoreManager);
+        WhiteboxImpl.setInternalState(KeyStoreManager.class, "mtKeyStoreManagers", mtKeyStoreManagers);
+        Mockito.when(keyStoreManager.getPrimaryKeyStore()).thenReturn(wso2KeyStore);
+        Mockito.when(keyStoreManager.getKeyStore("wso2carbon.jks")).thenReturn(wso2KeyStore);
+
+
         RequestObjectValidator requestObjectValidator = new RequestObjectValidatorImpl();
         when((oauthServerConfigurationMock.getRequestObjectValidator())).thenReturn(requestObjectValidator);
-        Path clientStorePath = Paths.get(System.getProperty(CarbonBaseConstants.CARBON_HOME), "repository", "resources",
-                "security", "client-truststore1.jks");
-        Path configPath = Paths.get(System.getProperty(CarbonBaseConstants.CARBON_HOME), "repository", "conf",
-                "identity", "EndpointConfig.properties");
-
-        PowerMockito.doReturn(configPath.toString()).when(RequestObjectValidatorImpl.class, "buildFilePath",
-                "./repository/conf/identity/EndpointConfig.properties");
-        PowerMockito.doReturn(clientStorePath.toString()).when(RequestObjectValidatorImpl.class, "buildFilePath",
-                "./repository/resources/security/client-truststore.jks");
 
         PowerMockito.doReturn(SOME_SERVER_URL.toString()).when(RequestObjectValidatorImpl.class, "getTokenEpURL",
                 anyString());
@@ -133,7 +142,7 @@ public class OIDCRequestObjectFactoryTest extends PowerMockTestCase {
         try {
             oidcRequestObjectFactory.buildRequestObject(oAuthAuthzRequest, oAuth2Parameters, requestObject);
         } catch (RequestObjectException e) {
-            Assert.assertFalse(exceptionNotExpected, errorMsg + "Request Object Building failed.");
+            Assert.assertFalse(exceptionNotExpected, errorMsg + "Request Object Building failed due to " + e.getErrorMessage());
         }
 
 
@@ -155,25 +164,28 @@ public class OIDCRequestObjectFactoryTest extends PowerMockTestCase {
         mockStatic(RequestObjectValidatorImpl.class);
         PowerMockito.spy(RequestObjectValidatorImpl.class);
 
-        rsaPrivateKey = (RSAPrivateKey) wso2KeyStore.getKey("wso2carbon", "wso2carbon".toCharArray());
         mockStatic(OAuth2Util.class);
         when(OAuth2Util.getTenantId("carbon.super")).thenReturn(-1234);
         when((OAuth2Util.getPrivateKey(anyString(), anyInt()))).thenReturn(rsaPrivateKey);
 
+        mockStatic(IdentityTenantUtil.class);
+        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
+
+//        rsaPrivateKey = (RSAPrivateKey) wso2KeyStore.getKey("wso2carbon", "wso2carbon".toCharArray());
+
         RequestObjectValidator requestObjectValidator = new RequestObjectValidatorImpl();
         when((oauthServerConfigurationMock.getRequestObjectValidator())).thenReturn(requestObjectValidator);
-        Path clientStorePath = Paths.get(System.getProperty(CarbonBaseConstants.CARBON_HOME), "repository", "resources",
-                "security", "client-truststore1.jks");
-        Path configPath = Paths.get(System.getProperty(CarbonBaseConstants.CARBON_HOME), "repository", "conf",
-                "identity", "EndpointConfig.properties");
-
-        PowerMockito.doReturn(configPath.toString()).when(RequestObjectValidatorImpl.class, "buildFilePath",
-                "./repository/conf/identity/EndpointConfig.properties");
-        PowerMockito.doReturn(clientStorePath.toString()).when(RequestObjectValidatorImpl.class, "buildFilePath",
-                "./repository/resources/security/client-truststore.jks");
 
         PowerMockito.doReturn(SOME_SERVER_URL.toString()).when(RequestObjectValidatorImpl.class, "getTokenEpURL",
                 anyString());
+
+        KeyStoreManager keyStoreManager = Mockito.mock(KeyStoreManager.class);
+        ConcurrentHashMap<String, KeyStoreManager> mtKeyStoreManagers = new ConcurrentHashMap();
+        mtKeyStoreManagers.put(String.valueOf(SUPER_TENANT_ID), keyStoreManager);
+        WhiteboxImpl.setInternalState(KeyStoreManager.class, "mtKeyStoreManagers", mtKeyStoreManagers);
+        Mockito.when(keyStoreManager.getPrimaryKeyStore()).thenReturn(wso2KeyStore);
+        Mockito.when(keyStoreManager.getKeyStore("wso2carbon.jks")).thenReturn(wso2KeyStore);
+
 
         RequestObject requestObject = new RequestObject();
         RequestParamRequestObjectBuilder requestParamRequestObjectBuilder = new RequestParamRequestObjectBuilder();

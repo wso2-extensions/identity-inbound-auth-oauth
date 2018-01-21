@@ -32,16 +32,7 @@ public interface RequestObjectValidator {
      *
      * @param requestObject
      */
-    boolean validateSignature(RequestObject requestObject, String alias) throws RequestObjectException;
-
-    /**
-     * To decrypt the request objected by using IS primary key
-     *
-     * @param requestObject    requestObject
-     * @param oAuth2Parameters oAuth2Parameters
-     * @throws RequestObjectException
-     */
-    String decrypt(String requestObject, OAuth2Parameters oAuth2Parameters) throws RequestObjectException;
+    boolean validateSignature(RequestObject requestObject, OAuth2Parameters oAuth2Parameters) throws RequestObjectException;
 
     /**
      * To validate request object

@@ -32,4 +32,14 @@ public class Constants {
     public static final String AUD = "aud";
     public static final String MAX_AGE = "max_age";
     public static String CLAIMS = "claims";
+
+    //JWS is consists of three parts seperated by 2 '.'s as JOSE header, JWS payload, JWS signature
+    public static final int NUMBER_OF_PARTS_IN_JWS = 3;
+    public static final int NUMBER_OF_PARTS_IN_JWE = 5;
+    public static final String RS = "RS";
+    public static final String JWT_PART_DELIMITER = "\\.";
+
+    public static final String FULL_STOP_DELIMITER = ".";
+    public static final String DASH_DELIMITER = "-";
+    public static final String KEYSTORE_FILE_EXTENSION = ".jks";
 }
