@@ -20,6 +20,7 @@
 
 package org.wso2.carbon.identity.openidconnect.dao;
 
+import org.testng.Assert;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithH2Database;
@@ -38,8 +39,8 @@ import java.util.List;
         files = {"dbScripts/h2_with_application_and_token.sql", "dbScripts/identity.sql"})
 public class RequestObjectDAOImplTest {
 
-    @Test(expectedExceptions = {IdentityOAuth2Exception.class})
-    public void testInsertRequestObject() throws IdentityOAuth2Exception {
+    @Test
+    private void testInsertRequestObject() throws IdentityOAuth2Exception {
 
         RequestObjectDAO requestObjectDAO = new RequestObjectDAOImpl();
         List<List<RequestedClaim>> requestedEssentialClaims = new ArrayList<>();
@@ -51,13 +52,16 @@ public class RequestObjectDAOImplTest {
         requestedClaim.setType("userinfo");
         requestedClaim.setValue("value1");
         requestedClaim.setEssential(true);
-
+        requestedClaim.setValues(values);
         values.add("val1");
         values.add("val2");
         requestedClaim.setValues(values);
         lstRequestedCliams.add(requestedClaim);
         requestedEssentialClaims.add(lstRequestedCliams);
-        requestObjectDAO.insertRequestObjectData("consumerKey", "codeId", null, "sessionDataKey",
+
+        requestObjectDAO.insertRequestObjectData("consumerKey", "d43e8da324a33bdc941b9b95cad6a6a2", null, "sessionDataKey",
                 requestedEssentialClaims);
+        requestObjectDAO.getEssentialClaims("d43e8da324a33bdc941b9b95cad6a6a2", null, true);
+        Assert.assertEquals(requestObjectDAO.getEssentialClaims("code1", null, true).size(), 0);
     }
 }

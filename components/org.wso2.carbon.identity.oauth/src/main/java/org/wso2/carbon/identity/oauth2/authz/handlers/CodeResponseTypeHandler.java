@@ -67,6 +67,7 @@ public class CodeResponseTypeHandler extends AbstractResponseTypeHandler {
             throws IdentityOAuth2Exception {
         AuthzCodeDO authorizationCode = ResponseTypeHandlerUtil.generateAuthorizationCode(oauthAuthzMsgCtx, cacheEnabled
                 , oauthIssuerImpl);
+        //Trigger an event to update request_object_reference table.
         postIssueCode(authorizationCode.getAuthzCodeId(), oauthAuthzMsgCtx.getAuthorizationReqDTO().getSessionDataKey());
         return buildResponseDTO(oauthAuthzMsgCtx, authorizationCode);
     }

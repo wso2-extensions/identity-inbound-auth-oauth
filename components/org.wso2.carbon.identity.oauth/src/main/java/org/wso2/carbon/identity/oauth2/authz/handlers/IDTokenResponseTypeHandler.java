@@ -19,8 +19,12 @@
 package org.wso2.carbon.identity.oauth2.authz.handlers;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.common.model.Claim;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
+import org.wso2.carbon.identity.event.IdentityEventException;
+import org.wso2.carbon.identity.event.event.Event;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
@@ -33,7 +37,10 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.IDTokenBuilder;
+import org.wso2.carbon.identity.openidconnect.OIDCConstants;
+import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -50,6 +57,9 @@ public class IDTokenResponseTypeHandler extends AbstractResponseTypeHandler {
                 oauthIssuerImpl);
         // Generating response for id_token flow.
         OAuth2AuthorizeRespDTO respDTO = buildResponseDTO(oauthAuthzMsgCtx, accessTokenDO);
+        //Trigger this to notify to update the request object reference table with the issued access token.
+        ResponseTypeHandlerUtil.postIssueAccessToken(accessTokenDO.getTokenId(),
+                oauthAuthzMsgCtx.getAuthorizationReqDTO().getSessionDataKey());
         // Starting to trigger post listeners.
         ResponseTypeHandlerUtil.triggerPostListeners(oauthAuthzMsgCtx, accessTokenDO, respDTO);
         return respDTO;

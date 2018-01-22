@@ -943,7 +943,9 @@ public class OAuth2AuthzEndpoint {
         String sessionDataKey = UUIDGenerator.generateUUID();
 
         //To persist the request object against the session data key.
-        persistRequestObject(oauthRequest, params, sessionDataKey);
+        if (isRequestUri(oauthRequest.getParam(REQUEST_URI)) || isRequestUri(oauthRequest.getParam(REQUEST))) {
+            persistRequestObject(oauthRequest, params, sessionDataKey);
+        }
 
         params.setSessionDataKey(sessionDataKey);
         addDataToSessionCache(oAuthMessage, params, sessionDataKey);

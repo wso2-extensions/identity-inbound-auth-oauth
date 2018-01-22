@@ -20,8 +20,6 @@ package org.wso2.carbon.identity.oauth.endpoint.user.impl;
 
 import org.apache.oltu.oauth2.common.utils.JSONUtils;
 import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.DataProvider;
@@ -34,11 +32,8 @@ import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.endpoint.util.ClaimUtil;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
-import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
-import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilter;
 import org.wso2.carbon.identity.openidconnect.RequestObjectService;
-import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.registry.core.service.RegistryService;
 
 import java.util.Collections;
@@ -47,9 +42,8 @@ import java.util.List;
 import java.util.Map;
 
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyString;
-import static org.mockito.Mockito.*;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
@@ -66,13 +60,6 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
 
     private UserInfoJSONResponseBuilder userInfoJSONResponseBuilder;
 
-   /* @Mock
-    private OpenIDConnectServiceComponentHolder openIDConnectServiceComponentHolder;
-
-    @Mock
-    private OpenIDConnectClaimFilter openIDConnectClaimFilter;
-
-    */
    @Mock
    private RequestObjectService requestObjectService;
 
@@ -174,7 +161,8 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
 
         initSingleClaimTest(claimUri, claimValue);
         List<String> essentialClaims = Collections.singletonList(EMAIL);
-        when(requestObjectService.getEssentialClaims(anyString(), anyString(),anyBoolean())).thenReturn(essentialClaims);
+        when(requestObjectService.getEssentialClaims(anyString(), anyString(), anyBoolean())).
+                thenReturn(essentialClaims);
         String responseString =
                 userInfoJSONResponseBuilder.getResponseString(getTokenResponseDTO(AUTHORIZED_USER_FULL_QUALIFIED));
 

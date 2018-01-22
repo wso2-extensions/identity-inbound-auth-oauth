@@ -21,7 +21,6 @@ package org.wso2.carbon.identity.openidconnect.handlers;
 import org.wso2.carbon.identity.event.IdentityEventException;
 import org.wso2.carbon.identity.event.event.Event;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
-import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.openidconnect.OIDCConstants;
 import org.wso2.carbon.identity.openidconnect.dao.RequestObjectPersistenceFactory;
 
@@ -43,21 +42,18 @@ public class RequestObjectPersistanceHandler extends AbstractEventHandler {
         Map<String, Object> eventProperties = event.getEventProperties();
         String eventName = event.getEventName();
         String sessionDataKey = (String) eventProperties.get(OIDCConstants.Event.SESSION_DATA_KEY);
-        try {
-            if (OIDCConstants.Event.POST_ISSUE_CODE.equals(eventName)) {
-                String codeId = (String) eventProperties.get(OIDCConstants.Event.CODE_ID);
-                RequestObjectPersistenceFactory.getInstance().getRequestObjectDAO().updateRequestObjectReference
-                        (sessionDataKey, codeId, null);
 
-            } else if (OIDCConstants.Event.POST_ISSUE_ACCESS_TOKEN.equals(eventName)) {
-                String tokenId = (String) eventProperties.get(OIDCConstants.Event.TOKEN_ID);
-                RequestObjectPersistenceFactory.getInstance().getRequestObjectDAO().updateRequestObjectReference
-                        (sessionDataKey, null, tokenId);
-            }
+        if (OIDCConstants.Event.POST_ISSUE_CODE.equals(eventName)) {
+            String codeId = (String) eventProperties.get(OIDCConstants.Event.CODE_ID);
+            RequestObjectPersistenceFactory.getInstance().getRequestObjectDAO().updateRequestObjectReference
+                    (sessionDataKey, codeId, null);
 
-        } catch (IdentityOAuth2Exception e) {
-           throw new IdentityEventException("Error while invoking request object factory.");
+        } else if (OIDCConstants.Event.POST_ISSUE_ACCESS_TOKEN.equals(eventName)) {
+            String tokenId = (String) eventProperties.get(OIDCConstants.Event.TOKEN_ID);
+            RequestObjectPersistenceFactory.getInstance().getRequestObjectDAO().updateRequestObjectReference
+                    (sessionDataKey, null, tokenId);
         }
+
     }
 
     public String getName() {

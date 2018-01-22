@@ -35,8 +35,7 @@ public interface RequestObjectDAO {
                                  String accessTokenId, String sessionDataKey, List<List<RequestedClaim>> claims)
             throws IdentityOAuth2Exception;
 
-    void updateRequestObjectReference(String sessionDataKey, String codeId, String accessTokenId)
-            throws IdentityOAuth2Exception;
+    void updateRequestObjectReference(String sessionDataKey, String codeId, String accessTokenId);
 
     void deleteRequestObjectReference(String tokenId, String codeId) throws IdentityOAuth2Exception,
             IdentityOAuthAdminException;

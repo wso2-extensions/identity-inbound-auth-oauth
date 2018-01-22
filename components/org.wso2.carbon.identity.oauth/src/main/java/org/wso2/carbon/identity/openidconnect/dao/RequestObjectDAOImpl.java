@@ -178,8 +178,7 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
      * @throws IdentityOAuth2Exception
      */
     @Override
-    public void updateRequestObjectReference(String sessionDataKey, String codeId, String accessTokenId)
-            throws IdentityOAuth2Exception {
+    public void updateRequestObjectReference(String sessionDataKey, String codeId, String accessTokenId) {
 
         Connection connection = IdentityDatabaseUtil.getDBConnection();
         PreparedStatement ps = null;
@@ -193,8 +192,10 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
             ps.execute();
             connection.commit();
         } catch (SQLException e) {
-            String errorMsg = "Error updating code id or the access token id of the table.";
-            throw new IdentityOAuth2Exception(errorMsg, e);
+            String errorMsg = "Can not update code id or the access token id of the table ."
+                    + OIDCConstants.IDN_OIDC_REQ_OBJECT_REFERENCE;
+            log.info(errorMsg);
+
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, null, ps);
         }
@@ -242,7 +243,7 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
         return essentialClaims;
     }
 
-    private void deleteRequestObjectReferenceByTokenId(String tokenId) throws IdentityOAuthAdminException {
+    private void deleteRequestObjectReferenceByTokenId(String tokenId)  {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection();
              PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.DELETE_REQ_OBJECT_BY_TOKEN_ID)) {
@@ -250,11 +251,13 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
             prepStmt.execute();
             connection.commit();
         } catch (SQLException e) {
-            throw handleError("Error when executing the SQL : " + SQLQueries.DELETE_REQ_OBJECT_BY_TOKEN_ID, e);
+            String errorMsg = "Can not delete code id or the access_token_id from the table ."
+                    + OIDCConstants.IDN_OIDC_REQ_OBJECT_REFERENCE;
+            log.info(errorMsg);
         }
     }
 
-    private void deleteRequestObjectReferenceByCode(String codeId) throws IdentityOAuthAdminException {
+    private void deleteRequestObjectReferenceByCode(String codeId) {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection();
              PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.DELETE_REQ_OBJECT_BY_CODE_ID)) {
@@ -262,7 +265,9 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
             prepStmt.execute();
             connection.commit();
         } catch (SQLException e) {
-            throw handleError("Error when executing the SQL : " + SQLQueries.DELETE_REQ_OBJECT_BY_CODE_ID, e);
+            String errorMsg = "Can not delete code id or the access token id from the table ."
+                    + OIDCConstants.IDN_OIDC_REQ_OBJECT_REFERENCE;
+            log.info(errorMsg);
         }
     }
 }
