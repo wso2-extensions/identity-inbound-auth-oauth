@@ -17,11 +17,9 @@
 package org.wso2.carbon.identity.openidconnect.internal;
 
 import org.wso2.carbon.identity.event.services.IdentityEventService;
-import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.openidconnect.ClaimProvider;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilter;
 import org.wso2.carbon.identity.openidconnect.RequestObjectService;
-import org.wso2.carbon.identity.openidconnect.handlers.RequestObjectPersistanceHandler;
 import org.wso2.carbon.identity.openidconnect.handlers.RequestObjectRevokeHandler;
 
 import java.util.ArrayList;
@@ -34,7 +32,6 @@ public class OpenIDConnectServiceComponentHolder {
     private List<ClaimProvider> claimProviders = new ArrayList<>();
     private static RequestObjectService requestObjectService;
     private static IdentityEventService identityEventService;
-    private static RequestObjectPersistanceHandler requestObjectPersistanceHandler;
     private static RequestObjectRevokeHandler requestObjectRevokeHandler;
 
     public static RequestObjectRevokeHandler getRequestObjectRevokeHandler() {
@@ -45,16 +42,6 @@ public class OpenIDConnectServiceComponentHolder {
     public static void setRequestObjectRevokeHandler(RequestObjectRevokeHandler requestObjectRevokeHandler) {
 
         OpenIDConnectServiceComponentHolder.requestObjectRevokeHandler = requestObjectRevokeHandler;
-    }
-
-    public static RequestObjectPersistanceHandler getRequestObjectPersistanceHandler() {
-
-        return requestObjectPersistanceHandler;
-    }
-
-    public static void setRequestObjectPersistanceHandler(RequestObjectPersistanceHandler requestObjectPersistanceHandler) {
-
-        OpenIDConnectServiceComponentHolder.requestObjectPersistanceHandler = requestObjectPersistanceHandler;
     }
 
     public static IdentityEventService getIdentityEventService() {

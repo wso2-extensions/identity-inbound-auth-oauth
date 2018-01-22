@@ -39,16 +39,16 @@ import java.util.List;
 @WithCarbonHome
 @WithH2Database(jndiName = "jdbc/WSO2IdentityDB",
         files = {"dbScripts/h2_with_application_and_token.sql", "dbScripts/identity.sql"})
-public class RequestObjectRevokeHandlerTest {
+public class RequestObjectHandlerTest {
 
     RequestObjectRevokeHandler requestObjectRevokeHandler = new RequestObjectRevokeHandler();
 
     @DataProvider(name = "requestObjectRevoke")
     public Object[][] revokeAccessToken() {
 
-        List<String> code = new ArrayList<>();
-        code.add("code1");
-        code.add("code2");
+        List<String> codeList = new ArrayList<>();
+        codeList.add("code1");
+        codeList.add("code2");
         AuthzCodeDO authzCodeDO = new AuthzCodeDO();
         authzCodeDO.setAuthorizationCode("code1");
         authzCodeDO.setAuthzCodeId("coded1");
@@ -58,24 +58,32 @@ public class RequestObjectRevokeHandlerTest {
         List<AuthzCodeDO> lstAuthzCode = new ArrayList<>();
         lstAuthzCode.add(authzCodeDO);
         lstAuthzCode.add(authzCodeDO1);
-        return new Object[][]{{OIDCConstants.Event.POST_REVOKE_ACESS_TOKEN, code, null, OIDCConstants.Event.ACEESS_TOKENS},
-                {OIDCConstants.Event.POST_REVOKE_CODE, null, lstAuthzCode, OIDCConstants.Event.CODES}};
+        return new Object[][]{{OIDCConstants.Event.POST_REVOKE_ACESS_TOKEN, codeList, null, OIDCConstants.Event.
+                ACEESS_TOKENS, null},
+                {OIDCConstants.Event.POST_REVOKE_CODE, null, lstAuthzCode, OIDCConstants.Event.CODES, null},
+                {OIDCConstants.Event.POST_ISSUE_ACCESS_TOKEN, null, null, OIDCConstants.Event.
+                        TOKEN_ID, "token1"},
+                {OIDCConstants.Event.POST_ISSUE_CODE, null, null, OIDCConstants.Event.
+                        CODE_ID, "token1"}
+        };
     }
 
     @Test(dataProvider = "requestObjectRevoke")
-    public void testHandleEvent(String eventName, List<String> code, List<AuthzCodeDO> lstAuthzCode, String propertyName)
+    public void testHandleEvent(String eventName, List<String> codeList, List<AuthzCodeDO> lstAuthzCode,
+                                String propertyName, String code)
             throws IdentityEventException {
 
         HashMap<String, Object> properties = new HashMap<>();
-        if (CollectionUtils.isNotEmpty(code)) {
+        if (CollectionUtils.isNotEmpty(codeList)) {
             properties.put(propertyName, code);
         } else if (CollectionUtils.isNotEmpty(lstAuthzCode)) {
             properties.put(propertyName, lstAuthzCode);
         }
+        properties.put(OIDCConstants.Event.SESSION_DATA_KEY, "sessionDataKey");
         Event event = new Event(eventName, properties);
         requestObjectRevokeHandler.handleEvent(event);
-        Assert.assertEquals(requestObjectRevokeHandler.getName(), OIDCConstants.Event.REVOKE_REQUEST_OBJECT);
-        Assert.assertEquals(event.getEventProperties().size(), 1);
+        Assert.assertEquals(requestObjectRevokeHandler.getName(), OIDCConstants.Event.HANDLE_REQUEST_OBJECT);
+        Assert.assertNotNull(event.getEventProperties().size());
     }
 
 }

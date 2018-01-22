@@ -18,6 +18,8 @@
 
 package org.wso2.carbon.identity.openidconnect.handlers;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.event.IdentityEventException;
 import org.wso2.carbon.identity.event.event.Event;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
@@ -37,6 +39,8 @@ import java.util.Map;
  */
 public class RequestObjectRevokeHandler extends AbstractEventHandler {
 
+    private static final Log log = LogFactory.getLog(RequestObjectRevokeHandler.class);
+
     /**
      * Handles the event and invoke RequestObjectPersistenceFactory.
      *
@@ -50,6 +54,7 @@ public class RequestObjectRevokeHandler extends AbstractEventHandler {
         String eventName = event.getEventName();
         try {
             String tokenState = (String) eventProperties.get(OIDCConstants.Event.TOKEN_STATE);
+            String sessionDataKey = (String) eventProperties.get(OIDCConstants.Event.SESSION_DATA_KEY);
 
             if (OIDCConstants.Event.POST_REVOKE_ACESS_TOKEN.equals(eventName)) {
                 if (isTokenRemoved(tokenState)) {
@@ -73,10 +78,20 @@ public class RequestObjectRevokeHandler extends AbstractEventHandler {
                 RequestObjectPersistenceFactory.getInstance().getRequestObjectDAO().refreshRequestObjectReference
                         (oldAccessToken, newAccessToken);
             }
-        } catch (IdentityOAuth2Exception e) {
-            throw new IdentityEventException("Error while invoking request object factory.");
-        } catch (IdentityOAuthAdminException e) {
-            throw new IdentityEventException("Error while invoking request object factory.");
+            if (OIDCConstants.Event.POST_ISSUE_CODE.equals(eventName)) {
+                String codeId = (String) eventProperties.get(OIDCConstants.Event.CODE_ID);
+                RequestObjectPersistenceFactory.getInstance().getRequestObjectDAO().refreshRequestObjectReference
+                        (sessionDataKey, codeId, null);
+
+            } else if (OIDCConstants.Event.POST_ISSUE_ACCESS_TOKEN.equals(eventName)) {
+                String tokenId = (String) eventProperties.get(OIDCConstants.Event.TOKEN_ID);
+                RequestObjectPersistenceFactory.getInstance().getRequestObjectDAO().refreshRequestObjectReference
+                        (sessionDataKey, null, tokenId);
+            }
+        } catch (IdentityOAuth2Exception | IdentityOAuthAdminException e) {
+            String errorMsg = "Error while handling event: " + eventName;
+            log.info(errorMsg);
+            throw new IdentityEventException(errorMsg, e.getMessage());
         }
     }
 
@@ -87,6 +102,7 @@ public class RequestObjectRevokeHandler extends AbstractEventHandler {
     }
 
     public String getName() {
-        return OIDCConstants.Event.REVOKE_REQUEST_OBJECT;
+
+        return OIDCConstants.Event.HANDLE_REQUEST_OBJECT;
     }
 }
