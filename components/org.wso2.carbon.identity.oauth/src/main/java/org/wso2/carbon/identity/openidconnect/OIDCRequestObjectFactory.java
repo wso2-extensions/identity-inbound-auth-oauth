@@ -71,7 +71,7 @@ public class OIDCRequestObjectFactory {
         RequestObjectValidator requestObjectValidator = OAuthServerConfiguration.getInstance()
                 .getRequestObjectValidator();
         if (requestObject.isSigned()) {
-            if (!requestObjectValidator.validateSignature(requestObject, oAuth2Parameters.getClientId())) {
+            if (!requestObjectValidator.validateSignature(requestObject, oAuth2Parameters)) {
                 throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST,
                         "Request Object signature verification failed.");
 

@@ -702,7 +702,7 @@ public class OAuthServerConfiguration {
             while (iterator.hasNext()) {
                 OMElement requestObjectBuildersElement = iterator.next();
                 OMElement builderNameElement = requestObjectBuildersElement
-                        .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.BUILDER_NAME));
+                        .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.BUILDER_TYPE));
                 String builderName = null;
                 if (builderNameElement != null) {
                     builderName = builderNameElement.getText();
@@ -2255,8 +2255,8 @@ public class OAuthServerConfiguration {
         // Request Object Configs
         private static final String REQUEST_OBJECT_BUILDERS = "RequestObjectBuilders";
         private static final String REQUEST_OBJECT_BUILDER = "RequestObjectBuilder";
-        private static final String BUILDER_NAME = "BuilderName";
-        private static final String REQUEST_OBJECT_IMPL_CLASS = "RequestObjectBuilderImplClass";
+        private static final String BUILDER_TYPE = "Type";
+        private static final String REQUEST_OBJECT_IMPL_CLASS = "ClassName";
 
     }
 

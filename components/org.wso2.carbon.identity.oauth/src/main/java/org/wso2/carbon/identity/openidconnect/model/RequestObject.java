@@ -16,7 +16,6 @@
 package org.wso2.carbon.identity.openidconnect.model;
 
 
-import com.nimbusds.jose.ReadOnlyJWSHeader;
 import com.nimbusds.jwt.PlainJWT;
 import com.nimbusds.jwt.ReadOnlyJWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;

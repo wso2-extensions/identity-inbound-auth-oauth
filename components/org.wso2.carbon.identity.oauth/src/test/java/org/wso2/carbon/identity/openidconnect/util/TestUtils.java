@@ -34,11 +34,14 @@ import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.PlainJWT;
 import com.nimbusds.jwt.SignedJWT;
+import net.minidev.json.JSONArray;
+import net.minidev.json.JSONObject;
 import org.testng.Assert;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.oauth.dao.SQLQueries;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.authcontext.JWTTokenGenerator;
+import org.wso2.carbon.identity.openidconnect.model.Constants;
 import org.wso2.carbon.user.core.UserCoreConstants;
 
 import java.io.FileInputStream;
@@ -55,6 +58,7 @@ import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Map;
 
 public class TestUtils {
@@ -261,5 +265,75 @@ public class TestUtils {
 
         }
         return jwt.serialize();
+    }
+
+    public static Object[][] getRequestObjects(Key privateKey, Key privateKey2 , PublicKey publicKey, String
+            testClientId, String audience) throws
+            Exception {
+
+        Map<String,Object> claims1 = new HashMap<>();
+        Map<String,Object> claims2 = new HashMap<>();
+        Map<String,Object> claims3 = new HashMap<>();
+        Map<String,Object> claims4 = new HashMap<>();
+
+        claims1.put(Constants.STATE, "af0ifjsldkj");
+        claims1.put(Constants.CLIENT_ID, testClientId);
+
+        JSONObject userInfoClaims = new JSONObject();
+        userInfoClaims.put("essential", true);
+        userInfoClaims.put("value", "some-value");
+        JSONArray valuesArray = new JSONArray();
+        valuesArray.add("value1");
+        valuesArray.add("value2");
+        userInfoClaims.put("values", valuesArray);
+        JSONObject userInfoClaim = new JSONObject();
+        userInfoClaim.put("user_info", userInfoClaims);
+        JSONObject acr = new JSONObject();
+        acr.put("acr", userInfoClaim);
+        claims2.put("claims", acr);
+
+        claims3.put(Constants.CLIENT_ID, "some-string");
+
+        JSONObject givenName = new JSONObject();
+        givenName.put("given_name", null);
+
+        JSONObject idTokenClaim = new JSONObject();
+        idTokenClaim.put("id_token", givenName);
+        claims4.put("claims", idTokenClaim);
+
+        String jsonWebToken1 = buildJWT(testClientId, testClientId, "1000", audience, "RSA265", privateKey, 0,
+                claims1);
+        String jsonWebToken2 = buildJWT(testClientId, testClientId, "1001", audience, "none", privateKey, 0,
+                claims1);
+        String jsonWebToken3 = buildJWT(testClientId, testClientId, "1002", audience, "RSA265", privateKey, 0,
+                claims2);
+        String jsonWebToken4 = buildJWT(testClientId, testClientId, "1003", audience, "none", privateKey, 0,
+                claims2);
+        String jsonWebToken5 = buildJWT(testClientId, testClientId, "1004", audience, "none", privateKey, 0,
+                claims3);
+        String jsonWebToken6 = buildJWT(testClientId, testClientId, "1005", audience, "RSA265", privateKey2, 0,
+                claims2);
+        String jsonWebToken7 = buildJWT(testClientId, testClientId, "1000", audience, "RSA265", privateKey, 0,
+                claims4);
+        String jsonWebEncryption1 = buildJWE(testClientId, testClientId, "2000", audience,
+                JWSAlgorithm.NONE.getName(), privateKey, publicKey, 0, claims1);
+        String jsonWebEncryption2 = buildJWE(testClientId, testClientId, "2001", audience,
+                JWSAlgorithm.RS256.getName(), privateKey, publicKey, 0, claims1);
+        return new Object[][]{
+                {jsonWebToken1, claims1, true, false, true, "Valid Request Object, signed, not encrypted."},
+                {jsonWebToken2, claims1, false, false, true, "Valid Request Object, not signed, not encrypted."},
+                {jsonWebToken3, claims2, true, false, true, "Valid Request Object, signed, not encrypted."},
+                {jsonWebToken4, claims2, false, false, true, "Valid Request Object, not signed, not encrypted."},
+                {jsonWebToken5, claims3, false, false, false, "Invalid Request Object, not signed, not encrypted, " +
+                        "mismatching client_id."},
+                {jsonWebToken6, claims2, true, false, false, "Invalid Request Object, signed but with different key, " +
+                        "not encrypted."},
+                {jsonWebToken7, claims4, true, false, true, "Valid Request Object, signed, not encrypted."},
+                {"some-request-object", null, false, false, false, "Invalid Request Object string, " +
+                        "signed not encrypted."},
+                {"", null, false, false, false, "Invalid Request Object, signed not encrypted."},
+                {jsonWebEncryption1, claims1, false, true, true, "Valid Request Object, signed and encrypted."},
+                {jsonWebEncryption2, claims1, true, true, true, "Valid Request Object, signed and encrypted."}
+        };
     }
 }

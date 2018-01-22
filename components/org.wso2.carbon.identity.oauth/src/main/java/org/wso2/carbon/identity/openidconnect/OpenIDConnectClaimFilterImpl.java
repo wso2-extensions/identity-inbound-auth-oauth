@@ -130,6 +130,28 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
         return DEFAULT_PRIORITY;
     }
 
+    public Map<String, Object> getClaimsFilteredByEssentialClaims(Map<String, Object> userClaims,
+                                                                  String type,
+                                                                  RequestObject requestObject) {
+
+        Map<String, Object> essentialClaims = new HashMap();
+        if (isEmpty(userClaims)) {
+            // No user claims to filter.
+            if (log.isDebugEnabled()) {
+                log.debug("No user claims to filter. Returning an empty map of filtered claims.");
+            }
+            return new HashMap<>();
+        }
+        if (requestObject != null) {
+            Map<String, List<RequestedClaim>> requestParamClaims = requestObject.getRequestedClaims();
+            List<String> essentialClaimsfromRequestParam = OAuth2Util.essentialClaimsFromRequestParam(type,
+                    requestParamClaims);
+            for (String essentialClaim : essentialClaimsfromRequestParam) {
+                essentialClaims.put(essentialClaim, userClaims.get(essentialClaim));
+            }
+        }
+        return essentialClaims;
+    }
 
     private Properties getOIDCScopeProperties(String spTenantDomain) {
         Resource oidcScopesResource = null;

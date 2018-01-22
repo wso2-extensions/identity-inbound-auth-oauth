@@ -33,5 +33,14 @@ public interface RequestObjectBuilder {
     void buildRequestObject(String requestObject, OAuth2Parameters oAuth2Parameters, RequestObject
             requestObjectInstance) throws RequestObjectException;
 
+    /**
+     * To decrypt the request objected by using IS primary key
+     *
+     * @param requestObject    requestObject
+     * @param oAuth2Parameters oAuth2Parameters
+     * @throws RequestObjectException
+     */
+    String decrypt(String requestObject, OAuth2Parameters oAuth2Parameters) throws RequestObjectException;
+
 }
 

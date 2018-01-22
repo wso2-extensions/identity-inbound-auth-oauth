@@ -18,54 +18,46 @@
 package org.wso2.carbon.identity.openidconnect;
 
 import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.JWEObject;
 import com.nimbusds.jose.JWSVerifier;
 import com.nimbusds.jose.ReadOnlyJWSHeader;
-import com.nimbusds.jose.crypto.RSADecrypter;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jwt.EncryptedJWT;
-import com.nimbusds.jwt.JWTClaimsSet;
-import com.nimbusds.jwt.PlainJWT;
 import com.nimbusds.jwt.SignedJWT;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.core.util.KeyStoreManager;
 import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.base.IdentityConstants;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
-import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
-import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.model.Constants;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.security.Key;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.security.cert.Certificate;
-import java.security.cert.CertificateException;
-import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
 import java.util.List;
 import java.util.Properties;
 
 import static org.apache.commons.lang.StringUtils.isEmpty;
+import static org.wso2.carbon.identity.openidconnect.model.Constants.DASH_DELIMITER;
+import static org.wso2.carbon.identity.openidconnect.model.Constants.FULL_STOP_DELIMITER;
+import static org.wso2.carbon.identity.openidconnect.model.Constants.KEYSTORE_FILE_EXTENSION;
+import static org.wso2.carbon.identity.openidconnect.model.Constants.RS;
 
 /**
  * This class validates request object parameter value which comes with the OIDC authorization request as an optional
@@ -75,13 +67,6 @@ import static org.apache.commons.lang.StringUtils.isEmpty;
 public class RequestObjectValidatorImpl implements RequestObjectValidator {
 
     private static Log log = LogFactory.getLog(RequestObjectValidatorImpl.class);
-    //JWS is consists of three parts seperated by 2 '.'s as JOSE header, JWS payload, JWS signature
-    private static final int NUMBER_OF_PARTS_IN_JWS = 3;
-    private static final String RS = "RS";
-    public static final String JWT_PART_DELIMITER = "\\.";
-
-    public static final String FULL_STOP_DELIMITER = ".";
-    private static Properties properties;
 
     @Override
     public boolean isEncrypted(String requestObject) {
@@ -99,57 +84,16 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
     }
 
     @Override
-    public boolean validateSignature(RequestObject requestObject, String alias) throws RequestObjectException {
+    public boolean validateSignature(RequestObject requestObject, OAuth2Parameters oAuth2Parameters) throws
+            RequestObjectException {
         SignedJWT jwt = requestObject.getSignedJWT();
-        Certificate certificate = getCertificateForAlias(alias);
+        Certificate certificate = getCertificateForAlias(oAuth2Parameters.getTenantDomain(), oAuth2Parameters
+                .getClientId());
         boolean isVerified = isSignatureVerified(jwt, certificate);
         requestObject.setIsSignatureValid(isVerified);
         return isVerified;
     }
 
-
-    /**
-     * Decrypt the request object.
-     *
-     * @param requestObject    requestObject
-     * @param oAuth2Parameters oAuth2Parameters
-     * @throws RequestObjectException
-     */
-    @Override
-    public String decrypt(String requestObject, OAuth2Parameters oAuth2Parameters) throws RequestObjectException {
-
-        EncryptedJWT encryptedJWT;
-        try {
-            encryptedJWT = EncryptedJWT.parse(requestObject);
-            RSAPrivateKey rsaPrivateKey = getRsaPrivateKey(oAuth2Parameters);
-            RSADecrypter decrypter = new RSADecrypter(rsaPrivateKey);
-            encryptedJWT.decrypt(decrypter);
-
-            JWEObject jweObject = JWEObject.parse(requestObject);
-            jweObject.decrypt(decrypter);
-
-            if (jweObject != null && jweObject.getPayload() != null && jweObject.getPayload().toString()
-                    .split(JWT_PART_DELIMITER).length == NUMBER_OF_PARTS_IN_JWS) {
-                return jweObject.getPayload().toString();
-            } else {
-                return new PlainJWT((JWTClaimsSet) encryptedJWT.getJWTClaimsSet()).serialize();
-            }
-
-        } catch (JOSEException | IdentityOAuth2Exception | java.text.ParseException e) {
-            String errorMessage = "Failed to decrypt request object.";
-            if (log.isDebugEnabled()) {
-                log.debug(errorMessage, e);
-            }
-            throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST, errorMessage);
-        }
-    }
-
-    private RSAPrivateKey getRsaPrivateKey(OAuth2Parameters oAuth2Parameters) throws IdentityOAuth2Exception {
-        String tenantDomain = getTenantDomainForDecryption(oAuth2Parameters);
-        int tenantId = OAuth2Util.getTenantId(tenantDomain);
-        Key key = OAuth2Util.getPrivateKey(tenantDomain, tenantId);
-        return (RSAPrivateKey) key;
-    }
 
     /**
      * Decide whether this request object is a signed object encrypted object or a nested object.
@@ -261,40 +205,52 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
     }
 
     /**
-     * Get tenant domain from oAuth2Parameters.
+     * Get the X509CredentialImpl object for a particular tenant and alias
      *
-     * @param oAuth2Parameters oAuth2Parameters
-     * @return Tenant domain
+     * @param tenantDomain tenant domain of the issuer
+     * @param alias        alias of cert
+     * @return X509Certificate object containing the public certificate in the primary keystore of the tenantDOmain
+     * with alias
      */
-    private String getTenantDomainForDecryption(OAuth2Parameters oAuth2Parameters) {
-        if (StringUtils.isNotEmpty(oAuth2Parameters.getTenantDomain())) {
-            return oAuth2Parameters.getTenantDomain();
+    protected Certificate getCertificateForAlias(String tenantDomain, String alias) throws RequestObjectException {
+
+        int tenantId;
+        String error = "Unable to Validate the Signature of Request Object";
+        tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
+        KeyStoreManager keyStoreManager;
+        // get an instance of the corresponding Key Store Manager instance
+        keyStoreManager = KeyStoreManager.getInstance(tenantId);
+        KeyStore keyStore;
+        try {
+            if (tenantId != MultitenantConstants.SUPER_TENANT_ID) {// for tenants, load key from their generated key store
+                keyStore = keyStoreManager.getKeyStore(generateKSNameFromDomainName(tenantDomain));
+            } else {
+                // for super tenant, load the default pub. cert using the config. in carbon.xml
+                keyStore = keyStoreManager.getPrimaryKeyStore();
+            }
+            return keyStore.getCertificate(alias);
+
+        } catch (KeyStoreException e) {
+            String errorMsg = "Error instantiating an X509Certificate object for the certificate alias:" + alias +
+                    " in tenant:" + tenantDomain;
+            log.error(errorMsg, e);
+            throw new RequestObjectException(OAuth2ErrorCodes.SERVER_ERROR, error);
+        } catch (Exception e) {
+            //keyStoreManager throws Exception
+            log.error("Unable to load key store manager for the tenant domain:" + tenantDomain, e);
+            throw new RequestObjectException(OAuth2ErrorCodes.SERVER_ERROR, error);
         }
-        return MultitenantConstants.SUPER_TENANT_NAME;
     }
 
     /**
-     * Get the certificate which matches the given alias from client-truststore
+     * Generate the key store name from the domain name
      *
-     * @param alias
-     * @return
-     * @throws RequestObjectException
+     * @param tenantDomain tenant domain name
+     * @return key store file name
      */
-    private Certificate getCertificateForAlias(String alias) throws RequestObjectException {
-        Certificate certificate;
-        try {
-            KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
-            keyStore.load(new FileInputStream(buildFilePath(getPropertyValue(OAuthConstants.CLIENT_TRUST_STORE))),
-                    getPropertyValue(OAuthConstants.CLIENT_TRUST_STORE_PASSWORD).toCharArray());
-            certificate = keyStore.getCertificate(alias);
-        } catch (KeyStoreException | IOException | NoSuchAlgorithmException | CertificateException e) {
-            String errorMsg = "Error while loading a certificate to validate the request object signature.";
-            if (log.isDebugEnabled()) {
-                log.error(errorMsg, e);
-            }
-            throw new RequestObjectException(OAuth2ErrorCodes.SERVER_ERROR, errorMsg);
-        }
-        return certificate;
+    public static String generateKSNameFromDomainName(String tenantDomain) {
+        String ksName = tenantDomain.trim().replace(FULL_STOP_DELIMITER, DASH_DELIMITER);
+        return ksName + KEYSTORE_FILE_EXTENSION;
     }
 
     /**
@@ -352,47 +308,5 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
         return false;
     }
 
-    /**
-     * Build the absolute path of a give file path
-     *
-     * @param path File path
-     * @return Absolute file path
-     */
-    private static String buildFilePath(String path) {
-
-        if (StringUtils.isNotEmpty(path) && path.startsWith(FULL_STOP_DELIMITER)) {
-            // Relative file path is given
-            File currentDirectory = new File(new File(FULL_STOP_DELIMITER)
-                    .getAbsolutePath());
-            try {
-                path = currentDirectory.getCanonicalPath() + File.separator + path;
-            } catch (IOException e) {
-                log.error("Error occurred while retrieving current directory path");
-            }
-        }
-
-        if (log.isDebugEnabled()) {
-            log.debug("File path for TrustStore : " + path);
-        }
-        return path;
-    }
-
-    /**
-     * Get property value by key
-     *
-     * @param key Property key
-     * @return Property value
-     */
-    private static String getPropertyValue(String key) throws IOException {
-
-        if (properties == null) {
-            properties = new Properties();
-            String configFilePath = buildFilePath(OAuthConstants.CONFIG_RELATIVE_PATH);
-            File configFile = new File(configFilePath);
-            InputStream inputStream = new FileInputStream(configFile);
-            properties.load(inputStream);
-        }
-        return properties.getProperty(key);
-    }
 }
 
