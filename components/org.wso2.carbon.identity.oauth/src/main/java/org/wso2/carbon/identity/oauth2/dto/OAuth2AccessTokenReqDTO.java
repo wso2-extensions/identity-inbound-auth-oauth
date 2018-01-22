@@ -45,6 +45,7 @@ public class OAuth2AccessTokenReqDTO {
     private RequestParameter[] requestParameters;
     private HttpRequestHeader[] httpRequestHeaders;
     private List<String> authenticationMethodReferences = new ArrayList<>();
+    private OAuthClientAuthnContext oAuthClientAuthnContext;
 
     public String getClientId() {
         return clientId;

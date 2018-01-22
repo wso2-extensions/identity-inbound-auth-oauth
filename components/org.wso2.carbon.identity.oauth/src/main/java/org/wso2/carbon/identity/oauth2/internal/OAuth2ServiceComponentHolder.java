@@ -36,7 +36,6 @@ public class OAuth2ServiceComponentHolder {
     private static boolean pkceEnabled = false;
     private static RegistryService registryService;
     private static AuthenticationMethodNameTranslator authenticationMethodNameTranslator;
-    private OAuth2ServiceComponentHolder(){
     private static List<OAuthClientAuthenticator> authenticationHandlers = new ArrayList<>();
 
     private OAuth2ServiceComponentHolder() {

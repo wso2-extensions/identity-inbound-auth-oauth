@@ -88,7 +88,8 @@ public class OAuthRevocationRequestDTO {
         return oAuthClientAuthnContext;
     }
 
-    public void setoAuthClientAuthnContext(OAuthClientAuthnContext oAuthClientAuthnContext) {
+    public void setOauthClientAuthnContext(OAuthClientAuthnContext oAuthClientAuthnContext) {
         this.oAuthClientAuthnContext = oAuthClientAuthnContext;
     }
+
 }

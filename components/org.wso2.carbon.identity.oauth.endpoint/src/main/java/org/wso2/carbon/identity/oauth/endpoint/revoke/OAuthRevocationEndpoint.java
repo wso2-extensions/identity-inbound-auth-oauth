@@ -167,7 +167,7 @@ public class OAuthRevocationEndpoint {
         Object oauthClientAuthnContextObj = request.getAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT);
         if (oauthClientAuthnContextObj instanceof OAuthClientAuthnContext) {
             OAuthClientAuthnContext oAuthClientAuthnContext = (OAuthClientAuthnContext) oauthClientAuthnContextObj;
-            revokeRequest.setoAuthClientAuthnContext(oAuthClientAuthnContext);
+            revokeRequest.setOauthClientAuthnContext(oAuthClientAuthnContext);
             revokeRequest.setConsumerKey(oAuthClientAuthnContext.getClientId());
             if (oAuthClientAuthnContext.getParameter(OAuth.OAUTH_CLIENT_SECRET) != null) {
                 revokeRequest.setConsumerSecret((String) oAuthClientAuthnContext.getParameter(OAuth

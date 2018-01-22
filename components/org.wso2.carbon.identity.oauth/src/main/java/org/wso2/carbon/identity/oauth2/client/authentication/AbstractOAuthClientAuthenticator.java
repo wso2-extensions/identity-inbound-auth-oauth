@@ -38,6 +38,7 @@ public abstract class AbstractOAuthClientAuthenticator extends AbstractIdentityH
      * @return Body parameters as a string map
      */
     protected Map<String, String> getBodyParameters(Map<String, List> content) {
+
         Map<String, String> stringParams = new HashMap<>();
         content.forEach((key, value) -> {
             if (value != null && value.size() > 0) {
@@ -54,6 +55,7 @@ public abstract class AbstractOAuthClientAuthenticator extends AbstractIdentityH
      * @return HTTP headers as a string parameter map
      */
     protected Map<String, String> getHeaders(HttpServletRequest request) {
+
         Map<String, String> headers = new HashMap<>();
         Enumeration<String> headerNames = request.getHeaderNames();
         while (headerNames.hasMoreElements()) {

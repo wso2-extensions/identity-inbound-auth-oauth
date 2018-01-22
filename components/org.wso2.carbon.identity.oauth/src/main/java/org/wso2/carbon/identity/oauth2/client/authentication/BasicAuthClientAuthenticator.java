@@ -44,6 +44,7 @@ import java.util.Map;
 public class BasicAuthClientAuthenticator extends AbstractOAuthClientAuthenticator {
 
     private static Log log = LogFactory.getLog(BasicAuthClientAuthenticator.class);
+    private static String CREDENTIAL_SEPARATOR = ":";
 
     /**
      * Returns the execution order of this authenticator
@@ -52,6 +53,7 @@ public class BasicAuthClientAuthenticator extends AbstractOAuthClientAuthenticat
      */
     @Override
     public int getPriority() {
+
         return 100;
     }
 
@@ -76,7 +78,7 @@ public class BasicAuthClientAuthenticator extends AbstractOAuthClientAuthenticat
         } else {
             try {
                 if (log.isDebugEnabled()) {
-                    log.debug("Authenticating client: " + oAuthClientAuthnContext.getClientId() + " with client " +
+                    log.debug("Authenticating client : " + oAuthClientAuthnContext.getClientId() + " with client " +
                             "secret.");
                 }
                 return OAuth2Util.authenticateClient(oAuthClientAuthnContext.getClientId(),
@@ -96,6 +98,7 @@ public class BasicAuthClientAuthenticator extends AbstractOAuthClientAuthenticat
 
     private void validateAuthenticationInfo(HttpServletRequest request, Map<String, List> contentMap)
             throws OAuthClientAuthnException {
+
         if (isAuthorizationHeaderExists(request)) {
             if (log.isErrorEnabled()) {
                 log.debug("Authorization header exists. Hence validating whether body params also present");
@@ -141,6 +144,7 @@ public class BasicAuthClientAuthenticator extends AbstractOAuthClientAuthenticat
      */
     @Override
     public String getName() {
+
         return "BasicOAuthClientCredAuthenticator";
     }
 
@@ -170,7 +174,6 @@ public class BasicAuthClientAuthenticator extends AbstractOAuthClientAuthenticat
         return oAuthClientAuthnContext.getClientId();
     }
 
-
     /**
      * Validates that basic authentication information is only present either in body or as authorization headers.
      *
@@ -193,10 +196,12 @@ public class BasicAuthClientAuthenticator extends AbstractOAuthClientAuthenticat
     }
 
     protected boolean isAuthorizationHeaderExists(HttpServletRequest request) {
+
         return StringUtils.isNotEmpty(getAuthorizationHeader(request));
     }
 
     protected String getAuthorizationHeader(HttpServletRequest request) {
+
         return request.getHeader(HTTPConstants.HEADER_AUTHORIZATION);
     }
 
@@ -224,7 +229,7 @@ public class BasicAuthClientAuthenticator extends AbstractOAuthClientAuthenticat
         if (splitValues.length == 2) {
             byte[] decodedBytes = Base64Utils.decode(splitValues[1].trim());
             String userNamePassword = new String(decodedBytes, Charsets.UTF_8);
-            String[] credentials = userNamePassword.split(":");
+            String[] credentials = userNamePassword.split(CREDENTIAL_SEPARATOR);
             if (credentials.length == 2) {
                 return credentials;
             }
@@ -241,6 +246,7 @@ public class BasicAuthClientAuthenticator extends AbstractOAuthClientAuthenticat
      * @param context      OAuth client authentication context.
      */
     protected void setClientCredentialsFromParam(Map<String, List> contentParam, OAuthClientAuthnContext context) {
+
         Map<String, String> stringContent = getBodyParameters(contentParam);
         context.setClientId(stringContent.get(OAuth.OAUTH_CLIENT_ID));
         context.addParameter(OAuth.OAUTH_CLIENT_SECRET, stringContent.get(OAuth.OAUTH_CLIENT_SECRET));

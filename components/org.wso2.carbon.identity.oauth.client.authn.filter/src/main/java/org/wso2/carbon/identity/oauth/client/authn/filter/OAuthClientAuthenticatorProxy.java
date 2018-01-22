@@ -45,6 +45,7 @@ public class OAuthClientAuthenticatorProxy extends AbstractPhaseInterceptor<Mess
     private static String HTTP_REQUEST = "HTTP.REQUEST";
 
     public OAuthClientAuthenticatorProxy() {
+
         // Since the body is consumed and body parameters are available at this phase we use "PRE_INVOKE"
         super(Phase.PRE_INVOKE);
     }
@@ -63,7 +64,7 @@ public class OAuthClientAuthenticatorProxy extends AbstractPhaseInterceptor<Mess
         HttpServletRequest request = ((HttpServletRequest) message.get(HTTP_REQUEST));
         OAuthClientAuthnContext oAuthClientAuthnContext = oAuthClientAuthnService.authenticateClient(request,
                 bodyContentParams);
-        if(!oAuthClientAuthnContext.isPreviousAuthenticatorEngaged()) {
+        if (!oAuthClientAuthnContext.isPreviousAuthenticatorEngaged()) {
             oAuthClientAuthnContext.setErrorCode(OAuth2ErrorCodes.INVALID_CLIENT);
             oAuthClientAuthnContext.setErrorMessage("Unsupported client authentication mechanism");
         }
@@ -77,6 +78,7 @@ public class OAuthClientAuthenticatorProxy extends AbstractPhaseInterceptor<Mess
      * @return Body parameter of the incoming request message
      */
     protected Map<String, List> getContentParams(Message message) {
+
         Map<String, List> contentMap = new HashMap<>();
         List contentList = message.getContent(List.class);
         contentList.forEach(item -> {
@@ -93,10 +95,10 @@ public class OAuthClientAuthenticatorProxy extends AbstractPhaseInterceptor<Mess
     }
 
     private void setContextToRequest(HttpServletRequest request, OAuthClientAuthnContext oAuthClientAuthnContext) {
+
         if (log.isDebugEnabled()) {
             log.debug("Setting OAuth client authentication context to request");
         }
-
         request.setAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT,
                 oAuthClientAuthnContext);
     }

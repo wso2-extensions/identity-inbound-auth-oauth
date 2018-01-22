@@ -38,89 +38,111 @@ public class OAuthClientAuthnContext extends MessageContext {
 
     /**
      * Get authenticated client id.
+     *
      * @return Authenticated client id.
      */
     public String getClientId() {
+
         return clientId;
     }
 
     /**
      * Set authenticated client id.
+     *
      * @param clientId Authenticated client id.
      */
     public void setClientId(String clientId) {
+
         this.clientId = clientId;
     }
 
     /**
      * Get authentication status of the client.
+     *
      * @return Authentication status of client.
      */
     public boolean isAuthenticated() {
+
         return isAuthenticated;
     }
 
     /**
      * Set authentication status of client.
+     *
      * @param authenticated Whether the client is authenticated or not.
      */
     public void setAuthenticated(boolean authenticated) {
+
         isAuthenticated = authenticated;
     }
 
     /**
      * Get the list of executed authenticators for a particular request.
+     *
      * @return List of authenticators.
      */
     public List getExecutedAuthenticators() {
+
         return executedAuthenticators;
     }
 
     /**
      * Get error message.
+     *
      * @return Error message.
      */
     public String getErrorMessage() {
+
         return errorMessage;
     }
 
     /**
      * Set error message.
+     *
      * @param errorMessage Error message.
      */
     public void setErrorMessage(String errorMessage) {
+
         this.errorMessage = errorMessage;
     }
 
     /**
      * Get error code.
+     *
      * @return error code.
      */
     public String getErrorCode() {
+
         return errorCode;
     }
 
     /**
      * Set error code.
+     *
      * @param errorCode Error code.
      */
     public void setErrorCode(String errorCode) {
+
         this.errorCode = errorCode;
     }
 
     /**
      * Add an authenticator.
+     *
      * @param authenticatorName Authenticator name.
      */
     public void addAuthenticator(String authenticatorName) {
+
         this.executedAuthenticators.add(authenticatorName);
     }
 
     /**
      * Checks whether a previous authenticator is engaged towards this request.
+     *
      * @return true if another authenticator is engaged previously. False if not.
      */
-    public boolean isPreviousAuthenticatorEngaged () {
+    public boolean isPreviousAuthenticatorEngaged() {
+
         return (this.executedAuthenticators.size() > 0);
     }
 }

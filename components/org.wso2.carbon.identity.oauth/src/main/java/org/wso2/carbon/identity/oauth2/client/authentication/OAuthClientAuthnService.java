@@ -42,6 +42,7 @@ public class OAuthClientAuthnService {
      * @return List of OAuth2 client authenticators.
      */
     public List<OAuthClientAuthenticator> getClientAuthenticators() {
+
         if (log.isDebugEnabled()) {
             log.debug("Retrieving registered OAuth client authenticator list.");
         }
@@ -57,6 +58,7 @@ public class OAuthClientAuthnService {
      * authentication.
      */
     public OAuthClientAuthnContext authenticateClient(HttpServletRequest request, Map<String, List> bodyContentParams) {
+
         OAuthClientAuthnContext oAuthClientAuthnContext = new OAuthClientAuthnContext();
         executeClientAuthenticators(request, oAuthClientAuthnContext, bodyContentParams);
         return oAuthClientAuthnContext;
@@ -117,6 +119,7 @@ public class OAuthClientAuthnService {
      * @param oAuthClientAuthnContext OAuth client authentication context.
      */
     private void failOnMultipleAuthenticators(OAuthClientAuthnContext oAuthClientAuthnContext) {
+
         if (oAuthClientAuthnContext.getExecutedAuthenticators().size() > 1) {
 
             if (log.isDebugEnabled()) {
@@ -135,6 +138,7 @@ public class OAuthClientAuthnService {
      * @param oAuthClientAuthnContext OAuth client authentication request.
      */
     private void setContextToRequest(HttpServletRequest request, OAuthClientAuthnContext oAuthClientAuthnContext) {
+
         if (log.isDebugEnabled()) {
             log.debug("Setting OAuth client authentication context to request");
         }
@@ -170,6 +174,7 @@ public class OAuthClientAuthnService {
      */
     private void setErrorToContext(String errorCode, String errorMessage, OAuthClientAuthnContext
             oAuthClientAuthnContext) {
+
         if (log.isDebugEnabled()) {
             log.debug("Setting error to client authentication context : Error code : " + errorCode + ", Error " +
                     "message : " + errorMessage);
@@ -186,6 +191,7 @@ public class OAuthClientAuthnService {
      * @return Whether the client authenticator is enabled or disabled.
      */
     private boolean isAuthenticatorDisabled(OAuthClientAuthenticator oAuthClientAuthenticator) {
+
         return !oAuthClientAuthenticator.isEnabled();
     }
 
@@ -260,6 +266,7 @@ public class OAuthClientAuthnService {
     private boolean canAuthenticate(OAuthClientAuthenticator oAuthClientAuthenticator,
                                     OAuthClientAuthnContext oAuthClientAuthnContext,
                                     HttpServletRequest request, Map<String, List> bodyContentMap) {
+
         if (log.isDebugEnabled()) {
             log.debug("Evaluating canAuthenticate of authenticator : " + oAuthClientAuthenticator.getName());
         }
