@@ -218,5 +218,4 @@ public class RequestObject implements Serializable {
     public Object getClaim(String claimName) {
         return claimsSet.getClaim(claimName);
     }
-
 }

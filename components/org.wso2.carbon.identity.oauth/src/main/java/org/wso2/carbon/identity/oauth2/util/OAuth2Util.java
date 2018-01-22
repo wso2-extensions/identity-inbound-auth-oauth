@@ -1946,27 +1946,6 @@ public class OAuth2Util {
         return true;
     }
 
-    /**
-     * This method returns essential:true claims list from the request parameter of OIDC authorization request
-     *
-     * @param claimRequestor                  claimrequestor is either id_token or  userinfo
-     * @param requestedClaimsFromRequestParam claims defined in the value of the request parameter
-     * @return the claim list which have attribute vale essentail :true
-     */
-    public static List<String> essentialClaimsFromRequestParam(String claimRequestor, Map<String, List<RequestedClaim>>
-            requestedClaimsFromRequestParam) {
-
-        List<String> essentialClaimsfromRequestParam = new ArrayList<>();
-        List<RequestedClaim> claimsforClaimRequestor = requestedClaimsFromRequestParam.get(claimRequestor);
-        for (RequestedClaim claimforClaimRequestor : claimsforClaimRequestor) {
-            String claim = claimforClaimRequestor.getName();
-            if (claimforClaimRequestor.isEssential()) {
-                essentialClaimsfromRequestParam.add(claim);
-            }
-        }
-        return essentialClaimsfromRequestParam;
-    }
-
     /* Get authorized user from the {@link AccessTokenDO}. When getting authorized user we also make sure flag to
     * determine whether the user is federated or not is set.
     *
