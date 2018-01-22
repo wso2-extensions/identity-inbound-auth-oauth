@@ -62,7 +62,7 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
     @Override
     public void buildRequestObject(String requestObjectParam, OAuth2Parameters oAuth2Parameters,
                                    RequestObject requestObjectInstance) throws RequestObjectException {
-
+      
         //Making a copy of requestObjectParam to prevent editing initial reference
         String requestObjectParamValue = requestObjectParam;
         if (isEncrypted(requestObjectParamValue)) {
