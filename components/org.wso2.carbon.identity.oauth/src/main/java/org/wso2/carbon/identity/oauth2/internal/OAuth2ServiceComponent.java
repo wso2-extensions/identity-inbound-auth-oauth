@@ -271,7 +271,7 @@ public class OAuth2ServiceComponent {
     @Reference(
             name = "oauth.client.authenticator",
             service = OAuthClientAuthenticator.class,
-            cardinality = ReferenceCardinality.OPTIONAL,
+            cardinality = ReferenceCardinality.MULTIPLE,
             policy = ReferencePolicy.DYNAMIC,
             unbind = "unsetOAuthClientAuthenticator"
     )

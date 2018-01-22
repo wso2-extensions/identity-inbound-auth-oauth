@@ -145,4 +145,13 @@ public class OAuthClientAuthnContext extends MessageContext {
 
         return (this.executedAuthenticators.size() > 0);
     }
+
+    /**
+     * Returns whether multiple authenticators were executed or not
+     * @return true if multiple authenticators were engaged, else false.
+     */
+    public boolean isMultipleAuthenticatorsEngaged() {
+
+        return this.executedAuthenticators.size() > 1;
+    }
 }
