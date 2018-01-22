@@ -41,6 +41,10 @@ public class OIDCConstants {
         public static final String POST_REVOKE_CODE = "POST_REVOKE_CODE";
         public static final String ACEESS_TOKENS = "ACEESS_TOKENS";
         public static final String CODES = "CODES";
+        public static final String TOKEN_STATE = "TOKEN_STATE";
+        public static final String NEW_ACCESS_TOKEN = "NEW_ACCESS_TOKEN";
+        public static final String OLD_ACCESS_TOKEN = "OLD_ACCESS_TOKEN";
+        public static final String POST_REFRESH_TOKEN = "POST_REFRESH_TOKEN";
     }
 }
 

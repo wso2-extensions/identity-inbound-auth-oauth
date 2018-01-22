@@ -31,14 +31,59 @@ import java.util.List;
  */
 public interface RequestObjectDAO {
 
+    /**
+     * Store request object related data into related db tables.
+     *
+     * @param consumerKeyId    consumer key
+     * @param codeId         code id
+     * @param accessTokenId  access token id
+     * @param sessionDataKey session data key
+     * @param claims         request object claims
+     * @throws IdentityOAuth2Exception
+     */
     void insertRequestObjectData(String consumerKeyId, String codeId,
                                  String accessTokenId, String sessionDataKey, List<List<RequestedClaim>> claims)
             throws IdentityOAuth2Exception;
 
-    void updateRequestObjectReference(String sessionDataKey, String codeId, String accessTokenId);
+    /**
+     * Update request object reference when the code or the token is generated.
+     *
+     * @param sessionDataKey session data key
+     * @param codeId         code id
+     * @param accessTokenId  access token id
+     * @throws IdentityOAuth2Exception
+     */
+    void refreshRequestObjectReference(String sessionDataKey, String codeId, String accessTokenId) throws IdentityOAuth2Exception;
+
+    /**
+     * Delete request object reference in code or token revoke.
+     *
+     * @param tokenId token id
+     * @param codeId code id
+     * @throws IdentityOAuth2Exception
+     * @throws IdentityOAuthAdminException
+     */
 
     void deleteRequestObjectReference(String tokenId, String codeId) throws IdentityOAuth2Exception,
             IdentityOAuthAdminException;
 
+    /**
+     * Retrieve essential claims for the id token and user info endpoint.
+     *
+     * @param tokenId token id
+     * @param codeId code id
+     * @param isUserInfo return true if the claims are requested from user info end point.
+     * @return
+     * @throws IdentityOAuth2Exception
+     */
     List<String> getEssentialClaims(String tokenId, String codeId, boolean isUserInfo) throws IdentityOAuth2Exception;
+
+    /**
+     * Updates refresh token whe refresh token is issued.
+     *
+     * @param oldAccessToken old access token id
+     * @param newAccessToken new access token id
+     * @throws IdentityOAuth2Exception
+     */
+    void refreshRequestObjectReference(String oldAccessToken, String newAccessToken) throws IdentityOAuth2Exception;
 }

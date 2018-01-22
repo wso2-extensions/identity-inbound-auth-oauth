@@ -18,30 +18,12 @@
 
 package org.wso2.carbon.identity.oauth2.authz.handlers;
 
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.identity.application.common.model.Claim;
-import org.wso2.carbon.identity.application.common.model.ClaimMapping;
-import org.wso2.carbon.identity.event.IdentityEventException;
-import org.wso2.carbon.identity.event.event.Event;
-import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
-import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
-import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
-import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.authz.handlers.util.ResponseTypeHandlerUtil;
-import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
-import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
-import org.wso2.carbon.identity.openidconnect.IDTokenBuilder;
-import org.wso2.carbon.identity.openidconnect.OIDCConstants;
-import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
-
-import java.util.HashMap;
-import java.util.Map;
+import org.wso2.carbon.identity.oauth2.util.OAuth2TokenUtil;
 
 /**
  * IDTokenResponseTypeHandler class generates an id_token.
@@ -58,7 +40,7 @@ public class IDTokenResponseTypeHandler extends AbstractResponseTypeHandler {
         // Generating response for id_token flow.
         OAuth2AuthorizeRespDTO respDTO = buildResponseDTO(oauthAuthzMsgCtx, accessTokenDO);
         //Trigger this to notify to update the request object reference table with the issued access token.
-        ResponseTypeHandlerUtil.postIssueAccessToken(accessTokenDO.getTokenId(),
+        OAuth2TokenUtil.postIssueAccessToken(accessTokenDO.getTokenId(),
                 oauthAuthzMsgCtx.getAuthorizationReqDTO().getSessionDataKey());
         // Starting to trigger post listeners.
         ResponseTypeHandlerUtil.triggerPostListeners(oauthAuthzMsgCtx, accessTokenDO, respDTO);

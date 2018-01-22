@@ -615,25 +615,5 @@ public class ResponseTypeHandlerUtil {
         }
     }
 
-    public static void postIssueAccessToken(String tokenId, String sessionDataKey) throws
-            IdentityOAuth2Exception {
-
-        String eventName = OIDCConstants.Event.POST_ISSUE_ACCESS_TOKEN;
-        HashMap<String, Object> properties = new HashMap<>();
-        properties.put(OIDCConstants.Event.TOKEN_ID, tokenId);
-        properties.put(OIDCConstants.Event.SESSION_DATA_KEY, sessionDataKey);
-        Event requestObjectPersistanceEvent = new Event(eventName, properties);
-        try {
-            if (OpenIDConnectServiceComponentHolder.getInstance().getIdentityEventService() != null) {
-                OpenIDConnectServiceComponentHolder.getInstance().getIdentityEventService().handleEvent
-                        (requestObjectPersistanceEvent);
-                if (log.isDebugEnabled()) {
-                    log.debug("The event " + eventName + " triggered after the access token is issued.");
-                }
-            }
-        } catch (IdentityEventException e) {
-            throw new IdentityOAuth2Exception("Error while invoking the request object persistance handler.");
-        }
-    }
 }
 

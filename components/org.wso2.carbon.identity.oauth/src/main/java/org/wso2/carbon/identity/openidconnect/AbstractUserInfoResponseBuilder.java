@@ -89,10 +89,11 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
             throws UserInfoEndpointException {
 
         List<String> essentialClaimsFromRequestObject = new ArrayList<>();
+        RequestObjectService requestObjectService = OpenIDConnectServiceComponentHolder.getRequestObjectService();
         try {
-            if (OpenIDConnectServiceComponentHolder.getRequestObjectService() != null) {
-                essentialClaimsFromRequestObject = OpenIDConnectServiceComponentHolder.getRequestObjectService().
-                        getEssentialClaims(getAccessToken(tokenResponse), null, true);
+            if (requestObjectService != null) {
+                essentialClaimsFromRequestObject = requestObjectService.getEssentialClaims(getAccessToken(tokenResponse)
+                        , null, true);
             }
         } catch (RequestObjectException e) {
             throw new UserInfoEndpointException(e.getErrorMessage());
@@ -164,6 +165,7 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
                                                                String[] requestedScopes,
                                                                String clientId,
                                                                String tenantDomain) {
+
         return OpenIDConnectServiceComponentHolder.getInstance()
                 .getHighestPriorityOpenIDConnectClaimFilter()
                 .getClaimsFilteredByOIDCScopes(userClaims, requestedScopes, clientId, tenantDomain);
@@ -171,6 +173,7 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
 
     protected Map<String, Object> getEssentialClaims(OAuth2TokenValidationResponseDTO tokenResponse,
                                                      Map<String, Object> claims) throws UserInfoEndpointException {
+
         Map<String, Object> essentialClaimMap = new HashMap<>();
         List<String> essentialClaims = getEssentialClaimUris(tokenResponse);
         if (isNotEmpty(essentialClaims)) {
@@ -206,6 +209,7 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
                                             Map<String, Object> filteredUserClaims) throws UserInfoEndpointException;
 
     private AuthenticatedUser getAuthenticatedUser(String accessToken) throws OAuthSystemException {
+
         AccessTokenDO accessTokenDO;
         try {
             accessTokenDO = OAuth2Util.getAccessTokenDOfromTokenIdentifier(accessToken);
@@ -217,6 +221,7 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
 
     private String getServiceProviderTenantDomain(OAuth2TokenValidationResponseDTO tokenResponse)
             throws UserInfoEndpointException {
+
         String clientId = getClientId(getAccessToken(tokenResponse));
         OAuthAppDO oAuthAppDO;
         try {
@@ -232,6 +237,7 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
                                      String userStoreDomain,
                                      String clientId,
                                      String spTenantDomain) throws UserInfoEndpointException {
+
         ServiceProvider serviceProvider = getServiceProvider(spTenantDomain, clientId);
 
         if (serviceProvider != null) {
@@ -254,6 +260,7 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
     }
 
     private String getClientId(String accessToken) throws UserInfoEndpointException {
+
         try {
             return OAuth2Util.getClientIdForAccessToken(accessToken);
         } catch (IdentityOAuth2Exception e) {
@@ -262,6 +269,7 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
     }
 
     private ServiceProvider getServiceProvider(String tenantDomain, String clientId) throws UserInfoEndpointException {
+
         ApplicationManagementService applicationMgtService = OAuth2ServiceComponentHolder.getApplicationMgtService();
         ServiceProvider serviceProvider;
         try {
@@ -276,6 +284,7 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
     }
 
     private List<String> getEssentialClaimUris(OAuth2TokenValidationResponseDTO tokenResponse) {
+
         AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(getAccessToken(tokenResponse));
         AuthorizationGrantCacheEntry cacheEntry = AuthorizationGrantCache.getInstance()
                 .getValueFromCacheByToken(cacheKey);
@@ -302,10 +311,12 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
     }
 
     private boolean isLocalUser(AuthenticatedUser authenticatedUser) {
+
         return !authenticatedUser.isFederatedUser();
     }
 
     private String getAccessToken(OAuth2TokenValidationResponseDTO tokenResponse) {
+
         return tokenResponse.getAuthorizationContextToken().getTokenString();
     }
 }

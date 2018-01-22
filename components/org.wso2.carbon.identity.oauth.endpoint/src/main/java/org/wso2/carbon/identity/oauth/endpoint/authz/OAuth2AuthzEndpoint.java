@@ -82,6 +82,7 @@ import org.wso2.carbon.identity.openidconnect.OIDCRequestObjectFactory;
 
 import static org.wso2.carbon.identity.openidconnect.model.Constants.MAX_AGE;
 import static org.wso2.carbon.identity.openidconnect.model.Constants.NONCE;
+
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.registry.core.utils.UUIDGenerator;
 import org.wso2.carbon.utils.CarbonUtils;
@@ -183,14 +184,11 @@ public class OAuth2AuthzEndpoint {
             return handleOAuthProblemException(oAuthMessage, e);
         } catch (OAuthSystemException e) {
             return handleOAuthSystemException(oAuthMessage.getSessionDataCacheEntry(), e);
-        } catch (RequestObjectException e) {
-            return handleRequestObjectException(oAuthMessage.getSessionDataCacheEntry(), e);
         } finally {
             handleRetainCache(oAuthMessage);
             PrivilegedCarbonContext.endTenantFlow();
         }
     }
-
 
     @POST
     @Path("/")
@@ -210,6 +208,7 @@ public class OAuth2AuthzEndpoint {
     }
 
     private Response handleInvalidRequest() throws URISyntaxException {
+
         if (log.isDebugEnabled()) {
             log.debug("Invalid authorization request");
         }
@@ -255,21 +254,6 @@ public class OAuth2AuthzEndpoint {
                 .setRequest(request)
                 .setResponse(response)
                 .build();
-    }
-
-    private Response handleRequestObjectException(SessionDataCacheEntry sessionDataCacheEntry,
-                                                  RequestObjectException e) throws URISyntaxException {
-        OAuth2Parameters params = null;
-        if (sessionDataCacheEntry != null) {
-            params = sessionDataCacheEntry.getoAuth2Parameters();
-        }
-        if (log.isDebugEnabled()) {
-            log.debug("Server error occurred while persisting request object.", e);
-        }
-        OAuthProblemException ex = OAuthProblemException.error(OAuth2ErrorCodes.SERVER_ERROR,
-                "Server error occurred while persisting request object.");
-        return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).location(new URI(
-                EndpointUtil.getErrorRedirectURL(ex, params))).build();
     }
 
     private Response handleOAuthSystemException(SessionDataCacheEntry sessionDataCacheEntry, OAuthSystemException e) throws URISyntaxException {
@@ -523,6 +507,7 @@ public class OAuth2AuthzEndpoint {
     }
 
     private Response handleFormPostMode(OAuthMessage oAuthMessage, OAuth2Parameters oauth2Params, String redirectURL, boolean isOIDCRequest, OIDCSessionState sessionState) {
+
         String sessionStateValue = null;
         if (isOIDCRequest) {
             sessionState.setAddSessionState(true);
@@ -563,7 +548,7 @@ public class OAuth2AuthzEndpoint {
     }
 
     private Response handleInitialAuthorizationRequest(OAuthMessage oAuthMessage) throws OAuthSystemException,
-            OAuthProblemException, URISyntaxException, InvalidRequestParentException, RequestObjectException {
+            OAuthProblemException, URISyntaxException, InvalidRequestParentException {
 
         String redirectURL = handleOAuthAuthorizationRequest(oAuthMessage);
         String type = getRequestProtocolType(oAuthMessage);
@@ -646,7 +631,6 @@ public class OAuth2AuthzEndpoint {
         }
         return paramStringBuilder.toString();
     }
-
 
     private void removeAuthenticationResult(OAuthMessage oAuthMessage, String sessionDataKey) {
 
@@ -912,11 +896,11 @@ public class OAuth2AuthzEndpoint {
      *
      * @param oAuthMessage oAuthMessage
      * @return String redirectURL
-     * @throws OAuthSystemException OAuthSystemException
+     * @throws OAuthSystemException  OAuthSystemException
      * @throws OAuthProblemException OAuthProblemException
      */
     private String handleOAuthAuthorizationRequest(OAuthMessage oAuthMessage)
-            throws OAuthSystemException, OAuthProblemException, InvalidRequestException, RequestObjectException {
+            throws OAuthSystemException, OAuthProblemException, InvalidRequestException {
 
         OAuth2ClientValidationResponseDTO validationResponse = validateClient(oAuthMessage);
 
@@ -927,6 +911,8 @@ public class OAuth2AuthzEndpoint {
         OAuthAuthzRequest oauthRequest = new CarbonOAuthAuthzRequest(oAuthMessage.getRequest());
 
         OAuth2Parameters params = new OAuth2Parameters();
+        String sessionDataKey = UUIDGenerator.generateUUID();
+        params.setSessionDataKey(sessionDataKey);
         String redirectURI = populateOauthParameters(params, oAuthMessage, validationResponse, oauthRequest);
         if (redirectURI != null) {
             return redirectURI;
@@ -940,14 +926,6 @@ public class OAuth2AuthzEndpoint {
             return redirectURI;
         }
 
-        String sessionDataKey = UUIDGenerator.generateUUID();
-
-        //To persist the request object against the session data key.
-        if (isRequestUri(oauthRequest.getParam(REQUEST_URI)) || isRequestUri(oauthRequest.getParam(REQUEST))) {
-            persistRequestObject(oauthRequest, params, sessionDataKey);
-        }
-
-        params.setSessionDataKey(sessionDataKey);
         addDataToSessionCache(oAuthMessage, params, sessionDataKey);
 
         try {
@@ -962,16 +940,13 @@ public class OAuth2AuthzEndpoint {
         }
     }
 
-    private void persistRequestObject(OAuthAuthzRequest oauthRequest, OAuth2Parameters params, String sessionDataKey)
+    private void persistRequestObject(OAuthAuthzRequest oauthRequest, OAuth2Parameters params)
             throws RequestObjectException {
 
-        try {
-            if (EndpointUtil.getRequestObjectService() != null) {
-                EndpointUtil.getRequestObjectService().addRequestObject(params.getClientId(), null, null, sessionDataKey,
-                        new ArrayList(getRequestObject(oauthRequest, params).getRequestedClaims().values()));
-            }
-        } catch (RequestObjectException e) {
-            throw new RequestObjectException(e.getErrorMessage());
+        String sessionDataKey = params.getSessionDataKey();
+        if (EndpointUtil.getRequestObjectService() != null) {
+            EndpointUtil.getRequestObjectService().addRequestObject(params.getClientId(), null, null, sessionDataKey,
+                    new ArrayList(getRequestObject(oauthRequest, params).getRequestedClaims().values()));
         }
     }
 
@@ -1228,6 +1203,7 @@ public class OAuth2AuthzEndpoint {
              */
             overrideAuthzParameters(parameters, oauthRequest.getParam(REQUEST), oauthRequest.getParam(REQUEST_URI),
                     requestObject);
+            persistRequestObject(oauthRequest, parameters);
         }
     }
 
@@ -1507,7 +1483,6 @@ public class OAuth2AuthzEndpoint {
         }
     }
 
-
     private AuthenticationResult getAuthenticationResult(OAuthMessage oAuthMessage, String sessionDataKey) {
 
         AuthenticationResult result = getAuthenticationResultFromRequest(oAuthMessage.getRequest());
@@ -1534,7 +1509,7 @@ public class OAuth2AuthzEndpoint {
      * Get authentication result from request
      *
      * @param request Http servlet request
-     * @return  AuthenticationResult
+     * @return AuthenticationResult
      */
     private AuthenticationResult getAuthenticationResultFromRequest(HttpServletRequest request) {
 
@@ -1552,7 +1527,6 @@ public class OAuth2AuthzEndpoint {
             return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).build();
         }
     }
-
 
     private Response processAuthResponseFromFramework(OAuthMessage oAuthMessage, CommonAuthResponseWrapper
             responseWrapper) throws IOException, InvalidRequestParentException, URISyntaxException {
@@ -1764,7 +1738,6 @@ public class OAuth2AuthzEndpoint {
         return null;
     }
 
-
     /**
      * Gets the last authenticated value from the commonAuthId cookie
      *
@@ -1788,7 +1761,6 @@ public class OAuth2AuthzEndpoint {
         }
         return authTime;
     }
-
 
     /**
      * Build OAuthProblem exception based on error details sent by the Framework as properties in the

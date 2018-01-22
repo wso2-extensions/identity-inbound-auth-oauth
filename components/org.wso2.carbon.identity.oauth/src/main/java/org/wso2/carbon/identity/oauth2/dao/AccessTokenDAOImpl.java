@@ -39,8 +39,8 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.util.OAuth2TokenUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
-import org.wso2.carbon.identity.openidconnect.util.OIDCUtil;
 
 import java.sql.Connection;
 import java.sql.DataTruncation;
@@ -81,7 +81,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
     @Override
     public void insertAccessToken(String accessToken, String consumerKey, AccessTokenDO accessTokenDO,
                                   String userStoreDomain) throws IdentityOAuth2Exception {
-        try(Connection connection = getConnection()) {
+
+        try (Connection connection = getConnection()) {
             insertAccessToken(accessToken, consumerKey, accessTokenDO, connection, userStoreDomain);
         } catch (SQLException e) {
             throw new IdentityOAuth2Exception("Error while inserting access token.", e);
@@ -798,12 +799,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             prepStmt.setString(2, tokenStateId);
             prepStmt.setString(3, tokenId);
             prepStmt.executeUpdate();
-            //if the access token state is updated to inactive or expired request object which is persisted against the code
-            // should be removed..
-            if(OAuthConstants.TokenStates.TOKEN_STATE_EXPIRED.equals(tokenState) || OAuthConstants.TokenStates.
-                    TOKEN_STATE_INACTIVE.equals(tokenState) ){
-                OIDCUtil.postRevokeAccessToken(tokenId, null);
-            }
+            OAuth2TokenUtil.postUpdateAccessToken(tokenId, tokenState);
         } catch (SQLException e) {
             IdentityDatabaseUtil.rollBack(connection);
             throw new IdentityOAuth2Exception("Error while updating Access Token with ID : " +
@@ -860,8 +856,9 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 }
                 ps.executeBatch();
                 connection.commit();
-                //to revoke request objects which have persisted against the access token.
-                OIDCUtil.postRevokeAccessToken(null, Arrays.asList(tokens));
+                //To revoke request objects which have persisted against the access token.
+                OAuth2TokenUtil.postUpdateAccessTokens(Arrays.asList(tokens), OAuthConstants.TokenStates.
+                        TOKEN_STATE_REVOKED);
             } catch (SQLException e) {
                 IdentityDatabaseUtil.rollBack(connection);
                 throw new IdentityOAuth2Exception("Error occurred while revoking Access Tokens : " +
@@ -882,7 +879,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 ps.executeUpdate();
 
                 //To revoke request objects which have persisted against the access token.
-                OIDCUtil.postRevokeAccessToken(null, Arrays.asList(tokens));
+                OAuth2TokenUtil.postUpdateAccessTokens(Arrays.asList(tokens), OAuthConstants.TokenStates.
+                        TOKEN_STATE_REVOKED);
             } catch (SQLException e) {
                 //IdentityDatabaseUtil.rollBack(connection);
                 throw new IdentityOAuth2Exception("Error occurred while revoking Access Token : " +
@@ -895,6 +893,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
 
     @Override
     public void revokeAccessTokensIndividually(String[] tokens) throws IdentityOAuth2Exception {
+
         List<String> accessTokenId = new ArrayList<>();
         if (log.isDebugEnabled()) {
             if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
@@ -929,7 +928,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             connection.commit();
             //To revoke request objects which have persisted against the access token.
             if (accessTokenId.size() > 0) {
-                OIDCUtil.postRevokeAccessToken(null, accessTokenId);
+                OAuth2TokenUtil.postUpdateAccessTokens(accessTokenId, OAuthConstants.TokenStates.
+                        TOKEN_STATE_REVOKED);
             }
         } catch (SQLException e) {
             IdentityDatabaseUtil.rollBack(connection);
@@ -968,7 +968,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             connection.commit();
 
             //to revoke the tokens from Request Object table.
-            OIDCUtil.postRevokeAccessToken(tokenId, null);
+            OAuth2TokenUtil.postUpdateAccessToken(tokenId, OAuthConstants.TokenStates.
+                    TOKEN_STATE_REVOKED);
         } catch (SQLException e) {
             IdentityDatabaseUtil.rollBack(connection);
             throw new IdentityOAuth2Exception("Error occurred while revoking Access Token with ID : " + tokenId, e);
@@ -976,8 +977,6 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             IdentityDatabaseUtil.closeAllConnections(connection, null, ps);
         }
     }
-
-
 
     /**
      * @param authenticatedUser
@@ -1221,6 +1220,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             String newAccessToken = accessTokenDO.getAccessToken();
             // store new token in the DB
             insertAccessToken(newAccessToken, consumerKey, accessTokenDO, connection, userStoreDomain);
+
+            OAuth2TokenUtil.postRefreshAccessToken(oldAccessTokenId, accessTokenDO.getTokenId(), tokenState);
 
             // update new access token against authorization code if token obtained via authorization code grant type
             updateTokenIdIfAutzCodeGrantType(oldAccessTokenId, accessTokenDO.getTokenId(), connection);

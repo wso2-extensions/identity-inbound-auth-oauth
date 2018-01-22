@@ -18,6 +18,7 @@ package org.wso2.carbon.identity.openidconnect;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.openidconnect.dao.RequestObjectPersistenceFactory;
@@ -55,7 +56,8 @@ public class RequestObjectService {
                             sessionDataKey, claims);
 
         } catch (IdentityOAuth2Exception e) {
-            throw new RequestObjectException(e.getMessage());
+            log.error("Error while persisting the Request Object against sessionDataKey: " + sessionDataKey, e);
+            throw new RequestObjectException(OAuth2ErrorCodes.SERVER_ERROR, "Error while processing the Request Object");
         }
     }
 
