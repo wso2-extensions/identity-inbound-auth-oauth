@@ -21,7 +21,6 @@ import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSVerifier;
 import com.nimbusds.jose.ReadOnlyJWSHeader;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
-import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.SignedJWT;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -49,9 +48,7 @@ import java.security.KeyStoreException;
 import java.security.PublicKey;
 import java.security.cert.Certificate;
 import java.security.interfaces.RSAPublicKey;
-import java.text.ParseException;
 import java.util.List;
-import java.util.Properties;
 
 import static org.apache.commons.lang.StringUtils.isEmpty;
 import static org.wso2.carbon.identity.openidconnect.model.Constants.DASH_DELIMITER;
@@ -67,16 +64,6 @@ import static org.wso2.carbon.identity.openidconnect.model.Constants.RS;
 public class RequestObjectValidatorImpl implements RequestObjectValidator {
 
     private static Log log = LogFactory.getLog(RequestObjectValidatorImpl.class);
-
-    @Override
-    public boolean isEncrypted(String requestObject) {
-        try {
-            EncryptedJWT.parse(requestObject);
-            return true;
-        } catch (ParseException e) {
-            return false;
-        }
-    }
 
     @Override
     public boolean isSigned(RequestObject requestObject) {
@@ -106,9 +93,9 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
     public boolean validateRequestObject(RequestObject requestObject, OAuth2Parameters oAuth2Parameters)
             throws RequestObjectException {
         boolean isValid = validateClientIdAndResponseType(requestObject, oAuth2Parameters);
-        if (notEmpty(requestObject, Constants.REQUEST_URI)) {
+        if (isParamPresent(requestObject, Constants.REQUEST_URI)) {
             isValid = false;
-        } else if (notEmpty(requestObject, Constants.REQUEST)) {
+        } else if (isParamPresent(requestObject, Constants.REQUEST)) {
             isValid = false;
         } else if (requestObject.isSigned()) {
             isValid = isValidIssuer(requestObject, oAuth2Parameters) && isValidAudience(requestObject, oAuth2Parameters);
@@ -148,22 +135,21 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
      * Return globally set audience or the token endpoint of the server
      *
      * @param tenantDomain
-     * @return
+     * @return tokenEndpoint of the Issuer
      * @throws IdentityOAuth2Exception
      */
     public static String getTokenEpURL(String tenantDomain) throws RequestObjectException {
-        String audience;
+        String tokenEndpoint;
         IdentityProvider residentIdP;
         try {
-            residentIdP = IdentityProviderManager.getInstance()
-                    .getResidentIdP(tenantDomain);
+            residentIdP = IdentityProviderManager.getInstance().getResidentIdP(tenantDomain);
             FederatedAuthenticatorConfig oidcFedAuthn = IdentityApplicationManagementUtil
                     .getFederatedAuthenticator(residentIdP.getFederatedAuthenticatorConfigs(),
                             IdentityApplicationConstants.Authenticator.OIDC.NAME);
-            audience = IdentityApplicationManagementUtil.getProperty(oidcFedAuthn.getProperties(),
+            tokenEndpoint = IdentityApplicationManagementUtil.getProperty(oidcFedAuthn.getProperties(),
                     IdentityApplicationConstants.Authenticator.OIDC.OAUTH2_TOKEN_URL).getValue();
             if (log.isDebugEnabled()) {
-                log.debug("Found Token Endpoint URL: " + audience);
+                log.debug("Found Token Endpoint URL: " + tokenEndpoint);
             }
         } catch (IdentityProviderManagementException e) {
             log.error("Error while loading OAuth2TokenEPUrl of the resident IDP of tenant:" + tenantDomain, e);
@@ -171,10 +157,10 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
                     "of Request Object.");
         }
 
-        if (isEmpty(audience)) {
-            audience = IdentityUtil.getServerURL(IdentityConstants.OAuth.TOKEN, true, false);
+        if (isEmpty(tokenEndpoint)) {
+            tokenEndpoint = IdentityUtil.getServerURL(IdentityConstants.OAuth.TOKEN, true, false);
         }
-        return audience;
+        return tokenEndpoint;
     }
 
     private boolean isValidIssuer(RequestObject requestObject, OAuth2Parameters oAuth2Parameters) {
@@ -182,7 +168,7 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
         return StringUtils.isNotEmpty(issuer) && issuer.equals(oAuth2Parameters.getClientId());
     }
 
-    private boolean notEmpty(RequestObject requestObject, String claim) {
+    private boolean isParamPresent(RequestObject requestObject, String claim) {
         return StringUtils.isNotEmpty(requestObject.getClaimValue(claim));
     }
 
@@ -269,23 +255,19 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
         }
 
         String alg = signedJWT.getHeader().getAlgorithm().getName();
-        if (isEmpty(alg)) {
-            return false;
-        } else {
-            if (log.isDebugEnabled()) {
-                log.debug("Signature Algorithm found in the JWT Header: " + alg);
-            }
-            if (alg.indexOf(RS) == 0) {
-                // At this point 'x509Certificate' will never be null.
-                PublicKey publicKey = x509Certificate.getPublicKey();
-                if (publicKey instanceof RSAPublicKey) {
-                    verifier = new RSASSAVerifier((RSAPublicKey) publicKey);
-                } else {
-                    return logAndReturnFalse("Public key is not an RSA public key.");
-                }
+        if (log.isDebugEnabled()) {
+            log.debug("Signature Algorithm found in the JWT Header: " + alg);
+        }
+        if (alg.indexOf(RS) == 0) {
+            // At this point 'x509Certificate' will never be null.
+            PublicKey publicKey = x509Certificate.getPublicKey();
+            if (publicKey instanceof RSAPublicKey) {
+                verifier = new RSASSAVerifier((RSAPublicKey) publicKey);
             } else {
-                return logAndReturnFalse("Signature Algorithm not supported yet : " + alg);
+                return logAndReturnFalse("Public key is not an RSA public key.");
             }
+        } else {
+            return logAndReturnFalse("Signature Algorithm not supported yet : " + alg);
         }
         // At this point 'verifier' will never be null;
         try {

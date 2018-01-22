@@ -224,10 +224,7 @@ public class TestUtils {
             return getEncryptedJWT((RSAPublicKey) publicKey, jwtClaimsSet);
         } else {
             return getSignedAndEncryptedJWT(publicKey, (RSAPrivateKey) privateKey, jwtClaimsSet);
-
         }
-
-
     }
 
     private static String getSignedAndEncryptedJWT(Key publicKey, RSAPrivateKey privateKey, JWTClaimsSet jwtClaimsSet) throws RequestObjectException {
@@ -241,8 +238,6 @@ public class TestUtils {
             jweObject.encrypt(new RSAEncrypter((RSAPublicKey) publicKey));
             return jweObject.serialize();
         } catch (JOSEException e) {
-            System.out.print(e);
-            e.printStackTrace();
             throw new RequestObjectException("error_building_jwd","Error occurred while creating JWE.");
         }
     }

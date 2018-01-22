@@ -21,6 +21,7 @@ import com.nimbusds.jwt.ReadOnlyJWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
+import org.apache.commons.lang.StringUtils;
 
 import java.io.Serializable;
 import java.text.ParseException;
@@ -83,7 +84,7 @@ public class RequestObject implements Serializable {
         this.plainJWT = plainJWT;
         this.setClaimSet(plainJWT.getJWTClaimsSet());
         if (this.claimsSet.getClaim(CLAIMS) != null) {
-            net.minidev.json.JSONObject claims = this.claimsSet.toJSONObject();
+            JSONObject claims = this.claimsSet.toJSONObject();
             processClaimObject(claims);
         }
     }
@@ -112,7 +113,7 @@ public class RequestObject implements Serializable {
         this.setSigned(true);
         setClaimSet(signedJWT.getJWTClaimsSet());
         if (this.claimsSet.getClaim(CLAIMS) != null) {
-            net.minidev.json.JSONObject claims = this.claimsSet.toJSONObject();
+            JSONObject claims = this.claimsSet.toJSONObject();
             processClaimObject(claims);
         }
     }
@@ -131,26 +132,28 @@ public class RequestObject implements Serializable {
      * @param jsonObjectRequestedClaims requested claims of the request object
      * @throws ParseException
      */
-    private void processClaimObject(net.minidev.json.JSONObject jsonObjectRequestedClaims) {
+    private void processClaimObject(JSONObject jsonObjectRequestedClaims) {
 
         Map<String, List<RequestedClaim>> claimsforClaimRequestor = new HashMap<>();
         if (jsonObjectRequestedClaims.get(CLAIMS) != null) {
             JSONObject jsonObjectClaim = (JSONObject) jsonObjectRequestedClaims.get(CLAIMS);
-            //To iterate the claims json object to fetch the claim requestor and all requested claims.
 
+            //To iterate the claims json object to fetch the claim requestor and all requested claims.
             for (Map.Entry<String, Object> requesterClaimsMap : jsonObjectClaim.entrySet()) {
                 List<RequestedClaim> requestedClaimsList = new ArrayList();
                 JSONObject jsonObjectAllRequestedClaims;
                 if (jsonObjectClaim.get(requesterClaimsMap.getKey()) != null) {
                     jsonObjectAllRequestedClaims = (JSONObject) jsonObjectClaim.get(requesterClaimsMap.getKey());
 
-                    for (Map.Entry<String, Object> requestedClaims : jsonObjectAllRequestedClaims.entrySet()) {
-                        JSONObject jsonObjectClaimAttributes = null;
-                        if (jsonObjectAllRequestedClaims.get(requestedClaims.getKey()) != null) {
-                            jsonObjectClaimAttributes = (JSONObject) jsonObjectAllRequestedClaims.get(requestedClaims.getKey());
+                    if (jsonObjectAllRequestedClaims != null) {
+                        for (Map.Entry<String, Object> requestedClaims : jsonObjectAllRequestedClaims.entrySet()) {
+                            JSONObject jsonObjectClaimAttributes = null;
+                            if (jsonObjectAllRequestedClaims.get(requestedClaims.getKey()) != null) {
+                                jsonObjectClaimAttributes = (JSONObject) jsonObjectAllRequestedClaims.get(requestedClaims.getKey());
+                            }
+                            populateRequestedClaimValues(requestedClaimsList, jsonObjectClaimAttributes,
+                                    requestedClaims.getKey(), requesterClaimsMap.getKey());
                         }
-                        populateRequestedClaimValues(requestedClaimsList, jsonObjectClaimAttributes,
-                                requestedClaims.getKey(), requesterClaimsMap.getKey());
                     }
                 }
                 claimsforClaimRequestor.put(requesterClaimsMap.getKey(), requestedClaimsList);
@@ -199,13 +202,13 @@ public class RequestObject implements Serializable {
      * return null if not found, or unable to parse
      *
      * @param claimName
-     * @return
+     * @return string value of the claim
      */
     public String getClaimValue(String claimName) {
         try {
             return claimsSet.getStringClaim(claimName);
         } catch (ParseException e) {
-            return null;
+            return StringUtils.EMPTY;
         }
     }
 
@@ -213,7 +216,7 @@ public class RequestObject implements Serializable {
      * Return the claim value which matches the given claimName, from jwtClaimset
      *
      * @param claimName
-     * @return
+     * @return Claim value object
      */
     public Object getClaim(String claimName) {
         return claimsSet.getClaim(claimName);

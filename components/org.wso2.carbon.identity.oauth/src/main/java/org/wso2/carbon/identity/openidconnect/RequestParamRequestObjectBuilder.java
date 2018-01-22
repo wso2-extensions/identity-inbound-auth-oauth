@@ -63,6 +63,7 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
     public void buildRequestObject(String requestObjectParam, OAuth2Parameters oAuth2Parameters,
                                    RequestObject requestObjectInstance) throws RequestObjectException {
 
+        //Making a copy of requestObjectParam to prevent editing initial reference
         String requestObjectParamValue = requestObjectParam;
         if (isEncrypted(requestObjectParamValue)) {
             requestObjectParamValue = decrypt(requestObjectParamValue, oAuth2Parameters);
@@ -102,12 +103,11 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
             if (log.isDebugEnabled()) {
                 log.debug(errorMessage, e);
             }
-            e.printStackTrace();
             throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST, errorMessage);
         }
     }
 
-    private boolean isEncrypted(String requestObject) {
+    protected boolean isEncrypted(String requestObject) {
         return requestObject.split(JWT_PART_DELIMITER).length == NUMBER_OF_PARTS_IN_JWE;
     }
 
