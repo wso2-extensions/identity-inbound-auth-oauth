@@ -81,8 +81,15 @@ import org.wso2.carbon.identity.oidc.session.OIDCSessionState;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
 import org.wso2.carbon.identity.openidconnect.OIDCRequestObjectFactory;
 
+import static org.wso2.carbon.identity.openidconnect.model.Constants.AUTH_TIME;
+import static org.wso2.carbon.identity.openidconnect.model.Constants.DISPLAY;
+import static org.wso2.carbon.identity.openidconnect.model.Constants.ID_TOKEN_HINT;
+import static org.wso2.carbon.identity.openidconnect.model.Constants.LOGIN_HINT;
 import static org.wso2.carbon.identity.openidconnect.model.Constants.MAX_AGE;
 import static org.wso2.carbon.identity.openidconnect.model.Constants.NONCE;
+import static org.wso2.carbon.identity.openidconnect.model.Constants.PROMPT;
+import static org.wso2.carbon.identity.openidconnect.model.Constants.SCOPE;
+import static org.wso2.carbon.identity.openidconnect.model.Constants.STATE;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.registry.core.utils.UUIDGenerator;
 import org.wso2.carbon.utils.CarbonUtils;
@@ -133,8 +140,7 @@ import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuth
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuthServerConfiguration;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.startSuperTenantFlow;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.validateParams;
-import static org.wso2.carbon.identity.openidconnect.model.Constants.SCOPE;
-import static org.wso2.carbon.identity.openidconnect.model.Constants.STATE;
+
 
 @Path("/authorize")
 public class OAuth2AuthzEndpoint {
@@ -1241,6 +1247,31 @@ public class OAuth2AuthzEndpoint {
             }
             if (StringUtils.isNotEmpty(requestObject.getClaimValue(MAX_AGE))) {
                 params.setMaxAge(Integer.parseInt(requestObject.getClaimValue(MAX_AGE)));
+            }
+            if (StringUtils.isNotEmpty(requestObject.getClaimValue(DISPLAY))) {
+                params.setDisplay(requestObject.getClaimValue(DISPLAY));
+            }
+            if (StringUtils.isNotEmpty(requestObject.getClaimValue(AUTH_TIME))) {
+                params.setAuthTime(Long.parseLong(requestObject.getClaimValue(AUTH_TIME)));
+            }
+            if (StringUtils.isNotEmpty(requestObject.getClaimValue(RESPONSE_MODE))) {
+                params.setResponseMode(requestObject.getClaimValue(RESPONSE_MODE));
+            }
+            if (StringUtils.isNotEmpty(requestObject.getClaimValue(LOGIN_HINT))) {
+                params.setLoginHint(requestObject.getClaimValue(LOGIN_HINT));
+            }
+            if (StringUtils.isNotEmpty(requestObject.getClaimValue(ID_TOKEN_HINT))) {
+                params.setIDTokenHint(requestObject.getClaimValue(ID_TOKEN_HINT));
+            }
+            if (StringUtils.isNotEmpty(requestObject.getClaimValue(PROMPT))) {
+                params.setPrompt(requestObject.getClaimValue(PROMPT));
+            }
+            if (StringUtils.isNotEmpty(requestObject.getClaimValue(ACR_VALUES))) {
+                String acrString = requestObject.getClaimValue(ACR_VALUES);
+                params.setACRValues(new LinkedHashSet<>(Arrays.asList(acrString.split(COMMA_SEPARATOR))));
+            }
+            if (StringUtils.isNotEmpty(requestObject.getClaimValue(CLAIMS))) {
+                params.setEssentialClaims(requestObject.getClaimValue(CLAIMS));
             }
         }
     }
