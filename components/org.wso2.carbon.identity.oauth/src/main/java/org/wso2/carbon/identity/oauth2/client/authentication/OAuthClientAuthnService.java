@@ -120,7 +120,7 @@ public class OAuthClientAuthnService {
      */
     private void failOnMultipleAuthenticators(OAuthClientAuthnContext oAuthClientAuthnContext) {
 
-        if (oAuthClientAuthnContext.getExecutedAuthenticators().size() > 1) {
+        if (oAuthClientAuthnContext.isMultipleAuthenticatorsEngaged()) {
 
             if (log.isDebugEnabled()) {
                 log.debug(oAuthClientAuthnContext.getExecutedAuthenticators().size() + " Authenticators were " +

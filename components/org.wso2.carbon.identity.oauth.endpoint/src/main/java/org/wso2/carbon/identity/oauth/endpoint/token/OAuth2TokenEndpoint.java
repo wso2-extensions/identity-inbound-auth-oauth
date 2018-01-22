@@ -135,7 +135,8 @@ public class OAuth2TokenEndpoint {
 
     private void validateOAuthApplication(OAuthClientAuthnContext oAuthClientAuthnContext) throws InvalidApplicationClientException, TokenEndpointBadRequestException {
 
-        if (isNotBlank(oAuthClientAuthnContext.getClientId())) {
+        if (isNotBlank(oAuthClientAuthnContext.getClientId()) && !oAuthClientAuthnContext
+                .isMultipleAuthenticatorsEngaged()) {
             validateOauthApplication(oAuthClientAuthnContext.getClientId());
         }
     }

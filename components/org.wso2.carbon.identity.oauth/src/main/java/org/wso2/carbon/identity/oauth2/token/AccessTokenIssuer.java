@@ -141,7 +141,7 @@ public class AccessTokenIssuer {
 
         // Will return an invalid request response if multiple authentication mechanisms are engaged irrespective of
         // whether the grant type is confidential or not.
-        if (oAuthClientAuthnContext.getExecutedAuthenticators().size() > 1) {
+        if (oAuthClientAuthnContext.isMultipleAuthenticatorsEngaged()) {
             tokenRespDTO = handleError(OAuth2ErrorCodes.INVALID_REQUEST, "The client MUST NOT use more than one " +
                     "authentication method in each", tokenReqDTO);
             setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
