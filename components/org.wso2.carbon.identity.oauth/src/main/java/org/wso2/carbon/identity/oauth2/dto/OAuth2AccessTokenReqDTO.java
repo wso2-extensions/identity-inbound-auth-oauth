@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth2.dto;
 
+import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.model.HttpRequestHeader;
 import org.wso2.carbon.identity.oauth2.model.RequestParameter;
 
@@ -44,6 +45,7 @@ public class OAuth2AccessTokenReqDTO {
     private RequestParameter[] requestParameters;
     private HttpRequestHeader[] httpRequestHeaders;
     private List<String> authenticationMethodReferences = new ArrayList<>();
+    private OAuthClientAuthnContext oAuthClientAuthnContext;
 
     public String getClientId() {
         return clientId;
@@ -187,5 +189,13 @@ public class OAuth2AccessTokenReqDTO {
 
     public List<String> getAuthenticationMethodReferences() {
         return Collections.unmodifiableList(authenticationMethodReferences);
+    }
+
+    public OAuthClientAuthnContext getoAuthClientAuthnContext() {
+        return oAuthClientAuthnContext;
+    }
+
+    public void setoAuthClientAuthnContext(OAuthClientAuthnContext oAuthClientAuthnContext) {
+        this.oAuthClientAuthnContext = oAuthClientAuthnContext;
     }
 }

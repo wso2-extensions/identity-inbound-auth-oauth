@@ -123,6 +123,7 @@ public final class OAuthConstants {
     public static final String OAUTH_INTERCEPTOR_PROXY = "OauthDataInterceptorHandlerProxy";
 
     public static final String RESPONSE_HEADERS_PROPERTY = "RESPONSE_HEADERS";
+    public static final String CLIENT_AUTHN_CONTEXT = "oauth.client.authentication.context";
 
 
     //Constants used for multiple scopes

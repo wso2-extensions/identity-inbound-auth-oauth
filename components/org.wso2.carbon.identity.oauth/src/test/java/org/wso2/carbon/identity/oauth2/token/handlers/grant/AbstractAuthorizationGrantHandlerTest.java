@@ -161,7 +161,7 @@ public class AbstractAuthorizationGrantHandlerTest {
         OAuthTokenReqMessageContext tokReqMsgCtx = new OAuthTokenReqMessageContext(oAuth2AccessTokenReqDTO);
         tokReqMsgCtx.setAuthorizedUser(authenticatedUser);
         tokReqMsgCtx.setScope(new String[] { "scope1", "scope2" });
-        
+
         OAuth2AccessTokenRespDTO tokenRespDTO = handler.issue(tokReqMsgCtx);
         assertNotNull(tokenRespDTO.getAccessToken());
     }
