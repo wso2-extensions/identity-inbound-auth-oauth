@@ -55,6 +55,11 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * @deprecated use {@link AccessTokenResponseTypeHandler} instead.
+ * @deprecated use {@link IDTokenResponseTypeHandler} instead.
+ */
+@Deprecated
 public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
 
     private static Log log = LogFactory.getLog(TokenResponseTypeHandler.class);

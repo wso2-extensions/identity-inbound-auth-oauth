@@ -126,7 +126,6 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
         return true;
     }
 
-
     private static boolean isValidParameter(String authParam, String requestObjParam) {
         return StringUtils.isEmpty(requestObjParam) || requestObjParam.equals(authParam);
     }

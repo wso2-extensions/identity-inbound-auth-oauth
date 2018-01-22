@@ -27,12 +27,14 @@ import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.message.OAuthResponse;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.OAuthClientException;
 import org.wso2.carbon.identity.oauth.endpoint.OAuthRequestWrapper;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.RevokeEndpointAccessDeniedException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.RevokeEndpointBadRequestException;
 import org.wso2.carbon.identity.oauth2.ResponseHeader;
+import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationResponseDTO;
 import javax.servlet.http.HttpServletRequest;
@@ -90,11 +92,8 @@ public class OAuthRevocationEndpoint {
             }
             String tokenType = getTokenType(paramMap, httpRequest);
 
-            if (isAuthorizationHeaderExists(request)) {
-                validateAuthorizationHeader(request, paramMap, callback);
-            }
-
-            OAuthRevocationRequestDTO revokeRequest = buildOAuthRevocationRequest(paramMap, token, tokenType);
+            OAuthRevocationRequestDTO revokeRequest = buildOAuthRevocationRequest(httpRequest, paramMap, token,
+                    tokenType);
             OAuthRevocationResponseDTO oauthRevokeResp = revokeTokens(revokeRequest);
 
             if (oauthRevokeResp.getErrorMsg() != null) {
@@ -161,29 +160,25 @@ public class OAuthRevocationEndpoint {
         return OAuth2ErrorCodes.INVALID_CLIENT.equals(oauthRevokeResp.getErrorCode());
     }
 
-    private OAuthRevocationRequestDTO buildOAuthRevocationRequest(
+    private OAuthRevocationRequestDTO buildOAuthRevocationRequest(HttpServletRequest request,
             MultivaluedMap<String, String> paramMap, String token, String tokenType) {
 
         OAuthRevocationRequestDTO revokeRequest = new OAuthRevocationRequestDTO();
-        if (isClientIdExists(paramMap)) {
-            revokeRequest.setConsumerKey(paramMap.getFirst(OAuth.OAUTH_CLIENT_ID));
-        }
-        if (isClientSecretExists(paramMap)) {
-            revokeRequest.setConsumerSecret(paramMap.getFirst(OAuth.OAUTH_CLIENT_SECRET));
+        Object oauthClientAuthnContextObj = request.getAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT);
+        if (oauthClientAuthnContextObj instanceof OAuthClientAuthnContext) {
+            OAuthClientAuthnContext oAuthClientAuthnContext = (OAuthClientAuthnContext) oauthClientAuthnContextObj;
+            revokeRequest.setOauthClientAuthnContext(oAuthClientAuthnContext);
+            revokeRequest.setConsumerKey(oAuthClientAuthnContext.getClientId());
+            if (oAuthClientAuthnContext.getParameter(OAuth.OAUTH_CLIENT_SECRET) != null) {
+                revokeRequest.setConsumerSecret((String) oAuthClientAuthnContext.getParameter(OAuth
+                        .OAUTH_CLIENT_SECRET));
+            }
         }
         revokeRequest.setToken(token);
         if (isNotEmpty(tokenType)) {
             revokeRequest.setTokenType(tokenType);
         }
         return revokeRequest;
-    }
-
-    private boolean isClientSecretExists(MultivaluedMap<String, String> paramMap) {
-        return paramMap.get(OAuth.OAUTH_CLIENT_SECRET) != null;
-    }
-
-    private boolean isClientIdExists(MultivaluedMap<String, String> paramMap) {
-        return paramMap.get(OAuth.OAUTH_CLIENT_ID) != null;
     }
 
     private void validateAuthorizationHeader(HttpServletRequest request, MultivaluedMap<String, String> paramMap,

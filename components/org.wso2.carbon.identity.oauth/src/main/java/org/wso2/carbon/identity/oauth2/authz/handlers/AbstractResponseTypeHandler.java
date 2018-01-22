@@ -32,12 +32,17 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
+import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
+/**
+ * AbstractResponseTypeHandler contains all the common methods of all three basic handlers.
+ */
 public abstract class AbstractResponseTypeHandler implements ResponseTypeHandler {
 
     private static Log log = LogFactory.getLog(AbstractResponseTypeHandler.class);
@@ -126,6 +131,22 @@ public abstract class AbstractResponseTypeHandler implements ResponseTypeHandler
         }
 
         return true;
+    }
+
+    /**
+     * This method initialize OAuth2AuthoriseRespDTO object and set callbackURL and scope. This is common for all
+     * response types.
+     * @param oauthAuthzMsgCtx
+     * @return OAUth2AuthorizeRespDTO object.
+     * @throws IdentityOAuth2Exception
+     */
+    public OAuth2AuthorizeRespDTO initResponse(OAuthAuthzReqMessageContext oauthAuthzMsgCtx)
+            throws IdentityOAuth2Exception {
+        OAuth2AuthorizeRespDTO respDTO = new OAuth2AuthorizeRespDTO();
+        OAuth2AuthorizeReqDTO authorizationReqDTO = oauthAuthzMsgCtx.getAuthorizationReqDTO();
+        respDTO.setCallbackURI(authorizationReqDTO.getCallbackUrl());
+        respDTO.setScope(oauthAuthzMsgCtx.getApprovedScope());
+        return respDTO;
     }
 
 }
