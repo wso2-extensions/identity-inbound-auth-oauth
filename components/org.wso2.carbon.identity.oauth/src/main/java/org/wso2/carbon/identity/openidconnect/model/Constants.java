@@ -31,6 +31,13 @@ public class Constants {
     public static final String ISS = "iss";
     public static final String AUD = "aud";
     public static final String MAX_AGE = "max_age";
+    public static final String DISPLAY = "display";
+    public static final String AUTH_TIME = "auth_time";
+    public static final String RESPONSE_MODE = "response_mode";
+    public static final String ACR_VALUES = "acr_values";
+    public static final String LOGIN_HINT = "login_hint";
+    public static final String ID_TOKEN_HINT = "id_token_hint";
+    public static final String PROMPT = "prompt";
     public static String CLAIMS = "claims";
 
     //JWS is consists of three parts seperated by 2 '.'s as JOSE header, JWS payload, JWS signature

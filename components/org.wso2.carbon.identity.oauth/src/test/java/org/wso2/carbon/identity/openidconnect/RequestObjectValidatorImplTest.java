@@ -159,7 +159,7 @@ public class RequestObjectValidatorImplTest extends PowerMockTestCase {
         requestParamRequestObjectBuilder.buildRequestObject(requestObjectString,
                 oAuth2Parameters, requestObject);
 
-        Assert.assertEquals(requestObjectValidator.isEncrypted(requestObjectString), isEncrypted,
+        Assert.assertEquals(requestParamRequestObjectBuilder.isEncrypted(requestObjectString), isEncrypted,
                 "Payload is encrypted:" + isEncrypted);
         Assert.assertEquals(requestObjectValidator.isSigned(requestObject), isSigned,
                 "Request object isSigned: " + isSigned);

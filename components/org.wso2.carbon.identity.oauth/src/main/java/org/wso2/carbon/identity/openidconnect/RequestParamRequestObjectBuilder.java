@@ -26,8 +26,6 @@ import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.PlainJWT;
 import com.nimbusds.jwt.SignedJWT;
-import net.minidev.json.JSONObject;
-import net.minidev.json.parser.JSONParser;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -37,7 +35,6 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
-import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 
 import java.security.Key;
@@ -65,7 +62,8 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
     @Override
     public void buildRequestObject(String requestObjectParam, OAuth2Parameters oAuth2Parameters,
                                    RequestObject requestObjectInstance) throws RequestObjectException {
-
+      
+        //Making a copy of requestObjectParam to prevent editing initial reference
         String requestObjectParamValue = requestObjectParam;
         if (isEncrypted(requestObjectParamValue)) {
             requestObjectParamValue = decrypt(requestObjectParamValue, oAuth2Parameters);
@@ -105,12 +103,11 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
             if (log.isDebugEnabled()) {
                 log.debug(errorMessage, e);
             }
-            e.printStackTrace();
             throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST, errorMessage);
         }
     }
 
-    private boolean isEncrypted(String requestObject) {
+    protected boolean isEncrypted(String requestObject) {
         return requestObject.split(JWT_PART_DELIMITER).length == NUMBER_OF_PARTS_IN_JWE;
     }
 
@@ -153,4 +150,5 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
             throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST, errorMessage);
         }
     }
+
 }

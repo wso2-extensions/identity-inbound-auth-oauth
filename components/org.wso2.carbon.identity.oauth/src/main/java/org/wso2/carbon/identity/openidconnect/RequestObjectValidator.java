@@ -45,13 +45,6 @@ public interface RequestObjectValidator {
             throws RequestObjectException;
 
     /**
-     * Check whether the Request Object is encrypted and sent as nested JWT
-     * @param requestObject
-     * @return
-     */
-    boolean isEncrypted(String requestObject);
-
-    /**
      * Check whether the Request Object is signed
      * @param requestObject
      * @return
@@ -59,4 +52,3 @@ public interface RequestObjectValidator {
     boolean isSigned(RequestObject requestObject);
 
 }
-
