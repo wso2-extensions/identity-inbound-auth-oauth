@@ -35,6 +35,7 @@ import org.apache.axiom.om.impl.builder.StAXOMBuilder;
 import org.apache.axiom.util.base64.Base64Utils;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -67,9 +68,11 @@ import org.wso2.carbon.identity.oauth2.config.SpOAuth2ExpiryTimeConfiguration;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.oauth2.model.ClientCredentialDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
-import org.wso2.carbon.identity.openidconnect.model.Claim;
+import org.wso2.carbon.identity.openidconnect.OIDCConstants;
+import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.registry.core.Registry;
 import org.wso2.carbon.registry.core.Resource;
 import org.wso2.carbon.registry.core.exceptions.RegistryException;
@@ -1946,35 +1949,6 @@ public class OAuth2Util {
         return true;
     }
 
-    /**
-     * This method returns essential:true claims list from the request parameter of OIDC authorization request
-     *
-     * @param claimRequestor                  claimrequestor is either id_token or  userinfo
-     * @param requestedClaimsFromRequestParam claims defined in the value of the request parameter
-     * @return the claim list which have attribute vale essentail :true
-     */
-    public static List<String> essentialClaimsFromRequestParam(String claimRequestor, Map<String, List<Claim>>
-            requestedClaimsFromRequestParam) {
-
-        String attributeValue = null;
-        List<String> essentialClaimsfromRequestParam = new ArrayList<>();
-        List<Claim> claimsforClaimRequestor = requestedClaimsFromRequestParam.get(claimRequestor);
-        for (Claim claimforClaimRequestor : claimsforClaimRequestor) {
-            String claim = claimforClaimRequestor.getName();
-            Map<String, String> attributesMap = claimforClaimRequestor.getClaimAttributesMap();
-            if (attributesMap != null) {
-                for (Map.Entry<String, String> attributesEntryMap : attributesMap.entrySet()) {
-                    attributeValue = attributesMap.get(attributesEntryMap.getKey());
-
-                    if (ESSENTAIL.equals(attributesEntryMap.getKey()) && Boolean.parseBoolean(attributeValue)) {
-                        essentialClaimsfromRequestParam.add(claim);
-                    }
-                }
-            }
-        }
-        return essentialClaimsfromRequestParam;
-    }
-
     /* Get authorized user from the {@link AccessTokenDO}. When getting authorized user we also make sure flag to
     * determine whether the user is federated or not is set.
     *
@@ -2010,4 +1984,27 @@ public class OAuth2Util {
 
         return isExplicitlyFederatedUser && isFederatedUserNotMappedToLocalUser;
     }
+
+    /**
+     * This method returns essential:true claims list from the request parameter of OIDC authorization request
+     *
+     * @param claimRequestor claimrequestor is either id_token or userinfo
+     * @param requestedClaimsFromRequestParam claims defined in the value of the request parameter
+     * @return the claim list which have attribute vale essentail :true
+     */
+    public static List<String> essentialClaimsFromRequestParam(String claimRequestor, Map<String, List<RequestedClaim>>
+            requestedClaimsFromRequestParam) {
+
+        List<String> essentialClaimsfromRequestParam = new ArrayList<>();
+        List<RequestedClaim> claimsforClaimRequestor = requestedClaimsFromRequestParam.get(claimRequestor);
+        for (RequestedClaim claimforClaimRequestor : claimsforClaimRequestor) {
+            String claim = claimforClaimRequestor.getName();
+            if (claimforClaimRequestor.isEssential()) {
+                essentialClaimsfromRequestParam.add(claim);
+            }
+        }
+        return essentialClaimsfromRequestParam;
+    }
+
 }
+

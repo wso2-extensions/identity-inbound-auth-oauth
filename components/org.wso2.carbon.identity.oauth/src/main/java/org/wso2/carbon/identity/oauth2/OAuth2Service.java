@@ -39,6 +39,7 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.authz.AuthorizationHandlerManager;
+import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
@@ -264,6 +265,7 @@ public class OAuth2Service extends AbstractAdmin {
         OAuthRevocationResponseDTO revokeResponseDTO = new OAuthRevocationResponseDTO();
         OAuthEventInterceptor oAuthEventInterceptorProxy = OAuthComponentServiceHolder.getInstance()
                 .getOAuthEventInterceptorProxy();
+        OAuthClientAuthnContext oAuthClientAuthnContext = revokeRequestDTO.getoAuthClientAuthnContext();
 
         //Invoke pre listeners
 
@@ -349,14 +351,11 @@ public class OAuth2Service extends AbstractAdmin {
                     grantType = refreshTokenDO.getGrantType();
                 }
 
-                if (!StringUtils.equals(OAuthConstants.GrantTypes.IMPLICIT, grantType) &&
-                        !OAuth2Util.authenticateClient(revokeRequestDTO.getConsumerKey(),
-                                revokeRequestDTO.getConsumerSecret())) {
-
+                if (!isClientAuthenticated(oAuthClientAuthnContext, grantType)) {
                     OAuthRevocationResponseDTO revokeRespDTO = new OAuthRevocationResponseDTO();
                     revokeRespDTO.setError(true);
-                    revokeRespDTO.setErrorCode(OAuth2ErrorCodes.UNAUTHORIZED_CLIENT);
-                    revokeRespDTO.setErrorMsg("Unauthorized Client");
+                    revokeRespDTO.setErrorCode(getErrorCode(oAuthClientAuthnContext));
+                    revokeRespDTO.setErrorMsg(getErrorMessage(oAuthClientAuthnContext));
 
                     invokePostRevocationListeners(revokeRequestDTO, revokeRespDTO, accessTokenDO,
                             refreshTokenDO);
@@ -401,8 +400,8 @@ public class OAuth2Service extends AbstractAdmin {
 
             } else {
                 revokeResponseDTO.setError(true);
-                revokeResponseDTO.setErrorCode(OAuth2ErrorCodes.INVALID_REQUEST);
-                revokeResponseDTO.setErrorMsg("Invalid revocation request");
+                revokeResponseDTO.setErrorCode(oAuthClientAuthnContext.getErrorCode());
+                revokeResponseDTO.setErrorMsg(oAuthClientAuthnContext.getErrorMessage());
                 invokePostRevocationListeners(revokeRequestDTO, revokeResponseDTO, accessTokenDO, refreshTokenDO);
                 return revokeResponseDTO;
             }
@@ -604,6 +603,27 @@ public class OAuth2Service extends AbstractAdmin {
             respHeaders.add(header);
             revokeResponseDTP.setResponseHeaders(respHeaders.toArray(new ResponseHeader[respHeaders.size()]));
         }
+    }
+
+    private boolean isClientAuthenticated(OAuthClientAuthnContext oAuthClientAuthnContext, String grantType) {
+        return oAuthClientAuthnContext != null && !StringUtils.equals(OAuthConstants.GrantTypes.IMPLICIT, grantType) &&
+                oAuthClientAuthnContext.isAuthenticated();
+    }
+
+    private String getErrorMessage(OAuthClientAuthnContext oAuthClientAuthnContext) {
+        String errorMessage = "Unauthorized Client";
+        if (oAuthClientAuthnContext != null && StringUtils.isNotEmpty(oAuthClientAuthnContext.getErrorMessage())) {
+            errorMessage = oAuthClientAuthnContext.getErrorMessage();
+        }
+        return errorMessage;
+    }
+
+    private String getErrorCode(OAuthClientAuthnContext oAuthClientAuthnContext) {
+        String errorCode = OAuth2ErrorCodes.UNAUTHORIZED_CLIENT;
+        if (oAuthClientAuthnContext != null && StringUtils.isNotEmpty(oAuthClientAuthnContext.getErrorCode())) {
+            errorCode = oAuthClientAuthnContext.getErrorCode();
+        }
+        return errorCode;
     }
 
 }

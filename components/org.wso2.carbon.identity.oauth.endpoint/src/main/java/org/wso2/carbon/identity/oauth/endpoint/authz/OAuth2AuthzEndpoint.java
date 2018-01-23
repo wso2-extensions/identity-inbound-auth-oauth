@@ -36,6 +36,7 @@ import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticatorFlowStatus;
 import org.wso2.carbon.identity.application.authentication.framework.CommonAuthenticationHandler;
 import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationResultCacheEntry;
+import org.wso2.carbon.identity.application.authentication.framework.context.AuthHistory;
 import org.wso2.carbon.identity.application.authentication.framework.context.SessionContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticationResult;
@@ -78,10 +79,15 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionState;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
 import org.wso2.carbon.identity.openidconnect.OIDCRequestObjectFactory;
+
+import static org.wso2.carbon.identity.openidconnect.model.Constants.MAX_AGE;
+import static org.wso2.carbon.identity.openidconnect.model.Constants.NONCE;
+
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.registry.core.utils.UUIDGenerator;
 import org.wso2.carbon.utils.CarbonUtils;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
+
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
@@ -91,6 +97,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.text.ParseException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -114,6 +121,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 
+import static org.apache.commons.lang.StringUtils.isEmpty;
 import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.AUTHENTICATION_RESPONSE;
 import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.INITIAL_REQUEST;
 import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.PASSTHROUGH_TO_COMMONAUTH;
@@ -123,8 +131,10 @@ import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getError
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getLoginPageURL;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuth2Service;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuthServerConfiguration;
-import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.startSuperTenantFlow;   
+import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.startSuperTenantFlow;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.validateParams;
+import static org.wso2.carbon.identity.openidconnect.model.Constants.SCOPE;
+import static org.wso2.carbon.identity.openidconnect.model.Constants.STATE;
 
 @Path("/authorize")
 public class OAuth2AuthzEndpoint {
@@ -136,6 +146,7 @@ public class OAuth2AuthzEndpoint {
     private static final String BEARER = "Bearer";
     private static final String ACR_VALUES = "acr_values";
     private static final String CLAIMS = "claims";
+    public static final String COMMA_SEPARATOR = ",";
     private boolean isCacheAvailable = false;
 
     private static final String REDIRECT_URI = "redirect_uri";
@@ -179,7 +190,6 @@ public class OAuth2AuthzEndpoint {
         }
     }
 
-
     @POST
     @Path("/")
     @Consumes("application/x-www-form-urlencoded")
@@ -198,6 +208,7 @@ public class OAuth2AuthzEndpoint {
     }
 
     private Response handleInvalidRequest() throws URISyntaxException {
+
         if (log.isDebugEnabled()) {
             log.debug("Invalid authorization request");
         }
@@ -302,6 +313,8 @@ public class OAuth2AuthzEndpoint {
             URISyntaxException {
 
         updateAuthTimeInSessionDataCacheEntry(oAuthMessage);
+        addSessionDataKeyToSessionDataCacheEntry(oAuthMessage);
+
         String consent = getConsentFromRequest(oAuthMessage);
 
         if (consent != null) {
@@ -320,6 +333,15 @@ public class OAuth2AuthzEndpoint {
             return Response.status(HttpServletResponse.SC_FOUND).location(new URI(redirectURL)).build();
         } else {
             return handleEmptyConsent(oAuthMessage);
+        }
+    }
+
+    private void addSessionDataKeyToSessionDataCacheEntry(OAuthMessage oAuthMessage) {
+        Cookie cookie = FrameworkUtils.getAuthCookie(oAuthMessage.getRequest());
+        if (cookie != null) {
+            String sessionContextKey = DigestUtils.sha256Hex(cookie.getValue());
+            oAuthMessage.getSessionDataCacheEntry().getParamMap().put(FrameworkConstants.SESSION_DATA_KEY, new String[]
+                    {sessionContextKey});
         }
     }
 
@@ -399,6 +421,7 @@ public class OAuth2AuthzEndpoint {
     private Response handleAuthenticationResponse(OAuthMessage oAuthMessage) throws OAuthSystemException, URISyntaxException {
 
         updateAuthTimeInSessionDataCacheEntry(oAuthMessage);
+        addSessionDataKeyToSessionDataCacheEntry(oAuthMessage);
 
         OAuth2Parameters oauth2Params = oAuthMessage.getSessionDataCacheEntry().getoAuth2Parameters();
         AuthenticationResult authnResult = getAuthenticationResult(oAuthMessage, oAuthMessage.getSessionDataKeyFromLogin());
@@ -484,6 +507,7 @@ public class OAuth2AuthzEndpoint {
     }
 
     private Response handleFormPostMode(OAuthMessage oAuthMessage, OAuth2Parameters oauth2Params, String redirectURL, boolean isOIDCRequest, OIDCSessionState sessionState) {
+
         String sessionStateValue = null;
         if (isOIDCRequest) {
             sessionState.setAddSessionState(true);
@@ -514,6 +538,8 @@ public class OAuth2AuthzEndpoint {
         if (authTime > 0) {
             oAuthMessage.getSessionDataCacheEntry().setAuthTime(authTime);
         }
+
+        associateAuthenticationHistory(oAuthMessage.getSessionDataCacheEntry(), cookie);
     }
 
     private boolean isFormPostResponseMode(OAuthMessage oAuthMessage, String redirectURL) {
@@ -605,7 +631,6 @@ public class OAuth2AuthzEndpoint {
         }
         return paramStringBuilder.toString();
     }
-
 
     private void removeAuthenticationResult(OAuthMessage oAuthMessage, String sessionDataKey) {
 
@@ -834,8 +859,20 @@ public class OAuth2AuthzEndpoint {
                 sessionDataCacheEntry.getoAuth2Parameters().getEssentialClaims());
         authorizationGrantCacheEntry.setAuthTime(sessionDataCacheEntry.getAuthTime());
         authorizationGrantCacheEntry.setMaxAge(sessionDataCacheEntry.getoAuth2Parameters().getMaxAge());
-        authorizationGrantCacheEntry.setRequestObject(sessionDataCacheEntry.getoAuth2Parameters().
-                getRequestObject());
+        String[] sessionIds = sessionDataCacheEntry.getParamMap().get(FrameworkConstants.SESSION_DATA_KEY);
+        if (ArrayUtils.isNotEmpty(sessionIds)) {
+            String commonAuthSessionId = sessionIds[0];
+            SessionContext sessionContext = FrameworkUtils.getSessionContextFromCache(commonAuthSessionId);
+            String selectedAcr = sessionContext.getSessionAuthHistory().getSelectedAcrValue();
+            authorizationGrantCacheEntry.setSelectedAcrValue(selectedAcr);
+        }
+
+        String[] amrEntries = sessionDataCacheEntry.getParamMap().get(OAuthConstants.AMR);
+        if (amrEntries != null) {
+            for (String amrEntry : amrEntries) {
+                authorizationGrantCacheEntry.addAmr(amrEntry);
+            }
+        }
         AuthorizationGrantCache.getInstance().addToCacheByCode(
                 authorizationGrantCacheKey, authorizationGrantCacheEntry);
     }
@@ -859,7 +896,7 @@ public class OAuth2AuthzEndpoint {
      *
      * @param oAuthMessage oAuthMessage
      * @return String redirectURL
-     * @throws OAuthSystemException OAuthSystemException
+     * @throws OAuthSystemException  OAuthSystemException
      * @throws OAuthProblemException OAuthProblemException
      */
     private String handleOAuthAuthorizationRequest(OAuthMessage oAuthMessage)
@@ -874,6 +911,8 @@ public class OAuth2AuthzEndpoint {
         OAuthAuthzRequest oauthRequest = new CarbonOAuthAuthzRequest(oAuthMessage.getRequest());
 
         OAuth2Parameters params = new OAuth2Parameters();
+        String sessionDataKey = UUIDGenerator.generateUUID();
+        params.setSessionDataKey(sessionDataKey);
         String redirectURI = populateOauthParameters(params, oAuthMessage, validationResponse, oauthRequest);
         if (redirectURI != null) {
             return redirectURI;
@@ -887,7 +926,6 @@ public class OAuth2AuthzEndpoint {
             return redirectURI;
         }
 
-        String sessionDataKey = UUIDGenerator.generateUUID();
         addDataToSessionCache(oAuthMessage, params, sessionDataKey);
 
         try {
@@ -899,6 +937,16 @@ public class OAuth2AuthzEndpoint {
 
         } catch (IdentityOAuth2Exception e) {
             return handleException(e);
+        }
+    }
+
+    private void persistRequestObject(OAuthAuthzRequest oauthRequest, OAuth2Parameters params)
+            throws RequestObjectException {
+
+        String sessionDataKey = params.getSessionDataKey();
+        if (EndpointUtil.getRequestObjectService() != null) {
+            EndpointUtil.getRequestObjectService().addRequestObject(params.getClientId(), null, null, sessionDataKey,
+                    new ArrayList(getRequestObject(oauthRequest, params).getRequestedClaims().values()));
         }
     }
 
@@ -1092,12 +1140,15 @@ public class OAuth2AuthzEndpoint {
             OIDC Request object will supersede parameters sent in the OAuth Authorization request. So handling the
             OIDC Request object needs to done after processing all request parameters.
          */
-        try {
-            handleOIDCRequestObject(oauthRequest, params);
-        } catch (RequestObjectException e) {
-            // All the error logs are specified at the time when throw the exception.
-            return EndpointUtil.getErrorPageURL(e.getErrorCode(), e.getErrorMessage(), null);
+        if (oauthRequest.getScopes().contains(OAuthConstants.Scope.OPENID)) {
+            try {
+                handleOIDCRequestObject(oauthRequest, params);
+            } catch (RequestObjectException e) {
+                // All the error logs are specified at the time when throw the exception.
+                return EndpointUtil.getErrorPageURL(e.getErrorCode(), e.getErrorMessage(), null);
+            }
         }
+
         return null;
     }
 
@@ -1131,7 +1182,7 @@ public class OAuth2AuthzEndpoint {
         // With in the same request it can not be used both request parameter and request_uri parameter.
         if (StringUtils.isNotEmpty(oauthRequest.getParam(REQUEST)) && StringUtils.isNotEmpty(oauthRequest.getParam
                 (REQUEST_URI))) {
-            throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST, "Both request and " +
+            throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST, "Both request and " +
                     "request_uri parameters can not be associated with the same authorization request.");
         }
     }
@@ -1152,6 +1203,7 @@ public class OAuth2AuthzEndpoint {
              */
             overrideAuthzParameters(parameters, oauthRequest.getParam(REQUEST), oauthRequest.getParam(REQUEST_URI),
                     requestObject);
+            persistRequestObject(oauthRequest, parameters);
         }
     }
 
@@ -1159,13 +1211,12 @@ public class OAuth2AuthzEndpoint {
             RequestObjectException {
 
         if (requestObject.isSignatureValid()) {
-            params.setRequestObject(requestObject);
             if (log.isDebugEnabled()) {
                 log.debug("The request Object is valid. Hence storing the request object value in oauth params.");
             }
         } else {
             if (log.isDebugEnabled()) {
-                log.debug("The request signature validation failed as the json is invalid.");
+                log.debug("The request signature validation failed as the JWT signature is invalid.");
             }
             throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST, "Request object signature " +
                     "validation failed.");
@@ -1184,20 +1235,21 @@ public class OAuth2AuthzEndpoint {
                                          String requestURIParameterValue, RequestObject requestObject) {
 
         if (StringUtils.isNotBlank(requestParameterValue) || StringUtils.isNotBlank(requestURIParameterValue)) {
-            if (StringUtils.isNotBlank(requestObject.getRedirectUri())) {
-                params.setRedirectURI(requestObject.getRedirectUri());
+            if (StringUtils.isNotBlank(requestObject.getClaimValue(REDIRECT_URI))) {
+                params.setRedirectURI(requestObject.getClaimValue(REDIRECT_URI));
             }
-            if (StringUtils.isNotBlank(requestObject.getNonce())) {
-                params.setNonce(requestObject.getNonce());
+            if (StringUtils.isNotBlank(requestObject.getClaimValue(NONCE))) {
+                params.setNonce(requestObject.getClaimValue(NONCE));
             }
-            if (StringUtils.isNotBlank(requestObject.getState())) {
-                params.setState(requestObject.getState());
+            if (StringUtils.isNotBlank(requestObject.getClaimValue(STATE))) {
+                params.setState(requestObject.getClaimValue(STATE));
             }
-            if (ArrayUtils.isNotEmpty(requestObject.getScopes())) {
-                params.setScopes(new HashSet<>(Arrays.asList(requestObject.getScopes())));
+            if (StringUtils.isNotEmpty(requestObject.getClaimValue(SCOPE))) {
+                String scopeString = requestObject.getClaimValue(SCOPE);
+                params.setScopes(new HashSet<>(Arrays.asList(scopeString.split(COMMA_SEPARATOR))));
             }
-            if (requestObject.getMaxAge() != 0 ) {
-                params.setMaxAge(requestObject.getMaxAge());
+            if (StringUtils.isNotEmpty(requestObject.getClaimValue(MAX_AGE))) {
+                params.setMaxAge(Integer.parseInt(requestObject.getClaimValue(MAX_AGE)));
             }
         }
     }
@@ -1417,6 +1469,7 @@ public class OAuth2AuthzEndpoint {
         authzReqDTO.setAuthTime(sessionDataCacheEntry.getAuthTime());
         authzReqDTO.setMaxAge(oauth2Params.getMaxAge());
         authzReqDTO.setEssentialClaims(oauth2Params.getEssentialClaims());
+        authzReqDTO.setSessionDataKey(oauth2Params.getSessionDataKey());
         return authzReqDTO;
     }
 
@@ -1429,7 +1482,6 @@ public class OAuth2AuthzEndpoint {
             }
         }
     }
-
 
     private AuthenticationResult getAuthenticationResult(OAuthMessage oAuthMessage, String sessionDataKey) {
 
@@ -1457,7 +1509,7 @@ public class OAuth2AuthzEndpoint {
      * Get authentication result from request
      *
      * @param request Http servlet request
-     * @return  AuthenticationResult
+     * @return AuthenticationResult
      */
     private AuthenticationResult getAuthenticationResultFromRequest(HttpServletRequest request) {
 
@@ -1475,7 +1527,6 @@ public class OAuth2AuthzEndpoint {
             return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).build();
         }
     }
-
 
     private Response processAuthResponseFromFramework(OAuthMessage oAuthMessage, CommonAuthResponseWrapper
             responseWrapper) throws IOException, InvalidRequestParentException, URISyntaxException {
@@ -1653,6 +1704,39 @@ public class OAuth2AuthzEndpoint {
         return redirectURL;
     }
 
+    /**
+     * Associates the authentication method references done while logged into the session (if any) to the OAuth cache.
+     * The SessionDataCacheEntry then will be used when getting "AuthenticationMethodReferences". Please see
+     * <a href="https://tools.ietf.org/html/draft-ietf-oauth-amr-values-02" >draft-ietf-oauth-amr-values-02</a>.
+     *
+     * @param resultFromLogin
+     * @param cookie
+     */
+    private void associateAuthenticationHistory(SessionDataCacheEntry resultFromLogin, Cookie cookie) {
+        SessionContext sessionContext = getSessionContext(cookie);
+        if (sessionContext != null && sessionContext.getSessionAuthHistory() != null
+                && sessionContext.getSessionAuthHistory().getHistory() != null) {
+            List<String> authMethods = new ArrayList<>();
+            for (AuthHistory authHistory : sessionContext.getSessionAuthHistory().getHistory()) {
+                authMethods.add(authHistory.toTranslatableString());
+            }
+            resultFromLogin.getParamMap().put(OAuthConstants.AMR, authMethods.toArray(new String[authMethods.size()]));
+        }
+    }
+
+    /**
+     * Returns the SessionContext associated with the cookie, if there is a one.
+     *
+     * @param cookie
+     * @return the associate SessionContext or null.
+     */
+    private SessionContext getSessionContext(Cookie cookie) {
+        if (cookie != null) {
+            String sessionContextKey = DigestUtils.sha256Hex(cookie.getValue());
+            return FrameworkUtils.getSessionContextFromCache(sessionContextKey);
+        }
+        return null;
+    }
 
     /**
      * Gets the last authenticated value from the commonAuthId cookie
@@ -1677,7 +1761,6 @@ public class OAuth2AuthzEndpoint {
         }
         return authTime;
     }
-
 
     /**
      * Build OAuthProblem exception based on error details sent by the Framework as properties in the

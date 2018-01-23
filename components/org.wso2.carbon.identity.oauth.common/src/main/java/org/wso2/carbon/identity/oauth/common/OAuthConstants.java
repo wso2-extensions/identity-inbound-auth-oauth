@@ -20,6 +20,11 @@ package org.wso2.carbon.identity.oauth.common;
 
 public final class OAuthConstants {
 
+    //OIDC request headers.
+    public static final String AMR = "amr";
+    public static final String ACR = "acr";
+    public static final String AT_HASH = "at_hash";
+
     //OAuth2 request headers.
     public static final String HTTP_REQ_HEADER_AUTHZ = "Authorization";
 
@@ -118,6 +123,7 @@ public final class OAuthConstants {
     public static final String OAUTH_INTERCEPTOR_PROXY = "OauthDataInterceptorHandlerProxy";
 
     public static final String RESPONSE_HEADERS_PROPERTY = "RESPONSE_HEADERS";
+    public static final String CLIENT_AUTHN_CONTEXT = "oauth.client.authentication.context";
 
 
     //Constants used for multiple scopes

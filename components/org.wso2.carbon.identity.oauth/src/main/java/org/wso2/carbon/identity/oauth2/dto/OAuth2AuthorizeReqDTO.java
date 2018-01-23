@@ -32,6 +32,7 @@ public class OAuth2AuthorizeReqDTO {
     private AuthenticatedUser user;
     private String password;
     private LinkedHashSet acrValues;
+    private String selectedAcr;
     private String nonce;
     private String pkceCodeChallenge;
     private String pkceCodeChallengeMethod;
@@ -41,6 +42,15 @@ public class OAuth2AuthorizeReqDTO {
     private long maxAge;
     private RequestObject requestObject;
     private String requestUriParamClaims;
+    private String sessionDataKey;
+
+    public String getSessionDataKey() {
+        return sessionDataKey;
+    }
+
+    public void setSessionDataKey(String sessionDataKey) {
+        this.sessionDataKey = sessionDataKey;
+    }
 
     public long getMaxAge() {
         return maxAge;
@@ -139,6 +149,14 @@ public class OAuth2AuthorizeReqDTO {
 
     public void setACRValues(LinkedHashSet acrValues) {
         this.acrValues = acrValues;
+    }
+
+    public String getSelectedAcr() {
+        return selectedAcr;
+    }
+
+    public void setSelectedAcr(String selectedAcr) {
+        this.selectedAcr = selectedAcr;
     }
 
     public void setNonce(String nonce) {

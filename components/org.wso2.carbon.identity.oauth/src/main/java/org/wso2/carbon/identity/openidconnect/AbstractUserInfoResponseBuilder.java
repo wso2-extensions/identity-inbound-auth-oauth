@@ -16,7 +16,6 @@
 
 package org.wso2.carbon.identity.openidconnect;
 
-import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -30,12 +29,12 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
-import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
 import org.wso2.carbon.identity.oauth.user.UserInfoResponseBuilder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
@@ -79,12 +78,33 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
         filteredUserClaims.putAll(essentialClaims);
 
         //Handle essential claims of the request object
-        if (getRequestObject(tokenResponse) != null) {
-            filteredUserClaims.putAll(getUserClaimsFilteredByEssentialClaims(userClaims, USERINFO,
-                    getRequestObject(tokenResponse)));
-        }
+        filterEssentialClaimsFromRequestObject(tokenResponse, userClaims, filteredUserClaims);
 
         return buildResponse(tokenResponse, spTenantDomain, filteredUserClaims);
+    }
+
+    private void filterEssentialClaimsFromRequestObject(OAuth2TokenValidationResponseDTO tokenResponse,
+                                                        Map<String, Object> userClaims,
+                                                        Map<String, Object> filteredUserClaims)
+            throws UserInfoEndpointException {
+
+        List<String> essentialClaimsFromRequestObject = new ArrayList<>();
+        RequestObjectService requestObjectService = OpenIDConnectServiceComponentHolder.getRequestObjectService();
+        try {
+            if (requestObjectService != null) {
+                essentialClaimsFromRequestObject = requestObjectService.getEssentialClaims(getAccessToken(tokenResponse)
+                        , null, true);
+            }
+        } catch (RequestObjectException e) {
+            throw new UserInfoEndpointException(e.getErrorMessage());
+        }
+        for (String essentialClaim : essentialClaimsFromRequestObject) {
+            filteredUserClaims.put(essentialClaim, userClaims.get(essentialClaim));
+            if (log.isDebugEnabled()) {
+                log.debug("The " + essentialClaim + " is marked as an essentialClaim for userinfo in the OIDC Request" +
+                        " Object.");
+            }
+        }
     }
 
     /**
@@ -145,30 +165,15 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
                                                                String[] requestedScopes,
                                                                String clientId,
                                                                String tenantDomain) {
+
         return OpenIDConnectServiceComponentHolder.getInstance()
                 .getHighestPriorityOpenIDConnectClaimFilter()
                 .getClaimsFilteredByOIDCScopes(userClaims, requestedScopes, clientId, tenantDomain);
     }
 
-    /**
-     * Filter user claims based on the essential claims of the request object which comes with the oidc authz request.
-     *
-     * @param type             id_token or userinfo
-     * @param requestObject     request object
-     * @param userClaims        Map of user claims
-     * @return essential claims
-     */
-    protected Map<String, Object> getUserClaimsFilteredByEssentialClaims(Map<String, Object> userClaims,
-                                                                String type,
-                                                                RequestObject requestObject) {
-
-        return OpenIDConnectServiceComponentHolder.getInstance()
-                .getHighestPriorityOpenIDConnectClaimFilter().getClaimsFilteredByEssentialClaims(userClaims, type,
-                        requestObject);
-    }
-
     protected Map<String, Object> getEssentialClaims(OAuth2TokenValidationResponseDTO tokenResponse,
                                                      Map<String, Object> claims) throws UserInfoEndpointException {
+
         Map<String, Object> essentialClaimMap = new HashMap<>();
         List<String> essentialClaims = getEssentialClaimUris(tokenResponse);
         if (isNotEmpty(essentialClaims)) {
@@ -204,6 +209,7 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
                                             Map<String, Object> filteredUserClaims) throws UserInfoEndpointException;
 
     private AuthenticatedUser getAuthenticatedUser(String accessToken) throws OAuthSystemException {
+
         AccessTokenDO accessTokenDO;
         try {
             accessTokenDO = OAuth2Util.getAccessTokenDOfromTokenIdentifier(accessToken);
@@ -215,6 +221,7 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
 
     private String getServiceProviderTenantDomain(OAuth2TokenValidationResponseDTO tokenResponse)
             throws UserInfoEndpointException {
+
         String clientId = getClientId(getAccessToken(tokenResponse));
         OAuthAppDO oAuthAppDO;
         try {
@@ -230,6 +237,7 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
                                      String userStoreDomain,
                                      String clientId,
                                      String spTenantDomain) throws UserInfoEndpointException {
+
         ServiceProvider serviceProvider = getServiceProvider(spTenantDomain, clientId);
 
         if (serviceProvider != null) {
@@ -252,6 +260,7 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
     }
 
     private String getClientId(String accessToken) throws UserInfoEndpointException {
+
         try {
             return OAuth2Util.getClientIdForAccessToken(accessToken);
         } catch (IdentityOAuth2Exception e) {
@@ -260,6 +269,7 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
     }
 
     private ServiceProvider getServiceProvider(String tenantDomain, String clientId) throws UserInfoEndpointException {
+
         ApplicationManagementService applicationMgtService = OAuth2ServiceComponentHolder.getApplicationMgtService();
         ServiceProvider serviceProvider;
         try {
@@ -274,6 +284,7 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
     }
 
     private List<String> getEssentialClaimUris(OAuth2TokenValidationResponseDTO tokenResponse) {
+
         AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(getAccessToken(tokenResponse));
         AuthorizationGrantCacheEntry cacheEntry = AuthorizationGrantCache.getInstance()
                 .getValueFromCacheByToken(cacheKey);
@@ -300,10 +311,12 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
     }
 
     private boolean isLocalUser(AuthenticatedUser authenticatedUser) {
+
         return !authenticatedUser.isFederatedUser();
     }
 
     private String getAccessToken(OAuth2TokenValidationResponseDTO tokenResponse) {
+
         return tokenResponse.getAuthorizationContextToken().getTokenString();
     }
 }
