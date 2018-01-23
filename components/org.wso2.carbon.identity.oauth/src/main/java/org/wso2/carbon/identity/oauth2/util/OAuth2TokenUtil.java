@@ -86,11 +86,10 @@ public class OAuth2TokenUtil {
 
         String eventName = null;
         HashMap<String, Object> properties = new HashMap<>();
-        if (StringUtils.isNotBlank(acessTokenId)) {
-            properties.put(TOKEN_STATE, tokenState);
-        }
+
         if (StringUtils.isNotBlank(acessTokenId)) {
             eventName = OIDCConstants.Event.POST_REVOKE_ACESS_TOKEN_BY_ID;
+            properties.put(TOKEN_STATE, tokenState);
             properties.put(OIDCConstants.Event.TOKEN_ID, acessTokenId);
         }
         triggerEvent(eventName, properties);
@@ -110,6 +109,7 @@ public class OAuth2TokenUtil {
         HashMap<String, Object> properties = new HashMap<>();
         if (CollectionUtils.isNotEmpty(acessTokens)) {
             eventName = OIDCConstants.Event.POST_REVOKE_ACESS_TOKEN;
+            properties.put(TOKEN_STATE, tokenState);
             properties.put(OIDCConstants.Event.ACEESS_TOKENS, acessTokens);
         }
         triggerEvent(eventName, properties);
@@ -139,17 +139,38 @@ public class OAuth2TokenUtil {
      * Uses to revoke codes from the request object related tables after token revocation
      * happens from access token related tables.
      *
-     * @param codeId code id
+     * @param codeId     code id
+     * @param tokenState
      * @throws IdentityOAuth2Exception
      */
-    public static void postRevokeCode(String codeId, List<AuthzCodeDO> authzCodeDOs) throws IdentityOAuth2Exception {
+    public static void postRevokeCode(String codeId, String tokenState)
+            throws IdentityOAuth2Exception {
 
         String eventName = null;
         HashMap<String, Object> properties = new HashMap<>();
         if (StringUtils.isNotBlank(codeId)) {
+            properties.put(OIDCConstants.Event.TOKEN_STATE, tokenState);
             eventName = OIDCConstants.Event.POST_REVOKE_CODE_BY_ID;
             properties.put(OIDCConstants.Event.CODE_ID, codeId);
-        } else if (CollectionUtils.isNotEmpty(authzCodeDOs)) {
+        }
+
+        triggerEvent(eventName, properties);
+    }
+
+    /**
+     * Uses to revoke codes from the request object related tables after token revocation
+     * happens from access token related tables.
+     *
+     * @param tokenState
+     * @throws IdentityOAuth2Exception
+     */
+    public static void postRevokeCodes(List<AuthzCodeDO> authzCodeDOs, String tokenState)
+            throws IdentityOAuth2Exception {
+
+        String eventName = null;
+        HashMap<String, Object> properties = new HashMap<>();
+        if (CollectionUtils.isNotEmpty(authzCodeDOs)) {
+            properties.put(OIDCConstants.Event.TOKEN_STATE, tokenState);
             eventName = OIDCConstants.Event.POST_REVOKE_CODE;
             properties.put(OIDCConstants.Event.CODES, authzCodeDOs);
         }

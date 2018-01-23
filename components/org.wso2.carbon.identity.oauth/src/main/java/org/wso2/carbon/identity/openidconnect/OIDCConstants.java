@@ -33,7 +33,6 @@ public class OIDCConstants {
         public static final String SESSION_DATA_KEY = "SESSION_DATA_KEY";
         public static final String POST_ISSUE_CODE = "POST_ISSUE_CODE";
         public static final String POST_ISSUE_ACCESS_TOKEN = "POST_ISSUE_ACCESS_TOKEN";
-        public static final String PERSIST_REQUEST_OBJECT = "persistRequestObject";
         public static final String HANDLE_REQUEST_OBJECT = "handleRequestObject";
         public static final String POST_REVOKE_ACESS_TOKEN = "POST_REVOKE_ACESS_TOKEN";
         public static final String POST_REVOKE_ACESS_TOKEN_BY_ID = "POST_REVOKE_ACESS_TOKEN_BY_ID";
