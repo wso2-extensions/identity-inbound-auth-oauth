@@ -186,7 +186,7 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
      * @throws IdentityOAuth2Exception
      */
     @Override
-    public void refreshRequestObjectReference(String sessionDataKey, String codeId, String accessTokenId)
+    public void updateRequestObjectReference(String sessionDataKey, String codeId, String accessTokenId)
             throws IdentityOAuth2Exception {
 
         Connection connection = IdentityDatabaseUtil.getDBConnection();

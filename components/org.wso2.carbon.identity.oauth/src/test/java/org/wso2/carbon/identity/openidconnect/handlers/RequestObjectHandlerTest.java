@@ -26,6 +26,7 @@ import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithH2Database;
 import org.wso2.carbon.identity.event.IdentityEventException;
 import org.wso2.carbon.identity.event.event.Event;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.openidconnect.OIDCConstants;
 
@@ -75,11 +76,14 @@ public class RequestObjectHandlerTest {
 
         HashMap<String, Object> properties = new HashMap<>();
         if (CollectionUtils.isNotEmpty(codeList)) {
-            properties.put(propertyName, code);
+            properties.put(propertyName, codeList);
         } else if (CollectionUtils.isNotEmpty(lstAuthzCode)) {
             properties.put(propertyName, lstAuthzCode);
         }
+        properties.put(OIDCConstants.Event.TOKEN_STATE, OAuthConstants.TokenStates.TOKEN_STATE_EXPIRED);
         properties.put(OIDCConstants.Event.SESSION_DATA_KEY, "sessionDataKey");
+        properties.put(OIDCConstants.Event.NEW_ACCESS_TOKEN, "new");
+        properties.put(OIDCConstants.Event.OLD_ACCESS_TOKEN, "old");
         Event event = new Event(eventName, properties);
         requestObjectRevokeHandler.handleEvent(event);
         Assert.assertEquals(requestObjectRevokeHandler.getName(), OIDCConstants.Event.HANDLE_REQUEST_OBJECT);
