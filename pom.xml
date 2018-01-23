@@ -120,6 +120,11 @@
                 <artifactId>org.wso2.carbon.tomcat.ext</artifactId>
                 <version>${carbon.kernel.version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.wso2.carbon.identity.framework</groupId>
+                <artifactId>org.wso2.carbon.identity.event</artifactId>
+                <version>${carbon.identity.framework.version}</version>
+            </dependency>
 
             <!-- Commons dependencies -->
             <dependency>

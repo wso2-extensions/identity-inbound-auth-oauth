@@ -16,9 +16,11 @@
 
 package org.wso2.carbon.identity.openidconnect.internal;
 
-import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.openidconnect.ClaimProvider;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilter;
+import org.wso2.carbon.identity.openidconnect.RequestObjectService;
+import org.wso2.carbon.identity.openidconnect.handlers.RequestObjectRevokeHandler;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,8 +30,38 @@ public class OpenIDConnectServiceComponentHolder {
     private static OpenIDConnectServiceComponentHolder instance = new OpenIDConnectServiceComponentHolder();
     private List<OpenIDConnectClaimFilter> openIDConnectClaimFilters = new ArrayList<>();
     private List<ClaimProvider> claimProviders = new ArrayList<>();
+    private static RequestObjectService requestObjectService;
+    private static IdentityEventService identityEventService;
+    private static RequestObjectRevokeHandler requestObjectRevokeHandler;
+
+    public static RequestObjectRevokeHandler getRequestObjectRevokeHandler() {
+
+        return requestObjectRevokeHandler;
+    }
+
+    public static void setRequestObjectRevokeHandler(RequestObjectRevokeHandler requestObjectRevokeHandler) {
+
+        OpenIDConnectServiceComponentHolder.requestObjectRevokeHandler = requestObjectRevokeHandler;
+    }
+
+    public static IdentityEventService getIdentityEventService() {
+        return identityEventService;
+    }
+
+    public static void setIdentityEventService(IdentityEventService identityEventService) {
+        OpenIDConnectServiceComponentHolder.identityEventService = identityEventService;
+    }
+
+    public static RequestObjectService getRequestObjectService() {
+        return requestObjectService;
+    }
+
+    public static void setRequestObjectService(RequestObjectService requestObjectService) {
+        OpenIDConnectServiceComponentHolder.requestObjectService = requestObjectService;
+    }
 
     private OpenIDConnectServiceComponentHolder() {
+
     }
 
     public static OpenIDConnectServiceComponentHolder getInstance() {
@@ -37,10 +69,10 @@ public class OpenIDConnectServiceComponentHolder {
     }
 
     /**
-     *
      * @return The OIDC Claim Filter with the highest priority.
      */
     public OpenIDConnectClaimFilter getHighestPriorityOpenIDConnectClaimFilter() {
+
         if (openIDConnectClaimFilters.isEmpty()) {
             throw new RuntimeException("No OpenIDConnect Claim Filters available.");
         }

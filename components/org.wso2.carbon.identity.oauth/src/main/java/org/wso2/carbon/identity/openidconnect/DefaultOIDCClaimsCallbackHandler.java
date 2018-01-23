@@ -46,6 +46,7 @@ import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
@@ -129,23 +130,6 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
     }
 
     /**
-     * Filter user claims based on the essential claims of the request object which comes with the oidc authz request.
-     *
-     * @param type             id_token or userinfo
-     * @param requestObject     request object
-     * @param userClaims        Map of user claims
-     * @return essential claims
-     */
-    protected Map<String, Object> filterClaimsByEssentialClaims(Map<String, Object> userClaims,
-                                                                String type,
-                                                                RequestObject requestObject) {
-
-        return OpenIDConnectServiceComponentHolder.getInstance()
-                .getHighestPriorityOpenIDConnectClaimFilter().getClaimsFilteredByEssentialClaims(userClaims, type,
-                        requestObject);
-    }
-
-    /**
      * Get response map
      *
      * @param requestMsgCtx Token request message context
@@ -173,15 +157,18 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
 
         String clientId = requestMsgCtx.getOauth2AccessTokenReqDTO().getClientId();
         String spTenantDomain = requestMsgCtx.getOauth2AccessTokenReqDTO().getTenantDomain();
-        RequestObject requestObject = (RequestObject) requestMsgCtx.getProperty(REQUEST_OBJECT);
         Map<String, Object> filterClaimsByScopesAndEssentialClaims = new HashMap<>();
         filterClaimsByScopesAndEssentialClaims.putAll(filterClaimsByScope(userClaimsInOIDCDialect, requestMsgCtx.getScope(),
                 clientId, spTenantDomain));
-        filterClaimsByScopesAndEssentialClaims.putAll(filterClaimsByEssentialClaims(userClaimsInOIDCDialect,
-                OAuthConstants.ID_TOKEN, requestObject));
+
+        //Handle essential claims of the request object
+        filterEssentialClaimsFromRequestObject(null, userClaimsInOIDCDialect, filterClaimsByScopesAndEssentialClaims,
+                requestMsgCtx);
+
         // Restrict Claims going into the token based on the scope and the essential claims
         return filterClaimsByScopesAndEssentialClaims;
     }
+
 
     private Map<ClaimMapping, String> getCachedUserAttributes(OAuthTokenReqMessageContext requestMsgCtx) {
         Map<ClaimMapping, String> userAttributes = getUserAttributesCachedAgainstToken(getAccessToken(requestMsgCtx));
@@ -251,14 +238,46 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         String clientId = authzReqMessageContext.getAuthorizationReqDTO().getConsumerKey();
         String spTenantDomain = authzReqMessageContext.getAuthorizationReqDTO().getTenantDomain();
         String[] approvedScopes = authzReqMessageContext.getApprovedScope();
-        RequestObject requestObject = authzReqMessageContext.getAuthorizationReqDTO().getRequestObject();
         Map<String, Object> filterClaimsByScopesAndEssentialClaims = new HashMap<>();
         filterClaimsByScopesAndEssentialClaims.putAll(filterClaimsByScope(userClaimsInOIDCDialect, approvedScopes,
                 clientId, spTenantDomain));
-        filterClaimsByScopesAndEssentialClaims.putAll(filterClaimsByEssentialClaims(userClaimsInOIDCDialect,
-                OAuthConstants.ID_TOKEN, requestObject));
+
+        //Handle essential claims of the request object
+        filterEssentialClaimsFromRequestObject(authzReqMessageContext, userClaimsInOIDCDialect,
+                filterClaimsByScopesAndEssentialClaims, null);
+
         return filterClaimsByScopesAndEssentialClaims;
     }
+
+    private void filterEssentialClaimsFromRequestObject(OAuthAuthzReqMessageContext authzReqMessageContext,
+                                                        Map<String, Object> userClaimsInOIDCDialect,
+                                                        Map<String, Object> filterClaimsByScopesAndEssentialClaims,
+                                                        OAuthTokenReqMessageContext requestMsgCtx)
+            throws OAuthSystemException {
+
+        if (OpenIDConnectServiceComponentHolder.getRequestObjectService() != null) {
+            List<String> essentialClaimsFromRequestObject = new ArrayList<>();
+            try {
+                if (authzReqMessageContext != null) {
+                    essentialClaimsFromRequestObject = OpenIDConnectServiceComponentHolder.getRequestObjectService().
+                            getEssentialClaims(getAccessToken(authzReqMessageContext), null, false);
+                } else if (requestMsgCtx != null) {
+                    essentialClaimsFromRequestObject = OpenIDConnectServiceComponentHolder.getRequestObjectService().
+                            getEssentialClaims(getAccessToken(requestMsgCtx), null, false);
+                }
+            } catch (RequestObjectException e) {
+                throw new OAuthSystemException(e.getMessage());
+            }
+            for (String essentialClaim : essentialClaimsFromRequestObject) {
+                if (log.isDebugEnabled()) {
+                    log.debug("The " + essentialClaim + " is marked as an essentialClaim for id_token in the OIDC " +
+                            "Request Object.");
+                }
+                filterClaimsByScopesAndEssentialClaims.put(essentialClaim, userClaimsInOIDCDialect.get(essentialClaim));
+            }
+        }
+    }
+
 
     private Map<String, Object> retrieveClaimsForLocalUser(OAuthAuthzReqMessageContext authzReqMessageContext) {
         try {
