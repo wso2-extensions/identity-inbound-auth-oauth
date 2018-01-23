@@ -90,6 +90,7 @@ import static org.wso2.carbon.identity.openidconnect.model.Constants.NONCE;
 import static org.wso2.carbon.identity.openidconnect.model.Constants.PROMPT;
 import static org.wso2.carbon.identity.openidconnect.model.Constants.SCOPE;
 import static org.wso2.carbon.identity.openidconnect.model.Constants.STATE;
+
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.registry.core.utils.UUIDGenerator;
 import org.wso2.carbon.utils.CarbonUtils;
@@ -140,6 +141,8 @@ import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuth
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuthServerConfiguration;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.startSuperTenantFlow;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.validateParams;
+import static org.wso2.carbon.identity.openidconnect.model.Constants.SCOPE;
+import static org.wso2.carbon.identity.openidconnect.model.Constants.STATE;
 
 
 @Path("/authorize")
@@ -196,7 +199,6 @@ public class OAuth2AuthzEndpoint {
         }
     }
 
-
     @POST
     @Path("/")
     @Consumes("application/x-www-form-urlencoded")
@@ -215,6 +217,7 @@ public class OAuth2AuthzEndpoint {
     }
 
     private Response handleInvalidRequest() throws URISyntaxException {
+
         if (log.isDebugEnabled()) {
             log.debug("Invalid authorization request");
         }
@@ -513,6 +516,7 @@ public class OAuth2AuthzEndpoint {
     }
 
     private Response handleFormPostMode(OAuthMessage oAuthMessage, OAuth2Parameters oauth2Params, String redirectURL, boolean isOIDCRequest, OIDCSessionState sessionState) {
+
         String sessionStateValue = null;
         if (isOIDCRequest) {
             sessionState.setAddSessionState(true);
@@ -636,7 +640,6 @@ public class OAuth2AuthzEndpoint {
         }
         return paramStringBuilder.toString();
     }
-
 
     private void removeAuthenticationResult(OAuthMessage oAuthMessage, String sessionDataKey) {
 
@@ -865,8 +868,6 @@ public class OAuth2AuthzEndpoint {
                 sessionDataCacheEntry.getoAuth2Parameters().getEssentialClaims());
         authorizationGrantCacheEntry.setAuthTime(sessionDataCacheEntry.getAuthTime());
         authorizationGrantCacheEntry.setMaxAge(sessionDataCacheEntry.getoAuth2Parameters().getMaxAge());
-        authorizationGrantCacheEntry.setRequestObject(sessionDataCacheEntry.getoAuth2Parameters().
-                getRequestObject());
         String[] sessionIds = sessionDataCacheEntry.getParamMap().get(FrameworkConstants.SESSION_DATA_KEY);
         if (ArrayUtils.isNotEmpty(sessionIds)) {
             String commonAuthSessionId = sessionIds[0];
@@ -904,7 +905,7 @@ public class OAuth2AuthzEndpoint {
      *
      * @param oAuthMessage oAuthMessage
      * @return String redirectURL
-     * @throws OAuthSystemException OAuthSystemException
+     * @throws OAuthSystemException  OAuthSystemException
      * @throws OAuthProblemException OAuthProblemException
      */
     private String handleOAuthAuthorizationRequest(OAuthMessage oAuthMessage)
@@ -919,6 +920,8 @@ public class OAuth2AuthzEndpoint {
         OAuthAuthzRequest oauthRequest = new CarbonOAuthAuthzRequest(oAuthMessage.getRequest());
 
         OAuth2Parameters params = new OAuth2Parameters();
+        String sessionDataKey = UUIDGenerator.generateUUID();
+        params.setSessionDataKey(sessionDataKey);
         String redirectURI = populateOauthParameters(params, oAuthMessage, validationResponse, oauthRequest);
         if (redirectURI != null) {
             return redirectURI;
@@ -932,7 +935,6 @@ public class OAuth2AuthzEndpoint {
             return redirectURI;
         }
 
-        String sessionDataKey = UUIDGenerator.generateUUID();
         addDataToSessionCache(oAuthMessage, params, sessionDataKey);
 
         try {
@@ -944,6 +946,16 @@ public class OAuth2AuthzEndpoint {
 
         } catch (IdentityOAuth2Exception e) {
             return handleException(e);
+        }
+    }
+
+    private void persistRequestObject(OAuthAuthzRequest oauthRequest, OAuth2Parameters params)
+            throws RequestObjectException {
+
+        String sessionDataKey = params.getSessionDataKey();
+        if (EndpointUtil.getRequestObjectService() != null) {
+            EndpointUtil.getRequestObjectService().addRequestObject(params.getClientId(), null, null, sessionDataKey,
+                    new ArrayList(getRequestObject(oauthRequest, params).getRequestedClaims().values()));
         }
     }
 
@@ -1200,6 +1212,7 @@ public class OAuth2AuthzEndpoint {
              */
             overrideAuthzParameters(parameters, oauthRequest.getParam(REQUEST), oauthRequest.getParam(REQUEST_URI),
                     requestObject);
+            persistRequestObject(oauthRequest, parameters);
         }
     }
 
@@ -1207,7 +1220,6 @@ public class OAuth2AuthzEndpoint {
             RequestObjectException {
 
         if (requestObject.isSignatureValid()) {
-            params.setRequestObject(requestObject);
             if (log.isDebugEnabled()) {
                 log.debug("The request Object is valid. Hence storing the request object value in oauth params.");
             }
@@ -1491,6 +1503,7 @@ public class OAuth2AuthzEndpoint {
         authzReqDTO.setAuthTime(sessionDataCacheEntry.getAuthTime());
         authzReqDTO.setMaxAge(oauth2Params.getMaxAge());
         authzReqDTO.setEssentialClaims(oauth2Params.getEssentialClaims());
+        authzReqDTO.setSessionDataKey(oauth2Params.getSessionDataKey());
         return authzReqDTO;
     }
 
@@ -1503,7 +1516,6 @@ public class OAuth2AuthzEndpoint {
             }
         }
     }
-
 
     private AuthenticationResult getAuthenticationResult(OAuthMessage oAuthMessage, String sessionDataKey) {
 
@@ -1531,7 +1543,7 @@ public class OAuth2AuthzEndpoint {
      * Get authentication result from request
      *
      * @param request Http servlet request
-     * @return  AuthenticationResult
+     * @return AuthenticationResult
      */
     private AuthenticationResult getAuthenticationResultFromRequest(HttpServletRequest request) {
 
@@ -1549,7 +1561,6 @@ public class OAuth2AuthzEndpoint {
             return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).build();
         }
     }
-
 
     private Response processAuthResponseFromFramework(OAuthMessage oAuthMessage, CommonAuthResponseWrapper
             responseWrapper) throws IOException, InvalidRequestParentException, URISyntaxException {
@@ -1761,7 +1772,6 @@ public class OAuth2AuthzEndpoint {
         return null;
     }
 
-
     /**
      * Gets the last authenticated value from the commonAuthId cookie
      *
@@ -1785,7 +1795,6 @@ public class OAuth2AuthzEndpoint {
         }
         return authTime;
     }
-
 
     /**
      * Build OAuthProblem exception based on error details sent by the Framework as properties in the

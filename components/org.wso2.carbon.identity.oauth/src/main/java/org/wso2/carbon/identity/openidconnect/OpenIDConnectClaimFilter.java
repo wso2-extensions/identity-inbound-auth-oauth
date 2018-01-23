@@ -16,7 +16,6 @@
 
 package org.wso2.carbon.identity.openidconnect;
 
-import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 
 import java.util.Map;
 
@@ -43,21 +42,6 @@ public interface OpenIDConnectClaimFilter {
                                                       String[] requestedScopes,
                                                       String clientId,
                                                       String spTenantDomain);
-
-    /**
-     * Filter claims based on the claims which have marked as essential in OIDC request object
-     * <p>
-     * OIDC request object is associated with OIDC authorization request. When the server get a request object with essential
-     * claims it ignores the requested scope and returns those essential claims if possible.
-     *</p>
-     * @param userClaims Retrieved claim values of the authenticated user.
-     * @param type id_token or userinfo
-     * @param requestObject request object
-     * @return
-     */
-    Map<String, Object> getClaimsFilteredByEssentialClaims(Map<String, Object> userClaims,
-                                                           String type,
-                                                           RequestObject requestObject);
 
     /**
      * Priority of the Claim Filter. Claims filters will be sorted based on their priority value and by default only

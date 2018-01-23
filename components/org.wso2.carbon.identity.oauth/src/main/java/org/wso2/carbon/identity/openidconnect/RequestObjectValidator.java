@@ -52,4 +52,3 @@ public interface RequestObjectValidator {
     boolean isSigned(RequestObject requestObject);
 
 }
-
