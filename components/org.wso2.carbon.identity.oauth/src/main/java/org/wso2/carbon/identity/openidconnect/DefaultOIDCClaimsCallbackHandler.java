@@ -266,7 +266,8 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
                             getEssentialClaims(getAccessToken(requestMsgCtx), null, false);
                 }
             } catch (RequestObjectException e) {
-                throw new OAuthSystemException(e.getMessage());
+                throw new OAuthSystemException("Error while obtaining the essential claim values requested from the " +
+                        "Request Object.");
             }
             for (String essentialClaim : essentialClaimsFromRequestObject) {
                 if (log.isDebugEnabled()) {

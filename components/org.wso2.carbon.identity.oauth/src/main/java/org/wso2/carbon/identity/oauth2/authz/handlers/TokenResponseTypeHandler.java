@@ -132,7 +132,6 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
         }
 
         String refreshToken = null;
-        String tokenId;
         Timestamp refreshTokenIssuedTime = null;
         long refreshTokenValidityPeriodInMillis = 0;
 
@@ -379,7 +378,7 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
             newAccessTokenDO.setTokenState(OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
             newAccessTokenDO.setGrantType(grantType);
 
-            tokenId = UUID.randomUUID().toString();
+            String tokenId = UUID.randomUUID().toString();
             newAccessTokenDO.setTokenId(tokenId);
             oauthAuthzMsgCtx.addProperty(OAuth2Util.ACCESS_TOKEN_DO, newAccessTokenDO);
 

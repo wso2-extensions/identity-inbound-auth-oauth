@@ -96,7 +96,8 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
                         , null, true);
             }
         } catch (RequestObjectException e) {
-            throw new UserInfoEndpointException(e.getErrorMessage());
+            throw new UserInfoEndpointException("Error while obtaining the essential claim values requested from the " +
+                    "Request Object.");
         }
         for (String essentialClaim : essentialClaimsFromRequestObject) {
             filteredUserClaims.put(essentialClaim, userClaims.get(essentialClaim));

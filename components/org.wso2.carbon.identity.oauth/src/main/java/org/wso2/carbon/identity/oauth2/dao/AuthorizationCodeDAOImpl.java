@@ -177,7 +177,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             prepStmt.executeBatch();
             connection.commit();
 
-            //to revoke request objects which are persisted against the code.
+            // To revoke request objects which are persisted against the code.
             OAuth2TokenUtil.postRevokeCode(null, authzCodeDOs);
         } catch (SQLException e) {
             throw new IdentityOAuth2Exception("Error when deactivating authorization code", e);

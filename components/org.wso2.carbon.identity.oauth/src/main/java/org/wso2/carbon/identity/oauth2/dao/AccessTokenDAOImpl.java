@@ -967,7 +967,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             }
             connection.commit();
 
-            //to revoke the tokens from Request Object table.
+            //To revoke the tokens from Request Object table.
             OAuth2TokenUtil.postUpdateAccessToken(tokenId, OAuthConstants.TokenStates.
                     TOKEN_STATE_REVOKED);
         } catch (SQLException e) {

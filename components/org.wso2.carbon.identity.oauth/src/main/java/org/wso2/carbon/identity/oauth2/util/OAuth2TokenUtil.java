@@ -38,14 +38,14 @@ import static org.wso2.carbon.identity.openidconnect.OIDCConstants.Event.OLD_ACC
 import static org.wso2.carbon.identity.openidconnect.OIDCConstants.Event.TOKEN_STATE;
 
 /**
- * Utility methods for OAuth 2.0 implementation
+ * Utility methods for OAuth token related functions.
  */
 public class OAuth2TokenUtil {
 
     private static final Log log = LogFactory.getLog(OAuth2TokenUtil.class);
 
     /**
-     * Uses to update access token details in the request object reference table..
+     * Uses to update access token details in the request object reference table.
      *
      * @param tokenId        token id
      * @param sessionDataKey session data key
@@ -59,10 +59,10 @@ public class OAuth2TokenUtil {
         properties.put(OIDCConstants.Event.TOKEN_ID, tokenId);
         properties.put(OIDCConstants.Event.SESSION_DATA_KEY, sessionDataKey);
         Event requestObjectPersistanceEvent = new Event(eventName, properties);
+        IdentityEventService identityEventService = OpenIDConnectServiceComponentHolder.getIdentityEventService();
         try {
-            if (OpenIDConnectServiceComponentHolder.getInstance().getIdentityEventService() != null) {
-                OpenIDConnectServiceComponentHolder.getInstance().getIdentityEventService().handleEvent
-                        (requestObjectPersistanceEvent);
+            if (identityEventService != null) {
+                identityEventService.handleEvent(requestObjectPersistanceEvent);
                 if (log.isDebugEnabled()) {
                     log.debug("The event " + eventName + " triggered after the access token " + tokenId +
                             " is issued.");
@@ -81,7 +81,6 @@ public class OAuth2TokenUtil {
      * @param acessTokenId
      * @throws IdentityOAuth2Exception
      */
-
     public static void postUpdateAccessToken(String acessTokenId, String tokenState)
             throws IdentityOAuth2Exception {
 
@@ -104,7 +103,6 @@ public class OAuth2TokenUtil {
      * @param acessTokens
      * @throws IdentityOAuth2Exception
      */
-
     public static void postUpdateAccessTokens(List<String> acessTokens, String tokenState)
             throws IdentityOAuth2Exception {
 
@@ -124,7 +122,6 @@ public class OAuth2TokenUtil {
      * @param acessTokenId
      * @throws IdentityOAuth2Exception
      */
-
     public static void postRefreshAccessToken(String oldAcessTokenId, String acessTokenId, String tokenState)
             throws IdentityOAuth2Exception {
 
@@ -185,7 +182,7 @@ public class OAuth2TokenUtil {
     /**
      * Uses to trigger an event once the code is issued.
      *
-     * @param codeId code id
+     * @param codeId         code id
      * @param sessionDataKey session data key
      * @throws IdentityOAuth2Exception
      */
