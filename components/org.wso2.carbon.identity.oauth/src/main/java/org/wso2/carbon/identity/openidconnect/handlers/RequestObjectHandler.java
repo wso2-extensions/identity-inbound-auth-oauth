@@ -37,9 +37,9 @@ import java.util.Map;
  * This handler is used to invoke RequestObjectPersistenceFactory to revoke code or token from request object reference
  * table when code or token is revoked from the original tables.
  */
-public class RequestObjectRevokeHandler extends AbstractEventHandler {
+public class RequestObjectHandler extends AbstractEventHandler {
 
-    private static final Log log = LogFactory.getLog(RequestObjectRevokeHandler.class);
+    private static final Log log = LogFactory.getLog(RequestObjectHandler.class);
 
     /**
      * Handles the event and invoke RequestObjectPersistenceFactory.

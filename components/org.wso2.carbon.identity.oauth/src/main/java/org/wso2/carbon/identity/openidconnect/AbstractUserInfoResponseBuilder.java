@@ -102,7 +102,7 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
         for (String essentialClaim : essentialClaimsFromRequestObject) {
             filteredUserClaims.put(essentialClaim, userClaims.get(essentialClaim));
             if (log.isDebugEnabled()) {
-                log.debug("The " + essentialClaim + " is marked as an essentialClaim for userinfo in the OIDC Request" +
+                log.debug("The " + essentialClaim + " is marked as an essential claim for userinfo in the OIDC Request" +
                         " Object.");
             }
         }

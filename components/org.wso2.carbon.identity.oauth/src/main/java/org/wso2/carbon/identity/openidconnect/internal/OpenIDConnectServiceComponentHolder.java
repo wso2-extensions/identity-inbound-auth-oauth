@@ -20,7 +20,7 @@ import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.openidconnect.ClaimProvider;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilter;
 import org.wso2.carbon.identity.openidconnect.RequestObjectService;
-import org.wso2.carbon.identity.openidconnect.handlers.RequestObjectRevokeHandler;
+import org.wso2.carbon.identity.openidconnect.handlers.RequestObjectHandler;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,16 +32,16 @@ public class OpenIDConnectServiceComponentHolder {
     private List<ClaimProvider> claimProviders = new ArrayList<>();
     private static RequestObjectService requestObjectService;
     private static IdentityEventService identityEventService;
-    private static RequestObjectRevokeHandler requestObjectRevokeHandler;
+    private static RequestObjectHandler requestObjectHandler;
 
-    public static RequestObjectRevokeHandler getRequestObjectRevokeHandler() {
+    public static RequestObjectHandler getRequestObjectHandler() {
 
-        return requestObjectRevokeHandler;
+        return requestObjectHandler;
     }
 
-    public static void setRequestObjectRevokeHandler(RequestObjectRevokeHandler requestObjectRevokeHandler) {
+    public static void setRequestObjectHandler(RequestObjectHandler requestObjectHandler) {
 
-        OpenIDConnectServiceComponentHolder.requestObjectRevokeHandler = requestObjectRevokeHandler;
+        OpenIDConnectServiceComponentHolder.requestObjectHandler = requestObjectHandler;
     }
 
     public static IdentityEventService getIdentityEventService() {

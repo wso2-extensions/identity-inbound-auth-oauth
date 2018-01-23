@@ -35,14 +35,14 @@ import java.util.HashMap;
 import java.util.List;
 
 /**
- * Unit Tests for RequestObjectRevokeHandler class.
+ * Unit Tests for RequestObjectHandler class.
  */
 @WithCarbonHome
 @WithH2Database(jndiName = "jdbc/WSO2IdentityDB",
         files = {"dbScripts/h2_with_application_and_token.sql", "dbScripts/identity.sql"})
 public class RequestObjectHandlerTest {
 
-    RequestObjectRevokeHandler requestObjectRevokeHandler = new RequestObjectRevokeHandler();
+    RequestObjectHandler requestObjectHandler = new RequestObjectHandler();
 
     @DataProvider(name = "requestObjectRevoke")
     public Object[][] revokeAccessToken() {
@@ -85,8 +85,8 @@ public class RequestObjectHandlerTest {
         properties.put(OIDCConstants.Event.NEW_ACCESS_TOKEN, "new");
         properties.put(OIDCConstants.Event.OLD_ACCESS_TOKEN, "old");
         Event event = new Event(eventName, properties);
-        requestObjectRevokeHandler.handleEvent(event);
-        Assert.assertEquals(requestObjectRevokeHandler.getName(), OIDCConstants.Event.HANDLE_REQUEST_OBJECT);
+        requestObjectHandler.handleEvent(event);
+        Assert.assertEquals(requestObjectHandler.getName(), OIDCConstants.Event.HANDLE_REQUEST_OBJECT);
         Assert.assertNotNull(event.getEventProperties().size());
     }
 
