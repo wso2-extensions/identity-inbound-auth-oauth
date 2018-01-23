@@ -80,12 +80,12 @@ public class RequestObjectRevokeHandler extends AbstractEventHandler {
             }
             if (OIDCConstants.Event.POST_ISSUE_CODE.equals(eventName)) {
                 String codeId = (String) eventProperties.get(OIDCConstants.Event.CODE_ID);
-                RequestObjectPersistenceFactory.getInstance().getRequestObjectDAO().refreshRequestObjectReference
+                RequestObjectPersistenceFactory.getInstance().getRequestObjectDAO().updateRequestObjectReference
                         (sessionDataKey, codeId, null);
 
             } else if (OIDCConstants.Event.POST_ISSUE_ACCESS_TOKEN.equals(eventName)) {
                 String tokenId = (String) eventProperties.get(OIDCConstants.Event.TOKEN_ID);
-                RequestObjectPersistenceFactory.getInstance().getRequestObjectDAO().refreshRequestObjectReference
+                RequestObjectPersistenceFactory.getInstance().getRequestObjectDAO().updateRequestObjectReference
                         (sessionDataKey, null, tokenId);
             }
         } catch (IdentityOAuth2Exception | IdentityOAuthAdminException e) {

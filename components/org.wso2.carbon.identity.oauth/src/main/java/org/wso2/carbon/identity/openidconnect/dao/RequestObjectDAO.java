@@ -53,7 +53,7 @@ public interface RequestObjectDAO {
      * @param accessTokenId  access token id
      * @throws IdentityOAuth2Exception
      */
-    void refreshRequestObjectReference(String sessionDataKey, String codeId, String accessTokenId) throws IdentityOAuth2Exception;
+    void updateRequestObjectReference(String sessionDataKey, String codeId, String accessTokenId) throws IdentityOAuth2Exception;
 
     /**
      * Delete request object reference in code or token revoke.
