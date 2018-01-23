@@ -45,6 +45,7 @@ public class BasicAuthClientAuthenticator extends AbstractOAuthClientAuthenticat
 
     private static Log log = LogFactory.getLog(BasicAuthClientAuthenticator.class);
     private static String CREDENTIAL_SEPARATOR = ":";
+    private static String SIMPLE_CASE_AUTHORIZATION_HEADER = "authorization";
 
     /**
      * Returns the execution order of this authenticator
@@ -201,8 +202,12 @@ public class BasicAuthClientAuthenticator extends AbstractOAuthClientAuthenticat
     }
 
     protected String getAuthorizationHeader(HttpServletRequest request) {
-
-        return request.getHeader(HTTPConstants.HEADER_AUTHORIZATION);
+        String authorizationHeader = request.getHeader(HTTPConstants.HEADER_AUTHORIZATION);
+        authorizationHeader =  request.getHeader(HTTPConstants.HEADER_AUTHORIZATION);
+        if (StringUtils.isEmpty(authorizationHeader)) {
+            authorizationHeader = request.getHeader(SIMPLE_CASE_AUTHORIZATION_HEADER);
+        }
+        return authorizationHeader;
     }
 
     protected boolean isClientCredentialsExistsAsParams(Map<String, List> contentParam) {

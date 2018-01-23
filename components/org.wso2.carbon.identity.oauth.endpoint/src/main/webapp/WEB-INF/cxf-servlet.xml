@@ -24,14 +24,6 @@
          http://cxf.apache.org/jaxrs http://cxf.apache.org/schemas/jaxrs.xsd">
 
     <jaxrs:server id="tokEP" address="/">
-
-        <jaxrs:inInterceptors>
-            <ref bean="oauthClientAuthnBean"/>
-        </jaxrs:inInterceptors>
-        <jaxrs:outInterceptors>
-            <ref bean="oauthClientAuthnBean"/>
-        </jaxrs:outInterceptors>
-
         <jaxrs:serviceBeans>
             <ref bean="authzEndpointBean"/>
             <ref bean="tokenEndpointBean"/>
