@@ -18,6 +18,7 @@ package org.wso2.carbon.identity.oauth2.client.authentication;
 
 import org.wso2.carbon.identity.core.handler.AbstractIdentityHandler;
 import org.wso2.carbon.identity.core.handler.AbstractIdentityMessageHandler;
+import org.wso2.carbon.identity.core.handler.InitConfig;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.Enumeration;
@@ -30,6 +31,13 @@ import java.util.Map;
  */
 public abstract class AbstractOAuthClientAuthenticator extends AbstractIdentityHandler implements
         OAuthClientAuthenticator {
+
+    /**
+     * Default constructor will initialize property values read from identity.xml
+     */
+    AbstractOAuthClientAuthenticator() {
+        this.init(new InitConfig());
+    }
 
     /**
      * Get the set of body parameters.
