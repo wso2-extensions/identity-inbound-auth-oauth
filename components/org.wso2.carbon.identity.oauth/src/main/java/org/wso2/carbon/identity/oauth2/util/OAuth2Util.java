@@ -1961,10 +1961,12 @@ public class OAuth2Util {
 
         List<String> essentialClaimsfromRequestParam = new ArrayList<>();
         List<RequestedClaim> claimsforClaimRequestor = requestedClaimsFromRequestParam.get(claimRequestor);
-        for (RequestedClaim claimforClaimRequestor : claimsforClaimRequestor) {
-            String claim = claimforClaimRequestor.getName();
-            if (claimforClaimRequestor.isEssential()) {
-                essentialClaimsfromRequestParam.add(claim);
+        if (CollectionUtils.isNotEmpty(claimsforClaimRequestor)) {
+            for (RequestedClaim claimforClaimRequestor : claimsforClaimRequestor) {
+                String claim = claimforClaimRequestor.getName();
+                if (claimforClaimRequestor.isEssential()) {
+                    essentialClaimsfromRequestParam.add(claim);
+                }
             }
         }
         return essentialClaimsfromRequestParam;

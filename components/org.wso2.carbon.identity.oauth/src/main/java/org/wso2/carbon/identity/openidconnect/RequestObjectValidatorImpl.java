@@ -73,6 +73,7 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
     @Override
     public boolean validateSignature(RequestObject requestObject, OAuth2Parameters oAuth2Parameters) throws
             RequestObjectException {
+
         SignedJWT jwt = requestObject.getSignedJWT();
         Certificate certificate = getCertificateForAlias(oAuth2Parameters.getTenantDomain(), oAuth2Parameters
                 .getClientId());
@@ -92,6 +93,7 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
     @Override
     public boolean validateRequestObject(RequestObject requestObject, OAuth2Parameters oAuth2Parameters)
             throws RequestObjectException {
+
         boolean isValid = validateClientIdAndResponseType(requestObject, oAuth2Parameters);
         if (isParamPresent(requestObject, Constants.REQUEST_URI)) {
             isValid = false;
@@ -104,6 +106,7 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
     }
 
     private boolean isValidAudience(RequestObject requestObject, OAuth2Parameters oAuth2Parameters) throws RequestObjectException {
+
         String tokenEPUrl = getTokenEpURL(oAuth2Parameters.getTenantDomain());
         List<String> audience = requestObject.getClaimsSet().getAudience();
         return validateAudience(tokenEPUrl, audience);
@@ -111,6 +114,7 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
 
     private static boolean validateClientIdAndResponseType(RequestObject requestObject, OAuth2Parameters oauthRequest)
             throws RequestObjectException {
+
         String clientIdInReqObj = requestObject.getClaimValue(Constants.CLIENT_ID);
         String responseTypeInReqObj = requestObject.getClaimValue(Constants.RESPONSE_TYPE);
         String errorMsg = "Request Object and Authorization request contains unmatched ";
@@ -138,6 +142,7 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
      * @throws IdentityOAuth2Exception
      */
     public static String getTokenEpURL(String tenantDomain) throws RequestObjectException {
+
         String tokenEndpoint;
         IdentityProvider residentIdP;
         try {
@@ -181,6 +186,7 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
      * @throws IdentityOAuth2Exception
      */
     public boolean validateAudience(String currentAudience, List<String> audience) {
+
         for (String aud : audience) {
             if (StringUtils.equals(currentAudience, aud)) {
                 return true;
