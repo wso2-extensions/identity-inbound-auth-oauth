@@ -21,11 +21,13 @@ package org.wso2.carbon.identity.oauth.endpoint.revoke;
 import org.apache.axis2.transport.http.HTTPConstants;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.cxf.interceptor.InInterceptors;
 import org.apache.oltu.oauth2.as.response.OAuthASResponse;
 import org.apache.oltu.oauth2.common.OAuth;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.message.OAuthResponse;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthenticatorProxy;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.OAuthClientException;
@@ -65,6 +67,7 @@ import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.startSup
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.validateParams;
 
 @Path("/revoke")
+@InInterceptors(classes = OAuthClientAuthenticatorProxy.class)
 public class OAuthRevocationEndpoint {
 
     private static final Log log = LogFactory.getLog(OAuthRevocationEndpoint.class);
