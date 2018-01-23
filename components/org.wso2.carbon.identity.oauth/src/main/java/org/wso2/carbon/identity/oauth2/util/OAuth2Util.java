@@ -35,6 +35,7 @@ import org.apache.axiom.om.impl.builder.StAXOMBuilder;
 import org.apache.axiom.util.base64.Base64Utils;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -1958,10 +1959,12 @@ public class OAuth2Util {
 
         List<String> essentialClaimsfromRequestParam = new ArrayList<>();
         List<RequestedClaim> claimsforClaimRequestor = requestedClaimsFromRequestParam.get(claimRequestor);
-        for (RequestedClaim claimforClaimRequestor : claimsforClaimRequestor) {
-            String claim = claimforClaimRequestor.getName();
-            if (claimforClaimRequestor.isEssential()) {
-                essentialClaimsfromRequestParam.add(claim);
+        if (CollectionUtils.isNotEmpty(claimsforClaimRequestor)) {
+            for (RequestedClaim claimforClaimRequestor : claimsforClaimRequestor) {
+                String claim = claimforClaimRequestor.getName();
+                if (claimforClaimRequestor.isEssential()) {
+                    essentialClaimsfromRequestParam.add(claim);
+                }
             }
         }
         return essentialClaimsfromRequestParam;

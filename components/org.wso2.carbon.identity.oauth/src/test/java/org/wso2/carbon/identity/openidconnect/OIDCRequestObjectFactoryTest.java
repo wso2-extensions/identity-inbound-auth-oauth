@@ -40,7 +40,6 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.model.Constants;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.Key;
 import java.security.KeyStore;
@@ -140,7 +139,7 @@ public class OIDCRequestObjectFactoryTest extends PowerMockTestCase {
 
         OIDCRequestObjectFactory oidcRequestObjectFactory = new OIDCRequestObjectFactory();
         try {
-            oidcRequestObjectFactory.buildRequestObject(oAuthAuthzRequest, oAuth2Parameters, requestObject);
+            oidcRequestObjectFactory.getRequestObject(oAuthAuthzRequest, oAuth2Parameters, requestObject);
         } catch (RequestObjectException e) {
             Assert.assertFalse(exceptionNotExpected, errorMsg + "Request Object Building failed due to " + e.getErrorMessage());
         }
@@ -195,6 +194,6 @@ public class OIDCRequestObjectFactoryTest extends PowerMockTestCase {
         when((oauthServerConfigurationMock.getRequestObjectBuilders())).thenReturn(requestObjectBuilderMap);
 
         OIDCRequestObjectFactory oidcRequestObjectFactory = new OIDCRequestObjectFactory();
-        oidcRequestObjectFactory.buildRequestObject(oAuthAuthzRequest, oAuth2Parameters, requestObject);
+        oidcRequestObjectFactory.getRequestObject(oAuthAuthzRequest, oAuth2Parameters, requestObject);
     }
 }

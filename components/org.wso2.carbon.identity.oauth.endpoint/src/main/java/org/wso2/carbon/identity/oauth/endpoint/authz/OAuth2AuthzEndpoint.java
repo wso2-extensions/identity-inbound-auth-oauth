@@ -75,7 +75,6 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.model.CarbonOAuthAuthzRequest;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
-import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionState;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
@@ -128,7 +127,6 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 
-import static org.apache.commons.lang.StringUtils.isEmpty;
 import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.AUTHENTICATION_RESPONSE;
 import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.INITIAL_REQUEST;
 import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.PASSTHROUGH_TO_COMMONAUTH;
@@ -1137,7 +1135,8 @@ public class OAuth2AuthzEndpoint {
             OIDC Request object will supersede parameters sent in the OAuth Authorization request. So handling the
             OIDC Request object needs to done after processing all request parameters.
          */
-        if (oauthRequest.getScopes().contains(OAuthConstants.Scope.OPENID)) {
+        if (CollectionUtils.isNotEmpty(oauthRequest.getScopes()) && oauthRequest.getScopes().contains(OAuthConstants
+                .Scope.OPENID)) {
             try {
                 handleOIDCRequestObject(oauthRequest, params);
             } catch (RequestObjectException e) {
@@ -1224,7 +1223,7 @@ public class OAuth2AuthzEndpoint {
             throws RequestObjectException {
 
         RequestObject requestObject = new RequestObject();
-        OIDCRequestObjectFactory.buildRequestObject(oauthRequest, parameters, requestObject);
+        OIDCRequestObjectFactory.getRequestObject(oauthRequest, parameters, requestObject);
         return requestObject;
     }
 

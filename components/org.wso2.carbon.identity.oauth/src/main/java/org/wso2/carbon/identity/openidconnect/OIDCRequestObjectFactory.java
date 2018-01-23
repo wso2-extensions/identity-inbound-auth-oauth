@@ -47,9 +47,9 @@ public class OIDCRequestObjectFactory {
      * @param oauthRequest authorization request
      * @throws RequestObjectException
      */
-    public static void buildRequestObject(OAuthAuthzRequest oauthRequest,
-                                          OAuth2Parameters oAuth2Parameters,
-                                          RequestObject requestObject) throws RequestObjectException {
+    public static void getRequestObject(OAuthAuthzRequest oauthRequest,
+                                        OAuth2Parameters oAuth2Parameters,
+                                        RequestObject requestObject) throws RequestObjectException {
         /*
           So that the request is a valid OAuth 2.0 Authorization Request, values for the response_type and client_id
           parameters MUST be included using the OAuth 2.0 request syntax, since they are REQUIRED by OAuth 2.0.
@@ -58,10 +58,10 @@ public class OIDCRequestObjectFactory {
         RequestObjectBuilder requestObjectBuilder;
         if (isRequestParameter(oauthRequest)) {
             requestObjectBuilder = getRequestObjectBuilder(REQUEST_PARAM_VALUE_BUILDER);
-            buildRequestObject(oauthRequest, oAuth2Parameters, requestObject, requestObjectBuilder, REQUEST);
+            getRequestObject(oauthRequest, oAuth2Parameters, requestObject, requestObjectBuilder, REQUEST);
         } else if (isRequestUri(oauthRequest)) {
             requestObjectBuilder = getRequestObjectBuilder(REQUEST_URI_PARAM_VALUE_BUILDER);
-            buildRequestObject(oauthRequest, oAuth2Parameters, requestObject, requestObjectBuilder,
+            getRequestObject(oauthRequest, oAuth2Parameters, requestObject, requestObjectBuilder,
                     REQUEST_URI);
 
         } else {
@@ -84,9 +84,9 @@ public class OIDCRequestObjectFactory {
         }
     }
 
-    private static void buildRequestObject(OAuthAuthzRequest oauthRequest, OAuth2Parameters oAuth2Parameters,
-                                           RequestObject requestObject, RequestObjectBuilder requestObjectBuilder,
-                                           String requestObjParam) throws RequestObjectException {
+    private static void getRequestObject(OAuthAuthzRequest oauthRequest, OAuth2Parameters oAuth2Parameters,
+                                         RequestObject requestObject, RequestObjectBuilder requestObjectBuilder,
+                                         String requestObjParam) throws RequestObjectException {
         String error = "Unable to build the OIDC Request Object from:";
         if (requestObjectBuilder != null) {
             requestObjectBuilder.buildRequestObject(oauthRequest.getParam(requestObjParam), oAuth2Parameters,
