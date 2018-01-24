@@ -17,6 +17,8 @@
 package org.wso2.carbon.identity.openidconnect;
 
 
+import org.wso2.carbon.identity.openidconnect.model.RequestObject;
+
 import java.util.Map;
 
 /**
@@ -50,4 +52,14 @@ public interface OpenIDConnectClaimFilter {
      * @return priority of the filter.
      */
     int getPriority();
+
+    /**
+     * To filter claims requested in the Request Object
+     * @param userClaims
+     * @param type
+     * @param requestObject
+     * @return
+     */
+    Map<String, Object> getClaimsFilteredByEssentialClaims(Map<String, Object> userClaims, String type,
+                                                           RequestObject requestObject);
 }

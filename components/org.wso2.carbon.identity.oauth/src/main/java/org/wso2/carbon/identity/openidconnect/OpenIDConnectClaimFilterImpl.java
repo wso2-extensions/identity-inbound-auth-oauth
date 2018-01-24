@@ -130,6 +130,7 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
         return DEFAULT_PRIORITY;
     }
 
+    @Override
     public Map<String, Object> getClaimsFilteredByEssentialClaims(Map<String, Object> userClaims,
                                                                   String type,
                                                                   RequestObject requestObject) {

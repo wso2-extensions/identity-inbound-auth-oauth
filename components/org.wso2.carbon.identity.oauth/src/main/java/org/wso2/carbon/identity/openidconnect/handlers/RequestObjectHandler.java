@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.openidconnect.handlers;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.event.IdentityEventException;
@@ -78,14 +79,16 @@ public class RequestObjectHandler extends AbstractEventHandler {
         }
     }
 
-    private void postIssueTOken(Map<String, Object> eventProperties, String sessionDataKey) throws IdentityOAuth2Exception {
+    private void postIssueTOken(Map<String, Object> eventProperties, String sessionDataKey) throws
+            IdentityOAuth2Exception {
 
         String tokenId = (String) eventProperties.get(OIDCConstants.Event.TOKEN_ID);
         RequestObjectPersistenceFactory.getInstance().getRequestObjectDAO().updateRequestObjectReference
                 (sessionDataKey, null, tokenId);
     }
 
-    private void postIssueCode(Map<String, Object> eventProperties, String sessionDataKey) throws IdentityOAuth2Exception {
+    private void postIssueCode(Map<String, Object> eventProperties, String sessionDataKey) throws
+            IdentityOAuth2Exception {
 
         String codeId = (String) eventProperties.get(OIDCConstants.Event.CODE_ID);
         RequestObjectPersistenceFactory.getInstance().getRequestObjectDAO().updateRequestObjectReference
@@ -100,19 +103,24 @@ public class RequestObjectHandler extends AbstractEventHandler {
                 (oldAccessToken, newAccessToken);
     }
 
-    private void revokeCodeById(Map<String, Object> eventProperties, String tokenState) throws IdentityOAuth2Exception,
+    private void revokeCodeById(Map<String, Object> eventProperties, String codeState) throws IdentityOAuth2Exception,
             IdentityOAuthAdminException {
+        String tokenId = (String) eventProperties.get(OIDCConstants.Event.TOKEN_ID);
+        String codeId = (String) eventProperties.get(OIDCConstants.Event.CODE_ID);
 
-        if (isCodeRemoved(tokenState)) {
-            String codeId = (String) eventProperties.get(OIDCConstants.Event.CODE_ID);
+        if (StringUtils.isNotEmpty(tokenId) && OAuthConstants.AuthorizationCodeState.INACTIVE.equals(codeState)) {
+            //update the token id  of request object reference identified by code id
+            RequestObjectPersistenceFactory.getInstance().getRequestObjectDAO().updateRequestObjectReferenceCodeToToken(codeId, tokenId);
+        } else if (isCodeRemoved(codeState)) {
+            //remove the request object reference upon removal of the code
             RequestObjectPersistenceFactory.getInstance().getRequestObjectDAO().deleteRequestObjectReference
                     (null, codeId);
 
         }
     }
 
-    private void postRevokeTokenById(Map<String, Object> eventProperties, String tokenState) throws IdentityOAuth2Exception,
-            IdentityOAuthAdminException {
+    private void postRevokeTokenById(Map<String, Object> eventProperties, String tokenState) throws
+            IdentityOAuth2Exception, IdentityOAuthAdminException {
 
         if (isCodeRemoved(tokenState)) {
             String tokenId = (String) eventProperties.get(OIDCConstants.Event.TOKEN_ID);
@@ -122,20 +130,29 @@ public class RequestObjectHandler extends AbstractEventHandler {
         }
     }
 
-    private void handlePostRevokeCode(Map<String, Object> eventProperties, String tokenState) throws IdentityOAuth2Exception,
-            IdentityOAuthAdminException {
+    private void handlePostRevokeCode(Map<String, Object> eventProperties, String codeState) throws
+            IdentityOAuth2Exception, IdentityOAuthAdminException {
 
-        if (isCodeRemoved(tokenState)) {
-            List<AuthzCodeDO> authzcodes = (List<AuthzCodeDO>) eventProperties.get(OIDCConstants.Event.CODES);
-            for (AuthzCodeDO authzCodeDO : authzcodes) {
+        boolean isCodeRemove = isCodeRemoved(codeState);
+        List<AuthzCodeDO> authzcodes = (List<AuthzCodeDO>) eventProperties.get(OIDCConstants.Event.CODES);
+        for (AuthzCodeDO authzCodeDO : authzcodes) {
+            String codeId = authzCodeDO.getAuthzCodeId();
+            String tokenId = authzCodeDO.getOauthTokenId();
+            if (isCodeRemove) {
                 RequestObjectPersistenceFactory.getInstance().getRequestObjectDAO().deleteRequestObjectReference
-                        (null, authzCodeDO.getAuthzCodeId());
+                        (null, codeId);
+            } else if (StringUtils.isNotEmpty(tokenId) && OAuthConstants.AuthorizationCodeState
+                    .INACTIVE.equals(codeState)) {
+                //update the token id  of request object reference identified by code id
+                RequestObjectPersistenceFactory.getInstance().getRequestObjectDAO()
+                        .updateRequestObjectReferenceCodeToToken(codeId, tokenId);
+
             }
         }
     }
 
-    private void handlePostRevokeToken(Map<String, Object> eventProperties, String tokenState) throws IdentityOAuth2Exception,
-            IdentityOAuthAdminException {
+    private void handlePostRevokeToken(Map<String, Object> eventProperties, String tokenState) throws
+            IdentityOAuth2Exception, IdentityOAuthAdminException {
 
         if (isTokenRemoved(tokenState)) {
             List<String> accessTokens = (List) eventProperties.get(OIDCConstants.Event.ACEESS_TOKENS);
@@ -155,7 +172,7 @@ public class RequestObjectHandler extends AbstractEventHandler {
     private boolean isCodeRemoved(String codeState) {
 
         return OAuthConstants.AuthorizationCodeState.EXPIRED.equals(codeState) || OAuthConstants.AuthorizationCodeState.
-                REVOKED.equals(codeState) || OAuthConstants.AuthorizationCodeState.INACTIVE.equals(codeState);
+                REVOKED.equals(codeState);
     }
 
     public String getName() {

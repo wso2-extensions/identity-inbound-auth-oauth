@@ -22,6 +22,8 @@ import com.nimbusds.jwt.SignedJWT;
 import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
 import org.apache.commons.lang.StringUtils;
+import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
+import org.wso2.carbon.identity.oauth2.RequestObjectException;
 
 import java.io.Serializable;
 import java.text.ParseException;
@@ -75,9 +77,14 @@ public class RequestObject implements Serializable {
      * @param plainJWT
      * @throws ParseException
      */
-    public void setPlainJWT(PlainJWT plainJWT) throws ParseException {
+    public void setPlainJWT(PlainJWT plainJWT) throws RequestObjectException {
         this.plainJWT = plainJWT;
-        this.setClaimSet(plainJWT.getJWTClaimsSet());
+        try {
+            this.setClaimSet(plainJWT.getJWTClaimsSet());
+        } catch (ParseException e) {
+            throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST, "Unable to parse Claim Set in " +
+                    "the Request Object.");
+        }
         if (this.claimsSet.getClaim(CLAIMS) != null) {
             JSONObject claims = this.claimsSet.toJSONObject();
             processClaimObject(claims);
@@ -103,9 +110,14 @@ public class RequestObject implements Serializable {
      * @param signedJWT
      * @throws ParseException
      */
-    public void setSignedJWT(SignedJWT signedJWT) throws ParseException {
+    public void setSignedJWT(SignedJWT signedJWT) throws RequestObjectException {
         this.signedJWT = signedJWT;
-        setClaimSet(signedJWT.getJWTClaimsSet());
+        try {
+            setClaimSet(signedJWT.getJWTClaimsSet());
+        } catch (ParseException e) {
+            throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST, "Unable to parse Claim Set in " +
+                    "the Request Object.");
+        }
         if (this.claimsSet.getClaim(CLAIMS) != null) {
             JSONObject claims = this.claimsSet.toJSONObject();
             processClaimObject(claims);
@@ -126,33 +138,38 @@ public class RequestObject implements Serializable {
      * @param jsonObjectRequestedClaims requested claims of the request object
      * @throws ParseException
      */
-    private void processClaimObject(JSONObject jsonObjectRequestedClaims) {
+    private void processClaimObject(JSONObject jsonObjectRequestedClaims) throws RequestObjectException {
 
-        Map<String, List<RequestedClaim>> claimsforClaimRequestor = new HashMap<>();
-        if (jsonObjectRequestedClaims.get(CLAIMS) != null) {
-            JSONObject jsonObjectClaim = (JSONObject) jsonObjectRequestedClaims.get(CLAIMS);
+        try {
+            Map<String, List<RequestedClaim>> claimsforClaimRequestor = new HashMap<>();
+            if (jsonObjectRequestedClaims.get(CLAIMS) != null) {
+                JSONObject jsonObjectClaim = (JSONObject) jsonObjectRequestedClaims.get(CLAIMS);
 
-            //To iterate the claims json object to fetch the claim requestor and all requested claims.
-            for (Map.Entry<String, Object> requesterClaimsMap : jsonObjectClaim.entrySet()) {
-                List<RequestedClaim> requestedClaimsList = new ArrayList();
-                JSONObject jsonObjectAllRequestedClaims;
-                if (jsonObjectClaim.get(requesterClaimsMap.getKey()) != null) {
-                    jsonObjectAllRequestedClaims = (JSONObject) jsonObjectClaim.get(requesterClaimsMap.getKey());
+                //To iterate the claims json object to fetch the claim requestor and all requested claims.
+                for (Map.Entry<String, Object> requesterClaimsMap : jsonObjectClaim.entrySet()) {
+                    List<RequestedClaim> requestedClaimsList = new ArrayList();
+                    JSONObject jsonObjectAllRequestedClaims;
+                    if (jsonObjectClaim.get(requesterClaimsMap.getKey()) != null) {
+                        jsonObjectAllRequestedClaims = (JSONObject) jsonObjectClaim.get(requesterClaimsMap.getKey());
 
-                    if (jsonObjectAllRequestedClaims != null) {
-                        for (Map.Entry<String, Object> requestedClaims : jsonObjectAllRequestedClaims.entrySet()) {
-                            JSONObject jsonObjectClaimAttributes = null;
-                            if (jsonObjectAllRequestedClaims.get(requestedClaims.getKey()) != null) {
-                                jsonObjectClaimAttributes = (JSONObject) jsonObjectAllRequestedClaims.get(requestedClaims.getKey());
+                        if (jsonObjectAllRequestedClaims != null) {
+                            for (Map.Entry<String, Object> requestedClaims : jsonObjectAllRequestedClaims.entrySet()) {
+                                JSONObject jsonObjectClaimAttributes = null;
+                                if (jsonObjectAllRequestedClaims.get(requestedClaims.getKey()) != null) {
+                                    jsonObjectClaimAttributes = (JSONObject) jsonObjectAllRequestedClaims.get(requestedClaims.getKey());
+                                }
+                                populateRequestedClaimValues(requestedClaimsList, jsonObjectClaimAttributes,
+                                        requestedClaims.getKey(), requesterClaimsMap.getKey());
                             }
-                            populateRequestedClaimValues(requestedClaimsList, jsonObjectClaimAttributes,
-                                    requestedClaims.getKey(), requesterClaimsMap.getKey());
                         }
                     }
+                    claimsforClaimRequestor.put(requesterClaimsMap.getKey(), requestedClaimsList);
                 }
-                claimsforClaimRequestor.put(requesterClaimsMap.getKey(), requestedClaimsList);
+                this.setRequestedClaims(claimsforClaimRequestor);
             }
-            this.setRequestedClaims(claimsforClaimRequestor);
+        } catch (ClassCastException e) {
+            throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST, "Requested \"claims\" in Request " +
+                    "Object is in invalid format.");
         }
     }
 

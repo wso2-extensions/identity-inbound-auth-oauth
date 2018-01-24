@@ -141,17 +141,19 @@ public class OAuth2TokenUtil {
      *
      * @param codeId     code id
      * @param tokenState
+     * @param tokenId
      * @throws IdentityOAuth2Exception
      */
-    public static void postRevokeCode(String codeId, String tokenState)
+    public static void postRevokeCode(String codeId, String tokenState, String tokenId)
             throws IdentityOAuth2Exception {
 
         String eventName = null;
         HashMap<String, Object> properties = new HashMap<>();
         if (StringUtils.isNotBlank(codeId)) {
             properties.put(OIDCConstants.Event.TOKEN_STATE, tokenState);
-            eventName = OIDCConstants.Event.POST_REVOKE_CODE_BY_ID;
+            properties.put(OIDCConstants.Event.TOKEN_ID, tokenId);
             properties.put(OIDCConstants.Event.CODE_ID, codeId);
+            eventName = OIDCConstants.Event.POST_REVOKE_CODE_BY_ID;
         }
 
         triggerEvent(eventName, properties);

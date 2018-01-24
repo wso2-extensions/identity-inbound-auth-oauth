@@ -79,8 +79,8 @@ public class OIDCRequestObjectUtil {
             }
         }
         if (!requestObjectValidator.validateRequestObject(requestObject, oAuth2Parameters)) {
-            throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST, "Invalid Request Object parameters " +
-                    "found  in the request.");
+            throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST, "Invalid parameters " +
+                    "found in the Request Object.");
 
         }
         if (log.isDebugEnabled()) {

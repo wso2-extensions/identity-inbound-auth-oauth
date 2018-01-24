@@ -86,4 +86,6 @@ public interface RequestObjectDAO {
      * @throws IdentityOAuth2Exception
      */
     void refreshRequestObjectReference(String oldAccessToken, String newAccessToken) throws IdentityOAuth2Exception;
+
+    void updateRequestObjectReferenceCodeToToken(String codeId, String tokenId) throws IdentityOAuth2Exception;
 }

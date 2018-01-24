@@ -117,7 +117,7 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
             for (List<RequestedClaim> list : claims) {
                 for (RequestedClaim claim : list) {
                     prepStmt.setInt(1, requestObjectId);
-                    prepStmt.setString(2, claim.getValue());
+                    prepStmt.setString(2, claim.getName());
                     prepStmt.setBoolean(3, claim.isEssential());
                     prepStmt.setString(4, claim.getValue());
                     if (OIDCConstants.USERINFO.equals(claim.getType())) {
@@ -278,6 +278,27 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
         } catch (SQLException e) {
             String errorMsg = "Can not update refreshed token id of the table ."
                     + OIDCConstants.IDN_OIDC_REQ_OBJECT_REFERENCE;
+            throw new IdentityOAuth2Exception(errorMsg, e);
+
+        } finally {
+            IdentityDatabaseUtil.closeAllConnections(connection, null, ps);
+        }
+    }
+
+    @Override
+    public void updateRequestObjectReferenceCodeToToken(String codeId, String tokenId) throws IdentityOAuth2Exception {
+        Connection connection = IdentityDatabaseUtil.getDBConnection();
+        PreparedStatement ps = null;
+        try {
+            connection.setAutoCommit(false);
+            String sql = SQLQueries.UPDATE_REQUEST_OBJECT_TOKEN_FOR_CODE;
+            ps = connection.prepareStatement(sql);
+            ps.setString(1, tokenId);
+            ps.setString(2, codeId);
+            ps.execute();
+            connection.commit();
+        } catch (SQLException e) {
+            String errorMsg = "Can not update token id for code id: " + codeId;
             throw new IdentityOAuth2Exception(errorMsg, e);
 
         } finally {

@@ -23,6 +23,7 @@ public class OIDCConstants {
 
     public static final String USERINFO = "userinfo";
     public static final String ID_TOKEN = "id_token";
+    public static final String CODE_ID = "code_id";
     public static final String IDN_OIDC_REQ_OBJECT_REFERENCE = "IDN_OIDC_REQ_OBJECT_REFERENCE";
     public static final String IDN_OIDC_REQ_OBJECT_CLAIMS = "STORE_IDN_OIDC_REQ_OBJECT_CLAIMS";
 

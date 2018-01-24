@@ -270,11 +270,13 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
                         "Request Object.");
             }
             for (String essentialClaim : essentialClaimsFromRequestObject) {
-                if (log.isDebugEnabled()) {
-                    log.debug("The " + essentialClaim + " is marked as an essentialClaim for id_token in the OIDC " +
-                            "Request Object.");
+                if (StringUtils.isNotEmpty(essentialClaim)) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("The " + essentialClaim + " is marked as an essentialClaim for id_token in the OIDC " +
+                                "Request Object.");
+                    }
+                    filterClaimsByScopesAndEssentialClaims.put(essentialClaim, userClaimsInOIDCDialect.get(essentialClaim));
                 }
-                filterClaimsByScopesAndEssentialClaims.put(essentialClaim, userClaimsInOIDCDialect.get(essentialClaim));
             }
         }
     }
