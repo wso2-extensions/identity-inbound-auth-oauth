@@ -30,8 +30,7 @@ public interface RequestObjectBuilder {
     /**
      * To build the request object
      */
-    void buildRequestObject(String requestObject, OAuth2Parameters oAuth2Parameters, RequestObject
-            requestObjectInstance) throws RequestObjectException;
+    RequestObject buildRequestObject(String requestObject, OAuth2Parameters oAuth2Parameters) throws RequestObjectException;
 
     /**
      * To decrypt the request objected by using IS primary key

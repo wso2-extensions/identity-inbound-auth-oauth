@@ -701,20 +701,30 @@ public class OAuthServerConfiguration {
 
             while (iterator.hasNext()) {
                 OMElement requestObjectBuildersElement = iterator.next();
-                OMElement builderNameElement = requestObjectBuildersElement
+                OMElement builderTypeElement = requestObjectBuildersElement
                         .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.BUILDER_TYPE));
-                String builderName = null;
-                if (builderNameElement != null) {
-                    builderName = builderNameElement.getText();
-                }
-
                 OMElement requestObjectImplClassElement = requestObjectBuildersElement
                         .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.REQUEST_OBJECT_IMPL_CLASS));
+
+                String builderType;
+
+                if (builderTypeElement == null) {
+                    //Empty configuration element for Type, ignore
+                    continue;
+                } else {
+                    if(requestObjectImplClassElement == null){
+                        log.warn("Request Object Builder is not defined for the Type: " + builderTypeElement);
+                        continue;
+                    }
+                }
+
+                builderType = builderTypeElement.getText();
                 String requestObjectImplClass = null;
                 if (requestObjectImplClassElement != null) {
                     requestObjectImplClass = requestObjectImplClassElement.getText();
                 }
-                requestObjectBuilderClassNames.put(builderName, requestObjectImplClass);
+                requestObjectBuilderClassNames.put(builderType, requestObjectImplClass);
+
             }
         }
         setDefaultRequestObjectBuilderClasses();
