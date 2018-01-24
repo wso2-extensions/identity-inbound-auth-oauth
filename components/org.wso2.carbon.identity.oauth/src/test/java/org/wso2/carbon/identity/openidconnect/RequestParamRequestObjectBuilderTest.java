@@ -105,11 +105,11 @@ public class RequestParamRequestObjectBuilderTest extends PowerMockTestCase {
         RequestObjectValidator requestObjectValidator = new RequestObjectValidatorImpl();
         when((oauthServerConfigurationMock.getRequestObjectValidator())).thenReturn(requestObjectValidator);
 
-        RequestObject requestObject = new RequestObject();
+        RequestObject requestObject;
         RequestParamRequestObjectBuilder requestParamRequestObjectBuilder = new RequestParamRequestObjectBuilder();
 
         try {
-            requestParamRequestObjectBuilder.buildRequestObject(requestObjectString, oAuth2Parameters, requestObject);
+            requestObject = requestParamRequestObjectBuilder.buildRequestObject(requestObjectString, oAuth2Parameters);
             Assert.assertEquals(requestObject.isSigned(), isSigned, errorMsg);
             if (claims != null && !claims.isEmpty()) {
                 for (Map.Entry entry : claims.entrySet()) {

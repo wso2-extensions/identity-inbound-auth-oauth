@@ -41,11 +41,10 @@ public class RequestObject implements Serializable {
     public static final String VALUE = "value";
     public static final String VALUES = "values";
     private boolean isSignatureValid;
-    private boolean isSigned;
 
     private SignedJWT signedJWT;
     private PlainJWT plainJWT;
-    ReadOnlyJWTClaimsSet claimsSet;
+    private ReadOnlyJWTClaimsSet claimsSet;
 
     /**
      * To store the claims requestor and the the requested claim list. claim requestor can be either userinfo or
@@ -63,11 +62,7 @@ public class RequestObject implements Serializable {
     }
 
     public boolean isSigned() {
-        return isSigned;
-    }
-
-    public void setSigned(boolean isSigned) {
-        this.isSigned = isSigned;
+        return this.signedJWT != null;
     }
 
     public PlainJWT getPlainJWT() {
@@ -110,7 +105,6 @@ public class RequestObject implements Serializable {
      */
     public void setSignedJWT(SignedJWT signedJWT) throws ParseException {
         this.signedJWT = signedJWT;
-        this.setSigned(true);
         setClaimSet(signedJWT.getJWTClaimsSet());
         if (this.claimsSet.getClaim(CLAIMS) != null) {
             JSONObject claims = this.claimsSet.toJSONObject();

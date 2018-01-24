@@ -73,6 +73,7 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
     @Override
     public boolean validateSignature(RequestObject requestObject, OAuth2Parameters oAuth2Parameters) throws
             RequestObjectException {
+
         SignedJWT jwt = requestObject.getSignedJWT();
         Certificate certificate = getCertificateForAlias(oAuth2Parameters.getTenantDomain(), oAuth2Parameters
                 .getClientId());
@@ -92,6 +93,7 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
     @Override
     public boolean validateRequestObject(RequestObject requestObject, OAuth2Parameters oAuth2Parameters)
             throws RequestObjectException {
+
         boolean isValid = validateClientIdAndResponseType(requestObject, oAuth2Parameters);
         if (isParamPresent(requestObject, Constants.REQUEST_URI)) {
             isValid = false;
@@ -103,20 +105,24 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
         return isValid;
     }
 
-    private boolean isValidAudience(RequestObject requestObject, OAuth2Parameters oAuth2Parameters) throws RequestObjectException {
+    private boolean isValidAudience(RequestObject requestObject, OAuth2Parameters oAuth2Parameters) throws
+            RequestObjectException {
+
         String tokenEPUrl = getTokenEpURL(oAuth2Parameters.getTenantDomain());
         List<String> audience = requestObject.getClaimsSet().getAudience();
         return validateAudience(tokenEPUrl, audience);
     }
 
-    private static boolean validateClientIdAndResponseType(RequestObject requestObject, OAuth2Parameters oauthRequest)
+    private boolean validateClientIdAndResponseType(RequestObject requestObject, OAuth2Parameters oauthRequest)
             throws RequestObjectException {
+
         String clientIdInReqObj = requestObject.getClaimValue(Constants.CLIENT_ID);
         String responseTypeInReqObj = requestObject.getClaimValue(Constants.RESPONSE_TYPE);
-        String errorMsg = "Request Object and Authorization request contains unmatched ";
+        final String errorMsg = "Request Object and Authorization request contains unmatched ";
 
         if (!isValidParameter(oauthRequest.getClientId(), clientIdInReqObj)) {
-            throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST, errorMsg + Constants.CLIENT_ID);
+            throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST, errorMsg + Constants
+                    .CLIENT_ID);
         }
 
         if (!isValidParameter(oauthRequest.getResponseType(), responseTypeInReqObj)) {
@@ -126,7 +132,7 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
         return true;
     }
 
-    private static boolean isValidParameter(String authParam, String requestObjParam) {
+    private boolean isValidParameter(String authParam, String requestObjParam) {
         return StringUtils.isEmpty(requestObjParam) || requestObjParam.equals(authParam);
     }
 
@@ -137,7 +143,8 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
      * @return tokenEndpoint of the Issuer
      * @throws IdentityOAuth2Exception
      */
-    public static String getTokenEpURL(String tenantDomain) throws RequestObjectException {
+    private String getTokenEpURL(String tenantDomain) throws RequestObjectException {
+
         String tokenEndpoint;
         IdentityProvider residentIdP;
         try {
@@ -181,6 +188,7 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
      * @throws IdentityOAuth2Exception
      */
     public boolean validateAudience(String currentAudience, List<String> audience) {
+
         for (String aud : audience) {
             if (StringUtils.equals(currentAudience, aud)) {
                 return true;
@@ -207,7 +215,8 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
         keyStoreManager = KeyStoreManager.getInstance(tenantId);
         KeyStore keyStore;
         try {
-            if (tenantId != MultitenantConstants.SUPER_TENANT_ID) {// for tenants, load key from their generated key store
+            // for tenants, load key from their generated key store
+            if (tenantId != MultitenantConstants.SUPER_TENANT_ID) {
                 keyStore = keyStoreManager.getKeyStore(generateKSNameFromDomainName(tenantDomain));
             } else {
                 // for super tenant, load the default pub. cert using the config. in carbon.xml

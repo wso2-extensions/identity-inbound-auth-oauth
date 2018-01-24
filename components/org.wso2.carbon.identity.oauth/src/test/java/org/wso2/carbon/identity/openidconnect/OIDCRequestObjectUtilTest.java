@@ -40,7 +40,6 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.model.Constants;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.Key;
 import java.security.KeyStore;
@@ -62,7 +61,7 @@ import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENA
 @PrepareForTest({OAuth2Util.class, IdentityUtil.class, OAuthServerConfiguration.class, OAuthAuthzRequest.class,
         RequestObjectValidatorImpl.class, IdentityTenantUtil.class})
 @PowerMockIgnore({"javax.crypto.*"})
-public class OIDCRequestObjectFactoryTest extends PowerMockTestCase {
+public class OIDCRequestObjectUtilTest extends PowerMockTestCase {
 
     private RSAPrivateKey rsaPrivateKey;
     private KeyStore clientKeyStore;
@@ -107,9 +106,6 @@ public class OIDCRequestObjectFactoryTest extends PowerMockTestCase {
         mockStatic(OAuthServerConfiguration.class);
         when(OAuthServerConfiguration.getInstance()).thenReturn(oauthServerConfigurationMock);
 
-        mockStatic(RequestObjectValidatorImpl.class);
-        PowerMockito.spy(RequestObjectValidatorImpl.class);
-
         mockStatic(OAuth2Util.class);
         when(OAuth2Util.getTenantId("carbon.super")).thenReturn(-1234);
         when((OAuth2Util.getPrivateKey(anyString(), anyInt()))).thenReturn(rsaPrivateKey);
@@ -125,22 +121,20 @@ public class OIDCRequestObjectFactoryTest extends PowerMockTestCase {
         Mockito.when(keyStoreManager.getKeyStore("wso2carbon.jks")).thenReturn(wso2KeyStore);
 
 
-        RequestObjectValidator requestObjectValidator = new RequestObjectValidatorImpl();
+        RequestObjectValidator requestObjectValidator = PowerMockito.spy(new RequestObjectValidatorImpl());
         when((oauthServerConfigurationMock.getRequestObjectValidator())).thenReturn(requestObjectValidator);
 
-        PowerMockito.doReturn(SOME_SERVER_URL.toString()).when(RequestObjectValidatorImpl.class, "getTokenEpURL",
+        PowerMockito.doReturn(SOME_SERVER_URL).when(requestObjectValidator, "getTokenEpURL",
                 anyString());
 
-        RequestObject requestObject = new RequestObject();
         RequestParamRequestObjectBuilder requestParamRequestObjectBuilder = new RequestParamRequestObjectBuilder();
         Map<String, RequestObjectBuilder> requestObjectBuilderMap = new HashMap<>();
         requestObjectBuilderMap.put(REQUEST_PARAM_VALUE_BUILDER, requestParamRequestObjectBuilder);
         requestObjectBuilderMap.put(REQUEST_URI_PARAM_VALUE_BUILDER, null);
         when((oauthServerConfigurationMock.getRequestObjectBuilders())).thenReturn(requestObjectBuilderMap);
 
-        OIDCRequestObjectFactory oidcRequestObjectFactory = new OIDCRequestObjectFactory();
         try {
-            oidcRequestObjectFactory.buildRequestObject(oAuthAuthzRequest, oAuth2Parameters, requestObject);
+            RequestObject requestObject = OIDCRequestObjectUtil.buildRequestObject(oAuthAuthzRequest, oAuth2Parameters);
         } catch (RequestObjectException e) {
             Assert.assertFalse(exceptionNotExpected, errorMsg + "Request Object Building failed due to " + e.getErrorMessage());
         }
@@ -161,9 +155,6 @@ public class OIDCRequestObjectFactoryTest extends PowerMockTestCase {
         mockStatic(OAuthServerConfiguration.class);
         when(OAuthServerConfiguration.getInstance()).thenReturn(oauthServerConfigurationMock);
 
-        mockStatic(RequestObjectValidatorImpl.class);
-        PowerMockito.spy(RequestObjectValidatorImpl.class);
-
         mockStatic(OAuth2Util.class);
         when(OAuth2Util.getTenantId("carbon.super")).thenReturn(-1234);
         when((OAuth2Util.getPrivateKey(anyString(), anyInt()))).thenReturn(rsaPrivateKey);
@@ -171,12 +162,10 @@ public class OIDCRequestObjectFactoryTest extends PowerMockTestCase {
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
 
-//        rsaPrivateKey = (RSAPrivateKey) wso2KeyStore.getKey("wso2carbon", "wso2carbon".toCharArray());
-
-        RequestObjectValidator requestObjectValidator = new RequestObjectValidatorImpl();
+        RequestObjectValidator requestObjectValidator = PowerMockito.spy(new RequestObjectValidatorImpl());
         when((oauthServerConfigurationMock.getRequestObjectValidator())).thenReturn(requestObjectValidator);
 
-        PowerMockito.doReturn(SOME_SERVER_URL.toString()).when(RequestObjectValidatorImpl.class, "getTokenEpURL",
+        PowerMockito.doReturn(SOME_SERVER_URL.toString()).when(requestObjectValidator, "getTokenEpURL",
                 anyString());
 
         KeyStoreManager keyStoreManager = Mockito.mock(KeyStoreManager.class);
@@ -187,14 +176,11 @@ public class OIDCRequestObjectFactoryTest extends PowerMockTestCase {
         Mockito.when(keyStoreManager.getKeyStore("wso2carbon.jks")).thenReturn(wso2KeyStore);
 
 
-        RequestObject requestObject = new RequestObject();
         RequestParamRequestObjectBuilder requestParamRequestObjectBuilder = new RequestParamRequestObjectBuilder();
         Map<String, RequestObjectBuilder> requestObjectBuilderMap = new HashMap<>();
         requestObjectBuilderMap.put(REQUEST_PARAM_VALUE_BUILDER, requestParamRequestObjectBuilder);
         requestObjectBuilderMap.put(REQUEST_URI_PARAM_VALUE_BUILDER, null);
         when((oauthServerConfigurationMock.getRequestObjectBuilders())).thenReturn(requestObjectBuilderMap);
-
-        OIDCRequestObjectFactory oidcRequestObjectFactory = new OIDCRequestObjectFactory();
-        oidcRequestObjectFactory.buildRequestObject(oAuthAuthzRequest, oAuth2Parameters, requestObject);
+        RequestObject requestObject = OIDCRequestObjectUtil.buildRequestObject(oAuthAuthzRequest, oAuth2Parameters);
     }
 }

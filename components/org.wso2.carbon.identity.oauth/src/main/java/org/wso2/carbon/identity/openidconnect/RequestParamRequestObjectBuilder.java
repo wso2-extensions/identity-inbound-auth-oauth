@@ -60,15 +60,19 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
      * @throws RequestObjectException
      */
     @Override
-    public void buildRequestObject(String requestObjectParam, OAuth2Parameters oAuth2Parameters,
-                                   RequestObject requestObjectInstance) throws RequestObjectException {
-      
+    public RequestObject buildRequestObject(String requestObjectParam, OAuth2Parameters oAuth2Parameters) throws RequestObjectException {
+
+        RequestObject requestObject = new RequestObject();
         //Making a copy of requestObjectParam to prevent editing initial reference
         String requestObjectParamValue = requestObjectParam;
         if (isEncrypted(requestObjectParamValue)) {
             requestObjectParamValue = decrypt(requestObjectParamValue, oAuth2Parameters);
         }
-        setRequestObjectValues(requestObjectParamValue, requestObjectInstance);
+        setRequestObjectValues(requestObjectParamValue, requestObject);
+        if (log.isDebugEnabled()) {
+            log.debug("Request Object extracted from the request: " + requestObjectParam);
+        }
+        return requestObject;
     }
 
     /**
