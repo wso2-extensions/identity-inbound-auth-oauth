@@ -67,7 +67,6 @@ public class XACMLScopeValidatorTest extends IdentityBaseTest {
     private String resource;
 
 
-
     @ObjectFactory
     public IObjectFactory getObjectFactory() {
         return new PowerMockObjectFactory();
@@ -81,7 +80,7 @@ public class XACMLScopeValidatorTest extends IdentityBaseTest {
         accessTokenDO = mock(AccessTokenDO.class);
         resource = mock(String.class);
         authApp = mock(OAuthAppDO.class);
-        scopeArray =  new String[]{"scope1", "scope2", "scope3"};
+        scopeArray = new String[]{"scope1", "scope2", "scope3"};
         when(log.isDebugEnabled()).thenReturn(true);
     }
 
@@ -107,7 +106,7 @@ public class XACMLScopeValidatorTest extends IdentityBaseTest {
     }
 
     @Test
-    public void testIsValidatedScope() throws Exception {
+    public void testValidatedScope() throws Exception {
         mockStatic(FrameworkUtils.class);
         doNothing().when(FrameworkUtils.class);
         FrameworkUtils.endTenantFlow();
@@ -119,6 +118,8 @@ public class XACMLScopeValidatorTest extends IdentityBaseTest {
 
         mockStatic(OAuth2Util.class);
         when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(authApp);
+        when(OAuth2Util.getIsValidationEnabledOfOauthApp(anyString(), anyString(), anyString())).thenReturn(true);
+
 
         RequestElementDTO requestElementDTO = mock(RequestElementDTO.class);
         mockStatic(PolicyCreatorUtil.class);
@@ -131,20 +132,25 @@ public class XACMLScopeValidatorTest extends IdentityBaseTest {
         OAuth2ServiceComponentHolder.setEntitlementService(entitlementService);
 
         when(entitlementService.getDecision(anyString())).thenReturn(xacmlResponse);
-        assertFalse(xacmlScopeValidator.validateScope(accessTokenDO,resource));
+        assertFalse(xacmlScopeValidator.validateScope(accessTokenDO, resource));
 
         xacmlResponse = xacmlResponse.replace(DECISION, RULE_EFFECT_NOT_APPLICABLE);
         when(entitlementService.getDecision(anyString())).thenReturn(xacmlResponse);
-        assertTrue(xacmlScopeValidator.validateScope(accessTokenDO,resource));
+        assertTrue(xacmlScopeValidator.validateScope(accessTokenDO, resource));
 
         xacmlResponse = xacmlResponse.replace(RULE_EFFECT_NOT_APPLICABLE, RULE_EFFECT_PERMIT);
         when(entitlementService.getDecision(anyString())).thenReturn(xacmlResponse);
-        assertTrue(xacmlScopeValidator.validateScope(accessTokenDO,resource));
+        assertTrue(xacmlScopeValidator.validateScope(accessTokenDO, resource));
 
         when(entitlementService.getDecision(anyString())).thenThrow(new EntitlementException(ERROR));
-        assertFalse(xacmlScopeValidator.validateScope(accessTokenDO,resource));
+        assertFalse(xacmlScopeValidator.validateScope(accessTokenDO, resource));
 
         when(policyBuilder.buildRequest(any(RequestElementDTO.class))).thenThrow(new PolicyBuilderException(ERROR));
-        assertFalse(xacmlScopeValidator.validateScope(accessTokenDO,resource));
+        assertFalse(xacmlScopeValidator.validateScope(accessTokenDO, resource));
+
+
+        when(OAuth2Util.getIsValidationEnabledOfOauthApp(anyString(), anyString(), anyString())).thenReturn(false);
+        assertTrue(xacmlScopeValidator.validateScope(accessTokenDO, resource));
+
     }
 }

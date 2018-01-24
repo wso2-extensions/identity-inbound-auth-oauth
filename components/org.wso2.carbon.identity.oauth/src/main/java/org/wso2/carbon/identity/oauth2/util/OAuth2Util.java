@@ -44,6 +44,8 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.wso2.carbon.core.util.KeyStoreManager;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
+import org.wso2.carbon.identity.application.mgt.ApplicationMgtSystemConfig;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.core.util.IdentityIOStreamUtils;
@@ -54,6 +56,7 @@ import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
+import org.wso2.carbon.identity.oauth.cache.ValidateScopeCache;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -925,6 +928,19 @@ public class OAuth2Util {
             issuer = OAuthURL.getOAuth2TokenEPUrl();
         }
         return issuer;
+    }
+
+    public static Boolean getIsValidationEnabledOfOauthApp(String applicationName, String consumerKey,
+                                                           String tenantDomainOfOauthApp)
+            throws IdentityApplicationManagementException {
+        Boolean isValidationEnabled = ValidateScopeCache.getInstance().getValueFromCache(consumerKey);
+        if (isValidationEnabled == null) {
+            isValidationEnabled = ApplicationMgtSystemConfig.getInstance()
+                    .getApplicationDAO().getApplication(applicationName, tenantDomainOfOauthApp)
+                    .getLocalAndOutBoundAuthenticationConfig().isEnableAuthorization();
+            ValidateScopeCache.getInstance().addToCache(consumerKey, isValidationEnabled);
+        }
+        return isValidationEnabled;
     }
 
     public static class OAuthURL {
