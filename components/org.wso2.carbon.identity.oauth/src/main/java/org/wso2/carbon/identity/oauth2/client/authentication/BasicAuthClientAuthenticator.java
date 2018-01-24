@@ -46,6 +46,8 @@ public class BasicAuthClientAuthenticator extends AbstractOAuthClientAuthenticat
     private static Log log = LogFactory.getLog(BasicAuthClientAuthenticator.class);
     private static String CREDENTIAL_SEPARATOR = ":";
     private static String SIMPLE_CASE_AUTHORIZATION_HEADER = "authorization";
+    private static String BASIC_PREFIX = "Basic";
+    private static int CREDENTIAL_LENGTH = 2;
 
     /**
      * Returns the execution order of this authenticator
@@ -70,37 +72,32 @@ public class BasicAuthClientAuthenticator extends AbstractOAuthClientAuthenticat
             oAuthClientAuthnContext) throws OAuthClientAuthnException {
 
         validateAuthenticationInfo(request, contentMap);
-        // Sets client id from canAuthenticate to void reading them again.
+        // In a case if client id is not set from canAuthenticate
         if (StringUtils.isEmpty(oAuthClientAuthnContext.getClientId())) {
-            if (log.isDebugEnabled()) {
-                log.debug("Couldn't find client ID in context. Hence returning false");
-            }
-            return false;
-        } else {
-            try {
-                if (log.isDebugEnabled()) {
-                    log.debug("Authenticating client : " + oAuthClientAuthnContext.getClientId() + " with client " +
-                            "secret.");
-                }
-                return OAuth2Util.authenticateClient(oAuthClientAuthnContext.getClientId(),
-                        (String) oAuthClientAuthnContext.getParameter(OAuth.OAUTH_CLIENT_SECRET));
-            } catch (IdentityOAuthAdminException e) {
-                throw new OAuthClientAuthnException(OAuth2ErrorCodes.INVALID_CLIENT, "Error while authenticating " +
-                        "client", e);
-            } catch (InvalidOAuthClientException e) {
-                throw new OAuthClientAuthnException(OAuth2ErrorCodes.INVALID_CLIENT,
-                        "Invalid Client : " + oAuthClientAuthnContext.getClientId(), e);
-            } catch (IdentityOAuth2Exception e) {
-                throw new OAuthClientAuthnException(OAuth2ErrorCodes.INVALID_CLIENT, "Error while authenticating " +
-                        "client", e);
-            }
+            oAuthClientAuthnContext.setClientId(getClientId(request, contentMap, oAuthClientAuthnContext));
         }
+
+        try {
+            if (log.isDebugEnabled()) {
+                log.debug("Authenticating client : " + oAuthClientAuthnContext.getClientId() + " with client " +
+                        "secret.");
+            }
+            return OAuth2Util.authenticateClient(oAuthClientAuthnContext.getClientId(),
+                    (String) oAuthClientAuthnContext.getParameter(OAuth.OAUTH_CLIENT_SECRET));
+        } catch (IdentityOAuthAdminException e) {
+            throw new OAuthClientAuthnException(OAuth2ErrorCodes.INVALID_CLIENT, "Error while authenticating " +
+                    "client", e);
+        } catch (InvalidOAuthClientException | IdentityOAuth2Exception e) {
+            throw new OAuthClientAuthnException(OAuth2ErrorCodes.INVALID_CLIENT,
+                    "Invalid Client : " + oAuthClientAuthnContext.getClientId(), e);
+        }
+
     }
 
     private void validateAuthenticationInfo(HttpServletRequest request, Map<String, List> contentMap)
             throws OAuthClientAuthnException {
 
-        if (isAuthorizationHeaderExists(request)) {
+        if (isBasicAuthorizationHeaderExists(request)) {
             if (log.isErrorEnabled()) {
                 log.debug("Authorization header exists. Hence validating whether body params also present");
             }
@@ -120,7 +117,7 @@ public class BasicAuthClientAuthenticator extends AbstractOAuthClientAuthenticat
     public boolean canAuthenticate(HttpServletRequest request, Map<String, List> contentMap, OAuthClientAuthnContext
             context) {
 
-        if (isAuthorizationHeaderExists(request)) {
+        if (isBasicAuthorizationHeaderExists(request)) {
             if (log.isDebugEnabled()) {
                 log.debug("Basic auth credentials exists as Authorization header. Hence returning true.");
             }
@@ -162,7 +159,7 @@ public class BasicAuthClientAuthenticator extends AbstractOAuthClientAuthenticat
     public String getClientId(HttpServletRequest request, Map<String, List> contentMap, OAuthClientAuthnContext
             oAuthClientAuthnContext) throws OAuthClientAuthnException {
 
-        if (isAuthorizationHeaderExists(request)) {
+        if (isBasicAuthorizationHeaderExists(request)) {
             validateDuplicatedBasicAuthInfo(request, contentMap);
             String[] credentials = extractCredentialsFromAuthzHeader(getAuthorizationHeader(request),
                     oAuthClientAuthnContext);
@@ -196,14 +193,18 @@ public class BasicAuthClientAuthenticator extends AbstractOAuthClientAuthenticat
         }
     }
 
-    protected boolean isAuthorizationHeaderExists(HttpServletRequest request) {
+    protected boolean isBasicAuthorizationHeaderExists(HttpServletRequest request) {
 
-        return StringUtils.isNotEmpty(getAuthorizationHeader(request));
+        String authorizationHeader = getAuthorizationHeader(request);
+        if (StringUtils.isNotEmpty(authorizationHeader) && authorizationHeader.startsWith(BASIC_PREFIX)) {
+            return true;
+        }
+        return false;
     }
 
     protected String getAuthorizationHeader(HttpServletRequest request) {
+
         String authorizationHeader = request.getHeader(HTTPConstants.HEADER_AUTHORIZATION);
-        authorizationHeader =  request.getHeader(HTTPConstants.HEADER_AUTHORIZATION);
         if (StringUtils.isEmpty(authorizationHeader)) {
             authorizationHeader = request.getHeader(SIMPLE_CASE_AUTHORIZATION_HEADER);
         }
@@ -211,6 +212,7 @@ public class BasicAuthClientAuthenticator extends AbstractOAuthClientAuthenticat
     }
 
     protected boolean isClientCredentialsExistsAsParams(Map<String, List> contentParam) {
+
         Map<String, String> stringContent = getBodyParameters(contentParam);
         return (StringUtils.isNotEmpty(stringContent.get(OAuth.OAUTH_CLIENT_ID)) && StringUtils.isNotEmpty
                 (stringContent.get(OAuth.OAUTH_CLIENT_SECRET)));
@@ -227,15 +229,12 @@ public class BasicAuthClientAuthenticator extends AbstractOAuthClientAuthenticat
     protected static String[] extractCredentialsFromAuthzHeader(String authorizationHeader, OAuthClientAuthnContext
             oAuthClientAuthnContext) throws OAuthClientAuthnException {
 
-        if (authorizationHeader == null) {
-            throw new OAuthClientAuthnException("Authorization header value is null");
-        }
         String[] splitValues = authorizationHeader.trim().split(" ");
-        if (splitValues.length == 2) {
+        if (splitValues.length == CREDENTIAL_LENGTH) {
             byte[] decodedBytes = Base64Utils.decode(splitValues[1].trim());
             String userNamePassword = new String(decodedBytes, Charsets.UTF_8);
             String[] credentials = userNamePassword.split(CREDENTIAL_SEPARATOR);
-            if (credentials.length == 2) {
+            if (credentials.length == CREDENTIAL_LENGTH) {
                 return credentials;
             }
         }
