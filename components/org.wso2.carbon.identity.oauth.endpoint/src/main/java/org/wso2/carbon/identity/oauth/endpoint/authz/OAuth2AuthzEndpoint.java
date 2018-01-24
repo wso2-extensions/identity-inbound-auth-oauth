@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth.endpoint.authz;
 import com.nimbusds.jwt.SignedJWT;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -78,7 +79,7 @@ import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionState;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
-import org.wso2.carbon.identity.openidconnect.OIDCRequestObjectFactory;
+import org.wso2.carbon.identity.openidconnect.OIDCRequestObjectUtil;
 
 import static org.wso2.carbon.identity.openidconnect.model.Constants.AUTH_TIME;
 import static org.wso2.carbon.identity.openidconnect.model.Constants.DISPLAY;
@@ -112,6 +113,7 @@ import java.util.List;
 import java.util.Scanner;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 import javax.servlet.ServletException;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
@@ -139,8 +141,6 @@ import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuth
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuthServerConfiguration;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.startSuperTenantFlow;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.validateParams;
-import static org.wso2.carbon.identity.openidconnect.model.Constants.SCOPE;
-import static org.wso2.carbon.identity.openidconnect.model.Constants.STATE;
 
 
 @Path("/authorize")
@@ -947,13 +947,15 @@ public class OAuth2AuthzEndpoint {
         }
     }
 
-    private void persistRequestObject(OAuthAuthzRequest oauthRequest, OAuth2Parameters params)
+    private void persistRequestObject(OAuth2Parameters params, RequestObject requestObject)
             throws RequestObjectException {
 
         String sessionDataKey = params.getSessionDataKey();
         if (EndpointUtil.getRequestObjectService() != null) {
-            EndpointUtil.getRequestObjectService().addRequestObject(params.getClientId(), null, null, sessionDataKey,
-                    new ArrayList(getRequestObject(oauthRequest, params).getRequestedClaims().values()));
+            if (requestObject != null && MapUtils.isNotEmpty(requestObject.getRequestedClaims())) {
+                EndpointUtil.getRequestObjectService().addRequestObject(params.getClientId(), null, null, sessionDataKey,
+                        new ArrayList(requestObject.getRequestedClaims().values()));
+            }
         }
     }
 
@@ -1199,59 +1201,35 @@ public class OAuth2AuthzEndpoint {
                                      String requestParameterValue) throws RequestObjectException {
 
         if (StringUtils.isNotBlank(requestParameterValue)) {
-            RequestObject requestObject = getRequestObject(oauthRequest, parameters);
+            RequestObject requestObject = OIDCRequestObjectUtil.buildRequestObject(oauthRequest, parameters);
             if (requestObject == null) {
-                throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST, "Can not build the request object as " +
-                        "request object instance is null.");
+                throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST, "Unable to build a valid Request " +
+                        "Object from the authorization request.");
             }
-            validateSignatureAndContent(parameters, requestObject);
             /*
               When the request parameter is used, the OpenID Connect request parameter values contained in the JWT supersede
               those passed using the OAuth 2.0 request syntax
              */
             overrideAuthzParameters(parameters, oauthRequest.getParam(REQUEST), oauthRequest.getParam(REQUEST_URI),
                     requestObject);
-            persistRequestObject(oauthRequest, parameters);
+            persistRequestObject(parameters, requestObject);
         }
-    }
-
-    private void validateSignatureAndContent(OAuth2Parameters params, RequestObject requestObject) throws
-            RequestObjectException {
-
-        if (requestObject.isSignatureValid()) {
-            if (log.isDebugEnabled()) {
-                log.debug("The request Object is valid. Hence storing the request object value in oauth params.");
-            }
-        } else {
-            if (log.isDebugEnabled()) {
-                log.debug("The request signature validation failed as the JWT signature is invalid.");
-            }
-            throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST, "Request object signature " +
-                    "validation failed.");
-        }
-    }
-
-    private RequestObject getRequestObject(OAuthAuthzRequest oauthRequest, OAuth2Parameters parameters)
-            throws RequestObjectException {
-
-        RequestObject requestObject = new RequestObject();
-        OIDCRequestObjectFactory.getRequestObject(oauthRequest, parameters, requestObject);
-        return requestObject;
     }
 
     private void overrideAuthzParameters(OAuth2Parameters params, String requestParameterValue,
                                          String requestURIParameterValue, RequestObject requestObject) {
 
         if (StringUtils.isNotBlank(requestParameterValue) || StringUtils.isNotBlank(requestURIParameterValue)) {
-            if (StringUtils.isNotBlank(requestObject.getClaimValue(REDIRECT_URI))) {
-                params.setRedirectURI(requestObject.getClaimValue(REDIRECT_URI));
-            }
-            if (StringUtils.isNotBlank(requestObject.getClaimValue(NONCE))) {
-                params.setNonce(requestObject.getClaimValue(NONCE));
-            }
-            if (StringUtils.isNotBlank(requestObject.getClaimValue(STATE))) {
-                params.setState(requestObject.getClaimValue(STATE));
-            }
+            replaceIfPresent(requestObject, REDIRECT_URI, params::setRedirectURI);
+            replaceIfPresent(requestObject, NONCE, params::setNonce);
+            replaceIfPresent(requestObject, STATE, params::setState);
+            replaceIfPresent(requestObject, DISPLAY, params::setDisplay);
+            replaceIfPresent(requestObject, RESPONSE_MODE, params::setResponseMode);
+            replaceIfPresent(requestObject, LOGIN_HINT, params::setLoginHint);
+            replaceIfPresent(requestObject, ID_TOKEN_HINT, params::setIDTokenHint);
+            replaceIfPresent(requestObject, PROMPT, params::setPrompt);
+            replaceIfPresent(requestObject, CLAIMS, params::setEssentialClaims);
+
             if (StringUtils.isNotEmpty(requestObject.getClaimValue(SCOPE))) {
                 String scopeString = requestObject.getClaimValue(SCOPE);
                 params.setScopes(new HashSet<>(Arrays.asList(scopeString.split(COMMA_SEPARATOR))));
@@ -1259,31 +1237,20 @@ public class OAuth2AuthzEndpoint {
             if (StringUtils.isNotEmpty(requestObject.getClaimValue(MAX_AGE))) {
                 params.setMaxAge(Integer.parseInt(requestObject.getClaimValue(MAX_AGE)));
             }
-            if (StringUtils.isNotEmpty(requestObject.getClaimValue(DISPLAY))) {
-                params.setDisplay(requestObject.getClaimValue(DISPLAY));
-            }
             if (StringUtils.isNotEmpty(requestObject.getClaimValue(AUTH_TIME))) {
                 params.setAuthTime(Long.parseLong(requestObject.getClaimValue(AUTH_TIME)));
-            }
-            if (StringUtils.isNotEmpty(requestObject.getClaimValue(RESPONSE_MODE))) {
-                params.setResponseMode(requestObject.getClaimValue(RESPONSE_MODE));
-            }
-            if (StringUtils.isNotEmpty(requestObject.getClaimValue(LOGIN_HINT))) {
-                params.setLoginHint(requestObject.getClaimValue(LOGIN_HINT));
-            }
-            if (StringUtils.isNotEmpty(requestObject.getClaimValue(ID_TOKEN_HINT))) {
-                params.setIDTokenHint(requestObject.getClaimValue(ID_TOKEN_HINT));
-            }
-            if (StringUtils.isNotEmpty(requestObject.getClaimValue(PROMPT))) {
-                params.setPrompt(requestObject.getClaimValue(PROMPT));
             }
             if (StringUtils.isNotEmpty(requestObject.getClaimValue(ACR_VALUES))) {
                 String acrString = requestObject.getClaimValue(ACR_VALUES);
                 params.setACRValues(new LinkedHashSet<>(Arrays.asList(acrString.split(COMMA_SEPARATOR))));
             }
-            if (StringUtils.isNotEmpty(requestObject.getClaimValue(CLAIMS))) {
-                params.setEssentialClaims(requestObject.getClaimValue(CLAIMS));
-            }
+        }
+    }
+
+    private void replaceIfPresent(RequestObject requestObject, String claim, Consumer<String> consumer) {
+        String claimValue = requestObject.getClaimValue(claim);
+        if (StringUtils.isNotEmpty(claimValue)) {
+            consumer.accept(claimValue);
         }
     }
 

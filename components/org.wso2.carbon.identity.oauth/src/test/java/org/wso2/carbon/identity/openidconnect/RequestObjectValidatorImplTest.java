@@ -56,6 +56,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
+import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.mock;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
@@ -131,15 +132,16 @@ public class RequestObjectValidatorImplTest extends PowerMockTestCase {
         mockStatic(OAuthServerConfiguration.class);
         when(OAuthServerConfiguration.getInstance()).thenReturn(oauthServerConfigurationMock);
 
-        mockStatic(RequestObjectValidatorImpl.class);
-        PowerMockito.spy(RequestObjectValidatorImpl.class);
+//        mockStatic(RequestObjectValidatorImpl.class);
+//        PowerMockito.spy(RequestObjectValidatorImpl.class);
 
         rsaPrivateKey = (RSAPrivateKey) wso2KeyStore.getKey("wso2carbon", "wso2carbon".toCharArray());
         mockStatic(OAuth2Util.class);
         when(OAuth2Util.getTenantId(SUPER_TENANT_DOMAIN_NAME)).thenReturn(SUPER_TENANT_ID);
         when((OAuth2Util.getPrivateKey(anyString(), anyInt()))).thenReturn(rsaPrivateKey);
 
-        RequestObjectValidator requestObjectValidator = new RequestObjectValidatorImpl();
+        RequestObjectValidatorImpl requestObjectValidator = PowerMockito.spy(new RequestObjectValidatorImpl());
+
         RequestParamRequestObjectBuilder requestParamRequestObjectBuilder = new RequestParamRequestObjectBuilder();
         when((oauthServerConfigurationMock.getRequestObjectValidator())).thenReturn(requestObjectValidator);
 
@@ -150,20 +152,17 @@ public class RequestObjectValidatorImplTest extends PowerMockTestCase {
         Mockito.when(keyStoreManager.getPrimaryKeyStore()).thenReturn(wso2KeyStore);
         Mockito.when(keyStoreManager.getKeyStore("wso2carbon.jks")).thenReturn(wso2KeyStore);
 
-        PowerMockito.doReturn(SOME_SERVER_URL.toString()).when(RequestObjectValidatorImpl.class, "getTokenEpURL",
+        PowerMockito.doReturn(SOME_SERVER_URL).when(requestObjectValidator, "getTokenEpURL",
                 anyString());
 
-
         String requestObjectString = jwt;
-        RequestObject requestObject = new RequestObject();
-        requestParamRequestObjectBuilder.buildRequestObject(requestObjectString,
-                oAuth2Parameters, requestObject);
+        RequestObject requestObject = requestParamRequestObjectBuilder.buildRequestObject(requestObjectString,
+                oAuth2Parameters);
 
         Assert.assertEquals(requestParamRequestObjectBuilder.isEncrypted(requestObjectString), isEncrypted,
                 "Payload is encrypted:" + isEncrypted);
         Assert.assertEquals(requestObjectValidator.isSigned(requestObject), isSigned,
                 "Request object isSigned: " + isSigned);
-        requestObject.setSigned(isSigned);
         if (isSigned) {
             Assert.assertEquals(requestObjectValidator.validateSignature(requestObject, oAuth2Parameters),
                     exceptionNotExpected, errorMsg + "Request Object Signature Validation failed.");
