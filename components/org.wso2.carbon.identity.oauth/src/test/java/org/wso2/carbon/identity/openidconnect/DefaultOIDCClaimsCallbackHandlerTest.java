@@ -19,8 +19,10 @@ package org.wso2.carbon.identity.openidconnect;
 
 import com.nimbusds.jwt.JWTClaimsSet;
 import net.minidev.json.JSONArray;
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.Spy;
 import org.opensaml.saml2.core.Assertion;
 import org.opensaml.saml2.core.Attribute;
@@ -32,6 +34,7 @@ import org.opensaml.saml2.core.impl.AttributeBuilder;
 import org.opensaml.saml2.core.impl.AttributeStatementBuilder;
 import org.opensaml.xml.ConfigurationException;
 import org.opensaml.xml.XMLObject;
+import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.IObjectFactory;
@@ -64,6 +67,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
+import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.registry.api.RegistryException;
 import org.wso2.carbon.registry.core.Resource;
 import org.wso2.carbon.registry.core.ResourceImpl;
@@ -74,6 +78,7 @@ import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 
+import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.nio.file.Paths;
@@ -85,6 +90,7 @@ import java.util.Map;
 import java.util.Properties;
 
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.eq;
@@ -216,9 +222,17 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
         mockStatic(FrameworkUtils.class);
         when(FrameworkUtils.getMultiAttributeSeparator()).thenReturn(MULTI_ATTRIBUTE_SEPARATOR_DEFAULT);
 
+        RequestObjectService requestObjectService = Mockito.mock(RequestObjectService.class);
+        List<RequestedClaim> requestedClaims =  Collections.EMPTY_LIST;
+        when(requestObjectService.getRequestedClaimsForIDToken(anyString(), anyString())).
+                thenReturn(requestedClaims);
+        when(requestObjectService.getRequestedClaimsForUserInfo(anyString(), anyString())).
+                thenReturn(requestedClaims);
         OpenIDConnectServiceComponentHolder.getInstance()
                 .getOpenIDConnectClaimFilters()
                 .add(new OpenIDConnectClaimFilterImpl());
+        OpenIDConnectServiceComponentHolder.setRequestObjectService(requestObjectService);
+
 
         defaultOIDCClaimsCallbackHandler = new DefaultOIDCClaimsCallbackHandler();
     }
