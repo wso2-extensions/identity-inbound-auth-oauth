@@ -144,7 +144,7 @@ public class OpenIDConnectServiceComponent {
     }
 
     @Reference(
-            name = "org.wso2.carbon.identity.event.services.IdentityEventService",
+            name = "org.wso2.carbon.identity.event.services. ",
             service = IdentityEventService.class,
             cardinality = ReferenceCardinality.OPTIONAL,
             policy = ReferencePolicy.DYNAMIC,

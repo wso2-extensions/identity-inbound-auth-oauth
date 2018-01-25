@@ -953,7 +953,7 @@ public class OAuth2AuthzEndpoint {
         String sessionDataKey = params.getSessionDataKey();
         if (EndpointUtil.getRequestObjectService() != null) {
             if (requestObject != null && MapUtils.isNotEmpty(requestObject.getRequestedClaims())) {
-                EndpointUtil.getRequestObjectService().addRequestObject(params.getClientId(), null, null, sessionDataKey,
+                EndpointUtil.getRequestObjectService().addRequestObject(params.getClientId(), sessionDataKey,
                         new ArrayList(requestObject.getRequestedClaims().values()));
             }
         }
