@@ -37,7 +37,7 @@ public abstract class AbstractOAuthClientAuthenticator extends AbstractIdentityH
      */
     public AbstractOAuthClientAuthenticator() {
 
-        this.init(new InitConfig());
+        init(new InitConfig());
     }
 
     /**
