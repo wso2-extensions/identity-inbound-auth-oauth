@@ -61,6 +61,7 @@ public class OAuthClientAuthnService {
 
         OAuthClientAuthnContext oAuthClientAuthnContext = new OAuthClientAuthnContext();
         executeClientAuthenticators(request, oAuthClientAuthnContext, bodyContentParams);
+        failOnMultipleAuthenticators(oAuthClientAuthnContext);
         return oAuthClientAuthnContext;
     }
 
@@ -129,22 +130,6 @@ public class OAuthClientAuthnService {
             setErrorToContext(OAuth2ErrorCodes.INVALID_REQUEST, "The client MUST NOT use more than one " +
                     "authentication method in each", oAuthClientAuthnContext);
         }
-    }
-
-    /**
-     * Set OAuthClientAuthentication context to http request.
-     *
-     * @param request                 Incoming HttpServletReqeust.
-     * @param oAuthClientAuthnContext OAuth client authentication request.
-     */
-    private void setContextToRequest(HttpServletRequest request, OAuthClientAuthnContext oAuthClientAuthnContext) {
-
-        if (log.isDebugEnabled()) {
-            log.debug("Setting OAuth client authentication context to request");
-        }
-
-        request.setAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT,
-                oAuthClientAuthnContext);
     }
 
     /**

@@ -49,16 +49,16 @@ import static org.testng.Assert.assertEquals;
 @WithCarbonHome
 public class BasicAuthClientAuthenticatorTest extends PowerMockIdentityBaseTest {
 
-    BasicAuthClientAuthenticator basicAuthClientAuthenticator = new BasicAuthClientAuthenticator();
+    private BasicAuthClientAuthenticator basicAuthClientAuthenticator = new BasicAuthClientAuthenticator();
     private static String SIMPLE_CASE_AUTHORIZATION_HEADER = "authorization";
-    private String CLIENT_ID = "someclientid";
-    private String CLIENT_SECRET = "someclientsecret";
+    private static String CLIENT_ID = "someclientid";
+    private static String CLIENT_SECRET = "someclientsecret";
 
     @Test
     public void testGetPriority() throws Exception {
 
-        assertEquals(100, basicAuthClientAuthenticator.getPriority(), "Default priority of the basic authenticator " +
-                "has changed");
+        assertEquals(100, basicAuthClientAuthenticator.getPriority(),
+                "Default priority of the basic authenticator has changed");
     }
 
     @DataProvider(name = "testClientAuthnData")
@@ -67,14 +67,13 @@ public class BasicAuthClientAuthenticatorTest extends PowerMockIdentityBaseTest 
         return new Object[][]{
 
                 // Correct authorization header present with correct encoding
-                {HTTPConstants.HEADER_AUTHORIZATION, getBase64EncodedBasicAuthHeader(CLIENT_ID, CLIENT_SECRET, null),
+                {HTTPConstants.HEADER_AUTHORIZATION, ClientAuthUtil.getBase64EncodedBasicAuthHeader(CLIENT_ID,
+                        CLIENT_SECRET, null),
                         new HashMap<String, List>(), buildOAuthClientAuthnContext(CLIENT_ID, CLIENT_SECRET), true, true},
 
-                {HTTPConstants.HEADER_AUTHORIZATION, getBase64EncodedBasicAuthHeader(CLIENT_ID, CLIENT_SECRET, null),
-                        new HashMap<String, List>(), buildOAuthClientAuthnContext(null, null), false,
-                        false},
-
-                {HTTPConstants.HEADER_AUTHORIZATION, getBase64EncodedBasicAuthHeader(CLIENT_ID, CLIENT_SECRET, null),
+                // Correct authentication information is in headers and no information in context.
+                {HTTPConstants.HEADER_AUTHORIZATION, ClientAuthUtil.getBase64EncodedBasicAuthHeader(CLIENT_ID,
+                        CLIENT_SECRET, null),
                         new HashMap<String, List>(), buildOAuthClientAuthnContext(null, null), false,
                         false},
         };
@@ -101,17 +100,20 @@ public class BasicAuthClientAuthenticatorTest extends PowerMockIdentityBaseTest 
 
         return new Object[][]{
                 // Throws an IdentityOAuthAdminException
-                {HTTPConstants.HEADER_AUTHORIZATION, getBase64EncodedBasicAuthHeader(CLIENT_ID, CLIENT_SECRET, null),
+                {HTTPConstants.HEADER_AUTHORIZATION, ClientAuthUtil.getBase64EncodedBasicAuthHeader(CLIENT_ID,
+                        CLIENT_SECRET, null),
                         new HashMap<String, List>(), buildOAuthClientAuthnContext(CLIENT_ID, CLIENT_SECRET), new
                         IdentityOAuthAdminException("OAuth Admin Error")},
 
                 // Throws an IdentityOAuthAdminException
-                {HTTPConstants.HEADER_AUTHORIZATION, getBase64EncodedBasicAuthHeader(CLIENT_ID, CLIENT_SECRET, null),
+                {HTTPConstants.HEADER_AUTHORIZATION, ClientAuthUtil.getBase64EncodedBasicAuthHeader(CLIENT_ID,
+                        CLIENT_SECRET, null),
                         new HashMap<String, List>(), buildOAuthClientAuthnContext(CLIENT_ID, CLIENT_SECRET), new
                         IdentityOAuthAdminException("OAuth Admin Error")},
 
                 // Throws an IdentityOAuthAdminException
-                {HTTPConstants.HEADER_AUTHORIZATION, getBase64EncodedBasicAuthHeader(CLIENT_ID, CLIENT_SECRET, null),
+                {HTTPConstants.HEADER_AUTHORIZATION, ClientAuthUtil.getBase64EncodedBasicAuthHeader(CLIENT_ID,
+                        CLIENT_SECRET, null),
                         new HashMap<String, List>(), buildOAuthClientAuthnContext(CLIENT_ID, CLIENT_SECRET), new
                         IdentityOAuth2Exception("OAuth Admin Error")},
         };
@@ -143,12 +145,12 @@ public class BasicAuthClientAuthenticatorTest extends PowerMockIdentityBaseTest 
         return new Object[][]{
 
                 // Correct Authorization header with valid client id and secret.
-                {HTTPConstants.HEADER_AUTHORIZATION, getBase64EncodedBasicAuthHeader(CLIENT_ID, CLIENT_SECRET, null)
-                        , new HashMap<String, List>(), true},
+                {HTTPConstants.HEADER_AUTHORIZATION, ClientAuthUtil.getBase64EncodedBasicAuthHeader(CLIENT_ID,
+                        CLIENT_SECRET, null), new HashMap<String, List>(), true},
 
                 // Simple case correct authorization header with valid client id and secret.
-                {SIMPLE_CASE_AUTHORIZATION_HEADER, getBase64EncodedBasicAuthHeader(CLIENT_ID, CLIENT_SECRET, null),
-                        new HashMap<String, List>(), true},
+                {SIMPLE_CASE_AUTHORIZATION_HEADER, ClientAuthUtil.getBase64EncodedBasicAuthHeader(CLIENT_ID,
+                        CLIENT_SECRET, null), new HashMap<String, List>(), true},
 
                 // Simple case authorization header value without "Basic" prefix
                 {SIMPLE_CASE_AUTHORIZATION_HEADER, "Gibberish value without Basic part", new HashMap<String, List>(),
@@ -162,20 +164,20 @@ public class BasicAuthClientAuthenticatorTest extends PowerMockIdentityBaseTest 
                 {SIMPLE_CASE_AUTHORIZATION_HEADER, null, new HashMap<String, List>(), false},
 
                 // Simple authorization header but no value. But has client id and secret in body.
-                {SIMPLE_CASE_AUTHORIZATION_HEADER, null, getBodyContentWithClientAndSecret(CLIENT_ID, CLIENT_SECRET),
-                        true},
+                {SIMPLE_CASE_AUTHORIZATION_HEADER, null, ClientAuthUtil.getBodyContentWithClientAndSecret(CLIENT_ID,
+                        CLIENT_SECRET), true},
 
                 // No authorization header. but client id and secret present in the body.
-                {null, null, getBodyContentWithClientAndSecret(CLIENT_ID, CLIENT_SECRET), true},
+                {null, null, ClientAuthUtil.getBodyContentWithClientAndSecret(CLIENT_ID, CLIENT_SECRET), true},
 
                 // No authorization header. Only client secret is present in body.
-                {null, null, getBodyContentWithClientAndSecret(null, CLIENT_SECRET), false},
+                {null, null, ClientAuthUtil.getBodyContentWithClientAndSecret(null, CLIENT_SECRET), false},
 
                 // No authorization header. Only client id is present in the body.
-                {null, null, getBodyContentWithClientAndSecret(CLIENT_ID, null), false},
+                {null, null, ClientAuthUtil.getBodyContentWithClientAndSecret(CLIENT_ID, null), false},
 
                 // Neither authorization header nor body parameters present with client id and secret.
-                {null, null, getBodyContentWithClientAndSecret(null, null), false},
+                {null, null, ClientAuthUtil.getBodyContentWithClientAndSecret(null, null), false},
         };
     }
 
@@ -202,19 +204,20 @@ public class BasicAuthClientAuthenticatorTest extends PowerMockIdentityBaseTest 
         return new Object[][]{
 
                 // Correct authorization header present with correct encoding
-                {HTTPConstants.HEADER_AUTHORIZATION, getBase64EncodedBasicAuthHeader(CLIENT_ID, CLIENT_SECRET, null)
+                {HTTPConstants.HEADER_AUTHORIZATION, ClientAuthUtil.getBase64EncodedBasicAuthHeader(CLIENT_ID,
+                        CLIENT_SECRET, null)
                         , new HashMap<String, List>(), CLIENT_ID},
 
                 // Simple case authorization header with correct client id and secret
-                {SIMPLE_CASE_AUTHORIZATION_HEADER, getBase64EncodedBasicAuthHeader(CLIENT_ID, CLIENT_SECRET, null), new
-                        HashMap<String, List>(), CLIENT_ID},
+                {SIMPLE_CASE_AUTHORIZATION_HEADER, ClientAuthUtil.getBase64EncodedBasicAuthHeader(CLIENT_ID,
+                        CLIENT_SECRET, null), new HashMap<String, List>(), CLIENT_ID},
 
                 // Simple case authorization header with null value. But has client id and secret in body content.
-                {SIMPLE_CASE_AUTHORIZATION_HEADER, null, getBodyContentWithClientAndSecret(CLIENT_ID, CLIENT_SECRET),
-                        CLIENT_ID},
+                {SIMPLE_CASE_AUTHORIZATION_HEADER, null, ClientAuthUtil.getBodyContentWithClientAndSecret(CLIENT_ID,
+                        CLIENT_SECRET), CLIENT_ID},
 
                 // No authorization header. But has client id and secret in body.
-                {null, null, getBodyContentWithClientAndSecret(CLIENT_ID, CLIENT_SECRET), CLIENT_ID},
+                {null, null, ClientAuthUtil.getBodyContentWithClientAndSecret(CLIENT_ID, CLIENT_SECRET), CLIENT_ID},
         };
     }
 
@@ -234,16 +237,18 @@ public class BasicAuthClientAuthenticatorTest extends PowerMockIdentityBaseTest 
         return new Object[][]{
 
                 // Authorization header with only client secret base64 encoded.
-                {HTTPConstants.HEADER_AUTHORIZATION, getBase64EncodedBasicAuthHeader(null, CLIENT_SECRET, null), new
-                        HashMap<String, List>()},
+                {HTTPConstants.HEADER_AUTHORIZATION, ClientAuthUtil.getBase64EncodedBasicAuthHeader(null,
+                        CLIENT_SECRET, null), new HashMap<String, List>()},
 
                 // Simple case authorization header with only client id base64 encoded.
-                {SIMPLE_CASE_AUTHORIZATION_HEADER, getBase64EncodedBasicAuthHeader(CLIENT_ID, null, null), new
+                {SIMPLE_CASE_AUTHORIZATION_HEADER, ClientAuthUtil.getBase64EncodedBasicAuthHeader(CLIENT_ID, null,
+                        null), new
                         HashMap<String, List>()},
 
                 // Authorization header present with correct id and secret encoding. Body also has client id and secret.
-                {HTTPConstants.HEADER_AUTHORIZATION, getBase64EncodedBasicAuthHeader(CLIENT_ID, CLIENT_SECRET, null),
-                        getBodyContentWithClientAndSecret(CLIENT_ID, CLIENT_SECRET)},
+                {HTTPConstants.HEADER_AUTHORIZATION, ClientAuthUtil.getBase64EncodedBasicAuthHeader(CLIENT_ID,
+                        CLIENT_SECRET, null), ClientAuthUtil.getBodyContentWithClientAndSecret(CLIENT_ID,
+                        CLIENT_SECRET)},
         };
     }
 
@@ -255,42 +260,6 @@ public class BasicAuthClientAuthenticatorTest extends PowerMockIdentityBaseTest 
         PowerMockito.when(httpServletRequest.getHeader(headerName)).thenReturn(headerValue);
         basicAuthClientAuthenticator.getClientId(httpServletRequest, bodyContent, new
                 OAuthClientAuthnContext());
-    }
-
-    private String getBase64EncodedBasicAuthHeader(String clientId, String secret, String extraParam) {
-
-        if (StringUtils.isEmpty(clientId)) {
-            return "Basic " + Base64Utils.encode((secret).getBytes());
-        } else if (StringUtils.isEmpty(secret)) {
-            return "Basic " + Base64Utils.encode((clientId).getBytes());
-        }
-        if (StringUtils.isNotEmpty(extraParam)) {
-            return "Basic " + Base64Utils.encode((clientId + ":" + secret + ":" + extraParam).getBytes());
-        }
-        return "Basic " + Base64Utils.encode((clientId + ":" + secret).getBytes());
-    }
-
-    private Map<String, List<String>> getBodyContent(Map<String, String> contentStrings) {
-
-        Map<String, List<String>> bodyContent = new HashMap<>();
-        contentStrings.forEach((key, value) -> {
-            List<String> valueList = new ArrayList<String>();
-            valueList.add(value);
-            bodyContent.put(key, valueList);
-        });
-        return bodyContent;
-    }
-
-    private Map<String, List<String>> getBodyContentWithClientAndSecret(String clientId, String secret) {
-
-        Map<String, String> content = new HashMap<>();
-        if (StringUtils.isNotEmpty(clientId)) {
-            content.put(OAuth.OAUTH_CLIENT_ID, clientId);
-        }
-        if (StringUtils.isNotEmpty(secret)) {
-            content.put(OAuth.OAUTH_CLIENT_SECRET, secret);
-        }
-        return getBodyContent(content);
     }
 
     private OAuthClientAuthnContext buildOAuthClientAuthnContext(String clientId, String clientSecret) {
