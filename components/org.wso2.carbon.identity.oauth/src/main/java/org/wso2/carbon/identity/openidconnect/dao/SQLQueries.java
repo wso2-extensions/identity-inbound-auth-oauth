@@ -39,6 +39,9 @@ public class SQLQueries {
     public static final String REFRESH_REQUEST_OBJECT = "UPDATE IDN_OIDC_REQ_OBJECT_REFERENCE SET " +
             "TOKEN_ID=? WHERE OLD_TOKEN_ID=?";
 
+    public static final String UPDATE_REQUEST_OBJECT_TOKEN_FOR_CODE = "UPDATE IDN_OIDC_REQ_OBJECT_REFERENCE SET " +
+            "TOKEN_ID=? WHERE CODE_ID=?";
+
     public static final String DELETE_REQ_OBJECT_BY_CODE_ID = "DELETE FROM IDN_OIDC_REQ_OBJECT_REFERENCE WHERE CODE_ID =" +
             " ?";
 

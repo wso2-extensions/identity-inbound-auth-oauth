@@ -36,7 +36,7 @@
             <class name="org.wso2.carbon.identity.openidconnect.RememberMeStoreTest"/>
             <class name="org.wso2.carbon.identity.openidconnect.RequestObjectValidatorImplTest"/>
             <class name="org.wso2.carbon.identity.openidconnect.RequestParamRequestObjectBuilderTest"/>
-            <class name="org.wso2.carbon.identity.openidconnect.OIDCRequestObjectFactoryTest"/>
+            <class name="org.wso2.carbon.identity.openidconnect.OIDCRequestObjectUtilTest"/>
             <class name="org.wso2.carbon.identity.openidconnect.dao.RequestObjectDAOImplTest"/>
             <class name="org.wso2.carbon.identity.openidconnect.handlers.RequestObjectHandlerTest"/>
         </classes>

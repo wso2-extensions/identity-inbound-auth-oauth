@@ -49,8 +49,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.TimeZone;
 
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenStates.TOKEN_STATE_INACTIVE;
-
 /*
 NOTE
 This is the very first step of moving to simplified architecture for token persistence. New set of DAO classes  for
@@ -341,12 +339,9 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             prepStmt.execute();
             connection.commit();
 
-            //If the code state is updated to inactive or expired request object which is persisted against the code
-            // should be removed.
-            if (OAuthConstants.AuthorizationCodeState.EXPIRED.equals(newState) || OAuthConstants.AuthorizationCodeState.
-                    INACTIVE.equals(newState)) {
-                OAuth2TokenUtil.postRevokeCode(authzCode, newState);
-            }
+//            //If the code state is updated to inactive or expired request object which is persisted against the code
+//            // should be updated/removed.
+            OAuth2TokenUtil.postRevokeCode(authzCode, newState, null);
         } catch (SQLException e) {
             IdentityDatabaseUtil.rollBack(connection);
             throw new IdentityOAuth2Exception("Error occurred while updating the state of Authorization Code : " +
@@ -381,7 +376,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
 
             // To revoke the request object which is persisted against the code.
             OAuth2TokenUtil.postRevokeCode(authzCodeDO.getAuthzCodeId(), OAuthConstants.
-                    AuthorizationCodeState.INACTIVE);
+                    AuthorizationCodeState.INACTIVE, authzCodeDO.getOauthTokenId());
         } catch (SQLException e) {
             throw new IdentityOAuth2Exception("Error when deactivating authorization code", e);
         } finally {

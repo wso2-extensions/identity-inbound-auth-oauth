@@ -66,8 +66,8 @@ public class OIDCRequestObjectUtilTest extends PowerMockTestCase {
     private RSAPrivateKey rsaPrivateKey;
     private KeyStore clientKeyStore;
     private KeyStore wso2KeyStore;
-    public static final String TEST_CLIENT_ID_1 = "test-client-id";
-    public static final String SOME_SERVER_URL = "some-server-url";
+    private static final String TEST_CLIENT_ID_1 = "test-client-id";
+    private static final String SOME_SERVER_URL = "some-server-url";
     private static final String REQUEST_PARAM_VALUE_BUILDER = "request_param_value_builder";
     private static final String REQUEST_URI_PARAM_VALUE_BUILDER = "request_uri_param_value_builder";
 

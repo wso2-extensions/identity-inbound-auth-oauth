@@ -39,6 +39,7 @@ import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 
 import java.security.Key;
 import java.security.interfaces.RSAPrivateKey;
+import java.text.ParseException;
 
 import static org.apache.commons.lang.StringUtils.isEmpty;
 import static org.wso2.carbon.identity.openidconnect.model.Constants.JWT_PART_DELIMITER;
@@ -60,7 +61,8 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
      * @throws RequestObjectException
      */
     @Override
-    public RequestObject buildRequestObject(String requestObjectParam, OAuth2Parameters oAuth2Parameters) throws RequestObjectException {
+    public RequestObject buildRequestObject(String requestObjectParam, OAuth2Parameters oAuth2Parameters) throws
+            RequestObjectException {
 
         RequestObject requestObject = new RequestObject();
         //Making a copy of requestObjectParam to prevent editing initial reference
@@ -88,24 +90,24 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
         EncryptedJWT encryptedJWT;
         try {
             encryptedJWT = EncryptedJWT.parse(requestObject);
-            RSAPrivateKey rsaPrivateKey = getRsaPrivateKey(oAuth2Parameters);
+            RSAPrivateKey rsaPrivateKey = getRSAPrivateKey(oAuth2Parameters);
             RSADecrypter decrypter = new RSADecrypter(rsaPrivateKey);
             encryptedJWT.decrypt(decrypter);
 
             JWEObject jweObject = JWEObject.parse(requestObject);
             jweObject.decrypt(decrypter);
 
-            if (jweObject != null && jweObject.getPayload() != null && jweObject.getPayload().toString()
+            if (jweObject.getPayload() != null && jweObject.getPayload().toString()
                     .split(JWT_PART_DELIMITER).length == NUMBER_OF_PARTS_IN_JWS) {
                 return jweObject.getPayload().toString();
             } else {
                 return new PlainJWT((JWTClaimsSet) encryptedJWT.getJWTClaimsSet()).serialize();
             }
 
-        } catch (JOSEException | IdentityOAuth2Exception | java.text.ParseException e) {
-            String errorMessage = "Failed to decrypt request object.";
+        } catch (JOSEException | IdentityOAuth2Exception | ParseException e) {
+            String errorMessage = "Failed to decrypt Request Object";
             if (log.isDebugEnabled()) {
-                log.debug(errorMessage, e);
+                log.debug(errorMessage + " from " + requestObject, e);
             }
             throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST, errorMessage);
         }
@@ -115,7 +117,7 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
         return requestObject.split(JWT_PART_DELIMITER).length == NUMBER_OF_PARTS_IN_JWE;
     }
 
-    protected RSAPrivateKey getRsaPrivateKey(OAuth2Parameters oAuth2Parameters) throws IdentityOAuth2Exception {
+    protected RSAPrivateKey getRSAPrivateKey(OAuth2Parameters oAuth2Parameters) throws IdentityOAuth2Exception {
         String tenantDomain = getTenantDomainForDecryption(oAuth2Parameters);
         int tenantId = OAuth2Util.getTenantId(tenantDomain);
         Key key = OAuth2Util.getPrivateKey(tenantDomain, tenantId);
@@ -135,7 +137,9 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
         return MultitenantConstants.SUPER_TENANT_NAME;
     }
 
-    private void setRequestObjectValues(String requestObjectString, RequestObject requestObjectInstance) throws RequestObjectException {
+    private void setRequestObjectValues(String requestObjectString, RequestObject requestObjectInstance) throws
+            RequestObjectException {
+
         if (isEmpty(requestObjectString)) {
             return;
         }
@@ -146,10 +150,10 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
             } else {
                 requestObjectInstance.setSignedJWT(SignedJWT.parse(requestObjectString));
             }
-        } catch (java.text.ParseException e) {
-            String errorMessage = "No Valid Request Object is found in the request.";
+        } catch (ParseException e) {
+            String errorMessage = "No Valid JWT is found for the Request Object.";
             if (log.isDebugEnabled()) {
-                log.debug(errorMessage, e);
+                log.debug(errorMessage + "Received Request Object: " + requestObjectString, e);
             }
             throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST, errorMessage);
         }
