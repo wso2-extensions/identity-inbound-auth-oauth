@@ -32,7 +32,8 @@ public class SampleClientAuthenticator extends AbstractOAuthClientAuthenticator 
     public boolean enabled = true;
 
     @Override
-    public boolean authenticateClient(HttpServletRequest request, Map<String, List> content, OAuthClientAuthnContext oAuthClientAuthnContext) throws OAuthClientAuthnException {
+    public boolean authenticateClient(HttpServletRequest request, Map<String, List> content,
+                                      OAuthClientAuthnContext oAuthClientAuthnContext) throws OAuthClientAuthnException {
 
         if (EXPECTED_SAMPLE_HEADER.equalsIgnoreCase(request.getHeader(SAMPLE_HEADER))) {
             return true;
@@ -52,7 +53,8 @@ public class SampleClientAuthenticator extends AbstractOAuthClientAuthenticator 
     }
 
     @Override
-    public String getClientId(HttpServletRequest request, Map<String, List> content, OAuthClientAuthnContext oAuthClientAuthnContext) throws OAuthClientAuthnException {
+    public String getClientId(HttpServletRequest request, Map<String, List> content,
+                              OAuthClientAuthnContext oAuthClientAuthnContext) throws OAuthClientAuthnException {
 
         if (request.getHeader("ErrorCanAuthenticate") != null) {
             throw new OAuthClientAuthnException("invalid_request", "Error while evaluating can authenticate");
