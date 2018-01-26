@@ -61,7 +61,7 @@ public class RequestObjectDAOImplTest {
 
         requestObjectDAO.insertRequestObjectData("consumerKey", "d43e8da324a33bdc941b9b95cad6a6a2",
                 requestedEssentialClaims);
-        requestObjectDAO.getEssentialClaims("d43e8da324a33bdc941b9b95cad6a6a2", null, true);
-        Assert.assertEquals(requestObjectDAO.getEssentialClaims("code1", null, true).size(), 0);
+        requestObjectDAO.getRequestedClaims("d43e8da324a33bdc941b9b95cad6a6a2", null, true);
+        Assert.assertEquals(requestObjectDAO.getRequestedClaims("code1", null, true).size(), 0);
     }
 }

@@ -82,4 +82,57 @@ public class RequestObjectService {
         }
         return essentialClaims;
     }
+
+    /**
+     * To invoke the RequestObjectPersistenceFactory to retrieve request object.
+     *
+     * @param token access token Id
+     * @param codeId  code Id
+     * @return list of claims which have marked as essential in the request object.
+     * @throws RequestObjectException
+     */
+    private List<RequestedClaim> getRequestedClaims(String token, String codeId, boolean isUserInfo)
+            throws RequestObjectException {
+
+        List<RequestedClaim> essentialClaims;
+        if (log.isDebugEnabled()) {
+            log.debug("Invoking the RequestObjectPersistenceFactory to retrieve essential claims list.");
+        }
+
+        try {
+            essentialClaims = RequestObjectPersistenceFactory.getInstance().getRequestObjectDAO()
+                    .getRequestedClaims(token, codeId, isUserInfo);
+        } catch (IdentityOAuth2Exception e) {
+            throw new RequestObjectException(e.getMessage());
+        }
+        return essentialClaims;
+    }
+
+    /**
+     * To invoke the RequestObjectPersistenceFactory to retrieve request object for id_token.
+     *
+     * @param token  access token Id
+     * @param codeId code Id
+     * @return list of claims which have marked as essential in the request object.
+     * @throws RequestObjectException
+     */
+    public List<RequestedClaim> getRequestedClaimsForIDToken(String token, String codeId)
+            throws RequestObjectException {
+
+        return getRequestedClaims(token, codeId, false);
+    }
+    /**
+     * To invoke the RequestObjectPersistenceFactory to retrieve request object for id_token.
+     *
+     * @param token  access token Id
+     * @param codeId code Id
+     * @return list of claims which have marked as essential in the request object.
+     * @throws RequestObjectException
+     */
+    public List<RequestedClaim> getRequestedClaimsForUserInfo(String token, String codeId)
+            throws RequestObjectException {
+
+        return getRequestedClaims(token, codeId, true);
+    }
+
 }

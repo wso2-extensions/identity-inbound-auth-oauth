@@ -18,6 +18,8 @@
 
 package org.wso2.carbon.identity.openidconnect;
 
+import org.mockito.Mockito;
+import org.powermock.api.mockito.PowerMockito;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
@@ -41,6 +43,7 @@ import org.wso2.carbon.identity.oauth2.test.utils.CommonTestUtils;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
+import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.identity.testutil.IdentityBaseTest;
 import org.wso2.carbon.identity.testutil.ReadCertStoreSampleUtil;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
@@ -49,10 +52,14 @@ import org.wso2.carbon.user.core.service.RealmService;
 
 import java.security.Key;
 import java.security.cert.Certificate;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static org.mockito.Matchers.anyBoolean;
+import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.wso2.carbon.identity.oauth2.test.utils.CommonTestUtils.setFinalStatic;
@@ -128,6 +135,18 @@ public class DefaultIDTokenBuilderTest extends IdentityBaseTest {
 
         OpenIDConnectServiceComponentHolder.getInstance()
                 .getOpenIDConnectClaimFilters().add(new OpenIDConnectClaimFilterImpl());
+
+        RequestObjectService requestObjectService = Mockito.mock(RequestObjectService.class);
+        List<RequestedClaim> requestedClaims =  Collections.EMPTY_LIST;
+        when(requestObjectService.getRequestedClaimsForIDToken(anyString(), anyString())).
+                thenReturn(requestedClaims);
+        when(requestObjectService.getRequestedClaimsForUserInfo(anyString(), anyString())).
+                thenReturn(requestedClaims);
+        OpenIDConnectServiceComponentHolder.getInstance()
+                .getOpenIDConnectClaimFilters()
+                .add(new OpenIDConnectClaimFilterImpl());
+        OpenIDConnectServiceComponentHolder.setRequestObjectService(requestObjectService);
+
     }
 
 

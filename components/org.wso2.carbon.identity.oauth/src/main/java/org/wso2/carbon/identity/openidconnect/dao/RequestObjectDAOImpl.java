@@ -267,6 +267,48 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
         return essentialClaims;
     }
 
+    /**
+     * Retrieve Requested claims for the id token and user info endpoint.
+     *
+     * @param token    token
+     * @param codeId     code id
+     * @param isUserInfo return true if the claims are requested from user info end point.
+     * @return
+     * @throws IdentityOAuth2Exception
+     */
+    @Override
+    public List<RequestedClaim> getRequestedClaims(String token, String codeId, boolean isUserInfo) throws IdentityOAuth2Exception {
+        Connection connection = IdentityDatabaseUtil.getDBConnection();
+        PreparedStatement prepStmt = null;
+        ResultSet resultSet = null;
+        List<RequestedClaim> essentialClaims = new ArrayList<>();
+        try {
+            String sql = SQLQueries.RETRIEVE_REQUESTED_CLAIMS_BY_TOKEN;
+            String tokenId = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO().
+                    getTokenIdByAccessToken(token);
+
+            prepStmt = connection.prepareStatement(sql);
+            prepStmt.setString(1, tokenId);
+            prepStmt.setBoolean(2, isUserInfo);
+            resultSet = prepStmt.executeQuery();
+
+            while (resultSet.next()) {
+                RequestedClaim requestedClaim = new RequestedClaim();
+                requestedClaim.setName(resultSet.getString(1));
+                requestedClaim.setEssential(resultSet.getBoolean(2));
+                requestedClaim.setValue(resultSet.getString(3));
+                essentialClaims.add(requestedClaim);
+            }
+            connection.commit();
+        } catch (SQLException e) {
+            String errorMsg = "Error occurred while retrieving request object.";
+            throw new IdentityOAuth2Exception(errorMsg, e);
+        } finally {
+            IdentityDatabaseUtil.closeAllConnections(connection, resultSet, prepStmt);
+        }
+        return essentialClaims;
+    }
+
     @Override
     public void refreshRequestObjectReference(String oldAccessTokenId, String newAccessTokenId)
             throws IdentityOAuth2Exception {

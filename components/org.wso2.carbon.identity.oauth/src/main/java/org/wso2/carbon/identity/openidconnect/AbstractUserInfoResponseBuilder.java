@@ -41,6 +41,7 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
+import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.util.ArrayList;
@@ -78,34 +79,24 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
         filteredUserClaims.putAll(essentialClaims);
 
         //Handle essential claims of the request object
-        filterEssentialClaimsFromRequestObject(tokenResponse, userClaims, filteredUserClaims);
+        filteredUserClaims.putAll(filterClaimsFromRequestObject(userClaims, getAccessToken(tokenResponse)));
 
         return buildResponse(tokenResponse, spTenantDomain, filteredUserClaims);
     }
 
-    private void filterEssentialClaimsFromRequestObject(OAuth2TokenValidationResponseDTO tokenResponse,
-                                                        Map<String, Object> userClaims,
-                                                        Map<String, Object> filteredUserClaims)
-            throws UserInfoEndpointException {
-
-        List<String> essentialClaimsFromRequestObject = new ArrayList<>();
-        RequestObjectService requestObjectService = OpenIDConnectServiceComponentHolder.getRequestObjectService();
+    private Map<String, Object> filterClaimsFromRequestObject(Map<String, Object> userAttributes,
+                                                              String token) throws OAuthSystemException {
         try {
-            if (requestObjectService != null) {
-                essentialClaimsFromRequestObject = requestObjectService.getEssentialClaims(getAccessToken(tokenResponse)
-                        , null, true);
-            }
+            List<RequestedClaim> requestedClaims = OpenIDConnectServiceComponentHolder.getRequestObjectService().
+                    getRequestedClaimsForUserInfo(token, null);
+            return OpenIDConnectServiceComponentHolder.getInstance()
+                    .getHighestPriorityOpenIDConnectClaimFilter()
+                    .getClaimsFilteredByEssentialClaims(userAttributes, requestedClaims);
         } catch (RequestObjectException e) {
-            throw new UserInfoEndpointException("Error while obtaining the essential claim values requested from the " +
-                    "Request Object.");
+            throw new OAuthSystemException("Unable to retrieve requested claims from Request Object." + e);
         }
-        for (String essentialClaim : essentialClaimsFromRequestObject) {
-            filteredUserClaims.put(essentialClaim, userClaims.get(essentialClaim));
-            if (log.isDebugEnabled()) {
-                log.debug("The " + essentialClaim + " is marked as an essential claim for userinfo in the OIDC Request" +
-                        " Object.");
-            }
-        }
+
+
     }
 
     /**
@@ -296,19 +287,6 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
             }
         }
         return new ArrayList<>();
-    }
-
-    private RequestObject getRequestObject(OAuth2TokenValidationResponseDTO tokenResponse) {
-
-        AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(getAccessToken(tokenResponse));
-        AuthorizationGrantCacheEntry cacheEntry = AuthorizationGrantCache.getInstance()
-                .getValueFromCacheByToken(cacheKey);
-        RequestObject requestObject = null;
-
-        if (cacheEntry != null) {
-            requestObject = cacheEntry.getRequestObject();
-        }
-        return requestObject;
     }
 
     private boolean isLocalUser(AuthenticatedUser authenticatedUser) {

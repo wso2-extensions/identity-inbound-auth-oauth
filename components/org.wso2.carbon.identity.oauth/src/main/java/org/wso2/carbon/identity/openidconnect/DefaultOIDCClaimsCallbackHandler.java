@@ -52,6 +52,7 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
+import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.user.api.UserRealm;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
@@ -79,7 +80,6 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
     private final static Log log = LogFactory.getLog(DefaultOIDCClaimsCallbackHandler.class);
     private final static String OAUTH2 = "oauth2";
     private final static String OIDC_DIALECT = "http://wso2.org/oidc/claim";
-    private static final String REQUEST_OBJECT = "requestObject";
     private final static String ATTRIBUTE_SEPARATOR = FrameworkUtils.getMultiAttributeSeparator();
 
     @Override
@@ -162,11 +162,27 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
                 clientId, spTenantDomain));
 
         //Handle essential claims of the request object
-        filterEssentialClaimsFromRequestObject(null, userClaimsInOIDCDialect, filterClaimsByScopesAndEssentialClaims,
-                requestMsgCtx);
+        String token = getAccessToken(requestMsgCtx);
+        filterClaimsByScopesAndEssentialClaims.putAll(filterClaimsFromRequestObject(userClaimsInOIDCDialect, token));
+
 
         // Restrict Claims going into the token based on the scope and the essential claims
         return filterClaimsByScopesAndEssentialClaims;
+    }
+
+    private Map<String, Object> filterClaimsFromRequestObject(Map<String, Object> userAttributes,
+                                                       String token) throws OAuthSystemException {
+        try {
+            List<RequestedClaim> requestedClaims = OpenIDConnectServiceComponentHolder.getRequestObjectService().
+                    getRequestedClaimsForIDToken(token, null);
+            return OpenIDConnectServiceComponentHolder.getInstance()
+                    .getHighestPriorityOpenIDConnectClaimFilter()
+                    .getClaimsFilteredByEssentialClaims(userAttributes, requestedClaims);
+        } catch (RequestObjectException e) {
+            throw new OAuthSystemException("Unable to retrieve requested claims from Request Object." + e);
+        }
+
+
     }
 
 
@@ -243,42 +259,10 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
                 clientId, spTenantDomain));
 
         //Handle essential claims of the request object
-        filterEssentialClaimsFromRequestObject(authzReqMessageContext, userClaimsInOIDCDialect,
-                filterClaimsByScopesAndEssentialClaims, null);
+        String token = getAccessToken(authzReqMessageContext);
+        filterClaimsByScopesAndEssentialClaims.putAll(filterClaimsFromRequestObject(userClaimsInOIDCDialect, token));
 
         return filterClaimsByScopesAndEssentialClaims;
-    }
-
-    private void filterEssentialClaimsFromRequestObject(OAuthAuthzReqMessageContext authzReqMessageContext,
-                                                        Map<String, Object> userClaimsInOIDCDialect,
-                                                        Map<String, Object> filterClaimsByScopesAndEssentialClaims,
-                                                        OAuthTokenReqMessageContext requestMsgCtx)
-            throws OAuthSystemException {
-
-        if (OpenIDConnectServiceComponentHolder.getRequestObjectService() != null) {
-            List<String> essentialClaimsFromRequestObject = new ArrayList<>();
-            try {
-                if (authzReqMessageContext != null) {
-                    essentialClaimsFromRequestObject = OpenIDConnectServiceComponentHolder.getRequestObjectService().
-                            getEssentialClaims(getAccessToken(authzReqMessageContext), null, false);
-                } else if (requestMsgCtx != null) {
-                    essentialClaimsFromRequestObject = OpenIDConnectServiceComponentHolder.getRequestObjectService().
-                            getEssentialClaims(getAccessToken(requestMsgCtx), null, false);
-                }
-            } catch (RequestObjectException e) {
-                throw new OAuthSystemException("Error while obtaining the essential claim values requested from the " +
-                        "Request Object.");
-            }
-            for (String essentialClaim : essentialClaimsFromRequestObject) {
-                if (StringUtils.isNotEmpty(essentialClaim)) {
-                    if (log.isDebugEnabled()) {
-                        log.debug("The " + essentialClaim + " is marked as an essentialClaim for id_token in the OIDC " +
-                                "Request Object.");
-                    }
-                    filterClaimsByScopesAndEssentialClaims.put(essentialClaim, userClaimsInOIDCDialect.get(essentialClaim));
-                }
-            }
-        }
     }
 
 
