@@ -23,7 +23,7 @@
         <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
         <artifactId>identity-inbound-auth-oauth</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <version>5.5.169-SNAPSHOT</version>
+        <version>5.5.181-SNAPSHOT</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -78,8 +78,10 @@
                             ${project.artifactId}
                         </Bundle-SymbolicName>
                         <Import-Package>
-                            org.apache.oltu.oauth2.common.validators; version="${oltu.package.import.version.range}",
-                            org.wso2.carbon.identity.base; version="${carbon.identity.framework.imp.pkg.version.range}"
+                            org.apache.oltu.oauth2.as.validator; version="${oltu.package.import.version.range}",
+                            org.apache.oltu.oauth2.common.*; version="${oltu.package.import.version.range}",
+                            org.wso2.carbon.identity.base; version="${carbon.identity.framework.imp.pkg.version.range}",
+                            javax.servlet.http; version="${imp.pkg.version.javax.servlet}"
                         </Import-Package>
                         <Export-Package>
                             org.wso2.carbon.identity.oauth.common.*;version="${identity.inbound.auth.oauth.exp.pkg.version}"

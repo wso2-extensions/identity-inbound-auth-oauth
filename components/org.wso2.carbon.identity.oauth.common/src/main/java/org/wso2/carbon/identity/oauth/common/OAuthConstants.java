@@ -97,6 +97,10 @@ public final class OAuthConstants {
     //Response types
     public static final String NONE = "none";
     public static final String TOKEN = "token";
+    public static final String CODE_TOKEN = "code token";
+    public static final String CODE_IDTOKEN = "code id_token";
+    public static final String CODE_IDTOKEN_TOKEN = "code id_token token";
+    public static final String IDTOKEN_TOKEN = "id_token token";
 
     //Constants used for OAuth/OpenID Connect Configuration UI
     public static final String CALLBACK_URL_REGEXP_PREFIX = "regexp=";
@@ -302,6 +306,8 @@ public final class OAuthConstants {
         public static final String NONCE = "nonce";
         public static final String ACR = "acr";
         public static final String MAX_AGE = "max_age";
+        // OIDC Specification : http://openid.net/specs/openid-connect-core-1_0.html
+        public static final String C_HASH = "c_hash";
 
         private OIDCClaims() {}
     }

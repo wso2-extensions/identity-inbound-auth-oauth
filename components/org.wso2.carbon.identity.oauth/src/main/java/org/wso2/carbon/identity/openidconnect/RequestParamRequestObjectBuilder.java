@@ -28,6 +28,7 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.model.Claim;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 
@@ -74,6 +75,10 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
                     oAuth2Parameters);
             if (StringUtils.isNotBlank(OAuthServerConfiguration.getInstance().getRequestObjectValidator().getPayload())) {
                 requestObject = OAuthServerConfiguration.getInstance().getRequestObjectValidator().getPayload();
+            }
+            if (!OAuth2Util.isValidJson(requestObject)) {
+                throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST, "Error occured while " +
+                        "processing the request parameter value json object.");
             }
             JSONObject jsonObjectRequestedClaims = (JSONObject) parser.parse(requestObject);
             processClaims(jsonObjectRequestedClaims, requestObjectInstance);
@@ -191,11 +196,11 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
         Claim claim = new Claim();
         claim.setName(claimName);
         if (jsonObjectClaimAttributes != null) {
-
+            Map<String, String> claimAttributesMap = new HashMap<>();
             //To iterate claim attributes object to fetch the attribute key and value for the fetched
             // requested claim in the fetched claim requestor
             for (Map.Entry<String, Object> claimAttributes : jsonObjectClaimAttributes.entrySet()) {
-                Map<String, String> claimAttributesMap = new HashMap<>();
+
                 if (jsonObjectClaimAttributes.get(claimAttributes.getKey()) != null) {
                     claimAttributeValue = jsonObjectClaimAttributes.get(claimAttributes.getKey()).toString();
                 }

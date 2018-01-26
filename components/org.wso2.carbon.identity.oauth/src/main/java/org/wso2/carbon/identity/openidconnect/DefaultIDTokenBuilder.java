@@ -68,8 +68,6 @@ import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -80,7 +78,6 @@ import java.util.Map;
 import javax.xml.namespace.QName;
 
 import static org.apache.commons.lang.StringUtils.isNotBlank;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.AT_HASH;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.AUTH_TIME;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.AZP;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.NONCE;
@@ -113,10 +110,10 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
     @Override
     public String buildIDToken(OAuthTokenReqMessageContext tokenReqMsgCtxt,
                                OAuth2AccessTokenRespDTO tokenRespDTO) throws IdentityOAuth2Exception {
-
         String clientId = tokenReqMsgCtxt.getOauth2AccessTokenReqDTO().getClientId();
         String spTenantDomain = getSpTenantDomain(tokenReqMsgCtxt);
         String idTokenIssuer = getIdTokenIssuer(spTenantDomain);
+        String accessToken = tokenRespDTO.getAccessToken();
 
         long idTokenValidityInMillis = getIDTokenExpiryInMillis();
         long currentTimeInMillis = Calendar.getInstance().getTimeInMillis();
@@ -140,12 +137,6 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
             }
         }
 
-        String atHash = null;
-        String accessToken = tokenRespDTO.getAccessToken();
-        if (isIDTokenSigned() && isNotBlank(accessToken)) {
-            atHash = getAtHash(accessToken);
-        }
-
         if (log.isDebugEnabled()) {
             log.debug(buildDebugMessage(idTokenIssuer, subjectClaim, nonceValue, idTokenValidityInMillis,
                     currentTimeInMillis));
@@ -161,9 +152,6 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         jwtClaimsSet.setIssueTime(new Date(currentTimeInMillis));
         if (authTime != 0) {
             jwtClaimsSet.setClaim(AUTH_TIME, authTime / 1000);
-        }
-        if (atHash != null) {
-            jwtClaimsSet.setClaim(AT_HASH, atHash);
         }
         if (nonceValue != null) {
             jwtClaimsSet.setClaim(NONCE, nonceValue);
@@ -231,13 +219,6 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         if (authTime != 0) {
             jwtClaimsSet.setClaim(AUTH_TIME, authTime / 1000);
         }
-
-        String responseType = authzReqMessageContext.getAuthorizationReqDTO().getResponseType();
-        if (isIDTokenSigned() && isAccessTokenHashApplicable(responseType) && isNotBlank(accessToken)) {
-            String atHash = getAtHash(accessToken);
-            jwtClaimsSet.setClaim(AT_HASH, atHash);
-        }
-
         if (nonceValue != null) {
             jwtClaimsSet.setClaim(OAuthConstants.OIDCClaims.NONCE, nonceValue);
         }
@@ -504,28 +485,6 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         // Need to add client_id as an audience value according to the spec.
         oidcAudiences.add(clientId);
         return oidcAudiences;
-    }
-
-    private String getAtHash(String accessToken) throws IdentityOAuth2Exception {
-        String digAlg = OAuth2Util.mapDigestAlgorithm(signatureAlgorithm);
-        MessageDigest md;
-        try {
-            md = MessageDigest.getInstance(digAlg);
-        } catch (NoSuchAlgorithmException e) {
-            throw new IdentityOAuth2Exception("Error creating the at_hash value. Invalid Digest Algorithm: " + digAlg);
-        }
-
-        md.update(accessToken.getBytes(Charsets.UTF_8));
-        byte[] digest = md.digest();
-        int leftHalfBytes = 16;
-        if (SHA384.equals(digAlg)) {
-            leftHalfBytes = 24;
-        } else if (SHA512.equals(digAlg)) {
-            leftHalfBytes = 32;
-        }
-        byte[] leftmost = new byte[leftHalfBytes];
-        System.arraycopy(digest, 0, leftmost, 0, leftHalfBytes);
-        return new String(Base64.encodeBase64URLSafe(leftmost), Charsets.UTF_8);
     }
 
     private ServiceProvider getServiceProvider(String spTenantDomain,

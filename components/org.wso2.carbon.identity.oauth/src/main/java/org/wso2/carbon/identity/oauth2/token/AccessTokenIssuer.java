@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth2.token;
 
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.error.OAuthError;
@@ -54,6 +55,8 @@ import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
+
 /**
  * This class is used to issue access tokens and refresh tokens.
  */
@@ -66,6 +69,7 @@ public class AccessTokenIssuer {
     private List<ClientAuthenticationHandler> clientAuthenticationHandlers =
             new ArrayList<ClientAuthenticationHandler>();
     private AppInfoCache appInfoCache;
+    public static final String OAUTH_APP_DO = "OAuthAppDO";
 
     /**
      * Private constructor which will not allow to create objects of this class from outside
@@ -120,16 +124,7 @@ public class AccessTokenIssuer {
 
         AuthorizationGrantHandler authzGrantHandler = authzGrantHandlers.get(grantType);
 
-        // loading the stored application data
-        OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(tokenReqDTO.getClientId());
-
-        // set the tenantDomain of the SP in the tokenReqDTO
-        // indirectly we can say that the tenantDomain of the SP is the tenantDomain of the user who created SP
-        // this is done to avoid having to send the tenantDomain as a query param to the token endpoint
-        tokenReqDTO.setTenantDomain(OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO));
-
         OAuthTokenReqMessageContext tokReqMsgCtx = new OAuthTokenReqMessageContext(tokenReqDTO);
-        tokReqMsgCtx.addProperty("OAuthAppDO", oAuthAppDO);
         boolean isRefreshRequest = GrantType.REFRESH_TOKEN.toString().equals(grantType);
 
         triggerPreListeners(tokenReqDTO, tokReqMsgCtx, isRefreshRequest);
@@ -156,14 +151,32 @@ public class AccessTokenIssuer {
         }
 
         if (authzGrantHandler == null) {
+            String errorMsg = "Unsupported grant type : " + grantType + ", is used.";
             if (log.isDebugEnabled()) {
-                log.debug("Unsupported grant type for client Id : " + tokenReqDTO.getClientId());
+                log.debug(errorMsg);
             }
             tokenRespDTO = handleError(OAuthError.TokenResponse.UNSUPPORTED_GRANT_TYPE,
-                    "Unsupported grant type " + grantType + " is used.", tokenReqDTO);
+                    errorMsg, tokenReqDTO);
             setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
             triggerPostListeners(tokenReqDTO, tokenRespDTO, tokReqMsgCtx, isRefreshRequest);
             return tokenRespDTO;
+        }
+
+        ClientAuthenticationHandler clientAuthHandler = null;
+        if (authenticatorHandlerIndex > -1) {
+            clientAuthHandler = clientAuthenticationHandlers.get(authenticatorHandlerIndex);
+        }
+        boolean isAuthenticated = false;
+        // If the client is not confidential then there is no need to authenticate the client.
+        if (clientAuthHandler != null && authzGrantHandler.isConfidentialClient()) {
+            isAuthenticated = clientAuthHandler.authenticateClient(tokReqMsgCtx);
+        } else if (!authzGrantHandler.isConfidentialClient()) {
+            if (StringUtils.isEmpty(tokenReqDTO.getClientId())) {
+                if (clientAuthHandler != null) {
+                    tokenReqDTO.setClientId(clientAuthHandler.getClientId(tokReqMsgCtx));
+                }
+            }
+            isAuthenticated = true;
         }
 
         if (authenticatorHandlerIndex < 0 && authzGrantHandler.isConfidentialClient()) {
@@ -179,16 +192,6 @@ public class AccessTokenIssuer {
             return tokenRespDTO;
         }
 
-        ClientAuthenticationHandler clientAuthHandler = null;
-        if (authenticatorHandlerIndex > -1) {
-            clientAuthHandler = clientAuthenticationHandlers.get(authenticatorHandlerIndex);
-        }
-        boolean isAuthenticated;
-        if (clientAuthHandler != null) {
-            isAuthenticated = clientAuthHandler.authenticateClient(tokReqMsgCtx);
-        } else {
-            isAuthenticated = true;
-        }
         if (!isAuthenticated) {
             if (log.isDebugEnabled()) {
                 log.debug("Client Authentication failed for client Id: " + tokenReqDTO.getClientId());
@@ -199,6 +202,16 @@ public class AccessTokenIssuer {
             triggerPostListeners(tokenReqDTO, tokenRespDTO, tokReqMsgCtx, isRefreshRequest);
             return tokenRespDTO;
         }
+
+        // loading the stored application data
+        OAuthAppDO oAuthAppDO = getOAuthApplication(tokenReqDTO.getClientId());
+
+        // set the tenantDomain of the SP in the tokenReqDTO
+        // indirectly we can say that the tenantDomain of the SP is the tenantDomain of the user who created SP
+        // this is done to avoid having to send the tenantDomain as a query param to the token endpoint
+        tokenReqDTO.setTenantDomain(OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO));
+
+        tokReqMsgCtx.addProperty(OAUTH_APP_DO, oAuthAppDO);
 
         if (!authzGrantHandler.isOfTypeApplicationUser()) {
             tokReqMsgCtx.setAuthorizedUser(oAuthAppDO.getUser());
@@ -460,5 +473,35 @@ public class AccessTokenIssuer {
         if (tokReqMsgCtx.getProperty(OAuthConstants.RESPONSE_HEADERS_PROPERTY) != null) {
             tokenRespDTO.setResponseHeaders((ResponseHeader[]) tokReqMsgCtx.getProperty(OAuthConstants.RESPONSE_HEADERS_PROPERTY));
         }
+    }
+
+
+    private OAuthAppDO getOAuthApplication(String consumerKey) throws InvalidOAuthClientException,
+            IdentityOAuth2Exception {
+
+        OAuthAppDO authAppDO = OAuth2Util.getAppInformationByClientId(consumerKey);
+        String appState = authAppDO.getState();
+        if (StringUtils.isEmpty(appState)) {
+            if (log.isDebugEnabled()) {
+                log.debug("A valid OAuth client could not be found for client_id: " + consumerKey);
+            }
+            throw new InvalidOAuthClientException("A valid OAuth client could not be found for client_id: " + consumerKey);
+        }
+
+        if (isNotActiveState(appState)) {
+            if (log.isDebugEnabled()) {
+                log.debug("App is not in active state in client ID: " + consumerKey + ". App state is:" + appState);
+            }
+            throw new InvalidOAuthClientException("Oauth application is not in active state");
+        }
+
+        if (log.isDebugEnabled()) {
+            log.debug("Oauth App validation success for consumer key: " + consumerKey);
+        }
+        return authAppDO;
+    }
+
+    private static boolean isNotActiveState(String appState) {
+        return !APP_STATE_ACTIVE.equalsIgnoreCase(appState);
     }
 }
