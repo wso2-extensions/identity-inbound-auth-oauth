@@ -606,8 +606,9 @@ public class OAuth2Service extends AbstractAdmin {
     }
 
     private boolean isClientAuthenticated(OAuthClientAuthnContext oAuthClientAuthnContext, String grantType) {
-        return oAuthClientAuthnContext != null && !StringUtils.equals(OAuthConstants.GrantTypes.IMPLICIT, grantType) &&
-                oAuthClientAuthnContext.isAuthenticated();
+        return (oAuthClientAuthnContext != null &&
+                oAuthClientAuthnContext.isAuthenticated() && !oAuthClientAuthnContext.isMultipleAuthenticatorsEngaged
+                ()) || StringUtils.equals(OAuthConstants.GrantTypes.IMPLICIT, grantType);
     }
 
     private String getErrorMessage(OAuthClientAuthnContext oAuthClientAuthnContext) {
