@@ -34,44 +34,60 @@ public interface RequestObjectDAO {
     /**
      * Store request object related data into related db tables.
      *
-     * @param consumerKeyId    consumer key
-     * @param codeId         code id
-     * @param accessTokenId  access token id
+     * @param consumerKeyId  consumer key
      * @param sessionDataKey session data key
      * @param claims         request object claims
      * @throws IdentityOAuth2Exception
      */
-    void insertRequestObjectData(String consumerKeyId, String codeId,
-                                 String accessTokenId, String sessionDataKey, List<List<RequestedClaim>> claims)
+    void insertRequestObjectData(String consumerKeyId, String sessionDataKey,
+                                 List<List<RequestedClaim>> claims)
             throws IdentityOAuth2Exception;
+
 
     /**
      * Update request object reference when the code or the token is generated.
      *
      * @param sessionDataKey session data key
      * @param codeId         code id
-     * @param accessTokenId  access token id
      * @throws IdentityOAuth2Exception
      */
-    void updateRequestObjectReference(String sessionDataKey, String codeId, String accessTokenId) throws IdentityOAuth2Exception;
+    void updateRequestObjectReferencebyCodeId(String sessionDataKey, String codeId)
+            throws IdentityOAuth2Exception;
 
     /**
-     * Delete request object reference in code or token revoke.
+     * Update request object reference when the code or the token is generated.
      *
-     * @param tokenId token id
+     * @param sessionDataKey session data key
+     * @param accessTokenId  accessTokenId
+     * @throws IdentityOAuth2Exception
+     */
+    void updateRequestObjectReferencebyTokenId(String sessionDataKey, String accessTokenId)
+            throws IdentityOAuth2Exception;
+
+    /**
+     * Delete request object reference in code revoke.
+     *
      * @param codeId code id
      * @throws IdentityOAuth2Exception
      * @throws IdentityOAuthAdminException
      */
 
-    void deleteRequestObjectReference(String tokenId, String codeId) throws IdentityOAuth2Exception,
+    void deleteRequestObjectReferenceByCode(String codeId) throws IdentityOAuth2Exception,
             IdentityOAuthAdminException;
+
+    /**
+     * Delete request object reference by token id in a token revoke.
+     *
+     * @param tokenId token id
+     * @throws IdentityOAuthAdminException
+     */
+    void deleteRequestObjectReferenceByTokenId(String tokenId) throws IdentityOAuthAdminException;
 
     /**
      * Retrieve essential claims for the id token and user info endpoint.
      *
-     * @param tokenId token id
-     * @param codeId code id
+     * @param tokenId    token id
+     * @param codeId     code id
      * @param isUserInfo return true if the claims are requested from user info end point.
      * @return
      * @throws IdentityOAuth2Exception
@@ -99,5 +115,12 @@ public interface RequestObjectDAO {
      */
     void refreshRequestObjectReference(String oldAccessToken, String newAccessToken) throws IdentityOAuth2Exception;
 
+    /**
+     * Updates code to token once a token is issued.
+     *
+     * @param codeId code id
+     * @param tokenId token id
+     * @throws IdentityOAuth2Exception
+     */
     void updateRequestObjectReferenceCodeToToken(String codeId, String tokenId) throws IdentityOAuth2Exception;
 }
