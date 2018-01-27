@@ -40,6 +40,9 @@ public class SQLQueries {
     public static final String UPDATE_REQUEST_OBJECT = "UPDATE IDN_OIDC_REQ_OBJECT_REFERENCE SET " +
             "CODE_ID=?,TOKEN_ID=? WHERE SESSION_DATA_KEY=?";
 
+    public static final String RETRIEVE_REQUEST_OBJECT_REF_ID_BY_TOKEN_ID = "SELECT ID FROM " +
+            "IDN_OIDC_REQ_OBJECT_REFERENCE WHERE TOKEN_ID=?";
+
     public static final String REFRESH_REQUEST_OBJECT = "UPDATE IDN_OIDC_REQ_OBJECT_REFERENCE SET " +
             "TOKEN_ID=? WHERE TOKEN_ID=?";
 

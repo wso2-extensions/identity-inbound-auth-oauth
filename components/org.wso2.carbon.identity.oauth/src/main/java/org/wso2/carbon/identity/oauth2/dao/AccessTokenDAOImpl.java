@@ -1221,13 +1221,14 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             // store new token in the DB
             insertAccessToken(newAccessToken, consumerKey, accessTokenDO, connection, userStoreDomain);
 
-            OAuth2TokenUtil.postRefreshAccessToken(oldAccessTokenId, accessTokenDO.getTokenId(), tokenState);
-
             // update new access token against authorization code if token obtained via authorization code grant type
             updateTokenIdIfAutzCodeGrantType(oldAccessTokenId, accessTokenDO.getTokenId(), connection);
 
             // commit both transactions
             connection.commit();
+
+            //Post refresh access token event
+            OAuth2TokenUtil.postRefreshAccessToken(oldAccessTokenId, accessTokenDO.getTokenId(), tokenState);
         } catch (SQLException e) {
             String errorMsg = "Error while regenerating access token";
             throw new IdentityOAuth2Exception(errorMsg, e);
