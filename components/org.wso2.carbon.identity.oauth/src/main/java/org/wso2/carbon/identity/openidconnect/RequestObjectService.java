@@ -100,7 +100,7 @@ public class RequestObjectService {
         }
 
         try {
-            essentialClaims = RequestObjectPersistenceFactory.getInstance().getRequestObjectDAO()
+            essentialClaims = OAuthTokenPersistenceFactory.getInstance().getRequestObjectDAO()
                     .getRequestedClaims(token, codeId, isUserInfo);
         } catch (IdentityOAuth2Exception e) {
             throw new RequestObjectException(e.getMessage());
