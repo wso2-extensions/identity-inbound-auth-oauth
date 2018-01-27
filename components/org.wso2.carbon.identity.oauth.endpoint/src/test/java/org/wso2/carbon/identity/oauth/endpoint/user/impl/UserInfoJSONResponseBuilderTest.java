@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth.endpoint.user.impl;
 
 import org.apache.oltu.oauth2.common.utils.JSONUtils;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.DataProvider;
@@ -31,9 +32,12 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.endpoint.util.ClaimUtil;
+import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImpl;
 import org.wso2.carbon.identity.openidconnect.RequestObjectService;
+import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.registry.core.service.RegistryService;
 
@@ -65,8 +69,20 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
    private RequestObjectService requestObjectService;
 
     @BeforeTest
-    public void setUpTest() {
+    public void setUpTest() throws RequestObjectException {
         userInfoJSONResponseBuilder = new UserInfoJSONResponseBuilder();
+    }
+
+    private void setUpRequestObjectService() throws RequestObjectException {
+        List<RequestedClaim> requestedClaims =  Collections.EMPTY_LIST;
+        when(requestObjectService.getRequestedClaimsForIDToken(anyString(), anyString())).
+                thenReturn(requestedClaims);
+        when(requestObjectService.getRequestedClaimsForUserInfo(anyString(), anyString())).
+                thenReturn(requestedClaims);
+        OpenIDConnectServiceComponentHolder.getInstance()
+                .getOpenIDConnectClaimFilters()
+                .add(new OpenIDConnectClaimFilterImpl());
+        OpenIDConnectServiceComponentHolder.setRequestObjectService(requestObjectService);
     }
 
     @DataProvider(name = "responseStringInputs")
@@ -82,6 +98,7 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
                                       Map<String, Object> expectedClaims) throws Exception {
 
         try {
+            setUpRequestObjectService();
             prepareForResponseClaimTest(inputClaims, oidcScopeMap, getClaimsFromCache);
             String responseString =
                     userInfoJSONResponseBuilder.getResponseString(
@@ -116,6 +133,8 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
 
         List<String> essentialClaims = Collections.singletonList(EMAIL);
         prepareForResponseClaimTest(inputClaims, oidcScopeMap, false);
+
+        setUpRequestObjectService();
 
         // Mock for essential claims.
         when(OAuth2Util.getEssentialClaims(anyString(), anyString())).thenReturn(essentialClaims);
@@ -161,11 +180,9 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
     private void testBooleanClaimInUserInfoResponse(String claimUri, String claimValue) throws Exception {
 
         initSingleClaimTest(claimUri, claimValue);
-        List<RequestedClaim> requestedClaims =  Collections.EMPTY_LIST;
-        when(requestObjectService.getRequestedClaimsForIDToken(anyString(), anyString())).
-                thenReturn(requestedClaims);
-        when(requestObjectService.getRequestedClaimsForUserInfo(anyString(), anyString())).
-                thenReturn(requestedClaims);
+
+        setUpRequestObjectService();
+
         String responseString =
                 userInfoJSONResponseBuilder.getResponseString(getTokenResponseDTO(AUTHORIZED_USER_FULL_QUALIFIED));
 
