@@ -21,7 +21,7 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
-import org.wso2.carbon.identity.openidconnect.dao.RequestObjectPersistenceFactory;
+import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 
 import java.util.List;
@@ -37,23 +37,20 @@ public class RequestObjectService {
      * To invoke the RequestObjectPersistenceFactory to insert request object.
      *
      * @param consumerKey    clientKey
-     * @param codeId         codeId
-     * @param accessTokenId  access token Id
      * @param sessionDataKey sessionDataKey
      * @param claims         list of claims
      * @throws RequestObjectException
      */
-    public void addRequestObject(String consumerKey, String codeId, String accessTokenId,
-                                 String sessionDataKey, List<List<RequestedClaim>> claims) throws RequestObjectException {
+    public void addRequestObject(String consumerKey, String sessionDataKey, List<List<RequestedClaim>> claims)
+            throws RequestObjectException {
 
         if (log.isDebugEnabled()) {
             log.debug("Invoking the RequestObjectPersistenceFactory to persist the request object claims against" +
                     " the sessionDataKey:" + sessionDataKey);
         }
         try {
-            RequestObjectPersistenceFactory.getInstance().getRequestObjectDAO()
-                    .insertRequestObjectData(consumerKey, codeId, accessTokenId,
-                            sessionDataKey, claims);
+            OAuthTokenPersistenceFactory.getInstance().getRequestObjectDAO().insertRequestObjectData
+                    (consumerKey, sessionDataKey, claims);
 
         } catch (IdentityOAuth2Exception e) {
             log.error("Error while persisting the Request Object against sessionDataKey: " + sessionDataKey, e);
@@ -78,7 +75,7 @@ public class RequestObjectService {
         }
 
         try {
-            essentialClaims = RequestObjectPersistenceFactory.getInstance().getRequestObjectDAO()
+            essentialClaims = OAuthTokenPersistenceFactory.getInstance().getRequestObjectDAO()
                     .getEssentialClaims(tokenId, codeId, isUserInfo);
         } catch (IdentityOAuth2Exception e) {
             throw new RequestObjectException(e.getMessage());

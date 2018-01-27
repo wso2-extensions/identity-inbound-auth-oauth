@@ -20,6 +20,10 @@ package org.wso2.carbon.identity.openidconnect.dao;
 
 public class SQLQueries {
 
+    private SQLQueries() {
+
+    }
+
     /**
      * OIDC Request Object related queries
      */
@@ -41,6 +45,9 @@ public class SQLQueries {
 
     public static final String REFRESH_REQUEST_OBJECT = "UPDATE IDN_OIDC_REQ_OBJECT_REFERENCE SET " +
             "TOKEN_ID=? WHERE TOKEN_ID=?";
+
+    public static final String DELETE_REQ_OBJECT_TOKEN_FOR_CODE = "DELETE FROM IDN_OIDC_REQ_OBJECT_REFERENCE WHERE TOKEN_ID =" +
+            " ?";
 
     public static final String UPDATE_REQUEST_OBJECT_TOKEN_FOR_CODE = "UPDATE IDN_OIDC_REQ_OBJECT_REFERENCE SET " +
             "TOKEN_ID=? WHERE CODE_ID=?";

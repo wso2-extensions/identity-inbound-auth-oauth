@@ -27,9 +27,9 @@ import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.openidconnect.OIDCConstants;
-import org.wso2.carbon.identity.openidconnect.dao.RequestObjectPersistenceFactory;
 
 import java.util.List;
 import java.util.Map;
@@ -83,38 +83,39 @@ public class RequestObjectHandler extends AbstractEventHandler {
             IdentityOAuth2Exception {
 
         String tokenId = (String) eventProperties.get(OIDCConstants.Event.TOKEN_ID);
-        RequestObjectPersistenceFactory.getInstance().getRequestObjectDAO().updateRequestObjectReference
-                (sessionDataKey, null, tokenId);
+        OAuthTokenPersistenceFactory.getInstance().getRequestObjectDAO().updateRequestObjectReferencebyTokenId
+                (sessionDataKey, tokenId);
     }
 
     private void postIssueCode(Map<String, Object> eventProperties, String sessionDataKey) throws
             IdentityOAuth2Exception {
 
         String codeId = (String) eventProperties.get(OIDCConstants.Event.CODE_ID);
-        RequestObjectPersistenceFactory.getInstance().getRequestObjectDAO().updateRequestObjectReference
-                (sessionDataKey, codeId, null);
+        OAuthTokenPersistenceFactory.getInstance().getRequestObjectDAO().updateRequestObjectReferencebyCodeId
+                (sessionDataKey, codeId);
     }
 
     private void postRefreshToken(Map<String, Object> eventProperties) throws IdentityOAuth2Exception {
 
         String oldAccessToken = (String) eventProperties.get(OIDCConstants.Event.OLD_ACCESS_TOKEN);
         String newAccessToken = (String) eventProperties.get(OIDCConstants.Event.NEW_ACCESS_TOKEN);
-        RequestObjectPersistenceFactory.getInstance().getRequestObjectDAO().refreshRequestObjectReference
+        OAuthTokenPersistenceFactory.getInstance().getRequestObjectDAO().refreshRequestObjectReference
                 (oldAccessToken, newAccessToken);
     }
 
     private void revokeCodeById(Map<String, Object> eventProperties, String codeState) throws IdentityOAuth2Exception,
             IdentityOAuthAdminException {
+
         String tokenId = (String) eventProperties.get(OIDCConstants.Event.TOKEN_ID);
         String codeId = (String) eventProperties.get(OIDCConstants.Event.CODE_ID);
 
         if (StringUtils.isNotEmpty(tokenId) && OAuthConstants.AuthorizationCodeState.INACTIVE.equals(codeState)) {
             //update the token id  of request object reference identified by code id
-            RequestObjectPersistenceFactory.getInstance().getRequestObjectDAO().updateRequestObjectReferenceCodeToToken(codeId, tokenId);
+            OAuthTokenPersistenceFactory.getInstance().getRequestObjectDAO().updateRequestObjectReferenceCodeToToken
+                    (codeId, tokenId);
         } else if (isCodeRemoved(codeState)) {
             //remove the request object reference upon removal of the code
-            RequestObjectPersistenceFactory.getInstance().getRequestObjectDAO().deleteRequestObjectReference
-                    (null, codeId);
+            OAuthTokenPersistenceFactory.getInstance().getRequestObjectDAO().deleteRequestObjectReferenceByCode(codeId);
 
         }
     }
@@ -124,9 +125,8 @@ public class RequestObjectHandler extends AbstractEventHandler {
 
         if (isCodeRemoved(tokenState)) {
             String tokenId = (String) eventProperties.get(OIDCConstants.Event.TOKEN_ID);
-            RequestObjectPersistenceFactory.getInstance().getRequestObjectDAO().deleteRequestObjectReference
-                    (null, tokenId);
-
+            OAuthTokenPersistenceFactory.getInstance().getRequestObjectDAO().deleteRequestObjectReferenceByTokenId
+                    (tokenId);
         }
     }
 
@@ -139,12 +139,12 @@ public class RequestObjectHandler extends AbstractEventHandler {
             String codeId = authzCodeDO.getAuthzCodeId();
             String tokenId = authzCodeDO.getOauthTokenId();
             if (isCodeRemove) {
-                RequestObjectPersistenceFactory.getInstance().getRequestObjectDAO().deleteRequestObjectReference
-                        (null, codeId);
+                OAuthTokenPersistenceFactory.getInstance().getRequestObjectDAO().deleteRequestObjectReferenceByCode
+                        (codeId);
             } else if (StringUtils.isNotEmpty(tokenId) && OAuthConstants.AuthorizationCodeState
                     .INACTIVE.equals(codeState)) {
                 //update the token id  of request object reference identified by code id
-                RequestObjectPersistenceFactory.getInstance().getRequestObjectDAO()
+                OAuthTokenPersistenceFactory.getInstance().getRequestObjectDAO()
                         .updateRequestObjectReferenceCodeToToken(codeId, tokenId);
 
             }
@@ -157,8 +157,8 @@ public class RequestObjectHandler extends AbstractEventHandler {
         if (isTokenRemoved(tokenState)) {
             List<String> accessTokens = (List) eventProperties.get(OIDCConstants.Event.ACEESS_TOKENS);
             for (String accessToken : accessTokens) {
-                RequestObjectPersistenceFactory.getInstance().getRequestObjectDAO().deleteRequestObjectReference
-                        (accessToken, null);
+                OAuthTokenPersistenceFactory.getInstance().getRequestObjectDAO().deleteRequestObjectReferenceByTokenId
+                        (accessToken);
             }
         }
     }
