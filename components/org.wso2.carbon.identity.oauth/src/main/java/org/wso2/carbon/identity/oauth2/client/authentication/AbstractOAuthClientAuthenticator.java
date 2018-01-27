@@ -18,6 +18,7 @@ package org.wso2.carbon.identity.oauth2.client.authentication;
 
 import org.wso2.carbon.identity.core.handler.AbstractIdentityHandler;
 import org.wso2.carbon.identity.core.handler.AbstractIdentityMessageHandler;
+import org.wso2.carbon.identity.core.handler.InitConfig;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.Enumeration;
@@ -30,6 +31,14 @@ import java.util.Map;
  */
 public abstract class AbstractOAuthClientAuthenticator extends AbstractIdentityHandler implements
         OAuthClientAuthenticator {
+
+    /**
+     * Default constructor will initialize property values read from identity.xml
+     */
+    public AbstractOAuthClientAuthenticator() {
+
+        init(new InitConfig());
+    }
 
     /**
      * Get the set of body parameters.
@@ -46,23 +55,6 @@ public abstract class AbstractOAuthClientAuthenticator extends AbstractIdentityH
             }
         });
         return stringParams;
-    }
-
-    /**
-     * Get HTTP headers as string map
-     *
-     * @param request HttpServeletRequest
-     * @return HTTP headers as a string parameter map
-     */
-    protected Map<String, String> getHeaders(HttpServletRequest request) {
-
-        Map<String, String> headers = new HashMap<>();
-        Enumeration<String> headerNames = request.getHeaderNames();
-        while (headerNames.hasMoreElements()) {
-            String attributeName = headerNames.nextElement();
-            headers.put(attributeName, request.getHeader(attributeName));
-        }
-        return headers;
     }
 
 }

@@ -39,6 +39,8 @@
             <class name="org.wso2.carbon.identity.openidconnect.OIDCRequestObjectUtilTest"/>
             <class name="org.wso2.carbon.identity.openidconnect.dao.RequestObjectDAOImplTest"/>
             <class name="org.wso2.carbon.identity.openidconnect.handlers.RequestObjectHandlerTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.client.authentication.BasicAuthClientAuthenticatorTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnServiceTest"/>
         </classes>
     </test>
     <test name="oauth.tests.with.debug.disabled" preserve-order="false" parallel="false">
