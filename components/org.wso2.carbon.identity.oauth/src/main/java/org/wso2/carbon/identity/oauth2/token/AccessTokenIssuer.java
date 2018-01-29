@@ -44,16 +44,13 @@ import org.wso2.carbon.identity.oauth2.ResponseHeader;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
-import org.wso2.carbon.identity.oauth2.token.handlers.clientauth.ClientAuthenticationHandler;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.IDTokenBuilder;
 import org.wso2.carbon.utils.CarbonUtils;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Hashtable;
-import java.util.List;
 import java.util.Map;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
@@ -67,8 +64,6 @@ public class AccessTokenIssuer {
     private static Log log = LogFactory.getLog(AccessTokenIssuer.class);
     private Map<String, AuthorizationGrantHandler> authzGrantHandlers =
             new Hashtable<String, AuthorizationGrantHandler>();
-    private List<ClientAuthenticationHandler> clientAuthenticationHandlers =
-            new ArrayList<ClientAuthenticationHandler>();
     private AppInfoCache appInfoCache;
     public static final String OAUTH_APP_DO = "OAuthAppDO";
 
@@ -78,7 +73,6 @@ public class AccessTokenIssuer {
     private AccessTokenIssuer() throws IdentityOAuth2Exception {
 
         authzGrantHandlers = OAuthServerConfiguration.getInstance().getSupportedGrantTypes();
-        clientAuthenticationHandlers = OAuthServerConfiguration.getInstance().getSupportedClientAuthHandlers();
         appInfoCache = AppInfoCache.getInstance();
         if (appInfoCache != null) {
             if (log.isDebugEnabled()) {
@@ -132,11 +126,11 @@ public class AccessTokenIssuer {
 
         OAuthClientAuthnContext oAuthClientAuthnContext = tokenReqDTO.getoAuthClientAuthnContext();
 
-        if(oAuthClientAuthnContext == null) {
-           oAuthClientAuthnContext = new OAuthClientAuthnContext();
-           oAuthClientAuthnContext.setAuthenticated(false);
-           oAuthClientAuthnContext.setErrorMessage("Client Authentication Failed");
-           oAuthClientAuthnContext.setErrorCode(OAuthError.TokenResponse.INVALID_REQUEST);
+        if (oAuthClientAuthnContext == null) {
+            oAuthClientAuthnContext = new OAuthClientAuthnContext();
+            oAuthClientAuthnContext.setAuthenticated(false);
+            oAuthClientAuthnContext.setErrorMessage("Client Authentication Failed");
+            oAuthClientAuthnContext.setErrorCode(OAuthError.TokenResponse.INVALID_REQUEST);
         }
 
         // Will return an invalid request response if multiple authentication mechanisms are engaged irrespective of
@@ -459,7 +453,6 @@ public class AccessTokenIssuer {
         }
     }
 
-
     private OAuthAppDO getOAuthApplication(String consumerKey) throws InvalidOAuthClientException,
             IdentityOAuth2Exception {
 
@@ -486,6 +479,7 @@ public class AccessTokenIssuer {
     }
 
     private static boolean isNotActiveState(String appState) {
+
         return !APP_STATE_ACTIVE.equalsIgnoreCase(appState);
     }
 }

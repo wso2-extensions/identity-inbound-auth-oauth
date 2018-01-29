@@ -46,8 +46,6 @@ import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.test.utils.CommonTestUtils;
-import org.wso2.carbon.identity.oauth2.token.handlers.clientauth.BasicAuthClientAuthHandler;
-import org.wso2.carbon.identity.oauth2.token.handlers.clientauth.ClientAuthenticationHandler;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.PasswordGrantHandler;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -56,14 +54,10 @@ import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 import org.wso2.carbon.utils.CarbonUtils;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
-
 import java.lang.reflect.Field;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Hashtable;
-import java.util.List;
 import java.util.Map;
 
 import static org.mockito.Matchers.any;
@@ -76,6 +70,7 @@ import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
 
 /**
  * Unit test cases for {@link AccessTokenIssuer}
@@ -104,9 +99,6 @@ public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
     private OAuth2AccessTokenRespDTO mockOAuth2AccessTokenRespDTO;
 
     @Mock
-    private BasicAuthClientAuthHandler basicAuthClientAuthHandler;
-
-    @Mock
     private OAuth2AccessTokenReqDTO tokenReqDTO;
 
     private static final String DUMMY_GRANT_TYPE = "dummy_grant_type";
@@ -116,6 +108,7 @@ public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
 
     @BeforeMethod
     public void setUp() throws Exception {
+
         mockStatic(CarbonUtils.class);
 
         mockStatic(OAuthServerConfiguration.class);
@@ -138,6 +131,7 @@ public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
 
     @DataProvider(name = "appConfigProvider")
     public Object[][] provideAppConfigData() {
+
         return new Object[][]{
                 {null},
                 {mock(AppInfoCache.class)}
@@ -146,6 +140,7 @@ public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
 
     @Test(dataProvider = "appConfigProvider")
     public void testGetInstance(Object appInfoCache) throws Exception {
+
         mockStatic(AppInfoCache.class);
         when(AppInfoCache.getInstance()).thenReturn((AppInfoCache) appInfoCache);
         CommonTestUtils.testSingleton(AccessTokenIssuer.getInstance(), AccessTokenIssuer.getInstance());
@@ -200,18 +195,6 @@ public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
         when(passwordGrantHandler.isConfidentialClient()).thenReturn(true);
 
         when(oAuthServerConfiguration.getSupportedGrantTypes()).thenReturn(authzGrantHandlers);
-
-        List<ClientAuthenticationHandler> clientAuthenticationHandlers = new ArrayList<>();
-        when(basicAuthClientAuthHandler.authenticateClient(any(OAuthTokenReqMessageContext.class))).thenReturn
-                (isAuthenticatedClient);
-        when(basicAuthClientAuthHandler.canAuthenticate(any(OAuthTokenReqMessageContext.class))).thenReturn
-                (canAuthenticate);
-        when(basicAuthClientAuthHandler.getClientId(any(OAuthTokenReqMessageContext.class))).thenReturn
-                (SOME_CLIENT_ID);
-        clientAuthenticationHandlers.add(basicAuthClientAuthHandler);
-
-        when(oAuthServerConfiguration.getSupportedClientAuthHandlers()).thenReturn(clientAuthenticationHandlers);
-
         AccessTokenIssuer tokenIssuer = AccessTokenIssuer.getInstance();
 
         when(tokenReqDTO.getGrantType()).thenReturn("password");
@@ -229,8 +212,6 @@ public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
     @Test
     public void testIssueFailedMultipleClientAuthentication() throws Exception {
 
-        ClientAuthenticationHandler anotherHandler = mock(ClientAuthenticationHandler.class);
-        when(anotherHandler.canAuthenticate(any(OAuthTokenReqMessageContext.class))).thenReturn(true);
         OAuth2AccessTokenReqDTO reqDTO = new OAuth2AccessTokenReqDTO();
         reqDTO.setGrantType(DUMMY_GRANT_TYPE);
         OAuthClientAuthnContext oAuthClientAuthnContext = new OAuthClientAuthnContext();
@@ -251,8 +232,7 @@ public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
      */
     @Test
     public void testIssueNoAuthorizationGrantHandler() throws Exception {
-        when(oAuthServerConfiguration.getSupportedClientAuthHandlers())
-                .thenReturn(new ArrayList<ClientAuthenticationHandler>());
+
         when(oAuthServerConfiguration.getSupportedGrantTypes())
                 .thenReturn(new HashMap<String, AuthorizationGrantHandler>());
 
@@ -275,13 +255,14 @@ public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
      */
     @Test
     public void testIssueWithNoClientAuthentication() throws Exception {
+
         AuthorizationGrantHandler dummyGrantHandler = mock(AuthorizationGrantHandler.class);
         when(dummyGrantHandler.isConfidentialClient()).thenReturn(true);
 
         HashMap<String, AuthorizationGrantHandler> authorizationGrantHandlers = new HashMap<>();
         authorizationGrantHandlers.put(DUMMY_GRANT_TYPE, dummyGrantHandler);
 
-        mockOAuth2ServerConfiguration(new ArrayList<ClientAuthenticationHandler>(), authorizationGrantHandlers);
+        mockOAuth2ServerConfiguration(authorizationGrantHandlers);
 
         OAuth2AccessTokenReqDTO reqDTO = new OAuth2AccessTokenReqDTO();
         reqDTO.setGrantType(DUMMY_GRANT_TYPE);
@@ -295,6 +276,7 @@ public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
 
     @DataProvider(name = "unauthorizedClientErrorConditionProvider")
     public Object[][] getUnauthorizedClientErrorConditions() {
+
         return new Object[][]{
                 // whether to throw an exception or not for a valid grant, Exception message
                 {true, "Exception when authorizing client."},
@@ -302,10 +284,10 @@ public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
         };
     }
 
-
     @Test(dataProvider = "unauthorizedClientErrorConditionProvider")
     public void testIssueErrorUnauthorizedClient(boolean throwException,
                                                  String exceptionMsg) throws Exception {
+
         AuthorizationGrantHandler dummyGrantHandler = mock(AuthorizationGrantHandler.class);
         when(dummyGrantHandler.isConfidentialClient()).thenReturn(false);
         // Not a confidential client
@@ -322,7 +304,7 @@ public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
         HashMap<String, AuthorizationGrantHandler> authorizationGrantHandlers = new HashMap<>();
         authorizationGrantHandlers.put(DUMMY_GRANT_TYPE, dummyGrantHandler);
 
-        mockOAuth2ServerConfiguration(new ArrayList<ClientAuthenticationHandler>(), authorizationGrantHandlers);
+        mockOAuth2ServerConfiguration(authorizationGrantHandlers);
 
         OAuth2AccessTokenReqDTO reqDTO = new OAuth2AccessTokenReqDTO();
         reqDTO.setGrantType(DUMMY_GRANT_TYPE);
@@ -340,6 +322,7 @@ public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
 
     @DataProvider(name = "invalidGrantErrorDataProvider")
     public Object[][] getInvalidGrantErrorData() {
+
         return new Object[][]{
                 // whether to throw an exception or not for a valid grant, Exception message
                 {true, "Exception when processing oauth2 grant."},
@@ -350,6 +333,7 @@ public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
     @Test(dataProvider = "invalidGrantErrorDataProvider")
     public void testIssueValidateGrantError(boolean throwException,
                                             String exceptionMsg) throws Exception {
+
         AuthorizationGrantHandler dummyGrantHandler = mock(AuthorizationGrantHandler.class);
         when(dummyGrantHandler.isConfidentialClient()).thenReturn(false);
         // Not a confidential client
@@ -368,7 +352,7 @@ public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
         HashMap<String, AuthorizationGrantHandler> authorizationGrantHandlers = new HashMap<>();
         authorizationGrantHandlers.put(DUMMY_GRANT_TYPE, dummyGrantHandler);
 
-        mockOAuth2ServerConfiguration(new ArrayList<ClientAuthenticationHandler>(), authorizationGrantHandlers);
+        mockOAuth2ServerConfiguration(authorizationGrantHandlers);
 
         OAuth2AccessTokenReqDTO reqDTO = new OAuth2AccessTokenReqDTO();
         reqDTO.setGrantType(DUMMY_GRANT_TYPE);
@@ -390,10 +374,12 @@ public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
      */
     @Test
     public void testIssueErrorWhenIssue2() throws Exception {
+
         AuthorizationGrantHandler dummyGrantHandler = getMockGrantHandlerForSuccess(true);
         when(dummyGrantHandler.issue(any(OAuthTokenReqMessageContext.class))).then(new Answer<Object>() {
             @Override
             public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
+
                 OAuth2AccessTokenRespDTO accessTokenRespDTO = new OAuth2AccessTokenRespDTO();
                 accessTokenRespDTO.setError(true);
                 return accessTokenRespDTO;
@@ -403,7 +389,7 @@ public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
         HashMap<String, AuthorizationGrantHandler> authorizationGrantHandlers = new HashMap<>();
         authorizationGrantHandlers.put(DUMMY_GRANT_TYPE, dummyGrantHandler);
 
-        mockOAuth2ServerConfiguration(new ArrayList<ClientAuthenticationHandler>(), authorizationGrantHandlers);
+        mockOAuth2ServerConfiguration(authorizationGrantHandlers);
 
         OAuth2AccessTokenReqDTO reqDTO = new OAuth2AccessTokenReqDTO();
         reqDTO.setGrantType(DUMMY_GRANT_TYPE);
@@ -414,9 +400,9 @@ public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
         assertTrue(tokenRespDTO.isError());
     }
 
-
     @DataProvider(name = "scopeDataProvider")
     public Object[][] provideDummyData() {
+
         return new Object[][]{
                 {null, null},
                 {new String[0], null},
@@ -434,6 +420,7 @@ public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
     @Test(dataProvider = "scopeDataProvider")
     public void testIssueWithScopes(String[] scopes,
                                     String expectedScopeString) throws Exception {
+
         when(OAuth2Util.buildScopeString(Matchers.<String[]>anyObject())).thenCallRealMethod();
 
         AuthorizationGrantHandler dummyGrantHandler = getMockGrantHandlerForSuccess(false);
@@ -452,6 +439,7 @@ public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
         when(dummyGrantHandler.issue(any(OAuthTokenReqMessageContext.class))).then(new Answer<Object>() {
             @Override
             public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
+
                 OAuthTokenReqMessageContext context =
                         invocationOnMock.getArgumentAt(0, OAuthTokenReqMessageContext.class);
                 // set some response headers
@@ -466,7 +454,7 @@ public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
         HashMap<String, AuthorizationGrantHandler> authorizationGrantHandlers = new HashMap<>();
         authorizationGrantHandlers.put(DUMMY_GRANT_TYPE, dummyGrantHandler);
 
-        mockOAuth2ServerConfiguration(new ArrayList<ClientAuthenticationHandler>(), authorizationGrantHandlers);
+        mockOAuth2ServerConfiguration(authorizationGrantHandlers);
         OAuth2AccessTokenRespDTO tokenRespDTO = AccessTokenIssuer.getInstance().issue(reqDTO);
 
         assertNotNull(tokenRespDTO);
@@ -481,6 +469,7 @@ public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
 
     @DataProvider(name = "grantTypeDataProvider")
     public Object[][] provideGrantTypes() {
+
         return new Object[][]{
                 {GrantType.AUTHORIZATION_CODE.toString()},
                 {GrantType.PASSWORD.toString()},
@@ -489,6 +478,7 @@ public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
 
     @Test(dataProvider = "grantTypeDataProvider")
     public void testIssueWithOpenIdScope(String grantType) throws Exception {
+
         OAuth2AccessTokenReqDTO reqDTO = new OAuth2AccessTokenReqDTO();
         reqDTO.setGrantType(grantType);
         reqDTO.setScope((String[]) ArrayUtils.clone(SCOPES_WITH_OPENID));
@@ -507,6 +497,7 @@ public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
 
     @Test
     public void testIssueWithOpenIdScopeFailure() throws Exception {
+
         OAuth2AccessTokenReqDTO reqDTO = new OAuth2AccessTokenReqDTO();
         reqDTO.setGrantType(DUMMY_GRANT_TYPE);
         reqDTO.setScope(SCOPES_WITH_OPENID);
@@ -526,9 +517,9 @@ public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
         assertNull(tokenRespDTO.getIDToken());
     }
 
-
     private AuthorizationGrantHandler getMockGrantHandlerForSuccess(boolean isOfTypeApplicationUser)
             throws IdentityOAuth2Exception {
+
         AuthorizationGrantHandler dummyGrantHandler = mock(AuthorizationGrantHandler.class);
         // Not a confidential client
         when(dummyGrantHandler.isConfidentialClient()).thenReturn(false);
@@ -543,11 +534,10 @@ public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
         return dummyGrantHandler;
     }
 
-    private void mockOAuth2ServerConfiguration(List<ClientAuthenticationHandler> clientAuthenticationHandlers,
-                                               Map<String, AuthorizationGrantHandler> authorizationGrantHandlerMap) {
+    private void mockOAuth2ServerConfiguration(Map<String, AuthorizationGrantHandler> authorizationGrantHandlerMap) {
+
         when(oAuthServerConfiguration.getSupportedGrantTypes()).thenReturn(authorizationGrantHandlerMap);
     }
-
 
     private void setupOIDCScopeTest(String grantType,
                                     boolean success) throws IdentityOAuth2Exception {
@@ -570,6 +560,7 @@ public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
         when(grantHandler.issue(any(OAuthTokenReqMessageContext.class))).then(new Answer<Object>() {
             @Override
             public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
+
                 OAuthTokenReqMessageContext context =
                         invocationOnMock.getArgumentAt(0, OAuthTokenReqMessageContext.class);
 
@@ -585,15 +576,17 @@ public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
         HashMap<String, AuthorizationGrantHandler> authorizationGrantHandlers = new HashMap<>();
         authorizationGrantHandlers.put(grantType, grantHandler);
 
-        mockOAuth2ServerConfiguration(new ArrayList<ClientAuthenticationHandler>(), authorizationGrantHandlers);
+        mockOAuth2ServerConfiguration(authorizationGrantHandlers);
     }
 
     private IDTokenBuilder getMockIDTokenBuilderForSuccess() throws IdentityOAuth2Exception {
+
         IDTokenBuilder idTokenBuilder = mock(IDTokenBuilder.class);
         when(idTokenBuilder.buildIDToken(any(OAuthTokenReqMessageContext.class), any(OAuth2AccessTokenRespDTO.class)))
                 .then(new Answer<Object>() {
                     @Override
                     public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
+
                         return ID_TOKEN;
                     }
                 });
@@ -601,6 +594,7 @@ public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
     }
 
     private IDTokenBuilder getMockIDTokenBuilderForFailure() throws IdentityOAuth2Exception {
+
         IDTokenBuilder idTokenBuilder = mock(IDTokenBuilder.class);
         when(idTokenBuilder.buildIDToken(any(OAuthTokenReqMessageContext.class), any(OAuth2AccessTokenRespDTO.class)))
                 .thenThrow(new IDTokenValidationFailureException("ID Token Validation failed"));
@@ -609,6 +603,7 @@ public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
 
     @ObjectFactory
     public IObjectFactory getObjectFactory() {
+
         return new org.powermock.modules.testng.PowerMockObjectFactory();
     }
 }
