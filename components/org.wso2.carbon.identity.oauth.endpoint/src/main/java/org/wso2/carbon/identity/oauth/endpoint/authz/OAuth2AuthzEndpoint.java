@@ -142,7 +142,6 @@ import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuth
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.startSuperTenantFlow;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.validateParams;
 
-
 @Path("/authorize")
 public class OAuth2AuthzEndpoint {
 
@@ -903,7 +902,7 @@ public class OAuth2AuthzEndpoint {
      *
      * @param oAuthMessage oAuthMessage
      * @return String redirectURL
-     * @throws OAuthSystemException  OAuthSystemException
+     * @throws OAuthSystemException OAuthSystemException
      * @throws OAuthProblemException OAuthProblemException
      */
     private String handleOAuthAuthorizationRequest(OAuthMessage oAuthMessage)

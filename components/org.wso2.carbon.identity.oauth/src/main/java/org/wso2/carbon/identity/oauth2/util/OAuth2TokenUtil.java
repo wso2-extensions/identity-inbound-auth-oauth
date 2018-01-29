@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2018, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -162,8 +162,8 @@ public class OAuth2TokenUtil {
     /**
      * Uses to revoke codes from the request object related tables after token revocation
      * happens from access token related tables.
-     *
-     * @param tokenState
+     * @param authzCodeDOs authzCodeDOs
+     * @param tokenState state of the token
      * @throws IdentityOAuth2Exception
      */
     public static void postRevokeCodes(List<AuthzCodeDO> authzCodeDOs, String tokenState)

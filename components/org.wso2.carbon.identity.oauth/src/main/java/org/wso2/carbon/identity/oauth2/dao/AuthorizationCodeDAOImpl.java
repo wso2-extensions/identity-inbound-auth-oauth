@@ -339,8 +339,8 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             prepStmt.execute();
             connection.commit();
 
-//            //If the code state is updated to inactive or expired request object which is persisted against the code
-//            // should be updated/removed.
+            //If the code state is updated to inactive or expired request object which is persisted against the code
+            // should be updated/removed.
             OAuth2TokenUtil.postRevokeCode(authzCode, newState, null);
         } catch (SQLException e) {
             IdentityDatabaseUtil.rollBack(connection);

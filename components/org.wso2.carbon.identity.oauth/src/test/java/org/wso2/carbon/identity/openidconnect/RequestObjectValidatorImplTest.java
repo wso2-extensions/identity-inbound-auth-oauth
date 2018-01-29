@@ -110,7 +110,6 @@ public class RequestObjectValidatorImplTest extends PowerMockTestCase {
         return new Object[][]{
                 {jsonWebToken1, true, false, true, "Valid Request Object, signed not encrypted."},
                 {jsonWebToken2, false, false, true, "Valid Request Object, signed not encrypted."},
-//                    {"some-request-object", false, false, false, "Invalid Request Object, signed not encrypted."},
                 {jsonWebEncryption1, false, true, true, "Valid Request Object, signed and encrypted."},
                 {jsonWebEncryption2, true, true, true, "Valid Request Object, signed and encrypted."}};
     }

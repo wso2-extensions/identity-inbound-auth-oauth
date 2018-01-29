@@ -189,7 +189,6 @@ public class TestUtils {
             connection.commit();
         } catch (SQLException e) {
             Assert.fail("Unable to add Oauth application.");
-            //throw new TestNGException("Unable to add Oauth application.");
         }
     }
 
@@ -229,7 +228,6 @@ public class TestUtils {
         SignedJWT signedJWT = getSignedJWT(jwtClaimsSet, privateKey);
         // Create JWE object with signed JWT as payload
         JWEHeader jweHeader = new JWEHeader(JWEAlgorithm.RSA_OAEP_256, EncryptionMethod.A256GCM);
-//        jweHeader.setContentType("JWT");
         JWEObject jweObject = new JWEObject(jweHeader, new Payload(signedJWT.serialize()));
         // Perform encryption
         try {

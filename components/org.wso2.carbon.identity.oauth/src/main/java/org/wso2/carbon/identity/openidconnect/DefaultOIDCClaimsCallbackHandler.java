@@ -165,7 +165,6 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         String token = getAccessToken(requestMsgCtx);
         filterClaimsByScopesAndEssentialClaims.putAll(filterClaimsFromRequestObject(userClaimsInOIDCDialect, token));
 
-
         // Restrict Claims going into the token based on the scope and the essential claims
         return filterClaimsByScopesAndEssentialClaims;
     }
@@ -181,10 +180,7 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         } catch (RequestObjectException e) {
             throw new OAuthSystemException("Unable to retrieve requested claims from Request Object." + e);
         }
-
-
     }
-
 
     private Map<ClaimMapping, String> getCachedUserAttributes(OAuthTokenReqMessageContext requestMsgCtx) {
         Map<ClaimMapping, String> userAttributes = getUserAttributesCachedAgainstToken(getAccessToken(requestMsgCtx));
@@ -264,7 +260,6 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
 
         return filterClaimsByScopesAndEssentialClaims;
     }
-
 
     private Map<String, Object> retrieveClaimsForLocalUser(OAuthAuthzReqMessageContext authzReqMessageContext) {
         try {
