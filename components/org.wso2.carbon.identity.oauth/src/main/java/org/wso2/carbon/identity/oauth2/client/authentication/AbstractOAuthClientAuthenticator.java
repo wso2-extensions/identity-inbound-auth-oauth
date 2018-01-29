@@ -43,13 +43,13 @@ public abstract class AbstractOAuthClientAuthenticator extends AbstractIdentityH
     /**
      * Get the set of body parameters.
      *
-     * @param content Map of parameters
+     * @param bodyParams Map of parameters
      * @return Body parameters as a string map
      */
-    protected Map<String, String> getBodyParameters(Map<String, List> content) {
+    protected Map<String, String> getBodyParameters(Map<String, List> bodyParams) {
 
         Map<String, String> stringParams = new HashMap<>();
-        content.forEach((key, value) -> {
+        bodyParams.forEach((key, value) -> {
             if (value != null && value.size() > 0) {
                 stringParams.put(key, (String) value.get(0));
             }
