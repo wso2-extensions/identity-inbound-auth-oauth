@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth2.token;
 
 import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.mockito.Matchers;
@@ -515,6 +516,108 @@ public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
         assertEquals(tokenRespDTO.getErrorCode(), OAuth2ErrorCodes.SERVER_ERROR);
         // ID Token should not be set
         assertNull(tokenRespDTO.getIDToken());
+    }
+
+    @DataProvider(name = "clientAuthContextDataProvider")
+    public Object[][] clientAuthContextDataProvider() {
+
+        return new Object[][]{
+
+                // Authenticaion has failed from a single authenticator with invalid_client error code.
+                {"sampleID", OAuth2ErrorCodes.INVALID_CLIENT, false, "BasicAuthenticator", null, OAuth2ErrorCodes
+                        .INVALID_CLIENT, true, false},
+
+                // Authentication success scenario.
+                {"sampleID", OAuth2ErrorCodes.INVALID_CLIENT, true, "BasicAuthenticator", null, null, true, true},
+
+                // Authentication has failed from a single authenticator with invalid_request error code
+                {"sampleID", OAuth2ErrorCodes.INVALID_REQUEST, false, "BasicAuthenticator", null, OAuth2ErrorCodes
+                        .INVALID_REQUEST, true, false},
+
+                // Multiple authenticators are engaged. Eventhough the error message set to context is
+                // invalid_client, the actual error message should be invalid_request.
+                {"sampleID", OAuth2ErrorCodes.INVALID_CLIENT, false, "BasicAuthenticator", "AnotherAuthenticator",
+                        OAuth2ErrorCodes
+                                .INVALID_REQUEST, true, false},
+
+                // Non confidential grant type. Hence authentication is not required.
+                {"sampleID", OAuth2ErrorCodes.INVALID_CLIENT, false, "BasicAuthenticator", null,
+                        null, false, true},
+
+                // Multiple authenticators are engaged. Hence invalid request.
+                {"sampleID", OAuth2ErrorCodes.INVALID_CLIENT, false, "BasicAuthenticator", "AnotherAuthenticator",
+                        OAuth2ErrorCodes.INVALID_REQUEST, false, false},
+
+                // No authenticator engaged. Hence authentication should fail
+                {"sampleID", OAuth2ErrorCodes.INVALID_CLIENT, false, null, null,
+                        OAuth2ErrorCodes.INVALID_REQUEST, true, false},
+
+                // Non confidential apps doesn't need authentication
+                {"sampleID", OAuth2ErrorCodes.INVALID_CLIENT, false, null, null,
+                        null, false, true},
+        };
+
+    }
+
+    /**
+     * Make sure oauth client authenticaion is done with context data.
+     *
+     * @throws Exception
+     */
+    @Test(dataProvider = "clientAuthContextDataProvider")
+    public void testClientAuthenticaion(String clientId, String errorCode, boolean isAuthenticated, String
+            authenticator1, String authenticator2, String expectedErrorCode, boolean isConfidential, boolean
+                                                authnResult) throws Exception {
+
+        OAuthClientAuthnContext oAuthClientAuthnContext = new OAuthClientAuthnContext();
+        oAuthClientAuthnContext.setClientId(clientId);
+        oAuthClientAuthnContext.setErrorCode(errorCode);
+        oAuthClientAuthnContext.setAuthenticated(isAuthenticated);
+
+        if (StringUtils.isNotEmpty(authenticator1)) {
+            oAuthClientAuthnContext.addAuthenticator(authenticator1);
+        }
+        if (StringUtils.isNotEmpty(authenticator2)) {
+            oAuthClientAuthnContext.addAuthenticator(authenticator2);
+        }
+
+        AuthorizationGrantHandler dummyGrantHandler = getMockGrantHandlerForSuccess(true);
+
+        final ResponseHeader responseHeader = new ResponseHeader();
+        responseHeader.setKey("Header");
+        responseHeader.setValue("HeaderValue");
+        final ResponseHeader[] responseHeaders = new ResponseHeader[]{responseHeader};
+
+        when(dummyGrantHandler.issue(any(OAuthTokenReqMessageContext.class))).then(new Answer<Object>() {
+            @Override
+            public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
+
+                OAuthTokenReqMessageContext context =
+                        invocationOnMock.getArgumentAt(0, OAuthTokenReqMessageContext.class);
+                // set some response headers
+                context.addProperty(OAuthConstants.RESPONSE_HEADERS_PROPERTY, responseHeaders);
+
+                String[] scopeArray = context.getOauth2AccessTokenReqDTO().getScope();
+                context.setScope(scopeArray);
+                return new OAuth2AccessTokenRespDTO();
+            }
+        });
+
+        when(dummyGrantHandler.isConfidentialClient()).thenReturn(isConfidential);
+
+        HashMap<String, AuthorizationGrantHandler> authorizationGrantHandlers = new HashMap<>();
+        authorizationGrantHandlers.put(DUMMY_GRANT_TYPE, dummyGrantHandler);
+
+        mockOAuth2ServerConfiguration(authorizationGrantHandlers);
+
+        OAuth2AccessTokenReqDTO reqDTO = new OAuth2AccessTokenReqDTO();
+        reqDTO.setGrantType(DUMMY_GRANT_TYPE);
+        reqDTO.setoAuthClientAuthnContext(oAuthClientAuthnContext);
+
+        OAuth2AccessTokenRespDTO tokenRespDTO = AccessTokenIssuer.getInstance().issue(reqDTO);
+        assertNotNull(tokenRespDTO);
+        assertEquals(tokenRespDTO.isError(), !authnResult);
+        assertEquals(tokenRespDTO.getErrorCode(), expectedErrorCode);
     }
 
     private AuthorizationGrantHandler getMockGrantHandlerForSuccess(boolean isOfTypeApplicationUser)

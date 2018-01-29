@@ -255,12 +255,12 @@ public class OAuth2ServiceComponent {
             policy = ReferencePolicy.DYNAMIC,
             unbind = "unsetAuthenticationMethodNameTranslator"
     )
-    public static void setAuthenticationMethodNameTranslator(
+    protected static void setAuthenticationMethodNameTranslator(
             AuthenticationMethodNameTranslator authenticationMethodNameTranslator) {
         OAuth2ServiceComponentHolder.setAuthenticationMethodNameTranslator(authenticationMethodNameTranslator);
     }
 
-    public static void unsetAuthenticationMethodNameTranslator(
+    protected static void unsetAuthenticationMethodNameTranslator(
             AuthenticationMethodNameTranslator authenticationMethodNameTranslator) {
         if (OAuth2ServiceComponentHolder.getAuthenticationMethodNameTranslator() ==
                 authenticationMethodNameTranslator) {
