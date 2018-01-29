@@ -90,7 +90,6 @@
             <!--<class name="org.wso2.carbon.identity.oauth2.OAuth2ServiceTest"/>-->
             <class name="org.wso2.carbon.identity.oauth2.OAuth2TokenValidationServiceTest"/>
             <class name="org.wso2.carbon.identity.oauth2.token.AccessTokenIssuerTest"/>
-            <class name="org.wso2.carbon.identity.oauth2.token.handlers.clientauth.BasicAuthClientAuthHandlerTest"/>
 
             <class name="org.wso2.carbon.identity.oauth2.token.handlers.grant.AbstractValidatorTest"/>
             <!--<class name="org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationCodeGrantHandlerTest"/>-->
@@ -159,7 +158,6 @@
             <!--<class name="org.wso2.carbon.identity.oauth2.OAuth2ServiceTest"/>-->
             <class name="org.wso2.carbon.identity.oauth2.OAuth2TokenValidationServiceTest"/>
             <class name="org.wso2.carbon.identity.oauth2.token.AccessTokenIssuerTest"/>
-            <class name="org.wso2.carbon.identity.oauth2.token.handlers.clientauth.BasicAuthClientAuthHandlerTest"/>
             <class name="org.wso2.carbon.identity.oauth2.token.handlers.grant.AbstractValidatorTest"/>
             <!--<class name="org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationCodeGrantHandlerTest"/>-->
             <class name="org.wso2.carbon.identity.oauth2.token.handlers.grant.ClientCredentialsGrantHandlerTest"/>
