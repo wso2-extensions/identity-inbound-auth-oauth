@@ -1153,7 +1153,9 @@ public class OAuth2AuthzEndpoint {
             try {
                 handleOIDCRequestObject(oauthRequest, params);
             } catch (RequestObjectException e) {
-                // All the error logs are specified at the time when throw the exception.
+                if (log.isDebugEnabled()) {
+                    log.debug("Request Object Handling failed due to : " + e.getErrorCode(), e);
+                }
                 return EndpointUtil.getErrorPageURL(e.getErrorCode(), e.getErrorMessage(), null);
             }
         }
@@ -1178,15 +1180,24 @@ public class OAuth2AuthzEndpoint {
     private void handleOIDCRequestObject(OAuthAuthzRequest oauthRequest, OAuth2Parameters parameters)
             throws RequestObjectException {
 
-        validateRequestObject(oauthRequest);
-        if (isRequestUri(oauthRequest.getParam(REQUEST_URI))) {
-            handleRequestObject(oauthRequest, parameters, oauthRequest.getParam(REQUEST_URI));
-        } else if (isRequestParameter(oauthRequest.getParam(REQUEST))) {
-            handleRequestObject(oauthRequest, parameters, oauthRequest.getParam(REQUEST));
+        validateRequestObjectParams(oauthRequest);
+        String requestObjValue = null;
+        if (isRequestUri(oauthRequest)) {
+            requestObjValue = oauthRequest.getParam(REQUEST_URI);
+        } else if (isRequestParameter(oauthRequest)) {
+            requestObjValue = oauthRequest.getParam(REQUEST);
+        }
+
+        if (StringUtils.isNotEmpty(requestObjValue)) {
+            handleRequestObject(oauthRequest, parameters);
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug("Authorization Request does not contain a Request Object or Request Object reference.");
+            }
         }
     }
 
-    private void validateRequestObject(OAuthAuthzRequest oauthRequest) throws RequestObjectException {
+    private void validateRequestObjectParams(OAuthAuthzRequest oauthRequest) throws RequestObjectException {
 
         // With in the same request it can not be used both request parameter and request_uri parameter.
         if (StringUtils.isNotEmpty(oauthRequest.getParam(REQUEST)) && StringUtils.isNotEmpty(oauthRequest.getParam
@@ -1196,23 +1207,20 @@ public class OAuth2AuthzEndpoint {
         }
     }
 
-    private void handleRequestObject(OAuthAuthzRequest oauthRequest, OAuth2Parameters parameters,
-                                     String requestParameterValue) throws RequestObjectException {
+    private void handleRequestObject(OAuthAuthzRequest oauthRequest, OAuth2Parameters parameters) throws RequestObjectException {
 
-        if (StringUtils.isNotBlank(requestParameterValue)) {
-            RequestObject requestObject = OIDCRequestObjectUtil.buildRequestObject(oauthRequest, parameters);
-            if (requestObject == null) {
-                throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST, "Unable to build a valid Request " +
-                        "Object from the authorization request.");
-            }
+        RequestObject requestObject = OIDCRequestObjectUtil.buildRequestObject(oauthRequest, parameters);
+        if (requestObject == null) {
+            throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST, "Unable to build a valid Request " +
+                    "Object from the authorization request.");
+        }
             /*
               When the request parameter is used, the OpenID Connect request parameter values contained in the JWT supersede
               those passed using the OAuth 2.0 request syntax
              */
-            overrideAuthzParameters(parameters, oauthRequest.getParam(REQUEST), oauthRequest.getParam(REQUEST_URI),
-                    requestObject);
-            persistRequestObject(parameters, requestObject);
-        }
+        overrideAuthzParameters(parameters, oauthRequest.getParam(REQUEST), oauthRequest.getParam(REQUEST_URI),
+                requestObject);
+        persistRequestObject(parameters, requestObject);
     }
 
     private void overrideAuthzParameters(OAuth2Parameters params, String requestParameterValue,
@@ -1253,11 +1261,13 @@ public class OAuth2AuthzEndpoint {
         }
     }
 
-    private static boolean isRequestUri(String param) {
+    private static boolean isRequestUri(OAuthAuthzRequest oAuthAuthzRequest) {
+        String param = oAuthAuthzRequest.getParam(REQUEST_URI);
         return StringUtils.isNotBlank(param);
     }
 
-    private static boolean isRequestParameter(String param) {
+    private static boolean isRequestParameter(OAuthAuthzRequest oAuthAuthzRequest) {
+        String param = oAuthAuthzRequest.getParam(REQUEST);
         return StringUtils.isNotBlank(param);
     }
 

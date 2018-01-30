@@ -68,7 +68,13 @@ public class OIDCRequestObjectUtil {
             // Unsupported request object type.
             return null;
         }
-        requestObject = buildRequestObject(oauthRequest, oAuth2Parameters, requestObjectBuilder, requestObjType);
+
+        if (requestObjectBuilder == null) {
+            String error = "Unable to build the OIDC Request Object from:";
+            throw new RequestObjectException(OAuth2ErrorCodes.SERVER_ERROR, error + requestObjType);
+        }
+        requestObject = requestObjectBuilder.buildRequestObject(oauthRequest.getParam(requestObjType),
+                oAuth2Parameters);
         RequestObjectValidator requestObjectValidator = OAuthServerConfiguration.getInstance()
                 .getRequestObjectValidator();
         if (requestObject.isSigned()) {
@@ -88,18 +94,6 @@ public class OIDCRequestObjectUtil {
         }
         return requestObject;
     }
-
-    private static RequestObject buildRequestObject(OAuthAuthzRequest oauthRequest, OAuth2Parameters oAuth2Parameters,
-                                                    RequestObjectBuilder requestObjectBuilder,
-                                                    String requestObjParam) throws RequestObjectException {
-        String error = "Unable to build the OIDC Request Object from:";
-        if (requestObjectBuilder != null) {
-            return requestObjectBuilder.buildRequestObject(oauthRequest.getParam(requestObjParam), oAuth2Parameters);
-        } else {
-            throw new RequestObjectException(OAuth2ErrorCodes.SERVER_ERROR, error + requestObjParam);
-        }
-    }
-
 
     private static RequestObjectBuilder getRequestObjectBuilder(String requestParamValueBuilder) {
         return OAuthServerConfiguration.getInstance().getRequestObjectBuilders().get(requestParamValueBuilder);

@@ -194,7 +194,8 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
                 return true;
             }
         }
-        return logAndReturnFalse("None of the audience values matched the tokenEndpoint Alias:" + currentAudience);
+        return logAndReturnFalse("None of the audience values matched the tokenEndpoint Alias: "
+                + currentAudience);
     }
 
     /**

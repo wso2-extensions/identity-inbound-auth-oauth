@@ -738,14 +738,12 @@ public class OAuthServerConfiguration {
     }
 
     private void setDefaultRequestObjectBuilderClasses() {
-        if (MapUtils.isEmpty(requestObjectBuilderClassNames)) {
+        if (requestObjectBuilderClassNames.get(REQUEST_PARAM_VALUE_BUILDER) == null) {
             // if this element is not present, assume the default case.
-            log.info("\'RequestObjectBuilders\' element not configured in identity.xml. " +
-                    "Therefore instantiating default request object builders");
-
-            Map<String, String> defaultRequestObjectBuilders = new HashMap<>();
-            defaultRequestObjectBuilders.put(REQUEST_PARAM_VALUE_BUILDER, REQUEST_PARAM_VALUE_BUILDER_CLASS);
-            requestObjectBuilderClassNames.putAll(defaultRequestObjectBuilders);
+            log.info("\'RequestObjectBuilder\' element for Type: " + REQUEST_PARAM_VALUE_BUILDER + "is not " +
+                    "configured in identity.xml. Therefore instantiating default request object builder: "
+                    + REQUEST_PARAM_VALUE_BUILDER_CLASS);
+            requestObjectBuilderClassNames.put(REQUEST_PARAM_VALUE_BUILDER, REQUEST_PARAM_VALUE_BUILDER_CLASS);
         }
     }
 

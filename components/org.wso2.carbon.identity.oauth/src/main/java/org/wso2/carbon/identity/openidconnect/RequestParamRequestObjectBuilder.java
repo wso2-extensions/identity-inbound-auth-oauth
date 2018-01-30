@@ -69,6 +69,9 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
         String requestObjectParamValue = requestObjectParam;
         if (isEncrypted(requestObjectParamValue)) {
             requestObjectParamValue = decrypt(requestObjectParamValue, oAuth2Parameters);
+            if (isEmpty(requestObjectParamValue)) {
+                return requestObject;
+            }
         }
         setRequestObjectValues(requestObjectParamValue, requestObject);
         if (log.isDebugEnabled()) {
@@ -140,9 +143,6 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
     private void setRequestObjectValues(String requestObjectString, RequestObject requestObjectInstance) throws
             RequestObjectException {
 
-        if (isEmpty(requestObjectString)) {
-            return;
-        }
         try {
             JOSEObject jwt = JOSEObject.parse(requestObjectString);
             if (jwt.getHeader().getAlgorithm() == null || jwt.getHeader().getAlgorithm().equals(JWSAlgorithm.NONE)) {
