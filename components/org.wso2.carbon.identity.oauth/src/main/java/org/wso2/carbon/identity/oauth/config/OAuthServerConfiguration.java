@@ -199,7 +199,7 @@ public class OAuthServerConfiguration {
     private boolean isRevokeResponseHeadersEnabled = true;
 
     // property to make DisplayName property to be used in consent page
-    private boolean showDisplayNameInConsentPage=false;
+    private boolean showDisplayNameInConsentPage = false;
     // Use the SP tenant domain instead of user domain.
     private boolean useSPTenantDomainValue;
 
@@ -207,6 +207,7 @@ public class OAuthServerConfiguration {
     private ValueGenerator tokenValueGenerator;
 
     private String tokenValueGeneratorClassName;
+
     private OAuthServerConfiguration() {
         buildOAuthServerConfiguration();
     }
@@ -520,7 +521,7 @@ public class OAuthServerConfiguration {
     }
 
     /**
-     * @deprecated  From v5.1.3 use @{@link BaseCache#isEnabled()} to check whether a cache is enabled or not instead
+     * @deprecated From v5.1.3 use @{@link BaseCache#isEnabled()} to check whether a cache is enabled or not instead
      * of relying on <EnableOAuthCache> global Cache config
      */
     public boolean isCacheEnabled() {
@@ -706,23 +707,20 @@ public class OAuthServerConfiguration {
                 OMElement requestObjectImplClassElement = requestObjectBuildersElement
                         .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.REQUEST_OBJECT_IMPL_CLASS));
 
-                String builderType;
 
                 if (builderTypeElement == null) {
+                    log.warn("Empty configuration element for Type.");
                     //Empty configuration element for Type, ignore
                     continue;
-                } else {
-                    if(requestObjectImplClassElement == null){
-                        log.warn("Request Object Builder is not defined for the Type: " + builderTypeElement);
-                        continue;
-                    }
                 }
 
-                builderType = builderTypeElement.getText();
-                String requestObjectImplClass = null;
-                if (requestObjectImplClassElement != null) {
-                    requestObjectImplClass = requestObjectImplClassElement.getText();
+                if (requestObjectImplClassElement == null) {
+                    log.warn("Request Object Builder is not defined for the Type: " + builderTypeElement);
+                    continue;
                 }
+
+                String builderType = builderTypeElement.getText();
+                String requestObjectImplClass = requestObjectImplClassElement.getText();
                 requestObjectBuilderClassNames.put(builderType, requestObjectImplClass);
 
             }
@@ -826,8 +824,8 @@ public class OAuthServerConfiguration {
                             clientAuthenticationHandler.init(entry.getValue());
                             supportedClientAuthHandlersTemp.add(clientAuthenticationHandler);
 
-                        //Exceptions necessarily don't have to break the flow since there are cases
-                        //runnable without client auth handlers
+                            // Exceptions necessarily don't have to break the flow since there are cases
+                            // runnable without client auth handlers
                         } catch (InstantiationException e) {
                             log.error("Error instantiating " + entry, e);
                         } catch (IllegalAccessException e) {
@@ -1034,17 +1032,14 @@ public class OAuthServerConfiguration {
     }
 
     /**
-     * @deprecated use {@link #getOpenIDConnectIDTokenExpiryTimeInSeconds()} instead
-     *
      * @return the openIDConnectIDTokenExpirationInSeconds
+     * @deprecated use {@link #getOpenIDConnectIDTokenExpiryTimeInSeconds()} instead
      */
     public String getOpenIDConnectIDTokenExpiration() {
         return openIDConnectIDTokenExpiration;
     }
 
     /**
-     *
-     *
      * @return ID Token expiry time in milliseconds.
      */
     public long getOpenIDConnectIDTokenExpiryTimeInSeconds() {

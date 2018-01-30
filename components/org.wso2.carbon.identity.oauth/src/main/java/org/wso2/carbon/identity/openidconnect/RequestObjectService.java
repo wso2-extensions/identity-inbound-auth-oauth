@@ -61,37 +61,11 @@ public class RequestObjectService {
     /**
      * To invoke the RequestObjectPersistenceFactory to retrieve request object.
      *
-     * @param tokenId access token Id
-     * @param codeId  code Id
-     * @return list of claims which have marked as essential in the request object.
-     * @throws RequestObjectException
-     */
-    public List<String> getEssentialClaims(String tokenId, String codeId, boolean isUserInfo)
-            throws RequestObjectException {
-
-        List<String> essentialClaims;
-        if (log.isDebugEnabled()) {
-            log.debug("Invoking the RequestObjectPersistenceFactory to retrieve essential claims list.");
-        }
-
-        try {
-            essentialClaims = OAuthTokenPersistenceFactory.getInstance().getRequestObjectDAO()
-                    .getEssentialClaims(tokenId, codeId, isUserInfo);
-        } catch (IdentityOAuth2Exception e) {
-            throw new RequestObjectException(e.getMessage());
-        }
-        return essentialClaims;
-    }
-
-    /**
-     * To invoke the RequestObjectPersistenceFactory to retrieve request object.
-     *
      * @param token access token Id
-     * @param codeId  code Id
      * @return list of claims which have marked as essential in the request object.
      * @throws RequestObjectException
      */
-    private List<RequestedClaim> getRequestedClaims(String token, String codeId, boolean isUserInfo)
+    private List<RequestedClaim> getRequestedClaims(String token, boolean isUserInfo)
             throws RequestObjectException {
 
         List<RequestedClaim> essentialClaims;
@@ -101,7 +75,7 @@ public class RequestObjectService {
 
         try {
             essentialClaims = OAuthTokenPersistenceFactory.getInstance().getRequestObjectDAO()
-                    .getRequestedClaims(token, codeId, isUserInfo);
+                    .getRequestedClaims(token, isUserInfo);
         } catch (IdentityOAuth2Exception e) {
             throw new RequestObjectException(e.getMessage());
         }
@@ -112,27 +86,23 @@ public class RequestObjectService {
      * To invoke the RequestObjectPersistenceFactory to retrieve request object for id_token.
      *
      * @param token  access token Id
-     * @param codeId code Id
      * @return list of claims which have marked as essential in the request object.
      * @throws RequestObjectException
      */
-    public List<RequestedClaim> getRequestedClaimsForIDToken(String token, String codeId)
-            throws RequestObjectException {
+    public List<RequestedClaim> getRequestedClaimsForIDToken(String token) throws RequestObjectException {
 
-        return getRequestedClaims(token, codeId, false);
+        return getRequestedClaims(token, false);
     }
     /**
      * To invoke the RequestObjectPersistenceFactory to retrieve request object for id_token.
      *
      * @param token  access token Id
-     * @param codeId code Id
      * @return list of claims which have marked as essential in the request object.
      * @throws RequestObjectException
      */
-    public List<RequestedClaim> getRequestedClaimsForUserInfo(String token, String codeId)
-            throws RequestObjectException {
+    public List<RequestedClaim> getRequestedClaimsForUserInfo(String token) throws RequestObjectException {
 
-        return getRequestedClaims(token, codeId, true);
+        return getRequestedClaims(token, true);
     }
 
 }

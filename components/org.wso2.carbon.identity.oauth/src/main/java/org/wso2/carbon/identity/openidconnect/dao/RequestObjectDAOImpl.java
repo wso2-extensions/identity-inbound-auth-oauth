@@ -21,7 +21,6 @@
 package org.wso2.carbon.identity.openidconnect.dao;
 
 import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
@@ -234,48 +233,16 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
         }
     }
 
-    @Override
-    public List<String> getEssentialClaims(String token, String code, boolean isUserinfo) throws IdentityOAuth2Exception {
-
-        Connection connection = IdentityDatabaseUtil.getDBConnection();
-        PreparedStatement prepStmt = null;
-        ResultSet resultSet = null;
-        List<String> essentialClaims = new ArrayList<>();
-        try {
-            String sql = SQLQueries.RETRIEVE_ESSENTIAL_CLAIMS_BY_TOKEN;
-            String tokenId = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO().
-                    getTokenIdByAccessToken(token);
-            prepStmt = connection.prepareStatement(sql);
-            prepStmt.setString(1, tokenId);
-            prepStmt.setBoolean(2, true);
-            prepStmt.setBoolean(3, isUserinfo);
-            resultSet = prepStmt.executeQuery();
-
-            while (resultSet.next()) {
-                String claimAttribute = resultSet.getString(1);
-                essentialClaims.add(claimAttribute);
-            }
-            connection.commit();
-        } catch (SQLException e) {
-            String errorMsg = "Error occurred while retrieving request object.";
-            throw new IdentityOAuth2Exception(errorMsg, e);
-        } finally {
-            IdentityDatabaseUtil.closeAllConnections(connection, resultSet, prepStmt);
-        }
-        return essentialClaims;
-    }
-
     /**
      * Retrieve Requested claims for the id token and user info endpoint.
      *
      * @param token    token
-     * @param codeId     code id
      * @param isUserInfo return true if the claims are requested from user info end point.
      * @return
      * @throws IdentityOAuth2Exception
      */
     @Override
-    public List<RequestedClaim> getRequestedClaims(String token, String codeId, boolean isUserInfo) throws IdentityOAuth2Exception {
+    public List<RequestedClaim> getRequestedClaims(String token, boolean isUserInfo) throws IdentityOAuth2Exception {
         Connection connection = IdentityDatabaseUtil.getDBConnection();
         PreparedStatement prepStmt = null;
         ResultSet resultSet = null;

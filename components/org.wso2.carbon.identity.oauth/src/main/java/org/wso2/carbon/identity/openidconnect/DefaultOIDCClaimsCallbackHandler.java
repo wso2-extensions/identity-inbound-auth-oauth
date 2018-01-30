@@ -51,7 +51,6 @@ import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
-import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.user.api.UserRealm;
 import org.wso2.carbon.user.api.UserStoreException;
@@ -161,7 +160,7 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         filterClaimsByScopesAndEssentialClaims.putAll(filterClaimsByScope(userClaimsInOIDCDialect, requestMsgCtx.getScope(),
                 clientId, spTenantDomain));
 
-        //Handle essential claims of the request object
+        // Handle essential claims of the request object
         String token = getAccessToken(requestMsgCtx);
         filterClaimsByScopesAndEssentialClaims.putAll(filterClaimsFromRequestObject(userClaimsInOIDCDialect, token));
 
@@ -173,7 +172,7 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
                                                        String token) throws OAuthSystemException {
         try {
             List<RequestedClaim> requestedClaims = OpenIDConnectServiceComponentHolder.getRequestObjectService().
-                    getRequestedClaimsForIDToken(token, null);
+                    getRequestedClaimsForIDToken(token);
             return OpenIDConnectServiceComponentHolder.getInstance()
                     .getHighestPriorityOpenIDConnectClaimFilter()
                     .getClaimsFilteredByEssentialClaims(userAttributes, requestedClaims);

@@ -40,7 +40,6 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
-import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 
@@ -88,7 +87,7 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
                                                               String token) throws OAuthSystemException {
         try {
             List<RequestedClaim> requestedClaims = OpenIDConnectServiceComponentHolder.getRequestObjectService().
-                    getRequestedClaimsForUserInfo(token, null);
+                    getRequestedClaimsForUserInfo(token);
             return OpenIDConnectServiceComponentHolder.getInstance()
                     .getHighestPriorityOpenIDConnectClaimFilter()
                     .getClaimsFilteredByEssentialClaims(userAttributes, requestedClaims);

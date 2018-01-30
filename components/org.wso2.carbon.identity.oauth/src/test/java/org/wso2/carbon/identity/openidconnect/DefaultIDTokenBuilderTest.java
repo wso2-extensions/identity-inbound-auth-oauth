@@ -19,7 +19,6 @@
 package org.wso2.carbon.identity.openidconnect;
 
 import org.mockito.Mockito;
-import org.powermock.api.mockito.PowerMockito;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
@@ -58,7 +57,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -138,9 +136,9 @@ public class DefaultIDTokenBuilderTest extends IdentityBaseTest {
 
         RequestObjectService requestObjectService = Mockito.mock(RequestObjectService.class);
         List<RequestedClaim> requestedClaims =  Collections.EMPTY_LIST;
-        when(requestObjectService.getRequestedClaimsForIDToken(anyString(), anyString())).
+        when(requestObjectService.getRequestedClaimsForIDToken(anyString())).
                 thenReturn(requestedClaims);
-        when(requestObjectService.getRequestedClaimsForUserInfo(anyString(), anyString())).
+        when(requestObjectService.getRequestedClaimsForUserInfo(anyString())).
                 thenReturn(requestedClaims);
         OpenIDConnectServiceComponentHolder.getInstance()
                 .getOpenIDConnectClaimFilters()

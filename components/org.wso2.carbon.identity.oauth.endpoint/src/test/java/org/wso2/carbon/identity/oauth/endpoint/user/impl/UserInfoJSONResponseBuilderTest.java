@@ -20,7 +20,6 @@ package org.wso2.carbon.identity.oauth.endpoint.user.impl;
 
 import org.apache.oltu.oauth2.common.utils.JSONUtils;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.DataProvider;
@@ -47,7 +46,6 @@ import java.util.List;
 import java.util.Map;
 
 import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyString;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertEquals;
@@ -75,9 +73,9 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
 
     private void setUpRequestObjectService() throws RequestObjectException {
         List<RequestedClaim> requestedClaims =  Collections.EMPTY_LIST;
-        when(requestObjectService.getRequestedClaimsForIDToken(anyString(), anyString())).
+        when(requestObjectService.getRequestedClaimsForIDToken(anyString())).
                 thenReturn(requestedClaims);
-        when(requestObjectService.getRequestedClaimsForUserInfo(anyString(), anyString())).
+        when(requestObjectService.getRequestedClaimsForUserInfo(anyString())).
                 thenReturn(requestedClaims);
         OpenIDConnectServiceComponentHolder.getInstance()
                 .getOpenIDConnectClaimFilters()

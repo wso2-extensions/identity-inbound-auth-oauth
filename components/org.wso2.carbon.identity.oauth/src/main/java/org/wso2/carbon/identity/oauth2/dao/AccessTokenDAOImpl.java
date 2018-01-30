@@ -856,7 +856,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 }
                 ps.executeBatch();
                 connection.commit();
-                //To revoke request objects which have persisted against the access token.
+                // To revoke request objects which have persisted against the access token.
                 OAuth2TokenUtil.postUpdateAccessTokens(Arrays.asList(tokens), OAuthConstants.TokenStates.
                         TOKEN_STATE_REVOKED);
             } catch (SQLException e) {
@@ -878,11 +878,11 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 ps.setString(3, getPersistenceProcessor().getProcessedAccessTokenIdentifier(tokens[0]));
                 ps.executeUpdate();
 
-                //To revoke request objects which have persisted against the access token.
+                // To revoke request objects which have persisted against the access token.
                 OAuth2TokenUtil.postUpdateAccessTokens(Arrays.asList(tokens), OAuthConstants.TokenStates.
                         TOKEN_STATE_REVOKED);
             } catch (SQLException e) {
-                //IdentityDatabaseUtil.rollBack(connection);
+                // IdentityDatabaseUtil.rollBack(connection);
                 throw new IdentityOAuth2Exception("Error occurred while revoking Access Token : " +
                         Arrays.toString(tokens), e);
             } finally {
@@ -926,7 +926,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             }
 
             connection.commit();
-            //To revoke request objects which have persisted against the access token.
+            // To revoke request objects which have persisted against the access token.
             if (accessTokenId.size() > 0) {
                 OAuth2TokenUtil.postUpdateAccessTokens(accessTokenId, OAuthConstants.TokenStates.
                         TOKEN_STATE_REVOKED);
@@ -967,7 +967,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             }
             connection.commit();
 
-            //To revoke the tokens from Request Object table.
+            // To revoke the tokens from Request Object table.
             OAuth2TokenUtil.postUpdateAccessToken(tokenId, OAuthConstants.TokenStates.
                     TOKEN_STATE_REVOKED);
         } catch (SQLException e) {
@@ -1227,7 +1227,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             // commit both transactions
             connection.commit();
 
-            //Post refresh access token event
+            // Post refresh access token event
             OAuth2TokenUtil.postRefreshAccessToken(oldAccessTokenId, accessTokenDO.getTokenId(), tokenState);
         } catch (SQLException e) {
             String errorMsg = "Error while regenerating access token";
@@ -1341,7 +1341,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             log.debug("Retrieving all ACTIVE and EXPIRED access tokens of userstore: " + userStoreDomain + " tenant " +
                     "id: " + tenantId);
         }
-        //we do not support access token partitioning here
+        // we do not support access token partitioning here
         Connection connection = IdentityDatabaseUtil.getDBConnection();
 
         userStoreDomain = OAuth2Util.getSanitizedUserStoreDomain(userStoreDomain);
@@ -1411,7 +1411,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             log.debug("Renaming userstore domain: " + currentUserStoreDomain + " as: " + newUserStoreDomain
                     + " tenant id: " + tenantId + " in IDN_OAUTH2_ACCESS_TOKEN table");
         }
-        //we do not support access token partitioning here
+        // we do not support access token partitioning here
         currentUserStoreDomain = OAuth2Util.getSanitizedUserStoreDomain(currentUserStoreDomain);
         newUserStoreDomain = OAuth2Util.getSanitizedUserStoreDomain(newUserStoreDomain);
         Connection connection = IdentityDatabaseUtil.getDBConnection();

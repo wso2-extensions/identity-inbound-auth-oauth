@@ -40,7 +40,7 @@ public class IDTokenTokenResponseTypeHandler extends IDTokenResponseTypeHandler 
                 oauthIssuerImpl);
         // Generating response for id_token token flow.
         OAuth2AuthorizeRespDTO respDTO = buildResponseDTO(oauthAuthzMsgCtx, accessTokenDO);
-        //Trigger this to notify to update the request object reference table with the issued access token.
+        // Trigger this to notify to update the request object reference table with the issued access token.
         OAuth2TokenUtil.postIssueAccessToken(accessTokenDO.getTokenId(),
                 oauthAuthzMsgCtx.getAuthorizationReqDTO().getSessionDataKey());
         // Starting to trigger post listeners.

@@ -22,7 +22,6 @@ import com.nimbusds.jwt.JWT;
 import com.nimbusds.jwt.JWTParser;
 import com.nimbusds.jwt.ReadOnlyJWTClaimsSet;
 import org.mockito.Mockito;
-import org.mockito.Spy;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
@@ -62,9 +61,9 @@ public class UserInfoJWTResponseTest extends UserInfoResponseBaseTest {
         userInfoJWTResponse = new UserInfoJWTResponse();
         RequestObjectService requestObjectService = Mockito.mock(RequestObjectService.class);
         List<RequestedClaim> requestedClaims = Collections.EMPTY_LIST;
-        when(requestObjectService.getRequestedClaimsForIDToken(anyString(), anyString())).
+        when(requestObjectService.getRequestedClaimsForIDToken(anyString())).
                 thenReturn(requestedClaims);
-        when(requestObjectService.getRequestedClaimsForUserInfo(anyString(), anyString())).
+        when(requestObjectService.getRequestedClaimsForUserInfo(anyString())).
                 thenReturn(requestedClaims);
         OpenIDConnectServiceComponentHolder.getInstance().getOpenIDConnectClaimFilters()
                 .add(new OpenIDConnectClaimFilterImpl());
