@@ -33,6 +33,7 @@ import java.rmi.RemoteException;
 public class OAuthAdminClient {
 
     private static String[] allowedGrantTypes = null;
+    private static String[] scopeValidators = null;
     private OAuthAdminServiceStub stub;
     /**
      * Instantiates OAuthAdminClient
@@ -125,5 +126,12 @@ public class OAuthAdminClient {
 
     public OAuthTokenExpiryTimeDTO getOAuthTokenExpiryTimeDTO() throws RemoteException {
         return stub.getTokenExpiryTimes();
+    }
+
+    public String[] getAllowedScopeValidators() throws RemoteException {
+        if (scopeValidators == null) {
+            scopeValidators = stub.getAllowedScopeValidators();
+        }
+        return scopeValidators;
     }
 }

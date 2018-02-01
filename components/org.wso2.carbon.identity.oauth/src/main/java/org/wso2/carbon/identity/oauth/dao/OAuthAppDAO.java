@@ -94,7 +94,6 @@ public class OAuthAppDAO {
                         prepStmt.setLong(13, consumerAppDO.getApplicationAccessTokenExpiryTime());
                         prepStmt.setLong(14, consumerAppDO.getRefreshTokenExpiryTime());
                         prepStmt.execute();
-                        connection.commit();
                     }
                 } else {
                     try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.ADD_OAUTH_APP)) {
@@ -111,11 +110,23 @@ public class OAuthAppDAO {
                         prepStmt.setLong(11, consumerAppDO.getApplicationAccessTokenExpiryTime());
                         prepStmt.setLong(12, consumerAppDO.getRefreshTokenExpiryTime());
                         prepStmt.execute();
-                        connection.commit();
                     }
                 }
+                // have to get the app id of the created app
+                try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.GET_APP_ID_BY_APP_NAME)) {
+                    prepStmt.setString(1, consumerAppDO.getApplicationName());
+                    prepStmt.setInt(2, IdentityTenantUtil.getTenantId(consumerAppDO.getUser().getTenantDomain()));
+                    try (ResultSet rSet = prepStmt.executeQuery()) {
+                        while (rSet.next()){
+                            int appId = rSet.getInt(1);
+                            addScopeValidators(connection, consumerAppDO.getScopeValidators(), appId);
+                        }
+                    }
+                }
+                connection.commit();
             } catch (SQLException e) {
-                throw handleError("Error when executing the SQL : " + SQLQueries.OAuthAppDAOSQLQueries.ADD_OAUTH_APP, e);
+                throw handleError("Error when executing SQL for OAuth application creation ", e);
+
             } catch (IdentityOAuth2Exception e) {
                 throw handleError("Error occurred while processing the client id and client secret by " +
                         "TokenPersistenceProcessor", null);
@@ -126,7 +137,8 @@ public class OAuthAppDAO {
         }
     }
 
-    public String[] addOAuthConsumer(String username, int tenantId, String userDomain) throws IdentityOAuthAdminException {
+    public String[] addOAuthConsumer(String username, int tenantId, String userDomain) throws
+            IdentityOAuthAdminException {
         String consumerKey;
         String consumerSecret = OAuthUtil.getRandomNumber();
         long userAccessTokenExpireTime = OAuthServerConfiguration.getInstance()
@@ -218,6 +230,7 @@ public class OAuthAppDAO {
                                 oauthApp.setRefreshTokenExpiryTime(rSet.getLong(13));
                             }
                             oauthApp.setUser(authenticatedUser);
+                            oauthApp.setScopeValidators(getScopeValidators(connection, oauthApp.getId()));
                             oauthApps.add(oauthApp);
                         }
                     }
@@ -236,7 +249,8 @@ public class OAuthAppDAO {
         return oauthAppsOfUser;
     }
 
-    public OAuthAppDO getAppInformation(String consumerKey) throws InvalidOAuthClientException, IdentityOAuth2Exception {
+    public OAuthAppDO getAppInformation(String consumerKey) throws
+            InvalidOAuthClientException, IdentityOAuth2Exception {
 
         OAuthAppDO oauthApp = null;
         boolean isPKCESupportEnabled = OAuth2ServiceComponentHolder.isPkceEnabled();
@@ -286,6 +300,7 @@ public class OAuthAppDAO {
                                 oauthApp.setApplicationAccessTokenExpiryTime(rSet.getLong(11));
                                 oauthApp.setRefreshTokenExpiryTime(rSet.getLong(12));
                             }
+                            oauthApp.setScopeValidators(getScopeValidators(connection, oauthApp.getId()));
                         }
                     }
                     if (!rSetHasRows) {
@@ -310,7 +325,8 @@ public class OAuthAppDAO {
         return oauthApp;
     }
 
-    public OAuthAppDO getAppInformationByAppName(String appName) throws InvalidOAuthClientException, IdentityOAuth2Exception {
+    public OAuthAppDO getAppInformationByAppName(String appName) throws
+            InvalidOAuthClientException, IdentityOAuth2Exception {
         OAuthAppDO oauthApp;
         boolean isPKCESupportEnabled = OAuth2ServiceComponentHolder.isPkceEnabled();
 
@@ -363,6 +379,7 @@ public class OAuthAppDAO {
                                 oauthApp.setApplicationAccessTokenExpiryTime(rSet.getLong(10));
                                 oauthApp.setRefreshTokenExpiryTime(rSet.getLong(11));
                             }
+                            oauthApp.setScopeValidators(getScopeValidators(connection, oauthApp.getId()));
                         }
                     }
                     if (!rSetHasRows) {
@@ -418,6 +435,8 @@ public class OAuthAppDAO {
                 }
 
                 int count = prepStmt.executeUpdate();
+                removeScopeValidators(connection, oauthAppDO.getId());
+                addScopeValidators(connection, oauthAppDO.getScopeValidators(), oauthAppDO.getId());
                 if (log.isDebugEnabled()) {
                     log.debug("No. of records updated for updating consumer application. : " + count);
                 }
@@ -436,15 +455,17 @@ public class OAuthAppDAO {
                 prepStmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.REMOVE_APPLICATION)) {
             prepStmt.setString(1, consumerKey);
             prepStmt.execute();
+//            removeScopeValidators();
             connection.commit();
         } catch (SQLException e) {
-            throw  handleError("Error when executing the SQL : " + SQLQueries.OAuthAppDAOSQLQueries.REMOVE_APPLICATION, e);
+            throw handleError("Error when executing the SQL : " + SQLQueries.OAuthAppDAOSQLQueries.REMOVE_APPLICATION, e);
         }
     }
 
     /**
      * Update the OAuth service provider name.
-     * @param appName Service provider name.
+     *
+     * @param appName     Service provider name.
      * @param consumerKey Consumer key.
      * @throws IdentityApplicationManagementException Identity Application Management Exception
      */
@@ -486,7 +507,8 @@ public class OAuthAppDAO {
         return consumerAppState;
     }
 
-    public void updateConsumerAppState(String consumerKey, String state) throws IdentityApplicationManagementException {
+    public void updateConsumerAppState(String consumerKey, String state) throws
+            IdentityApplicationManagementException {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(); PreparedStatement
                 statement = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.UPDATE_APPLICATION_STATE)) {
@@ -499,7 +521,8 @@ public class OAuthAppDAO {
         }
     }
 
-    private boolean isDuplicateApplication(String username, int tenantId, String userDomain, OAuthAppDO consumerAppDTO)
+    private boolean isDuplicateApplication(String username, int tenantId, String userDomain, OAuthAppDO
+            consumerAppDTO)
             throws IdentityOAuthAdminException {
 
         boolean isDuplicateApp = false;
@@ -557,5 +580,37 @@ public class OAuthAppDAO {
 
     private boolean isUsernameCaseSensitive(String tenantQualifiedUsername) {
         return IdentityUtil.isUserStoreInUsernameCaseSensitive(tenantQualifiedUsername);
+    }
+
+    private void addScopeValidators(Connection connection, String[] scopeValidators, int id) throws SQLException {
+        try (PreparedStatement stmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.ADD_APP_SCOPE_VALIDATOR)) {
+            for (String scopeValidator :
+                    scopeValidators) {
+                stmt.setInt(1, id);
+                stmt.setString(2, scopeValidator);
+                stmt.addBatch();
+            }
+            stmt.executeBatch();
+        }
+    }
+
+    private String[] getScopeValidators(Connection connection, int id) throws SQLException {
+        ArrayList<String> scopeValidators = new ArrayList<>();
+        try (PreparedStatement stmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.GET_APP_SCOPE_VALIDATORS)) {
+            stmt.setInt(1, id);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    scopeValidators.add(rs.getString(1));
+                }
+            }
+        }
+        return scopeValidators.toArray(new String[scopeValidators.size()]);
+    }
+
+    private void removeScopeValidators(Connection connection, int id) throws SQLException {
+        try (PreparedStatement stmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.REMOVE_APP_SCOPE_VALIDATORS)) {
+            stmt.setInt(1, id);
+            stmt.execute();
+        }
     }
 }

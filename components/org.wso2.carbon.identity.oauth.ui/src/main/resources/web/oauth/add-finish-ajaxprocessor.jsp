@@ -28,6 +28,8 @@
 
 <%@ page import="java.util.ResourceBundle" %>
 <%@ page import="org.wso2.carbon.identity.oauth.ui.util.OAuthUIUtil" %>
+<%@ page import="java.util.ArrayList" %>
+<%@ page import="java.util.List" %>
 
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt"%>
 <%@ taglib uri="http://wso2.org/projects/carbon/taglibs/carbontags.jar" prefix="carbon"%>
@@ -97,12 +99,22 @@
                     buff.append(grantType + " ");
                 }
             }
-
             grants = buff.toString();
+
+            List<String> registeredScopeValidators = new ArrayList<String>();
+            String[] allowedValidators = client.getAllowedScopeValidators();
+            for (String allowedValidator : allowedValidators) {
+                String val = request.getParameter("scope_validator_" + allowedValidator.replaceAll("\\.","_"));
+                if (val != null) {
+                    registeredScopeValidators.add(allowedValidator);
+                }
+            }
 
             if (OAuthConstants.OAuthVersions.VERSION_2.equals(oauthVersion)) {
                 app.setGrantTypes(grants);
+                app.setScopeValidators(registeredScopeValidators.toArray(new String[registeredScopeValidators.size()]));
             }
+
             app.setPkceMandatory(pkceMandatory);
             app.setPkceSupportPlain(pkceSupportPlain);
 

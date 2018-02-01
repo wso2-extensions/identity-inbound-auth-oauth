@@ -123,6 +123,16 @@ public class SQLQueries {
         public static final String UPDATE_APPLICATION_STATE = "UPDATE IDN_OAUTH_CONSUMER_APPS SET APP_STATE=? WHERE " +
                 "CONSUMER_KEY=?";
 
+        public static final String GET_APP_ID_BY_APP_NAME = "SELECT ID FROM IDN_OAUTH_CONSUMER_APPS WHERE APP_NAME=? AND TENANT_ID=? ";
+
+        public static final String ADD_APP_SCOPE_VALIDATOR = "INSERT INTO IDN_OAUTH_APP_SCOPE_VALIDATORS " +
+                "(APP_ID, SCOPE_VALIDATOR) VALUES (?,?) ";
+
+        public static final String GET_APP_SCOPE_VALIDATORS = "SELECT SCOPE_VALIDATOR FROM IDN_OAUTH_APP_SCOPE_VALIDATORS " +
+                "WHERE APP_ID=?";
+
+        public static final String REMOVE_APP_SCOPE_VALIDATORS = "DELETE FROM IDN_OAUTH_APP_SCOPE_VALIDATORS WHERE APP_ID=?";
+
         private OAuthAppDAOSQLQueries() {
         }
     }

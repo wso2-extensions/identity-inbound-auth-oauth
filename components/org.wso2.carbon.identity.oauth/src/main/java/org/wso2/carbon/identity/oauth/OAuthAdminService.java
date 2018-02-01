@@ -50,6 +50,7 @@ import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.ClientCredentialDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeValidator;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
@@ -70,6 +71,7 @@ public class OAuthAdminService extends AbstractAdmin {
     public static final String IMPLICIT = "implicit";
     public static final String AUTHORIZATION_CODE = "authorization_code";
     private static List<String> allowedGrants = null;
+    private static List<String> scopeValidators = null;
     protected Log log = LogFactory.getLog(OAuthAdminService.class);
 
     /**
@@ -130,6 +132,7 @@ public class OAuthAdminService extends AbstractAdmin {
                 dto.setOauthConsumerSecret(app.getOauthConsumerSecret());
                 dto.setOAuthVersion(app.getOauthVersion());
                 dto.setGrantTypes(app.getGrantTypes());
+                dto.setScopeValidators(app.getScopeValidators());
                 dto.setUsername(app.getUser().toString());
                 dto.setPkceMandatory(app.isPkceMandatory());
                 dto.setPkceSupportPlain(app.isPkceSupportPlain());
@@ -162,6 +165,7 @@ public class OAuthAdminService extends AbstractAdmin {
                 dto.setOauthConsumerSecret(app.getOauthConsumerSecret());
                 dto.setOAuthVersion(app.getOauthVersion());
                 dto.setGrantTypes(app.getGrantTypes());
+                dto.setScopeValidators(app.getScopeValidators());
                 dto.setPkceMandatory(app.isPkceMandatory());
                 dto.setPkceSupportPlain(app.isPkceSupportPlain());
                 dto.setUserAccessTokenExpiryTime(app.getUserAccessTokenExpiryTime());
@@ -199,6 +203,7 @@ public class OAuthAdminService extends AbstractAdmin {
                 dto.setOauthConsumerSecret(app.getOauthConsumerSecret());
                 dto.setOAuthVersion(app.getOauthVersion());
                 dto.setGrantTypes(app.getGrantTypes());
+                dto.setScopeValidators(app.getScopeValidators());
                 dto.setPkceMandatory(app.isPkceMandatory());
                 dto.setPkceSupportPlain(app.isPkceSupportPlain());
                 dto.setUserAccessTokenExpiryTime(app.getUserAccessTokenExpiryTime());
@@ -257,7 +262,7 @@ public class OAuthAdminService extends AbstractAdmin {
                                     " as registrant name");
                         }
                     } catch (UserStoreException e) {
-                        throw handleError("Error while retrieving the user store manager for user: "+ applicationUser, e);
+                        throw handleError("Error while retrieving the user store manager for user: " + applicationUser, e);
                     }
 
                 }
@@ -279,6 +284,17 @@ public class OAuthAdminService extends AbstractAdmin {
                         }
                     }
                     app.setGrantTypes(application.getGrantTypes());
+                    List<String> scopeValidators = new ArrayList<>(Arrays.asList(getAllowedScopeValidators()));
+                    String[] requestedScopeValidators = application.getScopeValidators();
+                    if (requestedScopeValidators == null) {
+                        requestedScopeValidators = new String[0];
+                    }
+                    for (String requestedScopeValidator : requestedScopeValidators) {
+                        if (!scopeValidators.contains(requestedScopeValidator)) {
+                            throw new IdentityOAuthAdminException(requestedScopeValidator + " not allowed");
+                        }
+                    }
+                    app.setScopeValidators(requestedScopeValidators);
                     app.setPkceMandatory(application.getPkceMandatory());
                     app.setPkceSupportPlain(application.getPkceSupportPlain());
                     // Validate access token expiry configurations.
@@ -291,7 +307,7 @@ public class OAuthAdminService extends AbstractAdmin {
                 AppInfoCache.getInstance().addToCache(app.getOauthConsumerKey(), app);
                 if (log.isDebugEnabled()) {
                     log.debug("Oauth Application registration success : " + application.getApplicationName() + " in " +
-                            "tenant domain: "+ tenantDomain);
+                            "tenant domain: " + tenantDomain);
                 }
             } else {
                 String message = "No application details in the request. Failed to register OAuth App";
@@ -381,12 +397,23 @@ public class OAuthAdminService extends AbstractAdmin {
                 }
             }
             oauthappdo.setGrantTypes(consumerAppDTO.getGrantTypes());
+            List<String> scopeValidators = new ArrayList<>(Arrays.asList(getAllowedScopeValidators()));
+            String[] requestedScopeValidators = consumerAppDTO.getScopeValidators();
+            if (requestedScopeValidators == null) {
+                requestedScopeValidators = new String[0];
+            }
+            for (String requestedScopeValidator : requestedScopeValidators) {
+                if (!scopeValidators.contains(requestedScopeValidator)) {
+                    throw new IdentityOAuthAdminException(requestedScopeValidator + " not allowed");
+                }
+            }
+            oauthappdo.setScopeValidators(requestedScopeValidators);
         }
         dao.updateConsumerApplication(oauthappdo);
         AppInfoCache.getInstance().addToCache(oauthappdo.getOauthConsumerKey(), oauthappdo);
         if (log.isDebugEnabled()) {
             log.debug("Oauth Application update success : " + consumerAppDTO.getApplicationName() + " in " +
-                    "tenant domain: "+ tenantDomain);
+                    "tenant domain: " + tenantDomain);
         }
     }
 
@@ -586,6 +613,7 @@ public class OAuthAdminService extends AbstractAdmin {
                                 appDTO.setApplicationName(appDO.getApplicationName());
                                 appDTO.setUsername(appDO.getUser().toString());
                                 appDTO.setGrantTypes(appDO.getGrantTypes());
+                                appDTO.setScopeValidators(appDO.getScopeValidators());
                                 appDTO.setPkceMandatory(appDO.isPkceMandatory());
                                 appDTO.setPkceSupportPlain(appDO.isPkceSupportPlain());
                                 appDTO.setUserAccessTokenExpiryTime(appDO.getUserAccessTokenExpiryTime());
@@ -798,6 +826,16 @@ public class OAuthAdminService extends AbstractAdmin {
             }
         }
         return allowedGrants.toArray(new String[allowedGrants.size()]);
+    }
+
+    public String[] getAllowedScopeValidators() {
+        Set<OAuth2ScopeValidator> oAuth2ScopeValidators = OAuthServerConfiguration.getInstance()
+                .getOAuth2ScopeValidators();
+        ArrayList<String> validators = new ArrayList<>();
+        for (OAuth2ScopeValidator validator : oAuth2ScopeValidators) {
+            validators.add(validator.getClass().getName());
+        }
+        return validators.toArray(new String[validators.size()]);
     }
 
     /**
