@@ -105,7 +105,7 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
         return isValid;
     }
 
-    private boolean isValidAudience(RequestObject requestObject, OAuth2Parameters oAuth2Parameters) throws
+    protected boolean isValidAudience(RequestObject requestObject, OAuth2Parameters oAuth2Parameters) throws
             RequestObjectException {
 
         String tokenEPUrl = getTokenEpURL(oAuth2Parameters.getTenantDomain());
@@ -113,7 +113,7 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
         return validateAudience(tokenEPUrl, audience);
     }
 
-    private boolean validateClientIdAndResponseType(RequestObject requestObject, OAuth2Parameters oauthRequest)
+    protected boolean validateClientIdAndResponseType(RequestObject requestObject, OAuth2Parameters oauthRequest)
             throws RequestObjectException {
 
         String clientIdInReqObj = requestObject.getClaimValue(Constants.CLIENT_ID);
@@ -132,7 +132,7 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
         return true;
     }
 
-    private boolean isValidParameter(String authParam, String requestObjParam) {
+    protected boolean isValidParameter(String authParam, String requestObjParam) {
         return StringUtils.isEmpty(requestObjParam) || requestObjParam.equals(authParam);
     }
 
@@ -143,7 +143,7 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
      * @return tokenEndpoint of the Issuer
      * @throws IdentityOAuth2Exception
      */
-    private String getTokenEpURL(String tenantDomain) throws RequestObjectException {
+    protected String getTokenEpURL(String tenantDomain) throws RequestObjectException {
 
         String tokenEndpoint;
         IdentityProvider residentIdP;
@@ -169,7 +169,7 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
         return tokenEndpoint;
     }
 
-    private boolean isValidIssuer(RequestObject requestObject, OAuth2Parameters oAuth2Parameters) {
+    protected boolean isValidIssuer(RequestObject requestObject, OAuth2Parameters oAuth2Parameters) {
         String issuer = requestObject.getClaimsSet().getIssuer();
         return StringUtils.isNotEmpty(issuer) && issuer.equals(oAuth2Parameters.getClientId());
     }
@@ -187,7 +187,7 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
      * @return
      * @throws IdentityOAuth2Exception
      */
-    public boolean validateAudience(String currentAudience, List<String> audience) {
+    protected boolean validateAudience(String currentAudience, List<String> audience) {
 
         for (String aud : audience) {
             if (StringUtils.equals(currentAudience, aud)) {
@@ -243,7 +243,7 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
      * @param tenantDomain tenant domain name
      * @return key store file name
      */
-    public static String generateKSNameFromDomainName(String tenantDomain) {
+    protected static String generateKSNameFromDomainName(String tenantDomain) {
         String ksName = tenantDomain.trim().replace(FULL_STOP_DELIMITER, DASH_DELIMITER);
         return ksName + KEYSTORE_FILE_EXTENSION;
     }
@@ -255,7 +255,7 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
      * @param x509Certificate
      * @return
      */
-    private boolean isSignatureVerified(SignedJWT signedJWT, Certificate x509Certificate) {
+    protected boolean isSignatureVerified(SignedJWT signedJWT, Certificate x509Certificate) {
 
         JWSVerifier verifier;
         ReadOnlyJWSHeader header = signedJWT.getHeader();

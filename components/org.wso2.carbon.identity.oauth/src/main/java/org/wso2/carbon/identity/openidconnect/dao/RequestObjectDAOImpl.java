@@ -63,7 +63,6 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
     public void insertRequestObjectData(String consumerKey, String sessionDataKey, List<List<RequestedClaim>> claims)
             throws IdentityOAuth2Exception {
 
-        int requestObjectId = -1;
         PreparedStatement prepStmt = null;
         ResultSet rs = null;
         String sqlStmt = SQLQueries.STORE_IDN_OIDC_REQ_OBJECT_REFERENCE;
@@ -76,14 +75,18 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
             prepStmt.setString(1, sessionDataKey);
             prepStmt.setString(2, consumerKey);
             prepStmt.execute();
+            int requestObjectId = -1;
             rs = prepStmt.getGeneratedKeys();
             if (rs.next()) {
                 requestObjectId = rs.getInt(1);
+            } else {
+                log.warn("Unable to persist Request Object reference for : " + sessionDataKey);
             }
             connection.commit();
             if (requestObjectId != -1) {
                 if (log.isDebugEnabled()) {
-                    log.debug("Successfully stored the request object reference: " + requestObjectId);
+                    log.debug("Successfully stored the Request Object reference: " + requestObjectId + " for " +
+                            "sessionDataKey: " + sessionDataKey);
                 }
                 insertRequestObjectClaims(requestObjectId, claims, connection);
             }
@@ -107,10 +110,10 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
     @Override
     public void updateRequestObjectReferencebyCodeId(String sessionDataKey, String codeId) throws IdentityOAuth2Exception {
 
-        Connection connection = IdentityDatabaseUtil.getDBConnection();
+        Connection connection = null;
         PreparedStatement ps = null;
         try {
-            connection.setAutoCommit(false);
+            connection = IdentityDatabaseUtil.getDBConnection();
             String sql = SQLQueries.UPDATE_REQUEST_OBJECT;
             ps = connection.prepareStatement(sql);
             ps.setString(1, codeId);
@@ -138,10 +141,10 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
     @Override
     public void updateRequestObjectReferencebyTokenId(String sessionDataKey, String accessTokenId) throws IdentityOAuth2Exception {
 
-        Connection connection = IdentityDatabaseUtil.getDBConnection();
+        Connection connection = null;
         PreparedStatement ps = null;
         try {
-            connection.setAutoCommit(false);
+            connection = IdentityDatabaseUtil.getDBConnection();
             String sql = SQLQueries.UPDATE_REQUEST_OBJECT;
             ps = connection.prepareStatement(sql);
             ps.setString(1, null);
@@ -162,7 +165,6 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
     private void insertRequestObjectClaims(int requestObjectId, List<List<RequestedClaim>> claims, Connection connection)
             throws IdentityOAuth2Exception {
 
-        int requestObjectClaimId = -1;
         String sqlStmt = SQLQueries.STORE_IDN_OIDC_REQ_OBJECT_CLAIMS;
         ResultSet rs;
         PreparedStatement prepStmt = null;
@@ -184,14 +186,16 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
                     prepStmt.addBatch();
                     prepStmt.executeBatch();
                     rs = prepStmt.getGeneratedKeys();
+                    int requestObjectClaimId = -1;
                     if (rs.next()) {
                         requestObjectClaimId = rs.getInt(1);
+                    } else {
+                        log.warn("Unable to persist the Request Object claim : " + claim.getName());
                     }
                     connection.commit();
                     if (requestObjectClaimId > -1) {
                         if (log.isDebugEnabled()) {
-                            log.debug("Successfully stored the request object claims in " + OIDCConstants.
-                                    IDN_OIDC_REQ_OBJECT_CLAIMS + "table.");
+                            log.debug("Successfully stored the Request Object claim: " + claim.getName());
                         }
                         if (CollectionUtils.isNotEmpty(claim.getValues()) && claim.getValues().size() > 0) {
                             insertRequestObjectClaimValues(requestObjectClaimId, claim.getValues(), connection);
@@ -236,18 +240,19 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
     /**
      * Retrieve Requested claims for the id token and user info endpoint.
      *
-     * @param token    token
+     * @param token      token
      * @param isUserInfo return true if the claims are requested from user info end point.
      * @return
      * @throws IdentityOAuth2Exception
      */
     @Override
     public List<RequestedClaim> getRequestedClaims(String token, boolean isUserInfo) throws IdentityOAuth2Exception {
-        Connection connection = IdentityDatabaseUtil.getDBConnection();
+        Connection connection = null;
         PreparedStatement prepStmt = null;
         ResultSet resultSet = null;
         List<RequestedClaim> essentialClaims = new ArrayList<>();
         try {
+            connection = IdentityDatabaseUtil.getDBConnection();
             String sql = SQLQueries.RETRIEVE_REQUESTED_CLAIMS_BY_TOKEN;
             String tokenId = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO().
                     getTokenIdByAccessToken(token);
@@ -278,10 +283,10 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
     public void refreshRequestObjectReference(String oldAccessTokenId, String newAccessTokenId)
             throws IdentityOAuth2Exception {
 
-        Connection connection = IdentityDatabaseUtil.getDBConnection();
+        Connection connection = null;
         PreparedStatement ps = null;
         try {
-            connection.setAutoCommit(false);
+            connection = IdentityDatabaseUtil.getDBConnection();
             String sql = SQLQueries.REFRESH_REQUEST_OBJECT;
             ps = connection.prepareStatement(sql);
             ps.setString(1, newAccessTokenId);
@@ -301,10 +306,10 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
     @Override
     public void updateRequestObjectReferenceCodeToToken(String codeId, String tokenId) throws IdentityOAuth2Exception {
 
-        Connection connection = IdentityDatabaseUtil.getDBConnection();
+        Connection connection = null;
         PreparedStatement ps = null;
         try {
-            connection.setAutoCommit(false);
+            connection = IdentityDatabaseUtil.getDBConnection();
             deleteRequestObjectReferenceforCode(tokenId);
             String sql = SQLQueries.UPDATE_REQUEST_OBJECT_TOKEN_FOR_CODE;
             ps = connection.prepareStatement(sql);

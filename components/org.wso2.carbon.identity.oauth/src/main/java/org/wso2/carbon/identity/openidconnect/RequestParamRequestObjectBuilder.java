@@ -65,7 +65,7 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
             RequestObjectException {
 
         RequestObject requestObject = new RequestObject();
-        //Making a copy of requestObjectParam to prevent editing initial reference
+        // Making a copy of requestObjectParam to prevent editing initial reference
         String requestObjectParamValue = requestObjectParam;
         if (isEncrypted(requestObjectParamValue)) {
             requestObjectParamValue = decrypt(requestObjectParamValue, oAuth2Parameters);
