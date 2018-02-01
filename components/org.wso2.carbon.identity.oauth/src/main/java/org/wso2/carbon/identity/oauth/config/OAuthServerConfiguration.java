@@ -49,7 +49,6 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.handlers.ResponseTypeHandler;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuerImpl;
-import org.wso2.carbon.identity.oauth2.token.handlers.clientauth.ClientAuthenticationHandler;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.saml.SAML2TokenCallbackHandler;
 import org.wso2.carbon.identity.oauth2.validators.grant.AuthorizationCodeGrantValidator;
@@ -150,7 +149,6 @@ public class OAuthServerConfiguration {
     private Map<String, Class<? extends OAuthValidator<HttpServletRequest>>> supportedResponseTypeValidators;
     private String[] supportedClaims = null;
     private Map<String, Properties> supportedClientAuthHandlerData = new HashMap<>();
-    private List<ClientAuthenticationHandler> supportedClientAuthHandlers;
     private String saml2TokenCallbackHandlerName = null;
     private String saml2BearerTokenUserType;
     private boolean mapFederatedUsersToLocal = false;
@@ -809,40 +807,7 @@ public class OAuthServerConfiguration {
     public String[] getSupportedClaims() {
         return supportedClaims;
     }
-
-    public List<ClientAuthenticationHandler> getSupportedClientAuthHandlers() {
-        if (supportedClientAuthHandlers == null) {
-            synchronized (this) {
-                if (supportedClientAuthHandlers == null) {
-                    List<ClientAuthenticationHandler> supportedClientAuthHandlersTemp = new ArrayList<>();
-
-                    for (Map.Entry<String, Properties> entry : supportedClientAuthHandlerData.entrySet()) {
-                        ClientAuthenticationHandler clientAuthenticationHandler = null;
-                        try {
-                            clientAuthenticationHandler = (ClientAuthenticationHandler)
-                                    Class.forName(entry.getKey()).newInstance();
-                            clientAuthenticationHandler.init(entry.getValue());
-                            supportedClientAuthHandlersTemp.add(clientAuthenticationHandler);
-
-                            // Exceptions necessarily don't have to break the flow since there are cases
-                            // runnable without client auth handlers
-                        } catch (InstantiationException e) {
-                            log.error("Error instantiating " + entry, e);
-                        } catch (IllegalAccessException e) {
-                            log.error("Illegal access to " + entry, e);
-                        } catch (ClassNotFoundException e) {
-                            log.error("Cannot find class: " + entry, e);
-                        } catch (IdentityOAuth2Exception e) {
-                            log.error("Error while initializing " + entry, e);
-                        }
-                        supportedClientAuthHandlers = supportedClientAuthHandlersTemp;
-                    }
-                }
-            }
-        }
-        return supportedClientAuthHandlers;
-    }
-
+    
     public SAML2TokenCallbackHandler getSAML2TokenCallbackHandler() {
 
         if (StringUtils.isBlank(saml2TokenCallbackHandlerName)) {
