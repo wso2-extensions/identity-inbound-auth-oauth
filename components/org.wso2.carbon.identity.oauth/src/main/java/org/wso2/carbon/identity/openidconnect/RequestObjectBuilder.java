@@ -30,8 +30,16 @@ public interface RequestObjectBuilder {
     /**
      * To build the request object
      */
-    public void buildRequestObject(String requestObject, OAuth2Parameters oAuth2Parameters, RequestObject
-            requestObjectInstance) throws RequestObjectException;
+    RequestObject buildRequestObject(String requestObject, OAuth2Parameters oAuth2Parameters) throws RequestObjectException;
+
+    /**
+     * To decrypt the request objected by using IS primary key
+     *
+     * @param requestObject    requestObject
+     * @param oAuth2Parameters oAuth2Parameters
+     * @throws RequestObjectException
+     */
+    String decrypt(String requestObject, OAuth2Parameters oAuth2Parameters) throws RequestObjectException;
 
 }
 

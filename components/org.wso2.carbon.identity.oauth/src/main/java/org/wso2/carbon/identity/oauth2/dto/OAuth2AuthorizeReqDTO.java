@@ -42,6 +42,15 @@ public class OAuth2AuthorizeReqDTO {
     private long maxAge;
     private RequestObject requestObject;
     private String requestUriParamClaims;
+    private String sessionDataKey;
+
+    public String getSessionDataKey() {
+        return sessionDataKey;
+    }
+
+    public void setSessionDataKey(String sessionDataKey) {
+        this.sessionDataKey = sessionDataKey;
+    }
 
     public long getMaxAge() {
         return maxAge;
