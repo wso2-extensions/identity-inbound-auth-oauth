@@ -67,7 +67,7 @@ public class DefaultOAuth2TokenValidator implements OAuth2TokenValidator {
         if (!scopeValidators.isEmpty()) {
             for (OAuth2ScopeValidator validator : oAuth2ScopeValidators) {
 
-                if (validator != null && scopeValidators.contains(validator.getClass().getName())
+                if (validator != null && scopeValidators.contains(validator.getClass().getSimpleName())
                         && validator.canHandle(messageContext)) {
                     String resource = null;
                     if (messageContext.getRequestDTO().getContext() != null) {

@@ -833,7 +833,7 @@ public class OAuthAdminService extends AbstractAdmin {
                 .getOAuth2ScopeValidators();
         ArrayList<String> validators = new ArrayList<>();
         for (OAuth2ScopeValidator validator : oAuth2ScopeValidators) {
-            validators.add(validator.getClass().getName());
+            validators.add(validator.getClass().getSimpleName());
         }
         return validators.toArray(new String[validators.size()]);
     }
