@@ -27,7 +27,6 @@ import org.wso2.balana.utils.exception.PolicyBuilderException;
 import org.wso2.balana.utils.policy.PolicyBuilder;
 import org.wso2.balana.utils.policy.dto.RequestElementDTO;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
-import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.entitlement.EntitlementException;
 import org.wso2.carbon.identity.entitlement.PDPConstants;
 import org.wso2.carbon.identity.entitlement.common.EntitlementPolicyConstants;
@@ -84,82 +83,51 @@ public class XACMLScopeValidator extends OAuth2ScopeValidator {
             return false;
         }
 
-        if (log.isDebugEnabled()) {
-            log.debug("In policy scope validation flow...");
-        }
-
         try {
             String consumerKey = accessTokenDO.getConsumerKey();
             OAuthAppDO authApp = OAuth2Util.getAppInformationByClientId(consumerKey);
             String tenantDomainOfOauthApp = OAuth2Util.getTenantDomainOfOauthApp(authApp);
 
-            Boolean isValidationEnabled = OAuth2Util.getIsValidationEnabledOfOauthApp(authApp.getApplicationName(),
-                    consumerKey, tenantDomainOfOauthApp);
+            boolean isValidated = false;
+            try {
+                RequestDTO requestDTO = createRequestDTO(accessTokenDO, authApp, resource);
+                RequestElementDTO requestElementDTO = PolicyCreatorUtil.createRequestElementDTO(requestDTO);
+                String requestString = PolicyBuilder.getInstance().buildRequest(requestElementDTO);
 
-
-            if (!isValidationEnabled) {
                 if (log.isDebugEnabled()) {
-                    log.debug(String.format("Scope validation is disabled for '%s@%s'",
-                            authApp.getApplicationName(), tenantDomainOfOauthApp));
+                    log.debug("XACML scope validation request :\n" + requestString);
                 }
-                return true;
+                FrameworkUtils.startTenantFlow(accessTokenDO.getAuthzUser().getTenantDomain());
+                String responseString =
+                        OAuth2ServiceComponentHolder.getEntitlementService().getDecision(requestString);
+                if (log.isDebugEnabled()) {
+                    log.debug("XACML scope validation response :\n" + responseString);
+                }
+                String validationResponse = evaluateXACMLResponse(responseString);
+                if (RULE_EFFECT_NOT_APPLICABLE.equalsIgnoreCase(validationResponse)) {
+                    log.warn(String.format(
+                            "No applicable rule for service provider '%s@%s'." +
+                                    "Add an validating policy (or unset Scope Validation using XACMLScopeValidator) to fix this warning.",
+                            authApp.getApplicationName(), tenantDomainOfOauthApp));
+                    isValidated = true;
+                } else if (RULE_EFFECT_PERMIT.equalsIgnoreCase(validationResponse)) {
+                    isValidated = true;
+                }
+            } catch (PolicyBuilderException e) {
+                log.error("Policy Builder Exception occurred", e);
+            } catch (XMLStreamException | JaxenException e) {
+                log.error("Exception occurred when getting decision from xacml response", e);
+            } catch (EntitlementException e) {
+                log.error("Entitlement Exception occurred", e);
+            } finally {
+                FrameworkUtils.endTenantFlow();
             }
-
-            return validateScope(accessTokenDO, authApp, resource, tenantDomainOfOauthApp);
+            return isValidated;
 
         } catch (InvalidOAuthClientException e) {
             log.error("Invalid OAuth Client Exception occurred", e);
-        } catch (IdentityApplicationManagementException e) {
-            log.error("Identity Application Management Exception occurred", e);
         }
         return false;
-    }
-
-    /**
-     * Use entitlement service to validate the scope of the token against the XACML policies.
-     *
-     * @param accessTokenDO          access token to be validated
-     * @param authApp                auth application of that token
-     * @param resource               resource to which the client is trying to access
-     * @param tenantDomainOfOauthApp tenant domain of the application
-     * @return
-     */
-    private boolean validateScope(AccessTokenDO accessTokenDO, OAuthAppDO authApp, String resource, String tenantDomainOfOauthApp) {
-        boolean isValidated = false;
-        try {
-            RequestDTO requestDTO = createRequestDTO(accessTokenDO, authApp, resource);
-            RequestElementDTO requestElementDTO = PolicyCreatorUtil.createRequestElementDTO(requestDTO);
-            String requestString = PolicyBuilder.getInstance().buildRequest(requestElementDTO);
-
-            if (log.isDebugEnabled()) {
-                log.debug("XACML scope validation request :\n" + requestString);
-            }
-            FrameworkUtils.startTenantFlow(accessTokenDO.getAuthzUser().getTenantDomain());
-            String responseString =
-                    OAuth2ServiceComponentHolder.getEntitlementService().getDecision(requestString);
-            if (log.isDebugEnabled()) {
-                log.debug("XACML scope validation response :\n" + responseString);
-            }
-            String validationResponse = evaluateXACMLResponse(responseString);
-            if (RULE_EFFECT_NOT_APPLICABLE.equalsIgnoreCase(validationResponse)) {
-                log.warn(String.format(
-                        "No applicable rule for service provider '%s@%s', Hence validating the token by default." +
-                                "Add an validating policy (or unset validation) to fix this warning.",
-                        authApp.getApplicationName(), tenantDomainOfOauthApp));
-                isValidated = true;
-            } else if (RULE_EFFECT_PERMIT.equalsIgnoreCase(validationResponse)) {
-                isValidated = true;
-            }
-        } catch (PolicyBuilderException e) {
-            log.error("Policy Builder Exception occurred", e);
-        } catch (XMLStreamException | JaxenException e) {
-            log.error("Exception occurred when getting decision from xacml response", e);
-        } catch (EntitlementException e) {
-            log.error("Entitlement Exception occurred", e);
-        } finally {
-            FrameworkUtils.endTenantFlow();
-        }
-        return isValidated;
     }
 
     /**

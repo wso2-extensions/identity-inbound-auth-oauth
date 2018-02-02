@@ -118,8 +118,6 @@ public class XACMLScopeValidatorTest extends IdentityBaseTest {
 
         mockStatic(OAuth2Util.class);
         when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(authApp);
-        when(OAuth2Util.getIsValidationEnabledOfOauthApp(anyString(), anyString(), anyString())).thenReturn(true);
-
 
         RequestElementDTO requestElementDTO = mock(RequestElementDTO.class);
         mockStatic(PolicyCreatorUtil.class);
@@ -147,10 +145,5 @@ public class XACMLScopeValidatorTest extends IdentityBaseTest {
 
         when(policyBuilder.buildRequest(any(RequestElementDTO.class))).thenThrow(new PolicyBuilderException(ERROR));
         assertFalse(xacmlScopeValidator.validateScope(accessTokenDO, resource));
-
-
-        when(OAuth2Util.getIsValidationEnabledOfOauthApp(anyString(), anyString(), anyString())).thenReturn(false);
-        assertTrue(xacmlScopeValidator.validateScope(accessTokenDO, resource));
-
     }
 }
