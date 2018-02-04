@@ -16,7 +16,6 @@
  ~ under the License.
  -->
 <%@ page import="org.apache.axis2.context.ConfigurationContext"%>
-<%@ page import="org.apache.commons.lang.StringUtils" %>
 <%@ page import="org.owasp.encoder.Encode" %>
 <%@ page import="org.wso2.carbon.CarbonConstants" %>
 <%@ page import="org.wso2.carbon.identity.oauth.common.OAuthConstants" %>
@@ -30,6 +29,7 @@
 <%@ page import="java.util.Arrays" %>
 <%@ page import="java.util.List" %>
 <%@ page import="java.util.ResourceBundle" %>
+<%@ page import="org.apache.commons.lang.ArrayUtils" %>
 
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%@ taglib uri="http://wso2.org/projects/carbon/taglibs/carbontags.jar" prefix="carbon" %>
@@ -124,9 +124,6 @@
                     grants = "";
                 }
                 audiences = app.getAudiences();
-                if (audiences == null) {
-                    audiences = "";
-                }
             }
         }
 
@@ -279,20 +276,18 @@
                     }
 
                 }
-                function disableAudienceRestriction(chkbx) {
-                    document.editAppform.audience.disabled = (chkbx.checked) ? false
-                        : true;
-                    document.editAppform.addAudience.disabled = (chkbx.checked) ? false
-                        : true;
+                function toggleAudienceRestriction(chkbx) {
+                    document.editAppform.audience.disabled = !chkbx.checked;
+                    document.editAppform.addAudience.disabled = (!chkbx.checked);
                 }
-                function addAudienceFunc() {
+                function addAudience() {
                     var audience = $.trim(document.getElementById('audience').value);
-                    if (audience == "") {
+                    if (audience === "") {
                         document.getElementById("audience").value = "";
                         return false;
                     }
 
-                    if ($.inArray(audience, audienceArr) != -1) {
+                    if ($.inArray(audience, audienceArr) !== -1) {
                         CARBON.showWarningDialog('<fmt:message key="duplicate.audience.value"/>');
                         document.getElementById("audience").value = "";
                         return false;
@@ -330,9 +325,9 @@
 
                 function removeAudience(i) {
                     var propRow = document.getElementById("audienceRow" + i);
-                    if (propRow != undefined && propRow != null) {
+                    if (propRow !== undefined && propRow !== null) {
                         var parentTBody = propRow.parentNode;
-                        if (parentTBody != undefined && parentTBody != null) {
+                        if (parentTBody !== undefined && parentTBody !== null) {
                             parentTBody.removeChild(propRow);
                             if (!isContainRaw(parentTBody)) {
                                 var propertyTable = document.getElementById("audienceTableId");
@@ -343,13 +338,13 @@
                 }
 
                 function isContainRaw(tbody) {
-                    if (tbody.childNodes == null || tbody.childNodes.length == 0) {
+                    if (tbody.childNodes === null || tbody.childNodes.length === 0) {
                         return false;
                     } else {
                         for (var i = 0; i < tbody.childNodes.length; i++) {
                             var child = tbody.childNodes[i];
-                            if (child != undefined && child != null) {
-                                if (child.nodeName == "tr" || child.nodeName == "TR") {
+                            if (child !== undefined && child !== null) {
+                                if (child.nodeName === "tr" || child.nodeName === "TR") {
                                     return true;
                                 }
                             }
@@ -518,8 +513,7 @@
                     <%
                         audienceTableStyle = app.getAudiences() != null ? "" :
                                 "display:none";
-                        if (app.getAudiences() != null &&
-                                StringUtils.isNotBlank(app.getAudiences())) {
+                        if (ArrayUtils.isNotEmpty(app.getAudiences())) {
                     %>
                     <tr id="audience-enable">
                         <td title="Enable Audience Restriction to restrict the audience. You may add audience members using the Audience text box and clicking the Add button"
@@ -527,14 +521,12 @@
                                                name="enableAudienceRestriction"
                                                id="enableAudienceRestriction"
                                                value="true" checked="checked"
-                                               onclick="disableAudienceRestriction(this);"/>
-                            <fmt:message
-                                    key="enable.audience.restriction"/>
+                                               onclick="toggleAudienceRestriction(this);"/>
+                            <fmt:message key="enable.audience.restriction"/>
                         </td>
                     </tr>
                     <tr id="audience-add">
-                        <td
-                                style="padding-left: 40px ! important; color: rgb(119, 119, 119); font-style: italic;">
+                        <td style="padding-left: 40px ! important; color: rgb(119, 119, 119); font-style: italic;">
                             <fmt:message key="sp.audience"/>
                         </td>
                         <td>
@@ -543,7 +535,7 @@
                             <input id="addAudience" name="addAudience"
                                    type="button"
                                    value="<fmt:message key="oauth.add.audience"/>"
-                                   onclick="return addAudienceFunc()"/>
+                                   onclick="return addAudience()"/>
                         </td>
                     </tr>
                     <% } else {%>
@@ -554,13 +546,12 @@
                                    name="enableAudienceRestriction"
                                    id="enableAudienceRestriction"
                                    value="true"
-                                   onclick="disableAudienceRestriction(this);"/>
+                                   onclick="toggleAudienceRestriction(this);"/>
                             <fmt:message key="enable.audience.restriction"/>
                         </td>
                     </tr>
                     <tr id="audience-add">
-                        <td
-                                style="padding-left: 40px ! important; color: rgb(119, 119, 119); font-style: italic;">
+                        <td style="padding-left: 40px ! important; color: rgb(119, 119, 119); font-style: italic;">
                             <fmt:message key="sp.audience"/>
                         </td>
                         <td>
@@ -569,7 +560,7 @@
                             <input id="addAudience" name="addAudience"
                                    type="button"
                                    disabled="disabled" value="<fmt:message key="oauth.add.audience"/>"
-                                   onclick="return addAudienceFunc()"/>
+                                   onclick="return addAudience()"/>
                         </td>
                     </tr>
                     <%} %>
@@ -593,7 +584,7 @@
                                 <tr id="audienceRow<%=j%>">
                                     <td style="padding-left: 40px ! important; color: rgb(119, 119, 119); font-style: italic;">
                                         <input type="hidden"
-                                               name="audiencePropertyName<%=j%>"
+                                               name="audiencePropertyName"
                                                id="audiencePropertyName<%=j%>"
                                                value="<%=Encode.forHtmlAttribute(audience)%>"/>
                                         <%=Encode.forHtml(audience)%>
@@ -621,7 +612,6 @@
                             </table>
                         </td>
                     </tr>
-                    <% } %>
 				</table>
 			</td>
 		    </tr>

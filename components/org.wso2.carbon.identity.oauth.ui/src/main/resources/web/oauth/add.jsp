@@ -193,21 +193,19 @@
 
                 }
 
-                function disableAudienceRestriction(chkbx) {
-                    document.addAppform.audience.disabled = (chkbx.checked) ? false
-                        : true;
-                    document.addAppform.addAudience.disabled = (chkbx.checked) ? false
-                        : true;
+                function toggleAudienceRestriction(chkbx) {
+                    document.addAppform.audience.disabled = !chkbx.checked;
+                    document.addAppform.addAudience.disabled = !chkbx.checked;
                 }
 
-                function addAudienceFunc() {
+                function addAudience() {
                     var audience = $.trim(document.getElementById('audience').value);
-                    if (audience == "") {
+                    if (audience === "") {
                         document.getElementById("audience").value = "";
                         return false;
                     }
 
-                    if ($.inArray(audience, audienceArr) != -1) {
+                    if ($.inArray(audience, audienceArr) !== -1) {
                         CARBON.showWarningDialog('<fmt:message key="duplicate.audience.value"/>');
                         document.getElementById("audience").value = "";
                         return false;
@@ -244,9 +242,9 @@
 
                 function removeAudience(i) {
                     var propRow = document.getElementById("audienceRow" + i);
-                    if (propRow != undefined && propRow != null) {
+                    if (propRow !== undefined && propRow !== null) {
                         var parentTBody = propRow.parentNode;
-                        if (parentTBody != undefined && parentTBody != null) {
+                        if (parentTBody !== undefined && parentTBody !== null) {
                             parentTBody.removeChild(propRow);
                             if (!isContainRaw(parentTBody)) {
                                 var propertyTable = document.getElementById("audienceTableId");
@@ -257,13 +255,13 @@
                 }
 
                 function isContainRaw(tbody) {
-                    if (tbody.childNodes == null || tbody.childNodes.length == 0) {
+                    if (tbody.childNodes === null || tbody.childNodes.length === 0) {
                         return false;
                     } else {
                         for (var i = 0; i < tbody.childNodes.length; i++) {
                             var child = tbody.childNodes[i];
-                            if (child != undefined && child != null) {
-                                if (child.nodeName == "tr" || child.nodeName == "TR") {
+                            if (child !== undefined && child !== null) {
+                                if (child.nodeName === "tr" || child.nodeName === "TR") {
                                     return true;
                                 }
                             }
@@ -435,7 +433,7 @@
                                    name="enableAudienceRestriction"
                                    id="enableAudienceRestriction"
                                    value="true"
-                                   onclick="disableAudienceRestriction(this);"/>
+                                   onclick="toggleAudienceRestriction(this);"/>
                             <fmt:message key="enable.audience.restriction"/>
                         </td>
                     </tr>
@@ -449,7 +447,7 @@
                                    class="text-box-big" disabled="disabled"/>
                             <input id="addAudience" name="addAudience" type="button"
                                    disabled="disabled" value="<fmt:message key="oauth.add.audience"/>"
-                                   onclick="return addAudienceFunc()"/>
+                                   onclick="return addAudience()"/>
                         </td>
                     </tr>
 

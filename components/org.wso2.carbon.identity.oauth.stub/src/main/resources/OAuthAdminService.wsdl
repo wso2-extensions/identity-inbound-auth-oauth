@@ -215,8 +215,8 @@
                     <xs:element minOccurs="0" name="OAuthVersion" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="applicationAccessTokenExpiryTime" type="xs:long"/>
                     <xs:element minOccurs="0" name="applicationName" nillable="true" type="xs:string"/>
-                    <xs:element minOccurs="0" name="callbackUrl" nillable="true" type="xs:string"/>
                     <xs:element maxOccurs="unbounded" minOccurs="0" name="audiences" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="callbackUrl" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="grantTypes" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="oauthConsumerKey" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="oauthConsumerSecret" nillable="true" type="xs:string"/>
@@ -303,8 +303,6 @@
     <wsdl:message name="getTokenExpiryTimesResponse">
         <wsdl:part name="parameters" element="ns1:getTokenExpiryTimesResponse"/>
     </wsdl:message>
-    <wsdl:message name="getAudiencesRequest"/>
-    <wsdl:message name="getAudiencesResponse"/>
     <wsdl:message name="getOauthApplicationStateRequest">
         <wsdl:part name="parameters" element="ns1:getOauthApplicationState"/>
     </wsdl:message>
@@ -340,6 +338,8 @@
     <wsdl:message name="revokeAuthzForAppsByResoureOwnerRequest">
         <wsdl:part name="parameters" element="ns1:revokeAuthzForAppsByResoureOwner"/>
     </wsdl:message>
+    <wsdl:message name="getAudiencesRequest"/>
+    <wsdl:message name="getAudiencesResponse"/>
     <wsdl:message name="revokeAuthzForAppsByResoureOwnerResponse">
         <wsdl:part name="parameters" element="ns1:revokeAuthzForAppsByResoureOwnerResponse"/>
     </wsdl:message>

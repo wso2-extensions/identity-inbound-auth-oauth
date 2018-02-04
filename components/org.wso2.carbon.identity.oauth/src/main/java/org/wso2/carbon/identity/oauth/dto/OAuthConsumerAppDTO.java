@@ -146,7 +146,8 @@ public class OAuthConsumerAppDTO {
     }
 
     public void setAudiences(String[] audiences) {
-        if(audiences != null) {
+
+        if (audiences != null) {
             this.audiences = audiences;
         }
     }

@@ -118,7 +118,7 @@ public class OAuthAppDAO {
                     }
                 }
 
-                if (OAuth2ServiceComponentHolder.isAudienceEnabled()) {
+                if (OAuth2ServiceComponentHolder.isAudienceEnabled() && consumerAppDO.getAudiences() != null) {
 
                     PreparedStatement prepStmtAddAudiences;
                     String[] audiences = consumerAppDO.getAudiences();
@@ -464,12 +464,17 @@ public class OAuthAppDAO {
 
                 if (OAuth2ServiceComponentHolder.isAudienceEnabled()) {
                     String[] audiences = oauthAppDO.getAudiences();
-                    HashSet<String> newAudiences = new HashSet<>(Arrays.asList(audiences));
+                    HashSet<String> newAudiences;
+                    if (audiences == null) {
+                        newAudiences = new HashSet<>();
+                    } else {
+                        newAudiences = new HashSet<>(Arrays.asList(audiences));
+                    }
                     List<String> oidcAudienceList = getOIDCAudiences(oauthAppDO.getUser().getTenantDomain(),
                             oauthAppDO.getOauthConsumerKey());
                     Set<String> currentAudiences =
                             oidcAudienceList == null ? Collections.<String>emptySet() : new HashSet<String>(oidcAudienceList);
-                    Set<String> newAudienceClone = (HashSet) newAudiences.clone();
+                    HashSet newAudienceClone = (HashSet) newAudiences.clone();
                     //removing all duplicate audiences in the new audience list
                     newAudiences.removeAll(currentAudiences);
                     //obtaining the audience values deleted in the list by user
@@ -648,11 +653,10 @@ public class OAuthAppDAO {
      */
     public List<String> getOIDCAudiences(String tenantDomain, String consumerKey) throws IdentityOAuth2Exception {
 
-        List<String> audiences = null;
+        List<String> audiences = new ArrayList<>();
         Connection connection = IdentityDatabaseUtil.getDBConnection();
         PreparedStatement prepStmt = null;
         ResultSet rSetAudiences = null;
-        audiences = new ArrayList<>();
         try {
             prepStmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.GET_AUDIENCE_VALUES);
             prepStmt.setInt(1, IdentityTenantUtil.getTenantId(tenantDomain));
