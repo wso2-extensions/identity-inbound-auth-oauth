@@ -30,6 +30,7 @@ import javax.servlet.http.HttpServletResponse;
  */
 public class RegistrationRequest extends IdentityRequest {
 
+    private static final long serialVersionUID = -6698974259780031092L;
     private RegistrationRequestProfile registrationRequestProfile = null;
 
     public RegistrationRequest(RegistrationRequestBuilder builder) throws FrameworkClientException {

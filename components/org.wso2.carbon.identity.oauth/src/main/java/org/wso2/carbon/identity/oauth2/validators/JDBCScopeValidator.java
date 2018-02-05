@@ -30,10 +30,9 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
-import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
-import org.wso2.carbon.identity.oauth2.dao.TokenMgtDAO;
+import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.ResourceScopeCacheEntry;
 import org.wso2.carbon.user.api.UserStoreException;
@@ -53,10 +52,20 @@ import java.util.Set;
  */
 public class JDBCScopeValidator extends OAuth2ScopeValidator {
 
+    // The following constants are as same as the constants defined in
+    // org.wso2.carbon.apimgt.keymgt.handlers.ResourceConstants.
+    // If any changes are taking place in that these should also be updated accordingly.
+    public static final String CHECK_ROLES_FROM_SAML_ASSERTION = "checkRolesFromSamlAssertion";
+
     Log log = LogFactory.getLog(JDBCScopeValidator.class);
 
     @Override
     public boolean validateScope(AccessTokenDO accessTokenDO, String resource) throws IdentityOAuth2Exception {
+
+        // Return true if there is no resource to validate the token against.
+        if (resource == null) {
+            return true;
+        }
 
         //Get the list of scopes associated with the access token
         String[] scopes = accessTokenDO.getScope();
@@ -68,40 +77,37 @@ public class JDBCScopeValidator extends OAuth2ScopeValidator {
 
         String resourceScope = null;
         int resourceTenantId = -1;
-        TokenMgtDAO tokenMgtDAO = new TokenMgtDAO();
 
         boolean cacheHit = false;
         // Check the cache, if caching is enabled.
-        if (OAuthServerConfiguration.getInstance().isCacheEnabled()) {
-            OAuthCache oauthCache = OAuthCache.getInstance();
-            OAuthCacheKey cacheKey = new OAuthCacheKey(resource);
-            CacheEntry result = oauthCache.getValueFromCache(cacheKey);
+        OAuthCacheKey cacheKey = new OAuthCacheKey(resource);
+        CacheEntry result = OAuthCache.getInstance().getValueFromCache(cacheKey);
 
-            //Cache hit
-            if (result instanceof ResourceScopeCacheEntry) {
-                resourceScope = ((ResourceScopeCacheEntry) result).getScope();
-                resourceTenantId = ((ResourceScopeCacheEntry) result).getTenantId();
-                cacheHit = true;
-            }
+        //Cache hit
+        if (result !=  null && result instanceof ResourceScopeCacheEntry) {
+            resourceScope = ((ResourceScopeCacheEntry) result).getScope();
+            resourceTenantId = ((ResourceScopeCacheEntry) result).getTenantId();
+            cacheHit = true;
         }
 
+
+        // Cache was not hit. So retrieve from database.
         if (!cacheHit) {
-            Pair<String, Integer> scopeMap = tokenMgtDAO.findTenantAndScopeOfResource(resource);
+            Pair<String, Integer> scopeMap = OAuthTokenPersistenceFactory.getInstance()
+                    .getTokenManagementDAO().findTenantAndScopeOfResource(resource);
 
             if (scopeMap != null) {
                 resourceScope = scopeMap.getLeft();
                 resourceTenantId = scopeMap.getRight();
             }
 
-            if (OAuthServerConfiguration.getInstance().isCacheEnabled()) {
-                OAuthCache oauthCache = OAuthCache.getInstance();
-                OAuthCacheKey cacheKey = new OAuthCacheKey(resource);
-                ResourceScopeCacheEntry cacheEntry = new ResourceScopeCacheEntry(resourceScope);
-                cacheEntry.setTenantId(resourceTenantId);
-                //Store resourceScope in cache even if it is null (to avoid database calls when accessing resources for
-                //which scopes haven't been defined).
-                oauthCache.addToCache(cacheKey, cacheEntry);
-            }
+            cacheKey = new OAuthCacheKey(resource);
+            ResourceScopeCacheEntry cacheEntry = new ResourceScopeCacheEntry(resourceScope);
+            cacheEntry.setTenantId(resourceTenantId);
+            //Store resourceScope in cache even if it is null (to avoid database calls when accessing resources for
+            //which scopes haven't been defined).
+            OAuthCache.getInstance().addToCache(cacheKey, cacheEntry);
+
         }
 
         //Return TRUE if - There does not exist a scope definition for the resource
@@ -123,9 +129,18 @@ public class JDBCScopeValidator extends OAuth2ScopeValidator {
             return false;
         }
 
+        // If a federated user and CHECK_ROLES_FROM_SAML_ASSERTION system property is set to true,
+        // avoid validating user roles.
+        // This system property is set at server start using -D option, Thus will be a permanent property.
+        if (accessTokenDO.getAuthzUser().isFederatedUser()
+                && Boolean.parseBoolean(System.getProperty(CHECK_ROLES_FROM_SAML_ASSERTION))) {
+            return true;
+        }
+
         try {
             //Get the roles associated with the scope, if any
-            Set<String> rolesOfScope = tokenMgtDAO.getRolesOfScopeByScopeKey(resourceScope, resourceTenantId);
+            Set<String> rolesOfScope = OAuthTokenPersistenceFactory.getInstance()
+                    .getOAuthScopeDAO().getBindingsOfScopeByScopeName(resourceScope, resourceTenantId);
 
             //If the scope doesn't have any roles associated with it.
             if(rolesOfScope == null || rolesOfScope.isEmpty()){

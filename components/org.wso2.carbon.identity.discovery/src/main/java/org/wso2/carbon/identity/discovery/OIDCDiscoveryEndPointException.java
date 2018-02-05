@@ -32,7 +32,7 @@ public class OIDCDiscoveryEndPointException extends Exception {
     public static final String ERROR_CODE_INVALID_REQUEST = "invalid_request";
     public static final String ERROR_MESSAGE_INVALID_TENANT = "Provided tenant is invalid.";
     public static final String ERROR_MESSAGE_NO_OPENID_PROVIDER_FOUND = "OpenID Provider was not properly found.";
-    public static final String ERROR_MESSAGE_JSON_EXCEPTION = "Error occured building response.";
+    public static final String ERROR_MESSAGE_JSON_EXCEPTION = "Error occurred building response.";
     public static final String ERROR_MESSAGE_INVALID_REQUEST = "Request is invalid.";
 
     private static final long serialVersionUID = -4449780649560053452L;

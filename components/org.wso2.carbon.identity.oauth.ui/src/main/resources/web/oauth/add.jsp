@@ -87,12 +87,19 @@
 
                 function validate() {
                     var callbackUrl = document.getElementById('callback').value;
+                    var userTokenExpiryTime = document.getElementById("userAccessTokenExpiryTime").value;
+                    var applicationTokenExpiryTime = document.getElementById("userAccessTokenExpiryTime").value;
+                    var refreshTokenExpiryTime = document.getElementById("refreshTokenExpiryTime").value;
+
+                    if (callbackUrl.indexOf("#") !== -1) {
+                        CARBON.showWarningDialog('<fmt:message key="callback.is.fragment"/>');
+                        return false;
+                    }
                     if ($(jQuery("#grant_authorization_code"))[0].checked || $(jQuery("#grant_implicit"))[0].checked) {
                         // This is to support providing regex patterns for callback URLs
                         if (callbackUrl.startsWith("regexp=")) {
                             // skip validation
-                        } else if (!isWhiteListed(callbackUrl, ["url"]) || !isNotBlackListed(callbackUrl,
-                                        ["uri-unsafe-exists"])) {
+                        } else if (!isWhiteListed(callbackUrl, ["url"])) {
                             CARBON.showWarningDialog('<fmt:message key="callback.is.not.url"/>');
                             return false;
                         }
@@ -107,12 +114,35 @@
                         if (!$(jQuery("#grant_authorization_code"))[0].checked && !$(jQuery("#grant_implicit"))[0].checked) {
                             document.getElementsByName("callback")[0].value = '';
                         }
+                        if (!isWhiteListed(userTokenExpiryTime, ["digits-only"])) {
+                            CARBON.showWarningDialog('<fmt:message key="invalid.user.access.token.expiry.time"/>');
+                            return false;
+                        }
+                        if (!isWhiteListed(applicationTokenExpiryTime, ["digits-only"])) {
+                            CARBON.showWarningDialog('<fmt:message key="invalid.application.access.token.expiry.time"/>');
+                            return false;
+                        }
+                        if (!isWhiteListed(refreshTokenExpiryTime, ["digits-only"])) {
+                            CARBON.showWarningDialog('<fmt:message key="invalid.refresh.token.expiry.time"/>');
+                            return false;
+                        }
                     } else {
-                        if (!isWhiteListed(callbackUrl, ["url"]) || !isNotBlackListed(callbackUrl,
-                                        ["uri-unsafe-exists"])) {
+                        if (!isWhiteListed(callbackUrl, ["url"])) {
                             CARBON.showWarningDialog('<fmt:message key="callback.is.not.url"/>');
                             return false;
 
+                        }
+                        if (!isWhiteListed(userTokenExpiryTime, ["digits-only"])) {
+                            CARBON.showWarningDialog('<fmt:message key="invalid.user.access.token.expiry.time"/>');
+                            return false;
+                        }
+                        if (!isWhiteListed(applicationTokenExpiryTime, ["digits-only"])) {
+                            CARBON.showWarningDialog('<fmt:message key="invalid.application.access.token.expiry.time"/>');
+                            return false;
+                        }
+                        if (!isWhiteListed(refreshTokenExpiryTime, ["digits-only"])) {
+                            CARBON.showWarningDialog('<fmt:message key="invalid.refresh.token.expiry.time"/>');
+                            return false;
                         }
                     }
                     document.addAppform.submit();
@@ -126,10 +156,16 @@
                         $(jQuery('#grant_row')).hide();
                         $(jQuery("#pkce_enable").hide());
                         $(jQuery("#pkce_support_plain").hide());
+                        $(jQuery('#userAccessTokenPlain').hide());
+                        $(jQuery('#applicationAccessTokenPlain').hide());
+                        $(jQuery('#refreshTokenPlain').hide());
                     } else if(oauthVersion == "<%=OAuthConstants.OAuthVersions.VERSION_2%>") {
                         $(jQuery('#grant_row')).show();
                         $(jQuery("#pkce_enable").show());
                         $(jQuery("#pkce_support_plain").show());
+                        $(jQuery('#userAccessTokenPlain').show());
+                        $(jQuery('#applicationAccessTokenPlain').show());
+                        $(jQuery('#refreshTokenPlain').show());
 
                         if(!supportGrantCode && !supportImplicit){
                             $(jQuery('#callback_row')).hide();
@@ -167,7 +203,7 @@
 			<td class="formRow">
 				<table class="normal" >
                             <tr>
-                                <td class="leftCol-small"><fmt:message key='oauth.version'/><span class="required">*</span> </td>
+                                <td class="leftCol-med"><fmt:message key='oauth.version'/><span class="required">*</span> </td>
                                 <td><input id="oauthVersion10a" name="oauthVersion" type="radio" value="<%=OAuthConstants.OAuthVersions.VERSION_1A%>" />1.0a
                                     <input id="oauthVersion20" name="oauthVersion" type="radio" value="<%=OAuthConstants.OAuthVersions.VERSION_2%>" CHECKED />2.0</td>
                             </tr>
@@ -178,18 +214,18 @@
 		                    </tr>
                             <% } else { %>
 		                    <tr>
-		                        <td class="leftCol-small"><fmt:message key='application.name'/><span class="required">*</span></td>
+		                        <td class="leftCol-med"><fmt:message key='application.name'/><span class="required">*</span></td>
 		                        <td><input class="text-box-big" id="application" name="application"
 		                                   type="text" /></td>
 		                    </tr>
 		                    <% } %>
 		                    <tr id="callback_row">
-		                        <td class="leftCol-small"><fmt:message key='callback'/><span class="required">*</span></td>
+		                        <td class="leftCol-med"><fmt:message key='callback'/><span class="required">*</span></td>
                                 <td><input class="text-box-big" id="callback" name="callback" type="text"
                                            white-list-patterns="https-url"/></td>
 		                    </tr>
 		                     <tr id="grant_row" name="grant_row">
-		                        <td class="leftCol-small"><fmt:message key='grantTypes'/></td>
+		                        <td class="leftCol-med"><fmt:message key='grantTypes'/></td>
 		                        <td>
 		                        <table>
                                     <%
@@ -258,7 +294,7 @@
 		                    </tr>
                             <%if(client.isPKCESupportedEnabled()) {%>
                             <tr id="pkce_enable">
-                                <td class="leftcol-small">
+                                <td class="leftCol-med">
                                     <fmt:message key='pkce.mandatory'/>
                                 </td>
                                 <td>
@@ -280,9 +316,32 @@
                                 </td>
                             </tr>
                             <% } %>
+                        <tr id="userAccessTokenPlain">
+                            <td class="leftCol-med"><fmt:message key='user.access.token.expiry.time'/></td>
+                            <td><input id="userAccessTokenExpiryTime" name="userAccessTokenExpiryTime"
+                                       type="text" value="<%=client.getOAuthTokenExpiryTimeDTO().getUserAccessTokenExpiryTime()%>" />
+                                <fmt:message key='seconds'/>
+                            </td>
+                        </tr>
+                        <tr id="applicationAccessTokenPlain">
+                            <td class="leftCol-med"><fmt:message key='application.access.token.expiry.time'/></td>
+                            <td>
+                                <input id="applicationAccessTokenExpiryTime" name="applicationAccessTokenExpiryTime" type="text"
+                                       value="<%=client.getOAuthTokenExpiryTimeDTO().getApplicationAccessTokenExpiryTime()%>" />
+                                <fmt:message key='seconds'/>
+                            </td>
+                        </tr>
+                        <tr id="refreshTokenPlain">
+                            <td class="leftCol-med"><fmt:message key='refresh.token.expiry.time'/></td>
+                            <td>
+                                <input id="refreshTokenExpiryTime" name="refreshTokenExpiryTime" type="text" value="<%=client.getOAuthTokenExpiryTimeDTO().getRefreshTokenExpiryTime()%>" />
+                                <fmt:message key='seconds'/>
+                            </td>
+                        </tr>
 				</table>
 			</td>
 		    </tr>
+
                     <tr>
                         <td class="buttonRow" >
                             <input name="addprofile" type="button" class="button" value="<fmt:message key='add'/>" onclick="onClickAdd();"/>

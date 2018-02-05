@@ -28,7 +28,6 @@ import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
-import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.registry.core.utils.UUIDGenerator;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
@@ -102,11 +101,9 @@ public final class OAuthUtil {
     }
 
     public static void clearOAuthCache(String oauthCacheKey) {
-        if (OAuthServerConfiguration.getInstance().isCacheEnabled()) {
-            OAuthCache oauthCache = OAuthCache.getInstance();
-            OAuthCacheKey cacheKey = new OAuthCacheKey(oauthCacheKey);
-            oauthCache.clearCacheEntry(cacheKey);
-        }
+
+        OAuthCacheKey cacheKey = new OAuthCacheKey(oauthCacheKey);
+        OAuthCache.getInstance().clearCacheEntry(cacheKey);
     }
 
     public static AuthenticatedUser getAuthenticatedUser(String fullyQualifiedUserName) {
@@ -116,16 +113,33 @@ public final class OAuthUtil {
         }
 
         AuthenticatedUser authenticatedUser = new AuthenticatedUser();
-        authenticatedUser.setUserName(IdentityUtil.extractDomainFromName(fullyQualifiedUserName));
+        authenticatedUser.setUserStoreDomain(IdentityUtil.extractDomainFromName(fullyQualifiedUserName));
         authenticatedUser.setTenantDomain(MultitenantUtils.getTenantDomain(fullyQualifiedUserName));
 
         String username = fullyQualifiedUserName;
-        if(fullyQualifiedUserName.startsWith(authenticatedUser.getUserStoreDomain())) {
+        if (fullyQualifiedUserName.startsWith(authenticatedUser.getUserStoreDomain())) {
             username = UserCoreUtil.removeDomainFromName(fullyQualifiedUserName);
         }
         authenticatedUser.setUserName(MultitenantUtils.getTenantAwareUsername(username));
 
         return authenticatedUser;
+    }
+
+    /**
+     * This is used to handle the OAuthAdminService exceptions. This will log the error message and return an
+     * IdentityOAuthAdminException exception
+     * @param message error message
+     * @param exception Exception.
+     * @return
+     */
+    public static IdentityOAuthAdminException handleError(String message, Exception exception) {
+        if (exception == null) {
+            log.error(message);
+            return new IdentityOAuthAdminException(message);
+        } else {
+            log.error(message, exception);
+            return new IdentityOAuthAdminException(message, exception);
+        }
     }
 
 }

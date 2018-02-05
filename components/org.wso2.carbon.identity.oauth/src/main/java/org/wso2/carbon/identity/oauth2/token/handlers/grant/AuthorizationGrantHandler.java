@@ -68,7 +68,8 @@ public interface AuthorizationGrantHandler {
     public boolean isOfTypeApplicationUser() throws IdentityOAuth2Exception;
 
     /**
-     * Validate the Authorization Grant
+     * Validate the Authorization Grant. Checks whether the token request satisfies minimum requirements to
+     * generate a token in requested grant type.
      *
      * @return <Code>true</Code>|<Code>false</Code> if the grant_type is valid or not.
      * @throws org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception Error when validating

@@ -24,14 +24,16 @@ import org.apache.axis2.client.ServiceClient;
 import org.apache.axis2.context.ConfigurationContext;
 import org.wso2.carbon.identity.oauth.stub.OAuthAdminServiceStub;
 import org.wso2.carbon.identity.oauth.stub.dto.OAuthConsumerAppDTO;
+import org.wso2.carbon.identity.oauth.stub.dto.OAuthTokenExpiryTimeDTO;
 import org.wso2.carbon.identity.oauth.stub.dto.OAuthRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth.stub.dto.OAuthRevocationResponseDTO;
+
+import java.rmi.RemoteException;
 
 public class OAuthAdminClient {
 
     private static String[] allowedGrantTypes = null;
     private OAuthAdminServiceStub stub;
-
     /**
      * Instantiates OAuthAdminClient
      *
@@ -119,5 +121,9 @@ public class OAuthAdminClient {
 
     public void updateOauthApplicationState(String consumerKey, String newState) throws Exception {
         stub.updateConsumerAppState(consumerKey, newState);
+    }
+
+    public OAuthTokenExpiryTimeDTO getOAuthTokenExpiryTimeDTO() throws RemoteException {
+        return stub.getTokenExpiryTimes();
     }
 }

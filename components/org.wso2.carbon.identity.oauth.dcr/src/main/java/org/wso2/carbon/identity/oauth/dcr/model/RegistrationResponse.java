@@ -25,6 +25,7 @@ import org.wso2.carbon.identity.application.authentication.framework.inbound.Ide
 public class RegistrationResponse extends IdentityResponse {
 
 
+    private static final long serialVersionUID = -8410341453019535800L;
     private RegistrationResponseProfile registrationResponseProfile = null;
 
     protected RegistrationResponse(

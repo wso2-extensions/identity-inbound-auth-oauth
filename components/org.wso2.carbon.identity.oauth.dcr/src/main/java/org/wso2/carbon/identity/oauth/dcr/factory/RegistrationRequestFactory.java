@@ -78,7 +78,7 @@ public class RegistrationRequestFactory extends HttpIdentityRequestFactory {
 
     @Override
     public RegistrationRequest.RegistrationRequestBuilder create(HttpServletRequest request,
-            HttpServletResponse response) throws FrameworkClientException {
+                                                                 HttpServletResponse response) throws FrameworkClientException {
 
         if (log.isDebugEnabled()) {
             log.debug("create RegistrationRequest.RegistrationRequestBuilder by RegistrationRequestFactory.");
@@ -92,153 +92,162 @@ public class RegistrationRequestFactory extends HttpIdentityRequestFactory {
 
     @Override
     public void create(IdentityRequest.IdentityRequestBuilder builder, HttpServletRequest request,
-            HttpServletResponse response) throws FrameworkClientException {
+                       HttpServletResponse response) throws FrameworkClientException {
 
-        RegistrationRequest.RegistrationRequestBuilder registerRequestBuilder = (RegistrationRequest.
-                RegistrationRequestBuilder) builder;
-
-        super.create(registerRequestBuilder, request, response);
-
-        try {
-            Reader requestBodyReader = request.getReader();
-            JSONParser jsonParser = new JSONParser();
-            JSONObject jsonData = (JSONObject) jsonParser.parse(requestBodyReader);
-            if (log.isDebugEnabled()) {
-                log.debug("DCR request json : " + jsonData.toJSONString());
-            }
-
-            RegistrationRequestProfile registrationRequestProfile = registerRequestBuilder
-                    .getRegistrationRequestProfile();
-            if (registrationRequestProfile == null) {
-                registrationRequestProfile = new RegistrationRequestProfile();
-            }
-
-            Object obj = jsonData.get(RegistrationRequest.RegisterRequestConstant.GRANT_TYPES);
-            if (obj instanceof JSONArray) {
-                JSONArray grantTypes = (JSONArray) obj;
-                for (Object grantType : grantTypes) {
-                    if (grantType instanceof String && IdentityUtil.isNotBlank((String) grantType)) {
-                        registrationRequestProfile.getGrantTypes().add((String) grantType);
-                    }
+        RegistrationRequest.RegistrationRequestBuilder registerRequestBuilder;
+        if (builder instanceof RegistrationRequest.RegistrationRequestBuilder) {
+            registerRequestBuilder = (RegistrationRequest.RegistrationRequestBuilder) builder;
+            super.create(registerRequestBuilder, request, response);
+            try {
+                Reader requestBodyReader = request.getReader();
+                JSONParser jsonParser = new JSONParser();
+                JSONObject jsonData = (JSONObject) jsonParser.parse(requestBodyReader);
+                if (log.isDebugEnabled()) {
+                    log.debug("DCR request json : " + jsonData.toJSONString());
                 }
-            } else if (obj instanceof  String) {
-                String grantType = (String) obj;
-                if (IdentityUtil.isNotBlank(grantType)) {
-                    registrationRequestProfile.getGrantTypes().add(grantType);
-                }
+
+
+                parseJson(jsonData, registerRequestBuilder);
+
+            } catch (IOException e) {
+                String errorMessage = "Error occurred while reading servlet request body, " + e.getMessage();
+                FrameworkClientException.error(errorMessage, e);
+            } catch (ParseException e) {
+                String errorMessage = "Error occurred while parsing the json object, " + e.getMessage();
+                FrameworkClientException.error(errorMessage, e);
             }
-
-            obj = jsonData.get(RegistrationRequest.RegisterRequestConstant.REDIRECT_URIS);
-            if (obj instanceof JSONArray) {
-                JSONArray redirectUris = (JSONArray) obj;
-                for (Object redirectUri : redirectUris) {
-                    if (redirectUri instanceof String) {
-                        registrationRequestProfile.getRedirectUris().add((String) redirectUri);
-                    }
-                }
-            } else if (obj instanceof String) {
-                registrationRequestProfile.getRedirectUris().add((String) obj);
-
-            } else if (registrationRequestProfile.getGrantTypes().contains(DCRConstants.GrantTypes.AUTHORIZATION_CODE)
-                    || registrationRequestProfile.getGrantTypes().contains(DCRConstants.GrantTypes.IMPLICIT)) {
-                throw IdentityException.error(FrameworkClientException.class,
-                        "RedirectUris property must have at least one URI value.");
-            }
-
-            registrationRequestProfile.setTokenEndpointAuthMethod(
-                    (String) jsonData.get(RegistrationRequest.RegisterRequestConstant.TOKEN_ENDPOINT_AUTH_METHOD));
-
-            obj = jsonData.get(RegistrationRequest.RegisterRequestConstant.RESPONSE_TYPES);
-            if (obj instanceof JSONArray) {
-                JSONArray redirectUris = (JSONArray) obj;
-                for (int i = 0; i < redirectUris.size(); i++) {
-                    registrationRequestProfile.getResponseTypes().add(redirectUris.get(i).toString());
-                }
-            } else if (obj instanceof String) {
-                registrationRequestProfile.getResponseTypes().add((String) obj);
-            }
-
-            // Get client Name if not available generate a uuid
-            Object objClient = jsonData.get(RegistrationRequest.RegisterRequestConstant.CLIENT_NAME);
-            if (objClient != null) {
-                registrationRequestProfile.setClientName((String) objClient);
-            } else {
-                registrationRequestProfile.setClientName(UUIDGenerator.generateUUID());
-            }
-
-            registrationRequestProfile
-                    .setClientUri((String) jsonData.get(RegistrationRequest.RegisterRequestConstant.CLIENT_URI));
-            registrationRequestProfile
-                    .setLogoUri((String) jsonData.get(RegistrationRequest.RegisterRequestConstant.LOGO_URI));
-
-            obj = jsonData.get(RegistrationRequest.RegisterRequestConstant.SCOPE);
-            if (obj instanceof JSONArray) {
-                JSONArray redirectUris = (JSONArray) obj;
-                for (int i = 0; i < redirectUris.size(); i++) {
-                    registrationRequestProfile.getScopes().add(redirectUris.get(i).toString());
-                }
-            } else if (obj instanceof String) {
-                registrationRequestProfile.getScopes().add((String) obj);
-            }
-
-            obj = jsonData.get(RegistrationRequest.RegisterRequestConstant.CONTACTS);
-            if (obj instanceof JSONArray) {
-                JSONArray redirectUris = (JSONArray) obj;
-                for (int i = 0; i < redirectUris.size(); i++) {
-                    registrationRequestProfile.getContacts().add(redirectUris.get(i).toString());
-                }
-            } else if (obj instanceof String) {
-                registrationRequestProfile.getContacts().add((String) obj);
-            }
-
-            registrationRequestProfile
-                    .setTosUri((String) jsonData.get(RegistrationRequest.RegisterRequestConstant.TOS_URI));
-            registrationRequestProfile
-                    .setPolicyUri((String) jsonData.get(RegistrationRequest.RegisterRequestConstant.POLICY_URI));
-            registrationRequestProfile
-                    .setJwksUri((String) jsonData.get(RegistrationRequest.RegisterRequestConstant.JWKS_URI));
-            registrationRequestProfile.setJkws((String) jsonData.get(RegistrationRequest.RegisterRequestConstant.JWKS));
-            registrationRequestProfile
-                    .setSoftwareId((String) jsonData.get(RegistrationRequest.RegisterRequestConstant.SOFTWARE_ID));
-            registrationRequestProfile.setSoftwareVersion(
-                    (String) jsonData.get(RegistrationRequest.RegisterRequestConstant.SOFTWARE_VERSION));
-
-            //TODO:This parameter is a custom one and we have to remove if we can collect the user name by having
-            // some authentication mechanism.
-            String username = CarbonContext.getThreadLocalCarbonContext().getUsername();
-            if (StringUtils.isBlank(username)) {
-                Object objOwner = jsonData.get(RegistrationRequest.RegisterRequestConstant.EXT_PARAM_OWNER);
-                if (objOwner != null) {
-                    username = (String) objOwner;
-                    try {
-                        UserRealm userRealm = CarbonContext.getThreadLocalCarbonContext().getUserRealm();
-                        if (!userRealm.getUserStoreManager().isExistingUser(username)) {
-                            throw IdentityException.error(FrameworkClientException.class, "Invalid application owner.");
-                        }
-                    } catch (UserStoreException e) {
-                        String errorMessage = "Invalid application owner, " + e.getMessage();
-                        throw IdentityException.error(FrameworkClientException.class, errorMessage, e);
-                    }
-                } else {
-                    throw IdentityException.error(FrameworkClientException.class, "Invalid application owner.");
-                }
-            }
-            registrationRequestProfile.setOwner(username);
-            registerRequestBuilder.setRegistrationRequestProfile(registrationRequestProfile);
-
-        } catch (IOException e) {
-            String errorMessage = "Error occurred while reading servlet request body, " + e.getMessage();
-            FrameworkClientException.error(errorMessage, e);
-        } catch (ParseException e) {
-            String errorMessage = "Error occurred while parsing the json object, " + e.getMessage();
-            FrameworkClientException.error(errorMessage, e);
         }
+    }
+
+    protected void parseJson(JSONObject jsonData, RegistrationRequest.RegistrationRequestBuilder
+            registerRequestBuilder) throws FrameworkClientException {
+        RegistrationRequestProfile registrationRequestProfile = registerRequestBuilder.getRegistrationRequestProfile();
+        if (registrationRequestProfile == null) {
+            registrationRequestProfile = new RegistrationRequestProfile();
+        }
+        Object obj = jsonData.get(RegistrationRequest.RegisterRequestConstant.GRANT_TYPES);
+        if (obj instanceof JSONArray) {
+            JSONArray grantTypes = (JSONArray) obj;
+            for (Object grantType : grantTypes) {
+                if (grantType instanceof String && IdentityUtil.isNotBlank((String) grantType)) {
+                    registrationRequestProfile.getGrantTypes().add((String) grantType);
+                }
+            }
+        } else if (obj instanceof String) {
+            String grantType = (String) obj;
+            if (IdentityUtil.isNotBlank(grantType)) {
+                registrationRequestProfile.getGrantTypes().add(grantType);
+            }
+        }
+
+        obj = jsonData.get(RegistrationRequest.RegisterRequestConstant.REDIRECT_URIS);
+        if (obj instanceof JSONArray) {
+            JSONArray redirectUris = (JSONArray) obj;
+            for (Object redirectUri : redirectUris) {
+                if (redirectUri instanceof String) {
+                    registrationRequestProfile.getRedirectUris().add((String) redirectUri);
+                }
+            }
+        } else if (obj instanceof String) {
+            registrationRequestProfile.getRedirectUris().add((String) obj);
+
+        } else if (registrationRequestProfile.getGrantTypes().contains(DCRConstants.GrantTypes
+                .AUTHORIZATION_CODE) || registrationRequestProfile.getGrantTypes().contains(DCRConstants
+                .GrantTypes.IMPLICIT)) {
+            throw IdentityException.error(FrameworkClientException.class,
+                    "RedirectUris property must have at least one URI value.");
+        }
+
+        registrationRequestProfile.setTokenEndpointAuthMethod(
+                (String) jsonData.get(RegistrationRequest.RegisterRequestConstant.TOKEN_ENDPOINT_AUTH_METHOD));
+
+        obj = jsonData.get(RegistrationRequest.RegisterRequestConstant.RESPONSE_TYPES);
+        if (obj instanceof JSONArray) {
+            JSONArray responseTypes = (JSONArray) obj;
+            for (int i = 0; i < responseTypes.size(); i++) {
+                registrationRequestProfile.getResponseTypes().add(responseTypes.get(i).toString());
+            }
+        } else if (obj instanceof String) {
+            registrationRequestProfile.getResponseTypes().add((String) obj);
+        }
+
+        // Get client Name if not available generate a uuid
+        Object objClient = jsonData.get(RegistrationRequest.RegisterRequestConstant.CLIENT_NAME);
+        if (objClient != null) {
+            registrationRequestProfile.setClientName((String) objClient);
+        } else {
+            registrationRequestProfile.setClientName(UUIDGenerator.generateUUID());
+        }
+
+        registrationRequestProfile
+                .setClientUri((String) jsonData.get(RegistrationRequest.RegisterRequestConstant.CLIENT_URI));
+        registrationRequestProfile
+                .setLogoUri((String) jsonData.get(RegistrationRequest.RegisterRequestConstant.LOGO_URI));
+
+        obj = jsonData.get(RegistrationRequest.RegisterRequestConstant.SCOPE);
+        if (obj instanceof JSONArray) {
+            JSONArray scopes = (JSONArray) obj;
+            for (int i = 0; i < scopes.size(); i++) {
+                registrationRequestProfile.getScopes().add(scopes.get(i).toString());
+            }
+        } else if (obj instanceof String) {
+            registrationRequestProfile.getScopes().add((String) obj);
+        }
+
+        obj = jsonData.get(RegistrationRequest.RegisterRequestConstant.CONTACTS);
+        if (obj instanceof JSONArray) {
+            JSONArray redirectUris = (JSONArray) obj;
+            for (int i = 0; i < redirectUris.size(); i++) {
+                registrationRequestProfile.getContacts().add(redirectUris.get(i).toString());
+            }
+        } else if (obj instanceof String) {
+            registrationRequestProfile.getContacts().add((String) obj);
+        }
+
+        registrationRequestProfile
+                .setTosUri((String) jsonData.get(RegistrationRequest.RegisterRequestConstant.TOS_URI));
+        registrationRequestProfile
+                .setPolicyUri((String) jsonData.get(RegistrationRequest.RegisterRequestConstant.POLICY_URI));
+        registrationRequestProfile
+                .setJwksUri((String) jsonData.get(RegistrationRequest.RegisterRequestConstant.JWKS_URI));
+        registrationRequestProfile
+                .setJkws((String) jsonData.get(RegistrationRequest.RegisterRequestConstant.JWKS));
+        registrationRequestProfile
+                .setSoftwareId((String) jsonData.get(RegistrationRequest.RegisterRequestConstant.SOFTWARE_ID));
+        registrationRequestProfile.setSoftwareVersion(
+                (String) jsonData.get(RegistrationRequest.RegisterRequestConstant.SOFTWARE_VERSION));
+
+        //TODO:This parameter is a custom one and we have to remove if we can collect the user name by having
+        // some authentication mechanism.
+        String username = CarbonContext.getThreadLocalCarbonContext().getUsername();
+        if (StringUtils.isBlank(username)) {
+            Object objOwner = jsonData.get(RegistrationRequest.RegisterRequestConstant.EXT_PARAM_OWNER);
+            if (objOwner != null) {
+                username = (String) objOwner;
+                try {
+                    UserRealm userRealm = CarbonContext.getThreadLocalCarbonContext().getUserRealm();
+                    if (!userRealm.getUserStoreManager().isExistingUser(username)) {
+                        throw IdentityException.error(FrameworkClientException.class, "Invalid application " +
+                                "owner.");
+                    }
+                } catch (UserStoreException e) {
+                    String errorMessage = "Invalid application owner, " + e.getMessage();
+                    throw IdentityException.error(FrameworkClientException.class, errorMessage, e);
+                }
+            } else {
+                throw IdentityException.error(FrameworkClientException.class, "Invalid application owner.");
+            }
+        }
+        registrationRequestProfile.setOwner(username);
+        registerRequestBuilder.setRegistrationRequestProfile(registrationRequestProfile);
     }
 
     @Override
     public HttpIdentityResponse.HttpIdentityResponseBuilder handleException(FrameworkClientException exception,
-            HttpServletRequest request, HttpServletResponse response) {
-        HttpIdentityResponse.HttpIdentityResponseBuilder builder = new HttpIdentityResponse.HttpIdentityResponseBuilder();
+                                                                            HttpServletRequest request,
+                                                                            HttpServletResponse response) {
+        HttpIdentityResponse.HttpIdentityResponseBuilder builder = new HttpIdentityResponse
+                .HttpIdentityResponseBuilder();
         String errorMessage = generateErrorResponse(INVALID_CLIENT_METADATA, exception.getMessage()).toJSONString();
         builder.setBody(errorMessage);
         builder.setStatusCode(HttpServletResponse.SC_BAD_REQUEST);

@@ -18,7 +18,6 @@
 
 package org.wso2.carbon.identity.oauth2.listener;
 
-
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.stratos.common.beans.TenantInfoBean;
 import org.wso2.carbon.stratos.common.exception.StratosException;

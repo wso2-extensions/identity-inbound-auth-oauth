@@ -33,6 +33,10 @@
             <ref bean="jwksEndpointBean"/>
             <ref bean="oidcdiscoveryEndpointBean"/>
         </jaxrs:serviceBeans>
+
+        <jaxrs:providers>
+            <bean class="org.wso2.carbon.identity.oauth.endpoint.expmapper.InvalidRequestExceptionMapper"/>
+        </jaxrs:providers>
     </jaxrs:server>
 
     <bean id="authzEndpointBean" class="org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpoint"/>

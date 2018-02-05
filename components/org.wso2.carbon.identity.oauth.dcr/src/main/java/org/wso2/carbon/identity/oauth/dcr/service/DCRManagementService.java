@@ -31,6 +31,8 @@ import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.base.IdentityValidationException;
+import org.wso2.carbon.identity.base.IdentityValidationUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.OAuthAdminService;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -40,7 +42,6 @@ import org.wso2.carbon.identity.oauth.dcr.model.RegistrationRequestProfile;
 import org.wso2.carbon.identity.oauth.dcr.model.RegistrationResponseProfile;
 import org.wso2.carbon.identity.oauth.dcr.util.DCRConstants;
 import org.wso2.carbon.identity.oauth.dcr.util.ErrorCodes;
-import org.wso2.carbon.identity.oauth.dcr.util.DCRUtils;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.registry.core.Registry;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
@@ -57,7 +58,7 @@ public class DCRManagementService {
     private static final String OAUTH_CONSUMER_SECRET = "oauthConsumerSecret";
     private static final String OAUTH_VERSION = "OAuth-2.0";
     // If client secret doesn't expire it should be 0
-    private static final String DEFAULT_CLIENT_SECRET_EXPIREY_TIME = "0";
+    private static final String DEFAULT_CLIENT_SECRET_EXPIRY_TIME = "0";
 
     private static DCRManagementService dcrManagementService = new DCRManagementService();
 
@@ -86,18 +87,9 @@ public class DCRManagementService {
             log.debug("Trying to register OAuth application: '" + applicationName + "'");
         }
 
-        RegistrationResponseProfile info;
-        info = this.createOAuthApplication(profile);
+        RegistrationResponseProfile info = this.createOAuthApplication(profile);
 
-        RegistrationResponseProfile registrationResponseProfile = new RegistrationResponseProfile();
-
-        registrationResponseProfile.setClientName(info.getClientName());
-        registrationResponseProfile.setClientId(info.getClientId());
-        registrationResponseProfile.getRedirectUrls().add(info.getRedirectUrls().get(0));
-        registrationResponseProfile.setClientSecret(info.getClientSecret());
-        registrationResponseProfile.setClientSecretExpiresAt(DEFAULT_CLIENT_SECRET_EXPIREY_TIME);
-        registrationResponseProfile.setGrantTypes(info.getGrantTypes());
-        return registrationResponseProfile;
+        return info;
     }
 
     /**
@@ -136,9 +128,6 @@ public class DCRManagementService {
 
             ApplicationManagementService appMgtService = DCRDataHolder.getInstance().
                     getApplicationManagementService();
-            if (appMgtService == null) {
-                throw new IllegalStateException("Error occurred while retrieving Application Management Service");
-            }
 
             ServiceProvider existingServiceProvider = null;
             ServiceProvider createdServiceProvider = null;
@@ -183,11 +172,15 @@ public class DCRManagementService {
                         errorMessage);
             } else if (profile.getRedirectUris().size() == 1) {
                 String redirectUri = profile.getRedirectUris().get(0);
-                if (DCRUtils.isRedirectionUriValid(redirectUri)) {
+                try {
+                    //validate the redirect uri
+                    IdentityValidationUtil.getValidInputOverWhiteListPatterns(redirectUri,
+                            new String[]{IdentityValidationUtil.ValidatorPattern.URL_WITHOUT_FRAGMENT.name()});
                     oAuthConsumerApp.setCallbackUrl(redirectUri);
-                } else {
+                } catch (IdentityValidationException e) {
                     //TODO: need to add error code
-                    throw IdentityException.error(DCRException.class, "Redirect URI: " + redirectUri + ", is invalid");
+                    throw IdentityException.error(DCRException.class,
+                            "Redirect URI: " + redirectUri + ", is invalid", e);
                 }
 
             } else if (profile.getRedirectUris().size() > 1) {
@@ -201,12 +194,10 @@ public class DCRManagementService {
             }
 
             try {
-                if ((existingServiceProvider == null) || (existingServiceProvider.getInboundAuthenticationConfig().
-                        getInboundAuthenticationRequestConfigs().length == 0)) {
-                    oAuthAdminService.registerOAuthApplicationData(oAuthConsumerApp);
-                }
+                oAuthAdminService.registerOAuthApplicationData(oAuthConsumerApp);
             } catch (IdentityOAuthAdminException e) {
-                throw IdentityException.error(DCRException.class, ErrorCodes.META_DATA_VALIDATION_FAILED.toString(), e.getMessage());
+                throw IdentityException.error(DCRException.class,
+                        ErrorCodes.META_DATA_VALIDATION_FAILED.toString(), e.getMessage());
             }
 
             if (log.isDebugEnabled()) {
@@ -260,6 +251,7 @@ public class DCRManagementService {
             registrationResponseProfile.getRedirectUrls().add(createdApp.getCallbackUrl());
             registrationResponseProfile.setClientSecret(oauthConsumerSecret);
             registrationResponseProfile.setClientName(createdApp.getApplicationName());
+            registrationResponseProfile.setClientSecretExpiresAt(DEFAULT_CLIENT_SECRET_EXPIRY_TIME);
             if (StringUtils.isNotBlank(createdApp.getGrantTypes())) {
                 String[] split = createdApp.getGrantTypes().split(" ");
                 registrationResponseProfile.setGrantTypes(Arrays.asList(split));
@@ -361,22 +353,21 @@ public class DCRManagementService {
         }
     }
 
-    private String replaceInvalidChars(String username) {
-        return username.replaceAll("@", "_AT_");
-    }
-
     private String createRegexPattern(List<String> redirectURIs) throws DCRException {
         StringBuilder regexPattern = new StringBuilder();
         for (String redirectURI : redirectURIs) {
-            if (DCRUtils.isRedirectionUriValid(redirectURI)) {
+            try {
+                //validate the redirect uri
+                IdentityValidationUtil.getValidInputOverWhiteListPatterns(redirectURI,
+                        new String[]{IdentityValidationUtil.ValidatorPattern.URL_WITHOUT_FRAGMENT.name()});
                 if (regexPattern.length() > 0) {
                     regexPattern.append("|").append(redirectURI);
                 } else {
                     regexPattern.append("(").append(redirectURI);
                 }
-            } else {
+            } catch (IdentityValidationException e) {
                 //TODO: need to add error code
-                throw IdentityException.error(DCRException.class, "Redirect URI: " + redirectURI + ", is invalid");
+                throw IdentityException.error(DCRException.class, "Redirect URI: " + redirectURI + ", is invalid", e);
             }
         }
         if (regexPattern.length() > 0) {

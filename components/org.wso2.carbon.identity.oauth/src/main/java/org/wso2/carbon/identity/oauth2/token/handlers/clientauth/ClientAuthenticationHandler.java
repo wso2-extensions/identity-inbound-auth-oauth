@@ -48,4 +48,13 @@ public interface ClientAuthenticationHandler {
      */
     public boolean authenticateClient(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception;
 
+    /**
+     * Extract the client-id from the token message context for the implemented auth mechanism
+     * @param tokReqMsgCtx
+     * @return client-id that can be identified by the given authentication mechanism
+     */
+    default public String getClientId(OAuthTokenReqMessageContext tokReqMsgCtx){
+        return tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId();
+    }
+
 }

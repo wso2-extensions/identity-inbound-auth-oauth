@@ -21,6 +21,10 @@ package org.wso2.carbon.identity.oidc.dcr.internal;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.osgi.service.component.ComponentContext;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.annotations.ReferenceCardinality;
+import org.osgi.service.component.annotations.ReferencePolicy;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.HttpIdentityRequestFactory;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.HttpIdentityResponseFactory;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.IdentityProcessor;
@@ -29,14 +33,10 @@ import org.wso2.carbon.identity.oidc.dcr.factory.HttpOIDCRegistrationResponseFac
 import org.wso2.carbon.identity.oidc.dcr.factory.OIDCRegistrationRequestFactory;
 import org.wso2.carbon.identity.oidc.dcr.processor.OIDCDCRProcessor;
 
-/**
- * @scr.component name="identity.oidc.dcr" immediate="true"
- * @scr.reference name="identity.application.management.service"
- * interface="org.wso2.carbon.identity.application.mgt.ApplicationManagementService"
- * cardinality="1..1" policy="dynamic"
- * bind="setApplicationManagementService" unbind="unsetApplicationManagementService"
- */
-
+@Component(
+        name = "identity.oidc.dcr",
+        immediate = true
+)
 public class OIDCDCRServiceComponent {
 
     private static final Log log = LogFactory.getLog(OIDCDCRServiceComponent.class);
@@ -47,11 +47,11 @@ public class OIDCDCRServiceComponent {
         try {
 
             componentContext.getBundleContext().registerService(HttpIdentityRequestFactory.class.getName(),
-                                                                new OIDCRegistrationRequestFactory(), null);
+                    new OIDCRegistrationRequestFactory(), null);
             componentContext.getBundleContext().registerService(IdentityProcessor.class.getName(),
-                                                                new OIDCDCRProcessor(), null);
+                    new OIDCDCRProcessor(), null);
             componentContext.getBundleContext().registerService(HttpIdentityResponseFactory.class.getName(),
-                                                                new HttpOIDCRegistrationResponseFactory(), null);
+                    new HttpOIDCRegistrationResponseFactory(), null);
         } catch (Throwable e) {
             log.error("Error occurred while activating OIDCDCRServiceComponent", e);
         }
@@ -71,10 +71,17 @@ public class OIDCDCRServiceComponent {
      *
      * @param applicationManagementService An instance of ApplicationManagementService
      */
+    @Reference(
+            name = "application.mgt.service",
+            service = ApplicationManagementService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetApplicationManagementService"
+    )
     protected void setApplicationManagementService(ApplicationManagementService applicationManagementService) {
 
         if (log.isDebugEnabled()) {
-            log.debug("Setting ApplicationManagement Service");
+            log.debug("Setting ApplicationManagement Service.");
         }
         OIDCDCRDataHolder.getInstance().
                 setApplicationManagementService(applicationManagementService);
@@ -88,7 +95,7 @@ public class OIDCDCRServiceComponent {
     protected void unsetApplicationManagementService(ApplicationManagementService applicationManagementService) {
 
         if (log.isDebugEnabled()) {
-            log.debug("Unsetting ApplicationManagement.");
+            log.debug("Unsetting ApplicationManagement Service.");
         }
         OIDCDCRDataHolder.getInstance().setApplicationManagementService(null);
     }

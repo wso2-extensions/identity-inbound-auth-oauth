@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth2.token.handlers.grant.iwa.ntlm;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.ResponseHeader;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
@@ -37,7 +38,6 @@ public class NTLMAuthenticationGrantHandlerWithHandshake extends AbstractAuthori
     private static final String SCHEME_NTLM = "NTLM";
     private static final String SERVER_CONNECTION = "server-connection";
     private static final String SECURITY_PACKAGE = "Negotiate";
-    private static final String RESPONSE_HEADERS_PROPERTY = "RESPONSE_HEADERS";
 
     //This is the index of the byte which represents the NTLM token type.
     private static final int MESSAGE_TYPE_BYTE_INDEX = 8;
@@ -100,7 +100,7 @@ public class NTLMAuthenticationGrantHandlerWithHandshake extends AbstractAuthori
                 responseHeaders[0] = new ResponseHeader();
                 responseHeaders[0].setKey(HEADER_WWW_AUTHENTICATE);
                 responseHeaders[0].setValue(SCHEME_NTLM + " " + type2Token);
-                tokReqMsgCtx.addProperty(RESPONSE_HEADERS_PROPERTY, responseHeaders);
+                tokReqMsgCtx.addProperty(OAuthConstants.RESPONSE_HEADERS_PROPERTY, responseHeaders);
                 return false;
             } else if (tokenType == NTLM_TYPE_3_TOKEN) {
                 serverContext = provider.acceptSecurityToken(SERVER_CONNECTION, bytesToken, SECURITY_PACKAGE);

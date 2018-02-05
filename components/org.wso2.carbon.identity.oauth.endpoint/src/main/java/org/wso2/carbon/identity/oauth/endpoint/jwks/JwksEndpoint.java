@@ -17,15 +17,9 @@
  */
 package org.wso2.carbon.identity.oauth.endpoint.jwks;
 
-
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.math.BigInteger;
-import java.security.KeyStore;
-import java.security.cert.Certificate;
-import java.security.interfaces.RSAPublicKey;
-
-
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.jwk.KeyUse;
+import com.nimbusds.jose.jwk.RSAKey;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -33,94 +27,107 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.core.util.KeyStoreManager;
-import org.wso2.carbon.identity.core.util.IdentityIOStreamUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.utils.CarbonUtils;
-
-
+import java.io.FileInputStream;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.cert.Certificate;
+import java.security.interfaces.RSAPublicKey;
+import java.text.ParseException;
+import javax.jws.WebService;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 
 
+@WebService
 public class JwksEndpoint {
     private static final Log log = LogFactory.getLog(JwksEndpoint.class);
-    private static final char[] ENCODE_MAP = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_".toCharArray();
-    private static final String alg = "RS256";
-    private static final String use = "sig";
-    private static final String kid = "d0ec514a32b6f88c0abd12a2840699bdd3deba9d";
+    private static final String KEY_USE = "sig";
+    private static final String SECURITY_KEY_STORE_LOCATION = "Security.KeyStore.Location";
+    private static final String SECURITY_KEY_STORE_PW = "Security.KeyStore.Password";
+    private static final String SECURITY_KEY_STORE_KEY_ALIAS = "Security.KeyStore.KeyAlias";
+    private static final String KEYS = "keys";
 
     @GET
     @Path(value = "/jwks")
     @Produces(MediaType.APPLICATION_JSON)
     public String jwks() {
 
-        String tenantDomain = null;
-        Object tenantObj = IdentityUtil.threadLocalProperties.get().get(OAuthConstants.TENANT_NAME_FROM_CONTEXT);
-        if (tenantObj != null){
-            tenantDomain = (String) tenantObj;
-        }
-        if (StringUtils.isEmpty(tenantDomain)){
-            tenantDomain = MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
-        }
+        String tenantDomain = getTenantDomain();
+        String keystorePath = CarbonUtils.getServerConfiguration().getFirstProperty(SECURITY_KEY_STORE_LOCATION);
 
-        RSAPublicKey publicKey = null;
-        JSONObject jwksJson = new JSONObject();
-        FileInputStream file = null;
-        try {
-            if (tenantDomain.equals(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)) {
-                file = new FileInputStream(CarbonUtils.getServerConfiguration().getFirstProperty
-                        ("Security.KeyStore.Location"));
+        try (FileInputStream file = new FileInputStream(keystorePath)) {
+            int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
+            RSAPublicKey publicKey;
+            if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equalsIgnoreCase(tenantDomain)) {
                 KeyStore keystore = KeyStore.getInstance(KeyStore.getDefaultType());
-                String password = CarbonUtils.getServerConfiguration().getInstance().getFirstProperty
-                        ("Security.KeyStore.Password");
+                String password = CarbonUtils.getServerConfiguration().getFirstProperty(SECURITY_KEY_STORE_PW);
                 keystore.load(file, password.toCharArray());
-                String alias = CarbonUtils.getServerConfiguration().getInstance().getFirstProperty
-                        ("Security.KeyStore.KeyAlias");
+                String alias = CarbonUtils.getServerConfiguration().getFirstProperty(SECURITY_KEY_STORE_KEY_ALIAS);
                 // Get certificate of public key
-                Certificate cert = keystore.getCertificate(alias);
-                // Get public key
-                publicKey = (RSAPublicKey) cert.getPublicKey();
+                publicKey = getRsaPublicKey(alias, keystore);
             } else {
-
-                int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
-                if (tenantId < 1 && tenantId != -1234) {
-                    String errorMesage = "The tenant is not existing";
-                    log.error(errorMesage);
-                    return errorMesage;
+                if (isInvalidTenantId(tenantId)) {
+                    String errorMessage = "Invalid Tenant: " + tenantDomain;
+                    return logAndReturnError(errorMessage, null);
                 }
                 KeyStoreManager keyStoreManager = KeyStoreManager.getInstance(tenantId);
                 KeyStore keyStore = keyStoreManager.getKeyStore(generateKSNameFromDomainName(tenantDomain));
                 // Get certificate of public key
-                Certificate cert = keyStore.getCertificate(tenantDomain);
-                publicKey = (RSAPublicKey) cert.getPublicKey();
-
+                publicKey = getRsaPublicKey(tenantDomain, keyStore);
             }
-            String modulus = base64EncodeUint(publicKey.getModulus());
-            String exponent = base64EncodeUint(publicKey.getPublicExponent());
-            String kty = publicKey.getAlgorithm();
-            JSONArray jwksKeyArray = new JSONArray();
-            JSONObject jwksKeys = new JSONObject();
-            jwksKeys.put("kty", kty);
-            jwksKeys.put("alg", alg);
-            jwksKeys.put("use", use);
-            jwksKeys.put("kid", kid);
-            jwksKeys.put("n", modulus);
-            jwksKeys.put("e", exponent);
-            jwksKeyArray.put(jwksKeys);
-            jwksJson.put("keys", jwksKeyArray);
+            return buildResponse(tenantDomain, tenantId, publicKey);
         } catch (Exception e) {
-            String errorMesage = "Error while generating the keyset";
-            log.error(errorMesage);
-            return errorMesage;
-        } finally {
-            IdentityIOStreamUtils.closeInputStream(file);
+            String errorMessage = "Error while generating the keyset for " + tenantDomain + " tenant domain.";
+            return logAndReturnError(errorMessage, e);
         }
+    }
 
+    private String buildResponse(String tenantDomain, int tenantId, RSAPublicKey publicKey)
+            throws IdentityOAuth2Exception, ParseException {
+        JSONArray jwksArray = new JSONArray();
+        JSONObject jwksJson = new JSONObject();
+
+        RSAKey.Builder jwk = new RSAKey.Builder(publicKey);
+        jwk.keyID(OAuth2Util.getThumbPrint(tenantDomain, tenantId));
+        jwk.algorithm(JWSAlgorithm.RS256);
+        jwk.keyUse(KeyUse.parse(KEY_USE));
+        jwksArray.put(jwk.build().toJSONObject());
+        jwksJson.put(KEYS, jwksArray);
         return jwksJson.toString();
+    }
+
+    private RSAPublicKey getRsaPublicKey(String alias, KeyStore keyStore) throws KeyStoreException {
+        Certificate cert = keyStore.getCertificate(alias);
+        return (RSAPublicKey) cert.getPublicKey();
+    }
+
+    private boolean isInvalidTenantId(int tenantId) {
+        return tenantId < 1 && tenantId != MultitenantConstants.SUPER_TENANT_ID;
+    }
+
+    private String getTenantDomain() {
+        Object tenantObj = IdentityUtil.threadLocalProperties.get().get(OAuthConstants.TENANT_NAME_FROM_CONTEXT);
+        if (tenantObj != null && StringUtils.isNotBlank((String) tenantObj)) {
+            return (String) tenantObj;
+        }
+        return MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
+    }
+
+    private String logAndReturnError(String errorMesage, Exception e) {
+        if (e != null) {
+            log.error(errorMesage, e);
+        } else {
+            log.error(errorMesage);
+        }
+        return errorMesage;
     }
 
     /**
@@ -131,75 +138,5 @@ public class JwksEndpoint {
     private String generateKSNameFromDomainName(String tenantDomain) {
         String ksName = tenantDomain.trim().replace(".", "-");
         return (ksName + ".jks");
-    }
-
-    /**
-     * This method is used to extract the modulus and exponent values of the jks file
-     * by converting the raw value to big endian format and encoding it
-     */
-    public String base64Encode(final byte[] bytes, final int offset, final int length, final boolean padding) {
-        final StringBuilder buffer = new StringBuilder(length * 3);
-        for (int i = offset; i < offset + length; i += 3) {
-            // p's are the segments for each byte. For every triple there are 6
-            // segments
-            int p0 = bytes[i] & 0xFC;
-            p0 >>= 2;
-
-            int p1 = bytes[i] & 0x03;
-            p1 <<= 4;
-
-            int p2;
-            int p3;
-            if (i + 1 < offset + length) {
-                p2 = bytes[i + 1] & 0xF0;
-                p2 >>= 4;
-                p3 = bytes[i + 1] & 0x0F;
-                p3 <<= 2;
-            } else {
-                p2 = 0;
-                p3 = 0;
-            }
-            int p4;
-            int p5;
-            if (i + 2 < offset + length) {
-                p4 = bytes[i + 2] & 0xC0;
-                p4 >>= 6;
-                p5 = bytes[i + 2] & 0x3F;
-            } else {
-                p4 = 0;
-                p5 = 0;
-            }
-
-            if (i + 2 < offset + length) {
-                buffer.append(ENCODE_MAP[p0]);
-                buffer.append(ENCODE_MAP[p1 | p2]);
-                buffer.append(ENCODE_MAP[p3 | p4]);
-                buffer.append(ENCODE_MAP[p5]);
-            } else if (i + 1 < offset + length) {
-                buffer.append(ENCODE_MAP[p0]);
-                buffer.append(ENCODE_MAP[p1 | p2]);
-                buffer.append(ENCODE_MAP[p3]);
-                if (padding) {
-                    buffer.append('=');
-                }
-            } else {
-                buffer.append(ENCODE_MAP[p0]);
-                buffer.append(ENCODE_MAP[p1 | p2]);
-                if (padding) {
-                    buffer.append("==");
-                }
-            }
-        }
-        return buffer.toString();
-    }
-
-    public String base64urlEncode(final byte[] bytes) {
-
-        return base64Encode(bytes, 0, bytes.length, false);
-    }
-
-    public String base64EncodeUint(final BigInteger v) {
-
-        return base64urlEncode(v.toByteArray());
     }
 }

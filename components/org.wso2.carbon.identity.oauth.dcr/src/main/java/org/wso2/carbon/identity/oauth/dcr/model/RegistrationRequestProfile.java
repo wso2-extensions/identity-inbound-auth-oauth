@@ -17,14 +17,16 @@
  */
 package org.wso2.carbon.identity.oauth.dcr.model;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * DTO class to be used when registering an OAuth application.
  */
-public class RegistrationRequestProfile {
+public class RegistrationRequestProfile implements Serializable {
 
+    private static final long serialVersionUID = 3265926426619907129L;
     private List<String> redirectUris = new ArrayList<>();
     private String tokenEndpointAuthMethod;
     private List<String> grantTypes = new ArrayList<>();

@@ -18,6 +18,8 @@
 
 package org.wso2.carbon.identity.oauth2.model;
 
+import org.wso2.carbon.identity.openidconnect.model.RequestObject;
+
 import java.io.Serializable;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -45,8 +47,27 @@ public class OAuth2Parameters implements Serializable {
     private LinkedHashSet acrValues;
     private String tenantDomain;
     private long authTime;
+    private long maxAge;
     private String responseMode;
     private String essentialClaims;
+    private String displayName;
+    private RequestObject requestObject;
+
+    public long getMaxAge() {
+        return maxAge;
+    }
+
+    public void setMaxAge(long maxAge) {
+        this.maxAge = maxAge;
+    }
+
+    public RequestObject getRequestObject() {
+        return requestObject;
+    }
+
+    public void setRequestObject(RequestObject requestObject) {
+        this.requestObject = requestObject;
+    }
 
     public String getEssentialClaims() {
         return essentialClaims;
@@ -220,5 +241,13 @@ public class OAuth2Parameters implements Serializable {
 
     public void setTenantDomain(String tenantDomain) {
         this.tenantDomain = tenantDomain;
+    }
+
+    public String getDisplayName() {
+        return displayName;
+    }
+
+    public void setDisplayName(String displayName) {
+        this.displayName = displayName;
     }
 }

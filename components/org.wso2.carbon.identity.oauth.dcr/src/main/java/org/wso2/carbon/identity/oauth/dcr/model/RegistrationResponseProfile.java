@@ -17,14 +17,16 @@
  */
 package org.wso2.carbon.identity.oauth.dcr.model;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * This class represents an OAuth application populated with necessary data.
  */
-public class RegistrationResponseProfile {
+public class RegistrationResponseProfile implements Serializable {
 
+    private static final long serialVersionUID = 6624914480171036967L;
     private String clientId;
     private String clientSecret;
     private String clientIdIssueAt;

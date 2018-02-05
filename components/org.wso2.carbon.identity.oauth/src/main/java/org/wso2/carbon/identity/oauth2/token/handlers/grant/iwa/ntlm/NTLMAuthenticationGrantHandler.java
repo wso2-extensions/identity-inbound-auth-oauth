@@ -75,9 +75,7 @@ public class NTLMAuthenticationGrantHandler extends AbstractAuthorizationGrantHa
 
             // Logging the windows authentication object
             if (log.isDebugEnabled() && IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.NTLM_TOKEN)) {
-                log.debug("Received NTLM Token : " +
-                          tokReqMsgCtx.getOauth2AccessTokenReqDTO().getWindowsToken()
-                );
+                log.debug("Received NTLM Token : " + tokReqMsgCtx.getOauth2AccessTokenReqDTO().getWindowsToken());
             }
 
             // client credentials handle
@@ -114,9 +112,21 @@ public class NTLMAuthenticationGrantHandler extends AbstractAuthorizationGrantHa
                             log.debug("NTLM token is authenticated");
                         }
                         String resourceOwnerUserNameWithDomain = WindowsAccountImpl.getCurrentUsername();
-                        String resourceOwnerUserName = resourceOwnerUserNameWithDomain.split("\\\\")[1];
-                        tokReqMsgCtx.setAuthorizedUser(OAuth2Util.getUserFromUserName(resourceOwnerUserName));
-                        break;
+                        String[] splitValues = resourceOwnerUserNameWithDomain.split("\\\\");
+                        if (splitValues.length == 2) {
+                            String resourceOwnerUserName = splitValues[1];
+
+                            if (log.isDebugEnabled()) {
+                                log.debug("Username of resource owner: " + resourceOwnerUserName);
+                            }
+
+                            tokReqMsgCtx.setAuthorizedUser(OAuth2Util.getUserFromUserName(resourceOwnerUserName));
+                            break;
+                        } else {
+                            if (log.isDebugEnabled()) {
+                                log.debug("Invalid format for username: " + resourceOwnerUserNameWithDomain);
+                            }
+                        }
                     }
                     String continueToken = response.getHeader("WWW-Authenticate").
                             substring(securityPackage.length() + 1);

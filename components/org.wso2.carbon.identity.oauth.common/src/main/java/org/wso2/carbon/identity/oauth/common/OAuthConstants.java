@@ -80,7 +80,13 @@ public final class OAuthConstants {
     public static final String CLIENT_AUTH_CREDENTIAL_VALIDATION = "StrictClientCredentialValidation";
     public static final String ACCESS_TOKEN = "accessToken";
     public static final String ID_TOKEN = "id_token";
+    public static final String USERINFO = "userinfo";
     public static final String AUTHZ_CODE = "AuthorizationCode";
+
+    //Constants for reading EndpointConfig.properties
+    public static final String CONFIG_RELATIVE_PATH = "./repository/conf/identity/EndpointConfig.properties";
+    public static final String CLIENT_TRUST_STORE_PASSWORD = "Carbon.Security.TrustStore.Password";
+    public static final String CLIENT_TRUST_STORE = "client.trustStore";
 
     //OAuth PKCE request parameters
     public static final String OAUTH_PKCE_CODE_VERIFIER = "code_verifier";
@@ -90,6 +96,11 @@ public final class OAuthConstants {
     public static final String OAUTH_PKCE_PLAIN_CHALLENGE = "plain";
     //Response types
     public static final String NONE = "none";
+    public static final String TOKEN = "token";
+    public static final String CODE_TOKEN = "code token";
+    public static final String CODE_IDTOKEN = "code id_token";
+    public static final String CODE_IDTOKEN_TOKEN = "code id_token token";
+    public static final String IDTOKEN_TOKEN = "id_token token";
 
     //Constants used for OAuth/OpenID Connect Configuration UI
     public static final String CALLBACK_URL_REGEXP_PREFIX = "regexp=";
@@ -106,11 +117,17 @@ public final class OAuthConstants {
     //Oauth Event Interceptor Proxy Name
     public static final String OAUTH_INTERCEPTOR_PROXY = "OauthDataInterceptorHandlerProxy";
 
+    public static final String RESPONSE_HEADERS_PROPERTY = "RESPONSE_HEADERS";
+
+
     //Constants used for multiple scopes
     public static final String OIDC_SCOPE_CONFIG_PATH = "oidc-scope-config.xml";
     public static final String SCOPE_RESOURCE_PATH = "/oidc";
 
     public static final String TENANT_NAME_FROM_CONTEXT = "TenantNameFromContext";
+
+    //Oauth2 sp expire time configuration.
+    public static final String TOKEN_EXPIRE_TIME_RESOURCE_PATH = "/identity/config/spTokenExpireTime";
 
     public static class GrantTypes {
         public static final String IMPLICIT = "implicit";
@@ -158,6 +175,9 @@ public final class OAuthConstants {
         public static final String DISPLAY = "display";
         public static final String ID_TOKEN_HINT = "id_token_hint";
         public static final String LOGIN_HINT = "login_hint";
+        public static final String AUTH_TIME = "auth_time";
+        public static final String ESSENTIAL = "essential";
+        public static final String USERINFO = "userinfo";
 
         private OAuth20Params() {
 
@@ -265,10 +285,49 @@ public final class OAuthConstants {
     public static class UserType {
         public static final String APPLICATION = "APPLICATION";
         public static final String APPLICATION_USER = "APPLICATION_USER";
+        public static final String FEDERATED_USER_DOMAIN_PREFIX = "FEDERATED";
+        public static final String FEDERATED_USER_DOMAIN_SEPARATOR = ":";
+        public static final String LOCAL_USER_TYPE = "LOCAL";
+        public static final String LEGACY_USER_TYPE = "LEGACY";
 
         private UserType() {
 
         }
+    }
+
+    public static class OIDCClaims {
+        public static final String UPDATED_AT = "updated_at";
+        public static final String PHONE_NUMBER_VERIFIED = "phone_number_verified";
+        public static final String EMAIL_VERIFIED = "email_verified";
+        public static final String ADDRESS = "address";
+        public static final String AZP = "azp";
+        public static final String AUTH_TIME = "auth_time";
+        public static final String AT_HASH = "at_hash";
+        public static final String NONCE = "nonce";
+        public static final String ACR = "acr";
+        public static final String MAX_AGE = "max_age";
+        // OIDC Specification : http://openid.net/specs/openid-connect-core-1_0.html
+        public static final String C_HASH = "c_hash";
+
+        private OIDCClaims() {}
+    }
+
+    public static class SignatureAlgorithms {
+        public static final String NONE = "NONE";
+        public static final String SHA256_WITH_RSA = "SHA256withRSA";
+        public static final String SHA384_WITH_RSA = "SHA384withRSA";
+        public static final String SHA512_WITH_RSA = "SHA512withRSA";
+        public static final String SHA256_WITH_HMAC = "SHA256withHMAC";
+        public static final String SHA384_WITH_HMAC = "SHA384withHMAC";
+        public static final String SHA512_WITH_HMAC = "SHA512withHMAC";
+        public static final String SHA256_WITH_EC = "SHA256withEC";
+        public static final String SHA384_WITH_EC = "SHA384withEC";
+        public static final String SHA512_WITH_EC = "SHA512withEC";
+        public static final String SHA256 = "SHA-256";
+        public static final String SHA384 = "SHA-384";
+        public static final String SHA512 = "SHA-512";
+
+        private SignatureAlgorithms() {}
     }
 
     private OAuthConstants() {

@@ -1,4 +1,4 @@
-/*
+    /*
  * Copyright (c) 2012, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
@@ -20,10 +20,8 @@ package org.wso2.carbon.identity.oauth2.authcontext;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
-import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSSigner;
 import com.nimbusds.jose.crypto.RSASSASigner;
-import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jwt.JWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.PlainJWT;
@@ -140,7 +138,7 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
             String claimsRetrieverImplClass = OAuthServerConfiguration.getInstance().getClaimsRetrieverImplClass();
             String sigAlg =  OAuthServerConfiguration.getInstance().getSignatureAlgorithm();
             if(sigAlg != null && !sigAlg.trim().isEmpty()){
-                signatureAlgorithm = mapSignatureAlgorithm(sigAlg);
+                signatureAlgorithm = OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(sigAlg);
             }
             useMultiValueSeparator = OAuthServerConfiguration.getInstance().isUseMultiValueSeparatorForAuthContextToken();
             if(claimsRetrieverImplClass != null){
@@ -169,20 +167,23 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
     @Override
     public void generateToken(OAuth2TokenValidationMessageContext messageContext) throws IdentityOAuth2Exception {
 
-        String clientId = ((AccessTokenDO)messageContext.getProperty("AccessTokenDO")).getConsumerKey();
-        long issuedTime = ((AccessTokenDO)messageContext.getProperty("AccessTokenDO")).getIssuedTime().getTime();
+        AccessTokenDO accessTokenDO = (AccessTokenDO)messageContext.getProperty("AccessTokenDO");
+        String clientId = accessTokenDO.getConsumerKey();
+        long issuedTime = accessTokenDO.getIssuedTime().getTime();
         String authzUser = messageContext.getResponseDTO().getAuthorizedUser();
-        int tenantID = ((AccessTokenDO)messageContext.getProperty("AccessTokenDO")).getTenantID();
-        String tenantDomain = OAuth2Util.getTenantDomain(tenantID);
+        int tenantId = accessTokenDO.getTenantID();
+        String tenantDomain = OAuth2Util.getTenantDomain(tenantId);
         boolean isExistingUser = false;
         String tenantAwareUsername = null;
 
         RealmService realmService = OAuthComponentServiceHolder.getInstance().getRealmService();
-        // TODO : Need to handle situation where federated user name is similar to a one we have in our user store
-        if (realmService != null && tenantID != MultitenantConstants.INVALID_TENANT_ID ) {
-            tenantAwareUsername = MultitenantUtils.getTenantAwareUsername(authzUser);
+        tenantAwareUsername = MultitenantUtils.getTenantAwareUsername(authzUser);
+
+        if (realmService != null && tenantId != MultitenantConstants.INVALID_TENANT_ID && !(accessTokenDO
+                .getAuthzUser().isFederatedUser() && !OAuthServerConfiguration.getInstance()
+                .isMapFederatedUsersToLocal())) {
             try {
-                UserRealm userRealm = realmService.getTenantUserRealm(tenantID);
+                UserRealm userRealm = realmService.getTenantUserRealm(tenantId);
                 if (userRealm != null) {
                     UserStoreManager userStoreManager = (UserStoreManager) userRealm.getUserStoreManager();
                     isExistingUser = userStoreManager.isExistingUser(tenantAwareUsername);
@@ -257,7 +258,7 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
             }
 
             if(isExistingUser) {
-                String claimSeparator = getMultiAttributeSeparator(authzUser, tenantID);
+                String claimSeparator = getMultiAttributeSeparator(authzUser, tenantId);
                 if (StringUtils.isNotBlank(claimSeparator)) {
                     userAttributeSeparator = claimSeparator;
                 }
@@ -288,10 +289,7 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
 
         JWT jwt = null;
         if(!JWSAlgorithm.NONE.equals(signatureAlgorithm)){
-            JWSHeader header = new JWSHeader(JWSAlgorithm.RS256);
-            header.setX509CertThumbprint(new Base64URL(getThumbPrint(tenantDomain, tenantID)));
-            jwt = new SignedJWT(header, claimsSet);
-            jwt = signJWT((SignedJWT)jwt, tenantDomain, tenantID);
+            jwt = OAuth2Util.signJWT(claimsSet, signatureAlgorithm, tenantDomain);
         } else {
             jwt = new PlainJWT(claimsSet);
         }
@@ -314,10 +312,10 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
      * @return
      * @throws IdentityOAuth2Exception
      */
+    @Deprecated
     protected SignedJWT signJWTWithRSA(SignedJWT signedJWT, JWSAlgorithm jwsAlgorithm, String tenantDomain,
                                        int tenantId)
             throws IdentityOAuth2Exception {
-
         try {
             Key privateKey = getPrivateKey(tenantDomain, tenantId);
             JWSSigner signer = new RSASSASigner((RSAPrivateKey) privateKey);
@@ -341,9 +339,9 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
      * @return
      * @throws IdentityOAuth2Exception
      */
+    @Deprecated
     protected JWT signJWT(SignedJWT signedJWT, String tenantDomain, int tenantId)
             throws IdentityOAuth2Exception {
-
         if (JWSAlgorithm.RS256.equals(signatureAlgorithm) || JWSAlgorithm.RS384.equals(signatureAlgorithm) ||
                 JWSAlgorithm.RS512.equals(signatureAlgorithm)) {
             return signJWTWithRSA(signedJWT, signatureAlgorithm, tenantDomain, tenantId);
@@ -372,31 +370,10 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
      * @return
      * @throws IdentityOAuth2Exception
      */
+    @Deprecated
     protected JWSAlgorithm mapSignatureAlgorithm(String signatureAlgorithm)
             throws IdentityOAuth2Exception {
-        if ("SHA256withRSA".equals(signatureAlgorithm)) {
-            return JWSAlgorithm.RS256;
-        } else if ("SHA384withRSA".equals(signatureAlgorithm)) {
-            return JWSAlgorithm.RS384;
-        } else if ("SHA512withRSA".equals(signatureAlgorithm)) {
-            return JWSAlgorithm.RS512;
-        } else if ("SHA256withHMAC".equals(signatureAlgorithm)) {
-            return JWSAlgorithm.HS256;
-        } else if ("SHA384withHMAC".equals(signatureAlgorithm)) {
-            return JWSAlgorithm.HS384;
-        } else if ("SHA512withHMAC".equals(signatureAlgorithm)) {
-            return JWSAlgorithm.HS512;
-        } else if ("SHA256withEC".equals(signatureAlgorithm)) {
-            return JWSAlgorithm.ES256;
-        } else if ("SHA384withEC".equals(signatureAlgorithm)) {
-            return JWSAlgorithm.ES384;
-        } else if ("SHA512withEC".equals(signatureAlgorithm)) {
-            return JWSAlgorithm.ES512;
-        } else if(NONE.equals(signatureAlgorithm)){
-            return new JWSAlgorithm(JWSAlgorithm.NONE.getName());
-        }
-        log.error("Unsupported Signature Algorithm in identity.xml");
-        throw new IdentityOAuth2Exception("Unsupported Signature Algorithm in identity.xml");
+        return OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(signatureAlgorithm);
     }
 
     private long getTTL() {
