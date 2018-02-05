@@ -316,12 +316,12 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
     private void revokeAccessTokensWhenSaaSDisabled(final ServiceProvider serviceProvider, final String tenantDomain) throws IdentityApplicationManagementException {
 
         try {
-            boolean wasSaasEnaledBefore = false;
+            boolean wasSaasEnabled = false;
             Object saasStatus = IdentityUtil.threadLocalProperties.get().get(SAAS_PROPERTY);
             if (saasStatus instanceof Boolean) {
-                wasSaasEnaledBefore = (Boolean) saasStatus;
+                wasSaasEnabled = (Boolean) saasStatus;
             }
-            if (wasSaasEnaledBefore && !serviceProvider.isSaasApp()) {
+            if (wasSaasEnabled && !serviceProvider.isSaasApp()) {
                 if (log.isDebugEnabled()) {
                     log.debug("SaaS setting removed for application: " + serviceProvider.getApplicationName()
                             + "in tenant domain: " + tenantDomain + ", hence proceeding to token revocation of other tenants.");
@@ -341,7 +341,7 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                                     tokenMgtDAO.revokeSaaSTokensOfOtherTenants(oauthKey, tenantId);
                                 } catch (IdentityOAuth2Exception e) {
                                     log.error("Error occurred while revoking access tokens for client ID: "
-                                            + config.getInboundAuthKey() + "and tenant domain: " + tenantDomain, e);
+                                            + config.getInboundAuthKey() + " and tenant domain: " + tenantDomain, e);
                                 }
                             }
                         }

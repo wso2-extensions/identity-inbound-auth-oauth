@@ -2654,7 +2654,7 @@ public class TokenMgtDAO {
     public void revokeSaaSTokensOfOtherTenants(String consumerKey, int tenantId) throws IdentityOAuth2Exception {
 
         if (consumerKey == null) {
-            log.error("invalid parameters provided. Client ID: " + consumerKey + "and tenant ID: " + tenantId);
+            log.error("Invalid parameters provided. Client ID: " + consumerKey + " and tenant ID: " + tenantId);
             return;
         }
         Connection connection = IdentityDatabaseUtil.getDBConnection();
@@ -2670,7 +2670,8 @@ public class TokenMgtDAO {
             ps.executeUpdate();
             connection.commit();
         } catch (SQLException e) {
-            String errorMsg = "Error revoking access tokens for client ID: " + consumerKey + "and tenant ID:" + tenantId;
+            String errorMsg = "Error revoking access tokens for client ID: " + consumerKey + " and tenant ID:" +
+                    tenantId;
             IdentityDatabaseUtil.rollBack(connection);
             throw new IdentityOAuth2Exception(errorMsg, e);
         } finally {
