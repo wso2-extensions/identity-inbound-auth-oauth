@@ -96,7 +96,7 @@ public class RefreshGrantHandlerTest {
     }
 
     @Test(dataProvider = "GetValidateGrantData")
-    public void testValidateGrant(String clientId, String tokenState, Boolean isUsernameCaseSensitive)
+    public void testValidateGrant(String clientId, String tokenState, boolean isUsernameCaseSensitive)
             throws Exception {
 
         RefreshTokenValidationDataDO validationDataDO = constructValidationDataDO("accessToken1", tokenState,
@@ -144,7 +144,7 @@ public class RefreshGrantHandlerTest {
         tokenReqDTO.setRefreshToken("refreshToken1");
         OAuthTokenReqMessageContext tokenReqMessageContext = new OAuthTokenReqMessageContext(tokenReqDTO);
 
-        Boolean isValid = refreshGrantHandler.validateGrant(tokenReqMessageContext);
+        boolean isValid = refreshGrantHandler.validateGrant(tokenReqMessageContext);
         assertTrue(isValid, "Refresh token validation should be successful.");
     }
 
@@ -186,9 +186,9 @@ public class RefreshGrantHandlerTest {
     }
 
     @Test(dataProvider = "GetTokenIssuerData")
-    public void testIssue(Long userAccessTokenExpiryTime, Long validityPeriod, Boolean isValidToken, Boolean isRenew,
-            Boolean checkUserNameAssertionEnabled, Boolean checkAccessTokenPartitioningEnabled,
-            Boolean isUsernameCaseSensitive) throws Exception {
+    public void testIssue(Long userAccessTokenExpiryTime, Long validityPeriod, boolean isValidToken, boolean isRenew,
+                          boolean checkUserNameAssertionEnabled, boolean checkAccessTokenPartitioningEnabled,
+                          boolean isUsernameCaseSensitive) throws Exception {
 
         OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
         oAuthAppDAO.removeConsumerApplication(TEST_CLIENT_ID);
@@ -286,7 +286,7 @@ public class RefreshGrantHandlerTest {
     }
 
     private RefreshTokenValidationDataDO constructValidationDataDO(String accessToken, String refreshTokenState,
-            Boolean isUsernameCaseSensitive) {
+                                                                   boolean isUsernameCaseSensitive) {
 
         RefreshTokenValidationDataDO validationDataDO = new RefreshTokenValidationDataDO();
         validationDataDO.setAccessToken(accessToken);
