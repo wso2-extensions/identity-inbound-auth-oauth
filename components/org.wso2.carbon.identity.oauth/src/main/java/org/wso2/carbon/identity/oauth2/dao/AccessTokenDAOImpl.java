@@ -25,6 +25,7 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
@@ -109,6 +110,20 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         if (accessTokenDO.getAuthzUser() == null) {
             throw new IdentityOAuth2Exception(
                     "Authorized user should be available for further execution.");
+        }
+
+        if (OAuthServerConfiguration.getInstance().usePersistedAccessTokenAlias()) {
+            try {
+                accessToken = OAuthServerConfiguration.getInstance().getIdentityOauthTokenIssuer()
+                        .getAccessTokenHash(accessToken);
+            } catch (OAuthSystemException e) {
+                if (log.isDebugEnabled() &&
+                        IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                    log.debug("Error while getting access token hash for token(hashed): " +
+                            DigestUtils.sha256Hex(accessToken));
+                }
+                throw new IdentityOAuth2Exception("Error while getting access token hash.");
+            }
         }
 
         if (log.isDebugEnabled()) {
