@@ -19,6 +19,7 @@ package org.wso2.carbon.identity.oauth.dao;
 
 import org.mockito.Mock;
 import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -61,7 +62,7 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
     private static final String AUTHZ_USER = "fakeAuthzUser";
     private static final String OAUTH_VERIFIER = "fakeOauthVerifier";
     private static final String NEW_SECRET = "a459a540f544777860e44e75f605d875";
-    private static final String DB_NAME = "testDB";
+    private static final String DB_NAME = "testOAuthConsumerDAO";
 
     @Mock
     private OAuthServerConfiguration mockedServerConfig;
@@ -74,9 +75,15 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
 
         initiateH2Base(DB_NAME, getFilePath("h2.sql"));
 
-        int consumer_ID = createBase(CLIENT_ID, SECRET, USER_NAME, APP_NAME, CALLBACK, APP_STATE);
-        createAccTokenTable(consumer_ID, ACC_TOKEN, ACC_TOKEN_SECRET, SCOPE, AUTHZ_USER);
-        createReqTokenTable(consumer_ID, REQ_TOKEN, REQ_TOKEN_SECRET, SCOPE, CALLBACK, OAUTH_VERIFIER, AUTHZ_USER);
+        int consumer_ID = createBaseOAuthApp(DB_NAME, CLIENT_ID, SECRET, USER_NAME, APP_NAME, CALLBACK, APP_STATE);
+        createAccessTokenTable(DB_NAME, consumer_ID, ACC_TOKEN, ACC_TOKEN_SECRET, SCOPE, AUTHZ_USER);
+        createReqTokenTable(DB_NAME, consumer_ID, REQ_TOKEN, REQ_TOKEN_SECRET, SCOPE, CALLBACK, OAUTH_VERIFIER,
+                AUTHZ_USER);
+    }
+
+    @AfterClass
+    public void tearDown() throws Exception {
+        closeH2Base(DB_NAME);
     }
 
     @Test
@@ -87,7 +94,7 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
         PlainTextPersistenceProcessor processor = new PlainTextPersistenceProcessor();
         when(mockedServerConfig.getPersistenceProcessor()).thenReturn(processor);
 
-        try(Connection connection1 = getConnection(DB_NAME)) {
+        try (Connection connection1 = getConnection(DB_NAME)) {
             mockStatic(IdentityDatabaseUtil.class);
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection1);
 
@@ -104,7 +111,7 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
         PlainTextPersistenceProcessor processor = new PlainTextPersistenceProcessor();
         when(mockedServerConfig.getPersistenceProcessor()).thenReturn(processor);
 
-        try(Connection connection1 = getConnection(DB_NAME)) {
+        try (Connection connection1 = getConnection(DB_NAME)) {
             Connection connection2 = spy(connection1);
             doThrow(new SQLException()).when(connection2).commit();
             mockStatic(IdentityDatabaseUtil.class);
@@ -125,7 +132,7 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
         PlainTextPersistenceProcessor processor = new PlainTextPersistenceProcessor();
         when(mockedServerConfig.getPersistenceProcessor()).thenReturn(processor);
 
-        try(Connection connection = getConnection(DB_NAME)) {
+        try (Connection connection = getConnection(DB_NAME)) {
 
             PreparedStatement statement = connection.prepareStatement(GET_SECRET_SQL);
             mockStatic(IdentityDatabaseUtil.class);
@@ -135,8 +142,8 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
             consumerDAO.updateSecretKey(CLIENT_ID, NEW_SECRET);
             statement.setString(1, CLIENT_ID);
 
-            try(ResultSet resultSet = statement.executeQuery()) {
-                if(resultSet.next()) {
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
                     assertEquals(resultSet.getString(1), NEW_SECRET, "Checking whether the passed value is set to the " +
                             " CONSUMER_SECRET.");
                 }
@@ -149,7 +156,7 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
 
         mockStatic(IdentityDatabaseUtil.class);
 
-        try(Connection connection2 = getConnection(DB_NAME)) {
+        try (Connection connection2 = getConnection(DB_NAME)) {
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection2);
 
             mockStatic(OAuthServerConfiguration.class);
@@ -167,7 +174,7 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
 
         mockStatic(IdentityDatabaseUtil.class);
 
-        try(Connection connection = getConnection(DB_NAME)) {
+        try (Connection connection = getConnection(DB_NAME)) {
             Connection connection1 = spy(connection);
             doThrow(new SQLException()).when(connection1).commit();
             mockStatic(IdentityDatabaseUtil.class);
@@ -199,7 +206,7 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
         PlainTextPersistenceProcessor processor = new PlainTextPersistenceProcessor();
         when(mockedServerConfig.getPersistenceProcessor()).thenReturn(processor);
 
-        try(Connection connection3 = getConnection(DB_NAME)) {
+        try (Connection connection3 = getConnection(DB_NAME)) {
             mockStatic(IdentityDatabaseUtil.class);
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection3);
 
@@ -216,7 +223,7 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
         PlainTextPersistenceProcessor processor = new PlainTextPersistenceProcessor();
         when(mockedServerConfig.getPersistenceProcessor()).thenReturn(processor);
 
-        try(Connection connection = getConnection(DB_NAME)) {
+        try (Connection connection = getConnection(DB_NAME)) {
             Connection connection1 = spy(connection);
             doThrow(new SQLException()).when(connection1).commit();
             mockStatic(IdentityDatabaseUtil.class);
@@ -237,7 +244,7 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
 
         whenNew(Parameters.class).withNoArguments().thenReturn(mockedParameters);
 
-        try(Connection connection3 = getConnection(DB_NAME)) {
+        try (Connection connection3 = getConnection(DB_NAME)) {
             mockStatic(IdentityDatabaseUtil.class);
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection3);
 
@@ -256,7 +263,7 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
 
         whenNew(Parameters.class).withNoArguments().thenReturn(mockedParameters);
 
-        try(Connection connection = getConnection(DB_NAME)) {
+        try (Connection connection = getConnection(DB_NAME)) {
             Connection connection1 = spy(connection);
             doThrow(new SQLException()).when(connection1).commit();
             mockStatic(IdentityDatabaseUtil.class);
@@ -285,7 +292,7 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
         PlainTextPersistenceProcessor processor = new PlainTextPersistenceProcessor();
         when(mockedServerConfig.getPersistenceProcessor()).thenReturn(processor);
 
-        try(Connection connection3 = getConnection(DB_NAME)) {
+        try (Connection connection3 = getConnection(DB_NAME)) {
             mockStatic(IdentityDatabaseUtil.class);
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection3);
 
@@ -296,13 +303,13 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
                 statement1 = connection3.prepareStatement(GET_ID_SQL);
                 statement1.setString(1, CLIENT_ID);
                 resultSet1 = statement1.executeQuery();
-                if(resultSet1.next()) {
-                     ID = resultSet1.getInt(1);
+                if (resultSet1.next()) {
+                    ID = resultSet1.getInt(1);
                 }
                 statement2 = connection3.prepareStatement(REQ_ID_SQL);
                 statement2.setInt(1, ID);
                 resultSet2 = statement2.executeQuery();
-                if(resultSet2.next()){
+                if (resultSet2.next()) {
                     req_Token = resultSet2.getString(1);
                 }
             } finally {
@@ -327,7 +334,7 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
         PlainTextPersistenceProcessor processor = new PlainTextPersistenceProcessor();
         when(mockedServerConfig.getPersistenceProcessor()).thenReturn(processor);
 
-        try(Connection connection3 = getConnection(DB_NAME)) {
+        try (Connection connection3 = getConnection(DB_NAME)) {
             mockStatic(IdentityDatabaseUtil.class);
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection3);
 
@@ -350,7 +357,7 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
         PlainTextPersistenceProcessor processor = new PlainTextPersistenceProcessor();
         when(mockedServerConfig.getPersistenceProcessor()).thenReturn(processor);
 
-        try(Connection connection = getConnection(DB_NAME)) {
+        try (Connection connection = getConnection(DB_NAME)) {
             Connection connection1 = spy(connection);
             doThrow(new SQLException()).when(connection1).commit();
             mockStatic(IdentityDatabaseUtil.class);
@@ -371,7 +378,7 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
 
         whenNew(Parameters.class).withNoArguments().thenReturn(mockedParameters);
 
-        try(Connection connection3 = getConnection(DB_NAME)) {
+        try (Connection connection3 = getConnection(DB_NAME)) {
             mockStatic(IdentityDatabaseUtil.class);
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection3);
 
@@ -390,7 +397,7 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
 
         whenNew(Parameters.class).withNoArguments().thenReturn(mockedParameters);
 
-        try(Connection connection = getConnection(DB_NAME)) {
+        try (Connection connection = getConnection(DB_NAME)) {
             Connection connection1 = spy(connection);
             doThrow(new SQLException()).when(connection1).commit();
             mockStatic(IdentityDatabaseUtil.class);
@@ -409,7 +416,7 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
         PlainTextPersistenceProcessor processor = new PlainTextPersistenceProcessor();
         when(mockedServerConfig.getPersistenceProcessor()).thenReturn(processor);
 
-        try(Connection connection = getConnection(DB_NAME)) {
+        try (Connection connection = getConnection(DB_NAME)) {
             mockStatic(IdentityDatabaseUtil.class);
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
 
@@ -426,7 +433,7 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
         PlainTextPersistenceProcessor processor = new PlainTextPersistenceProcessor();
         when(mockedServerConfig.getPersistenceProcessor()).thenReturn(processor);
 
-        try(Connection connection = getConnection(DB_NAME)) {
+        try (Connection connection = getConnection(DB_NAME)) {
             Connection connection1 = spy(connection);
             doThrow(new SQLException()).when(connection1).commit();
             mockStatic(IdentityDatabaseUtil.class);

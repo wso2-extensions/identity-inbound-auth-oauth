@@ -61,6 +61,9 @@ import static org.powermock.api.support.membermodification.MemberMatcher.methods
 import static org.powermock.api.support.membermodification.MemberModifier.suppress;
 import static org.testng.Assert.assertEquals;
 
+/**
+ * Unit test covering RegistrationRequestFactory
+ */
 @PrepareForTest(RegistrationRequestFactory.class)
 public class RegistrationRequestFactoryTest extends PowerMockIdentityBaseTest {
 

@@ -20,6 +20,9 @@ public class ScopeDTO  {
   private String name = null;
   
   @NotNull
+  private String displayName = null;
+  
+  
   private String description = null;
   
   
@@ -41,6 +44,18 @@ public class ScopeDTO  {
   /**
    **/
   @ApiModelProperty(required = true, value = "")
+  @JsonProperty("displayName")
+  public String getDisplayName() {
+    return displayName;
+  }
+  public void setDisplayName(String displayName) {
+    this.displayName = displayName;
+  }
+
+  
+  /**
+   **/
+  @ApiModelProperty(value = "")
   @JsonProperty("description")
   public String getDescription() {
     return description;
@@ -69,6 +84,7 @@ public class ScopeDTO  {
     sb.append("class ScopeDTO {\n");
     
     sb.append("  name: ").append(name).append("\n");
+    sb.append("  displayName: ").append(displayName).append("\n");
     sb.append("  description: ").append(description).append("\n");
     sb.append("  bindings: ").append(bindings).append("\n");
     sb.append("}\n");

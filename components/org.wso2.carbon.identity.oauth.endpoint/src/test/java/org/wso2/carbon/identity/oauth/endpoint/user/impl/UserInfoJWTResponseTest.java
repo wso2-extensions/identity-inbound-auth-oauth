@@ -18,25 +18,27 @@
 
 package org.wso2.carbon.identity.oauth.endpoint.user.impl;
 
-import com.nimbusds.jose.JWSAlgorithm;
-import com.nimbusds.jwt.PlainJWT;
+import com.nimbusds.jwt.JWT;
+import com.nimbusds.jwt.JWTParser;
+import com.nimbusds.jwt.ReadOnlyJWTClaimsSet;
+import org.mockito.Spy;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
-import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
-import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
-import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
-import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 
-import java.text.ParseException;
+import java.util.List;
+import java.util.Map;
 
-import static org.mockito.Matchers.anyString;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.spy;
-import static org.powermock.api.mockito.PowerMockito.when;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 
 /**
@@ -51,89 +53,118 @@ public class UserInfoJWTResponseTest extends UserInfoResponseBaseTest {
     public void setup() {
         userInfoJWTResponse = new UserInfoJWTResponse();
     }
+    @DataProvider(name = "subjectClaimDataProvider")
+    public Object[][] provideSubjectData() {
+        return getSubjectClaimTestData();
+    }
 
-    @DataProvider
+    @Test(dataProvider = "subjectClaimDataProvider")
+    public void testSubjectClaim(Map<String, Object> inputClaims,
+                                 Object authorizedUser,
+                                 boolean appendTenantDomain,
+                                 boolean appendUserStoreDomain,
+                                 String expectedSubjectValue) throws Exception {
+        try {
+            AuthenticatedUser authenticatedUser = (AuthenticatedUser) authorizedUser;
+            prepareForSubjectClaimTest(authenticatedUser, inputClaims, appendTenantDomain, appendUserStoreDomain);
+
+            userInfoJWTResponse = spy(new UserInfoJWTResponse());
+            when(userInfoJWTResponse.retrieveUserClaims(any(OAuth2TokenValidationResponseDTO.class)))
+                    .thenReturn(inputClaims);
+
+            String responseString =
+                    userInfoJWTResponse.getResponseString(getTokenResponseDTO(authenticatedUser.toFullQualifiedUsername()));
+
+            JWT jwt = JWTParser.parse(responseString);
+            assertNotNull(jwt);
+            assertNotNull(jwt.getJWTClaimsSet());
+            assertNotNull(jwt.getJWTClaimsSet().getSubject());
+            assertEquals(jwt.getJWTClaimsSet().getSubject(), expectedSubjectValue);
+        } finally {
+            PrivilegedCarbonContext.endTenantFlow();
+        }
+    }
+
+    @Test
+    public void testUpdateAtClaim() throws Exception {
+        String updateAtValue = "1509556412";
+        testLongClaimInUserInfoResponse(UPDATED_AT, updateAtValue);
+    }
+
+    @Test
+    public void testEmailVerified() throws Exception {
+        String emailVerifiedClaimValue = "true";
+        testBooleanClaimInUserInfoResponse(EMAIL_VERIFIED, emailVerifiedClaimValue);
+    }
+
+    @Test
+    public void testPhoneNumberVerified() throws Exception {
+        String phoneNumberVerifiedClaimValue = "true";
+        testBooleanClaimInUserInfoResponse(PHONE_NUMBER_VERIFIED, phoneNumberVerifiedClaimValue);
+    }
+
+    private void testBooleanClaimInUserInfoResponse(String claimUri, String claimValue) throws Exception {
+        initSingleClaimTest(claimUri, claimValue);
+        String responseString =
+                userInfoJWTResponse.getResponseString(getTokenResponseDTO(AUTHORIZED_USER_FULL_QUALIFIED));
+
+        JWT jwt = JWTParser.parse(responseString);
+        assertNotNull(jwt);
+        assertNotNull(jwt.getJWTClaimsSet());
+
+        Map<String, Object> claimsInResponse = jwt.getJWTClaimsSet().getAllClaims();
+        assertSubjectClaimPresent(claimsInResponse);
+        assertNotNull(claimsInResponse.get(claimUri));
+        assertEquals(claimsInResponse.get(claimUri), Boolean.parseBoolean(claimValue));
+    }
+
+    private void testLongClaimInUserInfoResponse(String claimUri, String claimValue) throws Exception {
+        initSingleClaimTest(claimUri, claimValue);
+        String responseString =
+                userInfoJWTResponse.getResponseString(getTokenResponseDTO(AUTHORIZED_USER_FULL_QUALIFIED));
+
+        JWT jwt = JWTParser.parse(responseString);
+        assertNotNull(jwt);
+        assertNotNull(jwt.getJWTClaimsSet());
+
+        Map<String, Object> claimsInResponse = jwt.getJWTClaimsSet().getAllClaims();
+        assertSubjectClaimPresent(claimsInResponse);
+        assertNotNull(claimsInResponse.get(claimUri));
+        assertTrue(claimsInResponse.get(claimUri) instanceof Integer || claimsInResponse.get(claimUri) instanceof Long);
+    }
+
+    @DataProvider(name = "responseStringInputs")
     public Object[][] responseStringInputs() {
-        return new Object[][]{
-                {new String[]{FIRST_NAME, LAST_NAME, EMAIL}, new String[]{FIRST_NAME}, new String[]
-                        {FIRST_NAME}, new String[]{OIDC}, false, false},
-
-                {new String[]{FIRST_NAME, LAST_NAME, EMAIL}, new String[]{FIRST_NAME}, new String[]
-                        {FIRST_NAME}, new String[]{OIDC}, false, false},
-
-                {new String[]{FIRST_NAME, SUB}, new String[]{FIRST_NAME}, new
-                        String[]{FIRST_NAME}, new String[]{OIDC}, false, false},
-
-                {new String[]{FIRST_NAME, LAST_NAME, EMAIL, PHONE_NUMBER_VERIFIED}, new String[]{FIRST_NAME,
-                        PHONE_NUMBER_VERIFIED}, new String[]{FIRST_NAME + CLAIM_SEPARATOR + LAST_NAME +
-                        CLAIM_SEPARATOR + PHONE_NUMBER_VERIFIED + CLAIM_SEPARATOR + EMAIL_VERIFIED}, new
-                        String[]{OIDC}, false, false},
-
-                {new String[]{FIRST_NAME, LAST_NAME, EMAIL, PHONE_NUMBER_VERIFIED, EMAIL_VERIFIED}, new
-                        String[]{FIRST_NAME, PHONE_NUMBER_VERIFIED, EMAIL_VERIFIED}, new
-                        String[]{FIRST_NAME + CLAIM_SEPARATOR + LAST_NAME + CLAIM_SEPARATOR + PHONE_NUMBER_VERIFIED +
-                        CLAIM_SEPARATOR + EMAIL_VERIFIED}, new String[]{OIDC}, false, false},
-
-                {new String[]{FIRST_NAME, LAST_NAME, EMAIL, ADDRESS_PREFIX + "address"}, new String[]{FIRST_NAME}, new
-                        String[]{FIRST_NAME + CLAIM_SEPARATOR + ADDRESS_PREFIX + "address"}, new String[]{OIDC},
-                        false, false},
-
-                {new String[]{FIRST_NAME, LAST_NAME, EMAIL, UPDATED_AT}, new String[]{FIRST_NAME, UPDATED_AT}, new
-                        String[]{FIRST_NAME + CLAIM_SEPARATOR + UPDATED_AT}, new String[]{OIDC}, false, false},
-
-                {new String[]{FIRST_NAME, LAST_NAME, EMAIL, UPDATED_AT + ":123456789"}, new String[]{FIRST_NAME,
-                        UPDATED_AT}, new String[]{FIRST_NAME + CLAIM_SEPARATOR + UPDATED_AT}, new String[]{OIDC},
-                        false, false},
-
-                {new String[]{FIRST_NAME, LAST_NAME, EMAIL}, new String[]{}, new String[]
-                        {FIRST_NAME}, new String[]{OIDC, "address"}, true, false},
-        };
+        return getOidcScopeFilterTestData();
     }
 
     @Test(dataProvider = "responseStringInputs")
-    public void testGetResponseString(String[] inputClaims, String[] assertClaims, String[] scopeClaims, String[]
-            scopes, boolean getClaimsFromCache, boolean useSigningAlgorithm) throws Exception {
-        startTenantFlow(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
-        mockOAuthServerConfiguration(useSigningAlgorithm);
-        mockStatic(IdentityTenantUtil.class);
-        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
-        spy(OAuth2Util.class);
-        prepareOAuth2Util(useSigningAlgorithm);
-        prepareIdentityUtil();
-        prepareUserInfoEndpointConfig();
-        prepareApplicationManagementService();
-        prepareRegistry(scopeClaims, scopes);
-        prepareAuthorizationGrantCache(getClaimsFromCache);
-        prepareClaimUtil(getClaims(inputClaims));
-        String responseString = userInfoJWTResponse.getResponseString(prepareTokenResponseDTO());
-        for (String claim : assertClaims) {
-            assertTrue(decodeJWT(responseString).contains(claim), "Expected to present " + claim + " in the response " +
-                    "string");
-        }
-    }
+    public void testGetResponseString(Map<String, Object> inputClaims,
+                                      Map<String, List<String>> oidcScopeMap,
+                                      boolean getClaimsFromCache,
+                                      String[] requestedScopes,
+                                      Map<String, Object> expectedClaims) throws Exception {
+        try {
+            prepareForResponseClaimTest(inputClaims, oidcScopeMap, getClaimsFromCache);
+            String responseString =
+                    userInfoJWTResponse.getResponseString(
+                            getTokenResponseDTO(AUTHORIZED_USER_FULL_QUALIFIED, requestedScopes));
 
-    private String decodeJWT(String jwtToken) throws ParseException {
-        return PlainJWT.parse(jwtToken).getPayload().toString();
-    }
+            JWT jwt = JWTParser.parse(responseString);
+            ReadOnlyJWTClaimsSet jwtClaimsSet = jwt.getJWTClaimsSet();
+            assertNotNull(jwtClaimsSet);
+            assertNotNull(jwtClaimsSet.getSubject());
 
-    protected void mockOAuthServerConfiguration(boolean useSigningAlgorithm) throws Exception {
-        super.mockOAuthServerConfiguration();
-        if (useSigningAlgorithm) {
-            when(oAuthServerConfiguration.getUserInfoJWTSignatureAlgorithm()).thenReturn("SHA256withRSA");
+            for (Map.Entry<String, Object> expectedClaimEntry : expectedClaims.entrySet()) {
+                assertTrue(jwtClaimsSet.getAllClaims().containsKey(expectedClaimEntry.getKey()));
+                assertNotNull(jwtClaimsSet.getClaim(expectedClaimEntry.getKey()));
+                assertEquals(
+                        expectedClaimEntry.getValue(),
+                        jwtClaimsSet.getClaim(expectedClaimEntry.getKey())
+                );
+            }
+        } finally {
+            PrivilegedCarbonContext.endTenantFlow();
         }
-    }
-
-    protected void prepareOAuth2Util(boolean useSigningAlgorithm) throws Exception {
-        super.prepareOAuth2Util();
-        AccessTokenDO accessTokenDO = new AccessTokenDO();
-        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
-        authenticatedUser.setAuthenticatedSubjectIdentifier("testUser@wso2.com");
-        authenticatedUser.setUserName("testUser@wso2.com");
-        accessTokenDO.setAuthzUser(authenticatedUser);
-        if (useSigningAlgorithm) {
-            JWSAlgorithm jwsAlgorithm = new JWSAlgorithm("SHA256withRSA");
-            when(OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(anyString())).thenReturn(jwsAlgorithm);
-        }
-        when(OAuth2Util.getAccessTokenDOfromTokenIdentifier(anyString())).thenReturn(accessTokenDO);
     }
 }

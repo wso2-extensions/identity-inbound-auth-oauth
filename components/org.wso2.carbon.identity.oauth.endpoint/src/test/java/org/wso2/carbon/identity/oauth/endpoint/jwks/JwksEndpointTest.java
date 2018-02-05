@@ -38,15 +38,12 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 import org.wso2.carbon.utils.CarbonUtils;
-
 import java.io.FileInputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.KeyStore;
-import java.security.cert.Certificate;
-import java.security.interfaces.RSAPublicKey;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -154,7 +151,7 @@ public class JwksEndpointTest extends PowerMockIdentityBaseTest {
             assertEquals(keyObject.get("kty"), "RSA", "Incorrect kty value");
         } catch (JSONException e) {
             if ("invalid.com".equals(tenantDomain)) {
-                assertTrue(result.contains("The tenant is not existing"),
+                assertTrue(result.contains("Invalid Tenant"),
                         "Error message for non existing tenant is not found");
             } else if (tenantDomain == null) {
                 assertTrue(result.contains("Error while generating the keyset"),
@@ -165,22 +162,6 @@ public class JwksEndpointTest extends PowerMockIdentityBaseTest {
         }
 
         threadLocalProperties.get().remove(OAuthConstants.TENANT_NAME_FROM_CONTEXT);
-    }
-
-    @Test
-    public void testBase64Encode() throws Exception {
-        KeyStore keyStore = getKeyStoreFromFile("foo-com.jks", "foo.com");
-        Certificate cert = keyStore.getCertificate("foo.com");
-        RSAPublicKey publicKey = (RSAPublicKey) cert.getPublicKey();
-
-        String encodedModules = jwksEndpoint.base64Encode(publicKey.getModulus().toByteArray(), 0,
-                publicKey.getModulus().toByteArray().length - 1, true);
-        assertTrue(encodedModules.startsWith("AJo"), "base64Encode result is incorrect");
-        assertTrue(encodedModules.endsWith("=="), "base64Encode result is incorrect");
-
-        String encodedExponent = jwksEndpoint.base64Encode(publicKey.getPublicExponent().toByteArray(), 0,
-                publicKey.getPublicExponent().toByteArray().length - 1, true);
-        assertEquals(encodedExponent, "AQA=");
     }
 
     private void mockOAuthServerConfiguration() throws Exception {

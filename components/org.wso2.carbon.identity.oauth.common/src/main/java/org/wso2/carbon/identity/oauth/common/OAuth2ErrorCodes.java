@@ -25,6 +25,7 @@ public class OAuth2ErrorCodes {
     public static final String ACCESS_DENIED = "access_denied";
     public static final String INVALID_CALLBACK = "invalid_callback";
     public static final String INVALID_REQUEST = "invalid_request";
+    public static final String INVALID_GRANT = "invalid_grant";
     public static final String INVALID_CLIENT = "invalid_client";
     public static final String UNSUPPORTED_GRANT_TYPE = "unsupported_grant_type";
     public static final String LOGIN_REQUIRED = "login_required";

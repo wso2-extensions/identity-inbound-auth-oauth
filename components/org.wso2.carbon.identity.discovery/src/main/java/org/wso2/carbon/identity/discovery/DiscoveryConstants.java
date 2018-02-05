@@ -271,4 +271,24 @@ public class DiscoveryConstants {
     public static final String CONFIG_ELEM_OIDC = "OpenIDConnectDiscovery";
     public static final String CONFIG_ELEM_OIDCCONFIG = "Configuration";
     public static final String CONFIG_DEFAULT_NAME = "default";
+
+
+    /**
+     * Following Discovery metadata related to OpenID Connect Session Management 1.0 - draft 28
+     */
+
+    /**
+     * check_session_iframe
+     * REQUIRED. URL of an OP iframe that supports cross-origin communications for session state information with the RP
+     * Client, using the HTML5 postMessage API. The page is loaded from an invisible iframe embedded in an RP page so
+     * that it can run in the OP's security context. It accepts postMessage requests from the relevant RP iframe and
+     * uses postMessage to post back the login status of the End-User at the OP.
+     */
+    public static final String CHECK_SESSION_IFRAME = "check_session_iframe";
+    /**
+     * end_session_endpoint
+     * REQUIRED. URL at the OP to which an RP can perform a redirect to request that the End-User be logged out at the
+     * OP.
+     */
+    public static final String END_SESSION_ENDPOINT = "end_session_endpoint";
 }

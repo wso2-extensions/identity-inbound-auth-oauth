@@ -40,11 +40,14 @@ import static org.powermock.api.support.membermodification.MemberMatcher.methods
 import static org.powermock.api.support.membermodification.MemberModifier.suppress;
 import static org.testng.Assert.assertEquals;
 
+/**
+ * Unit test covering UnregistrationRequestFactory
+ */
 @PrepareForTest(UnregistrationRequestFactory.class)
 public class UnregistrationRequestFactoryTest extends PowerMockIdentityBaseTest{
 
     @Mock
-    UnregistrationRequest.DCRUnregisterRequestBuilder unregisterRequestBuilder;
+    private UnregistrationRequest.DCRUnregisterRequestBuilder unregisterRequestBuilder;
 
     @Mock
     private HttpServletRequest mockHttpRequest;

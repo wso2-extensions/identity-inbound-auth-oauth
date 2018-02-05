@@ -31,13 +31,13 @@ public class ScopesApi  {
     @Path("/name/{name}")
     @Consumes({ "application/json" })
     @Produces({ "application/json" })
-    @io.swagger.annotations.ApiOperation(value = "Deletes a Scope\n", notes = "This API is used to delete scope by scope name.\n", response = String.class)
+    @io.swagger.annotations.ApiOperation(value = "Deletes a Scope\n", notes = "This API is used to delete a scope by a given scope name.\n", response = String.class)
     @io.swagger.annotations.ApiResponses(value = { 
-        @io.swagger.annotations.ApiResponse(code = 204, message = "Successful deleted"),
+        @io.swagger.annotations.ApiResponse(code = 204, message = "Successfully deleted"),
         
         @io.swagger.annotations.ApiResponse(code = 500, message = "Server Error") })
 
-    public Response deleteScope(@ApiParam(value = "scope name of the scope which need to get deleted",required=true ) @PathParam("name") String name)
+    public Response deleteScope(@ApiParam(value = "Name of the scope that is to be deleted",required=true ) @PathParam("name") String name)
     {
     return delegate.deleteScope(name);
     }
@@ -45,15 +45,15 @@ public class ScopesApi  {
     @Path("/name/{name}")
     @Consumes({ "application/json" })
     @Produces({ "application/json" })
-    @io.swagger.annotations.ApiOperation(value = "Returns a Scope by Scope Name\n", notes = "This API is used to get a scope by given scope name.\n", response = ScopeDTO.class)
+    @io.swagger.annotations.ApiOperation(value = "Returns a Scope by Scope Name\n", notes = "This API is used to retrieve details of a scope by a given scope name.\n", response = ScopeDTO.class)
     @io.swagger.annotations.ApiResponses(value = { 
-        @io.swagger.annotations.ApiResponse(code = 200, message = "Successful Retrieved"),
+        @io.swagger.annotations.ApiResponse(code = 200, message = "Successfully Retrieved"),
         
         @io.swagger.annotations.ApiResponse(code = 404, message = "Not Found"),
         
         @io.swagger.annotations.ApiResponse(code = 500, message = "Server Error") })
 
-    public Response getScope(@ApiParam(value = "scope name of the scope which the details to be retrieved",required=true ) @PathParam("name") String name)
+    public Response getScope(@ApiParam(value = "Name of the scope that is to be retrieved",required=true ) @PathParam("name") String name)
     {
     return delegate.getScope(name);
     }
@@ -63,14 +63,14 @@ public class ScopesApi  {
     @Produces({ "application/json" })
     @io.swagger.annotations.ApiOperation(value = "Returns all available Scopes\n", notes = "This API is used to get all the available scopes.\n", response = ScopeDTO.class, responseContainer = "List")
     @io.swagger.annotations.ApiResponses(value = { 
-        @io.swagger.annotations.ApiResponse(code = 200, message = "Successful Retrieved"),
+        @io.swagger.annotations.ApiResponse(code = 200, message = "Successfully Retrieved"),
         
         @io.swagger.annotations.ApiResponse(code = 404, message = "Not Found"),
         
         @io.swagger.annotations.ApiResponse(code = 500, message = "Server Error") })
 
-    public Response getScopes(@ApiParam(value = "start index of the list of scopes to be retrieved") @QueryParam("startIndex") Integer startIndex,
-    @ApiParam(value = "a limited number of scopes to be retrieved") @QueryParam("count") Integer count)
+    public Response getScopes(@ApiParam(value = "The start index of the list of scopes to be retrieved") @QueryParam("startIndex") Integer startIndex,
+    @ApiParam(value = "Number of scopes to retrieve from the point of the start index") @QueryParam("count") Integer count)
     {
     return delegate.getScopes(startIndex,count);
     }
@@ -78,7 +78,7 @@ public class ScopesApi  {
     @Path("/name/{name}")
     @Consumes({ "application/json" })
     @Produces({ "application/json" })
-    @io.swagger.annotations.ApiOperation(value = "Check Scope Existance using Scope Name\n", notes = "This API is used to check scope existance using scope name.\n", response = String.class)
+    @io.swagger.annotations.ApiOperation(value = "Check Scope Existance using Scope Name\n", notes = "This API is used to check a scope's existance using a given scope name.\n", response = String.class)
     @io.swagger.annotations.ApiResponses(value = { 
         @io.swagger.annotations.ApiResponse(code = 200, message = "Scope Exists"),
         
@@ -86,7 +86,7 @@ public class ScopesApi  {
         
         @io.swagger.annotations.ApiResponse(code = 500, message = "Server Error") })
 
-    public Response isScopeExists(@ApiParam(value = "scope name of the scope which the existance should be checked",required=true ) @PathParam("name") String name)
+    public Response isScopeExists(@ApiParam(value = "Name of the scope that is to be checked",required=true ) @PathParam("name") String name)
     {
     return delegate.isScopeExists(name);
     }
@@ -104,7 +104,7 @@ public class ScopesApi  {
         
         @io.swagger.annotations.ApiResponse(code = 500, message = "Server Error") })
 
-    public Response registerScope(@ApiParam(value = "a scope with the bindings which to be registered" ,required=true ) ScopeDTO scope)
+    public Response registerScope(@ApiParam(value = "Define a scope with bindings to register it" ,required=true ) ScopeDTO scope)
     {
     return delegate.registerScope(scope);
     }
@@ -112,16 +112,16 @@ public class ScopesApi  {
     @Path("/name/{name}")
     @Consumes({ "application/json" })
     @Produces({ "application/json" })
-    @io.swagger.annotations.ApiOperation(value = "Updates a Scope\n", notes = "This API is used to update a scope by scope name.\n", response = ScopeDTO.class)
+    @io.swagger.annotations.ApiOperation(value = "Updates a Scope\n", notes = "This API is used to update a scope by a given scope name.\n", response = ScopeDTO.class)
     @io.swagger.annotations.ApiResponses(value = { 
-        @io.swagger.annotations.ApiResponse(code = 200, message = "Successful updated"),
+        @io.swagger.annotations.ApiResponse(code = 200, message = "Successfully updated"),
         
         @io.swagger.annotations.ApiResponse(code = 409, message = "Conflict"),
         
         @io.swagger.annotations.ApiResponse(code = 500, message = "Server Error") })
 
     public Response updateScope(@ApiParam(value = "updated scope" ,required=true ) ScopeToUpdateDTO scope,
-    @ApiParam(value = "scope name of the scope which need to get updated",required=true ) @PathParam("name") String name)
+    @ApiParam(value = "Name of the scope that is to be updated",required=true ) @PathParam("name") String name)
     {
     return delegate.updateScope(scope,name);
     }

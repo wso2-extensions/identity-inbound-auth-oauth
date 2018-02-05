@@ -20,7 +20,7 @@ package org.wso2.carbon.identity.oauth2.internal;
 
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
-import org.wso2.carbon.identity.oauth2.dao.TokenMgtDAO;
+import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -37,9 +37,9 @@ public class OAuthUserStoreConfigListenerImpl extends AbstractUserStoreConfigLis
     @Override
     public void onUserStoreNamePreUpdate(int tenantId, String currentUserStoreName, String newUserStoreName) throws
             UserStoreException {
-        TokenMgtDAO tokenMgtDAO = new TokenMgtDAO();
         try {
-            Set<AccessTokenDO> accessTokenDOs = tokenMgtDAO.getAccessTokensOfUserStore(tenantId, currentUserStoreName);
+            Set<AccessTokenDO> accessTokenDOs = OAuthTokenPersistenceFactory.getInstance()
+                    .getAccessTokenDAO().getAccessTokensOfUserStore(tenantId, currentUserStoreName);
             for (AccessTokenDO accessTokenDO : accessTokenDOs) {
                 //Clear cache
                 OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser(),
@@ -47,8 +47,10 @@ public class OAuthUserStoreConfigListenerImpl extends AbstractUserStoreConfigLis
                 OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser());
                 OAuthUtil.clearOAuthCache(accessTokenDO.getAccessToken());
             }
-            tokenMgtDAO.renameUserStoreDomainInAccessTokenTable(tenantId, currentUserStoreName, newUserStoreName);
-            tokenMgtDAO.renameUserStoreDomainInAuthorizationCodeTable(tenantId, currentUserStoreName, newUserStoreName);
+            OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                    .updateUserStoreDomain(tenantId, currentUserStoreName, newUserStoreName);
+            OAuthTokenPersistenceFactory.getInstance().getAuthorizationCodeDAO()
+                    .updateUserStoreDomain(tenantId, currentUserStoreName, newUserStoreName);
         } catch (IdentityOAuth2Exception e) {
             throw new UserStoreException("Error occurred while renaming user store : " + currentUserStoreName +
                     " in tenant :" + tenantId, e);
@@ -57,9 +59,9 @@ public class OAuthUserStoreConfigListenerImpl extends AbstractUserStoreConfigLis
 
     @Override
     public void onUserStorePreDelete(int tenantId, String userStoreName) throws UserStoreException {
-        TokenMgtDAO tokenMgtDAO = new TokenMgtDAO();
         try {
-            Set<AccessTokenDO> accessTokenDOs = tokenMgtDAO.getAccessTokensOfUserStore(tenantId, userStoreName);
+            Set<AccessTokenDO> accessTokenDOs = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                    .getAccessTokensOfUserStore(tenantId, userStoreName);
             Map<String, AccessTokenDO> latestAccessTokens = new HashMap<>();
             for (AccessTokenDO accessTokenDO : accessTokenDOs) {
                 String keyString = accessTokenDO.getConsumerKey() + ":" + accessTokenDO.getAuthzUser() + ":" +
@@ -83,15 +85,17 @@ public class OAuthUserStoreConfigListenerImpl extends AbstractUserStoreConfigLis
             for (Map.Entry entry : latestAccessTokens.entrySet()) {
                 tokensToRevoke.add(((AccessTokenDO) entry.getValue()).getAccessToken());
             }
-            tokenMgtDAO.revokeTokens(tokensToRevoke.toArray(new String[tokensToRevoke.size()]));
-            List<AuthzCodeDO> latestAuthzCodes = tokenMgtDAO.getLatestAuthorizationCodesOfUserStore(tenantId,
-                    userStoreName);
+            OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                    .revokeAccessTokens(tokensToRevoke.toArray(new String[tokensToRevoke.size()]));
+            List<AuthzCodeDO> latestAuthzCodes = OAuthTokenPersistenceFactory.getInstance()
+                    .getAuthorizationCodeDAO().getLatestAuthorizationCodesByUserStore(tenantId, userStoreName);
             for (AuthzCodeDO authzCodeDO : latestAuthzCodes) {
                 // remove the authorization code from the cache
                 OAuthUtil.clearOAuthCache(authzCodeDO.getConsumerKey() + ":" + authzCodeDO.getAuthorizationCode());
 
             }
-            tokenMgtDAO.deactivateAuthorizationCode(latestAuthzCodes);
+            OAuthTokenPersistenceFactory.getInstance()
+                    .getAuthorizationCodeDAO().deactivateAuthorizationCodes(latestAuthzCodes);
         } catch (IdentityOAuth2Exception e) {
             throw new UserStoreException("Error occurred while revoking Access Token of user store : " +
                     userStoreName + " in tenant :" + tenantId, e);

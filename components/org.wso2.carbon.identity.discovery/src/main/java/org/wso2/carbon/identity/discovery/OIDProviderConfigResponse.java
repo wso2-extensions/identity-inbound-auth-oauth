@@ -64,6 +64,8 @@ public class OIDProviderConfigResponse {
     private String requireRequestUriRegistration;
     private String opPolicyUri;
     private String opTosUri;
+    private String checkSessionIframe;
+    private String endSessionEndpoint;
 
 
     public String getIssuer() {
@@ -349,6 +351,22 @@ public class OIDProviderConfigResponse {
         this.opTosUri = opTosUri;
     }
 
+    public String getCheckSessionIframe() {
+        return checkSessionIframe;
+    }
+
+    public void setCheckSessionIframe(String checkSessionIframe) {
+        this.checkSessionIframe = checkSessionIframe;
+    }
+
+    public String getEndSessionEndpoint() {
+        return endSessionEndpoint;
+    }
+
+    public void setEndSessionEndpoint(String endSessionEndpoint) {
+        this.endSessionEndpoint = endSessionEndpoint;
+    }
+
     public Map<String, Object> getConfigMap() {
         Map<String, Object> configMap = new HashMap<String, Object>();
         configMap.put(DiscoveryConstants.ISSUER.toLowerCase(), this.issuer);
@@ -397,6 +415,8 @@ public class OIDProviderConfigResponse {
         configMap.put(DiscoveryConstants.USERINFO_ENCRYPTION_ENC_VALUES_SUPPORTED.toLowerCase(), this
                 .userinfoEncryptionEncValuesSupported);
         configMap.put(DiscoveryConstants.USERINFO_ENDPOINT.toLowerCase(), this.userinfoEndpoint);
+        configMap.put(DiscoveryConstants.CHECK_SESSION_IFRAME.toLowerCase(), this.checkSessionIframe);
+        configMap.put(DiscoveryConstants.END_SESSION_ENDPOINT.toLowerCase(), this.endSessionEndpoint);
         configMap.put(DiscoveryConstants.USERINFO_SIGNING_ALG_VALUES_SUPPORTED.toLowerCase(), this
                 .userinfoSigningAlgValuesSupported);
         return configMap;

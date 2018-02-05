@@ -48,6 +48,11 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
 
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.HTTP_RESP_HEADER_CACHE_CONTROL;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.HTTP_RESP_HEADER_PRAGMA;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.HTTP_RESP_HEADER_VAL_CACHE_CONTROL_NO_STORE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.HTTP_RESP_HEADER_VAL_PRAGMA_NO_CACHE;
+
 @Path("/userinfo")
 public class OpenIDConnectUserEndpoint {
 
@@ -57,8 +62,7 @@ public class OpenIDConnectUserEndpoint {
     @Path("/")
     @Produces("application/json")
     public Response getUserClaims(@Context HttpServletRequest request) throws OAuthSystemException {
-
-        String response = null;
+        String userInfoResponse;
         try {
             // validate the request
             UserInfoRequestValidator requestValidator = UserInfoEndpointConfig.getInstance().getUserInfoRequestValidator();
@@ -69,19 +73,11 @@ public class OpenIDConnectUserEndpoint {
                     UserInfoEndpointConfig.getInstance().getUserInfoAccessTokenValidator();
             OAuth2TokenValidationResponseDTO tokenResponse = tokenValidator.validateToken(accessToken);
 
-            /*
-               We need to pass the SP's tenantId to the UserInfoResponseBuilder to retrieve the correct OIDC scope
-               configurations. We can't do this currently as OAuth2TokenValidationResponseDTO does not contain any
-               contextual information that could be used to derive the tenantId of the SP. Therefore we are setting
-               the tenantId in a thread local variable.
-             */
-            setServiceProviderTenantId(accessToken);
-
             // build the claims
             //ToDO - Validate the grant type to be implicit or authorization_code before retrieving claims
             UserInfoResponseBuilder userInfoResponseBuilder =
                     UserInfoEndpointConfig.getInstance().getUserInfoResponseBuilder();
-            response = userInfoResponseBuilder.getResponseString(tokenResponse);
+            userInfoResponse = userInfoResponseBuilder.getResponseString(tokenResponse);
 
         } catch (UserInfoEndpointException e) {
             return handleError(e);
@@ -90,15 +86,9 @@ public class OpenIDConnectUserEndpoint {
             throw new OAuthSystemException("UserInfoEndpoint Failed");
         }
 
-        ResponseBuilder respBuilder =
-                Response.status(HttpServletResponse.SC_OK)
-                        .header(OAuthConstants.HTTP_RESP_HEADER_CACHE_CONTROL,
-                                OAuthConstants.HTTP_RESP_HEADER_VAL_CACHE_CONTROL_NO_STORE)
-                        .header(OAuthConstants.HTTP_RESP_HEADER_PRAGMA,
-                                OAuthConstants.HTTP_RESP_HEADER_VAL_PRAGMA_NO_CACHE);
-
-        if(response != null) {
-            return respBuilder.entity(response).build();
+        ResponseBuilder respBuilder = getResponseBuilderWithCacheControlHeaders();
+        if (userInfoResponse != null) {
+            return respBuilder.entity(userInfoResponse).build();
         }
         return respBuilder.build();
     }
@@ -110,6 +100,12 @@ public class OpenIDConnectUserEndpoint {
         return getUserClaims(request);
     }
 
+    private ResponseBuilder getResponseBuilderWithCacheControlHeaders() {
+        return Response.status(HttpServletResponse.SC_OK)
+                .header(HTTP_RESP_HEADER_CACHE_CONTROL, HTTP_RESP_HEADER_VAL_CACHE_CONTROL_NO_STORE)
+                .header(HTTP_RESP_HEADER_PRAGMA, HTTP_RESP_HEADER_VAL_PRAGMA_NO_CACHE);
+    }
+
 
     /**
      * Build the error message response properly
@@ -119,76 +115,50 @@ public class OpenIDConnectUserEndpoint {
      * @throws OAuthSystemException
      */
     private Response handleError(UserInfoEndpointException e) throws OAuthSystemException {
-        log.debug(e);
-        OAuthResponse res;
+        if (log.isDebugEnabled()) {
+            log.debug("Error while building user info response.", e);
+        }
         try {
             if (OAuthError.ResourceResponse.INSUFFICIENT_SCOPE.equals(e.getErrorCode())) {
-                res = OAuthASResponse.errorResponse(HttpServletResponse.SC_FORBIDDEN)
-                        .setError(e.getErrorCode()).setErrorDescription(e.getErrorMessage())
-                        .buildJSONMessage();
-                return Response.status(res.getResponseStatus())
-                        .header(OAuthConstants.HTTP_RESP_HEADER_AUTHENTICATE,
-                                "Bearer error=\"" + e.getErrorCode() + "\"")
-                        .entity(res.getBody())
-                        .build();
+                return getErrorResponseWithAuthenticateHeader(e, HttpServletResponse.SC_FORBIDDEN);
             } else if (OAuthError.ResourceResponse.INVALID_TOKEN.equals(e.getErrorCode())) {
-                res = OAuthASResponse.errorResponse(HttpServletResponse.SC_UNAUTHORIZED)
-                        .setError(e.getErrorCode()).setErrorDescription(e.getErrorMessage())
-                        .buildJSONMessage();
-                return Response.status(res.getResponseStatus())
-                        .header(OAuthConstants.HTTP_RESP_HEADER_AUTHENTICATE,
-                                "Bearer error=\"" + e.getErrorCode() + "\"")
-                        .entity(res.getBody())
-                        .build();
+                return getErrorResponseWithAuthenticateHeader(e, HttpServletResponse.SC_UNAUTHORIZED);
             } else if (OAuthError.ResourceResponse.INVALID_REQUEST.equals(e.getErrorCode())) {
-                res = OAuthASResponse.errorResponse(HttpServletResponse.SC_BAD_REQUEST)
-                        .setError(e.getErrorCode()).setErrorDescription(e.getErrorMessage())
-                        .buildJSONMessage();
-                return Response.status(res.getResponseStatus())
-                        .header(OAuthConstants.HTTP_RESP_HEADER_AUTHENTICATE,
-                                "Bearer error=\"" + e.getErrorCode() + "\"")
-                        .entity(res.getBody())
-                        .build();
+                return getErrorResponseWithAuthenticateHeader(e, HttpServletResponse.SC_BAD_REQUEST);
             } else {
-                res = OAuthASResponse.errorResponse(HttpServletResponse.SC_BAD_REQUEST)
-                        .setError(e.getErrorCode()).setErrorDescription(e.getErrorMessage())
-                        .buildJSONMessage();
-                return Response.status(res.getResponseStatus())
-                        .entity(res.getBody())
-                        .build();
+                return buildBadRequestErrorResponse(e, HttpServletResponse.SC_BAD_REQUEST);
             }
-
         } catch (OAuthSystemException e1) {
             log.error("Error while building the JSON message", e1);
-            OAuthResponse response =
-                    OAuthASResponse.errorResponse(HttpServletResponse.SC_INTERNAL_SERVER_ERROR)
-                            .setError(OAuth2ErrorCodes.SERVER_ERROR)
-                            .setErrorDescription(e1.getMessage()).buildJSONMessage();
-            return Response.status(response.getResponseStatus()).entity(response.getBody()).build();
+            return buildServerErrorResponse(e1, HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
         }
     }
 
-    /**
-     * Derive the tenantId of the SP from the accessToken identifier and set a threadLocal variable to be used by
-     * the UserInfoResponseBuilder.
-     *
-     * @param accessToken
-     * @throws OAuthSystemException
-     */
-    private void setServiceProviderTenantId(String accessToken) throws OAuthSystemException {
-        try {
-            // get client id of OAuth app from the introspection
-            String clientId = OAuth2Util.getClientIdForAccessToken(accessToken);
-            if (StringUtils.isBlank(clientId)) {
-                throw new OAuthSystemException("Cannot find the clientID of the SP that issued the token.");
-            }
-            OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(clientId);
-            int spTenantId = OAuth2Util.getTenantId(OAuth2Util.getTenantDomainOfOauthApp(appDO));
-            // set the tenant id in the thread local variable
-            OAuth2Util.setClientTenatId(spTenantId);
-        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
-            throw new OAuthSystemException("Error when obtaining the tenant information of SP.", e);
-        }
+    private Response buildServerErrorResponse(OAuthSystemException ex, int statusCode) throws OAuthSystemException {
+        OAuthResponse response = OAuthASResponse.errorResponse(statusCode)
+                        .setError(OAuth2ErrorCodes.SERVER_ERROR)
+                        .setErrorDescription(ex.getMessage()).buildJSONMessage();
+        return Response.status(response.getResponseStatus()).entity(response.getBody()).build();
     }
 
+    private Response buildBadRequestErrorResponse(UserInfoEndpointException ex,
+                                                  int statusCode) throws OAuthSystemException {
+        OAuthResponse res = OAuthASResponse.errorResponse(statusCode)
+                .setError(ex.getErrorCode())
+                .setErrorDescription(ex.getErrorMessage())
+                .buildJSONMessage();
+        return Response.status(res.getResponseStatus()).entity(res.getBody()).build();
+    }
+
+    private Response getErrorResponseWithAuthenticateHeader(UserInfoEndpointException ex,
+                                                            int statusCode) throws OAuthSystemException {
+        OAuthResponse res = OAuthASResponse.errorResponse(statusCode)
+                .setError(ex.getErrorCode())
+                .setErrorDescription(ex.getErrorMessage())
+                .buildJSONMessage();
+        return Response.status(res.getResponseStatus())
+                .header(OAuthConstants.HTTP_RESP_HEADER_AUTHENTICATE, "Bearer error=\"" + ex.getErrorCode() + "\"")
+                .entity(res.getBody())
+                .build();
+    }
 }

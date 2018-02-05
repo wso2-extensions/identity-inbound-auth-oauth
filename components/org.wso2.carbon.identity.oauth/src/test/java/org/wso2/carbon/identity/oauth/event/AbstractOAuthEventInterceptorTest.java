@@ -39,7 +39,7 @@ import static org.testng.AssertJUnit.assertTrue;
 @PrepareForTest({IdentityUtil.class})
 public class AbstractOAuthEventInterceptorTest extends PowerMockIdentityBaseTest {
 
-    AbstractOAuthEventInterceptor testclass = new AbstractOAuthEventInterceptor();
+    private AbstractOAuthEventInterceptor testclass = new AbstractOAuthEventInterceptor();
 
     @Test
     public void testIsEnabled() throws Exception {

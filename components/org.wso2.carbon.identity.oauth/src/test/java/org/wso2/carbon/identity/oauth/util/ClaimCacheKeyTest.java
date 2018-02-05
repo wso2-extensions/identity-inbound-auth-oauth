@@ -73,7 +73,7 @@ public class ClaimCacheKeyTest {
         assertEquals(testclass.toString(), "ClaimCacheKey{authenticatedUser='test'}");
     }
 
-    class DummyAuthenticatedUser extends AuthenticatedUser {
+    static class DummyAuthenticatedUser extends AuthenticatedUser {
         int hashValue;
 
         @Override

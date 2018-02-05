@@ -43,7 +43,7 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthConsumerDAO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
-import org.wso2.carbon.identity.oauth2.dao.TokenMgtDAO;
+import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -217,7 +217,6 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
 
     private void removeEntriesFromCache(ServiceProvider serviceProvider, String tenantDomain, String userName)
             throws IdentityApplicationManagementException {
-        TokenMgtDAO tokenMgtDAO = new TokenMgtDAO();
         Set<String> accessTokens = new HashSet<>();
         Set<String> authorizationCodes = new HashSet<>();
         Set<String> oauthKeys = new HashSet<>();
@@ -238,8 +237,10 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
             if (oauthKeys.size() > 0) {
                 AppInfoCache appInfoCache = AppInfoCache.getInstance();
                 for (String oauthKey : oauthKeys) {
-                    accessTokens.addAll(tokenMgtDAO.getActiveTokensForConsumerKey(oauthKey));
-                    authorizationCodes.addAll(tokenMgtDAO.getAuthorizationCodesForConsumerKey(oauthKey));
+                    accessTokens.addAll(OAuthTokenPersistenceFactory.getInstance()
+                            .getAccessTokenDAO().getActiveTokensByConsumerKey(oauthKey));
+                    authorizationCodes.addAll(OAuthTokenPersistenceFactory.getInstance()
+                            .getAuthorizationCodeDAO().getAuthorizationCodesByConsumerKey(oauthKey));
                     // Remove client credential from AppInfoCache
                     appInfoCache.clearCacheEntry(oauthKey);
                 }
@@ -322,7 +323,6 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                             + "in tenant domain: " + tenantDomain + ", hence proceeding to token revocation of other tenants.");
                 }
                 final int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
-                final TokenMgtDAO tokenMgtDAO = new TokenMgtDAO();
 
                 new Thread(new Runnable() {
                     public void run() {
@@ -333,7 +333,8 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                                     config.getInboundAuthKey() != null) {
                                 String oauthKey = config.getInboundAuthKey();
                                 try {
-                                    tokenMgtDAO.revokeSaaSTokensOfOtherTenants(oauthKey, tenantId);
+                                    OAuthTokenPersistenceFactory.getInstance().getTokenManagementDAO()
+                                            .revokeSaaSTokensOfOtherTenants(oauthKey, tenantId);
                                 } catch (IdentityOAuth2Exception e) {
                                     log.error("Error occurred while revoking access tokens for client ID: "
                                             + config.getInboundAuthKey() + "and tenant domain: " + tenantDomain, e);

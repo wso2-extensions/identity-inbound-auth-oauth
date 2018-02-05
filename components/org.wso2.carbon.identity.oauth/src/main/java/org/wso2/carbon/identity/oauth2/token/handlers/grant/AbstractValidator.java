@@ -31,11 +31,14 @@ import java.util.Map;
  *
  * @since 5.4.10
  */
-public abstract class AbstractValidator
-		extends org.apache.oltu.oauth2.common.validators.AbstractValidator {
+public abstract class AbstractValidator extends org.apache.oltu.oauth2.common.validators.AbstractValidator {
 
 	public AbstractValidator() {
 		super();
+		// Client Authentication is handled by
+		// org.wso2.carbon.identity.oauth2.token.handlers.clientauth.ClientAuthenticationHandler extensions point.
+		// Therefore client_id and client_secret are not mandatory since client can authenticate with other means.
+		setEnforceClientAuthentication(false);
 		configureParams();
 	}
 

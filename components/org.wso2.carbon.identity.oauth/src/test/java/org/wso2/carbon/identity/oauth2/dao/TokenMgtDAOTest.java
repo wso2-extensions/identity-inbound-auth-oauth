@@ -18,12 +18,16 @@
 
 package org.wso2.carbon.identity.oauth2.dao;
 
+import org.apache.commons.lang.StringUtils;
 import org.mockito.Mock;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.IObjectFactory;
 import org.testng.annotations.BeforeClass;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.ObjectFactory;
+import org.testng.annotations.Optional;
+import org.testng.annotations.Parameters;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -36,6 +40,7 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.SQLQueries;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth.tokenprocessor.EncryptionDecryptionPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.dao.util.DAOConstants;
 import org.wso2.carbon.identity.oauth2.dao.util.DAOUtils;
@@ -64,6 +69,21 @@ import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
+import static org.wso2.carbon.identity.oauth2.dao.util.DAOConstants.CALLBACK_URL;
+import static org.wso2.carbon.identity.oauth2.dao.util.DAOConstants.DataProviders.DATA_HOLDER_TYPE_1;
+import static org.wso2.carbon.identity.oauth2.dao.util.DAOConstants.DataProviders.DATA_HOLDER_TYPE_2;
+import static org.wso2.carbon.identity.oauth2.dao.util.DAOConstants.DataProviders.DATA_HOLDER_TYPE_3;
+import static org.wso2.carbon.identity.oauth2.dao.util.DAOConstants.DataProviders.DATA_HOLDER_TYPE_4;
+import static org.wso2.carbon.identity.oauth2.dao.util.DAOConstants.DataProviders.DATA_HOLDER_TYPE_5;
+import static org.wso2.carbon.identity.oauth2.dao.util.DAOConstants.DataProviders.DATA_HOLDER_TYPE_6;
+import static org.wso2.carbon.identity.oauth2.dao.util.DAOConstants.FRAMEWORK_PERSISTENCE_POOL_SIZE;
+import static org.wso2.carbon.identity.oauth2.dao.util.DAOConstants.INVALID_SCOPE;
+import static org.wso2.carbon.identity.oauth2.dao.util.DAOConstants.OAUTH_TOKEN_PERSISTENCE_POOL_SIZE;
+import static org.wso2.carbon.identity.oauth2.dao.util.DAOConstants.OAUTH_TOKEN_PERSISTENCE_RETRY_COUNT;
+import static org.wso2.carbon.identity.oauth2.dao.util.DAOConstants.SAMPLE_TENANT_DOMAIN;
+import static org.wso2.carbon.identity.oauth2.dao.util.DAOConstants.SAMPLE_TENANT_ID;
+import static org.wso2.carbon.identity.oauth2.dao.util.DAOConstants.VALID_SCOPE_1;
+import static org.wso2.carbon.identity.oauth2.dao.util.DAOConstants.VALID_SCOPE_2;
 
 /**
  * Unit tests for TokenMgtDAO.
@@ -72,22 +92,6 @@ import static org.testng.Assert.assertTrue;
 public class TokenMgtDAOTest extends IdentityBaseTest {
 
     private static final String DB_NAME = "TOKEN_DB";
-
-    private static final String OAUTH_TOKEN_PERSISTENCE_POOL_SIZE = "OAuth.TokenPersistence.PoolSize";
-
-    private static final String FRAMEWORK_PERSISTENCE_POOL_SIZE = "JDBCPersistenceManager.SessionDataPersist.PoolSize";
-
-    private static final String OAUTH_TOKEN_PERSISTENCE_RETRY_COUNT = "OAuth.TokenPersistence.RetryCount";
-
-    private static final String CALLBACK_URL = "http://localhost:8080/sample/oauth2client";
-
-    private static final String SAMPLE_TENANT_DOMAIN = "wso2.com";
-
-    private static final int SAMPLE_TENANT_ID = 1;
-
-    private static final String SAMPLE_DOMAIN = "SAMPLE_DOMAIN";
-
-    private static final String INVALID_SCOPE = "INVALID_SCOPE";
 
     private TokenMgtDAO tokenMgtDAO;
 
@@ -109,8 +113,10 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
     @Mock
     private LocalAndOutboundAuthenticationConfig mockedLocalAndOutboundAuthenticationConfig;
 
+    @Parameters({"pkce-enabled"})
     @BeforeClass
-    public void initTest() throws Exception {
+    public void initTest(@Optional String pkceEnabled) throws Exception {
+
         DAOUtils.initializeDataSource(DB_NAME, DAOUtils.getFilePath("token.sql"));
         mockStatic(IdentityUtil.class);
         when(IdentityUtil.getProperty(OAUTH_TOKEN_PERSISTENCE_POOL_SIZE)).thenReturn("0");
@@ -133,42 +139,38 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
         when(mockedServiceProvider.getLocalAndOutBoundAuthenticationConfig()).thenReturn
                 (mockedLocalAndOutboundAuthenticationConfig);
         OAuth2ServiceComponentHolder.setApplicationMgtService(mockedApplicationManagementService);
+        if (StringUtils.isNotBlank(pkceEnabled) && Boolean.TRUE.toString().equalsIgnoreCase(pkceEnabled)) {
+            OAuth2ServiceComponentHolder.setPkceEnabled(true);
+        } else {
+            OAuth2ServiceComponentHolder.setPkceEnabled(false);
+        }
+    }
+
+    @BeforeMethod
+    public void mockStaticMethods() throws Exception {
+
+        mockStatic(OAuthServerConfiguration.class);
+        when(OAuthServerConfiguration.getInstance()).thenReturn(mockedOAuthServerConfiguration);
+        when(mockedOAuthServerConfiguration.getPersistenceProcessor()).thenReturn(new PlainTextPersistenceProcessor());
+        mockStatic(IdentityUtil.class);
     }
 
     @DataProvider(name = "storeAuthorizationCodeDataProvider")
     public Object[][] storeAuthorizationCodeData() {
 
-        return new Object[][]{
-                {
-                        CALLBACK_URL,
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME
-                },
-                {
-                        CALLBACK_URL,
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        SAMPLE_DOMAIN
-                },
-                {
-                        CALLBACK_URL,
-                        SAMPLE_TENANT_DOMAIN,
-                        SAMPLE_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME
-                },
-                {
-                        CALLBACK_URL,
-                        SAMPLE_TENANT_DOMAIN,
-                        SAMPLE_TENANT_ID,
-                        SAMPLE_DOMAIN
-                },
-        };
+        /*
+          callback url
+          tenant domain
+          tenant id
+          user store name
+         */
+        return DATA_HOLDER_TYPE_1;
     }
 
     @Test(dataProvider = "storeAuthorizationCodeDataProvider")
     public void testStoreAuthorizationCode(String callbackUrl, String tenantDomain, int tenantId, String
             userStoreDomain) throws Exception {
+
         persistAuthorizationCode(UUID.randomUUID().toString(), UUID.randomUUID().toString(),
                 UUID.randomUUID().toString(), callbackUrl, tenantDomain, tenantId, userStoreDomain, true,
                 OAuthConstants.AuthorizationCodeState.ACTIVE);
@@ -177,37 +179,19 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
     @DataProvider(name = "persistAuthorizationCodeDataProvider")
     public Object[][] persistAuthorizationCodeData() {
 
-        return new Object[][]{
-                {
-                        CALLBACK_URL,
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME
-                },
-                {
-                        CALLBACK_URL,
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        SAMPLE_DOMAIN
-                },
-                {
-                        CALLBACK_URL,
-                        SAMPLE_TENANT_DOMAIN,
-                        SAMPLE_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME
-                },
-                {
-                        CALLBACK_URL,
-                        SAMPLE_TENANT_DOMAIN,
-                        SAMPLE_TENANT_ID,
-                        SAMPLE_DOMAIN
-                },
-        };
+        /*
+          callback url
+          tenant domain
+          tenant id
+          user store name
+         */
+        return DATA_HOLDER_TYPE_1;
     }
 
     @Test(dataProvider = "persistAuthorizationCodeDataProvider")
     public void testPersistAuthorizationCode(String callbackUrl, String tenantDomain, int tenantId,
                                              String userStoreDomain) throws Exception {
+
         persistAuthorizationCode(UUID.randomUUID().toString(), UUID.randomUUID().toString(),
                 UUID.randomUUID().toString(), callbackUrl, tenantDomain, tenantId, userStoreDomain, true,
                 OAuthConstants.AuthorizationCodeState.ACTIVE);
@@ -216,37 +200,19 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
     @DataProvider(name = "deactivateAuthorizationCodeDataProvider")
     public Object[][] deactivateAuthorizationCodeData() {
 
-        return new Object[][]{
-                {
-                        CALLBACK_URL,
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME
-                },
-                {
-                        CALLBACK_URL,
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        SAMPLE_DOMAIN
-                },
-                {
-                        CALLBACK_URL,
-                        SAMPLE_TENANT_DOMAIN,
-                        SAMPLE_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME
-                },
-                {
-                        CALLBACK_URL,
-                        SAMPLE_TENANT_DOMAIN,
-                        SAMPLE_TENANT_ID,
-                        SAMPLE_DOMAIN
-                },
-        };
+        /*
+          callback url
+          tenant domain
+          tenant id
+          user store name
+         */
+        return DATA_HOLDER_TYPE_1;
     }
 
     @Test(dataProvider = "deactivateAuthorizationCodeDataProvider")
     public void testDeactivateAuthorizationCode(String callbackUrl, String tenantDomain, int tenantId,
                                                 String userStoreDomain) throws Exception {
+
         String authzCode = UUID.randomUUID().toString();
         persistAuthorizationCode(UUID.randomUUID().toString(), UUID.randomUUID().toString(), authzCode, callbackUrl,
                 tenantDomain, tenantId, userStoreDomain, true, OAuthConstants.AuthorizationCodeState.ACTIVE);
@@ -261,85 +227,19 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
 
     @DataProvider(name = "storeAccessTokenDataProvider")
     public Object[][] storeAccessTokenData() {
-
-        return new Object[][]{
-                // Change grant
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.AUTHORIZATION_CODE,
-                },
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.CLIENT_CREDENTIALS,
-                },
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.IMPLICIT,
-                },
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.IWA_NTLM,
-                },
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.PASSWORD,
-                },
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.TOKEN,
-                },
-                // Change Domain
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        SAMPLE_DOMAIN,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.AUTHORIZATION_CODE,
-                },
-                // Change Tenant
-                {
-                        SAMPLE_TENANT_DOMAIN,
-                        SAMPLE_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.AUTHORIZATION_CODE,
-                },
-                // Change user type
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION,
-                        OAuthConstants.GrantTypes.AUTHORIZATION_CODE,
-                },
-        };
+        /*
+          tenant domain
+          tenant id
+          user store name
+          user type
+          grant type
+         */
+        return DATA_HOLDER_TYPE_2;
     }
 
     @Test(dataProvider = "storeAccessTokenDataProvider")
     public void testStoreAccessToken(String tenantDomain, int tenantId, String userStoreDomain, String applicationType,
                                      String grantType) throws Exception {
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(mockedOAuthServerConfiguration);
-        when(mockedOAuthServerConfiguration.getPersistenceProcessor()).thenReturn(new PlainTextPersistenceProcessor());
-        mockStatic(IdentityUtil.class);
 
         String consumerKey = UUID.randomUUID().toString();
         createApplication(consumerKey, UUID.randomUUID().toString(), tenantId);
@@ -360,14 +260,22 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
         }
     }
 
-    @Test(dataProvider = "storeAccessTokenDataProvider")
+    @DataProvider(name = "storeAccessTokenWhileExpiringTheExistingDataProvider")
+    public Object[][] storeAccessTokenWhileExpiringTheExistingData() {
+        /*
+          tenant domain
+          tenant id
+          user store name
+          user type
+          grant type
+         */
+        return DATA_HOLDER_TYPE_2;
+    }
+
+    @Test(dataProvider = "storeAccessTokenWhileExpiringTheExistingDataProvider")
     public void testStoreAccessTokenWhileExpiringTheExisting(String tenantDomain, int tenantId, String userStoreDomain,
                                                              String applicationType, String grantType)
             throws Exception {
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(mockedOAuthServerConfiguration);
-        when(mockedOAuthServerConfiguration.getPersistenceProcessor()).thenReturn(new PlainTextPersistenceProcessor());
-        mockStatic(IdentityUtil.class);
 
         String consumerKey = UUID.randomUUID().toString();
         createApplication(consumerKey, UUID.randomUUID().toString(), tenantId);
@@ -398,13 +306,21 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
         }
     }
 
-    @Test(dataProvider = "storeAccessTokenDataProvider")
+    @DataProvider(name = "persistAccessTokenDataProvider")
+    public Object[][] persistAccessTokenData() {
+        /*
+          tenant domain
+          tenant id
+          user store name
+          user type
+          grant type
+         */
+        return DATA_HOLDER_TYPE_2;
+    }
+
+    @Test(dataProvider = "persistAccessTokenDataProvider")
     public void testPersistAccessToken(String tenantDomain, int tenantId, String userStoreDomain,
                                        String applicationType, String grantType) throws Exception {
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(mockedOAuthServerConfiguration);
-        when(mockedOAuthServerConfiguration.getPersistenceProcessor()).thenReturn(new PlainTextPersistenceProcessor());
-        mockStatic(IdentityUtil.class);
 
         String consumerKey = UUID.randomUUID().toString();
         createApplication(consumerKey, UUID.randomUUID().toString(), tenantId);
@@ -429,99 +345,22 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
 
     @DataProvider(name = "retrieveLatestAccessTokenDataProvider")
     public Object[][] retrieveLatestAccessTokenData() {
-
-        return new Object[][]{
-                // Change grant
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.AUTHORIZATION_CODE,
-                        "scope1 scope2",
-                        true
-                },
-                // Change Domain
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        SAMPLE_DOMAIN,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.AUTHORIZATION_CODE,
-                        "scope1 scope2",
-                        true
-                },
-                // Change Tenant
-                {
-                        SAMPLE_TENANT_DOMAIN,
-                        SAMPLE_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.AUTHORIZATION_CODE,
-                        "scope1 scope2",
-                        true
-                },
-                // Change user type
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION,
-                        OAuthConstants.GrantTypes.AUTHORIZATION_CODE,
-                        "scope1 scope2",
-                        true
-                },
-                // Change grant
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.AUTHORIZATION_CODE,
-                        "scope1 scope2",
-                        false
-                },
-                // Change Domain
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        SAMPLE_DOMAIN,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.AUTHORIZATION_CODE,
-                        "scope1 scope2",
-                        false
-                },
-                // Change Tenant
-                {
-                        SAMPLE_TENANT_DOMAIN,
-                        SAMPLE_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.AUTHORIZATION_CODE,
-                        "scope1 scope2",
-                        false
-                },
-                // Change user type
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION,
-                        OAuthConstants.GrantTypes.AUTHORIZATION_CODE,
-                        "scope1 scope2",
-                        false
-                },
-        };
+        /*
+          tenant domain
+          tenant id
+          user store name
+          user type
+          grant type
+          scope
+          include expired
+         */
+        return DATA_HOLDER_TYPE_3;
     }
 
     @Test(dataProvider = "retrieveLatestAccessTokenDataProvider")
     public void testRetrieveLatestAccessToken(String tenantDomain, int tenantId, String userStoreDomain,
                                               String applicationType, String grantType, String scope,
                                               boolean includeExpiredTokens) throws Exception {
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(mockedOAuthServerConfiguration);
-        when(mockedOAuthServerConfiguration.getPersistenceProcessor()).thenReturn(new PlainTextPersistenceProcessor());
-        mockStatic(IdentityUtil.class);
 
         String consumerKey = UUID.randomUUID().toString();
         createApplication(consumerKey, UUID.randomUUID().toString(), tenantId);
@@ -562,105 +401,43 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
                 tokenMgtDAO.persistAccessToken(newAccessTokenDO.getAccessToken(), consumerKey, newAccessTokenDO,
                         expiredAccessToken, userStoreDomain);
             }
-
-            try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
-                mockStatic(IdentityDatabaseUtil.class);
-                when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
-                AccessTokenDO accessTokenDO = tokenMgtDAO.retrieveLatestAccessToken(consumerKey, authenticatedUser,
-                        userStoreDomain, scope, false);
-                assertTrue(newAccessTokenDO.getAccessToken().equals(accessTokenDO.getAccessToken()), "Failed to " +
-                        "retrieve latest access token");
+            if (!INVALID_SCOPE.equals(scope)) {
+                try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
+                    mockStatic(IdentityDatabaseUtil.class);
+                    when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+                    AccessTokenDO accessTokenDO = tokenMgtDAO.retrieveLatestAccessToken(consumerKey, authenticatedUser,
+                            userStoreDomain, scope, false);
+                    assertTrue(newAccessTokenDO.getAccessToken().equals(accessTokenDO.getAccessToken()), "Failed to " +
+                            "retrieve latest access token");
+                }
+            } else {
+                try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
+                    mockStatic(IdentityDatabaseUtil.class);
+                    when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+                    assertNull(tokenMgtDAO.retrieveLatestAccessToken(consumerKey, authenticatedUser, userStoreDomain,
+                            scope, false), "Invalid access token.");
+                }
             }
         }
     }
 
     @DataProvider(name = "retrieveAccessTokensDataProvider")
     public Object[][] retrieveAccessTokensData() {
-
-        return new Object[][]{
-                // Change grant
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.AUTHORIZATION_CODE,
-                        true
-                },
-                // Change Domain
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        SAMPLE_DOMAIN,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.AUTHORIZATION_CODE,
-                        true
-                },
-                // Change Tenant
-                {
-                        SAMPLE_TENANT_DOMAIN,
-                        SAMPLE_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.AUTHORIZATION_CODE,
-                        true
-                },
-                // Change user type
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION,
-                        OAuthConstants.GrantTypes.AUTHORIZATION_CODE,
-                        true
-                },
-                // Change grant
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.AUTHORIZATION_CODE,
-                        true
-                },
-                // Change Domain
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        SAMPLE_DOMAIN,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.AUTHORIZATION_CODE,
-                        false
-                },
-                // Change Tenant
-                {
-                        SAMPLE_TENANT_DOMAIN,
-                        SAMPLE_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.AUTHORIZATION_CODE,
-                        false
-                },
-                // Change user type
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION,
-                        OAuthConstants.GrantTypes.AUTHORIZATION_CODE,
-                        false
-                },
-        };
+        /*
+          tenant domain
+          tenant id
+          user store name
+          user type
+          grant type
+          include expired
+         */
+        return DATA_HOLDER_TYPE_4;
     }
 
     @Test(dataProvider = "retrieveAccessTokensDataProvider")
     public void testRetrieveAccessTokens(String tenantDomain, int tenantId, String userStoreDomain,
                                          String applicationType, String grantType,
                                          boolean includeExpired) throws Exception {
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(mockedOAuthServerConfiguration);
-        when(mockedOAuthServerConfiguration.getPersistenceProcessor()).thenReturn(new PlainTextPersistenceProcessor());
-        mockStatic(IdentityUtil.class);
 
         String consumerKey = UUID.randomUUID().toString();
         createApplication(consumerKey, UUID.randomUUID().toString(), tenantId);
@@ -684,7 +461,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
 
         AccessTokenDO activeAccessToken2 = getAccessTokenDO(consumerKey, authenticatedUser, applicationType,
                 tenantId, grantType);
-        activeAccessToken2.setScope(new String[]{"scope3", "scope4"});
+        activeAccessToken2.setScope(new String[]{VALID_SCOPE_1, VALID_SCOPE_2});
         expiredAccessToken.setTokenState(OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
             tokenMgtDAO.storeAccessToken(activeAccessToken2.getAccessToken(), consumerKey, activeAccessToken2,
@@ -712,38 +489,19 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
 
     @DataProvider(name = "validateAuthorizationCodeDataProvider")
     public Object[][] validateAuthorizationCodeData() {
-
-        return new Object[][]{
-                {
-                        CALLBACK_URL,
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME
-                },
-                {
-                        CALLBACK_URL,
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        SAMPLE_DOMAIN
-                },
-                {
-                        CALLBACK_URL,
-                        SAMPLE_TENANT_DOMAIN,
-                        SAMPLE_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME
-                },
-                {
-                        CALLBACK_URL,
-                        SAMPLE_TENANT_DOMAIN,
-                        SAMPLE_TENANT_ID,
-                        SAMPLE_DOMAIN
-                },
-        };
+        /*
+          callback url
+          tenant domain
+          tenant id
+          user store name
+         */
+        return DATA_HOLDER_TYPE_1;
     }
 
     @Test(dataProvider = "validateAuthorizationCodeDataProvider")
     public void testValidateAuthorizationCode(String callbackUrl, String tenantDomain, int tenantId, String
             userStoreDomain) throws Exception {
+
         String consumerKey = UUID.randomUUID().toString();
         String authzCode = UUID.randomUUID().toString();
         persistAuthorizationCode(consumerKey, UUID.randomUUID().toString(), authzCode, callbackUrl, tenantDomain,
@@ -760,99 +518,20 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
 
     @DataProvider(name = "changeAuthzCodeStateDataProvider")
     public Object[][] changeAuthzCodeStateData() {
-
-        return new Object[][]{
-                {
-                        CALLBACK_URL,
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.AuthorizationCodeState.EXPIRED
-                },
-                {
-                        CALLBACK_URL,
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        SAMPLE_DOMAIN,
-                        OAuthConstants.AuthorizationCodeState.EXPIRED
-                },
-                {
-                        CALLBACK_URL,
-                        SAMPLE_TENANT_DOMAIN,
-                        SAMPLE_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.AuthorizationCodeState.EXPIRED
-                },
-                {
-                        CALLBACK_URL,
-                        SAMPLE_TENANT_DOMAIN,
-                        SAMPLE_TENANT_ID,
-                        SAMPLE_DOMAIN,
-                        OAuthConstants.AuthorizationCodeState.EXPIRED
-                },
-                {
-                        CALLBACK_URL,
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.AuthorizationCodeState.INACTIVE
-                },
-                {
-                        CALLBACK_URL,
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        SAMPLE_DOMAIN,
-                        OAuthConstants.AuthorizationCodeState.INACTIVE
-
-                },
-                {
-                        CALLBACK_URL,
-                        SAMPLE_TENANT_DOMAIN,
-                        SAMPLE_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.AuthorizationCodeState.INACTIVE
-                },
-                {
-                        CALLBACK_URL,
-                        SAMPLE_TENANT_DOMAIN,
-                        SAMPLE_TENANT_ID,
-                        SAMPLE_DOMAIN,
-                        OAuthConstants.AuthorizationCodeState.INACTIVE
-                },
-                {
-                        CALLBACK_URL,
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.AuthorizationCodeState.REVOKED
-                },
-                {
-                        CALLBACK_URL,
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        SAMPLE_DOMAIN,
-                        OAuthConstants.AuthorizationCodeState.REVOKED
-                },
-                {
-                        CALLBACK_URL,
-                        SAMPLE_TENANT_DOMAIN,
-                        SAMPLE_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.AuthorizationCodeState.REVOKED
-                },
-                {
-                        CALLBACK_URL,
-                        SAMPLE_TENANT_DOMAIN,
-                        SAMPLE_TENANT_ID,
-                        SAMPLE_DOMAIN,
-                        OAuthConstants.AuthorizationCodeState.REVOKED
-                },
-        };
+        /*
+          callback url
+          tenant domain
+          tenant id
+          user store
+          code status
+         */
+        return DATA_HOLDER_TYPE_5;
     }
 
     @Test(dataProvider = "changeAuthzCodeStateDataProvider")
     public void testChangeAuthzCodeState(String callbackUrl, String tenantDomain, int tenantId, String
             userStoreDomain, String tokenState) throws Exception {
+
         String authzCode = UUID.randomUUID().toString();
         persistAuthorizationCode(UUID.randomUUID().toString(), UUID.randomUUID().toString(), authzCode, callbackUrl,
                 tenantDomain, tenantId, userStoreDomain, true, OAuthConstants.AuthorizationCodeState.ACTIVE);
@@ -868,33 +547,13 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
 
     @DataProvider(name = "deactivateAuthorizationCodesDataProvider")
     public Object[][] deactivateAuthorizationCodesData() {
-
-        return new Object[][]{
-                {
-                        CALLBACK_URL,
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME
-                },
-                {
-                        CALLBACK_URL,
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        SAMPLE_DOMAIN
-                },
-                {
-                        CALLBACK_URL,
-                        SAMPLE_TENANT_DOMAIN,
-                        SAMPLE_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME
-                },
-                {
-                        CALLBACK_URL,
-                        SAMPLE_TENANT_DOMAIN,
-                        SAMPLE_TENANT_ID,
-                        SAMPLE_DOMAIN
-                },
-        };
+        /*
+          callback url
+          tenant domain
+          tenant id
+          user store name
+         */
+        return DATA_HOLDER_TYPE_1;
     }
 
     @Test(dataProvider = "deactivateAuthorizationCodesDataProvider")
@@ -923,8 +582,9 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
     }
 
     @Test(dataProvider = "changeAuthzCodeStateDataProvider")
-    public void doChangeAuthzCodeState(String callbackUrl, String tenantDomain, int tenantId, String
+    public void testDoChangeAuthzCodeState(String callbackUrl, String tenantDomain, int tenantId, String
             userStoreDomain, String tokenState) throws Exception {
+
         String authzCode = UUID.randomUUID().toString();
         persistAuthorizationCode(UUID.randomUUID().toString(), UUID.randomUUID().toString(), authzCode, callbackUrl,
                 tenantDomain, tenantId, userStoreDomain, true, OAuthConstants.AuthorizationCodeState.ACTIVE);
@@ -939,33 +599,13 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
 
     @DataProvider(name = "deactivateAuthorizationCodeByAuthzCodeDODataProvider")
     public Object[][] deactivateAuthorizationCodeByAuthzCodeDOData() {
-
-        return new Object[][]{
-                {
-                        CALLBACK_URL,
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME
-                },
-                {
-                        CALLBACK_URL,
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        SAMPLE_DOMAIN
-                },
-                {
-                        CALLBACK_URL,
-                        SAMPLE_TENANT_DOMAIN,
-                        SAMPLE_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME
-                },
-                {
-                        CALLBACK_URL,
-                        SAMPLE_TENANT_DOMAIN,
-                        SAMPLE_TENANT_ID,
-                        SAMPLE_DOMAIN
-                },
-        };
+        /*
+          callback url
+          tenant domain
+          tenant id
+          user store name
+         */
+        return DATA_HOLDER_TYPE_1;
     }
 
     @Test(dataProvider = "deactivateAuthorizationCodeByAuthzCodeDODataProvider")
@@ -987,71 +627,19 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
 
     @DataProvider(name = "validateRefreshTokenDataProvider")
     public Object[][] validateRefreshTokenData() {
-
-        return new Object[][]{
-                // Change grant
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.AUTHORIZATION_CODE,
-                },
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.IMPLICIT,
-                },
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.PASSWORD,
-                },
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.TOKEN,
-                },
-                // Change Domain
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        SAMPLE_DOMAIN,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.AUTHORIZATION_CODE,
-                },
-                // Change Tenant
-                {
-                        SAMPLE_TENANT_DOMAIN,
-                        SAMPLE_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.AUTHORIZATION_CODE,
-                },
-                // Change user type
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION,
-                        OAuthConstants.GrantTypes.AUTHORIZATION_CODE,
-                },
-        };
+        /*
+          tenant domain
+          tenant id
+          user store name
+          user type
+          grant type
+         */
+        return DATA_HOLDER_TYPE_2;
     }
 
     @Test(dataProvider = "validateRefreshTokenDataProvider")
-    public void validateRefreshToken(String tenantDomain, int tenantId, String userStoreDomain, String applicationType,
-                                     String grantType) throws Exception {
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(mockedOAuthServerConfiguration);
-        when(mockedOAuthServerConfiguration.getPersistenceProcessor()).thenReturn(new PlainTextPersistenceProcessor());
-        mockStatic(IdentityUtil.class);
+    public void testValidateRefreshToken(String tenantDomain, int tenantId, String userStoreDomain,
+                                         String applicationType, String grantType) throws Exception {
 
         AccessTokenDO accessTokenDO = persistAccessToken(UUID.randomUUID().toString(), tenantDomain, tenantId,
                 userStoreDomain, applicationType, grantType, OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE, true, null);
@@ -1068,134 +656,20 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
 
     @DataProvider(name = "retrieveAccessTokenDataProvider")
     public Object[][] retrieveAccessTokenData() {
-
-        return new Object[][]{
-                // Change grant
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.AUTHORIZATION_CODE,
-                        true
-                },
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.IMPLICIT,
-                        true
-                },
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.PASSWORD,
-                        true
-                },
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.TOKEN,
-                        true
-                },
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.AUTHORIZATION_CODE,
-                        false
-                },
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.IMPLICIT,
-                        false
-                },
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.PASSWORD,
-                        false
-                },
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.TOKEN,
-                        false
-                },
-                // Change Domain
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        SAMPLE_DOMAIN,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.AUTHORIZATION_CODE,
-                        true
-                },
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        SAMPLE_DOMAIN,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.AUTHORIZATION_CODE,
-                        false
-                },
-                // Change Tenant
-                {
-                        SAMPLE_TENANT_DOMAIN,
-                        SAMPLE_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.AUTHORIZATION_CODE,
-                        true
-                },
-                {
-                        SAMPLE_TENANT_DOMAIN,
-                        SAMPLE_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.AUTHORIZATION_CODE,
-                        false
-                },
-                // Change user type
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION,
-                        OAuthConstants.GrantTypes.AUTHORIZATION_CODE,
-                        true
-                },
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION,
-                        OAuthConstants.GrantTypes.AUTHORIZATION_CODE,
-                        false
-                },
-        };
+        /*
+          tenant domain
+          tenant id
+          user store name
+          user type
+          grant type
+          include expired
+         */
+        return DATA_HOLDER_TYPE_4;
     }
 
     @Test(dataProvider = "retrieveAccessTokenDataProvider")
-    public void retrieveAccessToken(String tenantDomain, int tenantId, String userStoreDomain, String applicationType,
-                                    String grantType, boolean includeExpired) throws Exception {
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(mockedOAuthServerConfiguration);
-        when(mockedOAuthServerConfiguration.getPersistenceProcessor()).thenReturn(new PlainTextPersistenceProcessor());
-        mockStatic(IdentityUtil.class);
+    public void testRetrieveAccessToken(String tenantDomain, int tenantId, String userStoreDomain, String
+            applicationType, String grantType, boolean includeExpired) throws Exception {
 
         AccessTokenDO accessTokenDO;
         if (includeExpired) {
@@ -1218,70 +692,20 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
 
     @DataProvider(name = "setAccessTokenStateDataProvider")
     public Object[][] setAccessTokenStateData() {
-
-        return new Object[][]{
-                // Change grant
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.AUTHORIZATION_CODE,
-                        OAuthConstants.TokenStates.TOKEN_STATE_EXPIRED
-                },
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.IMPLICIT,
-                        OAuthConstants.TokenStates.TOKEN_STATE_INACTIVE
-                },
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.PASSWORD,
-                        OAuthConstants.TokenStates.TOKEN_STATE_REVOKED
-                },
-                // Change Domain
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        SAMPLE_DOMAIN,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.AUTHORIZATION_CODE,
-                        OAuthConstants.TokenStates.TOKEN_STATE_EXPIRED
-                },
-                // Change Tenant
-                {
-                        SAMPLE_TENANT_DOMAIN,
-                        SAMPLE_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.AUTHORIZATION_CODE,
-                        OAuthConstants.TokenStates.TOKEN_STATE_INACTIVE
-                },
-                // Change user type
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION,
-                        OAuthConstants.GrantTypes.AUTHORIZATION_CODE,
-                        OAuthConstants.TokenStates.TOKEN_STATE_REVOKED
-                },
-        };
+        /*
+          tenant domain
+          tenant id
+          user store name
+          user type
+          grant type
+          token status
+         */
+        return DATA_HOLDER_TYPE_6;
     }
 
     @Test(dataProvider = "setAccessTokenStateDataProvider")
     public void testSetAccessTokenState(String tenantDomain, int tenantId, String userStoreDomain,
                                         String applicationType, String grantType, String tokenState) throws Exception {
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(mockedOAuthServerConfiguration);
-        when(mockedOAuthServerConfiguration.getPersistenceProcessor()).thenReturn(new PlainTextPersistenceProcessor());
-        mockStatic(IdentityUtil.class);
 
         AccessTokenDO accessTokenDO = persistAccessToken(UUID.randomUUID().toString(), tenantDomain, tenantId,
                 userStoreDomain, applicationType, grantType, OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE, true, null);
@@ -1298,92 +722,26 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
 
     @DataProvider(name = "revokeTokensDataProvider")
     public Object[][] revokeTokensData() {
-
-        return new Object[][]{
-                // Change grant
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.AUTHORIZATION_CODE,
-                },
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.CLIENT_CREDENTIALS,
-                },
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.IMPLICIT,
-                },
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.IWA_NTLM,
-                },
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.PASSWORD,
-                },
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.TOKEN,
-                },
-                // Change Domain
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        SAMPLE_DOMAIN,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.AUTHORIZATION_CODE,
-                },
-                // Change Tenant
-                {
-                        SAMPLE_TENANT_DOMAIN,
-                        SAMPLE_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.AUTHORIZATION_CODE,
-                },
-                // Change user type
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION,
-                        OAuthConstants.GrantTypes.AUTHORIZATION_CODE,
-                },
-        };
+        /*
+          tenant domain
+          tenant id
+          user store name
+          user type
+          grant type
+         */
+        return DATA_HOLDER_TYPE_2;
     }
 
     @Test(dataProvider = "revokeTokensDataProvider")
     public void testRevokeTokens(String tenantDomain, int tenantId, String userStoreDomain, String applicationType,
                                  String grantType) throws Exception {
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(mockedOAuthServerConfiguration);
-        when(mockedOAuthServerConfiguration.getPersistenceProcessor()).thenReturn(new PlainTextPersistenceProcessor());
-        mockStatic(IdentityUtil.class);
 
         String consumerKey = UUID.randomUUID().toString();
         AccessTokenDO accessTokenDO1 = persistAccessToken(consumerKey, tenantDomain, tenantId, userStoreDomain,
                 applicationType, grantType, OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE, true, null);
         AccessTokenDO accessTokenDO2 = persistAccessToken(consumerKey, tenantDomain, tenantId, userStoreDomain,
                 applicationType, grantType, OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE, false,
-                new String[]{"scope3"});
+                new String[]{VALID_SCOPE_2});
 
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
             mockStatic(IdentityDatabaseUtil.class);
@@ -1399,17 +757,13 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
     @Test(dataProvider = "revokeTokensDataProvider")
     public void testRevokeTokensBatch(String tenantDomain, int tenantId, String userStoreDomain, String applicationType,
                                       String grantType) throws Exception {
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(mockedOAuthServerConfiguration);
-        when(mockedOAuthServerConfiguration.getPersistenceProcessor()).thenReturn(new PlainTextPersistenceProcessor());
-        mockStatic(IdentityUtil.class);
 
         String consumerKey = UUID.randomUUID().toString();
         AccessTokenDO accessTokenDO1 = persistAccessToken(consumerKey, tenantDomain, tenantId, userStoreDomain,
                 applicationType, grantType, OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE, true, null);
         AccessTokenDO accessTokenDO2 = persistAccessToken(consumerKey, tenantDomain, tenantId, userStoreDomain,
                 applicationType, grantType, OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE, false,
-                new String[]{"scope3"});
+                new String[]{VALID_SCOPE_2});
 
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
             mockStatic(IdentityDatabaseUtil.class);
@@ -1425,17 +779,13 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
     @Test(dataProvider = "revokeTokensDataProvider")
     public void testRevokeTokensIndividual(String tenantDomain, int tenantId, String userStoreDomain, String
             applicationType, String grantType) throws Exception {
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(mockedOAuthServerConfiguration);
-        when(mockedOAuthServerConfiguration.getPersistenceProcessor()).thenReturn(new PlainTextPersistenceProcessor());
-        mockStatic(IdentityUtil.class);
 
         String consumerKey = UUID.randomUUID().toString();
         AccessTokenDO accessTokenDO1 = persistAccessToken(consumerKey, tenantDomain, tenantId, userStoreDomain,
                 applicationType, grantType, OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE, true, null);
         AccessTokenDO accessTokenDO2 = persistAccessToken(consumerKey, tenantDomain, tenantId, userStoreDomain,
                 applicationType, grantType, OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE, false,
-                new String[]{"scope3"});
+                new String[]{VALID_SCOPE_2});
 
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
             mockStatic(IdentityDatabaseUtil.class);
@@ -1451,10 +801,6 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
     @Test(dataProvider = "revokeTokensDataProvider")
     public void testRevokeToken(String tenantDomain, int tenantId, String userStoreDomain, String
             applicationType, String grantType) throws Exception {
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(mockedOAuthServerConfiguration);
-        when(mockedOAuthServerConfiguration.getPersistenceProcessor()).thenReturn(new PlainTextPersistenceProcessor());
-        mockStatic(IdentityUtil.class);
 
         AccessTokenDO accessTokenDO = persistAccessToken(UUID.randomUUID().toString(), tenantDomain, tenantId,
                 userStoreDomain, applicationType, grantType, OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE, true, null);
@@ -1470,91 +816,25 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
 
     @DataProvider(name = "getAccessTokensForUserDataProvider")
     public Object[][] getAccessTokensForUserData() {
-
-        return new Object[][]{
-                // Change grant
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.AUTHORIZATION_CODE,
-                },
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.CLIENT_CREDENTIALS,
-                },
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.IMPLICIT,
-                },
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.IWA_NTLM,
-                },
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.PASSWORD,
-                },
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.TOKEN,
-                },
-                // Change Domain
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        SAMPLE_DOMAIN,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.AUTHORIZATION_CODE,
-                },
-                // Change Tenant
-                {
-                        SAMPLE_TENANT_DOMAIN,
-                        SAMPLE_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.AUTHORIZATION_CODE,
-                },
-                // Change user type
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION,
-                        OAuthConstants.GrantTypes.AUTHORIZATION_CODE,
-                },
-        };
+        /*
+          tenant domain
+          tenant id
+          user store name
+          user type
+          grant type
+         */
+        return DATA_HOLDER_TYPE_2;
     }
 
     @Test(dataProvider = "getAccessTokensForUserDataProvider")
     public void testGetAccessTokensForUser(String tenantDomain, int tenantId, String userStoreDomain, String
             applicationType, String grantType) throws Exception {
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(mockedOAuthServerConfiguration);
-        when(mockedOAuthServerConfiguration.getPersistenceProcessor()).thenReturn(new PlainTextPersistenceProcessor());
-        mockStatic(IdentityUtil.class);
 
         AccessTokenDO accessTokenDO1 = persistAccessToken(UUID.randomUUID().toString(), tenantDomain, tenantId,
                 userStoreDomain, applicationType, grantType, OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE, true, null);
         AccessTokenDO accessTokenDO2 = persistAccessToken(UUID.randomUUID().toString(), tenantDomain, tenantId,
                 userStoreDomain, applicationType, grantType, OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE, true,
-                new String[]{"scope3"});
+                new String[]{VALID_SCOPE_2});
 
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
             mockStatic(IdentityDatabaseUtil.class);
@@ -1567,42 +847,18 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
 
     @DataProvider(name = "getAuthorizationCodesForUserDataProvider")
     public Object[][] getAuthorizationCodesForUserData() {
-
-        return new Object[][]{
-                {
-                        CALLBACK_URL,
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME
-                },
-                {
-                        CALLBACK_URL,
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        SAMPLE_DOMAIN
-                },
-                {
-                        CALLBACK_URL,
-                        SAMPLE_TENANT_DOMAIN,
-                        SAMPLE_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME
-                },
-                {
-                        CALLBACK_URL,
-                        SAMPLE_TENANT_DOMAIN,
-                        SAMPLE_TENANT_ID,
-                        SAMPLE_DOMAIN
-                },
-        };
+        /*
+          callback url
+          tenant domain
+          tenant id
+          user store name
+         */
+        return DATA_HOLDER_TYPE_1;
     }
 
     @Test(dataProvider = "getAuthorizationCodesForUserDataProvider")
     public void testGetAuthorizationCodesForUser(String callbackUrl, String tenantDomain, int tenantId,
                                                  String userStoreDomain) throws Exception {
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(mockedOAuthServerConfiguration);
-        when(mockedOAuthServerConfiguration.getPersistenceProcessor()).thenReturn(new PlainTextPersistenceProcessor());
-        mockStatic(IdentityUtil.class);
 
         AuthzCodeDO authzCodeDO1 = persistAuthorizationCode(UUID.randomUUID().toString(), UUID.randomUUID().toString(),
                 UUID.randomUUID().toString(), callbackUrl, tenantDomain, tenantId, userStoreDomain, true,
@@ -1622,71 +878,19 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
 
     @DataProvider(name = "getActiveTokensForConsumerKeyDataProvider")
     public Object[][] getActiveTokensForConsumerKeyData() {
-
-        return new Object[][]{
-                // Change grant
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.AUTHORIZATION_CODE,
-                },
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.IMPLICIT,
-                },
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.PASSWORD,
-                },
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.TOKEN,
-                },
-                // Change Domain
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        SAMPLE_DOMAIN,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.AUTHORIZATION_CODE,
-                },
-                // Change Tenant
-                {
-                        SAMPLE_TENANT_DOMAIN,
-                        SAMPLE_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.AUTHORIZATION_CODE,
-                },
-                // Change user type
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION,
-                        OAuthConstants.GrantTypes.AUTHORIZATION_CODE,
-                },
-        };
+        /*
+          tenant domain
+          tenant id
+          user store name
+          user type
+          grant type
+         */
+        return DATA_HOLDER_TYPE_2;
     }
 
     @Test(dataProvider = "getActiveTokensForConsumerKeyDataProvider")
-    public void getActiveTokensForConsumerKey(String tenantDomain, int tenantId, String userStoreDomain, String
+    public void testGetActiveTokensForConsumerKey(String tenantDomain, int tenantId, String userStoreDomain, String
             applicationType, String grantType) throws Exception {
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(mockedOAuthServerConfiguration);
-        when(mockedOAuthServerConfiguration.getPersistenceProcessor()).thenReturn(new PlainTextPersistenceProcessor());
-        mockStatic(IdentityUtil.class);
 
         String consumerKey = UUID.randomUUID().toString();
         createApplication(consumerKey, UUID.randomUUID().toString(), tenantId);
@@ -1696,7 +900,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
                 tenantId, grantType);
         AccessTokenDO accessTokenDO2 = getAccessTokenDO(consumerKey, authenticatedUser, applicationType,
                 tenantId, grantType);
-        accessTokenDO2.setScope(new String[]{"scope3"});
+        accessTokenDO2.setScope(new String[]{VALID_SCOPE_2});
         AccessTokenDO accessTokenDO3 = getAccessTokenDO(consumerKey, authenticatedUser, applicationType,
                 tenantId, grantType);
         accessTokenDO3.setTokenState(OAuthConstants.TokenStates.TOKEN_STATE_EXPIRED);
@@ -1719,12 +923,8 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
     }
 
     @Test(dataProvider = "getActiveTokensForConsumerKeyDataProvider")
-    public void getActiveDetailedTokensForConsumerKey(String tenantDomain, int tenantId, String userStoreDomain, String
-            applicationType, String grantType) throws Exception {
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(mockedOAuthServerConfiguration);
-        when(mockedOAuthServerConfiguration.getPersistenceProcessor()).thenReturn(new PlainTextPersistenceProcessor());
-        mockStatic(IdentityUtil.class);
+    public void testGetActiveDetailedTokensForConsumerKey(String tenantDomain, int tenantId, String userStoreDomain,
+                                                          String applicationType, String grantType) throws Exception {
 
         String consumerKey = UUID.randomUUID().toString();
         createApplication(consumerKey, UUID.randomUUID().toString(), tenantId);
@@ -1734,7 +934,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
                 tenantId, grantType);
         AccessTokenDO accessTokenDO2 = getAccessTokenDO(consumerKey, authenticatedUser, applicationType,
                 tenantId, grantType);
-        accessTokenDO2.setScope(new String[]{"scope3"});
+        accessTokenDO2.setScope(new String[]{VALID_SCOPE_2});
         AccessTokenDO accessTokenDO3 = getAccessTokenDO(consumerKey, authenticatedUser, applicationType,
                 tenantId, grantType);
         accessTokenDO3.setTokenState(OAuthConstants.TokenStates.TOKEN_STATE_EXPIRED);
@@ -1757,10 +957,6 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
     @Test(dataProvider = "getAuthorizationCodesForUserDataProvider")
     public void testGetAuthorizationCodesForConsumerKey(String callbackUrl, String tenantDomain, int tenantId,
                                                         String userStoreDomain) throws Exception {
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(mockedOAuthServerConfiguration);
-        when(mockedOAuthServerConfiguration.getPersistenceProcessor()).thenReturn(new PlainTextPersistenceProcessor());
-        mockStatic(IdentityUtil.class);
 
         String consumerKey = UUID.randomUUID().toString();
         AuthzCodeDO authzCodeDO1 = persistAuthorizationCode(consumerKey, UUID.randomUUID().toString(),
@@ -1786,10 +982,6 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
     @Test(dataProvider = "getAuthorizationCodesForUserDataProvider")
     public void testGetActiveAuthorizationCodesForConsumerKey(String callbackUrl, String tenantDomain, int tenantId,
                                                               String userStoreDomain) throws Exception {
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(mockedOAuthServerConfiguration);
-        when(mockedOAuthServerConfiguration.getPersistenceProcessor()).thenReturn(new PlainTextPersistenceProcessor());
-        mockStatic(IdentityUtil.class);
 
         String consumerKey = UUID.randomUUID().toString();
         AuthzCodeDO authzCodeDO1 = persistAuthorizationCode(consumerKey, UUID.randomUUID().toString(),
@@ -1815,10 +1007,6 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
     @Test(dataProvider = "getAuthorizationCodesForUserDataProvider")
     public void testGetAllTimeAuthorizedClientIds(String callbackUrl, String tenantDomain, int tenantId,
                                                   String userStoreDomain) throws Exception {
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(mockedOAuthServerConfiguration);
-        when(mockedOAuthServerConfiguration.getPersistenceProcessor()).thenReturn(new PlainTextPersistenceProcessor());
-        mockStatic(IdentityUtil.class);
 
         AuthzCodeDO authzCodeDO1 = persistAuthorizationCode(UUID.randomUUID().toString(), UUID.randomUUID().toString(),
                 UUID.randomUUID().toString(), callbackUrl, tenantDomain, tenantId, userStoreDomain, true,
@@ -1842,78 +1030,20 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
 
     @DataProvider(name = "invalidateAndCreateNewTokenDataProvider")
     public Object[][] invalidateAndCreateNewTokenData() {
-
-        return new Object[][]{
-                // Change grant
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.AUTHORIZATION_CODE,
-                        OAuthConstants.TokenStates.TOKEN_STATE_EXPIRED
-                },
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.IMPLICIT,
-                        OAuthConstants.TokenStates.TOKEN_STATE_REVOKED
-                },
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.PASSWORD,
-                        OAuthConstants.TokenStates.TOKEN_STATE_INACTIVE
-                },
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.TOKEN,
-                        OAuthConstants.TokenStates.TOKEN_STATE_EXPIRED
-                },
-                // Change Domain
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        SAMPLE_DOMAIN,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.AUTHORIZATION_CODE,
-                        OAuthConstants.TokenStates.TOKEN_STATE_EXPIRED
-                },
-                // Change Tenant
-                {
-                        SAMPLE_TENANT_DOMAIN,
-                        SAMPLE_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION_USER,
-                        OAuthConstants.GrantTypes.AUTHORIZATION_CODE,
-                        OAuthConstants.TokenStates.TOKEN_STATE_EXPIRED
-                },
-                // Change user type
-                {
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        MultitenantConstants.SUPER_TENANT_ID,
-                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME,
-                        OAuthConstants.UserType.APPLICATION,
-                        OAuthConstants.GrantTypes.AUTHORIZATION_CODE,
-                        OAuthConstants.TokenStates.TOKEN_STATE_EXPIRED
-                },
-        };
+        /*
+          tenant domain
+          tenant id
+          user store name
+          user type
+          grant type
+          token status
+         */
+        return DATA_HOLDER_TYPE_6;
     }
 
     @Test(dataProvider = "invalidateAndCreateNewTokenDataProvider")
-    public void invalidateAndCreateNewToken(String tenantDomain, int tenantId, String userStoreDomain, String
+    public void testInvalidateAndCreateNewToken(String tenantDomain, int tenantId, String userStoreDomain, String
             applicationType, String grantType, String tokenState) throws Exception {
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(mockedOAuthServerConfiguration);
-        when(mockedOAuthServerConfiguration.getPersistenceProcessor()).thenReturn(new PlainTextPersistenceProcessor());
-        mockStatic(IdentityUtil.class);
 
         String consumerKey = UUID.randomUUID().toString();
         createApplication(consumerKey, UUID.randomUUID().toString(), tenantId);
@@ -1940,12 +1070,8 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
     }
 
     @Test(dataProvider = "getAccessTokensForUserDataProvider")
-    public void getAccessTokensOfTenant(String tenantDomain, int tenantId, String userStoreDomain, String
+    public void testGetAccessTokensOfTenant(String tenantDomain, int tenantId, String userStoreDomain, String
             applicationType, String grantType) throws Exception {
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(mockedOAuthServerConfiguration);
-        when(mockedOAuthServerConfiguration.getPersistenceProcessor()).thenReturn(new PlainTextPersistenceProcessor());
-        mockStatic(IdentityUtil.class);
 
         String consumerKey = UUID.randomUUID().toString();
         createApplication(consumerKey, UUID.randomUUID().toString(), tenantId);
@@ -1955,7 +1081,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
                 tenantId, grantType);
         AccessTokenDO accessTokenDO2 = getAccessTokenDO(consumerKey, authenticatedUser, applicationType,
                 tenantId, grantType);
-        accessTokenDO2.setScope(new String[]{"scope3"});
+        accessTokenDO2.setScope(new String[]{VALID_SCOPE_2});
         AccessTokenDO accessTokenDO3 = getAccessTokenDO(consumerKey, authenticatedUser, applicationType,
                 tenantId, grantType);
         accessTokenDO3.setTokenState(OAuthConstants.TokenStates.TOKEN_STATE_EXPIRED);
@@ -1986,10 +1112,6 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
     @Test(dataProvider = "getAccessTokensForUserDataProvider")
     public void testGetAccessTokensOfUserStore(String tenantDomain, int tenantId, String userStoreDomain, String
             applicationType, String grantType) throws Exception {
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(mockedOAuthServerConfiguration);
-        when(mockedOAuthServerConfiguration.getPersistenceProcessor()).thenReturn(new PlainTextPersistenceProcessor());
-        mockStatic(IdentityUtil.class);
 
         String consumerKey = UUID.randomUUID().toString();
         createApplication(consumerKey, UUID.randomUUID().toString(), tenantId);
@@ -1999,7 +1121,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
                 tenantId, grantType);
         AccessTokenDO accessTokenDO2 = getAccessTokenDO(consumerKey, authenticatedUser, applicationType,
                 tenantId, grantType);
-        accessTokenDO2.setScope(new String[]{"scope3"});
+        accessTokenDO2.setScope(new String[]{VALID_SCOPE_2});
         AccessTokenDO accessTokenDO3 = getAccessTokenDO(consumerKey, authenticatedUser, applicationType,
                 tenantId, grantType);
         accessTokenDO3.setTokenState(OAuthConstants.TokenStates.TOKEN_STATE_EXPIRED);
@@ -2030,10 +1152,6 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
     @Test(dataProvider = "retrieveAccessTokenDataProvider")
     public void testRetrieveLatestAccessTokens(String tenantDomain, int tenantId, String userStoreDomain, String
             applicationType, String grantType, boolean includeExpiredTokens) throws Exception {
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(mockedOAuthServerConfiguration);
-        when(mockedOAuthServerConfiguration.getPersistenceProcessor()).thenReturn(new PlainTextPersistenceProcessor());
-        mockStatic(IdentityUtil.class);
 
         String consumerKey = UUID.randomUUID().toString();
         createApplication(consumerKey, UUID.randomUUID().toString(), tenantId);
@@ -2084,10 +1202,6 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
     @Test(dataProvider = "retrieveAccessTokenDataProvider")
     public void testRetrieveLatestToken(String tenantDomain, int tenantId, String userStoreDomain, String
             applicationType, String grantType, boolean active) throws Exception {
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(mockedOAuthServerConfiguration);
-        when(mockedOAuthServerConfiguration.getPersistenceProcessor()).thenReturn(new PlainTextPersistenceProcessor());
-        mockStatic(IdentityUtil.class);
 
         String consumerKey = UUID.randomUUID().toString();
         createApplication(consumerKey, UUID.randomUUID().toString(), tenantId);
@@ -2134,12 +1248,8 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
 
     @Test(dataProvider = "retrieveAccessTokenDataProvider")
     public void testUpdateAppAndRevokeTokensAndAuthzCodes(String tenantDomain, int tenantId, String userStoreDomain,
-                                                        String applicationType, String grantType, boolean isRevoke)
+                                                          String applicationType, String grantType, boolean isRevoke)
             throws Exception {
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(mockedOAuthServerConfiguration);
-        when(mockedOAuthServerConfiguration.getPersistenceProcessor()).thenReturn(new PlainTextPersistenceProcessor());
-        mockStatic(IdentityUtil.class);
 
         String consumerKey = UUID.randomUUID().toString();
         createApplication(consumerKey, UUID.randomUUID().toString(), tenantId);
@@ -2199,19 +1309,16 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
                                                  String callbackUrl, String tenantDomain, int tenantId,
                                                  String userStoreDomain, boolean createApplication, String status)
             throws Exception {
+
         if (createApplication) {
             createApplication(consumerKey, UUID.randomUUID().toString(), tenantId);
         }
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(mockedOAuthServerConfiguration);
-        when(mockedOAuthServerConfiguration.getPersistenceProcessor()).thenReturn(new PlainTextPersistenceProcessor());
-
         AuthenticatedUser authenticatedUser = new AuthenticatedUser();
         authenticatedUser.setUserName("sampleUser");
         authenticatedUser.setTenantDomain(tenantDomain);
         authenticatedUser.setUserStoreDomain(userStoreDomain);
 
-        AuthzCodeDO authzCodeDO = new AuthzCodeDO(authenticatedUser, new String[]{"scope1", "scope2"},
+        AuthzCodeDO authzCodeDO = new AuthzCodeDO(authenticatedUser, new String[]{VALID_SCOPE_1, VALID_SCOPE_2},
                 new Timestamp(System.currentTimeMillis()), 3600000L, callbackUrl, consumerKey, authzCode, authzCodeId,
                 null, null);
         authzCodeDO.setState(status);
@@ -2228,6 +1335,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
                                              String userStoreDomain, String applicationType, String grantType,
                                              String tokenState, boolean createApplication, String[] scope)
             throws Exception {
+
         if (createApplication) {
             createApplication(consumerKey, UUID.randomUUID().toString(), tenantId);
         }
@@ -2246,6 +1354,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
     }
 
     private void createApplication(String consumerKey, String consumerSecret, int tenantId) throws Exception {
+
         try (Connection connection = DAOUtils.getConnection(DB_NAME);
              PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.ADD_OAUTH_APP)) {
             prepStmt.setString(1, consumerKey);
@@ -2267,6 +1376,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
     }
 
     private String getAccessTokenStatusByTokenId(String accessTokenId) throws Exception {
+
         try (Connection connection = DAOUtils.getConnection(DB_NAME);
              PreparedStatement prepStmt = connection.prepareStatement(DAOConstants.TOKEN_STATUS_BY_TOKE)) {
             prepStmt.setString(1, accessTokenId);
@@ -2280,6 +1390,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
     }
 
     private String getAuthzCodeStatusByCode(String authzCode) throws Exception {
+
         try (Connection connection = DAOUtils.getConnection(DB_NAME);
              PreparedStatement prepStmt = connection.prepareStatement(DAOConstants.AUTHZ_CODE_STATUS_BY_CODE)) {
             prepStmt.setString(1, authzCode);
@@ -2293,6 +1404,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
     }
 
     private AuthenticatedUser getAuthenticatedUser(String tenantDomain, String userStoreDomain) {
+
         AuthenticatedUser authenticatedUser = new AuthenticatedUser();
         authenticatedUser.setUserName("sampleUser");
         authenticatedUser.setTenantDomain(tenantDomain);
@@ -2302,8 +1414,9 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
 
     private AccessTokenDO getAccessTokenDO(String consumerKey, AuthenticatedUser authenticatedUser, String
             applicationType, int tenantId, String grantType) {
-        AccessTokenDO accessTokenDO = new AccessTokenDO(consumerKey, authenticatedUser, new String[]{"scope1",
-                "scope2"}, new Timestamp(System.currentTimeMillis()), new Timestamp(System.currentTimeMillis()),
+
+        AccessTokenDO accessTokenDO = new AccessTokenDO(consumerKey, authenticatedUser, new String[]{VALID_SCOPE_1},
+                new Timestamp(System.currentTimeMillis()), new Timestamp(System.currentTimeMillis()),
                 3600L, 3600L, applicationType);
         accessTokenDO.setAccessToken(UUID.randomUUID().toString());
         accessTokenDO.setRefreshToken(UUID.randomUUID().toString());
@@ -2316,6 +1429,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
 
     @ObjectFactory
     public IObjectFactory getObjectFactory() {
+
         return new org.powermock.modules.testng.PowerMockObjectFactory();
     }
 }

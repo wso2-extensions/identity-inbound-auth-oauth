@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth.config;
 
 import org.apache.axiom.om.OMElement;
 import org.apache.axis2.util.JavaUtils;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -27,11 +28,9 @@ import org.apache.oltu.oauth2.as.issuer.OAuthIssuer;
 import org.apache.oltu.oauth2.as.issuer.OAuthIssuerImpl;
 import org.apache.oltu.oauth2.as.issuer.UUIDValueGenerator;
 import org.apache.oltu.oauth2.as.issuer.ValueGenerator;
-import org.apache.oltu.oauth2.as.validator.AuthorizationCodeValidator;
 import org.apache.oltu.oauth2.as.validator.ClientCredentialValidator;
+import org.apache.oltu.oauth2.as.validator.CodeTokenValidator;
 import org.apache.oltu.oauth2.as.validator.CodeValidator;
-import org.apache.oltu.oauth2.as.validator.PasswordValidator;
-import org.apache.oltu.oauth2.as.validator.RefreshTokenValidator;
 import org.apache.oltu.oauth2.as.validator.TokenValidator;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.apache.oltu.oauth2.common.message.types.ResponseType;
@@ -53,10 +52,18 @@ import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuerImpl;
 import org.wso2.carbon.identity.oauth2.token.handlers.clientauth.ClientAuthenticationHandler;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.saml.SAML2TokenCallbackHandler;
+import org.wso2.carbon.identity.oauth2.validators.grant.AuthorizationCodeGrantValidator;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeHandler;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeValidator;
+import org.wso2.carbon.identity.oauth2.validators.grant.ClientCredentialGrantValidator;
+import org.wso2.carbon.identity.oauth2.validators.grant.PasswordGrantValidator;
+import org.wso2.carbon.identity.oauth2.validators.grant.RefreshTokenGrantValidator;
 import org.wso2.carbon.identity.openidconnect.CustomClaimsCallbackHandler;
 import org.wso2.carbon.identity.openidconnect.IDTokenBuilder;
+import org.wso2.carbon.identity.openidconnect.RequestObjectBuilder;
+import org.wso2.carbon.identity.openidconnect.RequestObjectValidatorImpl;
+
+import org.wso2.carbon.identity.openidconnect.RequestObjectValidator;
 import org.wso2.carbon.utils.CarbonUtils;
 
 import java.util.ArrayList;
@@ -92,6 +99,10 @@ public class OAuthServerConfiguration {
             "org.wso2.carbon.identity.oauth2.token.handlers.grant.saml.SAML2BearerGrantHandler";
     private static final String IWA_NTLM_BEARER_GRANT_HANDLER_CLASS =
             "org.wso2.carbon.identity.oauth2.token.handlers.grant.iwa.ntlm.NTLMAuthenticationGrantHandler";
+    // Request object builder class.
+    private static final String REQUEST_PARAM_VALUE_BUILDER_CLASS =
+            "org.wso2.carbon.identity.openidconnect.RequestParamRequestObjectBuilder";
+    private static final String REQUEST_PARAM_VALUE_BUILDER = "request_param_value_builder";
     private static Log log = LogFactory.getLog(OAuthServerConfiguration.class);
     private static OAuthServerConfiguration instance;
     private static String oauth1RequestTokenUrl = null;
@@ -116,6 +127,7 @@ public class OAuthServerConfiguration {
     private String oauthTokenGeneratorClassName;
     private OAuthIssuer oauthTokenGenerator;
     private String oauthIdentityTokenGeneratorClassName;
+    private String persistAccessTokenAlias;
     private OauthTokenIssuer oauthIdentityTokenGenerator;
     private boolean cacheEnabled = false;
     private boolean isRefreshTokenRenewalEnabled = true;
@@ -129,6 +141,7 @@ public class OAuthServerConfiguration {
     private Map<String, String> idTokenAllowedForGrantTypesMap = new HashMap<>();
     private Set<String> idTokenNotAllowedGrantTypesSet = new HashSet<>();
     private Map<String, AuthorizationGrantHandler> supportedGrantTypes;
+    private Map<String, RequestObjectBuilder> requestObjectBuilder;
     private Map<String, String> supportedGrantTypeValidatorNames = new HashMap<>();
     private Map<String, Class<? extends OAuthValidator<HttpServletRequest>>> supportedGrantTypeValidators;
     private Map<String, String> supportedResponseTypeClassNames = new HashMap<>();
@@ -145,7 +158,7 @@ public class OAuthServerConfiguration {
     private Map<String, String> tokenValidatorClassNames = new HashMap();
     private boolean isAuthContextTokGenEnabled = false;
     private String tokenGeneratorImplClass = "org.wso2.carbon.identity.oauth2.token.JWTTokenGenerator";
-    private String claimsRetrieverImplClass = "org.wso2.carbon.identity.oauth2.token.DefaultClaimsRetriever";
+    private String claimsRetrieverImplClass = "org.wso2.carbon.identity.oauth2.authcontext.DefaultClaimsRetriever";
     private String consumerDialectURI = "http://wso2.org/claims";
     private String signatureAlgorithm = "SHA256withRSA";
     private String idTokenSignatureAlgorithm = "SHA256withRSA";
@@ -156,14 +169,21 @@ public class OAuthServerConfiguration {
 
     // OpenID Connect configurations
     private String openIDConnectIDTokenBuilderClassName = "org.wso2.carbon.identity.openidconnect.DefaultIDTokenBuilder";
+    private String defaultRequestValidatorClassName = "org.wso2.carbon.identity.openidconnect.RequestObjectValidatorImpl";
     private String openIDConnectIDTokenCustomClaimsHanlderClassName = "org.wso2.carbon.identity.openidconnect.SAMLAssertionClaimsCallback";
     private IDTokenBuilder openIDConnectIDTokenBuilder = null;
+    private Map<String, String> requestObjectBuilderClassNames = new HashMap<>();
+    private volatile RequestObjectValidator requestObjectValidator = null;
     private CustomClaimsCallbackHandler openidConnectIDTokenCustomClaimsCallbackHandler = null;
     private String openIDConnectIDTokenIssuerIdentifier = null;
     private String openIDConnectIDTokenSubClaim = "http://wso2.org/claims/fullname";
     private String openIDConnectSkipUserConsent = "true";
-    private String openIDConnectIDTokenExpiration = "300";
+    private String openIDConnectIDTokenExpiration = "3600";
+    private long openIDConnectIDTokenExpiryTimeInSeconds = 3600;
+
     private String openIDConnectUserInfoEndpointClaimDialect = "http://wso2.org/claims";
+
+
     private String openIDConnectUserInfoEndpointClaimRetriever = "org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoUserStoreClaimRetriever";
     private String openIDConnectUserInfoEndpointRequestValidator = "org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInforRequestDefaultValidator";
     private String openIDConnectUserInfoEndpointAccessTokenValidator = "org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoISAccessTokenValidator";
@@ -175,19 +195,18 @@ public class OAuthServerConfiguration {
     private boolean isJWTSignedWithSPKey = false;
     // property added to fix IDENTITY-4534 in backward compatible manner
     private boolean isImplicitErrorFragment = true;
-
     // property added to fix IDENTITY-4112 in backward compatible manner
     private boolean isRevokeResponseHeadersEnabled = true;
+
     // property to make DisplayName property to be used in consent page
     private boolean showDisplayNameInConsentPage=false;
-
     // Use the SP tenant domain instead of user domain.
     private boolean useSPTenantDomainValue;
 
     // Property added to customize the token valued generation method. (IDENTITY-6139)
     private ValueGenerator tokenValueGenerator;
-    private String tokenValueGeneratorClassName;
 
+    private String tokenValueGeneratorClassName;
     private OAuthServerConfiguration() {
         buildOAuthServerConfiguration();
     }
@@ -292,6 +311,9 @@ public class OAuthServerConfiguration {
 
         // parse identity OAuth 2.0 token generator
         parseOAuthTokenIssuerConfig(oauthElem);
+
+        // Parse Persist Access Token Alias element.
+        parsePersistAccessTokenAliasConfig(oauthElem);
 
         // Parse token value generator class name.
         parseOAuthTokenValueGenerator(oauthElem);
@@ -461,6 +483,10 @@ public class OAuthServerConfiguration {
         return oauthIdentityTokenGenerator;
     }
 
+    public boolean usePersistedAccessTokenAlias() {
+        return persistAccessTokenAlias != null ? Boolean.TRUE.toString().equalsIgnoreCase(persistAccessTokenAlias) : true;
+    }
+
     public String getOIDCConsentPageUrl() {
         return oidcConsentPageUrl;
     }
@@ -558,13 +584,13 @@ public class OAuthServerConfiguration {
                             new Hashtable<>();
                     // Load default grant type validators
                     supportedGrantTypeValidatorsTemp
-                            .put(GrantType.PASSWORD.toString(), PasswordValidator.class);
+                            .put(GrantType.PASSWORD.toString(), PasswordGrantValidator.class);
                     supportedGrantTypeValidatorsTemp.put(GrantType.CLIENT_CREDENTIALS.toString(),
-                            ClientCredentialValidator.class);
+                            ClientCredentialGrantValidator.class);
                     supportedGrantTypeValidatorsTemp.put(GrantType.AUTHORIZATION_CODE.toString(),
-                            AuthorizationCodeValidator.class);
+                            AuthorizationCodeGrantValidator.class);
                     supportedGrantTypeValidatorsTemp.put(GrantType.REFRESH_TOKEN.toString(),
-                            RefreshTokenValidator.class);
+                            RefreshTokenGrantValidator.class);
                     supportedGrantTypeValidatorsTemp.put(
                             org.wso2.carbon.identity.oauth.common.GrantType.SAML20_BEARER
                                     .toString(), SAML2GrantValidator.class);
@@ -607,9 +633,11 @@ public class OAuthServerConfiguration {
                             .put(ResponseType.CODE.toString(), CodeValidator.class);
                     supportedResponseTypeValidatorsTemp.put(ResponseType.TOKEN.toString(),
                             TokenValidator.class);
-                    supportedResponseTypeValidatorsTemp.put("id_token", IDTokenResponseValidator.class);
-                    supportedResponseTypeValidatorsTemp.put("id_token token", IDTokenTokenResponseValidator.class);
-
+                    supportedResponseTypeValidatorsTemp.put(OAuthConstants.ID_TOKEN, IDTokenResponseValidator.class);
+                    supportedResponseTypeValidatorsTemp.put(OAuthConstants.IDTOKEN_TOKEN, IDTokenTokenResponseValidator.class);
+                    supportedResponseTypeValidatorsTemp.put(OAuthConstants.CODE_TOKEN, CodeTokenValidator.class);
+                    supportedResponseTypeValidatorsTemp.put(OAuthConstants.CODE_IDTOKEN, CodeTokenValidator.class);
+                    supportedResponseTypeValidatorsTemp.put(OAuthConstants.CODE_IDTOKEN_TOKEN, CodeTokenValidator.class);
 
                     if (supportedResponseTypeValidatorNames != null) {
                         // Load configured grant type validators
@@ -664,6 +692,108 @@ public class OAuthServerConfiguration {
             }
         }
         return supportedResponseTypes;
+    }
+
+    private void parseRequestObjectConfig(OMElement requestObjectBuildersElem) {
+        if (requestObjectBuildersElem != null) {
+            Iterator<OMElement> iterator = requestObjectBuildersElem
+                    .getChildrenWithName(getQNameWithIdentityNS(ConfigElements.REQUEST_OBJECT_BUILDER));
+
+            while (iterator.hasNext()) {
+                OMElement requestObjectBuildersElement = iterator.next();
+                OMElement builderNameElement = requestObjectBuildersElement
+                        .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.BUILDER_NAME));
+                String builderName = null;
+                if (builderNameElement != null) {
+                    builderName = builderNameElement.getText();
+                }
+
+                OMElement requestObjectImplClassElement = requestObjectBuildersElement
+                        .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.REQUEST_OBJECT_IMPL_CLASS));
+                String requestObjectImplClass = null;
+                if (requestObjectImplClassElement != null) {
+                    requestObjectImplClass = requestObjectImplClassElement.getText();
+                }
+                requestObjectBuilderClassNames.put(builderName, requestObjectImplClass);
+            }
+        }
+        setDefaultRequestObjectBuilderClasses();
+        if (log.isDebugEnabled()) {
+            for (Map.Entry entry : requestObjectBuilderClassNames.entrySet()) {
+                String builderName = entry.getKey().toString();
+                String requestObjectBuilderImplClass = entry.getValue().toString();
+                log.debug(builderName + " is associated with " + requestObjectBuilderImplClass);
+            }
+        }
+    }
+
+    private void setDefaultRequestObjectBuilderClasses() {
+        if (MapUtils.isEmpty(requestObjectBuilderClassNames)) {
+            // if this element is not present, assume the default case.
+            log.info("\'RequestObjectBuilders\' element not configured in identity.xml. " +
+                    "Therefore instantiating default request object builders");
+
+            Map<String, String> defaultRequestObjectBuilders = new HashMap<>();
+            defaultRequestObjectBuilders.put(REQUEST_PARAM_VALUE_BUILDER, REQUEST_PARAM_VALUE_BUILDER_CLASS);
+            requestObjectBuilderClassNames.putAll(defaultRequestObjectBuilders);
+        }
+    }
+
+    /**
+     * Returns an instance of RequestObjectValidator
+     *
+     * @return instance of RequestObjectValidator
+     */
+    public RequestObjectValidator getRequestObjectValidator() {
+
+        if (requestObjectValidator == null) {
+            synchronized (RequestObjectValidator.class) {
+                if (requestObjectValidator == null) {
+                    try {
+                        Class clazz =
+                                Thread.currentThread().getContextClassLoader()
+                                        .loadClass(defaultRequestValidatorClassName);
+                        requestObjectValidator = (RequestObjectValidator) clazz.newInstance();
+                    } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
+                        log.warn("Failed to initiate RequestObjectValidator from identity.xml. " +
+                                "Hence initiating the default implementation");
+                        requestObjectValidator = new RequestObjectValidatorImpl();
+                    }
+                }
+            }
+        }
+        return requestObjectValidator;
+    }
+
+    /**
+     * Return an instance of the RequestObjectBuilder
+     *
+     * @return instance of the RequestObjectBuilder
+     */
+    public Map<String, RequestObjectBuilder> getRequestObjectBuilders() {
+        if (requestObjectBuilder == null) {
+            synchronized (this) {
+                if (requestObjectBuilder == null) {
+                    Map<String, RequestObjectBuilder> requestBuilderTemp = new HashMap<>();
+                    for (Map.Entry<String, String> entry : requestObjectBuilderClassNames.entrySet()) {
+                        RequestObjectBuilder requestObjectBuilder = null;
+                        try {
+                            requestObjectBuilder = (RequestObjectBuilder) Class.forName(entry.getValue()).newInstance();
+                        } catch (InstantiationException | IllegalAccessException | ClassNotFoundException e) {
+                            log.error("Error instantiating " + entry.getValue(), e);
+                        }
+                        if (requestObjectBuilder != null) {
+                            requestBuilderTemp.put(entry.getKey(), requestObjectBuilder);
+                        } else {
+                            log.warn("Failed to initiate request object builder class which is associated with the " +
+                                    "builder " + entry.getKey());
+                        }
+                    }
+                    requestObjectBuilder = requestBuilderTemp;
+                }
+            }
+        }
+        return requestObjectBuilder;
     }
 
     public Set<String> getSupportedResponseTypeNames() {
@@ -866,11 +996,7 @@ public class OAuthServerConfiguration {
                                 Thread.currentThread().getContextClassLoader()
                                         .loadClass(openIDConnectIDTokenCustomClaimsHanlderClassName);
                         openidConnectIDTokenCustomClaimsCallbackHandler = (CustomClaimsCallbackHandler) clazz.newInstance();
-                    } catch (ClassNotFoundException e) {
-                        log.error("Error while instantiating the IDTokenBuilder ", e);
-                    } catch (InstantiationException e) {
-                        log.error("Error while instantiating the IDTokenBuilder ", e);
-                    } catch (IllegalAccessException e) {
+                    } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
                         log.error("Error while instantiating the IDTokenBuilder ", e);
                     }
                 }
@@ -900,10 +1026,21 @@ public class OAuthServerConfiguration {
     }
 
     /**
-     * @return the openIDConnectIDTokenExpiration
+     * @deprecated use {@link #getOpenIDConnectIDTokenExpiryTimeInSeconds()} instead
+     *
+     * @return the openIDConnectIDTokenExpirationInSeconds
      */
     public String getOpenIDConnectIDTokenExpiration() {
         return openIDConnectIDTokenExpiration;
+    }
+
+    /**
+     *
+     *
+     * @return ID Token expiry time in milliseconds.
+     */
+    public long getOpenIDConnectIDTokenExpiryTimeInSeconds() {
+        return openIDConnectIDTokenExpiryTimeInSeconds;
     }
 
     public String getOpenIDConnectUserInfoEndpointClaimDialect() {
@@ -1502,6 +1639,22 @@ public class OAuthServerConfiguration {
         }
     }
 
+    private void parsePersistAccessTokenAliasConfig(OMElement oauthConfigElem) {
+
+        OMElement tokenIssuerClassConfigElem = oauthConfigElem
+                .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.IDENTITY_OAUTH_PERSIST_TOKEN_ALIAS));
+        if (tokenIssuerClassConfigElem != null && !"".equals(tokenIssuerClassConfigElem.getText().trim())) {
+            persistAccessTokenAlias = tokenIssuerClassConfigElem.getText().trim();
+            if (log.isDebugEnabled()) {
+                log.debug("Identity OAuth persist access token alias is set to : " + persistAccessTokenAlias);
+            }
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug("PersistAccessTokenAlias is not defiled. Default config will be used.");
+            }
+        }
+    }
+
     private void parseSupportedGrantTypesConfig(OMElement oauthConfigElem) {
 
         OMElement supportedGrantTypesElem =
@@ -1633,12 +1786,14 @@ public class OAuthServerConfiguration {
             // if this element is not present, assume the default case.
             log.warn("\'SupportedResponseTypes\' element not configured in identity.xml. " +
                     "Therefore instantiating default response type handlers");
-
-            Map<String, String> defaultResponseTypes = new HashMap<>(4);
+            Map<String, String> defaultResponseTypes = new HashMap<>();
             defaultResponseTypes.put(ResponseType.CODE.toString(), "org.wso2.carbon.identity.oauth2.authz.handlers.CodeResponseTypeHandler");
-            defaultResponseTypes.put(ResponseType.TOKEN.toString(), "org.wso2.carbon.identity.oauth2.authz.handlers.TokenResponseTypeHandler");
-            defaultResponseTypes.put("id_token", "org.wso2.carbon.identity.oauth2.authz.handlers.TokenResponseTypeHandler");
-            defaultResponseTypes.put("id_token token", "org.wso2.carbon.identity.oauth2.authz.handlers.TokenResponseTypeHandler");
+            defaultResponseTypes.put(ResponseType.TOKEN.toString(), "org.wso2.carbon.identity.oauth2.authz.handlers.AccessTokenResponseTypeHandler");
+            defaultResponseTypes.put(OAuthConstants.ID_TOKEN, "org.wso2.carbon.identity.oauth2.authz.handlers.IDTokenResponseTypeHandler");
+            defaultResponseTypes.put(OAuthConstants.IDTOKEN_TOKEN, "org.wso2.carbon.identity.oauth2.authz.handlers.IDTokenTokenResponseTypeHandler");
+            defaultResponseTypes.put(OAuthConstants.CODE_TOKEN, "org.wso2.carbon.identity.oauth2.authz.handlers.HybridResponseTypeHandler");
+            defaultResponseTypes.put(OAuthConstants.CODE_IDTOKEN, "org.wso2.carbon.identity.oauth2.authz.handlers.HybridResponseTypeHandler");
+            defaultResponseTypes.put(OAuthConstants.CODE_IDTOKEN_TOKEN, "org.wso2.carbon.identity.oauth2.authz.handlers.HybridResponseTypeHandler");
             supportedResponseTypeClassNames.putAll(defaultResponseTypes);
         }
 
@@ -1660,9 +1815,8 @@ public class OAuthServerConfiguration {
                 OMElement supportedClientAuthHandler = iterator.next();
                 Iterator<OMElement> confProperties = supportedClientAuthHandler
                         .getChildrenWithLocalName(ConfigElements.CLIENT_AUTH_PROPERTY);
-                Properties properties = null;
+                Properties properties = new Properties();
                 while (confProperties.hasNext()) {
-                    properties = new Properties();
                     OMElement paramElem = confProperties.next();
                     String paramName = paramElem.getAttributeValue(
                             new QName(ConfigElements.CLIENT_AUTH_NAME));
@@ -1680,12 +1834,7 @@ public class OAuthServerConfiguration {
                             + "ClientAuthHandler element. ");
                     return;
                 }
-                if (properties != null) {
-                    supportedClientAuthHandlerData.put(clientAuthHandlerImplClass, properties);
-                } else {
-                    supportedClientAuthHandlerData.put(clientAuthHandlerImplClass, new Properties());
-                }
-
+                supportedClientAuthHandlerData.put(clientAuthHandlerImplClass, properties);
             }
 
         } else {
@@ -1823,6 +1972,17 @@ public class OAuthServerConfiguration {
                 oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT));
 
         if (openIDConnectConfigElem != null) {
+
+            // Get <RequestObjectBuilders> element defined under <OpenIDConnect> config.
+            parseRequestObjectConfig(openIDConnectConfigElem.getFirstChildWithName(
+                    getQNameWithIdentityNS(ConfigElements.REQUEST_OBJECT_BUILDERS)));
+
+            if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.
+                    REQUEST_OBJECT_VALIDATOR)) != null) {
+                defaultRequestValidatorClassName =
+                        openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.
+                                REQUEST_OBJECT_VALIDATOR)).getText().trim();
+            }
             if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_IDTOKEN_BUILDER)) != null) {
                 openIDConnectIDTokenBuilderClassName =
                         openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_IDTOKEN_BUILDER))
@@ -1859,6 +2019,15 @@ public class OAuthServerConfiguration {
                 openIDConnectIDTokenExpiration =
                         openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_IDTOKEN_EXPIRATION))
                                 .getText().trim();
+
+                try {
+                    openIDConnectIDTokenExpiryTimeInSeconds = Long.parseLong(openIDConnectIDTokenExpiration);
+                } catch (NumberFormatException ex) {
+                    log.warn("Invalid value: '" + openIDConnectIDTokenExpiration + "' set for ID Token Expiry Time in " +
+                            "Seconds. Value should be an integer. Setting expiry time to default value: " +
+                            openIDConnectIDTokenExpiryTimeInSeconds + " seconds.");
+                }
+
             }
             if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_USERINFO_ENDPOINT_CLAIM_DIALECT)) != null) {
                 openIDConnectUserInfoEndpointClaimDialect =
@@ -1997,6 +2166,8 @@ public class OAuthServerConfiguration {
         public static final String OPENID_CONNECT_SIGN_JWT_WITH_SP_KEY = "SignJWTWithSPKey";
         public static final String OPENID_CONNECT_IDTOKEN_CUSTOM_CLAIM_CALLBACK_HANDLER = "IDTokenCustomClaimsCallBackHandler";
         public static final String SUPPORTED_CLAIMS = "OpenIDConnectClaims";
+        public static final String REQUEST_OBJECT = "RequestObject";
+        public static final String REQUEST_OBJECT_VALIDATOR = "RequestObjectValidator";
         // Callback handler related configuration elements
         private static final String OAUTH_CALLBACK_HANDLERS = "OAuthCallbackHandlers";
         private static final String OAUTH_CALLBACK_HANDLER = "OAuthCallbackHandler";
@@ -2040,6 +2211,9 @@ public class OAuthServerConfiguration {
         private static final String OAUTH_TOKEN_GENERATOR = "OAuthTokenGenerator";
         private static final String IDENTITY_OAUTH_TOKEN_GENERATOR = "IdentityOAuthTokenGenerator";
 
+        // Persist token alias
+        private static final String IDENTITY_OAUTH_PERSIST_TOKEN_ALIAS = "PersistAccessTokenAlias";
+
         // Supported Grant Types
         private static final String SUPPORTED_GRANT_TYPES = "SupportedGrantTypes";
         private static final String SUPPORTED_GRANT_TYPE = "SupportedGrantType";
@@ -2077,6 +2251,13 @@ public class OAuthServerConfiguration {
         // Property to decide whether to pick the user tenant domain or SP tenant domain.
         private static final String OAUTH_USE_SP_TENANT_DOMAIN = "UseSPTenantDomain";
         private static final String MAP_FED_USERS_TO_LOCAL = "MapFederatedUsersToLocal";
+
+        // Request Object Configs
+        private static final String REQUEST_OBJECT_BUILDERS = "RequestObjectBuilders";
+        private static final String REQUEST_OBJECT_BUILDER = "RequestObjectBuilder";
+        private static final String BUILDER_NAME = "BuilderName";
+        private static final String REQUEST_OBJECT_IMPL_CLASS = "RequestObjectBuilderImplClass";
+
     }
 
 }

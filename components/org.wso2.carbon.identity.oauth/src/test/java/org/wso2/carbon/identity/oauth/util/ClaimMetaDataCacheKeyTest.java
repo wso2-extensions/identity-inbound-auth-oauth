@@ -70,7 +70,7 @@ public class ClaimMetaDataCacheKeyTest {
         assertEquals(testclass.getAuthenticatedUser(), dummy2);
     }
 
-    class DummyAuthenticatedUser extends AuthenticatedUser {
+    static class DummyAuthenticatedUser extends AuthenticatedUser {
         int hashValue;
 
         @Override

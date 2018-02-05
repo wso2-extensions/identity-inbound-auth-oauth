@@ -61,6 +61,9 @@ import org.wso2.carbon.identity.oauth.cache.SessionDataCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
+import org.wso2.carbon.identity.oauth.endpoint.expmapper.InvalidRequestExceptionMapper;
+import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.OpenIDConnectUserRPStore;
 import org.wso2.carbon.identity.oauth.endpoint.util.TestOAuthEndpointBase;
@@ -77,7 +80,6 @@ import org.wso2.carbon.identity.oidc.session.OIDCSessionManager;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionState;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
 import org.wso2.carbon.utils.CarbonUtils;
-
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -181,6 +183,9 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
     @Mock
     ApplicationManagementService applicationManagementService;
 
+    @Mock
+    OAuthMessage oAuthMessage;
+
     private static final String ERROR_PAGE_URL = "https://localhost:9443/authenticationendpoint/oauth2_error.do";
     private static final String LOGIN_PAGE_URL = "https://localhost:9443/authenticationendpoint/login.do";
     private static final String USER_CONSENT_URL =
@@ -260,7 +265,15 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         mockStatic(OAuth2Util.OAuthURL.class);
         when(OAuth2Util.OAuthURL.getOAuth2ErrorPageUrl()).thenReturn(ERROR_PAGE_URL);
 
-        Response response = oAuth2AuthzEndpoint.authorizePost(httpServletRequest, httpServletResponse, paramMap);
+        Response response;
+
+        try {
+            response = oAuth2AuthzEndpoint.authorizePost(httpServletRequest, httpServletResponse, paramMap);
+        } catch (InvalidRequestParentException ire) {
+            InvalidRequestExceptionMapper invalidRequestExceptionMapper = new InvalidRequestExceptionMapper();
+            response = invalidRequestExceptionMapper.toResponse(ire);
+        }
+
         assertEquals(response.getStatus(), expected, "Unexpected HTTP response status");
     }
 
@@ -313,7 +326,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                         OAuth2ErrorCodes.INVALID_REQUEST },
 
                 { AuthenticatorFlowStatus.SUCCESS_COMPLETED, new String[]{CLIENT_ID_VALUE}, null, "true", "scope1",
-                        null, new IOException(), HttpServletResponse.SC_INTERNAL_SERVER_ERROR, null },
+                        null, new IOException(), HttpServletResponse.SC_FOUND, OAuth2ErrorCodes.INVALID_REQUEST },
 
                 { null, new String[]{CLIENT_ID_VALUE}, null, "false", null, null, null, HttpServletResponse.SC_FOUND,
                         OAuth2ErrorCodes.INVALID_REQUEST },
@@ -376,6 +389,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
         mockEndpointUtil();
         when(oAuth2Service.validateClientInfo(anyString(), anyString())).thenReturn(oAuth2ClientValidationResponseDTO);
+        when(oAuth2Service.getOauthApplicationState(CLIENT_ID_VALUE)).thenReturn("ACTIVE");
         when(oAuth2ClientValidationResponseDTO.isValidClient()).thenReturn(true);
 
         final String[] redirectUrl = new String[1];
@@ -392,7 +406,14 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
             }).when(httpServletResponse).sendRedirect(anyString());
         }
 
-        Response response = oAuth2AuthzEndpoint.authorize(httpServletRequest, httpServletResponse);
+        Response response;
+        try {
+            response = oAuth2AuthzEndpoint.authorize(httpServletRequest, httpServletResponse);
+        } catch (InvalidRequestParentException ire) {
+            InvalidRequestExceptionMapper invalidRequestExceptionMapper = new InvalidRequestExceptionMapper();
+            response = invalidRequestExceptionMapper.toResponse(ire);
+        }
+
         if (response != null) {
             assertEquals(response.getStatus(), expectedStatus, "Unexpected HTTP response status");
             MultivaluedMap<String, Object> responseMetadata = response.getMetadata();
@@ -500,6 +521,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                 thenReturn(true);
 
         mockEndpointUtil();
+        when(oAuth2Service.getOauthApplicationState(CLIENT_ID_VALUE)).thenReturn("ACTIVE");
 
         Response response = oAuth2AuthzEndpoint.authorize(httpServletRequest, httpServletResponse);
         assertEquals(response.getStatus(), expected, "Unexpected HTTP response status");
@@ -567,8 +589,16 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         when(OAuth2Util.OAuthURL.getOAuth2ErrorPageUrl()).thenReturn(ERROR_PAGE_URL);
 
         mockEndpointUtil();
+        when(oAuth2Service.getOauthApplicationState(CLIENT_ID_VALUE)).thenReturn("ACTIVE");
 
-        Response response = oAuth2AuthzEndpoint.authorize(httpServletRequest, httpServletResponse);
+        Response response;
+        try {
+            response = oAuth2AuthzEndpoint.authorize(httpServletRequest, httpServletResponse);
+        } catch (InvalidRequestParentException ire) {
+            InvalidRequestExceptionMapper invalidRequestExceptionMapper = new InvalidRequestExceptionMapper();
+            response = invalidRequestExceptionMapper.toResponse(ire);
+        }
+
         if (response != null) {
             assertEquals(response.getStatus(), expectedStatus, "Unexpected HTTP response status");
 
@@ -741,6 +771,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
 
         mockEndpointUtil();
+        when(oAuth2Service.getOauthApplicationState(CLIENT_ID_VALUE)).thenReturn("ACTIVE");
         when(oAuth2Service.isPKCESupportEnabled()).thenReturn(pkceEnabled);
         if (ERROR_PAGE_URL.equals(expectedLocation) && OAuthConstants.Prompt.NONE.equals(prompt)) {
             doThrow(new IdentityOAuth2Exception("error")).when(EndpointUtil.class, "getLoginPageURL", anyString(),
@@ -773,7 +804,13 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
             }
         }).when(httpServletResponse).sendRedirect(anyString());
 
-        Response response = oAuth2AuthzEndpoint.authorize(httpServletRequest, httpServletResponse);
+        Response response;
+        try {
+            response = oAuth2AuthzEndpoint.authorize(httpServletRequest, httpServletResponse);
+        } catch (InvalidRequestParentException ire) {
+            InvalidRequestExceptionMapper invalidRequestExceptionMapper = new InvalidRequestExceptionMapper();
+            response = invalidRequestExceptionMapper.toResponse(ire);
+        }
 
         if (response != null) {
             assertEquals(response.getStatus(), HttpServletResponse.SC_FOUND, "Unexpected HTTP response status");
@@ -876,7 +913,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         }
         mockEndpointUtil();
         when(oAuth2Service.authorize(any(OAuth2AuthorizeReqDTO.class))).thenReturn(authzRespDTO);
-
+        when(oAuth2Service.getOauthApplicationState(CLIENT_ID_VALUE)).thenReturn("ACTIVE");
         mockStatic(OpenIDConnectUserRPStore.class);
         when(OpenIDConnectUserRPStore.getInstance()).thenReturn(openIDConnectUserRPStore);
         doNothing().when(openIDConnectUserRPStore).putUserRPToStore(any(AuthenticatedUser.class),
@@ -884,7 +921,13 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
         when(oAuthServerConfiguration.getOpenIDConnectSkipeUserConsentConfig()).thenReturn(skipConsent);
 
-        Response response = oAuth2AuthzEndpoint.authorize(httpServletRequest, httpServletResponse);
+        Response response;
+        try {
+            response = oAuth2AuthzEndpoint.authorize(httpServletRequest, httpServletResponse);
+        } catch (InvalidRequestParentException ire) {
+            InvalidRequestExceptionMapper invalidRequestExceptionMapper = new InvalidRequestExceptionMapper();
+            response = invalidRequestExceptionMapper.toResponse(ire);
+        }
 
         assertNotNull(response, "Authorization response is null");
         assertEquals(response.getStatus(), expectedStatus, "Unexpected HTTP response status");
@@ -986,8 +1029,15 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         }
         when(signedJWT.getJWTClaimsSet()).thenReturn(readOnlyJWTClaimsSet);
         when(readOnlyJWTClaimsSet.getSubject()).thenReturn(idTokenHintSubject);
+        when(oAuth2Service.getOauthApplicationState(CLIENT_ID_VALUE)).thenReturn("ACTIVE");
 
-        Response response = oAuth2AuthzEndpoint.authorize(httpServletRequest, httpServletResponse);
+        Response response;
+        try {
+            response = oAuth2AuthzEndpoint.authorize(httpServletRequest, httpServletResponse);
+        } catch (InvalidRequestParentException ire) {
+            InvalidRequestExceptionMapper invalidRequestExceptionMapper = new InvalidRequestExceptionMapper();
+            response = invalidRequestExceptionMapper.toResponse(ire);
+        }
 
         assertNotNull(response, "Authorization response is null");
         assertEquals(response.getStatus(), HttpServletResponse.SC_FOUND, "Unexpected HTTP response status");
@@ -1093,8 +1143,16 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         when(OpenIDConnectUserRPStore.getInstance()).thenReturn(openIDConnectUserRPStore);
         when(openIDConnectUserRPStore.hasUserApproved(any(AuthenticatedUser.class), anyString(), anyString())).
                 thenReturn(true);
+        when(oAuth2Service.getOauthApplicationState(CLIENT_ID_VALUE)).thenReturn("ACTIVE");
 
-        Response response = oAuth2AuthzEndpoint.authorize(httpServletRequest, httpServletResponse);
+        Response response;
+        try {
+            response = oAuth2AuthzEndpoint.authorize(httpServletRequest, httpServletResponse);
+        } catch (InvalidRequestParentException ire) {
+            InvalidRequestExceptionMapper invalidRequestExceptionMapper = new InvalidRequestExceptionMapper();
+            response = invalidRequestExceptionMapper.toResponse(ire);
+        }
+
         assertNotNull(response, "Authorization response is null");
         assertEquals(response.getStatus(), expectedStatus, "Unexpected HTTP response status");
 
@@ -1188,21 +1246,40 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         mockStatic(OAuth2Util.OAuthURL.class);
         when(OAuth2Util.OAuthURL.getOAuth2ErrorPageUrl()).thenReturn(ERROR_PAGE_URL);
 
-        Method sendRequestToFramework = authzEndpointObject.getClass().getDeclaredMethod("sendRequestToFramework",
-                HttpServletRequest.class, HttpServletResponse.class, String.class, String.class);
+        Method sendRequestToFramework = authzEndpointObject.getClass().getDeclaredMethod("handleAuthFlowThroughFramework",
+                OAuthMessage.class, String.class);
         sendRequestToFramework.setAccessible(true);
-        Response resp =  (Response) sendRequestToFramework.invoke(authzEndpointObject, httpServletRequest,
-                httpServletResponse, "type", "sessionDataValue");
-        assertNotNull(resp, "Returned response is null");
+
+        when(oAuthMessage.getRequest()).thenReturn(httpServletRequest);
+        when(oAuthMessage.getResponse()).thenReturn(httpServletResponse);
+
+
+        Response response;
+        try {
+            response =  (Response) sendRequestToFramework.invoke(authzEndpointObject, oAuthMessage, "type");
+        } catch (Exception ire) {
+            InvalidRequestExceptionMapper invalidRequestExceptionMapper = new InvalidRequestExceptionMapper();
+            response = invalidRequestExceptionMapper.toResponse((InvalidRequestParentException) ire.getCause());
+        }
+
+        assertNotNull(response, "Returned response is null");
 
         requestAttributes.put(FrameworkConstants.RequestParams.FLOW_STATUS, flowStatus);
         mockHttpRequest(requestParams, requestAttributes, HttpMethod.POST);
 
-        Method sendRequestToFramework2 = authzEndpointObject.getClass().getDeclaredMethod("sendRequestToFramework",
-                HttpServletRequest.class, HttpServletResponse.class);
+        when(oAuthMessage.getRequest()).thenReturn(httpServletRequest);
+        when(oAuthMessage.getResponse()).thenReturn(httpServletResponse);
+
+        Method sendRequestToFramework2 = authzEndpointObject.getClass().getDeclaredMethod("handleAuthFlowThroughFramework",
+                OAuthMessage.class, String.class);
         sendRequestToFramework2.setAccessible(true);
-        resp =  (Response) sendRequestToFramework2.invoke(authzEndpointObject, httpServletRequest, httpServletResponse);
-        assertNotNull(resp, "Returned response is null");
+        try {
+            response =  (Response) sendRequestToFramework.invoke(authzEndpointObject, oAuthMessage, "type");
+        } catch (Exception ire) {
+            InvalidRequestExceptionMapper invalidRequestExceptionMapper = new InvalidRequestExceptionMapper();
+            response = invalidRequestExceptionMapper.toResponse((InvalidRequestParentException) ire.getCause());
+        }
+        assertNotNull(response, "Returned response is null");
     }
 
     @DataProvider(name = "provideAuthenticatedTimeFromCommonAuthData")
@@ -1352,7 +1429,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         when(oAuthServerConfiguration.isShowDisplayNameInConsentPage()).thenReturn(showDisplayName);
 
         Method handleOAuthAuthorizationRequest = authzEndpointObject.getClass().getDeclaredMethod(
-                "handleOAuthAuthorizationRequest", String.class, HttpServletRequest.class);
+                "handleOAuthAuthorizationRequest", OAuthMessage.class);
         handleOAuthAuthorizationRequest.setAccessible(true);
 
         SessionDataCache sessionDataCache = mock(SessionDataCache.class);
@@ -1367,13 +1444,19 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
             }
         }).when(sessionDataCache).addToCache(any(SessionDataCacheKey.class), any(SessionDataCacheEntry.class));
 
-        handleOAuthAuthorizationRequest.invoke(authzEndpointObject, CLIENT_ID_VALUE, httpServletRequest);
+        when(oAuthMessage.getRequest()).thenReturn(httpServletRequest);
+        when(oAuthMessage.getClientId()).thenReturn(CLIENT_ID_VALUE);
+
+        handleOAuthAuthorizationRequest.invoke(authzEndpointObject, oAuthMessage);
         assertNotNull(cacheEntry[0], "Parameters not saved in cache");
         assertEquals(cacheEntry[0].getoAuth2Parameters().getDisplayName(), savedDisplayName);
     }
 
     @Test(dependsOnGroups = "testWithConnection")
     public void testIdentityOAuthAdminException() throws Exception {
+
+        //OAuthAdminException will not occur due to introduce a new Service to get the App State instead directly use
+        // dao
         Map<String, String[]> requestParams = new HashMap<>();
         Map<String, Object> requestAttributes = new HashMap<>();
 
@@ -1387,11 +1470,20 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
 
         connection.close(); // Closing connection to create SQLException
-        Response response = oAuth2AuthzEndpoint.authorize(httpServletRequest, httpServletResponse);
-        assertEquals(response.getStatus(), HttpServletResponse.SC_NOT_FOUND);
-        assertNotNull(response.getEntity(), "Response entity is null");
-        assertTrue(response.getEntity().toString().contains(OAuth2ErrorCodes.SERVER_ERROR),
-                "Expected OAuth2 error code not found");
+        mockEndpointUtil();
+        mockStatic(OAuth2Util.OAuthURL.class);
+        when(OAuth2Util.OAuthURL.getOAuth2ErrorPageUrl()).thenReturn(ERROR_PAGE_URL);
+        when(oAuth2Service.getOauthApplicationState(CLIENT_ID_VALUE)).thenReturn("ACTIVE");
+
+        Response response;
+        try {
+            response = oAuth2AuthzEndpoint.authorize(httpServletRequest, httpServletResponse);
+        } catch (InvalidRequestParentException ire) {
+            InvalidRequestExceptionMapper invalidRequestExceptionMapper = new InvalidRequestExceptionMapper();
+            response = invalidRequestExceptionMapper.toResponse(ire);
+        }
+
+        assertEquals(response.getStatus(), HttpServletResponse.SC_FOUND);
     }
 
     private void mockHttpRequest(final Map<String, String[]> requestParams,

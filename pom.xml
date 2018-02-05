@@ -27,7 +27,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
     <artifactId>identity-inbound-auth-oauth</artifactId>
-    <version>5.5.67-SNAPSHOT</version>
+    <version>5.5.181-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>WSO2 Carbon OAuth module</name>
     <url>http://wso2.org</url>
@@ -40,6 +40,7 @@
     </scm>
 
     <modules>
+        <module>test-utils/org.wso2.carbon.identity.oauth.common.testng</module>
         <module>components/org.wso2.carbon.identity.oauth</module>
         <module>components/org.wso2.carbon.identity.oauth.common</module>
         <module>components/org.wso2.carbon.identity.oauth.endpoint</module>
@@ -112,6 +113,11 @@
             <dependency>
                 <groupId>org.wso2.carbon</groupId>
                 <artifactId>javax.cache.wso2</artifactId>
+                <version>${carbon.kernel.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.wso2.carbon</groupId>
+                <artifactId>org.wso2.carbon.tomcat.ext</artifactId>
                 <version>${carbon.kernel.version}</version>
             </dependency>
 
@@ -342,6 +348,12 @@
             </dependency>
             <dependency>
                 <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
+                <artifactId>org.wso2.carbon.identity.oauth.common.testng</artifactId>
+                <version>${project.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
                 <artifactId>org.wso2.carbon.identity.oauth.endpoint</artifactId>
                 <version>${project.version}</version>
                 <type>war</type>
@@ -483,7 +495,6 @@
                 <version>${carbon.identity.sso.saml.version}</version>
                 <scope>test</scope>
             </dependency>
-
 
             <dependency>
                 <groupId>commons-codec</groupId>
@@ -645,8 +656,8 @@
                 <inherited>true</inherited>
                 <configuration>
                     <encoding>UTF-8</encoding>
-                    <source>1.7</source>
-                    <target>1.7</target>
+                    <source>1.8</source>
+                    <target>1.8</target>
                 </configuration>
             </plugin>
             <plugin>
@@ -677,7 +688,7 @@
         <carbon.kernel.registry.imp.pkg.version.range>[1.0.1, 2.0.0)</carbon.kernel.registry.imp.pkg.version.range>
 
         <!-- Carbon Identity Framework version -->
-        <carbon.identity.framework.version>5.10.3</carbon.identity.framework.version>
+        <carbon.identity.framework.version>5.10.82</carbon.identity.framework.version>
         <carbon.identity.framework.imp.pkg.version.range>[5.0.0, 6.0.0)
         </carbon.identity.framework.imp.pkg.version.range>
 
@@ -754,7 +765,7 @@
         <!--Maven Plugin Version-->
         <carbon.p2.plugin.version>1.5.3</carbon.p2.plugin.version>
         <maven.compiler.plugin.version>2.3.1</maven.compiler.plugin.version>
-        <maven.scr.plugin.version>1.16.0</maven.scr.plugin.version>
+        <maven.scr.plugin.version>1.22.0</maven.scr.plugin.version>
         <maven.bundle.plugin.version>2.4.0</maven.bundle.plugin.version>
         <maven.buildnumber.plugin.version>1.4</maven.buildnumber.plugin.version>
 

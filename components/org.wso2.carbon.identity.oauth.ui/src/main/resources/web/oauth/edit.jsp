@@ -212,8 +212,7 @@
                             // This is to support providing regex patterns for callback URLs
                             if (callbackUrl.startsWith("regexp=")) {
                                 // skip validation
-                            } else if (!isWhiteListed(callbackUrl, ["url"]) || !isNotBlackListed(callbackUrl,
-                                            ["uri-unsafe-exists"])) {
+                            } else if (!isWhiteListed(callbackUrl, ["url"])) {
                                 CARBON.showWarningDialog('<fmt:message key="callback.is.not.url"/>');
                                 return false;
                             }
@@ -231,8 +230,7 @@
                             }
                         }
                     } else {
-                        if (!isWhiteListed(callbackUrl, ["url"]) || !isNotBlackListed(callbackUrl,
-                                        ["uri-unsafe-exists"])) {
+                        if (!isWhiteListed(callbackUrl, ["url"])) {
                             CARBON.showWarningDialog('<fmt:message key="callback.is.not.url"/>');
                             return false;
                         }

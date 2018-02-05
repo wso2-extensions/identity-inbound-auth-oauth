@@ -530,16 +530,16 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
     private void mockPrivilegedCarbonContext() {
         mockStatic(PrivilegedCarbonContext.class);
         when(PrivilegedCarbonContext.getThreadLocalCarbonContext()).thenReturn(mockedPrivilegedCarbonContext);
-        when(mockedPrivilegedCarbonContext.getOSGiService(OAuthServerConfiguration.class)).
+        when(mockedPrivilegedCarbonContext.getOSGiService(OAuthServerConfiguration.class, null)).
                 thenReturn(mockedOAuthServerConfiguration);
-        when(mockedPrivilegedCarbonContext.getOSGiService(WebFingerProcessor.class)).
+        when(mockedPrivilegedCarbonContext.getOSGiService(WebFingerProcessor.class, null)).
                 thenReturn(DefaultWebFingerProcessor.getInstance());
-        when(mockedPrivilegedCarbonContext.getOSGiService(OIDCProviderRequestBuilder.class)).
+        when(mockedPrivilegedCarbonContext.getOSGiService(OIDCProviderRequestBuilder.class, null)).
                 thenReturn(new DefaultOIDCProviderRequestBuilder());
-        when(mockedPrivilegedCarbonContext.getOSGiService(OIDCProcessor.class)).
+        when(mockedPrivilegedCarbonContext.getOSGiService(OIDCProcessor.class, null)).
                 thenReturn(DefaultOIDCProcessor.getInstance());
-        when(mockedPrivilegedCarbonContext.getOSGiService(OAuth2Service.class)).thenReturn(new OAuth2Service());
-        when(mockedPrivilegedCarbonContext.getOSGiService(OAuth2TokenValidationService.class)).
+        when(mockedPrivilegedCarbonContext.getOSGiService(OAuth2Service.class, null)).thenReturn(new OAuth2Service());
+        when(mockedPrivilegedCarbonContext.getOSGiService(OAuth2TokenValidationService.class, null)).
                 thenReturn(new OAuth2TokenValidationService());
     }
 

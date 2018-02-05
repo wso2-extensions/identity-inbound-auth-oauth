@@ -18,275 +18,126 @@
 
 package org.wso2.carbon.identity.openidconnect;
 
-import com.nimbusds.jose.JWSAlgorithm;
-import com.nimbusds.jwt.JWT;
-import com.nimbusds.jwt.JWTClaimsSet;
-import org.apache.commons.logging.Log;
-import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.testng.IObjectFactory;
-import org.testng.annotations.ObjectFactory;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
-import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
-import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
-import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
-import org.wso2.carbon.identity.application.common.model.Property;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
-import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
-import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
-import org.wso2.carbon.identity.core.util.IdentityConfigParser;
-import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
-import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
-import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
+import org.wso2.carbon.identity.application.mgt.internal.ApplicationManagementServiceComponent;
+import org.wso2.carbon.identity.application.mgt.internal.ApplicationManagementServiceComponentHolder;
+import org.wso2.carbon.identity.common.testng.WithAxisConfiguration;
+import org.wso2.carbon.identity.common.testng.WithCarbonHome;
+import org.wso2.carbon.identity.common.testng.WithH2Database;
+import org.wso2.carbon.identity.common.testng.WithKeyStore;
+import org.wso2.carbon.identity.common.testng.WithRealmService;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.oauth2.TestConstants;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
-import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
-import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.oauth2.test.utils.CommonTestUtils;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.identity.testutil.IdentityBaseTest;
+import org.wso2.carbon.identity.testutil.ReadCertStoreSampleUtil;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
+import org.wso2.carbon.idp.mgt.internal.IdpMgtServiceComponentHolder;
+import org.wso2.carbon.user.core.service.RealmService;
 
-import java.security.MessageDigest;
-import java.util.LinkedHashSet;
+import java.security.Key;
+import java.security.cert.Certificate;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Mockito.doNothing;
-import static org.powermock.api.mockito.PowerMockito.mock;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
-import static org.testng.Assert.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+import static org.wso2.carbon.identity.oauth2.test.utils.CommonTestUtils.setFinalStatic;
+import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
+import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_ID;
 
-@PrepareForTest({
-        IdentityProviderManager.class,
-        FederatedAuthenticatorConfig.class,
-        IdentityApplicationManagementUtil.class,
-        OAuthServerConfiguration.class, OAuth2Util.class,
-        JWTClaimsSet.class, FederatedAuthenticatorConfig.class,
-        MessageDigest.class,
-        IdentityConfigParser.class,
-        OAuth2ServiceComponentHolder.class})
+@WithCarbonHome
+@WithAxisConfiguration
+@WithH2Database(files = { "dbScripts/identity.sql" })
+@WithRealmService(injectToSingletons = {ApplicationManagementServiceComponentHolder.class})
+@WithKeyStore
 public class DefaultIDTokenBuilderTest extends IdentityBaseTest {
-    @Mock
-    private Log log;
 
-    @Mock
-    private IdentityProvider identityProvider;
+    public static final String TEST_APPLICATION_NAME = "DefaultIDTokenBuilderTest";
+    private DefaultIDTokenBuilder defaultIDTokenBuilder;
+    private OAuth2AccessTokenReqDTO tokenReqDTO = new OAuth2AccessTokenReqDTO();
+    private OAuthTokenReqMessageContext messageContext = new OAuthTokenReqMessageContext(tokenReqDTO);
+    private OAuth2AccessTokenRespDTO tokenRespDTO = new OAuth2AccessTokenRespDTO();
 
-    @Mock
-    private CustomClaimsCallbackHandler customClaimsCallbackHandler;
+    @BeforeClass
+    public void setUp() throws Exception {
+        tokenReqDTO.setTenantDomain(SUPER_TENANT_DOMAIN_NAME);
+        tokenReqDTO.setClientId(TestConstants.CLIENT_ID);
+        tokenReqDTO.setCallbackURI(TestConstants.CALLBACK);
 
-    @Mock
-    private OAuthServerConfiguration oAuthServerConfiguration;
+        AuthenticatedUser user = new AuthenticatedUser();
+        user.setAuthenticatedSubjectIdentifier(TestConstants.USER_NAME);
+        user.setUserName(TestConstants.USER_NAME);
+        user.setUserStoreDomain(TestConstants.USER_STORE_DOMAIN);
+        user.setTenantDomain(SUPER_TENANT_DOMAIN_NAME);
+        user.setFederatedUser(false);
 
-    @Mock
-    private JWTClaimsSet jwtClaimsSet;
+        messageContext.setAuthorizedUser(user);
 
-    @Mock
-    private OAuthAuthzReqMessageContext request;
+        messageContext.setScope(TestConstants.OPENID_SCOPE_STRING.split(" "));
 
-    @Mock
-    private OAuth2AuthorizeReqDTO oAuth2AuthorizeReqDTO;
+        tokenRespDTO.setAccessToken(TestConstants.ACCESS_TOKEN);
 
-    @Mock
-    private OAuth2AuthorizeRespDTO oAuth2AuthorizeRespDTO;
+        IdentityProvider idp = new IdentityProvider();
+        idp.setIdentityProviderName("LOCAL");
+        idp.setEnable(true);
 
-    @Mock
-    private IdentityProviderManager identityProviderManager;
+        IdentityProviderManager.getInstance().addResidentIdP(idp, SUPER_TENANT_DOMAIN_NAME);
+        defaultIDTokenBuilder =  new DefaultIDTokenBuilder();
 
-    @Mock
-    private FederatedAuthenticatorConfig federatedAuthenticatorConfig;
+        ApplicationManagementService applicationMgtService = mock(ApplicationManagementService.class);
+        OAuth2ServiceComponentHolder.setApplicationMgtService(applicationMgtService);
+        Map<String, ServiceProvider> fileBasedSPs = CommonTestUtils.getFileBasedSPs();
+        setFinalStatic(ApplicationManagementServiceComponent.class.getDeclaredField("fileBasedSPs"),
+                                       fileBasedSPs);
+        when(applicationMgtService
+                     .getApplicationExcludingFileBasedSPs(TEST_APPLICATION_NAME, SUPER_TENANT_DOMAIN_NAME))
+                .thenReturn(fileBasedSPs.get(TEST_APPLICATION_NAME));
+        when(applicationMgtService
+                     .getServiceProviderNameByClientId(TestConstants.CLIENT_ID, TestConstants.APP_TYPE,
+                                                       SUPER_TENANT_DOMAIN_NAME))
+                .thenReturn(TEST_APPLICATION_NAME);
+        RealmService realmService = IdentityTenantUtil.getRealmService();
+        HashMap<String, String> claims = new HashMap<>();
+        claims.put("http://wso2.org/claims/username", TestConstants.USER_NAME);
+        realmService.getTenantUserRealm(SUPER_TENANT_ID).getUserStoreManager()
+                    .addUser(TestConstants.USER_NAME, TestConstants.PASSWORD, new String[0], claims,
+                             TestConstants.DEFAULT_PROFILE);
 
-    @Mock
-    private AuthenticatedUser authenticatedUser;
+        Map<Integer, Certificate> publicCerts = new ConcurrentHashMap<>();
+        publicCerts.put(SUPER_TENANT_ID, ReadCertStoreSampleUtil.createKeyStore(getClass())
+                                                                .getCertificate("wso2carbon"));
+        setFinalStatic(OAuth2Util.class.getDeclaredField("publicCerts"), publicCerts);
+        Map<Integer, Key> privateKeys = new ConcurrentHashMap<>();
+        privateKeys.put(SUPER_TENANT_ID, ReadCertStoreSampleUtil.createKeyStore(getClass())
+                                                                .getKey("wso2carbon", "wso2carbon".toCharArray()));
+        setFinalStatic(OAuth2Util.class.getDeclaredField("privateKeys"), privateKeys);
 
-    @Mock
-    private Property property;
-
-    @Mock
-    private MessageDigest messageDigest;
-
-    @Mock
-    private OAuthTokenReqMessageContext request1;
-
-    @Mock
-    private OAuth2AccessTokenReqDTO tokenReqDTO;
-
-    @Mock
-    private OAuth2AccessTokenRespDTO oAuth2AccessTokenRespDTO;
-
-    @Mock
-    private JWT jwt;
-
-    @Mock
-    private IdentityConfigParser identityConfigParser;
-
-    @Mock
-    private ApplicationManagementService applicationManagementService;
-
-    @Mock
-    private ServiceProvider serviceProvider;
-
-    @ObjectFactory
-    public IObjectFactory getObjectFactory() {
-        return new org.powermock.modules.testng.PowerMockObjectFactory();
+        OpenIDConnectServiceComponentHolder.getInstance()
+                .getOpenIDConnectClaimFilters().add(new OpenIDConnectClaimFilterImpl());
     }
 
-    private String SUBJECT_IDENTIFIER = "Subjectdentifier1";
-    private String CLIENT_NAME = "ClientName1";
-    private String ACCESSTOKEN_NAME = "AccessToken1";
-    private String ALGORITHM = "Algorithm1";
-    private String RESPONSE = "Response1";
-    private String CONSUMERKEY = "Key1";
-    private String TENANT_DOMAIN = "Tenant1";
-    private String NONCE = "Nonce1";
-
-    @Test(expectedExceptions = IdentityOAuth2Exception.class)
-    public void testBuildIDToken() throws Exception {
-        request1 = mock(OAuthTokenReqMessageContext.class);
-        tokenReqDTO = mock(OAuth2AccessTokenReqDTO.class);
-        when(request1.getOauth2AccessTokenReqDTO()).thenReturn(tokenReqDTO);
-        when(tokenReqDTO.getTenantDomain()).thenReturn(TENANT_DOMAIN);
-        identityProvider = mock(IdentityProvider.class);
-        mockStatic(IdentityProviderManager.class);
-        when(IdentityProviderManager.getInstance()).thenReturn(identityProviderManager);
-        when(identityProviderManager.getResidentIdP(anyString())).thenReturn(identityProvider);
-
-        FederatedAuthenticatorConfig[] federatedAuthenticatorConfigs = new FederatedAuthenticatorConfig[10];
-        when(identityProvider.getFederatedAuthenticatorConfigs()).thenReturn(federatedAuthenticatorConfigs);
-
-        mockStatic(IdentityApplicationManagementUtil.class);
-        when(IdentityApplicationManagementUtil
-                .getFederatedAuthenticator(federatedAuthenticatorConfigs, "user1"))
-                .thenReturn(federatedAuthenticatorConfig);
-        Property[] properties = new Property[1];
-        Property property = new Property();
-        property.setName("IdPEntityId");
-        property.setValue("localhost");
-        properties[0] = property;
-
-        federatedAuthenticatorConfig.setProperties(properties);
-        FederatedAuthenticatorConfig[] federatedAuthenticatorConfig1 = new FederatedAuthenticatorConfig[10];
-        when(identityProvider.getFederatedAuthenticatorConfigs()).thenReturn(federatedAuthenticatorConfig1);
-
-        mockStatic(IdentityApplicationManagementUtil.class);
-        when(IdentityApplicationManagementUtil
-                .getFederatedAuthenticator(federatedAuthenticatorConfigs, IdentityApplicationConstants
-                        .Authenticator.OIDC.NAME)).thenReturn(federatedAuthenticatorConfig);
-        when(IdentityApplicationManagementUtil.getProperty(any(Property[].class), anyString())).thenCallRealMethod();
-
-        when(federatedAuthenticatorConfig.getProperties()).thenReturn(properties);
-
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
-        when(oAuthServerConfiguration.getTimeStampSkewInSeconds()).thenReturn((long) 3);
-        mockStatic(OAuth2Util.class);
-        when(oAuthServerConfiguration.getOpenIDConnectIDTokenExpiration()).thenReturn(String.valueOf((int) 78383));
-        when(OAuth2Util.mapDigestAlgorithm(any(JWSAlgorithm.class))).thenReturn(String.valueOf(JWSAlgorithm.RS256));
-
-        when(request1.getAuthorizedUser()).thenReturn(authenticatedUser);
-        when(authenticatedUser.getAuthenticatedSubjectIdentifier()).thenReturn(SUBJECT_IDENTIFIER);
-
-        applicationManagementService = mock(ApplicationManagementService.class);
-        serviceProvider = mock(ServiceProvider.class);
-
-        mockStatic(OAuth2ServiceComponentHolder.class);
-        when(OAuth2ServiceComponentHolder.getApplicationMgtService()).thenReturn(applicationManagementService);
-        when(applicationManagementService.
-                getApplicationExcludingFileBasedSPs(anyString(), anyString()))
-                .thenThrow(new IdentityApplicationManagementException("IdentityApplicationManagementException"));
-
-        when(applicationManagementService.getServiceProviderByClientId(anyString(), anyString(), anyString()))
-                .thenReturn(serviceProvider);
-        when(tokenReqDTO.getClientId()).thenReturn(CLIENT_NAME);
-
-        JWSAlgorithm jwsAlgorithm1 = new JWSAlgorithm(ALGORITHM);
-        when(OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(anyString())).thenReturn(jwsAlgorithm1);
-        when(OAuth2Util.mapDigestAlgorithm(any(JWSAlgorithm.class))).thenReturn("SHA-256");
-
-        mockStatic(MessageDigest.class);
-        when(MessageDigest.getInstance(String.valueOf(JWSAlgorithm.RS256))).thenReturn(messageDigest);
-        when(oAuth2AccessTokenRespDTO.getAccessToken()).thenReturn(ACCESSTOKEN_NAME);
-
-        mockStatic(IdentityConfigParser.class);
-        when(IdentityConfigParser.getInstance()).thenReturn(identityConfigParser);
-        when(oAuthServerConfiguration.getOpenIDConnectCustomClaimsCallbackHandler())
-                .thenReturn(customClaimsCallbackHandler);
-        doNothing().when(customClaimsCallbackHandler).handleCustomClaims(jwtClaimsSet, request);
-
-        when(OAuth2Util.signJWT(any(JWTClaimsSet.class), any(JWSAlgorithm.class), anyString())).thenReturn(jwt);
-        DefaultIDTokenBuilder defaultIDTokenBuilder1 = new DefaultIDTokenBuilder();
-        assertEquals(defaultIDTokenBuilder1.buildIDToken(request1, oAuth2AccessTokenRespDTO), null,
-                "Default token binder generated successfully.");
-    }
 
     @Test
-    public void testBuildIDTokenAuthorize() throws Exception {
-        request = mock(OAuthAuthzReqMessageContext.class);
-        identityProvider = mock(IdentityProvider.class);
-        identityProviderManager = mock(IdentityProviderManager.class);
-        authenticatedUser = mock(AuthenticatedUser.class);
-        when(request.getAuthorizationReqDTO()).thenReturn(oAuth2AuthorizeReqDTO);
-        when(oAuth2AuthorizeReqDTO.getTenantDomain()).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
-        mockStatic(IdentityProviderManager.class);
-        when(IdentityProviderManager.getInstance()).thenReturn(identityProviderManager);
-        when(identityProviderManager.getResidentIdP(anyString())).thenReturn(identityProvider);
-
-        Property[] properties = new Property[1];
-        Property property = new Property();
-        property.setName("IdPEntityId");
-        property.setValue("localhost");
-        properties[0] = property;
-
-        federatedAuthenticatorConfig.setProperties(properties);
-        FederatedAuthenticatorConfig[] federatedAuthenticatorConfigs = new FederatedAuthenticatorConfig[10];
-        when(identityProvider.getFederatedAuthenticatorConfigs()).thenReturn(federatedAuthenticatorConfigs);
-
-        mockStatic(IdentityApplicationManagementUtil.class);
-        when(IdentityApplicationManagementUtil.
-                getFederatedAuthenticator(federatedAuthenticatorConfigs, IdentityApplicationConstants
-                        .Authenticator.OIDC.NAME)).thenReturn(federatedAuthenticatorConfig);
-        when(IdentityApplicationManagementUtil.getProperty(any(Property[].class), anyString())).thenCallRealMethod();
-        when(federatedAuthenticatorConfig.getProperties()).thenReturn(properties);
-
-        when(oAuth2AuthorizeReqDTO.getUser()).thenReturn(authenticatedUser);
-        when(authenticatedUser.getAuthenticatedSubjectIdentifier()).thenReturn(SUBJECT_IDENTIFIER);
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
-        when(oAuthServerConfiguration.getTimeStampSkewInSeconds()).thenReturn((long) 3);
-        mockStatic(OAuth2Util.class);
-        when(oAuthServerConfiguration.getOpenIDConnectIDTokenExpiration()).thenReturn(String.valueOf((int) 78383));
-
-        when(oAuth2AuthorizeReqDTO.getNonce()).thenReturn(NONCE);
-        LinkedHashSet set1 = new LinkedHashSet(10);
-        when(oAuth2AuthorizeReqDTO.getACRValues()).thenReturn(set1);
-        when(oAuth2AuthorizeReqDTO.getResponseType()).thenReturn(RESPONSE);
-
-        JWSAlgorithm jwsAlgorithm = new JWSAlgorithm(ALGORITHM);
-        when(OAuth2Util.mapDigestAlgorithm(any(JWSAlgorithm.class))).thenReturn("SHA-256");
-        when(oAuthServerConfiguration.getIdTokenSignatureAlgorithm()).thenReturn(ALGORITHM);
-        mockStatic(FederatedAuthenticatorConfig.class);
-
-        JWSAlgorithm jwsAlgorithm1 = new JWSAlgorithm(ALGORITHM);
-        when(OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(anyString())).thenReturn(jwsAlgorithm1);
-
-        mockStatic(MessageDigest.class);
-        when(MessageDigest.getInstance(String.valueOf(JWSAlgorithm.RS256))).thenReturn(messageDigest);
-        when(oAuth2AuthorizeRespDTO.getAccessToken()).thenReturn(ACCESSTOKEN_NAME);
-        when(oAuth2AuthorizeReqDTO.getConsumerKey()).thenReturn(CONSUMERKEY);
-        mockStatic(IdentityConfigParser.class);
-        when(IdentityConfigParser.getInstance()).thenReturn(identityConfigParser);
-        when(oAuthServerConfiguration.getOpenIDConnectCustomClaimsCallbackHandler())
-                .thenReturn(customClaimsCallbackHandler);
-        doNothing().when(customClaimsCallbackHandler).handleCustomClaims(jwtClaimsSet, request);
-
-        when(OAuth2Util.signJWT(any(JWTClaimsSet.class), any(JWSAlgorithm.class), anyString())).thenReturn(jwt);
-        DefaultIDTokenBuilder defaultIDTokenBuilder = new DefaultIDTokenBuilder();
-        assertEquals(defaultIDTokenBuilder.buildIDToken(request, oAuth2AuthorizeRespDTO), null, "Successfully authorized token");
+    public void testBuildIDToken() throws Exception {
+        RealmService realmService = IdentityTenantUtil.getRealmService();
+        PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                               .setUserRealm(realmService.getTenantUserRealm(SUPER_TENANT_ID));
+        IdpMgtServiceComponentHolder.getInstance().setRealmService(IdentityTenantUtil.getRealmService());
+        defaultIDTokenBuilder.buildIDToken(messageContext, tokenRespDTO);
     }
+
 }

@@ -12,6 +12,8 @@
         </jaxrs:serviceBeans>
         <jaxrs:providers>
             <bean class="com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider"/>
+            <bean class="com.fasterxml.jackson.jaxrs.base.JsonMappingExceptionMapper"/>
+            <bean class="com.fasterxml.jackson.jaxrs.base.JsonParseExceptionMapper"/>
         </jaxrs:providers>
     </jaxrs:server>
 </beans>

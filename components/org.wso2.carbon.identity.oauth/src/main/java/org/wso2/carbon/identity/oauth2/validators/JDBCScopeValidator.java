@@ -32,7 +32,7 @@ import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
-import org.wso2.carbon.identity.oauth2.dao.TokenMgtDAO;
+import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.ResourceScopeCacheEntry;
 import org.wso2.carbon.user.api.UserStoreException;
@@ -77,7 +77,6 @@ public class JDBCScopeValidator extends OAuth2ScopeValidator {
 
         String resourceScope = null;
         int resourceTenantId = -1;
-        TokenMgtDAO tokenMgtDAO = new TokenMgtDAO();
 
         boolean cacheHit = false;
         // Check the cache, if caching is enabled.
@@ -94,7 +93,8 @@ public class JDBCScopeValidator extends OAuth2ScopeValidator {
 
         // Cache was not hit. So retrieve from database.
         if (!cacheHit) {
-            Pair<String, Integer> scopeMap = tokenMgtDAO.findTenantAndScopeOfResource(resource);
+            Pair<String, Integer> scopeMap = OAuthTokenPersistenceFactory.getInstance()
+                    .getTokenManagementDAO().findTenantAndScopeOfResource(resource);
 
             if (scopeMap != null) {
                 resourceScope = scopeMap.getLeft();
@@ -139,7 +139,8 @@ public class JDBCScopeValidator extends OAuth2ScopeValidator {
 
         try {
             //Get the roles associated with the scope, if any
-            Set<String> rolesOfScope = tokenMgtDAO.getBindingsOfScopeByScopeName(resourceScope, resourceTenantId);
+            Set<String> rolesOfScope = OAuthTokenPersistenceFactory.getInstance()
+                    .getOAuthScopeDAO().getBindingsOfScopeByScopeName(resourceScope, resourceTenantId);
 
             //If the scope doesn't have any roles associated with it.
             if(rolesOfScope == null || rolesOfScope.isEmpty()){

@@ -54,6 +54,7 @@ public class ScopeUtilsTest extends PowerMockTestCase {
     private final String CODE = "AJYRKLWB68NSB9";
     private final String MESSAGE = "Lifecycle exception occurred";
     private final String DESCRIPTION = "Error occurred while changing lifecycle state";
+    private final String SCOPE_DESCRIPTION = "This is a sample scope";
 
     private static final Log log = LogFactory.getLog(ScopeUtilsTest.class);
 
@@ -91,13 +92,15 @@ public class ScopeUtilsTest extends PowerMockTestCase {
     public void testGetScope() throws Exception {
 
         ScopeDTO scopeDTO = new ScopeDTO();
-        scopeDTO.setName("clientname");
-        scopeDTO.setDescription("Error occurred while changing lifecycle state");
+        scopeDTO.setName(CLIENT_NAME);
+        scopeDTO.setDisplayName(CLIENT_NAME);
+        scopeDTO.setDescription(SCOPE_DESCRIPTION);
         ArrayList binding = new ArrayList();
 
         Scope scope1 = ScopeUtils.getScope(scopeDTO);
         assertEquals(scope1.getName(), CLIENT_NAME, "Actual name is not match for expected name");
-        assertEquals(scope1.getDescription(), DESCRIPTION, "Actual description is not match for expected description");
+        assertEquals(scope1.getDisplayName(), CLIENT_NAME, "Actual display name is not match for expected display name");
+        assertEquals(scope1.getDescription(), SCOPE_DESCRIPTION, "Actual description is not match for expected description");
         assertEquals(scope1.getBindings(), binding, "Actual binding is not match for expected binding");
     }
 
@@ -105,12 +108,13 @@ public class ScopeUtilsTest extends PowerMockTestCase {
     public void testGetScopeDTO() throws Exception {
         ArrayList bindings = new ArrayList();
         bindings.add("binding1");
-        Scope scope = new Scope(CLIENT_NAME, DESCRIPTION, bindings);
+        Scope scope = new Scope(CLIENT_NAME, CLIENT_NAME, SCOPE_DESCRIPTION, bindings);
 
         ScopeDTO scopeDTO1 = ScopeUtils.getScopeDTO(scope);
         assertEquals(scopeDTO1.getBindings(), bindings, "Actual binding is not match for expected binding");
         assertTrue(scopeDTO1.getBindings().get(0).contains("binding1"));
-        assertEquals(scopeDTO1.getDescription(), DESCRIPTION, "Actual description is not match for expected description");
+        assertEquals(scopeDTO1.getDisplayName(), CLIENT_NAME, "Actual display name is not match for expected display name");
+        assertEquals(scopeDTO1.getDescription(), SCOPE_DESCRIPTION, "Actual description is not match for expected description");
         assertEquals(scopeDTO1.getName(), CLIENT_NAME, "Actual name is not match for expected name");
     }
 
@@ -119,11 +123,12 @@ public class ScopeUtilsTest extends PowerMockTestCase {
 
         ScopeToUpdateDTO sc = new ScopeToUpdateDTO();
         ArrayList bindings = new ArrayList();
-        sc.setDescription("Error occurred while changing lifecycle state");
+        sc.setDisplayName(CLIENT_NAME);
+        sc.setDescription(SCOPE_DESCRIPTION);
 
         Scope scope1 = ScopeUtils.getUpdatedScope(sc, "Actual name is not match for expected name");
         assertEquals(scope1.getBindings(), bindings, "Actual binding is not match for expected binding");
-        assertEquals(scope1.getDescription(), DESCRIPTION, "Actual description is not match for expected description");
+        assertEquals(scope1.getDescription(), SCOPE_DESCRIPTION, "Actual description is not match for expected description");
     }
 
     @Test(description = "Testing getScopeDTO")
@@ -133,7 +138,7 @@ public class ScopeUtilsTest extends PowerMockTestCase {
         Set<Scope> scopes = new HashSet<>();
         ArrayList<String> bindings = new ArrayList<>(Arrays.asList("scope1", "scope2"));
         for (int i = 0; i < scopeSize; i++) {
-            Scope scope1 = new Scope(CLIENT_NAME + "" + i, DESCRIPTION, bindings);
+            Scope scope1 = new Scope(CLIENT_NAME + "" + i, CLIENT_NAME + "" + i, SCOPE_DESCRIPTION, bindings);
             scopes.add(scope1);
         }
         Set<ScopeDTO> scopeDTOs = ScopeUtils.getScopeDTOs(scopes);

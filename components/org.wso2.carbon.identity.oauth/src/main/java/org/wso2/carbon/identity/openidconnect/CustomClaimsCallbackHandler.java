@@ -22,7 +22,7 @@ import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 
 /**
- * Builds custom claims for the {@code IDToken}
+ * Extension point to populate user claims to build the id_token/self contained JWT access token
  */
 public interface CustomClaimsCallbackHandler {
 

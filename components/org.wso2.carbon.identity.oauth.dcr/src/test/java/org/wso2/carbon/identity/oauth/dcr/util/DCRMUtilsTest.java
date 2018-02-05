@@ -25,10 +25,12 @@ import org.wso2.carbon.identity.oauth.dcr.exception.DCRMClientException;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMServerException;
 import org.wso2.carbon.identity.testutil.IdentityBaseTest;
 
+import static org.testng.Assert.fail;
+
 public class DCRMUtilsTest extends IdentityBaseTest{
 
     @DataProvider(name = "BuildRedirectUrl")
-    public Object[][] BuildRedirectUrl() {
+    public Object[][] buildRedirectUrl() {
         return new Object[][] {
                 {"http://example.com/", true},
                 {null, false},
@@ -42,51 +44,36 @@ public class DCRMUtilsTest extends IdentityBaseTest{
     }
 
     @DataProvider(name = "BuildServerException")
-    public Object[][] BuildServerException() {
+    public Object[][] buildServerException() {
         return new Object[][] {
-                {DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_INPUT,""},
-                {DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_INPUT,"error from bad request"}
+                {DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_INPUT, ""},
+                {DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_INPUT, "error from bad request"}
         };
     }
 
-    @Test(dataProvider = "BuildServerException")
+    @Test(dataProvider = "BuildServerException", expectedExceptions = DCRMServerException.class)
+    public void testThrowableServerException(DCRMConstants.ErrorMessages error, String data) throws Exception {
+        Throwable e = new Throwable();
+        throw DCRMUtils.generateServerException(error, data, e);
+    }
+
+    @Test(dataProvider = "BuildServerException", expectedExceptions = DCRMServerException.class)
     public void testGenerateServerException(DCRMConstants.ErrorMessages error, String data) throws Exception {
+        throw DCRMUtils.generateServerException(error, data);
+    }
+
+
+
+    @Test(dataProvider = "BuildServerException", expectedExceptions = DCRMClientException.class)
+    public void testThrowableClientException(DCRMConstants.ErrorMessages error, String data) throws Exception {
         Throwable e = new Throwable();
-        try {
-            DCRMUtils.generateServerException(error,data,e);
-        } catch (DCRMServerException ex) {
-            Assert.assertEquals(ex.getMessage(), data);
-        }
+        throw DCRMUtils.generateClientException(error, data, e);
 
     }
 
-    @Test(dataProvider = "BuildServerException")
-    public void testGenerateServerException1(DCRMConstants.ErrorMessages error, String data) throws Exception {
-        try {
-            DCRMUtils.generateServerException(error,data);
-        } catch (DCRMServerException e){
-            Assert.assertEquals(e.getMessage(),data);
-        }
-
-    }
-
-    @Test(dataProvider = "BuildServerException")
+    @Test(dataProvider = "BuildServerException", expectedExceptions = DCRMClientException.class)
     public void testGenerateClientException(DCRMConstants.ErrorMessages error, String data) throws Exception {
-        Throwable e = new Throwable();
-        try {
-            DCRMUtils.generateClientException(error,data,e);
-        } catch (DCRMClientException ex) {
-            Assert.assertEquals(ex.getMessage(),data);
-        }
-    }
-
-    @Test(dataProvider = "BuildServerException")
-    public void testGenerateClientException1(DCRMConstants.ErrorMessages error, String data) throws Exception {
-        try {
-            DCRMUtils.generateClientException(error,data);
-        } catch (DCRMClientException e){
-            Assert.assertEquals(e.getMessage(),data);
-        }
+        throw DCRMUtils.generateClientException(error, data);
 
     }
 }

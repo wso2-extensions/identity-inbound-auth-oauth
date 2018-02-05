@@ -51,22 +51,20 @@ import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.fail;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AParams.OAUTH_VERSION;
 
+/**
+ * Unit test covering DCRManagementService
+ */
 @PrepareForTest(DCRManagementService.class)
 public class DCRManagementServiceTest extends PowerMockTestCase {
 
     private DCRManagementService dcrManagementService;
 
-    private String ownerName = "dummyOwner";
-    private String clientName = "dummyClientName";
     private List<String> dummyGrantTypes = new ArrayList<>();
     private String tenantDomain = "dummyTenantDomain";
-    private String userName = "dummyUserName";
-    private String dummyOauthConsumerSecret = "dummyOauthConsumerSecret";
     private String applicationName;
 
-    private RegistrationRequestProfile mockRegistrationRequestProfile;
+    private RegistrationRequestProfile registrationRequestProfile;
     private ApplicationManagementService mockApplicationManagementService;
-    private OAuthAdminService mockOAuthAdminService;
 
     @BeforeTest
     public void getInstanceTest() {
@@ -75,6 +73,7 @@ public class DCRManagementServiceTest extends PowerMockTestCase {
         dummyGrantTypes.add("implicit");
         dcrManagementService = DCRManagementService.getInstance();
         assertNotNull(dcrManagementService);
+        registrationRequestProfile = new RegistrationRequestProfile();
     }
 
     @Test
@@ -82,15 +81,9 @@ public class DCRManagementServiceTest extends PowerMockTestCase {
 
         registerOAuthApplication();
 
-        mockRegistrationRequestProfile = mock(RegistrationRequestProfile.class);
-        when(mockRegistrationRequestProfile.getOwner()).thenReturn(ownerName);
-        when(mockRegistrationRequestProfile.getClientName()).thenReturn(clientName);
-        when(mockRegistrationRequestProfile.getGrantTypes()).thenReturn(dummyGrantTypes);
-        when(mockRegistrationRequestProfile.getTenantDomain()).thenReturn(tenantDomain);
-
         startTenantFlow();
         try {
-            dcrManagementService.registerOAuthApplication(mockRegistrationRequestProfile);
+            dcrManagementService.registerOAuthApplication(registrationRequestProfile);
         } catch (IllegalStateException ex) {
             assertEquals(ex.getMessage(), "ApplicationManagementService is not initialized properly");
             return;
@@ -112,7 +105,7 @@ public class DCRManagementServiceTest extends PowerMockTestCase {
         assertNotNull(dcrDataHolder, "null DCRDataHolder");
 
         try {
-            dcrManagementService.registerOAuthApplication(mockRegistrationRequestProfile);
+            dcrManagementService.registerOAuthApplication(registrationRequestProfile);
         } catch (IdentityException ex) {
             assertEquals(ex.getMessage(), "Couldn't create Service Provider Application " + applicationName);
             return;
@@ -134,7 +127,7 @@ public class DCRManagementServiceTest extends PowerMockTestCase {
                 getServiceProvider(applicationName, tenantDomain);
 
         try {
-            dcrManagementService.registerOAuthApplication(mockRegistrationRequestProfile);
+            dcrManagementService.registerOAuthApplication(registrationRequestProfile);
         } catch (IdentityException ex) {
             assertEquals(ex.getMessage(), "Error occurred while reading service provider, " + applicationName);
             return;
@@ -158,7 +151,7 @@ public class DCRManagementServiceTest extends PowerMockTestCase {
         assertNotNull(dcrDataHolder);
 
         try {
-            dcrManagementService.registerOAuthApplication(mockRegistrationRequestProfile);
+            dcrManagementService.registerOAuthApplication(registrationRequestProfile);
         } catch (IdentityException ex) {
             assertEquals(ex.getMessage(), "Service Provider with name: " + applicationName +
                     " already registered");
@@ -180,7 +173,7 @@ public class DCRManagementServiceTest extends PowerMockTestCase {
         when(mockApplicationManagementService.getServiceProvider(applicationName, tenantDomain)).thenReturn(null,
                 new ServiceProvider());
         try {
-            dcrManagementService.registerOAuthApplication(mockRegistrationRequestProfile);
+            dcrManagementService.registerOAuthApplication(registrationRequestProfile);
         } catch (IdentityException ex) {
             assertEquals(ex.getMessage(), "RedirectUris property must have at least one URI value.");
             return;
@@ -206,10 +199,10 @@ public class DCRManagementServiceTest extends PowerMockTestCase {
         when(mockApplicationManagementService.getServiceProvider(applicationName, tenantDomain)).thenReturn(null,
                 new ServiceProvider());
 
-        when(mockRegistrationRequestProfile.getRedirectUris()).thenReturn(redirectUris);
+        registrationRequestProfile.setRedirectUris(redirectUris);
 
         try {
-            dcrManagementService.registerOAuthApplication(mockRegistrationRequestProfile);
+            dcrManagementService.registerOAuthApplication(registrationRequestProfile);
         } catch (IdentityException ex) {
             assertEquals(ex.getMessage(), "Redirect URI: " + redirectUri + ", is invalid");
             return;
@@ -233,6 +226,7 @@ public class DCRManagementServiceTest extends PowerMockTestCase {
         dummyGrantTypes3.add("code");
         dummyGrantTypes3.add("implicit");
 
+        String dummyOauthConsumerSecret = "dummyOauthConsumerSecret";
         return new Object[][]{
                 {"", redirectUri1, dummyGrantTypes2},
                 {dummyOauthConsumerSecret, redirectUri2, dummyGrantTypes2},
@@ -247,7 +241,7 @@ public class DCRManagementServiceTest extends PowerMockTestCase {
         registerOAuthApplication();
 
         mockApplicationManagementService = mock(ApplicationManagementService.class);
-        when(mockRegistrationRequestProfile.getGrantTypes()).thenReturn(dummyGrantType);
+        registrationRequestProfile.setGrantTypes(dummyGrantType);
 
         DCRDataHolder dcrDataHolder = DCRDataHolder.getInstance();
         dcrDataHolder.setApplicationManagementService(mockApplicationManagementService);
@@ -255,9 +249,9 @@ public class DCRManagementServiceTest extends PowerMockTestCase {
         when(mockApplicationManagementService.getServiceProvider(applicationName, tenantDomain)).thenReturn(null,
                 new ServiceProvider());
 
-        when(mockRegistrationRequestProfile.getRedirectUris()).thenReturn(redirectUris);
+        registrationRequestProfile.setRedirectUris(redirectUris);
 
-        mockOAuthAdminService = mock(OAuthAdminService.class);
+        OAuthAdminService mockOAuthAdminService = mock(OAuthAdminService.class);
 
         OAuthConsumerAppDTO oAuthConsumerApp = new OAuthConsumerAppDTO();
         oAuthConsumerApp.setApplicationName(applicationName);
@@ -276,21 +270,21 @@ public class DCRManagementServiceTest extends PowerMockTestCase {
         when(mockOAuthAdminService
                 .getOAuthApplicationDataByAppName(applicationName)).thenReturn(oAuthConsumerApp);
 
-        RegistrationResponseProfile registrationRequestProfile = dcrManagementService.registerOAuthApplication
-                (mockRegistrationRequestProfile);
-        assertEquals(registrationRequestProfile.getGrantTypes(), dummyGrantType);
-        assertEquals(registrationRequestProfile.getClientName(), applicationName);
+        RegistrationResponseProfile registrationRqstProfile = dcrManagementService.registerOAuthApplication
+                (registrationRequestProfile);
+        assertEquals(registrationRqstProfile.getGrantTypes(), dummyGrantType);
+        assertEquals(registrationRqstProfile.getClientName(), applicationName);
     }
 
     private void registerOAuthApplication() {
 
-        mockRegistrationRequestProfile = mock(RegistrationRequestProfile.class);
-        when(mockRegistrationRequestProfile.getClientName()).thenReturn(applicationName);
-        when(mockRegistrationRequestProfile.getOwner()).thenReturn(ownerName);
-        when(mockRegistrationRequestProfile.getClientName()).thenReturn(clientName);
-        when(mockRegistrationRequestProfile.getGrantTypes()).thenReturn(dummyGrantTypes);
-        when(mockRegistrationRequestProfile.getTenantDomain()).thenReturn(tenantDomain);
-        applicationName = mockRegistrationRequestProfile.getOwner() + "_" + mockRegistrationRequestProfile
+        String clientName = "dummyClientName";
+        registrationRequestProfile.setClientName(clientName);
+        String ownerName = "dummyOwner";
+        registrationRequestProfile.setOwner(ownerName);
+        registrationRequestProfile.setGrantTypes(dummyGrantTypes);
+        registrationRequestProfile.setTenantDomain(tenantDomain);
+        applicationName = registrationRequestProfile.getOwner() + "_" + registrationRequestProfile
                 .getClientName();
 
         startTenantFlow();
@@ -302,6 +296,7 @@ public class DCRManagementServiceTest extends PowerMockTestCase {
         System.setProperty(CarbonBaseConstants.CARBON_HOME, carbonHome);
         PrivilegedCarbonContext.startTenantFlow();
         PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(tenantDomain);
+        String userName = "dummyUserName";
         PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(userName);
     }
 }

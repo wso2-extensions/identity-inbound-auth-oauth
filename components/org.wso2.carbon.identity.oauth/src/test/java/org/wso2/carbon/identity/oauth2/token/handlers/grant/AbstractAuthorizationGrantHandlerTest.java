@@ -18,318 +18,338 @@
 
 package org.wso2.carbon.identity.oauth2.token.handlers.grant;
 
-import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
-import org.wso2.carbon.identity.core.util.IdentityUtil;
-import org.wso2.carbon.identity.oauth.cache.OAuthCache;
-import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
-import org.wso2.carbon.identity.oauth.callback.OAuthCallbackManager;
+import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.common.testng.WithCarbonHome;
+import org.wso2.carbon.identity.common.testng.WithH2Database;
+import org.wso2.carbon.identity.common.testng.WithRealmService;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.common.GrantType;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthCallbackHandlerMetaData;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
-import org.wso2.carbon.identity.oauth2.dao.TokenMgtDAO;
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.TestConstants;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
-import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
-import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
+import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuerImpl;
+import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeHandler;
 
-import java.lang.reflect.Field;
-import java.sql.Timestamp;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.anyLong;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.MockitoAnnotations.initMocks;
-import static org.powermock.api.mockito.PowerMockito.doCallRealMethod;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
+import static org.mockito.Mockito.verify;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenStates.TOKEN_STATE_REVOKED;
 
-@PrepareForTest({OAuth2Util.class, IdentityUtil.class, OAuthServerConfiguration.class, OAuthCache.class})
-public class AbstractAuthorizationGrantHandlerTest extends PowerMockIdentityBaseTest {
+@WithCarbonHome
+@WithH2Database(jndiName = "jdbc/WSO2IdentityDB",
+                files = { "dbScripts/h2_with_application_and_token.sql", "dbScripts/identity.sql" })
+@WithRealmService(injectToSingletons = { OAuthComponentServiceHolder.class })
+public class AbstractAuthorizationGrantHandlerTest {
 
-    private static final String DEFAULT_CALLBACK_HANDLER_CLASS_NAME =
-            "org.wso2.carbon.identity.oauth.callback.DefaultCallbackHandler";
+    private AbstractAuthorizationGrantHandler handler;
+
+    private OauthTokenIssuer oauthIssuer;
+
+    private RefreshGrantHandler refreshGrantHandler;
+    private AuthenticatedUser authenticatedUser;
+    private String clientId;
+    private String tokenId;
+    private String appId = "TestApp1";
+
+    private static final String CUSTOM_GRANT = "custom grant";
+    private static final String DEFAULT_CALLBACK_HANDLER_CLASS_NAME = "org.wso2.carbon.identity.oauth.callback.DefaultCallbackHandler";
     private static final String PASSWORD_GRANT = "password";
 
-    @Mock
-    private AbstractAuthorizationGrantHandler handler;
-    @Mock
-    private OAuthTokenReqMessageContext tokReqMsgCtx;
-    @Mock
-    private OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO;
-    @Mock
-    private OAuthAppDO oAuthAppDO;
-    @Mock
-    private TokenMgtDAO tokenMgtDAO;
-    @Mock
-    private OAuthCallbackManager oAuthCallbackManager;
-    @Mock
-    private OAuthServerConfiguration serverConfiguration;
-    @Mock
-    private OAuthCache oAuthCache;
-    @Mock
-    private OauthTokenIssuer oauthIssuer;
-    @Mock
-    private AccessTokenDO cacheEntry;
-    @Mock
-    private AccessTokenDO accessTokenDO;
-    @Mock
-    private RefreshGrantHandler refreshGrantHandler;
-    @Mock
-    private AuthenticatedUser authenticatedUser;
-
-    private String accessToken = "654564654646456456456456487987";
-    private static final String clientId = "IbWwXLf5MnKSY6x6gnR_7gd7f1wa";
-    private static final String tokenId = "435fgd3535343535353453453453";
-
     @BeforeMethod
-    public void setUp() {
-        initMocks(this);
+    public void setUp() throws IdentityOAuthAdminException, IdentityOAuth2Exception {
+        authenticatedUser = new AuthenticatedUser() {
+
+        };
+        OAuthComponentServiceHolder.getInstance().setRealmService(IdentityTenantUtil.getRealmService());
+        authenticatedUser.setUserName("randomUser");
+        authenticatedUser.setTenantDomain("Homeless");
+        authenticatedUser.setUserStoreDomain("Street");
+
+        clientId = UUID.randomUUID().toString();
+        tokenId = clientId;
+        appId = clientId;
+
+        oauthIssuer = new OauthTokenIssuerImpl();
+        handler = new MockAuthzGrantHandler();
+        handler.init();
+
+        OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
+        OAuthAppDO oAuthAppDO = new OAuthAppDO();
+        oAuthAppDO.setApplicationName(appId);
+        oAuthAppDO.setOauthConsumerKey(clientId);
+        oAuthAppDO.setUser(authenticatedUser);
+        oAuthAppDO.setCallbackUrl("http://i.have.nowhere.to.go");
+        oAuthAppDO.setOauthVersion(OAuthConstants.OAuthVersions.VERSION_2);
+
+        oAuthAppDAO.addOAuthApplication(oAuthAppDO);
+
     }
 
     @AfterMethod
     public void tearDown() {
-        Mockito.reset(handler, tokReqMsgCtx, oAuth2AccessTokenReqDTO, oAuthAppDO, tokenMgtDAO, oAuthCallbackManager,
-                serverConfiguration, oAuthCache, oauthIssuer, cacheEntry, accessTokenDO, refreshGrantHandler, authenticatedUser);
+
     }
 
     @DataProvider(name = "IssueDataProvider")
     public Object[][] issueDataProvider() {
-        return new Object[][]{
-                {true, true, 3600L, 3600L, 0L, 0L, false, TOKEN_STATE_ACTIVE, false},
-                {true, true, 0L, 3600L, 0L, 0L, false, TOKEN_STATE_ACTIVE, false},
-                {true, true, 0L, 0L, 0L, 0L, false, TOKEN_STATE_ACTIVE, false},
-                {true, false, 0L, 0L, 0L, 0L, false, TOKEN_STATE_ACTIVE, false},
-                {false, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_ACTIVE, false},
-                {false, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_REVOKED, false},
-                {false, false, 0L, 0L, 0L, 0L, true, TOKEN_STATE_ACTIVE, false},
-                {false, false, 0L, 0L, 0L, 3600L, true, TOKEN_STATE_ACTIVE, false},
-                {true, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_ACTIVE, false},
-                {true, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_REVOKED, false},
-                {true, false, 0L, 0L, 0L, 0L, true, TOKEN_STATE_ACTIVE, false},
-                {true, false, 0L, 0L, 0L, 3600L, true, TOKEN_STATE_ACTIVE, false},
+        return new Object[][] { { true, true, 3600L, 3600L, 0L, 0L, false, TOKEN_STATE_ACTIVE, false },
+                { true, true, 0L, 3600L, 0L, 0L, false, TOKEN_STATE_ACTIVE, false },
+                { true, true, 0L, 0L, 0L, 0L, false, TOKEN_STATE_ACTIVE, false },
+                { true, false, 0L, 0L, 0L, 0L, false, TOKEN_STATE_ACTIVE, false },
+                { false, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_ACTIVE, false },
+                { false, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_REVOKED, false },
+                { false, false, 0L, 0L, 0L, 0L, true, TOKEN_STATE_ACTIVE, false },
+                { false, false, 0L, 0L, 0L, 3600L, true, TOKEN_STATE_ACTIVE, false },
+                { true, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_ACTIVE, false },
+                { true, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_REVOKED, false },
+                { true, false, 0L, 0L, 0L, 0L, true, TOKEN_STATE_ACTIVE, false },
+                { true, false, 0L, 0L, 0L, 3600L, true, TOKEN_STATE_ACTIVE, false },
 
-                {true, true, 3600L, 3600L, 0L, 0L, false, TOKEN_STATE_ACTIVE, true},
-                {true, true, 0L, 3600L, 0L, 0L, false, TOKEN_STATE_ACTIVE, true},
-                {true, true, 0L, 0L, 0L, 0L, false, TOKEN_STATE_ACTIVE, true},
-                {true, false, 0L, 0L, 0L, 0L, false, TOKEN_STATE_ACTIVE, true},
-                {false, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_ACTIVE, true},
-                {false, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_REVOKED, true},
-                {false, false, 0L, 0L, 0L, 0L, true, TOKEN_STATE_ACTIVE, true},
-                {false, false, 0L, 0L, 0L, 3600L, true, TOKEN_STATE_ACTIVE, true},
-                {true, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_ACTIVE, true},
-                {true, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_REVOKED, true},
-                {true, false, 0L, 0L, 0L, 0L, true, TOKEN_STATE_ACTIVE, true},
-                {true, false, 0L, 0L, 0L, 3600L, true, TOKEN_STATE_ACTIVE, true},
-        };
+                { true, true, 3600L, 3600L, 0L, 0L, false, TOKEN_STATE_ACTIVE, true },
+                { true, true, 0L, 3600L, 0L, 0L, false, TOKEN_STATE_ACTIVE, true },
+                { true, true, 0L, 0L, 0L, 0L, false, TOKEN_STATE_ACTIVE, true },
+                { true, false, 0L, 0L, 0L, 0L, false, TOKEN_STATE_ACTIVE, true },
+                { false, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_ACTIVE, true },
+                { false, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_REVOKED, true },
+                { false, false, 0L, 0L, 0L, 0L, true, TOKEN_STATE_ACTIVE, true },
+                { false, false, 0L, 0L, 0L, 3600L, true, TOKEN_STATE_ACTIVE, true },
+                { true, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_ACTIVE, true },
+                { true, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_REVOKED, true },
+                { true, false, 0L, 0L, 0L, 0L, true, TOKEN_STATE_ACTIVE, true },
+                { true, false, 0L, 0L, 0L, 3600L, true, TOKEN_STATE_ACTIVE, true },
+                { true, true, 0L, 0L, -1L, 3600L, true, TOKEN_STATE_ACTIVE, true },
+                { false, true, 0L, 0L, -1L, 3600L, true, TOKEN_STATE_ACTIVE, true } };
     }
 
     @Test(dataProvider = "IssueDataProvider")
-    public void testIssue(boolean cacheEnabled,
-                          boolean cacheEntryAvailable,
-                          long cachedTokenValidity,
-                          long cachedRefreshTokenValidity,
-                          long dbTokenValidity,
-                          long dbRefreshTokenValidity,
-                          boolean dbEntryAvailable,
-                          String dbTokenState,
-                          boolean tokenLoggable) throws Exception {
-
-        Field field = AbstractAuthorizationGrantHandler.class.getDeclaredField("tokenMgtDAO");
-        field.setAccessible(true);
-        field.set(handler, tokenMgtDAO);
-        field.setAccessible(false);
-
-        field = AbstractAuthorizationGrantHandler.class.getDeclaredField("callbackManager");
-        field.setAccessible(true);
-        field.set(handler, oAuthCallbackManager);
-        field.setAccessible(false);
-
-        field = AbstractAuthorizationGrantHandler.class.getDeclaredField("oauthCache");
-        field.setAccessible(true);
-        field.set(handler, oAuthCache);
-        field.setAccessible(false);
-
-        field = AbstractAuthorizationGrantHandler.class.getDeclaredField("cacheEnabled");
-        field.setAccessible(true);
-        field.set(handler, cacheEnabled);
-        field.setAccessible(false);
-
-        field = AbstractAuthorizationGrantHandler.class.getDeclaredField("oauthIssuerImpl");
-        field.setAccessible(true);
-        field.set(handler, oauthIssuer);
-        field.setAccessible(false);
-
-        mockStatic(OAuthCache.class);
-        when(OAuthCache.getInstance()).thenReturn(oAuthCache);
-        when(oAuthCache.isEnabled()).thenReturn(false);
-        when(oAuthCache.getValueFromCache(any(OAuthCacheKey.class))).thenReturn(cacheEntry);
-
-        when(cacheEntry.getAccessToken()).thenReturn(accessToken);
-        when(cacheEntry.getTokenId()).thenReturn(tokenId);
-        when(cacheEntry.getValidityPeriod()).thenReturn(cachedTokenValidity);
-        when(cacheEntry.getValidityPeriodInMillis()).thenReturn(cachedTokenValidity * 1000);
-        when(cacheEntry.getRefreshTokenValidityPeriodInMillis()).thenReturn(cachedRefreshTokenValidity);
-        if (cachedRefreshTokenValidity > 0) {
-            when(cacheEntry.getRefreshTokenIssuedTime()).thenReturn(new Timestamp(System.currentTimeMillis() -
-                    (60 * 1000)));
-        } else {
-            when(cacheEntry.getRefreshTokenIssuedTime()).thenReturn(new Timestamp(System.currentTimeMillis() -
-                    (1000 * 60 * 1000)));
-        }
-        if (cachedTokenValidity > 0) {
-            when(cacheEntry.getIssuedTime()).thenReturn(new Timestamp(System.currentTimeMillis() -
-                    (1000)));
-        } else {
-            when(cacheEntry.getIssuedTime()).thenReturn(new Timestamp(System.currentTimeMillis() -
-                    (10 * 60 * 1000)));
-        }
-
-        when(serverConfiguration.getIdentityOauthTokenIssuer()).thenReturn(oauthIssuer);
+    public void testIssue(boolean cacheEnabled, boolean cacheEntryAvailable, long cachedTokenValidity,
+            long cachedRefreshTokenValidity, long dbTokenValidity, long dbRefreshTokenValidity,
+            boolean dbEntryAvailable, String dbTokenState, boolean tokenLoggable) throws Exception {
 
         Map<String, AuthorizationGrantHandler> supportedGrantTypes = new HashMap<>();
         supportedGrantTypes.put("refresh_token", refreshGrantHandler);
-        when(serverConfiguration.getSupportedGrantTypes()).thenReturn(supportedGrantTypes);
 
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(serverConfiguration);
+        OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO = new OAuth2AccessTokenReqDTO();
+        oAuth2AccessTokenReqDTO.setClientId(clientId);
+        oAuth2AccessTokenReqDTO.setGrantType(PASSWORD_GRANT);
 
-        when(tokReqMsgCtx.getOauth2AccessTokenReqDTO()).thenReturn(oAuth2AccessTokenReqDTO);
-        when(tokReqMsgCtx.getScope()).thenReturn(new String[]{"scope1", "scope2"});
-        when(tokReqMsgCtx.getAuthorizedUser()).thenReturn(authenticatedUser);
-
-        when(authenticatedUser.toString()).thenReturn("randomUser");
-
-        when(oAuth2AccessTokenReqDTO.getClientId()).thenReturn(clientId);
-        when(oAuth2AccessTokenReqDTO.getGrantType()).thenReturn(PASSWORD_GRANT);
-
-        mockStatic(OAuth2Util.class);
-        when(OAuth2Util.getAppInformationByClientId(any(String.class))).thenReturn(oAuthAppDO);
-        when(OAuth2Util.checkAccessTokenPartitioningEnabled()).thenReturn(false);
-        when(OAuth2Util.checkUserNameAssertionEnabled()).thenReturn(false);
-
-        when(OAuth2Util.buildScopeString(any(String[].class))).thenCallRealMethod();
-        when(OAuth2Util.calculateValidityInMillis(anyLong(), anyLong())).thenCallRealMethod();
-        when(OAuth2Util.getTokenExpireTimeMillis(any(AccessTokenDO.class))).thenCallRealMethod();
-        when(OAuth2Util.getRefreshTokenExpireTimeMillis(any(AccessTokenDO.class))).thenCallRealMethod();
-        when(OAuth2Util.getAccessTokenExpireMillis(any(AccessTokenDO.class))).thenCallRealMethod();
-
-        mockStatic(IdentityUtil.class);
-        when(IdentityUtil.isUserStoreInUsernameCaseSensitive(any(String.class))).thenReturn(false);
-        when(IdentityUtil.isTokenLoggable(anyString())).thenReturn(tokenLoggable);
-
-        when(oauthIssuer.accessToken(any(OAuthTokenReqMessageContext.class))).thenReturn(accessToken);
-
-        if (dbEntryAvailable) {
-            when(tokenMgtDAO.retrieveLatestAccessToken(anyString(), any(AuthenticatedUser.class), anyString(),
-                    anyString(), anyBoolean())).thenReturn(accessTokenDO);
-        } else {
-            when(tokenMgtDAO.retrieveLatestAccessToken(anyString(), any(AuthenticatedUser.class), anyString(),
-                    anyString(), anyBoolean())).thenReturn(null);
-        }
-        when(accessTokenDO.getTokenState()).thenReturn(dbTokenState);
-        when(accessTokenDO.getValidityPeriod()).thenReturn(dbTokenValidity);
-        when(accessTokenDO.getValidityPeriodInMillis()).thenReturn(dbTokenValidity * 1000);
-        when(accessTokenDO.getRefreshTokenValidityPeriodInMillis()).thenReturn(dbRefreshTokenValidity);
-        if (dbRefreshTokenValidity > 0) {
-            when(accessTokenDO.getRefreshTokenIssuedTime()).thenReturn(new Timestamp(System.currentTimeMillis() -
-                    (60 * 1000)));
-        } else {
-            when(accessTokenDO.getRefreshTokenIssuedTime()).thenReturn(new Timestamp(System.currentTimeMillis() -
-                    (1000 * 60 * 1000)));
-        }
-        if (dbTokenValidity > 0) {
-            when(accessTokenDO.getIssuedTime()).thenReturn(new Timestamp(System.currentTimeMillis() -
-                    (1000)));
-        } else {
-            when(accessTokenDO.getIssuedTime()).thenReturn(new Timestamp(System.currentTimeMillis() -
-                    (10 * 60 * 1000)));
-        }
-        when(accessTokenDO.getAccessToken()).thenReturn(accessToken);
-
-        doCallRealMethod().when(handler).issue(any(OAuthTokenReqMessageContext.class));
+        OAuthTokenReqMessageContext tokReqMsgCtx = new OAuthTokenReqMessageContext(oAuth2AccessTokenReqDTO);
+        tokReqMsgCtx.setAuthorizedUser(authenticatedUser);
+        tokReqMsgCtx.setScope(new String[] { "scope1", "scope2" });
+        
         OAuth2AccessTokenRespDTO tokenRespDTO = handler.issue(tokReqMsgCtx);
-        assertEquals(tokenRespDTO.getAccessToken(), accessToken, "Returned access token is not as expected.");
+        assertNotNull(tokenRespDTO.getAccessToken());
     }
 
     @DataProvider(name = "AuthorizeAccessDelegationDataProvider")
     public Object[][] buildAuthorizeAccessDelegationDataProvider() {
-        return new Object[][]{
-                {GrantType.SAML20_BEARER.toString()},
-                {GrantType.IWA_NTLM.toString()},
-                {PASSWORD_GRANT}
-        };
+        return new Object[][] { { GrantType.SAML20_BEARER.toString() }, { GrantType.IWA_NTLM.toString() },
+                { PASSWORD_GRANT } };
     }
 
     @Test(dataProvider = "AuthorizeAccessDelegationDataProvider")
     public void testAuthorizeAccessDelegation(String grantType) throws Exception {
         Set<OAuthCallbackHandlerMetaData> callbackHandlerMetaData = new HashSet<>();
         callbackHandlerMetaData.add(new OAuthCallbackHandlerMetaData(DEFAULT_CALLBACK_HANDLER_CLASS_NAME, null, 1));
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(serverConfiguration);
-        when(serverConfiguration.getCallbackHandlerMetaData()).thenReturn(callbackHandlerMetaData);
 
-        OAuthCallbackManager oAuthCallbackManager = new OAuthCallbackManager();
-        Field field = AbstractAuthorizationGrantHandler.class.getDeclaredField("callbackManager");
-        field.setAccessible(true);
-        field.set(handler, oAuthCallbackManager);
-        field.setAccessible(false);
+        //        OAuthCallbackManager oAuthCallbackManager = new OAuthCallbackManager();
+        //        Field field = AbstractAuthorizationGrantHandler.class.getDeclaredField("callbackManager");
+        //        field.setAccessible(true);
+        //        field.set(handler, oAuthCallbackManager);
+        //        field.setAccessible(false);
 
-        when(oAuth2AccessTokenReqDTO.getClientId()).thenReturn(clientId);
-        when(oAuth2AccessTokenReqDTO.getGrantType()).thenReturn(grantType);
+        OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO = new OAuth2AccessTokenReqDTO();
+        oAuth2AccessTokenReqDTO.setClientId(clientId);
+        oAuth2AccessTokenReqDTO.setGrantType(grantType);
 
-        when(tokReqMsgCtx.getOauth2AccessTokenReqDTO()).thenReturn(oAuth2AccessTokenReqDTO);
-        when(tokReqMsgCtx.getAuthorizedUser()).thenReturn(authenticatedUser);
+        OAuthTokenReqMessageContext tokReqMsgCtx = new OAuthTokenReqMessageContext(oAuth2AccessTokenReqDTO);
+        tokReqMsgCtx.setScope(new String[] { "scope1", "scope2" });
+        tokReqMsgCtx.setAuthorizedUser(authenticatedUser);
 
-        when(authenticatedUser.toString()).thenReturn("randomUser");
-        doCallRealMethod().when(handler).authorizeAccessDelegation(any(OAuthTokenReqMessageContext.class));
         boolean result = handler.authorizeAccessDelegation(tokReqMsgCtx);
         assertTrue(result);
     }
 
     @DataProvider(name = "IsAuthorizedClientDataProvider")
     public Object[][] buildIsAuthorizedClient() {
-        return new Object[][]{
-                {true, GrantType.SAML20_BEARER.toString() + " " + GrantType.IWA_NTLM.toString() + " " + PASSWORD_GRANT,
-                        PASSWORD_GRANT, true},
-                {true, GrantType.SAML20_BEARER.toString() + " " + GrantType.IWA_NTLM.toString(), PASSWORD_GRANT, false},
-                {true, null, PASSWORD_GRANT, false},
-                {false, null, PASSWORD_GRANT, false},
-        };
+        return new Object[][] {
+                { true, GrantType.SAML20_BEARER.toString() + " " + GrantType.IWA_NTLM.toString() + " " + PASSWORD_GRANT,
+                        PASSWORD_GRANT, true },
+                { true, GrantType.SAML20_BEARER.toString() + " " + GrantType.IWA_NTLM.toString(), PASSWORD_GRANT,
+                        false }, { true, null, PASSWORD_GRANT, false }, { false, null, PASSWORD_GRANT, false }, };
     }
 
     @Test(dataProvider = "IsAuthorizedClientDataProvider")
-    public void testIsAuthorizedClient(boolean oAuthAppDOAvailable, String grantTypes, String grantType, boolean
-            result) throws Exception {
-        if (oAuthAppDOAvailable) {
-            when(tokReqMsgCtx.getProperty("OAuthAppDO")).thenReturn(oAuthAppDO);
-        } else {
-            when(tokReqMsgCtx.getProperty("OAuthAppDO")).thenReturn(null);
-        }
-        when(oAuthAppDO.getGrantTypes()).thenReturn(grantTypes);
-        when(tokReqMsgCtx.getOauth2AccessTokenReqDTO()).thenReturn(oAuth2AccessTokenReqDTO);
-        when(oAuth2AccessTokenReqDTO.getGrantType()).thenReturn(grantType);
+    public void testIsAuthorizedClient(boolean oAuthAppDOAvailable, String grantTypes, String grantType, boolean result)
+            throws Exception {
 
-        doCallRealMethod().when(handler).isAuthorizedClient(any(OAuthTokenReqMessageContext.class));
+        OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO = new OAuth2AccessTokenReqDTO();
+        oAuth2AccessTokenReqDTO.setClientId(clientId);
+        oAuth2AccessTokenReqDTO.setGrantType(grantType);
+
+        OAuthTokenReqMessageContext tokReqMsgCtx = new OAuthTokenReqMessageContext(oAuth2AccessTokenReqDTO);
+        tokReqMsgCtx.setScope(new String[] { "scope1", "scope2" });
+        tokReqMsgCtx.setAuthorizedUser(authenticatedUser);
+
+        if (oAuthAppDOAvailable) {
+            OAuthAppDO oAuthAppDO = new OAuthAppDO();
+            oAuthAppDO.setGrantTypes(grantTypes);
+            tokReqMsgCtx.addProperty("OAuthAppDO", oAuthAppDO);
+        }
+
         assertEquals(handler.isAuthorizedClient(tokReqMsgCtx), result);
+    }
+
+    @Test(expectedExceptions = IdentityOAuth2Exception.class)
+    public void testStoreAccessToken() throws IdentityException {
+
+        OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO = new OAuth2AccessTokenReqDTO();
+        AccessTokenDO newAccessTokenDO = new AccessTokenDO();
+        AccessTokenDO existingAccessTokenDO = new AccessTokenDO();
+        newAccessTokenDO.setAuthzUser(authenticatedUser);
+        newAccessTokenDO.setScope(new String[] { "scope1", "scope2" });
+
+        handler.storeAccessToken(oAuth2AccessTokenReqDTO, TestConstants.USERSTORE_DOMAIN, newAccessTokenDO,
+                TestConstants.NEW_ACCESS_TOKEN, existingAccessTokenDO);
+
+        verify(handler).storeAccessToken(oAuth2AccessTokenReqDTO, TestConstants.USERSTORE_DOMAIN, newAccessTokenDO,
+                TestConstants.NEW_ACCESS_TOKEN, existingAccessTokenDO);
+        handler.storeAccessToken(oAuth2AccessTokenReqDTO, TestConstants.USERSTORE_DOMAIN, newAccessTokenDO,
+                TestConstants.NEW_ACCESS_TOKEN, existingAccessTokenDO);
+    }
+
+    @DataProvider(name = "BuildTokenRequestMessageContext")
+    public Object[][] buildAttributeValues() {
+
+        OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO1 = new OAuth2AccessTokenReqDTO();
+        oAuth2AccessTokenReqDTO1.setGrantType(org.wso2.carbon.identity.oauth.common.GrantType.SAML20_BEARER.toString());
+        OAuthTokenReqMessageContext oAuthTokenReqMessageContext1 = new OAuthTokenReqMessageContext(
+                oAuth2AccessTokenReqDTO1);
+        OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO2 = new OAuth2AccessTokenReqDTO();
+        oAuth2AccessTokenReqDTO2.setGrantType(org.wso2.carbon.identity.oauth.common.GrantType.IWA_NTLM.toString());
+        OAuthTokenReqMessageContext oAuthTokenReqMessageContext2 = new OAuthTokenReqMessageContext(
+                oAuth2AccessTokenReqDTO2);
+        OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO3 = new OAuth2AccessTokenReqDTO();
+        oAuth2AccessTokenReqDTO3.setGrantType(CUSTOM_GRANT);
+        OAuthTokenReqMessageContext oAuthTokenReqMessageContext3 = new OAuthTokenReqMessageContext(
+                oAuth2AccessTokenReqDTO3);
+        OAuth2ScopeHandler oAuth2ScopeHandler1 = new OAuth2ScopeHandler() {
+
+            @Override
+            public boolean validateScope(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
+                return false;
+            }
+
+            @Override
+            public boolean canHandle(OAuthTokenReqMessageContext tokReqMsgCtx) {
+                return false;
+            }
+        };
+        OAuth2ScopeHandler oAuth2ScopeHandler2 = new OAuth2ScopeHandler() {
+
+            @Override
+            public boolean validateScope(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
+                return true;
+            }
+
+            @Override
+            public boolean canHandle(OAuthTokenReqMessageContext tokReqMsgCtx) {
+                return true;
+            }
+        };
+        OAuth2ScopeHandler oAuth2ScopeHandler3 = new OAuth2ScopeHandler() {
+
+            @Override
+            public boolean validateScope(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
+                return false;
+            }
+
+            @Override
+            public boolean canHandle(OAuthTokenReqMessageContext tokReqMsgCtx) {
+                return true;
+            }
+        };
+        Set<OAuth2ScopeHandler> scopeHandlers = new HashSet<>();
+        scopeHandlers.add(null);
+        scopeHandlers.add(oAuth2ScopeHandler1);
+        scopeHandlers.add(oAuth2ScopeHandler2);
+        scopeHandlers.add(oAuth2ScopeHandler3);
+
+        return new Object[][] { { oAuthTokenReqMessageContext1, Collections.EMPTY_SET, true },
+                { oAuthTokenReqMessageContext2, Collections.EMPTY_SET, true },
+                { oAuthTokenReqMessageContext3, Collections.EMPTY_SET, true },
+                { oAuthTokenReqMessageContext3, scopeHandlers, false } };
+    }
+
+    @Test(dataProvider = "BuildTokenRequestMessageContext")
+    public void testValidateScope(Object tokenRequestMessageContext, Set<OAuth2ScopeHandler> scopeHandlers,
+            boolean expectedValue) throws IdentityOAuth2Exception, IllegalAccessException, NoSuchFieldException {
+
+        OAuthTokenReqMessageContext tokReqMsgCtx = (OAuthTokenReqMessageContext) tokenRequestMessageContext;
+        OAuthServerConfiguration serverConfiguration = OAuthServerConfiguration.getInstance();
+        serverConfiguration.setOAuth2ScopeHandlers(scopeHandlers);
+        assertEquals(handler.validateScope(tokReqMsgCtx), expectedValue);
+    }
+
+    @DataProvider(name = "BuildTokenRequestMsgContextForAuthorizedClient")
+    public Object[][] buildTokenRequestMsgContextForAuthorizedClient() {
+
+        OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO = new OAuth2AccessTokenReqDTO();
+        oAuth2AccessTokenReqDTO.setGrantType(org.wso2.carbon.identity.oauth.common.GrantType.SAML20_BEARER.toString());
+        OAuthTokenReqMessageContext oAuthTokenReqMessageContext1 = new OAuthTokenReqMessageContext(
+                oAuth2AccessTokenReqDTO);
+        OAuthTokenReqMessageContext oAuthTokenReqMessageContext2 = new OAuthTokenReqMessageContext(
+                oAuth2AccessTokenReqDTO);
+        OAuthTokenReqMessageContext oAuthTokenReqMessageContext3 = new OAuthTokenReqMessageContext(
+                oAuth2AccessTokenReqDTO);
+        OAuthAppDO oAuthAppDO1 = new OAuthAppDO();
+        OAuthAppDO oAuthAppDO2 = new OAuthAppDO();
+        OAuthAppDO oAuthAppDO3 = new OAuthAppDO();
+        oAuthAppDO2.setGrantTypes(org.wso2.carbon.identity.oauth.common.GrantType.SAML20_BEARER.toString());
+        oAuthAppDO3.setGrantTypes(org.wso2.carbon.identity.oauth.common.GrantType.IWA_NTLM.toString());
+        oAuthTokenReqMessageContext1.addProperty("OAuthAppDO", oAuthAppDO1);
+        oAuthTokenReqMessageContext2.addProperty("OAuthAppDO", oAuthAppDO2);
+        oAuthTokenReqMessageContext3.addProperty("OAuthAppDO", oAuthAppDO3);
+
+        return new Object[][] { { oAuthTokenReqMessageContext1, false, false },
+                { oAuthTokenReqMessageContext1, true, false }, { oAuthTokenReqMessageContext2, false, true },
+                { oAuthTokenReqMessageContext2, true, true }, { oAuthTokenReqMessageContext3, false, false },
+                { oAuthTokenReqMessageContext3, true, false } };
+    }
+
+    @Test(dataProvider = "BuildTokenRequestMsgContextForAuthorizedClient")
+    public void testIsAuthorizedClient(Object tokenRequestMsgCtx, boolean debugEnabled, boolean expectedValue)
+            throws IdentityOAuth2Exception {
+        OAuthTokenReqMessageContext tokReqMsgCtx = (OAuthTokenReqMessageContext) tokenRequestMsgCtx;
+        assertEquals(handler.isAuthorizedClient(tokReqMsgCtx), expectedValue);
+    }
+
+    private static class MockAuthzGrantHandler extends AbstractAuthorizationGrantHandler {
+
     }
 }

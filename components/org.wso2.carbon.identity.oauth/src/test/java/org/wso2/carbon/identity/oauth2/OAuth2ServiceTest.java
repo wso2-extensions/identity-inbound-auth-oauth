@@ -20,7 +20,6 @@ package org.wso2.carbon.identity.oauth2;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.mockito.Mock;
 import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -125,21 +124,16 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
     @Mock
     private OAuthCache oAuthCache;
 
-    OAuth2Service oAuth2Service;
-    static final String clientId = "IbWwXLf5MnKSY6x6gnR_7gd7f1wa";
-    TokenPersistenceProcessor persistenceProcessor = new PlainTextPersistenceProcessor();
+    private OAuth2Service oAuth2Service;
+    private static final String clientId = "IbWwXLf5MnKSY6x6gnR_7gd7f1wa";
+    private TokenPersistenceProcessor persistenceProcessor = new PlainTextPersistenceProcessor();
 
     @BeforeMethod
-    public void setUp() throws Exception {
+    public void setUp() {
         oAuth2Service = new OAuth2Service();
         when(oAuthServerConfiguration.getTimeStampSkewInSeconds()).thenReturn(3600L);
         mockStatic(OAuthServerConfiguration.class);
         when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
-    }
-
-    @AfterMethod
-    public void tearDown() throws Exception {
-
     }
 
     /**
@@ -228,7 +222,6 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
 
     @Test
     public void testIssueAccessToken() throws IdentityException {
-
         OAuth2AccessTokenRespDTO tokenRespDTO = new OAuth2AccessTokenRespDTO();
         AccessTokenIssuer accessTokenIssuer = mock(AccessTokenIssuer.class);
         mockStatic(AccessTokenIssuer.class);
@@ -250,7 +243,6 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
 
     @Test(dataProvider = "ExceptionforIssueAccessToken")
     public void testExceptionForIssueAccesstoken(Object exception, String errorMsg) throws IdentityException {
-
         AccessTokenIssuer accessTokenIssuer = mock(AccessTokenIssuer.class);
         mockStatic(AccessTokenIssuer.class);
         when(AccessTokenIssuer.getInstance()).thenReturn(accessTokenIssuer);
@@ -262,7 +254,6 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
 
     @Test
     public void testIsPKCESupportEnabled() {
-
         mockStatic(OAuth2Util.class);
         when(OAuth2Util.isPKCESupportEnabled()).thenReturn(true);
         assertTrue(oAuth2Service.isPKCESupportEnabled());
@@ -282,7 +273,6 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
 
     @Test(dataProvider = "RefreshTokenWithDifferentFlows")
     public void testRevokeTokenByOAuthClientWithRefreshToken(String grantType, String tokenState) throws Exception {
-
         setUpRevokeToken();
         RefreshTokenValidationDataDO refreshTokenValidationDataDO = new RefreshTokenValidationDataDO();
         refreshTokenValidationDataDO.setGrantType(GrantType.REFRESH_TOKEN.toString());
@@ -303,13 +293,12 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
         OAuthRevocationRequestDTO revokeRequestDTO = new OAuthRevocationRequestDTO();
         revokeRequestDTO.setConsumerKey("testConsumerKey");
         revokeRequestDTO.setToken("testToken");
-        revokeRequestDTO.setToken_type(grantType);
+        revokeRequestDTO.setTokenType(grantType);
         assertFalse(oAuth2Service.revokeTokenByOAuthClient(revokeRequestDTO).isError());
     }
 
     @Test
     public void testRevokeTokenByOAuthClientWithAccesstoken() throws Exception {
-
         setUpRevokeToken();
         AuthenticatedUser authenticatedUser = mock(AuthenticatedUser.class);
         when(authenticatedUser.toString()).thenReturn("testAuthenticatedUser");
@@ -326,7 +315,7 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
         OAuthRevocationRequestDTO revokeRequestDTO = new OAuthRevocationRequestDTO();
         revokeRequestDTO.setConsumerKey("testConsumerKey");
         revokeRequestDTO.setToken("testToken");
-        revokeRequestDTO.setToken_type(GrantType.CLIENT_CREDENTIALS.toString());
+        revokeRequestDTO.setTokenType(GrantType.CLIENT_CREDENTIALS.toString());
 
         when(oAuthCache.getValueFromCache(any(OAuthCacheKey.class))).thenReturn(accessTokenDO);
         mockStatic(OAuthCache.class);
@@ -353,23 +342,22 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
 
     @Test(dataProvider = "ExceptionforRevokeTokenByOAuthClient")
     public void testIdentityOAuth2ExceptionForRevokeTokenByOAuthClient(
-            String errorMsg, boolean setDetails, boolean enableExp1, boolean enableExp2,
-            boolean enableExp3) throws Exception {
-
+            String errorMsg, boolean setDetails, boolean throwIdentityException,
+            boolean throwInvalidOAuthClientException, boolean failClientAuthentication) throws Exception {
         setUpRevokeToken();
         AccessTokenDO accessTokenDO = new AccessTokenDO();
         accessTokenDO.setConsumerKey("testConsumerKey");
         accessTokenDO.setAuthzUser(authenticatedUser);
         accessTokenDO.setGrantType(GrantType.CLIENT_CREDENTIALS.toString());
-        if (enableExp1) {
+        if (throwIdentityException) {
             doThrow(new IdentityOAuth2Exception("")).when(oAuthEventInterceptorProxy)
                     .onPreTokenRevocationByClient(any(OAuthRevocationRequestDTO.class), anyMap());
         }
-        if (enableExp2) {
+        if (throwInvalidOAuthClientException) {
             when(OAuth2Util.authenticateClient(anyString(), anyString()))
                     .thenThrow(new InvalidOAuthClientException(" "));
         }
-        if (enableExp3) {
+        if (failClientAuthentication) {
             when(OAuth2Util.authenticateClient(anyString(), anyString()))
                     .thenReturn(false);
         }
@@ -382,7 +370,7 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
             revokeRequestDTO.setConsumerKey("testConsumerKey");
             revokeRequestDTO.setToken("testToken");
         }
-        revokeRequestDTO.setToken_type(GrantType.REFRESH_TOKEN.toString());
+        revokeRequestDTO.setTokenType(GrantType.REFRESH_TOKEN.toString());
 
         when(oAuthCache.getValueFromCache(any(OAuthCacheKey.class))).thenReturn(accessTokenDO);
         mockStatic(OAuthCache.class);
@@ -395,7 +383,6 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
      */
     @DataProvider(name = "provideUserClaims")
     public Object[][] createUserClaims() {
-
         Map<String, String> testMap1 = new HashMap<>();
         testMap1.put("http://wso2.org/claims/emailaddress", "test@wso2.com");
         testMap1.put("http://wso2.org/claims/givenname", "testFirstName");
@@ -413,7 +400,6 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
     @Test(dataProvider = "provideUserClaims")
     public void testGetUserClaims(Object map, String[] claims, String[] supClaims,
                                   int arraySize, String username) throws Exception {
-
         OAuth2TokenValidationResponseDTO respDTO = mock(OAuth2TokenValidationResponseDTO.class);
         when(respDTO.getAuthorizedUser()).thenReturn(username);
         when(respDTO.getScope()).thenReturn(claims);
@@ -439,7 +425,6 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
 
     @Test
     public void testExceptionForGetUserClaims() throws Exception {
-
         OAuth2TokenValidationResponseDTO respDTO = mock(OAuth2TokenValidationResponseDTO.class);
         when(respDTO.getAuthorizedUser()).thenReturn("testUser");
         when(respDTO.getScope()).thenReturn(new String[]{"openid"});
@@ -458,7 +443,6 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
     }
 
     private void setUpRevokeToken() throws Exception {
-
         when(oAuthEventInterceptorProxy.isEnabled()).thenReturn(true);
         doNothing().when(oAuthEventInterceptorProxy).onPostTokenRevocationByClient
                 (any(OAuthRevocationRequestDTO.class), any(OAuthRevocationResponseDTO.class), any(AccessTokenDO.class),
@@ -467,8 +451,6 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
         when(oAuthComponentServiceHolder.getOAuthEventInterceptorProxy()).thenReturn(oAuthEventInterceptorProxy);
         mockStatic(OAuthComponentServiceHolder.class);
         when(OAuthComponentServiceHolder.getInstance()).thenReturn(oAuthComponentServiceHolder);
-
-        TokenPersistenceProcessor persistenceProcessor = new PlainTextPersistenceProcessor();
 
         when(authenticatedUser.toString()).thenReturn("testAuthenticatedUser");
 

@@ -53,9 +53,9 @@ public class OAuth2ScopeService {
         }
 
         // check whether the scope description is provided
-        if (StringUtils.isBlank(scope.getDescription())) {
+        if (StringUtils.isBlank(scope.getDisplayName())) {
             throw Oauth2ScopeUtils.generateClientException(Oauth2ScopeConstants.ErrorMessages.
-                    ERROR_CODE_BAD_REQUEST_SCOPE_DESCRIPTION_NOT_SPECIFIED, null);
+                    ERROR_CODE_BAD_REQUEST_SCOPE_DISPLAY_NAME_NOT_SPECIFIED, null);
         }
 
         // check whether a scope exists with the provided scope name
@@ -229,6 +229,12 @@ public class OAuth2ScopeService {
         if (updatedScope.getName() == null) {
             throw Oauth2ScopeUtils.generateClientException(Oauth2ScopeConstants.ErrorMessages.
                     ERROR_CODE_BAD_REQUEST_SCOPE_NAME_NOT_SPECIFIED, null);
+        }
+
+        // check whether the scope description is provided
+        if (StringUtils.isBlank(updatedScope.getDisplayName())) {
+            throw Oauth2ScopeUtils.generateClientException(Oauth2ScopeConstants.ErrorMessages.
+                    ERROR_CODE_BAD_REQUEST_SCOPE_DISPLAY_NAME_NOT_SPECIFIED, null);
         }
 
         // check whether a scope exists with the provided scope name which to be updated

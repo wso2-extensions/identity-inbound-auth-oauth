@@ -41,9 +41,11 @@ import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
+import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.IDTokenBuilder;
 
@@ -53,6 +55,11 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * @deprecated use {@link AccessTokenResponseTypeHandler} instead.
+ * @deprecated use {@link IDTokenResponseTypeHandler} instead.
+ */
+@Deprecated
 public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
 
     private static Log log = LogFactory.getLog(TokenResponseTypeHandler.class);
@@ -84,7 +91,7 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
         String grantType;
 
         // Loading the stored application data.
-        OAuthAppDO oAuthAppDO = null;
+        OAuthAppDO oAuthAppDO;
         try {
             oAuthAppDO = OAuth2Util.getAppInformationByClientId(consumerKey);
         } catch (InvalidOAuthClientException e) {
@@ -198,8 +205,8 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
             }
 
             // check if the last issued access token is still active and valid in the database
-            AccessTokenDO existingAccessTokenDO = tokenMgtDAO.retrieveLatestAccessToken(
-                    consumerKey, authorizationReqDTO.getUser(), userStoreDomain, scope, false);
+            AccessTokenDO existingAccessTokenDO = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                    .getLatestAccessToken(consumerKey, authorizationReqDTO.getUser(), userStoreDomain, scope, false);
 
             if (existingAccessTokenDO != null) {
 
@@ -373,8 +380,10 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
 
             // Persist the access token in database
             try {
-                tokenMgtDAO.storeAccessToken(accessToken, authorizationReqDTO.getConsumerKey(),
-                        newAccessTokenDO, existingAccessTokenDO, userStoreDomain);
+                OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO().insertAccessToken(accessToken,
+                        authorizationReqDTO.getConsumerKey(), newAccessTokenDO, existingAccessTokenDO, userStoreDomain);
+                deactivateCurrentAuthorizationCode(newAccessTokenDO.getAuthorizationCode(),
+                        newAccessTokenDO.getTokenId());
                 if (!accessToken.equals(newAccessTokenDO.getAccessToken())) {
                     // Using latest active token.
                     accessToken = newAccessTokenDO.getAccessToken();
@@ -433,6 +442,18 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
         return respDTO;
     }
 
+    private void deactivateCurrentAuthorizationCode(String authorizationCode, String tokenId)
+            throws IdentityOAuth2Exception {
+
+        if (authorizationCode != null) {
+            AuthzCodeDO authzCodeDO = new AuthzCodeDO();
+            authzCodeDO.setAuthorizationCode(authorizationCode);
+            authzCodeDO.setOauthTokenId(tokenId);
+            OAuthTokenPersistenceFactory.getInstance()
+                    .getAuthorizationCodeDAO().deactivateAuthorizationCode(authzCodeDO);
+        }
+    }
+
     private void triggerPostListeners(OAuthAuthzReqMessageContext
                                               oauthAuthzMsgCtx, AccessTokenDO tokenDO, OAuth2AuthorizeRespDTO respDTO) {
 
@@ -474,7 +495,8 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
         }
     }
 
-    private void addUserAttributesToCache(String accessToken, OAuthAuthzReqMessageContext msgCtx) {
+    private void addUserAttributesToCache(String accessToken,
+                                          OAuthAuthzReqMessageContext msgCtx) throws IdentityOAuth2Exception {
 
         OAuth2AuthorizeReqDTO authorizeReqDTO = msgCtx.getAuthorizationReqDTO();
         Map<ClaimMapping, String> userAttributes = authorizeReqDTO.getUser().getUserAttributes();
@@ -484,6 +506,18 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
             authorizationGrantCacheEntry.setEssentialClaims(authorizeReqDTO.getEssentialClaims());
         }
 
+        if (authorizeReqDTO.getRequestObject() != null) {
+            authorizationGrantCacheEntry.setRequestObject(authorizeReqDTO.getRequestObject());
+        }
+
+        if (authorizeReqDTO.getAuthTime() != 0) {
+            authorizationGrantCacheEntry.setAuthTime(authorizeReqDTO.getAuthTime());
+        }
+
+        if (authorizeReqDTO.getMaxAge() != 0) {
+            authorizationGrantCacheEntry.setMaxAge(authorizeReqDTO.getMaxAge());
+        }
+
         ClaimMapping key = new ClaimMapping();
         Claim claimOfKey = new Claim();
         claimOfKey.setClaimUri(OAuth2Util.SUB);
@@ -491,19 +525,23 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
         String sub = userAttributes.get(key);
 
         AccessTokenDO accessTokenDO = (AccessTokenDO)msgCtx.getProperty(OAuth2Util.ACCESS_TOKEN_DO);
+        if (accessTokenDO == null) {
+            accessTokenDO = OAuth2Util.getAccessTokenDOfromTokenIdentifier(accessToken);
+        }
+
         if (accessTokenDO != null && StringUtils.isNotBlank(accessTokenDO.getTokenId())) {
             authorizationGrantCacheEntry.setTokenId(accessTokenDO.getTokenId());
+            if (StringUtils.isBlank(sub)) {
+                sub = authorizeReqDTO.getUser().getAuthenticatedSubjectIdentifier();
+            }
+            if (StringUtils.isNotBlank(sub)) {
+                if (log.isDebugEnabled() && IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.USER_CLAIMS)) {
+                    log.debug("Setting subject: " + sub + " as the sub claim in cache against the access token.");
+                }
+                authorizationGrantCacheEntry.setSubjectClaim(sub);
+            }
+            AuthorizationGrantCache.getInstance().addToCacheByToken(authorizationGrantCacheKey,
+                    authorizationGrantCacheEntry);
         }
-
-        if (StringUtils.isBlank(sub)) {
-            sub = authorizeReqDTO.getUser().getAuthenticatedSubjectIdentifier();
-        }
-
-        if (StringUtils.isNotBlank(sub)) {
-            userAttributes.put(key, sub);
-        }
-
-        AuthorizationGrantCache.getInstance().addToCacheByToken(authorizationGrantCacheKey,
-                                                                authorizationGrantCacheEntry);
     }
 }

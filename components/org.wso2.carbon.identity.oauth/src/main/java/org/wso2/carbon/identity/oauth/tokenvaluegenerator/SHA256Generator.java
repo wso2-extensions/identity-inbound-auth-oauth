@@ -22,6 +22,7 @@ import org.apache.oltu.oauth2.as.issuer.ValueGenerator;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.bouncycastle.util.encoders.Hex;
 
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.UUID;
 
@@ -45,7 +46,7 @@ public class SHA256Generator implements ValueGenerator {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
 
             digest.reset();
-            digest.update(value.getBytes());
+            digest.update(value.getBytes(StandardCharsets.UTF_8));
 
             byte[] messageDigest = digest.digest();
 

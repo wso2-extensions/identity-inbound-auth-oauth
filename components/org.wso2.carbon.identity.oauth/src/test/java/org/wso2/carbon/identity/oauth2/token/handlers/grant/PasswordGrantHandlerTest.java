@@ -97,32 +97,20 @@ public class PasswordGrantHandlerTest extends PowerMockIdentityBaseTest {
     @DataProvider(name = "ValidateGrantDataProvider")
     public Object[][] buildScopeString() {
         return new Object[][]{
-                {"randomUser", "wso2.com", "wso2.com", 1, true, "randomPassword", true, "DOMAIN", true, "Password " +
-                        "grant validation should be successful."},
-                {"randomUser", "wso2.com", "test.com", 1, false, "randomPassword", true, "DOMAIN", false, "Password " +
-                        "grant validation should fail."},
-                {"randomUser", "wso2.com", "test.com", MultitenantConstants.INVALID_TENANT_ID, true, "randomPassword",
-                        false, "DOMAIN", false, "Password grant validation should fail."},
+                {"randomUser", true},
+                {"DOMAIN/randomUser", true},
+                {"randomUser", false},
         };
     }
 
     @Test(dataProvider = "ValidateGrantDataProvider")
-    public void testValidateGrant(String username,
-                                  String appTenant,
-                                  String userTenant,
-                                  int userTenantId,
-                                  boolean isSaas,
-                                  String resourceOwnerPassword,
-                                  boolean authenticate,
-                                  String domain,
-                                  boolean expected,
-                                  String message) throws Exception {
+    public void testValidateGrant(String username, boolean isSaas) throws Exception {
 
         when(tokReqMsgCtx.getOauth2AccessTokenReqDTO()).thenReturn(oAuth2AccessTokenReqDTO);
-        when(oAuth2AccessTokenReqDTO.getResourceOwnerUsername()).thenReturn(username + userTenant);
+        when(oAuth2AccessTokenReqDTO.getResourceOwnerUsername()).thenReturn(username + "wso2.com");
         when(oAuth2AccessTokenReqDTO.getClientId()).thenReturn(clientId);
-        when(oAuth2AccessTokenReqDTO.getTenantDomain()).thenReturn(appTenant);
-        when(oAuth2AccessTokenReqDTO.getResourceOwnerPassword()).thenReturn(resourceOwnerPassword);
+        when(oAuth2AccessTokenReqDTO.getTenantDomain()).thenReturn("wso2.com");
+        when(oAuth2AccessTokenReqDTO.getResourceOwnerPassword()).thenReturn("randomPassword");
 
         mockStatic(OAuthServerConfiguration.class);
         when(OAuthServerConfiguration.getInstance()).thenReturn(serverConfiguration);
@@ -130,23 +118,18 @@ public class PasswordGrantHandlerTest extends PowerMockIdentityBaseTest {
         when(serverConfiguration.getIdentityOauthTokenIssuer()).thenReturn(oauthIssuer);
 
         mockStatic(MultitenantUtils.class);
-        when(MultitenantUtils.getTenantDomain(anyString())).thenReturn(userTenant);
+        when(MultitenantUtils.getTenantDomain(anyString())).thenReturn("wso2.com");
         when(MultitenantUtils.getTenantAwareUsername(anyString())).thenReturn(username);
 
         mockStatic(OAuth2ServiceComponentHolder.class);
         when(OAuth2ServiceComponentHolder.getApplicationMgtService()).thenReturn(applicationManagementService);
 
         mockStatic(IdentityTenantUtil.class);
-        if (userTenantId == MultitenantConstants.INVALID_TENANT_ID) {
-            when(IdentityTenantUtil.getTenantIdOfUser(anyString())).thenThrow(new IdentityRuntimeException("Token " +
-                    "request with Password Grant Type for an invalid tenant."));
-        } else {
-            when(IdentityTenantUtil.getTenantIdOfUser(anyString())).thenReturn(userTenantId);
-        }
+        when(IdentityTenantUtil.getTenantIdOfUser(anyString())).thenReturn(1);
 
         mockStatic(UserCoreUtil.class);
-        when(UserCoreUtil.getDomainFromThreadLocal()).thenReturn(domain);
-        when(UserCoreUtil.removeDomainFromName(anyString())).thenReturn(userTenant);
+        when(UserCoreUtil.getDomainFromThreadLocal()).thenReturn("DOMAIN");
+        when(UserCoreUtil.removeDomainFromName(anyString())).thenReturn("wso2.com");
 
         mockStatic(OAuthComponentServiceHolder.class);
         when(OAuthComponentServiceHolder.getInstance()).thenReturn(oAuthComponentServiceHolder);
@@ -154,7 +137,7 @@ public class PasswordGrantHandlerTest extends PowerMockIdentityBaseTest {
         when(oAuthComponentServiceHolder.getRealmService()).thenReturn(realmService);
         when(realmService.getTenantUserRealm(anyInt())).thenReturn(userRealm);
         when(userRealm.getUserStoreManager()).thenReturn(userStoreManager);
-        when(userStoreManager.authenticate(anyString(), any())).thenReturn(authenticate);
+        when(userStoreManager.authenticate(anyString(), any())).thenReturn(true);
 
         when(applicationManagementService.getServiceProviderByClientId(anyString(), anyString(), anyString()))
                 .thenReturn(serviceProvider);
@@ -165,23 +148,25 @@ public class PasswordGrantHandlerTest extends PowerMockIdentityBaseTest {
         when(localAndOutboundAuthenticationConfig.isUseTenantDomainInLocalSubjectIdentifier()).thenReturn(true);
 
         PasswordGrantHandler passwordGrantHandler = new PasswordGrantHandler();
-        boolean actual = passwordGrantHandler.validateGrant(tokReqMsgCtx);
-        assertEquals(actual, expected, message);
+        boolean isValid = passwordGrantHandler.validateGrant(tokReqMsgCtx);
+        assertTrue(isValid, "Password grant validation should be successful");
     }
 
     @DataProvider(name = "GetValidateGrantForExceptionDataProvider")
-    public Object[][] ValidateGrantForExceptionDataProvider() {
+    public Object[][] validateGrantForExceptionDataProvider() {
 
         return new Object[][]{
-                {"password", null, "carbon.super"},
-                {"password", "clientId", "carbon.super"},
-                {"password", "clientId", "wso2.com"},
-                {null, "clientId", "carbon.super"}
+                {"carbon.super", true, true, new IdentityApplicationManagementException("Error"), "Error while retrieving service provider"},
+                {"carbon.super", true, true, new UserStoreException(), "Error while retrieving user store"},
+                {"wso2.com", false, true, null, "Authentication failed for user"},
+                {"wso2.com", true, false, null, "Cross tenant access of non Saas application"},
+
         };
     }
 
     @Test(dataProvider = "GetValidateGrantForExceptionDataProvider", expectedExceptions = IdentityOAuth2Exception.class)
-    public void testValidateGrantForException(String password, String clientId, String tenantDomain) throws Exception {
+    public void testValidateGrantForException(String tenantDomain, boolean authenticated, boolean isSaas, Exception e,
+                                              String reasonForError) throws Exception {
 
         mockStatic(OAuthServerConfiguration.class);
         when(OAuthServerConfiguration.getInstance()).thenReturn(serverConfiguration);
@@ -193,34 +178,37 @@ public class PasswordGrantHandlerTest extends PowerMockIdentityBaseTest {
         when(oAuth2AccessTokenReqDTO.getResourceOwnerUsername()).thenReturn("username");
         when(oAuth2AccessTokenReqDTO.getClientId()).thenReturn(clientId);
         when(oAuth2AccessTokenReqDTO.getTenantDomain()).thenReturn("carbon.super");
-        when(oAuth2AccessTokenReqDTO.getResourceOwnerPassword()).thenReturn(password);
+        when(oAuth2AccessTokenReqDTO.getResourceOwnerPassword()).thenReturn("password");
 
         mockStatic(OAuth2ServiceComponentHolder.class);
         when(OAuth2ServiceComponentHolder.getApplicationMgtService()).thenReturn(applicationManagementService);
         OAuthComponentServiceHolder.getInstance().setRealmService(realmService);
 
-        if (clientId == null) {
+        if (e instanceof IdentityApplicationManagementException) {
             when(applicationManagementService
-                    .getServiceProviderByClientId(null, OAuthConstants.Scope.OAUTH2, "carbon.super")).thenThrow(
-                    new IdentityApplicationManagementException(
-                            "Error occurred while retrieving OAuth2 application data."));
+                    .getServiceProviderByClientId(anyString(), anyString(), anyString())).thenThrow(e);
         } else {
             when(applicationManagementService
                     .getServiceProviderByClientId(anyString(), anyString(), anyString())).thenReturn(serviceProvider);
-            when(serviceProvider.isSaasApp()).thenReturn(true);
+            when(serviceProvider.isSaasApp()).thenReturn(isSaas);
             when(serviceProvider.getLocalAndOutBoundAuthenticationConfig())
                     .thenReturn(localAndOutboundAuthenticationConfig);
         }
         when(realmService.getTenantUserRealm(anyInt())).thenReturn(userRealm);
-        when(userRealm.getUserStoreManager()).thenReturn(userStoreManager);
-        when(userStoreManager.authenticate(anyString(), isNull(String.class))).thenThrow(new UserStoreException());
+        when(userStoreManager.authenticate(anyString(), anyString())).thenReturn(authenticated);
+        if (e instanceof UserStoreException) {
+            when(userRealm.getUserStoreManager()).thenThrow(e);
+        } else {
+            when(userRealm.getUserStoreManager()).thenReturn(userStoreManager);
+
+        }
 
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantIdOfUser(anyString())).thenReturn(1);
 
         PasswordGrantHandler passwordGrantHandler = new PasswordGrantHandler();
         passwordGrantHandler.validateGrant(tokReqMsgCtx);
-        fail("Password grant validation failed.");
+        fail("Password grant validation should fail with the reason " + reasonForError);
     }
 
     @Test

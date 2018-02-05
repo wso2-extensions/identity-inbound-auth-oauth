@@ -40,7 +40,7 @@ import static org.powermock.api.mockito.PowerMockito.when;
 public class ClaimCacheRemoveListenerTest {
 
     @Mock
-    ClaimMetaDataCache mockedClaimMetaDataCache;
+    private ClaimMetaDataCache mockedClaimMetaDataCache;
 
     @DataProvider(name = "provideParams")
     public Object[][] providePostParams() {
@@ -64,7 +64,6 @@ public class ClaimCacheRemoveListenerTest {
                 new CacheEntryEvent<ClaimCacheKey, UserClaims>(cache) {
                     AuthenticatedUser authenticatedUser = null;
                     ClaimCacheKey claimCacheKey = new ClaimCacheKey(authenticatedUser);
-                    SortedMap sortedMap = mock(SortedMap.class);
 
                     @Override
                     public ClaimCacheKey getKey() {

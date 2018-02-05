@@ -18,14 +18,14 @@
 
 package org.wso2.carbon.identity.oauth2.util;
 
+import com.nimbusds.jose.Algorithm;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
-import com.nimbusds.jose.JWSVerifier;
-import com.nimbusds.jose.crypto.RSASSAVerifier;
-import com.nimbusds.jose.Algorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSSigner;
+import com.nimbusds.jose.JWSVerifier;
 import com.nimbusds.jose.crypto.RSASSASigner;
+import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jwt.JWT;
 import com.nimbusds.jwt.JWTClaimsSet;
@@ -40,6 +40,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.message.types.ResponseType;
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.wso2.carbon.core.util.KeyStoreManager;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -50,7 +51,6 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
-import org.wso2.carbon.identity.oauth2.config.SpOAuth2ExpiryTimeConfiguration;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
@@ -63,11 +63,13 @@ import org.wso2.carbon.identity.oauth.dao.OAuthConsumerDAO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
-import org.wso2.carbon.identity.oauth2.dao.TokenMgtDAO;
+import org.wso2.carbon.identity.oauth2.config.SpOAuth2ExpiryTimeConfiguration;
+import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.ClientCredentialDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
+import org.wso2.carbon.identity.openidconnect.model.Claim;
 import org.wso2.carbon.registry.core.Registry;
 import org.wso2.carbon.registry.core.Resource;
 import org.wso2.carbon.registry.core.exceptions.RegistryException;
@@ -79,10 +81,6 @@ import org.wso2.carbon.utils.CarbonUtils;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
-import javax.xml.namespace.QName;
-import javax.xml.stream.XMLInputFactory;
-import javax.xml.stream.XMLStreamException;
-import javax.xml.stream.XMLStreamReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -95,9 +93,9 @@ import java.security.Key;
 import java.security.KeyStore;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.security.interfaces.RSAPublicKey;
 import java.security.cert.Certificate;
 import java.security.interfaces.RSAPrivateKey;
+import java.security.interfaces.RSAPublicKey;
 import java.sql.Timestamp;
 import java.text.ParseException;
 import java.util.ArrayList;
@@ -113,6 +111,10 @@ import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import javax.xml.namespace.QName;
+import javax.xml.stream.XMLInputFactory;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamReader;
 
 /**
  * Utility methods for OAuth 2.0 implementation
@@ -123,6 +125,7 @@ public class OAuth2Util {
     public static final String JWT_ACCESS_TOKEN = "JWT_ACCESS_TOKEN";
     public static final String ACCESS_TOKEN_DO = "AccessTokenDo";
     public static final String OAUTH2_VALIDATION_MESSAGE_CONTEXT = "OAuth2TokenValidationMessageContext";
+    private static final String ESSENTAIL = "essential";
 
     private static final String ALGORITHM_NONE = "NONE";
     /*
@@ -189,21 +192,21 @@ public class OAuth2Util {
     /***
      * Constant for user access token expiry time.
      */
-    public static final String USER_ACCESS_TOKEN_TIME_IN_MILLISECONDS = "userAccessTokenExpireTime";
+    public static final String USER_ACCESS_TOKEN_EXP_TIME_IN_MILLISECONDS = "userAccessTokenExpireTime";
 
     /***
      * Constant for refresh token expiry time.
      */
-    public static final String REFRESH_TOKEN_TIME_IN_MILLISECONDS = "refreshTokenExpireTime";
+    public static final String REFRESH_TOKEN_EXP_TIME_IN_MILLISECONDS = "refreshTokenExpireTime";
 
     /***
      * Constant for application access token expiry time.
      */
-    public static final String APPLICATION_ACCESS_TOKEN_TIME_IN_MILLISECONDS = "applicationAccessTokenExpireTime";
+    public static final String APPLICATION_ACCESS_TOKEN_EXP_TIME_IN_MILLISECONDS = "applicationAccessTokenExpireTime";
 
     private static Log log = LogFactory.getLog(OAuth2Util.class);
     private static long timestampSkew = OAuthServerConfiguration.getInstance().getTimeStampSkewInSeconds() * 1000;
-    private static ThreadLocal<Integer> clientTenatId = new ThreadLocal<>();
+    private static ThreadLocal<Integer> clientTenantId = new ThreadLocal<>();
     private static ThreadLocal<OAuthTokenReqMessageContext> tokenRequestContext = new ThreadLocal<>();
     private static ThreadLocal<OAuthAuthzReqMessageContext> authzRequestContext = new ThreadLocal<>();
     //Precompile PKCE Regex pattern for performance improvement
@@ -299,25 +302,25 @@ public class OAuth2Util {
      * @return
      */
     public static int getClientTenatId() {
-        if (clientTenatId.get() == null) {
+        if (clientTenantId.get() == null) {
             return -1;
         }
-        return clientTenatId.get().intValue();
+        return clientTenantId.get();
     }
 
     /**
      * @param tenantId
      */
     public static void setClientTenatId(int tenantId) {
-        Integer id = Integer.valueOf(tenantId);
-        clientTenatId.set(id);
+        Integer id = tenantId;
+        clientTenantId.set(id);
     }
 
     /**
      *
      */
     public static void clearClientTenantId() {
-        clientTenatId.remove();
+        clientTenantId.remove();
     }
 
     /**
@@ -489,18 +492,35 @@ public class OAuth2Util {
         return clientId + ":" + authzCode;
     }
 
+    /**
+     * Build the cache key string when storing token info in cache
+     *
+     * @param clientId
+     * @param scope
+     * @param authorizedUser
+     * @return
+     */
+    public static String buildCacheKeyStringForToken(String clientId, String scope, String authorizedUser) {
+        boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authorizedUser);
+        if (isUsernameCaseSensitive) {
+            return clientId + ":" + authorizedUser + ":" + scope;
+        } else {
+            return clientId + ":" + authorizedUser.toLowerCase() + ":" + scope;
+        }
+    }
+
     public static AccessTokenDO validateAccessTokenDO(AccessTokenDO accessTokenDO) {
 
         long validityPeriodMillis = accessTokenDO.getValidityPeriodInMillis();
         long issuedTime = accessTokenDO.getIssuedTime().getTime();
 
         //check the validity of cached OAuth2AccessToken Response
-        long accessTokenValidityMillis = calculateValidityInMillis(issuedTime,validityPeriodMillis);
+        long accessTokenValidityMillis = getTimeToExpire(issuedTime,validityPeriodMillis);
 
         if (accessTokenValidityMillis > 1000) {
             long refreshValidityPeriodMillis = OAuthServerConfiguration.getInstance()
                     .getRefreshTokenValidityPeriodInSeconds() * 1000;
-            long refreshTokenValidityMillis = calculateValidityInMillis(issuedTime, refreshValidityPeriodMillis);
+            long refreshTokenValidityMillis = getTimeToExpire(issuedTime, refreshValidityPeriodMillis);
             if (refreshTokenValidityMillis > 1000) {
                 //Set new validity period to response object
                 accessTokenDO.setValidityPeriodInMillis(accessTokenValidityMillis);
@@ -792,7 +812,7 @@ public class OAuth2Util {
         }
 
         long refreshTokenIssuedTime = accessTokenDO.getRefreshTokenIssuedTime().getTime();
-        long refreshTokenValidity = calculateValidityInMillis(refreshTokenIssuedTime, refreshTokenValidityPeriodMillis);
+        long refreshTokenValidity = getTimeToExpire(refreshTokenIssuedTime, refreshTokenValidityPeriodMillis);
         if (refreshTokenValidity > 1000) {
             return refreshTokenValidity;
         }
@@ -819,12 +839,17 @@ public class OAuth2Util {
         }
 
         long issuedTime = accessTokenDO.getIssuedTime().getTime();
-        long validityMillis = calculateValidityInMillis(issuedTime, validityPeriodMillis);
+        long validityMillis = getTimeToExpire(issuedTime, validityPeriodMillis);
         if (validityMillis > 1000) {
             return validityMillis;
         } else {
             return 0;
         }
+    }
+
+    @Deprecated
+    public static long calculateValidityInMillis(long issuedTimeInMillis, long validityPeriodMillis) {
+        return getTimeToExpire(issuedTimeInMillis, validityPeriodMillis);
     }
 
     /**
@@ -834,7 +859,7 @@ public class OAuth2Util {
      * @param validityPeriodMillis
      * @return skew corrected validity period in milliseconds
      */
-    public static long calculateValidityInMillis(long issuedTimeInMillis, long validityPeriodMillis) {
+    public static long getTimeToExpire(long issuedTimeInMillis, long validityPeriodMillis) {
 
         return issuedTimeInMillis + validityPeriodMillis - (System.currentTimeMillis() - timestampSkew);
     }
@@ -947,7 +972,7 @@ public class OAuth2Util {
         public static String getOAuth2DCREPUrl(String tenantDomain) throws URISyntaxException {
             String oauth2TokenEPUrl = OAuthServerConfiguration.getInstance().getOAuth2DCREPUrl();
             if (StringUtils.isBlank(oauth2TokenEPUrl)) {
-                oauth2TokenEPUrl = IdentityUtil.getServerURL("/identity/connect/register", true, false);
+                oauth2TokenEPUrl = IdentityUtil.getServerURL("/api/identity/oauth2/dcr/v1.0/register", true, false);
             }
             if (StringUtils.isNotBlank(tenantDomain) && !MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals
                     (tenantDomain)) {
@@ -1076,12 +1101,20 @@ public class OAuth2Util {
         //provided code challenge method is wrong
         return false;
     }
-    public static boolean doPKCEValidation(String referenceCodeChallenge, String codeVerifier, String challenge_method, OAuthAppDO oAuthAppDO) throws IdentityOAuth2Exception {
+
+    @Deprecated
+    public static boolean doPKCEValidation(String referenceCodeChallenge, String codeVerifier, String challenge_method,
+                                           OAuthAppDO oAuthAppDO) throws IdentityOAuth2Exception {
+        return validatePKCE(referenceCodeChallenge, codeVerifier, challenge_method, oAuthAppDO);
+    }
+
+    public static boolean validatePKCE(String referenceCodeChallenge, String verificationCode, String challenge_method,
+                                       OAuthAppDO oAuthApp) throws IdentityOAuth2Exception {
         //ByPass PKCE validation if PKCE Support is disabled
         if(!isPKCESupportEnabled()) {
             return true;
         }
-        if (oAuthAppDO != null && oAuthAppDO.isPkceMandatory() || referenceCodeChallenge != null) {
+        if (oAuthApp != null && oAuthApp.isPkceMandatory() || referenceCodeChallenge != null) {
 
             //As per RFC 7636 Fallback to 'plain' if no code_challenge_method parameter is sent
             if(challenge_method == null || challenge_method.trim().length() == 0) {
@@ -1089,9 +1122,9 @@ public class OAuth2Util {
             }
 
             //if app with no PKCE code verifier arrives
-            if ((codeVerifier == null || codeVerifier.trim().length() == 0)) {
+            if ((verificationCode == null || verificationCode.trim().length() == 0)) {
                 //if pkce is mandatory, throw error
-                if(oAuthAppDO.isPkceMandatory()) {
+                if(oAuthApp.isPkceMandatory()) {
                     throw new IdentityOAuth2Exception("No PKCE code verifier found.PKCE is mandatory for this " +
                             "oAuth 2.0 application.");
                 } else {
@@ -1106,15 +1139,15 @@ public class OAuth2Util {
                 }
             }
             //verify that the code verifier is upto spec as per RFC 7636
-            if(!validatePKCECodeVerifier(codeVerifier)) {
+            if(!validatePKCECodeVerifier(verificationCode)) {
                 throw new IdentityOAuth2Exception("Code verifier used is not up to RFC 7636 specifications.");
             }
             if (OAuthConstants.OAUTH_PKCE_PLAIN_CHALLENGE.equals(challenge_method)) {
                 //if the current application explicitly doesn't support plain, throw exception
-                if(!oAuthAppDO.isPkceSupportPlain()) {
+                if(!oAuthApp.isPkceSupportPlain()) {
                     throw new IdentityOAuth2Exception("This application does not allow 'plain' transformation algorithm.");
                 }
-                if (!referenceCodeChallenge.equals(codeVerifier)) {
+                if (!referenceCodeChallenge.equals(verificationCode)) {
                     return false;
                 }
             } else if (OAuthConstants.OAUTH_PKCE_S256_CHALLENGE.equals(challenge_method)) {
@@ -1122,7 +1155,7 @@ public class OAuth2Util {
                 try {
                     MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
 
-                    byte[] hash = messageDigest.digest(codeVerifier.getBytes(StandardCharsets.US_ASCII));
+                    byte[] hash = messageDigest.digest(verificationCode.getBytes(StandardCharsets.US_ASCII));
                     //Trim the base64 string to remove trailing CR LF characters.
                     String referencePKCECodeChallenge = new String(Base64.encodeBase64URLSafe(hash),
                             StandardCharsets.UTF_8).trim();
@@ -1168,8 +1201,7 @@ public class OAuth2Util {
                 Resource resource = registry.newResource();
                 if (scopes.size() > 0) {
                     for (Map.Entry<String, String> entry : scopes.entrySet()) {
-                        String valueStr = entry.getValue().toString();
-                        resource.setProperty(entry.getKey(), valueStr);
+                        resource.setProperty(entry.getKey(), entry.getValue());
                     }
                 }
 
@@ -1190,7 +1222,7 @@ public class OAuth2Util {
                 Resource resource = registry.get(OAuthConstants.SCOPE_RESOURCE_PATH);
                 Properties properties = resource.getProperties();
                 Enumeration e = properties.propertyNames();
-                List<String> scopes = new ArrayList();
+                List<String> scopes = new ArrayList<>();
                 while (e.hasMoreElements()) {
                     scopes.add((String) e.nextElement());
                 }
@@ -1218,11 +1250,13 @@ public class OAuth2Util {
 
         // cache miss, load the access token info from the database.
         if (accessTokenDO == null) {
-            accessTokenDO = new TokenMgtDAO().retrieveAccessToken(accessTokenIdentifier, false);
+            accessTokenDO = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                    .getAccessToken(accessTokenIdentifier, false);
         }
 
         if (accessTokenDO == null) {
-            throw new IllegalArgumentException("Invalid access token");
+            // this means the token is not active so we can't proceed further
+            throw new IllegalArgumentException("Invalid Access Token. Access token is not ACTIVE.");
         }
 
         // add the token back to the cache in the case of a cache miss
@@ -1250,7 +1284,7 @@ public class OAuth2Util {
      */
     @Deprecated
     public static void initTokenExpiryTimesOfSps(int tenantId) {
-        try{
+        try {
             Registry registry = OAuth2ServiceComponentHolder.getRegistryService().getConfigSystemRegistry(tenantId);
             if (!registry.resourceExists(OAuthConstants.TOKEN_EXPIRE_TIME_RESOURCE_PATH)) {
                 Resource resource = registry.newResource();
@@ -1289,20 +1323,20 @@ public class OAuth2Util {
                 }
                 JSONObject spTimeObject = new JSONObject(jsonString);
                 if (spTimeObject.length() > 0) {
-                    if (spTimeObject.has(USER_ACCESS_TOKEN_TIME_IN_MILLISECONDS) &&
-                            !spTimeObject.isNull(USER_ACCESS_TOKEN_TIME_IN_MILLISECONDS)) {
+                    if (spTimeObject.has(USER_ACCESS_TOKEN_EXP_TIME_IN_MILLISECONDS) &&
+                            !spTimeObject.isNull(USER_ACCESS_TOKEN_EXP_TIME_IN_MILLISECONDS)) {
                         try {
                             spTokenTimeObject.setUserAccessTokenExpiryTime(Long.parseLong(spTimeObject
-                                    .get(USER_ACCESS_TOKEN_TIME_IN_MILLISECONDS).toString()));
+                                    .get(USER_ACCESS_TOKEN_EXP_TIME_IN_MILLISECONDS).toString()));
                             if (log.isDebugEnabled()) {
                                 log.debug("The user access token expiry time :" + spTimeObject
-                                        .get(USER_ACCESS_TOKEN_TIME_IN_MILLISECONDS).toString() +
+                                        .get(USER_ACCESS_TOKEN_EXP_TIME_IN_MILLISECONDS).toString() +
                                         "  for application id : " + consumerKey);
                             }
                         } catch (NumberFormatException e) {
                             String errorMsg = String.format("Invalid value provided as user access token expiry time for consumer key %s," +
                                     " tenant id : %d. Given value: %s, Expected a long value", consumerKey, tenantId, spTimeObject
-                                    .get(USER_ACCESS_TOKEN_TIME_IN_MILLISECONDS).toString());
+                                    .get(USER_ACCESS_TOKEN_EXP_TIME_IN_MILLISECONDS).toString());
                             log.error(errorMsg, e);
                         }
                     } else {
@@ -1310,20 +1344,20 @@ public class OAuth2Util {
                                 .getUserAccessTokenValidityPeriodInSeconds() * 1000);
                     }
 
-                    if (spTimeObject.has(APPLICATION_ACCESS_TOKEN_TIME_IN_MILLISECONDS) &&
-                            !spTimeObject.isNull(APPLICATION_ACCESS_TOKEN_TIME_IN_MILLISECONDS)) {
+                    if (spTimeObject.has(APPLICATION_ACCESS_TOKEN_EXP_TIME_IN_MILLISECONDS) &&
+                            !spTimeObject.isNull(APPLICATION_ACCESS_TOKEN_EXP_TIME_IN_MILLISECONDS)) {
                         try {
                             spTokenTimeObject.setApplicationAccessTokenExpiryTime(Long.parseLong(spTimeObject
-                                    .get(APPLICATION_ACCESS_TOKEN_TIME_IN_MILLISECONDS).toString()));
+                                    .get(APPLICATION_ACCESS_TOKEN_EXP_TIME_IN_MILLISECONDS).toString()));
                             if (log.isDebugEnabled()) {
                                 log.debug("The application access token expiry time :" + spTimeObject
-                                        .get(APPLICATION_ACCESS_TOKEN_TIME_IN_MILLISECONDS).toString() +
+                                        .get(APPLICATION_ACCESS_TOKEN_EXP_TIME_IN_MILLISECONDS).toString() +
                                         "  for application id : " + consumerKey);
                             }
                         } catch (NumberFormatException e) {
                             String errorMsg = String.format("Invalid value provided as application access token expiry time for " +
                                     "consumer key %s, tenant id : %d. Given value: %s, Expected a long value ", consumerKey, tenantId, spTimeObject
-                                    .get(APPLICATION_ACCESS_TOKEN_TIME_IN_MILLISECONDS).toString());
+                                    .get(APPLICATION_ACCESS_TOKEN_EXP_TIME_IN_MILLISECONDS).toString());
                             log.error(errorMsg, e);
                         }
                     } else {
@@ -1331,21 +1365,21 @@ public class OAuth2Util {
                                 .getApplicationAccessTokenValidityPeriodInSeconds() * 1000);
                     }
 
-                    if (spTimeObject.has(REFRESH_TOKEN_TIME_IN_MILLISECONDS) &&
-                            !spTimeObject.isNull(REFRESH_TOKEN_TIME_IN_MILLISECONDS)) {
+                    if (spTimeObject.has(REFRESH_TOKEN_EXP_TIME_IN_MILLISECONDS) &&
+                            !spTimeObject.isNull(REFRESH_TOKEN_EXP_TIME_IN_MILLISECONDS)) {
                         try {
                             spTokenTimeObject.setRefreshTokenExpiryTime(Long.parseLong(spTimeObject
-                                    .get(REFRESH_TOKEN_TIME_IN_MILLISECONDS).toString()));
+                                    .get(REFRESH_TOKEN_EXP_TIME_IN_MILLISECONDS).toString()));
                             if (log.isDebugEnabled()) {
                                 log.debug("The refresh token expiry time :" + spTimeObject
-                                        .get(REFRESH_TOKEN_TIME_IN_MILLISECONDS).toString() +
+                                        .get(REFRESH_TOKEN_EXP_TIME_IN_MILLISECONDS).toString() +
                                         " for application id : " + consumerKey);
                             }
 
                         } catch (NumberFormatException e) {
                             String errorMsg = String.format("Invalid value provided as refresh token expiry time for consumer key %s," +
                                     " tenant id : %d. Given value: %s, Expected a long value", consumerKey, tenantId, spTimeObject
-                                    .get(REFRESH_TOKEN_TIME_IN_MILLISECONDS).toString());
+                                    .get(REFRESH_TOKEN_EXP_TIME_IN_MILLISECONDS).toString());
                             log.error(errorMsg, e);
                         }
                     } else {
@@ -1458,6 +1492,19 @@ public class OAuth2Util {
             tenantDomain = appDeveloper.getTenantDomain();
         }
         return tenantDomain;
+    }
+
+    /**
+     * This is used to get the tenant domain of an application by clientId.
+     * @param clientId Consumer key of Application
+     * @return Tenant Domain
+     * @throws IdentityOAuth2Exception
+     * @throws InvalidOAuthClientException
+     */
+    public static String getTenantDomainOfOauthApp(String clientId)
+            throws IdentityOAuth2Exception, InvalidOAuthClientException {
+        OAuthAppDO oAuthAppDO = getAppInformationByClientId(clientId);
+        return getTenantDomainOfOauthApp(oAuthAppDO);
     }
 
     /**
@@ -1664,7 +1711,7 @@ public class OAuth2Util {
         }
     }
 
-    private static Key getPrivateKey(String tenantDomain, int tenantId) throws IdentityOAuth2Exception {
+    public static Key getPrivateKey(String tenantDomain, int tenantId) throws IdentityOAuth2Exception {
         Key privateKey;
         if (!(privateKeys.containsKey(tenantId))) {
 
@@ -1789,29 +1836,24 @@ public class OAuth2Util {
         return buf.toString();
     }
 
-    public static ArrayList<String> getEssentialClaims(String essentialClaims, String claimType) {
+    public static List<String> getEssentialClaims(String essentialClaims, String claimType) {
         JSONObject jsonObjectClaims = new JSONObject(essentialClaims);
-        String key;
-        ArrayList essentailClaimslist = new ArrayList();
-        if ((jsonObjectClaims != null) && jsonObjectClaims.toString().contains(claimType)) {
+        List<String> essentialClaimsList = new ArrayList<>();
+        if (jsonObjectClaims.toString().contains(claimType)) {
             JSONObject newJSON = jsonObjectClaims.getJSONObject(claimType);
             if (newJSON != null) {
                 Iterator<?> keys = newJSON.keys();
                 while (keys.hasNext()) {
-                    key = (String) keys.next();
+                    String key = (String) keys.next();
                     if (!newJSON.isNull(key)) {
-                        String value;
-                        value = newJSON.get(key).toString();
+                        String value = newJSON.get(key).toString();
                         JSONObject jsonObjectValues = new JSONObject(value);
-                        if (jsonObjectValues != null) {
-                            Iterator<?> claimKeyValues = jsonObjectValues.keys();
-                            while (claimKeyValues.hasNext()) {
-                                String claimKey = (String) claimKeyValues.next();
-                                String claimValue = jsonObjectValues.get(claimKey).toString();
-                                if (claimValue.equals("true") &&
-                                        claimKey.equals(OAuthConstants.OAuth20Params.ESSENTIAL)) {
-                                    essentailClaimslist.add(key);
-                                }
+                        Iterator<?> claimKeyValues = jsonObjectValues.keys();
+                        while (claimKeyValues.hasNext()) {
+                            String claimKey = (String) claimKeyValues.next();
+                            String claimValue = jsonObjectValues.get(claimKey).toString();
+                            if (Boolean.parseBoolean(claimValue) && claimKey.equals(OAuthConstants.OAuth20Params.ESSENTIAL)) {
+                                essentialClaimsList.add(key);
                             }
                         }
                     }
@@ -1819,7 +1861,7 @@ public class OAuth2Util {
             }
         }
 
-        return essentailClaimslist;
+        return essentialClaimsList;
     }
 
     /**
@@ -1878,8 +1920,7 @@ public class OAuth2Util {
         }
 
         String usernameForToken = authenticatedUser.toString();
-        if (!OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && authenticatedUser.
-                isFederatedUser()) {
+        if (!OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && authenticatedUser.isFederatedUser()) {
             usernameForToken = OAuth2Util.getFederatedUserDomain(authenticatedUser.getFederatedIdPName());
             usernameForToken = usernameForToken + UserCoreConstants.DOMAIN_SEPARATOR + authenticatedUser.
                     getAuthenticatedSubjectIdentifier();
@@ -1890,4 +1931,83 @@ public class OAuth2Util {
         return Base64Utils.encode(tokenStrToEncode.getBytes(Charsets.UTF_8));
     }
 
+    /**
+     * Validates the json provided.
+     *
+     * @param redirectURL redirect url
+     * @return true if a valid json
+     */
+    public static boolean isValidJson(String redirectURL) {
+        try {
+            new JSONObject(redirectURL);
+        } catch (JSONException ex) {
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * This method returns essential:true claims list from the request parameter of OIDC authorization request
+     *
+     * @param claimRequestor                  claimrequestor is either id_token or  userinfo
+     * @param requestedClaimsFromRequestParam claims defined in the value of the request parameter
+     * @return the claim list which have attribute vale essentail :true
+     */
+    public static List<String> essentialClaimsFromRequestParam(String claimRequestor, Map<String, List<Claim>>
+            requestedClaimsFromRequestParam) {
+
+        String attributeValue = null;
+        List<String> essentialClaimsfromRequestParam = new ArrayList<>();
+        List<Claim> claimsforClaimRequestor = requestedClaimsFromRequestParam.get(claimRequestor);
+        for (Claim claimforClaimRequestor : claimsforClaimRequestor) {
+            String claim = claimforClaimRequestor.getName();
+            Map<String, String> attributesMap = claimforClaimRequestor.getClaimAttributesMap();
+            if (attributesMap != null) {
+                for (Map.Entry<String, String> attributesEntryMap : attributesMap.entrySet()) {
+                    attributeValue = attributesMap.get(attributesEntryMap.getKey());
+
+                    if (ESSENTAIL.equals(attributesEntryMap.getKey()) && Boolean.parseBoolean(attributeValue)) {
+                        essentialClaimsfromRequestParam.add(claim);
+                    }
+                }
+            }
+        }
+        return essentialClaimsfromRequestParam;
+    }
+
+    /* Get authorized user from the {@link AccessTokenDO}. When getting authorized user we also make sure flag to
+    * determine whether the user is federated or not is set.
+    *
+    * @param accessTokenDO accessTokenDO
+    * @return user
+    */
+    public static AuthenticatedUser getAuthenticatedUser(AccessTokenDO accessTokenDO) {
+        AuthenticatedUser authenticatedUser = accessTokenDO.getAuthzUser();
+        if (authenticatedUser != null) {
+            authenticatedUser.setFederatedUser(isFederatedUser(authenticatedUser));
+        }
+        return authenticatedUser;
+    }
+
+    /**
+     * Determine whether the user represented by {@link AuthenticatedUser} object is a federated user.
+     *
+     * @param authenticatedUser
+     * @return true if user is federated, false otherwise.
+     */
+    public static boolean isFederatedUser(AuthenticatedUser authenticatedUser) {
+        String userStoreDomain = authenticatedUser.getUserStoreDomain();
+
+        // We consider a user federated if the flag for federated user is set or the user store domain contain the
+        // federated user store domain prefix.
+        boolean isExplicitlyFederatedUser =
+                StringUtils.startsWith(userStoreDomain, OAuthConstants.UserType.FEDERATED_USER_DOMAIN_PREFIX) ||
+                authenticatedUser.isFederatedUser();
+
+        // Flag to make sure federated user is not mapped to local users.
+        boolean isFederatedUserNotMappedToLocalUser =
+                !OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal();
+
+        return isExplicitlyFederatedUser && isFederatedUserNotMappedToLocalUser;
+    }
 }

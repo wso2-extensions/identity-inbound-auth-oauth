@@ -44,6 +44,8 @@ import org.wso2.carbon.identity.oauth.cache.SessionDataCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.OAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidApplicationClientException;
+import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
@@ -51,7 +53,7 @@ import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.webfinger.DefaultWebFingerProcessor;
 import org.wso2.carbon.identity.webfinger.WebFingerProcessor;
-
+import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.List;
@@ -60,12 +62,18 @@ import java.util.Set;
 import java.util.UUID;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MultivaluedMap;
+
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
 
 public class EndpointUtil {
 
     private static final Log log = LogFactory.getLog(EndpointUtil.class);
+    private static final String OAUTH2 = "oauth2";
+    private static final String OPENID = "openid";
+    private static final String OIDC = "oidc";
+    private static final String OAUTH2_AUTHORIZE = "/oauth2/authorize";
+    private static final String UTF_8 = "UTF-8";
 
     private EndpointUtil() {
 
@@ -74,68 +82,67 @@ public class EndpointUtil {
     /**
      * Returns the {@code DefaultWebFingerProcessor} instance
      *
-     * @return
+     * @return DefaultWebFingerProcessor
      */
     public static DefaultWebFingerProcessor getWebFingerService() {
         return (DefaultWebFingerProcessor) PrivilegedCarbonContext.getThreadLocalCarbonContext().getOSGiService
-                (WebFingerProcessor.class);
+                (WebFingerProcessor.class, null);
     }
 
     /**
      * Returns the {@code OIDCProviderRequestBuilder} instance
      *
-     * @return
+     * @return DefaultOIDCProviderRequestBuilder
      */
     public static DefaultOIDCProviderRequestBuilder getOIDProviderRequestValidator() {
         return (DefaultOIDCProviderRequestBuilder) PrivilegedCarbonContext.getThreadLocalCarbonContext().getOSGiService
-                (OIDCProviderRequestBuilder.class);
+                (OIDCProviderRequestBuilder.class, null);
     }
 
     /**
      * Returns the {@code DefaultOIDCProcessor} instance
      *
-     * @return
+     * @return DefaultOIDCProcessor
      */
     public static DefaultOIDCProcessor getOIDCService() {
         return (DefaultOIDCProcessor) PrivilegedCarbonContext.getThreadLocalCarbonContext().getOSGiService
-                (OIDCProcessor.class);
+                (OIDCProcessor.class, null);
     }
 
     /**
      * Returns the {@code OAuth2Service} instance
      *
-     * @return
+     * @return OAuth2Service
      */
     public static OAuth2Service getOAuth2Service() {
         return (OAuth2Service) PrivilegedCarbonContext.getThreadLocalCarbonContext()
-                .getOSGiService(OAuth2Service.class);
+                .getOSGiService(OAuth2Service.class, null);
     }
 
     /**
      * Returns the {@code OAuthServerConfiguration} instance
      *
-     * @return
+     * @return OAuthServerConfiguration
      */
     public static OAuthServerConfiguration getOAuthServerConfiguration() {
         return (OAuthServerConfiguration) PrivilegedCarbonContext.getThreadLocalCarbonContext()
-                .getOSGiService(OAuthServerConfiguration.class);
+                .getOSGiService(OAuthServerConfiguration.class, null);
     }
 
     /**
      * Returns the {@code OAuthServerConfiguration} instance
      *
-     * @return
+     * @return OAuth2TokenValidationService
      */
     public static OAuth2TokenValidationService getOAuth2TokenValidationService() {
         return (OAuth2TokenValidationService) PrivilegedCarbonContext.getThreadLocalCarbonContext()
-                .getOSGiService(OAuth2TokenValidationService.class);
+                .getOSGiService(OAuth2TokenValidationService.class, null);
     }
 
     /**
      * Returns the request validator class name
      *
-     * @return
-     * @throws OAuthSystemException
+     * @return UserInfoEndpointRequestValidator
      */
     public static String getUserInfoRequestValidator() throws OAuthSystemException {
         return getOAuthServerConfiguration().getOpenIDConnectUserInfoEndpointRequestValidator();
@@ -144,7 +151,7 @@ public class EndpointUtil {
     /**
      * Returns the access token validator class name
      *
-     * @return
+     * @return AccessTokenValidator
      */
     public static String getAccessTokenValidator() {
         return getOAuthServerConfiguration().getOpenIDConnectUserInfoEndpointAccessTokenValidator();
@@ -153,7 +160,7 @@ public class EndpointUtil {
     /**
      * Returns the response builder class name
      *
-     * @return
+     * @return UserInfoResponseBuilder
      */
     public static String getUserInfoResponseBuilder() {
         return getOAuthServerConfiguration().getOpenIDConnectUserInfoEndpointResponseBuilder();
@@ -162,7 +169,7 @@ public class EndpointUtil {
     /**
      * Returns the claim retriever class name
      *
-     * @return
+     * @return UserInfoClaimRetriever
      */
     public static String getUserInfoClaimRetriever() {
         return getOAuthServerConfiguration().getOpenIDConnectUserInfoEndpointClaimRetriever();
@@ -171,7 +178,7 @@ public class EndpointUtil {
     /**
      * Return the claim dialect for the claim retriever
      *
-     * @return
+     * @return UserInfoClaimDialect
      */
     public static String getUserInfoClaimDialect() {
         return getOAuthServerConfiguration().getOpenIDConnectUserInfoEndpointClaimDialect();
@@ -182,7 +189,7 @@ public class EndpointUtil {
      *
      * @param authorizationHeader "Basic " + base64encode(username + ":" + password)
      * @return String array with client id and client secret.
-     * @throws org.wso2.carbon.identity.base.IdentityException If the decoded data is null.
+     * @throws OAuthClientException If the decoded data is null.
      */
     public static String[] extractCredentialsFromAuthzHeader(String authorizationHeader)
             throws OAuthClientException {
@@ -208,17 +215,17 @@ public class EndpointUtil {
      * Returns the error page URL. If appName is not <code>null</code> it will be added as query parameter
      * to be displayed to the user. If redirect_uri is <code>null</code> the common error page URL will be returned.
      *
-     * @param errorCode
-     * @param errorMessage
-     * @param appName
-     * @return
+     * @param errorCode : Error Code
+     * @param errorMessage : Error Message
+     * @param appName : Application Name
+     * @return ErrorPageURL
      */
     public static String getErrorPageURL(String errorCode, String errorMessage, String appName) {
 
         String errorPageUrl = OAuth2Util.OAuthURL.getOAuth2ErrorPageUrl();
         try {
-            errorPageUrl += "?" + OAuthConstants.OAUTH_ERROR_CODE + "=" + URLEncoder.encode(errorCode, "UTF-8") +
-                    "&" + OAuthConstants.OAUTH_ERROR_MESSAGE + "=" + URLEncoder.encode(errorMessage, "UTF-8");
+            errorPageUrl += "?" + OAuthConstants.OAUTH_ERROR_CODE + "=" + URLEncoder.encode(errorCode, UTF_8) +
+                    "&" + OAuthConstants.OAUTH_ERROR_MESSAGE + "=" + URLEncoder.encode(errorMessage, UTF_8);
         } catch (UnsupportedEncodingException e) {
             //ignore
             if (log.isDebugEnabled()){
@@ -228,7 +235,7 @@ public class EndpointUtil {
 
         if (appName != null) {
             try {
-                errorPageUrl += "&application" + "=" + URLEncoder.encode(appName, "UTF-8");
+                errorPageUrl += "&application" + "=" + URLEncoder.encode(appName, UTF_8);
             } catch (UnsupportedEncodingException e) {
                 //ignore
                 if (log.isDebugEnabled()){
@@ -278,10 +285,10 @@ public class EndpointUtil {
     /**
      * Returns the login page URL.
      *
-     * @param checkAuthentication
-     * @param forceAuthenticate
-     * @param scopes
-     * @return
+     * @param checkAuthentication : True if Passive Authentication
+     * @param forceAuthenticate : True if need to authenticate forcefully
+     * @param scopes : Scopes set
+     * @return LoginPageURL
      */
     public static String getLoginPageURL(String clientId, String sessionDataKey,
                                          boolean forceAuthenticate, boolean checkAuthentication, Set<String> scopes)
@@ -307,7 +314,7 @@ public class EndpointUtil {
      * @param forceAuthenticate
      * @param checkAuthentication
      * @param scopes
-     * @return
+     * @return LoginPageURL
      * @throws java.io.UnsupportedEncodingException
      */
     public static String getLoginPageURL(String clientId, String sessionDataKey,
@@ -316,47 +323,65 @@ public class EndpointUtil {
 
         try {
 
-            String type = "oauth2";
-
-            if (scopes != null && scopes.contains("openid")) {
-                type = "oidc";
-            }
-            String commonAuthURL = IdentityUtil.getServerURL(FrameworkConstants.COMMONAUTH, false, true);
-            String selfPath = "/oauth2/authorize";
-            AuthenticationRequest authenticationRequest = new AuthenticationRequest();
-
-            int tenantId = OAuth2Util.getClientTenatId();
-
-            //Build the authentication request context.
-            authenticationRequest.setCommonAuthCallerPath(selfPath);
-            authenticationRequest.setForceAuth(forceAuthenticate);
-            authenticationRequest.setPassiveAuth(checkAuthentication);
-            authenticationRequest.setRelyingParty(clientId);
-            authenticationRequest.setTenantDomain(OAuth2Util.getTenantDomain(tenantId));
-            authenticationRequest.setRequestQueryParams(reqParams);
-
-            //Build an AuthenticationRequestCacheEntry which wraps AuthenticationRequestContext
-            AuthenticationRequestCacheEntry authRequest = new AuthenticationRequestCacheEntry
-                    (authenticationRequest);
+            AuthenticationRequestCacheEntry authRequest = buildAuthenticationRequestCacheEntry(clientId,
+                    forceAuthenticate, checkAuthentication, reqParams);
             FrameworkUtils.addAuthenticationRequestToCache(sessionDataKey, authRequest);
             // Build new query param with only type and session data key
-            StringBuilder queryStringBuilder = new StringBuilder();
-            queryStringBuilder.append(commonAuthURL).
-                    append("?").
-                    append(FrameworkConstants.SESSION_DATA_KEY).
-                    append("=").
-                    append(URLEncoder.encode(sessionDataKey, "UTF-8")).
-                    append("&").
-                    append(FrameworkConstants.RequestParams.TYPE).
-                    append("=").
-                    append(type);
-
-            return queryStringBuilder.toString();
+            return buildQueryString(sessionDataKey, scopes);
         } catch (UnsupportedEncodingException e) {
             throw new IdentityOAuth2Exception("Error encoding the session key : ", e);
         } finally {
             OAuth2Util.clearClientTenantId();
         }
+    }
+
+    private static String buildQueryString(String sessionDataKey, Set<String> scopes) throws UnsupportedEncodingException {
+
+        String type = getProtocolType(scopes);
+        String commonAuthURL = IdentityUtil.getServerURL(FrameworkConstants.COMMONAUTH, false, true);
+
+        StringBuilder queryStringBuilder = new StringBuilder();
+        queryStringBuilder.append(commonAuthURL).
+                append("?").
+                append(FrameworkConstants.SESSION_DATA_KEY).
+                append("=").
+                append(URLEncoder.encode(sessionDataKey, UTF_8)).
+                append("&").
+                append(FrameworkConstants.RequestParams.TYPE).
+                append("=").
+                append(type);
+
+        return queryStringBuilder.toString();
+    }
+
+    private static AuthenticationRequestCacheEntry buildAuthenticationRequestCacheEntry(String clientId,
+                 boolean forceAuthenticate, boolean checkAuthentication, Map<String, String[]> reqParams)
+            throws IdentityOAuth2Exception {
+
+        String selfPath = OAUTH2_AUTHORIZE;
+        AuthenticationRequest authenticationRequest = new AuthenticationRequest();
+
+        int tenantId = OAuth2Util.getClientTenatId();
+
+        //Build the authentication request context.
+        authenticationRequest.setCommonAuthCallerPath(selfPath);
+        authenticationRequest.setForceAuth(forceAuthenticate);
+        authenticationRequest.setPassiveAuth(checkAuthentication);
+        authenticationRequest.setRelyingParty(clientId);
+        authenticationRequest.setTenantDomain(OAuth2Util.getTenantDomain(tenantId));
+        authenticationRequest.setRequestQueryParams(reqParams);
+
+        //Build an AuthenticationRequestCacheEntry which wraps AuthenticationRequestContext
+        return new AuthenticationRequestCacheEntry(authenticationRequest);
+    }
+
+    private static String getProtocolType(Set<String> scopes) {
+        String type = OAUTH2;
+
+        if (scopes != null && scopes.contains(OPENID)) {
+            type = OIDC;
+        }
+        return type;
     }
 
     /**
@@ -387,7 +412,7 @@ public class EndpointUtil {
             } else {
                 sessionDataCache.addToCache(new SessionDataCacheKey(sessionDataKeyConsent),entry);
                 if (entry.getQueryString() != null) {
-                    queryString = URLEncoder.encode(entry.getQueryString(), "UTF-8");
+                    queryString = URLEncoder.encode(entry.getQueryString(), UTF_8);
                 }
             }
 
@@ -399,16 +424,16 @@ public class EndpointUtil {
             }
             if (params != null) {
                 consentPage += "?" + OAuthConstants.OIDC_LOGGED_IN_USER + "=" + URLEncoder.encode(loggedInUser,
-                        "UTF-8") + "&application=";
+                        UTF_8) + "&application=";
 
                 if (StringUtils.isNotEmpty(params.getDisplayName())) {
-                    consentPage += URLEncoder.encode(params.getDisplayName(), "UTF-8");
+                    consentPage += URLEncoder.encode(params.getDisplayName(), UTF_8);
                 } else {
-                    consentPage += URLEncoder.encode(params.getApplicationName(), "UTF-8");
+                    consentPage += URLEncoder.encode(params.getApplicationName(), UTF_8);
                 }
                 consentPage = consentPage + "&" + OAuthConstants.OAuth20Params.SCOPE + "=" + URLEncoder.encode
-                        (EndpointUtil.getScope(params), "UTF-8") + "&" + OAuthConstants.SESSION_DATA_KEY_CONSENT
-                        + "=" + URLEncoder.encode(sessionDataKeyConsent, "UTF-8") + "&spQueryParams=" + queryString;
+                        (EndpointUtil.getScope(params), UTF_8) + "&" + OAuthConstants.SESSION_DATA_KEY_CONSENT
+                        + "=" + URLEncoder.encode(sessionDataKeyConsent, UTF_8) + "&spQueryParams=" + queryString;
             } else {
                 throw new OAuthSystemException("Error while retrieving the application name");
             }
@@ -444,11 +469,20 @@ public class EndpointUtil {
         return ServerConfiguration.getInstance().getFirstProperty("HostName");
     }
 
-    public static boolean validateParams(@Context HttpServletRequest request, @Context HttpServletResponse response,
+    @Deprecated
+    public static boolean validateParams(HttpServletRequest request, HttpServletResponse response,
                                          MultivaluedMap<String, String> paramMap) {
+        return validateParams(request, paramMap);
+    }
+
+    public static boolean validateParams(HttpServletRequest request, MultivaluedMap<String, String> paramMap) {
+
         if (paramMap != null) {
             for (Map.Entry<String, List<String>> paramEntry : paramMap.entrySet()) {
                 if (paramEntry.getValue().size() > 1) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Repeated param found:" + paramEntry.getKey());
+                    }
                     return false;
                 }
             }
@@ -457,10 +491,62 @@ public class EndpointUtil {
             Map<String, String[]> map = request.getParameterMap();
             for (Map.Entry<String, String[]> entry : map.entrySet()) {
                 if (entry.getValue().length > 1) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Repeated param found:" + entry.getKey());
+                    }
                     return false;
                 }
             }
         }
         return true;
+    }
+
+    public static boolean validateParams(OAuthMessage oAuthMessage, MultivaluedMap<String, String> paramMap) {
+        return validateParams(oAuthMessage.getRequest(), paramMap);
+    }
+
+    /**
+     * This method will start a super tenant flow
+     */
+    public static void startSuperTenantFlow() {
+
+        PrivilegedCarbonContext.startTenantFlow();
+        PrivilegedCarbonContext carbonContext = PrivilegedCarbonContext.getThreadLocalCarbonContext();
+        carbonContext.setTenantId(MultitenantConstants.SUPER_TENANT_ID);
+        carbonContext.setTenantDomain(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+    }
+
+    /**
+     * This API validate the oauth application. Check whether an application exits for given cosumerKey and check
+     * it's status
+     * @param consumerKey clientId
+     * @throws InvalidApplicationClientException
+     */
+    public static void validateOauthApplication(String consumerKey) throws InvalidApplicationClientException {
+
+        String appState = EndpointUtil.getOAuth2Service().getOauthApplicationState(consumerKey);
+
+        if (StringUtils.isEmpty(appState)) {
+            if (log.isDebugEnabled()) {
+                log.debug("A valid OAuth client could not be found for client_id: " + consumerKey);
+            }
+
+            throw new InvalidApplicationClientException("A valid OAuth client could not be found for client_id: " + consumerKey);
+        }
+
+        if (isNotActiveState(appState)) {
+            if (log.isDebugEnabled()) {
+                log.debug("App is not in active state in client ID: " + consumerKey + ". App state is:" + appState);
+            }
+            throw new InvalidApplicationClientException("Oauth application is not in active state");
+        }
+
+        if (log.isDebugEnabled()) {
+            log.debug("Oauth App validation success for consumer key: " + consumerKey);
+        }
+    }
+
+    private static boolean isNotActiveState(String appState) {
+        return !APP_STATE_ACTIVE.equalsIgnoreCase(appState);
     }
 }

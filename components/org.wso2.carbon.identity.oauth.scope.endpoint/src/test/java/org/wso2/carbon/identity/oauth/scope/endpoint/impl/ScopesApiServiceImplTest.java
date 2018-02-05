@@ -228,7 +228,7 @@ public class ScopesApiServiceImplTest extends PowerMockIdentityBaseTest {
     public void testGetScopes(Response.Status expectation) throws Exception {
 
         Set<Scope> scopes = new HashSet<>();
-        scopes.add(new Scope(someScopeName, someScopeDescription));
+        scopes.add(new Scope(someScopeName, someScopeName, someScopeDescription));
         int startIndex = 0;
         int count = 1;
 

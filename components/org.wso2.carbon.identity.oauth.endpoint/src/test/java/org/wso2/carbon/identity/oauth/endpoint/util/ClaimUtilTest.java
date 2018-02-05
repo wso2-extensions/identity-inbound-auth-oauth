@@ -18,7 +18,6 @@
 package org.wso2.carbon.identity.oauth.endpoint.util;
 
 import org.apache.commons.collections.map.HashedMap;
-import org.apache.commons.logging.Log;
 import org.mockito.Mock;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.Assert;
@@ -39,9 +38,11 @@ import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataHandler;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
@@ -52,9 +53,7 @@ import org.wso2.carbon.user.core.UserRealm;
 import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
 
-import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -73,52 +72,44 @@ import static org.powermock.api.mockito.PowerMockito.when;
 public class ClaimUtilTest extends PowerMockIdentityBaseTest {
 
     @Mock
-    OAuth2TokenValidationResponseDTO mockedValidationTokenResponseDTO;
+    private OAuth2TokenValidationResponseDTO mockedValidationTokenResponseDTO;
 
     @Mock
-    UserRealm mockedUserRealm;
+    private UserRealm mockedUserRealm;
 
     @Mock
-    OAuthServerConfiguration mockedOAuthServerConfiguration;
+    private OAuthServerConfiguration mockedOAuthServerConfiguration;
 
     @Mock
-    AccessTokenDO mockedAccessTokenDO;
+    private UserStoreManager mockedUserStoreManager;
 
     @Mock
-    AuthenticatedUser mockedAuthenticatedUser;
+    private ApplicationManagementService mockedApplicationManagementService;
 
     @Mock
-    UserStoreManager mockedUserStoreManager;
+    private ServiceProvider mockedServiceProvider;
 
     @Mock
-    ApplicationManagementService mockedApplicationManagementService;
+    private OAuth2TokenValidationResponseDTO.AuthorizationContextToken mockedAuthzContextToken;
 
     @Mock
-    ServiceProvider mockedServiceProvider;
+    private ClaimConfig mockedClaimConfig;
 
     @Mock
-    OAuth2TokenValidationResponseDTO.AuthorizationContextToken mockedAuthzContextToken;
+    private LocalAndOutboundAuthenticationConfig mockedLocalAndOutboundConfig;
 
     @Mock
-    ClaimConfig mockedClaimConfig;
+    private ClaimMetadataHandler mockedClaimMetadataHandler;
 
     @Mock
-    LocalAndOutboundAuthenticationConfig mockedLocalAndOutboundConfig;
+    private OAuthAppDO mockedOAuthAppDO;
 
     @Mock
-    ClaimMetadataHandler mockedClaimMetadataHandler;
+    private RealmConfiguration mockedRealmConfiguration;
 
     @Mock
-    OAuthAppDO mockedOAuthAppDO;
+    private PermissionsAndRoleConfig mockedPermissionAndRoleConfig;
 
-    @Mock
-    RealmConfiguration mockedRealmConfiguration;
-
-    @Mock
-    PermissionsAndRoleConfig mockedPermissionAndRoleConfig;
-
-    @Mock
-    Log mockedLog;
 
     private Field claimUtilLogField;
     private Object claimUtilObject;
@@ -199,42 +190,44 @@ public class ClaimUtilTest extends PowerMockIdentityBaseTest {
     @DataProvider(name = "provideDataForGetClaimsFromUser")
     public Object[][] provideDataForGetClaimsFromUser() {
         return new Object[][] {
-                { false, true, true, requestedClaimMappings, spToLocalClaimMappings, userClaimsMap, CLIENT_ID,
-                        USERNAME_CLAIM_URI, "PRIMARY", CLAIM_SEPARATOR, false, false, true, 0},
+                // TODO: Realm is NULL
+//                { false, true, true, requestedClaimMappings, spToLocalClaimMappings, userClaimsMap, CLIENT_ID,
+//                        USERNAME_CLAIM_URI, "PRIMARY", CLAIM_SEPARATOR, false, false,, 1},
                 { true, false, true, requestedClaimMappings, spToLocalClaimMappings, userClaimsMap, CLIENT_ID,
-                        USERNAME_CLAIM_URI, "PRIMARY", CLAIM_SEPARATOR, false, false, true, -1},
-                { true, true, false, requestedClaimMappings, spToLocalClaimMappings, userClaimsMap, CLIENT_ID,
-                        USERNAME_CLAIM_URI, "PRIMARY", CLAIM_SEPARATOR, false, false, true, 0},
+                        USERNAME_CLAIM_URI, "PRIMARY", CLAIM_SEPARATOR, false, false, -1},
+                // TODO: SP NULL
+//                { true, true, false, requestedClaimMappings, spToLocalClaimMappings, userClaimsMap, CLIENT_ID,
+//                        USERNAME_CLAIM_URI, "PRIMARY", CLAIM_SEPARATOR, false, false, 1},
                 { true, true, true, new ClaimMapping[0], spToLocalClaimMappings, userClaimsMapWithSubject, CLIENT_ID,
-                        USERNAME_CLAIM_URI, "PRIMARY", CLAIM_SEPARATOR, false, false, true, 0},
+                        USERNAME_CLAIM_URI, "PRIMARY", CLAIM_SEPARATOR, false, false, 1},
                 { true, true, true, requestedClaimMappings, new HashMap<String, String>(), userClaimsMap, CLIENT_ID,
-                        USERNAME_CLAIM_URI, "PRIMARY", CLAIM_SEPARATOR, false, false, true, 0},
+                        USERNAME_CLAIM_URI, "PRIMARY", CLAIM_SEPARATOR, false, false, 1},
                 { true, true, true, requestedClaimMappings, spToLocalClaimMappings, new HashMap<String, String>(),
-                        CLIENT_ID, null, "PRIMARY", CLAIM_SEPARATOR, false, false, true, 0},
+                        CLIENT_ID, null, "PRIMARY", CLAIM_SEPARATOR, false, false, 1},
                 { true, true, true, requestedClaimMappings, spToLocalClaimMappings, userClaimsMap, CLIENT_ID,
-                        EMAIL_CLAIM_URI, "PRIMARY", CLAIM_SEPARATOR, false, false, true, 4},
+                        EMAIL_CLAIM_URI, "PRIMARY", CLAIM_SEPARATOR, false, false, 4},
                 { true, true, true, null, spToLocalClaimMappings, userClaimsMapWithSubject, CLIENT_ID, null, "PRIMARY",
-                        CLAIM_SEPARATOR, false, false, true, 0},
+                        CLAIM_SEPARATOR, false, false, 1},
                 { true, true, true, new ClaimMapping[0], spToLocalClaimMappings, userClaimsMap, CLIENT_ID, null,
-                        "PRIMARY", CLAIM_SEPARATOR, false, false, true, 0},
+                        "PRIMARY", CLAIM_SEPARATOR, false, false, 1},
                 { true, true, true, requestedClaimMappings, spToLocalClaimMappings, userClaimsMap, CLIENT_ID,
-                        USERNAME_CLAIM_URI, "", CLAIM_SEPARATOR, false, false, true, 3},
+                        USERNAME_CLAIM_URI, "", CLAIM_SEPARATOR, false, false, 3},
                 { true, true, true, requestedClaimMappings, spToLocalClaimMappings, userClaimsMap, CLIENT_ID,
-                        USERNAME_CLAIM_URI, "FEDERATED_UM", CLAIM_SEPARATOR, false, false, true, 0},
+                        USERNAME_CLAIM_URI, "FEDERATED_UM", CLAIM_SEPARATOR, false, false, 1},
                 { true, true, true, requestedClaimMappings, spToLocalClaimMappings, userClaimsMap, CLIENT_ID,
-                        USERNAME_CLAIM_URI, "PRIMARY", "", false, false, true, 3},
+                        USERNAME_CLAIM_URI, "PRIMARY", "", false, false, 3},
                 { true, true, true, requestedClaimMappings, spToLocalClaimMappings, userClaimsMap, CLIENT_ID,
-                        USERNAME_CLAIM_URI, "PRIMARY", CLAIM_SEPARATOR, true, false, true, 0},
+                        USERNAME_CLAIM_URI, "PRIMARY", CLAIM_SEPARATOR, true, false, 1},
                 { true, true, true, requestedClaimMappings, spToLocalClaimMappings, userClaimsMap, CLIENT_ID,
-                        USERNAME_CLAIM_URI, "PRIMARY", CLAIM_SEPARATOR, false, true, true, 3},
+                        USERNAME_CLAIM_URI, "PRIMARY", CLAIM_SEPARATOR, false, true, 3},
                 { true, true, true, requestedClaimMappings, spToLocalClaimMappings, userClaimsMap, CLIENT_ID,
-                        USERNAME_CLAIM_URI, "PRIMARY", CLAIM_SEPARATOR, false, false, false, 3},
+                        USERNAME_CLAIM_URI, "PRIMARY", CLAIM_SEPARATOR, false, false, 3},
                 { true, true, true, requestedClaimMappings, spToLocalClaimMappings, userClaimsMap, CLIENT_ID,
-                        USERNAME_CLAIM_URI, "FEDERATED_UM", CLAIM_SEPARATOR, false, false, false, 0},
-                { true, true, true, requestedClaimMappings, spToLocalClaimMappings, null, CLIENT_ID,
-                        USERNAME_CLAIM_URI, "PRIMARY", CLAIM_SEPARATOR, false, false, true, 0},
-                { true, true, true, requestedClaimMappings, spToLocalClaimMappings, null, CLIENT_ID,
-                        USERNAME_CLAIM_URI, "PRIMARY", CLAIM_SEPARATOR, false, false, false, 0}
+                        USERNAME_CLAIM_URI, "FEDERATED_UM", CLAIM_SEPARATOR, false, false, 1},
+                    // TODO : Userstore exception
+//                { true, true, true, requestedClaimMappings, spToLocalClaimMappings, null, CLIENT_ID,
+//                        USERNAME_CLAIM_URI, "PRIMARY", CLAIM_SEPARATOR, false, false, 0},
+
         };
 
     }
@@ -244,12 +237,9 @@ public class ClaimUtilTest extends PowerMockIdentityBaseTest {
                                            Object claimMappingObject, Map<String, String> spToLocalClaimMappings,
                                            Map<String, String> userClaimsMap, String clientId, String subjectClaimUri,
                                            String userStoreDomain, String claimSeparator, boolean isFederated,
-                                           boolean mapFedUsersToLocal, boolean isDebugEnabled, int expectedMapSize)
-            throws  Exception {
+                                           boolean mapFedUsersToLocal, int expectedMapSize) throws  Exception {
 
-        setMockedLog(isDebugEnabled);
         ClaimMapping[] claimMappings = (ClaimMapping[]) claimMappingObject;
-
         mockStatic(IdentityTenantUtil.class);
         if (mockRealm) {
             when(IdentityTenantUtil.getRealm(anyString(), anyString())).thenReturn(mockedUserRealm);
@@ -261,11 +251,11 @@ public class ClaimUtilTest extends PowerMockIdentityBaseTest {
         when(OAuthServerConfiguration.getInstance()).thenReturn(mockedOAuthServerConfiguration);
         when(mockedOAuthServerConfiguration.isMapFederatedUsersToLocal()).thenReturn(mapFedUsersToLocal);
 
-        mockStatic(OAuth2Util.class);
-        when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(mockedOAuthAppDO);
-        when(OAuth2Util.getTenantDomainOfOauthApp(any(OAuthAppDO.class))).thenReturn("carbon.super");
+        mockOAuth2Util();
+
+        AccessTokenDO accessTokenDO = getAccessTokenDO(clientId, userStoreDomain, isFederated);
         if (mockAccessTokenDO) {
-            when(OAuth2Util.getAccessTokenDOfromTokenIdentifier(anyString())).thenReturn(mockedAccessTokenDO);
+            when(OAuth2Util.getAccessTokenDOfromTokenIdentifier(anyString())).thenReturn(accessTokenDO);
         }
 
         mockStatic(OAuth2ServiceComponentHolder.class);
@@ -278,9 +268,6 @@ public class ClaimUtilTest extends PowerMockIdentityBaseTest {
                     thenReturn(mockedServiceProvider);
         }
 
-        when(mockedAccessTokenDO.getConsumerKey()).thenReturn(clientId);
-        when(mockedAccessTokenDO.getAuthzUser()).thenReturn(mockedAuthenticatedUser);
-        when(mockedAuthenticatedUser.getUserStoreDomain()).thenReturn(userStoreDomain);
 
         when(mockedValidationTokenResponseDTO.getAuthorizedUser()).thenReturn(AUTHORIZED_USER);
         when(mockedValidationTokenResponseDTO.getAuthorizationContextToken()).thenReturn(mockedAuthzContextToken);
@@ -305,11 +292,8 @@ public class ClaimUtilTest extends PowerMockIdentityBaseTest {
                     thenThrow(new UserStoreException("UserNotFound"));
         }
 
-        when(mockedAuthenticatedUser.isFederatedUser()).thenReturn(isFederated);
-
         mockStatic(IdentityUtil.class);
         when(IdentityUtil.extractDomainFromName(anyString())).thenReturn(userStoreDomain);
-        when(IdentityUtil.isTokenLoggable(anyString())).thenReturn(isDebugEnabled);
 
         when(mockedUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
         when(mockedUserStoreManager.getSecondaryUserStoreManager(anyString())).thenReturn(mockedUserStoreManager);
@@ -320,13 +304,36 @@ public class ClaimUtilTest extends PowerMockIdentityBaseTest {
         when(mockedServiceProvider.getPermissionAndRoleConfig()).thenReturn(mockedPermissionAndRoleConfig);
         when(mockedPermissionAndRoleConfig.getRoleMappings()).thenReturn(roleMappings);
 
-        Map<String, Object> claimsMap = null;
+        Map<String, Object> claimsMap;
         try {
             claimsMap = ClaimUtil.getClaimsFromUserStore(mockedValidationTokenResponseDTO);
             Assert.assertEquals(claimsMap.size(), expectedMapSize);
         } catch (UserInfoEndpointException e) {
             Assert.assertEquals(expectedMapSize, -1, "Unexpected exception thrown");
         }
+    }
+
+    protected void mockOAuth2Util() throws IdentityOAuth2Exception, InvalidOAuthClientException {
+        mockStatic(OAuth2Util.class);
+        when(OAuth2Util.getAuthenticatedUser(any(AccessTokenDO.class))).thenCallRealMethod();
+        when(OAuth2Util.isFederatedUser(any(AuthenticatedUser.class))).thenCallRealMethod();
+        when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(mockedOAuthAppDO);
+        when(OAuth2Util.getTenantDomainOfOauthApp(any(OAuthAppDO.class))).thenReturn("carbon.super");
+    }
+
+    private AccessTokenDO getAccessTokenDO(String clientId, String userStoreDomain, boolean isFederated) {
+        AuthenticatedUser authenticatedUser = getAuthenticatedUser(userStoreDomain, isFederated);
+        AccessTokenDO accessTokenDO = new AccessTokenDO();
+        accessTokenDO.setConsumerKey(clientId);
+        accessTokenDO.setAuthzUser(authenticatedUser);
+        return accessTokenDO;
+    }
+
+    private AuthenticatedUser getAuthenticatedUser(String userStoreDomain, boolean isFederated) {
+        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+        authenticatedUser.setUserStoreDomain(userStoreDomain);
+        authenticatedUser.setFederatedUser(isFederated);
+        return authenticatedUser;
     }
 
     @DataProvider(name = "provideRoleMappingData")
@@ -353,21 +360,5 @@ public class ClaimUtilTest extends PowerMockIdentityBaseTest {
         String returned = ClaimUtil.getServiceProviderMappedUserRoles(mockedServiceProvider,
                 locallyMappedUserRoles, claimSeparator);
         Assert.assertEquals(returned, expected, "Invalid returned value");
-    }
-
-    private void setMockedLog(boolean isDebugEnabled) throws Exception {
-
-        Constructor<ClaimUtil> constructor = ClaimUtil.class.getDeclaredConstructor();
-        constructor.setAccessible(true);
-        Object claimUtilObject = constructor.newInstance();
-        Field logField = claimUtilObject.getClass().getDeclaredField("log");
-
-        Field modifiersField = Field.class.getDeclaredField("modifiers");
-        modifiersField.setAccessible(true);
-        modifiersField.setInt(logField, logField.getModifiers() & ~Modifier.FINAL);
-
-        logField.setAccessible(true);
-        logField.set(claimUtilObject, mockedLog);
-        when(mockedLog.isDebugEnabled()).thenReturn(isDebugEnabled);
     }
 }

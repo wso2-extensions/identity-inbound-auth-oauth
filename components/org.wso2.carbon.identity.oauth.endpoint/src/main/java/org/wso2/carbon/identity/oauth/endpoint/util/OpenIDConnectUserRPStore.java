@@ -81,9 +81,10 @@ public class OpenIDConnectUserRPStore {
      */
     public boolean hasUserApproved(AuthenticatedUser user, String appName, String clientId) throws
             OAuthSystemException {
+
         OpenIDUserRPDAO dao = new OpenIDUserRPDAO();
         OpenIDUserRPDO rpDO;
-        int tenantId = -1;
+        int tenantId;
         if (user.getUserName() != null) {
             tenantId = IdentityTenantUtil.getTenantId(user.getTenantDomain());
         } else {

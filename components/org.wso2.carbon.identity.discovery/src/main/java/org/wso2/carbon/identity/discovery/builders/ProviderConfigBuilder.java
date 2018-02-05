@@ -22,8 +22,10 @@ package org.wso2.carbon.identity.discovery.builders;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.base.ServerConfigurationException;
+import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.discovery.OIDCDiscoveryEndPointException;
 import org.wso2.carbon.identity.discovery.OIDProviderConfigResponse;
 import org.wso2.carbon.identity.discovery.OIDProviderRequest;
@@ -88,6 +90,11 @@ public class ProviderConfigBuilder {
                 String[supportedResponseTypeNames.size()]));
 
         providerConfig.setSubjectTypesSupported(new String[]{"pairwise"});
+
+        providerConfig.setCheckSessionIframe(IdentityUtil.getProperty(
+                IdentityConstants.OAuth.OIDC_CHECK_SESSION_EP_URL));
+        providerConfig.setEndSessionEndpoint(IdentityUtil.getProperty(
+                IdentityConstants.OAuth.OIDC_LOGOUT_EP_URL));
         return providerConfig;
     }
 }

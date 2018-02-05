@@ -73,7 +73,7 @@ public class OAuthScopeCache extends BaseCache<OAuthScopeCacheKey, Scope> {
         if (IdentityUtil.getIdentityCacheConfig(IDENTITY_CACHE_MANAGER, OAUTH_SCOPE_CACHE_NAME).isEnabled()) {
             entry = super.getValueFromCache(key);
             if (log.isDebugEnabled()) {
-                log.debug("Scope is getting from the cache. \n" + entry.toString());
+                log.debug("Scope is getting from the cache. \n" + String.valueOf(entry));
             }
         }
         return entry;

@@ -34,4 +34,21 @@ public interface OauthTokenIssuer {
 
     String refreshToken(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) throws OAuthSystemException;
 
+    /**
+     * This is used to generate a hash of the access token. Eg. when JWTTokenIssuer is used, use JWTID as the hash
+     * @param accessToken Access Token
+     * @return hash of the access token
+     * @throws OAuthSystemException {@link OAuthSystemException} OAuth System Exception.
+     */
+    default String getAccessTokenHash(String accessToken) throws OAuthSystemException {
+        return accessToken;
+    }
+
+    /**
+     * Renew access token per request
+     * @return true if new access token per each request
+     */
+    default boolean renewAccessTokenPerRequest() {
+        return false;
+    }
 }

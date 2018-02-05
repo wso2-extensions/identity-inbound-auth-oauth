@@ -19,83 +19,50 @@
 package org.wso2.carbon.identity.oauth2.authz.handlers;
 
 import org.apache.oltu.oauth2.common.message.types.ResponseType;
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PowerMockIgnore;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.Assert;
-import org.testng.annotations.BeforeClass;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
-import org.wso2.carbon.identity.core.util.IdentityConfigParser;
-import org.wso2.carbon.identity.core.util.IdentityUtil;
-import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.common.testng.WithCarbonHome;
+import org.wso2.carbon.identity.common.testng.WithRealmService;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 
-import java.io.File;
-import java.lang.reflect.Field;
-
 /**
  * Unit test cases covering AbstractResponseTypeHandler
  */
-@PrepareForTest({IdentityUtil.class})
-@PowerMockIgnore({"javax.net.*", "javax.security.*", "javax.crypto.*"})
-public class AbstractResponseTypeHandlerTest extends PowerMockTestCase {
-    AbstractResponseTypeHandler abstractResponseTypeHandler;
+/**
+ * Unit test cases covering AbstractResponseTypeHandler
+ */
+@WithCarbonHome
+@WithRealmService
+public class AbstractResponseTypeHandlerTest {
 
-    @BeforeClass
+    private AbstractResponseTypeHandler abstractResponseTypeHandler;
+
+    @BeforeMethod
     public void setUp() throws Exception {
         abstractResponseTypeHandler = new AbstractResponseTypeHandler() {
+
             @Override
-            public OAuth2AuthorizeRespDTO
-            issue(OAuthAuthzReqMessageContext oauthAuthzMsgCtx)
+            public OAuth2AuthorizeRespDTO issue(OAuthAuthzReqMessageContext oauthAuthzMsgCtx)
                     throws IdentityOAuth2Exception {
                 return null;
             }
         };
-        System.setProperty("carbon.home", System.getProperty("user.dir")
-                + File.separator + "target");
-        PowerMockito.mockStatic(IdentityUtil.class);
-        PowerMockito.when(IdentityUtil.getIdentityConfigDirPath())
-                .thenReturn(System.getProperty("user.dir") + File.separator + "src" + File.separator + "test"
-                        + File.separator + "resources" + File.separator + "conf");
-
-        Field oAuthCallbackHandlerRegistry =
-                OAuthServerConfiguration.class.getDeclaredField("instance");
-        oAuthCallbackHandlerRegistry.setAccessible(true);
-        oAuthCallbackHandlerRegistry.set(null, null);
-
-        Field oAuthServerConfigInstance =
-                OAuthServerConfiguration.class.getDeclaredField("instance");
-        oAuthServerConfigInstance.setAccessible(true);
-        oAuthServerConfigInstance.set(null, null);
-
-        Field instance = IdentityConfigParser.class.getDeclaredField("parser");
-        instance.setAccessible(true);
-        instance.set(null, null);
+        
         abstractResponseTypeHandler.init();
     }
 
     @Test
-    public void testInit() throws Exception {
-        Field field = abstractResponseTypeHandler
-                .getClass().getSuperclass().getDeclaredField("cacheEnabled");
-        abstractResponseTypeHandler.init();
-        field.setAccessible(true);
-        Assert.assertTrue(field.getBoolean(abstractResponseTypeHandler),
-                "AbstractResponseTypeHandler not set");
-    }
-
-    @Test(dataProvider = "grantTypeProvider")
-    public void testValidateAccessDelegation(String grantType, boolean result) throws Exception {
+    public void testValidateAccessDelegation() throws Exception {
         Assert.assertEquals(abstractResponseTypeHandler.
-                        validateAccessDelegation(this.setSampleOAuthReqMessageContext(grantType)),
-                result, "Access Delegation not set");
+                        validateAccessDelegation(this.setSampleOAuthReqMessageContext("authorization_code")),
+                true, "Access Delegation not set");
     }
 
     @Test
@@ -105,25 +72,17 @@ public class AbstractResponseTypeHandlerTest extends PowerMockTestCase {
                 "Validate scope returns wrong value");
     }
 
-    @Test(dataProvider = "grantTypeProvider2")
+    @Test(dataProvider = "grantTypeProvider")
     public void testIsAuthorizedClient(String grantType, boolean result) throws Exception {
         Assert.assertEquals(abstractResponseTypeHandler
                 .isAuthorizedClient(this.setSampleOAuthReqMessageContext(grantType)), result);
     }
 
     @DataProvider(name = "grantTypeProvider")
-    public static Object[][] grantTypes() {
-        return new Object[][]{{null, true},
-                {"authorization_code", true},
-                {"dummy_code", false},
-                {"implicit", true},
-                {"dummy_code_2", false}};
-    }
-
-    @DataProvider(name = "grantTypeProvider2")
     public static Object[][] grantTypes2() {
         return new Object[][]{{null, false},
                 {"authorization_code", true},
+                {"implicit", true},
                 {"dummy_code", false}};
     }
 

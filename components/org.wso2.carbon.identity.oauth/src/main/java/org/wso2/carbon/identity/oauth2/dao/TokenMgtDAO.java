@@ -24,6 +24,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
@@ -41,6 +42,7 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
+import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 
@@ -72,6 +74,7 @@ import java.util.concurrent.LinkedBlockingDeque;
  * Data Access Layer functionality for Token management in OAuth 2.0 implementation. This includes
  * storing and retrieving access tokens, authorization codes and refresh tokens.
  */
+@Deprecated
 public class TokenMgtDAO {
 
     public static final String AUTHZ_USER = "AUTHZ_USER";
@@ -79,7 +82,10 @@ public class TokenMgtDAO {
     private static final String UTC = "UTC";
     private static TokenPersistenceProcessor persistenceProcessor;
 
-    private static final int DEFAULT_POOL_SIZE = 100;
+    private boolean persistAccessTokenAlias = OAuthServerConfiguration.getInstance().usePersistedAccessTokenAlias();
+    private OauthTokenIssuer oauthIssuerImpl = OAuthServerConfiguration.getInstance().getIdentityOauthTokenIssuer();
+
+    private static final int DEFAULT_POOL_SIZE = 0;
     private static final int DEFAULT_TOKEN_PERSIST_RETRY_COUNT = 5;
     private static final boolean DEFAULT_PERSIST_ENABLED = true;
 
@@ -284,6 +290,18 @@ public class TokenMgtDAO {
                                   Connection connection, String userStoreDomain, int retryAttempt)
             throws IdentityOAuth2Exception {
 
+        if (persistAccessTokenAlias) {
+            try {
+                accessToken = oauthIssuerImpl.getAccessTokenHash(accessToken);
+            } catch (OAuthSystemException e) {
+                if (log.isDebugEnabled() &&
+                        IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                    log.debug("Error while getting access token hash for token: " + accessToken);
+                }
+                throw new IdentityOAuth2Exception("Error while getting access token hash.");
+            }
+        }
+
         if (log.isDebugEnabled()) {
             if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
                 log.debug("Persisting access token(hashed): " + DigestUtils.sha256Hex(accessToken) + " for client: " +
@@ -430,17 +448,6 @@ public class TokenMgtDAO {
             return false;
         }
 
-        if (log.isDebugEnabled()) {
-            if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
-                log.debug("Persisting access token(hashed): " + DigestUtils.sha256Hex(accessToken) + " for client: " +
-                        consumerKey + " user: " + newAccessTokenDO.getAuthzUser().toString() + " scope: " + Arrays
-                        .toString(newAccessTokenDO.getScope()));
-            } else {
-                log.debug("Persisting access token for client: " + consumerKey + " user: " + newAccessTokenDO
-                        .getAuthzUser().toString() + " scope: " + Arrays.toString(newAccessTokenDO.getScope()));
-            }
-        }
-
         userStoreDomain = OAuth2Util.getSanitizedUserStoreDomain(userStoreDomain);
 
         Connection connection = IdentityDatabaseUtil.getDBConnection();
@@ -482,7 +489,6 @@ public class TokenMgtDAO {
         String tenantDomain = authzUser.getTenantDomain();
         int tenantId = OAuth2Util.getTenantId(tenantDomain);
         String tenantAwareUsernameWithNoUserDomain = authzUser.getUserName();
-        userStoreDomain = OAuth2Util.getSanitizedUserStoreDomain(userStoreDomain);
 
         String userDomain;
         if (!OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && authzUser.isFederatedUser()) {
@@ -1483,7 +1489,7 @@ public class TokenMgtDAO {
                 long issuedTimeInMillis = timeCreated.getTime();
 
                 // if authorization code is not expired.
-                if (OAuth2Util.calculateValidityInMillis(issuedTimeInMillis, validityPeriodInMillis) > 1000) {
+                if (OAuth2Util.getTimeToExpire(issuedTimeInMillis, validityPeriodInMillis) > 1000) {
                     authorizationCodes.add(persistenceProcessor.getPreprocessedAuthzCode(rs.getString(1)));
                 }
             }
@@ -2727,8 +2733,8 @@ public class TokenMgtDAO {
                 // update consumer secret of the oauth app
                 updateStateStatement = connection.prepareStatement
                         (org.wso2.carbon.identity.oauth.dao.SQLQueries.OAuthAppDAOSQLQueries.UPDATE_OAUTH_SECRET_KEY);
-                updateStateStatement.setString(1, newSecretKey);
-                updateStateStatement.setString(2, consumerKey);
+                updateStateStatement.setString(1, persistenceProcessor.getProcessedClientSecret(newSecretKey));
+                updateStateStatement.setString(2, persistenceProcessor.getProcessedClientId(consumerKey));
                 updateStateStatement.execute();
             }
 
@@ -3011,7 +3017,6 @@ public class TokenMgtDAO {
         String tenantDomain = authzUser.getTenantDomain();
         int tenantId = OAuth2Util.getTenantId(tenantDomain);
         String tenantAwareUsernameWithNoUserDomain = authzUser.getUserName();
-        userStoreDomain = OAuth2Util.getSanitizedUserStoreDomain(userStoreDomain);
 
         String userDomain;
         if (!OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && authzUser.isFederatedUser()) {

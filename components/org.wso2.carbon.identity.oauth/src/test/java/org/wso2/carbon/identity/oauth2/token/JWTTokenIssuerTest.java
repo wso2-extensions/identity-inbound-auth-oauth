@@ -18,6 +18,7 @@ package org.wso2.carbon.identity.oauth2.token;
 
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.PlainJWT;
 import org.joda.time.Duration;
 import org.mockito.Mock;
 import org.mockito.invocation.InvocationOnMock;
@@ -41,7 +42,9 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.CustomClaimsCallbackHandler;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.mockito.Matchers.any;
@@ -65,11 +68,10 @@ import static org.testng.Assert.fail;
         }
 )
 public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
+
     // Signature algorithms.
     private static final String NONE = "NONE";
-
     private static final String SHA256_WITH_RSA = "SHA256withRSA";
-
     private static final String SHA384_WITH_RSA = "SHA384withRSA";
     private static final String SHA512_WITH_RSA = "SHA512withRSA";
     private static final String SHA256_WITH_HMAC = "SHA256withHMAC";
@@ -78,6 +80,7 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
     private static final String SHA256_WITH_EC = "SHA256withEC";
     private static final String SHA384_WITH_EC = "SHA384withEC";
     private static final String SHA512_WITH_EC = "SHA512withEC";
+
     private static final long DEFAULT_APPLICATION_ACCESS_TOKEN_EXPIRY_TIME = 4600L;
     private static final long DEFAULT_USER_ACCESS_TOKEN_EXPIRY_TIME = 3600L;
 
@@ -101,24 +104,71 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         reset(oAuthServerConfiguration);
     }
 
-    @Test
-    public void testAccessToken() throws Exception {
+    @DataProvider(name = "requestScopesProvider")
+    public Object[][] provideRequestScopes() {
+        final String[] SCOPES_WITH_AUD = new String[]{"aud", "scope1", "scope1"};
+        return new Object[][]{
+                {null, null},
+                {new String[0], null},
+                {new String[]{"scope1", "scope1"}, null},
+                {SCOPES_WITH_AUD, Arrays.asList(SCOPES_WITH_AUD)}
+        };
     }
 
-    @Test
-    public void testAccessToken1() throws Exception {
+    /**
+     * Test for Plain JWT Building from {@link OAuthTokenReqMessageContext}
+     */
+    @Test(dataProvider = "requestScopesProvider")
+    public void testBuildJWTTokenFromTokenMsgContext(String requestScopes[],
+                                                     List<String> expectedJWTAudiences) throws Exception {
+
+        OAuth2AccessTokenReqDTO accessTokenReqDTO = new OAuth2AccessTokenReqDTO();
+        OAuthTokenReqMessageContext reqMessageContext = new OAuthTokenReqMessageContext(accessTokenReqDTO);
+        reqMessageContext.setScope(requestScopes);
+
+        JWTTokenIssuer jwtTokenIssuer = getJWTTokenIssuer(NONE);
+        String jwtToken = jwtTokenIssuer.buildJWTToken(reqMessageContext);
+
+        PlainJWT plainJWT = PlainJWT.parse(jwtToken);
+        assertNotNull(plainJWT);
+        assertNotNull(plainJWT.getJWTClaimsSet());
+        assertEquals(plainJWT.getJWTClaimsSet().getAudience(), expectedJWTAudiences);
     }
 
-    @Test
-    public void testBuildJWTToken() throws Exception {
+    /**
+     * Test for Plain JWT Building from {@link OAuthAuthzReqMessageContext}
+     */
+    @Test(dataProvider = "requestScopesProvider")
+    public void testBuildJWTTokenFromAuthzMsgContext(String requestScopes[],
+                                                     List<String> expectedJWTAudiences) throws Exception {
+
+        OAuth2AuthorizeReqDTO authorizeReqDTO = new OAuth2AuthorizeReqDTO();
+        OAuthAuthzReqMessageContext authzReqMessageContext = new OAuthAuthzReqMessageContext(authorizeReqDTO);
+        authzReqMessageContext.setApprovedScope(requestScopes);
+
+        JWTTokenIssuer jwtTokenIssuer = getJWTTokenIssuer(NONE);
+        String jwtToken = jwtTokenIssuer.buildJWTToken(authzReqMessageContext);
+        PlainJWT plainJWT = PlainJWT.parse(jwtToken);
+        assertNotNull(plainJWT);
+        assertNotNull(plainJWT.getJWTClaimsSet());
+        assertEquals(plainJWT.getJWTClaimsSet().getAudience(), expectedJWTAudiences);
     }
 
-    @Test
-    public void testBuildJWTToken1() throws Exception {
-    }
+    private JWTTokenIssuer getJWTTokenIssuer(String signatureAlgorithm) throws IdentityOAuth2Exception {
+        when(oAuthServerConfiguration.getSignatureAlgorithm()).thenReturn(signatureAlgorithm);
+        JWTTokenIssuer jwtTokenIssuer = spy(new JWTTokenIssuer());
 
-    @Test
-    public void testSignJWT() throws Exception {
+        doAnswer(new Answer<Object>() {
+            @Override
+            public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
+                return new JWTClaimsSet();
+            }
+        }).when(jwtTokenIssuer).createJWTClaimSet(
+                any(OAuthAuthzReqMessageContext.class),
+                any(OAuthTokenReqMessageContext.class),
+                anyString());
+
+        return jwtTokenIssuer;
     }
 
     @Test(expectedExceptions = IdentityOAuth2Exception.class)

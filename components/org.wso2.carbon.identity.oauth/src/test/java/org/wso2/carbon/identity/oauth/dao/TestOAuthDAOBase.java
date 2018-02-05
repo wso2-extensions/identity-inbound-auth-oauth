@@ -32,9 +32,8 @@ import java.util.Map;
 public class TestOAuthDAOBase extends PowerMockIdentityBaseTest {
 
     private static Map<String, BasicDataSource> dataSourceMap = new HashMap<>();
-    private static final String DB_Name = "testDB";
 
-    private static final String ADD_OAUTH = "INSERT INTO IDN_OAUTH_CONSUMER_APPS " +
+    private static final String ADD_OAUTH_APP_SQL = "INSERT INTO IDN_OAUTH_CONSUMER_APPS " +
             "(CONSUMER_KEY, CONSUMER_SECRET, USERNAME, TENANT_ID, USER_DOMAIN, APP_NAME, OAUTH_VERSION," +
             " CALLBACK_URL, GRANT_TYPES, APP_STATE) VALUES (?,?,?,?,?,?,?,?,?,?) ";
 
@@ -59,11 +58,19 @@ public class TestOAuthDAOBase extends PowerMockIdentityBaseTest {
         dataSourceMap.put(databaseName, dataSource);
     }
 
+
+    protected void closeH2Base(String databaseName) throws Exception {
+        BasicDataSource dataSource =  dataSourceMap.get(databaseName);
+        if(dataSource != null) {
+            dataSource.close();
+        }
+    }
+
     public static Connection getConnection(String database) throws SQLException {
         if (dataSourceMap.get(database) != null) {
             return dataSourceMap.get(database).getConnection();
         }
-        throw new RuntimeException("Invalid datasource.");
+        throw new RuntimeException("No datasource initiated for database: " + database);
     }
 
     public static String getFilePath(String fileName) {
@@ -71,15 +78,27 @@ public class TestOAuthDAOBase extends PowerMockIdentityBaseTest {
             return Paths.get(System.getProperty("user.dir"), "src", "test", "resources", "dbScripts", fileName)
                     .toString();
         }
-        return null;
+        throw new IllegalArgumentException("DB Script file name cannot be empty.");
     }
 
-    protected int createBase(String clientId, String secret, String username, String appName, String callback, String appState)
-            throws Exception {
+    public static BasicDataSource getDatasource(String datasourceName){
+        if (dataSourceMap.get(datasourceName) != null) {
+            return dataSourceMap.get(datasourceName);
+        }
+        throw new RuntimeException("No datasource initiated for database: " + datasourceName);
+    }
+
+    protected int createBaseOAuthApp(String databaseName,
+                                     String clientId,
+                                     String secret,
+                                     String username,
+                                     String appName,
+                                     String callback,
+                                     String appState) throws Exception {
 
         PreparedStatement statement = null;
-        try (Connection connection1 = this.getConnection(DB_Name)) {
-            statement = connection1.prepareStatement(ADD_OAUTH);
+        try (Connection connection = getConnection(databaseName)) {
+            statement = connection.prepareStatement(ADD_OAUTH_APP_SQL);
             statement.setString(1, clientId);
             statement.setString(2, secret);
             statement.setString(3, username);
@@ -104,20 +123,26 @@ public class TestOAuthDAOBase extends PowerMockIdentityBaseTest {
         return -1;
     }
 
-    protected void createReqTokenTable(int consumerId, String req_tok, String req_tok_secret,
-                                       String scope, String callback, String oauth_verifier, String authz_user) throws Exception {
+    protected void createReqTokenTable(String databaseName,
+                                       int consumerId,
+                                       String requestToken,
+                                       String requestTokenSecret,
+                                       String scope,
+                                       String callback,
+                                       String oauthVerifier,
+                                       String authzUser) throws Exception {
 
         PreparedStatement statementReq = null;
-        try (Connection connection2 = this.getConnection(DB_Name)) {
-            statementReq = connection2.prepareStatement(ADD_OAUTH_REQ_TOKEN);
-            statementReq.setString(1, req_tok);
-            statementReq.setString(2, req_tok_secret);
+        try (Connection connection = getConnection(databaseName)) {
+            statementReq = connection.prepareStatement(ADD_OAUTH_REQ_TOKEN);
+            statementReq.setString(1, requestToken);
+            statementReq.setString(2, requestTokenSecret);
             statementReq.setInt(3, consumerId);
             statementReq.setString(4, callback);
             statementReq.setString(5, scope);
             statementReq.setString(6, "fakeAuthorized");
-            statementReq.setString(7, oauth_verifier);
-            statementReq.setString(8, authz_user);
+            statementReq.setString(7, oauthVerifier);
+            statementReq.setString(8, authzUser);
             statementReq.setInt(9, -1234);
             statementReq.execute();
         } finally {
@@ -127,17 +152,21 @@ public class TestOAuthDAOBase extends PowerMockIdentityBaseTest {
         }
     }
 
-    protected void createAccTokenTable(int consumerId, String acc_tok, String acc_tok_secret,
-                                       String scope, String authz_user) throws Exception {
+    protected void createAccessTokenTable(String databaseName,
+                                          int consumerId,
+                                          String accessToken,
+                                          String accessTokenSecret,
+                                          String scope,
+                                          String authzUser) throws Exception {
 
         PreparedStatement statementAcc = null;
-        try (Connection connection3 = this.getConnection(DB_Name)) {
-            statementAcc = connection3.prepareStatement(ADD_OAUTH_ACC_TOKEN);
-            statementAcc.setString(1, acc_tok);
-            statementAcc.setString(2, acc_tok_secret);
+        try (Connection connection = getConnection(databaseName)) {
+            statementAcc = connection.prepareStatement(ADD_OAUTH_ACC_TOKEN);
+            statementAcc.setString(1, accessToken);
+            statementAcc.setString(2, accessTokenSecret);
             statementAcc.setInt(3, consumerId);
             statementAcc.setString(4, scope);
-            statementAcc.setString(5, authz_user);
+            statementAcc.setString(5, authzUser);
             statementAcc.setInt(6, -1234);
             statementAcc.execute();
         } finally {
@@ -146,5 +175,4 @@ public class TestOAuthDAOBase extends PowerMockIdentityBaseTest {
             }
         }
     }
-
 }

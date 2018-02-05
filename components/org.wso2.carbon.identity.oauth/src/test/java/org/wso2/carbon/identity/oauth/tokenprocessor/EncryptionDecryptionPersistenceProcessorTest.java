@@ -29,6 +29,8 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 import org.wso2.carbon.registry.core.service.RegistryService;
 
+import java.nio.charset.StandardCharsets;
+
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.powermock.api.mockito.PowerMockito.mock;
@@ -46,7 +48,7 @@ import static org.testng.Assert.assertEquals;
 })
 public class EncryptionDecryptionPersistenceProcessorTest extends PowerMockIdentityBaseTest {
 
-    EncryptionDecryptionPersistenceProcessor testclass = new EncryptionDecryptionPersistenceProcessor();
+    private EncryptionDecryptionPersistenceProcessor testclass = new EncryptionDecryptionPersistenceProcessor();
 
     @Test
     public void testGetPreprocessedClientId() throws IdentityOAuth2Exception {
@@ -65,9 +67,9 @@ public class EncryptionDecryptionPersistenceProcessorTest extends PowerMockIdent
 
         mockStatic(CryptoUtil.class);
         CryptoUtil cryptoUtil = mock(CryptoUtil.class);
-        byte[] testbyte = "test".getBytes();
+        byte[] testbyte = "test".getBytes(StandardCharsets.UTF_8);
         when(cryptoUtil.base64DecodeAndDecrypt(anyString())).thenReturn(testbyte);
-        when(cryptoUtil.getDefaultCryptoUtil(any(ServerConfigurationService.class),
+        when(CryptoUtil.getDefaultCryptoUtil(any(ServerConfigurationService.class),
                 any(RegistryService.class))).thenReturn(cryptoUtil);
         when(CryptoUtil.getDefaultCryptoUtil()).thenReturn(cryptoUtil);
 
@@ -83,7 +85,7 @@ public class EncryptionDecryptionPersistenceProcessorTest extends PowerMockIdent
         mockStatic(CryptoUtil.class);
         CryptoUtil cryptoUtil = mock(CryptoUtil.class);
         when(cryptoUtil.encryptAndBase64Encode(any(byte[].class))).thenReturn("test");
-        when(cryptoUtil.getDefaultCryptoUtil(any(ServerConfigurationService.class),
+        when(CryptoUtil.getDefaultCryptoUtil(any(ServerConfigurationService.class),
                 any(RegistryService.class))).thenReturn(cryptoUtil);
         when(CryptoUtil.getDefaultCryptoUtil()).thenReturn(cryptoUtil);
 
@@ -100,7 +102,7 @@ public class EncryptionDecryptionPersistenceProcessorTest extends PowerMockIdent
         mockStatic(CryptoUtil.class);
         CryptoUtil cryptoUtil = mock(CryptoUtil.class);
         when(cryptoUtil.base64DecodeAndDecrypt(anyString())).thenThrow(new CryptoException());
-        when(cryptoUtil.getDefaultCryptoUtil(any(ServerConfigurationService.class),
+        when(CryptoUtil.getDefaultCryptoUtil(any(ServerConfigurationService.class),
                 any(RegistryService.class))).thenReturn(cryptoUtil);
         when(CryptoUtil.getDefaultCryptoUtil()).thenReturn(cryptoUtil);
         testclass.getPreprocessedAuthzCode("test");
@@ -113,7 +115,7 @@ public class EncryptionDecryptionPersistenceProcessorTest extends PowerMockIdent
         mockStatic(CryptoUtil.class);
         CryptoUtil cryptoUtil = mock(CryptoUtil.class);
         when(cryptoUtil.base64DecodeAndDecrypt(anyString())).thenThrow(new CryptoException());
-        when(cryptoUtil.getDefaultCryptoUtil(any(ServerConfigurationService.class),
+        when(CryptoUtil.getDefaultCryptoUtil(any(ServerConfigurationService.class),
                 any(RegistryService.class))).thenReturn(cryptoUtil);
         when(CryptoUtil.getDefaultCryptoUtil()).thenReturn(cryptoUtil);
         testclass.getPreprocessedAccessTokenIdentifier("test");
@@ -126,7 +128,7 @@ public class EncryptionDecryptionPersistenceProcessorTest extends PowerMockIdent
         mockStatic(CryptoUtil.class);
         CryptoUtil cryptoUtil = mock(CryptoUtil.class);
         when(cryptoUtil.base64DecodeAndDecrypt(anyString())).thenThrow(new CryptoException());
-        when(cryptoUtil.getDefaultCryptoUtil(any(ServerConfigurationService.class),
+        when(CryptoUtil.getDefaultCryptoUtil(any(ServerConfigurationService.class),
                 any(RegistryService.class))).thenReturn(cryptoUtil);
         when(CryptoUtil.getDefaultCryptoUtil()).thenReturn(cryptoUtil);
         testclass.getPreprocessedRefreshToken("test");
@@ -139,7 +141,7 @@ public class EncryptionDecryptionPersistenceProcessorTest extends PowerMockIdent
         mockStatic(CryptoUtil.class);
         CryptoUtil cryptoUtil = mock(CryptoUtil.class);
         when(cryptoUtil.base64DecodeAndDecrypt(anyString())).thenThrow(new CryptoException());
-        when(cryptoUtil.getDefaultCryptoUtil(any(ServerConfigurationService.class),
+        when(CryptoUtil.getDefaultCryptoUtil(any(ServerConfigurationService.class),
                 any(RegistryService.class))).thenReturn(cryptoUtil);
         when(CryptoUtil.getDefaultCryptoUtil()).thenReturn(cryptoUtil);
         testclass.getPreprocessedClientSecret("test");
@@ -151,7 +153,7 @@ public class EncryptionDecryptionPersistenceProcessorTest extends PowerMockIdent
         mockStatic(CryptoUtil.class);
         CryptoUtil cryptoUtil = mock(CryptoUtil.class);
         when(cryptoUtil.encryptAndBase64Encode(any(byte[].class))).thenThrow(new CryptoException());
-        when(cryptoUtil.getDefaultCryptoUtil(any(ServerConfigurationService.class),
+        when(CryptoUtil.getDefaultCryptoUtil(any(ServerConfigurationService.class),
                 any(RegistryService.class))).thenReturn(cryptoUtil);
         when(CryptoUtil.getDefaultCryptoUtil()).thenReturn(cryptoUtil);
         testclass.getProcessedAuthzCode("test");
@@ -164,7 +166,7 @@ public class EncryptionDecryptionPersistenceProcessorTest extends PowerMockIdent
         mockStatic(CryptoUtil.class);
         CryptoUtil cryptoUtil = mock(CryptoUtil.class);
         when(cryptoUtil.encryptAndBase64Encode(any(byte[].class))).thenThrow(new CryptoException());
-        when(cryptoUtil.getDefaultCryptoUtil(any(ServerConfigurationService.class),
+        when(CryptoUtil.getDefaultCryptoUtil(any(ServerConfigurationService.class),
                 any(RegistryService.class))).thenReturn(cryptoUtil);
         when(CryptoUtil.getDefaultCryptoUtil()).thenReturn(cryptoUtil);
         testclass.getProcessedAccessTokenIdentifier("test");
@@ -177,7 +179,7 @@ public class EncryptionDecryptionPersistenceProcessorTest extends PowerMockIdent
         mockStatic(CryptoUtil.class);
         CryptoUtil cryptoUtil = mock(CryptoUtil.class);
         when(cryptoUtil.encryptAndBase64Encode(any(byte[].class))).thenThrow(new CryptoException());
-        when(cryptoUtil.getDefaultCryptoUtil(any(ServerConfigurationService.class),
+        when(CryptoUtil.getDefaultCryptoUtil(any(ServerConfigurationService.class),
                 any(RegistryService.class))).thenReturn(cryptoUtil);
         when(CryptoUtil.getDefaultCryptoUtil()).thenReturn(cryptoUtil);
         testclass.getProcessedRefreshToken("test");
@@ -190,7 +192,7 @@ public class EncryptionDecryptionPersistenceProcessorTest extends PowerMockIdent
         mockStatic(CryptoUtil.class);
         CryptoUtil cryptoUtil = mock(CryptoUtil.class);
         when(cryptoUtil.encryptAndBase64Encode(any(byte[].class))).thenThrow(new CryptoException());
-        when(cryptoUtil.getDefaultCryptoUtil(any(ServerConfigurationService.class),
+        when(CryptoUtil.getDefaultCryptoUtil(any(ServerConfigurationService.class),
                 any(RegistryService.class))).thenReturn(cryptoUtil);
         when(CryptoUtil.getDefaultCryptoUtil()).thenReturn(cryptoUtil);
         testclass.getProcessedClientSecret("test");
