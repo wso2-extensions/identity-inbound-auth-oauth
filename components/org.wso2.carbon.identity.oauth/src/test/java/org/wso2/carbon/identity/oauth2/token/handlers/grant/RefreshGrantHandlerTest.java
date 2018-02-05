@@ -128,7 +128,7 @@ public class RefreshGrantHandlerTest extends PowerMockIdentityBaseTest {
 
     @Test(dataProvider = "GetValidateGrantData")
     public void testValidateGrant(String clientId, String refreshToken, String accessToken, String tokenState,
-                                  Boolean isUsernameCaseSensitive, Boolean expected) throws Exception {
+                                  boolean isUsernameCaseSensitive, boolean expected) throws Exception {
 
         mockStatic(OAuth2Util.class);
         RefreshTokenValidationDataDO validationDataDO = constructValidationDataDO(accessToken, tokenState,
@@ -164,7 +164,7 @@ public class RefreshGrantHandlerTest extends PowerMockIdentityBaseTest {
         tokenReqDTO.setRefreshToken(refreshToken);
         OAuthTokenReqMessageContext tokenReqMessageContext = new OAuthTokenReqMessageContext(tokenReqDTO);
 
-        Boolean actual = refreshGrantHandler.validateGrant(tokenReqMessageContext);
+        boolean actual = refreshGrantHandler.validateGrant(tokenReqMessageContext);
         if (expected) {
             assertEquals(actual, expected, "Refresh token validation should be successful.");
         } else {
@@ -202,8 +202,8 @@ public class RefreshGrantHandlerTest extends PowerMockIdentityBaseTest {
     }
 
     @Test(dataProvider = "GetTokenIssuerData")
-    public void testIssue(Long userAccessTokenExpiryTime, Long validityPeriod, Boolean isValidToken, Boolean
-            isRenew, Boolean checkUserNameAssertionEnabled, Boolean checkAccessTokenPartitioningEnabled, Boolean
+    public void testIssue(Long userAccessTokenExpiryTime, Long validityPeriod, boolean isValidToken, boolean
+            isRenew, boolean checkUserNameAssertionEnabled, boolean checkAccessTokenPartitioningEnabled, boolean
                                   isUsernameCaseSensitive) throws Exception {
 
         mockStatic(OAuth2Util.class);
@@ -263,7 +263,7 @@ public class RefreshGrantHandlerTest extends PowerMockIdentityBaseTest {
     }
 
     @Test(dataProvider = "GetValidateScopeData")
-    public void validateScope(String[] requestedScopes, String[] grantedScopes, Boolean expected, String message)
+    public void validateScope(String[] requestedScopes, String[] grantedScopes, boolean expected, String message)
             throws Exception {
 
         OAuth2AccessTokenReqDTO tokenReqDTO = new OAuth2AccessTokenReqDTO();
@@ -277,7 +277,7 @@ public class RefreshGrantHandlerTest extends PowerMockIdentityBaseTest {
         System.setProperty(CarbonBaseConstants.CARBON_HOME, "");
         refreshGrantHandler = new RefreshGrantHandler();
         refreshGrantHandler.init();
-        Boolean actual = refreshGrantHandler.validateScope(tokenReqMessageContext);
+        boolean actual = refreshGrantHandler.validateScope(tokenReqMessageContext);
         assertEquals(actual, expected, message);
     }
 
@@ -331,7 +331,7 @@ public class RefreshGrantHandlerTest extends PowerMockIdentityBaseTest {
     }
 
     private RefreshTokenValidationDataDO constructValidationDataDO(String accessToken, String refreshTokenState,
-                                                                   Boolean isUsernameCaseSensitive) {
+                                                                   boolean isUsernameCaseSensitive) {
 
         RefreshTokenValidationDataDO validationDataDO = new RefreshTokenValidationDataDO();
         validationDataDO.setAccessToken(accessToken);
