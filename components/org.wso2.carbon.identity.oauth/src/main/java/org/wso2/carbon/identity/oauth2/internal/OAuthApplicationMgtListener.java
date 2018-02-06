@@ -104,6 +104,9 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
         ApplicationManagementService applicationMgtService = OAuth2ServiceComponentHolder.getApplicationMgtService();
         ServiceProvider serviceProvider = applicationMgtService.getApplicationExcludingFileBasedSPs(applicationName, tenantDomain);
         removeEntriesFromCache(serviceProvider, tenantDomain, userName);
+        if (OAuth2ServiceComponentHolder.isAudienceEnabled()) {
+            removeOauthConsumerAppProperties(serviceProvider, tenantDomain);
+        }
         return true;
     }
 
@@ -346,6 +349,37 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
             }
         } finally {
             IdentityUtil.threadLocalProperties.get().remove(SAAS_PROPERTY);
+        }
+    }
+
+    /**
+     * Remove oauth consumer app related properties.
+     *
+     * @param serviceProvider Service provider
+     * @param tenantDomain Application tenant domain
+     * @throws IdentityApplicationManagementException
+     */
+    private void removeOauthConsumerAppProperties(ServiceProvider serviceProvider, String tenantDomain) throws IdentityApplicationManagementException {
+
+        try {
+            InboundAuthenticationConfig inboundAuthenticationConfig = serviceProvider.getInboundAuthenticationConfig();
+            if (inboundAuthenticationConfig != null) {
+                InboundAuthenticationRequestConfig[] inboundRequestConfigs = inboundAuthenticationConfig.
+                        getInboundAuthenticationRequestConfigs();
+                if (inboundRequestConfigs != null) {
+                    for (InboundAuthenticationRequestConfig inboundRequestConfig : inboundRequestConfigs) {
+                        if (StringUtils.equals(OAUTH2, inboundRequestConfig.getInboundAuthType()) || StringUtils
+                                .equals(inboundRequestConfig.getInboundAuthType(), OAUTH)) {
+                            String oauthKey = inboundRequestConfig.getInboundAuthKey();
+                            OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
+                            oAuthAppDAO.removeOIDCProperties(tenantDomain, oauthKey);
+                        }
+                    }
+                }
+            }
+        } catch (IdentityOAuthAdminException ex) {
+            throw new IdentityApplicationManagementException("Error occurred while removing OIDC properties " +
+                    "for application:" + serviceProvider.getApplicationName() + " in tenant domain: " + tenantDomain);
         }
     }
 }
