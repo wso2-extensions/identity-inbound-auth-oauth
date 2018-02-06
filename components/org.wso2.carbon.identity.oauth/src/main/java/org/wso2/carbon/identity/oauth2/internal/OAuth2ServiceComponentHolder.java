@@ -34,6 +34,7 @@ public class OAuth2ServiceComponentHolder {
 
     private static ApplicationManagementService applicationMgtService;
     private static boolean pkceEnabled = false;
+    private static boolean audienceEnabled = false;
     private static RegistryService registryService;
     private static AuthenticationMethodNameTranslator authenticationMethodNameTranslator;
     private static List<OAuthClientAuthenticator> authenticationHandlers = new ArrayList<>();
@@ -66,6 +67,14 @@ public class OAuth2ServiceComponentHolder {
 
     public static void setPkceEnabled(boolean pkceEnabled) {
         OAuth2ServiceComponentHolder.pkceEnabled = pkceEnabled;
+    }
+
+    public static boolean isAudienceEnabled() {
+        return audienceEnabled;
+    }
+
+    public static void setAudienceEnabled(boolean audienceEnabled) {
+        OAuth2ServiceComponentHolder.audienceEnabled = audienceEnabled;
     }
 
     public static RegistryService getRegistryService() {

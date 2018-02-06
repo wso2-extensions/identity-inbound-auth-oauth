@@ -33,6 +33,7 @@ public class OAuthConsumerAppDTO {
     private long userAccessTokenExpiryTime;
     private long applicationAccessTokenExpiryTime;
     private long refreshTokenExpiryTime;
+    private String[] audiences;
 
     public long getUserAccessTokenExpiryTime() {
         return userAccessTokenExpiryTime;
@@ -138,6 +139,17 @@ public class OAuthConsumerAppDTO {
 
     public String getState() {
         return state;
+    }
+
+    public String[] getAudiences() {
+        return audiences;
+    }
+
+    public void setAudiences(String[] audiences) {
+
+        if (audiences != null) {
+            this.audiences = audiences;
+        }
     }
 }
 
