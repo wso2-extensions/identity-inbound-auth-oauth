@@ -19,14 +19,20 @@
 package org.wso2.carbon.identity.oauth2.util;
 
 import com.nimbusds.jose.Algorithm;
+import com.nimbusds.jose.EncryptionMethod;
 import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JWEAlgorithm;
+import com.nimbusds.jose.JWEEncrypter;
+import com.nimbusds.jose.JWEHeader;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSSigner;
 import com.nimbusds.jose.JWSVerifier;
+import com.nimbusds.jose.crypto.RSAEncrypter;
 import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jose.util.Base64URL;
+import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
@@ -44,6 +50,10 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.wso2.carbon.core.util.KeyStoreManager;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
+import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
+import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.core.util.IdentityIOStreamUtils;
@@ -94,6 +104,7 @@ import java.security.KeyStore;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.sql.Timestamp;
@@ -229,6 +240,9 @@ public class OAuth2Util {
     private static final String SHA256 = "SHA-256";
     private static final String SHA384 = "SHA-384";
     private static final String SHA512 = "SHA-512";
+
+    // Supported Encryption Algorithms
+    private static final String RSA_OAEP = "RSA-OAEP";
 
     private OAuth2Util(){
 
@@ -1521,6 +1535,37 @@ public class OAuth2Util {
     }
 
     /**
+     * This method map encryption algorithm defined in identity.xml to nimbus
+     * encryption algorithm
+     *
+     * @param encryptionAlgorithm name of the encryption algorithm
+     * @return mapped JWEAlgorithm
+     * @throws IdentityOAuth2Exception
+     */
+    public static JWEAlgorithm mapEncryptionAlgorithmForJWEAlgorithm(String encryptionAlgorithm)
+            throws IdentityOAuth2Exception {
+
+        // TODO: 2/6/18 Refine
+        JWEAlgorithm jweAlgorithm = JWEAlgorithm.parse(encryptionAlgorithm);
+
+        if (jweAlgorithm.getRequirement() != null) {
+            return jweAlgorithm;
+        } else {
+            log.error("Unsupported Encryption Algorithm in identity.xml");
+            throw new IdentityOAuth2Exception("Unsupported Encryption Algorithm: " + encryptionAlgorithm + ", in identity.xml");
+        }
+
+//        if (NONE.equalsIgnoreCase(encryptionAlgorithm)) {
+//            return new JWEAlgorithm(JWEAlgorithm.NONE.getName());
+//        } else if (RSA_OAEP.equals(encryptionAlgorithm)) {
+//            return JWEAlgorithm.RSA_OAEP;
+//        } else {
+//            log.error("Unsupported Encryption Algorithm in identity.xml");
+//            throw new IdentityOAuth2Exception("Unsupported Encryption Algorithm: " + encryptionAlgorithm + ", in identity.xml");
+//        }
+    }
+
+    /**
      * This method map signature algorithm define in identity.xml to nimbus
      * signature algorithm
      *
@@ -1642,6 +1687,72 @@ public class OAuth2Util {
         } else {
             throw new RuntimeException("Provided signature algorithm: " + signatureAlgorithm +
                     " is not supported");
+        }
+    }
+
+    /**
+     * Generic Encryption function
+     *
+     * @param jwtClaimsSet contains JWT body
+     * @param encryptionAlgorithm JWT encryption algorithm
+     * @param spTenantDomain Service provider tenant domain
+     * @param clientId ID of the client
+     * @return encrypted JWT token
+     * @throws IdentityOAuth2Exception
+     */
+    public static JWT encryptJWT(JWTClaimsSet jwtClaimsSet, JWEAlgorithm encryptionAlgorithm, String spTenantDomain,
+                                 String clientId) throws IdentityOAuth2Exception{
+        if (JWEAlgorithm.RSA_OAEP.equals(encryptionAlgorithm) || JWEAlgorithm.RSA1_5.equals(encryptionAlgorithm) ||
+                JWEAlgorithm.RSA_OAEP_256.equals(encryptionAlgorithm)) {
+            return encryptWithRSA(jwtClaimsSet, encryptionAlgorithm, spTenantDomain, clientId);
+        } else {
+            throw new RuntimeException("Provided encryption algorithm: " + encryptionAlgorithm +
+                    " is not supported");
+        }
+    }
+
+    /**
+     * encrypt JWT token from RSA algorithm
+     *
+     * @param jwtClaimsSet contains JWT body
+     * @param encryptionAlgorithm JWT signing algorithm
+     * @param spTenantDomain Service provider tenant domain
+     * @param clientId ID of the client
+     * @return encrypted JWT token
+     * @throws IdentityOAuth2Exception
+     */
+    private static JWT encryptWithRSA(JWTClaimsSet jwtClaimsSet, JWEAlgorithm encryptionAlgorithm,
+                                      String spTenantDomain, String clientId) throws IdentityOAuth2Exception {
+        try {
+            if (StringUtils.isBlank(spTenantDomain)) {
+                spTenantDomain = MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
+                if (log.isDebugEnabled()) {
+                    log.debug("Assign super tenant domain as signing domain."); // TODO: 2/6/18 Refine
+                }
+            }
+
+            if (log.isDebugEnabled()) {
+                log.debug("Encrypting JWT using the algorithm: " + encryptionAlgorithm + " & key of the tenant: " +
+                        spTenantDomain);
+            }
+
+            int tenantId = IdentityTenantUtil.getTenantId(spTenantDomain);
+            Certificate publicCert = getPublicCertOfOAuthApp(clientId, spTenantDomain);
+            Key publicKey = publicCert.getPublicKey();
+
+            EncryptionMethod encryptionMethod = EncryptionMethod.A128GCM; // TODO: 2/7/18 Refine
+            JWEHeader header = new JWEHeader(encryptionAlgorithm, encryptionMethod);
+            header.setKeyID(getThumbPrint(spTenantDomain, tenantId));
+            header.setX509CertThumbprint(new Base64URL(getThumbPrint(spTenantDomain, tenantId)));
+
+            EncryptedJWT encryptedJWT = new EncryptedJWT(header, jwtClaimsSet);
+
+            JWEEncrypter encrypter = new RSAEncrypter((RSAPublicKey) publicKey);
+            encryptedJWT.encrypt(encrypter);
+
+            return encryptedJWT;
+        } catch (JOSEException e) {
+            throw new IdentityOAuth2Exception("Error occurred while encrypting JWT", e);
         }
     }
 
@@ -2010,4 +2121,39 @@ public class OAuth2Util {
 
         return isExplicitlyFederatedUser && isFederatedUserNotMappedToLocalUser;
     }
+
+    // Temp method ============================
+    public static ServiceProvider getServiceProvider(String clientId, String tenantDomain)
+            throws IdentityOAuth2Exception {
+        ApplicationManagementService applicationMgtService = OAuth2ServiceComponentHolder.getApplicationMgtService();
+        try {
+            // Get the Service Provider.
+            return applicationMgtService.getServiceProviderByClientId(
+                    clientId, IdentityApplicationConstants.OAuth2.NAME, tenantDomain);
+        } catch (IdentityApplicationManagementException e) {
+            throw new IdentityOAuth2Exception("Error while obtaining the service provider for client_id: " +
+                    clientId + " of tenantDomain: " + tenantDomain, e);
+        }
+    }
+
+    public static Certificate getPublicCertOfOAuthApp(String clientId, String tenantDomain)
+            throws IdentityOAuth2Exception {
+        try {
+            ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(clientId, tenantDomain);
+            // Get the certificate content
+            String certificateContent = serviceProvider.getCertificateContent();
+            if (StringUtils.isNotBlank(certificateContent)) {
+                // Get the cert and return
+                return IdentityUtil.convertPEMEncodedContentToCertificate(certificateContent);
+            } else {
+                // Throw exception
+                throw new IdentityOAuth2Exception("Error while obtaining certificate for client_id: " +
+                clientId + " Blank certificate.");
+            }
+        } catch (CertificateException e) {
+            throw new IdentityOAuth2Exception("Error while building X509 cert of oauth app with client_id: "
+                    + clientId + " of tenantDomain: " + tenantDomain);
+        }
+    }
+    // Temp method end ============================
 }
