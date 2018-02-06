@@ -172,7 +172,7 @@ public class AccessTokenIssuer {
         if (!isAuthenticated && !oAuthClientAuthnContext.isPreviousAuthenticatorEngaged() && authzGrantHandler
                 .isConfidentialClient()) {
             tokenRespDTO = handleError(
-                    OAuth2ErrorCodes.INVALID_REQUEST,
+                    OAuth2ErrorCodes.INVALID_CLIENT,
                     "Unsupported Client Authentication Method!", tokenReqDTO);
             setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
             triggerPostListeners(tokenReqDTO, tokenRespDTO, tokReqMsgCtx, isRefreshRequest);
