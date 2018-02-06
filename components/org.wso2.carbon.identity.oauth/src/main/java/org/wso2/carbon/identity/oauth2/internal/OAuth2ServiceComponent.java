@@ -55,6 +55,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkAudienceEnabled;
+
 @Component(
         name = "identity.oauth2.component",
         immediate = true
@@ -141,6 +143,17 @@ public class OAuth2ServiceComponent {
             }
         } catch (Throwable e) {
             log.error("Error while activating OAuth2ServiceComponent.", e);
+        }
+        if (checkAudienceEnabled()) {
+            if (log.isDebugEnabled()) {
+                log.debug("OAuth - OIDC audiences enabled.");
+            }
+            OAuth2ServiceComponentHolder.setAudienceEnabled(true);
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug("OAuth - OIDC audiences disabled.");
+            }
+            OAuth2ServiceComponentHolder.setAudienceEnabled(false);
         }
     }
 

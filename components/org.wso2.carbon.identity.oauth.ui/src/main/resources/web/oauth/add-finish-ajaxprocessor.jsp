@@ -25,6 +25,7 @@
 <%@ page import="org.wso2.carbon.ui.CarbonUIMessage"%>
 <%@ page import="org.wso2.carbon.ui.CarbonUIUtil"%>
 <%@ page import="org.wso2.carbon.utils.ServerConstants"%>
+<%@ page import="org.wso2.carbon.identity.core.util.IdentityUtil" %>
 
 <%@ page import="java.util.ResourceBundle" %>
 <%@ page import="org.wso2.carbon.identity.oauth.ui.util.OAuthUIUtil" %>
@@ -102,6 +103,17 @@
 
             if (OAuthConstants.OAuthVersions.VERSION_2.equals(oauthVersion)) {
                 app.setGrantTypes(grants);
+            }
+
+            if (Boolean.parseBoolean(request.getParameter("enableAudienceRestriction"))) {
+                String audiencesCountParameter = request.getParameter("audiencePropertyCounter");
+                if (IdentityUtil.isNotBlank(audiencesCountParameter)) {
+                    int audiencesCount = Integer.parseInt(audiencesCountParameter);
+                    String[] audiences = request.getParameterValues("audiencePropertyName");
+                    if (OAuthConstants.OAuthVersions.VERSION_2.equals(oauthVersion)) {
+                        app.setAudiences(audiences);
+                    }
+                }
             }
             app.setPkceMandatory(pkceMandatory);
             app.setPkceSupportPlain(pkceSupportPlain);
