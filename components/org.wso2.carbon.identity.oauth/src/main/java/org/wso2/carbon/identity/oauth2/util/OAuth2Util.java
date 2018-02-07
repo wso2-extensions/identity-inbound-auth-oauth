@@ -69,6 +69,7 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dao.OAuthConsumerDAO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.config.SpOAuth2ExpiryTimeConfiguration;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
@@ -101,6 +102,7 @@ import java.security.KeyStore;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.sql.Timestamp;
@@ -2048,7 +2050,6 @@ public class OAuth2Util {
         return isExplicitlyFederatedUser && isFederatedUserNotMappedToLocalUser;
     }
 
-
     public static ServiceProvider getServiceProvider(String clientId,
                                                      String tenantDomain) throws IdentityOAuth2Exception {
         ApplicationManagementService applicationMgtService = OAuth2ServiceComponentHolder.getApplicationMgtService();
@@ -2059,6 +2060,26 @@ public class OAuth2Util {
         } catch (IdentityApplicationManagementException e) {
             throw new IdentityOAuth2Exception("Error while obtaining the service provider for client_id: " +
                     clientId + " of tenantDomain: " + tenantDomain, e);
+        }
+    }
+
+    public static Certificate getPublicCertOfOAuthApp(String clientId,
+                                                         String tenantDomain) throws IdentityOAuth2Exception {
+
+        try {
+            ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(clientId, tenantDomain);
+            // Get the certificate content
+            String certificateContent = serviceProvider.getCertificateContent();
+            if (StringUtils.isNotBlank(certificateContent)) {
+                // Get the cert and return
+                return IdentityUtil.convertPEMEncodedContentToCertificate(certificateContent);
+            } else {
+                throw new IdentityOAuth2Exception("Public certificate not configured for Service Provider with " +
+                        "client_id: " + clientId + " of tenantDomain: " + tenantDomain);
+            }
+        } catch (CertificateException e) {
+            throw new IdentityOAuth2Exception("Error while building X509 cert of oauth app with client_id: "
+                    + clientId + " of tenantDomain: " + tenantDomain);
         }
     }
 }
