@@ -236,8 +236,17 @@ public class EndpointUtil {
 
         String errorPageUrl = OAuth2Util.OAuthURL.getOAuth2ErrorPageUrl();
         try {
-            errorPageUrl += "?" + OAuthConstants.OAUTH_ERROR_CODE + "=" + URLEncoder.encode(errorCode, UTF_8) +
-                    "&" + OAuthConstants.OAUTH_ERROR_MESSAGE + "=" + URLEncoder.encode(errorMessage, UTF_8);
+
+            if (StringUtils.isNotBlank(errorCode)) {
+                errorPageUrl = FrameworkUtils.appendQueryParamsStringToUrl(errorPageUrl,
+                        OAuthConstants.OAUTH_ERROR_CODE + "=" + URLEncoder.encode(errorCode, UTF_8));
+            }
+
+            if (StringUtils.isNotBlank(errorMessage)) {
+                errorPageUrl = FrameworkUtils.appendQueryParamsStringToUrl(errorPageUrl,
+                        OAuthConstants.OAUTH_ERROR_MESSAGE + "=" + URLEncoder.encode(errorMessage, UTF_8));
+            }
+
         } catch (UnsupportedEncodingException e) {
             //ignore
             if (log.isDebugEnabled()){
