@@ -198,7 +198,7 @@
                     document.addAppform.addAudience.disabled = !chkbx.checked;
                 }
 
-                function addAudience() {
+                function addAudienceFunc() {
                     var audience = $.trim(document.getElementById('audience').value);
                     if (audience === "") {
                         document.getElementById("audience").value = "";
@@ -447,7 +447,7 @@
                                    class="text-box-big" disabled="disabled"/>
                             <input id="addAudience" name="addAudience" type="button"
                                    disabled="disabled" value="<fmt:message key="oauth.add.audience"/>"
-                                   onclick="return addAudience()"/>
+                                   onclick="return addAudienceFunc()"/>
                         </td>
                     </tr>
 
