@@ -550,7 +550,7 @@ public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
 
                 // No authenticator engaged. Hence authentication should fail
                 {"sampleID", OAuth2ErrorCodes.INVALID_CLIENT, false, null, null,
-                        OAuth2ErrorCodes.INVALID_REQUEST, true, false},
+                        OAuth2ErrorCodes.INVALID_CLIENT, true, false},
 
                 // Non confidential apps doesn't need authentication
                 {"sampleID", OAuth2ErrorCodes.INVALID_CLIENT, false, null, null,
