@@ -280,7 +280,7 @@
                     document.editAppform.audience.disabled = !chkbx.checked;
                     document.editAppform.addAudience.disabled = (!chkbx.checked);
                 }
-                function addAudience() {
+                function addAudienceFunc() {
                     var audience = $.trim(document.getElementById('audience').value);
                     if (audience === "") {
                         document.getElementById("audience").value = "";
@@ -535,7 +535,7 @@
                             <input id="addAudience" name="addAudience"
                                    type="button"
                                    value="<fmt:message key="oauth.add.audience"/>"
-                                   onclick="return addAudience()"/>
+                                   onclick="return addAudienceFunc()"/>
                         </td>
                     </tr>
                     <% } else {%>
@@ -560,7 +560,7 @@
                             <input id="addAudience" name="addAudience"
                                    type="button"
                                    disabled="disabled" value="<fmt:message key="oauth.add.audience"/>"
-                                   onclick="return addAudience()"/>
+                                   onclick="return addAudienceFunc()"/>
                         </td>
                     </tr>
                     <%} %>
