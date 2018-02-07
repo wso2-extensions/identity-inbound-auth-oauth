@@ -37,7 +37,8 @@ public class RequestObjectException extends FrameworkException {
 
     public RequestObjectException(String errorMessage) {
         super(errorMessage);
-        this.errorCode = null;
+        // By default we set the invalid_request error code.
+        this.errorCode = ERROR_CODE_INVALID_REQUEST;
         this.errorMessage = errorMessage;
     }
 

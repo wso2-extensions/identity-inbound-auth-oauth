@@ -252,24 +252,10 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
      * with alias
      */
     protected Certificate getPublicCertOfOAuthApp(String clientId, String tenantDomain) throws RequestObjectException {
-
         try {
-            ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(clientId, tenantDomain);
-            // Get the certificate content
-            String certificateContent = serviceProvider.getCertificateContent();
-            if (StringUtils.isNotBlank(certificateContent)) {
-                // Get the cert and return
-                return IdentityUtil.convertPEMEncodedContentToCertificate(certificateContent);
-            } else {
-                // Go for backward compatibility approach.
-                // TODO: throw an exception, no need of the backward compatible behaviour....
-                return getCertificateForAlias(tenantDomain, clientId);
-            }
+            return OAuth2Util.getPublicCertOfOAuthApp(clientId, tenantDomain);
         } catch (IdentityOAuth2Exception e) {
-            throw new RequestObjectException("Error while retrieving public cert of oauth app with client_id: "
-                    + clientId + " of tenantDomain: " + tenantDomain);
-        } catch (CertificateException e) {
-            throw new RequestObjectException("Error while building X509 cert of oauth app with client_id: "
+            throw new RequestObjectException("Error retrieving public certificate of OAuth app with client_id: "
                     + clientId + " of tenantDomain: " + tenantDomain);
         }
     }
