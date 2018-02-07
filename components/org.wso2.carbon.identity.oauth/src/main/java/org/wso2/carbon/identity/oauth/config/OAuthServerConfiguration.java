@@ -49,7 +49,6 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.handlers.ResponseTypeHandler;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuerImpl;
-import org.wso2.carbon.identity.oauth2.token.handlers.clientauth.ClientAuthenticationHandler;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.saml.SAML2TokenCallbackHandler;
 import org.wso2.carbon.identity.oauth2.validators.grant.AuthorizationCodeGrantValidator;
@@ -150,7 +149,6 @@ public class OAuthServerConfiguration {
     private Map<String, Class<? extends OAuthValidator<HttpServletRequest>>> supportedResponseTypeValidators;
     private String[] supportedClaims = null;
     private Map<String, Properties> supportedClientAuthHandlerData = new HashMap<>();
-    private List<ClientAuthenticationHandler> supportedClientAuthHandlers;
     private String saml2TokenCallbackHandlerName = null;
     private String saml2BearerTokenUserType;
     private boolean mapFederatedUsersToLocal = false;
@@ -199,7 +197,7 @@ public class OAuthServerConfiguration {
     private boolean isRevokeResponseHeadersEnabled = true;
 
     // property to make DisplayName property to be used in consent page
-    private boolean showDisplayNameInConsentPage=false;
+    private boolean showDisplayNameInConsentPage = false;
     // Use the SP tenant domain instead of user domain.
     private boolean useSPTenantDomainValue;
 
@@ -207,6 +205,7 @@ public class OAuthServerConfiguration {
     private ValueGenerator tokenValueGenerator;
 
     private String tokenValueGeneratorClassName;
+
     private OAuthServerConfiguration() {
         buildOAuthServerConfiguration();
     }
@@ -520,7 +519,7 @@ public class OAuthServerConfiguration {
     }
 
     /**
-     * @deprecated  From v5.1.3 use @{@link BaseCache#isEnabled()} to check whether a cache is enabled or not instead
+     * @deprecated From v5.1.3 use @{@link BaseCache#isEnabled()} to check whether a cache is enabled or not instead
      * of relying on <EnableOAuthCache> global Cache config
      */
     public boolean isCacheEnabled() {
@@ -701,20 +700,27 @@ public class OAuthServerConfiguration {
 
             while (iterator.hasNext()) {
                 OMElement requestObjectBuildersElement = iterator.next();
-                OMElement builderNameElement = requestObjectBuildersElement
-                        .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.BUILDER_NAME));
-                String builderName = null;
-                if (builderNameElement != null) {
-                    builderName = builderNameElement.getText();
-                }
-
+                OMElement builderTypeElement = requestObjectBuildersElement
+                        .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.BUILDER_TYPE));
                 OMElement requestObjectImplClassElement = requestObjectBuildersElement
                         .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.REQUEST_OBJECT_IMPL_CLASS));
-                String requestObjectImplClass = null;
-                if (requestObjectImplClassElement != null) {
-                    requestObjectImplClass = requestObjectImplClassElement.getText();
+
+
+                if (builderTypeElement == null) {
+                    log.warn("Empty configuration element for Type.");
+                    //Empty configuration element for Type, ignore
+                    continue;
                 }
-                requestObjectBuilderClassNames.put(builderName, requestObjectImplClass);
+
+                if (requestObjectImplClassElement == null) {
+                    log.warn("Request Object Builder is not defined for the Type: " + builderTypeElement);
+                    continue;
+                }
+
+                String builderType = builderTypeElement.getText();
+                String requestObjectImplClass = requestObjectImplClassElement.getText();
+                requestObjectBuilderClassNames.put(builderType, requestObjectImplClass);
+
             }
         }
         setDefaultRequestObjectBuilderClasses();
@@ -728,14 +734,12 @@ public class OAuthServerConfiguration {
     }
 
     private void setDefaultRequestObjectBuilderClasses() {
-        if (MapUtils.isEmpty(requestObjectBuilderClassNames)) {
+        if (requestObjectBuilderClassNames.get(REQUEST_PARAM_VALUE_BUILDER) == null) {
             // if this element is not present, assume the default case.
-            log.info("\'RequestObjectBuilders\' element not configured in identity.xml. " +
-                    "Therefore instantiating default request object builders");
-
-            Map<String, String> defaultRequestObjectBuilders = new HashMap<>();
-            defaultRequestObjectBuilders.put(REQUEST_PARAM_VALUE_BUILDER, REQUEST_PARAM_VALUE_BUILDER_CLASS);
-            requestObjectBuilderClassNames.putAll(defaultRequestObjectBuilders);
+            log.info("\'RequestObjectBuilder\' element for Type: " + REQUEST_PARAM_VALUE_BUILDER + "is not " +
+                    "configured in identity.xml. Therefore instantiating default request object builder: "
+                    + REQUEST_PARAM_VALUE_BUILDER_CLASS);
+            requestObjectBuilderClassNames.put(REQUEST_PARAM_VALUE_BUILDER, REQUEST_PARAM_VALUE_BUILDER_CLASS);
         }
     }
 
@@ -803,40 +807,7 @@ public class OAuthServerConfiguration {
     public String[] getSupportedClaims() {
         return supportedClaims;
     }
-
-    public List<ClientAuthenticationHandler> getSupportedClientAuthHandlers() {
-        if (supportedClientAuthHandlers == null) {
-            synchronized (this) {
-                if (supportedClientAuthHandlers == null) {
-                    List<ClientAuthenticationHandler> supportedClientAuthHandlersTemp = new ArrayList<>();
-
-                    for (Map.Entry<String, Properties> entry : supportedClientAuthHandlerData.entrySet()) {
-                        ClientAuthenticationHandler clientAuthenticationHandler = null;
-                        try {
-                            clientAuthenticationHandler = (ClientAuthenticationHandler)
-                                    Class.forName(entry.getKey()).newInstance();
-                            clientAuthenticationHandler.init(entry.getValue());
-                            supportedClientAuthHandlersTemp.add(clientAuthenticationHandler);
-
-                        //Exceptions necessarily don't have to break the flow since there are cases
-                        //runnable without client auth handlers
-                        } catch (InstantiationException e) {
-                            log.error("Error instantiating " + entry, e);
-                        } catch (IllegalAccessException e) {
-                            log.error("Illegal access to " + entry, e);
-                        } catch (ClassNotFoundException e) {
-                            log.error("Cannot find class: " + entry, e);
-                        } catch (IdentityOAuth2Exception e) {
-                            log.error("Error while initializing " + entry, e);
-                        }
-                        supportedClientAuthHandlers = supportedClientAuthHandlersTemp;
-                    }
-                }
-            }
-        }
-        return supportedClientAuthHandlers;
-    }
-
+    
     public SAML2TokenCallbackHandler getSAML2TokenCallbackHandler() {
 
         if (StringUtils.isBlank(saml2TokenCallbackHandlerName)) {
@@ -1026,17 +997,14 @@ public class OAuthServerConfiguration {
     }
 
     /**
-     * @deprecated use {@link #getOpenIDConnectIDTokenExpiryTimeInSeconds()} instead
-     *
      * @return the openIDConnectIDTokenExpirationInSeconds
+     * @deprecated use {@link #getOpenIDConnectIDTokenExpiryTimeInSeconds()} instead
      */
     public String getOpenIDConnectIDTokenExpiration() {
         return openIDConnectIDTokenExpiration;
     }
 
     /**
-     *
-     *
      * @return ID Token expiry time in milliseconds.
      */
     public long getOpenIDConnectIDTokenExpiryTimeInSeconds() {
@@ -2255,8 +2223,8 @@ public class OAuthServerConfiguration {
         // Request Object Configs
         private static final String REQUEST_OBJECT_BUILDERS = "RequestObjectBuilders";
         private static final String REQUEST_OBJECT_BUILDER = "RequestObjectBuilder";
-        private static final String BUILDER_NAME = "BuilderName";
-        private static final String REQUEST_OBJECT_IMPL_CLASS = "RequestObjectBuilderImplClass";
+        private static final String BUILDER_TYPE = "Type";
+        private static final String REQUEST_OBJECT_IMPL_CLASS = "ClassName";
 
     }
 

@@ -17,17 +17,15 @@
 package org.wso2.carbon.identity.openidconnect;
 
 import net.minidev.json.JSONObject;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
-import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
-import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
-import org.wso2.carbon.identity.openidconnect.model.Claim;
-import org.wso2.carbon.identity.openidconnect.model.RequestObject;
+import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.registry.api.RegistryException;
 import org.wso2.carbon.registry.api.Resource;
 import org.wso2.carbon.registry.core.service.RegistryService;
@@ -131,11 +129,10 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
         return DEFAULT_PRIORITY;
     }
 
-    public Map<String, Object> getClaimsFilteredByEssentialClaims(Map<String, Object> userClaims,
-                                                                  String type,
-                                                                  RequestObject requestObject) {
+    @Override
+    public Map<String, Object> getClaimsFilteredByEssentialClaims(Map<String, Object> userClaims, List<RequestedClaim> requestParamClaims) {
 
-        Map<String, Object> essentialClaims = new HashMap();
+        Map<String, Object> essentialClaims = new HashMap<>();
         if (isEmpty(userClaims)) {
             // No user claims to filter.
             if (log.isDebugEnabled()) {
@@ -143,12 +140,12 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
             }
             return new HashMap<>();
         }
-        if (requestObject != null) {
-            Map<String, List<Claim>> requestParamClaims = requestObject.getClaimsforRequestParameter();
-            List<String> essentialClaimsfromRequestParam = OAuth2Util.essentialClaimsFromRequestParam(type,
-                    requestParamClaims);
-            for (String essentialClaim : essentialClaimsfromRequestParam) {
-                essentialClaims.put(essentialClaim, userClaims.get(essentialClaim));
+        if (CollectionUtils.isNotEmpty(requestParamClaims)) {
+            for (RequestedClaim essentialClaim : requestParamClaims) {
+                String claimName = essentialClaim.getName();
+                if (essentialClaim.isEssential() && userClaims.get(claimName) != null){
+                    essentialClaims.put(claimName, userClaims.get(claimName));
+                }
             }
         }
         return essentialClaims;

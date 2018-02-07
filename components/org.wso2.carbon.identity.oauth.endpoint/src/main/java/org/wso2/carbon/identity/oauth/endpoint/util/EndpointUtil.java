@@ -49,6 +49,7 @@ import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
+import org.wso2.carbon.identity.openidconnect.RequestObjectService;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.webfinger.DefaultWebFingerProcessor;
@@ -107,6 +108,17 @@ public class EndpointUtil {
     public static DefaultOIDCProcessor getOIDCService() {
         return (DefaultOIDCProcessor) PrivilegedCarbonContext.getThreadLocalCarbonContext().getOSGiService
                 (OIDCProcessor.class, null);
+    }
+
+    /**
+     * Returns the {@code RequestObjectService} instance
+     *
+     * @return RequestObjectService
+     */
+    public static RequestObjectService getRequestObjectService() {
+
+        return (RequestObjectService) PrivilegedCarbonContext.getThreadLocalCarbonContext().getOSGiService
+                (RequestObjectService.class, null);
     }
 
     /**

@@ -31,34 +31,34 @@ public interface OAuthClientAuthenticator extends IdentityHandler {
      * Authenticate OAuth2 Client.
      *
      * @param request                 Incoming HttpServletRequest.
-     * @param content                 Body parameter content of the incoming HttpRequest
+     * @param bodyParams                 Body parameter content of the incoming HttpRequest
      * @param oAuthClientAuthnContext OAuth2 Client Authenticaion Context
      * @return Client authentication status. True if the client authentication is success. Else false.
      * @throws OAuthClientAuthnException
      */
-    boolean authenticateClient(HttpServletRequest request, Map<String, List> content, OAuthClientAuthnContext
+    boolean authenticateClient(HttpServletRequest request, Map<String, List> bodyParams, OAuthClientAuthnContext
             oAuthClientAuthnContext) throws OAuthClientAuthnException;
 
     /**
      * Returns whether the incoming reqeust can be handled by the particular authenticator.
      *
      * @param request                 Incoming HttpServletRequest.
-     * @param content                 Content of the body parameters.
+     * @param bodyParams                 Content of the body parameters.
      * @param oAuthClientAuthnContext OAuth Client Authentication context.
      * @return Whether the OAuth client can be authenticated or not by this authenticator.
      */
-    boolean canAuthenticate(HttpServletRequest request, Map<String, List> content, OAuthClientAuthnContext
+    boolean canAuthenticate(HttpServletRequest request, Map<String, List> bodyParams, OAuthClientAuthnContext
             oAuthClientAuthnContext);
 
     /**
      * Extracts the OAuth client id from the incoming request.
      *
      * @param request                 HttpServletRequest which is the incoming request.
-     * @param content                 Body parameter content of the incoming request.
+     * @param bodyParams                 Body parameter content of the incoming request.
      * @param oAuthClientAuthnContext OAuth Client Authentication Context.
      * @return Client ID
      * @throws OAuthClientAuthnException
      */
-    String getClientId(HttpServletRequest request, Map<String, List> content, OAuthClientAuthnContext
+    String getClientId(HttpServletRequest request, Map<String, List> bodyParams, OAuthClientAuthnContext
             oAuthClientAuthnContext) throws OAuthClientAuthnException;
 }

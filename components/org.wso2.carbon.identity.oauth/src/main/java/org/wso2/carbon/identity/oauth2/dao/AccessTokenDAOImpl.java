@@ -25,6 +25,7 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
@@ -39,6 +40,7 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.util.OAuth2TokenUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.sql.Connection;
@@ -80,7 +82,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
     @Override
     public void insertAccessToken(String accessToken, String consumerKey, AccessTokenDO accessTokenDO,
                                   String userStoreDomain) throws IdentityOAuth2Exception {
-        try(Connection connection = getConnection()) {
+
+        try (Connection connection = getConnection()) {
             insertAccessToken(accessToken, consumerKey, accessTokenDO, connection, userStoreDomain);
         } catch (SQLException e) {
             throw new IdentityOAuth2Exception("Error while inserting access token.", e);
@@ -109,6 +112,20 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         if (accessTokenDO.getAuthzUser() == null) {
             throw new IdentityOAuth2Exception(
                     "Authorized user should be available for further execution.");
+        }
+
+        if (OAuthServerConfiguration.getInstance().usePersistedAccessTokenAlias()) {
+            try {
+                accessToken = OAuthServerConfiguration.getInstance().getIdentityOauthTokenIssuer()
+                        .getAccessTokenHash(accessToken);
+            } catch (OAuthSystemException e) {
+                if (log.isDebugEnabled() &&
+                        IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                    log.debug("Error while getting access token hash for token(hashed): " +
+                            DigestUtils.sha256Hex(accessToken));
+                }
+                throw new IdentityOAuth2Exception("Error while getting access token hash.");
+            }
         }
 
         if (log.isDebugEnabled()) {
@@ -797,6 +814,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             prepStmt.setString(2, tokenStateId);
             prepStmt.setString(3, tokenId);
             prepStmt.executeUpdate();
+            OAuth2TokenUtil.postUpdateAccessToken(tokenId, tokenState);
         } catch (SQLException e) {
             IdentityDatabaseUtil.rollBack(connection);
             throw new IdentityOAuth2Exception("Error while updating Access Token with ID : " +
@@ -853,6 +871,9 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 }
                 ps.executeBatch();
                 connection.commit();
+                // To revoke request objects which have persisted against the access token.
+                OAuth2TokenUtil.postUpdateAccessTokens(Arrays.asList(tokens), OAuthConstants.TokenStates.
+                        TOKEN_STATE_REVOKED);
             } catch (SQLException e) {
                 IdentityDatabaseUtil.rollBack(connection);
                 throw new IdentityOAuth2Exception("Error occurred while revoking Access Tokens : " +
@@ -871,8 +892,12 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 ps.setString(2, UUID.randomUUID().toString());
                 ps.setString(3, getPersistenceProcessor().getProcessedAccessTokenIdentifier(tokens[0]));
                 ps.executeUpdate();
+
+                // To revoke request objects which have persisted against the access token.
+                OAuth2TokenUtil.postUpdateAccessTokens(Arrays.asList(tokens), OAuthConstants.TokenStates.
+                        TOKEN_STATE_REVOKED);
             } catch (SQLException e) {
-                //IdentityDatabaseUtil.rollBack(connection);
+                // IdentityDatabaseUtil.rollBack(connection);
                 throw new IdentityOAuth2Exception("Error occurred while revoking Access Token : " +
                         Arrays.toString(tokens), e);
             } finally {
@@ -884,6 +909,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
     @Override
     public void revokeAccessTokensIndividually(String[] tokens) throws IdentityOAuth2Exception {
 
+        List<String> accessTokenId = new ArrayList<>();
         if (log.isDebugEnabled()) {
             if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
                 StringBuilder stringBuilder = new StringBuilder();
@@ -911,9 +937,15 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 if (log.isDebugEnabled()) {
                     log.debug("Number of rows being updated : " + count);
                 }
+                accessTokenId.add(getTokenIdByAccessToken(token));
             }
 
             connection.commit();
+            // To revoke request objects which have persisted against the access token.
+            if (accessTokenId.size() > 0) {
+                OAuth2TokenUtil.postUpdateAccessTokens(accessTokenId, OAuthConstants.TokenStates.
+                        TOKEN_STATE_REVOKED);
+            }
         } catch (SQLException e) {
             IdentityDatabaseUtil.rollBack(connection);
             throw new IdentityOAuth2Exception("Error occurred while revoking Access Token : " +
@@ -949,6 +981,10 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 log.debug("Number of rows being updated : " + count);
             }
             connection.commit();
+
+            // To revoke the tokens from Request Object table.
+            OAuth2TokenUtil.postUpdateAccessToken(tokenId, OAuthConstants.TokenStates.
+                    TOKEN_STATE_REVOKED);
         } catch (SQLException e) {
             IdentityDatabaseUtil.rollBack(connection);
             throw new IdentityOAuth2Exception("Error occurred while revoking Access Token with ID : " + tokenId, e);
@@ -956,8 +992,6 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             IdentityDatabaseUtil.closeAllConnections(connection, null, ps);
         }
     }
-
-
 
     /**
      * @param authenticatedUser
@@ -1207,6 +1241,9 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
 
             // commit both transactions
             connection.commit();
+
+            // Post refresh access token event
+            OAuth2TokenUtil.postRefreshAccessToken(oldAccessTokenId, accessTokenDO.getTokenId(), tokenState);
         } catch (SQLException e) {
             String errorMsg = "Error while regenerating access token";
             throw new IdentityOAuth2Exception(errorMsg, e);
@@ -1319,7 +1356,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             log.debug("Retrieving all ACTIVE and EXPIRED access tokens of userstore: " + userStoreDomain + " tenant " +
                     "id: " + tenantId);
         }
-        //we do not support access token partitioning here
+        // we do not support access token partitioning here
         Connection connection = IdentityDatabaseUtil.getDBConnection();
 
         userStoreDomain = OAuth2Util.getSanitizedUserStoreDomain(userStoreDomain);
@@ -1389,7 +1426,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             log.debug("Renaming userstore domain: " + currentUserStoreDomain + " as: " + newUserStoreDomain
                     + " tenant id: " + tenantId + " in IDN_OAUTH2_ACCESS_TOKEN table");
         }
-        //we do not support access token partitioning here
+        // we do not support access token partitioning here
         currentUserStoreDomain = OAuth2Util.getSanitizedUserStoreDomain(currentUserStoreDomain);
         newUserStoreDomain = OAuth2Util.getSanitizedUserStoreDomain(newUserStoreDomain);
         Connection connection = IdentityDatabaseUtil.getDBConnection();

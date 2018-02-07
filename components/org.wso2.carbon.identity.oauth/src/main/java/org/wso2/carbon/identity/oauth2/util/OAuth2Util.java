@@ -35,6 +35,7 @@ import org.apache.axiom.om.impl.builder.StAXOMBuilder;
 import org.apache.axiom.util.base64.Base64Utils;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -46,6 +47,8 @@ import org.wso2.carbon.core.util.KeyStoreManager;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.core.util.IdentityConfigParser;
+import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.core.util.IdentityIOStreamUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -67,9 +70,11 @@ import org.wso2.carbon.identity.oauth2.config.SpOAuth2ExpiryTimeConfiguration;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.oauth2.model.ClientCredentialDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
-import org.wso2.carbon.identity.openidconnect.model.Claim;
+import org.wso2.carbon.identity.openidconnect.OIDCConstants;
+import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.registry.core.Registry;
 import org.wso2.carbon.registry.core.Resource;
 import org.wso2.carbon.registry.core.exceptions.RegistryException;
@@ -126,6 +131,10 @@ public class OAuth2Util {
     public static final String ACCESS_TOKEN_DO = "AccessTokenDo";
     public static final String OAUTH2_VALIDATION_MESSAGE_CONTEXT = "OAuth2TokenValidationMessageContext";
     private static final String ESSENTAIL = "essential";
+    public static final String CONFIG_ELEM_OAUTH = "OAuth";
+    public static final String OPENID_CONNECT = "OpenIDConnect";
+    public static final String ENABLE_OPENID_CONNECT_AUDIENCES = "EnableAudiences";
+    public static final String OPENID_CONNECT_AUDIENCE = "audience";
 
     private static final String ALGORITHM_NONE = "NONE";
     /*
@@ -1556,6 +1565,38 @@ public class OAuth2Util {
         }
     }
 
+    /**
+     * Check if audiences are enabled by reading configuration file at server startup.
+     *
+     * @return
+     */
+    public static boolean checkAudienceEnabled() {
+
+        boolean isAudienceEnabled = false;
+        IdentityConfigParser configParser = IdentityConfigParser.getInstance();
+        OMElement oauthElem = configParser.getConfigElement(CONFIG_ELEM_OAUTH);
+
+        if (oauthElem == null) {
+            log.warn("Error in OAuth Configuration. OAuth element is not available.");
+            return isAudienceEnabled;
+        }
+        OMElement configOpenIDConnect = oauthElem.getFirstChildWithName(new QName(IdentityCoreConstants.IDENTITY_DEFAULT_NAMESPACE, OPENID_CONNECT));
+
+        if (configOpenIDConnect == null) {
+            log.warn("Error in OAuth Configuration. OpenID element is not available.");
+            return isAudienceEnabled;
+        }
+        OMElement configAudience = configOpenIDConnect.
+                getFirstChildWithName(new QName(IdentityCoreConstants.IDENTITY_DEFAULT_NAMESPACE, ENABLE_OPENID_CONNECT_AUDIENCES));
+
+        if (configAudience != null) {
+            String configAudienceValue = configAudience.getText();
+            if (StringUtils.isNotBlank(configAudienceValue)) {
+                isAudienceEnabled = Boolean.parseBoolean(configAudienceValue);
+            }
+        }
+        return isAudienceEnabled;
+    }
 
     /**
      * Generate the unique user domain value in the format of "FEDERATED:idp_name".
@@ -1945,7 +1986,7 @@ public class OAuth2Util {
         }
         return true;
     }
-
+  
     /**
      * This method returns essential:true claims list from the request parameter of OIDC authorization request
      *
@@ -1953,22 +1994,16 @@ public class OAuth2Util {
      * @param requestedClaimsFromRequestParam claims defined in the value of the request parameter
      * @return the claim list which have attribute vale essentail :true
      */
-    public static List<String> essentialClaimsFromRequestParam(String claimRequestor, Map<String, List<Claim>>
+    public static List<String> essentialClaimsFromRequestParam(String claimRequestor, Map<String, List<RequestedClaim>>
             requestedClaimsFromRequestParam) {
 
-        String attributeValue = null;
         List<String> essentialClaimsfromRequestParam = new ArrayList<>();
-        List<Claim> claimsforClaimRequestor = requestedClaimsFromRequestParam.get(claimRequestor);
-        for (Claim claimforClaimRequestor : claimsforClaimRequestor) {
-            String claim = claimforClaimRequestor.getName();
-            Map<String, String> attributesMap = claimforClaimRequestor.getClaimAttributesMap();
-            if (attributesMap != null) {
-                for (Map.Entry<String, String> attributesEntryMap : attributesMap.entrySet()) {
-                    attributeValue = attributesMap.get(attributesEntryMap.getKey());
-
-                    if (ESSENTAIL.equals(attributesEntryMap.getKey()) && Boolean.parseBoolean(attributeValue)) {
-                        essentialClaimsfromRequestParam.add(claim);
-                    }
+        List<RequestedClaim> claimsforClaimRequestor = requestedClaimsFromRequestParam.get(claimRequestor);
+        if (CollectionUtils.isNotEmpty(claimsforClaimRequestor)) {
+            for (RequestedClaim claimforClaimRequestor : claimsforClaimRequestor) {
+                String claim = claimforClaimRequestor.getName();
+                if (claimforClaimRequestor.isEssential()) {
+                    essentialClaimsfromRequestParam.add(claim);
                 }
             }
         }
@@ -2010,4 +2045,6 @@ public class OAuth2Util {
 
         return isExplicitlyFederatedUser && isFederatedUserNotMappedToLocalUser;
     }
+
 }
+

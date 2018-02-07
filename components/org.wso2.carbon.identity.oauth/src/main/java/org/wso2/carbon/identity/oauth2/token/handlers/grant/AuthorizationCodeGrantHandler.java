@@ -44,6 +44,7 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.buildCacheKeyStringForToken;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getTimeToExpire;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.validatePKCE;
+import static org.wso2.carbon.identity.openidconnect.OIDCConstants.CODE_ID;
 
 /**
  * Implements the AuthorizationGrantHandler for the Grant Type : authorization_code.
@@ -71,6 +72,7 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
         } finally {
             // After validating grant, authorization code is revoked. This is done to stop repetitive usage of
             // same authorization code in erroneous token requests.
+            tokReqMsgCtx.addProperty(CODE_ID, authzCodeBean.getAuthzCodeId());
             revokeAuthorizationCode(authzCodeBean);
         }
         if (log.isDebugEnabled()) {
@@ -140,6 +142,7 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
             AuthzCodeDO authzCodeDO = new AuthzCodeDO();
             authzCodeDO.setAuthorizationCode(authzCode);
             authzCodeDO.setOauthTokenId(tokenId);
+            authzCodeDO.setAuthzCodeId(tokReqMsgCtx.getProperty(CODE_ID).toString());
             OAuthTokenPersistenceFactory.getInstance().getAuthorizationCodeDAO()
                     .deactivateAuthorizationCode(authzCodeDO);
             if (log.isDebugEnabled()

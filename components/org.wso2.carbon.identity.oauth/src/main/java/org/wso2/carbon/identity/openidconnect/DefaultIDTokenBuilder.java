@@ -50,9 +50,14 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
+import org.wso2.carbon.identity.oauth.cache.CacheEntry;
+import org.wso2.carbon.identity.oauth.cache.OIDCAudienceCache;
+import org.wso2.carbon.identity.oauth.cache.OIDCAudienceCacheEntry;
+import org.wso2.carbon.identity.oauth.cache.OIDCAudienceCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IDTokenValidationFailureException;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
@@ -151,7 +156,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
                     currentTimeInMillis));
         }
 
-        List<String> audience = getOIDCAudience(clientId);
+        List<String> audience = getOIDCAudience(clientId, spTenantDomain);
 
         JWTClaimsSet jwtClaimsSet = new JWTClaimsSet();
         jwtClaimsSet.setIssuer(idTokenIssuer);
@@ -222,7 +227,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         jwtClaimsSet.setIssuer(issuer);
 
         // Set the audience
-        List<String> audience = getOIDCAudience(clientId);
+        List<String> audience = getOIDCAudience(clientId, spTenantDomain);
         jwtClaimsSet.setAudience(audience);
 
         jwtClaimsSet.setClaim(AZP, clientId);
@@ -497,8 +502,8 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         return subjectClaimUri;
     }
 
-    private List<String> getOIDCAudience(String clientId) {
-        List<String> oidcAudiences = getDefinedCustomOIDCAudiences();
+    private List<String> getOIDCAudience(String clientId, String tenantDomain) {
+        List<String> oidcAudiences = getDefinedCustomOIDCAudiences(clientId, tenantDomain);
         // Need to add client_id as an audience value according to the spec.
         oidcAudiences.add(clientId);
         return oidcAudiences;
@@ -708,8 +713,38 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         return OAuth2Util.mapDigestAlgorithm(signatureAlgorithm);
     }
 
-    private List<String> getDefinedCustomOIDCAudiences() {
+    private List<String> getDefinedCustomOIDCAudiences(String clientId, String tenantDomain) {
         List<String> audiences = new ArrayList<>();
+
+        // Priority should be given to service provider specific audiences over globally configured ones.
+        if (OAuth2ServiceComponentHolder.isAudienceEnabled()) {
+            OIDCAudienceCacheKey cacheKey = new OIDCAudienceCacheKey(clientId + "@" + tenantDomain);
+            CacheEntry result = OIDCAudienceCache.getInstance().getValueFromCache(cacheKey);
+
+            // Check cache hit, do the type check.
+            if (result != null && result instanceof OIDCAudienceCacheEntry) {
+                audiences = ((OIDCAudienceCacheEntry) result).getAudiences();
+                return audiences;
+            } else {
+                OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
+                try {
+                    audiences = oAuthAppDAO.getOIDCAudiences(tenantDomain, clientId);
+                    if (CollectionUtils.isNotEmpty(audiences)) {
+                        OIDCAudienceCacheEntry cacheEntry = new OIDCAudienceCacheEntry();
+                        cacheEntry.setAudiences(audiences);
+                        OIDCAudienceCache.getInstance().addToCache(cacheKey, cacheEntry);
+                        if (log.isDebugEnabled()) {
+                            log.debug("OIDC Audiences added back to the cache.");
+                        }
+                        return audiences;
+                    }
+                } catch (IdentityOAuth2Exception e) {
+                    log.error("Error while retrieving OIDC audiences for tenant domain: " + tenantDomain +
+                            " and clientID: " + clientId);
+                }
+            }
+
+        }
         IdentityConfigParser configParser = IdentityConfigParser.getInstance();
         OMElement oauthElem = configParser.getConfigElement(CONFIG_ELEM_OAUTH);
         if (oauthElem == null) {

@@ -35,42 +35,26 @@ public abstract class AbstractOAuthClientAuthenticator extends AbstractIdentityH
     /**
      * Default constructor will initialize property values read from identity.xml
      */
-    AbstractOAuthClientAuthenticator() {
-        this.init(new InitConfig());
+    public AbstractOAuthClientAuthenticator() {
+
+        init(new InitConfig());
     }
 
     /**
      * Get the set of body parameters.
      *
-     * @param content Map of parameters
+     * @param bodyParams Map of parameters
      * @return Body parameters as a string map
      */
-    protected Map<String, String> getBodyParameters(Map<String, List> content) {
+    protected Map<String, String> getBodyParameters(Map<String, List> bodyParams) {
 
         Map<String, String> stringParams = new HashMap<>();
-        content.forEach((key, value) -> {
+        bodyParams.forEach((key, value) -> {
             if (value != null && value.size() > 0) {
                 stringParams.put(key, (String) value.get(0));
             }
         });
         return stringParams;
-    }
-
-    /**
-     * Get HTTP headers as string map
-     *
-     * @param request HttpServeletRequest
-     * @return HTTP headers as a string parameter map
-     */
-    protected Map<String, String> getHeaders(HttpServletRequest request) {
-
-        Map<String, String> headers = new HashMap<>();
-        Enumeration<String> headerNames = request.getHeaderNames();
-        while (headerNames.hasMoreElements()) {
-            String attributeName = headerNames.nextElement();
-            headers.put(attributeName, request.getHeader(attributeName));
-        }
-        return headers;
     }
 
 }
