@@ -130,17 +130,18 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
         cleanUpOAuthConsumerApps(DB_NAME);
     }
 
-    @DataProvider(name = "pkceEnabledDataProvider")
+    @DataProvider(name = "spConfigDataProvider")
     public Object[][] provideData() throws Exception {
         return new Object[][]{
-                {true},
-                {false}
+                {true, true},
+                {false, false}
         };
     }
 
-    @Test(dataProvider = "pkceEnabledDataProvider")
-    public void testAddOAuthApplication(Boolean isPkceEnabled) throws Exception {
+    @Test(dataProvider = "spConfigDataProvider")
+    public void testAddOAuthApplication(Boolean isPkceEnabled, Boolean isAudienceEnabled) throws Exception {
         setupMocksForTest(isPkceEnabled);
+        setupMockAudiencesForTest(isAudienceEnabled);
         OAuthAppDO appDO = getDefaultOAuthAppDO();
         try (Connection connection = getConnection(DB_NAME)) {
             mockIdentityUtilDataBaseConnection(connection);
@@ -168,9 +169,10 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
     /**
      * Test adding duplicate OAuth apps.
      */
-    @Test(dataProvider = "pkceEnabledDataProvider", expectedExceptions = IdentityOAuthAdminException.class)
-    public void testAddDuplicateOAuthApplication(Boolean isPkceEnabled) throws Exception {
+    @Test(dataProvider = "spConfigDataProvider", expectedExceptions = IdentityOAuthAdminException.class)
+    public void testAddDuplicateOAuthApplication(Boolean isPkceEnabled, Boolean isAudienceEnabled) throws Exception {
         setupMocksForTest(isPkceEnabled);
+        setupMockAudiencesForTest(isAudienceEnabled);
 
         OAuthAppDO appDO = getDefaultOAuthAppDO();
         OAuthAppDAO appDAO = new OAuthAppDAO();
@@ -182,9 +184,10 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
         }
     }
 
-    @Test(dataProvider = "pkceEnabledDataProvider", expectedExceptions = IdentityOAuthAdminException.class)
-    public void testAddOAuthApplicationWithExceptions(Boolean isPkceEnabled) throws Exception {
+    @Test(dataProvider = "spConfigDataProvider", expectedExceptions = IdentityOAuthAdminException.class)
+    public void testAddOAuthApplicationWithExceptions(Boolean isPkceEnabled, Boolean isAudienceEnabled) throws Exception {
         setupMocksForTest(isPkceEnabled);
+        setupMockAudiencesForTest(isAudienceEnabled);
 
         OAuthAppDO appDO = getDefaultOAuthAppDO();
         try (Connection connection = getConnection(DB_NAME)) {
@@ -226,8 +229,8 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
         }
     }
 
-    @Test(dataProvider = "pkceEnabledDataProvider")
-    public void testUpdateConsumerApplication(Boolean isPkceEnabled) throws Exception {
+    @Test(dataProvider = "spConfigDataProvider")
+    public void testUpdateConsumerApplication(Boolean isPkceEnabled, Boolean isAudienceEnabled) throws Exception {
         final String MODIFIED_CALLBACK_URL = "http://idp.wso2.com/callback";
         final String MODIFIED_GRANT_TYPES = "password";
         final String MODIFIED_APP_NAME = "MODIFIED_APP_NAME";
@@ -297,10 +300,11 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
         }
     }
 
-    @Test(dataProvider = "pkceEnabledDataProvider", expectedExceptions = IdentityOAuthAdminException.class)
-    public void testUpdateConsumerApplicationWithExceptions(Boolean isPkceEnabled) throws Exception {
+    @Test(dataProvider = "spConfigDataProvider", expectedExceptions = IdentityOAuthAdminException.class)
+    public void testUpdateConsumerApplicationWithExceptions(Boolean isPkceEnabled, Boolean isAudienceEnabled) throws Exception {
 
         setupMocksForTest(isPkceEnabled);
+        setupMockAudiencesForTest(isAudienceEnabled);
         try (Connection connection = getConnection(DB_NAME)) {
             mockIdentityUtilDataBaseConnection(connection);
             OAuthAppDO oAuthAppDO = getDefaultOAuthAppDO();
@@ -456,17 +460,19 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
     @DataProvider(name = "booleanTests")
     public Object[][] booleanTest() throws Exception {
         return new Object[][]{
-                {true, true},
-                {true, false},
-                {false, true},
-                {false, false}
+                {true, true, true},
+                {true, false, true},
+                {false, true, false},
+                {false, false, false}
         };
     }
 
     @Test(dataProvider = "booleanTests")
-    public void testGetOAuthConsumerAppsOfUser(Boolean enablePKCE, Boolean isSensitive) throws Exception {
+    public void testGetOAuthConsumerAppsOfUser(Boolean enablePKCE, Boolean isSensitive, Boolean enableAudiences) throws
+            Exception {
 
         setupMocksForTest(enablePKCE, isSensitive);
+        setupMockAudiencesForTest(enableAudiences);
         try (Connection connection = getConnection(DB_NAME)) {
             mockIdentityUtilDataBaseConnection(connection);
 
@@ -489,9 +495,11 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
 
     @Test(dataProvider = "booleanTests", expectedExceptions = IdentityOAuthAdminException.class)
     public void testGetOAuthConsumerAppsOfUserWithExceptions(Boolean isPkceEnabled,
-                                                             Boolean isUsernameCaseSensitive) throws Exception {
+                                                             Boolean isUsernameCaseSensitive,
+                                                             Boolean isAudienceEnabled) throws Exception {
 
         setupMocksForTest(isPkceEnabled, isUsernameCaseSensitive);
+        setupMockAudiencesForTest(isAudienceEnabled);
         try (Connection connection = getConnection(DB_NAME)) {
             Connection errorConnection = getExceptionThrowingConnection(connection);
             mockIdentityDataBaseUtilConnection(errorConnection);
@@ -501,9 +509,10 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
         }
     }
 
-    @Test(dataProvider = "pkceEnabledDataProvider")
-    public void testGetAppInformation(Boolean isPkceEnabled) throws Exception {
+    @Test(dataProvider = "spConfigDataProvider")
+    public void testGetAppInformation(Boolean isPkceEnabled, Boolean isAudienceEnabled) throws Exception {
         setupMocksForTest(isPkceEnabled);
+        setupMockAudiencesForTest(isAudienceEnabled);
         try (Connection connection = getConnection(DB_NAME)) {
             mockIdentityUtilDataBaseConnection(connection);
             addOAuthApplication(getDefaultOAuthAppDO());
@@ -513,10 +522,11 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
         }
     }
 
-    @Test(dataProvider = "pkceEnabledDataProvider", expectedExceptions = IdentityOAuth2Exception.class)
-    public void testGetAppInformationWithExceptions(Boolean isPkceEnabled) throws Exception {
+    @Test(dataProvider = "spConfigDataProvider", expectedExceptions = IdentityOAuth2Exception.class)
+    public void testGetAppInformationWithExceptions(Boolean isPkceEnabled, Boolean isAudienceEnabled) throws Exception {
 
         setupMocksForTest(isPkceEnabled);
+        setupMockAudiencesForTest(isAudienceEnabled);
         try (Connection connection = getConnection(DB_NAME)) {
             mockIdentityUtilDataBaseConnection(connection);
             addOAuthApplication(getDefaultOAuthAppDO());
@@ -529,10 +539,11 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
         }
     }
 
-    @Test(dataProvider = "pkceEnabledDataProvider")
-    public void testGetAppInformationByAppName(Boolean isPkceEnabled) throws Exception {
+    @Test(dataProvider = "spConfigDataProvider")
+    public void testGetAppInformationByAppName(Boolean isPkceEnabled, Boolean isAudienceEnabled) throws Exception {
 
         setupMocksForTest(isPkceEnabled);
+        setupMockAudiencesForTest(isAudienceEnabled);
         try (Connection connection = getConnection(DB_NAME)) {
             mockIdentityUtilDataBaseConnection(connection);
 
@@ -547,10 +558,11 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
         }
     }
 
-    @Test(dataProvider = "pkceEnabledDataProvider", expectedExceptions = IdentityOAuth2Exception.class)
-    public void testGetAppInformationByAppNameWithExceptions(Boolean isPkceEnabled) throws Exception {
+    @Test(dataProvider = "spConfigDataProvider", expectedExceptions = IdentityOAuth2Exception.class)
+    public void testGetAppInformationByAppNameWithExceptions(Boolean isPkceEnabled, Boolean isAudienceEnabled) throws Exception {
 
         setupMocksForTest(isPkceEnabled);
+        setupMockAudiencesForTest(isAudienceEnabled);
         try (Connection connection = getConnection(DB_NAME)) {
 
             mockIdentityUtilDataBaseConnection(connection);
@@ -582,6 +594,10 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
         appDO.setApplicationAccessTokenExpiryTime(APPLICATION_ACCESS_TOKEN_EXPIRY_TIME);
         appDO.setUserAccessTokenExpiryTime(USER_ACCESS_TOKEN_EXPIRY_TIME);
         appDO.setRefreshTokenExpiryTime(REFRESH_TOKEN_EXPIRY_TIME);
+        String[] audiences = new String[2];
+        audiences[0] = "testAudience1";
+        audiences[1] = "testAudience2";
+        appDO.setAudiences(audiences);
         return appDO;
     }
 
@@ -605,6 +621,13 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
 
         mockStatic(OAuth2ServiceComponentHolder.class);
         when(OAuth2ServiceComponentHolder.isPkceEnabled()).thenReturn(isPkceEnabled);
+    }
+
+    private void setupMockAudiencesForTest(boolean isAudienceEnabled) throws Exception {
+        setupMocksForTest();
+
+        mockStatic(OAuth2ServiceComponentHolder.class);
+        when(OAuth2ServiceComponentHolder.isAudienceEnabled()).thenReturn(isAudienceEnabled);
     }
 
     private void setupMocksForTest() throws Exception {
