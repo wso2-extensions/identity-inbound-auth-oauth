@@ -114,6 +114,7 @@ import static org.mockito.Matchers.anySet;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.MockitoAnnotations.initMocks;
 import static org.powermock.api.mockito.PowerMockito.doAnswer;
+import static org.powermock.api.mockito.PowerMockito.doCallRealMethod;
 import static org.powermock.api.mockito.PowerMockito.doNothing;
 import static org.powermock.api.mockito.PowerMockito.doReturn;
 import static org.powermock.api.mockito.PowerMockito.doThrow;
@@ -1238,6 +1239,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
         mockStatic(FrameworkUtils.class);
         when(FrameworkUtils.getRequestCoordinator()).thenReturn(requestCoordinator);
+        when(FrameworkUtils.appendQueryParamsStringToUrl(anyString(), anyString())).thenCallRealMethod();
 
         doAnswer(new Answer<Object>() {
             @Override

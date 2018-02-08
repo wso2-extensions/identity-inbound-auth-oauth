@@ -204,45 +204,45 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
                 + currentAudience);
     }
 
-    /**
-     * Get the X509CredentialImpl object for a particular tenant and alias
-     *
-     * @param tenantDomain tenant domain of the issuer
-     * @param alias        alias of cert
-     * @return X509Certificate object containing the public certificate in the primary keystore of the tenantDOmain
-     * with alias
-     */
-    @Deprecated
-    protected Certificate getCertificateForAlias(String tenantDomain, String alias) throws RequestObjectException {
-
-        int tenantId;
-        String error = "Unable to Validate the Signature of Request Object";
-        tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
-        KeyStoreManager keyStoreManager;
-        // get an instance of the corresponding Key Store Manager instance
-        keyStoreManager = KeyStoreManager.getInstance(tenantId);
-        KeyStore keyStore;
-        try {
-            // for tenants, load key from their generated key store
-            if (tenantId != MultitenantConstants.SUPER_TENANT_ID) {
-                keyStore = keyStoreManager.getKeyStore(generateKSNameFromDomainName(tenantDomain));
-            } else {
-                // for super tenant, load the default pub. cert using the config. in carbon.xml
-                keyStore = keyStoreManager.getPrimaryKeyStore();
-            }
-            return keyStore.getCertificate(alias);
-
-        } catch (KeyStoreException e) {
-            String errorMsg = "Error instantiating an X509Certificate object for the certificate alias:" + alias +
-                    " in tenant:" + tenantDomain;
-            log.error(errorMsg, e);
-            throw new RequestObjectException(OAuth2ErrorCodes.SERVER_ERROR, error);
-        } catch (Exception e) {
-            //keyStoreManager throws Exception
-            log.error("Unable to load key store manager for the tenant domain:" + tenantDomain, e);
-            throw new RequestObjectException(OAuth2ErrorCodes.SERVER_ERROR, error);
-        }
-    }
+//    /**
+//     * Get the X509CredentialImpl object for a particular tenant and alias
+//     *
+//     * @param tenantDomain tenant domain of the issuer
+//     * @param alias        alias of cert
+//     * @return X509Certificate object containing the public certificate in the primary keystore of the tenantDOmain
+//     * with alias
+//     */
+//    @Deprecated
+//    protected Certificate getCertificateForAlias(String tenantDomain, String alias) throws RequestObjectException {
+//
+//        int tenantId;
+//        String error = "Unable to Validate the Signature of Request Object";
+//        tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
+//        KeyStoreManager keyStoreManager;
+//        // get an instance of the corresponding Key Store Manager instance
+//        keyStoreManager = KeyStoreManager.getInstance(tenantId);
+//        KeyStore keyStore;
+//        try {
+//            // for tenants, load key from their generated key store
+//            if (tenantId != MultitenantConstants.SUPER_TENANT_ID) {
+//                keyStore = keyStoreManager.getKeyStore(generateKSNameFromDomainName(tenantDomain));
+//            } else {
+//                // for super tenant, load the default pub. cert using the config. in carbon.xml
+//                keyStore = keyStoreManager.getPrimaryKeyStore();
+//            }
+//            return keyStore.getCertificate(alias);
+//
+//        } catch (KeyStoreException e) {
+//            String errorMsg = "Error instantiating an X509Certificate object for the certificate alias:" + alias +
+//                    " in tenant:" + tenantDomain;
+//            log.error(errorMsg, e);
+//            throw new RequestObjectException(OAuth2ErrorCodes.SERVER_ERROR, error);
+//        } catch (Exception e) {
+//            //keyStoreManager throws Exception
+//            log.error("Unable to load key store manager for the tenant domain:" + tenantDomain, e);
+//            throw new RequestObjectException(OAuth2ErrorCodes.SERVER_ERROR, error);
+//        }
+//    }
 
     /**
      * Get the X509CredentialImpl object for a particular tenant and alias
@@ -260,16 +260,16 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
         }
     }
 
-    /**
-     * Generate the key store name from the domain name
-     *
-     * @param tenantDomain tenant domain name
-     * @return key store file name
-     */
-    protected static String generateKSNameFromDomainName(String tenantDomain) {
-        String ksName = tenantDomain.trim().replace(FULL_STOP_DELIMITER, DASH_DELIMITER);
-        return ksName + KEYSTORE_FILE_EXTENSION;
-    }
+//    /**
+//     * Generate the key store name from the domain name
+//     *
+//     * @param tenantDomain tenant domain name
+//     * @return key store file name
+//     */
+//    protected static String generateKSNameFromDomainName(String tenantDomain) {
+//        String ksName = tenantDomain.trim().replace(FULL_STOP_DELIMITER, DASH_DELIMITER);
+//        return ksName + KEYSTORE_FILE_EXTENSION;
+//    }
 
     /**
      * Validate the signedJWT signature with given certificate

@@ -33,6 +33,7 @@ import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
+import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
 import java.nio.file.Paths;
 import java.security.Key;
@@ -101,6 +102,8 @@ public class RequestParamRequestObjectBuilderTest extends PowerMockTestCase {
         mockStatic(OAuth2Util.class);
         when(OAuth2Util.getTenantId("carbon.super")).thenReturn(-1234);
         when((OAuth2Util.getPrivateKey(anyString(), anyInt()))).thenReturn(rsaPrivateKey);
+        when(OAuth2Util.getPublicCertOfOAuthApp(TEST_CLIENT_ID_1, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME))
+                .thenReturn(clientKeyStore.getCertificate("wso2carbon"));
 
         RequestObjectValidator requestObjectValidator = new RequestObjectValidatorImpl();
         when((oauthServerConfigurationMock.getRequestObjectValidator())).thenReturn(requestObjectValidator);
