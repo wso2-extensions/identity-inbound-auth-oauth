@@ -2064,7 +2064,7 @@ public class OAuth2Util {
     }
 
     public static Certificate getPublicCertOfOAuthApp(String clientId,
-                                                         String tenantDomain) throws IdentityOAuth2Exception {
+                                                      String tenantDomain) throws IdentityOAuth2Exception {
 
         try {
             ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(clientId, tenantDomain);
