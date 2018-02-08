@@ -104,7 +104,7 @@
             List<String> scopeValidators = new ArrayList<String>();
             String[] allowedValidators = client.getAllowedScopeValidators();
             for (String allowedValidator : allowedValidators) {
-                String val = request.getParameter("scope_validator_" + allowedValidator.replaceAll("\\.","_"));
+                String val = request.getParameter("scope_validator_" + allowedValidator);
                 if (val != null) {
                     scopeValidators.add(allowedValidator);
                 }

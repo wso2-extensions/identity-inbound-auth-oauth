@@ -474,8 +474,8 @@
                                             %>
                                             <tr>
                                                 <td><label><input type="checkbox"
-                                                                  id=<%="scope_validator_" + scopeValidator.replaceAll("\\.","_")%> name=<%="scope_validator_" + scopeValidator.replaceAll("\\.", "_")%>
-                                                                  value=<%=scopeValidator.replaceAll("\\.","_")%> <%=(scopeValidators.contains(scopeValidator) ? "checked=\"checked\"" : "")%>/><%=scopeValidator%>
+                                                                  id=<%="scope_validator_" + scopeValidator%> name=<%="scope_validator_" + scopeValidator%>
+                                                                  value=<%=scopeValidator%> <%=(scopeValidators.contains(scopeValidator) ? "checked=\"checked\"" : "")%>/><%=scopeValidator%>
                                                 </label></td>
                                             </tr>
                                             <%

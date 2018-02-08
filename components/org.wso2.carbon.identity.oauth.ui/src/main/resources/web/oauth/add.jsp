@@ -38,13 +38,42 @@
 <script type="text/javascript" src="../identity/validation/js/identity-validate.js"></script>
 
 <%
+    String forwardTo = "index.jsp";
     String BUNDLE = "org.wso2.carbon.identity.oauth.ui.i18n.Resources";
     ResourceBundle resourceBundle = ResourceBundle.getBundle(BUNDLE, request.getLocale());
     String applicationSPName = request.getParameter("spName");
     session.setAttribute("application-sp-name", applicationSPName);
 
     OAuthAdminClient client = null;
+    String cookie = (String) session.getAttribute(ServerConstants.ADMIN_SERVICE_COOKIE);
+    String backendServerURL = CarbonUIUtil.getServerURL(config.getServletContext(), session);
+    ConfigurationContext configContext =
+            (ConfigurationContext) config.getServletContext()
+                    .getAttribute(CarbonConstants.CONFIGURATION_CONTEXT);
+    client = new OAuthAdminClient(cookie, backendServerURL, configContext);
+    List<String> allowedGrants = null;
+    List<String> scopeValidators = null;
+    try {
+        allowedGrants = new ArrayList<String>(Arrays.asList(client.getAllowedOAuthGrantTypes()));
+        scopeValidators = new ArrayList<String>(Arrays.asList(client.getAllowedScopeValidators()));
+    } catch (Exception e) {
+        String message = resourceBundle.getString("error.while.loading.add.new.application") + " : " + e.getMessage();
+        CarbonUIMessage.sendCarbonUIMessage(message, CarbonUIMessage.ERROR, request, e);
 %>
+<script type="text/javascript">
+    function forward() {
+        location.href = "<%=forwardTo%>";
+    }
+</script>
+
+<script type="text/javascript">
+    forward();
+</script>
+<%
+    }
+
+%>
+
 
 <jsp:include page="../dialog/display_messages.jsp"/>
 
@@ -241,15 +270,7 @@
                                     <td>
                                         <table>
                                             <%
-                                                String forwardTo = "index.jsp";
                                                 try {
-                                                    String cookie = (String) session.getAttribute(ServerConstants.ADMIN_SERVICE_COOKIE);
-                                                    String backendServerURL = CarbonUIUtil.getServerURL(config.getServletContext(), session);
-                                                    ConfigurationContext configContext =
-                                                            (ConfigurationContext) config.getServletContext()
-                                                                    .getAttribute(CarbonConstants.CONFIGURATION_CONTEXT);
-                                                    client = new OAuthAdminClient(cookie, backendServerURL, configContext);
-                                                    List<String> allowedGrants = new ArrayList<String>(Arrays.asList(client.getAllowedOAuthGrantTypes()));
                                                     if (allowedGrants.contains("authorization_code")) {
                                                         allowedGrants.remove("authorization_code");
                                             %>
@@ -375,23 +396,14 @@
                                     <td>
                                         <table>
                                             <%
-                                                String forwardTo2 = "index.jsp";
                                                 try {
-                                                    String cookie = (String) session.getAttribute(ServerConstants.ADMIN_SERVICE_COOKIE);
-                                                    String backendServerURL = CarbonUIUtil.getServerURL(config.getServletContext(), session);
-                                                    ConfigurationContext configContext =
-                                                            (ConfigurationContext) config.getServletContext()
-                                                                    .getAttribute(CarbonConstants.CONFIGURATION_CONTEXT);
-                                                    client = new OAuthAdminClient(cookie, backendServerURL, configContext);
-                                                    List<String> scopeValidators = new ArrayList<String>(Arrays.asList(client.getAllowedScopeValidators()));
-
                                                     for (String scopeValidator : scopeValidators) {
 
                                             %>
                                             <tr>
                                                 <td><label><input type="checkbox"
-                                                                  id=<%="scope_validator_" + scopeValidator.replaceAll("\\.","_")%> name=<%="scope_validator_" + scopeValidator.replaceAll("\\.","_")%>
-                                                                  value=<%=scopeValidator.replaceAll("\\.","_")%> checked="checked"/><%=scopeValidator%>
+                                                                  id=<%="scope_validator_" + scopeValidator%> name=<%="scope_validator_" + scopeValidator%>
+                                                                  value=<%=scopeValidator%> checked="checked"/><%=scopeValidator%>
                                                 </label></td>
                                             </tr>
                                             <%
@@ -402,7 +414,7 @@
                                             %>
                                             <script type="text/javascript">
                                                 function forward() {
-                                                    location.href = "<%=forwardTo2%>";
+                                                    location.href = "<%=forwardTo%>";
                                                 }
                                             </script>
 

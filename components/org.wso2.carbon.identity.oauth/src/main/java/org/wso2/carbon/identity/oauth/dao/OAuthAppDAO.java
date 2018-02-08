@@ -258,7 +258,7 @@ public class OAuthAppDAO {
                 prepStmt.setString(1, persistenceProcessor.getProcessedClientId(consumerKey));
 
                 try (ResultSet rSet = prepStmt.executeQuery()) {
-                    /**
+                    /*
                      * We need to determine whether the result set has more than 1 row. Meaning, we found an application for
                      * the given consumer key. There can be situations where a user passed a key which doesn't yet have an
                      * associated application. We need to barf with a meaningful error message for this case
@@ -296,7 +296,7 @@ public class OAuthAppDAO {
                         }
                     }
                     if (!rSetHasRows) {
-                        /**
+                        /*
                          * We come here because user submitted a key that doesn't have any associated application with it.
                          * We're throwing an error here because we cannot continue without this info. Otherwise it'll throw
                          * a null values not supported error when it tries to cache this info
@@ -340,7 +340,7 @@ public class OAuthAppDAO {
                     oauthApp.setApplicationName(appName);
                     AuthenticatedUser user = new AuthenticatedUser();
                     user.setTenantDomain(IdentityTenantUtil.getTenantDomain(tenantID));
-                    /**
+                    /*
                      * We need to determine whether the result set has more than 1 row. Meaning, we found an application for
                      * the given consumer key. There can be situations where a user passed a key which doesn't yet have an
                      * associated application. We need to barf with a meaningful error message for this case
@@ -375,7 +375,7 @@ public class OAuthAppDAO {
                         }
                     }
                     if (!rSetHasRows) {
-                        /**
+                        /*
                          * We come here because user submitted a key that doesn't have any associated application with it.
                          * We're throwing an error here because we cannot continue without this info. Otherwise it'll throw
                          * a null values not supported error when it tries to cache this info

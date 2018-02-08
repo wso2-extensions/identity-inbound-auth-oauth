@@ -1,17 +1,19 @@
 /*
  * Copyright (c) 2018, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
+ * WSO2 Inc. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
  * You may obtain a copy of the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 
@@ -47,17 +49,17 @@ import java.util.ArrayList;
 import java.util.List;
 import javax.xml.stream.XMLStreamException;
 
+
 /**
  * The Scope Validation implementation. This uses XACML policies to evaluate scope validation defined by the user.
  */
 public class XACMLScopeValidator extends OAuth2ScopeValidator {
 
     private static final String DECISION_XPATH = "//ns:Result/ns:Decision/text()";
-    private static final String XACML_NS = "urn:oasis:names:tc:xacml:3.0:core:schema:wd-17";
     private static final String XACML_NS_PREFIX = "ns";
+    private static final String ACTION_VALIDATE = "token_validation";
     private static final String RULE_EFFECT_PERMIT = "Permit";
     private static final String RULE_EFFECT_NOT_APPLICABLE = "NotApplicable";
-    private static final String ACTION_VALIDATE = "token_validation";
 
     private static final String ACTION_CATEGORY = "http://wso2.org/identity/identity-action";
     private static final String SP_CATEGORY = "http://wso2.org/identity/sp";
@@ -83,51 +85,47 @@ public class XACMLScopeValidator extends OAuth2ScopeValidator {
             return false;
         }
 
+        boolean isValidated = false;
         try {
             String consumerKey = accessTokenDO.getConsumerKey();
             OAuthAppDO authApp = OAuth2Util.getAppInformationByClientId(consumerKey);
-            String tenantDomainOfOauthApp = OAuth2Util.getTenantDomainOfOauthApp(authApp);
 
-            boolean isValidated = false;
-            try {
-                RequestDTO requestDTO = createRequestDTO(accessTokenDO, authApp, resource);
-                RequestElementDTO requestElementDTO = PolicyCreatorUtil.createRequestElementDTO(requestDTO);
-                String requestString = PolicyBuilder.getInstance().buildRequest(requestElementDTO);
+            RequestDTO requestDTO = createRequestDTO(accessTokenDO, authApp, resource);
+            RequestElementDTO requestElementDTO = PolicyCreatorUtil.createRequestElementDTO(requestDTO);
+            String requestString = PolicyBuilder.getInstance().buildRequest(requestElementDTO);
 
-                if (log.isDebugEnabled()) {
-                    log.debug("XACML scope validation request :\n" + requestString);
-                }
-                FrameworkUtils.startTenantFlow(accessTokenDO.getAuthzUser().getTenantDomain());
-                String responseString =
-                        OAuth2ServiceComponentHolder.getEntitlementService().getDecision(requestString);
-                if (log.isDebugEnabled()) {
-                    log.debug("XACML scope validation response :\n" + responseString);
-                }
-                String validationResponse = evaluateXACMLResponse(responseString);
-                if (RULE_EFFECT_NOT_APPLICABLE.equalsIgnoreCase(validationResponse)) {
-                    log.warn(String.format(
-                            "No applicable rule for service provider '%s@%s'." +
-                                    "Add an validating policy (or unset Scope Validation using XACMLScopeValidator) to fix this warning.",
-                            authApp.getApplicationName(), tenantDomainOfOauthApp));
-                    isValidated = true;
-                } else if (RULE_EFFECT_PERMIT.equalsIgnoreCase(validationResponse)) {
-                    isValidated = true;
-                }
-            } catch (PolicyBuilderException e) {
-                log.error("Policy Builder Exception occurred", e);
-            } catch (XMLStreamException | JaxenException e) {
-                log.error("Exception occurred when getting decision from xacml response", e);
-            } catch (EntitlementException e) {
-                log.error("Entitlement Exception occurred", e);
-            } finally {
-                FrameworkUtils.endTenantFlow();
+            if (log.isDebugEnabled()) {
+                log.debug("XACML scope validation request :\n" + requestString);
             }
-            return isValidated;
-
+            FrameworkUtils.startTenantFlow(accessTokenDO.getAuthzUser().getTenantDomain());
+            String responseString = OAuth2ServiceComponentHolder.getEntitlementService().getDecision(requestString);
+            if (log.isDebugEnabled()) {
+                log.debug("XACML scope validation response :\n" + responseString);
+            }
+            String validationResponse = evaluateXACMLResponse(responseString);
+            if (RULE_EFFECT_NOT_APPLICABLE.equalsIgnoreCase(validationResponse)) {
+                log.warn(String.format(
+                        "No applicable rule for service provider '%s@%s'. Add an validating policy (or unset Scope " +
+                                "Validation using XACMLScopeValidator) to fix this warning.",
+                        authApp.getApplicationName(), OAuth2Util.getTenantDomainOfOauthApp(authApp)));
+                isValidated = true;
+            } else if (RULE_EFFECT_PERMIT.equalsIgnoreCase(validationResponse)) {
+                isValidated = true;
+            }
         } catch (InvalidOAuthClientException e) {
             log.error("Invalid OAuth Client Exception occurred", e);
+        } catch (PolicyBuilderException e) {
+            log.error("Policy Builder Exception occurred", e);
+        } catch (XMLStreamException | JaxenException e) {
+            log.error("Exception occurred when getting decision from xacml response", e);
+        } catch (EntitlementException e) {
+            log.error("Entitlement Exception occurred", e);
+        } finally {
+            FrameworkUtils.endTenantFlow();
         }
-        return false;
+        return isValidated;
+
+
     }
 
     /**
@@ -141,20 +139,15 @@ public class XACMLScopeValidator extends OAuth2ScopeValidator {
     private RequestDTO createRequestDTO(AccessTokenDO accessTokenDO, OAuthAppDO authApp, String resource) {
         List<RowDTO> rowDTOs = new ArrayList<>();
         RowDTO actionDTO =
-                createRowDTO(ACTION_VALIDATE,
-                        AUTH_ACTION_ID, ACTION_CATEGORY);
+                createRowDTO(ACTION_VALIDATE, AUTH_ACTION_ID, ACTION_CATEGORY);
         RowDTO spNameDTO =
-                createRowDTO(authApp.getApplicationName(),
-                        SP_NAME_ID, SP_CATEGORY);
+                createRowDTO(authApp.getApplicationName(), SP_NAME_ID, SP_CATEGORY);
         RowDTO usernameDTO =
-                createRowDTO(accessTokenDO.getAuthzUser().getUserName(),
-                        USERNAME_ID, USER_CATEGORY);
+                createRowDTO(accessTokenDO.getAuthzUser().getUserName(), USERNAME_ID, USER_CATEGORY);
         RowDTO userStoreDomainDTO =
-                createRowDTO(accessTokenDO.getAuthzUser().getUserStoreDomain(),
-                        USER_STORE_ID, USER_CATEGORY);
+                createRowDTO(accessTokenDO.getAuthzUser().getUserStoreDomain(), USER_STORE_ID, USER_CATEGORY);
         RowDTO userTenantDomainDTO =
-                createRowDTO(accessTokenDO.getAuthzUser().getTenantDomain(),
-                        USER_TENANT_DOMAIN_ID, USER_CATEGORY);
+                createRowDTO(accessTokenDO.getAuthzUser().getTenantDomain(), USER_TENANT_DOMAIN_ID, USER_CATEGORY);
         RowDTO resourceDTO = createRowDTO(resource, EntitlementPolicyConstants.RESOURCE_ID,
                 PDPConstants.RESOURCE_CATEGORY_URI);
 
@@ -166,9 +159,7 @@ public class XACMLScopeValidator extends OAuth2ScopeValidator {
         rowDTOs.add(resourceDTO);
 
         for (String scope : accessTokenDO.getScope()) {
-            RowDTO scopeNameDTO =
-                    createRowDTO(scope,
-                            SCOPE_ID, SCOPE_CATEGORY);
+            RowDTO scopeNameDTO = createRowDTO(scope, SCOPE_ID, SCOPE_CATEGORY);
             rowDTOs.add(scopeNameDTO);
         }
         RequestDTO requestDTO = new RequestDTO();
@@ -206,7 +197,7 @@ public class XACMLScopeValidator extends OAuth2ScopeValidator {
     private String evaluateXACMLResponse(String xacmlResponse) throws XMLStreamException, JaxenException {
 
         AXIOMXPath axiomxPath = new AXIOMXPath(DECISION_XPATH);
-        axiomxPath.addNamespace(XACML_NS_PREFIX, XACML_NS);
+        axiomxPath.addNamespace(XACML_NS_PREFIX, EntitlementPolicyConstants.REQ_RES_CONTEXT_XACML3);
         OMElement rootElement =
                 new StAXOMBuilder(new ByteArrayInputStream(xacmlResponse.getBytes(StandardCharsets.UTF_8)))
                         .getDocumentElement();
