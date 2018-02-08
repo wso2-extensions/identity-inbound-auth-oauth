@@ -205,11 +205,11 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
     }
 
     /**
-     * Get the X509CredentialImpl object for a particular tenant and alias
+     * Get the X509Certificate object containing the public key of the OAuth client.
      *
-     * @param tenantDomain tenant domain of the issuer
-     * @return X509Certificate object containing the public certificate in the primary keystore of the tenantDOmain
-     * with alias
+     * @param clientId clientID of the OAuth client (Service Provider).
+     * @param tenantDomain tenant domain of Service Provider.
+     * @return X509Certificate object containing the public certificate of the Service Provider.
      */
     protected Certificate getPublicCertOfOAuthApp(String clientId, String tenantDomain) throws RequestObjectException {
         try {

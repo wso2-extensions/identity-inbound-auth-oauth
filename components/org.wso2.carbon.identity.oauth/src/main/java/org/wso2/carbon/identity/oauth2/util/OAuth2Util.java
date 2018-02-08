@@ -2068,10 +2068,10 @@ public class OAuth2Util {
 
         try {
             ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(clientId, tenantDomain);
-            // Get the certificate content
+            // Get the certificate content.
             String certificateContent = serviceProvider.getCertificateContent();
             if (StringUtils.isNotBlank(certificateContent)) {
-                // Get the cert and return
+                // Build the Certificate object from cert content.
                 return IdentityUtil.convertPEMEncodedContentToCertificate(certificateContent);
             } else {
                 throw new IdentityOAuth2Exception("Public certificate not configured for Service Provider with " +
