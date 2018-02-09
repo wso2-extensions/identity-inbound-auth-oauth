@@ -80,13 +80,18 @@ public class XACMLScopeValidator extends OAuth2ScopeValidator {
 
         if (accessTokenDO.getAuthzUser() == null) {
             if (log.isDebugEnabled()) {
-                log.debug("Invalid access token");
+                log.debug(String.format("There is no authorized user for client id %s ",
+                        accessTokenDO.getConsumerKey()));
             }
             return false;
         }
 
         boolean isValidated = false;
         try {
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("In XACML based scope validation flow for access token of consumer key : %s ",
+                        accessTokenDO.getConsumerKey()));
+            }
             String consumerKey = accessTokenDO.getConsumerKey();
             OAuthAppDO authApp = OAuth2Util.getAppInformationByClientId(consumerKey);
 
@@ -113,13 +118,17 @@ public class XACMLScopeValidator extends OAuth2ScopeValidator {
                 isValidated = true;
             }
         } catch (InvalidOAuthClientException e) {
-            log.error("Invalid OAuth Client Exception occurred", e);
+            log.error(String.format("Exception occurred when getting app information for client id %s ",
+                    accessTokenDO.getConsumerKey()), e);
         } catch (PolicyBuilderException e) {
-            log.error("Policy Builder Exception occurred", e);
+            log.error(String.format("Exception occurred when building  XACML request for token with id  %s",
+                    accessTokenDO.getTokenId()), e);
         } catch (XMLStreamException | JaxenException e) {
-            log.error("Exception occurred when getting decision from xacml response", e);
+            log.error(String.format("Exception occurred when reading XACML response for token with id %s",
+                    accessTokenDO.getTokenId()), e);
         } catch (EntitlementException e) {
-            log.error("Entitlement Exception occurred", e);
+            log.error(String.format("Exception occurred when evaluating XACML request for token with id %s",
+                    accessTokenDO.getTokenId()), e);
         } finally {
             FrameworkUtils.endTenantFlow();
         }

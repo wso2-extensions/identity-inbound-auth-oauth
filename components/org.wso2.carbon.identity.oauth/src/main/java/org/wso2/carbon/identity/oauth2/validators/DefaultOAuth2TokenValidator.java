@@ -61,7 +61,8 @@ public class DefaultOAuth2TokenValidator implements OAuth2TokenValidator {
             scopeValidators = Arrays.asList(OAuth2Util.getAppInformationByClientId(accessTokenDO.getConsumerKey())
                     .getScopeValidators());
         } catch (InvalidOAuthClientException e) {
-            throw new IdentityOAuth2Exception("Identity Application Management Exception occurred", e);
+            throw new IdentityOAuth2Exception(String.format("Identity Application Management Exception occurred when " +
+                    "getting app information for client id %s ", accessTokenDO.getConsumerKey()), e);
         }
 
         if (!scopeValidators.isEmpty()) {
@@ -82,7 +83,8 @@ public class DefaultOAuth2TokenValidator implements OAuth2TokenValidator {
                         }
                     }
                     if (log.isDebugEnabled()) {
-                        log.debug(String.format("Validating scope of %s using %s", accessTokenDO.getConsumerKey(), validator.getClass().getName()));
+                        log.debug(String.format("Validating scope of %s using %s", accessTokenDO.getConsumerKey(),
+                                validator.getClass().getName()));
                     }
                     boolean isValid = validator.validateScope(accessTokenDO, resource);
 
