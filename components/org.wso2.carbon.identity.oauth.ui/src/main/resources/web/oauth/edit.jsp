@@ -29,6 +29,7 @@
 <%@ page import="java.util.Arrays" %>
 <%@ page import="java.util.List" %>
 <%@ page import="java.util.ResourceBundle" %>
+<%@ page import="java.util.Collections" %>
 
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%@ taglib uri="http://wso2.org/projects/carbon/taglibs/carbontags.jar" prefix="carbon" %>
@@ -59,7 +60,7 @@
     OAuthAdminClient client = null;
     String action = null;
     String grants = null;
-    String[] allowedScopeValidators = null;
+    List<String> allowedScopeValidators = new ArrayList<String>();
     List<String> scopeValidators = new ArrayList<String>();
 
     try {
@@ -106,7 +107,8 @@
                 app.setCallbackUrl("");
             }
             allowedGrants = new ArrayList<String>(Arrays.asList(client.getAllowedOAuthGrantTypes()));
-            allowedScopeValidators = client.getAllowedScopeValidators();
+            allowedScopeValidators = Arrays.asList(client.getAllowedScopeValidators());
+            Collections.sort(allowedScopeValidators);
             if (OAuthConstants.OAuthVersions.VERSION_2.equals(app.getOAuthVersion())) {
                 id = resourceBundle.getString("consumerkey.oauth20");
                 secret = resourceBundle.getString("consumersecret.oauth20");
@@ -465,25 +467,6 @@
                                         </table>
                                     </td>
                                 </tr>
-                                <tr id="scope_validator_row" name="scope_validator_row">
-                                    <td class="leftCol-med"><fmt:message key='scopeValidators'/></td>
-                                    <td>
-                                        <table>
-                                            <%
-                                                for (String scopeValidator : allowedScopeValidators) {
-                                            %>
-                                            <tr>
-                                                <td><label><input type="checkbox"
-                                                                  id=<%="scope_validator_" + scopeValidator%> name=<%="scope_validator_" + scopeValidator%>
-                                                                  value=<%=scopeValidator%> <%=(scopeValidators.contains(scopeValidator) ? "checked=\"checked\"" : "")%>/><%=scopeValidator%>
-                                                </label></td>
-                                            </tr>
-                                            <%
-                                                }
-                                            %>
-                                        </table>
-                                    </td>
-                                </tr>
                                 <% if (client.isPKCESupportedEnabled()) {%>
                                 <tr id="pkce_enable">
                                     <td class="leftCol-med">
@@ -536,6 +519,25 @@
                                         <input id="refreshTokenExpiryTime" name="refreshTokenExpiryTime" type="text"
                                                value="<%=Encode.forHtmlAttribute(Long.toString(app.getRefreshTokenExpiryTime()))%>"/>
                                         <fmt:message key='seconds'/>
+                                    </td>
+                                </tr>
+                                <tr id="scope_validator_row" name="scope_validator_row">
+                                    <td class="leftCol-med"><fmt:message key='scopeValidators'/></td>
+                                    <td>
+                                        <table>
+                                            <%
+                                                for (String scopeValidator : allowedScopeValidators) {
+                                            %>
+                                            <tr>
+                                                <td><label><input type="checkbox"
+                                                                  id=<%="scope_validator_" + scopeValidator%> name=<%="scope_validator_" + scopeValidator%>
+                                                                  value=<%=scopeValidator%> <%=(scopeValidators.contains(scopeValidator) ? "checked=\"checked\"" : "")%>/><%=scopeValidator%>
+                                                </label></td>
+                                            </tr>
+                                            <%
+                                                }
+                                            %>
+                                        </table>
                                     </td>
                                 </tr>
                             </table>

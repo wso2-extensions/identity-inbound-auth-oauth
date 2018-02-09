@@ -28,6 +28,7 @@
 <%@ page import="java.util.Arrays" %>
 <%@ page import="java.util.List" %>
 <%@ page import="java.util.ResourceBundle" %>
+<%@ page import="java.util.Collections" %>
 
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%@ taglib uri="http://wso2.org/projects/carbon/taglibs/carbontags.jar" prefix="carbon" %>
@@ -56,6 +57,7 @@
     try {
         allowedGrants = new ArrayList<String>(Arrays.asList(client.getAllowedOAuthGrantTypes()));
         scopeValidators = new ArrayList<String>(Arrays.asList(client.getAllowedScopeValidators()));
+        Collections.sort(scopeValidators);
     } catch (Exception e) {
         String message = resourceBundle.getString("error.while.loading.add.new.application") + " : " + e.getMessage();
         CarbonUIMessage.sendCarbonUIMessage(message, CarbonUIMessage.ERROR, request, e);
@@ -391,44 +393,6 @@
                                     </td>
                                 </tr>
                                 </tr>
-                                <tr id="scope_validator_row" name="scope_validator_row">
-                                    <td class="leftCol-med"><fmt:message key='scopeValidators'/></td>
-                                    <td>
-                                        <table>
-                                            <%
-                                                try {
-                                                    for (String scopeValidator : scopeValidators) {
-
-                                            %>
-                                            <tr>
-                                                <td><label><input type="checkbox"
-                                                                  id=<%="scope_validator_" + scopeValidator%> name=<%="scope_validator_" + scopeValidator%>
-                                                                  value=<%=scopeValidator%> checked="checked"/><%=scopeValidator%>
-                                                </label></td>
-                                            </tr>
-                                            <%
-                                                }
-                                            } catch (Exception e) {
-                                                String message = resourceBundle.getString("error.while.getting.scope.validators") + " : " + e.getMessage();
-                                                CarbonUIMessage.sendCarbonUIMessage(message, CarbonUIMessage.ERROR, request, e);
-                                            %>
-                                            <script type="text/javascript">
-                                                function forward() {
-                                                    location.href = "<%=forwardTo%>";
-                                                }
-                                            </script>
-
-                                            <script type="text/javascript">
-                                                forward();
-                                            </script>
-                                            <%
-                                                }
-
-                                            %>
-
-                                        </table>
-                                    </td>
-                                </tr>
                                 <%if (client.isPKCESupportedEnabled()) {%>
                                 <tr id="pkce_enable">
                                     <td class="leftCol-med">
@@ -477,6 +441,44 @@
                                         <input id="refreshTokenExpiryTime" name="refreshTokenExpiryTime" type="text"
                                                value="<%=client.getOAuthTokenExpiryTimeDTO().getRefreshTokenExpiryTime()%>"/>
                                         <fmt:message key='seconds'/>
+                                    </td>
+                                </tr>
+                                <tr id="scope_validator_row" name="scope_validator_row">
+                                    <td class="leftCol-med"><fmt:message key='scopeValidators'/></td>
+                                    <td>
+                                        <table>
+                                            <%
+                                                try {
+                                                    for (String scopeValidator : scopeValidators) {
+
+                                            %>
+                                            <tr>
+                                                <td><label><input type="checkbox"
+                                                                  id=<%="scope_validator_" + scopeValidator%> name=<%="scope_validator_" + scopeValidator%>
+                                                                  value=<%=scopeValidator%> checked="checked"/><%=scopeValidator%>
+                                                </label></td>
+                                            </tr>
+                                            <%
+                                                }
+                                            } catch (Exception e) {
+                                                String message = resourceBundle.getString("error.while.getting.scope.validators") + " : " + e.getMessage();
+                                                CarbonUIMessage.sendCarbonUIMessage(message, CarbonUIMessage.ERROR, request, e);
+                                            %>
+                                            <script type="text/javascript">
+                                                function forward() {
+                                                    location.href = "<%=forwardTo%>";
+                                                }
+                                            </script>
+
+                                            <script type="text/javascript">
+                                                forward();
+                                            </script>
+                                            <%
+                                                }
+
+                                            %>
+
+                                        </table>
                                     </td>
                                 </tr>
                             </table>
