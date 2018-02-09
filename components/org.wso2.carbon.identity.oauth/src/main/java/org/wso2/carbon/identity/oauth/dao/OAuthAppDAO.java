@@ -79,9 +79,12 @@ public class OAuthAppDAO {
             int appId = 0;
             try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
                 if (OAuth2ServiceComponentHolder.isPkceEnabled()) {
-                    try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.ADD_OAUTH_APP_WITH_PKCE)) {
-                        prepStmt.setString(1, persistenceProcessor.getProcessedClientId(consumerAppDO.getOauthConsumerKey()));
-                        prepStmt.setString(2, persistenceProcessor.getProcessedClientSecret(consumerAppDO.getOauthConsumerSecret()));
+                    try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries
+                            .ADD_OAUTH_APP_WITH_PKCE)) {
+                        prepStmt.setString(1, persistenceProcessor.getProcessedClientId(consumerAppDO
+                                .getOauthConsumerKey()));
+                        prepStmt.setString(2, persistenceProcessor.getProcessedClientSecret(consumerAppDO
+                                .getOauthConsumerSecret()));
                         prepStmt.setString(3, consumerAppDO.getUser().getUserName());
                         prepStmt.setInt(4, IdentityTenantUtil.getTenantId(consumerAppDO.getUser().getTenantDomain()));
                         prepStmt.setString(5, consumerAppDO.getUser().getUserStoreDomain());
@@ -102,9 +105,12 @@ public class OAuthAppDAO {
                         }
                     }
                 } else {
-                    try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.ADD_OAUTH_APP)) {
-                        prepStmt.setString(1, persistenceProcessor.getProcessedClientId(consumerAppDO.getOauthConsumerKey()));
-                        prepStmt.setString(2, persistenceProcessor.getProcessedClientSecret(consumerAppDO.getOauthConsumerSecret()));
+                    try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries
+                            .ADD_OAUTH_APP)) {
+                        prepStmt.setString(1, persistenceProcessor.getProcessedClientId(consumerAppDO
+                                .getOauthConsumerKey()));
+                        prepStmt.setString(2, persistenceProcessor.getProcessedClientSecret(consumerAppDO
+                                .getOauthConsumerSecret()));
                         prepStmt.setString(3, consumerAppDO.getUser().getUserName());
                         prepStmt.setInt(4, IdentityTenantUtil.getTenantId(consumerAppDO.getUser().getTenantDomain()));
                         prepStmt.setString(5, consumerAppDO.getUser().getUserStoreDomain());
@@ -164,7 +170,8 @@ public class OAuthAppDAO {
         while (isDuplicateConsumer(consumerKey));
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection();
-             PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.ADD_OAUTH_CONSUMER)) {
+             PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries
+                     .ADD_OAUTH_CONSUMER)) {
             prepStmt.setString(1, consumerKey);
             prepStmt.setString(2, consumerSecret);
             prepStmt.setString(3, username);
@@ -217,8 +224,10 @@ public class OAuthAppDAO {
                     while (rSet.next()) {
                         if (rSet.getString(3) != null && rSet.getString(3).length() > 0) {
                             OAuthAppDO oauthApp = new OAuthAppDO();
-                            oauthApp.setOauthConsumerKey(persistenceProcessor.getPreprocessedClientId(rSet.getString(1)));
-                            oauthApp.setOauthConsumerSecret(persistenceProcessor.getPreprocessedClientSecret(rSet.getString(2)));
+                            oauthApp.setOauthConsumerKey(persistenceProcessor.getPreprocessedClientId(rSet.getString
+                                    (1)));
+                            oauthApp.setOauthConsumerSecret(persistenceProcessor.getPreprocessedClientSecret(rSet
+                                    .getString(2)));
                             oauthApp.setApplicationName(rSet.getString(3));
                             oauthApp.setOauthVersion(rSet.getString(4));
                             oauthApp.setCallbackUrl(rSet.getString(5));
@@ -277,8 +286,10 @@ public class OAuthAppDAO {
 
                 try (ResultSet rSet = prepStmt.executeQuery()) {
                     /*
-                     * We need to determine whether the result set has more than 1 row. Meaning, we found an application for
-                     * the given consumer key. There can be situations where a user passed a key which doesn't yet have an
+                     * We need to determine whether the result set has more than 1 row. Meaning, we found an
+                     * application for
+                     * the given consumer key. There can be situations where a user passed a key which doesn't yet
+                     * have an
                      * associated application. We need to barf with a meaningful error message for this case
                      */
                     boolean rSetHasRows = false;
@@ -288,7 +299,8 @@ public class OAuthAppDAO {
                         if (rSet.getString(4) != null && rSet.getString(4).length() > 0) {
                             oauthApp = new OAuthAppDO();
                             oauthApp.setOauthConsumerKey(consumerKey);
-                            oauthApp.setOauthConsumerSecret(persistenceProcessor.getPreprocessedClientSecret(rSet.getString(1)));
+                            oauthApp.setOauthConsumerSecret(persistenceProcessor.getPreprocessedClientSecret(rSet
+                                    .getString(1)));
                             AuthenticatedUser authenticatedUser = new AuthenticatedUser();
                             authenticatedUser.setUserName(rSet.getString(2));
                             oauthApp.setApplicationName(rSet.getString(3));
@@ -315,12 +327,14 @@ public class OAuthAppDAO {
                     }
                     if (!rSetHasRows) {
                         /*
-                         * We come here because user submitted a key that doesn't have any associated application with it.
-                         * We're throwing an error here because we cannot continue without this info. Otherwise it'll throw
+                         * We come here because user submitted a key that doesn't have any associated application
+                         * with it.
+                         * We're throwing an error here because we cannot continue without this info. Otherwise it'll
+                         * throw
                          * a null values not supported error when it tries to cache this info
                          */
-
-                        String message = "Cannot find an application associated with the given consumer key : " + consumerKey;
+                        String message = "Cannot find an application associated with the given consumer key : " +
+                                consumerKey;
                         if (log.isDebugEnabled()) {
                             log.debug(message);
                         }
@@ -359,8 +373,10 @@ public class OAuthAppDAO {
                     AuthenticatedUser user = new AuthenticatedUser();
                     user.setTenantDomain(IdentityTenantUtil.getTenantDomain(tenantID));
                     /*
-                     * We need to determine whether the result set has more than 1 row. Meaning, we found an application for
-                     * the given consumer key. There can be situations where a user passed a key which doesn't yet have an
+                     * We need to determine whether the result set has more than 1 row. Meaning, we found an
+                     * application for
+                     * the given consumer key. There can be situations where a user passed a key which doesn't yet
+                     * have an
                      * associated application. We need to barf with a meaningful error message for this case
                      */
                     boolean rSetHasRows = false;
@@ -368,11 +384,13 @@ public class OAuthAppDAO {
                         // There is at least one application associated with a given key
                         rSetHasRows = true;
                         if (rSet.getString(4) != null && rSet.getString(4).length() > 0) {
-                            oauthApp.setOauthConsumerSecret(persistenceProcessor.getPreprocessedClientSecret(rSet.getString(1)));
+                            oauthApp.setOauthConsumerSecret(persistenceProcessor.getPreprocessedClientSecret(rSet
+                                    .getString(1)));
                             user.setUserName(rSet.getString(2));
                             user.setUserStoreDomain(rSet.getString(3));
                             oauthApp.setUser(user);
-                            oauthApp.setOauthConsumerKey(persistenceProcessor.getPreprocessedClientId(rSet.getString(4)));
+                            oauthApp.setOauthConsumerKey(persistenceProcessor.getPreprocessedClientId(rSet.getString
+                                    (4)));
                             oauthApp.setOauthVersion(rSet.getString(5));
                             oauthApp.setCallbackUrl(rSet.getString(6));
                             oauthApp.setGrantTypes(rSet.getString(7));
@@ -394,11 +412,14 @@ public class OAuthAppDAO {
                     }
                     if (!rSetHasRows) {
                         /*
-                         * We come here because user submitted a key that doesn't have any associated application with it.
-                         * We're throwing an error here because we cannot continue without this info. Otherwise it'll throw
+                         * We come here because user submitted a key that doesn't have any associated application
+                         * with it.
+                         * We're throwing an error here because we cannot continue without this info. Otherwise it'll
+                          * throw
                          * a null values not supported error when it tries to cache this info
                          */
-                        String message = "Cannot find an application associated with the given consumer key : " + appName;
+                        String message = "Cannot find an application associated with the given consumer key : " +
+                                appName;
                         if (log.isDebugEnabled()) {
                             log.debug(message);
                         }
@@ -435,13 +456,15 @@ public class OAuthAppDAO {
                     prepStmt.setLong(8, oauthAppDO.getRefreshTokenExpiryTime());
 
                     prepStmt.setString(9, persistenceProcessor.getProcessedClientId(oauthAppDO.getOauthConsumerKey()));
-                    prepStmt.setString(10, persistenceProcessor.getProcessedClientSecret(oauthAppDO.getOauthConsumerSecret()));
+                    prepStmt.setString(10, persistenceProcessor.getProcessedClientSecret(oauthAppDO
+                            .getOauthConsumerSecret()));
                 } else {
                     prepStmt.setLong(4, oauthAppDO.getUserAccessTokenExpiryTime());
                     prepStmt.setLong(5, oauthAppDO.getApplicationAccessTokenExpiryTime());
                     prepStmt.setLong(6, oauthAppDO.getRefreshTokenExpiryTime());
                     prepStmt.setString(7, persistenceProcessor.getProcessedClientId(oauthAppDO.getOauthConsumerKey()));
-                    prepStmt.setString(8, persistenceProcessor.getProcessedClientSecret(oauthAppDO.getOauthConsumerSecret()));
+                    prepStmt.setString(8, persistenceProcessor.getProcessedClientSecret(oauthAppDO
+                            .getOauthConsumerSecret()));
                 }
                 int count = prepStmt.executeUpdate();
                 updateScopeValidators(connection, oauthAppDO.getId(), oauthAppDO.getScopeValidators());
@@ -453,7 +476,8 @@ public class OAuthAppDAO {
         } catch (SQLException e) {
             throw handleError("Error when updating OAuth application", e);
         } catch (IdentityOAuth2Exception e) {
-            throw handleError("Error occurred while processing client id and client secret by TokenPersistenceProcessor", e);
+            throw handleError("Error occurred while processing client id and client secret by " +
+                    "TokenPersistenceProcessor", e);
         }
     }
 
@@ -465,7 +489,8 @@ public class OAuthAppDAO {
             prepStmt.execute();
             connection.commit();
         } catch (SQLException e) {
-            throw handleError("Error when executing the SQL : " + SQLQueries.OAuthAppDAOSQLQueries.REMOVE_APPLICATION, e);
+            throw handleError("Error when executing the SQL : " + SQLQueries.OAuthAppDAOSQLQueries
+                    .REMOVE_APPLICATION, e);
         }
     }
 
@@ -558,7 +583,8 @@ public class OAuthAppDAO {
                 }
             }
         } catch (SQLException e) {
-            throw handleError("Error when executing the SQL : " + SQLQueries.OAuthAppDAOSQLQueries.CHECK_EXISTING_APPLICATION, e);
+            throw handleError("Error when executing the SQL : " + SQLQueries.OAuthAppDAOSQLQueries
+                    .CHECK_EXISTING_APPLICATION, e);
         }
         return isDuplicateApp;
     }
@@ -580,7 +606,8 @@ public class OAuthAppDAO {
         } catch (IdentityOAuth2Exception e) {
             throw handleError("Error occurred while processing the client id by TokenPersistenceProcessor", null);
         } catch (SQLException e) {
-            throw handleError("Error when executing the SQL: " + SQLQueries.OAuthAppDAOSQLQueries.CHECK_EXISTING_CONSUMER, e);
+            throw handleError("Error when executing the SQL: " + SQLQueries.OAuthAppDAOSQLQueries
+                    .CHECK_EXISTING_CONSUMER, e);
         }
         return isDuplicateConsumer;
     }
@@ -592,10 +619,10 @@ public class OAuthAppDAO {
     /**
      * Add scope validators for consumerApp using connection
      *
-     * @param connection    same db connection used in OAuth creation
-     * @param appId id of consumerApp
+     * @param connection      same db connection used in OAuth creation
+     * @param appId           id of consumerApp
      * @param scopeValidators list of scope validators.
-     * @throws SQLException                sql error
+     * @throws SQLException sql error
      */
     private void addScopeValidators(Connection connection, int appId, String[] scopeValidators) throws SQLException {
         if (scopeValidators != null && scopeValidators.length > 0) {
@@ -612,17 +639,17 @@ public class OAuthAppDAO {
     }
 
     /**
-     *  Retrieve all scope validators for specific appId
+     * Retrieve all scope validators for specific appId
      *
      * @param connection same db connection used in retrieving OAuth App
-     * @param id appId of the OAuth app
+     * @param id         appId of the OAuth app
      * @return list of scope validator names
      * @throws SQLException sql error
      */
     private String[] getScopeValidators(Connection connection, int id) throws SQLException {
         List<String> scopeValidators = new ArrayList<>();
-        try (PreparedStatement stmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.
-                GET_APP_SCOPE_VALIDATORS)) {
+        try (PreparedStatement stmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries
+                .GET_APP_SCOPE_VALIDATORS)) {
             stmt.setInt(1, id);
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
@@ -637,35 +664,36 @@ public class OAuthAppDAO {
      * Update the scope validator of OAuth app .
      * Remove all the registered scope validators and then add
      *
-     * @param connection    same db connection used in OAuth update
-      * @param appId id of consumerApp
+     * @param connection      same db connection used in OAuth update
+     * @param appId           id of consumerApp
      * @param scopeValidators list of scope validators.
-     * @throws SQLException   sql error
+     * @throws SQLException sql error
      */
     private void updateScopeValidators(Connection connection, int appId, String[] scopeValidators)
             throws SQLException {
-        try (PreparedStatement stmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.
-                REMOVE_APP_SCOPE_VALIDATORS)) {
+        try (PreparedStatement stmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries
+                .REMOVE_APP_SCOPE_VALIDATORS)) {
             stmt.setInt(1, appId);
             stmt.execute();
         }
-        addScopeValidators(connection,appId,scopeValidators);
+        addScopeValidators(connection, appId, scopeValidators);
     }
 
     /**
      * Get the application id using the client id
      *
      * @param connection same db connection used in OAuth creation
-     * @param clientId client id of the created app
+     * @param clientId   client id of the created app
      * @return
-     * @throws SQLException sql exception
+     * @throws SQLException                sql exception
      * @throws InvalidOAuthClientException Invalid OAuth Client Exception
-     * @throws IdentityOAuth2Exception Identity OAuth2 Exception
+     * @throws IdentityOAuth2Exception     Identity OAuth2 Exception
      */
     private int getAppIdByClientId(Connection connection, String clientId)
             throws SQLException, InvalidOAuthClientException, IdentityOAuth2Exception {
         int appId = 0;
-        try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.GET_APP_ID_BY_CONSUMER_KEY)) {
+        try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries
+                .GET_APP_ID_BY_CONSUMER_KEY)) {
             prepStmt.setString(1, persistenceProcessor.getProcessedClientId(clientId));
             try (ResultSet rSet = prepStmt.executeQuery()) {
                 boolean rSetHasRows = false;

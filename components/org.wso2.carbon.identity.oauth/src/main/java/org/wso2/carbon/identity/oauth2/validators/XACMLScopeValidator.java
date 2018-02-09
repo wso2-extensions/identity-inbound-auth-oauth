@@ -37,7 +37,6 @@ import org.wso2.carbon.identity.entitlement.common.dto.RowDTO;
 import org.wso2.carbon.identity.entitlement.common.util.PolicyCreatorUtil;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
-
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
@@ -147,18 +146,15 @@ public class XACMLScopeValidator extends OAuth2ScopeValidator {
      */
     private RequestDTO createRequestDTO(AccessTokenDO accessTokenDO, OAuthAppDO authApp, String resource) {
         List<RowDTO> rowDTOs = new ArrayList<>();
-        RowDTO actionDTO =
-                createRowDTO(ACTION_VALIDATE, AUTH_ACTION_ID, ACTION_CATEGORY);
-        RowDTO spNameDTO =
-                createRowDTO(authApp.getApplicationName(), SP_NAME_ID, SP_CATEGORY);
-        RowDTO usernameDTO =
-                createRowDTO(accessTokenDO.getAuthzUser().getUserName(), USERNAME_ID, USER_CATEGORY);
-        RowDTO userStoreDomainDTO =
-                createRowDTO(accessTokenDO.getAuthzUser().getUserStoreDomain(), USER_STORE_ID, USER_CATEGORY);
-        RowDTO userTenantDomainDTO =
-                createRowDTO(accessTokenDO.getAuthzUser().getTenantDomain(), USER_TENANT_DOMAIN_ID, USER_CATEGORY);
-        RowDTO resourceDTO = createRowDTO(resource, EntitlementPolicyConstants.RESOURCE_ID,
-                PDPConstants.RESOURCE_CATEGORY_URI);
+        RowDTO actionDTO = createRowDTO(ACTION_VALIDATE, AUTH_ACTION_ID, ACTION_CATEGORY);
+        RowDTO spNameDTO = createRowDTO(authApp.getApplicationName(), SP_NAME_ID, SP_CATEGORY);
+        RowDTO usernameDTO = createRowDTO(accessTokenDO.getAuthzUser().getUserName(), USERNAME_ID, USER_CATEGORY);
+        RowDTO userStoreDomainDTO = createRowDTO(accessTokenDO.getAuthzUser().getUserStoreDomain(), USER_STORE_ID,
+                USER_CATEGORY);
+        RowDTO userTenantDomainDTO = createRowDTO(accessTokenDO.getAuthzUser().getTenantDomain(),
+                USER_TENANT_DOMAIN_ID, USER_CATEGORY);
+        RowDTO resourceDTO = createRowDTO(resource, EntitlementPolicyConstants.RESOURCE_ID, PDPConstants
+                .RESOURCE_CATEGORY_URI);
 
         rowDTOs.add(actionDTO);
         rowDTOs.add(spNameDTO);
@@ -207,9 +203,8 @@ public class XACMLScopeValidator extends OAuth2ScopeValidator {
 
         AXIOMXPath axiomxPath = new AXIOMXPath(DECISION_XPATH);
         axiomxPath.addNamespace(XACML_NS_PREFIX, EntitlementPolicyConstants.REQ_RES_CONTEXT_XACML3);
-        OMElement rootElement =
-                new StAXOMBuilder(new ByteArrayInputStream(xacmlResponse.getBytes(StandardCharsets.UTF_8)))
-                        .getDocumentElement();
+        OMElement rootElement = new StAXOMBuilder(new ByteArrayInputStream(xacmlResponse.getBytes(StandardCharsets
+                .UTF_8))).getDocumentElement();
         return axiomxPath.stringValueOf(rootElement);
 
     }
