@@ -30,6 +30,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.identity.application.authentication.framework.AuthenticationMethodNameTranslator;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ClaimConfig;
@@ -49,9 +50,14 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
+import org.wso2.carbon.identity.oauth.cache.CacheEntry;
+import org.wso2.carbon.identity.oauth.cache.OIDCAudienceCache;
+import org.wso2.carbon.identity.oauth.cache.OIDCAudienceCacheEntry;
+import org.wso2.carbon.identity.oauth.cache.OIDCAudienceCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IDTokenValidationFailureException;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
@@ -67,19 +73,19 @@ import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import javax.xml.namespace.QName;
 
 import static org.apache.commons.lang.StringUtils.isNotBlank;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.AT_HASH;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.AUTH_TIME;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.AZP;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.NONCE;
@@ -112,10 +118,10 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
     @Override
     public String buildIDToken(OAuthTokenReqMessageContext tokenReqMsgCtxt,
                                OAuth2AccessTokenRespDTO tokenRespDTO) throws IdentityOAuth2Exception {
-
         String clientId = tokenReqMsgCtxt.getOauth2AccessTokenReqDTO().getClientId();
         String spTenantDomain = getSpTenantDomain(tokenReqMsgCtxt);
         String idTokenIssuer = getIdTokenIssuer(spTenantDomain);
+        String accessToken = tokenRespDTO.getAccessToken();
 
         long idTokenValidityInMillis = getIDTokenExpiryInMillis();
         long currentTimeInMillis = Calendar.getInstance().getTimeInMillis();
@@ -125,24 +131,24 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
 
         String nonceValue = null;
         long authTime = 0;
-        LinkedHashSet acrValue = new LinkedHashSet();
+        String acrValue = null;
+        List<String> amrValues = Collections.emptyList();
+        Set<String> requestedAcrValues = Collections.emptySet();
 
         // AuthorizationCode only available for authorization code grant type
         if (getAuthorizationCode(tokenReqMsgCtxt) != null) {
             AuthorizationGrantCacheEntry authzGrantCacheEntry = getAuthorizationGrantCacheEntry(tokenReqMsgCtxt);
             if (authzGrantCacheEntry != null) {
                 nonceValue = authzGrantCacheEntry.getNonceValue();
-                acrValue = authzGrantCacheEntry.getAcrValue();
+                acrValue = authzGrantCacheEntry.getSelectedAcrValue();
+                requestedAcrValues = authzGrantCacheEntry.getAcrValue();
                 if (isAuthTimeRequired(authzGrantCacheEntry)) {
                     authTime = authzGrantCacheEntry.getAuthTime();
                 }
+                amrValues = authzGrantCacheEntry.getAmrList();
             }
-        }
-
-        String atHash = null;
-        String accessToken = tokenRespDTO.getAccessToken();
-        if (isIDTokenSigned() && isNotBlank(accessToken)) {
-            atHash = getAtHash(accessToken);
+        } else {
+            amrValues = tokenReqMsgCtxt.getOauth2AccessTokenReqDTO().getAuthenticationMethodReferences();
         }
 
         if (log.isDebugEnabled()) {
@@ -150,7 +156,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
                     currentTimeInMillis));
         }
 
-        List<String> audience = getOIDCAudience(clientId);
+        List<String> audience = getOIDCAudience(clientId, spTenantDomain);
 
         JWTClaimsSet jwtClaimsSet = new JWTClaimsSet();
         jwtClaimsSet.setIssuer(idTokenIssuer);
@@ -161,14 +167,14 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         if (authTime != 0) {
             jwtClaimsSet.setClaim(AUTH_TIME, authTime / 1000);
         }
-        if (atHash != null) {
-            jwtClaimsSet.setClaim(AT_HASH, atHash);
-        }
         if (nonceValue != null) {
             jwtClaimsSet.setClaim(NONCE, nonceValue);
         }
-        if (acrValue != null) {
-            jwtClaimsSet.setClaim(OAuthConstants.OIDCClaims.ACR, "urn:mace:incommon:iap:silver");
+        if (acrValue != null && !acrValue.isEmpty()) {
+            jwtClaimsSet.setClaim(OAuthConstants.ACR, translateAcrToResponse(acrValue, requestedAcrValues));
+        }
+        if (amrValues != null) {
+            jwtClaimsSet.setClaim(OAuthConstants.AMR, translateAmrToResponse(amrValues));
         }
 
         setAdditionalClaims(tokenReqMsgCtxt, tokenRespDTO, jwtClaimsSet);
@@ -206,7 +212,9 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
                 getSubjectClaim(authzReqMessageContext, tokenRespDTO, clientId, spTenantDomain, authorizedUser);
 
         String nonceValue = authzReqMessageContext.getAuthorizationReqDTO().getNonce();
-        LinkedHashSet acrValue = authzReqMessageContext.getAuthorizationReqDTO().getACRValues();
+        LinkedHashSet requestedAcrValueSet = authzReqMessageContext.getAuthorizationReqDTO().getACRValues();
+        String acrValue = authzReqMessageContext.getAuthorizationReqDTO().getSelectedAcr();
+        List<String> amrValues = Collections.emptyList(); //TODO:
 
         long idTokenLifeTimeInMillis = getIDTokenExpiryInMillis();
         long currentTimeInMillis = Calendar.getInstance().getTimeInMillis();
@@ -219,7 +227,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         jwtClaimsSet.setIssuer(issuer);
 
         // Set the audience
-        List<String> audience = getOIDCAudience(clientId);
+        List<String> audience = getOIDCAudience(clientId, spTenantDomain);
         jwtClaimsSet.setAudience(audience);
 
         jwtClaimsSet.setClaim(AZP, clientId);
@@ -230,18 +238,14 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         if (authTime != 0) {
             jwtClaimsSet.setClaim(AUTH_TIME, authTime / 1000);
         }
-
-        String responseType = authzReqMessageContext.getAuthorizationReqDTO().getResponseType();
-        if (isIDTokenSigned() && isAccessTokenHashApplicable(responseType) && isNotBlank(accessToken)) {
-            String atHash = getAtHash(accessToken);
-            jwtClaimsSet.setClaim(AT_HASH, atHash);
-        }
-
         if (nonceValue != null) {
             jwtClaimsSet.setClaim(OAuthConstants.OIDCClaims.NONCE, nonceValue);
         }
-        if (acrValue != null) {
-            jwtClaimsSet.setClaim(OAuthConstants.OIDCClaims.ACR, "urn:mace:incommon:iap:silver");
+        if (acrValue != null && !acrValue.isEmpty()) {
+            jwtClaimsSet.setClaim("acr", translateAcrToResponse(acrValue, requestedAcrValueSet));
+        }
+        if (amrValues != null) {
+            jwtClaimsSet.setClaim("amr", translateAmrToResponse(amrValues));
         }
 
         setAdditionalClaims(authzReqMessageContext, tokenRespDTO, jwtClaimsSet);
@@ -498,33 +502,11 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         return subjectClaimUri;
     }
 
-    private List<String> getOIDCAudience(String clientId) {
-        List<String> oidcAudiences = getDefinedCustomOIDCAudiences();
+    private List<String> getOIDCAudience(String clientId, String tenantDomain) {
+        List<String> oidcAudiences = getDefinedCustomOIDCAudiences(clientId, tenantDomain);
         // Need to add client_id as an audience value according to the spec.
         oidcAudiences.add(clientId);
         return oidcAudiences;
-    }
-
-    private String getAtHash(String accessToken) throws IdentityOAuth2Exception {
-        String digAlg = OAuth2Util.mapDigestAlgorithm(signatureAlgorithm);
-        MessageDigest md;
-        try {
-            md = MessageDigest.getInstance(digAlg);
-        } catch (NoSuchAlgorithmException e) {
-            throw new IdentityOAuth2Exception("Error creating the at_hash value. Invalid Digest Algorithm: " + digAlg);
-        }
-
-        md.update(accessToken.getBytes(Charsets.UTF_8));
-        byte[] digest = md.digest();
-        int leftHalfBytes = 16;
-        if (SHA384.equals(digAlg)) {
-            leftHalfBytes = 24;
-        } else if (SHA512.equals(digAlg)) {
-            leftHalfBytes = 32;
-        }
-        byte[] leftmost = new byte[leftHalfBytes];
-        System.arraycopy(digest, 0, leftmost, 0, leftHalfBytes);
-        return new String(Base64.encodeBase64URLSafe(leftmost), Charsets.UTF_8);
     }
 
     private ServiceProvider getServiceProvider(String spTenantDomain,
@@ -731,8 +713,38 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         return OAuth2Util.mapDigestAlgorithm(signatureAlgorithm);
     }
 
-    private List<String> getDefinedCustomOIDCAudiences() {
+    private List<String> getDefinedCustomOIDCAudiences(String clientId, String tenantDomain) {
         List<String> audiences = new ArrayList<>();
+
+        // Priority should be given to service provider specific audiences over globally configured ones.
+        if (OAuth2ServiceComponentHolder.isAudienceEnabled()) {
+            OIDCAudienceCacheKey cacheKey = new OIDCAudienceCacheKey(clientId + "@" + tenantDomain);
+            CacheEntry result = OIDCAudienceCache.getInstance().getValueFromCache(cacheKey);
+
+            // Check cache hit, do the type check.
+            if (result != null && result instanceof OIDCAudienceCacheEntry) {
+                audiences = ((OIDCAudienceCacheEntry) result).getAudiences();
+                return audiences;
+            } else {
+                OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
+                try {
+                    audiences = oAuthAppDAO.getOIDCAudiences(tenantDomain, clientId);
+                    if (CollectionUtils.isNotEmpty(audiences)) {
+                        OIDCAudienceCacheEntry cacheEntry = new OIDCAudienceCacheEntry();
+                        cacheEntry.setAudiences(audiences);
+                        OIDCAudienceCache.getInstance().addToCache(cacheKey, cacheEntry);
+                        if (log.isDebugEnabled()) {
+                            log.debug("OIDC Audiences added back to the cache.");
+                        }
+                        return audiences;
+                    }
+                } catch (IdentityOAuth2Exception e) {
+                    log.error("Error while retrieving OIDC audiences for tenant domain: " + tenantDomain +
+                            " and clientID: " + clientId);
+                }
+            }
+
+        }
         IdentityConfigParser configParser = IdentityConfigParser.getInstance();
         OMElement oauthElem = configParser.getConfigElement(CONFIG_ELEM_OAUTH);
         if (oauthElem == null) {
@@ -879,5 +891,60 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
                         entry.getValue());
             }
         }
+    }
+
+    /**
+     * +     * Converts the internal representation to external (response) form.
+     * +     * The resultant list will not have any duplicate values.
+     * +     * @param internalList
+     * +     * @return a list of amr values to be sent via ID token. May be empty, but not null.
+     * +
+     */
+    private List<String> translateAmrToResponse(List<String> internalList) {
+        Set<String> result = new HashSet<>();
+        for (String internalValue : internalList) {
+            result.addAll(translateToResponse(internalValue));
+        }
+        return new ArrayList<>(result);
+    }
+
+    /**
+     * Converts the internal representation to external (response) form.
+     * The resultant list will not have any duplicate values.
+     *
+     * @param internalAcr
+     * @return the ACR value to be sent via ID token. Can be null.
+     */
+    private String translateAcrToResponse(String internalAcr, Set<String> requestedAcrValueSet) {
+        String result = internalAcr;
+        AuthenticationMethodNameTranslator authenticationMethodNameTranslator = OAuth2ServiceComponentHolder
+                .getAuthenticationMethodNameTranslator();
+        if (authenticationMethodNameTranslator != null) {
+            Set<String> externalAcrSet = authenticationMethodNameTranslator
+                    .translateToExternalAcr(internalAcr, INBOUND_AUTH2_TYPE);
+            result = externalAcrSet.stream().filter(e -> requestedAcrValueSet.contains(e)).findFirst().orElse(result);
+        }
+        return result;
+    }
+
+    private List<String> translateToResponse(String internalValue) {
+        List<String> result = null;
+        AuthenticationMethodNameTranslator authenticationMethodNameTranslator = OAuth2ServiceComponentHolder
+                .getAuthenticationMethodNameTranslator();
+        if (authenticationMethodNameTranslator != null) {
+            Set<String> externalAmrSet = authenticationMethodNameTranslator
+                    .translateToExternalAmr(internalValue, INBOUND_AUTH2_TYPE);
+            if (externalAmrSet == null || externalAmrSet.isEmpty()) {
+                if (log.isDebugEnabled()) {
+                    log.debug("There was no mapping found to translate AMR from internal to external URI. Internal " +
+                            "Method Reference : " + internalValue);
+                }
+                result = new ArrayList<>();
+                result.add(internalValue);
+            } else {
+                result = new ArrayList<>(externalAmrSet);
+            }
+        }
+        return result;
     }
 }

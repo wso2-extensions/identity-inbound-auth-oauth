@@ -46,11 +46,12 @@ import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
-import org.wso2.carbon.identity.openidconnect.model.RequestObject;
+import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.user.api.UserRealm;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
@@ -78,7 +79,6 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
     private final static Log log = LogFactory.getLog(DefaultOIDCClaimsCallbackHandler.class);
     private final static String OAUTH2 = "oauth2";
     private final static String OIDC_DIALECT = "http://wso2.org/oidc/claim";
-    private static final String REQUEST_OBJECT = "requestObject";
     private final static String ATTRIBUTE_SEPARATOR = FrameworkUtils.getMultiAttributeSeparator();
 
     @Override
@@ -129,23 +129,6 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
     }
 
     /**
-     * Filter user claims based on the essential claims of the request object which comes with the oidc authz request.
-     *
-     * @param type             id_token or userinfo
-     * @param requestObject     request object
-     * @param userClaims        Map of user claims
-     * @return essential claims
-     */
-    protected Map<String, Object> filterClaimsByEssentialClaims(Map<String, Object> userClaims,
-                                                                String type,
-                                                                RequestObject requestObject) {
-
-        return OpenIDConnectServiceComponentHolder.getInstance()
-                .getHighestPriorityOpenIDConnectClaimFilter().getClaimsFilteredByEssentialClaims(userClaims, type,
-                        requestObject);
-    }
-
-    /**
      * Get response map
      *
      * @param requestMsgCtx Token request message context
@@ -173,14 +156,29 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
 
         String clientId = requestMsgCtx.getOauth2AccessTokenReqDTO().getClientId();
         String spTenantDomain = requestMsgCtx.getOauth2AccessTokenReqDTO().getTenantDomain();
-        RequestObject requestObject = (RequestObject) requestMsgCtx.getProperty(REQUEST_OBJECT);
         Map<String, Object> filterClaimsByScopesAndEssentialClaims = new HashMap<>();
         filterClaimsByScopesAndEssentialClaims.putAll(filterClaimsByScope(userClaimsInOIDCDialect, requestMsgCtx.getScope(),
                 clientId, spTenantDomain));
-        filterClaimsByScopesAndEssentialClaims.putAll(filterClaimsByEssentialClaims(userClaimsInOIDCDialect,
-                OAuthConstants.ID_TOKEN, requestObject));
+
+        // Handle essential claims of the request object
+        String token = getAccessToken(requestMsgCtx);
+        filterClaimsByScopesAndEssentialClaims.putAll(filterClaimsFromRequestObject(userClaimsInOIDCDialect, token));
+
         // Restrict Claims going into the token based on the scope and the essential claims
         return filterClaimsByScopesAndEssentialClaims;
+    }
+
+    private Map<String, Object> filterClaimsFromRequestObject(Map<String, Object> userAttributes,
+                                                       String token) throws OAuthSystemException {
+        try {
+            List<RequestedClaim> requestedClaims = OpenIDConnectServiceComponentHolder.getRequestObjectService().
+                    getRequestedClaimsForIDToken(token);
+            return OpenIDConnectServiceComponentHolder.getInstance()
+                    .getHighestPriorityOpenIDConnectClaimFilter()
+                    .getClaimsFilteredByEssentialClaims(userAttributes, requestedClaims);
+        } catch (RequestObjectException e) {
+            throw new OAuthSystemException("Unable to retrieve requested claims from Request Object." + e);
+        }
     }
 
     private Map<ClaimMapping, String> getCachedUserAttributes(OAuthTokenReqMessageContext requestMsgCtx) {
@@ -251,12 +249,14 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         String clientId = authzReqMessageContext.getAuthorizationReqDTO().getConsumerKey();
         String spTenantDomain = authzReqMessageContext.getAuthorizationReqDTO().getTenantDomain();
         String[] approvedScopes = authzReqMessageContext.getApprovedScope();
-        RequestObject requestObject = authzReqMessageContext.getAuthorizationReqDTO().getRequestObject();
         Map<String, Object> filterClaimsByScopesAndEssentialClaims = new HashMap<>();
         filterClaimsByScopesAndEssentialClaims.putAll(filterClaimsByScope(userClaimsInOIDCDialect, approvedScopes,
                 clientId, spTenantDomain));
-        filterClaimsByScopesAndEssentialClaims.putAll(filterClaimsByEssentialClaims(userClaimsInOIDCDialect,
-                OAuthConstants.ID_TOKEN, requestObject));
+
+        //Handle essential claims of the request object
+        String token = getAccessToken(authzReqMessageContext);
+        filterClaimsByScopesAndEssentialClaims.putAll(filterClaimsFromRequestObject(userClaimsInOIDCDialect, token));
+
         return filterClaimsByScopesAndEssentialClaims;
     }
 

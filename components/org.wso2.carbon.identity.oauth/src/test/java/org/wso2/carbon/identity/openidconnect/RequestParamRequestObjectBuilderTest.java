@@ -18,65 +18,107 @@
 
 package org.wso2.carbon.identity.openidconnect;
 
+import org.powermock.api.mockito.PowerMockito;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockObjectFactory;
 import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.Assert;
-import org.testng.IObjectFactory;
+import org.testng.annotations.BeforeTest;
 import org.testng.annotations.DataProvider;
-import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
+import org.wso2.carbon.base.CarbonBaseConstants;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 
+import java.nio.file.Paths;
+import java.security.Key;
+import java.security.KeyStore;
+import java.security.PublicKey;
+import java.security.interfaces.RSAPrivateKey;
+import java.util.Map;
+
+import static org.mockito.Matchers.anyBoolean;
+import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
-import static org.powermock.api.mockito.PowerMockito.mock;
+import static org.mockito.Mockito.mock;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
+import static org.wso2.carbon.identity.openidconnect.util.TestUtils.getKeyStoreFromFile;
+import static org.wso2.carbon.identity.openidconnect.util.TestUtils.getRequestObjects;
 
-@PrepareForTest({OAuth2Util.class, OAuthServerConfiguration.class})
+@PrepareForTest({OAuth2Util.class, IdentityUtil.class, OAuthServerConfiguration.class, RequestObjectValidatorImpl.class})
+@PowerMockIgnore({"javax.crypto.*"})
 public class RequestParamRequestObjectBuilderTest extends PowerMockTestCase {
+    private RSAPrivateKey rsaPrivateKey;
+    private KeyStore clientKeyStore;
+    private KeyStore wso2KeyStore;
+    public static final String TEST_CLIENT_ID_1 = "wso2test";
+    public static final String SOME_SERVER_URL = "some-server-url";
 
-    @ObjectFactory
-    public IObjectFactory getObjectFactory() {
-        return new PowerMockObjectFactory();
+    @BeforeTest
+    public void setUp() throws Exception {
+        System.setProperty(CarbonBaseConstants.CARBON_HOME,
+                Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString());
+        clientKeyStore = getKeyStoreFromFile("testkeystore.jks", "wso2carbon", System.getProperty(CarbonBaseConstants.CARBON_HOME));
+        wso2KeyStore = getKeyStoreFromFile("wso2carbon.jks", "wso2carbon", System.getProperty(CarbonBaseConstants
+                .CARBON_HOME));
     }
 
     @DataProvider(name = "TestBuildRequestObjectTest")
-    public Object[][] buildRequestObjectData() {
-        RequestObjectTest requestObject = new RequestObjectTest();
-        return new Object[][]{
-                {requestObject.getRequestJson()},
-                {requestObject.getEncodeRequestObject()},
-                {requestObject.getEncryptedRequestObject()}
-        };
+    public Object[][] buildRequestObjectData() throws Exception {
+        Key privateKey = clientKeyStore.getKey("wso2carbon", "wso2carbon".toCharArray());
+        Key privateKey2 = wso2KeyStore.getKey("wso2carbon", "wso2carbon".toCharArray());
+        PublicKey publicKey = wso2KeyStore.getCertificate("wso2carbon").getPublicKey();
+        return getRequestObjects(privateKey, privateKey2, publicKey, TEST_CLIENT_ID_1, SOME_SERVER_URL);
     }
 
+
     @Test(dataProvider = "TestBuildRequestObjectTest")
-    public void buildRequestObjectTest(String requestObject) throws RequestObjectException {
-        RequestObjectTest requestObjectforTests = new RequestObjectTest();
-        RequestObjectBuilder requestObjectBuilder = new RequestParamRequestObjectBuilder();
-        RequestObject requestObjectInstance = new RequestObject();
+    public void buildRequestObjectTest(String requestObjectString, Map<String, Object> claims, boolean isSigned,
+                                       boolean isEncrypted,
+                                       boolean exceptionNotExpected,
+                                       String errorMsg) throws Exception {
+
+        mockStatic(IdentityUtil.class);
+        when(IdentityUtil.getServerURL(anyString(), anyBoolean(), anyBoolean())).thenReturn("some-server-url");
+
         OAuth2Parameters oAuth2Parameters = new OAuth2Parameters();
         oAuth2Parameters.setTenantDomain("carbon.super");
+        oAuth2Parameters.setClientId(TEST_CLIENT_ID_1);
 
         OAuthServerConfiguration oauthServerConfigurationMock = mock(OAuthServerConfiguration.class);
-        RequestObjectValidatorImpl requestObjectValidatorImplMock = mock(RequestObjectValidatorImpl.class);
-
         mockStatic(OAuthServerConfiguration.class);
         when(OAuthServerConfiguration.getInstance()).thenReturn(oauthServerConfigurationMock);
 
+        mockStatic(RequestObjectValidatorImpl.class);
+        PowerMockito.spy(RequestObjectValidatorImpl.class);
+
+        rsaPrivateKey = (RSAPrivateKey) wso2KeyStore.getKey("wso2carbon", "wso2carbon".toCharArray());
         mockStatic(OAuth2Util.class);
-        when(OAuth2Util.isValidJson(anyString())).thenReturn(true);
+        when(OAuth2Util.getTenantId("carbon.super")).thenReturn(-1234);
+        when((OAuth2Util.getPrivateKey(anyString(), anyInt()))).thenReturn(rsaPrivateKey);
 
-        when((oauthServerConfigurationMock.getRequestObjectValidator())).thenReturn(requestObjectValidatorImplMock);
-        when((requestObjectValidatorImplMock.getPayload())).thenReturn(requestObject,requestObjectforTests.
-                getRequestJson());
-        requestObjectBuilder.buildRequestObject(requestObject, oAuth2Parameters, requestObjectInstance);
-        Assert.assertEquals(requestObjectInstance.getClaimsforRequestParameter().size(), 2);
+        RequestObjectValidator requestObjectValidator = new RequestObjectValidatorImpl();
+        when((oauthServerConfigurationMock.getRequestObjectValidator())).thenReturn(requestObjectValidator);
 
+        RequestObject requestObject;
+        RequestParamRequestObjectBuilder requestParamRequestObjectBuilder = new RequestParamRequestObjectBuilder();
+
+        try {
+            requestObject = requestParamRequestObjectBuilder.buildRequestObject(requestObjectString, oAuth2Parameters);
+            Assert.assertEquals(requestObject.isSigned(), isSigned, errorMsg);
+            if (claims != null && !claims.isEmpty()) {
+                for (Map.Entry entry : claims.entrySet()) {
+                    Assert.assertEquals(requestObject.getClaim(entry.getKey().toString()), entry.getValue(),
+                            "Request object claim:" + entry.getKey() + " is not properly set.");
+                }
+            }
+        } catch (RequestObjectException e) {
+            Assert.assertFalse(exceptionNotExpected, errorMsg + "Building failed due to " + e.getMessage());
+        }
     }
 }

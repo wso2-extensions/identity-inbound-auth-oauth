@@ -1,13 +1,13 @@
 /*
  * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
- * 
+ *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -17,24 +17,34 @@
  */
 package org.wso2.carbon.identity.openidconnect;
 
-import net.minidev.json.JSONObject;
-import net.minidev.json.parser.JSONParser;
-import net.minidev.json.parser.ParseException;
-import org.apache.commons.codec.binary.Base64;
-import org.apache.commons.collections.MapUtils;
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JOSEObject;
+import com.nimbusds.jose.JWEObject;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.crypto.RSADecrypter;
+import com.nimbusds.jwt.EncryptedJWT;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.PlainJWT;
+import com.nimbusds.jwt.SignedJWT;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
-import org.wso2.carbon.identity.openidconnect.model.Claim;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.security.Key;
+import java.security.interfaces.RSAPrivateKey;
+import java.text.ParseException;
+
+import static org.apache.commons.lang.StringUtils.isEmpty;
+import static org.wso2.carbon.identity.openidconnect.model.Constants.JWT_PART_DELIMITER;
+import static org.wso2.carbon.identity.openidconnect.model.Constants.NUMBER_OF_PARTS_IN_JWE;
+import static org.wso2.carbon.identity.openidconnect.model.Constants.NUMBER_OF_PARTS_IN_JWS;
 
 /**
  * This class is used to build request object parameter value which comes with the OIDC authorization request as an optional
@@ -42,170 +52,111 @@ import java.util.Map;
  */
 public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
 
-    private static final String CLIENT_ID = "client_id";
-    private static final String REDIRECT_URI = "redirect_uri";
-    private static final String SCOPE = "scope";
-    private static final String STATE = "state";
-    private static final String NONCE = "nonce";
-    private static final String ISS = "iss";
-    private static final String AUD = "aud";
-    private static final String RESPONSE_TYPE = "response_type";
-    private static final String MAX_AGE = "max_age";
-    private static String CLAIMS = "claims";
-    private static final Base64 base64Url = new Base64(true);
-    //To store the claims requestor and the the requested claim list. claim requestor can be either userinfo or idtoken
-    // or any custom member.
-    private static Map<String, List<Claim>> claimsforClaimRequestor = new HashMap<>();
     private static Log log = LogFactory.getLog(RequestParamRequestObjectBuilder.class);
 
     /**
      * Builds request object which comes as the value of the request query parameter of OIDC authorization request
      *
-     * @param requestObject request object
+     * @param requestObjectParam request object
      * @throws RequestObjectException
      */
     @Override
-    public void buildRequestObject(String requestObject, OAuth2Parameters oAuth2Parameters,
-                                   RequestObject requestObjectInstance) throws RequestObjectException {
+    public RequestObject buildRequestObject(String requestObjectParam, OAuth2Parameters oAuth2Parameters) throws
+            RequestObjectException {
 
-        JSONParser parser = new JSONParser();
-        try {
-            OAuthServerConfiguration.getInstance().getRequestObjectValidator().validateRequestObject(requestObject,
-                    oAuth2Parameters);
-            if (StringUtils.isNotBlank(OAuthServerConfiguration.getInstance().getRequestObjectValidator().getPayload())) {
-                requestObject = OAuthServerConfiguration.getInstance().getRequestObjectValidator().getPayload();
+        RequestObject requestObject = new RequestObject();
+        // Making a copy of requestObjectParam to prevent editing initial reference
+        String requestObjectParamValue = requestObjectParam;
+        if (isEncrypted(requestObjectParamValue)) {
+            requestObjectParamValue = decrypt(requestObjectParamValue, oAuth2Parameters);
+            if (isEmpty(requestObjectParamValue)) {
+                return requestObject;
             }
-            JSONObject jsonObjectRequestedClaims = (JSONObject) parser.parse(requestObject);
-            processClaims(jsonObjectRequestedClaims, requestObjectInstance);
-
-        } catch (ParseException e) {
-            throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST, "Error occured while " +
-                    "processing the request parameter value json object.");
         }
-    }
-
-    private void processClaims(JSONObject jsonObjectRequestedClaims, RequestObject requestObjectInstance)
-            throws RequestObjectException {
-
-        //To process the basic claims which comes with the request parameter.
-        processBasicClaims(jsonObjectRequestedClaims, requestObjectInstance);
-        try {
-            //To process the claim object which comes with the request parameter.
-            processClaimObject(jsonObjectRequestedClaims, requestObjectInstance);
-        } catch (ParseException e) {
-            throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST, "Error occured while " +
-                    "processing the request parameter value json object.");
+        setRequestObjectValues(requestObjectParamValue, requestObject);
+        if (log.isDebugEnabled()) {
+            log.debug("Request Object extracted from the request: " + requestObjectParam);
         }
+        return requestObject;
     }
 
     /**
-     * To process the basic claims as client_id ,redirect_url with in the request object.
+     * Decrypt the request object.
      *
-     * @param jsonObjectRequestedClaims requested claims from the json object
-     * @param requestObjectInstance     instance of request object
+     * @param requestObject    requestObject
+     * @param oAuth2Parameters oAuth2Parameters
+     * @throws RequestObjectException
      */
-    private void processBasicClaims(JSONObject jsonObjectRequestedClaims, RequestObject requestObjectInstance) {
+    @Override
+    public String decrypt(String requestObject, OAuth2Parameters oAuth2Parameters) throws RequestObjectException {
 
-        if (jsonObjectRequestedClaims.get(CLIENT_ID) != null) {
-            requestObjectInstance.setClientId(jsonObjectRequestedClaims.get(CLIENT_ID).toString());
+        EncryptedJWT encryptedJWT;
+        try {
+            encryptedJWT = EncryptedJWT.parse(requestObject);
+            RSAPrivateKey rsaPrivateKey = getRSAPrivateKey(oAuth2Parameters);
+            RSADecrypter decrypter = new RSADecrypter(rsaPrivateKey);
+            encryptedJWT.decrypt(decrypter);
+
+            JWEObject jweObject = JWEObject.parse(requestObject);
+            jweObject.decrypt(decrypter);
+
+            if (jweObject.getPayload() != null && jweObject.getPayload().toString()
+                    .split(JWT_PART_DELIMITER).length == NUMBER_OF_PARTS_IN_JWS) {
+                return jweObject.getPayload().toString();
+            } else {
+                return new PlainJWT((JWTClaimsSet) encryptedJWT.getJWTClaimsSet()).serialize();
+            }
+
+        } catch (JOSEException | IdentityOAuth2Exception | ParseException e) {
+            String errorMessage = "Failed to decrypt Request Object";
+            if (log.isDebugEnabled()) {
+                log.debug(errorMessage + " from " + requestObject, e);
+            }
+            throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST, errorMessage);
         }
-        if (jsonObjectRequestedClaims.get(REDIRECT_URI) != null) {
-            requestObjectInstance.setRedirectUri(jsonObjectRequestedClaims.get(REDIRECT_URI).toString());
-        }
-        if (jsonObjectRequestedClaims.get(SCOPE) != null) {
-            requestObjectInstance.setScopes(jsonObjectRequestedClaims.get(SCOPE).toString().split(" "));
-        }
-        if (jsonObjectRequestedClaims.get(STATE) != null) {
-            requestObjectInstance.setState(jsonObjectRequestedClaims.get(STATE).toString());
-        }
-        if (jsonObjectRequestedClaims.get(NONCE) != null) {
-            requestObjectInstance.setNonce(jsonObjectRequestedClaims.get(NONCE).toString());
-        }
-        if (jsonObjectRequestedClaims.get(ISS) != null) {
-            requestObjectInstance.setIss(jsonObjectRequestedClaims.get(ISS).toString());
-        }
-        if (jsonObjectRequestedClaims.get(AUD) != null) {
-            requestObjectInstance.setAud(jsonObjectRequestedClaims.get(AUD).toString());
-        }
-        if (jsonObjectRequestedClaims.get(RESPONSE_TYPE) != null) {
-            requestObjectInstance.setResponseType(jsonObjectRequestedClaims.get(RESPONSE_TYPE).toString());
-        }
-        if (jsonObjectRequestedClaims.get(MAX_AGE) != null) {
-            Object maxAge = jsonObjectRequestedClaims.get(MAX_AGE);
-            requestObjectInstance.setMaxAge(new Long(maxAge.toString()));
-        }
+    }
+
+    protected boolean isEncrypted(String requestObject) {
+        return requestObject.split(JWT_PART_DELIMITER).length == NUMBER_OF_PARTS_IN_JWE;
+    }
+
+    protected RSAPrivateKey getRSAPrivateKey(OAuth2Parameters oAuth2Parameters) throws IdentityOAuth2Exception {
+        String tenantDomain = getTenantDomainForDecryption(oAuth2Parameters);
+        int tenantId = OAuth2Util.getTenantId(tenantDomain);
+        Key key = OAuth2Util.getPrivateKey(tenantDomain, tenantId);
+        return (RSAPrivateKey) key;
     }
 
     /**
-     * To process the claim object which comes with the request object.
+     * Get tenant domain from oAuth2Parameters.
      *
-     * @param jsonObjectRequestedClaims requested claims of the request object
-     * @throws ParseException
+     * @param oAuth2Parameters oAuth2Parameters
+     * @return Tenant domain
      */
-    private void processClaimObject(JSONObject jsonObjectRequestedClaims, RequestObject requestObjectInstance)
-            throws ParseException {
+    private String getTenantDomainForDecryption(OAuth2Parameters oAuth2Parameters) {
+        if (StringUtils.isNotEmpty(oAuth2Parameters.getTenantDomain())) {
+            return oAuth2Parameters.getTenantDomain();
+        }
+        return MultitenantConstants.SUPER_TENANT_NAME;
+    }
 
-        if (jsonObjectRequestedClaims.get(CLAIMS) != null) {
-            String allRequestedClaims = null;
-            String claimAttributeValue = null;
-            JSONParser parser = new JSONParser();
-            JSONObject jsonObjectClaim = (JSONObject) parser.parse(jsonObjectRequestedClaims.get(CLAIMS).
-                    toString());
-            //To iterate the claims json object to fetch the claim requestor and all requested claims.
+    private void setRequestObjectValues(String requestObjectString, RequestObject requestObjectInstance) throws
+            RequestObjectException {
 
-            for (Map.Entry<String, Object> requesterClaimMap : jsonObjectClaim.entrySet()) {
-                List<Claim> essentialClaimsRequestParam = new ArrayList();
-                if (jsonObjectClaim.get(requesterClaimMap.getKey()) != null) {
-                    allRequestedClaims = jsonObjectClaim.get(requesterClaimMap.getKey()).toString();
-                }
-                if (log.isDebugEnabled()) {
-                    log.debug("The " + requesterClaimMap.getKey() + " requests " + allRequestedClaims + " set of claims.");
-                }
-                JSONObject jsonObjectAllRequestedClaims = (JSONObject) parser.parse(allRequestedClaims);
-
-                //To iterate all requested claims object to fetch the claim attributes and values for the fetched claim
-                // requestor.
-                for (Map.Entry<String, Object> requestedClaims : jsonObjectAllRequestedClaims.entrySet()) {
-                    JSONObject jsonObjectClaimAttributes = null;
-                    if (jsonObjectAllRequestedClaims.get(requestedClaims.getKey()) != null) {
-                        jsonObjectClaimAttributes = (JSONObject) parser.parse(jsonObjectAllRequestedClaims.get
-                                (requestedClaims.getKey()).toString());
-                    }
-                    if (log.isDebugEnabled()) {
-                        log.debug("The attributes " + jsonObjectAllRequestedClaims + "for the requested claim: " +
-                                requestedClaims.getKey());
-                    }
-                    //To maintain a claim - claim attribute mapping.
-                    addClaimAttributes(claimAttributeValue, essentialClaimsRequestParam, jsonObjectClaimAttributes,
-                            requestedClaims.getKey());
-                }
-                claimsforClaimRequestor.put(requesterClaimMap.getKey(), essentialClaimsRequestParam);
+        try {
+            JOSEObject jwt = JOSEObject.parse(requestObjectString);
+            if (jwt.getHeader().getAlgorithm() == null || jwt.getHeader().getAlgorithm().equals(JWSAlgorithm.NONE)) {
+                requestObjectInstance.setPlainJWT(PlainJWT.parse(requestObjectString));
+            } else {
+                requestObjectInstance.setSignedJWT(SignedJWT.parse(requestObjectString));
             }
-            requestObjectInstance.setClaimsforRequestParameter(claimsforClaimRequestor);
+        } catch (ParseException e) {
+            String errorMessage = "No Valid JWT is found for the Request Object.";
+            if (log.isDebugEnabled()) {
+                log.debug(errorMessage + "Received Request Object: " + requestObjectString, e);
+            }
+            throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST, errorMessage);
         }
     }
 
-    private void addClaimAttributes(String claimAttributeValue, List<Claim> essentialClaimsRequestParam,
-                                    JSONObject jsonObjectClaimAttributes, String claimName) {
-
-        Claim claim = new Claim();
-        claim.setName(claimName);
-        if (jsonObjectClaimAttributes != null) {
-
-            //To iterate claim attributes object to fetch the attribute key and value for the fetched
-            // requested claim in the fetched claim requestor
-            for (Map.Entry<String, Object> claimAttributes : jsonObjectClaimAttributes.entrySet()) {
-                Map<String, String> claimAttributesMap = new HashMap<>();
-                if (jsonObjectClaimAttributes.get(claimAttributes.getKey()) != null) {
-                    claimAttributeValue = jsonObjectClaimAttributes.get(claimAttributes.getKey()).toString();
-                }
-                claimAttributesMap.put(claimAttributes.getKey(), claimAttributeValue);
-                claim.setClaimAttributesMap(claimAttributesMap);
-                essentialClaimsRequestParam.add(claim);
-            }
-        } else {
-            claim.setClaimAttributesMap(MapUtils.EMPTY_MAP);
-            essentialClaimsRequestParam.add(claim);
-        }
-    }
 }

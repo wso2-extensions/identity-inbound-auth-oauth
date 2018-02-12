@@ -40,6 +40,7 @@ public class OAuthAppDO implements Serializable {
     private long userAccessTokenExpiryTime;
     private long applicationAccessTokenExpiryTime;
     private long refreshTokenExpiryTime;
+    private String[] audiences;
 
     public AuthenticatedUser getUser() {
         return user;
@@ -159,5 +160,13 @@ public class OAuthAppDO implements Serializable {
 
     public void setRefreshTokenExpiryTime(long refreshTokenExpiryTime) {
         this.refreshTokenExpiryTime = refreshTokenExpiryTime;
+    }
+
+    public String[] getAudiences() {
+        return audiences;
+    }
+
+    public void setAudiences(String[] audiences) {
+        this.audiences = audiences;
     }
 }

@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth.config;
 
 import org.apache.axiom.om.OMElement;
 import org.apache.axis2.util.JavaUtils;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -28,6 +29,7 @@ import org.apache.oltu.oauth2.as.issuer.OAuthIssuerImpl;
 import org.apache.oltu.oauth2.as.issuer.UUIDValueGenerator;
 import org.apache.oltu.oauth2.as.issuer.ValueGenerator;
 import org.apache.oltu.oauth2.as.validator.ClientCredentialValidator;
+import org.apache.oltu.oauth2.as.validator.CodeTokenValidator;
 import org.apache.oltu.oauth2.as.validator.CodeValidator;
 import org.apache.oltu.oauth2.as.validator.TokenValidator;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
@@ -47,12 +49,12 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.handlers.ResponseTypeHandler;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuerImpl;
-import org.wso2.carbon.identity.oauth2.token.handlers.clientauth.ClientAuthenticationHandler;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.saml.SAML2TokenCallbackHandler;
 import org.wso2.carbon.identity.oauth2.validators.grant.AuthorizationCodeGrantValidator;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeHandler;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeValidator;
+import org.wso2.carbon.identity.oauth2.validators.grant.ClientCredentialGrantValidator;
 import org.wso2.carbon.identity.oauth2.validators.grant.PasswordGrantValidator;
 import org.wso2.carbon.identity.oauth2.validators.grant.RefreshTokenGrantValidator;
 import org.wso2.carbon.identity.openidconnect.CustomClaimsCallbackHandler;
@@ -147,7 +149,6 @@ public class OAuthServerConfiguration {
     private Map<String, Class<? extends OAuthValidator<HttpServletRequest>>> supportedResponseTypeValidators;
     private String[] supportedClaims = null;
     private Map<String, Properties> supportedClientAuthHandlerData = new HashMap<>();
-    private List<ClientAuthenticationHandler> supportedClientAuthHandlers;
     private String saml2TokenCallbackHandlerName = null;
     private String saml2BearerTokenUserType;
     private boolean mapFederatedUsersToLocal = false;
@@ -196,7 +197,7 @@ public class OAuthServerConfiguration {
     private boolean isRevokeResponseHeadersEnabled = true;
 
     // property to make DisplayName property to be used in consent page
-    private boolean showDisplayNameInConsentPage=false;
+    private boolean showDisplayNameInConsentPage = false;
     // Use the SP tenant domain instead of user domain.
     private boolean useSPTenantDomainValue;
 
@@ -204,6 +205,7 @@ public class OAuthServerConfiguration {
     private ValueGenerator tokenValueGenerator;
 
     private String tokenValueGeneratorClassName;
+
     private OAuthServerConfiguration() {
         buildOAuthServerConfiguration();
     }
@@ -517,7 +519,7 @@ public class OAuthServerConfiguration {
     }
 
     /**
-     * @deprecated  From v5.1.3 use @{@link BaseCache#isEnabled()} to check whether a cache is enabled or not instead
+     * @deprecated From v5.1.3 use @{@link BaseCache#isEnabled()} to check whether a cache is enabled or not instead
      * of relying on <EnableOAuthCache> global Cache config
      */
     public boolean isCacheEnabled() {
@@ -583,7 +585,7 @@ public class OAuthServerConfiguration {
                     supportedGrantTypeValidatorsTemp
                             .put(GrantType.PASSWORD.toString(), PasswordGrantValidator.class);
                     supportedGrantTypeValidatorsTemp.put(GrantType.CLIENT_CREDENTIALS.toString(),
-                            ClientCredentialValidator.class);
+                            ClientCredentialGrantValidator.class);
                     supportedGrantTypeValidatorsTemp.put(GrantType.AUTHORIZATION_CODE.toString(),
                             AuthorizationCodeGrantValidator.class);
                     supportedGrantTypeValidatorsTemp.put(GrantType.REFRESH_TOKEN.toString(),
@@ -630,9 +632,11 @@ public class OAuthServerConfiguration {
                             .put(ResponseType.CODE.toString(), CodeValidator.class);
                     supportedResponseTypeValidatorsTemp.put(ResponseType.TOKEN.toString(),
                             TokenValidator.class);
-                    supportedResponseTypeValidatorsTemp.put("id_token", IDTokenResponseValidator.class);
-                    supportedResponseTypeValidatorsTemp.put("id_token token", IDTokenTokenResponseValidator.class);
-
+                    supportedResponseTypeValidatorsTemp.put(OAuthConstants.ID_TOKEN, IDTokenResponseValidator.class);
+                    supportedResponseTypeValidatorsTemp.put(OAuthConstants.IDTOKEN_TOKEN, IDTokenTokenResponseValidator.class);
+                    supportedResponseTypeValidatorsTemp.put(OAuthConstants.CODE_TOKEN, CodeTokenValidator.class);
+                    supportedResponseTypeValidatorsTemp.put(OAuthConstants.CODE_IDTOKEN, CodeTokenValidator.class);
+                    supportedResponseTypeValidatorsTemp.put(OAuthConstants.CODE_IDTOKEN_TOKEN, CodeTokenValidator.class);
 
                     if (supportedResponseTypeValidatorNames != null) {
                         // Load configured grant type validators
@@ -690,43 +694,52 @@ public class OAuthServerConfiguration {
     }
 
     private void parseRequestObjectConfig(OMElement requestObjectBuildersElem) {
-
         if (requestObjectBuildersElem != null) {
             Iterator<OMElement> iterator = requestObjectBuildersElem
                     .getChildrenWithName(getQNameWithIdentityNS(ConfigElements.REQUEST_OBJECT_BUILDER));
+
             while (iterator.hasNext()) {
                 OMElement requestObjectBuildersElement = iterator.next();
-                OMElement builderNameElement = requestObjectBuildersElement
-                        .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.BUILDER_NAME));
-                String builderName = null;
-                if (builderNameElement != null) {
-                    builderName = builderNameElement.getText();
-                }
-
+                OMElement builderTypeElement = requestObjectBuildersElement
+                        .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.BUILDER_TYPE));
                 OMElement requestObjectImplClassElement = requestObjectBuildersElement
                         .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.REQUEST_OBJECT_IMPL_CLASS));
-                String requestObjectImplClass = null;
-                if (requestObjectImplClassElement != null) {
-                    requestObjectImplClass = requestObjectImplClassElement.getText();
+
+
+                if (builderTypeElement == null) {
+                    log.warn("Empty configuration element for Type.");
+                    //Empty configuration element for Type, ignore
+                    continue;
                 }
-                requestObjectBuilderClassNames.put(builderName, requestObjectImplClass);
+
+                if (requestObjectImplClassElement == null) {
+                    log.warn("Request Object Builder is not defined for the Type: " + builderTypeElement);
+                    continue;
+                }
+
+                String builderType = builderTypeElement.getText();
+                String requestObjectImplClass = requestObjectImplClassElement.getText();
+                requestObjectBuilderClassNames.put(builderType, requestObjectImplClass);
+
             }
-        } else {
-            // if this element is not present, assume the default case.
-            log.info("\'RequestObjectBuilders\' element not configured in identity.xml. " +
-                    "Therefore instantiating default request object builders");
-
-            Map<String, String> defaultRequestObjectBuilders = new HashMap<>();
-            defaultRequestObjectBuilders.put(REQUEST_PARAM_VALUE_BUILDER, REQUEST_PARAM_VALUE_BUILDER_CLASS);
-            requestObjectBuilderClassNames.putAll(defaultRequestObjectBuilders);
         }
-
+        setDefaultRequestObjectBuilderClasses();
         if (log.isDebugEnabled()) {
             for (Map.Entry entry : requestObjectBuilderClassNames.entrySet()) {
                 String builderName = entry.getKey().toString();
                 String requestObjectBuilderImplClass = entry.getValue().toString();
                 log.debug(builderName + " is associated with " + requestObjectBuilderImplClass);
             }
+        }
+    }
+
+    private void setDefaultRequestObjectBuilderClasses() {
+        if (requestObjectBuilderClassNames.get(REQUEST_PARAM_VALUE_BUILDER) == null) {
+            // if this element is not present, assume the default case.
+            log.info("\'RequestObjectBuilder\' element for Type: " + REQUEST_PARAM_VALUE_BUILDER + "is not " +
+                    "configured in identity.xml. Therefore instantiating default request object builder: "
+                    + REQUEST_PARAM_VALUE_BUILDER_CLASS);
+            requestObjectBuilderClassNames.put(REQUEST_PARAM_VALUE_BUILDER, REQUEST_PARAM_VALUE_BUILDER_CLASS);
         }
     }
 
@@ -794,40 +807,7 @@ public class OAuthServerConfiguration {
     public String[] getSupportedClaims() {
         return supportedClaims;
     }
-
-    public List<ClientAuthenticationHandler> getSupportedClientAuthHandlers() {
-        if (supportedClientAuthHandlers == null) {
-            synchronized (this) {
-                if (supportedClientAuthHandlers == null) {
-                    List<ClientAuthenticationHandler> supportedClientAuthHandlersTemp = new ArrayList<>();
-
-                    for (Map.Entry<String, Properties> entry : supportedClientAuthHandlerData.entrySet()) {
-                        ClientAuthenticationHandler clientAuthenticationHandler = null;
-                        try {
-                            clientAuthenticationHandler = (ClientAuthenticationHandler)
-                                    Class.forName(entry.getKey()).newInstance();
-                            clientAuthenticationHandler.init(entry.getValue());
-                            supportedClientAuthHandlersTemp.add(clientAuthenticationHandler);
-
-                        //Exceptions necessarily don't have to break the flow since there are cases
-                        //runnable without client auth handlers
-                        } catch (InstantiationException e) {
-                            log.error("Error instantiating " + entry, e);
-                        } catch (IllegalAccessException e) {
-                            log.error("Illegal access to " + entry, e);
-                        } catch (ClassNotFoundException e) {
-                            log.error("Cannot find class: " + entry, e);
-                        } catch (IdentityOAuth2Exception e) {
-                            log.error("Error while initializing " + entry, e);
-                        }
-                        supportedClientAuthHandlers = supportedClientAuthHandlersTemp;
-                    }
-                }
-            }
-        }
-        return supportedClientAuthHandlers;
-    }
-
+    
     public SAML2TokenCallbackHandler getSAML2TokenCallbackHandler() {
 
         if (StringUtils.isBlank(saml2TokenCallbackHandlerName)) {
@@ -1017,17 +997,14 @@ public class OAuthServerConfiguration {
     }
 
     /**
-     * @deprecated use {@link #getOpenIDConnectIDTokenExpiryTimeInSeconds()} instead
-     *
      * @return the openIDConnectIDTokenExpirationInSeconds
+     * @deprecated use {@link #getOpenIDConnectIDTokenExpiryTimeInSeconds()} instead
      */
     public String getOpenIDConnectIDTokenExpiration() {
         return openIDConnectIDTokenExpiration;
     }
 
     /**
-     *
-     *
      * @return ID Token expiry time in milliseconds.
      */
     public long getOpenIDConnectIDTokenExpiryTimeInSeconds() {
@@ -1777,12 +1754,14 @@ public class OAuthServerConfiguration {
             // if this element is not present, assume the default case.
             log.warn("\'SupportedResponseTypes\' element not configured in identity.xml. " +
                     "Therefore instantiating default response type handlers");
-
-            Map<String, String> defaultResponseTypes = new HashMap<>(4);
+            Map<String, String> defaultResponseTypes = new HashMap<>();
             defaultResponseTypes.put(ResponseType.CODE.toString(), "org.wso2.carbon.identity.oauth2.authz.handlers.CodeResponseTypeHandler");
-            defaultResponseTypes.put(ResponseType.TOKEN.toString(), "org.wso2.carbon.identity.oauth2.authz.handlers.TokenResponseTypeHandler");
-            defaultResponseTypes.put("id_token", "org.wso2.carbon.identity.oauth2.authz.handlers.TokenResponseTypeHandler");
-            defaultResponseTypes.put("id_token token", "org.wso2.carbon.identity.oauth2.authz.handlers.TokenResponseTypeHandler");
+            defaultResponseTypes.put(ResponseType.TOKEN.toString(), "org.wso2.carbon.identity.oauth2.authz.handlers.AccessTokenResponseTypeHandler");
+            defaultResponseTypes.put(OAuthConstants.ID_TOKEN, "org.wso2.carbon.identity.oauth2.authz.handlers.IDTokenResponseTypeHandler");
+            defaultResponseTypes.put(OAuthConstants.IDTOKEN_TOKEN, "org.wso2.carbon.identity.oauth2.authz.handlers.IDTokenTokenResponseTypeHandler");
+            defaultResponseTypes.put(OAuthConstants.CODE_TOKEN, "org.wso2.carbon.identity.oauth2.authz.handlers.HybridResponseTypeHandler");
+            defaultResponseTypes.put(OAuthConstants.CODE_IDTOKEN, "org.wso2.carbon.identity.oauth2.authz.handlers.HybridResponseTypeHandler");
+            defaultResponseTypes.put(OAuthConstants.CODE_IDTOKEN_TOKEN, "org.wso2.carbon.identity.oauth2.authz.handlers.HybridResponseTypeHandler");
             supportedResponseTypeClassNames.putAll(defaultResponseTypes);
         }
 
@@ -2244,8 +2223,8 @@ public class OAuthServerConfiguration {
         // Request Object Configs
         private static final String REQUEST_OBJECT_BUILDERS = "RequestObjectBuilders";
         private static final String REQUEST_OBJECT_BUILDER = "RequestObjectBuilder";
-        private static final String BUILDER_NAME = "BuilderName";
-        private static final String REQUEST_OBJECT_IMPL_CLASS = "RequestObjectBuilderImplClass";
+        private static final String BUILDER_TYPE = "Type";
+        private static final String REQUEST_OBJECT_IMPL_CLASS = "ClassName";
 
     }
 

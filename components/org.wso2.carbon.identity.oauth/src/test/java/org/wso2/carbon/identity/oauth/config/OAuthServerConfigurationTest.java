@@ -82,6 +82,7 @@ public class OAuthServerConfigurationTest extends PowerMockIdentityBaseTest {
 
     @BeforeMethod
     public void setUp() throws Exception {
+
         System.setProperty("carbon.home", System.getProperty("user.dir"));
         PowerMockito.mockStatic(IdentityUtil.class);
         PowerMockito.when(IdentityUtil.getIdentityConfigDirPath())
@@ -102,11 +103,13 @@ public class OAuthServerConfigurationTest extends PowerMockIdentityBaseTest {
 
     @Test
     public void testGetInstance() throws Exception {
+
         Assert.assertNotNull(OAuthServerConfiguration.getInstance(), "Instance is not created");
     }
 
     @Test
     public void testGetCallbackHandlerMetaData() throws Exception {
+
         Set<OAuthCallbackHandlerMetaData> metadataSet =
                 OAuthServerConfiguration.getInstance().getCallbackHandlerMetaData();
         Assert.assertEquals(metadataSet.toArray()[0]
@@ -117,6 +120,7 @@ public class OAuthServerConfigurationTest extends PowerMockIdentityBaseTest {
 
     @Test
     public void testGetOAuth1RequestTokenUrl() throws Exception {
+
         PowerMockito.when(IdentityUtil.fillURLPlaceholders(oAuth1RequestTokenUrl))
                 .thenReturn(fillURLPlaceholdersForTest(oAuth1RequestTokenUrl));
         Assert.assertEquals(OAuthServerConfiguration.getInstance()
@@ -126,6 +130,7 @@ public class OAuthServerConfigurationTest extends PowerMockIdentityBaseTest {
 
     @Test
     public void testGetOAuth1AuthorizeUrl() throws Exception {
+
         PowerMockito.when(IdentityUtil.fillURLPlaceholders(oAuth1AuthorizeUrl))
                 .thenReturn(fillURLPlaceholdersForTest(oAuth1AuthorizeUrl));
         Assert.assertEquals(OAuthServerConfiguration.getInstance()
@@ -135,6 +140,7 @@ public class OAuthServerConfigurationTest extends PowerMockIdentityBaseTest {
 
     @Test
     public void testGetOAuth1AccessTokenUrl() throws Exception {
+
         PowerMockito.when(IdentityUtil.fillURLPlaceholders(oAuth1AccessTokenUrl))
                 .thenReturn(fillURLPlaceholdersForTest(oAuth1AccessTokenUrl));
         Assert.assertEquals(OAuthServerConfiguration.getInstance()
@@ -144,6 +150,7 @@ public class OAuthServerConfigurationTest extends PowerMockIdentityBaseTest {
 
     @Test
     public void testGetOAuth2AuthzEPUrl() throws Exception {
+
         PowerMockito.when(IdentityUtil.fillURLPlaceholders(oAuth2AuthzEPUrl))
                 .thenReturn(fillURLPlaceholdersForTest(oAuth2AuthzEPUrl));
         Assert.assertEquals(OAuthServerConfiguration.getInstance()
@@ -153,6 +160,7 @@ public class OAuthServerConfigurationTest extends PowerMockIdentityBaseTest {
 
     @Test
     public void testGetOAuth2TokenEPUrl() throws Exception {
+
         PowerMockito.when(IdentityUtil.fillURLPlaceholders(oAuth2TokenEPUrl))
                 .thenReturn(oAuth2TokenEPUrl);
         Assert.assertEquals(OAuthServerConfiguration.getInstance()
@@ -161,6 +169,7 @@ public class OAuthServerConfigurationTest extends PowerMockIdentityBaseTest {
 
     @Test
     public void testGetOAuth2DCREPUrl() throws Exception {
+
         PowerMockito.when(IdentityUtil.fillURLPlaceholders(oAuth2DCREPUrl))
                 .thenReturn(oAuth2DCREPUrl);
         Assert.assertEquals(OAuthServerConfiguration.getInstance()
@@ -169,6 +178,7 @@ public class OAuthServerConfigurationTest extends PowerMockIdentityBaseTest {
 
     @Test
     public void testGetOAuth2JWKSPageUrl() throws Exception {
+
         PowerMockito.when(IdentityUtil.fillURLPlaceholders(oAuth2JWKSPage))
                 .thenReturn(oAuth2JWKSPage);
         Assert.assertEquals(OAuthServerConfiguration.getInstance()
@@ -178,6 +188,7 @@ public class OAuthServerConfigurationTest extends PowerMockIdentityBaseTest {
 
     @Test
     public void testGetOidcDiscoveryUrl() throws Exception {
+
         PowerMockito.when(IdentityUtil.fillURLPlaceholders(oIDCDiscoveryEPUrl))
                 .thenReturn(oIDCDiscoveryEPUrl);
         Assert.assertEquals(OAuthServerConfiguration.getInstance()
@@ -186,6 +197,7 @@ public class OAuthServerConfigurationTest extends PowerMockIdentityBaseTest {
 
     @Test
     public void testGetOidcWebFingerEPUrl() throws Exception {
+
         PowerMockito.when(IdentityUtil.fillURLPlaceholders(oIDCWebFingerEPUrl))
                 .thenReturn(oIDCWebFingerEPUrl);
         Assert.assertEquals(OAuthServerConfiguration.getInstance()
@@ -195,6 +207,7 @@ public class OAuthServerConfigurationTest extends PowerMockIdentityBaseTest {
 
     @Test
     public void testGetOauth2UserInfoEPUrl() throws Exception {
+
         PowerMockito.when(IdentityUtil.fillURLPlaceholders(oAuth2UserInfoEPUrl))
                 .thenReturn(oAuth2UserInfoEPUrl);
         Assert.assertEquals(OAuthServerConfiguration.getInstance()
@@ -204,6 +217,7 @@ public class OAuthServerConfigurationTest extends PowerMockIdentityBaseTest {
 
     @Test
     public void testGetOIDCConsentPageUrl() throws Exception {
+
         PowerMockito.when(IdentityUtil.fillURLPlaceholders(oIDCConsentPage))
                 .thenReturn(oIDCConsentPage);
         Assert.assertEquals(OAuthServerConfiguration.getInstance()
@@ -213,6 +227,7 @@ public class OAuthServerConfigurationTest extends PowerMockIdentityBaseTest {
 
     @Test
     public void testGetOauth2ConsentPageUrl() throws Exception {
+
         PowerMockito.when(IdentityUtil.fillURLPlaceholders(oAuth2ConsentPage))
                 .thenReturn(oAuth2ConsentPage);
         Assert.assertEquals(OAuthServerConfiguration.getInstance()
@@ -222,6 +237,7 @@ public class OAuthServerConfigurationTest extends PowerMockIdentityBaseTest {
 
     @Test
     public void testGetOauth2ErrorPageUrl() throws Exception {
+
         PowerMockito.when(IdentityUtil.fillURLPlaceholders(oAuth2ErrorPage))
                 .thenReturn(oAuth2ErrorPage);
         Assert.assertEquals(OAuthServerConfiguration.getInstance()
@@ -231,6 +247,7 @@ public class OAuthServerConfigurationTest extends PowerMockIdentityBaseTest {
 
     @Test
     public void testGetOAuthTokenGenerator() throws Exception {
+
         Assert.assertNotNull(OAuthServerConfiguration.getInstance()
                         .getOAuthTokenGenerator().accessToken(),
                 "Expected value not returned from getter");
@@ -238,6 +255,7 @@ public class OAuthServerConfigurationTest extends PowerMockIdentityBaseTest {
 
     @Test
     public void testGetTokenValueGenerator() throws Exception {
+
         Assert.assertNotNull(OAuthServerConfiguration.getInstance()
                         .getTokenValueGenerator().generateValue(),
                 "Expected value not returned from getter");
@@ -245,12 +263,14 @@ public class OAuthServerConfigurationTest extends PowerMockIdentityBaseTest {
 
     @Test
     public void testGetIdentityOauthTokenIssuer() throws Exception {
+
         Assert.assertNotNull(OAuthServerConfiguration.getInstance().getIdentityOauthTokenIssuer(),
                 "Instance is set as null");
     }
 
     @Test
     public void testGetAuthorizationCodeValidityPeriodInSeconds() throws Exception {
+
         Assert.assertEquals(OAuthServerConfiguration.getInstance()
                         .getAuthorizationCodeValidityPeriodInSeconds(), 300
                 , "Expected value not returned from getter");
@@ -258,6 +278,7 @@ public class OAuthServerConfigurationTest extends PowerMockIdentityBaseTest {
 
     @Test
     public void testGetUserAccessTokenValidityPeriodInSeconds() throws Exception {
+
         Assert.assertEquals(OAuthServerConfiguration.getInstance()
                         .getUserAccessTokenValidityPeriodInSeconds(), 3600,
                 "Expected value not returned from getter");
@@ -265,6 +286,7 @@ public class OAuthServerConfigurationTest extends PowerMockIdentityBaseTest {
 
     @Test
     public void testGetApplicationAccessTokenValidityPeriodInSeconds() throws Exception {
+
         Assert.assertEquals(OAuthServerConfiguration.getInstance()
                         .getApplicationAccessTokenValidityPeriodInSeconds(), 3600,
                 "Expected value not returned from getter");
@@ -272,6 +294,7 @@ public class OAuthServerConfigurationTest extends PowerMockIdentityBaseTest {
 
     @Test
     public void testGetRefreshTokenValidityPeriodInSeconds() throws Exception {
+
         Assert.assertEquals(OAuthServerConfiguration.getInstance()
                         .getRefreshTokenValidityPeriodInSeconds(), 84600,
                 "Expected value not returned from getter");
@@ -279,6 +302,7 @@ public class OAuthServerConfigurationTest extends PowerMockIdentityBaseTest {
 
     @Test
     public void testGetTimeStampSkewInSeconds() throws Exception {
+
         Assert.assertEquals(OAuthServerConfiguration.getInstance()
                         .getTimeStampSkewInSeconds(), 300,
                 "Expected value not returned from getter");
@@ -286,42 +310,49 @@ public class OAuthServerConfigurationTest extends PowerMockIdentityBaseTest {
 
     @Test
     public void testIsCacheEnabled() throws Exception {
+
         Assert.assertFalse(OAuthServerConfiguration.getInstance().isCacheEnabled(),
                 "Expected value not returned from getter");
     }
 
     @Test
     public void testIsRefreshTokenRenewalEnabled() throws Exception {
+
         Assert.assertTrue(OAuthServerConfiguration.getInstance()
                 .isRefreshTokenRenewalEnabled(), "Expected value not returned from getter");
     }
 
     @Test
     public void testGetSupportedGrantTypeValidators() throws Exception {
+
         Assert.assertTrue(OAuthServerConfiguration.getInstance()
                 .getSupportedGrantTypeValidators().size() == 5, "Expected value not returned from getter");
     }
 
     @Test
     public void testGetSupportedResponseTypeValidators() throws Exception {
+
         Assert.assertTrue(OAuthServerConfiguration.getInstance()
-                .getSupportedResponseTypeValidators().size() == 4, "Expected value not returned from getter");
+                .getSupportedResponseTypeValidators().size() == 7, "Expected value not returned from getter");
     }
 
     @Test
     public void testGetSupportedResponseTypes() throws Exception {
+
         Assert.assertTrue(OAuthServerConfiguration.getInstance()
                 .getSupportedResponseTypes().size() == 4, "Expected value not returned from getter");
     }
 
     @Test
     public void testGetSupportedResponseTypeNames() throws Exception {
+
         Assert.assertTrue(OAuthServerConfiguration.getInstance()
                 .getSupportedResponseTypeNames().size() == 4, "Expected value not returned from getter");
     }
 
     @Test
     public void testGetSupportedClaims() throws Exception {
+
         Field claim = OAuthServerConfiguration.class.getDeclaredField("supportedClaims");
         claim.setAccessible(true);
         claim.set(OAuthServerConfiguration.getInstance(), new String[]{"claim1", "claim2"});
@@ -333,13 +364,8 @@ public class OAuthServerConfigurationTest extends PowerMockIdentityBaseTest {
     }
 
     @Test
-    public void testGetSupportedClientAuthHandlers() throws Exception {
-        Assert.assertFalse(OAuthServerConfiguration.getInstance()
-                .getSupportedClientAuthHandlers().isEmpty());
-    }
-
-    @Test
     public void testGetSAML2TokenCallbackHandler() throws Exception {
+
         Field callBackHandler = OAuthServerConfiguration.class
                 .getDeclaredField("saml2TokenCallbackHandlerName");
         callBackHandler.setAccessible(true);
@@ -354,6 +380,7 @@ public class OAuthServerConfigurationTest extends PowerMockIdentityBaseTest {
 
     @Test
     public void testGetTokenValidatorClassNames() throws Exception {
+
         Map<String, String> tokenClassMap = new HashMap<>();
         tokenClassMap.put("clazz1", "sample.clazz1");
         tokenClassMap.put("clazz2", "sample.clazz2");
@@ -366,11 +393,13 @@ public class OAuthServerConfigurationTest extends PowerMockIdentityBaseTest {
 
     @Test
     public void testIsAccessTokenPartitioningEnabled() throws Exception {
+
         Assert.assertFalse(OAuthServerConfiguration.getInstance()
                 .isAccessTokenPartitioningEnabled());
     }
 
     private String fillURLPlaceholdersForTest(String url) {
+
         return url.replace("${carbon.protocol}", "https")
                 .replace("${carbon.host}", "localhost")
                 .replace("${carbon.management.port}", "9443");

@@ -57,8 +57,9 @@ public class TokenResponseTypeHandlerTest {
 
     @Test
     public void testIssue() throws Exception {
-        TokenResponseTypeHandler tokenResponseTypeHandler = new TokenResponseTypeHandler();
+        AccessTokenResponseTypeHandler tokenResponseTypeHandler = new AccessTokenResponseTypeHandler();
         tokenResponseTypeHandler.init();
+
         OAuth2AuthorizeReqDTO authorizationReqDTO = new OAuth2AuthorizeReqDTO();
 
         authorizationReqDTO.setCallbackUrl("https://localhost:8000/callback");

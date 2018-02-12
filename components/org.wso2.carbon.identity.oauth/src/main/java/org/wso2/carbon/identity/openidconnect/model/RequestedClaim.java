@@ -16,18 +16,21 @@
 package org.wso2.carbon.identity.openidconnect.model;
 
 import java.io.Serializable;
-import java.util.Map;
+import java.util.List;
 
 /**
  * This class contains claim object which comes with the request object parameter value in OIDC authorization request.
  */
 
-public class Claim implements Serializable {
+public class RequestedClaim implements Serializable {
 
     private static final long serialVersionUID = 6372165740005867083L;
 
     private String name;
-    private Map<String, String> claimAttributesMap;
+    private String type;
+    private boolean isEssential;
+    private String value;
+    private List<String> values;
 
     public String getName() {
         return name;
@@ -37,11 +40,35 @@ public class Claim implements Serializable {
         this.name = name;
     }
 
-    public Map<String, String> getClaimAttributesMap() {
-        return claimAttributesMap;
+    public String  getType() {
+        return type;
     }
 
-    public void setClaimAttributesMap(Map<String, String> claimAttributesMap) {
-        this.claimAttributesMap = claimAttributesMap;
+    public void setType(String isUserInfo) {
+        this.type = isUserInfo;
+    }
+
+    public boolean isEssential() {
+        return isEssential;
+    }
+
+    public void setEssential(boolean isEssential) {
+        this.isEssential = isEssential;
+    }
+
+    public String getValue() {
+        return value;
+    }
+
+    public void setValue(String value) {
+        this.value = value;
+    }
+
+    public List<String> getValues() {
+        return values;
+    }
+
+    public void setValues(List<String> values) {
+        this.values = values;
     }
 }

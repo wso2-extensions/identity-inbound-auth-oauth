@@ -46,6 +46,7 @@
     session.setAttribute("application-sp-name", applicationSPName);
 
     OAuthAdminClient client = null;
+    String audienceTableStyle = "display:none";
     String cookie = (String) session.getAttribute(ServerConstants.ADMIN_SERVICE_COOKIE);
     String backendServerURL = CarbonUIUtil.getServerURL(config.getServletContext(), session);
     ConfigurationContext configContext =
@@ -94,6 +95,9 @@
 
         <div id="workArea">
             <script type="text/javascript">
+
+                var audienceArr = [];
+
                 function onClickAdd() {
                     var version2Checked = document.getElementById("oauthVersion20").checked;
                     if ($(jQuery("#grant_authorization_code"))[0].checked || $(jQuery("#grant_implicit"))[0].checked) {
@@ -192,7 +196,10 @@
                         $(jQuery('#userAccessTokenPlain').hide());
                         $(jQuery('#applicationAccessTokenPlain').hide());
                         $(jQuery('#refreshTokenPlain').hide());
-                    } else if (oauthVersion == "<%=OAuthConstants.OAuthVersions.VERSION_2%>") {
+                        $(jQuery("#audience_enable").hide());
+                        $(jQuery("#add_audience").hide());
+                        $(jQuery("#audience_table").hide());
+                    } else if(oauthVersion == "<%=OAuthConstants.OAuthVersions.VERSION_2%>") {
                         $(jQuery('#grant_row')).show();
                         $(jQuery('#scope_validator_row')).show();
                         $(jQuery("#pkce_enable").show());
@@ -200,6 +207,9 @@
                         $(jQuery('#userAccessTokenPlain').show());
                         $(jQuery('#applicationAccessTokenPlain').show());
                         $(jQuery('#refreshTokenPlain').show());
+                        $(jQuery("#audience_enable").show());
+                        $(jQuery("#add_audience").show());
+                        $(jQuery("#audience_table").show());
 
                         if (!supportGrantCode && !supportImplicit) {
                             $(jQuery('#callback_row')).hide();
@@ -218,6 +228,85 @@
                 }
 
                 jQuery(document).ready(function () {
+
+                function toggleAudienceRestriction(chkbx) {
+                    document.addAppform.audience.disabled = !chkbx.checked;
+                    document.addAppform.addAudience.disabled = !chkbx.checked;
+                }
+
+                function addAudienceFunc() {
+                    var audience = $.trim(document.getElementById('audience').value);
+                    if (audience === "") {
+                        document.getElementById("audience").value = "";
+                        return false;
+                    }
+
+                    if ($.inArray(audience, audienceArr) !== -1) {
+                        CARBON.showWarningDialog('<fmt:message key="duplicate.audience.value"/>');
+                        document.getElementById("audience").value = "";
+                        return false;
+                    }
+                    audienceArr.push(audience);
+                    var propertyCount = document.getElementById("audiencePropertyCounter");
+
+                    var i = propertyCount.value;
+                    var currentCount = parseInt(i);
+
+                    currentCount = currentCount + 1;
+                    propertyCount.value = currentCount;
+
+                    document.getElementById('audienceTableId').style.display = '';
+                    var audienceTableTBody = document.getElementById('audienceTableTbody');
+
+                    var audienceRow = document.createElement('tr');
+                    audienceRow.setAttribute('id', 'audienceRow' + i);
+
+                    var audiencePropertyTD = document.createElement('td');
+                    audiencePropertyTD.setAttribute('style', 'color: rgb(119, 119, 119); font-style: italic;');
+                    audiencePropertyTD.innerHTML = "" + audience + "<input type='hidden' name='audiencePropertyName' id='audiencePropertyName" + i + "'  value='" + audience + "'/> ";
+
+                    var audienceRemoveTD = document.createElement('td');
+                    audienceRemoveTD.innerHTML = "<a href='#' class='icon-link' style='background-image: url(../admin/images/delete.gif)' onclick='removeAudience(" + i + ");return false;'>" + "Delete" + "</a>";
+
+                    audienceRow.appendChild(audiencePropertyTD);
+                    audienceRow.appendChild(audienceRemoveTD);
+
+                    audienceTableTBody.appendChild(audienceRow);
+                    document.getElementById("audience").value = "";
+                    return true;
+                }
+
+                function removeAudience(i) {
+                    var propRow = document.getElementById("audienceRow" + i);
+                    if (propRow !== undefined && propRow !== null) {
+                        var parentTBody = propRow.parentNode;
+                        if (parentTBody !== undefined && parentTBody !== null) {
+                            parentTBody.removeChild(propRow);
+                            if (!isContainRaw(parentTBody)) {
+                                var propertyTable = document.getElementById("audienceTableId");
+                                propertyTable.style.display = "none";
+                            }
+                        }
+                    }
+                }
+
+                function isContainRaw(tbody) {
+                    if (tbody.childNodes === null || tbody.childNodes.length === 0) {
+                        return false;
+                    } else {
+                        for (var i = 0; i < tbody.childNodes.length; i++) {
+                            var child = tbody.childNodes[i];
+                            if (child !== undefined && child !== null) {
+                                if (child.nodeName === "tr" || child.nodeName === "TR") {
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                    return false;
+                }
+
+                jQuery(document).ready(function() {
                     //on load adjust the form based on the current settings
                     adjustForm();
                     $(jQuery("#addAppForm input")).change(adjustForm);
@@ -330,45 +419,16 @@
                                             <%
                                                 }
 
-                                                for (String grantType : allowedGrants) {
-                                                    if (grantType.equals("urn:ietf:params:oauth:grant-type:saml1-bearer")) {
-                                            %>
-                                            <tr>
-                                                <td><label><input type="checkbox"
-                                                                  id="grant_urn:ietf:params:oauth:grant-type:saml1-bearer"
-                                                                  name="grant_urn:ietf:params:oauth:grant-type:saml1-bearer"
-                                                                  value="urn:ietf:params:oauth:grant-type:saml1-bearer"
-                                                                  checked="checked"/>SAML1</label></td>
-                                            </tr>
-                                            <%
-                                            } else if (grantType.equals("urn:ietf:params:oauth:grant-type:saml2-bearer")) {
-                                            %>
-                                            <tr>
-                                                <td><label><input type="checkbox"
-                                                                  id="grant_urn:ietf:params:oauth:grant-type:saml2-bearer"
-                                                                  name="grant_urn:ietf:params:oauth:grant-type:saml2-bearer"
-                                                                  value="urn:ietf:params:oauth:grant-type:saml2-bearer"
-                                                                  checked="checked"/>SAML2</label></td>
-                                            </tr>
-                                            <%
-                                            } else if (grantType.equals("iwa:ntlm")) {
-                                            %>
-                                            <tr>
-                                                <td><label><input type="checkbox" id="grant_iwa:ntlm"
-                                                                  name="grant_iwa:ntlm" value="iwa:ntlm"
-                                                                  checked="checked"/>IWA-NTLM</label></td>
-                                            </tr>
-                                            <%
-                                            } else {
-                                            %>
-                                            <tr>
-                                                <td><label><input type="checkbox"
-                                                                  id=<%="grant_"+grantType%> name=<%="grant_"+grantType%>
-                                                                  value=<%=grantType%> checked="checked"/><%=grantType%>
-                                                </label></td>
-                                            </tr>
-                                            <%
-                                                    }
+                                            for (String grantType : allowedGrants) {
+                                                if (grantType.equals("urn:ietf:params:oauth:grant-type:saml1-bearer")) {
+                                                    %><tr><td><label><input type="checkbox" id="grant_urn:ietf:params:oauth:grant-type:saml1-bearer" name="grant_urn:ietf:params:oauth:grant-type:saml1-bearer" value="urn:ietf:params:oauth:grant-type:saml1-bearer" checked="checked"/>SAML1</label></td></tr><%
+                                                } else if (grantType.equals("urn:ietf:params:oauth:grant-type:saml2-bearer")) {
+                                                    %><tr><td><label><input type="checkbox" id="grant_urn:ietf:params:oauth:grant-type:saml2-bearer" name="grant_urn:ietf:params:oauth:grant-type:saml2-bearer" value="urn:ietf:params:oauth:grant-type:saml2-bearer" checked="checked"/>SAML2</label></td></tr><%
+                                                } else if (grantType.equals("iwa:ntlm")) {
+                                                    %><tr><td><label><input type="checkbox" id="grant_iwa:ntlm" name="grant_iwa:ntlm" value="iwa:ntlm" checked="checked"/>IWA-NTLM</label></td></tr><%
+                                                } else {
+                                                    %><tr><td><label><input type="checkbox" id=<%="grant_"+grantType%> name=<%="grant_"+grantType%> value=<%=grantType%> checked="checked"/><%=grantType%></label></td></tr><%
+                                                }
 
                                                 }
                                             } catch (Exception e) {
@@ -389,60 +449,97 @@
 
                                             %>
 
-                                        </table>
-                                    </td>
-                                </tr>
-                                </tr>
-                                <%if (client.isPKCESupportedEnabled()) {%>
-                                <tr id="pkce_enable">
-                                    <td class="leftCol-med">
-                                        <fmt:message key='pkce.mandatory'/>
-                                    </td>
-                                    <td>
-                                        <input type="checkbox" name="pkce" value="mandatory"/>Mandatory
-                                        <div class="sectionHelp">
-                                            <fmt:message key='pkce.mandatory.hint'/>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr id="pkce_support_plain">
-                                    <td>
-                                        <fmt:message key='pkce.support.plain'/>
-                                    </td>
-                                    <td>
-                                        <input type="checkbox" name="pkce_plain" value="yes" checked>Yes
-                                        <div class="sectionHelp">
-                                            <fmt:message key='pkce.support.plain.hint'/>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <% } %>
-                                <tr id="userAccessTokenPlain">
-                                    <td class="leftCol-med"><fmt:message key='user.access.token.expiry.time'/></td>
-                                    <td><input id="userAccessTokenExpiryTime" name="userAccessTokenExpiryTime"
-                                               type="text"
-                                               value="<%=client.getOAuthTokenExpiryTimeDTO().getUserAccessTokenExpiryTime()%>"/>
-                                        <fmt:message key='seconds'/>
-                                    </td>
-                                </tr>
-                                <tr id="applicationAccessTokenPlain">
-                                    <td class="leftCol-med"><fmt:message
-                                            key='application.access.token.expiry.time'/></td>
-                                    <td>
-                                        <input id="applicationAccessTokenExpiryTime"
-                                               name="applicationAccessTokenExpiryTime" type="text"
-                                               value="<%=client.getOAuthTokenExpiryTimeDTO().getApplicationAccessTokenExpiryTime()%>"/>
-                                        <fmt:message key='seconds'/>
-                                    </td>
-                                </tr>
-                                <tr id="refreshTokenPlain">
-                                    <td class="leftCol-med"><fmt:message key='refresh.token.expiry.time'/></td>
-                                    <td>
-                                        <input id="refreshTokenExpiryTime" name="refreshTokenExpiryTime" type="text"
-                                               value="<%=client.getOAuthTokenExpiryTimeDTO().getRefreshTokenExpiryTime()%>"/>
-                                        <fmt:message key='seconds'/>
-                                    </td>
-                                </tr>
+		                        </table>
+		                        </td>
+		                    </tr>
+                            <%if(client.isPKCESupportedEnabled()) {%>
+                            <tr id="pkce_enable">
+                                <td class="leftCol-med">
+                                    <fmt:message key='pkce.mandatory'/>
+                                </td>
+                                <td>
+                                    <input type="checkbox" name="pkce" value="mandatory"/>Mandatory
+                                    <div class="sectionHelp">
+                                        <fmt:message key='pkce.mandatory.hint'/>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr id="pkce_support_plain">
+                                <td>
+                                    <fmt:message key='pkce.support.plain'/>
+                                </td>
+                                <td>
+                                    <input type="checkbox" name="pkce_plain" value="yes" checked>Yes
+                                    <div class="sectionHelp">
+                                        <fmt:message key='pkce.support.plain.hint'/>
+                                    </div>
+                                </td>
+                            </tr>
+                            <% } %>
+                        <tr id="userAccessTokenPlain">
+                            <td class="leftCol-med"><fmt:message key='user.access.token.expiry.time'/></td>
+                            <td><input id="userAccessTokenExpiryTime" name="userAccessTokenExpiryTime"
+                                       type="text" value="<%=client.getOAuthTokenExpiryTimeDTO().getUserAccessTokenExpiryTime()%>" />
+                                <fmt:message key='seconds'/>
+                            </td>
+                        </tr>
+                        <tr id="applicationAccessTokenPlain">
+                            <td class="leftCol-med"><fmt:message key='application.access.token.expiry.time'/></td>
+                            <td>
+                                <input id="applicationAccessTokenExpiryTime" name="applicationAccessTokenExpiryTime" type="text"
+                                       value="<%=client.getOAuthTokenExpiryTimeDTO().getApplicationAccessTokenExpiryTime()%>" />
+                                <fmt:message key='seconds'/>
+                            </td>
+                        </tr>
+                        <tr id="refreshTokenPlain">
+                            <td class="leftCol-med"><fmt:message key='refresh.token.expiry.time'/></td>
+                            <td>
+                                <input id="refreshTokenExpiryTime" name="refreshTokenExpiryTime" type="text" value="<%=client.getOAuthTokenExpiryTimeDTO().getRefreshTokenExpiryTime()%>" />
+                                <fmt:message key='seconds'/>
+                            </td>
+                        </tr>
+                    <tr id="audience_enable">
+                        <td colspan="2"
+                            title="Enable Audience Restriction to restrict the audience. You may add audience members using the Audience text box and clicking the Add button">
+                            <input type="checkbox"
+                                   name="enableAudienceRestriction"
+                                   id="enableAudienceRestriction"
+                                   value="true"
+                                   onclick="toggleAudienceRestriction(this);"/>
+                            <fmt:message key="enable.audience.restriction"/>
+                        </td>
+                    </tr>
+                    <tr id="add_audience">
+                        <td
+                                style="padding-left: 40px ! important; color: rgb(119, 119, 119); font-style: italic;">
+                            <fmt:message key="sp.audience"/>
+                        </td>
+                        <td>
+                            <input type="text" id="audience" name="audience"
+                                   class="text-box-big" disabled="disabled"/>
+                            <input id="addAudience" name="addAudience" type="button"
+                                   disabled="disabled" value="<fmt:message key="oauth.add.audience"/>"
+                                   onclick="return addAudienceFunc()"/>
+                        </td>
+                    </tr>
+
+                    <tr id="audience_table" >
+                        <td></td>
+                        <td>
+                            <table id="audienceTableId"
+                                   style="<%=audienceTableStyle%>"
+                                   class="styledInner">
+                                <tbody id="audienceTableTbody">
+                                <%
+                                    int j = 0;
+                                %>
+                                <input type="hidden" name="audiencePropertyCounter"
+                                       id="audiencePropertyCounter"
+                                       value="<%=j%>"/>
+                                </tbody>
+                            </table>
+                        </td>
+                    </tr>
                                 <tr id="scope_validator_row" name="scope_validator_row">
                                     <td class="leftCol-med"><fmt:message key='scopeValidators'/></td>
                                     <td>
@@ -481,9 +578,9 @@
                                         </table>
                                     </td>
                                 </tr>
-                            </table>
-                        </td>
-                    </tr>
+				</table>
+			</td>
+		    </tr>
 
                     <tr>
                         <td class="buttonRow">

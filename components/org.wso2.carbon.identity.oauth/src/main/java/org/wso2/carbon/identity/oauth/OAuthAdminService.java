@@ -171,6 +171,7 @@ public class OAuthAdminService extends AbstractAdmin {
                 dto.setUserAccessTokenExpiryTime(app.getUserAccessTokenExpiryTime());
                 dto.setApplicationAccessTokenExpiryTime(app.getApplicationAccessTokenExpiryTime());
                 dto.setRefreshTokenExpiryTime(app.getRefreshTokenExpiryTime());
+                dto.setAudiences(app.getAudiences());
 
                 if (log.isDebugEnabled()) {
                     log.debug("Found App :" + dto.getApplicationName() + " for consumerKey: " + consumerKey);
@@ -209,6 +210,8 @@ public class OAuthAdminService extends AbstractAdmin {
                 dto.setUserAccessTokenExpiryTime(app.getUserAccessTokenExpiryTime());
                 dto.setApplicationAccessTokenExpiryTime(app.getApplicationAccessTokenExpiryTime());
                 dto.setRefreshTokenExpiryTime(app.getRefreshTokenExpiryTime());
+                dto.setAudiences(app.getAudiences());
+
             }
             return dto;
         } catch (InvalidOAuthClientException | IdentityOAuth2Exception e) {
@@ -295,6 +298,7 @@ public class OAuthAdminService extends AbstractAdmin {
                         }
                     }
                     app.setScopeValidators(requestedScopeValidators);
+                    app.setAudiences(application.getAudiences());
                     app.setPkceMandatory(application.getPkceMandatory());
                     app.setPkceSupportPlain(application.getPkceSupportPlain());
                     // Validate access token expiry configurations.
@@ -397,6 +401,7 @@ public class OAuthAdminService extends AbstractAdmin {
                 }
             }
             oauthappdo.setGrantTypes(consumerAppDTO.getGrantTypes());
+            oauthappdo.setAudiences(consumerAppDTO.getAudiences());
             List<String> scopeValidators = new ArrayList<>(Arrays.asList(getAllowedScopeValidators()));
             String[] requestedScopeValidators = consumerAppDTO.getScopeValidators();
             if (requestedScopeValidators == null) {
@@ -619,6 +624,7 @@ public class OAuthAdminService extends AbstractAdmin {
                                 appDTO.setUserAccessTokenExpiryTime(appDO.getUserAccessTokenExpiryTime());
                                 appDTO.setApplicationAccessTokenExpiryTime(appDO.getApplicationAccessTokenExpiryTime());
                                 appDTO.setRefreshTokenExpiryTime(appDO.getRefreshTokenExpiryTime());
+                                appDTO.setAudiences(appDO.getAudiences());
                                 appDTOs.add(appDTO);
                                 if (log.isDebugEnabled()) {
                                     log.debug("Found App: " + appDO.getApplicationName() + " for user: " + username);

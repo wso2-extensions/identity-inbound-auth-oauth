@@ -18,9 +18,15 @@
 
 package org.wso2.carbon.identity.oauth2.internal;
 
+import org.wso2.carbon.identity.application.authentication.framework.AuthenticationMethodNameTranslator;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.entitlement.EntitlementService;
+import org.wso2.carbon.identity.core.handler.HandlerComparator;
+import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
 import org.wso2.carbon.registry.core.service.RegistryService;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * OAuth2 Service component data holder
@@ -29,10 +35,14 @@ public class OAuth2ServiceComponentHolder {
 
     private static ApplicationManagementService applicationMgtService;
     private static boolean pkceEnabled = false;
+    private static boolean audienceEnabled = false;
     private static RegistryService registryService;
     private static EntitlementService entitlementService;
 
-    private OAuth2ServiceComponentHolder(){
+    private static AuthenticationMethodNameTranslator authenticationMethodNameTranslator;
+    private static List<OAuthClientAuthenticator> authenticationHandlers = new ArrayList<>();
+
+    private OAuth2ServiceComponentHolder() {
 
     }
 
@@ -62,6 +72,14 @@ public class OAuth2ServiceComponentHolder {
         OAuth2ServiceComponentHolder.pkceEnabled = pkceEnabled;
     }
 
+    public static boolean isAudienceEnabled() {
+        return audienceEnabled;
+    }
+
+    public static void setAudienceEnabled(boolean audienceEnabled) {
+        OAuth2ServiceComponentHolder.audienceEnabled = audienceEnabled;
+    }
+
     public static RegistryService getRegistryService() {
         return registryService;
     }
@@ -76,5 +94,23 @@ public class OAuth2ServiceComponentHolder {
 
     public static EntitlementService getEntitlementService() {
         return entitlementService;
+    }
+
+    public static void addAuthenticationHandler(OAuthClientAuthenticator clientAuthenticator) {
+        authenticationHandlers.add(clientAuthenticator);
+        authenticationHandlers.sort(new HandlerComparator());
+    }
+
+    public static List<OAuthClientAuthenticator> getAuthenticationHandlers() {
+        return authenticationHandlers;
+    }
+
+    public static AuthenticationMethodNameTranslator getAuthenticationMethodNameTranslator() {
+        return authenticationMethodNameTranslator;
+    }
+
+    public static void setAuthenticationMethodNameTranslator(
+            AuthenticationMethodNameTranslator authenticationMethodNameTranslator) {
+        OAuth2ServiceComponentHolder.authenticationMethodNameTranslator = authenticationMethodNameTranslator;
     }
 }

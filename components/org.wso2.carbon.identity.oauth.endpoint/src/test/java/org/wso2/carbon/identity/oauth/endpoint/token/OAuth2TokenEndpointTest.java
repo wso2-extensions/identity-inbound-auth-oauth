@@ -171,24 +171,18 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
                         GrantType.PASSWORD.toString(), null, null, null, HttpServletResponse.SC_BAD_REQUEST,
                         OAuth2ErrorCodes.INVALID_REQUEST },
 
-                // Request with authorization header and credentials in parameter map.
-                // Will return unauthorized error since multiple methods of authentication
-                {CLIENT_ID_VALUE, AUTHORIZATION_HEADER, mapWithCredentials, GrantType.PASSWORD.toString(), null, null,
-                        null, HttpServletResponse.SC_UNAUTHORIZED, OAuth2ErrorCodes.INVALID_CLIENT },
-
-                // Request with invalid authorization header. Will return unauthorized error
+                // Request with invalid authorization header. Will return bad request error
                 {CLIENT_ID_VALUE, inCorrectAuthzHeader, mapWithClientId, GrantType.PASSWORD.toString(), null, null,
-                        null, HttpServletResponse.SC_UNAUTHORIZED, OAuth2ErrorCodes.INVALID_CLIENT },
+                        null, HttpServletResponse.SC_BAD_REQUEST, OAuth2ErrorCodes.INVALID_REQUEST },
 
-                // Request from inactive client. Will give unauthorized error
+                // Request from inactive client. Will give correct response, inactive client state should be handled
+                // in access token issuer
                 {INACTIVE_CLIENT_ID_VALUE, inactiveClientHeader, new MultivaluedHashMap<String, String>(),
-                        GrantType.PASSWORD.toString(), null, null, null, HttpServletResponse.SC_UNAUTHORIZED,
-                        OAuth2ErrorCodes.INVALID_CLIENT },
+                        GrantType.PASSWORD.toString(), null, null, null, HttpServletResponse.SC_OK, "" },
 
-                // Request from invalid client. Will give unauthorized error
+                // Request from invalid client. Will give correct response, invalid-id is handles in access token issuer
                 {"invalidId", invalidClientHeader, new MultivaluedHashMap<String, String>(),
-                        GrantType.PASSWORD.toString(), null, null, null, HttpServletResponse.SC_UNAUTHORIZED,
-                        OAuth2ErrorCodes.INVALID_CLIENT },
+                        GrantType.PASSWORD.toString(), null, null, null, HttpServletResponse.SC_OK,"" },
 
                 // Request without client id and authz header. Will give bad request error
                 {null, null, new MultivaluedHashMap<String, String>(), GrantType.PASSWORD.toString(), null, null, null,
