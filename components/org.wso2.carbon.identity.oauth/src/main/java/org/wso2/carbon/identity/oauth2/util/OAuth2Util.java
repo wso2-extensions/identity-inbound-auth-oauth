@@ -45,8 +45,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.wso2.carbon.core.util.KeyStoreManager;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
-import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
-import org.wso2.carbon.identity.application.mgt.ApplicationMgtSystemConfig;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
@@ -59,7 +57,6 @@ import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
-import org.wso2.carbon.identity.oauth.cache.ValidateScopeCache;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -73,10 +70,8 @@ import org.wso2.carbon.identity.oauth2.config.SpOAuth2ExpiryTimeConfiguration;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
-import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.oauth2.model.ClientCredentialDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
-import org.wso2.carbon.identity.openidconnect.OIDCConstants;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.registry.core.Registry;
 import org.wso2.carbon.registry.core.Resource;
@@ -937,19 +932,6 @@ public class OAuth2Util {
             issuer = OAuthURL.getOAuth2TokenEPUrl();
         }
         return issuer;
-    }
-
-    public static Boolean getIsValidationEnabledOfOauthApp(String applicationName, String consumerKey,
-                                                           String tenantDomainOfOauthApp)
-            throws IdentityApplicationManagementException {
-        Boolean isValidationEnabled = ValidateScopeCache.getInstance().getValueFromCache(consumerKey);
-        if (isValidationEnabled == null) {
-            isValidationEnabled = ApplicationMgtSystemConfig.getInstance()
-                    .getApplicationDAO().getApplication(applicationName, tenantDomainOfOauthApp)
-                    .getLocalAndOutBoundAuthenticationConfig().isEnableAuthorization();
-            ValidateScopeCache.getInstance().addToCache(consumerKey, isValidationEnabled);
-        }
-        return isValidationEnabled;
     }
 
     public static class OAuthURL {
