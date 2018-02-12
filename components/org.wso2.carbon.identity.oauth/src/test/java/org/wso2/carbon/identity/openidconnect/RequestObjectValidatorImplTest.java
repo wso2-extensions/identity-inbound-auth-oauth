@@ -19,18 +19,15 @@
 package org.wso2.carbon.identity.openidconnect;
 
 import com.nimbusds.jose.JWSAlgorithm;
-import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.testng.PowerMockTestCase;
-import org.powermock.reflect.internal.WhiteboxImpl;
 import org.testng.Assert;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
-import org.wso2.carbon.core.util.KeyStoreManager;
 import org.wso2.carbon.identity.common.testng.WithAxisConfiguration;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithH2Database;
@@ -51,12 +48,10 @@ import java.security.KeyStore;
 import java.security.PublicKey;
 import java.security.interfaces.RSAPrivateKey;
 import java.util.HashMap;
-import java.util.concurrent.ConcurrentHashMap;
 
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
-import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.mock;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
@@ -77,6 +72,7 @@ import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENA
 @PowerMockIgnore({"javax.crypto.*"})
 public class RequestObjectValidatorImplTest extends PowerMockTestCase {
     public static final String SOME_SERVER_URL = "some-server-url";
+    public static final String CLIENT_PUBLIC_CERT_ALIAS = "wso2carbon";
     private RSAPrivateKey rsaPrivateKey;
     private KeyStore clientKeyStore;
     private KeyStore wso2KeyStore;
@@ -86,7 +82,8 @@ public class RequestObjectValidatorImplTest extends PowerMockTestCase {
     public void setUp() throws Exception {
         System.setProperty(CarbonBaseConstants.CARBON_HOME,
                 Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString());
-        clientKeyStore = getKeyStoreFromFile("testkeystore.jks", "wso2carbon", System.getProperty(CarbonBaseConstants.CARBON_HOME));
+        clientKeyStore =
+                getKeyStoreFromFile("testkeystore.jks", CLIENT_PUBLIC_CERT_ALIAS, System.getProperty(CarbonBaseConstants.CARBON_HOME));
         wso2KeyStore = getKeyStoreFromFile("wso2carbon.jks", "wso2carbon", System.getProperty(CarbonBaseConstants
                 .CARBON_HOME));
     }
@@ -97,7 +94,7 @@ public class RequestObjectValidatorImplTest extends PowerMockTestCase {
         PublicKey publicKey = wso2KeyStore.getCertificate("wso2carbon").getPublicKey();
         String audience = SOME_SERVER_URL;
 
-        HashMap claims1 = new HashMap<>();
+        HashMap<String, Object> claims1 = new HashMap<>();
         claims1.put(Constants.STATE, "af0ifjsldkj");
         String jsonWebToken1 = buildJWT(TEST_CLIENT_ID_1, TEST_CLIENT_ID_1, "1000", audience, "RSA265", privateKey, 0,
                 claims1);
@@ -111,11 +108,15 @@ public class RequestObjectValidatorImplTest extends PowerMockTestCase {
                 {jsonWebToken1, true, false, true, "Valid Request Object, signed not encrypted."},
                 {jsonWebToken2, false, false, true, "Valid Request Object, signed not encrypted."},
                 {jsonWebEncryption1, false, true, true, "Valid Request Object, signed and encrypted."},
-                {jsonWebEncryption2, true, true, true, "Valid Request Object, signed and encrypted."}};
+                {jsonWebEncryption2, true, true, true, "Valid Request Object, signed and encrypted."}
+        };
     }
 
     @Test(dataProvider = "provideJWT")
-    public void testValidateRequestObj(String jwt, boolean isSigned, boolean isEncrypted, boolean exceptionNotExpected,
+    public void testValidateRequestObj(String jwt,
+                                       boolean isSigned,
+                                       boolean isEncrypted,
+                                       boolean exceptionNotExpected,
                                        String errorMsg) throws Exception {
         OAuth2Parameters oAuth2Parameters = new OAuth2Parameters();
         oAuth2Parameters.setTenantDomain(SUPER_TENANT_DOMAIN_NAME);
@@ -131,37 +132,30 @@ public class RequestObjectValidatorImplTest extends PowerMockTestCase {
         mockStatic(OAuthServerConfiguration.class);
         when(OAuthServerConfiguration.getInstance()).thenReturn(oauthServerConfigurationMock);
 
-//        mockStatic(RequestObjectValidatorImpl.class);
-//        PowerMockito.spy(RequestObjectValidatorImpl.class);
-
         rsaPrivateKey = (RSAPrivateKey) wso2KeyStore.getKey("wso2carbon", "wso2carbon".toCharArray());
         mockStatic(OAuth2Util.class);
         when(OAuth2Util.getTenantId(SUPER_TENANT_DOMAIN_NAME)).thenReturn(SUPER_TENANT_ID);
         when((OAuth2Util.getPrivateKey(anyString(), anyInt()))).thenReturn(rsaPrivateKey);
+
+        // Mock OAuth2Util returning public cert of the service provider
+        when(OAuth2Util.getX509CertOfOAuthApp(TEST_CLIENT_ID_1, SUPER_TENANT_DOMAIN_NAME))
+                .thenReturn(clientKeyStore.getCertificate(CLIENT_PUBLIC_CERT_ALIAS));
 
         RequestObjectValidatorImpl requestObjectValidator = PowerMockito.spy(new RequestObjectValidatorImpl());
 
         RequestParamRequestObjectBuilder requestParamRequestObjectBuilder = new RequestParamRequestObjectBuilder();
         when((oauthServerConfigurationMock.getRequestObjectValidator())).thenReturn(requestObjectValidator);
 
-        KeyStoreManager keyStoreManager = Mockito.mock(KeyStoreManager.class);
-        ConcurrentHashMap<String, KeyStoreManager> mtKeyStoreManagers = new ConcurrentHashMap();
-        mtKeyStoreManagers.put(String.valueOf(SUPER_TENANT_ID), keyStoreManager);
-        WhiteboxImpl.setInternalState(KeyStoreManager.class, "mtKeyStoreManagers", mtKeyStoreManagers);
-        Mockito.when(keyStoreManager.getPrimaryKeyStore()).thenReturn(wso2KeyStore);
-        Mockito.when(keyStoreManager.getKeyStore("wso2carbon.jks")).thenReturn(wso2KeyStore);
-
         PowerMockito.doReturn(SOME_SERVER_URL).when(requestObjectValidator, "getTokenEpURL",
                 anyString());
 
-        String requestObjectString = jwt;
-        RequestObject requestObject = requestParamRequestObjectBuilder.buildRequestObject(requestObjectString,
-                oAuth2Parameters);
+        RequestObject requestObject = requestParamRequestObjectBuilder.buildRequestObject(jwt, oAuth2Parameters);
 
-        Assert.assertEquals(requestParamRequestObjectBuilder.isEncrypted(requestObjectString), isEncrypted,
+        Assert.assertEquals(requestParamRequestObjectBuilder.isEncrypted(jwt), isEncrypted,
                 "Payload is encrypted:" + isEncrypted);
         Assert.assertEquals(requestObjectValidator.isSigned(requestObject), isSigned,
                 "Request object isSigned: " + isSigned);
+
         if (isSigned) {
             Assert.assertEquals(requestObjectValidator.validateSignature(requestObject, oAuth2Parameters),
                     exceptionNotExpected, errorMsg + "Request Object Signature Validation failed.");

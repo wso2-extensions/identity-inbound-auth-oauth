@@ -26,27 +26,31 @@ public class RequestObjectException extends FrameworkException {
 
     public static final String ERROR_CODE_INVALID_REQUEST = "invalid_request";
     private static final long serialVersionUID = -4449780649560053452L;
-    private final String errorCode;
-    private final String errorMessage;
+    private String errorMessage;
 
     public RequestObjectException(String errorCode, String errorMessage) {
-        super(errorMessage);
-        this.errorCode = errorCode;
+        super(errorCode, errorMessage);
+        this.errorMessage = errorMessage;
+    }
+
+    public RequestObjectException(String errorCode, String errorMessage, Throwable cause) {
+        super(errorCode, errorMessage, cause);
         this.errorMessage = errorMessage;
     }
 
     public RequestObjectException(String errorMessage) {
-        super(errorMessage);
-        this.errorCode = null;
+        // By default we set the invalid_request error code.
+        super(ERROR_CODE_INVALID_REQUEST, errorMessage);
         this.errorMessage = errorMessage;
     }
 
-    public String getErrorCode() {
-        return errorCode;
+    public RequestObjectException(String errorMessage, Throwable cause) {
+        // By default we set the invalid_request error code.
+        super(ERROR_CODE_INVALID_REQUEST, errorMessage, cause);
+        this.errorMessage = errorMessage;
     }
 
     public String getErrorMessage() {
         return errorMessage;
     }
 }
-
