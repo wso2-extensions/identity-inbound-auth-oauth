@@ -70,7 +70,7 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
 
         SignedJWT jwt = requestObject.getSignedJWT();
         Certificate certificate =
-                getX509CertOfOAuthApp(oAuth2Parameters.getClientId(), oAuth2Parameters.getTenantDomain());
+                getCertificateForAlias(oAuth2Parameters.getTenantDomain(), oAuth2Parameters.getClientId());
         boolean isVerified = isSignatureVerified(jwt, certificate);
         requestObject.setIsSignatureValid(isVerified);
         return isVerified;

@@ -2050,6 +2050,14 @@ public class OAuth2Util {
         return isExplicitlyFederatedUser && isFederatedUserNotMappedToLocalUser;
     }
 
+    /**
+     * Returns the service provider associated with the OAuth clientId.
+     *
+     * @param clientId OAuth2/OIDC Client Identifier
+     * @param tenantDomain
+     * @return
+     * @throws IdentityOAuth2Exception
+     */
     public static ServiceProvider getServiceProvider(String clientId,
                                                      String tenantDomain) throws IdentityOAuth2Exception {
         ApplicationManagementService applicationMgtService = OAuth2ServiceComponentHolder.getApplicationMgtService();
@@ -2063,6 +2071,15 @@ public class OAuth2Util {
         }
     }
 
+    /**
+     *  Returns the public certificate of the service provider associated with the OAuth consumer app as
+     *  an X509 @{@link Certificate} object.
+     *
+     * @param clientId OAuth2/OIDC Client Identifier
+     * @param tenantDomain
+     * @return
+     * @throws IdentityOAuth2Exception
+     */
     public static Certificate getX509CertOfOAuthApp(String clientId,
                                                     String tenantDomain) throws IdentityOAuth2Exception {
 
