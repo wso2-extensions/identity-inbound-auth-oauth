@@ -102,7 +102,7 @@ public class RequestParamRequestObjectBuilderTest extends PowerMockTestCase {
         mockStatic(OAuth2Util.class);
         when(OAuth2Util.getTenantId("carbon.super")).thenReturn(-1234);
         when((OAuth2Util.getPrivateKey(anyString(), anyInt()))).thenReturn(rsaPrivateKey);
-        when(OAuth2Util.getPublicCertOfOAuthApp(TEST_CLIENT_ID_1, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME))
+        when(OAuth2Util.getX509CertOfOAuthApp(TEST_CLIENT_ID_1, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME))
                 .thenReturn(clientKeyStore.getCertificate("wso2carbon"));
 
         RequestObjectValidator requestObjectValidator = new RequestObjectValidatorImpl();

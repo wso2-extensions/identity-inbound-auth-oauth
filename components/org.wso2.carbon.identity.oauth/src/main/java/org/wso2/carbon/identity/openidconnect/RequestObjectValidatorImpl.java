@@ -25,15 +25,11 @@ import com.nimbusds.jwt.SignedJWT;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.base.MultitenantConstants;
-import org.wso2.carbon.core.util.KeyStoreManager;
 import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
-import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.base.IdentityConstants;
-import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -45,19 +41,12 @@ import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 
-import java.security.KeyStore;
-import java.security.KeyStoreException;
 import java.security.PublicKey;
 import java.security.cert.Certificate;
-import java.security.cert.CertificateException;
 import java.security.interfaces.RSAPublicKey;
 import java.util.List;
 
-import static org.apache.commons.lang.StringUtils.getCommonPrefix;
 import static org.apache.commons.lang.StringUtils.isEmpty;
-import static org.wso2.carbon.identity.openidconnect.model.Constants.DASH_DELIMITER;
-import static org.wso2.carbon.identity.openidconnect.model.Constants.FULL_STOP_DELIMITER;
-import static org.wso2.carbon.identity.openidconnect.model.Constants.KEYSTORE_FILE_EXTENSION;
 import static org.wso2.carbon.identity.openidconnect.model.Constants.RS;
 
 /**
@@ -81,7 +70,7 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
 
         SignedJWT jwt = requestObject.getSignedJWT();
         Certificate certificate =
-                getPublicCertOfOAuthApp(oAuth2Parameters.getClientId(), oAuth2Parameters.getTenantDomain());
+                getX509CertOfOAuthApp(oAuth2Parameters.getClientId(), oAuth2Parameters.getTenantDomain());
         boolean isVerified = isSignatureVerified(jwt, certificate);
         requestObject.setIsSignatureValid(isVerified);
         return isVerified;
@@ -204,6 +193,16 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
                 + currentAudience);
     }
 
+
+    /**
+     * @deprecated use @{@link RequestObjectValidatorImpl#getX509CertOfOAuthApp(String, String)}} instead
+     * to retrieve the public certificate of the Service Provider in X509 format.
+     */
+    @Deprecated
+    protected Certificate getCertificateForAlias(String tenantDomain, String alias) throws RequestObjectException {
+        return getX509CertOfOAuthApp(alias, tenantDomain);
+    }
+
     /**
      * Get the X509Certificate object containing the public key of the OAuth client.
      *
@@ -211,12 +210,12 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
      * @param tenantDomain tenant domain of Service Provider.
      * @return X509Certificate object containing the public certificate of the Service Provider.
      */
-    protected Certificate getPublicCertOfOAuthApp(String clientId, String tenantDomain) throws RequestObjectException {
+    protected Certificate getX509CertOfOAuthApp(String clientId, String tenantDomain) throws RequestObjectException {
         try {
-            return OAuth2Util.getPublicCertOfOAuthApp(clientId, tenantDomain);
+            return OAuth2Util.getX509CertOfOAuthApp(clientId, tenantDomain);
         } catch (IdentityOAuth2Exception e) {
             throw new RequestObjectException("Error retrieving public certificate of OAuth app with client_id: "
-                    + clientId + " of tenantDomain: " + tenantDomain);
+                    + clientId + " of tenantDomain: " + tenantDomain, e);
         }
     }
 

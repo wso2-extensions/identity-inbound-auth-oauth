@@ -2063,8 +2063,8 @@ public class OAuth2Util {
         }
     }
 
-    public static Certificate getPublicCertOfOAuthApp(String clientId,
-                                                      String tenantDomain) throws IdentityOAuth2Exception {
+    public static Certificate getX509CertOfOAuthApp(String clientId,
+                                                    String tenantDomain) throws IdentityOAuth2Exception {
 
         try {
             ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(clientId, tenantDomain);
@@ -2079,7 +2079,7 @@ public class OAuth2Util {
             }
         } catch (CertificateException e) {
             throw new IdentityOAuth2Exception("Error while building X509 cert of oauth app with client_id: "
-                    + clientId + " of tenantDomain: " + tenantDomain);
+                    + clientId + " of tenantDomain: " + tenantDomain, e);
         }
     }
 }
