@@ -46,6 +46,8 @@ import org.wso2.carbon.core.util.KeyStoreManager;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.core.util.IdentityConfigParser;
+import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.core.util.IdentityIOStreamUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -126,6 +128,10 @@ public class OAuth2Util {
     public static final String ACCESS_TOKEN_DO = "AccessTokenDo";
     public static final String OAUTH2_VALIDATION_MESSAGE_CONTEXT = "OAuth2TokenValidationMessageContext";
     private static final String ESSENTAIL = "essential";
+    public static final String CONFIG_ELEM_OAUTH = "OAuth";
+    public static final String OPENID_CONNECT = "OpenIDConnect";
+    public static final String ENABLE_OPENID_CONNECT_AUDIENCES = "EnableAudiences";
+    public static final String OPENID_CONNECT_AUDIENCE = "audience";
 
     private static final String ALGORITHM_NONE = "NONE";
     /*
@@ -1556,6 +1562,38 @@ public class OAuth2Util {
         }
     }
 
+    /**
+     * Check if audiences are enabled by reading configuration file at server startup.
+     *
+     * @return
+     */
+    public static boolean checkAudienceEnabled() {
+
+        boolean isAudienceEnabled = false;
+        IdentityConfigParser configParser = IdentityConfigParser.getInstance();
+        OMElement oauthElem = configParser.getConfigElement(CONFIG_ELEM_OAUTH);
+
+        if (oauthElem == null) {
+            log.warn("Error in OAuth Configuration. OAuth element is not available.");
+            return isAudienceEnabled;
+        }
+        OMElement configOpenIDConnect = oauthElem.getFirstChildWithName(new QName(IdentityCoreConstants.IDENTITY_DEFAULT_NAMESPACE, OPENID_CONNECT));
+
+        if (configOpenIDConnect == null) {
+            log.warn("Error in OAuth Configuration. OpenID element is not available.");
+            return isAudienceEnabled;
+        }
+        OMElement configAudience = configOpenIDConnect.
+                getFirstChildWithName(new QName(IdentityCoreConstants.IDENTITY_DEFAULT_NAMESPACE, ENABLE_OPENID_CONNECT_AUDIENCES));
+
+        if (configAudience != null) {
+            String configAudienceValue = configAudience.getText();
+            if (StringUtils.isNotBlank(configAudienceValue)) {
+                isAudienceEnabled = Boolean.parseBoolean(configAudienceValue);
+            }
+        }
+        return isAudienceEnabled;
+    }
 
     /**
      * Generate the unique user domain value in the format of "FEDERATED:idp_name".

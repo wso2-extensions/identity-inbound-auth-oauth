@@ -29,6 +29,7 @@
 <%@ page import="java.util.Arrays" %>
 <%@ page import="java.util.List" %>
 <%@ page import="java.util.ResourceBundle" %>
+<%@ page import="org.apache.commons.lang.ArrayUtils" %>
 
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%@ taglib uri="http://wso2.org/projects/carbon/taglibs/carbontags.jar" prefix="carbon" %>
@@ -59,6 +60,8 @@
     OAuthAdminClient client = null;
     String action = null;
     String grants = null;
+    String[] audiences = null;
+    String audienceTableStyle = "display:none";
 
     try {
 
@@ -120,6 +123,7 @@
                 } else {
                     grants = "";
                 }
+                audiences = app.getAudiences();
             }
         }
 
@@ -164,6 +168,9 @@
 
         <div id="workArea">
    			<script type="text/javascript">
+
+                var audienceArr = [];
+
                 function onClickUpdate() {
                     var versionValue = document.getElementsByName("oauthVersion")[0].value;
                     var callbackUrl = document.getElementsByName("callback")[0].value;
@@ -269,6 +276,83 @@
                     }
 
                 }
+                function toggleAudienceRestriction(chkbx) {
+                    document.editAppform.audience.disabled = !chkbx.checked;
+                    document.editAppform.addAudience.disabled = (!chkbx.checked);
+                }
+                function addAudienceFunc() {
+                    var audience = $.trim(document.getElementById('audience').value);
+                    if (audience === "") {
+                        document.getElementById("audience").value = "";
+                        return false;
+                    }
+
+                    if ($.inArray(audience, audienceArr) !== -1) {
+                        CARBON.showWarningDialog('<fmt:message key="duplicate.audience.value"/>');
+                        document.getElementById("audience").value = "";
+                        return false;
+                    }
+                    audienceArr.push(audience);
+                    var propertyCount = document.getElementById("audiencePropertyCounter");
+
+                    var i = propertyCount.value;
+                    var currentCount = parseInt(i);
+
+                    currentCount = currentCount + 1;
+                    propertyCount.value = currentCount;
+
+                    document.getElementById('audienceTableId').style.display = '';
+                    var audienceTableTBody = document.getElementById('audienceTableTbody');
+
+                    var audienceRow = document.createElement('tr');
+                    audienceRow.setAttribute('id', 'audienceRow' + i);
+
+                    var audience = document.getElementById('audience').value;
+                    var audiencePropertyTD = document.createElement('td');
+                    audiencePropertyTD.setAttribute('style', 'padding-left: 40px ! important; color: rgb(119, 119, 119); font-style: italic;');
+                    audiencePropertyTD.innerHTML = "" + audience + "<input type='hidden' name='audiencePropertyName' id='audiencePropertyName" + i + "'  value='" + audience + "'/> ";
+
+                    var audienceRemoveTD = document.createElement('td');
+                    audienceRemoveTD.innerHTML = "<a href='#' class='icon-link' style='background-image: url(../admin/images/delete.gif)' onclick='removeAudience(" + i + ");return false;'>" + "Delete" + "</a>";
+
+                    audienceRow.appendChild(audiencePropertyTD);
+                    audienceRow.appendChild(audienceRemoveTD);
+
+                    audienceTableTBody.appendChild(audienceRow);
+                    document.getElementById("audience").value = "";
+                    return true;
+                }
+
+                function removeAudience(i) {
+                    var propRow = document.getElementById("audienceRow" + i);
+                    if (propRow !== undefined && propRow !== null) {
+                        var parentTBody = propRow.parentNode;
+                        if (parentTBody !== undefined && parentTBody !== null) {
+                            parentTBody.removeChild(propRow);
+                            if (!isContainRaw(parentTBody)) {
+                                var propertyTable = document.getElementById("audienceTableId");
+                                propertyTable.style.display = "none";
+                            }
+                        }
+                    }
+                }
+
+                function isContainRaw(tbody) {
+                    if (tbody.childNodes === null || tbody.childNodes.length === 0) {
+                        return false;
+                    } else {
+                        for (var i = 0; i < tbody.childNodes.length; i++) {
+                            var child = tbody.childNodes[i];
+                            if (child !== undefined && child !== null) {
+                                if (child.nodeName === "tr" || child.nodeName === "TR") {
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                    return false;
+                }
+
                 jQuery(document).ready(function() {
                     //on load adjust the form based on the current settings
                     adjustForm();
@@ -425,6 +509,109 @@
                                 <fmt:message key='seconds'/>
                             </td>
                         </tr>
+                    <!-- EnableAudienceRestriction -->
+                    <%
+                        audienceTableStyle = app.getAudiences() != null ? "" :
+                                "display:none";
+                        if (ArrayUtils.isNotEmpty(app.getAudiences())) {
+                    %>
+                    <tr id="audience-enable">
+                        <td title="Enable Audience Restriction to restrict the audience. You may add audience members using the Audience text box and clicking the Add button"
+                            colspan="2"><input type="checkbox"
+                                               name="enableAudienceRestriction"
+                                               id="enableAudienceRestriction"
+                                               value="true" checked="checked"
+                                               onclick="toggleAudienceRestriction(this);"/>
+                            <fmt:message key="enable.audience.restriction"/>
+                        </td>
+                    </tr>
+                    <tr id="audience-add">
+                        <td style="padding-left: 40px ! important; color: rgb(119, 119, 119); font-style: italic;">
+                            <fmt:message key="sp.audience"/>
+                        </td>
+                        <td>
+                            <input type="text" id="audience" name="audience"
+                                   class="text-box-big"/>
+                            <input id="addAudience" name="addAudience"
+                                   type="button"
+                                   value="<fmt:message key="oauth.add.audience"/>"
+                                   onclick="return addAudienceFunc()"/>
+                        </td>
+                    </tr>
+                    <% } else {%>
+                    <tr id="audience-enable">
+                        <td colspan="2"
+                            title="Enable Audience Restriction to restrict the audience. You may add audience members using the Audience text box and clicking the Add button">
+                            <input type="checkbox"
+                                   name="enableAudienceRestriction"
+                                   id="enableAudienceRestriction"
+                                   value="true"
+                                   onclick="toggleAudienceRestriction(this);"/>
+                            <fmt:message key="enable.audience.restriction"/>
+                        </td>
+                    </tr>
+                    <tr id="audience-add">
+                        <td style="padding-left: 40px ! important; color: rgb(119, 119, 119); font-style: italic;">
+                            <fmt:message key="sp.audience"/>
+                        </td>
+                        <td>
+                            <input type="text" id="audience" name="audience"
+                                   class="text-box-big" disabled="disabled"/>
+                            <input id="addAudience" name="addAudience"
+                                   type="button"
+                                   disabled="disabled" value="<fmt:message key="oauth.add.audience"/>"
+                                   onclick="return addAudienceFunc()"/>
+                        </td>
+                    </tr>
+                    <%} %>
+                    <tr id="audience-table">
+                        <td></td>
+                        <td>
+                            <table id="audienceTableId"
+                                   style="width: 40%; <%=audienceTableStyle%>"
+                                   class="styledInner">
+                                <tbody id="audienceTableTbody">
+                                <%
+                                    int j = 0;
+                                    if (app.getAudiences() != null){
+
+                                %>
+                                <%
+                                    for (String audience : audiences) {
+                                        if (audience != null &&
+                                                !"null".equals(audience)) {
+                                %>
+                                <tr id="audienceRow<%=j%>">
+                                    <td style="padding-left: 40px ! important; color: rgb(119, 119, 119); font-style: italic;">
+                                        <input type="hidden"
+                                               name="audiencePropertyName"
+                                               id="audiencePropertyName<%=j%>"
+                                               value="<%=Encode.forHtmlAttribute(audience)%>"/>
+                                        <%=Encode.forHtml(audience)%>
+                                    </td>
+                                    <td>
+                                        <a onclick="removeAudience('<%=j%>');return false;"
+                                           href="#" class="icon-link"
+                                           style="background-image: url(../admin/images/delete.gif)">Delete
+                                        </a>
+                                    </td>
+                                </tr>
+                                <%
+                                            j++;
+                                        }
+                                    }
+                                %>
+                                <%
+                                    }
+                                %>
+                                <input type="hidden"
+                                       name="audiencePropertyCounter"
+                                       id="audiencePropertyCounter"
+                                       value="<%=j%>"/>
+                                </tbody>
+                            </table>
+                        </td>
+                    </tr>
 				</table>
 			</td>
 		    </tr>

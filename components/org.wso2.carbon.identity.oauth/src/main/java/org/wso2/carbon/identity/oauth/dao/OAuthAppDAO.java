@@ -36,6 +36,7 @@ import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcess
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
@@ -46,7 +47,11 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
 
@@ -94,7 +99,6 @@ public class OAuthAppDAO {
                         prepStmt.setLong(13, consumerAppDO.getApplicationAccessTokenExpiryTime());
                         prepStmt.setLong(14, consumerAppDO.getRefreshTokenExpiryTime());
                         prepStmt.execute();
-                        connection.commit();
                     }
                 } else {
                     try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.ADD_OAUTH_APP)) {
@@ -111,9 +115,25 @@ public class OAuthAppDAO {
                         prepStmt.setLong(11, consumerAppDO.getApplicationAccessTokenExpiryTime());
                         prepStmt.setLong(12, consumerAppDO.getRefreshTokenExpiryTime());
                         prepStmt.execute();
-                        connection.commit();
                     }
                 }
+
+                if (OAuth2ServiceComponentHolder.isAudienceEnabled() && consumerAppDO.getAudiences() != null) {
+
+                    PreparedStatement prepStmtAddAudiences;
+                    String[] audiences = consumerAppDO.getAudiences();
+                    prepStmtAddAudiences = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.ADD_OAUTH_APP_WITH_AUDIENCES);
+
+                    for (String audience : audiences) {
+                        prepStmtAddAudiences.setInt(1, IdentityTenantUtil.getTenantId(consumerAppDO.getUser().getTenantDomain()));
+                        prepStmtAddAudiences.setString(2, persistenceProcessor.getProcessedClientId(consumerAppDO.getOauthConsumerKey()));
+                        prepStmtAddAudiences.setString(3, OAuth2Util.OPENID_CONNECT_AUDIENCE);
+                        prepStmtAddAudiences.setString(4, audience);
+                        prepStmtAddAudiences.addBatch();
+                    }
+                    prepStmtAddAudiences.executeBatch();
+                }
+                connection.commit();
             } catch (SQLException e) {
                 throw handleError("Error when executing the SQL : " + SQLQueries.OAuthAppDAOSQLQueries.ADD_OAUTH_APP, e);
             } catch (IdentityOAuth2Exception e) {
@@ -174,6 +194,7 @@ public class OAuthAppDAO {
             String tenantQualifiedUsername = UserCoreUtil.addTenantDomainToEntry(tenantAwareUserName, tenantDomain);
             boolean isUsernameCaseSensitive = isUsernameCaseSensitive(tenantQualifiedUsername);
             boolean isPKCESupportEnabled = OAuth2ServiceComponentHolder.isPkceEnabled();
+            boolean isAudienceEnabled = OAuth2ServiceComponentHolder.isAudienceEnabled();
 
             String sql;
             if (isPKCESupportEnabled) {
@@ -216,6 +237,11 @@ public class OAuthAppDAO {
                                 oauthApp.setUserAccessTokenExpiryTime(rSet.getLong(11));
                                 oauthApp.setApplicationAccessTokenExpiryTime(rSet.getLong(12));
                                 oauthApp.setRefreshTokenExpiryTime(rSet.getLong(13));
+                            }
+                            if (isAudienceEnabled) {
+                                List<String> oidcAudiences = getOIDCAudiences(authenticatedUser.getTenantDomain(), oauthApp.getOauthConsumerKey());
+                                String[] audiences = oidcAudiences.toArray(new String[oidcAudiences.size()]);
+                                oauthApp.setAudiences(audiences);
                             }
                             oauthApp.setUser(authenticatedUser);
                             oauthApps.add(oauthApp);
@@ -303,6 +329,12 @@ public class OAuthAppDAO {
                         }
                         throw new InvalidOAuthClientException(message);
                     }
+                    if (OAuth2ServiceComponentHolder.isAudienceEnabled()) {
+                        List<String> oidcAudienceList = getOIDCAudiences(oauthApp.getUser().getTenantDomain(),
+                                persistenceProcessor.getProcessedClientId(consumerKey));
+                        String[] oidcAudiences = oidcAudienceList.toArray(new String[oidcAudienceList.size()]);
+                        oauthApp.setAudiences(oidcAudiences);
+                    }
                     connection.commit();
                 }
             }
@@ -379,6 +411,12 @@ public class OAuthAppDAO {
                         }
                         throw new InvalidOAuthClientException(message);
                     }
+                    if (OAuth2ServiceComponentHolder.isAudienceEnabled()) {
+                        List<String> oidcAudienceList = getOIDCAudiences(IdentityTenantUtil.getTenantDomain(tenantID),
+                                oauthApp.getOauthConsumerKey());
+                        String[] oidcAudiences = oidcAudienceList.toArray(new String[oidcAudienceList.size()]);
+                        oauthApp.setAudiences(oidcAudiences);
+                    }
                     connection.commit();
                 }
             }
@@ -423,6 +461,46 @@ public class OAuthAppDAO {
                 if (log.isDebugEnabled()) {
                     log.debug("No. of records updated for updating consumer application. : " + count);
                 }
+
+                if (OAuth2ServiceComponentHolder.isAudienceEnabled()) {
+                    String[] audiences = oauthAppDO.getAudiences();
+                    HashSet<String> newAudiences;
+                    if (audiences == null) {
+                        newAudiences = new HashSet<>();
+                    } else {
+                        newAudiences = new HashSet<>(Arrays.asList(audiences));
+                    }
+                    List<String> oidcAudienceList = getOIDCAudiences(oauthAppDO.getUser().getTenantDomain(),
+                            oauthAppDO.getOauthConsumerKey());
+                    Set<String> currentAudiences =
+                            oidcAudienceList == null ? Collections.<String>emptySet() : new HashSet<String>(oidcAudienceList);
+                    HashSet newAudienceClone = (HashSet) newAudiences.clone();
+                    //removing all duplicate audiences in the new audience list
+                    newAudiences.removeAll(currentAudiences);
+                    //obtaining the audience values deleted in the list by user
+                    currentAudiences.removeAll(newAudienceClone);
+                    PreparedStatement prepStmtAudDeleted = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries
+                            .REMOVE_AUDIENCE_VALUE);
+                    for (String deleteAudience : currentAudiences) {
+                        prepStmtAudDeleted.setInt(1, IdentityTenantUtil.getTenantId(oauthAppDO.getUser().getTenantDomain()));
+                        prepStmtAudDeleted.setString(2, oauthAppDO.getOauthConsumerKey());
+                        prepStmtAudDeleted.setString(3, OAuth2Util.OPENID_CONNECT_AUDIENCE);
+                        prepStmtAudDeleted.setString(4, deleteAudience);
+                        prepStmtAudDeleted.addBatch();
+                    }
+                    prepStmtAudDeleted.executeBatch();
+                    //add new entry in db for each new audience value
+                    PreparedStatement prepStmtAudAdd = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries
+                            .ADD_OAUTH_APP_WITH_AUDIENCES);
+                    for (String addAudience : newAudiences) {
+                        prepStmtAudAdd.setInt(1, IdentityTenantUtil.getTenantId(oauthAppDO.getUser().getTenantDomain()));
+                        prepStmtAudAdd.setString(2, oauthAppDO.getOauthConsumerKey());
+                        prepStmtAudAdd.setString(3, OAuth2Util.OPENID_CONNECT_AUDIENCE);
+                        prepStmtAudAdd.setString(4, addAudience);
+                        prepStmtAudAdd.addBatch();
+                    }
+                    prepStmtAudAdd.executeBatch();
+                }
                 connection.commit();
             }
         } catch (SQLException e) {
@@ -438,6 +516,10 @@ public class OAuthAppDAO {
                 prepStmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.REMOVE_APPLICATION)) {
             prepStmt.setString(1, consumerKey);
             prepStmt.execute();
+            if (OAuth2ServiceComponentHolder.isAudienceEnabled()) {
+                String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+                removeOauthOIDCPropertyTable(connection, tenantDomain, consumerKey);
+            }
             connection.commit();
         } catch (SQLException e) {
             throw  handleError("Error when executing the SQL : " + SQLQueries.OAuthAppDAOSQLQueries.REMOVE_APPLICATION, e);
@@ -559,5 +641,76 @@ public class OAuthAppDAO {
 
     private boolean isUsernameCaseSensitive(String tenantQualifiedUsername) {
         return IdentityUtil.isUserStoreInUsernameCaseSensitive(tenantQualifiedUsername);
+    }
+
+    /**
+     * Retrieves OIDC audience values configured for an oauth consumer app.
+     *
+     * @param tenantDomain application tenant domain
+     * @param consumerKey client ID
+     * @return
+     * @throws IdentityOAuth2Exception
+     */
+    public List<String> getOIDCAudiences(String tenantDomain, String consumerKey) throws IdentityOAuth2Exception {
+
+        List<String> audiences = new ArrayList<>();
+        Connection connection = IdentityDatabaseUtil.getDBConnection();
+        PreparedStatement prepStmt = null;
+        ResultSet rSetAudiences = null;
+        try {
+            prepStmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.GET_AUDIENCE_VALUES);
+            prepStmt.setInt(1, IdentityTenantUtil.getTenantId(tenantDomain));
+            prepStmt.setString(2, consumerKey);
+            prepStmt.setString(3, OAuth2Util.OPENID_CONNECT_AUDIENCE);
+            rSetAudiences = prepStmt.executeQuery();
+            while (rSetAudiences.next()) {
+                String audience = rSetAudiences.getString(1);
+                if (audience != null) {
+                    audiences.add(rSetAudiences.getString(1));
+                }
+            }
+            connection.commit();
+        } catch (SQLException e) {
+            String errorMsg = "Error occurred while retrieving OIDC audiences for client ID: " + consumerKey +
+                    " and tenant domain: " + tenantDomain;
+            IdentityDatabaseUtil.rollBack(connection);
+            throw new IdentityOAuth2Exception(errorMsg, e);
+        } finally {
+            IdentityDatabaseUtil.closeAllConnections(connection, rSetAudiences, prepStmt);
+        }
+        return audiences;
+    }
+
+    /**
+     * Remove Oauth consumer app related properties.
+     *
+     * @param tenantDomain application tenant domain
+     * @param consumerKey client ID
+     * @throws IdentityOAuthAdminException
+     */
+    public void removeOIDCProperties(String tenantDomain, String consumerKey) throws IdentityOAuthAdminException {
+
+        Connection connection = IdentityDatabaseUtil.getDBConnection();
+        PreparedStatement prepStmt = null;
+        try {
+            removeOauthOIDCPropertyTable(connection, tenantDomain, consumerKey);
+            connection.commit();
+        } catch (SQLException e) {
+            String errorMsg = "Error removing OIDC properties for client ID: " + consumerKey + " and tenant domain: "
+                    + tenantDomain;
+            IdentityDatabaseUtil.rollBack(connection);
+            throw new IdentityOAuthAdminException(errorMsg, e);
+        } finally {
+            IdentityDatabaseUtil.closeAllConnections(connection, null, prepStmt);
+        }
+    }
+
+    private void removeOauthOIDCPropertyTable(Connection connection, String tenantDomain, String consumerKey) throws SQLException {
+
+        PreparedStatement prepStmt = null;
+        prepStmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.REMOVE_OIDC_PROPERTIES);
+        prepStmt.setInt(1, IdentityTenantUtil.getTenantId(tenantDomain));
+        prepStmt.setString(2, consumerKey);
+        prepStmt.execute();
     }
 }
