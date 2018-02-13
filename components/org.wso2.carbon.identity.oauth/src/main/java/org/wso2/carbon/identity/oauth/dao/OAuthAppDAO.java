@@ -122,7 +122,7 @@ public class OAuthAppDAO {
 
                     PreparedStatement prepStmtAddAudiences;
                     String[] audiences = consumerAppDO.getAudiences();
-                    prepStmtAddAudiences = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.ADD_OAUTH_APP_WITH_AUDIENCES);
+                    prepStmtAddAudiences = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.ADD_SP_OIDC_PROPERTY);
 
                     for (String audience : audiences) {
                         prepStmtAddAudiences.setInt(1, IdentityTenantUtil.getTenantId(consumerAppDO.getUser().getTenantDomain()));
@@ -480,7 +480,7 @@ public class OAuthAppDAO {
                     //obtaining the audience values deleted in the list by user
                     currentAudiences.removeAll(newAudienceClone);
                     PreparedStatement prepStmtAudDeleted = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries
-                            .REMOVE_AUDIENCE_VALUE);
+                            .REMOVE_SP_OIDC_PROPERTY);
                     for (String deleteAudience : currentAudiences) {
                         prepStmtAudDeleted.setInt(1, IdentityTenantUtil.getTenantId(oauthAppDO.getUser().getTenantDomain()));
                         prepStmtAudDeleted.setString(2, oauthAppDO.getOauthConsumerKey());
@@ -491,7 +491,7 @@ public class OAuthAppDAO {
                     prepStmtAudDeleted.executeBatch();
                     //add new entry in db for each new audience value
                     PreparedStatement prepStmtAudAdd = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries
-                            .ADD_OAUTH_APP_WITH_AUDIENCES);
+                            .ADD_SP_OIDC_PROPERTY);
                     for (String addAudience : newAudiences) {
                         prepStmtAudAdd.setInt(1, IdentityTenantUtil.getTenantId(oauthAppDO.getUser().getTenantDomain()));
                         prepStmtAudAdd.setString(2, oauthAppDO.getOauthConsumerKey());
@@ -658,7 +658,7 @@ public class OAuthAppDAO {
         PreparedStatement prepStmt = null;
         ResultSet rSetAudiences = null;
         try {
-            prepStmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.GET_AUDIENCE_VALUES);
+            prepStmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.GET_SP_OIDC_PROPERTY);
             prepStmt.setInt(1, IdentityTenantUtil.getTenantId(tenantDomain));
             prepStmt.setString(2, consumerKey);
             prepStmt.setString(3, OAuth2Util.OPENID_CONNECT_AUDIENCE);
@@ -708,7 +708,7 @@ public class OAuthAppDAO {
     private void removeOauthOIDCPropertyTable(Connection connection, String tenantDomain, String consumerKey) throws SQLException {
 
         PreparedStatement prepStmt = null;
-        prepStmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.REMOVE_OIDC_PROPERTIES);
+        prepStmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.REMOVE_SP_OIDC_PROPERTY);
         prepStmt.setInt(1, IdentityTenantUtil.getTenantId(tenantDomain));
         prepStmt.setString(2, consumerKey);
         prepStmt.execute();
