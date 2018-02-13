@@ -179,6 +179,8 @@ public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
         oAuthConsumerAppDTO.setOauthConsumerKey(CONSUMER_KEY);
         oAuthConsumerAppDTO.setOauthConsumerSecret(CONSUMER_SECRET);
         oAuthConsumerAppDTO.setOAuthVersion(oauthVersion);
+        String[] audiences = { "audience1", "audience2"};
+        oAuthConsumerAppDTO.setAudiences(audiences);
 
         whenNew(OAuthAppDAO.class).withNoArguments().thenReturn(oAtuhAppDAO);
         doNothing().when(oAtuhAppDAO).addOAuthApplication(Matchers.any(OAuthAppDO.class));
@@ -326,6 +328,8 @@ public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
         app.setUserAccessTokenExpiryTime(1500000);
         app.setApplicationAccessTokenExpiryTime(2000000);
         app.setRefreshTokenExpiryTime(3000000);
+        String[] audiences = {"audience1", "audience2"};
+        app.setAudiences(audiences);
         return app;
     }
 
