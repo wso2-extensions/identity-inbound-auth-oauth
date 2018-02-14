@@ -108,6 +108,7 @@ import java.security.KeyStore;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.Certificate;
+import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
@@ -1540,8 +1541,8 @@ public class OAuth2Util {
     }
 
     /**
-     * This method map encryption algorithm defined in identity.xml to nimbus
-     * encryption algorithm
+     * This method maps the encryption algorithm name defined in identity.xml to a respective
+     * nimbus encryption algorithm.
      *
      * @param encryptionAlgorithm name of the encryption algorithm
      * @return mapped JWEAlgorithm
@@ -1550,24 +1551,38 @@ public class OAuth2Util {
     public static JWEAlgorithm mapEncryptionAlgorithmForJWEAlgorithm(String encryptionAlgorithm)
             throws IdentityOAuth2Exception {
 
-        // TODO: 2/6/18 Refine
+        // Parse method in JWEAlgorithm is used to get a JWEAlgorithm object from the algorithm name.
         JWEAlgorithm jweAlgorithm = JWEAlgorithm.parse(encryptionAlgorithm);
 
+        // Parse method returns a new JWEAlgorithm with requirement set to null if unknown algorithm name is passed.
         if (jweAlgorithm.getRequirement() != null) {
             return jweAlgorithm;
         } else {
-            log.error("Unsupported Encryption Algorithm in identity.xml");
             throw new IdentityOAuth2Exception("Unsupported Encryption Algorithm: " + encryptionAlgorithm + ", in identity.xml");
         }
+    }
 
-//        if (NONE.equalsIgnoreCase(encryptionAlgorithm)) {
-//            return new JWEAlgorithm(JWEAlgorithm.NONE.getName());
-//        } else if (RSA_OAEP.equals(encryptionAlgorithm)) {
-//            return JWEAlgorithm.RSA_OAEP;
-//        } else {
-//            log.error("Unsupported Encryption Algorithm in identity.xml");
-//            throw new IdentityOAuth2Exception("Unsupported Encryption Algorithm: " + encryptionAlgorithm + ", in identity.xml");
-//        }
+    /**
+     * This method maps the encryption method name defined in identity.xml to a respective nimbus
+     * encryption method.
+     *
+     * @param encryptionMethod name of the encryption method
+     * @return mapped EncryptionMethod
+     * @throws IdentityOAuth2Exception
+     */
+    public static EncryptionMethod mapEncryptionMethodForJWEAlgorithm(String encryptionMethod)
+            throws IdentityOAuth2Exception {
+
+        // Parse method in EncryptionMethod is used to get a EncryptionMethod object from the method name.
+        EncryptionMethod method = EncryptionMethod.parse(encryptionMethod);
+
+        // Parse method returns a new EncryptionMethod with requirement set to null if unknown method name is passed.
+        if (method.getRequirement() != null) {
+            return method;
+        } else {
+            log.error("Unsupported Encryption Method in identity.xml");
+            throw new IdentityOAuth2Exception("Unsupported Encryption Method: " + encryptionMethod + ", in identity.xml");
+        }
     }
 
     /**
@@ -1728,20 +1743,22 @@ public class OAuth2Util {
     }
 
     /**
-     * Generic Encryption function
+     * This is the generic Encryption function which calls algorithm specific encryption function
+     * depending on the algorithm name.
      *
-     * @param jwtClaimsSet contains JWT body
+     * @param jwtClaimsSet        contains JWT body
      * @param encryptionAlgorithm JWT encryption algorithm
-     * @param spTenantDomain Service provider tenant domain
-     * @param clientId ID of the client
+     * @param spTenantDomain      Service provider tenant domain
+     * @param clientId            ID of the client
      * @return encrypted JWT token
      * @throws IdentityOAuth2Exception
      */
-    public static JWT encryptJWT(JWTClaimsSet jwtClaimsSet, JWEAlgorithm encryptionAlgorithm, String spTenantDomain,
-                                 String clientId) throws IdentityOAuth2Exception{
-        if (JWEAlgorithm.RSA_OAEP.equals(encryptionAlgorithm) || JWEAlgorithm.RSA1_5.equals(encryptionAlgorithm) ||
-                JWEAlgorithm.RSA_OAEP_256.equals(encryptionAlgorithm)) {
-            return encryptWithRSA(jwtClaimsSet, encryptionAlgorithm, spTenantDomain, clientId);
+    public static JWT encryptJWT(JWTClaimsSet jwtClaimsSet, JWEAlgorithm encryptionAlgorithm,
+                                 EncryptionMethod encryptionMethod, String spTenantDomain, String clientId)
+            throws IdentityOAuth2Exception {
+
+        if (isRSAAlgorithm(encryptionAlgorithm)) {
+            return encryptWithRSA(jwtClaimsSet, encryptionAlgorithm, encryptionMethod, spTenantDomain, clientId);
         } else {
             throw new RuntimeException("Provided encryption algorithm: " + encryptionAlgorithm +
                     " is not supported");
@@ -1749,47 +1766,50 @@ public class OAuth2Util {
     }
 
     /**
-     * encrypt JWT token from RSA algorithm
+     * Encrypt JWT id token using RSA algorithm.
      *
-     * @param jwtClaimsSet contains JWT body
+     * @param jwtClaimsSet        contains JWT body
      * @param encryptionAlgorithm JWT signing algorithm
-     * @param spTenantDomain Service provider tenant domain
-     * @param clientId ID of the client
+     * @param spTenantDomain      Service provider tenant domain
+     * @param clientId            ID of the client
      * @return encrypted JWT token
      * @throws IdentityOAuth2Exception
      */
     private static JWT encryptWithRSA(JWTClaimsSet jwtClaimsSet, JWEAlgorithm encryptionAlgorithm,
-                                      String spTenantDomain, String clientId) throws IdentityOAuth2Exception {
+                                      EncryptionMethod encryptionMethod, String spTenantDomain, String clientId)
+            throws IdentityOAuth2Exception {
+
         try {
             if (StringUtils.isBlank(spTenantDomain)) {
                 spTenantDomain = MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
                 if (log.isDebugEnabled()) {
-                    log.debug("Assign super tenant domain as signing domain."); // TODO: 2/6/18 Refine
+                    log.debug("Assigned super tenant domain as signing domain when encrypting id token for " +
+                            "client_id: " + clientId);
                 }
             }
 
-            if (log.isDebugEnabled()) {
-                log.debug("Encrypting JWT using the algorithm: " + encryptionAlgorithm + " & key of the tenant: " +
-                        spTenantDomain);
-            }
-
-            int tenantId = IdentityTenantUtil.getTenantId(spTenantDomain);
             Certificate publicCert = getX509CertOfOAuthApp(clientId, spTenantDomain);
             Key publicKey = publicCert.getPublicKey();
 
-            EncryptionMethod encryptionMethod = EncryptionMethod.A128GCM; // TODO: 2/7/18 Refine
             JWEHeader header = new JWEHeader(encryptionAlgorithm, encryptionMethod);
-            header.setKeyID(getThumbPrint(spTenantDomain, tenantId));
-            header.setX509CertThumbprint(new Base64URL(getThumbPrint(spTenantDomain, tenantId)));
+            String thumbPrint = getThumbPrint(publicCert);
+            header.setKeyID(thumbPrint);
+            header.setX509CertThumbprint(new Base64URL(thumbPrint));
 
             EncryptedJWT encryptedJWT = new EncryptedJWT(header, jwtClaimsSet);
+
+            if (log.isDebugEnabled()) {
+                log.debug("Encrypting JWT using the algorithm: " + encryptionAlgorithm + ", key of the tenant: " +
+                        spTenantDomain + " & header: " + header.toString());
+            }
 
             JWEEncrypter encrypter = new RSAEncrypter((RSAPublicKey) publicKey);
             encryptedJWT.encrypt(encrypter);
 
             return encryptedJWT;
-        } catch (JOSEException e) {
-            throw new IdentityOAuth2Exception("Error occurred while encrypting JWT", e);
+        } catch (JOSEException | NoSuchAlgorithmException | CertificateEncodingException e) {
+            throw new IdentityOAuth2Exception("Error occurred while encrypting JWT for the client_id: " + clientId
+                    + " with the tenant domain: " + spTenantDomain, e);
         }
     }
 
@@ -1911,22 +1931,30 @@ public class OAuth2Util {
             Certificate certificate = getCertificate(tenantDomain, tenantId);
 
             // TODO: maintain a hashmap with tenants' pubkey thumbprints after first initialization
+            return getThumbPrint(certificate);
 
-            //generate the SHA-1 thumbprint of the certificate
-            MessageDigest digestValue = MessageDigest.getInstance("SHA-1");
-            byte[] der = certificate.getEncoded();
-            digestValue.update(der);
-            byte[] digestInBytes = digestValue.digest();
-
-            String publicCertThumbprint = hexify(digestInBytes);
-            String base64EncodedThumbPrint = new String(new Base64(0, null, true).encode(
-                    publicCertThumbprint.getBytes(Charsets.UTF_8)), Charsets.UTF_8);
-            return base64EncodedThumbPrint;
 
         } catch (Exception e) {
             String error = "Error in obtaining certificate for tenant " + tenantDomain;
             throw new IdentityOAuth2Exception(error, e);
         }
+    }
+
+    private static String getThumbPrint(Certificate certificate) throws NoSuchAlgorithmException, CertificateEncodingException {
+        // Generate the SHA-1 thumbprint of the certificate.
+        MessageDigest digestValue = MessageDigest.getInstance("SHA-1");
+        byte[] der = certificate.getEncoded();
+        digestValue.update(der);
+        byte[] digestInBytes = digestValue.digest();
+
+        String publicCertThumbprint = hexify(digestInBytes);
+        return new String(new Base64(0, null, true).encode(
+                publicCertThumbprint.getBytes(Charsets.UTF_8)), Charsets.UTF_8);
+    }
+
+    private static boolean isRSAAlgorithm(JWEAlgorithm algorithm) {
+        return (JWEAlgorithm.RSA_OAEP.equals(algorithm) || JWEAlgorithm.RSA1_5.equals(algorithm) ||
+                JWEAlgorithm.RSA_OAEP_256.equals(algorithm));
     }
 
     private static Certificate getCertificate(String tenantDomain, int tenantId) throws Exception {

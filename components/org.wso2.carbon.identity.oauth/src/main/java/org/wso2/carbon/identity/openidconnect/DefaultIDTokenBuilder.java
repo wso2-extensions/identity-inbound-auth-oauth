@@ -18,6 +18,7 @@
 package org.wso2.carbon.identity.openidconnect;
 
 import com.nimbusds.jose.Algorithm;
+import com.nimbusds.jose.EncryptionMethod;
 import com.nimbusds.jose.JWEAlgorithm;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jwt.JWTClaimsSet;
@@ -109,18 +110,21 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
 
     private static final Log log = LogFactory.getLog(DefaultIDTokenBuilder.class);
     private JWSAlgorithm signatureAlgorithm = null;
-    private JWEAlgorithm encryptionAlgorithm = null;
+    private JWEAlgorithm encryptionAlgorithm;
+    private EncryptionMethod encryptionMethod;
 
     public DefaultIDTokenBuilder() throws IdentityOAuth2Exception {
-        //map signature algorithm from identity.xml to nimbus format, this is a one time configuration
+        // Map signature algorithm from identity.xml to nimbus format, this is a one time configuration.
         signatureAlgorithm = OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(
                 OAuthServerConfiguration.getInstance().getIdTokenSignatureAlgorithm());
         encryptionAlgorithm = OAuth2Util.mapEncryptionAlgorithmForJWEAlgorithm(
                 OAuthServerConfiguration.getInstance().getIdTokenEncryptionAlgorithm());
+        encryptionMethod = OAuth2Util.mapEncryptionMethodForJWEAlgorithm(
+                OAuthServerConfiguration.getInstance().getIdTokenEncryptionMethod());
     }
 
-    // Check and return true if JWE is requested
-    private boolean isJWERequested(String clientId) throws IdentityOAuth2Exception {
+    // Check and return true if JWE is requested.
+    private boolean isIdTokenEncryptionEnabled(String clientId) throws IdentityOAuth2Exception {
         OAuthAppDO oAuthAppDO;
         try {
             oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
@@ -128,6 +132,13 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
             String error = "Error occurred while getting app information for client_id: " + clientId;
             throw new IdentityOAuth2Exception(error, e);
         }
+
+        if (log.isDebugEnabled()) {
+            log.debug("Id token encryption is enabled: " + oAuthAppDO.isIdTokenEncryptionEnabled() +
+                    " for client_id: " + clientId);
+
+        }
+
         return oAuthAppDO.isIdTokenEncryptionEnabled();
     }
 
@@ -209,8 +220,8 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
             return new PlainJWT(jwtClaimsSet).serialize();
         }
 
-        if (isJWERequested(clientId)) {
-            return OAuth2Util.encryptJWT(jwtClaimsSet, encryptionAlgorithm, spTenantDomain, clientId).serialize();
+        if (isIdTokenEncryptionEnabled(clientId)) {
+            return OAuth2Util.encryptJWT(jwtClaimsSet, encryptionAlgorithm, encryptionMethod, spTenantDomain, clientId).serialize();
         } else {
             String signingTenantDomain = getSigningTenantDomain(tokenReqMsgCtxt);
             return OAuth2Util.signJWT(jwtClaimsSet, signatureAlgorithm, signingTenantDomain).serialize();
@@ -280,8 +291,12 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
             return new PlainJWT(jwtClaimsSet).serialize();
         }
 
-        String signingTenantDomain = getSigningTenantDomain(authzReqMessageContext);
-        return OAuth2Util.signJWT(jwtClaimsSet, signatureAlgorithm, signingTenantDomain).serialize();
+        if (isIdTokenEncryptionEnabled(clientId)) {
+            return OAuth2Util.encryptJWT(jwtClaimsSet, encryptionAlgorithm, encryptionMethod, spTenantDomain, clientId).serialize();
+        } else {
+            String signingTenantDomain = getSigningTenantDomain(authzReqMessageContext);
+            return OAuth2Util.signJWT(jwtClaimsSet, signatureAlgorithm, signingTenantDomain).serialize();
+        }
     }
 
     protected String getSubjectClaim(OAuthTokenReqMessageContext tokenReqMessageContext,
