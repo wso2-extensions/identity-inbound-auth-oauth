@@ -31,6 +31,7 @@
 <%@ page import="org.wso2.carbon.identity.oauth.ui.util.OAuthUIUtil" %>
 <%@ page import="java.util.ArrayList" %>
 <%@ page import="java.util.List" %>
+<%@ page import="org.wso2.carbon.identity.oauth.ui.util.OAuthUIConstants" %>
 
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt"%>
 <%@ taglib uri="http://wso2.org/projects/carbon/taglibs/carbontags.jar" prefix="carbon"%>
@@ -109,7 +110,7 @@
             List<String> scopeValidators = new ArrayList<String>();
             String[] allowedValidators = client.getAllowedScopeValidators();
             for (String allowedValidator : allowedValidators) {
-                String val = request.getParameter("scope_validator_" + allowedValidator);
+                String val = request.getParameter(OAuthUIConstants.SCOPE_VALIDATOR  + allowedValidator);
                 if (val != null) {
                     scopeValidators.add(allowedValidator);
                 }

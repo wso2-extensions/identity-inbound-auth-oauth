@@ -33,8 +33,9 @@ import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.spy;
 import static org.powermock.api.mockito.PowerMockito.when;
-import static org.testng.Assert.*;
-import static org.testng.AssertJUnit.assertEquals;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertTrue;
+import static org.testng.Assert.assertFalse;
 
 /**
  * XACMLScopeValidatorTest defines unit tests for XACMLScopeValidator class.

@@ -848,6 +848,11 @@ public class OAuthAdminService extends AbstractAdmin {
         return allowedGrants.toArray(new String[allowedGrants.size()]);
     }
 
+    /**
+     * Get the registered scope validators from OAuth server configuration file
+     *
+     * @return list of string containing simple names of the registered validator class
+     */
     public String[] getAllowedScopeValidators() {
         Set<OAuth2ScopeValidator> oAuth2ScopeValidators = OAuthServerConfiguration.getInstance()
                 .getOAuth2ScopeValidators();

@@ -79,8 +79,8 @@ public class XACMLScopeValidator extends OAuth2ScopeValidator {
 
         if (accessTokenDO.getAuthzUser() == null) {
             if (log.isDebugEnabled()) {
-                log.debug(String.format("There is no authorized user for client id %s ",
-                        accessTokenDO.getConsumerKey()));
+                log.debug(String.format("There is no authorized user for access token id %s ",
+                        accessTokenDO.getTokenId()));
             }
             return false;
         }
@@ -132,8 +132,6 @@ public class XACMLScopeValidator extends OAuth2ScopeValidator {
             FrameworkUtils.endTenantFlow();
         }
         return isValidated;
-
-
     }
 
     /**

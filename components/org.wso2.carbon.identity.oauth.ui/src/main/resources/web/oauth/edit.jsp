@@ -31,6 +31,7 @@
 <%@ page import="java.util.Collections" %>
 <%@ page import="java.util.List" %>
 <%@ page import="java.util.ResourceBundle" %>
+<%@ page import="org.wso2.carbon.identity.oauth.ui.util.OAuthUIConstants" %>
 
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%@ taglib uri="http://wso2.org/projects/carbon/taglibs/carbontags.jar" prefix="carbon" %>
@@ -745,7 +746,7 @@
                                             %>
                                             <tr>
                                                 <td><label><input type="checkbox"
-                                                                  id=<%="scope_validator_" + scopeValidator%> name=<%="scope_validator_" + scopeValidator%>
+                                                                  id=<%=OAuthUIConstants.SCOPE_VALIDATOR  + scopeValidator%> name=<%=OAuthUIConstants.SCOPE_VALIDATOR  + scopeValidator%>
                                                                   value=<%=scopeValidator%> <%=(scopeValidators.contains(scopeValidator) ? "checked=\"checked\"" : "")%>/><%=scopeValidator%>
                                                 </label></td>
                                             </tr>
