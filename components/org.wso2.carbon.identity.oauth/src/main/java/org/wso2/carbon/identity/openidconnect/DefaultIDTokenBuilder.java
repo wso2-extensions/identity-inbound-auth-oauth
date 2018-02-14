@@ -54,9 +54,11 @@ import org.wso2.carbon.identity.oauth.cache.OIDCAudienceCache;
 import org.wso2.carbon.identity.oauth.cache.OIDCAudienceCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OIDCAudienceCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
-import org.wso2.carbon.identity.oauth2.IDTokenValidationFailureException;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth2.IDTokenValidationFailureException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
@@ -118,9 +120,15 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
     }
 
     // Check and return true if JWE is requested
-    private boolean isJWERequested() {
-        // TODO: 2/6/18 implement the method body
-        return true;
+    private boolean isJWERequested(String clientId) throws IdentityOAuth2Exception {
+        OAuthAppDO oAuthAppDO;
+        try {
+            oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
+        } catch (InvalidOAuthClientException e) {
+            String error = "Error occurred while getting app information for client_id: " + clientId;
+            throw new IdentityOAuth2Exception(error, e);
+        }
+        return oAuthAppDO.isIdTokenEncryptionEnabled();
     }
 
     @Override
@@ -201,7 +209,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
             return new PlainJWT(jwtClaimsSet).serialize();
         }
 
-        if (isJWERequested()) {
+        if (isJWERequested(clientId)) {
             return OAuth2Util.encryptJWT(jwtClaimsSet, encryptionAlgorithm, spTenantDomain, clientId).serialize();
         } else {
             String signingTenantDomain = getSigningTenantDomain(tokenReqMsgCtxt);
