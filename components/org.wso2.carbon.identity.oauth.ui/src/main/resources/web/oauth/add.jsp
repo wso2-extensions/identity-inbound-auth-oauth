@@ -166,6 +166,9 @@
                         $(jQuery("#audience_enable").hide());
                         $(jQuery("#add_audience").hide());
                         $(jQuery("#audience_table").hide());
+                        $(jQuery("#validate_request_object_signature_row").hide());
+                        $(jQuery("#encrypt_id_token_row").hide());
+
                     } else if(oauthVersion == "<%=OAuthConstants.OAuthVersions.VERSION_2%>") {
                         $(jQuery('#grant_row')).show();
                         $(jQuery("#pkce_enable").show());
@@ -176,7 +179,9 @@
                         $(jQuery("#audience_enable").show());
                         $(jQuery("#add_audience").show());
                         $(jQuery("#audience_table").show());
-
+                        $(jQuery("#validate_request_object_signature_row").show());
+                        $(jQuery("#encrypt_id_token_row").show());
+                        
                         if(!supportGrantCode && !supportImplicit){
                             $(jQuery('#callback_row')).hide();
                         } else {
@@ -466,6 +471,28 @@
                                        value="<%=j%>"/>
                                 </tbody>
                             </table>
+                        </td>
+                    </tr>
+                    
+                    <!-- OIDC related properties -->
+                    <tr id="validate_request_object_signature_row">
+                        <td colspan="2" title="Validate the signature of the request object">
+                            <input type="checkbox"
+                                   name="validateRequestObjectSignature"
+                                   id="validateRequestObjectSignature"
+                                   value="true"/>
+                            <fmt:message key='enable.request.object.signature.validation'/>
+                        </td>
+                    </tr>
+                    
+                    <tr id="encrypt_id_token_row">
+                        <td colspan="2"
+                            title="Encrypt the id_token">
+                            <input type="checkbox"
+                                   name="encryptIdToken"
+                                   id="encryptIdToken"
+                                   value="true"/>
+                            <fmt:message key='enable.id.token.encryption'/>
                         </td>
                     </tr>
 				</table>

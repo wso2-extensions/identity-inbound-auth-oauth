@@ -22,9 +22,13 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.as.request.OAuthAuthzRequest;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
+import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 
 /**
@@ -77,13 +81,9 @@ public class OIDCRequestObjectUtil {
                 oAuth2Parameters);
         RequestObjectValidator requestObjectValidator = OAuthServerConfiguration.getInstance()
                 .getRequestObjectValidator();
-        if (requestObject.isSigned()) {
-            if (!requestObjectValidator.validateSignature(requestObject, oAuth2Parameters)) {
-                throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST,
-                        "Request Object signature verification failed.");
 
-            }
-        }
+        validateRequestObjectSignature(oAuth2Parameters, requestObject, requestObjectValidator);
+
         if (!requestObjectValidator.validateRequestObject(requestObject, oAuth2Parameters)) {
             throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST, "Invalid parameters " +
                     "found in the Request Object.");
@@ -95,15 +95,63 @@ public class OIDCRequestObjectUtil {
         return requestObject;
     }
 
+    private static void validateRequestObjectSignature(OAuth2Parameters oAuth2Parameters,
+                                                       RequestObject requestObject,
+                                                       RequestObjectValidator requestObjectValidator)
+            throws RequestObjectException {
+
+        String clientId = oAuth2Parameters.getClientId();
+        OAuthAppDO oAuthAppDO;
+        try {
+            oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
+        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+            throw new RequestObjectException("Error while retrieving app information for client_id: " + clientId +
+                    ". Cannot proceed with signature validation", e);
+        }
+
+        // Check whether request object signature validation is enforced.
+        if (oAuthAppDO.isRequestObjectSignatureValidationEnabled()) {
+            if (log.isDebugEnabled()) {
+                log.debug("Request Object Signature Verification enabled for client_id: " + clientId);
+            }
+            if (requestObject.isSigned()) {
+                validateSignature(oAuth2Parameters, requestObject, requestObjectValidator);
+            } else {
+                // If request object is not signed we need to throw an exception.
+                throw new RequestObjectException("Request object signature validation is enabled but request object " +
+                        "is not signed.");
+            }
+        } else {
+            // Since request object signature validation is not enabled we will only validate the signature if
+            // the request object is signed.
+            if (requestObject.isSigned()) {
+                validateSignature(oAuth2Parameters, requestObject, requestObjectValidator);
+            }
+        }
+    }
+
+    private static void validateSignature(OAuth2Parameters oAuth2Parameters,
+                                          RequestObject requestObject,
+                                          RequestObjectValidator requestObjectValidator) throws RequestObjectException {
+
+        if (!requestObjectValidator.validateSignature(requestObject, oAuth2Parameters)) {
+            throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST,
+                    "Request Object signature verification failed.");
+        }
+    }
+
     private static RequestObjectBuilder getRequestObjectBuilder(String requestParamValueBuilder) {
+
         return OAuthServerConfiguration.getInstance().getRequestObjectBuilders().get(requestParamValueBuilder);
     }
 
     private static boolean isRequestUri(OAuthAuthzRequest oAuthAuthzRequest) {
+
         return StringUtils.isNotBlank(oAuthAuthzRequest.getParam(REQUEST_URI));
     }
 
     private static boolean isRequestParameter(OAuthAuthzRequest oAuthAuthzRequest) {
+
         return StringUtils.isNotBlank(oAuthAuthzRequest.getParam(REQUEST));
     }
 }

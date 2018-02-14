@@ -34,6 +34,8 @@ import org.wso2.carbon.core.util.KeyStoreManager;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -113,14 +115,16 @@ public class OIDCRequestObjectUtilTest extends PowerMockTestCase {
         when(OAuth2Util.getX509CertOfOAuthApp(TEST_CLIENT_ID_1, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME))
                 .thenReturn(clientKeyStore.getCertificate("wso2carbon"));
 
+        OAuthAppDO oAuthAppDO = new OAuthAppDO();
+        when(OAuth2Util.getAppInformationByClientId(TEST_CLIENT_ID_1)).thenReturn(oAuthAppDO);
+
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
 
         RequestObjectValidator requestObjectValidator = PowerMockito.spy(new RequestObjectValidatorImpl());
         when((oauthServerConfigurationMock.getRequestObjectValidator())).thenReturn(requestObjectValidator);
 
-        PowerMockito.doReturn(SOME_SERVER_URL).when(requestObjectValidator, "getTokenEpURL",
-                anyString());
+        PowerMockito.doReturn(SOME_SERVER_URL).when(requestObjectValidator, "getTokenEpURL", anyString());
 
         RequestParamRequestObjectBuilder requestParamRequestObjectBuilder = new RequestParamRequestObjectBuilder();
         Map<String, RequestObjectBuilder> requestObjectBuilderMap = new HashMap<>();
