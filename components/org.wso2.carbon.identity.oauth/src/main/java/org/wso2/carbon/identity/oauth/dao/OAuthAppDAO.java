@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth.dao;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.context.CarbonContext;
@@ -36,7 +37,6 @@ import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcess
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
-import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
@@ -48,12 +48,16 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ID_TOKEN_ENCRYPTED;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.REQUEST_OBJECT_SIGNED;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.OPENID_CONNECT_AUDIENCE;
 
 /**
  * JDBC Based data access layer for OAuth Consumer Applications.
@@ -78,17 +82,23 @@ public class OAuthAppDAO {
     }
 
     public void addOAuthApplication(OAuthAppDO consumerAppDO) throws IdentityOAuthAdminException {
-        if (!isDuplicateApplication(consumerAppDO.getUser().getUserName(), IdentityTenantUtil.getTenantId(consumerAppDO
-                .getUser().getTenantDomain()), consumerAppDO.getUser().getUserStoreDomain(), consumerAppDO)) {
 
+        int spTenantId = IdentityTenantUtil.getTenantId(consumerAppDO.getUser().getTenantDomain());
+        String userStoreDomain = consumerAppDO.getUser().getUserStoreDomain();
+        if (!isDuplicateApplication(consumerAppDO.getUser().getUserName(), spTenantId, userStoreDomain, consumerAppDO)) {
             try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
+                String processedClientId =
+                        persistenceProcessor.getProcessedClientId(consumerAppDO.getOauthConsumerKey());
+                String processedClientSecret =
+                        persistenceProcessor.getProcessedClientSecret(consumerAppDO.getOauthConsumerSecret());
+
                 if (OAuth2ServiceComponentHolder.isPkceEnabled()) {
                     try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.ADD_OAUTH_APP_WITH_PKCE)) {
-                        prepStmt.setString(1, persistenceProcessor.getProcessedClientId(consumerAppDO.getOauthConsumerKey()));
-                        prepStmt.setString(2, persistenceProcessor.getProcessedClientSecret(consumerAppDO.getOauthConsumerSecret()));
+                        prepStmt.setString(1, processedClientId);
+                        prepStmt.setString(2, processedClientSecret);
                         prepStmt.setString(3, consumerAppDO.getUser().getUserName());
-                        prepStmt.setInt(4, IdentityTenantUtil.getTenantId(consumerAppDO.getUser().getTenantDomain()));
-                        prepStmt.setString(5, consumerAppDO.getUser().getUserStoreDomain());
+                        prepStmt.setInt(4, spTenantId);
+                        prepStmt.setString(5, userStoreDomain);
                         prepStmt.setString(6, consumerAppDO.getApplicationName());
                         prepStmt.setString(7, consumerAppDO.getOauthVersion());
                         prepStmt.setString(8, consumerAppDO.getCallbackUrl());
@@ -102,11 +112,11 @@ public class OAuthAppDAO {
                     }
                 } else {
                     try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.ADD_OAUTH_APP)) {
-                        prepStmt.setString(1, persistenceProcessor.getProcessedClientId(consumerAppDO.getOauthConsumerKey()));
-                        prepStmt.setString(2, persistenceProcessor.getProcessedClientSecret(consumerAppDO.getOauthConsumerSecret()));
+                        prepStmt.setString(1, processedClientId);
+                        prepStmt.setString(2, processedClientSecret);
                         prepStmt.setString(3, consumerAppDO.getUser().getUserName());
-                        prepStmt.setInt(4, IdentityTenantUtil.getTenantId(consumerAppDO.getUser().getTenantDomain()));
-                        prepStmt.setString(5, consumerAppDO.getUser().getUserStoreDomain());
+                        prepStmt.setInt(4, spTenantId);
+                        prepStmt.setString(5, userStoreDomain);
                         prepStmt.setString(6, consumerAppDO.getApplicationName());
                         prepStmt.setString(7, consumerAppDO.getOauthVersion());
                         prepStmt.setString(8, consumerAppDO.getCallbackUrl());
@@ -118,21 +128,8 @@ public class OAuthAppDAO {
                     }
                 }
 
-                if (OAuth2ServiceComponentHolder.isAudienceEnabled() && consumerAppDO.getAudiences() != null) {
-
-                    PreparedStatement prepStmtAddAudiences;
-                    String[] audiences = consumerAppDO.getAudiences();
-                    prepStmtAddAudiences = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.ADD_SP_OIDC_PROPERTY);
-
-                    for (String audience : audiences) {
-                        prepStmtAddAudiences.setInt(1, IdentityTenantUtil.getTenantId(consumerAppDO.getUser().getTenantDomain()));
-                        prepStmtAddAudiences.setString(2, persistenceProcessor.getProcessedClientId(consumerAppDO.getOauthConsumerKey()));
-                        prepStmtAddAudiences.setString(3, OAuth2Util.OPENID_CONNECT_AUDIENCE);
-                        prepStmtAddAudiences.setString(4, audience);
-                        prepStmtAddAudiences.addBatch();
-                    }
-                    prepStmtAddAudiences.executeBatch();
-                }
+                // Handle OIDC Related Properties. These are persisted in IDN_OIDC_PROPERTY table.
+                addServiceProviderOIDCProperties(connection, consumerAppDO, processedClientId, spTenantId);
                 connection.commit();
             } catch (SQLException e) {
                 throw handleError("Error when executing the SQL : " + SQLQueries.OAuthAppDAOSQLQueries.ADD_OAUTH_APP, e);
@@ -194,7 +191,6 @@ public class OAuthAppDAO {
             String tenantQualifiedUsername = UserCoreUtil.addTenantDomainToEntry(tenantAwareUserName, tenantDomain);
             boolean isUsernameCaseSensitive = isUsernameCaseSensitive(tenantQualifiedUsername);
             boolean isPKCESupportEnabled = OAuth2ServiceComponentHolder.isPkceEnabled();
-            boolean isAudienceEnabled = OAuth2ServiceComponentHolder.isAudienceEnabled();
 
             String sql;
             if (isPKCESupportEnabled) {
@@ -216,7 +212,9 @@ public class OAuthAppDAO {
                     while (rSet.next()) {
                         if (rSet.getString(3) != null && rSet.getString(3).length() > 0) {
                             OAuthAppDO oauthApp = new OAuthAppDO();
-                            oauthApp.setOauthConsumerKey(persistenceProcessor.getPreprocessedClientId(rSet.getString(1)));
+                            String preprocessedClientId = persistenceProcessor.getPreprocessedClientId(rSet.getString(1));
+
+                            oauthApp.setOauthConsumerKey(preprocessedClientId);
                             oauthApp.setOauthConsumerSecret(persistenceProcessor.getPreprocessedClientSecret(rSet.getString(2)));
                             oauthApp.setApplicationName(rSet.getString(3));
                             oauthApp.setOauthVersion(rSet.getString(4));
@@ -238,12 +236,10 @@ public class OAuthAppDAO {
                                 oauthApp.setApplicationAccessTokenExpiryTime(rSet.getLong(12));
                                 oauthApp.setRefreshTokenExpiryTime(rSet.getLong(13));
                             }
-                            if (isAudienceEnabled) {
-                                List<String> oidcAudiences = getOIDCAudiences(authenticatedUser.getTenantDomain(), oauthApp.getOauthConsumerKey());
-                                String[] audiences = oidcAudiences.toArray(new String[oidcAudiences.size()]);
-                                oauthApp.setAudiences(audiences);
-                            }
+
                             oauthApp.setUser(authenticatedUser);
+                            String spTenantDomain = authenticatedUser.getTenantDomain();
+                            handleSpOIDCProperties(connection, preprocessedClientId, spTenantDomain, oauthApp);
                             oauthApps.add(oauthApp);
                         }
                     }
@@ -275,18 +271,19 @@ public class OAuthAppDAO {
             }
 
             try (PreparedStatement prepStmt = connection.prepareStatement(sqlQuery)) {
-                prepStmt.setString(1, persistenceProcessor.getProcessedClientId(consumerKey));
+                String preprocessedClientId = persistenceProcessor.getProcessedClientId(consumerKey);
+                prepStmt.setString(1, preprocessedClientId);
 
                 try (ResultSet rSet = prepStmt.executeQuery()) {
-                    /**
-                     * We need to determine whether the result set has more than 1 row. Meaning, we found an application for
-                     * the given consumer key. There can be situations where a user passed a key which doesn't yet have an
-                     * associated application. We need to barf with a meaningful error message for this case
+                    /*
+                      We need to determine whether the result set has more than 1 row. Meaning, we found an application for
+                      the given consumer key. There can be situations where a user passed a key which doesn't yet have an
+                      associated application. We need to barf with a meaningful error message for this case
                      */
-                    boolean rSetHasRows = false;
+                    boolean appExists = false;
                     while (rSet.next()) {
                         // There is at least one application associated with a given key
-                        rSetHasRows = true;
+                        appExists = true;
                         if (rSet.getString(4) != null && rSet.getString(4).length() > 0) {
                             oauthApp = new OAuthAppDO();
                             oauthApp.setOauthConsumerKey(consumerKey);
@@ -314,26 +311,14 @@ public class OAuthAppDAO {
                                 oauthApp.setRefreshTokenExpiryTime(rSet.getLong(12));
                                 oauthApp.setState(rSet.getString(13));
                             }
-                        }
-                    }
-                    if (!rSetHasRows) {
-                        /**
-                         * We come here because user submitted a key that doesn't have any associated application with it.
-                         * We're throwing an error here because we cannot continue without this info. Otherwise it'll throw
-                         * a null values not supported error when it tries to cache this info
-                         */
 
-                        String message = "Cannot find an application associated with the given consumer key : " + consumerKey;
-                        if (log.isDebugEnabled()) {
-                            log.debug(message);
+                            String spTenantDomain = authenticatedUser.getTenantDomain();
+                            handleSpOIDCProperties(connection, preprocessedClientId, spTenantDomain, oauthApp);
                         }
-                        throw new InvalidOAuthClientException(message);
                     }
-                    if (OAuth2ServiceComponentHolder.isAudienceEnabled()) {
-                        List<String> oidcAudienceList = getOIDCAudiences(oauthApp.getUser().getTenantDomain(),
-                                persistenceProcessor.getProcessedClientId(consumerKey));
-                        String[] oidcAudiences = oidcAudienceList.toArray(new String[oidcAudienceList.size()]);
-                        oauthApp.setAudiences(oidcAudiences);
+
+                    if (!appExists) {
+                        handleRequestForANonExistingConsumerKey(consumerKey);
                     }
                     connection.commit();
                 }
@@ -366,21 +351,23 @@ public class OAuthAppDAO {
                     oauthApp.setApplicationName(appName);
                     AuthenticatedUser user = new AuthenticatedUser();
                     user.setTenantDomain(IdentityTenantUtil.getTenantDomain(tenantID));
-                    /**
-                     * We need to determine whether the result set has more than 1 row. Meaning, we found an application for
-                     * the given consumer key. There can be situations where a user passed a key which doesn't yet have an
-                     * associated application. We need to barf with a meaningful error message for this case
+                    /*
+                      We need to determine whether the result set has more than 1 row. Meaning, we found an application for
+                      the given consumer key. There can be situations where a user passed a key which doesn't yet have an
+                      associated application. We need to barf with a meaningful error message for this case
                      */
-                    boolean rSetHasRows = false;
+                    boolean appExists = false;
                     while (rSet.next()) {
                         // There is at least one application associated with a given key
-                        rSetHasRows = true;
+                        appExists = true;
                         if (rSet.getString(4) != null && rSet.getString(4).length() > 0) {
                             oauthApp.setOauthConsumerSecret(persistenceProcessor.getPreprocessedClientSecret(rSet.getString(1)));
                             user.setUserName(rSet.getString(2));
                             user.setUserStoreDomain(rSet.getString(3));
                             oauthApp.setUser(user);
-                            oauthApp.setOauthConsumerKey(persistenceProcessor.getPreprocessedClientId(rSet.getString(4)));
+
+                            String preprocessedClientId = persistenceProcessor.getPreprocessedClientId(rSet.getString(4));
+                            oauthApp.setOauthConsumerKey(preprocessedClientId);
                             oauthApp.setOauthVersion(rSet.getString(5));
                             oauthApp.setCallbackUrl(rSet.getString(6));
                             oauthApp.setGrantTypes(rSet.getString(7));
@@ -397,25 +384,14 @@ public class OAuthAppDAO {
                                 oauthApp.setApplicationAccessTokenExpiryTime(rSet.getLong(10));
                                 oauthApp.setRefreshTokenExpiryTime(rSet.getLong(11));
                             }
+
+                            String spTenantDomain = user.getTenantDomain();
+                            handleSpOIDCProperties(connection, preprocessedClientId, spTenantDomain, oauthApp);
                         }
                     }
-                    if (!rSetHasRows) {
-                        /**
-                         * We come here because user submitted a key that doesn't have any associated application with it.
-                         * We're throwing an error here because we cannot continue without this info. Otherwise it'll throw
-                         * a null values not supported error when it tries to cache this info
-                         */
-                        String message = "Cannot find an application associated with the given consumer key : " + appName;
-                        if (log.isDebugEnabled()) {
-                            log.debug(message);
-                        }
-                        throw new InvalidOAuthClientException(message);
-                    }
-                    if (OAuth2ServiceComponentHolder.isAudienceEnabled()) {
-                        List<String> oidcAudienceList = getOIDCAudiences(IdentityTenantUtil.getTenantDomain(tenantID),
-                                oauthApp.getOauthConsumerKey());
-                        String[] oidcAudiences = oidcAudienceList.toArray(new String[oidcAudienceList.size()]);
-                        oauthApp.setAudiences(oidcAudiences);
+
+                    if (!appExists) {
+                        handleRequestForANonExistingApp(appName);
                     }
                     connection.commit();
                 }
@@ -462,45 +438,7 @@ public class OAuthAppDAO {
                     log.debug("No. of records updated for updating consumer application. : " + count);
                 }
 
-                if (OAuth2ServiceComponentHolder.isAudienceEnabled()) {
-                    String[] audiences = oauthAppDO.getAudiences();
-                    HashSet<String> newAudiences;
-                    if (audiences == null) {
-                        newAudiences = new HashSet<>();
-                    } else {
-                        newAudiences = new HashSet<>(Arrays.asList(audiences));
-                    }
-                    List<String> oidcAudienceList = getOIDCAudiences(oauthAppDO.getUser().getTenantDomain(),
-                            oauthAppDO.getOauthConsumerKey());
-                    Set<String> currentAudiences =
-                            oidcAudienceList == null ? Collections.<String>emptySet() : new HashSet<String>(oidcAudienceList);
-                    HashSet newAudienceClone = (HashSet) newAudiences.clone();
-                    //removing all duplicate audiences in the new audience list
-                    newAudiences.removeAll(currentAudiences);
-                    //obtaining the audience values deleted in the list by user
-                    currentAudiences.removeAll(newAudienceClone);
-                    PreparedStatement prepStmtAudDeleted = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries
-                            .REMOVE_SP_OIDC_PROPERTY);
-                    for (String deleteAudience : currentAudiences) {
-                        prepStmtAudDeleted.setInt(1, IdentityTenantUtil.getTenantId(oauthAppDO.getUser().getTenantDomain()));
-                        prepStmtAudDeleted.setString(2, oauthAppDO.getOauthConsumerKey());
-                        prepStmtAudDeleted.setString(3, OAuth2Util.OPENID_CONNECT_AUDIENCE);
-                        prepStmtAudDeleted.setString(4, deleteAudience);
-                        prepStmtAudDeleted.addBatch();
-                    }
-                    prepStmtAudDeleted.executeBatch();
-                    //add new entry in db for each new audience value
-                    PreparedStatement prepStmtAudAdd = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries
-                            .ADD_SP_OIDC_PROPERTY);
-                    for (String addAudience : newAudiences) {
-                        prepStmtAudAdd.setInt(1, IdentityTenantUtil.getTenantId(oauthAppDO.getUser().getTenantDomain()));
-                        prepStmtAudAdd.setString(2, oauthAppDO.getOauthConsumerKey());
-                        prepStmtAudAdd.setString(3, OAuth2Util.OPENID_CONNECT_AUDIENCE);
-                        prepStmtAudAdd.setString(4, addAudience);
-                        prepStmtAudAdd.addBatch();
-                    }
-                    prepStmtAudAdd.executeBatch();
-                }
+                addOrUpdateOIDCSpProperty(oauthAppDO, connection);
                 connection.commit();
             }
         } catch (SQLException e) {
@@ -510,13 +448,126 @@ public class OAuthAppDAO {
         }
     }
 
+    private void addOrUpdateOIDCSpProperty(OAuthAppDO oauthAppDO,
+                                           Connection connection) throws IdentityOAuth2Exception, SQLException {
+
+        String preprocessedClientId = persistenceProcessor.getPreprocessedClientId(oauthAppDO.getOauthConsumerKey());
+        String spTenantDomain = oauthAppDO.getUser().getTenantDomain();
+        int spTenantId = IdentityTenantUtil.getTenantId(spTenantDomain);
+
+        // Get the current OIDC SP properties.
+        Map<String, List<String>> spOIDCProperties =
+                getSpOIDCProperties(connection, preprocessedClientId, spTenantDomain);
+
+        // Add new entry in IDN_OIDC_PROPERTY table for each new OIDC property.
+        PreparedStatement prepStatementForPropertyAdd =
+                connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.ADD_SP_OIDC_PROPERTY);
+
+        PreparedStatement preparedStatementForPropertyUpdate =
+                connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.UPDATE_SP_OIDC_PROPERTY);
+
+        PreparedStatement prepStatementForPropertyDelete =
+                connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.REMOVE_SP_OIDC_PROPERTY);
+
+        if (isOIDCAudienceEnabled()) {
+            String[] audiences = oauthAppDO.getAudiences();
+            HashSet<String> newAudiences = audiences == null ? new HashSet<>() : new HashSet<>(Arrays.asList(audiences)) ;
+            List<String> oidcAudienceList = getOIDCAudiences(spTenantDomain, oauthAppDO.getOauthConsumerKey());
+            Set<String> currentAudiences = oidcAudienceList == null ? new HashSet<>() : new HashSet<>(oidcAudienceList);
+            HashSet<String> newAudienceClone = (HashSet<String>) newAudiences.clone();
+            //removing all duplicate audiences in the new audience list
+            newAudiences.removeAll(currentAudiences);
+            //obtaining the audience values deleted in the list by user
+            currentAudiences.removeAll(newAudienceClone);
+
+            for (String deletedAudience : currentAudiences) {
+                addToBatchForOIDCPropertyDelete(preprocessedClientId, spTenantId, prepStatementForPropertyDelete,
+                        OPENID_CONNECT_AUDIENCE, deletedAudience);
+            }
+
+            for (String addedAudience : newAudiences) {
+                addToBatchForOIDCPropertyAdd(preprocessedClientId, spTenantId, prepStatementForPropertyAdd,
+                        OPENID_CONNECT_AUDIENCE, addedAudience);
+            }
+        }
+
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties, REQUEST_OBJECT_SIGNED,
+                String.valueOf(oauthAppDO.isRequestObjectSignatureValidationEnabled()),
+                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties, ID_TOKEN_ENCRYPTED,
+                String.valueOf(oauthAppDO.isIdTokenEncryptionEnabled()),
+                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
+        // Execute Property add batch.
+        prepStatementForPropertyAdd.executeBatch();
+        preparedStatementForPropertyUpdate.executeBatch();
+        prepStatementForPropertyDelete.executeBatch();
+    }
+
+    private void addOrUpdateOIDCSpProperty(String preprocessedClientId,
+                                           int spTenantId,
+                                           Map<String, List<String>> spOIDCProperties,
+                                           String propertyKey, String propertyValue,
+                                           PreparedStatement preparedStatementForPropertyAdd,
+                                           PreparedStatement preparedStatementForPropertyUpdate) throws SQLException {
+
+        if (propertyAlreadyExists(spOIDCProperties, propertyKey)) {
+            addToBatchForOIDCPropertyUpdate(preprocessedClientId, spTenantId, preparedStatementForPropertyUpdate,
+                    propertyKey, propertyValue);
+        } else {
+            addToBatchForOIDCPropertyAdd(preprocessedClientId, spTenantId, preparedStatementForPropertyAdd,
+                    propertyKey, propertyValue);
+        }
+    }
+
+    private void addToBatchForOIDCPropertyAdd(String consumerKey,
+                                              int tenantId,
+                                              PreparedStatement preparedStatement,
+                                              String propertyKey,
+                                              String propertyValue) throws SQLException {
+        preparedStatement.setInt(1, tenantId);
+        preparedStatement.setString(2, consumerKey);
+        preparedStatement.setString(3, propertyKey);
+        preparedStatement.setString(4, propertyValue);
+        preparedStatement.addBatch();
+    }
+
+    private void addToBatchForOIDCPropertyDelete(String consumerKey,
+                                                 int tenantId,
+                                                 PreparedStatement preparedStatement,
+                                                 String propertyKey,
+                                                 String propertyValue) throws SQLException {
+        preparedStatement.setInt(1, tenantId);
+        preparedStatement.setString(2, consumerKey);
+        preparedStatement.setString(3, propertyKey);
+        preparedStatement.setString(4, propertyValue);
+        preparedStatement.addBatch();
+    }
+
+    private void addToBatchForOIDCPropertyUpdate(String consumerKey,
+                                                 int tenantId,
+                                                 PreparedStatement preparedStatement,
+                                                 String propertyKey,
+                                                 String propertyValue) throws SQLException {
+        preparedStatement.setString(1, propertyValue);
+        preparedStatement.setInt(2, tenantId );
+        preparedStatement.setString(3, consumerKey);
+        preparedStatement.setString(4, propertyKey);
+        preparedStatement.addBatch();
+    }
+
+    private boolean propertyAlreadyExists(Map<String, List<String>> spOIDCProperties, String propertyKey) {
+        return spOIDCProperties.containsKey(propertyKey);
+    }
+
     public void removeConsumerApplication(String consumerKey) throws IdentityOAuthAdminException {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(); PreparedStatement
                 prepStmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.REMOVE_APPLICATION)) {
             prepStmt.setString(1, consumerKey);
             prepStmt.execute();
-            if (OAuth2ServiceComponentHolder.isAudienceEnabled()) {
+            if (isOIDCAudienceEnabled()) {
                 String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
                 removeOauthOIDCPropertyTable(connection, tenantDomain, consumerKey);
             }
@@ -661,7 +712,7 @@ public class OAuthAppDAO {
             prepStmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.GET_SP_OIDC_PROPERTY);
             prepStmt.setInt(1, IdentityTenantUtil.getTenantId(tenantDomain));
             prepStmt.setString(2, consumerKey);
-            prepStmt.setString(3, OAuth2Util.OPENID_CONNECT_AUDIENCE);
+            prepStmt.setString(3, OPENID_CONNECT_AUDIENCE);
             rSetAudiences = prepStmt.executeQuery();
             while (rSetAudiences.next()) {
                 String audience = rSetAudiences.getString(1);
@@ -691,7 +742,6 @@ public class OAuthAppDAO {
     public void removeOIDCProperties(String tenantDomain, String consumerKey) throws IdentityOAuthAdminException {
 
         Connection connection = IdentityDatabaseUtil.getDBConnection();
-        PreparedStatement prepStmt = null;
         try {
             removeOauthOIDCPropertyTable(connection, tenantDomain, consumerKey);
             connection.commit();
@@ -701,16 +751,126 @@ public class OAuthAppDAO {
             IdentityDatabaseUtil.rollBack(connection);
             throw new IdentityOAuthAdminException(errorMsg, e);
         } finally {
-            IdentityDatabaseUtil.closeAllConnections(connection, null, prepStmt);
+            IdentityDatabaseUtil.closeAllConnections(connection, null, null);
         }
     }
 
-    private void removeOauthOIDCPropertyTable(Connection connection, String tenantDomain, String consumerKey) throws SQLException {
+    private void removeOauthOIDCPropertyTable(Connection connection,
+                                              String tenantDomain,
+                                              String consumerKey) throws SQLException {
+        try (PreparedStatement prepStmt =
+                     connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.REMOVE_ALL_SP_OIDC_PROPERTIES)) {
+            prepStmt.setInt(1, IdentityTenantUtil.getTenantId(tenantDomain));
+            prepStmt.setString(2, consumerKey);
+            prepStmt.execute();
+        }
+    }
 
-        PreparedStatement prepStmt = null;
-        prepStmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.REMOVE_SP_OIDC_PROPERTY);
-        prepStmt.setInt(1, IdentityTenantUtil.getTenantId(tenantDomain));
-        prepStmt.setString(2, consumerKey);
-        prepStmt.execute();
+    private void addServiceProviderOIDCProperties(Connection connection,
+                                                  OAuthAppDO consumerAppDO,
+                                                  String processedClientId,
+                                                  int spTenantId) throws SQLException {
+
+        try (PreparedStatement prepStmtAddOIDCProperty =
+                     connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.ADD_SP_OIDC_PROPERTY)) {
+
+            if (isOIDCAudienceEnabled() && consumerAppDO.getAudiences() != null) {
+                String[] audiences = consumerAppDO.getAudiences();
+                for (String audience : audiences) {
+                    addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                            OPENID_CONNECT_AUDIENCE, audience);
+                }
+            }
+
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    REQUEST_OBJECT_SIGNED, String.valueOf(consumerAppDO.isRequestObjectSignatureValidationEnabled()));
+
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    ID_TOKEN_ENCRYPTED, String.valueOf(consumerAppDO.isIdTokenEncryptionEnabled()));
+
+            prepStmtAddOIDCProperty.executeBatch();
+        }
+    }
+
+    private void handleSpOIDCProperties(Connection connection,
+                                        String preprocessedClientId,
+                                        String spTenantDomain,
+                                        OAuthAppDO oauthApp) throws IdentityOAuth2Exception {
+
+        Map<String, List<String>> spOIDCProperties =
+                getSpOIDCProperties(connection, preprocessedClientId, spTenantDomain);
+
+        // Set OIDC properties to IDP_OIDC_PROPERTY table.
+        setSpOIDCProperties(spOIDCProperties, oauthApp);
+    }
+
+    private Map<String, List<String>> getSpOIDCProperties(Connection connection,
+                                                          String consumerKey,
+                                                          String spTenantDomain) throws IdentityOAuth2Exception {
+        Map<String, List<String>> spOIDCProperties = new HashMap<>();
+        PreparedStatement prepStatement = null;
+        ResultSet spOIDCPropertyResultSet = null;
+        try {
+            prepStatement = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.GET_ALL_SP_OIDC_PROPERTIES);
+            prepStatement.setInt(1, IdentityTenantUtil.getTenantId(spTenantDomain));
+            prepStatement.setString(2, consumerKey);
+
+            spOIDCPropertyResultSet = prepStatement.executeQuery();
+            while (spOIDCPropertyResultSet.next()) {
+                String propertyKey = spOIDCPropertyResultSet.getString(1);
+                String propertyValue = spOIDCPropertyResultSet.getString(2);
+                spOIDCProperties.computeIfAbsent(propertyKey, k -> new ArrayList<>()).add(propertyValue);
+            }
+        } catch (SQLException e) {
+            String errorMsg = "Error occurred while retrieving OIDC properties for client ID: " + consumerKey +
+                    " and tenant domain: " + spTenantDomain;
+            throw new IdentityOAuth2Exception(errorMsg, e);
+        } finally {
+            IdentityDatabaseUtil.closeAllConnections(null, spOIDCPropertyResultSet, prepStatement);
+        }
+        return spOIDCProperties;
+    }
+
+    private void setSpOIDCProperties(Map<String, List<String>> spOIDCProperties, OAuthAppDO oauthApp) {
+
+        // Handle OIDC audience values
+        if (isOIDCAudienceEnabled() &&
+                CollectionUtils.isNotEmpty(spOIDCProperties.get(OPENID_CONNECT_AUDIENCE))) {
+            List<String> oidcAudience = new ArrayList<>(spOIDCProperties.get(OPENID_CONNECT_AUDIENCE));
+            oauthApp.setAudiences(oidcAudience.toArray(new String[oidcAudience.size()]));
+        }
+
+        // Handle other SP OIDC properties
+        boolean isRequestObjectSigned = Boolean.parseBoolean(
+                getFirstPropertyValue(spOIDCProperties, REQUEST_OBJECT_SIGNED));
+        oauthApp.setRequestObjectSignatureValidationEnabled(isRequestObjectSigned);
+
+        boolean isIdTokenEncrypted = Boolean.parseBoolean(
+                getFirstPropertyValue(spOIDCProperties, ID_TOKEN_ENCRYPTED));
+        oauthApp.setIdTokenEncryptionEnabled(isIdTokenEncrypted);
+    }
+
+    private String getFirstPropertyValue(Map<String, List<String>> propertyMap, String key) {
+        return CollectionUtils.isNotEmpty(propertyMap.get(key)) ? propertyMap.get(key).get(0) : null;
+    }
+
+    private boolean isOIDCAudienceEnabled() {
+        return OAuth2ServiceComponentHolder.isAudienceEnabled();
+    }
+
+    private void handleRequestForANonExistingConsumerKey(String consumerKey) throws InvalidOAuthClientException {
+        String message = "Cannot find an application associated with the given consumer key : " + consumerKey;
+        if (log.isDebugEnabled()) {
+            log.debug(message);
+        }
+        throw new InvalidOAuthClientException(message);
+    }
+
+    private void handleRequestForANonExistingApp(String appName) throws InvalidOAuthClientException {
+        String message = "Cannot find an application associated with the given appName : " + appName;
+        if (log.isDebugEnabled()) {
+            log.debug(message);
+        }
+        throw new InvalidOAuthClientException(message);
     }
 }

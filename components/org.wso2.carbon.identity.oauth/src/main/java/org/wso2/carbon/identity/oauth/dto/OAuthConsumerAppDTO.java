@@ -34,6 +34,9 @@ public class OAuthConsumerAppDTO {
     private long applicationAccessTokenExpiryTime;
     private long refreshTokenExpiryTime;
     private String[] audiences;
+    // OIDC related properties
+    private boolean isRequestObjectSignatureValidationEnabled;
+    private boolean isIdTokenEncryptionEnabled;
 
     public long getUserAccessTokenExpiryTime() {
         return userAccessTokenExpiryTime;
@@ -150,6 +153,22 @@ public class OAuthConsumerAppDTO {
         if (audiences != null) {
             this.audiences = audiences;
         }
+    }
+
+    public boolean isRequestObjectSignatureValidationEnabled() {
+        return isRequestObjectSignatureValidationEnabled;
+    }
+
+    public void setRequestObjectSignatureValidationEnabled(boolean requestObjectSignatureValidationEnabled) {
+        this.isRequestObjectSignatureValidationEnabled = requestObjectSignatureValidationEnabled;
+    }
+
+    public boolean isIdTokenEncryptionEnabled() {
+        return isIdTokenEncryptionEnabled;
+    }
+
+    public void setIdTokenEncryptionEnabled(boolean idTokenEncryptionEnabled) {
+        this.isIdTokenEncryptionEnabled = idTokenEncryptionEnabled;
     }
 }
 

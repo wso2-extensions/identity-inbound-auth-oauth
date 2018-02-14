@@ -318,6 +318,13 @@ public final class OAuthConstants {
         private OIDCClaims() {}
     }
 
+    public static class OIDCConfigProperties {
+        public static final String REQUEST_OBJECT_SIGNED = "requestObjectSigned";
+        public static final String ID_TOKEN_ENCRYPTED = "idTokenEncrypted";
+
+        private OIDCConfigProperties() { }
+    }
+
     public static class SignatureAlgorithms {
         public static final String NONE = "NONE";
         public static final String SHA256_WITH_RSA = "SHA256withRSA";

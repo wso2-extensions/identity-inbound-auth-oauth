@@ -39,7 +39,10 @@ public class OAuthAppDO implements Serializable {
     private long userAccessTokenExpiryTime;
     private long applicationAccessTokenExpiryTime;
     private long refreshTokenExpiryTime;
-    private String[] audiences;
+    private String[] audiences = new String[0];
+    // OIDC related properties.
+    private boolean requestObjectSignatureValidationEnabled;
+    private boolean idTokenEncryptionEnabled;
 
     public AuthenticatedUser getUser() {
         return user;
@@ -159,5 +162,21 @@ public class OAuthAppDO implements Serializable {
 
     public void setAudiences(String[] audiences) {
         this.audiences = audiences;
+    }
+
+    public boolean isRequestObjectSignatureValidationEnabled() {
+        return requestObjectSignatureValidationEnabled;
+    }
+
+    public void setRequestObjectSignatureValidationEnabled(boolean requestObjectSignatureValidationEnabled) {
+        this.requestObjectSignatureValidationEnabled = requestObjectSignatureValidationEnabled;
+    }
+
+    public boolean isIdTokenEncryptionEnabled() {
+        return idTokenEncryptionEnabled;
+    }
+
+    public void setIdTokenEncryptionEnabled(boolean idTokenEncryptionEnabled) {
+        this.idTokenEncryptionEnabled = idTokenEncryptionEnabled;
     }
 }
