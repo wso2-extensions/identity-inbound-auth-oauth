@@ -39,6 +39,7 @@ import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.model.Constants;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
+import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
 import java.nio.file.Paths;
 import java.security.Key;
@@ -109,17 +110,11 @@ public class OIDCRequestObjectUtilTest extends PowerMockTestCase {
         mockStatic(OAuth2Util.class);
         when(OAuth2Util.getTenantId("carbon.super")).thenReturn(-1234);
         when((OAuth2Util.getPrivateKey(anyString(), anyInt()))).thenReturn(rsaPrivateKey);
+        when(OAuth2Util.getX509CertOfOAuthApp(TEST_CLIENT_ID_1, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME))
+                .thenReturn(clientKeyStore.getCertificate("wso2carbon"));
 
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
-
-        KeyStoreManager keyStoreManager = Mockito.mock(KeyStoreManager.class);
-        ConcurrentHashMap<String, KeyStoreManager> mtKeyStoreManagers = new ConcurrentHashMap();
-        mtKeyStoreManagers.put(String.valueOf(SUPER_TENANT_ID), keyStoreManager);
-        WhiteboxImpl.setInternalState(KeyStoreManager.class, "mtKeyStoreManagers", mtKeyStoreManagers);
-        Mockito.when(keyStoreManager.getPrimaryKeyStore()).thenReturn(wso2KeyStore);
-        Mockito.when(keyStoreManager.getKeyStore("wso2carbon.jks")).thenReturn(wso2KeyStore);
-
 
         RequestObjectValidator requestObjectValidator = PowerMockito.spy(new RequestObjectValidatorImpl());
         when((oauthServerConfigurationMock.getRequestObjectValidator())).thenReturn(requestObjectValidator);
@@ -138,8 +133,6 @@ public class OIDCRequestObjectUtilTest extends PowerMockTestCase {
         } catch (RequestObjectException e) {
             Assert.assertFalse(exceptionNotExpected, errorMsg + "Request Object Building failed due to " + e.getErrorMessage());
         }
-
-
     }
 
     @Test(expectedExceptions = {RequestObjectException.class})

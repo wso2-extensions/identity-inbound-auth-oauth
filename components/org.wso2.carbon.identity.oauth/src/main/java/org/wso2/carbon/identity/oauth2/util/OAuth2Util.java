@@ -45,6 +45,10 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.wso2.carbon.core.util.KeyStoreManager;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
+import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
+import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
@@ -65,6 +69,7 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dao.OAuthConsumerDAO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.config.SpOAuth2ExpiryTimeConfiguration;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
@@ -97,6 +102,7 @@ import java.security.KeyStore;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.sql.Timestamp;
@@ -2044,5 +2050,54 @@ public class OAuth2Util {
         return isExplicitlyFederatedUser && isFederatedUserNotMappedToLocalUser;
     }
 
+    /**
+     * Returns the service provider associated with the OAuth clientId.
+     *
+     * @param clientId OAuth2/OIDC Client Identifier
+     * @param tenantDomain
+     * @return
+     * @throws IdentityOAuth2Exception
+     */
+    public static ServiceProvider getServiceProvider(String clientId,
+                                                     String tenantDomain) throws IdentityOAuth2Exception {
+        ApplicationManagementService applicationMgtService = OAuth2ServiceComponentHolder.getApplicationMgtService();
+        try {
+            // Get the Service Provider.
+            return applicationMgtService.getServiceProviderByClientId(
+                    clientId, IdentityApplicationConstants.OAuth2.NAME, tenantDomain);
+        } catch (IdentityApplicationManagementException e) {
+            throw new IdentityOAuth2Exception("Error while obtaining the service provider for client_id: " +
+                    clientId + " of tenantDomain: " + tenantDomain, e);
+        }
+    }
+
+    /**
+     *  Returns the public certificate of the service provider associated with the OAuth consumer app as
+     *  an X509 @{@link Certificate} object.
+     *
+     * @param clientId OAuth2/OIDC Client Identifier
+     * @param tenantDomain
+     * @return
+     * @throws IdentityOAuth2Exception
+     */
+    public static Certificate getX509CertOfOAuthApp(String clientId,
+                                                    String tenantDomain) throws IdentityOAuth2Exception {
+
+        try {
+            ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(clientId, tenantDomain);
+            // Get the certificate content.
+            String certificateContent = serviceProvider.getCertificateContent();
+            if (StringUtils.isNotBlank(certificateContent)) {
+                // Build the Certificate object from cert content.
+                return IdentityUtil.convertPEMEncodedContentToCertificate(certificateContent);
+            } else {
+                throw new IdentityOAuth2Exception("Public certificate not configured for Service Provider with " +
+                        "client_id: " + clientId + " of tenantDomain: " + tenantDomain);
+            }
+        } catch (CertificateException e) {
+            throw new IdentityOAuth2Exception("Error while building X509 cert of oauth app with client_id: "
+                    + clientId + " of tenantDomain: " + tenantDomain, e);
+        }
+    }
 }
 
