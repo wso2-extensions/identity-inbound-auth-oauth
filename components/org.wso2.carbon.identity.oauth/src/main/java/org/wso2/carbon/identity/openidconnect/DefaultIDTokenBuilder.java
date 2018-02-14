@@ -18,13 +18,13 @@
 package org.wso2.carbon.identity.openidconnect;
 
 import com.nimbusds.jose.Algorithm;
+import com.nimbusds.jose.EncryptionMethod;
+import com.nimbusds.jose.JWEAlgorithm;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.PlainJWT;
 import org.apache.axiom.om.OMElement;
-import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.io.Charsets;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -55,9 +55,11 @@ import org.wso2.carbon.identity.oauth.cache.OIDCAudienceCache;
 import org.wso2.carbon.identity.oauth.cache.OIDCAudienceCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OIDCAudienceCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
-import org.wso2.carbon.identity.oauth2.IDTokenValidationFailureException;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth2.IDTokenValidationFailureException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
@@ -108,11 +110,36 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
 
     private static final Log log = LogFactory.getLog(DefaultIDTokenBuilder.class);
     private JWSAlgorithm signatureAlgorithm = null;
+    private JWEAlgorithm encryptionAlgorithm;
+    private EncryptionMethod encryptionMethod;
 
     public DefaultIDTokenBuilder() throws IdentityOAuth2Exception {
-        //map signature algorithm from identity.xml to nimbus format, this is a one time configuration
+        // Map signature algorithm from identity.xml to nimbus format, this is a one time configuration.
         signatureAlgorithm = OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(
                 OAuthServerConfiguration.getInstance().getIdTokenSignatureAlgorithm());
+        encryptionAlgorithm = OAuth2Util.mapEncryptionAlgorithmForJWEAlgorithm(
+                OAuthServerConfiguration.getInstance().getIdTokenEncryptionAlgorithm());
+        encryptionMethod = OAuth2Util.mapEncryptionMethodForJWEAlgorithm(
+                OAuthServerConfiguration.getInstance().getIdTokenEncryptionMethod());
+    }
+
+    // Check and return true if JWE is requested.
+    private boolean isIdTokenEncryptionEnabled(String clientId) throws IdentityOAuth2Exception {
+        OAuthAppDO oAuthAppDO;
+        try {
+            oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
+        } catch (InvalidOAuthClientException e) {
+            String error = "Error occurred while getting app information for client_id: " + clientId;
+            throw new IdentityOAuth2Exception(error, e);
+        }
+
+        if (log.isDebugEnabled()) {
+            log.debug("Id token encryption is enabled: " + oAuthAppDO.isIdTokenEncryptionEnabled() +
+                    " for client_id: " + clientId);
+
+        }
+
+        return oAuthAppDO.isIdTokenEncryptionEnabled();
     }
 
     @Override
@@ -193,8 +220,12 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
             return new PlainJWT(jwtClaimsSet).serialize();
         }
 
-        String signingTenantDomain = getSigningTenantDomain(tokenReqMsgCtxt);
-        return OAuth2Util.signJWT(jwtClaimsSet, signatureAlgorithm, signingTenantDomain).serialize();
+        if (isIdTokenEncryptionEnabled(clientId)) {
+            return OAuth2Util.encryptJWT(jwtClaimsSet, encryptionAlgorithm, encryptionMethod, spTenantDomain, clientId).serialize();
+        } else {
+            String signingTenantDomain = getSigningTenantDomain(tokenReqMsgCtxt);
+            return OAuth2Util.signJWT(jwtClaimsSet, signatureAlgorithm, signingTenantDomain).serialize();
+        }
     }
 
     @Override
@@ -260,8 +291,12 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
             return new PlainJWT(jwtClaimsSet).serialize();
         }
 
-        String signingTenantDomain = getSigningTenantDomain(authzReqMessageContext);
-        return OAuth2Util.signJWT(jwtClaimsSet, signatureAlgorithm, signingTenantDomain).serialize();
+        if (isIdTokenEncryptionEnabled(clientId)) {
+            return OAuth2Util.encryptJWT(jwtClaimsSet, encryptionAlgorithm, encryptionMethod, spTenantDomain, clientId).serialize();
+        } else {
+            String signingTenantDomain = getSigningTenantDomain(authzReqMessageContext);
+            return OAuth2Util.signJWT(jwtClaimsSet, signatureAlgorithm, signingTenantDomain).serialize();
+        }
     }
 
     protected String getSubjectClaim(OAuthTokenReqMessageContext tokenReqMessageContext,
