@@ -41,6 +41,7 @@ import org.wso2.carbon.identity.oauth.dcr.internal.DCRDataHolder;
 import org.wso2.carbon.identity.oauth.dcr.model.RegistrationRequestProfile;
 import org.wso2.carbon.identity.oauth.dcr.model.RegistrationResponseProfile;
 import org.wso2.carbon.identity.oauth.dcr.util.DCRConstants;
+import org.wso2.carbon.identity.oauth.dcr.util.DCRMUtils;
 import org.wso2.carbon.identity.oauth.dcr.util.ErrorCodes;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.registry.core.Registry;
@@ -86,6 +87,11 @@ public class DCRManagementService {
         if (log.isDebugEnabled()) {
             log.debug("Trying to register OAuth application: '" + applicationName + "'");
         }
+        // Regex validation of the application name.
+        if (!DCRMUtils.isRegexValidated(applicationName)) {
+            throw new DCRException("The Application name: " + applicationName + " is not valid! It is not adhering to" +
+                    " the regex: " + DCRConstants.APP_NAME_VALIDATING_REGEX);
+        }
 
         RegistrationResponseProfile info = this.createOAuthApplication(profile);
 
@@ -103,8 +109,16 @@ public class DCRManagementService {
 
         //Subscriber's name should be passed as a parameter, since it's under the subscriber
         //the OAuth App is created.
+        String owner =  profile.getOwner();
+        // Replace all unsupported characters
+        String ownerName = owner.replaceAll(String.valueOf(DCRConstants.UNSUPPORTED_CHARACTERS_IN_REGISTRY), "_");
+        String applicationName = ownerName + "_" + profile.getClientName();
+        // Regex validation of the application name.
+        if (!DCRMUtils.isRegexValidated(applicationName)) {
+            throw new DCRException("The Application name: " + applicationName + " is not valid! It is not adhering to" +
+                    " the regex: " + DCRConstants.APP_NAME_VALIDATING_REGEX);
+        }
 
-        String applicationName = profile.getOwner() + "_" + profile.getClientName();
         String grantType = StringUtils.join(profile.getGrantTypes(), " ");
         String baseUser = CarbonContext.getThreadLocalCarbonContext().getUsername();
         String userName = MultitenantUtils.getTenantAwareUsername(profile.getOwner());
@@ -380,6 +394,5 @@ public class DCRManagementService {
         return (Registry) PrivilegedCarbonContext.getThreadLocalCarbonContext().getRegistry(
                 RegistryType.SYSTEM_CONFIGURATION);
     }
-
 
 }
