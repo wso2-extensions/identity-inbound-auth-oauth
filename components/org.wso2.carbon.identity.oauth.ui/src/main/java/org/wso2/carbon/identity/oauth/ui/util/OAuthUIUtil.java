@@ -97,6 +97,12 @@ public class OAuthUIUtil {
         }
     }
 
+    /**
+     * Ensures that returned audience array is not empty and does not contain any null values.
+     *
+     * @param audiences
+     * @return
+     */
     public static boolean isAudienceNotEmpty(String[] audiences) {
         if (ArrayUtils.isEmpty(audiences)) {
             return false;

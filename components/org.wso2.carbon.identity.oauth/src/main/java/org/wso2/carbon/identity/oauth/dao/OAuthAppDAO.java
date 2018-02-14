@@ -499,7 +499,7 @@ public class OAuthAppDAO {
                 String.valueOf(oauthAppDO.isIdTokenEncryptionEnabled()),
                 prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
-        // Execute Property add batch.
+        // Execute batched add/update/delete.
         prepStatementForPropertyAdd.executeBatch();
         preparedStatementForPropertyUpdate.executeBatch();
         prepStatementForPropertyDelete.executeBatch();
