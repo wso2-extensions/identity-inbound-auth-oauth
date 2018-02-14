@@ -318,13 +318,7 @@ public class OAuthAppDAO {
                       We need to determine whether the result set has more than 1 row. Meaning, we found an application for
                       the given consumer key. There can be situations where a user passed a key which doesn't yet have an
                       associated application. We need to barf with a meaningful error message for this case
-                    /*
-                     * We need to determine whether the result set has more than 1 row. Meaning, we found an
-                     * application for
-                     * the given consumer key. There can be situations where a user passed a key which doesn't yet
-                     * have an
-                     * associated application. We need to barf with a meaningful error message for this case
-                     */
+                    */
                     boolean appExists = false;
                     while (rSet.next()) {
                         // There is at least one application associated with a given key
@@ -403,12 +397,6 @@ public class OAuthAppDAO {
                       We need to determine whether the result set has more than 1 row. Meaning, we found an application for
                       the given consumer key. There can be situations where a user passed a key which doesn't yet have an
                       associated application. We need to barf with a meaningful error message for this case
-                    /*
-                     * We need to determine whether the result set has more than 1 row. Meaning, we found an
-                     * application for
-                     * the given consumer key. There can be situations where a user passed a key which doesn't yet
-                     * have an
-                     * associated application. We need to barf with a meaningful error message for this case
                      */
                     boolean appExists = false;
                     while (rSet.next()) {
@@ -821,11 +809,12 @@ public class OAuthAppDAO {
 
     private void removeOauthOIDCPropertyTable(Connection connection, String tenantDomain, String consumerKey) throws SQLException {
 
-        PreparedStatement prepStmt = null;
-        prepStmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.REMOVE_OIDC_PROPERTIES);
-        prepStmt.setInt(1, IdentityTenantUtil.getTenantId(tenantDomain));
-        prepStmt.setString(2, consumerKey);
-        prepStmt.execute();
+        try (PreparedStatement prepStmt =
+                     connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.REMOVE_ALL_SP_OIDC_PROPERTIES)) {
+            prepStmt.setInt(1, IdentityTenantUtil.getTenantId(tenantDomain));
+            prepStmt.setString(2, consumerKey);
+            prepStmt.execute();
+        }
     }
 
 
@@ -926,7 +915,6 @@ public class OAuthAppDAO {
         }
         return appId;
     }
-}
 
     private void addServiceProviderOIDCProperties(Connection connection,
                                                   OAuthAppDO consumerAppDO,

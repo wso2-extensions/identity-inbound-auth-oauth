@@ -236,6 +236,7 @@
                     <xs:element minOccurs="0" name="pkceMandatory" type="xs:boolean"/>
                     <xs:element minOccurs="0" name="pkceSupportPlain" type="xs:boolean"/>
                     <xs:element minOccurs="0" name="refreshTokenExpiryTime" type="xs:long"/>
+                    <xs:element maxOccurs="unbounded" minOccurs="0" name="scopeValidators" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="requestObjectSignatureValidationEnabled" type="xs:boolean"/>
                     <xs:element minOccurs="0" name="state" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="userAccessTokenExpiryTime" type="xs:long"/>
