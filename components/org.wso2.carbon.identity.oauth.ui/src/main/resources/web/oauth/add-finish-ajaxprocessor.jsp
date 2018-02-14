@@ -52,8 +52,8 @@
     String userAccessTokenExpiryTime = request.getParameter("userAccessTokenExpiryTime");
     String applicationAccessTokenExpiryTime = request.getParameter("applicationAccessTokenExpiryTime");
     String refreshTokenExpiryTime = request.getParameter("refreshTokenExpiryTime");
-
-	boolean pkceMandatory = false;
+    
+    boolean pkceMandatory = false;
 	boolean pkceSupportPlain = false;
 
 	if(request.getParameter("pkce") != null) {
@@ -62,9 +62,12 @@
 	if(request.getParameter("pkce_plain") != null) {
 		pkceSupportPlain = true;
 	}
-
-
-	String forwardTo = "index.jsp";
+    
+    // OIDC related properties
+    boolean isRequestObjectSignatureValidated = Boolean.parseBoolean(request.getParameter("validateRequestObjectSignature"));
+    boolean isIdTokenEncrypted = Boolean.parseBoolean(request.getParameter("encryptIdToken"));
+    
+    String forwardTo = "index.jsp";
 	String BUNDLE = "org.wso2.carbon.identity.oauth.ui.i18n.Resources";
 	ResourceBundle resourceBundle = ResourceBundle.getBundle(BUNDLE, request.getLocale());
 	OAuthConsumerAppDTO app = new OAuthConsumerAppDTO();
@@ -117,7 +120,11 @@
             }
             app.setPkceMandatory(pkceMandatory);
             app.setPkceSupportPlain(pkceSupportPlain);
-
+            
+            // Set OIDC related configuration properties.
+            app.setRequestObjectSignatureValidationEnabled(isRequestObjectSignatureValidated);
+            app.setIdTokenEncryptionEnabled(isIdTokenEncrypted);
+            
             client.registerOAuthApplicationData(app);
 
             consumerApp = client.getOAuthApplicationDataByAppName(applicationName);

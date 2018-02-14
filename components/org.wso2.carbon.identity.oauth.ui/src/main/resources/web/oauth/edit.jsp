@@ -30,6 +30,7 @@
 <%@ page import="java.util.List" %>
 <%@ page import="java.util.ResourceBundle" %>
 <%@ page import="org.apache.commons.lang.ArrayUtils" %>
+<%@ page import="org.wso2.carbon.identity.oauth.ui.util.OAuthUIUtil" %>
 
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%@ taglib uri="http://wso2.org/projects/carbon/taglibs/carbontags.jar" prefix="carbon" %>
@@ -513,7 +514,7 @@
                     <%
                         audienceTableStyle = app.getAudiences() != null ? "" :
                                 "display:none";
-                        if (ArrayUtils.isNotEmpty(app.getAudiences())) {
+                        if (OAuthUIUtil.isAudienceNotEmpty(app.getAudiences())) {
                     %>
                     <tr id="audience-enable">
                         <td title="Enable Audience Restriction to restrict the audience. You may add audience members using the Audience text box and clicking the Add button"
@@ -612,6 +613,35 @@
                             </table>
                         </td>
                     </tr>
+                    
+                    
+                    <!-- OIDC related properties -->
+                    <tr id="validate_request_object_signature">
+                        <td colspan="2"
+                            title="Validate the signature of the request object">
+                            <input type="checkbox"
+                                   name="validateRequestObjectSignature"
+                                   id="validateRequestObjectSignature"
+                                   value="true"
+                                    <%=(app.getRequestObjectSignatureValidationEnabled() ? "checked" : "")%>
+                            />
+                            <fmt:message key='enable.request.object.signature.validation'/>
+                        </td>
+                    </tr>
+                    
+                    <tr id="encrypt_id_token">
+                        <td colspan="2"
+                            title="Encrypt the id_token">
+                            <input type="checkbox"
+                                   name="encryptIdToken"
+                                   id="encryptIdToken"
+                                   value="true"
+                                    <%=(app.getIdTokenEncryptionEnabled() ? "checked" : "")%>
+                            />
+                            <fmt:message key='enable.id.token.encryption'/>
+                        </td>
+                    </tr>
+                    
 				</table>
 			</td>
 		    </tr>
