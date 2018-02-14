@@ -139,6 +139,9 @@ public class OAuthAdminService extends AbstractAdmin {
                 dto.setUserAccessTokenExpiryTime(app.getUserAccessTokenExpiryTime());
                 dto.setApplicationAccessTokenExpiryTime(app.getApplicationAccessTokenExpiryTime());
                 dto.setRefreshTokenExpiryTime(app.getRefreshTokenExpiryTime());
+                dto.setAudiences(app.getAudiences());
+                dto.setRequestObjectSignatureValidationEnabled(app.isRequestObjectSignatureValidationEnabled());
+                dto.setIdTokenEncryptionEnabled(app.isIdTokenEncryptionEnabled());
                 dtos[i] = dto;
             }
         }
@@ -172,6 +175,8 @@ public class OAuthAdminService extends AbstractAdmin {
                 dto.setApplicationAccessTokenExpiryTime(app.getApplicationAccessTokenExpiryTime());
                 dto.setRefreshTokenExpiryTime(app.getRefreshTokenExpiryTime());
                 dto.setAudiences(app.getAudiences());
+                dto.setRequestObjectSignatureValidationEnabled(app.isRequestObjectSignatureValidationEnabled());
+                dto.setIdTokenEncryptionEnabled(app.isIdTokenEncryptionEnabled());
 
                 if (log.isDebugEnabled()) {
                     log.debug("Found App :" + dto.getApplicationName() + " for consumerKey: " + consumerKey);
@@ -211,7 +216,8 @@ public class OAuthAdminService extends AbstractAdmin {
                 dto.setApplicationAccessTokenExpiryTime(app.getApplicationAccessTokenExpiryTime());
                 dto.setRefreshTokenExpiryTime(app.getRefreshTokenExpiryTime());
                 dto.setAudiences(app.getAudiences());
-
+                dto.setRequestObjectSignatureValidationEnabled(app.isRequestObjectSignatureValidationEnabled());
+                dto.setIdTokenEncryptionEnabled(app.isIdTokenEncryptionEnabled());
             }
             return dto;
         } catch (InvalidOAuthClientException | IdentityOAuth2Exception e) {
@@ -306,6 +312,10 @@ public class OAuthAdminService extends AbstractAdmin {
                     app.setUserAccessTokenExpiryTime(application.getUserAccessTokenExpiryTime());
                     app.setApplicationAccessTokenExpiryTime(application.getApplicationAccessTokenExpiryTime());
                     app.setRefreshTokenExpiryTime(application.getRefreshTokenExpiryTime());
+
+                    // Set OIDC Config Properties.
+                    app.setRequestObjectSignatureValidationEnabled(application.isRequestObjectSignatureValidationEnabled());
+                    app.setIdTokenEncryptionEnabled(application.isIdTokenEncryptionEnabled());
                 }
                 dao.addOAuthApplication(app);
                 AppInfoCache.getInstance().addToCache(app.getOauthConsumerKey(), app);
@@ -413,6 +423,8 @@ public class OAuthAdminService extends AbstractAdmin {
                 }
             }
             oauthappdo.setScopeValidators(requestedScopeValidators);
+            oauthappdo.setRequestObjectSignatureValidationEnabled(consumerAppDTO.isRequestObjectSignatureValidationEnabled());
+            oauthappdo.setIdTokenEncryptionEnabled(consumerAppDTO.isIdTokenEncryptionEnabled());
         }
         dao.updateConsumerApplication(oauthappdo);
         AppInfoCache.getInstance().addToCache(oauthappdo.getOauthConsumerKey(), oauthappdo);
@@ -625,6 +637,8 @@ public class OAuthAdminService extends AbstractAdmin {
                                 appDTO.setApplicationAccessTokenExpiryTime(appDO.getApplicationAccessTokenExpiryTime());
                                 appDTO.setRefreshTokenExpiryTime(appDO.getRefreshTokenExpiryTime());
                                 appDTO.setAudiences(appDO.getAudiences());
+                                appDTO.setRequestObjectSignatureValidationEnabled(appDO.isRequestObjectSignatureValidationEnabled());
+                                appDTO.setIdTokenEncryptionEnabled(appDO.isIdTokenEncryptionEnabled());
                                 appDTOs.add(appDTO);
                                 if (log.isDebugEnabled()) {
                                     log.debug("Found App: " + appDO.getApplicationName() + " for user: " + username);

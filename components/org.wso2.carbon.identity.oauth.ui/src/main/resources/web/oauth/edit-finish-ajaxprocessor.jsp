@@ -67,8 +67,12 @@
     if(request.getParameter("pkce_plain") != null) {
         pkceSupportPlain = true;
     }
-
-	String forwardTo = "index.jsp";
+    
+    // OIDC related properties
+    boolean isRequestObjectSignatureValidated = Boolean.parseBoolean(request.getParameter("validateRequestObjectSignature"));
+    boolean isIdTokenEncrypted = Boolean.parseBoolean(request.getParameter("encryptIdToken"));
+    
+    String forwardTo = "index.jsp";
     String BUNDLE = "org.wso2.carbon.identity.oauth.ui.i18n.Resources";
 	ResourceBundle resourceBundle = ResourceBundle.getBundle(BUNDLE, request.getLocale());
 	OAuthConsumerAppDTO app = new OAuthConsumerAppDTO();
@@ -124,6 +128,10 @@
                     }
                 }
             }
+            
+            app.setRequestObjectSignatureValidationEnabled(isRequestObjectSignatureValidated);
+            app.setIdTokenEncryptionEnabled(isIdTokenEncrypted);
+            
             client.updateOAuthApplicationData(app);
             String message = resourceBundle.getString("app.updated.successfully");
             CarbonUIMessage.sendCarbonUIMessage(message, CarbonUIMessage.INFO, request);

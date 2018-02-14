@@ -18,6 +18,9 @@
 
 package org.wso2.carbon.identity.oauth.ui.util;
 
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -94,4 +97,22 @@ public class OAuthUIUtil {
         }
     }
 
+    /**
+     * Ensures that returned audience array is not empty and does not contain any null values.
+     *
+     * @param audiences
+     * @return
+     */
+    public static boolean isAudienceNotEmpty(String[] audiences) {
+        if (ArrayUtils.isEmpty(audiences)) {
+            return false;
+        }
+
+        for (String audience : audiences) {
+            if (StringUtils.isNotEmpty(audience) && !StringUtils.equalsIgnoreCase(audience , "null")) {
+                return true;
+            }
+        }
+        return false;
+    }
 }

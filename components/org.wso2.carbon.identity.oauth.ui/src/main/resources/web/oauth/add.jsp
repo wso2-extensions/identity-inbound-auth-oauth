@@ -188,7 +188,7 @@
                     var supportGrantCode = $('input[name=grant_authorization_code]:checked').val() != null;
                     var supportImplicit = $('input[name=grant_implicit]:checked').val() != null;
 
-                    if (oauthVersion == "<%=OAuthConstants.OAuthVersions.VERSION_1A%>") {
+                    if(oauthVersion == "<%=OAuthConstants.OAuthVersions.VERSION_1A%>") {
                         $(jQuery('#grant_row')).hide();
                         $(jQuery('#scope_validator_row')).hide();
                         $(jQuery("#pkce_enable").hide());
@@ -199,6 +199,9 @@
                         $(jQuery("#audience_enable").hide());
                         $(jQuery("#add_audience").hide());
                         $(jQuery("#audience_table").hide());
+                        $(jQuery("#validate_request_object_signature_row").hide());
+                        $(jQuery("#encrypt_id_token_row").hide());
+
                     } else if(oauthVersion == "<%=OAuthConstants.OAuthVersions.VERSION_2%>") {
                         $(jQuery('#grant_row')).show();
                         $(jQuery('#scope_validator_row')).show();
@@ -210,13 +213,15 @@
                         $(jQuery("#audience_enable").show());
                         $(jQuery("#add_audience").show());
                         $(jQuery("#audience_table").show());
+                        $(jQuery("#validate_request_object_signature_row").show());
+                        $(jQuery("#encrypt_id_token_row").show());
 
-                        if (!supportGrantCode && !supportImplicit) {
+                        if(!supportGrantCode && !supportImplicit){
                             $(jQuery('#callback_row')).hide();
                         } else {
                             $(jQuery('#callback_row')).show();
                         }
-                        if (supportGrantCode) {
+                        if(supportGrantCode) {
                             $(jQuery("#pkce_enable").show());
                             $(jQuery("#pkce_support_plain").show());
                         } else {
@@ -538,6 +543,27 @@
                             </table>
                         </td>
                     </tr>
+                                <!-- OIDC related properties -->
+                                <tr id="validate_request_object_signature_row">
+                                    <td colspan="2" title="Validate the signature of the request object">
+                                        <input type="checkbox"
+                                               name="validateRequestObjectSignature"
+                                               id="validateRequestObjectSignature"
+                                               value="true"/>
+                                        <fmt:message key='enable.request.object.signature.validation'/>
+                                    </td>
+                                </tr>
+
+                                <tr id="encrypt_id_token_row">
+                                    <td colspan="2"
+                                        title="Encrypt the id_token">
+                                        <input type="checkbox"
+                                               name="encryptIdToken"
+                                               id="encryptIdToken"
+                                               value="true"/>
+                                        <fmt:message key='enable.id.token.encryption'/>
+                                    </td>
+                                </tr>
                                 <tr id="scope_validator_row" name="scope_validator_row">
                                     <td class="leftCol-med"><fmt:message key='scopeValidators'/></td>
                                     <td>
@@ -581,23 +607,24 @@
 		    </tr>
 
                     <tr>
-                        <td class="buttonRow">
+                        <td class="buttonRow" >
                             <input name="addprofile" type="button" class="button" value="<fmt:message key='add'/>" onclick="onClickAdd();"/>
+                            
                             <%
 
-                                boolean applicationComponentFound = CarbonUIUtil.isContextRegistered(config, "/application/");
-                                if (applicationComponentFound) {
+                            boolean applicationComponentFound = CarbonUIUtil.isContextRegistered(config, "/application/");
+                            if (applicationComponentFound) {                            
                             %>
                             <input type="button" class="button"
-                                   onclick="javascript:location.href='../application/configure-service-provider.jsp?spName=<%=Encode.forUriComponent(applicationSPName)%>'"
+                                       onclick="javascript:location.href='../application/configure-service-provider.jsp?spName=<%=Encode.forUriComponent(applicationSPName)%>'"
                                    value="<fmt:message key='cancel'/>"/>
                             <% } else { %>
-
+                                   
                             <input type="button" class="button"
-                                   onclick="javascript:location.href='index.jsp?region=region1&item=oauth_menu&ordinal=0'"
+                                       onclick="javascript:location.href='index.jsp?region=region1&item=oauth_menu&ordinal=0'"
                                    value="<fmt:message key='cancel'/>"/>
                             <%} %>
-                        </td>
+                       </td>
                     </tr>
                     </tbody>
                 </table>

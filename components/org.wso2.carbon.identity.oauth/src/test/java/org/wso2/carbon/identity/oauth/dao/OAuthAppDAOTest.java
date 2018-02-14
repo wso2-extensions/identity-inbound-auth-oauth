@@ -539,6 +539,27 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
         }
     }
 
+    @Test(dataProvider = "pkceEnabledDataProvider")
+    public void testGetAppInformationWithOIDCProperties(Boolean isPkceEnabled) throws Exception {
+        setupMocksForTest(isPkceEnabled);
+        try (Connection connection = getConnection(DB_NAME)) {
+            mockIdentityUtilDataBaseConnection(connection);
+            OAuthAppDO defaultOAuthAppDO = getDefaultOAuthAppDO();
+            // Add OIDC properties.
+            defaultOAuthAppDO.setAudiences(new String[] {"DUMMY"});
+            defaultOAuthAppDO.setIdTokenEncryptionEnabled(true);
+            defaultOAuthAppDO.setRequestObjectSignatureValidationEnabled(true);
+
+            addOAuthApplication(defaultOAuthAppDO);
+
+            OAuthAppDAO appDAO = new OAuthAppDAO();
+            OAuthAppDO oAuthAppDO = appDAO.getAppInformation(CONSUMER_KEY);
+            assertNotNull(oAuthAppDO);
+            assertEquals(oAuthAppDO.isIdTokenEncryptionEnabled(), true);
+            assertEquals(oAuthAppDO.isRequestObjectSignatureValidationEnabled(), true);
+        }
+    }
+
     @Test(dataProvider = "pkceEnabledDataProvider", expectedExceptions = IdentityOAuth2Exception.class)
     public void testGetAppInformationWithExceptions(Boolean isPkceEnabled) throws Exception {
 
