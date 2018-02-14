@@ -177,7 +177,6 @@
 
         <div id="workArea">
             <script type="text/javascript">
-   			<script type="text/javascript">
 
                 var audienceArr = [];
 

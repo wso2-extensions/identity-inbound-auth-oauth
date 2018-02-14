@@ -227,8 +227,6 @@
 
                 }
 
-                jQuery(document).ready(function () {
-
                 function toggleAudienceRestriction(chkbx) {
                     document.addAppform.audience.disabled = !chkbx.checked;
                     document.addAppform.addAudience.disabled = !chkbx.checked;
@@ -584,9 +582,7 @@
 
                     <tr>
                         <td class="buttonRow">
-                            <input name="addprofile" type="button" class="button" value="<fmt:message key='add'/>"
-                                   onclick="onClickAdd();"/>
-
+                            <input name="addprofile" type="button" class="button" value="<fmt:message key='add'/>" onclick="onClickAdd();"/>
                             <%
 
                                 boolean applicationComponentFound = CarbonUIUtil.isContextRegistered(config, "/application/");
