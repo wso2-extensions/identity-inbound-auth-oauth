@@ -102,7 +102,7 @@ public class OAuthApplicationMgtListenerTest extends TestOAuthDAOBase {
     @BeforeClass
     public void setUp() throws Exception {
 
-        //initialize in-memory H2 DB.
+        // Initialize in-memory H2 DB.
         initiateH2Base(DB_NAME, getFilePath("h2.sql"));
         oAuthApplicationMgtListener = new OAuthApplicationMgtListener();
     }
@@ -155,7 +155,7 @@ public class OAuthApplicationMgtListenerTest extends TestOAuthDAOBase {
     }
 
     @Test(dataProvider = "GetSPConfigData")
-    public void testDoPreUpdateApplication(Boolean hasAuthConfig, Boolean hasRequestConfig, String authType,
+    public void testDoPreUpdateApplication(boolean hasAuthConfig, boolean hasRequestConfig, String authType,
                                            String propName) throws Exception {
 
         ServiceProvider serviceProvider = createServiceProvider(1, hasAuthConfig, hasRequestConfig, authType, propName);
@@ -166,12 +166,12 @@ public class OAuthApplicationMgtListenerTest extends TestOAuthDAOBase {
         when(mockAppMgtService.getServiceProvider(serviceProvider.getApplicationID()))
                 .thenReturn(persistedServiceProvider);
 
-        Boolean result = oAuthApplicationMgtListener.doPreUpdateApplication(serviceProvider, tenantDomain, userName);
+        boolean result = oAuthApplicationMgtListener.doPreUpdateApplication(serviceProvider, tenantDomain, userName);
         assertTrue(result, "Pre-update application failed.");
     }
 
     @Test(dataProvider = "GetSPConfigData")
-    public void testDoPostGetServiceProvider(Boolean hasAuthConfig, Boolean hasRequestConfig, String authType,
+    public void testDoPostGetServiceProvider(boolean hasAuthConfig, boolean hasRequestConfig, String authType,
                                              String propName) throws Exception {
 
         try (Connection connection = getConnection(DB_NAME)) {
@@ -179,7 +179,7 @@ public class OAuthApplicationMgtListenerTest extends TestOAuthDAOBase {
 
             ServiceProvider serviceProvider =
                     createServiceProvider(1, hasAuthConfig, hasRequestConfig, authType, propName);
-            Boolean result =
+            boolean result =
                     oAuthApplicationMgtListener.doPostGetServiceProvider(serviceProvider, spName, tenantDomain);
             assertTrue(result, "Post-get service provider failed.");
         }
@@ -191,7 +191,7 @@ public class OAuthApplicationMgtListenerTest extends TestOAuthDAOBase {
         try (Connection connection = getConnection(DB_NAME)) {
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
 
-            Boolean result = oAuthApplicationMgtListener.doPostGetServiceProvider(null, spName, tenantDomain);
+            boolean result = oAuthApplicationMgtListener.doPostGetServiceProvider(null, spName, tenantDomain);
             assertTrue(result, "Post-get service provider failed.");
         }
     }
@@ -203,7 +203,7 @@ public class OAuthApplicationMgtListenerTest extends TestOAuthDAOBase {
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
 
             ServiceProvider serviceProvider = createServiceProvider(1, true, true, OAUTH2, OAUTH_CONSUMER_SECRET);
-            Boolean result = oAuthApplicationMgtListener.doPostGetServiceProviderByClientId(serviceProvider,
+            boolean result = oAuthApplicationMgtListener.doPostGetServiceProviderByClientId(serviceProvider,
                     "clientId", "clientType", tenantDomain);
             assertTrue(result, "Post-get service provider by client ID failed.");
         }
@@ -216,7 +216,7 @@ public class OAuthApplicationMgtListenerTest extends TestOAuthDAOBase {
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
 
             ServiceProvider serviceProvider = createServiceProvider(1, true, true, OAUTH2, OAUTH_CONSUMER_SECRET);
-            Boolean result = oAuthApplicationMgtListener.doPostCreateApplication(serviceProvider, tenantDomain, userName);
+            boolean result = oAuthApplicationMgtListener.doPostCreateApplication(serviceProvider, tenantDomain, userName);
             assertTrue(result, "Post-create application failed.");
         }
     }
@@ -242,8 +242,8 @@ public class OAuthApplicationMgtListenerTest extends TestOAuthDAOBase {
     }
 
     @Test(dataProvider = "GetPostUpdateApplicationData")
-    public void testDoPostUpdateApplication(Boolean hasAuthConfig, Boolean hasRequestConfig, String authType,
-                                            String propName, Boolean cacheEnabled, Boolean saasEnabledBefore)
+    public void testDoPostUpdateApplication(boolean hasAuthConfig, boolean hasRequestConfig, String authType,
+                                            String propName, boolean cacheEnabled, boolean saasEnabledBefore)
             throws Exception {
 
         try (Connection connection = getConnection(DB_NAME)) {
@@ -279,8 +279,7 @@ public class OAuthApplicationMgtListenerTest extends TestOAuthDAOBase {
 
             System.setProperty(CarbonBaseConstants.CARBON_HOME, "");
             ServiceProvider serviceProvider = createServiceProvider(1, hasAuthConfig, hasRequestConfig, authType, propName);
-            Boolean result = oAuthApplicationMgtListener.doPostUpdateApplication(serviceProvider, tenantDomain,
-                    userName);
+            boolean result = oAuthApplicationMgtListener.doPostUpdateApplication(serviceProvider, tenantDomain, userName);
             assertTrue(result, "Post-update application failed.");
         }
     }
@@ -292,8 +291,7 @@ public class OAuthApplicationMgtListenerTest extends TestOAuthDAOBase {
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
 
             ServiceProvider serviceProvider = createServiceProvider(1, true, true, OAUTH2, OAUTH_CONSUMER_SECRET);
-            Boolean result = oAuthApplicationMgtListener.doPostGetApplicationExcludingFileBasedSPs(serviceProvider,
-                    spName, tenantDomain);
+            boolean result = oAuthApplicationMgtListener.doPostGetApplicationExcludingFileBasedSPs(serviceProvider, spName, tenantDomain);
             assertTrue(result, "Post-get application excluding file based service providers failed.");
         }
     }
@@ -308,7 +306,7 @@ public class OAuthApplicationMgtListenerTest extends TestOAuthDAOBase {
                     OAUTH_CONSUMER_SECRET);
             when(mockAppMgtService.getApplicationExcludingFileBasedSPs(anyString(), anyString())).thenReturn(serviceProvider);
 
-            Boolean result = oAuthApplicationMgtListener.doPreDeleteApplication(spName, tenantDomain, userName);
+            boolean result = oAuthApplicationMgtListener.doPreDeleteApplication(spName, tenantDomain, userName);
             assertTrue(result, "Post-delete application failed.");
         }
     }
@@ -323,7 +321,7 @@ public class OAuthApplicationMgtListenerTest extends TestOAuthDAOBase {
      * @param propName
      * @return
      */
-    private ServiceProvider createServiceProvider(int appId, Boolean hasAuthConfig, Boolean hasRequestConfig,
+    private ServiceProvider createServiceProvider(int appId, boolean hasAuthConfig, boolean hasRequestConfig,
                                                   String authType, String propName) {
 
         ServiceProvider serviceProvider = new ServiceProvider();
