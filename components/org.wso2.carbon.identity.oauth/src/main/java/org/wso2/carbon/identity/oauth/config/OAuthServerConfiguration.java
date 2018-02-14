@@ -160,6 +160,7 @@ public class OAuthServerConfiguration {
     private String consumerDialectURI = "http://wso2.org/claims";
     private String signatureAlgorithm = "SHA256withRSA";
     private String idTokenSignatureAlgorithm = "SHA256withRSA";
+    private String idTokenEncryptionAlgorithm = "RSA-OAEP"; // TODO: 2/6/18 change to a correct algo
     private String userInfoJWTSignatureAlgorithm = "SHA256withRSA";
     private String authContextTTL = "15L";
     // property added to fix IDENTITY-4551 in backward compatible manner
@@ -876,6 +877,10 @@ public class OAuthServerConfiguration {
 
     public String getIdTokenSignatureAlgorithm() {
         return idTokenSignatureAlgorithm;
+    }
+
+    public String getIdTokenEncryptionAlgorithm() {
+        return idTokenEncryptionAlgorithm;
     }
 
     public String getUserInfoJWTSignatureAlgorithm() {
@@ -1963,6 +1968,12 @@ public class OAuthServerConfiguration {
                                 .getText().trim();
             }
 
+            if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.ENCRYPTION_ALGORITHM)) != null) {
+                idTokenEncryptionAlgorithm =
+                        openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.ENCRYPTION_ALGORITHM))
+                                .getText().trim();
+            }
+
             if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_IDTOKEN_CUSTOM_CLAIM_CALLBACK_HANDLER)) != null) {
                 openIDConnectIDTokenCustomClaimsHanlderClassName =
                         openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_IDTOKEN_CUSTOM_CLAIM_CALLBACK_HANDLER))
@@ -2111,6 +2122,7 @@ public class OAuthServerConfiguration {
         public static final String CLAIMS_RETRIEVER_IMPL_CLASS = "ClaimsRetrieverImplClass";
         public static final String CONSUMER_DIALECT_URI = "ConsumerDialectURI";
         public static final String SIGNATURE_ALGORITHM = "SignatureAlgorithm";
+        public static final String ENCRYPTION_ALGORITHM = "EncryptionAlgorithm";
         public static final String SECURITY_CONTEXT_TTL = "AuthorizationContextTTL";
         private static final String AUTH_CONTEXT_TOKEN_USE_MULTIVALUE_SEPARATOR = "UseMultiValueSeparator";
 

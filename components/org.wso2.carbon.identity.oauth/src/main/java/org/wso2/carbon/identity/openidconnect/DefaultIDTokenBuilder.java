@@ -18,13 +18,12 @@
 package org.wso2.carbon.identity.openidconnect;
 
 import com.nimbusds.jose.Algorithm;
+import com.nimbusds.jose.JWEAlgorithm;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.PlainJWT;
 import org.apache.axiom.om.OMElement;
-import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.io.Charsets;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -108,11 +107,20 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
 
     private static final Log log = LogFactory.getLog(DefaultIDTokenBuilder.class);
     private JWSAlgorithm signatureAlgorithm = null;
+    private JWEAlgorithm encryptionAlgorithm = null;
 
     public DefaultIDTokenBuilder() throws IdentityOAuth2Exception {
         //map signature algorithm from identity.xml to nimbus format, this is a one time configuration
         signatureAlgorithm = OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(
                 OAuthServerConfiguration.getInstance().getIdTokenSignatureAlgorithm());
+        encryptionAlgorithm = OAuth2Util.mapEncryptionAlgorithmForJWEAlgorithm(
+                OAuthServerConfiguration.getInstance().getIdTokenEncryptionAlgorithm());
+    }
+
+    // Check and return true if JWE is requested
+    private boolean isJWERequested() {
+        // TODO: 2/6/18 implement the method body
+        return true;
     }
 
     @Override
@@ -193,8 +201,12 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
             return new PlainJWT(jwtClaimsSet).serialize();
         }
 
-        String signingTenantDomain = getSigningTenantDomain(tokenReqMsgCtxt);
-        return OAuth2Util.signJWT(jwtClaimsSet, signatureAlgorithm, signingTenantDomain).serialize();
+        if (isJWERequested()) {
+            return OAuth2Util.encryptJWT(jwtClaimsSet, encryptionAlgorithm, spTenantDomain, clientId).serialize();
+        } else {
+            String signingTenantDomain = getSigningTenantDomain(tokenReqMsgCtxt);
+            return OAuth2Util.signJWT(jwtClaimsSet, signatureAlgorithm, signingTenantDomain).serialize();
+        }
     }
 
     @Override

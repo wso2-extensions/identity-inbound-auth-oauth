@@ -19,14 +19,20 @@
 package org.wso2.carbon.identity.oauth2.util;
 
 import com.nimbusds.jose.Algorithm;
+import com.nimbusds.jose.EncryptionMethod;
 import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JWEAlgorithm;
+import com.nimbusds.jose.JWEEncrypter;
+import com.nimbusds.jose.JWEHeader;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSSigner;
 import com.nimbusds.jose.JWSVerifier;
+import com.nimbusds.jose.crypto.RSAEncrypter;
 import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jose.util.Base64URL;
+import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
@@ -1534,6 +1540,37 @@ public class OAuth2Util {
     }
 
     /**
+     * This method map encryption algorithm defined in identity.xml to nimbus
+     * encryption algorithm
+     *
+     * @param encryptionAlgorithm name of the encryption algorithm
+     * @return mapped JWEAlgorithm
+     * @throws IdentityOAuth2Exception
+     */
+    public static JWEAlgorithm mapEncryptionAlgorithmForJWEAlgorithm(String encryptionAlgorithm)
+            throws IdentityOAuth2Exception {
+
+        // TODO: 2/6/18 Refine
+        JWEAlgorithm jweAlgorithm = JWEAlgorithm.parse(encryptionAlgorithm);
+
+        if (jweAlgorithm.getRequirement() != null) {
+            return jweAlgorithm;
+        } else {
+            log.error("Unsupported Encryption Algorithm in identity.xml");
+            throw new IdentityOAuth2Exception("Unsupported Encryption Algorithm: " + encryptionAlgorithm + ", in identity.xml");
+        }
+
+//        if (NONE.equalsIgnoreCase(encryptionAlgorithm)) {
+//            return new JWEAlgorithm(JWEAlgorithm.NONE.getName());
+//        } else if (RSA_OAEP.equals(encryptionAlgorithm)) {
+//            return JWEAlgorithm.RSA_OAEP;
+//        } else {
+//            log.error("Unsupported Encryption Algorithm in identity.xml");
+//            throw new IdentityOAuth2Exception("Unsupported Encryption Algorithm: " + encryptionAlgorithm + ", in identity.xml");
+//        }
+    }
+
+    /**
      * This method map signature algorithm define in identity.xml to nimbus
      * signature algorithm
      *
@@ -1687,6 +1724,72 @@ public class OAuth2Util {
         } else {
             throw new RuntimeException("Provided signature algorithm: " + signatureAlgorithm +
                     " is not supported");
+        }
+    }
+
+    /**
+     * Generic Encryption function
+     *
+     * @param jwtClaimsSet contains JWT body
+     * @param encryptionAlgorithm JWT encryption algorithm
+     * @param spTenantDomain Service provider tenant domain
+     * @param clientId ID of the client
+     * @return encrypted JWT token
+     * @throws IdentityOAuth2Exception
+     */
+    public static JWT encryptJWT(JWTClaimsSet jwtClaimsSet, JWEAlgorithm encryptionAlgorithm, String spTenantDomain,
+                                 String clientId) throws IdentityOAuth2Exception{
+        if (JWEAlgorithm.RSA_OAEP.equals(encryptionAlgorithm) || JWEAlgorithm.RSA1_5.equals(encryptionAlgorithm) ||
+                JWEAlgorithm.RSA_OAEP_256.equals(encryptionAlgorithm)) {
+            return encryptWithRSA(jwtClaimsSet, encryptionAlgorithm, spTenantDomain, clientId);
+        } else {
+            throw new RuntimeException("Provided encryption algorithm: " + encryptionAlgorithm +
+                    " is not supported");
+        }
+    }
+
+    /**
+     * encrypt JWT token from RSA algorithm
+     *
+     * @param jwtClaimsSet contains JWT body
+     * @param encryptionAlgorithm JWT signing algorithm
+     * @param spTenantDomain Service provider tenant domain
+     * @param clientId ID of the client
+     * @return encrypted JWT token
+     * @throws IdentityOAuth2Exception
+     */
+    private static JWT encryptWithRSA(JWTClaimsSet jwtClaimsSet, JWEAlgorithm encryptionAlgorithm,
+                                      String spTenantDomain, String clientId) throws IdentityOAuth2Exception {
+        try {
+            if (StringUtils.isBlank(spTenantDomain)) {
+                spTenantDomain = MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
+                if (log.isDebugEnabled()) {
+                    log.debug("Assign super tenant domain as signing domain."); // TODO: 2/6/18 Refine
+                }
+            }
+
+            if (log.isDebugEnabled()) {
+                log.debug("Encrypting JWT using the algorithm: " + encryptionAlgorithm + " & key of the tenant: " +
+                        spTenantDomain);
+            }
+
+            int tenantId = IdentityTenantUtil.getTenantId(spTenantDomain);
+            Certificate publicCert = getX509CertOfOAuthApp(clientId, spTenantDomain);
+            Key publicKey = publicCert.getPublicKey();
+
+            EncryptionMethod encryptionMethod = EncryptionMethod.A128GCM; // TODO: 2/7/18 Refine
+            JWEHeader header = new JWEHeader(encryptionAlgorithm, encryptionMethod);
+            header.setKeyID(getThumbPrint(spTenantDomain, tenantId));
+            header.setX509CertThumbprint(new Base64URL(getThumbPrint(spTenantDomain, tenantId)));
+
+            EncryptedJWT encryptedJWT = new EncryptedJWT(header, jwtClaimsSet);
+
+            JWEEncrypter encrypter = new RSAEncrypter((RSAPublicKey) publicKey);
+            encryptedJWT.encrypt(encrypter);
+
+            return encryptedJWT;
+        } catch (JOSEException e) {
+            throw new IdentityOAuth2Exception("Error occurred while encrypting JWT", e);
         }
     }
 
@@ -1990,7 +2093,7 @@ public class OAuth2Util {
         }
         return true;
     }
-  
+
     /**
      * This method returns essential:true claims list from the request parameter of OIDC authorization request
      *
