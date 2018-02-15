@@ -102,18 +102,29 @@ public class DCRMService {
         OAuthConsumerAppDTO appDTO = getApplicationById(clientId);
         String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         String applicationOwner = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
+        String clientName = updateRequest.getClientName();
 
         // Update Service Provider
         ServiceProvider sp = getServiceProvider(appDTO.getApplicationName(), tenantDomain);
-        if (StringUtils.isNotEmpty(updateRequest.getClientName())) {
-            sp.setApplicationName(updateRequest.getClientName());
+        if (StringUtils.isNotEmpty(clientName)) {
+            // Regex validation of the application name.
+            if (!DCRMUtils.isRegexValidated(clientName)) {
+                throw new DCRMException("The Application name: " + clientName + " is not valid! It is not adhering to" +
+                        " the regex: " + DCRConstants.APP_NAME_VALIDATING_REGEX);
+            }
+            sp.setApplicationName(clientName);
             updateServiceProvider(sp, tenantDomain, applicationOwner);
         }
 
         // Update application
         try {
-            if (StringUtils.isNotEmpty(updateRequest.getClientName())) {
-                appDTO.setApplicationName(updateRequest.getClientName());
+            if (StringUtils.isNotEmpty(clientName)) {
+                // Regex validation of the application name.
+                if (!DCRMUtils.isRegexValidated(clientName)) {
+                    throw new DCRMException("The Application name: " + clientName + " is not valid! It is not adhering to" +
+                            " the regex: " + DCRConstants.APP_NAME_VALIDATING_REGEX);
+                }
+                appDTO.setApplicationName(clientName);
             }
             if (!updateRequest.getGrantTypes().isEmpty()) {
                 String grantType = StringUtils.join(updateRequest.getGrantTypes(), GRANT_TYPE_SEPARATOR);
@@ -159,6 +170,12 @@ public class DCRMService {
         String applicationOwner = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
         String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         String spName = registrationRequest.getClientName();
+
+        // Regex validation of the application name.
+        if (!DCRMUtils.isRegexValidated(spName)) {
+            throw new DCRMException("The Application name: " + spName + " is not valid! It is not adhering to" +
+                    " the regex: " + DCRConstants.APP_NAME_VALIDATING_REGEX);
+        }
 
         // Check whether a service provider already exists for the name we are trying to register the OAuth app with.
         if (isServiceProviderExist(spName, tenantDomain)) {
