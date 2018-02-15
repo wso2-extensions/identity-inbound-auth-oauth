@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oauth2.internal;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationMethodNameTranslator;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.handler.HandlerComparator;
+import org.wso2.carbon.identity.entitlement.EntitlementService;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
 import org.wso2.carbon.identity.openidconnect.ClaimProvider;
 import org.wso2.carbon.registry.core.service.RegistryService;
@@ -38,6 +39,7 @@ public class OAuth2ServiceComponentHolder {
     private static boolean audienceEnabled = false;
     private static RegistryService registryService;
     private static AuthenticationMethodNameTranslator authenticationMethodNameTranslator;
+    private static EntitlementService entitlementService;
     private static List<OAuthClientAuthenticator> authenticationHandlers = new ArrayList<>();
     private static List<ClaimProvider> claimProviders = new ArrayList<>();
 
@@ -142,6 +144,15 @@ public class OAuth2ServiceComponentHolder {
      */
     public static void unregisterClaimProvider(ClaimProvider claimProvider) {
         claimProviders.remove(claimProvider);
+    }
+
+
+    public static void setEntitlementService(EntitlementService entitlementService) {
+        OAuth2ServiceComponentHolder.entitlementService = entitlementService;
+    }
+
+    public static EntitlementService getEntitlementService() {
+        return entitlementService;
     }
 
 }
