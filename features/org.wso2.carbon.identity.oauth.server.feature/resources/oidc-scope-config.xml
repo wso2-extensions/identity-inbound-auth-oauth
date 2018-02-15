@@ -18,17 +18,14 @@
 <Scopes>
     <Scope id="openid">
         <Claim>
-            sub,email,email_verified,name,family_name,given_name,middle_name,nickname,preferred_username,profile,picture,
-            website,gender,birthdate,zoneinfo,locale,updated_at,phone_number,phone_number_verified,address,street_address,
-            country,formatted,postal_code,locality,region
+            sub,email,email_verified,name,family_name,given_name,middle_name,nickname,preferred_username,profile,picture,website,gender,birthdate,zoneinfo,locale,updated_at,phone_number,phone_number_verified,address,street_address,country,formatted,postal_code,locality,region
         </Claim>
     </Scope>
     <Scope id="email">
         <Claim>email,email_verified</Claim>
     </Scope>
     <Scope id="profile">
-        <Claim>name,family_name,given_name,middle_name,nickname,preferred_username,profile,picture,website,
-            gender,birthdate,zoneinfo,locale,updated_at
+        <Claim>name,family_name,given_name,middle_name,nickname,preferred_username,profile,picture,website,gender,birthdate,zoneinfo,locale,updated_at
         </Claim>
     </Scope>
     <Scope id="phone">
