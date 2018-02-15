@@ -21,16 +21,21 @@
 <%@ page import="org.wso2.carbon.identity.oauth.common.OAuthConstants" %>
 <%@ page import="org.wso2.carbon.identity.oauth.stub.dto.OAuthConsumerAppDTO" %>
 <%@ page import="org.wso2.carbon.identity.oauth.ui.client.OAuthAdminClient" %>
+<%@ page import="org.wso2.carbon.identity.oauth.ui.util.OAuthUIUtil" %>
 <%@ page import="org.wso2.carbon.ui.CarbonUIMessage" %>
 <%@ page import="org.wso2.carbon.ui.CarbonUIUtil" %>
 <%@ page import="org.wso2.carbon.utils.ServerConstants"%>
 <%@ page import="java.util.ArrayList" %>
 
+<%@ page import="java.util.ArrayList" %>
 <%@ page import="java.util.Arrays" %>
+<%@ page import="java.util.Collections" %>
 <%@ page import="java.util.List" %>
 <%@ page import="java.util.ResourceBundle" %>
 <%@ page import="org.apache.commons.lang.ArrayUtils" %>
 <%@ page import="org.wso2.carbon.identity.oauth.ui.util.OAuthUIUtil" %>
+<%@ page import="org.wso2.carbon.identity.oauth.ui.util.OAuthUIConstants" %>
+
 
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%@ taglib uri="http://wso2.org/projects/carbon/taglibs/carbontags.jar" prefix="carbon" %>
@@ -63,6 +68,8 @@
     String grants = null;
     String[] audiences = null;
     String audienceTableStyle = "display:none";
+    List<String> allowedScopeValidators = new ArrayList<String>();
+    List<String> scopeValidators = new ArrayList<String>();
 
     try {
 
@@ -111,6 +118,8 @@
                 app.setBackChannelLogoutUrl("");
             }
             allowedGrants = new ArrayList<String>(Arrays.asList(client.getAllowedOAuthGrantTypes()));
+            allowedScopeValidators = new ArrayList<String>(Arrays.asList(client.getAllowedScopeValidators()));
+            Collections.sort(allowedScopeValidators);
             if (OAuthConstants.OAuthVersions.VERSION_2.equals(app.getOAuthVersion())) {
                 id = resourceBundle.getString("consumerkey.oauth20");
                 secret = resourceBundle.getString("consumersecret.oauth20");
@@ -667,7 +676,26 @@
                             <fmt:message key='enable.id.token.encryption'/>
                         </td>
                     </tr>
-                    
+                        <%--Scope validators--%>
+                    <tr id="scope_validator_row" name="scope_validator_row">
+                        <td class="leftCol-med"><fmt:message key='scopeValidators'/></td>
+                        <td>
+                            <table>
+                                <%
+                                    for (String scopeValidator : allowedScopeValidators) {
+                                %>
+                                <tr>
+                                    <td><label><input type="checkbox"
+                                                      id=<%=OAuthUIConstants.SCOPE_VALIDATOR  + scopeValidator%> name=<%=OAuthUIConstants.SCOPE_VALIDATOR  + scopeValidator%>
+                                                      value=<%=scopeValidator%> <%=(scopeValidators.contains(scopeValidator) ? "checked=\"checked\"" : "")%>/><%=scopeValidator%>
+                                    </label></td>
+                                </tr>
+                                <%
+                                    }
+                                %>
+                            </table>
+                        </td>
+                    </tr>
 				</table>
 			</td>
 		    </tr>
