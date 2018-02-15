@@ -33,6 +33,7 @@ public class OAuthAppDO implements Serializable {
     private AuthenticatedUser user;
     private String oauthVersion;
     private String grantTypes;
+    private String[] scopeValidators;
     private boolean pkceSupportPlain;
     private boolean pkceMandatory;
     private String state;
@@ -98,6 +99,14 @@ public class OAuthAppDO implements Serializable {
 
     public void setGrantTypes(String grantTypes) {
         this.grantTypes = grantTypes;
+    }
+
+    public String[] getScopeValidators() {
+        return scopeValidators;
+    }
+
+    public void setScopeValidators(String[] scopeValidators) {
+        this.scopeValidators = scopeValidators;
     }
 
     public int getId() {

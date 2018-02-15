@@ -23,9 +23,12 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
+import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
+import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -54,6 +57,10 @@ public class DefaultOAuth2TokenValidatorTest {
         oAuth2TokenValidationMessageContext =
                 new OAuth2TokenValidationMessageContext
                         (oAuth2TokenValidationRequestDTO, oAuth2TokenValidationResponseDTO);
+
+        AccessTokenDO accessTokenDO = new AccessTokenDO();
+        accessTokenDO.setConsumerKey("consumer-key");
+        oAuth2TokenValidationMessageContext.addProperty("AccessTokenDO", accessTokenDO);
     }
 
     @AfterMethod
@@ -77,8 +84,11 @@ public class DefaultOAuth2TokenValidatorTest {
                     = getClassInstance(scopeValidatorClazz, OAuth2ScopeValidator.class);
             Set<OAuth2ScopeValidator> oAuth2ScopeValidators = new HashSet<OAuth2ScopeValidator>();
             oAuth2ScopeValidators.add(scopeValidator);
-
             oAuthServerConfiguration.setOAuth2ScopeValidators(oAuth2ScopeValidators);
+
+            OAuthAppDO authApp = new OAuthAppDO();
+            authApp.setScopeValidators(new String[]{scopeValidatorClazz});
+            AppInfoCache.getInstance().addToCache("consumer-key", authApp);
         }
         Assert.assertTrue(defaultOAuth2TokenValidator
                 .validateScope(oAuth2TokenValidationMessageContext), "Access token validated");

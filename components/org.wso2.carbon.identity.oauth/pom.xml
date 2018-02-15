@@ -281,6 +281,7 @@
                             javax.cache,
                             javax.crypto,
                             javax.crypto.spec,
+                            javax.xml.stream,
                             javax.xml.namespace,
                             javax.management,
                             javax.naming.directory,

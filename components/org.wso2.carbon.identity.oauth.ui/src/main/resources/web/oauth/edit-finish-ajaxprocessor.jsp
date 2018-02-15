@@ -29,6 +29,9 @@
 
 <%@ page import="java.util.ResourceBundle" %>
 <%@ page import="org.wso2.carbon.identity.oauth.ui.util.OAuthUIUtil" %>
+<%@ page import="java.util.ArrayList" %>
+<%@ page import="java.util.List" %>
+<%@ page import="org.wso2.carbon.identity.oauth.ui.util.OAuthUIConstants" %>
 
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt"%>
 <%@ taglib uri="http://wso2.org/projects/carbon/taglibs/carbontags.jar" prefix="carbon"%>
@@ -104,8 +107,17 @@
                 }
             }
             grants = buff.toString();
+            List<String> scopeValidators = new ArrayList<String>();
+            String[] allowedValidators = client.getAllowedScopeValidators();
+            for (String allowedValidator : allowedValidators) {
+                String val = request.getParameter(OAuthUIConstants.SCOPE_VALIDATOR  + allowedValidator);
+                if (val != null) {
+                    scopeValidators.add(allowedValidator);
+                }
+            }
             if (OAuthConstants.OAuthVersions.VERSION_2.equals(oauthVersion)) {
                 app.setGrantTypes(grants);
+                app.setScopeValidators(scopeValidators.toArray(new String[scopeValidators.size()]));
             }
             if (Boolean.parseBoolean(request.getParameter("enableAudienceRestriction"))) {
                 String audiencesCountParameter = request.getParameter("audiencePropertyCounter");

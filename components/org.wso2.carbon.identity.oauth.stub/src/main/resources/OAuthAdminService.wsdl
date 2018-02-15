@@ -11,18 +11,6 @@
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
-            <xs:element name="registerOAuthConsumer">
-                <xs:complexType>
-                    <xs:sequence/>
-                </xs:complexType>
-            </xs:element>
-            <xs:element name="registerOAuthConsumerResponse">
-                <xs:complexType>
-                    <xs:sequence>
-                        <xs:element maxOccurs="unbounded" minOccurs="0" name="return" nillable="true" type="xs:string"/>
-                    </xs:sequence>
-                </xs:complexType>
-            </xs:element>
             <xs:element name="getAllOAuthApplicationData">
                 <xs:complexType>
                     <xs:sequence/>
@@ -32,6 +20,18 @@
                 <xs:complexType>
                     <xs:sequence>
                         <xs:element maxOccurs="unbounded" minOccurs="0" name="return" nillable="true" type="ax2371:OAuthConsumerAppDTO"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="registerOAuthConsumer">
+                <xs:complexType>
+                    <xs:sequence/>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="registerOAuthConsumerResponse">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element maxOccurs="unbounded" minOccurs="0" name="return" nillable="true" type="xs:string"/>
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
@@ -166,6 +166,18 @@
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
+            <xs:element name="getAllowedScopeValidators">
+                <xs:complexType>
+                    <xs:sequence/>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="getAllowedScopeValidatorsResponse">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element maxOccurs="unbounded" minOccurs="0" name="return" nillable="true" type="xs:string"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
             <xs:element name="isPKCESupportEnabled">
                 <xs:complexType>
                     <xs:sequence/>
@@ -224,6 +236,7 @@
                     <xs:element minOccurs="0" name="pkceSupportPlain" type="xs:boolean"/>
                     <xs:element minOccurs="0" name="refreshTokenExpiryTime" type="xs:long"/>
                     <xs:element minOccurs="0" name="requestObjectSignatureValidationEnabled" type="xs:boolean"/>
+                    <xs:element maxOccurs="unbounded" minOccurs="0" name="scopeValidators" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="state" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="userAccessTokenExpiryTime" type="xs:long"/>
                     <xs:element minOccurs="0" name="username" nillable="true" type="xs:string"/>
@@ -344,6 +357,12 @@
     <wsdl:message name="revokeAuthzForAppsByResoureOwnerResponse">
         <wsdl:part name="parameters" element="ns1:revokeAuthzForAppsByResoureOwnerResponse"/>
     </wsdl:message>
+    <wsdl:message name="getAllowedScopeValidatorsRequest">
+        <wsdl:part name="parameters" element="ns1:getAllowedScopeValidators"/>
+    </wsdl:message>
+    <wsdl:message name="getAllowedScopeValidatorsResponse">
+        <wsdl:part name="parameters" element="ns1:getAllowedScopeValidatorsResponse"/>
+    </wsdl:message>
     <wsdl:portType name="OAuthAdminServicePortType">
         <wsdl:operation name="updateApproveAlwaysForAppConsentByResourceOwner">
             <wsdl:input message="tns:updateApproveAlwaysForAppConsentByResourceOwnerRequest" wsaw:Action="urn:updateApproveAlwaysForAppConsentByResourceOwner"/>
@@ -425,6 +444,10 @@
             <wsdl:input message="tns:revokeAuthzForAppsByResoureOwnerRequest" wsaw:Action="urn:revokeAuthzForAppsByResoureOwner"/>
             <wsdl:output message="tns:revokeAuthzForAppsByResoureOwnerResponse" wsaw:Action="urn:revokeAuthzForAppsByResoureOwnerResponse"/>
             <wsdl:fault message="tns:OAuthAdminServiceIdentityOAuthAdminException" name="OAuthAdminServiceIdentityOAuthAdminException" wsaw:Action="urn:revokeAuthzForAppsByResoureOwnerOAuthAdminServiceIdentityOAuthAdminException"/>
+        </wsdl:operation>
+        <wsdl:operation name="getAllowedScopeValidators">
+            <wsdl:input message="tns:getAllowedScopeValidatorsRequest" wsaw:Action="urn:getAllowedScopeValidators"/>
+            <wsdl:output message="tns:getAllowedScopeValidatorsResponse" wsaw:Action="urn:getAllowedScopeValidatorsResponse"/>
         </wsdl:operation>
     </wsdl:portType>
     <wsdl:binding name="OAuthAdminServiceSoap11Binding" type="tns:OAuthAdminServicePortType">
@@ -621,6 +644,15 @@
                 <soap:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
             </wsdl:fault>
         </wsdl:operation>
+        <wsdl:operation name="getAllowedScopeValidators">
+            <soap:operation soapAction="urn:getAllowedScopeValidators" style="document"/>
+            <wsdl:input>
+                <soap:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap:body use="literal"/>
+            </wsdl:output>
+        </wsdl:operation>
     </wsdl:binding>
     <wsdl:binding name="OAuthAdminServiceSoap12Binding" type="tns:OAuthAdminServicePortType">
         <soap12:binding transport="http://schemas.xmlsoap.org/soap/http" style="document"/>
@@ -816,6 +848,15 @@
                 <soap12:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
             </wsdl:fault>
         </wsdl:operation>
+        <wsdl:operation name="getAllowedScopeValidators">
+            <soap12:operation soapAction="urn:getAllowedScopeValidators" style="document"/>
+            <wsdl:input>
+                <soap12:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap12:body use="literal"/>
+            </wsdl:output>
+        </wsdl:operation>
     </wsdl:binding>
     <wsdl:binding name="OAuthAdminServiceHttpBinding" type="tns:OAuthAdminServicePortType">
         <http:binding verb="POST"/>
@@ -965,6 +1006,15 @@
         </wsdl:operation>
         <wsdl:operation name="revokeAuthzForAppsByResoureOwner">
             <http:operation location="revokeAuthzForAppsByResoureOwner"/>
+            <wsdl:input>
+                <mime:content type="text/xml" part="parameters"/>
+            </wsdl:input>
+            <wsdl:output>
+                <mime:content type="text/xml" part="parameters"/>
+            </wsdl:output>
+        </wsdl:operation>
+        <wsdl:operation name="getAllowedScopeValidators">
+            <http:operation location="getAllowedScopeValidators"/>
             <wsdl:input>
                 <mime:content type="text/xml" part="parameters"/>
             </wsdl:input>

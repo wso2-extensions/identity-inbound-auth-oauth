@@ -27,6 +27,7 @@ public class OAuthConsumerAppDTO {
     private String oauthVersion;
     private String username;
     private String grantTypes = "";
+    private String[] scopeValidators = null;
     private boolean pkceSupportPlain;
     private boolean pkceMandatory;
     private String state;
@@ -118,6 +119,14 @@ public class OAuthConsumerAppDTO {
         if(grantTypes != null) {
             this.grantTypes = grantTypes;
         }
+    }
+
+    public String[] getScopeValidators() {
+        return scopeValidators;
+    }
+
+    public void setScopeValidators(String[] scopeValidators) {
+        this.scopeValidators = scopeValidators;
     }
 
     public boolean getPkceSupportPlain() {

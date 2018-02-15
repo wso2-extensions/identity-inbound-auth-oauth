@@ -315,6 +315,7 @@ public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
         app.setOauthConsumerSecret("some-consumer-secret");
         app.setOauthVersion("some-oauth-version");
         app.setGrantTypes("some-grant-types");
+        app.setScopeValidators(new String[]{"some-scope-valiator-1", "some-scope-valiator-2"});
         // Create authenticated user.
         AuthenticatedUser user = new AuthenticatedUser();
         user.setUserStoreDomain(UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME);

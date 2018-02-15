@@ -18,11 +18,17 @@
 
 package org.wso2.carbon.identity.oauth2.validators;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -33,6 +39,7 @@ public class DefaultOAuth2TokenValidator implements OAuth2TokenValidator {
 
     public static final String TOKEN_TYPE = "bearer";
     private static final String ACCESS_TOKEN_DO = "AccessTokenDO";
+    private Log log = LogFactory.getLog(DefaultOAuth2TokenValidator.class);
 
     @Override
     public boolean validateAccessDelegation(OAuth2TokenValidationMessageContext messageContext)
@@ -48,26 +55,42 @@ public class DefaultOAuth2TokenValidator implements OAuth2TokenValidator {
 
         Set<OAuth2ScopeValidator> oAuth2ScopeValidators = OAuthServerConfiguration.getInstance()
                 .getOAuth2ScopeValidators();
-        for (OAuth2ScopeValidator validator: oAuth2ScopeValidators) {
+        List<String> scopeValidators;
+        AccessTokenDO accessTokenDO = (AccessTokenDO) messageContext.getProperty(ACCESS_TOKEN_DO);
+        try {
+            scopeValidators = Arrays.asList(OAuth2Util.getAppInformationByClientId(accessTokenDO.getConsumerKey())
+                    .getScopeValidators());
+        } catch (InvalidOAuthClientException e) {
+            throw new IdentityOAuth2Exception(String.format("Identity Application Management Exception occurred when " +
+                    "getting app information for client id %s ", accessTokenDO.getConsumerKey()), e);
+        }
 
-            if (validator != null && validator.canHandle(messageContext)) {
-                String resource = null;
-                if (messageContext.getRequestDTO().getContext() != null) {
-                    //Iterate the array of context params to find the 'resource' context param.
-                    for (OAuth2TokenValidationRequestDTO.TokenValidationContextParam resourceParam :
-                            messageContext.getRequestDTO().getContext()) {
-                        //If the context param is the resource that is being accessed
-                        if (resourceParam != null && "resource".equals(resourceParam.getKey())) {
-                            resource = resourceParam.getValue();
-                            break;
+        if (!scopeValidators.isEmpty()) {
+            for (OAuth2ScopeValidator validator : oAuth2ScopeValidators) {
+
+                if (validator != null && scopeValidators.contains(validator.getClass().getSimpleName())
+                        && validator.canHandle(messageContext)) {
+                    String resource = null;
+                    if (messageContext.getRequestDTO().getContext() != null) {
+                        //Iterate the array of context params to find the 'resource' context param.
+                        for (OAuth2TokenValidationRequestDTO.TokenValidationContextParam resourceParam :
+                                messageContext.getRequestDTO().getContext()) {
+                            //If the context param is the resource that is being accessed
+                            if (resourceParam != null && "resource".equals(resourceParam.getKey())) {
+                                resource = resourceParam.getValue();
+                                break;
+                            }
                         }
                     }
-                }
-                boolean isValid = validator.validateScope((AccessTokenDO) messageContext.getProperty
-                        (ACCESS_TOKEN_DO), resource);
+                    if (log.isDebugEnabled()) {
+                        log.debug(String.format("Validating scope of token %s using %s", accessTokenDO.getTokenId(),
+                                validator.getClass().getName()));
+                    }
+                    boolean isValid = validator.validateScope(accessTokenDO, resource);
 
-                if (!isValid) {
-                    return false;
+                    if (!isValid) {
+                        return false;
+                    }
                 }
             }
         }
