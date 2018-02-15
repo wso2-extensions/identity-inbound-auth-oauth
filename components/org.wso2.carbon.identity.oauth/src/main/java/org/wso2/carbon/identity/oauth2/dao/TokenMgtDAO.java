@@ -3205,7 +3205,8 @@ public class TokenMgtDAO {
             ps.executeUpdate();
             connection.commit();
         } catch (SQLException e) {
-            String errorMsg = "Error revoking access tokens for client ID: " + consumerKey + "and tenant ID:" + tenantId;
+            String errorMsg = "Error revoking access tokens for client ID: " + consumerKey + " and tenant ID: " +
+                    tenantId;
             IdentityDatabaseUtil.rollBack(connection);
             throw new IdentityOAuth2Exception(errorMsg, e);
         } finally {
