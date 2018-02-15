@@ -678,7 +678,26 @@
                                         <fmt:message key='enable.id.token.encryption'/>
                                     </td>
                                 </tr>
-
+                                    <%--Scope validators--%>
+                                <tr id="scope_validator_row" name="scope_validator_row">
+                                    <td class="leftCol-med"><fmt:message key='scopeValidators'/></td>
+                                    <td>
+                                        <table>
+                                            <%
+                                                for (String scopeValidator : allowedScopeValidators) {
+                                            %>
+                                            <tr>
+                                                <td><label><input type="checkbox"
+                                                                  id=<%=OAuthUIConstants.SCOPE_VALIDATOR  + scopeValidator%> name=<%=OAuthUIConstants.SCOPE_VALIDATOR  + scopeValidator%>
+                                                                  value=<%=scopeValidator%> <%=(scopeValidators.contains(scopeValidator) ? "checked=\"checked\"" : "")%>/><%=scopeValidator%>
+                                                </label></td>
+                                            </tr>
+                                            <%
+                                                }
+                                            %>
+                                        </table>
+                                    </td>
+                                </tr>
                             </table>
                         </td>
                     </tr>
