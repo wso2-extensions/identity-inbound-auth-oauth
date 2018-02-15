@@ -107,6 +107,9 @@
             if (app.getCallbackUrl() == null) {
                 app.setCallbackUrl("");
             }
+            if (app.getBackChannelLogoutUrl() == null) {
+                app.setBackChannelLogoutUrl("");
+            }
             allowedGrants = new ArrayList<String>(Arrays.asList(client.getAllowedOAuthGrantTypes()));
             if (OAuthConstants.OAuthVersions.VERSION_2.equals(app.getOAuthVersion())) {
                 id = resourceBundle.getString("consumerkey.oauth20");
@@ -202,9 +205,14 @@
                     var userTokenExpiryTime = document.getElementById("userAccessTokenExpiryTime").value;
                     var applicationTokenExpiryTime = document.getElementById("userAccessTokenExpiryTime").value;
                     var refreshTokenExpiryTime = document.getElementById("refreshTokenExpiryTime").value;
+                    var backChannelLogoutUrl = document.getElementsByName("backChannelLogout")[0].value;
 
                     if (callbackUrl.indexOf("#") !== -1) {
                         CARBON.showWarningDialog('<fmt:message key="callback.is.fragment"/>');
+                        return false;
+                    }
+                    if (backChannelLogoutUrl.indexOf("#") !== -1) {
+                        CARBON.showWarningDialog('<fmt:message key="backchannel.logout.is.fragment"/>');
                         return false;
                     }
                     var value = document.getElementsByName("application")[0].value;
@@ -224,6 +232,11 @@
                                 CARBON.showWarningDialog('<fmt:message key="callback.is.not.url"/>');
                                 return false;
                             }
+                            if (!isWhiteListed(backChannelLogoutUrl, ["url"]) || !isNotBlackListed(backChannelLogoutUrl,
+                                    ["uri-unsafe-exists"])) {
+                                CARBON.showWarningDialog('<fmt:message key="backchannel.logout.is.not.url"/>');
+                                return false;
+                            }
                             if (!isWhiteListed(userTokenExpiryTime, ["digits-only"])) {
                                 CARBON.showWarningDialog('<fmt:message key="invalid.user.access.token.expiry.time"/>');
                                 return false;
@@ -240,6 +253,11 @@
                     } else {
                         if (!isWhiteListed(callbackUrl, ["url"])) {
                             CARBON.showWarningDialog('<fmt:message key="callback.is.not.url"/>');
+                            return false;
+                        }
+                        if (!isWhiteListed(backChannelLogoutUrl, ["url"]) || !isNotBlackListed(backChannelLogoutUrl,
+                                ["uri-unsafe-exists"])) {
+                            CARBON.showWarningDialog('<fmt:message key="backchannel.logout.is.not.url"/>');
                             return false;
                         }
                         if (!isWhiteListed(userTokenExpiryTime, ["digits-only"])) {
@@ -396,6 +414,11 @@
                                 <td><input class="text-box-big" id="callback" name="callback"
                                            type="text" value="<%=Encode.forHtmlAttribute(app.getCallbackUrl())%>"/></td>
 		                    </tr>
+                            <tr id="bclogout_row">
+                                <td class="leftCol-med"><fmt:message key="bclogout"/></td>
+                                <td><input class="text-box-big" id="bclogout" name="bclogout"
+                                           type="text" value="<%=Encode.forHtmlAttribute(app.getBackChannelLogoutUrl())%>"/></td>
+                            </tr>
 
                             <script>
                                 if(<%=app.getOAuthVersion().equals(OAuthConstants.OAuthVersions.VERSION_1A)%> || <%=codeGrant%> || <%=implicitGrant%>){

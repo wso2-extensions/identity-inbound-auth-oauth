@@ -48,6 +48,7 @@
 
     String consumerkey = request.getParameter("consumerkey");
     String callback = request.getParameter("callback");
+    String backchannelLogoutUrl = request.getParameter("bclogout");
     String applicationName = request.getParameter("application");
     String consumersecret = request.getParameter("consumersecret");
     String oauthVersion = request.getParameter("oauthVersion");
@@ -74,22 +75,24 @@
     String BUNDLE = "org.wso2.carbon.identity.oauth.ui.i18n.Resources";
 	ResourceBundle resourceBundle = ResourceBundle.getBundle(BUNDLE, request.getLocale());
 	OAuthConsumerAppDTO app = new OAuthConsumerAppDTO();
-	
+
 	String spName = (String) session.getAttribute("application-sp-name");
 	session.removeAttribute("application-sp-name");
 	boolean isError = false;
-	
+
     try {
         if (OAuthUIUtil.isValidURI(callback) || callback.startsWith(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX)) {
             String cookie = (String) session.getAttribute(ServerConstants.ADMIN_SERVICE_COOKIE);
             String backendServerURL = CarbonUIUtil.getServerURL(config.getServletContext(), session);
             ConfigurationContext configContext =
-                    (ConfigurationContext) config.getServletContext().getAttribute(CarbonConstants.CONFIGURATION_CONTEXT);
+                    (ConfigurationContext) config.getServletContext()
+                            .getAttribute(CarbonConstants.CONFIGURATION_CONTEXT);
             OAuthAdminClient client = new OAuthAdminClient(cookie, backendServerURL, configContext);
             app.setOauthConsumerKey(consumerkey);
             app.setOauthConsumerSecret(consumersecret);
             app.setCallbackUrl(callback);
             app.setApplicationName(applicationName);
+            app.setBackChannelLogoutUrl(backchannelLogoutUrl);
             app.setOAuthVersion(oauthVersion);
             app.setPkceMandatory(pkceMandatory);
             app.setPkceSupportPlain(pkceSupportPlain);
@@ -131,10 +134,10 @@
         }
 
     } catch (Exception e) {
-    	isError = false;
-    	String message = resourceBundle.getString("error.while.updating.app");
-    	CarbonUIMessage.sendCarbonUIMessage(message, CarbonUIMessage.ERROR, request,e);
-        forwardTo ="../admin/error.jsp";
+        isError = false;
+        String message = resourceBundle.getString("error.while.updating.app");
+        CarbonUIMessage.sendCarbonUIMessage(message, CarbonUIMessage.ERROR, request, e);
+        forwardTo = "../admin/error.jsp";
     }
 %>
 

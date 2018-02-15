@@ -126,6 +126,7 @@ public class OAuthAdminService extends AbstractAdmin {
                 dto = new OAuthConsumerAppDTO();
                 dto.setApplicationName(app.getApplicationName());
                 dto.setCallbackUrl(app.getCallbackUrl());
+                dto.setBackChannelLogoutUrl(app.getBackChannelLogoutUrl());
                 dto.setOauthConsumerKey(app.getOauthConsumerKey());
                 dto.setOauthConsumerSecret(app.getOauthConsumerSecret());
                 dto.setOAuthVersion(app.getOauthVersion());
@@ -203,6 +204,7 @@ public class OAuthAdminService extends AbstractAdmin {
                 dto.setCallbackUrl(app.getCallbackUrl());
                 dto.setOauthConsumerKey(app.getOauthConsumerKey());
                 dto.setOauthConsumerSecret(app.getOauthConsumerSecret());
+                dto.setBackChannelLogoutUrl(app.getBackChannelLogoutUrl());
                 dto.setOAuthVersion(app.getOauthVersion());
                 dto.setGrantTypes(app.getGrantTypes());
                 dto.setPkceMandatory(app.isPkceMandatory());
@@ -241,6 +243,7 @@ public class OAuthAdminService extends AbstractAdmin {
                     throw new IdentityOAuthAdminException("Callback Url is required for Code or Implicit grant types");
                 }
                 app.setCallbackUrl(application.getCallbackUrl());
+                app.setBackChannelLogoutUrl(application.getBackChannelLogoutUrl());
                 if (application.getOauthConsumerKey() == null) {
                     app.setOauthConsumerKey(OAuthUtil.getRandomNumber());
                     app.setOauthConsumerSecret(OAuthUtil.getRandomNumber());
@@ -374,6 +377,7 @@ public class OAuthAdminService extends AbstractAdmin {
         oauthappdo.setOauthConsumerKey(consumerKey);
         oauthappdo.setOauthConsumerSecret(consumerAppDTO.getOauthConsumerSecret());
         oauthappdo.setCallbackUrl(consumerAppDTO.getCallbackUrl());
+        oauthappdo.setBackChannelLogoutUrl(consumerAppDTO.getBackChannelLogoutUrl());
         oauthappdo.setApplicationName(consumerAppDTO.getApplicationName());
         oauthappdo.setPkceMandatory(consumerAppDTO.getPkceMandatory());
         oauthappdo.setPkceSupportPlain(consumerAppDTO.getPkceSupportPlain());

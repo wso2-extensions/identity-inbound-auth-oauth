@@ -30,7 +30,7 @@ public class TestOAuthEndpointBase extends PowerMockIdentityBaseTest {
 
     private static final String ADD_OAUTH_APP_SQL = "INSERT INTO IDN_OAUTH_CONSUMER_APPS " +
             "(CONSUMER_KEY, CONSUMER_SECRET, USERNAME, TENANT_ID, USER_DOMAIN, APP_NAME, OAUTH_VERSION," +
-            " CALLBACK_URL, GRANT_TYPES, APP_STATE) VALUES (?,?,?,?,?,?,?,?,?,?) ";
+            " CALLBACK_URL, GRANT_TYPES, APP_STATE, BACKCHANNELLOGOUT_URL) VALUES (?,?,?,?,?,?,?,?,?,?,?) ";
 
     protected Connection connection;
     protected BasicDataSource dataSource;
@@ -65,6 +65,7 @@ public class TestOAuthEndpointBase extends PowerMockIdentityBaseTest {
             statement.setString(8, "http://localhost:8080/redirect");
             statement.setString(9, "password");
             statement.setString(10, appState);
+            statement.setString(11,null);
             statement.execute();
         } finally {
             if (statement != null) {

@@ -18,6 +18,7 @@
 package org.wso2.carbon.identity.oauth.endpoint.authz;
 
 import com.nimbusds.jwt.SignedJWT;
+import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
@@ -25,6 +26,8 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.utils.URIBuilder;
 import org.apache.oltu.oauth2.as.request.OAuthAuthzRequest;
 import org.apache.oltu.oauth2.as.response.OAuthASResponse;
 import org.apache.oltu.oauth2.common.OAuth;
@@ -75,9 +78,14 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.model.CarbonOAuthAuthzRequest;
+import org.wso2.carbon.identity.oauth2.model.HttpRequestHeaderHandler;
+import org.wso2.carbon.identity.oauth2.model.HttpRequestHeaderHandler;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionState;
+import org.wso2.carbon.identity.oidc.session.cache.OIDCBackChannelAuthCodeCache;
+import org.wso2.carbon.identity.oidc.session.cache.OIDCBackChannelAuthCodeCacheEntry;
+import org.wso2.carbon.identity.oidc.session.cache.OIDCBackChannelAuthCodeCacheKey;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
 import org.wso2.carbon.identity.openidconnect.OIDCRequestObjectUtil;
 
@@ -107,13 +115,18 @@ import java.nio.file.Paths;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.servlet.ServletException;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
@@ -164,6 +177,11 @@ public class OAuth2AuthzEndpoint {
 
     private static final String formPostRedirectPage = getFormPostRedirectPage();
     private static final String DISPLAY_NAME = "DisplayName";
+    private static final String ID_TOKEN = "id_token";
+    private static final String ACCESS_CODE = "code";
+    private static final String SESSIONID_CLAIM = "sid";
+
+    private String sessionId;
 
     @GET
     @Path("/")
@@ -654,8 +672,9 @@ public class OAuth2AuthzEndpoint {
         storeUserConsent(oAuthMessage, consent);
         OAuthResponse oauthResponse;
         String responseType = oauth2Params.getResponseType();
+        HttpRequestHeaderHandler httpRequestHeaderHandler = new HttpRequestHeaderHandler(oAuthMessage.getRequest());
         // authorizing the request
-        OAuth2AuthorizeRespDTO authzRespDTO = authorize(oauth2Params, oAuthMessage.getSessionDataCacheEntry());
+        OAuth2AuthorizeRespDTO authzRespDTO = authorize(oauth2Params, oAuthMessage.getSessionDataCacheEntry(), httpRequestHeaderHandler);
 
         if (isSucessAuthorization(authzRespDTO)) {
             oauthResponse = handleSuccessAuthorization(oAuthMessage, sessionState, oauth2Params, responseType, authzRespDTO);
@@ -1456,13 +1475,15 @@ public class OAuth2AuthzEndpoint {
      * @return
      */
     private OAuth2AuthorizeRespDTO authorize(OAuth2Parameters oauth2Params,
-                                             SessionDataCacheEntry sessionDataCacheEntry) {
+                                             SessionDataCacheEntry sessionDataCacheEntry,
+                                             HttpRequestHeaderHandler httpRequestHeaderHandler) {
 
-        OAuth2AuthorizeReqDTO authzReqDTO = buildAuthRequest(oauth2Params, sessionDataCacheEntry);
+        OAuth2AuthorizeReqDTO authzReqDTO = buildAuthRequest(oauth2Params, sessionDataCacheEntry, httpRequestHeaderHandler);
         return getOAuth2Service().authorize(authzReqDTO);
     }
 
-    private OAuth2AuthorizeReqDTO buildAuthRequest(OAuth2Parameters oauth2Params, SessionDataCacheEntry sessionDataCacheEntry) {
+    private OAuth2AuthorizeReqDTO buildAuthRequest(OAuth2Parameters oauth2Params, SessionDataCacheEntry
+            sessionDataCacheEntry, HttpRequestHeaderHandler httpRequestHeaderHandler) {
 
         OAuth2AuthorizeReqDTO authzReqDTO = new OAuth2AuthorizeReqDTO();
         authzReqDTO.setCallbackUrl(oauth2Params.getRedirectURI());
@@ -1479,6 +1500,9 @@ public class OAuth2AuthzEndpoint {
         authzReqDTO.setMaxAge(oauth2Params.getMaxAge());
         authzReqDTO.setEssentialClaims(oauth2Params.getEssentialClaims());
         authzReqDTO.setSessionDataKey(oauth2Params.getSessionDataKey());
+        // Adding Httprequest headers and cookies in AuthzDTO.
+        authzReqDTO.setHttpRequestHeaders(httpRequestHeaderHandler.getHttpRequestHeaders());
+        authzReqDTO.setCookie(httpRequestHeaderHandler.getCookies());
         return authzReqDTO;
     }
 
@@ -1642,7 +1666,8 @@ public class OAuth2AuthzEndpoint {
                     log.debug("User authenticated. Initiate OIDC browser session.");
                 }
                 opBrowserStateCookie = OIDCSessionManagementUtil.addOPBrowserStateCookie(response);
-
+                // Adding sid claim in the IDtoken to OIDCSessionState class.
+                storeSidClaim(redirectURL, sessionStateObj);
                 sessionStateObj.setAuthenticatedUser(authenticatedUser);
                 sessionStateObj.addSessionParticipant(oAuth2Parameters.getClientId());
                 OIDCSessionManagementUtil.getSessionManager()
@@ -1663,6 +1688,8 @@ public class OAuth2AuthzEndpoint {
                         previousSessionState.addSessionParticipant(oAuth2Parameters.getClientId());
                         OIDCSessionManagementUtil.getSessionManager().restoreOIDCSessionState
                                 (oldOPBrowserStateCookieId, newOPBrowserStateCookieId, previousSessionState);
+
+                        storeSidClaim(redirectURL, previousSessionState);
                     }
                 } else {
                     log.warn("No session state found for the received Session ID : " + opBrowserStateCookie.getValue());
@@ -1801,5 +1828,134 @@ public class OAuth2AuthzEndpoint {
         } else {
             return OAuthProblemException.error(errorCode, errorMessage);
         }
+    }
+
+    /**
+     * Store sessionID using the redirect URl.
+     *
+     * @param redirectURL
+     * @param sessionState
+     */
+    private void storeSidClaim(String redirectURL, OIDCSessionState sessionState) {
+        String idToken;
+        String code;
+        if (redirectURL.contains(ID_TOKEN)) {
+
+            try {
+                idToken = getIdTokenFromRedirectURL(redirectURL);
+                if (!idToken.isEmpty()) {
+                    addSidToSessionStateFromIdToken(idToken, sessionState);
+                }
+            } catch (URISyntaxException e) {
+                log.error("Error while getting ID token from redirectURL ", e);
+            }
+        } else if (redirectURL.contains(ACCESS_CODE)) {
+            try {
+                setSidToSessionState(sessionState);
+                code = getAuthCodeFromRedirectURL(redirectURL);
+                if (code != null && !code.isEmpty()) {
+                    addToBCLogoutSessionCache(code);
+                } else {
+                    log.debug("Authorization code is not found in the redirect URL");
+                }
+            } catch (URISyntaxException e) {
+                log.error("Error while getting authorization code from redirectURL ", e);
+            }
+        }
+    }
+
+    /**
+     * Generate sessionID if there is no sessionID otherwise get sessionId from Session State
+     *
+     * @param sessionState
+     */
+    private void setSidToSessionState(OIDCSessionState sessionState) {
+
+        sessionId = sessionState.getSidClaim();
+        if (sessionId == null) {
+            // Generating sid claim for authorization code flow.
+            sessionId = UUID.randomUUID().toString();
+            setSidClaimToSessionState(sessionState);
+        }
+    }
+
+    /**
+     * Store sessionID from ID Token when ID Token comes as URL Fragment in redirectURL.
+     *
+     * @param idToken
+     * @param sessionState
+     */
+    private void addSidToSessionStateFromIdToken(String idToken, OIDCSessionState sessionState) {
+
+        try {
+            sessionId = (String) SignedJWT.parse(idToken).getJWTClaimsSet().getClaim(SESSIONID_CLAIM);
+            setSidClaimToSessionState(sessionState);
+        } catch (ParseException e) {
+            log.error("Error while decoding the ID Token ", e);
+        }
+    }
+
+    /**
+     * Set sid claim to session state.
+     *
+     * @param sessionState
+     */
+    private void setSidClaimToSessionState(OIDCSessionState sessionState) {
+
+        sessionState.setSidClaim(sessionId);
+    }
+
+    /**
+     * Get id token from redirect Url fragment.
+     *
+     * @param redirectURL
+     * @return
+     * @throws URISyntaxException
+     */
+    private String getIdTokenFromRedirectURL(String redirectURL) throws URISyntaxException {
+
+        String fragment = new URI(redirectURL).getFragment();
+        Map<String, String> output = new HashMap<>();
+        String[] keys = fragment.split("&");
+        for (String key : keys) {
+            String[] values = key.split("=");
+            output.put(values[0], (values.length > 1 ? values[1] : ""));
+            if(ID_TOKEN.equals(values[0])){
+                break;
+            }
+        }
+        String idToken = output.get(ID_TOKEN);
+        return idToken;
+    }
+
+    /**
+     * Get AuthorizationCode from redirect Url query parameters.
+     *
+     * @param redirectURL
+     * @return
+     * @throws URISyntaxException
+     */
+    private String getAuthCodeFromRedirectURL(String redirectURL) throws URISyntaxException {
+        String authCode = null;
+
+        List<NameValuePair> queryParameters = new URIBuilder(redirectURL).getQueryParams();
+        for (NameValuePair param : queryParameters) {
+            if ((ACCESS_CODE).equals(param.getName()))
+                authCode = param.getValue();
+        }
+        return authCode;
+    }
+
+    /**
+     * Store Authorization Code and SessionID for back-channel logout in the cache.
+     *
+     * @param authorizationCode
+     */
+    private void addToBCLogoutSessionCache(String authorizationCode) {
+
+        OIDCBackChannelAuthCodeCacheKey authCacheKey = new OIDCBackChannelAuthCodeCacheKey(authorizationCode);
+        OIDCBackChannelAuthCodeCacheEntry sidCacheEntry = new OIDCBackChannelAuthCodeCacheEntry();
+        sidCacheEntry.setSessionId(sessionId);
+        OIDCBackChannelAuthCodeCache.getInstance().addToCache(authCacheKey, sidCacheEntry);
     }
 }
