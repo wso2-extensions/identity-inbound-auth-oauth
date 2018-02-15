@@ -53,11 +53,11 @@
     ConfigurationContext configContext = (ConfigurationContext) config.getServletContext()
             .getAttribute(CarbonConstants.CONFIGURATION_CONTEXT);
     client = new OAuthAdminClient(cookie, backendServerURL, configContext);
-    List<String> allowedGrants = new ArrayList<String>;
-    List<String> scopeValidators = new ArrayList<String>;
+    List<String> allowedGrants = new ArrayList<String>();
+    List<String> scopeValidators = new ArrayList<String>();
     try {
-        allowedGrants = Arrays.asList(client.getAllowedOAuthGrantTypes());
-        scopeValidators = Arrays.asList(client.getAllowedScopeValidators());
+        allowedGrants = new ArrayList<String>(Arrays.asList(client.getAllowedOAuthGrantTypes()));
+        scopeValidators = new ArrayList<String>(Arrays.asList(client.getAllowedScopeValidators()));
         Collections.sort(scopeValidators);
     } catch (Exception e) {
         String message = resourceBundle.getString("error.while.loading.add.new.application") + " : " + e.getMessage();
@@ -610,7 +610,7 @@
                                             <tr>
                                                 <td><label><input type="checkbox"
                                                                   id=<%=OAuthUIConstants.SCOPE_VALIDATOR + scopeValidator%> name=<%=OAuthUIConstants.SCOPE_VALIDATOR + scopeValidator%>
-                                                                  value=<%=scopeValidator%> checked="checked"/><%=scopeValidator%>
+                                                                  value=<%=scopeValidator%>/><%=scopeValidator%>
                                                 </label></td>
                                             </tr>
                                             <%

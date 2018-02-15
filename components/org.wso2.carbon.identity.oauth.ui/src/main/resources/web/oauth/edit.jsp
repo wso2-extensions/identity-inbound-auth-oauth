@@ -111,7 +111,7 @@
                 app.setCallbackUrl("");
             }
             allowedGrants = new ArrayList<String>(Arrays.asList(client.getAllowedOAuthGrantTypes()));
-            allowedScopeValidators = Arrays.asList(client.getAllowedScopeValidators());
+            allowedScopeValidators = new ArrayList<String>(Arrays.asList(client.getAllowedScopeValidators()));
             Collections.sort(allowedScopeValidators);
             if (OAuthConstants.OAuthVersions.VERSION_2.equals(app.getOAuthVersion())) {
                 id = resourceBundle.getString("consumerkey.oauth20");

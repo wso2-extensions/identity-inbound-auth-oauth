@@ -108,9 +108,6 @@ public class OAuthAdminClient {
     public String[] getAllowedOAuthGrantTypes() throws Exception {
         if (allowedGrantTypes == null) {
             allowedGrantTypes = stub.getAllowedGrantTypes();
-            if (allowedGrantTypes == null) {
-                allowedGrantTypes = new String[0];
-            }
         }
         return allowedGrantTypes;
     }
