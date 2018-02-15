@@ -237,11 +237,10 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
         final long MODIFIED_APPLICATION_ACCESS_TOKEN_EXPIRY_TIME = 1000;
         final long MODIFIED_USER_ACCESS_TOKEN_EXPIRY_TIME = 8000;
         final long MODIFIED_REFRESH_TOKEN_EXPIRY_TIME = 18000;
-        final String MODIFIED_BACKCHANNEL_LOGOUT = "http://idp.wso2.com/backChannelLogout";
 
         final String GET_APP_FIELDS = "SELECT APP_NAME,GRANT_TYPES,CALLBACK_URL," +
                 "APP_ACCESS_TOKEN_EXPIRE_TIME,USER_ACCESS_TOKEN_EXPIRE_TIME,REFRESH_TOKEN_EXPIRE_TIME, " +
-                "PKCE_MANDATORY, PKCE_SUPPORT_PLAIN, BACKCHANNELLOGOUT_URL FROM IDN_OAUTH_CONSUMER_APPS WHERE CONSUMER_KEY=?";
+                "PKCE_MANDATORY, PKCE_SUPPORT_PLAIN FROM IDN_OAUTH_CONSUMER_APPS WHERE CONSUMER_KEY=?";
 
         setupMocksForTest(isPkceEnabled);
         try (Connection connection = getConnection(DB_NAME);
@@ -261,7 +260,6 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 assertEquals(resultSet.getLong(4), APPLICATION_ACCESS_TOKEN_EXPIRY_TIME);
                 assertEquals(resultSet.getLong(5), USER_ACCESS_TOKEN_EXPIRY_TIME);
                 assertEquals(resultSet.getLong(6), REFRESH_TOKEN_EXPIRY_TIME);
-                assertEquals(resultSet.getString(9), BACKCHANNEL_LOGOUT);
                 if (isPkceEnabled) {
                     // These asserts are only relevant if PKCE is enabled
                     assertEquals(resultSet.getBoolean(7), false);
@@ -276,7 +274,6 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
             appDO.setApplicationAccessTokenExpiryTime(MODIFIED_APPLICATION_ACCESS_TOKEN_EXPIRY_TIME);
             appDO.setUserAccessTokenExpiryTime(MODIFIED_USER_ACCESS_TOKEN_EXPIRY_TIME);
             appDO.setRefreshTokenExpiryTime(MODIFIED_REFRESH_TOKEN_EXPIRY_TIME);
-            appDO.setBackChannelLogoutUrl(MODIFIED_BACKCHANNEL_LOGOUT);
             if (isPkceEnabled) {
                 // Enable PKCE related configs
                 appDO.setPkceMandatory(true);
@@ -294,7 +291,6 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 assertEquals(resultSet.getLong(4), MODIFIED_APPLICATION_ACCESS_TOKEN_EXPIRY_TIME);
                 assertEquals(resultSet.getLong(5), MODIFIED_USER_ACCESS_TOKEN_EXPIRY_TIME);
                 assertEquals(resultSet.getLong(6), MODIFIED_REFRESH_TOKEN_EXPIRY_TIME);
-                assertEquals(resultSet.getString(9), MODIFIED_BACKCHANNEL_LOGOUT);
                 if (isPkceEnabled) {
                     // These asserts are only relevant if PKCE is enabled
                     assertEquals(resultSet.getBoolean(7), true);
@@ -527,10 +523,13 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
         try (Connection connection = getConnection(DB_NAME)) {
             mockIdentityUtilDataBaseConnection(connection);
             OAuthAppDO defaultOAuthAppDO = getDefaultOAuthAppDO();
+
+            final String BACK_CHANNEL_LOGOUT_URL = "https://dummy.com/logout";
             // Add OIDC properties.
             defaultOAuthAppDO.setAudiences(new String[] {"DUMMY"});
             defaultOAuthAppDO.setIdTokenEncryptionEnabled(true);
             defaultOAuthAppDO.setRequestObjectSignatureValidationEnabled(true);
+            defaultOAuthAppDO.setBackChannelLogoutUrl(BACK_CHANNEL_LOGOUT_URL);
 
             addOAuthApplication(defaultOAuthAppDO);
 
@@ -539,6 +538,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
             assertNotNull(oAuthAppDO);
             assertEquals(oAuthAppDO.isIdTokenEncryptionEnabled(), true);
             assertEquals(oAuthAppDO.isRequestObjectSignatureValidationEnabled(), true);
+            assertEquals(oAuthAppDO.getBackChannelLogoutUrl(), BACK_CHANNEL_LOGOUT_URL);
         }
     }
 

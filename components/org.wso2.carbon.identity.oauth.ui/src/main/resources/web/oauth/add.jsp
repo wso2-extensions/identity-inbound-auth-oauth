@@ -179,6 +179,7 @@
                         $(jQuery('#userAccessTokenPlain').hide());
                         $(jQuery('#applicationAccessTokenPlain').hide());
                         $(jQuery('#refreshTokenPlain').hide());
+                        $(jQuery('#bclogout_row').hide());
                         $(jQuery("#audience_enable").hide());
                         $(jQuery("#add_audience").hide());
                         $(jQuery("#audience_table").hide());
@@ -192,6 +193,10 @@
                         $(jQuery('#userAccessTokenPlain').show());
                         $(jQuery('#applicationAccessTokenPlain').show());
                         $(jQuery('#refreshTokenPlain').show());
+                        /**
+                         * Backchannel logout feature is kept hidden in the UI for now.
+                         */
+                        $(jQuery('#bclogout_row').hide());
                         $(jQuery("#audience_enable").show());
                         $(jQuery("#add_audience").show());
                         $(jQuery("#audience_table").show());
@@ -335,8 +340,7 @@
 		                    </tr>
                             <tr id="bclogout_row">
                                 <td class="leftCol-med"><fmt:message key="bclogout"/></td>
-                                <td><input class="text-box-big" id="bclogout" name="bclogout"
-                                           type="text" white-list-patterns="https-url"/></td>
+                                <td><input class="text-box-big" id="backChannelLogout" name="backChannelLogout" type="text" white-list-patterns="https-url"/></td>
                             </tr>
 		                     <tr id="grant_row" name="grant_row">
 		                        <td class="leftCol-med"><fmt:message key='grantTypes'/></td>

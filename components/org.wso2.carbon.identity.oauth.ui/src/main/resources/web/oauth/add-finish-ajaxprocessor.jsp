@@ -52,7 +52,7 @@
     String userAccessTokenExpiryTime = request.getParameter("userAccessTokenExpiryTime");
     String applicationAccessTokenExpiryTime = request.getParameter("applicationAccessTokenExpiryTime");
     String refreshTokenExpiryTime = request.getParameter("refreshTokenExpiryTime");
-    String backchannelLogoutUrl = request.getParameter("bclogout");
+    String backchannelLogoutUrl = request.getParameter("backChannelLogout");
 
 	boolean pkceMandatory = false;
 	boolean pkceSupportPlain = false;

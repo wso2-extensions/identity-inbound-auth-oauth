@@ -205,7 +205,7 @@
                     var userTokenExpiryTime = document.getElementById("userAccessTokenExpiryTime").value;
                     var applicationTokenExpiryTime = document.getElementById("userAccessTokenExpiryTime").value;
                     var refreshTokenExpiryTime = document.getElementById("refreshTokenExpiryTime").value;
-                    var backChannelLogoutUrl = document.getElementsByName("backChannelLogout")[0].value;
+                    var backChannelLogoutUrl = document.getElementById("backChannelLogout").value;
 
                     if (callbackUrl.indexOf("#") !== -1) {
                         CARBON.showWarningDialog('<fmt:message key="callback.is.fragment"/>');
@@ -293,7 +293,10 @@
                         $(jQuery("#pkce_enable").hide());
                         $(jQuery("#pkce_support_plain").hide());
                     }
-
+                    /**
+                     * Backchannel logout feature is kept hidden in the UI for now.
+                     */
+                    $(jQuery('#bclogout_row').hide());
                 }
                 function toggleAudienceRestriction(chkbx) {
                     document.editAppform.audience.disabled = !chkbx.checked;
@@ -416,7 +419,7 @@
 		                    </tr>
                             <tr id="bclogout_row">
                                 <td class="leftCol-med"><fmt:message key="bclogout"/></td>
-                                <td><input class="text-box-big" id="bclogout" name="bclogout"
+                                <td><input class="text-box-big" id="backChannelLogout" name="backChannelLogout"
                                            type="text" value="<%=Encode.forHtmlAttribute(app.getBackChannelLogoutUrl())%>"/></td>
                             </tr>
 
