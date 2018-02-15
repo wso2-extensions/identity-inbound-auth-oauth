@@ -21,6 +21,7 @@
 <%@ page import="org.wso2.carbon.CarbonConstants" %>
 <%@ page import="org.wso2.carbon.identity.oauth.common.OAuthConstants" %>
 <%@ page import="org.wso2.carbon.identity.oauth.ui.client.OAuthAdminClient" %>
+<%@ page import="org.wso2.carbon.identity.oauth.ui.util.OAuthUIConstants" %>
 <%@ page import="org.wso2.carbon.ui.CarbonUIMessage" %>
 <%@ page import="org.wso2.carbon.ui.CarbonUIUtil" %>
 <%@ page import="org.wso2.carbon.utils.ServerConstants" %>
@@ -29,7 +30,6 @@
 <%@ page import="java.util.Collections" %>
 <%@ page import="java.util.List" %>
 <%@ page import="java.util.ResourceBundle" %>
-<%@ page import="org.wso2.carbon.identity.oauth.ui.util.OAuthUIConstants" %>
 
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%@ taglib uri="http://wso2.org/projects/carbon/taglibs/carbontags.jar" prefix="carbon" %>
@@ -50,15 +50,14 @@
     String audienceTableStyle = "display:none";
     String cookie = (String) session.getAttribute(ServerConstants.ADMIN_SERVICE_COOKIE);
     String backendServerURL = CarbonUIUtil.getServerURL(config.getServletContext(), session);
-    ConfigurationContext configContext =
-            (ConfigurationContext) config.getServletContext()
-                    .getAttribute(CarbonConstants.CONFIGURATION_CONTEXT);
+    ConfigurationContext configContext = (ConfigurationContext) config.getServletContext()
+            .getAttribute(CarbonConstants.CONFIGURATION_CONTEXT);
     client = new OAuthAdminClient(cookie, backendServerURL, configContext);
-    List<String> allowedGrants = null;
-    List<String> scopeValidators = null;
+    List<String> allowedGrants = new ArrayList<String>;
+    List<String> scopeValidators = new ArrayList<String>;
     try {
-        allowedGrants = new ArrayList<String>(Arrays.asList(client.getAllowedOAuthGrantTypes()));
-        scopeValidators = new ArrayList<String>(Arrays.asList(client.getAllowedScopeValidators()));
+        allowedGrants = Arrays.asList(client.getAllowedOAuthGrantTypes());
+        scopeValidators = Arrays.asList(client.getAllowedScopeValidators());
         Collections.sort(scopeValidators);
     } catch (Exception e) {
         String message = resourceBundle.getString("error.while.loading.add.new.application") + " : " + e.getMessage();
@@ -631,9 +630,7 @@
                                             </script>
                                             <%
                                                 }
-
                                             %>
-
                                         </table>
                                     </td>
                                 </tr>

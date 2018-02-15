@@ -117,7 +117,8 @@ public class XACMLScopeValidator extends OAuth2ScopeValidator {
                 isValidated = true;
             }
         } catch (InvalidOAuthClientException e) {
-            log.error(String.format("Exception occurred when getting app information for client id %s ",
+            log.error(String.format("Exception occurred when getting app information for client id %s . " +
+                            "Error occurred when retrieving corresponding app for this specific client id  ",
                     accessTokenDO.getConsumerKey()), e);
         } catch (PolicyBuilderException e) {
             log.error(String.format("Exception occurred when building  XACML request for token with id  %s",
@@ -135,7 +136,7 @@ public class XACMLScopeValidator extends OAuth2ScopeValidator {
     }
 
     /**
-     * Creates request dto object
+     * Creates request dto object.
      *
      * @param accessTokenDO access token
      * @param authApp       OAuth app
@@ -171,7 +172,7 @@ public class XACMLScopeValidator extends OAuth2ScopeValidator {
     }
 
     /**
-     * Creates RowDTO object of xacml request
+     * Creates RowDTO object of xacml request.
      *
      * @param resourceName  resource name
      * @param attributeId   attribute id of the resource
@@ -186,11 +187,10 @@ public class XACMLScopeValidator extends OAuth2ScopeValidator {
         rowDTO.setAttributeId(attributeId);
         rowDTO.setCategory(categoryValue);
         return rowDTO;
-
     }
 
     /**
-     * This extracts the decision from the xacml response
+     * This extracts the decision from the xacml response.
      *
      * @param xacmlResponse xacml response to be extracted
      * @return extracted decision
@@ -204,6 +204,5 @@ public class XACMLScopeValidator extends OAuth2ScopeValidator {
         OMElement rootElement = new StAXOMBuilder(new ByteArrayInputStream(xacmlResponse.getBytes(StandardCharsets
                 .UTF_8))).getDocumentElement();
         return axiomxPath.stringValueOf(rootElement);
-
     }
 }

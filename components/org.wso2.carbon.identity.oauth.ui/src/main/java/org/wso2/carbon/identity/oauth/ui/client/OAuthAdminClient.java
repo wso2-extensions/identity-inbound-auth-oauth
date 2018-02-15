@@ -108,6 +108,9 @@ public class OAuthAdminClient {
     public String[] getAllowedOAuthGrantTypes() throws Exception {
         if (allowedGrantTypes == null) {
             allowedGrantTypes = stub.getAllowedGrantTypes();
+            if (allowedGrantTypes == null) {
+                allowedGrantTypes = new String[0];
+            }
         }
         return allowedGrantTypes;
     }
@@ -129,7 +132,7 @@ public class OAuthAdminClient {
     }
 
     /**
-     * Get the registered scope validators from OAuth server configuration file
+     * Get the registered scope validators from OAuth server configuration file.
      *
      * @return list of string containing simple names of the registered validator class
      * @throws RemoteException exception occured during remote call
@@ -137,6 +140,9 @@ public class OAuthAdminClient {
     public String[] getAllowedScopeValidators() throws RemoteException {
         if (scopeValidators == null) {
             scopeValidators = stub.getAllowedScopeValidators();
+            if (scopeValidators == null) {
+                scopeValidators = new String[0];
+            }
         }
         return scopeValidators;
     }
