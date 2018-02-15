@@ -32,7 +32,7 @@
 <%@ page import="java.util.ResourceBundle" %>
 
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
-<%@ taglib uri="http://wso2.org/projects/carbon/taglibs/carbontags.jar"  prefix="carbon" %>
+<%@ taglib uri="http://wso2.org/projects/carbon/taglibs/carbontags.jar" prefix="carbon" %>
 
 <script type="text/javascript" src="extensions/js/vui.js"></script>
 <script type="text/javascript" src="../extensions/core/js/vui.js"></script>
@@ -198,6 +198,7 @@
                     }
                     document.addAppform.submit();
                 }
+
                 function adjustForm() {
                     var oauthVersion = $('input[name=oauthVersion]:checked').val();
                     var supportGrantCode = $('input[name=grant_authorization_code]:checked').val() != null;
@@ -346,209 +347,198 @@
                     </tr>
                     </thead>
                     <tbody>
-                    <tr>
-                        <td class="formRow">
-                            <table class="normal">
-                                <tr>
-                                    <td class="leftCol-med"><fmt:message key='oauth.version'/><span
-                                            class="required">*</span></td>
-                                    <td><input id="oauthVersion10a" name="oauthVersion" type="radio"
-                                               value="<%=OAuthConstants.OAuthVersions.VERSION_1A%>"/>1.0a
-                                        <input id="oauthVersion20" name="oauthVersion" type="radio"
-                                               value="<%=OAuthConstants.OAuthVersions.VERSION_2%>" CHECKED/>2.0
+		    <tr>
+			<td class="formRow">
+				<table class="normal" >
+                            <tr>
+                                <td class="leftCol-med"><fmt:message key='oauth.version'/><span class="required">*</span> </td>
+                                <td><input id="oauthVersion10a" name="oauthVersion" type="radio" value="<%=OAuthConstants.OAuthVersions.VERSION_1A%>" />1.0a
+                                    <input id="oauthVersion20" name="oauthVersion" type="radio" value="<%=OAuthConstants.OAuthVersions.VERSION_2%>" CHECKED />2.0</td>
+                            </tr>
+                            <%if  (applicationSPName!= null) {%>
+                             <tr style="display: none;">
+		                        <td colspan="2" style="display: none;"><input class="text-box-big" type="hidden" id="application" name="application"
+		                                   value="<%=Encode.forHtmlAttribute(applicationSPName)%>" /></td>
+		                    </tr>
+                            <% } else { %>
+		                    <tr>
+		                        <td class="leftCol-med"><fmt:message key='application.name'/><span class="required">*</span></td>
+		                        <td><input class="text-box-big" id="application" name="application"
+		                                   type="text" /></td>
+		                    </tr>
+		                    <% } %>
+		                    <tr id="callback_row">
+		                        <td class="leftCol-med"><fmt:message key='callback'/><span class="required">*</span></td>
+                                <td><input class="text-box-big" id="callback" name="callback" type="text"
+                                           white-list-patterns="https-url"/></td>
+		                    </tr>
+                            <tr id="bclogout_row">
+                                <td class="leftCol-med"><fmt:message key="bclogout"/></td>
+                                <td><input class="text-box-big" id="backChannelLogout" name="backChannelLogout" type="text" white-list-patterns="https-url"/></td>
+                            </tr>
+		                     <tr id="grant_row" name="grant_row">
+		                        <td class="leftCol-med"><fmt:message key='grantTypes'/></td>
+		                        <td>
+		                        <table>
+                                    <%
+                                        try {
+                                            if (allowedGrants.contains("authorization_code")) {
+                                                allowedGrants.remove("authorization_code");
+                                                %><tr><td><label><input type="checkbox" id="grant_authorization_code" name="grant_authorization_code" value="authorization_code" checked="checked" onclick="toggleCallback()"/>Code</label></td></tr><%
+                                            }
+                                            if (allowedGrants.contains("implicit")) {
+                                                allowedGrants.remove("implicit");
+                                                %><tr><td><label><input type="checkbox" id="grant_implicit" name="grant_implicit" value="implicit" checked="checked" onclick="toggleCallback()"/>Implicit</label></td></tr><%
+                                            }
+                                            if (allowedGrants.contains("password")) {
+                                                allowedGrants.remove("password");
+                                                %><tr><td><lable><input type="checkbox" id="grant_password" name="grant_password" value="password" checked="checked"/>Password</lable></td></tr><%
+                                            }
+                                            if (allowedGrants.contains("client_credentials")) {
+                                                allowedGrants.remove("client_credentials");
+                                                %><tr><td><label><input type="checkbox" id="grant_client_credentials" name="grant_client_credentials" value="client_credentials" checked="checked"/>Client Credential</label></td></tr><%
+                                            }
+                                            if (allowedGrants.contains("refresh_token")) {
+                                                allowedGrants.remove("refresh_token");
+                                                %><tr><td><label><input type="checkbox" id="grant_refresh_token" name="grant_refresh_token" value="refresh_token" checked="checked"/>Refresh Token</label></td></tr><%
+                                            }
+
+                                                for (String grantType : allowedGrants) {
+                                                    if (grantType.equals("urn:ietf:params:oauth:grant-type:saml1-bearer")) {
+                                            %>
+                                            <tr>
+                                                <td><label><input type="checkbox"
+                                                                  id="grant_urn:ietf:params:oauth:grant-type:saml1-bearer"
+                                                                  name="grant_urn:ietf:params:oauth:grant-type:saml1-bearer"
+                                                                  value="urn:ietf:params:oauth:grant-type:saml1-bearer"
+                                                                  checked="checked"/>SAML1</label></td>
+                                            </tr>
+                                            <%
+                                            } else if (grantType.equals("urn:ietf:params:oauth:grant-type:saml2-bearer")) {
+                                            %>
+                                            <tr>
+                                                <td><label><input type="checkbox"
+                                                                  id="grant_urn:ietf:params:oauth:grant-type:saml2-bearer"
+                                                                  name="grant_urn:ietf:params:oauth:grant-type:saml2-bearer"
+                                                                  value="urn:ietf:params:oauth:grant-type:saml2-bearer"
+                                                                  checked="checked"/>SAML2</label></td>
+                                            </tr>
+                                            <%
+                                            } else if (grantType.equals("iwa:ntlm")) {
+                                            %>
+                                            <tr>
+                                                <td><label><input type="checkbox" id="grant_iwa:ntlm"
+                                                                  name="grant_iwa:ntlm" value="iwa:ntlm"
+                                                                  checked="checked"/>IWA-NTLM</label></td>
+                                            </tr>
+                                            <%
+                                            } else {
+                                            %>
+                                            <tr>
+                                                <td><label><input type="checkbox"
+                                                                  id=<%="grant_"+grantType%> name=<%="grant_"+grantType%>
+                                                                  value=<%=grantType%> checked="checked"/><%=grantType%>
+                                                </label></td>
+                                            </tr>
+                                            <%
+                                                    }
+
+                                                }
+                                            } catch (Exception e) {
+                                                String message = resourceBundle.getString("error.while.getting.allowed.grants") + " : " + e.getMessage();
+                                                CarbonUIMessage.sendCarbonUIMessage(message, CarbonUIMessage.ERROR, request, e);
+                                            %>
+                                            <script type="text/javascript">
+                                                function forward() {
+                                                    location.href = "<%=forwardTo%>";
+                                                }
+                                            </script>
+
+                                            <script type="text/javascript">
+                                                forward();
+                                            </script>
+                                            <%
+                                                }
+
+                                            %>
+
+                                        </table>
                                     </td>
                                 </tr>
-                                <%if (applicationSPName != null) {%>
-                                <tr style="display: none;">
-                                    <td colspan="2" style="display: none;"><input class="text-box-big" type="hidden"
-                                                                                  id="application" name="application"
-                                                                                  value="<%=Encode.forHtmlAttribute(applicationSPName)%>"/>
+                                <%if (client.isPKCESupportedEnabled()) {%>
+                                <tr id="pkce_enable">
+                                    <td class="leftCol-med">
+                                        <fmt:message key='pkce.mandatory'/>
+                                    </td>
+                                    <td>
+                                        <input type="checkbox" name="pkce" value="mandatory"/>Mandatory
+                                        <div class="sectionHelp">
+                                            <fmt:message key='pkce.mandatory.hint'/>
+                                        </div>
                                     </td>
                                 </tr>
-                                <% } else { %>
-                                <tr>
-                                    <td class="leftCol-med"><fmt:message key='application.name'/><span class="required">*</span>
+                                <tr id="pkce_support_plain">
+                                    <td>
+                                        <fmt:message key='pkce.support.plain'/>
                                     </td>
-                                    <td><input class="text-box-big" id="application" name="application"
-                                               type="text"/></td>
+                                    <td>
+                                        <input type="checkbox" name="pkce_plain" value="yes" checked>Yes
+                                        <div class="sectionHelp">
+                                            <fmt:message key='pkce.support.plain.hint'/>
+                                        </div>
+                                    </td>
                                 </tr>
                                 <% } %>
-                                <tr id="callback_row">
-                                    <td class="leftCol-med"><fmt:message key='callback'/><span class="required">*</span>
+                                <tr id="userAccessTokenPlain">
+                                    <td class="leftCol-med"><fmt:message key='user.access.token.expiry.time'/></td>
+                                    <td><input id="userAccessTokenExpiryTime" name="userAccessTokenExpiryTime"
+                                               type="text"
+                                               value="<%=client.getOAuthTokenExpiryTimeDTO().getUserAccessTokenExpiryTime()%>"/>
+                                        <fmt:message key='seconds'/>
                                     </td>
-                                    <td><input class="text-box-big" id="callback" name="callback" type="text"
-                                               white-list-patterns="https-url"/></td>
                                 </tr>
-                                <tr id="bclogout_row">
-                                    <td class="leftCol-med"><fmt:message key="bclogout"/></td>
-                                    <td><input class="text-box-big" id="backChannelLogout" name="backChannelLogout" type="text" white-list-patterns="https-url"/></td>
-                                </tr>
-                                <tr id="grant_row" name="grant_row">
-                                    <td class="leftCol-med"><fmt:message key='grantTypes'/></td>
+                                <tr id="applicationAccessTokenPlain">
+                                    <td class="leftCol-med"><fmt:message
+                                            key='application.access.token.expiry.time'/></td>
                                     <td>
-                                        <table>
-                                            <%
-                                                try {
-                                                    if (allowedGrants.contains("authorization_code")) {
-                                                        allowedGrants.remove("authorization_code");
-                                            %>
-                                            <tr>
-                                                <td><label><input type="checkbox" id="grant_authorization_code"
-                                                                  name="grant_authorization_code"
-                                                                  value="authorization_code" checked="checked"
-                                                                  onclick="toggleCallback()"/>Code</label></td>
-                                            </tr>
-                                            <%
-                                                }
-                                                if (allowedGrants.contains("implicit")) {
-                                                    allowedGrants.remove("implicit");
-                                            %>
-                                            <tr>
-                                                <td><label><input type="checkbox" id="grant_implicit"
-                                                                  name="grant_implicit" value="implicit"
-                                                                  checked="checked" onclick="toggleCallback()"/>Implicit</label>
-                                                </td>
-                                            </tr>
-                                            <%
-                                                }
-                                                if (allowedGrants.contains("password")) {
-                                                    allowedGrants.remove("password");
-                                            %>
-                                            <tr>
-                                                <td>
-                                                    <lable><input type="checkbox" id="grant_password"
-                                                                  name="grant_password" value="password"
-                                                                  checked="checked"/>Password
-                                                    </lable>
-                                                </td>
-                                            </tr>
-                                            <%
-                                                }
-                                                if (allowedGrants.contains("client_credentials")) {
-                                                    allowedGrants.remove("client_credentials");
-                                            %>
-                                            <tr>
-                                                <td><label><input type="checkbox" id="grant_client_credentials"
-                                                                  name="grant_client_credentials"
-                                                                  value="client_credentials" checked="checked"/>Client
-                                                    Credential</label></td>
-                                            </tr>
-                                            <%
-                                                }
-                                                if (allowedGrants.contains("refresh_token")) {
-                                                    allowedGrants.remove("refresh_token");
-                                            %>
-                                            <tr>
-                                                <td><label><input type="checkbox" id="grant_refresh_token"
-                                                                  name="grant_refresh_token" value="refresh_token"
-                                                                  checked="checked"/>Refresh Token</label></td>
-                                            </tr>
-                                            <%
-                                                }
-
-                                            for (String grantType : allowedGrants) {
-                                                if (grantType.equals("urn:ietf:params:oauth:grant-type:saml1-bearer")) {
-                                                    %><tr><td><label><input type="checkbox" id="grant_urn:ietf:params:oauth:grant-type:saml1-bearer" name="grant_urn:ietf:params:oauth:grant-type:saml1-bearer" value="urn:ietf:params:oauth:grant-type:saml1-bearer" checked="checked"/>SAML1</label></td></tr><%
-                                                } else if (grantType.equals("urn:ietf:params:oauth:grant-type:saml2-bearer")) {
-                                                    %><tr><td><label><input type="checkbox" id="grant_urn:ietf:params:oauth:grant-type:saml2-bearer" name="grant_urn:ietf:params:oauth:grant-type:saml2-bearer" value="urn:ietf:params:oauth:grant-type:saml2-bearer" checked="checked"/>SAML2</label></td></tr><%
-                                                } else if (grantType.equals("iwa:ntlm")) {
-                                                    %><tr><td><label><input type="checkbox" id="grant_iwa:ntlm" name="grant_iwa:ntlm" value="iwa:ntlm" checked="checked"/>IWA-NTLM</label></td></tr><%
-                                                } else {
-                                                    %><tr><td><label><input type="checkbox" id=<%="grant_"+grantType%> name=<%="grant_"+grantType%> value=<%=grantType%> checked="checked"/><%=grantType%></label></td></tr><%
-                                                }
-
-                                            }
-                                        } catch (Exception e) {
-                                            String message = resourceBundle.getString("error.while.getting.allowed.grants") + " : " + e.getMessage();
-                                            CarbonUIMessage.sendCarbonUIMessage(message, CarbonUIMessage.ERROR, request, e);
-                                    %>
-                                                <script type="text/javascript">
-                                                    function forward() {
-                                                        location.href = "<%=forwardTo%>";
-                                                    }
-                                                </script>
-
-                                                <script type="text/javascript">
-                                                        forward();
-                                                </script>
-                                    <%
-                                        }
-
-                                    %>
-
-		                        </table>   
-		                        </td>
-		                    </tr>
-                            <%if(client.isPKCESupportedEnabled()) {%>
-                            <tr id="pkce_enable">
-                                <td class="leftCol-med">
-                                    <fmt:message key='pkce.mandatory'/>
-                                </td>
-                                <td>
-                                    <input type="checkbox" name="pkce" value="mandatory"/>Mandatory
-                                    <div class="sectionHelp">
-                                        <fmt:message key='pkce.mandatory.hint'/>
-                                    </div>
-                                </td>
-                            </tr>
-                            <tr id="pkce_support_plain">
-                                <td>
-                                    <fmt:message key='pkce.support.plain'/>
-                                </td>
-                                <td>
-                                    <input type="checkbox" name="pkce_plain" value="yes" checked>Yes
-                                    <div class="sectionHelp">
-                                        <fmt:message key='pkce.support.plain.hint'/>
-                                    </div>
-                                </td>
-                            </tr>
-                            <% } %>
-                        <tr id="userAccessTokenPlain">
-                            <td class="leftCol-med"><fmt:message key='user.access.token.expiry.time'/></td>
-                            <td><input id="userAccessTokenExpiryTime" name="userAccessTokenExpiryTime"
-                                       type="text" value="<%=client.getOAuthTokenExpiryTimeDTO().getUserAccessTokenExpiryTime()%>" />
-                                <fmt:message key='seconds'/>
-                            </td>
-                        </tr>
-                        <tr id="applicationAccessTokenPlain">
-                            <td class="leftCol-med"><fmt:message key='application.access.token.expiry.time'/></td>
-                            <td>
-                                <input id="applicationAccessTokenExpiryTime" name="applicationAccessTokenExpiryTime" type="text"
-                                       value="<%=client.getOAuthTokenExpiryTimeDTO().getApplicationAccessTokenExpiryTime()%>" />
-                                <fmt:message key='seconds'/>
-                            </td>
-                        </tr>
-                        <tr id="refreshTokenPlain">
-                            <td class="leftCol-med"><fmt:message key='refresh.token.expiry.time'/></td>
-                            <td>
-                                <input id="refreshTokenExpiryTime" name="refreshTokenExpiryTime" type="text" value="<%=client.getOAuthTokenExpiryTimeDTO().getRefreshTokenExpiryTime()%>" />
-                                <fmt:message key='seconds'/>
-                            </td>
-                        </tr>
-                    <tr id="audience_enable">
-                        <td colspan="2"
-                            title="Enable Audience Restriction to restrict the audience. You may add audience members using the Audience text box and clicking the Add button">
-                            <input type="checkbox"
-                                   name="enableAudienceRestriction"
-                                   id="enableAudienceRestriction"
-                                   value="true"
-                                   onclick="toggleAudienceRestriction(this);"/>
-                            <fmt:message key="enable.audience.restriction"/>
-                        </td>
-                    </tr>
-                    <tr id="add_audience">
-                        <td
-                                style="padding-left: 40px ! important; color: rgb(119, 119, 119); font-style: italic;">
-                            <fmt:message key="sp.audience"/>
-                        </td>
-                        <td>
-                            <input type="text" id="audience" name="audience"
-                                   class="text-box-big" disabled="disabled"/>
-                            <input id="addAudience" name="addAudience" type="button"
-                                   disabled="disabled" value="<fmt:message key="oauth.add.audience"/>"
-                                   onclick="return addAudienceFunc()"/>
-                        </td>
-                    </tr>
+                                        <input id="applicationAccessTokenExpiryTime"
+                                               name="applicationAccessTokenExpiryTime" type="text"
+                                               value="<%=client.getOAuthTokenExpiryTimeDTO().getApplicationAccessTokenExpiryTime()%>"/>
+                                        <fmt:message key='seconds'/>
+                                    </td>
+                                </tr>
+                                <tr id="refreshTokenPlain">
+                                    <td class="leftCol-med"><fmt:message key='refresh.token.expiry.time'/></td>
+                                    <td>
+                                        <input id="refreshTokenExpiryTime" name="refreshTokenExpiryTime" type="text"
+                                               value="<%=client.getOAuthTokenExpiryTimeDTO().getRefreshTokenExpiryTime()%>"/>
+                                        <fmt:message key='seconds'/>
+                                    </td>
+                                </tr>
+                                <tr id="audience_enable">
+                                    <td colspan="2"
+                                        title="Enable Audience Restriction to restrict the audience. You may add audience members using the Audience text box and clicking the Add button">
+                                        <input type="checkbox"
+                                               name="enableAudienceRestriction"
+                                               id="enableAudienceRestriction"
+                                               value="true"
+                                               onclick="toggleAudienceRestriction(this);"/>
+                                        <fmt:message key="enable.audience.restriction"/>
+                                    </td>
+                                </tr>
+                                <tr id="add_audience">
+                                    <td
+                                            style="padding-left: 40px ! important; color: rgb(119, 119, 119); font-style: italic;">
+                                        <fmt:message key="sp.audience"/>
+                                    </td>
+                                    <td>
+                                        <input type="text" id="audience" name="audience"
+                                               class="text-box-big" disabled="disabled"/>
+                                        <input id="addAudience" name="addAudience" type="button"
+                                               disabled="disabled" value="<fmt:message key="oauth.add.audience"/>"
+                                               onclick="return addAudienceFunc()"/>
+                                    </td>
+                                </tr>
 
                                 <tr id="audience_table">
                                     <td></td>
