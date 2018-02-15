@@ -127,7 +127,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
 
             prepStmt.setString(1, getPersistenceProcessor().getProcessedClientId(consumerKey));
             if (refreshToken != null) {
-                prepStmt.setString(2, getPersistenceProcessor().getProcessedRefreshToken(refreshToken));
+                prepStmt.setString(2, getHashingPersistenceProcessor().getProcessedRefreshToken(refreshToken));
             }
 
             resultSet = prepStmt.executeQuery();
@@ -422,7 +422,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                 // update consumer secret of the oauth app
                 updateStateStatement = connection.prepareStatement
                         (org.wso2.carbon.identity.oauth.dao.SQLQueries.OAuthAppDAOSQLQueries.UPDATE_OAUTH_SECRET_KEY);
-                updateStateStatement.setString(1, newSecretKey);
+                updateStateStatement.setString(1, getPersistenceProcessor().getProcessedClientSecret(newSecretKey));
                 updateStateStatement.setString(2, consumerKey);
                 updateStateStatement.execute();
             }

@@ -188,7 +188,15 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             insertTokenPrepStmt.setString(13, accessTokenDO.getTokenId());
             insertTokenPrepStmt.setString(14, accessTokenDO.getGrantType());
             insertTokenPrepStmt.setString(15, accessTokenDO.getAuthzUser().getAuthenticatedSubjectIdentifier());
-            insertTokenPrepStmt.setString(16, getPersistenceProcessor().getProcessedClientId(consumerKey));
+            insertTokenPrepStmt
+                    .setString(16, getHashingPersistenceProcessor().getProcessedAccessTokenIdentifier(accessToken));
+            if (accessTokenDO.getRefreshToken() != null) {
+                insertTokenPrepStmt.setString(17,
+                        getHashingPersistenceProcessor().getProcessedRefreshToken(accessTokenDO.getRefreshToken()));
+            } else {
+                insertTokenPrepStmt.setString(17, accessTokenDO.getRefreshToken());
+            }
+            insertTokenPrepStmt.setString(18, getPersistenceProcessor().getProcessedClientId(consumerKey));
             insertTokenPrepStmt.execute();
 
             String accessTokenId = accessTokenDO.getTokenId();
@@ -718,7 +726,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
 
             prepStmt = connection.prepareStatement(sql);
 
-            prepStmt.setString(1, getPersistenceProcessor().getProcessedAccessTokenIdentifier(accessTokenIdentifier));
+            prepStmt.setString(1, getHashingPersistenceProcessor().getProcessedAccessTokenIdentifier(accessTokenIdentifier));
             resultSet = prepStmt.executeQuery();
 
             int iterateId = 0;
@@ -866,7 +874,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 for (String token : tokens) {
                     ps.setString(1, OAuthConstants.TokenStates.TOKEN_STATE_REVOKED);
                     ps.setString(2, UUID.randomUUID().toString());
-                    ps.setString(3, getPersistenceProcessor().getProcessedAccessTokenIdentifier(token));
+                    ps.setString(3, getHashingPersistenceProcessor().getProcessedAccessTokenIdentifier(token));
                     ps.addBatch();
                 }
                 ps.executeBatch();
@@ -890,7 +898,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 ps = connection.prepareStatement(sqlQuery);
                 ps.setString(1, OAuthConstants.TokenStates.TOKEN_STATE_REVOKED);
                 ps.setString(2, UUID.randomUUID().toString());
-                ps.setString(3, getPersistenceProcessor().getProcessedAccessTokenIdentifier(tokens[0]));
+                ps.setString(3, getHashingPersistenceProcessor().getProcessedAccessTokenIdentifier(tokens[0]));
                 ps.executeUpdate();
 
                 // To revoke request objects which have persisted against the access token.
@@ -932,7 +940,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 ps = connection.prepareStatement(sqlQuery);
                 ps.setString(1, OAuthConstants.TokenStates.TOKEN_STATE_REVOKED);
                 ps.setString(2, UUID.randomUUID().toString());
-                ps.setString(3, getPersistenceProcessor().getProcessedAccessTokenIdentifier(token));
+                ps.setString(3, getHashingPersistenceProcessor().getProcessedAccessTokenIdentifier(token));
                 int count = ps.executeUpdate();
                 if (log.isDebugEnabled()) {
                     log.debug("Number of rows being updated : " + count);
@@ -1501,7 +1509,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     userStoreDomain);
 
             prepStmt = connection.prepareStatement(sql);
-            prepStmt.setString(1, getPersistenceProcessor().getProcessedAccessTokenIdentifier(token));
+            prepStmt.setString(1, getHashingPersistenceProcessor().getProcessedAccessTokenIdentifier(token));
             resultSet = prepStmt.executeQuery();
 
             if (resultSet.next()) {
