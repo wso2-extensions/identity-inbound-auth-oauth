@@ -19,16 +19,19 @@
 <%@ page import="org.apache.axis2.context.ConfigurationContext"%>
 <%@ page import="org.owasp.encoder.Encode" %>
 <%@ page import="org.wso2.carbon.CarbonConstants"%>
+<%@ page import="org.wso2.carbon.identity.core.util.IdentityUtil"%>
 <%@ page import="org.wso2.carbon.identity.oauth.common.OAuthConstants"%>
 <%@ page import="org.wso2.carbon.identity.oauth.stub.dto.OAuthConsumerAppDTO"%>
 <%@ page import="org.wso2.carbon.identity.oauth.ui.client.OAuthAdminClient"%>
-<%@ page import="org.wso2.carbon.ui.CarbonUIMessage"%>
-<%@ page import="org.wso2.carbon.ui.CarbonUIUtil"%>
-<%@ page import="org.wso2.carbon.utils.ServerConstants"%>
-<%@ page import="org.wso2.carbon.identity.core.util.IdentityUtil" %>
+<%@ page import="org.wso2.carbon.identity.oauth.ui.util.OAuthUIConstants"%>
+<%@ page import="org.wso2.carbon.identity.oauth.ui.util.OAuthUIUtil"%>
+<%@ page import="org.wso2.carbon.ui.CarbonUIMessage" %>
 
+<%@ page import="org.wso2.carbon.ui.CarbonUIUtil" %>
+<%@ page import="org.wso2.carbon.utils.ServerConstants" %>
+<%@ page import="java.util.ArrayList" %>
+<%@ page import="java.util.List" %>
 <%@ page import="java.util.ResourceBundle" %>
-<%@ page import="org.wso2.carbon.identity.oauth.ui.util.OAuthUIUtil" %>
 
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt"%>
 <%@ taglib uri="http://wso2.org/projects/carbon/taglibs/carbontags.jar" prefix="carbon"%>
@@ -57,6 +60,9 @@
 	boolean pkceMandatory = false;
 	boolean pkceSupportPlain = false;
 
+    boolean pkceMandatory = false;
+    boolean pkceSupportPlain = false;
+
 	if(request.getParameter("pkce") != null) {
 		pkceMandatory = true;
 	}
@@ -78,7 +84,7 @@
 	boolean isError = false;
 	OAuthConsumerAppDTO consumerApp = null;
 
-	try {
+    try {
         if (OAuthUIUtil.isValidURI(callback) || callback.startsWith(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX)) {
             String cookie = (String) session.getAttribute(ServerConstants.ADMIN_SERVICE_COOKIE);
             String backendServerURL = CarbonUIUtil.getServerURL(config.getServletContext(), session);
@@ -103,11 +109,20 @@
                     buff.append(grantType + " ");
                 }
             }
-
             grants = buff.toString();
+
+            List<String> registeredScopeValidators = new ArrayList<String>();
+            String[] allowedValidators = client.getAllowedScopeValidators();
+            for (String allowedValidator : allowedValidators) {
+                String val = request.getParameter(OAuthUIConstants.SCOPE_VALIDATOR + allowedValidator);
+                if (val != null) {
+                    registeredScopeValidators.add(allowedValidator);
+                }
+            }
 
             if (OAuthConstants.OAuthVersions.VERSION_2.equals(oauthVersion)) {
                 app.setGrantTypes(grants);
+                app.setScopeValidators(registeredScopeValidators.toArray(new String[registeredScopeValidators.size()]));
             }
 
             if (Boolean.parseBoolean(request.getParameter("enableAudienceRestriction"))) {
@@ -138,7 +153,6 @@
             String message = resourceBundle.getString("callback.is.not.url");
             CarbonUIMessage.sendCarbonUIMessage(message, CarbonUIMessage.ERROR, request);
         }
-
     } catch (Exception e) {
         isError = true;
         String message = resourceBundle.getString("error.while.adding.app") + " : " + e.getMessage();

@@ -21,11 +21,13 @@
 <%@ page import="org.wso2.carbon.CarbonConstants" %>
 <%@ page import="org.wso2.carbon.identity.oauth.common.OAuthConstants" %>
 <%@ page import="org.wso2.carbon.identity.oauth.ui.client.OAuthAdminClient" %>
+<%@ page import="org.wso2.carbon.identity.oauth.ui.util.OAuthUIConstants" %>
 <%@ page import="org.wso2.carbon.ui.CarbonUIMessage" %>
 <%@ page import="org.wso2.carbon.ui.CarbonUIUtil" %>
 <%@ page import="org.wso2.carbon.utils.ServerConstants" %>
 <%@ page import="java.util.ArrayList" %>
 <%@ page import="java.util.Arrays" %>
+<%@ page import="java.util.Collections" %>
 <%@ page import="java.util.List" %>
 <%@ page import="java.util.ResourceBundle" %>
 
@@ -38,6 +40,7 @@
 <script type="text/javascript" src="../identity/validation/js/identity-validate.js"></script>
 
 <%
+    String forwardTo = "index.jsp";
     String BUNDLE = "org.wso2.carbon.identity.oauth.ui.i18n.Resources";
     ResourceBundle resourceBundle = ResourceBundle.getBundle(BUNDLE, request.getLocale());
     String applicationSPName = request.getParameter("spName");
@@ -45,7 +48,35 @@
 
     OAuthAdminClient client = null;
     String audienceTableStyle = "display:none";
+    String cookie = (String) session.getAttribute(ServerConstants.ADMIN_SERVICE_COOKIE);
+    String backendServerURL = CarbonUIUtil.getServerURL(config.getServletContext(), session);
+    ConfigurationContext configContext = (ConfigurationContext) config.getServletContext()
+            .getAttribute(CarbonConstants.CONFIGURATION_CONTEXT);
+    client = new OAuthAdminClient(cookie, backendServerURL, configContext);
+    List<String> allowedGrants = new ArrayList<String>();
+    List<String> scopeValidators = new ArrayList<String>();
+    try {
+        allowedGrants = new ArrayList<String>(Arrays.asList(client.getAllowedOAuthGrantTypes()));
+        scopeValidators = new ArrayList<String>(Arrays.asList(client.getAllowedScopeValidators()));
+        Collections.sort(scopeValidators);
+    } catch (Exception e) {
+        String message = resourceBundle.getString("error.while.loading.add.new.application") + " : " + e.getMessage();
+        CarbonUIMessage.sendCarbonUIMessage(message, CarbonUIMessage.ERROR, request, e);
 %>
+<script type="text/javascript">
+    function forward() {
+        location.href = "<%=forwardTo%>";
+    }
+</script>
+
+<script type="text/javascript">
+    forward();
+</script>
+<%
+    }
+
+%>
+
 
 <jsp:include page="../dialog/display_messages.jsp"/>
 
@@ -175,6 +206,7 @@
                     if(oauthVersion == "<%=OAuthConstants.OAuthVersions.VERSION_1A%>") {
                         $(jQuery('#grant_row')).hide();
                         $(jQuery("#pkce_enable").hide());
+                        $(jQuery('#scope_validator_row')).hide();
                         $(jQuery("#pkce_support_plain").hide());
                         $(jQuery('#userAccessTokenPlain').hide());
                         $(jQuery('#applicationAccessTokenPlain').hide());
@@ -188,6 +220,7 @@
 
                     } else if(oauthVersion == "<%=OAuthConstants.OAuthVersions.VERSION_2%>") {
                         $(jQuery('#grant_row')).show();
+                        $(jQuery('#scope_validator_row')).show();
                         $(jQuery("#pkce_enable").show());
                         $(jQuery("#pkce_support_plain").show());
                         $(jQuery('#userAccessTokenPlain').show());
@@ -208,7 +241,7 @@
                         } else {
                             $(jQuery('#callback_row')).show();
                         }
-                        if(supportGrantCode) {
+                        if (supportGrantCode) {
                             $(jQuery("#pkce_enable").show());
                             $(jQuery("#pkce_support_plain").show());
                         } else {
@@ -313,69 +346,105 @@
                     </tr>
                     </thead>
                     <tbody>
-		    <tr>
-			<td class="formRow">
-				<table class="normal" >
-                            <tr>
-                                <td class="leftCol-med"><fmt:message key='oauth.version'/><span class="required">*</span> </td>
-                                <td><input id="oauthVersion10a" name="oauthVersion" type="radio" value="<%=OAuthConstants.OAuthVersions.VERSION_1A%>" />1.0a
-                                    <input id="oauthVersion20" name="oauthVersion" type="radio" value="<%=OAuthConstants.OAuthVersions.VERSION_2%>" CHECKED />2.0</td>
-                            </tr>
-                            <%if  (applicationSPName!= null) {%>
-                             <tr style="display: none;">
-		                        <td colspan="2" style="display: none;"><input class="text-box-big" type="hidden" id="application" name="application"
-		                                   value="<%=Encode.forHtmlAttribute(applicationSPName)%>" /></td>
-		                    </tr>
-                            <% } else { %>
-		                    <tr>
-		                        <td class="leftCol-med"><fmt:message key='application.name'/><span class="required">*</span></td>
-		                        <td><input class="text-box-big" id="application" name="application"
-		                                   type="text" /></td>
-		                    </tr>
-		                    <% } %>
-		                    <tr id="callback_row">
-		                        <td class="leftCol-med"><fmt:message key='callback'/><span class="required">*</span></td>
-                                <td><input class="text-box-big" id="callback" name="callback" type="text"
-                                           white-list-patterns="https-url"/></td>
-		                    </tr>
-                            <tr id="bclogout_row">
-                                <td class="leftCol-med"><fmt:message key="bclogout"/></td>
-                                <td><input class="text-box-big" id="backChannelLogout" name="backChannelLogout" type="text" white-list-patterns="https-url"/></td>
-                            </tr>
-		                     <tr id="grant_row" name="grant_row">
-		                        <td class="leftCol-med"><fmt:message key='grantTypes'/></td>
-		                        <td>
-		                        <table>
-                                    <%
-                                        String forwardTo = "index.jsp";
-                                        try {
-                                            String cookie = (String) session.getAttribute(ServerConstants.ADMIN_SERVICE_COOKIE);
-                                            String backendServerURL = CarbonUIUtil.getServerURL(config.getServletContext(), session);
-                                            ConfigurationContext configContext =
-                                                    (ConfigurationContext) config.getServletContext()
-                                                            .getAttribute(CarbonConstants.CONFIGURATION_CONTEXT);
-                                            client = new OAuthAdminClient(cookie, backendServerURL, configContext);
-                                            List<String> allowedGrants = new ArrayList<String>(Arrays.asList(client.getAllowedOAuthGrantTypes()));
-                                            if (allowedGrants.contains("authorization_code")) {
-                                                allowedGrants.remove("authorization_code");
-                                                %><tr><td><label><input type="checkbox" id="grant_authorization_code" name="grant_authorization_code" value="authorization_code" checked="checked" onclick="toggleCallback()"/>Code</label></td></tr><%
-                                            }
-                                            if (allowedGrants.contains("implicit")) {
-                                                allowedGrants.remove("implicit");
-                                                %><tr><td><label><input type="checkbox" id="grant_implicit" name="grant_implicit" value="implicit" checked="checked" onclick="toggleCallback()"/>Implicit</label></td></tr><%
-                                            }
-                                            if (allowedGrants.contains("password")) {
-                                                allowedGrants.remove("password");
-                                                %><tr><td><lable><input type="checkbox" id="grant_password" name="grant_password" value="password" checked="checked"/>Password</lable></td></tr><%
-                                            }
-                                            if (allowedGrants.contains("client_credentials")) {
-                                                allowedGrants.remove("client_credentials");
-                                                %><tr><td><label><input type="checkbox" id="grant_client_credentials" name="grant_client_credentials" value="client_credentials" checked="checked"/>Client Credential</label></td></tr><%
-                                            }
-                                            if (allowedGrants.contains("refresh_token")) {
-                                                allowedGrants.remove("refresh_token");
-                                                %><tr><td><label><input type="checkbox" id="grant_refresh_token" name="grant_refresh_token" value="refresh_token" checked="checked"/>Refresh Token</label></td></tr><%
-                                            }
+                    <tr>
+                        <td class="formRow">
+                            <table class="normal">
+                                <tr>
+                                    <td class="leftCol-med"><fmt:message key='oauth.version'/><span
+                                            class="required">*</span></td>
+                                    <td><input id="oauthVersion10a" name="oauthVersion" type="radio"
+                                               value="<%=OAuthConstants.OAuthVersions.VERSION_1A%>"/>1.0a
+                                        <input id="oauthVersion20" name="oauthVersion" type="radio"
+                                               value="<%=OAuthConstants.OAuthVersions.VERSION_2%>" CHECKED/>2.0
+                                    </td>
+                                </tr>
+                                <%if (applicationSPName != null) {%>
+                                <tr style="display: none;">
+                                    <td colspan="2" style="display: none;"><input class="text-box-big" type="hidden"
+                                                                                  id="application" name="application"
+                                                                                  value="<%=Encode.forHtmlAttribute(applicationSPName)%>"/>
+                                    </td>
+                                </tr>
+                                <% } else { %>
+                                <tr>
+                                    <td class="leftCol-med"><fmt:message key='application.name'/><span class="required">*</span>
+                                    </td>
+                                    <td><input class="text-box-big" id="application" name="application"
+                                               type="text"/></td>
+                                </tr>
+                                <% } %>
+                                <tr id="callback_row">
+                                    <td class="leftCol-med"><fmt:message key='callback'/><span class="required">*</span>
+                                    </td>
+                                    <td><input class="text-box-big" id="callback" name="callback" type="text"
+                                               white-list-patterns="https-url"/></td>
+                                </tr>
+                                <tr id="bclogout_row">
+                                    <td class="leftCol-med"><fmt:message key="bclogout"/></td>
+                                    <td><input class="text-box-big" id="backChannelLogout" name="backChannelLogout" type="text" white-list-patterns="https-url"/></td>
+                                </tr>
+                                <tr id="grant_row" name="grant_row">
+                                    <td class="leftCol-med"><fmt:message key='grantTypes'/></td>
+                                    <td>
+                                        <table>
+                                            <%
+                                                try {
+                                                    if (allowedGrants.contains("authorization_code")) {
+                                                        allowedGrants.remove("authorization_code");
+                                            %>
+                                            <tr>
+                                                <td><label><input type="checkbox" id="grant_authorization_code"
+                                                                  name="grant_authorization_code"
+                                                                  value="authorization_code" checked="checked"
+                                                                  onclick="toggleCallback()"/>Code</label></td>
+                                            </tr>
+                                            <%
+                                                }
+                                                if (allowedGrants.contains("implicit")) {
+                                                    allowedGrants.remove("implicit");
+                                            %>
+                                            <tr>
+                                                <td><label><input type="checkbox" id="grant_implicit"
+                                                                  name="grant_implicit" value="implicit"
+                                                                  checked="checked" onclick="toggleCallback()"/>Implicit</label>
+                                                </td>
+                                            </tr>
+                                            <%
+                                                }
+                                                if (allowedGrants.contains("password")) {
+                                                    allowedGrants.remove("password");
+                                            %>
+                                            <tr>
+                                                <td>
+                                                    <lable><input type="checkbox" id="grant_password"
+                                                                  name="grant_password" value="password"
+                                                                  checked="checked"/>Password
+                                                    </lable>
+                                                </td>
+                                            </tr>
+                                            <%
+                                                }
+                                                if (allowedGrants.contains("client_credentials")) {
+                                                    allowedGrants.remove("client_credentials");
+                                            %>
+                                            <tr>
+                                                <td><label><input type="checkbox" id="grant_client_credentials"
+                                                                  name="grant_client_credentials"
+                                                                  value="client_credentials" checked="checked"/>Client
+                                                    Credential</label></td>
+                                            </tr>
+                                            <%
+                                                }
+                                                if (allowedGrants.contains("refresh_token")) {
+                                                    allowedGrants.remove("refresh_token");
+                                            %>
+                                            <tr>
+                                                <td><label><input type="checkbox" id="grant_refresh_token"
+                                                                  name="grant_refresh_token" value="refresh_token"
+                                                                  checked="checked"/>Refresh Token</label></td>
+                                            </tr>
+                                            <%
+                                                }
 
                                             for (String grantType : allowedGrants) {
                                                 if (grantType.equals("urn:ietf:params:oauth:grant-type:saml1-bearer")) {
@@ -481,48 +550,84 @@
                         </td>
                     </tr>
 
-                    <tr id="audience_table" >
-                        <td></td>
-                        <td>
-                            <table id="audienceTableId"
-                                   style="<%=audienceTableStyle%>"
-                                   class="styledInner">
-                                <tbody id="audienceTableTbody">
-                                <%
-                                    int j = 0;
-                                %>
-                                <input type="hidden" name="audiencePropertyCounter"
-                                       id="audiencePropertyCounter"
-                                       value="<%=j%>"/>
-                                </tbody>
+                                <tr id="audience_table">
+                                    <td></td>
+                                    <td>
+                                        <table id="audienceTableId"
+                                               style="<%=audienceTableStyle%>"
+                                               class="styledInner">
+                                            <tbody id="audienceTableTbody">
+                                            <%
+                                                int j = 0;
+                                            %>
+                                            <input type="hidden" name="audiencePropertyCounter"
+                                                   id="audiencePropertyCounter"
+                                                   value="<%=j%>"/>
+                                            </tbody>
+                                        </table>
+                                    </td>
+                                </tr>
+                                <!-- OIDC related properties -->
+                                <tr id="validate_request_object_signature_row">
+                                    <td colspan="2" title="Validate the signature of the request object">
+                                        <input type="checkbox"
+                                               name="validateRequestObjectSignature"
+                                               id="validateRequestObjectSignature"
+                                               value="true"/>
+                                        <fmt:message key='enable.request.object.signature.validation'/>
+                                    </td>
+                                </tr>
+
+                                <tr id="encrypt_id_token_row">
+                                    <td colspan="2"
+                                        title="Encrypt the id_token">
+                                        <input type="checkbox"
+                                               name="encryptIdToken"
+                                               id="encryptIdToken"
+                                               value="true"/>
+                                        <fmt:message key='enable.id.token.encryption'/>
+                                    </td>
+                                </tr>
+                                    <%--Scope validators--%>
+                                <tr id="scope_validator_row" name="scope_validator_row">
+                                    <td class="leftCol-med"><fmt:message key='scopeValidators'/></td>
+                                    <td>
+                                        <table>
+                                            <%
+                                                try {
+                                                    for (String scopeValidator : scopeValidators) {
+
+                                            %>
+                                            <tr>
+                                                <td><label><input type="checkbox"
+                                                                  id=<%=OAuthUIConstants.SCOPE_VALIDATOR + scopeValidator%> name=<%=OAuthUIConstants.SCOPE_VALIDATOR + scopeValidator%>
+                                                                  value=<%=scopeValidator%>/><%=scopeValidator%>
+                                                </label></td>
+                                            </tr>
+                                            <%
+                                                }
+                                            } catch (Exception e) {
+                                                String message = resourceBundle.getString("error.while.getting.scope.validators") + " : " + e.getMessage();
+                                                CarbonUIMessage.sendCarbonUIMessage(message, CarbonUIMessage.ERROR, request, e);
+                                            %>
+                                            <script type="text/javascript">
+                                                function forward() {
+                                                    location.href = "<%=forwardTo%>";
+                                                }
+                                            </script>
+
+                                            <script type="text/javascript">
+                                                forward();
+                                            </script>
+                                            <%
+                                                }
+                                            %>
+                                        </table>
+                                    </td>
+                                </tr>
                             </table>
                         </td>
                     </tr>
-                    
-                    <!-- OIDC related properties -->
-                    <tr id="validate_request_object_signature_row">
-                        <td colspan="2" title="Validate the signature of the request object">
-                            <input type="checkbox"
-                                   name="validateRequestObjectSignature"
-                                   id="validateRequestObjectSignature"
-                                   value="true"/>
-                            <fmt:message key='enable.request.object.signature.validation'/>
-                        </td>
-                    </tr>
-                    
-                    <tr id="encrypt_id_token_row">
-                        <td colspan="2"
-                            title="Encrypt the id_token">
-                            <input type="checkbox"
-                                   name="encryptIdToken"
-                                   id="encryptIdToken"
-                                   value="true"/>
-                            <fmt:message key='enable.id.token.encryption'/>
-                        </td>
-                    </tr>
-				</table>
-			</td>
-		    </tr>
 
                     <tr>
                         <td class="buttonRow" >
