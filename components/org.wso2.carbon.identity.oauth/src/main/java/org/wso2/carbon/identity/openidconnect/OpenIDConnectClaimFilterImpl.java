@@ -33,6 +33,7 @@ import org.wso2.carbon.registry.api.Resource;
 import org.wso2.carbon.registry.core.service.RegistryService;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
@@ -245,12 +246,14 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
 
     private List<String> getClaimUrisInSupportedOidcScope(Properties properties, String requestedScope) {
         String[] requestedScopeClaimsArray;
-        if (StringUtils.isBlank(properties.getProperty(requestedScope))) {
-            requestedScopeClaimsArray = new String[0];
-        } else {
+        List<String> requestedScopeClaimsList = new ArrayList<>();
+        if (StringUtils.isNotBlank(properties.getProperty(requestedScope))) {
             requestedScopeClaimsArray = properties.getProperty(requestedScope).split(OIDC_SCOPE_CLAIM_SEPARATOR);
+            for (String requestedScopeClaim : requestedScopeClaimsArray) {
+                requestedScopeClaimsList.add(requestedScopeClaim.trim());
+            }
         }
-        return Arrays.asList(requestedScopeClaimsArray);
+        return requestedScopeClaimsList;
     }
 
     private void handleUpdateAtClaim(Map<String, Object> returnClaims) {
