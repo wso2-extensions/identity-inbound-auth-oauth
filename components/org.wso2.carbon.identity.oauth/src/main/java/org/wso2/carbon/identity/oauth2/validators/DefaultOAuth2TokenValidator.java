@@ -83,7 +83,7 @@ public class DefaultOAuth2TokenValidator implements OAuth2TokenValidator {
                         }
                     }
                     if (log.isDebugEnabled()) {
-                        log.debug(String.format("Validating scope of %s using %s", accessTokenDO.getConsumerKey(),
+                        log.debug(String.format("Validating scope of token %s using %s", accessTokenDO.getTokenId(),
                                 validator.getClass().getName()));
                     }
                     boolean isValid = validator.validateScope(accessTokenDO, resource);
