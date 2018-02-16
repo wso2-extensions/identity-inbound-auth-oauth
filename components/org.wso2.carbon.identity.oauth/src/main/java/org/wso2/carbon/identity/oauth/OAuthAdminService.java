@@ -139,6 +139,7 @@ public class OAuthAdminService extends AbstractAdmin {
                 dto.setAudiences(app.getAudiences());
                 dto.setRequestObjectSignatureValidationEnabled(app.isRequestObjectSignatureValidationEnabled());
                 dto.setIdTokenEncryptionEnabled(app.isIdTokenEncryptionEnabled());
+                dto.setBackChannelLogoutUrl(app.getBackChannelLogoutUrl());
                 dtos[i] = dto;
             }
         }
@@ -213,6 +214,7 @@ public class OAuthAdminService extends AbstractAdmin {
                 dto.setAudiences(app.getAudiences());
                 dto.setRequestObjectSignatureValidationEnabled(app.isRequestObjectSignatureValidationEnabled());
                 dto.setIdTokenEncryptionEnabled(app.isIdTokenEncryptionEnabled());
+                dto.setBackChannelLogoutUrl(app.getBackChannelLogoutUrl());
             }
             return dto;
         } catch (InvalidOAuthClientException | IdentityOAuth2Exception e) {
@@ -300,6 +302,7 @@ public class OAuthAdminService extends AbstractAdmin {
                     // Set OIDC Config Properties.
                     app.setRequestObjectSignatureValidationEnabled(application.isRequestObjectSignatureValidationEnabled());
                     app.setIdTokenEncryptionEnabled(application.isIdTokenEncryptionEnabled());
+                    app.setBackChannelLogoutUrl(application.getBackChannelLogoutUrl());
                 }
                 dao.addOAuthApplication(app);
                 AppInfoCache.getInstance().addToCache(app.getOauthConsumerKey(), app);
@@ -398,6 +401,7 @@ public class OAuthAdminService extends AbstractAdmin {
             oauthappdo.setAudiences(consumerAppDTO.getAudiences());
             oauthappdo.setRequestObjectSignatureValidationEnabled(consumerAppDTO.isRequestObjectSignatureValidationEnabled());
             oauthappdo.setIdTokenEncryptionEnabled(consumerAppDTO.isIdTokenEncryptionEnabled());
+            oauthappdo.setBackChannelLogoutUrl(consumerAppDTO.getBackChannelLogoutUrl());
         }
         dao.updateConsumerApplication(oauthappdo);
         AppInfoCache.getInstance().addToCache(oauthappdo.getOauthConsumerKey(), oauthappdo);

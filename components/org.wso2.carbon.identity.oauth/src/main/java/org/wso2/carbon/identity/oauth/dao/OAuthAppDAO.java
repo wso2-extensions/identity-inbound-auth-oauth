@@ -55,6 +55,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.BACK_CHANNEL_LOGOUT_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ID_TOKEN_ENCRYPTED;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.REQUEST_OBJECT_SIGNED;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.OPENID_CONNECT_AUDIENCE;
@@ -499,6 +500,9 @@ public class OAuthAppDAO {
                 String.valueOf(oauthAppDO.isIdTokenEncryptionEnabled()),
                 prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties, BACK_CHANNEL_LOGOUT_URL,
+                oauthAppDO.getBackChannelLogoutUrl(), prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
         // Execute batched add/update/delete.
         prepStatementForPropertyAdd.executeBatch();
         preparedStatementForPropertyUpdate.executeBatch();
@@ -788,6 +792,9 @@ public class OAuthAppDAO {
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                     ID_TOKEN_ENCRYPTED, String.valueOf(consumerAppDO.isIdTokenEncryptionEnabled()));
 
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    BACK_CHANNEL_LOGOUT_URL, consumerAppDO.getBackChannelLogoutUrl());
+
             prepStmtAddOIDCProperty.executeBatch();
         }
     }
@@ -848,6 +855,9 @@ public class OAuthAppDAO {
         boolean isIdTokenEncrypted = Boolean.parseBoolean(
                 getFirstPropertyValue(spOIDCProperties, ID_TOKEN_ENCRYPTED));
         oauthApp.setIdTokenEncryptionEnabled(isIdTokenEncrypted);
+
+        String backChannelLogoutUrl = getFirstPropertyValue(spOIDCProperties, BACK_CHANNEL_LOGOUT_URL);
+        oauthApp.setBackChannelLogoutUrl(backChannelLogoutUrl);
     }
 
     private String getFirstPropertyValue(Map<String, List<String>> propertyMap, String key) {

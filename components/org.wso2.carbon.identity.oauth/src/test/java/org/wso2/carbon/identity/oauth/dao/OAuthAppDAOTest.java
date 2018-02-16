@@ -101,6 +101,9 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
 
     private static final String COUNT_APPS = "SELECT count(*) FROM IDN_OAUTH_CONSUMER_APPS WHERE APP_NAME=? and " +
             "TENANT_ID=?";
+
+    private static final String BACKCHANNEL_LOGOUT="https://localhost:8090/playground2/backChannelLogout";
+
     @Mock
     private TenantManager mockedTenantManager;
 
@@ -310,6 +313,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
             mockIdentityDataBaseUtilConnection(exceptionThrowingConnection);
 
             oAuthAppDO.setCallbackUrl("CHANGED_CALL_BACK");
+            oAuthAppDO.setBackChannelLogoutUrl("CHANGED_BACKCHANNEL_LOGOUT");
 
             OAuthAppDAO AppDAO = new OAuthAppDAO();
             AppDAO.updateConsumerApplication(oAuthAppDO);
@@ -519,10 +523,13 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
         try (Connection connection = getConnection(DB_NAME)) {
             mockIdentityUtilDataBaseConnection(connection);
             OAuthAppDO defaultOAuthAppDO = getDefaultOAuthAppDO();
+
+            final String BACK_CHANNEL_LOGOUT_URL = "https://dummy.com/logout";
             // Add OIDC properties.
             defaultOAuthAppDO.setAudiences(new String[] {"DUMMY"});
             defaultOAuthAppDO.setIdTokenEncryptionEnabled(true);
             defaultOAuthAppDO.setRequestObjectSignatureValidationEnabled(true);
+            defaultOAuthAppDO.setBackChannelLogoutUrl(BACK_CHANNEL_LOGOUT_URL);
 
             addOAuthApplication(defaultOAuthAppDO);
 
@@ -531,6 +538,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
             assertNotNull(oAuthAppDO);
             assertEquals(oAuthAppDO.isIdTokenEncryptionEnabled(), true);
             assertEquals(oAuthAppDO.isRequestObjectSignatureValidationEnabled(), true);
+            assertEquals(oAuthAppDO.getBackChannelLogoutUrl(), BACK_CHANNEL_LOGOUT_URL);
         }
     }
 
@@ -598,6 +606,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
         appDO.setOauthConsumerSecret(CONSUMER_SECRET);
         appDO.setUser(authenticatedUser);
         appDO.setCallbackUrl(CALLBACK);
+        appDO.setBackChannelLogoutUrl(BACKCHANNEL_LOGOUT);
         appDO.setGrantTypes(GRANT_TYPES);
         appDO.setOauthVersion(OAuthConstants.OAuthVersions.VERSION_1A);
         appDO.setApplicationAccessTokenExpiryTime(APPLICATION_ACCESS_TOKEN_EXPIRY_TIME);

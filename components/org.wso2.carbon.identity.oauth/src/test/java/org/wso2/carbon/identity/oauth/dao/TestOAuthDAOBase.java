@@ -35,7 +35,7 @@ public class TestOAuthDAOBase extends PowerMockIdentityBaseTest {
 
     private static final String ADD_OAUTH_APP_SQL = "INSERT INTO IDN_OAUTH_CONSUMER_APPS " +
             "(CONSUMER_KEY, CONSUMER_SECRET, USERNAME, TENANT_ID, USER_DOMAIN, APP_NAME, OAUTH_VERSION," +
-            " CALLBACK_URL, GRANT_TYPES, APP_STATE) VALUES (?,?,?,?,?,?,?,?,?,?) ";
+            " CALLBACK_URL, GRANT_TYPES, APP_STATE, BACKCHANNELLOGOUT_URL) VALUES (?,?,?,?,?,?,?,?,?,?,?) ";
 
     private static final String ADD_OAUTH_REQ_TOKEN = "INSERT INTO IDN_OAUTH1A_REQUEST_TOKEN " +
             "(REQUEST_TOKEN, REQUEST_TOKEN_SECRET, CONSUMER_KEY_ID, CALLBACK_URL, SCOPE, AUTHORIZED, " +
@@ -94,7 +94,8 @@ public class TestOAuthDAOBase extends PowerMockIdentityBaseTest {
                                      String username,
                                      String appName,
                                      String callback,
-                                     String appState) throws Exception {
+                                     String appState,
+                                     String backchannelLogout) throws Exception {
 
         PreparedStatement statement = null;
         try (Connection connection = getConnection(databaseName)) {
@@ -109,6 +110,7 @@ public class TestOAuthDAOBase extends PowerMockIdentityBaseTest {
             statement.setString(8, callback);
             statement.setString(9, "password");
             statement.setString(10, appState);
+            statement.setString(11, backchannelLogout);
             statement.execute();
 
             ResultSet resultSet = statement.getGeneratedKeys();

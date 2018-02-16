@@ -37,6 +37,7 @@ public class OAuthConsumerAppDTO {
     // OIDC related properties
     private boolean isRequestObjectSignatureValidationEnabled;
     private boolean isIdTokenEncryptionEnabled;
+    private String backChannelLogoutUrl;
 
     public long getUserAccessTokenExpiryTime() {
         return userAccessTokenExpiryTime;
@@ -169,6 +170,14 @@ public class OAuthConsumerAppDTO {
 
     public void setIdTokenEncryptionEnabled(boolean idTokenEncryptionEnabled) {
         this.isIdTokenEncryptionEnabled = idTokenEncryptionEnabled;
+    }
+
+    public void setBackChannelLogoutUrl(String backChannelLogoutUrl) {
+        this.backChannelLogoutUrl = backChannelLogoutUrl;
+    }
+
+    public String getBackChannelLogoutUrl() {
+        return backChannelLogoutUrl;
     }
 }
 
