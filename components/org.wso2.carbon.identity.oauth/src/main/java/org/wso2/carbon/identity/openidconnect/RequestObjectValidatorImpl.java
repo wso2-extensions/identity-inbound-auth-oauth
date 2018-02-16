@@ -211,11 +211,18 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
      * @return X509Certificate object containing the public certificate of the Service Provider.
      */
     protected Certificate getX509CertOfOAuthApp(String clientId, String tenantDomain) throws RequestObjectException {
+
         try {
             return OAuth2Util.getX509CertOfOAuthApp(clientId, tenantDomain);
         } catch (IdentityOAuth2Exception e) {
-            throw new RequestObjectException("Error retrieving public certificate of OAuth app with client_id: "
-                    + clientId + " of tenantDomain: " + tenantDomain, e);
+            String errorMsg = "Error retrieving application certificate of OAuth app with client_id: " + clientId +
+                    " , tenantDomain: " + tenantDomain;
+            if (StringUtils.isNotBlank(e.getMessage())) {
+                // We expect OAuth2Util.getX509CertOfOAuthApp() to throw an exception with a more specific reason for
+                // not being able to retrieve the X509 Cert of the service provider.
+                errorMsg = e.getMessage();
+            }
+            throw new RequestObjectException(errorMsg, e);
         }
     }
 
