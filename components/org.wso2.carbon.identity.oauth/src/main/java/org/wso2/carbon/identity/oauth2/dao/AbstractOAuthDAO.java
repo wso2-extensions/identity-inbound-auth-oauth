@@ -69,7 +69,7 @@ abstract class AbstractOAuthDAO {
 
     /**
      * Method to get HashingPersistenceProcessor instance
-     * @return
+     * @return an instance of HashingPersistenceProcessor
      */
     protected TokenPersistenceProcessor getHashingPersistenceProcessor() {
 
