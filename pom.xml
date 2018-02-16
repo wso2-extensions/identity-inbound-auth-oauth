@@ -319,20 +319,20 @@
              carbon.deployment module    
             -->  
             <dependency>
-		        <groupId>org.apache.cxf</groupId>
-			    <artifactId>cxf-core</artifactId>
-			    <version>${org.apache.cxf.version}</version>				
-			</dependency>
-			<dependency>
-			    <groupId>org.apache.cxf</groupId>
-			    <artifactId>cxf-rt-frontend-jaxrs</artifactId>
-			    <version>${org.apache.cxf.version}</version>	
-			</dependency>
-			<dependency>
-    			<groupId>org.apache.cxf</groupId>
-    			<artifactId>cxf-rt-transports-http</artifactId>
-				<version>${org.apache.cxf.version}</version>	
-			</dependency>
+		 <groupId>org.apache.cxf</groupId>
+		 <artifactId>cxf-core</artifactId>
+		 <version>${org.apache.cxf.version}</version>				
+	    </dependency>
+	    <dependency>
+	         <groupId>org.apache.cxf</groupId>
+		 <artifactId>cxf-rt-frontend-jaxrs</artifactId>
+		 <version>${org.apache.cxf.version}</version>	
+	    </dependency>
+	    <dependency>
+    	         <groupId>org.apache.cxf</groupId>
+    		 <artifactId>cxf-rt-transports-http</artifactId>
+		 <version>${org.apache.cxf.version}</version>	
+	    </dependency>
 
             <!-- Carbon Identity Inbound Authentication OAuth dependency -->
             <dependency>
