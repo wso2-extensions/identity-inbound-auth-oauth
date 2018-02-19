@@ -77,11 +77,7 @@ public class XACMLScopeValidator extends OAuth2ScopeValidator {
     @Override
     public boolean validateScope(AccessTokenDO accessTokenDO, String resource) throws IdentityOAuth2Exception {
 
-        if (accessTokenDO.getAuthzUser() == null) {
-            if (log.isDebugEnabled()) {
-                log.debug(String.format("There is no authorized user for access token id %s ",
-                        accessTokenDO.getTokenId()));
-            }
+        if (isUnAuthorizedToken(accessTokenDO)) {
             return false;
         }
         String authzUser = accessTokenDO.getAuthzUser().getUserName();
@@ -108,13 +104,13 @@ public class XACMLScopeValidator extends OAuth2ScopeValidator {
                 log.debug("XACML scope validation response :\n" + responseString);
             }
             String validationResponse = evaluateXACMLResponse(responseString);
-            if (RULE_EFFECT_NOT_APPLICABLE.equalsIgnoreCase(validationResponse)) {
+            if (isResponseNotApplicable(validationResponse)) {
                 log.warn(String.format(
                         "No applicable rule for service provider '%s@%s'. Add an validating policy (or unset Scope " +
                                 "Validation using XACMLScopeValidator) to fix this warning.",
                         authApp.getApplicationName(), OAuth2Util.getTenantDomainOfOauthApp(authApp)));
                 isValidated = true;
-            } else if (RULE_EFFECT_PERMIT.equalsIgnoreCase(validationResponse)) {
+            } else if (isResponsePermit(validationResponse)) {
                 isValidated = true;
             }
         } catch (InvalidOAuthClientException e) {
@@ -207,4 +203,42 @@ public class XACMLScopeValidator extends OAuth2ScopeValidator {
                 .UTF_8))).getDocumentElement();
         return axiomxPath.stringValueOf(rootElement);
     }
+
+    /**
+     * decides whether the token have and authorized user.
+     *
+     * @param accessTokenDO access token
+     * @return boolean
+     */
+    private boolean isUnAuthorizedToken(AccessTokenDO accessTokenDO) {
+        if (accessTokenDO.getAuthzUser() == null) {
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("There is no authorized user for access token id %s ",
+                        accessTokenDO.getTokenId()));
+            }
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * decides whether the validation response is not applicable.
+     *
+     * @param validationResponse extracted decision of the XACML response
+     * @return true if it is not applicable
+     */
+    private boolean isResponsePermit(String validationResponse) {
+        return RULE_EFFECT_PERMIT.equalsIgnoreCase(validationResponse);
+    }
+
+    /**
+     * decides whether the validation response is permit.
+     *
+     * @param validationResponse extracted decision of the XACML response
+     * @return true if it is permit
+     */
+    private boolean isResponseNotApplicable(String validationResponse) {
+        return RULE_EFFECT_NOT_APPLICABLE.equalsIgnoreCase(validationResponse);
+    }
+
 }
