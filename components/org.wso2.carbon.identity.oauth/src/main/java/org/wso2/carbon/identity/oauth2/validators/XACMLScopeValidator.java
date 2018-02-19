@@ -86,8 +86,8 @@ public class XACMLScopeValidator extends OAuth2ScopeValidator {
         }
 
         boolean isValidated = false;
+        FrameworkUtils.startTenantFlow(accessTokenDO.getAuthzUser().getTenantDomain());
         try {
-            FrameworkUtils.startTenantFlow(accessTokenDO.getAuthzUser().getTenantDomain());
             if (log.isDebugEnabled()) {
                 log.debug(String.format("In XACML based scope validation flow for access token of consumer key : %s ",
                         accessTokenDO.getConsumerKey()));
