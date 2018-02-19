@@ -84,16 +84,17 @@ public class XACMLScopeValidator extends OAuth2ScopeValidator {
             }
             return false;
         }
-
+        String authzUser = accessTokenDO.getAuthzUser().getUserName();
         boolean isValidated = false;
         FrameworkUtils.startTenantFlow(accessTokenDO.getAuthzUser().getTenantDomain());
         try {
-            if (log.isDebugEnabled()) {
-                log.debug(String.format("In XACML based scope validation flow for access token of consumer key : %s ",
-                        accessTokenDO.getConsumerKey()));
-            }
             String consumerKey = accessTokenDO.getConsumerKey();
             OAuthAppDO authApp = OAuth2Util.getAppInformationByClientId(consumerKey);
+
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("Inside XACML based scope validation flow for access token of consumer key :" +
+                                " %s of user %s", accessTokenDO.getConsumerKey(), authzUser));
+            }
 
             RequestDTO requestDTO = createRequestDTO(accessTokenDO, authApp, resource);
             RequestElementDTO requestElementDTO = PolicyCreatorUtil.createRequestElementDTO(requestDTO);
@@ -117,18 +118,18 @@ public class XACMLScopeValidator extends OAuth2ScopeValidator {
                 isValidated = true;
             }
         } catch (InvalidOAuthClientException e) {
-            log.error(String.format("Exception occurred when getting app information for client id %s . " +
+            log.error(String.format("Exception occurred when getting app information for client id %s of user %s. " +
                             "Error occurred when retrieving corresponding app for this specific client id  ",
-                    accessTokenDO.getConsumerKey()), e);
+                    accessTokenDO.getConsumerKey(), authzUser), e);
         } catch (PolicyBuilderException e) {
-            log.error(String.format("Exception occurred when building  XACML request for token with id  %s",
-                    accessTokenDO.getTokenId()), e);
+            log.error(String.format("Exception occurred when building  XACML request for token with id  %s of user %s.",
+                    accessTokenDO.getTokenId(), authzUser), e);
         } catch (XMLStreamException | JaxenException e) {
-            log.error(String.format("Exception occurred when reading XACML response for token with id %s",
-                    accessTokenDO.getTokenId()), e);
+            log.error(String.format("Exception occurred when reading XACML response for token with id %s of user %s.",
+                    accessTokenDO.getTokenId(), authzUser), e);
         } catch (EntitlementException e) {
-            log.error(String.format("Exception occurred when evaluating XACML request for token with id %s",
-                    accessTokenDO.getTokenId()), e);
+            log.error(String.format("Exception occurred when evaluating XACML request for token with id %s of user %s.",
+                    accessTokenDO.getTokenId(), authzUser), e);
         } finally {
             FrameworkUtils.endTenantFlow();
         }
@@ -144,6 +145,7 @@ public class XACMLScopeValidator extends OAuth2ScopeValidator {
      * @return RequestDTO
      */
     private RequestDTO createRequestDTO(AccessTokenDO accessTokenDO, OAuthAppDO authApp, String resource) {
+
         List<RowDTO> rowDTOs = new ArrayList<>();
         RowDTO actionDTO = createRowDTO(ACTION_VALIDATE, AUTH_ACTION_ID, ACTION_CATEGORY);
         RowDTO spNameDTO = createRowDTO(authApp.getApplicationName(), SP_NAME_ID, SP_CATEGORY);
