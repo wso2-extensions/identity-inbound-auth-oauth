@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) ${YEAR}, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ *  * Copyright (c) 2018, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *  *
  *  * WSO2 Inc. licenses this file to you under the Apache License,
  *  * Version 2.0 (the "License"); you may not use this file except
@@ -89,6 +89,7 @@ public class XACMLScopeValidator extends OAuth2ScopeValidator {
 
         boolean isValidated = false;
         try {
+            FrameworkUtils.startTenantFlow(accessTokenDO.getAuthzUser().getTenantDomain());
             if (log.isDebugEnabled()) {
                 log.debug(String.format("In XACML based scope validation flow for access token of consumer key : %s ",
                         accessTokenDO.getConsumerKey()));
@@ -103,7 +104,6 @@ public class XACMLScopeValidator extends OAuth2ScopeValidator {
             if (log.isDebugEnabled()) {
                 log.debug("XACML scope validation request :\n" + requestString);
             }
-            FrameworkUtils.startTenantFlow(accessTokenDO.getAuthzUser().getTenantDomain());
             String responseString = OAuth2ServiceComponentHolder.getEntitlementService().getDecision(requestString);
             if (log.isDebugEnabled()) {
                 log.debug("XACML scope validation response :\n" + responseString);
@@ -138,7 +138,7 @@ public class XACMLScopeValidator extends OAuth2ScopeValidator {
     }
 
     /**
-     * Creates request dto object.
+     * Creates RequestDTO object for XACML request with the parameters retrieved from the access token
      *
      * @param accessTokenDO access token
      * @param authApp       OAuth app
@@ -174,7 +174,7 @@ public class XACMLScopeValidator extends OAuth2ScopeValidator {
     }
 
     /**
-     * Creates RowDTO object of xacml request.
+     * Creates RowDTO object of xacml request using the resource name, attribute id, category value
      *
      * @param resourceName  resource name
      * @param attributeId   attribute id of the resource

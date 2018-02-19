@@ -67,6 +67,26 @@ public class OAuth2ServiceComponent {
     private static Log log = LogFactory.getLog(OAuth2ServiceComponent.class);
     private BundleContext bundleContext;
 
+    @Reference(
+            name = "framework.authentication.context.method.name.translator",
+            service = AuthenticationMethodNameTranslator.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetAuthenticationMethodNameTranslator"
+    )
+    protected static void setAuthenticationMethodNameTranslator(
+            AuthenticationMethodNameTranslator authenticationMethodNameTranslator) {
+        OAuth2ServiceComponentHolder.setAuthenticationMethodNameTranslator(authenticationMethodNameTranslator);
+    }
+
+    protected static void unsetAuthenticationMethodNameTranslator(
+            AuthenticationMethodNameTranslator authenticationMethodNameTranslator) {
+        if (OAuth2ServiceComponentHolder.getAuthenticationMethodNameTranslator() ==
+                authenticationMethodNameTranslator) {
+            OAuth2ServiceComponentHolder.setAuthenticationMethodNameTranslator(null);
+        }
+    }
+
     protected void activate(ComponentContext context) {
         try {
             int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
@@ -121,7 +141,8 @@ public class OAuth2ServiceComponent {
                 log.error("OAuth - UserStoreConfigListener could not be registered.");
             }
 
-            ServiceRegistration oauthApplicationMgtListenerSR = bundleContext.registerService(ApplicationMgtListener.class.getName(),
+            ServiceRegistration oauthApplicationMgtListenerSR = bundleContext.registerService(ApplicationMgtListener
+                            .class.getName(),
                     new OAuthApplicationMgtListener(), null);
             if (oauthApplicationMgtListenerSR != null) {
                 if (log.isDebugEnabled()) {
@@ -264,26 +285,6 @@ public class OAuth2ServiceComponent {
     }
 
     @Reference(
-            name = "framework.authentication.context.method.name.translator",
-            service = AuthenticationMethodNameTranslator.class,
-            cardinality = ReferenceCardinality.MANDATORY,
-            policy = ReferencePolicy.DYNAMIC,
-            unbind = "unsetAuthenticationMethodNameTranslator"
-    )
-    protected static void setAuthenticationMethodNameTranslator(
-            AuthenticationMethodNameTranslator authenticationMethodNameTranslator) {
-        OAuth2ServiceComponentHolder.setAuthenticationMethodNameTranslator(authenticationMethodNameTranslator);
-    }
-
-    protected static void unsetAuthenticationMethodNameTranslator(
-            AuthenticationMethodNameTranslator authenticationMethodNameTranslator) {
-        if (OAuth2ServiceComponentHolder.getAuthenticationMethodNameTranslator() ==
-                authenticationMethodNameTranslator) {
-            OAuth2ServiceComponentHolder.setAuthenticationMethodNameTranslator(null);
-        }
-    }
-
-    @Reference(
             name = "oauth.client.authenticator",
             service = OAuthClientAuthenticator.class,
             cardinality = ReferenceCardinality.MULTIPLE,
@@ -303,6 +304,7 @@ public class OAuth2ServiceComponent {
         }
         OAuth2ServiceComponentHolder.getAuthenticationHandlers().remove(oAuthClientAuthenticator);
     }
+
     @Reference(
             name = "identity.entitlement.service",
             service = EntitlementService.class,
