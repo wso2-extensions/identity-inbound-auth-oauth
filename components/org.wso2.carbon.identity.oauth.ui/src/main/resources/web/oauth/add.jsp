@@ -371,6 +371,9 @@
                                     <td class="leftCol-med"><fmt:message key='callback'/><span class="required">*</span></td>
                                     <td><input class="text-box-big" id="callback" name="callback" type="text"
                                                white-list-patterns="https-url"/></td>
+                                </tr>
+                                <tr id="bclogout_row">
+                                    <td class="leftCol-med"><fmt:message key="bclogout"/></td>
                                     <td><input class="text-box-big" id="backChannelLogout" name="backChannelLogout" type="text" white-list-patterns="https-url"/></td>
                                 </tr>
                                 <tr id="grant_row" name="grant_row">
