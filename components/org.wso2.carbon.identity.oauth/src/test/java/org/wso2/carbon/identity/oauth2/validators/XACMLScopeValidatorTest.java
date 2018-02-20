@@ -37,6 +37,7 @@ import org.wso2.carbon.identity.entitlement.EntitlementService;
 import org.wso2.carbon.identity.entitlement.common.dto.RequestDTO;
 import org.wso2.carbon.identity.entitlement.common.util.PolicyCreatorUtil;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -126,7 +127,7 @@ public class XACMLScopeValidatorTest extends IdentityBaseTest {
      *
      * @throws Exception exception
      */
-    @Test
+    @Test (expectedExceptions = IdentityOAuth2Exception.class)
     public void testValidatedScope() throws Exception {
 
         mockStatic(FrameworkUtils.class);
@@ -160,9 +161,9 @@ public class XACMLScopeValidatorTest extends IdentityBaseTest {
         assertTrue(xacmlScopeValidator.validateScope(accessTokenDO, resource));
 
         when(entitlementService.getDecision(anyString())).thenThrow(new EntitlementException(ERROR));
-        assertFalse(xacmlScopeValidator.validateScope(accessTokenDO, resource));
+        xacmlScopeValidator.validateScope(accessTokenDO, resource);
 
         when(policyBuilder.buildRequest(any(RequestElementDTO.class))).thenThrow(new PolicyBuilderException(ERROR));
-        assertFalse(xacmlScopeValidator.validateScope(accessTokenDO, resource));
+        xacmlScopeValidator.validateScope(accessTokenDO, resource);
     }
 }

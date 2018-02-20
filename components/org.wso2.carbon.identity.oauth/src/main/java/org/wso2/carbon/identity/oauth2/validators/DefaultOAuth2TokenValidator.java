@@ -31,7 +31,6 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Set;
 
 /**
@@ -62,8 +61,8 @@ public class DefaultOAuth2TokenValidator implements OAuth2TokenValidator {
             app = OAuth2Util.getAppInformationByClientId(accessTokenDO.getConsumerKey());
             appScopeValidators = new ArrayList<>(Arrays.asList(app.getScopeValidators()));
         } catch (InvalidOAuthClientException e) {
-            throw new IdentityOAuth2Exception(String.format("Identity Application Management Exception occurred when " +
-                    "getting app information for client id %s ", accessTokenDO.getConsumerKey()), e);
+            throw new IdentityOAuth2Exception(String.format("Exception occurred when getting app information for " +
+                    "client id %s ", accessTokenDO.getConsumerKey()), e);
         }
 
         if (!appScopeValidators.isEmpty()) {
