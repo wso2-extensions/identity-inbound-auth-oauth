@@ -91,6 +91,7 @@
 
                 function validate() {
                     var callbackUrl = document.getElementById('callback').value;
+                    var backChannelLogoutUrl = document.getElementById('backChannelLogout').value;
                     var userTokenExpiryTime = document.getElementById("userAccessTokenExpiryTime").value;
                     var applicationTokenExpiryTime = document.getElementById("userAccessTokenExpiryTime").value;
                     var refreshTokenExpiryTime = document.getElementById("refreshTokenExpiryTime").value;
@@ -99,6 +100,11 @@
                         CARBON.showWarningDialog('<fmt:message key="callback.is.fragment"/>');
                         return false;
                     }
+                    if (backChannelLogoutUrl.indexOf("#") !== -1) {
+                        CARBON.showWarningDialog('<fmt:message key="backchannel.logout.is.fragment"/>');
+                        return false;
+                    }
+
                     if ($(jQuery("#grant_authorization_code"))[0].checked || $(jQuery("#grant_implicit"))[0].checked) {
                         // This is to support providing regex patterns for callback URLs
                         if (callbackUrl.startsWith("regexp=")) {
@@ -106,6 +112,11 @@
                         } else if (!isWhiteListed(callbackUrl, ["url"])) {
                             CARBON.showWarningDialog('<fmt:message key="callback.is.not.url"/>');
                             return false;
+                        }
+                        if (!isWhiteListed(backChannelLogoutUrl, ["url"]) || !isNotBlackListed(backChannelLogoutUrl,
+                            ["uri-unsafe-exists"])) {
+                        CARBON.showWarningDialog('<fmt:message key="backchannel.logout.is.not.url"/>');
+                        return false;
                         }
                     }
                     var value = document.getElementsByName("application")[0].value;
@@ -136,6 +147,11 @@
                             return false;
 
                         }
+                        if (!isWhiteListed(backChannelLogoutUrl, ["url"]) || !isNotBlackListed(backChannelLogoutUrl,
+                                ["uri-unsafe-exists"])) {
+                            CARBON.showWarningDialog('<fmt:message key="backchannel.logout.is.not.url"/>');
+                            return false;
+                        }
                         if (!isWhiteListed(userTokenExpiryTime, ["digits-only"])) {
                             CARBON.showWarningDialog('<fmt:message key="invalid.user.access.token.expiry.time"/>');
                             return false;
@@ -163,6 +179,7 @@
                         $(jQuery('#userAccessTokenPlain').hide());
                         $(jQuery('#applicationAccessTokenPlain').hide());
                         $(jQuery('#refreshTokenPlain').hide());
+                        $(jQuery('#bclogout_row').hide());
                         $(jQuery("#audience_enable").hide());
                         $(jQuery("#add_audience").hide());
                         $(jQuery("#audience_table").hide());
@@ -176,6 +193,10 @@
                         $(jQuery('#userAccessTokenPlain').show());
                         $(jQuery('#applicationAccessTokenPlain').show());
                         $(jQuery('#refreshTokenPlain').show());
+                        /**
+                         * Backchannel logout feature is kept hidden in the UI for now.
+                         */
+                        $(jQuery('#bclogout_row').hide());
                         $(jQuery("#audience_enable").show());
                         $(jQuery("#add_audience").show());
                         $(jQuery("#audience_table").show());
@@ -317,6 +338,10 @@
                                 <td><input class="text-box-big" id="callback" name="callback" type="text"
                                            white-list-patterns="https-url"/></td>
 		                    </tr>
+                            <tr id="bclogout_row">
+                                <td class="leftCol-med"><fmt:message key="bclogout"/></td>
+                                <td><input class="text-box-big" id="backChannelLogout" name="backChannelLogout" type="text" white-list-patterns="https-url"/></td>
+                            </tr>
 		                     <tr id="grant_row" name="grant_row">
 		                        <td class="leftCol-med"><fmt:message key='grantTypes'/></td>
 		                        <td>
@@ -526,4 +551,3 @@
         </div>
     </div>
 </fmt:bundle>
-

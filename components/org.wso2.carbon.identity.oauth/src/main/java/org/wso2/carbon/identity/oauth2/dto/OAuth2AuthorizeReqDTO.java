@@ -19,8 +19,10 @@
 package org.wso2.carbon.identity.oauth2.dto;
 
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.oauth2.model.HttpRequestHeader;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 
+import javax.servlet.http.Cookie;
 import java.util.LinkedHashSet;
 import java.util.Properties;
 
@@ -40,6 +42,8 @@ public class OAuth2AuthorizeReqDTO {
     private long authTime;
     private String essentialClaims;
     private long maxAge;
+    private HttpRequestHeader[] httpRequestHeaders;
+    private Cookie[] cookies;
     private RequestObject requestObject;
     private String requestUriParamClaims;
     private String sessionDataKey;
@@ -197,5 +201,21 @@ public class OAuth2AuthorizeReqDTO {
 
     public void setTenantDomain(String tenantDomain) {
         this.tenantDomain = tenantDomain;
+    }
+
+    public void setHttpRequestHeaders(HttpRequestHeader[] httpRequestHeaders) {
+        this.httpRequestHeaders = httpRequestHeaders;
+    }
+
+    public HttpRequestHeader[] getHttpRequestHeaders() {
+        return this.httpRequestHeaders;
+    }
+
+    public void setCookie(Cookie[] cookies) {
+        this.cookies = cookies;
+    }
+
+    public Cookie[] getCookie() {
+        return this.cookies;
     }
 }

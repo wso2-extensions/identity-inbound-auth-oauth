@@ -78,6 +78,9 @@
         <operation name="getAllowedGrantTypes" mep="http://www.w3.org/2006/01/wsdl/in-out">
             <parameter name="AuthorizationAction" locked="true">/permission/admin/manage/identity/applicationmgt/view</parameter>
         </operation>
+        <operation name="getAllowedScopeValidators" mep="http://www.w3.org/2006/01/wsdl/in-out">
+            <parameter name="AuthorizationAction" locked="true">/permission/admin/manage/identity/applicationmgt/view</parameter>
+        </operation>
         <operation name="isPKCESupportEnabled" mep="http://www.w3.org/2006/01/wsdl/in-out">
             <parameter name="AuthorizationAction" locked="true">/permission/admin/manage/identity/applicationmgt/view</parameter>
         </operation>

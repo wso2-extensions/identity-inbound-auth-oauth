@@ -23,7 +23,7 @@
         <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
         <artifactId>identity-inbound-auth-oauth</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <version>5.6.19-SNAPSHOT</version>
+        <version>5.6.25-SNAPSHOT</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -257,6 +257,10 @@
             <artifactId>org.wso2.carbon.identity.oauth.common.testng</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.wso2.balana</groupId>
+            <artifactId>org.wso2.balana.utils</artifactId>
+        </dependency>
     </dependencies>
 
     <build>
@@ -326,6 +330,7 @@
                             org.osgi.framework; version="${osgi.framework.imp.pkg.version.range}",
                             org.osgi.service.component; version="${osgi.service.component.imp.pkg.version.range}",
 
+                            org.wso2.balana.utils; version="${balana.imp.pkg.version.range}",
                             org.wso2.carbon.idp.mgt; version="${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.identity.base; version="${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.identity.core.*; version="${carbon.identity.framework.imp.pkg.version.range}",

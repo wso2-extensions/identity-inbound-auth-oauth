@@ -43,6 +43,7 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oidc.session.backChannelLogout.LogoutRequestSender;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
 import org.wso2.carbon.identity.oidc.session.cache.OIDCSessionDataCache;
 import org.wso2.carbon.identity.oidc.session.cache.OIDCSessionDataCacheEntry;
@@ -156,6 +157,7 @@ public class OIDCLogoutServlet extends HttpServlet {
                     OIDCSessionDataCacheEntry cacheEntry = new OIDCSessionDataCacheEntry();
                     addSessionDataToCache(opBrowserStateCookie.getValue(), cacheEntry);
                 }
+
                 sendToFrameworkForLogout(request, response);
                 return;
             } else {
@@ -438,6 +440,8 @@ public class OIDCLogoutServlet extends HttpServlet {
         String sessionDataKey = request.getParameter(FrameworkConstants.SESSION_DATA_KEY);
         OIDCSessionDataCacheEntry cacheEntry = getSessionDataFromCache(sessionDataKey);
         if (cacheEntry != null) {
+            // BackChannel logout request.
+            doBackChannelLogout(request);
             String redirectURL = cacheEntry.getPostLogoutRedirectUri();
             if (redirectURL == null) {
                 redirectURL = OIDCSessionManagementUtil.getOIDCLogoutURL();
@@ -454,12 +458,12 @@ public class OIDCLogoutServlet extends HttpServlet {
     }
 
     private void addAuthenticationRequestToRequest(HttpServletRequest request,
-            AuthenticationRequestCacheEntry authRequest) {
+                                                   AuthenticationRequestCacheEntry authRequest) {
         request.setAttribute(FrameworkConstants.RequestAttribute.AUTH_REQUEST, authRequest);
     }
 
     private void sendRequestToFramework(HttpServletRequest request, HttpServletResponse response, String sessionDataKey,
-            String type) throws ServletException, IOException {
+                                        String type) throws ServletException, IOException {
 
         CommonAuthenticationHandler commonAuthenticationHandler = new CommonAuthenticationHandler();
 
@@ -510,5 +514,15 @@ public class OIDCLogoutServlet extends HttpServlet {
     private static boolean getOpenIDConnectSkipeUserConsent() {
         return OAuthServerConfiguration.getInstance().getOpenIDConnectSkipeUserConsentConfig();
 
+    }
+
+    /**
+     * Sends logout token to registered back-channel logout uris.
+     *
+     * @param request
+     */
+    private void doBackChannelLogout(HttpServletRequest request) {
+
+        LogoutRequestSender.getInstance().sendLogoutRequests(request);
     }
 }

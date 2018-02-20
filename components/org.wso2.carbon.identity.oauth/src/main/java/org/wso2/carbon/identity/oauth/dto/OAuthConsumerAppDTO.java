@@ -27,6 +27,7 @@ public class OAuthConsumerAppDTO {
     private String oauthVersion;
     private String username;
     private String grantTypes = "";
+    private String[] scopeValidators = null;
     private boolean pkceSupportPlain;
     private boolean pkceMandatory;
     private String state;
@@ -37,6 +38,7 @@ public class OAuthConsumerAppDTO {
     // OIDC related properties
     private boolean isRequestObjectSignatureValidationEnabled;
     private boolean isIdTokenEncryptionEnabled;
+    private String backChannelLogoutUrl;
 
     public long getUserAccessTokenExpiryTime() {
         return userAccessTokenExpiryTime;
@@ -120,6 +122,14 @@ public class OAuthConsumerAppDTO {
         }
     }
 
+    public String[] getScopeValidators() {
+        return scopeValidators;
+    }
+
+    public void setScopeValidators(String[] scopeValidators) {
+        this.scopeValidators = scopeValidators;
+    }
+
     public boolean getPkceSupportPlain() {
         return pkceSupportPlain;
     }
@@ -169,6 +179,14 @@ public class OAuthConsumerAppDTO {
 
     public void setIdTokenEncryptionEnabled(boolean idTokenEncryptionEnabled) {
         this.isIdTokenEncryptionEnabled = idTokenEncryptionEnabled;
+    }
+
+    public void setBackChannelLogoutUrl(String backChannelLogoutUrl) {
+        this.backChannelLogoutUrl = backChannelLogoutUrl;
+    }
+
+    public String getBackChannelLogoutUrl() {
+        return backChannelLogoutUrl;
     }
 }
 

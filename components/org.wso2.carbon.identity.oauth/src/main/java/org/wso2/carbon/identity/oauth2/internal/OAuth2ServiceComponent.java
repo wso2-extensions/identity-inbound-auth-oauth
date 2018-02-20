@@ -34,6 +34,7 @@ import org.wso2.carbon.identity.application.mgt.listener.ApplicationMgtListener;
 import org.wso2.carbon.identity.base.IdentityRuntimeException;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
+import org.wso2.carbon.identity.entitlement.EntitlementService;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
@@ -44,6 +45,7 @@ import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnSer
 import org.wso2.carbon.identity.oauth2.dao.SQLQueries;
 import org.wso2.carbon.identity.oauth2.listener.TenantCreationEventListener;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.openidconnect.ClaimProvider;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilter;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImpl;
 import org.wso2.carbon.identity.user.store.configuration.listener.UserStoreConfigListener;
@@ -119,8 +121,8 @@ public class OAuth2ServiceComponent {
                 log.error("OAuth - UserStoreConfigListener could not be registered.");
             }
 
-            ServiceRegistration oauthApplicationMgtListenerSR = bundleContext.registerService(ApplicationMgtListener.class.getName(),
-                    new OAuthApplicationMgtListener(), null);
+            ServiceRegistration oauthApplicationMgtListenerSR = bundleContext.registerService(ApplicationMgtListener
+                            .class.getName(), new OAuthApplicationMgtListener(), null);
             if (oauthApplicationMgtListenerSR != null) {
                 if (log.isDebugEnabled()) {
                     log.debug("OAuth - ApplicationMgtListener registered.");
@@ -300,5 +302,28 @@ public class OAuth2ServiceComponent {
             log.debug("UnSetting the Registry Service");
         }
         OAuth2ServiceComponentHolder.getAuthenticationHandlers().remove(oAuthClientAuthenticator);
+    }
+
+    @Reference(
+            name = "identity.entitlement.service",
+            service = EntitlementService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetEntitlementService"
+    )
+    protected void setEntitlementService(EntitlementService entitlementService) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Setting the Entitlement Service");
+        }
+        OAuth2ServiceComponentHolder.setEntitlementService(entitlementService);
+    }
+
+    protected void unsetEntitlementService(EntitlementService entitlementService) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Unsetting the EntitlementService");
+        }
+        OAuth2ServiceComponentHolder.setEntitlementService(null);
     }
 }

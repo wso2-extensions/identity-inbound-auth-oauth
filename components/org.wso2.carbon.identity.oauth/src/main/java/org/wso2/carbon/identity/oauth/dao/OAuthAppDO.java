@@ -33,6 +33,7 @@ public class OAuthAppDO implements Serializable {
     private AuthenticatedUser user;
     private String oauthVersion;
     private String grantTypes;
+    private String[] scopeValidators;
     private boolean pkceSupportPlain;
     private boolean pkceMandatory;
     private String state;
@@ -43,6 +44,7 @@ public class OAuthAppDO implements Serializable {
     // OIDC related properties.
     private boolean requestObjectSignatureValidationEnabled;
     private boolean idTokenEncryptionEnabled;
+    private String backChannelLogoutUrl;
 
     public AuthenticatedUser getUser() {
         return user;
@@ -98,6 +100,14 @@ public class OAuthAppDO implements Serializable {
 
     public void setGrantTypes(String grantTypes) {
         this.grantTypes = grantTypes;
+    }
+
+    public String[] getScopeValidators() {
+        return scopeValidators;
+    }
+
+    public void setScopeValidators(String[] scopeValidators) {
+        this.scopeValidators = scopeValidators;
     }
 
     public int getId() {
@@ -178,5 +188,11 @@ public class OAuthAppDO implements Serializable {
 
     public void setIdTokenEncryptionEnabled(boolean idTokenEncryptionEnabled) {
         this.idTokenEncryptionEnabled = idTokenEncryptionEnabled;
+    }
+    public void setBackChannelLogoutUrl(String backChannelLogoutUrl) {
+        this.backChannelLogoutUrl = backChannelLogoutUrl;
+    }
+    public String getBackChannelLogoutUrl() {
+        return backChannelLogoutUrl;
     }
 }
