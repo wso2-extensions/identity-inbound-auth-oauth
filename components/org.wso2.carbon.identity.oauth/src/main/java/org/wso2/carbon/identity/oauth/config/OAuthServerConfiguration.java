@@ -700,7 +700,6 @@ public class OAuthServerConfiguration {
     }
 
     public String getHashAlgorithm() {
-
         return hashAlgorithm;
     }
 
