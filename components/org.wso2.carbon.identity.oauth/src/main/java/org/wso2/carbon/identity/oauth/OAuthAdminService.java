@@ -296,7 +296,7 @@ public class OAuthAdminService extends AbstractAdmin {
                         }
                     }
                     app.setGrantTypes(application.getGrantTypes());
-                    app.setScopeValidators(getRequestedScopeValidators(application));
+                    app.setScopeValidators(filterScopeValidators(application));
                     app.setAudiences(application.getAudiences());
                     app.setPkceMandatory(application.getPkceMandatory());
                     app.setPkceSupportPlain(application.getPkceSupportPlain());
@@ -408,7 +408,7 @@ public class OAuthAdminService extends AbstractAdmin {
             }
             oauthappdo.setGrantTypes(consumerAppDTO.getGrantTypes());
             oauthappdo.setAudiences(consumerAppDTO.getAudiences());
-            oauthappdo.setScopeValidators(getRequestedScopeValidators(consumerAppDTO));
+            oauthappdo.setScopeValidators(filterScopeValidators(consumerAppDTO));
             oauthappdo.setRequestObjectSignatureValidationEnabled(consumerAppDTO
                     .isRequestObjectSignatureValidationEnabled());
             oauthappdo.setIdTokenEncryptionEnabled(consumerAppDTO.isIdTokenEncryptionEnabled());
@@ -708,8 +708,8 @@ public class OAuthAdminService extends AbstractAdmin {
                             OAuthUtil.clearOAuthCache(accessTokenDO.getAccessToken());
                             AccessTokenDO scopedToken;
                             try {
-                                // retrieve latest access token for particular client, user and scope combination if
-                                // its ACTIVE or EXPIRED
+                                // Retrieve latest access token for particular client, user and scope combination if
+                                // its ACTIVE or EXPIRED.
                                 scopedToken = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                                         .getLatestAccessToken(appDTO.getOauthConsumerKey(), user, userStoreDomain,
                                                 OAuth2Util.buildScopeString(accessTokenDO.getScope()), true);
@@ -839,9 +839,9 @@ public class OAuthAdminService extends AbstractAdmin {
     }
 
     /**
-     * Get the registered scope validators from OAuth server configuration file
+     * Get the registered scope validators from OAuth server configuration file.
      *
-     * @return list of string containing simple names of the registered validator class
+     * @return List of string containing simple names of the registered validator class.
      */
     public String[] getAllowedScopeValidators() {
 
@@ -915,13 +915,13 @@ public class OAuthAdminService extends AbstractAdmin {
     }
 
     /**
-     *  Get the scope validators registered by the user and checking whether they are allowed
+     *  Get the scope validators registered by the user and filter the allowed ones.
      *
-     * @param application application user have registered
-     * @return list of scope validators
-     * @throws IdentityOAuthAdminException  identity OAuthAdmin exception
+     * @param application Application user have registered.
+     * @return List of scope validators.
+     * @throws IdentityOAuthAdminException  Identity OAuthAdmin exception.
      */
-    private String[] getRequestedScopeValidators(OAuthConsumerAppDTO application) throws IdentityOAuthAdminException {
+    private String[] filterScopeValidators(OAuthConsumerAppDTO application) throws IdentityOAuthAdminException {
 
         List<String> scopeValidators = new ArrayList<>(Arrays.asList(getAllowedScopeValidators()));
         String[] requestedScopeValidators = application.getScopeValidators();

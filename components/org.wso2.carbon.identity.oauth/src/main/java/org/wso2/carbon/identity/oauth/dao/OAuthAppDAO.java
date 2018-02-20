@@ -397,10 +397,9 @@ public class OAuthAppDAO {
                     user.setTenantDomain(IdentityTenantUtil.getTenantDomain(tenantID));
                     /*
                       We need to determine whether the result set has more than 1 row. Meaning, we found an
-                      application for
-                      the given consumer key. There can be situations where a user passed a key which doesn't yet
-                      have an
-                      associated application. We need to barf with a meaningful error message for this case
+                      application for the given consumer key. There can be situations where a user passed a key which
+                       doesn't yet have an associated application. We need to barf with a meaningful error message for
+                        this case.
                      */
                     boolean appExists = false;
                     while (rSet.next()) {
@@ -830,12 +829,12 @@ public class OAuthAppDAO {
 
 
     /**
-     * Add scope validators for consumerApp using connection
+     * Add scope validators for consumerApp using connection.
      *
-     * @param connection      same db connection used in OAuth creation
-     * @param appId           id of consumerApp
-     * @param scopeValidators list of scope validators.
-     * @throws SQLException sql error
+     * @param connection      Same db connection used in OAuth creation.
+     * @param appId           Id of consumerApp.
+     * @param scopeValidators List of scope validators.
+     * @throws SQLException Sql error.
      */
     private void addScopeValidators(Connection connection, int appId, String[] scopeValidators) throws SQLException {
 
@@ -857,10 +856,10 @@ public class OAuthAppDAO {
     /**
      * Retrieve all scope validators for specific appId
      *
-     * @param connection same db connection used in retrieving OAuth App
-     * @param id         appId of the OAuth app
-     * @return list of scope validator names
-     * @throws SQLException sql error
+     * @param connection Same db connection used in retrieving OAuth App.
+     * @param id         AppId of the OAuth app.
+     * @return List of scope validator names.
+     * @throws SQLException Sql error.
      */
     private String[] getScopeValidators(Connection connection, int id) throws SQLException {
 
@@ -882,13 +881,12 @@ public class OAuthAppDAO {
     }
 
     /**
-     * Update the scope validator of OAuth app
-     * Remove all the registered scope validators and then add as new entry
+     * Update the scope validator of OAuth app by remove all the registered scope validators and then add as new entry.
      *
-     * @param connection      same db connection used in OAuth update
-     * @param appId           id of consumerApp
-     * @param scopeValidators list of scope validators.
-     * @throws SQLException sql error
+     * @param connection      Same db connection used in OAuth update.
+     * @param appId           Id of consumerApp.
+     * @param scopeValidators List of scope validators.
+     * @throws SQLException Sql error.
      */
     private void updateScopeValidators(Connection connection, int appId, String[] scopeValidators)
             throws SQLException {
@@ -903,14 +901,14 @@ public class OAuthAppDAO {
     }
 
     /**
-     * Get the application id using the client id
+     * Get the application id using the client id.
      *
-     * @param connection same db connection used in OAuth creation
-     * @param clientId   client id of the created app
-     * @return application id of the client id
-     * @throws SQLException                sql exception
-     * @throws InvalidOAuthClientException Invalid OAuth Client Exception
-     * @throws IdentityOAuth2Exception     Identity OAuth2 Exception
+     * @param connection Same db connection used in OAuth creation.
+     * @param clientId   Client id of the created app.
+     * @return Application id of the client id.
+     * @throws SQLException                Sql exception.
+     * @throws InvalidOAuthClientException Invalid OAuth Client Exception.
+     * @throws IdentityOAuth2Exception     Identity OAuth2 Exception.
      */
     private int getAppIdByClientId(Connection connection, String clientId)
             throws SQLException, InvalidOAuthClientException, IdentityOAuth2Exception {
