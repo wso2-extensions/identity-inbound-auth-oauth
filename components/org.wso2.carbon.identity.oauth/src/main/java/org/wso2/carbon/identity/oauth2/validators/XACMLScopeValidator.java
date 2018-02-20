@@ -103,7 +103,7 @@ public class XACMLScopeValidator extends OAuth2ScopeValidator {
             if (log.isDebugEnabled()) {
                 log.debug("XACML scope validation response :\n" + responseString);
             }
-            String validationResponse = evaluateXACMLResponse(responseString);
+            String validationResponse = extractDecisionFromXACMLResponse(responseString);
             if (isResponseNotApplicable(validationResponse)) {
                 log.warn(String.format(
                         "No applicable rule for service provider '%s@%s'. Add an validating policy (or unset Scope " +
@@ -195,7 +195,7 @@ public class XACMLScopeValidator extends OAuth2ScopeValidator {
      * @throws XMLStreamException exception when converting string response to XML
      * @throws JaxenException     exception
      */
-    private String evaluateXACMLResponse(String xacmlResponse) throws XMLStreamException, JaxenException {
+    private String extractDecisionFromXACMLResponse(String xacmlResponse) throws XMLStreamException, JaxenException {
 
         AXIOMXPath axiomxPath = new AXIOMXPath(DECISION_XPATH);
         axiomxPath.addNamespace(XACML_NS_PREFIX, EntitlementPolicyConstants.REQ_RES_CONTEXT_XACML3);
