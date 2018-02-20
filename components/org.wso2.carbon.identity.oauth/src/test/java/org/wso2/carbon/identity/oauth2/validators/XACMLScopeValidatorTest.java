@@ -108,8 +108,8 @@ public class XACMLScopeValidatorTest extends IdentityBaseTest {
         when(authApp.getApplicationName()).thenReturn(APP_NAME);
         RequestDTO requestDTO = WhiteboxImpl.invokeMethod(xacmlScopeValidator,
                 "createRequestDTO", accessTokenDO, authApp, resource);
-        // checking whether the created requestDTO have generated rows for all the attributes of the access token.
-        // Here it is 9. If you add more attributed to access token, then you have to increment the count
+        // Checking whether the created requestDTO have generated rows for all the attributes of the access token.
+        // If you add more attributed to access token, then you have to increment the count.
         assertTrue(requestDTO.getRowDTOs().size() == 9);
     }
 
