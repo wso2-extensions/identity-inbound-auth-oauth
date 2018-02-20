@@ -18,8 +18,6 @@
 
 package org.wso2.carbon.identity.oauth2.validators;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.testng.PowerMockObjectFactory;
@@ -46,7 +44,6 @@ import org.wso2.carbon.identity.testutil.IdentityBaseTest;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
-import static org.powermock.api.mockito.PowerMockito.doNothing;
 import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.spy;
@@ -58,7 +55,7 @@ import static org.testng.Assert.assertTrue;
 /**
  * XACMLScopeValidatorTest defines unit tests for XACMLScopeValidator class.
  */
-@PrepareForTest({LogFactory.class, FrameworkUtils.class, PolicyCreatorUtil.class, PolicyBuilder.class,
+@PrepareForTest({FrameworkUtils.class, PolicyCreatorUtil.class, PolicyBuilder.class,
         OAuth2Util.class})
 @PowerMockIgnore("javax.xml.*")
 @WithCarbonHome
@@ -81,26 +78,24 @@ public class XACMLScopeValidatorTest extends IdentityBaseTest {
     private XACMLScopeValidator xacmlScopeValidator;
     private AccessTokenDO accessTokenDO;
     private OAuthAppDO authApp;
-    private Log log = mock(Log.class);
     private String[] scopeArray;
     private String resource;
 
 
     @ObjectFactory
     public IObjectFactory getObjectFactory() {
+
         return new PowerMockObjectFactory();
     }
 
     @BeforeClass
     public void init() {
-        mockStatic(LogFactory.class);
-        when(LogFactory.getLog(XACMLScopeValidator.class)).thenReturn(log);
+
         xacmlScopeValidator = spy(new XACMLScopeValidator());
         accessTokenDO = mock(AccessTokenDO.class);
         resource = mock(String.class);
         authApp = mock(OAuthAppDO.class);
         scopeArray = new String[]{"scope1", "scope2", "scope3"};
-        when(log.isDebugEnabled()).thenReturn(true);
     }
 
     @Test
@@ -113,13 +108,15 @@ public class XACMLScopeValidatorTest extends IdentityBaseTest {
         when(authApp.getApplicationName()).thenReturn(APP_NAME);
         RequestDTO requestDTO = WhiteboxImpl.invokeMethod(xacmlScopeValidator,
                 "createRequestDTO", accessTokenDO, authApp, resource);
+        // checking whether the created requestDTO have generated rows for all the attributes of the access token.
+        // Here it is 9. If you add more attributed to access token, then you have to increment the count
         assertTrue(requestDTO.getRowDTOs().size() == 9);
     }
 
     @Test
-    public void testEvaluateXACMLResponse() throws Exception {
+    public void testExtractXACMLResponse() throws Exception {
 
-        String response = WhiteboxImpl.invokeMethod(xacmlScopeValidator, "evaluateXACMLResponse",
+        String response = WhiteboxImpl.invokeMethod(xacmlScopeValidator, "extractXACMLResponse",
                 xacmlResponse);
         assertEquals(response, DECISION);
     }
@@ -131,10 +128,8 @@ public class XACMLScopeValidatorTest extends IdentityBaseTest {
      */
     @Test
     public void testValidatedScope() throws Exception {
-        mockStatic(FrameworkUtils.class);
-        doNothing().when(FrameworkUtils.class);
-        FrameworkUtils.endTenantFlow();
 
+        mockStatic(FrameworkUtils.class);
         AuthenticatedUser authenticatedUser = new AuthenticatedUser();
         authenticatedUser.setUserName(ADMIN_USER);
         when(accessTokenDO.getAuthzUser()).thenReturn(authenticatedUser);
