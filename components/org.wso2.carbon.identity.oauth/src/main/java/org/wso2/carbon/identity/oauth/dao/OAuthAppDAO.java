@@ -838,6 +838,7 @@ public class OAuthAppDAO {
      * @throws SQLException sql error
      */
     private void addScopeValidators(Connection connection, int appId, String[] scopeValidators) throws SQLException {
+
         if (scopeValidators != null && scopeValidators.length > 0) {
             log.debug(String.format("Adding %d Scope validators registered for OAuth appId %d",
                     scopeValidators.length, appId));
@@ -862,6 +863,7 @@ public class OAuthAppDAO {
      * @throws SQLException sql error
      */
     private String[] getScopeValidators(Connection connection, int id) throws SQLException {
+
         List<String> scopeValidators = new ArrayList<>();
         try (PreparedStatement stmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries
                 .GET_APP_SCOPE_VALIDATORS)) {
@@ -880,8 +882,8 @@ public class OAuthAppDAO {
     }
 
     /**
-     * Update the scope validator of OAuth app .
-     * Remove all the registered scope validators and then add
+     * Update the scope validator of OAuth app
+     * Remove all the registered scope validators and then add as new entry
      *
      * @param connection      same db connection used in OAuth update
      * @param appId           id of consumerApp
@@ -890,6 +892,7 @@ public class OAuthAppDAO {
      */
     private void updateScopeValidators(Connection connection, int appId, String[] scopeValidators)
             throws SQLException {
+
         log.debug(String.format("Removing  Scope validators registered for OAuth appId %d", appId));
         try (PreparedStatement stmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries
                 .REMOVE_APP_SCOPE_VALIDATORS)) {
@@ -904,13 +907,14 @@ public class OAuthAppDAO {
      *
      * @param connection same db connection used in OAuth creation
      * @param clientId   client id of the created app
-     * @return
+     * @return application id of the client id
      * @throws SQLException                sql exception
      * @throws InvalidOAuthClientException Invalid OAuth Client Exception
      * @throws IdentityOAuth2Exception     Identity OAuth2 Exception
      */
     private int getAppIdByClientId(Connection connection, String clientId)
             throws SQLException, InvalidOAuthClientException, IdentityOAuth2Exception {
+
         int appId = 0;
         try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries
                 .GET_APP_ID_BY_CONSUMER_KEY)) {

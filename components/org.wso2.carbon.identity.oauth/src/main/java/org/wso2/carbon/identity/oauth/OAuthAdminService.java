@@ -71,7 +71,7 @@ public class OAuthAdminService extends AbstractAdmin {
     public static final String IMPLICIT = "implicit";
     public static final String AUTHORIZATION_CODE = "authorization_code";
     private static List<String> allowedGrants = null;
-    private static List<String> scopeValidators = null;
+    private static String[] allowedScopeValidators = null;
     protected Log log = LogFactory.getLog(OAuthAdminService.class);
 
     /**
@@ -296,17 +296,7 @@ public class OAuthAdminService extends AbstractAdmin {
                         }
                     }
                     app.setGrantTypes(application.getGrantTypes());
-                    List<String> scopeValidators = new ArrayList<>(Arrays.asList(getAllowedScopeValidators()));
-                    String[] requestedScopeValidators = application.getScopeValidators();
-                    if (requestedScopeValidators == null) {
-                        requestedScopeValidators = new String[0];
-                    }
-                    for (String requestedScopeValidator : requestedScopeValidators) {
-                        if (!scopeValidators.contains(requestedScopeValidator)) {
-                            throw new IdentityOAuthAdminException(requestedScopeValidator + " not allowed");
-                        }
-                    }
-                    app.setScopeValidators(requestedScopeValidators);
+                    app.setScopeValidators(getRequestedScopeValidators(application));
                     app.setAudiences(application.getAudiences());
                     app.setPkceMandatory(application.getPkceMandatory());
                     app.setPkceSupportPlain(application.getPkceSupportPlain());
@@ -418,17 +408,7 @@ public class OAuthAdminService extends AbstractAdmin {
             }
             oauthappdo.setGrantTypes(consumerAppDTO.getGrantTypes());
             oauthappdo.setAudiences(consumerAppDTO.getAudiences());
-            List<String> scopeValidators = new ArrayList<>(Arrays.asList(getAllowedScopeValidators()));
-            String[] requestedScopeValidators = consumerAppDTO.getScopeValidators();
-            if (requestedScopeValidators == null) {
-                requestedScopeValidators = new String[0];
-            }
-            for (String requestedScopeValidator : requestedScopeValidators) {
-                if (!scopeValidators.contains(requestedScopeValidator)) {
-                    throw new IdentityOAuthAdminException(requestedScopeValidator + " not allowed");
-                }
-            }
-            oauthappdo.setScopeValidators(requestedScopeValidators);
+            oauthappdo.setScopeValidators(getRequestedScopeValidators(consumerAppDTO));
             oauthappdo.setRequestObjectSignatureValidationEnabled(consumerAppDTO
                     .isRequestObjectSignatureValidationEnabled());
             oauthappdo.setIdTokenEncryptionEnabled(consumerAppDTO.isIdTokenEncryptionEnabled());
@@ -859,18 +839,22 @@ public class OAuthAdminService extends AbstractAdmin {
     }
 
     /**
-     * Get the registered scope validators from OAuth server configuration file.
+     * Get the registered scope validators from OAuth server configuration file
      *
      * @return list of string containing simple names of the registered validator class
      */
     public String[] getAllowedScopeValidators() {
-        Set<OAuth2ScopeValidator> oAuth2ScopeValidators = OAuthServerConfiguration.getInstance()
-                .getOAuth2ScopeValidators();
-        ArrayList<String> validators = new ArrayList<>();
-        for (OAuth2ScopeValidator validator : oAuth2ScopeValidators) {
-            validators.add(validator.getClass().getSimpleName());
+
+        if (allowedScopeValidators == null) {
+            Set<OAuth2ScopeValidator> oAuth2ScopeValidators = OAuthServerConfiguration.getInstance()
+                    .getOAuth2ScopeValidators();
+            ArrayList<String> validators = new ArrayList<>();
+            for (OAuth2ScopeValidator validator : oAuth2ScopeValidators) {
+                validators.add(validator.getClass().getSimpleName());
+            }
+            allowedScopeValidators = validators.toArray(new String[validators.size()]);
         }
-        return validators.toArray(new String[validators.size()]);
+        return allowedScopeValidators;
     }
 
     /**
@@ -928,5 +912,27 @@ public class OAuthAdminService extends AbstractAdmin {
             log.debug("Invalid expiry time value '0' set for " + tokenType + " in ServiceProvider: " + appName + ". "
                     + "Defaulting to expiry value: " + defaultValue + " seconds.");
         }
+    }
+
+    /**
+     *  Get the scope validators registered by the user and checking whether they are allowed
+     *
+     * @param application application user have registered
+     * @return list of scope validators
+     * @throws IdentityOAuthAdminException  identity OAuthAdmin exception
+     */
+    private String[] getRequestedScopeValidators(OAuthConsumerAppDTO application) throws IdentityOAuthAdminException {
+
+        List<String> scopeValidators = new ArrayList<>(Arrays.asList(getAllowedScopeValidators()));
+        String[] requestedScopeValidators = application.getScopeValidators();
+        if (requestedScopeValidators == null) {
+            requestedScopeValidators = new String[0];
+        }
+        for (String requestedScopeValidator : requestedScopeValidators) {
+            if (!scopeValidators.contains(requestedScopeValidator)) {
+                throw new IdentityOAuthAdminException(requestedScopeValidator + " not allowed");
+            }
+        }
+        return requestedScopeValidators;
     }
 }
