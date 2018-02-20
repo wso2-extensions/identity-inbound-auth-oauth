@@ -207,6 +207,8 @@ public class OAuthServerConfiguration {
     private ValueGenerator tokenValueGenerator;
 
     private String tokenValueGeneratorClassName;
+    //property to define hashing algorithm when enabling hashing of tokens and authorization codes.
+    private String hashAlgorithm = "SHA-256";
 
 
     // Property added to determine the expiration of logout token in oidc back-channel logout.
@@ -328,6 +330,8 @@ public class OAuthServerConfiguration {
 
         parseRevokeResponseHeadersEnableConfig(oauthElem);
         parseShowDisplayNameInConsentPage(oauthElem);
+        // read hash algorithm type config
+        parseHashAlgorithm(oauthElem);
     }
 
     private void parseShowDisplayNameInConsentPage(OMElement oauthElem) {
@@ -697,6 +701,10 @@ public class OAuthServerConfiguration {
             }
         }
         return supportedResponseTypes;
+    }
+
+    public String getHashAlgorithm() {
+        return hashAlgorithm;
     }
 
     private void parseRequestObjectConfig(OMElement requestObjectBuildersElem) {
@@ -2088,6 +2096,18 @@ public class OAuthServerConfiguration {
         }
     }
 
+    private void parseHashAlgorithm(OMElement oauthConfigElem) {
+
+        OMElement hashingAlgorithmElement = oauthConfigElem
+                .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.HASH_ALGORITHM));
+        if (hashingAlgorithmElement != null) {
+            hashAlgorithm = hashingAlgorithmElement.getText();
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("Hash algorithm was set to : " + hashAlgorithm);
+        }
+    }
+
     public OAuth2ScopeValidator getoAuth2ScopeValidator() {
         return oAuth2ScopeValidator;
     }
@@ -2270,6 +2290,9 @@ public class OAuthServerConfiguration {
         private static final String REQUEST_OBJECT_BUILDER = "RequestObjectBuilder";
         private static final String BUILDER_TYPE = "Type";
         private static final String REQUEST_OBJECT_IMPL_CLASS = "ClassName";
+
+        //Hash algorithm configs
+        private static final String HASH_ALGORITHM = "HashAlgorithm";
 
     }
 

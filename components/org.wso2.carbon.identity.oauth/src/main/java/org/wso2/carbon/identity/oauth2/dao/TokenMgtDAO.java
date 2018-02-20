@@ -35,6 +35,7 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.tokenprocessor.HashingPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -80,7 +81,7 @@ public class TokenMgtDAO {
     public static final String AUTHZ_USER = "AUTHZ_USER";
     public static final String LOWER_AUTHZ_USER = "LOWER(AUTHZ_USER)";
     private static final String UTC = "UTC";
-    private static TokenPersistenceProcessor persistenceProcessor;
+    private static TokenPersistenceProcessor persistenceProcessor, hashingPersistenceProcessor;
 
     private boolean persistAccessTokenAlias = OAuthServerConfiguration.getInstance().usePersistedAccessTokenAlias();
     private OauthTokenIssuer oauthIssuerImpl = OAuthServerConfiguration.getInstance().getIdentityOauthTokenIssuer();
@@ -139,6 +140,7 @@ public class TokenMgtDAO {
     public TokenMgtDAO() {
         try {
             persistenceProcessor = OAuthServerConfiguration.getInstance().getPersistenceProcessor();
+            hashingPersistenceProcessor = new HashingPersistenceProcessor();
             if (log.isDebugEnabled()) {
                 log.debug("TokenPersistenceProcessor set for: " + persistenceProcessor.getClass());
             }
@@ -219,7 +221,8 @@ public class TokenMgtDAO {
                 prepStmt.setString(10, authzCodeDO.getAuthorizedUser().getAuthenticatedSubjectIdentifier());
                 prepStmt.setString(11, authzCodeDO.getPkceCodeChallenge());
                 prepStmt.setString(12, authzCodeDO.getPkceCodeChallengeMethod());
-                prepStmt.setString(13, persistenceProcessor.getProcessedClientId(consumerKey));
+                prepStmt.setString(13, hashingPersistenceProcessor.getProcessedAuthzCode(authzCode));
+                prepStmt.setString(14, persistenceProcessor.getProcessedClientId(consumerKey));
 
             } else {
                 prepStmt = connection.prepareStatement(SQLQueries.STORE_AUTHORIZATION_CODE);
@@ -235,7 +238,8 @@ public class TokenMgtDAO {
                         Calendar.getInstance(TimeZone.getTimeZone(UTC)));
                 prepStmt.setLong(9, authzCodeDO.getValidityPeriod());
                 prepStmt.setString(10, authzCodeDO.getAuthorizedUser().getAuthenticatedSubjectIdentifier());
-                prepStmt.setString(11, persistenceProcessor.getProcessedClientId(consumerKey));
+                prepStmt.setString(11, hashingPersistenceProcessor.getProcessedAuthzCode(authzCode));
+                prepStmt.setString(12, persistenceProcessor.getProcessedClientId(consumerKey));
 
             }
 
@@ -362,7 +366,14 @@ public class TokenMgtDAO {
             insertTokenPrepStmt.setString(13, accessTokenDO.getTokenId());
             insertTokenPrepStmt.setString(14, accessTokenDO.getGrantType());
             insertTokenPrepStmt.setString(15, accessTokenDO.getAuthzUser().getAuthenticatedSubjectIdentifier());
-            insertTokenPrepStmt.setString(16, persistenceProcessor.getProcessedClientId(consumerKey));
+            insertTokenPrepStmt.setString(16, hashingPersistenceProcessor.getProcessedAccessTokenIdentifier(accessToken));
+            if (accessTokenDO.getRefreshToken() != null) {
+                insertTokenPrepStmt.setString(17, hashingPersistenceProcessor.getProcessedRefreshToken
+                        (accessTokenDO.getRefreshToken()));
+            }else{
+                insertTokenPrepStmt.setString(17, accessTokenDO.getRefreshToken());
+            }
+            insertTokenPrepStmt.setString(18, persistenceProcessor.getProcessedClientId(consumerKey));
             insertTokenPrepStmt.execute();
 
             String accessTokenId = accessTokenDO.getTokenId();
@@ -766,7 +777,7 @@ public class TokenMgtDAO {
 
                 prepStmt = connection.prepareStatement(SQLQueries.VALIDATE_AUTHZ_CODE_WITH_PKCE);
                 prepStmt.setString(1, persistenceProcessor.getProcessedClientId(consumerKey));
-                prepStmt.setString(2, persistenceProcessor.getProcessedAuthzCode(authorizationKey));
+                prepStmt.setString(2, hashingPersistenceProcessor.getProcessedAuthzCode(authorizationKey));
                 resultSet = prepStmt.executeQuery();
 
                 if (resultSet.next()) {
@@ -822,7 +833,7 @@ public class TokenMgtDAO {
             } else {
                 prepStmt = connection.prepareStatement(SQLQueries.VALIDATE_AUTHZ_CODE);
                 prepStmt.setString(1, persistenceProcessor.getProcessedClientId(consumerKey));
-                prepStmt.setString(2, persistenceProcessor.getProcessedAuthzCode(authorizationKey));
+                prepStmt.setString(2, hashingPersistenceProcessor.getProcessedAuthzCode(authorizationKey));
                 resultSet = prepStmt.executeQuery();
 
                 if (resultSet.next()) {
@@ -930,7 +941,7 @@ public class TokenMgtDAO {
             prepStmt = connection.prepareStatement(SQLQueries.DEACTIVATE_AUTHZ_CODE_AND_INSERT_CURRENT_TOKEN);
             for (AuthzCodeDO authzCodeDO : authzCodeDOs) {
                 prepStmt.setString(1, authzCodeDO.getOauthTokenId());
-                prepStmt.setString(2, persistenceProcessor.getPreprocessedAuthzCode(authzCodeDO.getAuthorizationCode()));
+                prepStmt.setString(2, hashingPersistenceProcessor.getProcessedAuthzCode(authzCodeDO.getAuthorizationCode()));
                 prepStmt.addBatch();
             }
             prepStmt.executeBatch();
@@ -961,7 +972,7 @@ public class TokenMgtDAO {
                     authCodeStoreTable);
             prepStmt = connection.prepareStatement(sqlQuery);
             prepStmt.setString(1, newState);
-            prepStmt.setString(2, persistenceProcessor.getPreprocessedAuthzCode(authzCode));
+            prepStmt.setString(2, hashingPersistenceProcessor.getProcessedAuthzCode(authzCode));
             prepStmt.execute();
             connection.commit();
         } catch (SQLException e) {
@@ -999,7 +1010,7 @@ public class TokenMgtDAO {
         try {
             prepStmt = connection.prepareStatement(SQLQueries.DEACTIVATE_AUTHZ_CODE_AND_INSERT_CURRENT_TOKEN);
             prepStmt.setString(1, authzCodeDO.getOauthTokenId());
-            prepStmt.setString(2, persistenceProcessor.getPreprocessedAuthzCode(authzCodeDO.getAuthorizationCode()));
+            prepStmt.setString(2, hashingPersistenceProcessor.getProcessedAuthzCode(authzCodeDO.getAuthorizationCode()));
             prepStmt.executeUpdate();
         } catch (SQLException e) {
             throw new IdentityOAuth2Exception("Error when deactivating authorization code", e);
@@ -1053,7 +1064,7 @@ public class TokenMgtDAO {
 
             prepStmt.setString(1, persistenceProcessor.getProcessedClientId(consumerKey));
             if (refreshToken != null) {
-                prepStmt.setString(2, persistenceProcessor.getProcessedRefreshToken(refreshToken));
+                prepStmt.setString(2, hashingPersistenceProcessor.getProcessedRefreshToken(refreshToken));
             }
 
             resultSet = prepStmt.executeQuery();
@@ -1141,7 +1152,7 @@ public class TokenMgtDAO {
 
             prepStmt = connection.prepareStatement(sql);
 
-            prepStmt.setString(1, persistenceProcessor.getProcessedAccessTokenIdentifier(accessTokenIdentifier));
+            prepStmt.setString(1, hashingPersistenceProcessor.getProcessedAccessTokenIdentifier(accessTokenIdentifier));
             resultSet = prepStmt.executeQuery();
 
             int iterateId = 0;
@@ -1294,7 +1305,7 @@ public class TokenMgtDAO {
                 for (String token : tokens) {
                     ps.setString(1, OAuthConstants.TokenStates.TOKEN_STATE_REVOKED);
                     ps.setString(2, UUID.randomUUID().toString());
-                    ps.setString(3, persistenceProcessor.getProcessedAccessTokenIdentifier(token));
+                    ps.setString(3, hashingPersistenceProcessor.getProcessedAccessTokenIdentifier(token));
                     ps.addBatch();
                 }
                 ps.executeBatch();
@@ -1314,7 +1325,7 @@ public class TokenMgtDAO {
                 ps = connection.prepareStatement(sqlQuery);
                 ps.setString(1, OAuthConstants.TokenStates.TOKEN_STATE_REVOKED);
                 ps.setString(2, UUID.randomUUID().toString());
-                ps.setString(3, persistenceProcessor.getProcessedAccessTokenIdentifier(tokens[0]));
+                ps.setString(3, hashingPersistenceProcessor.getProcessedAccessTokenIdentifier(tokens[0]));
                 ps.executeUpdate();
             } catch (SQLException e) {
                 //IdentityDatabaseUtil.rollBack(connection);
@@ -1350,7 +1361,7 @@ public class TokenMgtDAO {
                 ps = connection.prepareStatement(sqlQuery);
                 ps.setString(1, OAuthConstants.TokenStates.TOKEN_STATE_REVOKED);
                 ps.setString(2, UUID.randomUUID().toString());
-                ps.setString(3, persistenceProcessor.getProcessedAccessTokenIdentifier(token));
+                ps.setString(3, hashingPersistenceProcessor.getProcessedAccessTokenIdentifier(token));
                 int count = ps.executeUpdate();
                 if (log.isDebugEnabled()) {
                     log.debug("Number of rows being updated : " + count);
@@ -2365,7 +2376,7 @@ public class TokenMgtDAO {
             String sql = SQLQueries.RETRIEVE_CODE_ID_BY_AUTHORIZATION_CODE;
 
             prepStmt = connection.prepareStatement(sql);
-            prepStmt.setString(1, persistenceProcessor.getProcessedAuthzCode(authzCode));
+            prepStmt.setString(1, hashingPersistenceProcessor.getProcessedAuthzCode(authzCode));
             resultSet = prepStmt.executeQuery();
 
             if (resultSet.next()) {
@@ -2464,7 +2475,7 @@ public class TokenMgtDAO {
                     userStoreDomain);
 
             prepStmt = connection.prepareStatement(sql);
-            prepStmt.setString(1, persistenceProcessor.getProcessedAccessTokenIdentifier(token));
+            prepStmt.setString(1, hashingPersistenceProcessor.getProcessedAccessTokenIdentifier(token));
             resultSet = prepStmt.executeQuery();
 
             if (resultSet.next()) {

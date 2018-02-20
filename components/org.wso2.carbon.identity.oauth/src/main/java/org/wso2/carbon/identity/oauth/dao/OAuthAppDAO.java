@@ -472,15 +472,11 @@ public class OAuthAppDAO {
                     prepStmt.setLong(8, oauthAppDO.getRefreshTokenExpiryTime());
 
                     prepStmt.setString(9, persistenceProcessor.getProcessedClientId(oauthAppDO.getOauthConsumerKey()));
-                    prepStmt.setString(10, persistenceProcessor.getProcessedClientSecret(oauthAppDO
-                            .getOauthConsumerSecret()));
                 } else {
                     prepStmt.setLong(4, oauthAppDO.getUserAccessTokenExpiryTime());
                     prepStmt.setLong(5, oauthAppDO.getApplicationAccessTokenExpiryTime());
                     prepStmt.setLong(6, oauthAppDO.getRefreshTokenExpiryTime());
                     prepStmt.setString(7, persistenceProcessor.getProcessedClientId(oauthAppDO.getOauthConsumerKey()));
-                    prepStmt.setString(8, persistenceProcessor.getProcessedClientSecret(oauthAppDO
-                            .getOauthConsumerSecret()));
                 }
                 int count = prepStmt.executeUpdate();
                 updateScopeValidators(connection, oauthAppDO.getId(), oauthAppDO.getScopeValidators());
