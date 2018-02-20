@@ -53,7 +53,7 @@ import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
 /**
- * XACMLScopeValidatorTest defines unit tests for XACMLScopeValidator class.
+ * Unit tests for XACMLScopeValidator class.
  */
 @PrepareForTest({FrameworkUtils.class, PolicyCreatorUtil.class, PolicyBuilder.class,
         OAuth2Util.class})
@@ -116,13 +116,13 @@ public class XACMLScopeValidatorTest extends IdentityBaseTest {
     @Test
     public void testExtractXACMLResponse() throws Exception {
 
-        String response = WhiteboxImpl.invokeMethod(xacmlScopeValidator, "extractXACMLResponse",
-                xacmlResponse);
+        String response = WhiteboxImpl.invokeMethod(xacmlScopeValidator,
+                "extractDecisionFromXACMLResponse", xacmlResponse);
         assertEquals(response, DECISION);
     }
 
     /**
-     * This tests the validateScope method, by returning different mock XACML response for entitlementService.
+     * Tests the validateScope method, by returning different mock XACML response for entitlementService.
      *
      * @throws Exception exception
      */
