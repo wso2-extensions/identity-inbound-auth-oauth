@@ -115,6 +115,7 @@
             }
             allowedGrants = new ArrayList<String>(Arrays.asList(client.getAllowedOAuthGrantTypes()));
             allowedScopeValidators = new ArrayList<String>(Arrays.asList(client.getAllowedScopeValidators()));
+            // Sorting the list to display the scope validators in alphabetical order
             Collections.sort(allowedScopeValidators);
             if (OAuthConstants.OAuthVersions.VERSION_2.equals(app.getOAuthVersion())) {
                 id = resourceBundle.getString("consumerkey.oauth20");
@@ -688,8 +689,8 @@
                                             %>
                                             <tr>
                                                 <td><label><input type="checkbox"
-                                                                  id=<%=OAuthUIConstants.SCOPE_VALIDATOR  + scopeValidator.replaceAll(" ", "-")%>
-                                                                          name=<%=OAuthUIConstants.SCOPE_VALIDATOR  + scopeValidator%>
+                                                                  id=<%=OAuthUIConstants.SCOPE_VALIDATOR_PREFIX  + scopeValidator.replaceAll(" ", "-")%>
+                                                                          name=<%=OAuthUIConstants.SCOPE_VALIDATOR_PREFIX + scopeValidator%>
                                                                   value=<%=scopeValidator%> <%=(scopeValidators.contains(scopeValidator) ? "checked=\"checked\"" : "")%>/><%=scopeValidator%>
                                                 </label></td>
                                             </tr>

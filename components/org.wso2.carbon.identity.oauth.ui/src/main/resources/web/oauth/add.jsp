@@ -57,10 +57,8 @@
     List<String> scopeValidators = new ArrayList<String>();
     try {
         allowedGrants = new ArrayList<String>(Arrays.asList(client.getAllowedOAuthGrantTypes()));
-        scopeValidators = new ArrayList<String>(Arrays.asList(client.getAllowedScopeValidators()));
-        Collections.sort(scopeValidators);
     } catch (Exception e) {
-        String message = resourceBundle.getString("error.while.loading.add.new.application") + " : " + e.getMessage();
+        String message = resourceBundle.getString("error.while.getting.allowed.grants") + " : " + e.getMessage();
         CarbonUIMessage.sendCarbonUIMessage(message, CarbonUIMessage.ERROR, request, e);
 %>
 <script type="text/javascript">
@@ -74,7 +72,21 @@
 </script>
 <%
     }
-
+    try {
+        scopeValidators = new ArrayList<String>(Arrays.asList(client.getAllowedScopeValidators()));
+        // Sorting the list to display the scope validators in alphabetical order
+        Collections.sort(scopeValidators);
+    } catch (Exception e) {
+        String message = resourceBundle.getString("error.while.getting.scope.validators") + " : " + e.getMessage();
+        CarbonUIMessage.sendCarbonUIMessage(message, CarbonUIMessage.ERROR, request, e);
+%>
+<script type="text/javascript">
+    function forward() {
+        location.href = "<%=forwardTo%>";
+    }
+</script>
+<%
+    }
 %>
 
 
@@ -557,8 +569,8 @@
                                             %>
                                             <tr>
                                                 <td><label><input type="checkbox"
-                                                                  id=<%=OAuthUIConstants.SCOPE_VALIDATOR + scopeValidator.replaceAll(" ", "-")%>
-                                                                          name=<%=OAuthUIConstants.SCOPE_VALIDATOR + scopeValidator%>
+                                                                  id=<%=OAuthUIConstants.SCOPE_VALIDATOR_PREFIX + scopeValidator.replaceAll(" ", "-")%>
+                                                                          name=<%=OAuthUIConstants.SCOPE_VALIDATOR_PREFIX + scopeValidator%>
                                                                   value=<%=scopeValidator%>/><%=scopeValidator%>
                                                 </label></td>
                                             </tr>
