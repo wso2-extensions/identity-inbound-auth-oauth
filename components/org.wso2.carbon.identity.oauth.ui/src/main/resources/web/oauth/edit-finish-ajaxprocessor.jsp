@@ -113,7 +113,8 @@
             List<String> scopeValidators = new ArrayList<String>();
             String[] allowedValidators = client.getAllowedScopeValidators();
             for (String allowedValidator : allowedValidators) {
-                String val = request.getParameter(OAuthUIConstants.SCOPE_VALIDATOR  + allowedValidator);
+                String val = request.getParameter(OAuthUIConstants.SCOPE_VALIDATOR
+                        + allowedValidator.replaceAll(" ", "-"));
                 if (val != null) {
                     scopeValidators.add(allowedValidator);
                 }

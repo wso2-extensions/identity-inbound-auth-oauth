@@ -688,7 +688,8 @@
                                             %>
                                             <tr>
                                                 <td><label><input type="checkbox"
-                                                                  id=<%=OAuthUIConstants.SCOPE_VALIDATOR  + scopeValidator%> name=<%=OAuthUIConstants.SCOPE_VALIDATOR  + scopeValidator%>
+                                                                  id=<%=OAuthUIConstants.SCOPE_VALIDATOR  + scopeValidator.replaceAll(" ", "-")%>
+                                                                          name=<%=OAuthUIConstants.SCOPE_VALIDATOR  + scopeValidator%>
                                                                   value=<%=scopeValidator%> <%=(scopeValidators.contains(scopeValidator) ? "checked=\"checked\"" : "")%>/><%=scopeValidator%>
                                                 </label></td>
                                             </tr>
