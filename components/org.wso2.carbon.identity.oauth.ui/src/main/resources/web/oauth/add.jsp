@@ -571,7 +571,7 @@
                                                 <td><label><input type="checkbox"
                                                                   id=<%=OAuthUIConstants.SCOPE_VALIDATOR_PREFIX + scopeValidator.replaceAll(" ", "-")%>
                                                                           name=<%=OAuthUIConstants.SCOPE_VALIDATOR_PREFIX + scopeValidator%>
-                                                                  value=<%=scopeValidator%>/><%=scopeValidator%>
+                                                                  value=<%=Encode.forHtmlAttribute(scopeValidator)%>/><%=Encode.forHtmlAttribute(scopeValidator)%>
                                                 </label></td>
                                             </tr>
                                             <%
