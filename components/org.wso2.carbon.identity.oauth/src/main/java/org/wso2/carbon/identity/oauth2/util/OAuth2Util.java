@@ -396,29 +396,42 @@ public class OAuth2Util {
         }
 
         // Cache miss
-        if (clientSecret == null) {
-            OAuthConsumerDAO oAuthConsumerDAO = new OAuthConsumerDAO();
-            clientSecret = oAuthConsumerDAO.getOAuthConsumerSecret(clientId);
-            if (log.isDebugEnabled()) {
-                log.debug("Client credentials were fetched from the database.");
-            }
-        }
-
-        if (clientSecret == null) {
-            if (log.isDebugEnabled()) {
-                log.debug("Provided Client ID : " + clientId + "is not valid.");
-            }
-            return false;
-        }
-
-        if (!clientSecret.equals(clientSecretProvided)) {
-
-            if (log.isDebugEnabled()) {
-                log.debug("Provided the Client ID : " + clientId +
-                        " and Client Secret do not match with the issued credentials.");
+        Boolean isHashDisabled = isHashDisabled();
+        OAuthConsumerDAO oAuthConsumerDAO = new OAuthConsumerDAO();
+        if (isHashDisabled) {
+            if (clientSecret == null) {
+                clientSecret = oAuthConsumerDAO.getOAuthConsumerSecret(clientId);
+                if (log.isDebugEnabled()) {
+                    log.debug("Client credentials were fetched from the database.");
+                }
             }
 
-            return false;
+            if (clientSecret == null) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Provided Client ID : " + clientId + "is not valid.");
+                }
+                return false;
+            }
+
+            if (!clientSecret.equals(clientSecretProvided)) {
+
+                if (log.isDebugEnabled()) {
+                    log.debug("Provided the Client ID : " + clientId +
+                            " and Client Secret do not match with the issued credentials.");
+                }
+
+                return false;
+            }
+        } else {
+            // Check whether the provided consumerKey, consumerSecret combination is exist or not in the database.
+            if (!oAuthConsumerDAO.isConsumerSecretExist(clientId, clientSecretProvided)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Provided the Client ID : " + clientId +
+                            " and Client Secret do not match with the issued credentials.");
+                }
+
+                return false;
+            }
         }
 
         if (log.isDebugEnabled()) {
@@ -999,6 +1012,17 @@ public class OAuth2Util {
                 oauth2TokenEPUrl = getTenantUrl(oauth2TokenEPUrl, tenantDomain);
             }
             return oauth2TokenEPUrl;
+        }
+
+        /**
+         * Check whether hash feature is disabled or not.
+         *
+         * @return Whether hash feature is disabled or not.
+         */
+        public static Boolean isHashDisabled() {
+            Boolean isHashEnabled = OAuthServerConfiguration.getInstance().isHashEnabled();
+            return !isHashEnabled;
+
         }
 
         public static String getOAuth2JWKSPageUrl(String tenantDomain) throws URISyntaxException {

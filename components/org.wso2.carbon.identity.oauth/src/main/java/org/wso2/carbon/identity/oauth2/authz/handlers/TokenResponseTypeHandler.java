@@ -63,6 +63,7 @@ import java.util.UUID;
 public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
 
     private static Log log = LogFactory.getLog(TokenResponseTypeHandler.class);
+    private Boolean isHashDisabled = OAuth2Util.isHashDisabled();
 
     @Override
     public OAuth2AuthorizeRespDTO issue(OAuthAuthzReqMessageContext oauthAuthzMsgCtx)
@@ -136,7 +137,7 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
         synchronized ((consumerKey + ":" + authorizedUser + ":" + scope).intern()) {
 
             // check if valid access token exists in cache
-            if (cacheEnabled) {
+            if (cacheEnabled && isHashDisabled) {
                 AccessTokenDO accessTokenDO = (AccessTokenDO) OAuthCache.getInstance().getValueFromCache(cacheKey);
                 if (accessTokenDO != null) {
                     if (log.isDebugEnabled()) {
@@ -208,7 +209,7 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
             AccessTokenDO existingAccessTokenDO = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                     .getLatestAccessToken(consumerKey, authorizationReqDTO.getUser(), userStoreDomain, scope, false);
 
-            if (existingAccessTokenDO != null) {
+            if (existingAccessTokenDO != null && isHashDisabled) {
 
                 if (log.isDebugEnabled()) {
                     log.debug("Retrieved latest Access Token" +

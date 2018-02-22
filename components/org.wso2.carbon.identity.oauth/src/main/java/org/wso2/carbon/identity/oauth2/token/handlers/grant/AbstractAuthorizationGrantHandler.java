@@ -63,6 +63,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     protected OAuthCache oauthCache;
     protected static final String EXISTING_TOKEN_ISSUED = "existingTokenUsed";
     protected static final int SECONDS_TO_MILISECONDS_FACTOR = 1000;
+    private Boolean isHashDisabled = OAuth2Util.isHashDisabled();
 
     @Override
     public void init() throws IdentityOAuth2Exception {

@@ -209,6 +209,7 @@ public class OAuthServerConfiguration {
     private String tokenValueGeneratorClassName;
     //property to define hashing algorithm when enabling hashing of tokens and authorization codes.
     private String hashAlgorithm = "SHA-256";
+    private boolean isHashEnabled = false;
 
 
     // Property added to determine the expiration of logout token in oidc back-channel logout.
@@ -332,6 +333,10 @@ public class OAuthServerConfiguration {
         parseShowDisplayNameInConsentPage(oauthElem);
         // read hash algorithm type config
         parseHashAlgorithm(oauthElem);
+
+        // read hash mode config
+        parseEnableHashMode(oauthElem);
+
     }
 
     private void parseShowDisplayNameInConsentPage(OMElement oauthElem) {
@@ -705,6 +710,10 @@ public class OAuthServerConfiguration {
 
     public String getHashAlgorithm() {
         return hashAlgorithm;
+    }
+
+    public boolean isHashEnabled() {
+        return isHashEnabled;
     }
 
     private void parseRequestObjectConfig(OMElement requestObjectBuildersElem) {
@@ -2108,6 +2117,18 @@ public class OAuthServerConfiguration {
         }
     }
 
+    private void parseEnableHashMode(OMElement oauthConfigElem) {
+
+        OMElement hashModeElement = oauthConfigElem
+                .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.ENABLE_HASH_MODE));
+        if (hashModeElement != null) {
+            isHashEnabled = Boolean.parseBoolean(hashModeElement.getText());
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("Hash mode was set to : " + isHashEnabled);
+        }
+    }
+
     public OAuth2ScopeValidator getoAuth2ScopeValidator() {
         return oAuth2ScopeValidator;
     }
@@ -2293,6 +2314,8 @@ public class OAuthServerConfiguration {
 
         //Hash algorithm configs
         private static final String HASH_ALGORITHM = "HashAlgorithm";
+        //Token hash mode configs
+        private static final String ENABLE_HASH_MODE = "TokenHashMode";
 
     }
 

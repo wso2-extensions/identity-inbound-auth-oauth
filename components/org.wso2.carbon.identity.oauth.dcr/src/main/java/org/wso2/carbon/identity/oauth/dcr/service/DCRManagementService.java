@@ -44,6 +44,7 @@ import org.wso2.carbon.identity.oauth.dcr.util.DCRConstants;
 import org.wso2.carbon.identity.oauth.dcr.util.DCRMUtils;
 import org.wso2.carbon.identity.oauth.dcr.util.ErrorCodes;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.registry.core.Registry;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
@@ -130,6 +131,7 @@ public class DCRManagementService {
         // username is fetched from CarbonContext
         PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(userName);
 
+        Boolean isHashDisabled = OAuth2Util.isHashDisabled();
         try {
             // Create the Service Provider
             ServiceProvider serviceProvider = new ServiceProvider();
@@ -207,8 +209,13 @@ public class DCRManagementService {
                 log.debug("Creating OAuth App " + applicationName);
             }
 
+            OAuthConsumerAppDTO createdApp = null;
             try {
-                oAuthAdminService.registerOAuthApplicationData(oAuthConsumerApp);
+                if (isHashDisabled) {
+                    oAuthAdminService.registerOAuthApplicationData(oAuthConsumerApp);
+                } else {
+                      createdApp = oAuthAdminService.registerAndRetrieveOAuthApplicationData(oAuthConsumerApp);
+                }
             } catch (IdentityOAuthAdminException e) {
                 throw IdentityException.error(DCRException.class,
                         ErrorCodes.META_DATA_VALIDATION_FAILED.toString(), e.getMessage());
@@ -218,17 +225,18 @@ public class DCRManagementService {
                 log.debug("Created OAuth App " + applicationName);
             }
 
-            OAuthConsumerAppDTO createdApp = null;
 
             try {
-                createdApp = oAuthAdminService
-                        .getOAuthApplicationDataByAppName(oAuthConsumerApp.getApplicationName());
+                if (isHashDisabled) {
+                    createdApp = oAuthAdminService
+                            .getOAuthApplicationDataByAppName(oAuthConsumerApp.getApplicationName());
+                }
             } catch (IdentityOAuthAdminException e) {
                 throw IdentityException.error(DCRException.class, ErrorCodes.BAD_REQUEST.toString(), e.getMessage());
 
             }
 
-            if (log.isDebugEnabled()) {
+            if (log.isDebugEnabled() && createdApp != null) {
                 log.debug("Retrieved Details for OAuth App " + createdApp.getApplicationName());
             }
             // Set the OAuthApp in InboundAuthenticationConfig
@@ -237,9 +245,10 @@ public class DCRManagementService {
 
             InboundAuthenticationRequestConfig inboundAuthenticationRequestConfig =
                     new InboundAuthenticationRequestConfig();
-            inboundAuthenticationRequestConfig.setInboundAuthKey(createdApp.getOauthConsumerKey());
+            inboundAuthenticationRequestConfig.setInboundAuthKey(createdApp != null ?
+                    createdApp.getOauthConsumerKey() : null);
             inboundAuthenticationRequestConfig.setInboundAuthType(AUTH_TYPE_OAUTH_2);
-            String oauthConsumerSecret = createdApp.getOauthConsumerSecret();
+            String oauthConsumerSecret = createdApp != null ? createdApp.getOauthConsumerSecret() : null;
             if (oauthConsumerSecret != null && !oauthConsumerSecret.isEmpty()) {
                 Property property = new Property();
                 property.setName(OAUTH_CONSUMER_SECRET);
@@ -261,12 +270,12 @@ public class DCRManagementService {
             }
 
             RegistrationResponseProfile registrationResponseProfile = new RegistrationResponseProfile();
-            registrationResponseProfile.setClientId(createdApp.getOauthConsumerKey());
-            registrationResponseProfile.getRedirectUrls().add(createdApp.getCallbackUrl());
+            registrationResponseProfile.setClientId(createdApp != null ? createdApp.getOauthConsumerKey() : null);
+            registrationResponseProfile.getRedirectUrls().add(createdApp != null ? createdApp.getCallbackUrl() : null);
             registrationResponseProfile.setClientSecret(oauthConsumerSecret);
-            registrationResponseProfile.setClientName(createdApp.getApplicationName());
+            registrationResponseProfile.setClientName(createdApp != null ? createdApp.getApplicationName() : null);
             registrationResponseProfile.setClientSecretExpiresAt(DEFAULT_CLIENT_SECRET_EXPIRY_TIME);
-            if (StringUtils.isNotBlank(createdApp.getGrantTypes())) {
+            if (StringUtils.isNotBlank(createdApp != null ? createdApp.getGrantTypes() : null)) {
                 String[] split = createdApp.getGrantTypes().split(" ");
                 registrationResponseProfile.setGrantTypes(Arrays.asList(split));
             }

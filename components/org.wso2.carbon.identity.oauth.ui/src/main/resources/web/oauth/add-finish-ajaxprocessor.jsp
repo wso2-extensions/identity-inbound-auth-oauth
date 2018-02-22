@@ -26,6 +26,7 @@
 <%@ page import="org.wso2.carbon.identity.oauth.ui.util.OAuthUIConstants"%>
 <%@ page import="org.wso2.carbon.identity.oauth.ui.util.OAuthUIUtil"%>
 <%@ page import="org.wso2.carbon.ui.CarbonUIMessage" %>
+<%@ page import="org.wso2.carbon.identity.oauth2.util.OAuth2Util"%>
 
 <%@ page import="org.wso2.carbon.ui.CarbonUIUtil" %>
 <%@ page import="org.wso2.carbon.utils.ServerConstants" %>
@@ -71,7 +72,8 @@
     // OIDC related properties
     boolean isRequestObjectSignatureValidated = Boolean.parseBoolean(request.getParameter("validateRequestObjectSignature"));
     boolean isIdTokenEncrypted = Boolean.parseBoolean(request.getParameter("encryptIdToken"));
-    
+
+    Boolean isHashDisabled = OAuth2Util.isHashDisabled();
     String forwardTo = "index.jsp";
 	String BUNDLE = "org.wso2.carbon.identity.oauth.ui.i18n.Resources";
 	ResourceBundle resourceBundle = ResourceBundle.getBundle(BUNDLE, request.getLocale());
@@ -140,11 +142,13 @@
             // Set OIDC related configuration properties.
             app.setRequestObjectSignatureValidationEnabled(isRequestObjectSignatureValidated);
             app.setIdTokenEncryptionEnabled(isIdTokenEncrypted);
-            
-            client.registerOAuthApplicationData(app);
 
-            consumerApp = client.getOAuthApplicationDataByAppName(applicationName);
-
+            if (isHashDisabled) {
+                client.registerOAuthApplicationData(app);
+                consumerApp = client.getOAuthApplicationDataByAppName(applicationName);
+            } else {
+                consumerApp = client.registerAndRetrieveOAuthApplicationData(app);
+            }
             String message = resourceBundle.getString("app.added.successfully");
             CarbonUIMessage.sendCarbonUIMessage(message, CarbonUIMessage.INFO, request);
         } else {
@@ -168,9 +172,17 @@ if (qpplicationComponentFound) {
 	if (!isError) {
 		session.setAttribute("oauth-consum-secret", consumerApp.getOauthConsumerSecret());
 %>
+    <% if (isHashDisabled) { %>
     location.href = '../application/configure-service-provider.jsp?action=update&display=oauthapp&spName=<%=Encode.forUriComponent(spName)%>&oauthapp=<%=Encode.forUriComponent(consumerApp.getOauthConsumerKey())%>';
+    <% } else { %>
+    location.href = 'application-details.jsp?action=update&display=oauthapp&spName=<%=Encode.forUriComponent(spName)%>&oauthapp=<%=Encode.forUriComponent(consumerApp.getOauthConsumerKey())%>';
+    <% } %>
 <% } else { %>
+    <% if (isHashDisabled) { %>
     location.href = '../application/configure-service-provider.jsp?display=oauthapp&spName=<%=Encode.forUriComponent(spName)%>&action=cancel';
+    <% } else { %>
+    location.href = 'application-details.jsp?display=oauthapp&spName=<%=Encode.forUriComponent(spName)%>&action=cancel';
+    <% } %>
 <% }
 } else {%>
     location.href = 'index.jsp';
