@@ -431,6 +431,12 @@ public class AccessTokenIssuer {
                     AuthorizationGrantCache.getInstance().clearCacheEntryByCode(oldCacheKey);
                 } else {
                     //if the user attributes are already saved for access token, no need to add again.
+                    AuthorizationGrantCacheEntry previousAuthorizationGrantCacheEntry = AuthorizationGrantCache.getInstance().getValueFromCacheByToken(newCacheKey);
+                    if (previousAuthorizationGrantCacheEntry.hashCode() != authorizationGrantCacheEntry.hashCode()) {
+                        log.info ("AuthorizationGrantCache updated");
+                        AuthorizationGrantCache.getInstance().addToCacheByToken(newCacheKey, authorizationGrantCacheEntry);
+                        AuthorizationGrantCache.getInstance().clearCacheEntryByCode(oldCacheKey);
+                    }
                 }
             }
         }
