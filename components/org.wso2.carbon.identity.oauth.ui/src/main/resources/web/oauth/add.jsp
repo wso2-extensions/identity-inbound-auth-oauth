@@ -626,9 +626,9 @@
                                             %>
                                             <tr>
                                                 <td><label><input type="checkbox"
-                                                                  id=<%=OAuthUIConstants.SCOPE_VALIDATOR_PREFIX + scopeValidator.replaceAll(" ", "-")%>
-                                                                          name=<%=OAuthUIConstants.SCOPE_VALIDATOR_PREFIX + scopeValidator%>
-                                                                  value=<%=Encode.forHtmlAttribute(scopeValidator)%>/><%=Encode.forHtmlAttribute(scopeValidator)%>
+                                                                  id=<%=OAuthUIConstants.SCOPE_VALIDATOR_PREFIX + scopeValidator.replaceAll(" ", "_")%>
+                                                                          name=<%=OAuthUIConstants.SCOPE_VALIDATOR_PREFIX + scopeValidator.replaceAll(" ", "_")%>
+                                                                  value=<%=Encode.forHtmlAttribute(scopeValidator.replaceAll(" ", "_"))%>/><%=Encode.forHtmlAttribute(scopeValidator)%>
                                                 </label></td>
                                             </tr>
                                             <%

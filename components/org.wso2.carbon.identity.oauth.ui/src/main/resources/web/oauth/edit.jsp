@@ -738,9 +738,9 @@
                                             %>
                                             <tr>
                                                 <td><label><input type="checkbox"
-                                                                  id=<%=OAuthUIConstants.SCOPE_VALIDATOR_PREFIX  + scopeValidator.replaceAll(" ", "-")%>
-                                                                          name=<%=OAuthUIConstants.SCOPE_VALIDATOR_PREFIX + scopeValidator%>
-                                                                  value=<%=Encode.forHtmlAttribute(scopeValidator)%> <%=(scopeValidators.contains(scopeValidator) ? "checked=\"checked\"" : "")%>/><%=Encode.forHtmlAttribute(scopeValidator)%>
+                                                                  id=<%=OAuthUIConstants.SCOPE_VALIDATOR_PREFIX  + scopeValidator.replaceAll(" ", "_")%>
+                                                                          name=<%=OAuthUIConstants.SCOPE_VALIDATOR_PREFIX + scopeValidator.replaceAll(" ", "_")%>
+                                                                  value=<%=Encode.forHtmlAttribute(scopeValidator.replaceAll(" ", "_"))%> <%=(scopeValidators.contains(scopeValidator) ? "checked=\"checked\"" : "")%>/><%=Encode.forHtmlAttribute(scopeValidator)%>
                                                 </label></td>
                                             </tr>
                                             <%
