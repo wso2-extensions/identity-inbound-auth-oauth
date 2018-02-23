@@ -56,6 +56,7 @@ public class JDBCScopeValidator extends OAuth2ScopeValidator {
     // org.wso2.carbon.apimgt.keymgt.handlers.ResourceConstants.
     // If any changes are taking place in that these should also be updated accordingly.
     public static final String CHECK_ROLES_FROM_SAML_ASSERTION = "checkRolesFromSamlAssertion";
+    private static final String SCOPE_VALIDATOR_NAME = "JDBC Scope Validator";
 
     Log log = LogFactory.getLog(JDBCScopeValidator.class);
 
@@ -218,5 +219,10 @@ public class JDBCScopeValidator extends OAuth2ScopeValidator {
             log.error("Error when getting the tenant's UserStoreManager or when getting roles of user ", e);
             return false;
         }
+    }
+
+    @Override
+    public String getValidatorName() {
+        return SCOPE_VALIDATOR_NAME;
     }
 }

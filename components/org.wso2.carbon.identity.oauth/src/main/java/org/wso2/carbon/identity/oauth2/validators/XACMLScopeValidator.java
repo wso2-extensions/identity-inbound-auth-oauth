@@ -72,6 +72,8 @@ public class XACMLScopeValidator extends OAuth2ScopeValidator {
     private static final String USER_TENANT_DOMAIN_ID = USER_CATEGORY + "/user-tenant-domain";
     private static final String SCOPE_ID = SCOPE_CATEGORY + "/scope-name";
 
+    private static final String SCOPE_VALIDATOR_NAME = "XACML Scope Validator";
+
     private Log log = LogFactory.getLog(XACMLScopeValidator.class);
 
     @Override
@@ -107,7 +109,7 @@ public class XACMLScopeValidator extends OAuth2ScopeValidator {
             if (isResponseNotApplicable(validationResponse)) {
                 log.warn(String.format(
                         "No applicable rule for service provider '%s@%s'. Add an validating policy (or unset Scope " +
-                                "Validation using XACMLScopeValidator) to fix this warning.",
+                                "Validation with XACML Scope Validator) to fix this warning.",
                         authApp.getApplicationName(), OAuth2Util.getTenantDomainOfOauthApp(authApp)));
                 isValidated = true;
             } else if (isResponsePermit(validationResponse)) {
@@ -241,4 +243,8 @@ public class XACMLScopeValidator extends OAuth2ScopeValidator {
         return RULE_EFFECT_NOT_APPLICABLE.equalsIgnoreCase(validationResponse);
     }
 
+    @Override
+    public String getValidatorName() {
+        return SCOPE_VALIDATOR_NAME;
+    }
 }

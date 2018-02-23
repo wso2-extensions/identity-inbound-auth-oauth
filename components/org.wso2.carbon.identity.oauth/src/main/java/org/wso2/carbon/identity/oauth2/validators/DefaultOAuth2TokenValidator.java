@@ -86,14 +86,14 @@ public class DefaultOAuth2TokenValidator implements OAuth2TokenValidator {
                 .getOAuth2ScopeValidators();
         ArrayList<String> appScopeValidators = new ArrayList<>(Arrays.asList(scopeValidators));
         for (OAuth2ScopeValidator validator : oAuth2ScopeValidators) {
-            if (validator != null && appScopeValidators.contains(validator.getClass().getSimpleName())
+            if (validator != null && appScopeValidators.contains(validator.getValidatorName())
                     && validator.canHandle(messageContext)) {
                 if (log.isDebugEnabled()) {
                     log.debug(String.format("Validating scope of token %s using %s", accessTokenDO.getTokenId(),
-                            validator.getClass().getName()));
+                            validator.getValidatorName()));
                 }
                 boolean isValid = validator.validateScope(accessTokenDO, resource);
-                appScopeValidators.remove(validator.getClass().getSimpleName());
+                appScopeValidators.remove(validator.getValidatorName());
                 if (!isValid) {
                     return false;
                 }
