@@ -176,12 +176,12 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
                 for (RequestedClaim claim : list) {
                     prepStmt.setInt(1, requestObjectId);
                     prepStmt.setString(2, claim.getName());
-                    prepStmt.setBoolean(3, claim.isEssential());
+                    prepStmt.setString(3, claim.isEssential() ? "1" : "0");
                     prepStmt.setString(4, claim.getValue());
                     if (OIDCConstants.USERINFO.equals(claim.getType())) {
-                        prepStmt.setBoolean(5, true);
+                        prepStmt.setString(5, "1");
                     } else if (OIDCConstants.ID_TOKEN.equals(claim.getType())) {
-                        prepStmt.setBoolean(5, false);
+                        prepStmt.setString(5, "0");
                     }
                     prepStmt.addBatch();
                     prepStmt.executeBatch();
@@ -259,13 +259,13 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
 
             prepStmt = connection.prepareStatement(sql);
             prepStmt.setString(1, tokenId);
-            prepStmt.setBoolean(2, isUserInfo);
+            prepStmt.setString(2, isUserInfo ? "1" : "0");
             resultSet = prepStmt.executeQuery();
 
             while (resultSet.next()) {
                 RequestedClaim requestedClaim = new RequestedClaim();
                 requestedClaim.setName(resultSet.getString(1));
-                requestedClaim.setEssential(resultSet.getBoolean(2));
+                requestedClaim.setEssential(!"0".equals(resultSet.getString(2)));
                 requestedClaim.setValue(resultSet.getString(3));
                 essentialClaims.add(requestedClaim);
             }
