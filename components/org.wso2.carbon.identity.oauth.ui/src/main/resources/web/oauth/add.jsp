@@ -230,6 +230,7 @@
                         $(jQuery("#audience_table").hide());
                         $(jQuery("#validate_request_object_signature_row").hide());
                         $(jQuery("#encrypt_id_token_row").hide());
+                        $(jQuery('#callback_row')).show();
 
                     } else if(oauthVersion == "<%=OAuthConstants.OAuthVersions.VERSION_2%>") {
                         $(jQuery('#grant_row')).show();
@@ -379,11 +380,6 @@
                                                type="text" /></td>
                                 </tr>
                                 <% } %>
-                                <tr id="callback_row">
-                                    <td class="leftCol-med"><fmt:message key='callback'/><span class="required">*</span></td>
-                                    <td><input class="text-box-big" id="callback" name="callback" type="text"
-                                               white-list-patterns="https-url"/></td>
-                                </tr>
                                 <tr id="bclogout_row">
                                     <td class="leftCol-med"><fmt:message key="bclogout"/></td>
                                     <td><input class="text-box-big" id="backChannelLogout" name="backChannelLogout" type="text" white-list-patterns="https-url"/></td>
@@ -448,24 +444,29 @@
                                         </table>
                                     </td>
                                 </tr>
+                                <tr id="callback_row">
+                                    <td class="leftCol-med"><fmt:message key='callback'/><span class="required">*</span></td>
+                                    <td><input class="text-box-big" id="callback" name="callback" type="text"
+                                               white-list-patterns="https-url"/></td>
+                                </tr>
                                 <%if(client.isPKCESupportedEnabled()) {%>
                                 <tr id="pkce_enable">
-                                    <td class="leftCol-med">
-                                        <fmt:message key='pkce.mandatory'/>
-                                    </td>
-                                    <td>
-                                        <input type="checkbox" name="pkce" value="mandatory"/>Mandatory
+                                    <td class="leftCol-med" colspan="2">
+                                        <label>
+                                            <input type="checkbox" name="pkce" value="mandatory"/>
+                                            <fmt:message key='pkce.mandatory'/>
+                                        </label>
                                         <div class="sectionHelp">
                                             <fmt:message key='pkce.mandatory.hint'/>
                                         </div>
                                     </td>
                                 </tr>
                                 <tr id="pkce_support_plain">
-                                    <td>
-                                        <fmt:message key='pkce.support.plain'/>
-                                    </td>
-                                    <td>
-                                        <input type="checkbox" name="pkce_plain" value="yes" checked>Yes
+                                    <td colspan="2">
+                                        <label>
+                                            <input type="checkbox" name="pkce_plain" value="yes" checked>
+                                            <fmt:message key='pkce.support.plain'/>
+                                        </label>
                                         <div class="sectionHelp">
                                             <fmt:message key='pkce.support.plain.hint'/>
                                         </div>
@@ -495,19 +496,17 @@
                                     </td>
                                 </tr>
                                 <tr id="audience_enable">
-                                    <td colspan="2"
-                                        title="Enable Audience Restriction to restrict the audience. You may add audience members using the Audience text box and clicking the Add button">
-                                        <input type="checkbox"
-                                               name="enableAudienceRestriction"
-                                               id="enableAudienceRestriction"
-                                               value="true"
-                                               onclick="toggleAudienceRestriction(this);"/>
-                                        <fmt:message key="enable.audience.restriction"/>
+                                    <td colspan="2">
+                                        <label title="Enable Audience Restriction to restrict the audience. You may add audience members using the Audience text box and clicking the Add button">
+                                            <input type="checkbox" name="enableAudienceRestriction"
+                                                   id="enableAudienceRestriction" value="true"
+                                                   onclick="toggleAudienceRestriction(this);"/>
+                                            <fmt:message key="enable.audience.restriction"/>
+                                        </label>
                                     </td>
                                 </tr>
                                 <tr id="add_audience">
-                                    <td
-                                            style="padding-left: 40px ! important; color: rgb(119, 119, 119); font-style: italic;">
+                                    <td style="padding-left: 40px ! important; color: rgb(119, 119, 119); font-style: italic;">
                                         <fmt:message key="sp.audience"/>
                                     </td>
                                     <td>
@@ -538,23 +537,22 @@
                                 </tr>
                                 <!-- OIDC related properties -->
                                 <tr id="validate_request_object_signature_row">
-                                    <td colspan="2" title="Validate the signature of the request object">
-                                        <input type="checkbox"
-                                               name="validateRequestObjectSignature"
-                                               id="validateRequestObjectSignature"
-                                               value="true"/>
-                                        <fmt:message key='enable.request.object.signature.validation'/>
+                                    <td colspan="2">
+                                        <label title="Validate the signature of the request object">
+                                            <input type="checkbox" name="validateRequestObjectSignature"
+                                                   id="validateRequestObjectSignature" value="true"/>
+                                            <fmt:message key='enable.request.object.signature.validation'/>
+                                        </label>
                                     </td>
                                 </tr>
 
                                 <tr id="encrypt_id_token_row">
-                                    <td colspan="2"
-                                        title="Encrypt the id_token">
-                                        <input type="checkbox"
-                                               name="encryptIdToken"
-                                               id="encryptIdToken"
-                                               value="true"/>
-                                        <fmt:message key='enable.id.token.encryption'/>
+                                    <td colspan="2">
+                                        <label title="Encrypt the id_token">
+                                            <input type="checkbox" name="encryptIdToken" id="encryptIdToken"
+                                                   value="true"/>
+                                            <fmt:message key='enable.id.token.encryption'/>
+                                        </label>
                                     </td>
                                 </tr>
                                     <%--Scope validators--%>
