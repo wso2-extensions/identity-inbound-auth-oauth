@@ -23,6 +23,8 @@ import org.apache.commons.lang.StringUtils;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.Spy;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 import org.opensaml.saml2.core.Assertion;
 import org.opensaml.saml2.core.Attribute;
 import org.opensaml.saml2.core.AttributeStatement;
@@ -88,6 +90,7 @@ import java.util.Properties;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
+import static org.mockito.Matchers.anyMap;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.doReturn;
@@ -146,6 +149,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
 
     @Mock
     private ApplicationManagementService applicationManagementService;
+
 
     private static final String CUSTOM_ATTRIBUTE_NAME = "CustomAttributeName";
 
@@ -214,22 +218,25 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
     @BeforeClass
     public void setUp() throws Exception {
         System.setProperty(CarbonBaseConstants.CARBON_HOME, CARBON_HOME);
-
         mockStatic(FrameworkUtils.class);
         when(FrameworkUtils.getMultiAttributeSeparator()).thenReturn(MULTI_ATTRIBUTE_SEPARATOR_DEFAULT);
 
         RequestObjectService requestObjectService = Mockito.mock(RequestObjectService.class);
-        List<RequestedClaim> requestedClaims =  Collections.EMPTY_LIST;
+        List<RequestedClaim> requestedClaims =  Collections.emptyList();
         when(requestObjectService.getRequestedClaimsForIDToken(anyString())).
                 thenReturn(requestedClaims);
         when(requestObjectService.getRequestedClaimsForUserInfo(anyString())).
                 thenReturn(requestedClaims);
-        OpenIDConnectServiceComponentHolder.getInstance()
-                .getOpenIDConnectClaimFilters()
-                .add(new OpenIDConnectClaimFilterImpl());
+
+        // Skipping filtering with user consent.
+        // TODO: Remove mocking claims filtering based on consent when fixing https://github.com/wso2/product-is/issues/2676
+        OpenIDConnectClaimFilterImpl openIDConnectClaimFilter = spy(new OpenIDConnectClaimFilterImpl());
+        when(openIDConnectClaimFilter
+                .getClaimsFilteredByUserConsent(anyMap(), any(AuthenticatedUser.class), anyString(), anyString()))
+                .thenAnswer(invocation -> invocation.getArguments()[0]);
+        OpenIDConnectServiceComponentHolder.getInstance().getOpenIDConnectClaimFilters().add(openIDConnectClaimFilter);
+
         OpenIDConnectServiceComponentHolder.setRequestObjectService(requestObjectService);
-
-
         defaultOIDCClaimsCallbackHandler = new DefaultOIDCClaimsCallbackHandler();
     }
 
@@ -907,8 +914,6 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
 
         when(registryService.getConfigSystemRegistry(anyInt())).thenReturn(userRegistry);
         when(userRegistry.get(OAuthConstants.SCOPE_RESOURCE_PATH)).thenReturn(resource);
-
-
     }
 
     private Assertion getAssertion(String[] attributeValues) throws ConfigurationException {

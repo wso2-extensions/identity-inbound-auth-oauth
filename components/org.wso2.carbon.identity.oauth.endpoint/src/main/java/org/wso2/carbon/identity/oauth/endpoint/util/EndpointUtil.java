@@ -29,6 +29,7 @@ import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.base.ServerConfiguration;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationRequestCacheEntry;
+import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.SSOConsentService;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticationRequest;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
@@ -78,6 +79,16 @@ public class EndpointUtil {
 
     private EndpointUtil() {
 
+    }
+
+    /**
+     * Returns the registered {@code {@link SSOConsentService}} instance
+     *
+     * @return
+     */
+    public static SSOConsentService getSSOConsentService() {
+        return (SSOConsentService) PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                .getOSGiService(SSOConsentService.class, null);
     }
 
     /**

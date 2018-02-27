@@ -200,6 +200,8 @@
                                 <importFeatureDef>org.wso2.carbon.security.mgt.server:compatible:${carbon.identity.framework.version}</importFeatureDef>
                                 <importFeatureDef>org.wso2.carbon.identity.application.mgt.server:compatible:${carbon.identity.framework.version}</importFeatureDef>
                                 <importFeatureDef>org.wso2.carbon.identity.application.authentication.framework.server:compatible:${carbon.identity.framework.version}</importFeatureDef>
+                                <importFeatureDef>org.wso2.carbon.claim.mgt.server:compatible:${carbon.identity.framework.version}</importFeatureDef>
+                                <importFeatureDef>org.wso2.carbon.identity.event.server:compatible:${carbon.identity.framework.version}</importFeatureDef>
                             </importFeatures>
                         </configuration>
                     </execution>

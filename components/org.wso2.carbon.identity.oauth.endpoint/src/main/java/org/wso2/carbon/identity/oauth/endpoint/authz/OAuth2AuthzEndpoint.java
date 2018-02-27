@@ -18,7 +18,6 @@
 package org.wso2.carbon.identity.oauth.endpoint.authz;
 
 import com.nimbusds.jwt.SignedJWT;
-import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
@@ -42,6 +41,10 @@ import org.wso2.carbon.identity.application.authentication.framework.CommonAuthe
 import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationResultCacheEntry;
 import org.wso2.carbon.identity.application.authentication.framework.context.AuthHistory;
 import org.wso2.carbon.identity.application.authentication.framework.context.SessionContext;
+import org.wso2.carbon.identity.application.authentication.framework.exception.FrameworkException;
+import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.ClaimMetaData;
+import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.ConsentClaimsData;
+import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.SSOConsentService;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticationResult;
 import org.wso2.carbon.identity.application.authentication.framework.model.CommonAuthRequestWrapper;
@@ -67,6 +70,7 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.endpoint.OAuthRequestWrapper;
+import org.wso2.carbon.identity.oauth.endpoint.exception.ConsentHandlingFailedException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
@@ -79,7 +83,6 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.model.CarbonOAuthAuthzRequest;
 import org.wso2.carbon.identity.oauth2.model.HttpRequestHeaderHandler;
-import org.wso2.carbon.identity.oauth2.model.HttpRequestHeaderHandler;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionState;
@@ -88,17 +91,6 @@ import org.wso2.carbon.identity.oidc.session.cache.OIDCBackChannelAuthCodeCacheE
 import org.wso2.carbon.identity.oidc.session.cache.OIDCBackChannelAuthCodeCacheKey;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
 import org.wso2.carbon.identity.openidconnect.OIDCRequestObjectUtil;
-
-import static org.wso2.carbon.identity.openidconnect.model.Constants.AUTH_TIME;
-import static org.wso2.carbon.identity.openidconnect.model.Constants.DISPLAY;
-import static org.wso2.carbon.identity.openidconnect.model.Constants.ID_TOKEN_HINT;
-import static org.wso2.carbon.identity.openidconnect.model.Constants.LOGIN_HINT;
-import static org.wso2.carbon.identity.openidconnect.model.Constants.MAX_AGE;
-import static org.wso2.carbon.identity.openidconnect.model.Constants.NONCE;
-import static org.wso2.carbon.identity.openidconnect.model.Constants.PROMPT;
-import static org.wso2.carbon.identity.openidconnect.model.Constants.SCOPE;
-import static org.wso2.carbon.identity.openidconnect.model.Constants.STATE;
-
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.registry.core.utils.UUIDGenerator;
 import org.wso2.carbon.utils.CarbonUtils;
@@ -115,6 +107,7 @@ import java.nio.file.Paths;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -122,11 +115,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
+import java.util.StringJoiner;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import javax.servlet.ServletException;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
@@ -154,6 +146,15 @@ import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuth
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuthServerConfiguration;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.startSuperTenantFlow;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.validateParams;
+import static org.wso2.carbon.identity.openidconnect.model.Constants.AUTH_TIME;
+import static org.wso2.carbon.identity.openidconnect.model.Constants.DISPLAY;
+import static org.wso2.carbon.identity.openidconnect.model.Constants.ID_TOKEN_HINT;
+import static org.wso2.carbon.identity.openidconnect.model.Constants.LOGIN_HINT;
+import static org.wso2.carbon.identity.openidconnect.model.Constants.MAX_AGE;
+import static org.wso2.carbon.identity.openidconnect.model.Constants.NONCE;
+import static org.wso2.carbon.identity.openidconnect.model.Constants.PROMPT;
+import static org.wso2.carbon.identity.openidconnect.model.Constants.SCOPE;
+import static org.wso2.carbon.identity.openidconnect.model.Constants.STATE;
 
 @Path("/authorize")
 public class OAuth2AuthzEndpoint {
@@ -334,13 +335,20 @@ public class OAuth2AuthzEndpoint {
     }
 
     private Response handleResponseFromConsent(OAuthMessage oAuthMessage) throws OAuthSystemException,
-            URISyntaxException {
+            URISyntaxException, ConsentHandlingFailedException {
 
         updateAuthTimeInSessionDataCacheEntry(oAuthMessage);
         addSessionDataKeyToSessionDataCacheEntry(oAuthMessage);
 
-        String consent = getConsentFromRequest(oAuthMessage);
+        OAuth2Parameters oAuth2Parameters = oAuthMessage.getSessionDataCacheEntry().getoAuth2Parameters();
+        if (isConsentHandlingFromFrameworkApplicable(oAuth2Parameters)) {
+            /*
+                Get the user consented claims from the consent response and create a consent receipt.
+            */
+            handlePostConsent(oAuthMessage);
+        }
 
+        String consent = getConsentFromRequest(oAuthMessage);
         if (consent != null) {
             if (OAuthConstants.Consent.DENY.equals(consent)) {
                 return handleDenyConsent(oAuthMessage);
@@ -358,6 +366,67 @@ public class OAuth2AuthzEndpoint {
         } else {
             return handleEmptyConsent(oAuthMessage);
         }
+    }
+
+    private boolean isConsentHandlingFromFrameworkApplicable(OAuth2Parameters oAuth2Parameters) {
+
+        return OAuth2Util.isOIDCAuthzRequest(oAuth2Parameters.getScopes());
+    }
+
+    private void handlePostConsent(OAuthMessage oAuthMessage) throws ConsentHandlingFailedException {
+
+        String tenantDomain = oAuthMessage.getSessionDataCacheEntry().getoAuth2Parameters().getTenantDomain();
+        AuthenticatedUser loggedInUser = oAuthMessage.getSessionDataCacheEntry().getLoggedInUser();
+        String clientId = oAuthMessage.getSessionDataCacheEntry().getoAuth2Parameters().getClientId();
+        ServiceProvider serviceProvider;
+        try {
+            serviceProvider = OAuth2Util.getServiceProvider(clientId, tenantDomain);
+            List<Integer> approvedClaimIds = getUserConsentClaimIds(oAuthMessage);
+            if (isConsentHandlingRequired(approvedClaimIds)) {
+                ConsentClaimsData value = getConsentRequiredClaims(loggedInUser, serviceProvider);
+                // Call framework and create the consent receipt.
+                getConsentService().processConsent(approvedClaimIds, serviceProvider, loggedInUser, value);
+            }
+        } catch (IdentityOAuth2Exception e) {
+            String msg = "Error while retrieving service provider for client_id: " + clientId + " of tenantDomain: "
+                    + tenantDomain + " to handle consent.";
+            throw new ConsentHandlingFailedException(msg, e);
+        } catch (FrameworkException e) {
+            String msg = "Error while processing consent of user: " + loggedInUser.toFullQualifiedUsername() + " for " +
+                    "client_id: " + clientId + " of tenantDomain: " + tenantDomain;
+            throw new ConsentHandlingFailedException(msg, e);
+        }
+    }
+
+    private SSOConsentService getConsentService() {
+        return EndpointUtil.getSSOConsentService();
+    }
+
+    private ConsentClaimsData getConsentRequiredClaims(AuthenticatedUser loggedInUser,
+                                                       ServiceProvider serviceProvider) throws FrameworkException {
+        return getConsentService().getConsentRequiredClaims(serviceProvider, loggedInUser);
+    }
+
+    private boolean isConsentHandlingRequired(List<Integer> approvedClaimIds) {
+        return CollectionUtils.isNotEmpty(approvedClaimIds);
+    }
+
+    private List<Integer> getUserConsentClaimIds(OAuthMessage oAuthMessage) {
+        List<Integer> approvedClaims = new ArrayList<>();
+        String consentClaimsPrefix = "consent_";
+
+        Enumeration<String> parameterNames = oAuthMessage.getRequest().getParameterNames();
+        while (parameterNames.hasMoreElements()) {
+            String parameterName = parameterNames.nextElement();
+            if (parameterName.startsWith(consentClaimsPrefix)) {
+                try {
+                    approvedClaims.add(Integer.parseInt(parameterName.substring(consentClaimsPrefix.length())));
+                } catch (NumberFormatException ex) {
+                    // Ignore and continue.
+                }
+            }
+        }
+        return approvedClaims;
     }
 
     private void addSessionDataKeyToSessionDataCacheEntry(OAuthMessage oAuthMessage) {
@@ -442,7 +511,8 @@ public class OAuth2AuthzEndpoint {
         return Response.status(HttpServletResponse.SC_FOUND).location(new URI(denyResponse)).build();
     }
 
-    private Response handleAuthenticationResponse(OAuthMessage oAuthMessage) throws OAuthSystemException, URISyntaxException {
+    private Response handleAuthenticationResponse(OAuthMessage oAuthMessage)
+            throws OAuthSystemException, URISyntaxException, ConsentHandlingFailedException {
 
         updateAuthTimeInSessionDataCacheEntry(oAuthMessage);
         addSessionDataKeyToSessionDataCacheEntry(oAuthMessage);
@@ -453,7 +523,7 @@ public class OAuth2AuthzEndpoint {
             removeAuthenticationResult(oAuthMessage, oAuthMessage.getSessionDataKeyFromLogin());
 
             if (authnResult.isAuthenticated()) {
-                return handleSuccessAuthentication(oAuthMessage, oauth2Params, authnResult);
+                return handleSuccessfulAuthentication(oAuthMessage, oauth2Params, authnResult);
             } else {
                 return handleFailedAuthentication(oAuthMessage, oauth2Params, authnResult);
             }
@@ -466,9 +536,9 @@ public class OAuth2AuthzEndpoint {
         return authnResult != null;
     }
 
-    private Response handleSuccessAuthentication(OAuthMessage oAuthMessage,
-                                                 OAuth2Parameters oauth2Params, AuthenticationResult authnResult)
-            throws OAuthSystemException, URISyntaxException {
+    private Response handleSuccessfulAuthentication(OAuthMessage oAuthMessage,
+                                                    OAuth2Parameters oauth2Params, AuthenticationResult authnResult)
+            throws OAuthSystemException, URISyntaxException, ConsentHandlingFailedException {
 
         boolean isOIDCRequest = OAuth2Util.isOIDCAuthzRequest(oauth2Params.getScopes());
         AuthenticatedUser authenticatedUser = authnResult.getSubject();
@@ -1342,18 +1412,26 @@ public class OAuth2AuthzEndpoint {
      * @throws OAuthSystemException OAuthSystemException
      */
     private String doUserAuthz(OAuthMessage oAuthMessage, String sessionDataKey, OIDCSessionState sessionState)
-            throws OAuthSystemException {
+            throws OAuthSystemException, ConsentHandlingFailedException {
 
         OAuth2Parameters oauth2Params = oAuthMessage.getSessionDataCacheEntry().getoAuth2Parameters();
-        AuthenticatedUser user = oAuthMessage.getSessionDataCacheEntry().getLoggedInUser();
-        String loggedInUser = user.getAuthenticatedSubjectIdentifier();
-        boolean hasUserApproved = isUserAlreadyApproved(oauth2Params, user);
+        AuthenticatedUser authenticatedUser = oAuthMessage.getSessionDataCacheEntry().getLoggedInUser();
+        String loggedInUser = authenticatedUser.getAuthenticatedSubjectIdentifier();
+        boolean hasUserApproved = isUserAlreadyApproved(oauth2Params, authenticatedUser);
+
+        /*
+            Handle user consent from claims that will be shared in OIDC responses
+         */
+        String queryParamsForConsent = StringUtils.EMPTY;
+        if (isConsentHandlingFromFrameworkApplicable(oauth2Params)) {
+            queryParamsForConsent = handlePreConsent(oauth2Params, authenticatedUser);
+        }
 
         if (hasPromptContainsConsent(oauth2Params)) {
-            return getUserConsentURL(sessionDataKey, oauth2Params, loggedInUser);
+            return getUserConsentURL(sessionDataKey, oauth2Params, authenticatedUser, queryParamsForConsent);
 
         } else if (isPromptNone(oauth2Params)) {
-            if (isUserSessionNotExists(user)) {
+            if (isUserSessionNotExists(authenticatedUser)) {
                 return getErrorRedirectURL(oauth2Params, OAuth2ErrorCodes.LOGIN_REQUIRED);
             }
 
@@ -1372,12 +1450,67 @@ public class OAuth2AuthzEndpoint {
                 sessionState.setAddSessionState(true);
                 return handleUserConsent(oAuthMessage, APPROVE, sessionState);
             } else {
-                return getUserConsentURL(sessionDataKey, oauth2Params, loggedInUser);
+                return getUserConsentURL(sessionDataKey, oauth2Params, authenticatedUser, queryParamsForConsent);
             }
         } else {
             return StringUtils.EMPTY;
         }
 
+    }
+
+    private String handlePreConsent(OAuth2Parameters oauth2Params,
+                                    AuthenticatedUser user) throws ConsentHandlingFailedException {
+
+        String additionalQueryParam = StringUtils.EMPTY;
+        ServiceProvider serviceProvider;
+        String clientId = oauth2Params.getClientId();
+        String spTenantDomain = oauth2Params.getTenantDomain();
+        try {
+            serviceProvider = OAuth2Util.getServiceProvider(clientId, spTenantDomain);
+            ConsentClaimsData claimsForApproval = getConsentService().getConsentRequiredClaims(serviceProvider, user);
+            if (claimsForApproval != null) {
+                // Get the mandatory claims and append as query param
+                String requestClaimsQueryParam = null;
+                if (CollectionUtils.isNotEmpty(claimsForApproval.getRequestedClaims())) {
+                    requestClaimsQueryParam = "requestedClaims=" +
+                            buildConsentClaimString(claimsForApproval.getRequestedClaims());
+                }
+
+                String mandatoryClaimsQueryParam = null;
+                if (CollectionUtils.isNotEmpty(claimsForApproval.getMandatoryClaims())) {
+                    mandatoryClaimsQueryParam = "mandatoryClaims=" +
+                            buildConsentClaimString(claimsForApproval.getMandatoryClaims());
+                }
+
+                return buildQueryParam(requestClaimsQueryParam, mandatoryClaimsQueryParam);
+            }
+        } catch (IdentityOAuth2Exception | UnsupportedEncodingException | FrameworkException e) {
+            String msg = "Error while handling user consent for claim for user: " + user.toFullQualifiedUsername() +
+                    " for client_id: " + clientId + " of tenantDomain: " + spTenantDomain;
+            throw new ConsentHandlingFailedException(msg, e);
+        }
+        return additionalQueryParam;
+    }
+
+    private String buildQueryParam(String requestClaimsQueryParam, String mandatoryClaimsQueryParam) {
+        StringJoiner joiner = new StringJoiner("&");
+        if (StringUtils.isNotBlank(requestClaimsQueryParam)) {
+            joiner.add(requestClaimsQueryParam);
+        }
+
+        if (StringUtils.isNotBlank(mandatoryClaimsQueryParam)) {
+            joiner.add(mandatoryClaimsQueryParam);
+        }
+
+        return joiner.toString();
+    }
+
+    private String buildConsentClaimString(List<ClaimMetaData> consentClaimsData) throws UnsupportedEncodingException {
+        StringJoiner joiner = new StringJoiner(",");
+        for (ClaimMetaData claimMetaData : consentClaimsData) {
+            joiner.add(claimMetaData.getId() + "_" + claimMetaData.getDisplayName());
+        }
+        return URLEncoder.encode(joiner.toString(), StandardCharsets.UTF_8.toString());
     }
 
     private boolean isPromptEqualLoginOrNoPrompt(OAuth2Parameters oauth2Params) {
@@ -1466,6 +1599,17 @@ public class OAuth2AuthzEndpoint {
     private String getUserConsentURL(String sessionDataKey, OAuth2Parameters oauth2Params, String loggedInUser) throws OAuthSystemException {
         return EndpointUtil.getUserConsentURL(oauth2Params, loggedInUser, sessionDataKey,
                 OAuth2Util.isOIDCAuthzRequest(oauth2Params.getScopes()));
+    }
+
+    private String getUserConsentURL(String sessionDataKey,
+                                     OAuth2Parameters oauth2Params,
+                                     AuthenticatedUser authenticatedUser,
+                                     String additionalQueryParams) throws OAuthSystemException {
+
+        String loggedInUser = authenticatedUser.getAuthenticatedSubjectIdentifier();
+        String userConsentURL = EndpointUtil.getUserConsentURL(oauth2Params, loggedInUser, sessionDataKey,
+                OAuth2Util.isOIDCAuthzRequest(oauth2Params.getScopes()));
+        return FrameworkUtils.appendQueryParamsStringToUrl(userConsentURL, additionalQueryParams);
     }
 
     /**

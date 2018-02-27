@@ -154,22 +154,48 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
             userClaimsInOIDCDialect = getOIDCClaimMapFromUserAttributes(userAttributes);
         }
 
+        AuthenticatedUser user = requestMsgCtx.getAuthorizedUser();
         String clientId = requestMsgCtx.getOauth2AccessTokenReqDTO().getClientId();
         String spTenantDomain = requestMsgCtx.getOauth2AccessTokenReqDTO().getTenantDomain();
-        Map<String, Object> filterClaimsByScopesAndEssentialClaims = new HashMap<>();
-        filterClaimsByScopesAndEssentialClaims.putAll(filterClaimsByScope(userClaimsInOIDCDialect, requestMsgCtx.getScope(),
-                clientId, spTenantDomain));
+        String[] approvedScopes = requestMsgCtx.getScope();
+        String token = getAccessToken(requestMsgCtx);
+
+        return filterOIDCClaims(token, userClaimsInOIDCDialect, user, approvedScopes, clientId, spTenantDomain);
+    }
+
+    private Map<String, Object> filterOIDCClaims(String accessToken,
+                                                 Map<String, Object> userClaimsInOIDCDialect,
+                                                 AuthenticatedUser authenticatedUser,
+                                                 String[] approvedScopes,
+                                                 String clientId,
+                                                 String spTenantDomain) throws OAuthSystemException {
+
+        if (isEmpty(userClaimsInOIDCDialect)) {
+            if (log.isDebugEnabled()) {
+                log.debug("No claims to filter for user: " + authenticatedUser.toFullQualifiedUsername() + " for " +
+                        "client_id: " + clientId + " in tenantDomain: " + spTenantDomain);
+            }
+            return new HashMap<>();
+        }
+
+        Map<String, Object> filteredUserClaimsByOIDCScopes =
+                filterClaimsByScope(userClaimsInOIDCDialect, approvedScopes, clientId, spTenantDomain);
+
+        // TODO: Get claims filtered by essential claims and add to returning claims
+        // https://github.com/wso2/product-is/issues/2680
 
         // Handle essential claims of the request object
-        String token = getAccessToken(requestMsgCtx);
-        filterClaimsByScopesAndEssentialClaims.putAll(filterClaimsFromRequestObject(userClaimsInOIDCDialect, token));
+        Map<String, Object> claimsFromRequestObject =
+                filterClaimsFromRequestObject(userClaimsInOIDCDialect, accessToken);
+        filteredUserClaimsByOIDCScopes.putAll(claimsFromRequestObject);
 
-        // Restrict Claims going into the token based on the scope and the essential claims
-        return filterClaimsByScopesAndEssentialClaims;
+        // Restrict the claims based on user consent given
+        return getUserConsentedClaims(filteredUserClaimsByOIDCScopes, authenticatedUser, clientId, spTenantDomain);
     }
 
     private Map<String, Object> filterClaimsFromRequestObject(Map<String, Object> userAttributes,
-                                                       String token) throws OAuthSystemException {
+                                                              String token) throws OAuthSystemException {
+
         try {
             List<RequestedClaim> requestedClaims = OpenIDConnectServiceComponentHolder.getRequestObjectService().
                     getRequestedClaimsForIDToken(token);
@@ -179,6 +205,16 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         } catch (RequestObjectException e) {
             throw new OAuthSystemException("Unable to retrieve requested claims from Request Object." + e);
         }
+    }
+
+    private Map<String, Object> getUserConsentedClaims(Map<String, Object> userClaims,
+                                                       AuthenticatedUser authenticatedUser,
+                                                       String clientId,
+                                                       String spTenantDomain) throws OAuthSystemException {
+
+        return OpenIDConnectServiceComponentHolder.getInstance()
+                .getHighestPriorityOpenIDConnectClaimFilter()
+                .getClaimsFilteredByUserConsent(userClaims, authenticatedUser, clientId, spTenantDomain);
     }
 
     private Map<ClaimMapping, String> getCachedUserAttributes(OAuthTokenReqMessageContext requestMsgCtx) {
@@ -246,18 +282,13 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
             userClaimsInOIDCDialect = getOIDCClaimMapFromUserAttributes(userAttributes);
         }
 
+        AuthenticatedUser user = authzReqMessageContext.getAuthorizationReqDTO().getUser();
         String clientId = authzReqMessageContext.getAuthorizationReqDTO().getConsumerKey();
         String spTenantDomain = authzReqMessageContext.getAuthorizationReqDTO().getTenantDomain();
         String[] approvedScopes = authzReqMessageContext.getApprovedScope();
-        Map<String, Object> filterClaimsByScopesAndEssentialClaims = new HashMap<>();
-        filterClaimsByScopesAndEssentialClaims.putAll(filterClaimsByScope(userClaimsInOIDCDialect, approvedScopes,
-                clientId, spTenantDomain));
+        String accessToken = getAccessToken(authzReqMessageContext);
 
-        //Handle essential claims of the request object
-        String token = getAccessToken(authzReqMessageContext);
-        filterClaimsByScopesAndEssentialClaims.putAll(filterClaimsFromRequestObject(userClaimsInOIDCDialect, token));
-
-        return filterClaimsByScopesAndEssentialClaims;
+        return filterOIDCClaims(accessToken, userClaimsInOIDCDialect, user, approvedScopes, clientId, spTenantDomain);
     }
 
     private Map<String, Object> retrieveClaimsForLocalUser(OAuthAuthzReqMessageContext authzReqMessageContext) {
