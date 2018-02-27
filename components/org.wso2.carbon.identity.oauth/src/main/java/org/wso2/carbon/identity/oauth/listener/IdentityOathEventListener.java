@@ -46,6 +46,7 @@ import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -259,23 +260,28 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
                 log.error(errorMsg, e);
                 return true;
             }
+
+            Set<String> scopes = new HashSet<>();
             for (AccessTokenDO accessTokenDO : accessTokenDOs) {
-                //Clear cache
+                // Clear cache
                 OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser(),
                         OAuth2Util.buildScopeString(accessTokenDO.getScope()));
                 OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser());
                 OAuthUtil.clearOAuthCache(accessTokenDO.getAccessToken());
+                // Get unique scopes list
+                scopes.add(OAuth2Util.buildScopeString(accessTokenDO.getScope()));
+            }
+
+            for (String scope : scopes) {
                 AccessTokenDO scopedToken = null;
                 try {
                     // retrieve latest access token for particular client, user and scope combination if its ACTIVE or EXPIRED
                     scopedToken = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
-                            .getLatestAccessToken(clientId, authenticatedUser, userStoreDomain,
-                                    OAuth2Util.buildScopeString(accessTokenDO.getScope()), true);
+                            .getLatestAccessToken(clientId, authenticatedUser, userStoreDomain, scope, true);
                 } catch (IdentityOAuth2Exception e) {
                     String errorMsg = "Error occurred while retrieving latest " +
                             "access token issued for Client ID : " +
-                            clientId + ", User ID : " + authenticatedUser + " and Scope : " +
-                            OAuth2Util.buildScopeString(accessTokenDO.getScope());
+                            clientId + ", User ID : " + authenticatedUser + " and Scope : " + scope;
                     log.error(errorMsg, e);
                     return true;
                 }
