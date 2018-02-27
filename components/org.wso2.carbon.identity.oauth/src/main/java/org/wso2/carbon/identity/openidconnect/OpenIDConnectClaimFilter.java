@@ -47,8 +47,7 @@ public interface OpenIDConnectClaimFilter {
                                                       String spTenantDomain);
 
     /**
-     *
-     *
+     * Filter user claims based on user consent.
      *
      * @param userClaims
      * @param authenticatedUser
