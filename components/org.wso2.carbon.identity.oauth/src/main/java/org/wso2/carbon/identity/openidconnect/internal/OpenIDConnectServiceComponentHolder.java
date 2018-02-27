@@ -16,6 +16,8 @@
 
 package org.wso2.carbon.identity.openidconnect.internal;
 
+import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.SSOConsentService;
+import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.openidconnect.ClaimProvider;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilter;
@@ -33,6 +35,8 @@ public class OpenIDConnectServiceComponentHolder {
     private static RequestObjectService requestObjectService;
     private static IdentityEventService identityEventService;
     private static RequestObjectHandler requestObjectHandler;
+    private ClaimMetadataManagementService claimMetadataManagementService;
+    private SSOConsentService ssoConsentService;
 
     public static RequestObjectHandler getRequestObjectHandler() {
 
@@ -90,5 +94,23 @@ public class OpenIDConnectServiceComponentHolder {
      */
     public List<ClaimProvider> getClaimProviders() {
         return claimProviders;
+    }
+
+    public void setClaimMetadataManagementService(ClaimMetadataManagementService claimMetadataManagementService) {
+        this.claimMetadataManagementService = claimMetadataManagementService;
+    }
+
+    public ClaimMetadataManagementService getClaimMetadataManagementService() {
+        return claimMetadataManagementService;
+    }
+
+    public void setSsoConsentService(SSOConsentService ssoConsentService) {
+
+        this.ssoConsentService = ssoConsentService;
+    }
+
+    public SSOConsentService getSsoConsentService() {
+
+        return ssoConsentService;
     }
 }

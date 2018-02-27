@@ -24,9 +24,12 @@ import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
+import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.SSOConsentService;
+import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.openidconnect.ClaimProvider;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilter;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectSystemClaimImpl;
@@ -211,4 +214,45 @@ public class OpenIDConnectServiceComponent {
         }
         OpenIDConnectServiceComponentHolder.setRequestObjectHandler(null);
     }
+
+    @Reference(
+            name = "claim.manager.listener.service",
+            service = ClaimMetadataManagementService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetClaimManagementService"
+    )
+    protected void setClaimManagementService(ClaimMetadataManagementService claimMetadataManagementService) {
+        OpenIDConnectServiceComponentHolder.getInstance()
+                .setClaimMetadataManagementService(claimMetadataManagementService);
+    }
+
+    protected void unsetClaimManagementService(ClaimMetadataManagementService claimMetadataManagementService) {
+        OpenIDConnectServiceComponentHolder.getInstance()
+                .setClaimMetadataManagementService(null);
+    }
+
+    @Reference(
+            name = "sso.consent.service",
+            service = SSOConsentService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetConsentManagementService"
+    )
+    protected void setConsentManagementService(SSOConsentService ssoConsentService) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Setting the SSOConsentService.");
+        }
+        OpenIDConnectServiceComponentHolder.getInstance().setSsoConsentService(ssoConsentService);
+    }
+
+    protected void unsetConsentManagementService(SSOConsentService ssoConsentService) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Un setting the SSOConsentService");
+        }
+        OpenIDConnectServiceComponentHolder.getInstance().setSsoConsentService(null);
+    }
+
 }

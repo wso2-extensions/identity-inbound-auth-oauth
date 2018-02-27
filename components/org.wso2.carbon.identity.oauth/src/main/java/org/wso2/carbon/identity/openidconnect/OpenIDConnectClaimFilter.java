@@ -16,7 +16,7 @@
 
 package org.wso2.carbon.identity.openidconnect;
 
-
+import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 
 import java.util.List;
@@ -47,6 +47,23 @@ public interface OpenIDConnectClaimFilter {
                                                       String spTenantDomain);
 
     /**
+     *
+     *
+     *
+     * @param userClaims
+     * @param authenticatedUser
+     * @param clientId
+     * @param spTenantDomain
+     * @return
+     */
+    default Map<String, Object> getClaimsFilteredByUserConsent(Map<String, Object> userClaims,
+                                                               AuthenticatedUser authenticatedUser,
+                                                               String clientId,
+                                                               String spTenantDomain) {
+        return userClaims;
+    }
+
+    /**
      * Priority of the Claim Filter. Claims filters will be sorted based on their priority value and by default only
      * the claim filter with the highest priority will be executed.
      *
@@ -60,5 +77,6 @@ public interface OpenIDConnectClaimFilter {
      * @param requestParamClaims
      * @return
      */
-    Map<String, Object> getClaimsFilteredByEssentialClaims(Map<String, Object> userClaims, List<RequestedClaim> requestParamClaims);
+    Map<String, Object> getClaimsFilteredByEssentialClaims(Map<String, Object> userClaims,
+                                                           List<RequestedClaim> requestParamClaims);
 }

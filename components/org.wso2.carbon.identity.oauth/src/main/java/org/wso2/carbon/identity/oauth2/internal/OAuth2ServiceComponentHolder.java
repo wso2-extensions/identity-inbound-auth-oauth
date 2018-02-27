@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth2.internal;
 
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationMethodNameTranslator;
+import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.SSOConsentService;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.handler.HandlerComparator;
 import org.wso2.carbon.identity.entitlement.EntitlementService;
@@ -154,5 +155,4 @@ public class OAuth2ServiceComponentHolder {
     public static EntitlementService getEntitlementService() {
         return entitlementService;
     }
-
 }

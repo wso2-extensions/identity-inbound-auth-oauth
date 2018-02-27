@@ -122,6 +122,9 @@ public class InvalidRequestExceptionMapper implements ExceptionMapper<InvalidReq
                 return handleInternalServerError();
             }
         } else {
+            if (log.isDebugEnabled()) {
+                log.debug("OAuth System error while processing request: ", exception);
+            }
             return handleInternalServerError();
         }
     }

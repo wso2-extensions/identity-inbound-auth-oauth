@@ -72,7 +72,7 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
     }
 
     private void setUpRequestObjectService() throws RequestObjectException {
-        List<RequestedClaim> requestedClaims =  Collections.EMPTY_LIST;
+        List<RequestedClaim> requestedClaims =  Collections.emptyList();
         when(requestObjectService.getRequestedClaimsForIDToken(anyString())).
                 thenReturn(requestedClaims);
         when(requestObjectService.getRequestedClaimsForUserInfo(anyString())).

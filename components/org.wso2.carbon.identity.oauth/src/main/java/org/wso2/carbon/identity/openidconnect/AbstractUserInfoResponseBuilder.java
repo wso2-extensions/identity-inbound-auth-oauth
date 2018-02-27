@@ -16,6 +16,7 @@
 
 package org.wso2.carbon.identity.openidconnect;
 
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -64,23 +65,47 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
         String spTenantDomain = getServiceProviderTenantDomain(tokenResponse);
         // Retrieve user claims.
         Map<String, Object> userClaims = retrieveUserClaims(tokenResponse);
-
-        // Filter user claims based on the requested scopes
-        Map<String, Object> filteredUserClaims =
-                getUserClaimsFilteredByScope(userClaims, tokenResponse.getScope(), clientId, spTenantDomain);
+        Map<String, Object> filteredUserClaims = filterOIDCClaims(tokenResponse, clientId, spTenantDomain, userClaims);
 
         // Handle subject claim.
         String subjectClaim = getSubjectClaim(userClaims, clientId, spTenantDomain, tokenResponse);
         filteredUserClaims.put(OAuth2Util.SUB, subjectClaim);
 
+        return buildResponse(tokenResponse, spTenantDomain, filteredUserClaims);
+    }
+
+    private Map<String, Object> filterOIDCClaims(OAuth2TokenValidationResponseDTO tokenResponse,
+                                                 String clientId,
+                                                 String spTenantDomain,
+                                                 Map<String, Object> userClaims)
+            throws OAuthSystemException, UserInfoEndpointException {
+
+        if(MapUtils.isEmpty(userClaims)) {
+            if (log.isDebugEnabled()) {
+                AuthenticatedUser authenticatedUser = getAuthenticatedUser(getAccessToken(tokenResponse));
+                log.debug("No user claims available to be filtered for user: " +
+                        authenticatedUser.toFullQualifiedUsername() + " for client_id: " + clientId +
+                        " of tenantDomain: " + spTenantDomain);
+            }
+            return new HashMap<>();
+        }
+
+        // Filter user claims based on the requested scopes
+        Map<String, Object> userClaimsFilteredByScope =
+                getUserClaimsFilteredByScope(userClaims, tokenResponse.getScope(), clientId, spTenantDomain);
+
         // Handle essential claims
         Map<String, Object> essentialClaims = getEssentialClaims(tokenResponse, userClaims);
-        filteredUserClaims.putAll(essentialClaims);
+        userClaimsFilteredByScope.putAll(essentialClaims);
 
         //Handle essential claims of the request object
-        filteredUserClaims.putAll(filterClaimsFromRequestObject(userClaims, getAccessToken(tokenResponse)));
+        Map<String, Object> filteredClaimsFromRequestObject =
+                filterClaimsFromRequestObject(userClaims, getAccessToken(tokenResponse));
+        userClaimsFilteredByScope.putAll(filteredClaimsFromRequestObject);
 
-        return buildResponse(tokenResponse, spTenantDomain, filteredUserClaims);
+        // Filter the user claims based on user consent
+        AuthenticatedUser authenticatedUser = getAuthenticatedUser(getAccessToken(tokenResponse));
+        return getUserClaimsFilteredByConsent(userClaimsFilteredByScope, authenticatedUser, clientId, spTenantDomain);
     }
 
     private Map<String, Object> filterClaimsFromRequestObject(Map<String, Object> userAttributes,
@@ -161,6 +186,26 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
                 .getHighestPriorityOpenIDConnectClaimFilter()
                 .getClaimsFilteredByOIDCScopes(userClaims, requestedScopes, clientId, tenantDomain);
     }
+
+    /**
+     * Filter user claims requested by the Service Provider based on the requested scopes.
+     *
+     * @param userClaims
+     * @param user
+     * @param clientId
+     * @param tenantDomain
+     * @return
+     */
+    protected Map<String, Object> getUserClaimsFilteredByConsent(Map<String, Object> userClaims,
+                                                                 AuthenticatedUser user,
+                                                                 String clientId,
+                                                                 String tenantDomain) {
+        return OpenIDConnectServiceComponentHolder.getInstance()
+                .getHighestPriorityOpenIDConnectClaimFilter()
+                .getClaimsFilteredByUserConsent(userClaims, user , clientId, tenantDomain);
+    }
+
+
 
     protected Map<String, Object> getEssentialClaims(OAuth2TokenValidationResponseDTO tokenResponse,
                                                      Map<String, Object> claims) throws UserInfoEndpointException {
