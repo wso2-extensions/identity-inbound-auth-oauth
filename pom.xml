@@ -531,8 +531,7 @@
                 <groupId>org.wso2.orbit.org.apache.httpcomponents</groupId>
                 <artifactId>httpclient</artifactId>
                 <version>${http.client.version}</version>
-                <scope>provided</scope>
-            </dependency>
+             </dependency>
         </dependencies>
     </dependencyManagement>
 
