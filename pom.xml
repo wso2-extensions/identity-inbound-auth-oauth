@@ -527,6 +527,12 @@
                 <artifactId>tomcat-coyote</artifactId>
                 <version>${tomcat.version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.wso2.orbit.org.apache.httpcomponents</groupId>
+                <artifactId>httpclient</artifactId>
+                <version>${http.client.version}</version>
+                <scope>provided</scope>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -792,6 +798,8 @@
         <jackson.version>1.8.6</jackson.version>
         <spring-web.version>4.1.6.RELEASE</spring-web.version>
         <swagger-jaxrs.version>1.5.2</swagger-jaxrs.version>
+
+        <http.client.version>4.3.6.wso2v1</http.client.version>
 
         <!--Test Dependencies-->
         <junit.version>4.12</junit.version>
