@@ -798,7 +798,7 @@
         <jackson.version>1.8.6</jackson.version>
         <spring-web.version>4.1.6.RELEASE</spring-web.version>
         <swagger-jaxrs.version>1.5.2</swagger-jaxrs.version>
-
+        <!-- httpclient dependency Version-->
         <http.client.version>4.3.6.wso2v1</http.client.version>
 
         <!--Test Dependencies-->
