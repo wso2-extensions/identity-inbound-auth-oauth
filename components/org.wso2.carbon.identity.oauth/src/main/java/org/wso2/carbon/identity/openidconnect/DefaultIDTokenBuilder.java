@@ -131,7 +131,8 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
 
         // AuthorizationCode only available for authorization code grant type
         if (getAuthorizationCode(tokenReqMsgCtxt) != null) {
-            AuthorizationGrantCacheEntry authzGrantCacheEntry = getAuthorizationGrantCacheEntry(tokenReqMsgCtxt);
+            AuthorizationGrantCacheEntry authzGrantCacheEntry =
+                    getAuthorizationGrantCacheEntryFromToken(tokenRespDTO.getAccessToken());
             if (authzGrantCacheEntry != null) {
                 nonceValue = authzGrantCacheEntry.getNonceValue();
                 acrValue = authzGrantCacheEntry.getAcrValue();
@@ -604,13 +605,14 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
     }
 
     /**
-     * @param request
+     * @param accessToken
      * @return AuthorizationGrantCacheEntry contains user attributes and nonce value
      */
-    private AuthorizationGrantCacheEntry getAuthorizationGrantCacheEntry(OAuthTokenReqMessageContext request) {
-        String authorizationCode = getAuthorizationCode(request);
-        AuthorizationGrantCacheKey authorizationGrantCacheKey = new AuthorizationGrantCacheKey(authorizationCode);
-        return AuthorizationGrantCache.getInstance().getValueFromCacheByCode(authorizationGrantCacheKey);
+    private AuthorizationGrantCacheEntry getAuthorizationGrantCacheEntryFromToken(String accessToken) {
+        AuthorizationGrantCacheKey authorizationGrantCacheKey = new AuthorizationGrantCacheKey(accessToken);
+        AuthorizationGrantCacheEntry authorizationGrantCacheEntry = AuthorizationGrantCache.getInstance().
+                getValueFromCacheByToken(authorizationGrantCacheKey);
+        return authorizationGrantCacheEntry;
     }
 
     /**
