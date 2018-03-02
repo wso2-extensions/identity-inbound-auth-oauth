@@ -234,7 +234,7 @@ public class AccessTokenIssuer {
 
             if (log.isDebugEnabled()) {
                 log.debug("Client Id: " + tokenReqDTO.getClientId() + " is not authorized to use grant type: " +
-                        tokenReqDTO.getGrantType());
+                        grantType);
             }
             tokenRespDTO = handleError(OAuthError.TokenResponse.UNAUTHORIZED_CLIENT, error, tokenReqDTO);
             setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
@@ -324,7 +324,7 @@ public class AccessTokenIssuer {
                     tokReqMsgCtx.getAuthorizedUser() + " and scopes: " + tokenRespDTO.getAuthorizedScopes());
         }
 
-        if (tokenReqDTO.getGrantType().equals(GrantType.AUTHORIZATION_CODE.toString())) {
+        if (GrantType.AUTHORIZATION_CODE.toString().equals(grantType)) {
             addUserAttributesToCache(tokenReqDTO, tokenRespDTO);
         }
 
@@ -421,10 +421,13 @@ public class AccessTokenIssuer {
             AuthorizationGrantCacheKey newCacheKey = new AuthorizationGrantCacheKey(tokenRespDTO.getAccessToken());
             if (authorizationGrantCacheEntry != null) {
                 authorizationGrantCacheEntry.setTokenId(tokenRespDTO.getTokenId());
-                if (log.isDebugEnabled()
-                        && IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
-                    log.debug("Adding AuthorizationGrantCache entry for the access token(hashed):" +
-                            DigestUtils.sha256Hex(newCacheKey.getUserAttributesId()));
+                if (log.isDebugEnabled()) {
+                    if(IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                        log.debug("Adding AuthorizationGrantCache entry for the access token(hashed):" +
+                                DigestUtils.sha256Hex(newCacheKey.getUserAttributesId()));
+                    } else {
+                        log.debug("Adding AuthorizationGrantCache entry for the access token");
+                    }
                 }
                 AuthorizationGrantCache.getInstance().addToCacheByToken(newCacheKey, authorizationGrantCacheEntry);
                 AuthorizationGrantCache.getInstance().clearCacheEntryByCode(oldCacheKey);
