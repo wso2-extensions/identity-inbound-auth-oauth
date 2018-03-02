@@ -234,7 +234,7 @@ public class AccessTokenIssuer {
 
             if (log.isDebugEnabled()) {
                 log.debug("Client Id: " + tokenReqDTO.getClientId() + " is not authorized to use grant type: " +
-                        tokenReqDTO.getGrantType());
+                        grantType);
             }
             tokenRespDTO = handleError(OAuthError.TokenResponse.UNAUTHORIZED_CLIENT, error, tokenReqDTO);
             setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
@@ -324,6 +324,10 @@ public class AccessTokenIssuer {
                     tokReqMsgCtx.getAuthorizedUser() + " and scopes: " + tokenRespDTO.getAuthorizedScopes());
         }
 
+        if (GrantType.AUTHORIZATION_CODE.toString().equals(grantType)) {
+            addUserAttributesToCache(tokenReqDTO, tokenRespDTO);
+        }
+
         if (tokReqMsgCtx.getScope() != null && OAuth2Util.isOIDCAuthzRequest(tokReqMsgCtx.getScope())) {
             if (log.isDebugEnabled()) {
                 log.debug("Issuing ID token for client: " + tokenReqDTO.getClientId());
@@ -337,10 +341,6 @@ public class AccessTokenIssuer {
                 tokenRespDTO = handleError(OAuth2ErrorCodes.SERVER_ERROR, "Server Error", tokenReqDTO);
                 return tokenRespDTO;
             }
-        }
-
-        if (tokenReqDTO.getGrantType().equals(GrantType.AUTHORIZATION_CODE.toString())) {
-            addUserAttributesToCache(tokenReqDTO, tokenRespDTO);
         }
 
         return tokenRespDTO;
@@ -421,17 +421,16 @@ public class AccessTokenIssuer {
             AuthorizationGrantCacheKey newCacheKey = new AuthorizationGrantCacheKey(tokenRespDTO.getAccessToken());
             if (authorizationGrantCacheEntry != null) {
                 authorizationGrantCacheEntry.setTokenId(tokenRespDTO.getTokenId());
-                if (AuthorizationGrantCache.getInstance().getValueFromCacheByToken(newCacheKey) == null) {
-                    if (log.isDebugEnabled()
-                            && IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
-                        log.debug("No AuthorizationGrantCache entry found for the access token(hashed):" +
-                                DigestUtils.sha256Hex(newCacheKey.getUserAttributesId()) + ", hence adding to cache");
+                if (log.isDebugEnabled()) {
+                    if(IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                        log.debug("Adding AuthorizationGrantCache entry for the access token(hashed):" +
+                                DigestUtils.sha256Hex(newCacheKey.getUserAttributesId()));
+                    } else {
+                        log.debug("Adding AuthorizationGrantCache entry for the access token");
                     }
-                    AuthorizationGrantCache.getInstance().addToCacheByToken(newCacheKey, authorizationGrantCacheEntry);
-                    AuthorizationGrantCache.getInstance().clearCacheEntryByCode(oldCacheKey);
-                } else {
-                    //if the user attributes are already saved for access token, no need to add again.
                 }
+                AuthorizationGrantCache.getInstance().addToCacheByToken(newCacheKey, authorizationGrantCacheEntry);
+                AuthorizationGrantCache.getInstance().clearCacheEntryByCode(oldCacheKey);
             }
         }
     }
