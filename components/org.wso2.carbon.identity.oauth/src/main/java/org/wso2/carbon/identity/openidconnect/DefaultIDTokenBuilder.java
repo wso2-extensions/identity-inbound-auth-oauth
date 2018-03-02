@@ -164,7 +164,8 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
 
         // AuthorizationCode only available for authorization code grant type
         if (getAuthorizationCode(tokenReqMsgCtxt) != null) {
-            AuthorizationGrantCacheEntry authzGrantCacheEntry = getAuthorizationGrantCacheEntry(tokenReqMsgCtxt);
+            AuthorizationGrantCacheEntry authzGrantCacheEntry = getAuthorizationGrantCacheEntryFromToken
+                    (tokenRespDTO.getAccessToken());
             if (authzGrantCacheEntry != null) {
                 nonceValue = authzGrantCacheEntry.getNonceValue();
                 acrValue = authzGrantCacheEntry.getSelectedAcrValue();
@@ -657,13 +658,13 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
     }
 
     /**
-     * @param request
+     * @param accessToken
      * @return AuthorizationGrantCacheEntry contains user attributes and nonce value
      */
-    private AuthorizationGrantCacheEntry getAuthorizationGrantCacheEntry(OAuthTokenReqMessageContext request) {
-        String authorizationCode = getAuthorizationCode(request);
-        AuthorizationGrantCacheKey authorizationGrantCacheKey = new AuthorizationGrantCacheKey(authorizationCode);
-        return AuthorizationGrantCache.getInstance().getValueFromCacheByCode(authorizationGrantCacheKey);
+    private AuthorizationGrantCacheEntry getAuthorizationGrantCacheEntryFromToken(String accessToken) {
+
+        AuthorizationGrantCacheKey authorizationGrantCacheKey = new AuthorizationGrantCacheKey(accessToken);
+        return AuthorizationGrantCache.getInstance().getValueFromCacheByToken(authorizationGrantCacheKey);
     }
 
     /**
@@ -901,9 +902,9 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         List<ClaimProvider> claimProviders = getClaimProviders();
         if (CollectionUtils.isNotEmpty(claimProviders)) {
             for (ClaimProvider claimProvider : claimProviders) {
-                Map<String, Object>  additionalIdTokenClaims =
+                Map<String, Object> additionalIdTokenClaims =
                         claimProvider.getAdditionalClaims(authzReqMessageContext, authorizeRespDTO);
-                setAdditionalClaimSet(jwtClaimsSet,  additionalIdTokenClaims);
+                setAdditionalClaimSet(jwtClaimsSet, additionalIdTokenClaims);
             }
         }
     }
