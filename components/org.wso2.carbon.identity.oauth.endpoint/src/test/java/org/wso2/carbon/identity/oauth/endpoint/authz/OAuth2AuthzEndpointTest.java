@@ -92,6 +92,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.nio.file.Paths;
+import java.sql.Connection;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -121,6 +122,7 @@ import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.eq;
 import static org.mockito.MockitoAnnotations.initMocks;
 import static org.powermock.api.mockito.PowerMockito.doAnswer;
+import static org.powermock.api.mockito.PowerMockito.doCallRealMethod;
 import static org.powermock.api.mockito.PowerMockito.doNothing;
 import static org.powermock.api.mockito.PowerMockito.doReturn;
 import static org.powermock.api.mockito.PowerMockito.doThrow;
@@ -516,28 +518,35 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
         mockStatic(FrameworkUtils.class);
         when(FrameworkUtils.getAuthenticationResultFromCache(anyString())).thenReturn(authResultCacheEntry);
+        when(FrameworkUtils.appendQueryParamsStringToUrl(anyString(), anyString())).thenCallRealMethod();
 
         OAuth2Parameters oAuth2Params = setOAuth2Parameters(scopes, APP_NAME, responseMode, redirectUri);
+        oAuth2Params.setClientId(CLIENT_ID_VALUE);
         when(loginCacheEntry.getoAuth2Parameters()).thenReturn(oAuth2Params);
         when(loginCacheEntry.getLoggedInUser()).thenReturn(result.getSubject());
 
         mockOAuthServerConfiguration();
 
-        mockStatic(IdentityDatabaseUtil.class);
-        when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+        mockStatic(IdentityTenantUtil.class);
+        when(IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
 
-        mockStatic(OpenIDConnectUserRPStore.class);
-        when(OpenIDConnectUserRPStore.getInstance()).thenReturn(openIDConnectUserRPStore);
-        when(openIDConnectUserRPStore.hasUserApproved(any(AuthenticatedUser.class), anyString(), anyString())).
-                thenReturn(true);
+        try (Connection connection = getConnection()) {
+            mockStatic(IdentityDatabaseUtil.class);
+            when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
 
-        mockEndpointUtil();
-        when(oAuth2Service.getOauthApplicationState(CLIENT_ID_VALUE)).thenReturn("ACTIVE");
+            mockStatic(OpenIDConnectUserRPStore.class);
+            when(OpenIDConnectUserRPStore.getInstance()).thenReturn(openIDConnectUserRPStore);
+            when(openIDConnectUserRPStore.hasUserApproved(any(AuthenticatedUser.class), anyString(), anyString())).
+                    thenReturn(true);
 
-        mockApplicationManagementService();
+            mockEndpointUtil();
+            when(oAuth2Service.getOauthApplicationState(CLIENT_ID_VALUE)).thenReturn("ACTIVE");
 
-        Response response = oAuth2AuthzEndpoint.authorize(httpServletRequest, httpServletResponse);
-        assertEquals(response.getStatus(), expected, "Unexpected HTTP response status");
+            mockApplicationManagementService();
+
+            Response response = oAuth2AuthzEndpoint.authorize(httpServletRequest, httpServletResponse);
+            assertEquals(response.getStatus(), expected, "Unexpected HTTP response status");
+        }
     }
 
     @DataProvider(name = "provideConsentData")
@@ -600,6 +609,9 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
         mockStatic(OAuth2Util.OAuthURL.class);
         when(OAuth2Util.OAuthURL.getOAuth2ErrorPageUrl()).thenReturn(ERROR_PAGE_URL);
+
+        mockStatic(OAuth2Util.class);
+        when(OAuth2Util.getServiceProvider(CLIENT_ID_VALUE)).thenReturn(new ServiceProvider());
 
         mockEndpointUtil();
         when(oAuth2Service.getOauthApplicationState(CLIENT_ID_VALUE)).thenReturn("ACTIVE");
@@ -936,6 +948,8 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
         when(oAuthServerConfiguration.getOpenIDConnectSkipeUserConsentConfig()).thenReturn(skipConsent);
 
+        mockStatic(OAuth2Util.class);
+        when(OAuth2Util.getServiceProvider(CLIENT_ID_VALUE)).thenReturn(new ServiceProvider());
         mockApplicationManagementService();
 
         Response response;
@@ -1193,8 +1207,10 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
     }
 
     private void mockApplicationManagementService() throws IdentityApplicationManagementException {
+        mockApplicationManagementService(new ServiceProvider());
+    }
 
-        ServiceProvider sp = new ServiceProvider();
+    private void mockApplicationManagementService(ServiceProvider sp) throws IdentityApplicationManagementException {
         ApplicationManagementService appMgtService = mock(ApplicationManagementService.class);
         when(appMgtService.getServiceProviderByClientId(anyString(), anyString(), anyString())).thenReturn(sp);
         OAuth2ServiceComponentHolder.setApplicationMgtService(appMgtService);
@@ -1364,32 +1380,33 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
     @Test(dataProvider = "provideGetServiceProviderData", groups = "testWithConnection")
     public void testGetServiceProvider(String clientId, Exception e) throws Exception {
-        Method getServiceProvider = authzEndpointObject.getClass().getDeclaredMethod(
-                "getServiceProvider", String.class);
+        Method getServiceProvider = authzEndpointObject.getClass().getDeclaredMethod("getServiceProvider", String.class);
         getServiceProvider.setAccessible(true);
 
         ServiceProvider sp = new ServiceProvider();
         sp.setApplicationName(APP_NAME);
         mockOAuthServerConfiguration();
         mockEndpointUtil();
-        doReturn(applicationManagementService).when(EndpointUtil.class, "getApplicationManagementService");
-        when(applicationManagementService.getServiceProvider(anyString(), anyString())).thenReturn(sp);
+
+        mockApplicationManagementService(sp);
 
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
 
-        mockStatic(IdentityDatabaseUtil.class);
-        when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+        try (Connection connection = getConnection()) {
+            mockStatic(IdentityDatabaseUtil.class);
+            when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
 
-        if (e instanceof IdentityOAuth2Exception) {
-            when(tokenPersistenceProcessor.getPreprocessedClientSecret(anyString())).thenThrow(e);
-        }
-        try {
-            ServiceProvider result = (ServiceProvider) getServiceProvider.invoke(authzEndpointObject, clientId);
-            assertEquals(result.getApplicationName(), APP_NAME);
-        } catch (Exception e1) {
-            if (e == null && CLIENT_ID_VALUE.equals(clientId)) {
-                fail("Unexpected Exception");
+            if (e instanceof IdentityOAuth2Exception) {
+                when(tokenPersistenceProcessor.getPreprocessedClientSecret(anyString())).thenThrow(e);
+            }
+            try {
+                ServiceProvider result = (ServiceProvider) getServiceProvider.invoke(authzEndpointObject, clientId);
+                assertEquals(result.getApplicationName(), APP_NAME);
+            } catch (Exception e1) {
+                if (e == null && CLIENT_ID_VALUE.equals(clientId)) {
+                    fail("Unexpected Exception");
+                }
             }
         }
     }
@@ -1425,11 +1442,10 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         ServiceProvider sp = (ServiceProvider) spObj;
         sp.setApplicationName(APP_NAME);
 
+        mockApplicationManagementService(sp);
+
         mockOAuthServerConfiguration();
         mockEndpointUtil();
-        doReturn(applicationManagementService).when(EndpointUtil.class, "getApplicationManagementService");
-        when(applicationManagementService.getServiceProvider(anyString(), anyString())).thenReturn(sp);
-        doReturn(applicationManagementService).when(EndpointUtil.class, "getApplicationManagementService");
 
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
@@ -1569,8 +1585,14 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         // TODO: Remove mocking consentUtil and test the consent flow as well
         // https://github.com/wso2/product-is/issues/2679
         SSOConsentService ssoConsentService = mock(SSOConsentService.class);
-        when(ssoConsentService.getConsentRequiredClaims(any(ServiceProvider.class), any(AuthenticatedUser.class)))
+        when(ssoConsentService
+                .getConsentRequiredClaimsWithExistingConsents(any(ServiceProvider.class), any(AuthenticatedUser.class)))
                 .thenReturn(new ConsentClaimsData());
+
+        when(ssoConsentService
+                .getConsentRequiredClaimsWithoutExistingConsents(any(ServiceProvider.class), any(AuthenticatedUser.class)))
+                .thenReturn(new ConsentClaimsData());
+
         doReturn(ssoConsentService).when(EndpointUtil.class, "getSSOConsentService");
     }
 

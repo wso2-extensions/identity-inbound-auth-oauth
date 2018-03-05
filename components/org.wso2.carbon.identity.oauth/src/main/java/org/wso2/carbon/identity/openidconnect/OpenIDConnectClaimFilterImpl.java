@@ -25,6 +25,7 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.exception.FrameworkException;
 import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.ClaimMetaData;
+import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.exception.SSOConsentServiceException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
@@ -158,10 +159,10 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
                     .filter(userConsentClaimUrisInOIDCDialect::contains)
                     .collect(Collectors.toMap(key -> key, userClaims::get));
 
-        } catch (IdentityOAuth2Exception | FrameworkException e) {
+        } catch (IdentityOAuth2Exception | SSOConsentServiceException e) {
             String msg = "Error while filtering claims based on user consent for user: " +
                     authenticatedUser.toFullQualifiedUsername() + " for client_id: " + clientId;
-            log.error(e);
+            log.error(msg, e);
         }
 
         return userClaims;
@@ -169,7 +170,7 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
 
     private List<String> getUserConsentedLocalClaimURIs(AuthenticatedUser authenticatedUser, String clientId,
                                                         String spTenantDomain)
-            throws IdentityOAuth2Exception, FrameworkException {
+            throws IdentityOAuth2Exception, SSOConsentServiceException {
 
         ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(clientId, spTenantDomain);
         List<ClaimMetaData> claimsWithConsents = OpenIDConnectServiceComponentHolder.getInstance()

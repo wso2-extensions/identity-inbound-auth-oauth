@@ -109,7 +109,8 @@ public class OIDCSessionState implements Serializable {
     }
 
     /**
-     * Sets add session state flag
+     * Sets add session state flag. When this flag is set session_state parameter is returned in the OIDC
+     * authentication response.
      *
      * @param addSessionState
      */

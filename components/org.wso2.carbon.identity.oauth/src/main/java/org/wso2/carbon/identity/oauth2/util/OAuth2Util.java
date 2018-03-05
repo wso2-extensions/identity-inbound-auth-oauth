@@ -2203,6 +2203,29 @@ public class OAuth2Util {
     }
 
     /**
+     * Returns the service provider associated with the OAuth clientId.
+     *
+     * @param clientId OAuth2/OIDC Client Identifier
+     * @return
+     * @throws IdentityOAuth2Exception
+     */
+    public static ServiceProvider getServiceProvider(String clientId) throws IdentityOAuth2Exception {
+        ApplicationManagementService applicationMgtService = OAuth2ServiceComponentHolder.getApplicationMgtService();
+        String tenantDomain = null;
+        try {
+            tenantDomain = getTenantDomainOfOauthApp(clientId);
+            // Get the Service Provider.
+            return applicationMgtService.getServiceProviderByClientId(
+                    clientId, IdentityApplicationConstants.OAuth2.NAME, tenantDomain);
+        } catch (IdentityApplicationManagementException e) {
+            throw new IdentityOAuth2Exception("Error while obtaining the service provider for client_id: " +
+                    clientId + " of tenantDomain: " + tenantDomain, e);
+        } catch (InvalidOAuthClientException e) {
+            throw new IdentityOAuth2Exception("Could not find an existing app for clientId: " + clientId, e);
+        }
+    }
+
+    /**
      *  Returns the public certificate of the service provider associated with the OAuth consumer app as
      *  an X509 @{@link Certificate} object.
      *
