@@ -491,7 +491,7 @@ public class EndpointUtil {
      */
     public static ApplicationManagementService getApplicationManagementService() {
         return (ApplicationManagementService) PrivilegedCarbonContext.getThreadLocalCarbonContext().getOSGiService
-                (ApplicationManagementService.class);
+                (ApplicationManagementService.class, null);
     }
     public static String getRealmInfo() {
         return "Basic realm=" + getHostName();

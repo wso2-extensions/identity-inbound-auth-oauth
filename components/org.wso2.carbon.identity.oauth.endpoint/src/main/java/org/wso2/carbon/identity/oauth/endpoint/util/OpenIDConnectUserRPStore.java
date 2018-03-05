@@ -24,8 +24,8 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.core.model.OpenIDUserRPDO;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
-import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 /**
  * Stores user consent on applications
@@ -53,21 +53,11 @@ public class OpenIDConnectUserRPStore {
         OpenIDUserRPDO repDO = new OpenIDUserRPDO();
         repDO.setDefaultProfileName(DEFAULT_PROFILE_NAME);
         repDO.setRpUrl(appName);
-        repDO.setUserName(user.getAuthenticatedSubjectIdentifier());
+        repDO.setUserName(getAuthenticatedSubjectIdentifier(user));
         repDO.setTrustedAlways(trustedAlways);
-        int tenantId = -1;
-        if (user.getUserName() != null) {
-            tenantId = IdentityTenantUtil.getTenantId(user.getTenantDomain());
-        } else {
-            OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
-            OAuthAppDO appDO;
-            try {
-                appDO = oAuthAppDAO.getAppInformation(clientId);
-                tenantId = IdentityTenantUtil.getTenantId(appDO.getUser().getTenantDomain());
-            } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
-                throw new OAuthSystemException("Error while retrieving app");
-            }
-        }
+
+        OAuthAppDO oAuthAppDO = getOAuthApp(clientId);
+        int tenantId = getTenantId(user, oAuthAppDO);
 
         OpenIDUserRPDAO dao = new OpenIDUserRPDAO();
         dao.createOrUpdate(repDO, tenantId);
@@ -83,26 +73,61 @@ public class OpenIDConnectUserRPStore {
             OAuthSystemException {
 
         OpenIDUserRPDAO dao = new OpenIDUserRPDAO();
-        OpenIDUserRPDO rpDO;
+
+        OAuthAppDO oAuthAppDO = getOAuthApp(clientId);
+        int tenantId = getTenantId(user, oAuthAppDO);
+
+        OpenIDUserRPDO rpDO = dao.getOpenIDUserRP(getAuthenticatedSubjectIdentifier(user), appName, tenantId);
+        return rpDO != null && rpDO.isTrustedAlways();
+    }
+
+    /**
+     * @param user
+     * @throws OAuthSystemException
+     */
+    public void removeConsentForUser(AuthenticatedUser user,
+                                     String clientId) throws OAuthSystemException {
+
+        OAuthAppDO oAuthAppDO = getOAuthApp(clientId);
+        int tenantId = getTenantId(user, oAuthAppDO);
+        String appName = oAuthAppDO.getApplicationName();
+
+        OpenIDUserRPDAO dao = new OpenIDUserRPDAO();
+        OpenIDUserRPDO consent = dao.getOpenIDUserRP(getAuthenticatedSubjectIdentifier(user), appName, tenantId);
+        if (consent != null) {
+            dao.delete(consent, tenantId);
+        }
+    }
+
+    private String getAuthenticatedSubjectIdentifier(AuthenticatedUser user) {
+
+        return user.getAuthenticatedSubjectIdentifier();
+    }
+
+    private int getTenantId(AuthenticatedUser user, OAuthAppDO oauthApp) throws OAuthSystemException {
+
         int tenantId;
         if (user.getUserName() != null) {
             tenantId = IdentityTenantUtil.getTenantId(user.getTenantDomain());
         } else {
-            OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
-            OAuthAppDO appDO;
-            try {
-                appDO = oAuthAppDAO.getAppInformation(clientId);
-                tenantId = IdentityTenantUtil.getTenantId(appDO.getUser().getTenantDomain());
-            } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
-                throw new OAuthSystemException("Error while retrieving app");
-            }
+            tenantId = IdentityTenantUtil.getTenantId(OAuth2Util.getTenantDomainOfOauthApp(oauthApp));
         }
-
-        rpDO = dao.getOpenIDUserRP(user.getAuthenticatedSubjectIdentifier(), appName, tenantId);
-        if (rpDO != null && rpDO.isTrustedAlways()) {
-            return true;
-        }
-
-        return false;
+        return tenantId;
     }
+
+    private OAuthAppDO getOAuthApp(String clientId) throws OAuthSystemException {
+
+        String errorMsg = "Unable to retrieve app information for clientId: " + clientId;
+        try {
+            OAuthAppDO oAuthApp = OAuth2Util.getAppInformationByClientId(clientId);
+            if (oAuthApp == null) {
+                throw new OAuthSystemException(errorMsg);
+            } else {
+                return oAuthApp;
+            }
+        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+            throw new OAuthSystemException(errorMsg, e);
+        }
+    }
+
 }
