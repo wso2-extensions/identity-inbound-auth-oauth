@@ -240,44 +240,6 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
         defaultOIDCClaimsCallbackHandler = new DefaultOIDCClaimsCallbackHandler();
     }
 
-    @DataProvider(name = "samlAttributeValueProvider")
-    public Object[][] provideSamlAttributeValues() {
-        return new Object[][]{
-                // Empty attribute value
-                {new String[]{""}, ""},
-                // Single attribute value
-                {new String[]{"value1"}, "value1"},
-                // Multiple attribute values
-                {new String[]{"value1", "value2"}, "value1" + MULTI_ATTRIBUTE_SEPARATOR_DEFAULT + "value2"},
-                // Multiple attribute values with an empty value
-                {new String[]{"value1", "", "value2"}, "value1" + MULTI_ATTRIBUTE_SEPARATOR_DEFAULT + "value2"}
-        };
-    }
-
-    @Test(dataProvider = "samlAttributeValueProvider")
-    public void testCustomClaimForOAuthTokenReqMessageContext(String[] attributeValues,
-                                                              String expectedClaimValue) throws Exception {
-        mockStatic(FrameworkUtils.class);
-        when(FrameworkUtils.getMultiAttributeSeparator()).thenReturn(MULTI_ATTRIBUTE_SEPARATOR_DEFAULT);
-
-        JWTClaimsSet jwtClaimsSet = new JWTClaimsSet();
-        Assertion assertion = getAssertion(attributeValues);
-
-        OAuth2AccessTokenReqDTO accessTokenReqDTO = new OAuth2AccessTokenReqDTO();
-        accessTokenReqDTO.setClientId(DUMMY_CLIENT_ID);
-
-        OAuthTokenReqMessageContext requestMsgCtx = new OAuthTokenReqMessageContext(accessTokenReqDTO);
-        requestMsgCtx.addProperty(OAuthConstants.OAUTH_SAML2_ASSERTION, assertion);
-
-        defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSet, requestMsgCtx);
-
-        // Assert whether the custom attribute from SAML Assertion was set as a claim.
-        assertFalse(jwtClaimsSet.getCustomClaims().isEmpty());
-        assertNotNull(jwtClaimsSet.getCustomClaim(CUSTOM_ATTRIBUTE_NAME));
-        // Assert whether multi value attribute values were joined correctly.
-        assertEquals(jwtClaimsSet.getCustomClaim(CUSTOM_ATTRIBUTE_NAME), expectedClaimValue);
-    }
-
     /**
      * Service provider not available for client_id. Therefore no custom claims will be set.
      */
@@ -785,39 +747,6 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
 
     private void setRegistryMockService(RegistryService registryMockService) throws Exception {
         setStaticField(OAuth2ServiceComponentHolder.class, "registryService", registryMockService);
-    }
-
-    @Test
-    public void testCustomClaimForOAuthTokenReqMessageContextWithNullAssertionSubject() throws Exception {
-        JWTClaimsSet jwtClaimsSet = new JWTClaimsSet();
-        OAuthTokenReqMessageContext requestMsgCtx = mock(OAuthTokenReqMessageContext.class);
-
-        mockSubject = mock(Subject.class);
-        assertion = mock(Assertion.class);
-        nameID = mock(NameID.class);
-        when(assertion.getSubject()).thenReturn(mockSubject);
-        when(mockSubject.getNameID()).thenReturn(nameID);
-        when(nameID.getValue()).thenReturn(" C=US, O=NCSA-TEST, OU=User, CN=trscavo@uiuc.edu");
-
-        AttributeStatement statement = mock(AttributeStatement.class);
-        List<AttributeStatement> attributeStatementList = null;
-        when(assertion.getAttributeStatements()).thenReturn(attributeStatementList);
-
-        List<Attribute> attributesList = new ArrayList<>();
-        Attribute attribute = new AttributeBuilder().buildObject("urn:oasis:names:tc:SAML:2.0:assertion",
-                "Attribute", "saml2");
-        XMLObject obj = mock(XMLObject.class);
-        attribute.getAttributeValues().add(obj);
-
-        Element ele = mock(Element.class);
-        when(obj.getDOM()).thenReturn(ele);
-        attributesList.add(attribute);
-        when(statement.getAttributes()).thenReturn(attributesList);
-
-        when(requestMsgCtx.getProperty(OAuthConstants.OAUTH_SAML2_ASSERTION)).thenReturn(assertion);
-        defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSet, requestMsgCtx);
-
-        assertEquals(jwtClaimsSet.getAllClaims().size(), 8, "Claims are not successfully set.");
     }
 
     @Test
