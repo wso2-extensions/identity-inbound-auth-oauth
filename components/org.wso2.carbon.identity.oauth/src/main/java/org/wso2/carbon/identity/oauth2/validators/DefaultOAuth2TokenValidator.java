@@ -53,7 +53,7 @@ public class DefaultOAuth2TokenValidator implements OAuth2TokenValidator {
     }
 
     /**
-     *  Validate scope of the access token using scope validators registered for that specific app.
+     * Validate scope of the access token using scope validators registered for that specific app.
      *
      * @param messageContext Message context of the token validation request
      * @return Whether validation success or not
@@ -100,8 +100,8 @@ public class DefaultOAuth2TokenValidator implements OAuth2TokenValidator {
             }
         }
         if (!appScopeValidators.isEmpty()) {
-            throw new IdentityOAuth2Exception(String.format("The scope validators %s registered for application " +
-                    "%s@%s are not found in the server configuration ", StringUtils.join(appScopeValidators, ", "),
+            throw new IdentityOAuth2Exception(String.format("The scope validators %s registered for application %s@%s" +
+                            " are not found in the server configuration ", StringUtils.join(appScopeValidators, ", "),
                     app.getApplicationName(), OAuth2Util.getTenantDomainOfOauthApp(app)));
         }
         return true;

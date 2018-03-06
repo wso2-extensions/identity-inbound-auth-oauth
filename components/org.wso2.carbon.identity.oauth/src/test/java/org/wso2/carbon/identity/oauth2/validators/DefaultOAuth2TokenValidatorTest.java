@@ -18,7 +18,6 @@
 
 package org.wso2.carbon.identity.oauth2.validators;
 
-import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
