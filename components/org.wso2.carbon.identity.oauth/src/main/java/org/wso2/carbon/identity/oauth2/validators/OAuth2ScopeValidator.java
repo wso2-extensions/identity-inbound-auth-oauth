@@ -71,8 +71,11 @@ public abstract class OAuth2ScopeValidator {
 
     /**
      * Method to get the name of the implemented scope validator name to display in the UI and save in the database.
+     * As default the class name is used.
      *
      * @return Name of the scope validator
      */
-    public abstract String getValidatorName();
+    public String getValidatorName() {
+        return this.getClass().getCanonicalName();
+    }
 }
