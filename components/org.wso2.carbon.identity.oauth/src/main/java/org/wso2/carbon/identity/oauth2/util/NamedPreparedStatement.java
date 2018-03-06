@@ -19,7 +19,9 @@ package org.wso2.carbon.identity.oauth2.util;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -76,6 +78,7 @@ public class NamedPreparedStatement {
      * @throws SQLException SQL Exception.
      */
     public NamedPreparedStatement(Connection connection, String sqlQuery) throws SQLException {
+
         this(connection, sqlQuery, new HashMap<String, Integer>());
     }
 
@@ -85,6 +88,7 @@ public class NamedPreparedStatement {
      * @return Prepared Statement.
      */
     public PreparedStatement getPreparedStatement() {
+
         return preparedStatement;
     }
 
@@ -96,7 +100,8 @@ public class NamedPreparedStatement {
      * @throws SQLException SQL Exception.
      */
     public void setLong(String name, long value) throws SQLException {
-        if(getIndex(name) > 0) {
+
+        if (getIndex(name) > 0) {
             preparedStatement.setLong(getIndex(name), value);
         }
     }
@@ -109,7 +114,8 @@ public class NamedPreparedStatement {
      * @throws SQLException SQL Exception.
      */
     public void setInt(String name, int value) throws SQLException {
-        if(getIndex(name) > 0) {
+
+        if (getIndex(name) > 0) {
             preparedStatement.setInt(getIndex(name), value);
         }
     }
@@ -122,7 +128,8 @@ public class NamedPreparedStatement {
      * @throws SQLException SQL Exception
      */
     public void setString(String name, String value) throws SQLException {
-        if(getIndex(name) > 0) {
+
+        if (getIndex(name) > 0) {
             preparedStatement.setString(getIndex(name), value);
         }
     }
@@ -144,12 +151,29 @@ public class NamedPreparedStatement {
     }
 
     public void setObject(String name, Object value) throws SQLException {
-        if(getIndex(name) > 0) {
+
+        if (getIndex(name) > 0) {
             preparedStatement.setObject(getIndex(name), value);
         }
     }
 
+    /**
+     * Set <code>TimeStamp</code> value for the named index.
+     *
+     * @param name      Name of the index.
+     * @param timestamp value to be replaced.
+     * @param calendar value to be replaced.
+     * @throws SQLException SQL Exception.
+     */
+    public void setTimeStamp(String name, Timestamp timestamp, Calendar calendar) throws SQLException {
+
+        if (getIndex(name) > 0) {
+            preparedStatement.setTimestamp(getIndex(name), timestamp, calendar);
+        }
+    }
+
     private int getIndex(String name) {
+
         return fields.indexOf(name) + 1;
     }
 }
