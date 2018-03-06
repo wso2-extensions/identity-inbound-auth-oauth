@@ -66,6 +66,8 @@
     String audienceTableStyle = "display:none";
     List<String> allowedScopeValidators = new ArrayList<String>();
     List<String> scopeValidators = new ArrayList<String>();
+    String[] supportedIdTokenEncryptionAlgorithms = null;
+    String[] supportedIdTokenEncryptionMethods = null;
 
     try {
 
@@ -79,6 +81,9 @@
                 (ConfigurationContext) config.getServletContext()
                         .getAttribute(CarbonConstants.CONFIGURATION_CONTEXT);
         client = new OAuthAdminClient(cookie, backendServerURL, configContext);
+
+        supportedIdTokenEncryptionAlgorithms = client.getSupportedIDTokenAlgorithms().getSupportedIdTokenEncryptionAlgorithms();
+        supportedIdTokenEncryptionMethods = client.getSupportedIDTokenAlgorithms().getSupportedIdTokenEncryptionMethods();
 
         if (appName != null) {
             app = client.getOAuthApplicationDataByAppName(appName);
@@ -290,6 +295,7 @@
                     var oauthVersion = $('input[name=oauthVersion]:checked').val();
                     var supportGrantCode = $('input[name=grant_authorization_code]:checked').val() != null;
                     var supportImplicit = $('input[name=grant_implicit]:checked').val() != null;
+                    var idTokenEncryptionEnabled = $('input[name=encryptIdToken]:checked').val() != null;
 
                     if(!supportGrantCode && !supportImplicit){
                         $(jQuery('#callback_row')).hide();
@@ -307,6 +313,14 @@
                      * Backchannel logout feature is kept hidden in the UI for now.
                      */
                     $(jQuery('#bclogout_row').hide());
+
+                    if (!idTokenEncryptionEnabled) {
+                        $(jQuery('#encryption_algorithm_row')).hide();
+                        $(jQuery('#encryption_method_row')).hide();
+                    } else {
+                        $(jQuery('#encryption_algorithm_row')).show();
+                        $(jQuery('#encryption_method_row')).show();
+                    }
                 }
 
                 function toggleAudienceRestriction(chkbx) {
@@ -391,6 +405,10 @@
                     //on load adjust the form based on the current settings
                     adjustForm();
                     $("form[name='editAppform']").change(adjustForm);
+
+                    // Set selected encryption algorithm and encryption method.
+                    $('select[name=idTokenEncryptionAlgorithm]').val('<%=Encode.forJavaScriptAttribute(app.getIdTokenEncryptionAlgorithm())%>');
+                    $('select[name=idTokenEncryptionMethod]').val('<%=Encode.forJavaScriptAttribute(app.getIdTokenEncryptionAlgorithm())%>');
                 })
             </script>
 
@@ -674,6 +692,42 @@
                                         </label>
                                     </td>
                                 </tr>
+
+                                <tr id="encryption_algorithm_row">
+                                    <td style="padding-left: 40px ! important;">
+                                        <fmt:message key='id.token.encryption.algorithm'/>
+                                    </td>
+                                    <td>
+                                        <select name="idTokenEncryptionAlgorithm" style="width: 250px;">
+                                    <%
+                                        for (String algorithm: supportedIdTokenEncryptionAlgorithms) {
+                                            algorithm = Encode.forHtmlAttribute(algorithm);
+                                    %>
+                                            <option value="<%=algorithm%>"><%=algorithm%></option>
+                                    <%
+                                        }
+                                    %>
+                                        </select>
+                                    </td>
+                                </tr>
+                                <tr id="encryption_method_row">
+                                    <td style="padding-left: 40px ! important;">
+                                        <fmt:message key='id.token.encryption.method'/>
+                                    </td>
+                                    <td>
+                                        <select name="idTokenEncryptionMethod" style="width: 250px;">
+                                    <%
+                                        for (String method: supportedIdTokenEncryptionMethods) {
+                                            method = Encode.forHtmlAttribute(method);
+                                    %>
+                                            <option value="<%=method%>"><%=method%></option>
+                                    <%
+                                        }
+                                    %>
+                                        </select>
+                                    </td>
+                                </tr>
+
                                     <%--Scope validators--%>
                                 <tr id="scope_validator_row" name="scope_validator_row">
                                     <td class="leftCol-med"><fmt:message key='scopeValidators'/></td>

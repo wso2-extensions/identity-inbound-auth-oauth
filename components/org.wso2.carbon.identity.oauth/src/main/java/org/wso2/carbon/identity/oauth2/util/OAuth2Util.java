@@ -1558,7 +1558,7 @@ public class OAuth2Util {
         if (jweAlgorithm.getRequirement() != null) {
             return jweAlgorithm;
         } else {
-            throw new IdentityOAuth2Exception("Unsupported Encryption Algorithm: " + encryptionAlgorithm + ", in identity.xml");
+            throw new IdentityOAuth2Exception("Unsupported Encryption Algorithm: " + encryptionAlgorithm);
         }
     }
 
@@ -1581,7 +1581,7 @@ public class OAuth2Util {
             return method;
         } else {
             log.error("Unsupported Encryption Method in identity.xml");
-            throw new IdentityOAuth2Exception("Unsupported Encryption Method: " + encryptionMethod + ", in identity.xml");
+            throw new IdentityOAuth2Exception("Unsupported Encryption Method: " + encryptionMethod);
         }
     }
 
@@ -1799,8 +1799,8 @@ public class OAuth2Util {
             EncryptedJWT encryptedJWT = new EncryptedJWT(header, jwtClaimsSet);
 
             if (log.isDebugEnabled()) {
-                log.debug("Encrypting JWT using the algorithm: " + encryptionAlgorithm + ", key of the tenant: " +
-                        spTenantDomain + " & header: " + header.toString());
+                log.debug("Encrypting JWT using the algorithm: " + encryptionAlgorithm + ", method: " +
+                        encryptionMethod + ", tenant: " + spTenantDomain + " & header: " + header.toString());
             }
 
             JWEEncrypter encrypter = new RSAEncrypter((RSAPublicKey) publicKey);

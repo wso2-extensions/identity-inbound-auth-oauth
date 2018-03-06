@@ -62,11 +62,13 @@ import org.wso2.carbon.identity.openidconnect.RequestObjectValidator;
 import org.wso2.carbon.identity.openidconnect.RequestObjectValidatorImpl;
 import org.wso2.carbon.utils.CarbonUtils;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
@@ -156,8 +158,10 @@ public class OAuthServerConfiguration {
     private String consumerDialectURI = "http://wso2.org/claims";
     private String signatureAlgorithm = "SHA256withRSA";
     private String idTokenSignatureAlgorithm = "SHA256withRSA";
-    private String idTokenEncryptionAlgorithm = "RSA-OAEP";
-    private String idTokenEncryptionMethod = "A128GCM";
+    private String defaultIdTokenEncryptionAlgorithm = "RSA-OAEP";
+    private List<String> supportedIdTokenEncryptionAlgorithms = new ArrayList<>();
+    private String defaultIdTokenEncryptionMethod = "A128GCM";
+    private List<String> supportedIdTokenEncryptionMethods = new ArrayList<>();
     private String userInfoJWTSignatureAlgorithm = "SHA256withRSA";
     private String authContextTTL = "15L";
     // property added to fix IDENTITY-4551 in backward compatible manner
@@ -895,12 +899,20 @@ public class OAuthServerConfiguration {
         return idTokenSignatureAlgorithm;
     }
 
-    public String getIdTokenEncryptionAlgorithm() {
-        return idTokenEncryptionAlgorithm;
+    public String getDefaultIdTokenEncryptionAlgorithm() {
+        return defaultIdTokenEncryptionAlgorithm;
     }
 
-    public String getIdTokenEncryptionMethod() {
-        return idTokenEncryptionMethod;
+    public List<String> getSupportedIdTokenEncryptionAlgorithm() {
+        return supportedIdTokenEncryptionAlgorithms;
+    }
+
+    public String getDefaultIdTokenEncryptionMethod() {
+        return defaultIdTokenEncryptionMethod;
+    }
+
+    public List<String> getSupportedIdTokenEncryptionMethods() {
+        return supportedIdTokenEncryptionMethods;
     }
 
     public String getUserInfoJWTSignatureAlgorithm() {
@@ -2046,16 +2058,37 @@ public class OAuthServerConfiguration {
                                 .getText().trim();
             }
 
-            if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.ENCRYPTION_ALGORITHM)) != null) {
-                idTokenEncryptionAlgorithm =
-                        openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.ENCRYPTION_ALGORITHM))
+            if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.ID_TOKEN_ENCRYPTION_ALGORITHM)) != null) {
+                defaultIdTokenEncryptionAlgorithm =
+                        openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.ID_TOKEN_ENCRYPTION_ALGORITHM))
                                 .getText().trim();
             }
 
-            if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.ENCRYPTION_METHOD)) != null) {
-                idTokenEncryptionMethod =
-                        openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.ENCRYPTION_METHOD))
+            if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.SUPPORTED_ID_TOKEN_ENCRYPTION_ALGORITHMS)) != null) {
+                parseSupportedIdTokenEncryptionAlgorithms(openIDConnectConfigElem.getFirstChildWithName(
+                        getQNameWithIdentityNS(ConfigElements.SUPPORTED_ID_TOKEN_ENCRYPTION_ALGORITHMS)));
+            } else {
+                // Hardcoding encryption algorithms due to migration concerns.
+                supportedIdTokenEncryptionAlgorithms.add("RSA1_5");
+                supportedIdTokenEncryptionAlgorithms.add("RSA-OAEP");
+            }
+
+            if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.ID_TOKEN_ENCRYPTION_METHOD)) != null) {
+                defaultIdTokenEncryptionMethod =
+                        openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.ID_TOKEN_ENCRYPTION_METHOD))
                                 .getText().trim();
+            }
+
+            if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.SUPPORTED_ID_TOKEN_ENCRYPTION_METHODS)) != null) {
+                parseSupportedIdTokenEncryptionMethods(openIDConnectConfigElem.getFirstChildWithName(
+                        getQNameWithIdentityNS(ConfigElements.SUPPORTED_ID_TOKEN_ENCRYPTION_METHODS)));
+            } else {
+                // Hardcoding encryption methods due to migration concerns.
+                supportedIdTokenEncryptionMethods.add("A128GCM");
+                supportedIdTokenEncryptionMethods.add("A192GCM");
+                supportedIdTokenEncryptionMethods.add("A256GCM");
+                supportedIdTokenEncryptionMethods.add("A128CBC-HS256");
+                supportedIdTokenEncryptionMethods.add("A128CBC+HS256");
             }
 
             if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_IDTOKEN_CUSTOM_CLAIM_CALLBACK_HANDLER)) != null) {
@@ -2155,6 +2188,50 @@ public class OAuthServerConfiguration {
         }
     }
 
+    /**
+     * Parse supported encryption algorithms set and add them to supportedIdTokenEncryptionAlgorithms.
+     *
+     * @param algorithms OMElement of supported algorithms.
+     */
+    private void parseSupportedIdTokenEncryptionAlgorithms(OMElement algorithms) {
+
+        if (algorithms == null) {
+            return;
+        }
+
+        Iterator iterator = algorithms.getChildrenWithLocalName(ConfigElements.SUPPORTED_ID_TOKEN_ENCRYPTION_ALGORITHM);
+        if (iterator != null) {
+            for (; iterator.hasNext(); ) {
+                OMElement algorithm = (OMElement) iterator.next();
+                if (algorithm != null) {
+                    supportedIdTokenEncryptionAlgorithms.add(algorithm.getText());
+                }
+            }
+        }
+    }
+
+    /**
+     * Parse supported encryption methods set and add them to supportedIdTokenEncryptionMethods.
+     *
+     * @param methods OMElement of supported methods.
+     */
+    private void parseSupportedIdTokenEncryptionMethods(OMElement methods) {
+
+        if (methods == null) {
+            return;
+        }
+
+        Iterator iterator = methods.getChildrenWithLocalName(ConfigElements.SUPPORTED_ID_TOKEN_ENCRYPTION_METHOD);
+        if (iterator != null) {
+            for (; iterator.hasNext(); ) {
+                OMElement method = (OMElement) iterator.next();
+                if (method != null) {
+                    supportedIdTokenEncryptionMethods.add(method.getText());
+                }
+            }
+        }
+    }
+
     private void parseHashAlgorithm(OMElement oauthConfigElem) {
 
         OMElement hashingAlgorithmElement = oauthConfigElem
@@ -2232,8 +2309,12 @@ public class OAuthServerConfiguration {
         public static final String CLAIMS_RETRIEVER_IMPL_CLASS = "ClaimsRetrieverImplClass";
         public static final String CONSUMER_DIALECT_URI = "ConsumerDialectURI";
         public static final String SIGNATURE_ALGORITHM = "SignatureAlgorithm";
-        public static final String ENCRYPTION_ALGORITHM = "EncryptionAlgorithm";
-        public static final String ENCRYPTION_METHOD = "EncryptionMethod";
+        public static final String ID_TOKEN_ENCRYPTION_ALGORITHM = "IDTokenEncryptionAlgorithm";
+        public static final String SUPPORTED_ID_TOKEN_ENCRYPTION_ALGORITHMS = "SupportedIDTokenEncryptionAlgorithms";
+        public static final String SUPPORTED_ID_TOKEN_ENCRYPTION_ALGORITHM = "SupportedIDTokenEncryptionAlgorithm";
+        public static final String ID_TOKEN_ENCRYPTION_METHOD = "IDTokenEncryptionMethod";
+        public static final String SUPPORTED_ID_TOKEN_ENCRYPTION_METHODS = "SupportedIDTokenEncryptionMethods";
+        public static final String SUPPORTED_ID_TOKEN_ENCRYPTION_METHOD = "SupportedIDTokenEncryptionMethod";
         public static final String SECURITY_CONTEXT_TTL = "AuthorizationContextTTL";
         private static final String AUTH_CONTEXT_TOKEN_USE_MULTIVALUE_SEPARATOR = "UseMultiValueSeparator";
 

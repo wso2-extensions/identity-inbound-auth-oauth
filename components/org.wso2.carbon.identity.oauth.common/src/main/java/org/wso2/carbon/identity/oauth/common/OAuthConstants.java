@@ -321,6 +321,8 @@ public final class OAuthConstants {
     public static class OIDCConfigProperties {
         public static final String REQUEST_OBJECT_SIGNED = "requestObjectSigned";
         public static final String ID_TOKEN_ENCRYPTED = "idTokenEncrypted";
+        public static final String ID_TOKEN_ENCRYPTION_ALGORITHM = "idTokenEncryptionAlgorithm";
+        public static final String ID_TOKEN_ENCRYPTION_METHOD = "idTokenEncryptionMethod";
         public static final String BACK_CHANNEL_LOGOUT_URL = "backChannelLogoutURL";
 
         private OIDCConfigProperties() { }

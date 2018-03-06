@@ -24,6 +24,7 @@ import org.apache.axis2.client.ServiceClient;
 import org.apache.axis2.context.ConfigurationContext;
 import org.wso2.carbon.identity.oauth.stub.OAuthAdminServiceStub;
 import org.wso2.carbon.identity.oauth.stub.dto.OAuthConsumerAppDTO;
+import org.wso2.carbon.identity.oauth.stub.dto.OAuthIDTokenAlgorithmDTO;
 import org.wso2.carbon.identity.oauth.stub.dto.OAuthTokenExpiryTimeDTO;
 import org.wso2.carbon.identity.oauth.stub.dto.OAuthRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth.stub.dto.OAuthRevocationResponseDTO;
@@ -142,5 +143,15 @@ public class OAuthAdminClient {
             }
         }
         return scopeValidators;
+    }
+
+    /**
+     * Return supported algorithms read from identity.xml configuration file.
+     *
+     * @return OAuthIDTokenAlgorithmDTO object.
+     * @throws RemoteException
+     */
+    public OAuthIDTokenAlgorithmDTO getSupportedIDTokenAlgorithms() throws RemoteException {
+        return stub.getSupportedIDTokenAlgorithms();
     }
 }
