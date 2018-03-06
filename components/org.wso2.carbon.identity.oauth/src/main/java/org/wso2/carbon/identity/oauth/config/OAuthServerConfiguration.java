@@ -1808,6 +1808,10 @@ public class OAuthServerConfiguration {
     private void parseSupportedClientAuthHandlersConfig(OMElement clientAuthElement) {
 
         if (clientAuthElement != null) {
+
+            log.warn("\'SupportedClientAuthMethods\' is no longer supported (ClientAuthHandler in identity.xml). If " +
+                    "you have customized ClientAuthHandler implementations migrate them");
+
             Iterator<OMElement> iterator = clientAuthElement.getChildrenWithLocalName(
                     ConfigElements.CLIENT_AUTH_HANDLER_IMPL_CLASS);
             while (iterator.hasNext()) {
@@ -1837,9 +1841,6 @@ public class OAuthServerConfiguration {
             }
 
         } else {
-            // if this element is not present, assume the default case.
-            log.warn("\'SupportedClientAuthMethods\' element not configured in identity.xml. " +
-                    "Therefore instantiating default client authentication handlers");
 
             Map<String, Properties> defaultClientAuthHandlers = new HashMap<>(1);
             defaultClientAuthHandlers.put(
