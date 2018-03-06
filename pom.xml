@@ -241,7 +241,7 @@
                 <version>${json-smart.version}</version>
             </dependency>
             <dependency>
-                <groupId>org.apache.cxf.wso2</groupId>
+                <groupId>org.wso2.orbit.org.apache.cxf</groupId>
                 <artifactId>cxf-bundle</artifactId>
                 <version>${cxf-bundle.wso2.version}</version>
             </dependency>
@@ -753,7 +753,7 @@
         <tomcat.wso2.imp.pkg.version.range>[1.7.0,2.0)</tomcat.wso2.imp.pkg.version.range>
 
         <google.guava.wso2.version>12.0.0.wso2v1</google.guava.wso2.version>
-        <cxf-bundle.wso2.version>2.6.1.wso2v2</cxf-bundle.wso2.version>
+        <cxf-bundle.wso2.version>2.7.16.wso2v1</cxf-bundle.wso2.version>
         <encoder.wso2.version>1.2.0.wso2v1</encoder.wso2.version>
         <json-simple.version>1.1.wso2v1</json-simple.version>
 
