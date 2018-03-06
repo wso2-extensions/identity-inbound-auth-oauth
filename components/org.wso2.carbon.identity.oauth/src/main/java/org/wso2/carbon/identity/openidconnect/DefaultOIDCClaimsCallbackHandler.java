@@ -154,16 +154,25 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
             userClaimsInOIDCDialect = getOIDCClaimMapFromUserAttributes(userAttributes);
         }
 
+        return filterOIDCClaims(requestMsgCtx, userClaimsInOIDCDialect);
+    }
+
+    private Map<String, Object> filterOIDCClaims(OAuthTokenReqMessageContext requestMsgCtx,
+                                                 Map<String, Object> userClaimsInOIDCDialect) throws OAuthSystemException {
+
         AuthenticatedUser user = requestMsgCtx.getAuthorizedUser();
         String clientId = requestMsgCtx.getOauth2AccessTokenReqDTO().getClientId();
         String spTenantDomain = requestMsgCtx.getOauth2AccessTokenReqDTO().getTenantDomain();
         String[] approvedScopes = requestMsgCtx.getScope();
         String token = getAccessToken(requestMsgCtx);
+        String grantType = requestMsgCtx.getOauth2AccessTokenReqDTO().getGrantType();
 
-        return filterOIDCClaims(token, userClaimsInOIDCDialect, user, approvedScopes, clientId, spTenantDomain);
+        return filterOIDCClaims(token, grantType, userClaimsInOIDCDialect, user, approvedScopes, clientId, spTenantDomain);
     }
 
+
     private Map<String, Object> filterOIDCClaims(String accessToken,
+                                                 String grantType,
                                                  Map<String, Object> userClaimsInOIDCDialect,
                                                  AuthenticatedUser authenticatedUser,
                                                  String[] approvedScopes,
@@ -190,7 +199,8 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         filteredUserClaimsByOIDCScopes.putAll(claimsFromRequestObject);
 
         // Restrict the claims based on user consent given
-        return getUserConsentedClaims(filteredUserClaimsByOIDCScopes, authenticatedUser, clientId, spTenantDomain);
+        return getUserConsentedClaims(filteredUserClaimsByOIDCScopes, authenticatedUser, grantType, clientId,
+                spTenantDomain);
     }
 
     private Map<String, Object> filterClaimsFromRequestObject(Map<String, Object> userAttributes,
@@ -209,12 +219,12 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
 
     private Map<String, Object> getUserConsentedClaims(Map<String, Object> userClaims,
                                                        AuthenticatedUser authenticatedUser,
+                                                       String grantType,
                                                        String clientId,
-                                                       String spTenantDomain) throws OAuthSystemException {
+                                                       String spTenantDomain) {
 
-        return OpenIDConnectServiceComponentHolder.getInstance()
-                .getHighestPriorityOpenIDConnectClaimFilter()
-                .getClaimsFilteredByUserConsent(userClaims, authenticatedUser, clientId, spTenantDomain);
+        return OIDCClaimUtil.filterUserClaimsBasedOnConsent(userClaims, authenticatedUser, clientId,
+                spTenantDomain, grantType);
     }
 
     private Map<ClaimMapping, String> getCachedUserAttributes(OAuthTokenReqMessageContext requestMsgCtx) {
@@ -282,13 +292,21 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
             userClaimsInOIDCDialect = getOIDCClaimMapFromUserAttributes(userAttributes);
         }
 
+        return filterOIDCClaims(authzReqMessageContext, userClaimsInOIDCDialect);
+    }
+
+    private Map<String, Object> filterOIDCClaims(OAuthAuthzReqMessageContext authzReqMessageContext,
+                                                 Map<String, Object> userClaimsInOIDCDialect) throws OAuthSystemException {
+
         AuthenticatedUser user = authzReqMessageContext.getAuthorizationReqDTO().getUser();
         String clientId = authzReqMessageContext.getAuthorizationReqDTO().getConsumerKey();
         String spTenantDomain = authzReqMessageContext.getAuthorizationReqDTO().getTenantDomain();
         String[] approvedScopes = authzReqMessageContext.getApprovedScope();
         String accessToken = getAccessToken(authzReqMessageContext);
+        String grantType = OAuthConstants.GrantTypes.IMPLICIT;
 
-        return filterOIDCClaims(accessToken, userClaimsInOIDCDialect, user, approvedScopes, clientId, spTenantDomain);
+        return filterOIDCClaims(accessToken, grantType, userClaimsInOIDCDialect, user, approvedScopes,
+                clientId, spTenantDomain);
     }
 
     private Map<String, Object> retrieveClaimsForLocalUser(OAuthAuthzReqMessageContext authzReqMessageContext) {

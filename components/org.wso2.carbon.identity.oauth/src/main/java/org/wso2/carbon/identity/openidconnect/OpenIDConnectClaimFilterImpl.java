@@ -151,9 +151,18 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
 
         // Filter the claims based on the user consent.
         try {
-            List<String> userConsentedClaimUris =
-                    getUserConsentedLocalClaimURIs(authenticatedUser, clientId, spTenantDomain);
 
+            ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(clientId, spTenantDomain);
+
+            if (isConsentManagementServiceDisabled(serviceProvider)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Consent Management disabled or not applicable for Service Provider: "
+                            + serviceProvider.getApplicationName() + ". Skipping filtering user claims based on consent.");
+                }
+                return userClaims;
+            }
+
+            List<String> userConsentedClaimUris = getUserConsentedLocalClaimURIs(authenticatedUser, serviceProvider);
             List<String> userConsentClaimUrisInOIDCDialect = getOIDCClaimURIs(userConsentedClaimUris, spTenantDomain);
 
             return userClaims.keySet().stream()
@@ -169,13 +178,17 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
         return userClaims;
     }
 
-    private List<String> getUserConsentedLocalClaimURIs(AuthenticatedUser authenticatedUser, String clientId,
-                                                        String spTenantDomain)
-            throws IdentityOAuth2Exception, SSOConsentServiceException {
+    private boolean isConsentManagementServiceDisabled(ServiceProvider serviceProvider) {
 
-        ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(clientId, spTenantDomain);
+        return !OpenIDConnectServiceComponentHolder.getInstance().getSsoConsentService()
+                .isSSOConsentManagementEnabled(serviceProvider);
+    }
+
+    private List<String> getUserConsentedLocalClaimURIs(AuthenticatedUser authenticatedUser, ServiceProvider sp)
+            throws SSOConsentServiceException {
+
         List<ClaimMetaData> claimsWithConsents = OpenIDConnectServiceComponentHolder.getInstance()
-                .getSsoConsentService().getClaimsWithConsents(serviceProvider, authenticatedUser);
+                .getSsoConsentService().getClaimsWithConsents(sp, authenticatedUser);
         return getClaimUrisWithConsent(claimsWithConsents);
     }
 
