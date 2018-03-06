@@ -71,7 +71,9 @@
     // OIDC related properties
     boolean isRequestObjectSignatureValidated = Boolean.parseBoolean(request.getParameter("validateRequestObjectSignature"));
     boolean isIdTokenEncrypted = Boolean.parseBoolean(request.getParameter("encryptIdToken"));
-    
+    String idTokenEncryptionAlgorithm = request.getParameter("idTokenEncryptionAlgorithm");
+    String idTokenEncryptionMethod = request.getParameter("idTokenEncryptionMethod");
+
     String forwardTo = "index.jsp";
 	String BUNDLE = "org.wso2.carbon.identity.oauth.ui.i18n.Resources";
 	ResourceBundle resourceBundle = ResourceBundle.getBundle(BUNDLE, request.getLocale());
@@ -140,7 +142,11 @@
             // Set OIDC related configuration properties.
             app.setRequestObjectSignatureValidationEnabled(isRequestObjectSignatureValidated);
             app.setIdTokenEncryptionEnabled(isIdTokenEncrypted);
-            
+            if (isIdTokenEncrypted) {
+                app.setIdTokenEncryptionAlgorithm(idTokenEncryptionAlgorithm);
+                app.setIdTokenEncryptionMethod(idTokenEncryptionMethod);
+            }
+
             client.registerOAuthApplicationData(app);
 
             consumerApp = client.getOAuthApplicationDataByAppName(applicationName);

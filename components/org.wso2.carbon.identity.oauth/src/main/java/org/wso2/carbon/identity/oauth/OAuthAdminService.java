@@ -40,6 +40,7 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
+import org.wso2.carbon.identity.oauth.dto.OAuthIDTokenAlgorithmDTO;
 import org.wso2.carbon.identity.oauth.dto.OAuthRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth.dto.OAuthRevocationResponseDTO;
 import org.wso2.carbon.identity.oauth.dto.OAuthTokenExpiryTimeDTO;
@@ -142,6 +143,8 @@ public class OAuthAdminService extends AbstractAdmin {
                 dto.setAudiences(app.getAudiences());
                 dto.setRequestObjectSignatureValidationEnabled(app.isRequestObjectSignatureValidationEnabled());
                 dto.setIdTokenEncryptionEnabled(app.isIdTokenEncryptionEnabled());
+                dto.setIdTokenEncryptionAlgorithm(app.getIdTokenEncryptionAlgorithm());
+                dto.setIdTokenEncryptionMethod(app.getIdTokenEncryptionMethod());
                 dto.setBackChannelLogoutUrl(app.getBackChannelLogoutUrl());
                 dtos[i] = dto;
             }
@@ -178,6 +181,8 @@ public class OAuthAdminService extends AbstractAdmin {
                 dto.setAudiences(app.getAudiences());
                 dto.setRequestObjectSignatureValidationEnabled(app.isRequestObjectSignatureValidationEnabled());
                 dto.setIdTokenEncryptionEnabled(app.isIdTokenEncryptionEnabled());
+                dto.setIdTokenEncryptionAlgorithm(app.getIdTokenEncryptionAlgorithm());
+                dto.setIdTokenEncryptionMethod(app.getIdTokenEncryptionMethod());
 
                 if (log.isDebugEnabled()) {
                     log.debug("Found App :" + dto.getApplicationName() + " for consumerKey: " + consumerKey);
@@ -219,6 +224,8 @@ public class OAuthAdminService extends AbstractAdmin {
                 dto.setAudiences(app.getAudiences());
                 dto.setRequestObjectSignatureValidationEnabled(app.isRequestObjectSignatureValidationEnabled());
                 dto.setIdTokenEncryptionEnabled(app.isIdTokenEncryptionEnabled());
+                dto.setIdTokenEncryptionAlgorithm(app.getIdTokenEncryptionAlgorithm());
+                dto.setIdTokenEncryptionMethod(app.getIdTokenEncryptionMethod());
                 dto.setBackChannelLogoutUrl(app.getBackChannelLogoutUrl());
             }
             return dto;
@@ -310,6 +317,8 @@ public class OAuthAdminService extends AbstractAdmin {
                     app.setRequestObjectSignatureValidationEnabled(application
                             .isRequestObjectSignatureValidationEnabled());
                     app.setIdTokenEncryptionEnabled(application.isIdTokenEncryptionEnabled());
+                    app.setIdTokenEncryptionAlgorithm(application.getIdTokenEncryptionAlgorithm());
+                    app.setIdTokenEncryptionMethod(application.getIdTokenEncryptionMethod());
                     app.setBackChannelLogoutUrl(application.getBackChannelLogoutUrl());
                 }
                 dao.addOAuthApplication(app);
@@ -412,6 +421,8 @@ public class OAuthAdminService extends AbstractAdmin {
             oauthappdo.setRequestObjectSignatureValidationEnabled(consumerAppDTO
                     .isRequestObjectSignatureValidationEnabled());
             oauthappdo.setIdTokenEncryptionEnabled(consumerAppDTO.isIdTokenEncryptionEnabled());
+            oauthappdo.setIdTokenEncryptionAlgorithm(consumerAppDTO.getIdTokenEncryptionAlgorithm());
+            oauthappdo.setIdTokenEncryptionMethod(consumerAppDTO.getIdTokenEncryptionMethod());
             oauthappdo.setBackChannelLogoutUrl(consumerAppDTO.getBackChannelLogoutUrl());
         }
         dao.updateConsumerApplication(oauthappdo);
@@ -628,6 +639,8 @@ public class OAuthAdminService extends AbstractAdmin {
                                 appDTO.setRequestObjectSignatureValidationEnabled(appDO
                                         .isRequestObjectSignatureValidationEnabled());
                                 appDTO.setIdTokenEncryptionEnabled(appDO.isIdTokenEncryptionEnabled());
+                                appDTO.setIdTokenEncryptionAlgorithm(appDO.getIdTokenEncryptionAlgorithm());
+                                appDTO.setIdTokenEncryptionMethod(appDO.getIdTokenEncryptionMethod());
                                 appDTOs.add(appDTO);
                                 if (log.isDebugEnabled()) {
                                     log.debug("Found App: " + appDO.getApplicationName() + " for user: " + username);
@@ -934,5 +947,24 @@ public class OAuthAdminService extends AbstractAdmin {
             }
         }
         return requestedScopeValidators;
+    }
+
+    /**
+     * Get supported algorithms from OAuthServerConfiguration and construct an OAuthIDTokenAlgorithmDTO object.
+     *
+     * @return  Constructed OAuthIDTokenAlgorithmDTO object with supported algorithms.
+     */
+    public OAuthIDTokenAlgorithmDTO getSupportedIDTokenAlgorithms() {
+
+        OAuthIDTokenAlgorithmDTO oAuthIDTokenAlgorithmDTO = new OAuthIDTokenAlgorithmDTO();
+        oAuthIDTokenAlgorithmDTO.setDefaultIdTokenEncryptionAlgorithm(
+                OAuthServerConfiguration.getInstance().getDefaultIdTokenEncryptionAlgorithm());
+        oAuthIDTokenAlgorithmDTO.setDefaultIdTokenEncryptionMethod(
+                OAuthServerConfiguration.getInstance().getDefaultIdTokenEncryptionMethod());
+        oAuthIDTokenAlgorithmDTO.setSupportedIdTokenEncryptionAlgorithms(
+                OAuthServerConfiguration.getInstance().getSupportedIdTokenEncryptionAlgorithm());
+        oAuthIDTokenAlgorithmDTO.setSupportedIdTokenEncryptionMethods(
+                OAuthServerConfiguration.getInstance().getSupportedIdTokenEncryptionMethods());
+        return oAuthIDTokenAlgorithmDTO;
     }
 }

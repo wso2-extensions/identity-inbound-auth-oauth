@@ -55,6 +55,14 @@
     client = new OAuthAdminClient(cookie, backendServerURL, configContext);
     List<String> allowedGrants = new ArrayList<String>();
     List<String> scopeValidators = new ArrayList<String>();
+
+    String defaultIdTokenEncryptionAlgorithm = client.getSupportedIDTokenAlgorithms().getDefaultIdTokenEncryptionAlgorithm();
+    String[] supportedIdTokenEncryptionAlgorithms =
+            client.getSupportedIDTokenAlgorithms().getSupportedIdTokenEncryptionAlgorithms();
+    String defaultIdTokenEncryptionMethod = client.getSupportedIDTokenAlgorithms().getDefaultIdTokenEncryptionMethod();
+    String[] supportedIdTokenEncryptionMethods =
+            client.getSupportedIDTokenAlgorithms().getSupportedIdTokenEncryptionMethods();
+
     try {
         allowedGrants = new ArrayList<String>(Arrays.asList(client.getAllowedOAuthGrantTypes()));
     } catch (Exception e) {
@@ -215,6 +223,7 @@
                     var oauthVersion = $('input[name=oauthVersion]:checked').val();
                     var supportGrantCode = $('input[name=grant_authorization_code]:checked').val() != null;
                     var supportImplicit = $('input[name=grant_implicit]:checked').val() != null;
+                    var idTokenEncryptionEnabled = $('input[name=encryptIdToken]:checked').val() != null;
 
                     if(oauthVersion == "<%=OAuthConstants.OAuthVersions.VERSION_1A%>") {
                         $(jQuery('#grant_row')).hide();
@@ -230,6 +239,8 @@
                         $(jQuery("#audience_table").hide());
                         $(jQuery("#validate_request_object_signature_row").hide());
                         $(jQuery("#encrypt_id_token_row").hide());
+                        $(jQuery('#encryption_method_row')).hide();
+                        $(jQuery('#encryption_algorithm_row')).hide();
                         $(jQuery('#callback_row')).show();
 
                     } else if(oauthVersion == "<%=OAuthConstants.OAuthVersions.VERSION_2%>") {
@@ -261,6 +272,14 @@
                         } else {
                             $(jQuery("#pkce_enable").hide());
                             $(jQuery("#pkce_support_plain").hide());
+                        }
+
+                        if (!idTokenEncryptionEnabled) {
+                            $(jQuery('#encryption_algorithm_row')).hide();
+                            $(jQuery('#encryption_method_row')).hide();
+                        } else {
+                            $(jQuery('#encryption_algorithm_row')).show();
+                            $(jQuery('#encryption_method_row')).show();
                         }
                     }
 
@@ -347,6 +366,10 @@
                     //on load adjust the form based on the current settings
                     adjustForm();
                     $(jQuery("#addAppForm input")).change(adjustForm);
+
+                    // Set default encryption algorithm and encryption method read from identity.xml.
+                    $('select[name=idTokenEncryptionAlgorithm]').val('<%=Encode.forJavaScriptAttribute(defaultIdTokenEncryptionAlgorithm)%>');
+                    $('select[name=idTokenEncryptionMethod]').val('<%=Encode.forJavaScriptAttribute(defaultIdTokenEncryptionMethod)%>');
                 })
 
             </script>
@@ -555,6 +578,42 @@
                                         </label>
                                     </td>
                                 </tr>
+
+                                <tr id="encryption_algorithm_row">
+                                    <td style="padding-left: 40px ! important;">
+                                        <fmt:message key='id.token.encryption.algorithm'/>
+                                    </td>
+                                    <td>
+                                        <select name="idTokenEncryptionAlgorithm" style="width: 250px;">
+                                    <%
+                                        for (String algorithm: supportedIdTokenEncryptionAlgorithms) {
+                                            algorithm = Encode.forHtmlAttribute(algorithm);
+                                    %>
+                                            <option value="<%=algorithm%>"><%=algorithm%></option>
+                                    <%
+                                        }
+                                    %>
+                                        </select>
+                                    </td>
+                                </tr>
+                                <tr id="encryption_method_row">
+                                    <td style="padding-left: 40px ! important;">
+                                        <fmt:message key='id.token.encryption.method'/>
+                                    </td>
+                                    <td>
+                                        <select name="idTokenEncryptionMethod" style="width: 250px;">
+                                    <%
+                                        for (String method: supportedIdTokenEncryptionMethods) {
+                                            method = Encode.forHtmlAttribute(method);
+                                    %>
+                                            <option value="<%=method%>"><%=method%></option>
+                                    <%
+                                        }
+                                    %>
+                                        </select>
+                                    </td>
+                                </tr>
+
                                     <%--Scope validators--%>
                                 <tr id="scope_validator_row" name="scope_validator_row">
                                     <td class="leftCol-med"><fmt:message key='scopeValidators'/></td>

@@ -44,6 +44,8 @@ public class OAuthAppDO implements Serializable {
     // OIDC related properties.
     private boolean requestObjectSignatureValidationEnabled;
     private boolean idTokenEncryptionEnabled;
+    private String idTokenEncryptionAlgorithm;
+    private String idTokenEncryptionMethod;
     private String backChannelLogoutUrl;
 
     public AuthenticatedUser getUser() {
@@ -189,9 +191,27 @@ public class OAuthAppDO implements Serializable {
     public void setIdTokenEncryptionEnabled(boolean idTokenEncryptionEnabled) {
         this.idTokenEncryptionEnabled = idTokenEncryptionEnabled;
     }
+
+    public String getIdTokenEncryptionAlgorithm() {
+        return idTokenEncryptionAlgorithm;
+    }
+
+    public void setIdTokenEncryptionAlgorithm(String idTokenEncryptionAlgorithm) {
+        this.idTokenEncryptionAlgorithm = idTokenEncryptionAlgorithm;
+    }
+
+    public String getIdTokenEncryptionMethod() {
+        return idTokenEncryptionMethod;
+    }
+
+    public void setIdTokenEncryptionMethod(String idTokenEncryptionMethod) {
+        this.idTokenEncryptionMethod = idTokenEncryptionMethod;
+    }
+
     public void setBackChannelLogoutUrl(String backChannelLogoutUrl) {
         this.backChannelLogoutUrl = backChannelLogoutUrl;
     }
+
     public String getBackChannelLogoutUrl() {
         return backChannelLogoutUrl;
     }

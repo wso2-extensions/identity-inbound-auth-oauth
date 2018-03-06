@@ -57,6 +57,8 @@ import java.util.Set;
 
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.BACK_CHANNEL_LOGOUT_URL;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ID_TOKEN_ENCRYPTION_ALGORITHM;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ID_TOKEN_ENCRYPTION_METHOD;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ID_TOKEN_ENCRYPTED;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.REQUEST_OBJECT_SIGNED;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.OPENID_CONNECT_AUDIENCE;
@@ -547,6 +549,14 @@ public class OAuthAppDAO {
                 String.valueOf(oauthAppDO.isIdTokenEncryptionEnabled()),
                 prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties, ID_TOKEN_ENCRYPTION_ALGORITHM,
+                String.valueOf(oauthAppDO.getIdTokenEncryptionAlgorithm()),
+                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties, ID_TOKEN_ENCRYPTION_METHOD,
+                String.valueOf(oauthAppDO.getIdTokenEncryptionMethod()),
+                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
         addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties, BACK_CHANNEL_LOGOUT_URL,
                 oauthAppDO.getBackChannelLogoutUrl(), prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
@@ -955,6 +965,12 @@ public class OAuthAppDAO {
                     ID_TOKEN_ENCRYPTED, String.valueOf(consumerAppDO.isIdTokenEncryptionEnabled()));
 
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    ID_TOKEN_ENCRYPTION_ALGORITHM, String.valueOf(consumerAppDO.getIdTokenEncryptionAlgorithm()));
+
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    ID_TOKEN_ENCRYPTION_METHOD, String.valueOf(consumerAppDO.getIdTokenEncryptionMethod()));
+
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                     BACK_CHANNEL_LOGOUT_URL, consumerAppDO.getBackChannelLogoutUrl());
 
             prepStmtAddOIDCProperty.executeBatch();
@@ -1017,6 +1033,12 @@ public class OAuthAppDAO {
         boolean isIdTokenEncrypted = Boolean.parseBoolean(
                 getFirstPropertyValue(spOIDCProperties, ID_TOKEN_ENCRYPTED));
         oauthApp.setIdTokenEncryptionEnabled(isIdTokenEncrypted);
+
+        String idTokenEncryptionAlgorithm = getFirstPropertyValue(spOIDCProperties, ID_TOKEN_ENCRYPTION_ALGORITHM);
+        oauthApp.setIdTokenEncryptionAlgorithm(idTokenEncryptionAlgorithm);
+
+        String idTokenEncryptionMethod = getFirstPropertyValue(spOIDCProperties, ID_TOKEN_ENCRYPTION_METHOD);
+        oauthApp.setIdTokenEncryptionMethod(idTokenEncryptionMethod);
 
         String backChannelLogoutUrl = getFirstPropertyValue(spOIDCProperties, BACK_CHANNEL_LOGOUT_URL);
         oauthApp.setBackChannelLogoutUrl(backChannelLogoutUrl);

@@ -109,7 +109,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
     private static final String OPENID_IDP_ENTITY_ID = "IdPEntityId";
 
     private static final Log log = LogFactory.getLog(DefaultIDTokenBuilder.class);
-    private JWSAlgorithm signatureAlgorithm = null;
+    private JWSAlgorithm signatureAlgorithm;
     private JWEAlgorithm encryptionAlgorithm;
     private EncryptionMethod encryptionMethod;
 
@@ -117,29 +117,23 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         // Map signature algorithm from identity.xml to nimbus format, this is a one time configuration.
         signatureAlgorithm = OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(
                 OAuthServerConfiguration.getInstance().getIdTokenSignatureAlgorithm());
-        encryptionAlgorithm = OAuth2Util.mapEncryptionAlgorithmForJWEAlgorithm(
-                OAuthServerConfiguration.getInstance().getIdTokenEncryptionAlgorithm());
-        encryptionMethod = OAuth2Util.mapEncryptionMethodForJWEAlgorithm(
-                OAuthServerConfiguration.getInstance().getIdTokenEncryptionMethod());
     }
 
-    // Check and return true if JWE is requested.
-    private boolean isIdTokenEncryptionEnabled(String clientId) throws IdentityOAuth2Exception {
-        OAuthAppDO oAuthAppDO;
-        try {
-            oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
-        } catch (InvalidOAuthClientException e) {
-            String error = "Error occurred while getting app information for client_id: " + clientId;
-            throw new IdentityOAuth2Exception(error, e);
-        }
+    /**
+     * Create an oAuthAppDO object using client id and set encryption algorithm and encryption method.
+     * @param clientId  ID of the client.
+     * @throws IdentityOAuth2Exception
+     */
+    private void setupEncryptionAlgorithms(OAuthAppDO oAuthAppDO, String clientId) throws IdentityOAuth2Exception {
+
+        encryptionAlgorithm = OAuth2Util.mapEncryptionAlgorithmForJWEAlgorithm(
+                    oAuthAppDO.getIdTokenEncryptionAlgorithm());
+        encryptionMethod = OAuth2Util.mapEncryptionMethodForJWEAlgorithm(oAuthAppDO.getIdTokenEncryptionMethod());
 
         if (log.isDebugEnabled()) {
-            log.debug("Id token encryption is enabled: " + oAuthAppDO.isIdTokenEncryptionEnabled() +
-                    " for client_id: " + clientId);
-
+            log.debug("Id token encryption is enabled using encryption algorithm: " + encryptionAlgorithm +
+                    " and encryption method: " + encryptionMethod + ", for client: " + clientId);
         }
-
-        return oAuthAppDO.isIdTokenEncryptionEnabled();
     }
 
     @Override
@@ -219,12 +213,16 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
             return new PlainJWT(jwtClaimsSet).serialize();
         }
 
-        if (isIdTokenEncryptionEnabled(clientId)) {
-            return OAuth2Util.encryptJWT(jwtClaimsSet, encryptionAlgorithm, encryptionMethod, spTenantDomain, clientId).serialize();
-        } else {
-            String signingTenantDomain = getSigningTenantDomain(tokenReqMsgCtxt);
-            return OAuth2Util.signJWT(jwtClaimsSet, signatureAlgorithm, signingTenantDomain).serialize();
+        // Initialize OAuthAppDO using the client ID.
+        OAuthAppDO oAuthAppDO;
+        try {
+            oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
+        } catch (InvalidOAuthClientException e) {
+            String error = "Error occurred while getting app information for client_id: " + clientId;
+            throw new IdentityOAuth2Exception(error, e);
         }
+
+        return getIDToken(clientId, spTenantDomain, jwtClaimsSet, oAuthAppDO, getSigningTenantDomain(tokenReqMsgCtxt));
     }
 
     @Override
@@ -289,10 +287,27 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
             return new PlainJWT(jwtClaimsSet).serialize();
         }
 
-        if (isIdTokenEncryptionEnabled(clientId)) {
-            return OAuth2Util.encryptJWT(jwtClaimsSet, encryptionAlgorithm, encryptionMethod, spTenantDomain, clientId).serialize();
+        // Initialize OAuthAppDO using the client ID.
+        OAuthAppDO oAuthAppDO;
+        try {
+            oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
+        } catch (InvalidOAuthClientException e) {
+            String error = "Error occurred while getting app information for client_id: " + clientId;
+            throw new IdentityOAuth2Exception(error, e);
+        }
+
+        return getIDToken(clientId, spTenantDomain, jwtClaimsSet, oAuthAppDO,
+                getSigningTenantDomain(authzReqMessageContext));
+    }
+
+    private String getIDToken(String clientId, String spTenantDomain, JWTClaimsSet jwtClaimsSet, OAuthAppDO oAuthAppDO,
+                              String signingTenantDomain) throws IdentityOAuth2Exception {
+
+        if (oAuthAppDO.isIdTokenEncryptionEnabled()) {
+            setupEncryptionAlgorithms(oAuthAppDO, clientId);
+            return OAuth2Util.encryptJWT(jwtClaimsSet, encryptionAlgorithm, encryptionMethod, spTenantDomain,
+                    clientId).serialize();
         } else {
-            String signingTenantDomain = getSigningTenantDomain(authzReqMessageContext);
             return OAuth2Util.signJWT(jwtClaimsSet, signatureAlgorithm, signingTenantDomain).serialize();
         }
     }
