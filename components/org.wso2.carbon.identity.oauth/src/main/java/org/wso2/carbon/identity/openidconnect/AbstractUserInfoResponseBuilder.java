@@ -92,7 +92,7 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
 
         // Filter user claims based on the requested scopes
         Map<String, Object> userClaimsFilteredByScope =
-                getUserClaimsFilteredByScope(userClaims, tokenResponse.getScope(), clientId, spTenantDomain);
+                getUserClaimsFilteredByScope(tokenResponse,userClaims, tokenResponse.getScope(), clientId, spTenantDomain);
 
         // Handle essential claims
         Map<String, Object> essentialClaims = getEssentialClaims(tokenResponse, userClaims);
@@ -105,7 +105,18 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
 
         // Filter the user claims based on user consent
         AuthenticatedUser authenticatedUser = getAuthenticatedUser(getAccessToken(tokenResponse));
-        return getUserClaimsFilteredByConsent(userClaimsFilteredByScope, authenticatedUser, clientId, spTenantDomain);
+        return getUserClaimsFilteredByConsent(tokenResponse, userClaimsFilteredByScope, authenticatedUser, clientId,
+                spTenantDomain);
+    }
+
+    private String getGrantType(OAuth2TokenValidationResponseDTO tokenResponse) throws UserInfoEndpointException {
+
+        try {
+            return OAuth2Util.getAccessTokenDOfromTokenIdentifier(getAccessToken(tokenResponse)).getGrantType();
+        } catch (IdentityOAuth2Exception e) {
+            throw new UserInfoEndpointException(
+                    "Error while retrieving access token information to derive the grant type." , e);
+        }
     }
 
     private Map<String, Object> filterClaimsFromRequestObject(Map<String, Object> userAttributes,
@@ -177,10 +188,11 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
      * @param tenantDomain
      * @return
      */
-    protected Map<String, Object> getUserClaimsFilteredByScope(Map<String, Object> userClaims,
+    protected Map<String, Object> getUserClaimsFilteredByScope(OAuth2TokenValidationResponseDTO validationResponseDTO,
+                                                               Map<String, Object> userClaims,
                                                                String[] requestedScopes,
                                                                String clientId,
-                                                               String tenantDomain) {
+                                                               String tenantDomain) throws UserInfoEndpointException {
 
         return OpenIDConnectServiceComponentHolder.getInstance()
                 .getHighestPriorityOpenIDConnectClaimFilter()
@@ -196,13 +208,14 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
      * @param tenantDomain
      * @return
      */
-    protected Map<String, Object> getUserClaimsFilteredByConsent(Map<String, Object> userClaims,
+    protected Map<String, Object> getUserClaimsFilteredByConsent(OAuth2TokenValidationResponseDTO validationResponseDTO,
+                                                                 Map<String, Object> userClaims,
                                                                  AuthenticatedUser user,
                                                                  String clientId,
-                                                                 String tenantDomain) {
-        return OpenIDConnectServiceComponentHolder.getInstance()
-                .getHighestPriorityOpenIDConnectClaimFilter()
-                .getClaimsFilteredByUserConsent(userClaims, user , clientId, tenantDomain);
+                                                                 String tenantDomain) throws UserInfoEndpointException {
+
+        String grantType = getGrantType(validationResponseDTO);
+        return OIDCClaimUtil.filterUserClaimsBasedOnConsent(userClaims, user, clientId, tenantDomain, grantType);
     }
 
 

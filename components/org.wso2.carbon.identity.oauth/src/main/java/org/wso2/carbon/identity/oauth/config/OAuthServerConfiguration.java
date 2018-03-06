@@ -2301,7 +2301,6 @@ public class OAuthServerConfiguration {
         private static final String USER_CONSENT_ENABLED_GRANT_TYPE = "UserConsentEnabledGrantType";
         private static final String USER_CONSENT_ENABLED_GRANT_TYPE_NAME = "GrantTypeName";
 
-
         private static final String ID_TOKEN_ALLOWED = "IdTokenAllowed";
         private static final String GET_CONSENT_FOR_USER_CLAIMS = "GetConsentForUserClaims";
         private static final String GRANT_TYPE_HANDLER_IMPL_CLASS = "GrantTypeHandlerImplClass";
