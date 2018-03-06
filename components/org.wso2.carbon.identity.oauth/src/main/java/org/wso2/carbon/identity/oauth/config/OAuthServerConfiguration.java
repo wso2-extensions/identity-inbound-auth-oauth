@@ -20,7 +20,6 @@ package org.wso2.carbon.identity.oauth.config;
 
 import org.apache.axiom.om.OMElement;
 import org.apache.axis2.util.JavaUtils;
-import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -28,7 +27,6 @@ import org.apache.oltu.oauth2.as.issuer.OAuthIssuer;
 import org.apache.oltu.oauth2.as.issuer.OAuthIssuerImpl;
 import org.apache.oltu.oauth2.as.issuer.UUIDValueGenerator;
 import org.apache.oltu.oauth2.as.issuer.ValueGenerator;
-import org.apache.oltu.oauth2.as.validator.ClientCredentialValidator;
 import org.apache.oltu.oauth2.as.validator.CodeTokenValidator;
 import org.apache.oltu.oauth2.as.validator.CodeValidator;
 import org.apache.oltu.oauth2.as.validator.TokenValidator;
@@ -65,13 +63,11 @@ import org.wso2.carbon.identity.openidconnect.RequestObjectValidatorImpl;
 import org.wso2.carbon.identity.openidconnect.RequestObjectValidator;
 import org.wso2.carbon.utils.CarbonUtils;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
@@ -139,6 +135,7 @@ public class OAuthServerConfiguration {
     private Map<String, Boolean> refreshTokenAllowedGrantTypes = new HashMap<>();
     private Map<String, String> idTokenAllowedForGrantTypesMap = new HashMap<>();
     private Set<String> idTokenNotAllowedGrantTypesSet = new HashSet<>();
+    private Set<String> userConsentEnabledGrantTypes = new HashSet<>();
     private Map<String, AuthorizationGrantHandler> supportedGrantTypes;
     private Map<String, RequestObjectBuilder> requestObjectBuilder;
     private Map<String, String> supportedGrantTypeValidatorNames = new HashMap<>();
@@ -284,6 +281,9 @@ public class OAuthServerConfiguration {
 
         // read supported grant types
         parseSupportedGrantTypesConfig(oauthElem);
+
+        // Read <UserConsentEnabledGrantTypes> under <OAuth> tag and populate data.
+        parseUserConsentEnabledGrantTypesConfig(oauthElem);
 
         // read supported response types
         parseSupportedResponseTypesConfig(oauthElem);
@@ -1090,6 +1090,16 @@ public class OAuthServerConfiguration {
     }
 
     /**
+     * Returns whether user consent is required for the particular grant type.
+     *
+     * @param grantType
+     * @return
+     */
+    public boolean isUserConsentRequiredForClaims(String grantType) {
+        return userConsentEnabledGrantTypes.contains(grantType);
+    }
+
+    /**
      * Get the value of the property "UseSPTenantDomain". This property is used to decide whether to use SP tenant
      * domain or user tenant domain.
      *
@@ -1693,7 +1703,6 @@ public class OAuthServerConfiguration {
                     }
                 }
 
-
                 if (StringUtils.isNotEmpty(grantTypeName) && StringUtils.isNotEmpty(authzGrantHandlerImplClass)) {
                     supportedGrantTypeClassNames.put(grantTypeName, authzGrantHandlerImplClass);
 
@@ -1740,6 +1749,41 @@ public class OAuthServerConfiguration {
                 String authzGrantHandlerImplClass = entry.getValue().toString();
                 log.debug(grantTypeName + "supported by" + authzGrantHandlerImplClass);
             }
+        }
+    }
+
+    private void parseUserConsentEnabledGrantTypesConfig(OMElement oauthConfigElem) {
+
+        OMElement userConsentEnabledGrantTypesElement =
+                oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.USER_CONSENT_ENABLED_GRANT_TYPES));
+
+        if (userConsentEnabledGrantTypesElement != null) {
+            Iterator iterator = userConsentEnabledGrantTypesElement
+                    .getChildrenWithName(getQNameWithIdentityNS(ConfigElements.USER_CONSENT_ENABLED_GRANT_TYPE));
+
+            while (iterator.hasNext()) {
+                OMElement supportedGrantTypeElement = (OMElement) iterator.next();
+                OMElement grantTypeNameElement = supportedGrantTypeElement
+                        .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.USER_CONSENT_ENABLED_GRANT_TYPE_NAME));
+                String grantTypeName = null;
+                if (grantTypeNameElement != null) {
+                    grantTypeName = grantTypeNameElement.getText();
+                }
+
+                if (StringUtils.isNotEmpty(grantTypeName)) {
+                    userConsentEnabledGrantTypes.add(grantTypeName);
+                } else {
+                    log.warn("Grant Type: " + grantTypeName + " is not a supported grant type. Therefore skipping it " +
+                            "from user consent enabled grant type list.");
+                }
+            }
+
+        } else {
+            // Assume the default case.
+            log.warn("<UserConsentEnabledGrantTypes> element in not found in identity.xml. Adding 'authorization_code' " +
+                    "and 'implicit' grant types as default user consent enabled grant types.");
+            userConsentEnabledGrantTypes.add(OAuthConstants.GrantTypes.AUTHORIZATION_CODE);
+            userConsentEnabledGrantTypes.add(OAuthConstants.GrantTypes.IMPLICIT);
         }
     }
 
@@ -2252,7 +2296,14 @@ public class OAuthServerConfiguration {
         private static final String SUPPORTED_GRANT_TYPES = "SupportedGrantTypes";
         private static final String SUPPORTED_GRANT_TYPE = "SupportedGrantType";
         private static final String GRANT_TYPE_NAME = "GrantTypeName";
+
+        private static final String USER_CONSENT_ENABLED_GRANT_TYPES = "UserConsentEnabledGrantTypes";
+        private static final String USER_CONSENT_ENABLED_GRANT_TYPE = "UserConsentEnabledGrantType";
+        private static final String USER_CONSENT_ENABLED_GRANT_TYPE_NAME = "GrantTypeName";
+
+
         private static final String ID_TOKEN_ALLOWED = "IdTokenAllowed";
+        private static final String GET_CONSENT_FOR_USER_CLAIMS = "GetConsentForUserClaims";
         private static final String GRANT_TYPE_HANDLER_IMPL_CLASS = "GrantTypeHandlerImplClass";
         private static final String GRANT_TYPE_VALIDATOR_IMPL_CLASS = "GrantTypeValidatorImplClass";
         private static final String RESPONSE_TYPE_VALIDATOR_IMPL_CLASS = "ResponseTypeValidatorImplClass";
