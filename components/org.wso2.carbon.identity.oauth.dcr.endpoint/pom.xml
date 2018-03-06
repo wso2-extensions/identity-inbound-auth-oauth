@@ -17,7 +17,7 @@
 
     <dependencies>
         <dependency>
-            <groupId>org.apache.cxf.wso2</groupId>
+            <groupId>org.wso2.orbit.org.apache.cxf</groupId>
             <artifactId>cxf-bundle</artifactId>
             <scope>provided</scope>
         </dependency>

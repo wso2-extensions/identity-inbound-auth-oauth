@@ -43,6 +43,7 @@ import org.wso2.carbon.registry.core.service.RegistryService;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
