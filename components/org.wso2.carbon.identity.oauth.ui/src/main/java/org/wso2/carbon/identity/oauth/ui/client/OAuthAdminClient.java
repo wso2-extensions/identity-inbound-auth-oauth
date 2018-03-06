@@ -71,6 +71,10 @@ public class OAuthAdminClient {
         stub.registerOAuthApplicationData(application);
     }
 
+    public OAuthConsumerAppDTO registerAndRetrieveOAuthApplicationData(OAuthConsumerAppDTO application) throws Exception {
+        return stub.registerAndRetrieveOAuthApplicationData(application);
+    }
+
     // TODO : this method should be removed once above is done
     public OAuthConsumerAppDTO getOAuthApplicationDataByName(String applicationName) throws Exception {
         OAuthConsumerAppDTO[] dtos = stub.getAllOAuthApplicationData();
@@ -114,6 +118,10 @@ public class OAuthAdminClient {
 
     public void regenerateSecretKey(String consumerkey) throws Exception {
         stub.updateOauthSecretKey(consumerkey);
+    }
+
+    public OAuthConsumerAppDTO regenerateAndRetrieveOauthSecretKey(String consumerKey) throws Exception {
+        return stub.updateAndRetrieveOauthSecretKey(consumerKey);
     }
 
     public String getOauthApplicationState(String consumerKey) throws Exception {

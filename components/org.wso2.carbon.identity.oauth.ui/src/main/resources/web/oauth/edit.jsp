@@ -24,6 +24,7 @@
 <%@ page import="org.wso2.carbon.identity.oauth.ui.util.OAuthUIUtil" %>
 <%@ page import="org.wso2.carbon.ui.CarbonUIMessage" %>
 <%@ page import="org.wso2.carbon.ui.CarbonUIUtil" %>
+<%@ page import="org.wso2.carbon.identity.oauth2.util.OAuth2Util"%>
 <%@ page import="org.wso2.carbon.utils.ServerConstants" %>
 
 <%@ page import="java.util.ArrayList" %>
@@ -88,11 +89,20 @@
 
         if (OAuthConstants.ACTION_REGENERATE.equalsIgnoreCase(action)) {
             String oauthAppState = client.getOauthApplicationState(consumerkey);
-            client.regenerateSecretKey(consumerkey);
+            Boolean isHashDisabled = OAuth2Util.isHashDisabled();
+            if (isHashDisabled) {
+                client.regenerateSecretKey(consumerkey);
+            } else {
+                consumerApp = client.regenerateAndRetrieveOauthSecretKey(consumerkey);
+            }
             if (OAuthConstants.OauthAppStates.APP_STATE_REVOKED.equalsIgnoreCase(oauthAppState)) {
                 client.updateOauthApplicationState(consumerkey, OAuthConstants.OauthAppStates.APP_STATE_ACTIVE);
             }
-            app.setOauthConsumerSecret(client.getOAuthApplicationData(consumerkey).getOauthConsumerSecret());
+            if (isHashDisabled) {
+                app.setOauthConsumerSecret(client.getOAuthApplicationData(consumerkey).getOauthConsumerSecret());
+            } else {
+                app.setOauthConsumerSecret(consumerApp.getOauthConsumerSecret());
+            }
             CarbonUIMessage.sendCarbonUIMessage("Client Secret successfully updated for Client ID: " + consumerkey,
                     CarbonUIMessage.INFO, request);
 

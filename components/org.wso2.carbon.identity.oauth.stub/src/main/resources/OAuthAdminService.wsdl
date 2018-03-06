@@ -70,6 +70,34 @@
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
+            <xs:element name="registerAndRetrieveOAuthApplicationData">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element minOccurs="0" name="application" nillable="true" type="ax2393:OAuthConsumerAppDTO"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="registerAndRetrieveOAuthApplicationDataResponse">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element minOccurs="0" name="return" nillable="true" type="ax2393:OAuthConsumerAppDTO"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="updateAndRetrieveOauthSecretKey">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element minOccurs="0" name="consumerKey" nillable="true" type="xs:string"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="updateAndRetrieveOauthSecretKeyResponse">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element minOccurs="0" name="return" nillable="true" type="ax2393:OAuthConsumerAppDTO"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
             <xs:element name="updateConsumerApplication">
                 <xs:complexType>
                     <xs:sequence>
@@ -302,6 +330,18 @@
         <wsdl:part name="parameters" element="ns1:registerOAuthApplicationData"/>
     </wsdl:message>
     <wsdl:message name="registerOAuthApplicationDataResponse"/>
+    <wsdl:message name="registerAndRetrieveOAuthApplicationDataRequest">
+        <wsdl:part name="parameters" element="ns1:registerAndRetrieveOAuthApplicationData"/>
+    </wsdl:message>
+    <wsdl:message name="registerAndRetrieveOAuthApplicationDataResponse">
+        <wsdl:part name="parameters" element="ns1:registerAndRetrieveOAuthApplicationDataResponse"/>
+    </wsdl:message>
+    <wsdl:message name="updateAndRetrieveOauthSecretKeyRequest">
+        <wsdl:part name="parameters" element="ns1:updateAndRetrieveOauthSecretKey"/>
+    </wsdl:message>
+    <wsdl:message name="updateAndRetrieveOauthSecretKeyResponse">
+        <wsdl:part name="parameters" element="ns1:updateAndRetrieveOauthSecretKeyResponse"/>
+    </wsdl:message>
     <wsdl:message name="removeOAuthApplicationDataRequest">
         <wsdl:part name="parameters" element="ns1:removeOAuthApplicationData"/>
     </wsdl:message>
@@ -393,6 +433,16 @@
             <wsdl:input message="tns:registerOAuthApplicationDataRequest" wsaw:Action="urn:registerOAuthApplicationData"/>
             <wsdl:output message="tns:registerOAuthApplicationDataResponse" wsaw:Action="urn:registerOAuthApplicationDataResponse"/>
             <wsdl:fault message="tns:OAuthAdminServiceIdentityOAuthAdminException" name="OAuthAdminServiceIdentityOAuthAdminException" wsaw:Action="urn:registerOAuthApplicationDataOAuthAdminServiceIdentityOAuthAdminException"/>
+        </wsdl:operation>
+        <wsdl:operation name="registerAndRetrieveOAuthApplicationData">
+            <wsdl:input message="tns:registerAndRetrieveOAuthApplicationDataRequest" wsaw:Action="urn:registerAndRetrieveOAuthApplicationData"/>
+            <wsdl:output message="tns:registerAndRetrieveOAuthApplicationDataResponse" wsaw:Action="urn:registerAndRetrieveOAuthApplicationDataResponse"/>
+            <wsdl:fault message="tns:OAuthAdminServiceIdentityOAuthAdminException" name="OAuthAdminServiceIdentityOAuthAdminException" wsaw:Action="urn:registerAndRetrieveOAuthApplicationDataOAuthAdminServiceIdentityOAuthAdminException"/>
+        </wsdl:operation>
+        <wsdl:operation name="updateAndRetrieveOauthSecretKey">
+            <wsdl:input message="tns:updateAndRetrieveOauthSecretKeyRequest" wsaw:Action="urn:updateAndRetrieveOauthSecretKey"/>
+            <wsdl:output message="tns:updateAndRetrieveOauthSecretKeyResponse" wsaw:Action="urn:updateAndRetrieveOauthSecretKeyResponse"/>
+            <wsdl:fault message="tns:OAuthAdminServiceIdentityOAuthAdminException" name="OAuthAdminServiceIdentityOAuthAdminException" wsaw:Action="urn:updateAndRetrieveOauthSecretKeyOAuthAdminServiceIdentityOAuthAdminException"/>
         </wsdl:operation>
         <wsdl:operation name="removeOAuthApplicationData">
             <wsdl:input message="tns:removeOAuthApplicationDataRequest" wsaw:Action="urn:removeOAuthApplicationData"/>
@@ -512,6 +562,30 @@
         </wsdl:operation>
         <wsdl:operation name="registerOAuthApplicationData">
             <soap:operation soapAction="urn:registerOAuthApplicationData" style="document"/>
+            <wsdl:input>
+                <soap:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap:body use="literal"/>
+            </wsdl:output>
+            <wsdl:fault name="OAuthAdminServiceIdentityOAuthAdminException">
+                <soap:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
+            </wsdl:fault>
+        </wsdl:operation>
+        <wsdl:operation name="registerAndRetrieveOAuthApplicationData">
+            <soap:operation soapAction="urn:registerAndRetrieveOAuthApplicationData" style="document"/>
+            <wsdl:input>
+                <soap:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap:body use="literal"/>
+            </wsdl:output>
+            <wsdl:fault name="OAuthAdminServiceIdentityOAuthAdminException">
+                <soap:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
+            </wsdl:fault>
+        </wsdl:operation>
+        <wsdl:operation name="updateAndRetrieveOauthSecretKey">
+            <soap:operation soapAction="urn:updateAndRetrieveOauthSecretKey" style="document"/>
             <wsdl:input>
                 <soap:body use="literal"/>
             </wsdl:input>
@@ -726,6 +800,30 @@
                 <soap12:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
             </wsdl:fault>
         </wsdl:operation>
+        <wsdl:operation name="registerAndRetrieveOAuthApplicationData">
+            <soap12:operation soapAction="urn:registerAndRetrieveOAuthApplicationData" style="document"/>
+            <wsdl:input>
+                <soap12:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap12:body use="literal"/>
+            </wsdl:output>
+            <wsdl:fault name="OAuthAdminServiceIdentityOAuthAdminException">
+                <soap12:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
+            </wsdl:fault>
+        </wsdl:operation>
+        <wsdl:operation name="updateAndRetrieveOauthSecretKey">
+            <soap12:operation soapAction="urn:updateAndRetrieveOauthSecretKey" style="document"/>
+            <wsdl:input>
+                <soap12:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap12:body use="literal"/>
+            </wsdl:output>
+            <wsdl:fault name="OAuthAdminServiceIdentityOAuthAdminException">
+                <soap12:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
+            </wsdl:fault>
+        </wsdl:operation>
         <wsdl:operation name="removeOAuthApplicationData">
             <soap12:operation soapAction="urn:removeOAuthApplicationData" style="document"/>
             <wsdl:input>
@@ -908,6 +1006,24 @@
         </wsdl:operation>
         <wsdl:operation name="registerOAuthApplicationData">
             <http:operation location="registerOAuthApplicationData"/>
+            <wsdl:input>
+                <mime:content type="text/xml" part="parameters"/>
+            </wsdl:input>
+            <wsdl:output>
+                <mime:content type="text/xml" part="parameters"/>
+            </wsdl:output>
+        </wsdl:operation>
+        <wsdl:operation name="registerAndRetrieveOAuthApplicationData">
+            <http:operation location="registerAndRetrieveOAuthApplicationData"/>
+            <wsdl:input>
+                <mime:content type="text/xml" part="parameters"/>
+            </wsdl:input>
+            <wsdl:output>
+                <mime:content type="text/xml" part="parameters"/>
+            </wsdl:output>
+        </wsdl:operation>
+        <wsdl:operation name="updateAndRetrieveOauthSecretKey">
+            <http:operation location="updateAndRetrieveOauthSecretKey"/>
             <wsdl:input>
                 <mime:content type="text/xml" part="parameters"/>
             </wsdl:input>

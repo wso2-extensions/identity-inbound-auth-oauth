@@ -135,6 +135,9 @@ public class SQLQueries {
         public static final String UPDATE_OAUTH_SECRET_KEY = "UPDATE IDN_OAUTH_CONSUMER_APPS SET CONSUMER_SECRET=? WHERE " +
                 "CONSUMER_KEY=?";
 
+        public static final String UPDATE_OAUTH_SECRET_KEY_WITH_HASH = "UPDATE IDN_OAUTH_CONSUMER_APPS SET " +
+                "CONSUMER_SECRET=?, CONSUMER_SECRET_HASH=? " + "WHERE CONSUMER_KEY=?";
+
         public static final String UPDATE_SP_OIDC_PROPERTY = "UPDATE IDN_OIDC_PROPERTY SET PROPERTY_VALUE=? WHERE " +
                 "TENANT_ID=? AND CONSUMER_KEY=? AND PROPERTY_KEY=?";
 
@@ -161,6 +164,9 @@ public class SQLQueries {
     public static class OAuthConsumerDAOSQLQueries {
         public static final String GET_CONSUMER_SECRET = "SELECT CONSUMER_SECRET FROM IDN_OAUTH_CONSUMER_APPS " +
                 "WHERE CONSUMER_KEY=?";
+
+        public static final String EXISTENCE_OF_CONSUMER_SECRET = "SELECT CONSUMER_KEY FROM IDN_OAUTH_CONSUMER_APPS " +
+                "WHERE CONSUMER_KEY=? AND CONSUMER_SECRET=?";
 
         public static final String GET_REGISTERED_CALLBACK_URL = "SELECT CALLBACK_URL FROM IDN_OAUTH_CONSUMER_APPS WHERE CONSUMER_KEY=?";
 
