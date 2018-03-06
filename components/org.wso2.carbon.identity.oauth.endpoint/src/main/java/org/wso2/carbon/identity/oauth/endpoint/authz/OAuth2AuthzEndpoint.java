@@ -1243,9 +1243,10 @@ public class OAuth2AuthzEndpoint {
         }
         if (StringUtils.isNotBlank(oauthRequest.getParam(ACR_VALUES)) && !"null".equals(oauthRequest.getParam
                 (ACR_VALUES))) {
-            String[] acrValues = oauthRequest.getParam(ACR_VALUES).split(" ");
-            LinkedHashSet<String> list = new LinkedHashSet<>(Arrays.asList(acrValues));
-            params.setACRValues(list);
+            List acrValuesList = Arrays.asList(oauthRequest.getParam(ACR_VALUES).split(" "));
+            LinkedHashSet acrValuesHashSet = new LinkedHashSet<>(acrValuesList);
+            params.setACRValues(acrValuesHashSet);
+            oAuthMessage.getRequest().setAttribute(ACR_VALUES, acrValuesList);
         }
         if (StringUtils.isNotBlank(oauthRequest.getParam(CLAIMS))) {
             params.setEssentialClaims(oauthRequest.getParam(CLAIMS));
@@ -1259,7 +1260,7 @@ public class OAuth2AuthzEndpoint {
          */
         if (OAuth2Util.isOIDCAuthzRequest(oauthRequest.getScopes())) {
             try {
-                handleOIDCRequestObject(oauthRequest, params);
+                handleOIDCRequestObject(oAuthMessage, oauthRequest, params);
             } catch (RequestObjectException e) {
                 if (log.isDebugEnabled()) {
                     log.debug("Request Object Handling failed due to : " + e.getErrorCode() + " for client_id: "
@@ -1286,8 +1287,8 @@ public class OAuth2AuthzEndpoint {
         }
     }
 
-    private void handleOIDCRequestObject(OAuthAuthzRequest oauthRequest, OAuth2Parameters parameters)
-            throws RequestObjectException {
+    private void handleOIDCRequestObject(OAuthMessage oAuthMessage, OAuthAuthzRequest oauthRequest,
+                                         OAuth2Parameters parameters) throws RequestObjectException {
 
         validateRequestObjectParams(oauthRequest);
         String requestObjValue = null;
@@ -1298,7 +1299,7 @@ public class OAuth2AuthzEndpoint {
         }
 
         if (StringUtils.isNotEmpty(requestObjValue)) {
-            handleRequestObject(oauthRequest, parameters);
+            handleRequestObject(oAuthMessage, oauthRequest, parameters);
         } else {
             if (log.isDebugEnabled()) {
                 log.debug("Authorization Request does not contain a Request Object or Request Object reference.");
@@ -1316,7 +1317,8 @@ public class OAuth2AuthzEndpoint {
         }
     }
 
-    private void handleRequestObject(OAuthAuthzRequest oauthRequest, OAuth2Parameters parameters) throws RequestObjectException {
+    private void handleRequestObject(OAuthMessage oAuthMessage, OAuthAuthzRequest oauthRequest,
+                                     OAuth2Parameters parameters) throws RequestObjectException {
 
         RequestObject requestObject = OIDCRequestObjectUtil.buildRequestObject(oauthRequest, parameters);
         if (requestObject == null) {
@@ -1327,12 +1329,12 @@ public class OAuth2AuthzEndpoint {
               When the request parameter is used, the OpenID Connect request parameter values contained in the JWT supersede
               those passed using the OAuth 2.0 request syntax
              */
-        overrideAuthzParameters(parameters, oauthRequest.getParam(REQUEST), oauthRequest.getParam(REQUEST_URI),
-                requestObject);
+        overrideAuthzParameters(oAuthMessage, parameters, oauthRequest.getParam(REQUEST),
+                oauthRequest.getParam(REQUEST_URI), requestObject);
         persistRequestObject(parameters, requestObject);
     }
 
-    private void overrideAuthzParameters(OAuth2Parameters params, String requestParameterValue,
+    private void overrideAuthzParameters(OAuthMessage oAuthMessage, OAuth2Parameters params, String requestParameterValue,
                                          String requestURIParameterValue, RequestObject requestObject) {
 
         if (StringUtils.isNotBlank(requestParameterValue) || StringUtils.isNotBlank(requestURIParameterValue)) {
@@ -1359,6 +1361,8 @@ public class OAuth2AuthzEndpoint {
             if (StringUtils.isNotEmpty(requestObject.getClaimValue(ACR_VALUES))) {
                 String acrString = requestObject.getClaimValue(ACR_VALUES);
                 params.setACRValues(new LinkedHashSet<>(Arrays.asList(acrString.split(COMMA_SEPARATOR))));
+                oAuthMessage.getRequest().setAttribute(ACR_VALUES,
+                        new ArrayList<>(Arrays.asList(acrString.split(COMMA_SEPARATOR))));
             }
         }
     }
