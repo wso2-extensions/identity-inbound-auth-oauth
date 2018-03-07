@@ -392,9 +392,18 @@ public class OAuth2AuthzEndpoint {
             List<Integer> approvedClaimIds = getUserConsentClaimIds(oAuthMessage);
             if (isConsentHandlingRequired(approvedClaimIds)) {
                 serviceProvider = OAuth2Util.getServiceProvider(clientId, tenantDomain);
-                ConsentClaimsData value = getConsentRequiredClaimsWithPreviousConsents(loggedInUser, serviceProvider);
+                /*
+                    With the current implementation of the SSOConsentService we need to send back the original
+                    ConsentClaimsData object we got during pre consent stage. Currently we are repeating the API call
+                    during post consent handling to get the original ConsentClaimsData object (Assuming there is no
+                    change in SP during pre-consent and post-consent).
+
+                    The API on the SSO Consent Service will be improved to avoid having to send the original
+                    ConsentClaimsData object.
+                 */
+                ConsentClaimsData value = getConsentRequiredClaims(loggedInUser, serviceProvider, oauth2Params);
                 // Call framework and create the consent receipt.
-                getConsentService().processConsent(approvedClaimIds, serviceProvider, loggedInUser, value);
+                getSSOConsentService().processConsent(approvedClaimIds, serviceProvider, loggedInUser, value);
             }
         } catch (IdentityOAuth2Exception e) {
             String msg = "Error while retrieving service provider for client_id: " + clientId + " of tenantDomain: "
@@ -407,15 +416,16 @@ public class OAuth2AuthzEndpoint {
         }
     }
 
-    private SSOConsentService getConsentService() {
-        return EndpointUtil.getSSOConsentService();
-    }
-
-    private ConsentClaimsData getConsentRequiredClaimsWithPreviousConsents(AuthenticatedUser loggedInUser,
-                                                                           ServiceProvider serviceProvider)
+    private ConsentClaimsData getConsentRequiredClaims(AuthenticatedUser user, ServiceProvider serviceProvider,
+                                                       OAuth2Parameters oAuth2Parameters)
             throws SSOConsentServiceException {
 
-        return getConsentService().getConsentRequiredClaimsWithExistingConsents(serviceProvider, loggedInUser);
+        if (hasPromptContainsConsent(oAuth2Parameters)) {
+            // Ignore all previous consents and get consent required claims
+            return getSSOConsentService().getConsentRequiredClaimsWithoutExistingConsents(serviceProvider, user);
+        } else {
+            return getSSOConsentService().getConsentRequiredClaimsWithExistingConsents(serviceProvider, user);
+        }
     }
 
     private boolean isConsentHandlingRequired(List<Integer> approvedClaimIds) {
@@ -1607,9 +1617,9 @@ public class OAuth2AuthzEndpoint {
                                                        ServiceProvider serviceProvider,
                                                        boolean useExistingConsents) throws SSOConsentServiceException {
         if (useExistingConsents) {
-            return getConsentService().getConsentRequiredClaimsWithExistingConsents(serviceProvider, user);
+            return getSSOConsentService().getConsentRequiredClaimsWithExistingConsents(serviceProvider, user);
         } else {
-            return getConsentService().getConsentRequiredClaimsWithoutExistingConsents(serviceProvider, user);
+            return getSSOConsentService().getConsentRequiredClaimsWithoutExistingConsents(serviceProvider, user);
         }
     }
 
