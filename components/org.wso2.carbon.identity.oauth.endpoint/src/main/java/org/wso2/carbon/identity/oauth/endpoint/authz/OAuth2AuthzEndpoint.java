@@ -692,7 +692,7 @@ public class OAuth2AuthzEndpoint {
     private String createFormPage(String jsonPayLoad, String redirectURI, String authenticatedIdPs,
                                   String sessionStateValue) {
 
-        if (isConsentFromUserRequired(formPostRedirectPage)) {
+        if (StringUtils.isNotBlank(formPostRedirectPage)) {
             String newPage = formPostRedirectPage;
             String pageWithRedirectURI = newPage.replace("$redirectURI", redirectURI);
             return pageWithRedirectURI.replace("<!--$params-->", buildParams(jsonPayLoad, authenticatedIdPs, sessionStateValue));
@@ -1450,7 +1450,7 @@ public class OAuth2AuthzEndpoint {
             }
 
             // Need to prompt for consent and get user consent for claims as well.
-            return promptUserForConsent(sessionDataKeyFromLogin, oauth2Params, authenticatedUser);
+            return promptUserForConsent(sessionDataKeyFromLogin, oauth2Params, authenticatedUser, true);
         } else if (isPromptNone(oauth2Params)) {
             return handlePromptNone(oAuthMessage, sessionState, oauth2Params, authenticatedUser, hasUserApproved);
         } else if (isPromptLogin(oauth2Params) || isPromptParamsNotPresent(oauth2Params)) {
@@ -1482,7 +1482,7 @@ public class OAuth2AuthzEndpoint {
         } else if (hasUserApproved) {
             return handleApproveAlwaysWithPromptForNewConsent(oAuthMessage, sessionState, oauth2Params);
         } else {
-            return promptUserForConsent(sessionDataKey, oauth2Params, authenticatedUser);
+            return promptUserForConsent(sessionDataKey, oauth2Params, authenticatedUser, false);
         }
     }
 
@@ -1496,15 +1496,19 @@ public class OAuth2AuthzEndpoint {
         return (OAuthConstants.Prompt.LOGIN).equals(oauth2Params.getPrompt());
     }
 
-    private String promptUserForConsent(String sessionDataKey, OAuth2Parameters oauth2Params, AuthenticatedUser user)
-            throws OAuthSystemException, ConsentHandlingFailedException {
+    private String promptUserForConsent(String sessionDataKey, OAuth2Parameters oauth2Params,
+                                                  AuthenticatedUser user, boolean ignoreExistingConsents)
+            throws ConsentHandlingFailedException, OAuthSystemException {
 
-        String preConsent= handlePreConsent(oauth2Params, user, true);
-        if (isConsentFromUserRequired(preConsent)) {
-            return getUserConsentURL(sessionDataKey, oauth2Params, user, preConsent);
+        String preConsent;
+        if (ignoreExistingConsents) {
+            // Ignore existing consents and prompt for all SP mandatory and requested claims.
+            preConsent = handlePreConsentExcludingExistingConsents(oauth2Params, user);
         } else {
-            return getUserConsentURL(sessionDataKey, oauth2Params, user);
+            preConsent = handlePreConsentIncludingExistingConsents(oauth2Params, user);
         }
+
+        return getUserConsentURL(sessionDataKey, oauth2Params, user, preConsent);
     }
 
     private String handlePromptNone(OAuthMessage oAuthMessage,
@@ -1537,6 +1541,16 @@ public class OAuth2AuthzEndpoint {
     private boolean isConsentFromUserRequired(String preConsentQueryParams) {
 
         return StringUtils.isNotBlank(preConsentQueryParams);
+    }
+
+    private String handlePreConsentExcludingExistingConsents(OAuth2Parameters oauth2Params, AuthenticatedUser user)
+            throws ConsentHandlingFailedException, OAuthSystemException {
+        return handlePreConsent(oauth2Params, user, false);
+    }
+
+    private String handlePreConsentIncludingExistingConsents(OAuth2Parameters oauth2Params, AuthenticatedUser user)
+            throws ConsentHandlingFailedException, OAuthSystemException {
+        return handlePreConsent(oauth2Params, user, true);
     }
 
     /**
@@ -1666,7 +1680,7 @@ public class OAuth2AuthzEndpoint {
             throws ConsentHandlingFailedException, OAuthSystemException {
 
         AuthenticatedUser authenticatedUser = getLoggedInUser(oAuthMessage);
-        String preConsent = handlePreConsent(oauth2Params, authenticatedUser, true);
+        String preConsent = handlePreConsentIncludingExistingConsents(oauth2Params, authenticatedUser);
 
         if (isConsentFromUserRequired(preConsent)) {
             return getErrorRedirectURL(oauth2Params, OAuth2ErrorCodes.CONSENT_REQUIRED);
@@ -1680,7 +1694,7 @@ public class OAuth2AuthzEndpoint {
             throws ConsentHandlingFailedException, OAuthSystemException {
 
         AuthenticatedUser authenticatedUser = getLoggedInUser(oAuthMessage);
-        String preConsent = handlePreConsent(oauth2Params, authenticatedUser, false);
+        String preConsent = handlePreConsentIncludingExistingConsents(oauth2Params, authenticatedUser);
 
         if (isConsentFromUserRequired(preConsent)) {
             String sessionDataKeyFromLogin = getSessionDataKeyFromLogin(oAuthMessage);
