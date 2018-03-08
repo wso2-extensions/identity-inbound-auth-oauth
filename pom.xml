@@ -537,6 +537,11 @@
                 <artifactId>httpclient</artifactId>
                 <version>${http.client.version}</version>
              </dependency>
+            <dependency>
+                <groupId>org.apache.httpcomponents.wso2</groupId>
+                <artifactId>httpcore</artifactId>
+                <version>${http.core.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -804,6 +809,7 @@
         <swagger-jaxrs.version>1.5.2</swagger-jaxrs.version>
         <!-- httpclient dependency Version-->
         <http.client.version>4.3.6.wso2v1</http.client.version>
+        <http.core.version>4.3.3.wso2v1</http.core.version>
 
         <!--Test Dependencies-->
         <junit.version>4.12</junit.version>
