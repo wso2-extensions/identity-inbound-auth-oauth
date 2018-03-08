@@ -18,7 +18,6 @@
 
 package org.wso2.carbon.identity.oauth2.validators;
 
-import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
@@ -89,7 +88,7 @@ public class DefaultOAuth2TokenValidatorTest {
             oAuthServerConfiguration.setOAuth2ScopeValidators(oAuth2ScopeValidators);
 
             OAuthAppDO authApp = new OAuthAppDO();
-            authApp.setScopeValidators(new String[]{"SampleScopeValidator"});
+            authApp.setScopeValidators(new String[]{scopeValidator.getValidatorName()});
 
             AuthenticatedUser user = new AuthenticatedUser();
             user.setTenantDomain("carbon");

@@ -24,8 +24,16 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeValidator;
 
 public class SampleScopeValidator extends OAuth2ScopeValidator {
+
+    private static final String SAMPLE_SCOPE_VALIDATOR = "Sample Scope Validator";
+
     @Override
     public boolean validateScope(AccessTokenDO accessTokenDO, String resource) throws IdentityOAuth2Exception {
         return true;
+    }
+
+    @Override
+    public String getValidatorName() {
+        return SAMPLE_SCOPE_VALIDATOR;
     }
 }

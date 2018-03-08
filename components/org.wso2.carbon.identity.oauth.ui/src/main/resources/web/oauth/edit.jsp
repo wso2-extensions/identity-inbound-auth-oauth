@@ -31,7 +31,6 @@
 <%@ page import="java.util.Collections" %>
 <%@ page import="java.util.List" %>
 <%@ page import="java.util.ResourceBundle" %>
-<%@ page import="org.wso2.carbon.identity.oauth.ui.util.OAuthUIConstants" %>
 
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%@ taglib uri="http://wso2.org/projects/carbon/taglibs/carbontags.jar" prefix="carbon" %>
@@ -738,9 +737,9 @@
                                             %>
                                             <tr>
                                                 <td><label><input type="checkbox"
-                                                                  id=<%=OAuthUIConstants.SCOPE_VALIDATOR_PREFIX  + scopeValidator.replaceAll(" ", "-")%>
-                                                                          name=<%=OAuthUIConstants.SCOPE_VALIDATOR_PREFIX + scopeValidator%>
-                                                                  value=<%=Encode.forHtmlAttribute(scopeValidator)%> <%=(scopeValidators.contains(scopeValidator) ? "checked=\"checked\"" : "")%>/><%=Encode.forHtmlAttribute(scopeValidator)%>
+                                                                  id=<%= + OAuthUIUtil.getScopeValidatorId(scopeValidator)%>
+                                                                          name=<%=+ OAuthUIUtil.getScopeValidatorId(scopeValidator)%>
+                                                                  value=<%=Encode.forHtmlAttribute(OAuthUIUtil.getScopeValidatorId(scopeValidator))%> <%=(scopeValidators.contains(scopeValidator) ? "checked=\"checked\"" : "")%>/><%=Encode.forHtmlAttribute(scopeValidator)%>
                                                 </label></td>
                                             </tr>
                                             <%
