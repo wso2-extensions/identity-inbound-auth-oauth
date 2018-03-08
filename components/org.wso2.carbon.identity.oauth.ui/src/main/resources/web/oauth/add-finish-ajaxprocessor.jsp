@@ -23,7 +23,6 @@
 <%@ page import="org.wso2.carbon.identity.oauth.common.OAuthConstants"%>
 <%@ page import="org.wso2.carbon.identity.oauth.stub.dto.OAuthConsumerAppDTO"%>
 <%@ page import="org.wso2.carbon.identity.oauth.ui.client.OAuthAdminClient"%>
-<%@ page import="org.wso2.carbon.identity.oauth.ui.util.OAuthUIConstants"%>
 <%@ page import="org.wso2.carbon.identity.oauth.ui.util.OAuthUIUtil"%>
 <%@ page import="org.wso2.carbon.ui.CarbonUIMessage" %>
 
@@ -114,8 +113,7 @@
             List<String> registeredScopeValidators = new ArrayList<String>();
             String[] allowedValidators = client.getAllowedScopeValidators();
             for (String allowedValidator : allowedValidators) {
-                String scopeValidatorValue = request.getParameter(OAuthUIConstants.SCOPE_VALIDATOR_PREFIX
-                        + allowedValidator.replaceAll(" ", "_"));
+                String scopeValidatorValue = request.getParameter(OAuthUIUtil.getScopeValidatorId(allowedValidator));
                 if (scopeValidatorValue != null) {
                     registeredScopeValidators.add(allowedValidator);
                 }

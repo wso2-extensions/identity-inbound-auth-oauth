@@ -21,7 +21,6 @@
 <%@ page import="org.wso2.carbon.CarbonConstants" %>
 <%@ page import="org.wso2.carbon.identity.oauth.common.OAuthConstants" %>
 <%@ page import="org.wso2.carbon.identity.oauth.ui.client.OAuthAdminClient" %>
-<%@ page import="org.wso2.carbon.identity.oauth.ui.util.OAuthUIConstants" %>
 <%@ page import="org.wso2.carbon.ui.CarbonUIMessage" %>
 <%@ page import="org.wso2.carbon.ui.CarbonUIUtil" %>
 <%@ page import="org.wso2.carbon.utils.ServerConstants" %>
@@ -30,6 +29,7 @@
 <%@ page import="java.util.Collections" %>
 <%@ page import="java.util.List" %>
 <%@ page import="java.util.ResourceBundle" %>
+<%@ page import="org.wso2.carbon.identity.oauth.ui.util.OAuthUIUtil" %>
 
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%@ taglib uri="http://wso2.org/projects/carbon/taglibs/carbontags.jar" prefix="carbon" %>
@@ -626,9 +626,9 @@
                                             %>
                                             <tr>
                                                 <td><label><input type="checkbox"
-                                                                  id=<%=OAuthUIConstants.SCOPE_VALIDATOR_PREFIX + scopeValidator.replaceAll(" ", "_")%>
-                                                                          name=<%=OAuthUIConstants.SCOPE_VALIDATOR_PREFIX + scopeValidator.replaceAll(" ", "_")%>
-                                                                  value=<%=Encode.forHtmlAttribute(scopeValidator.replaceAll(" ", "_"))%>/><%=Encode.forHtmlAttribute(scopeValidator)%>
+                                                                  id=<%=+ OAuthUIUtil.getScopeValidatorId(scopeValidator)%>
+                                                                          name=<%=+ OAuthUIUtil.getScopeValidatorId(scopeValidator)%>
+                                                                  value=<%=Encode.forHtmlAttribute(OAuthUIUtil.getScopeValidatorId(scopeValidator))%>/><%=Encode.forHtmlAttribute(scopeValidator)%>
                                                 </label></td>
                                             </tr>
                                             <%

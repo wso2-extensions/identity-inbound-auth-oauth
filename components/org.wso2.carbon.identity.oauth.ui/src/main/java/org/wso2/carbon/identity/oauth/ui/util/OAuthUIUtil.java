@@ -18,7 +18,6 @@
 
 package org.wso2.carbon.identity.oauth.ui.util;
 
-import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -36,6 +35,7 @@ import javax.servlet.http.HttpServletRequest;
 public class OAuthUIUtil {
 
     private static final Log log = LogFactory.getLog(OAuthUIUtil.class);
+    private static final String SCOPE_VALIDATOR_PREFIX = "scope_validator_";
 
     private OAuthUIUtil() {
 
@@ -114,5 +114,14 @@ public class OAuthUIUtil {
             }
         }
         return false;
+    }
+
+    /**
+     *  Generate id for the scope validator
+     * @param name scope validator name
+     * @return scope validator id
+     */
+    public static String getScopeValidatorId(String name) {
+        return SCOPE_VALIDATOR_PREFIX + name.replaceAll(" ", "_");
     }
 }
