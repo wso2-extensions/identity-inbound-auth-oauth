@@ -626,8 +626,8 @@
                                             %>
                                             <tr>
                                                 <td><label><input type="checkbox"
-                                                                  id=<%=+ OAuthUIUtil.getScopeValidatorId(scopeValidator)%>
-                                                                          name=<%=+ OAuthUIUtil.getScopeValidatorId(scopeValidator)%>
+                                                                  id=<%= OAuthUIUtil.getScopeValidatorId(scopeValidator)%>
+                                                                          name=<%= OAuthUIUtil.getScopeValidatorId(scopeValidator)%>
                                                                   value=<%=Encode.forHtmlAttribute(OAuthUIUtil.getScopeValidatorId(scopeValidator))%>/><%=Encode.forHtmlAttribute(scopeValidator)%>
                                                 </label></td>
                                             </tr>
