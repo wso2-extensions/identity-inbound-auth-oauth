@@ -737,8 +737,8 @@
                                             %>
                                             <tr>
                                                 <td><label><input type="checkbox"
-                                                                  id=<%= + OAuthUIUtil.getScopeValidatorId(scopeValidator)%>
-                                                                          name=<%=+ OAuthUIUtil.getScopeValidatorId(scopeValidator)%>
+                                                                  id=<%=  OAuthUIUtil.getScopeValidatorId(scopeValidator)%>
+                                                                          name=<%= OAuthUIUtil.getScopeValidatorId(scopeValidator)%>
                                                                   value=<%=Encode.forHtmlAttribute(OAuthUIUtil.getScopeValidatorId(scopeValidator))%> <%=(scopeValidators.contains(scopeValidator) ? "checked=\"checked\"" : "")%>/><%=Encode.forHtmlAttribute(scopeValidator)%>
                                                 </label></td>
                                             </tr>
