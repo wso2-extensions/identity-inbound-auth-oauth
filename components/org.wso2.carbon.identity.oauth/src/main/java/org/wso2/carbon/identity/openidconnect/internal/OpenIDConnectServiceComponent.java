@@ -126,7 +126,7 @@ public class OpenIDConnectServiceComponent {
     @Reference(
             name = "ClaimProvider",
             service = ClaimProvider.class,
-            cardinality = ReferenceCardinality.OPTIONAL,
+            cardinality = ReferenceCardinality.MULTIPLE,
             policy = ReferencePolicy.DYNAMIC,
             unbind = "unsetClaimProvider"
     )
