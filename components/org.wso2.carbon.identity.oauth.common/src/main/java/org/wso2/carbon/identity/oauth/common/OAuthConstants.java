@@ -314,6 +314,7 @@ public final class OAuthConstants {
         public static final String MAX_AGE = "max_age";
         // OIDC Specification : http://openid.net/specs/openid-connect-core-1_0.html
         public static final String C_HASH = "c_hash";
+        public static final String SESSION_ID_CLAIM = "sid";
 
         private OIDCClaims() {}
     }

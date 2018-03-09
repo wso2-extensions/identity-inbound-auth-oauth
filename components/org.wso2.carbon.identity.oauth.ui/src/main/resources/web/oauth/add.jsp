@@ -260,6 +260,8 @@
                         $(jQuery("#audience_table").show());
                         $(jQuery("#validate_request_object_signature_row").show());
                         $(jQuery("#encrypt_id_token_row").show());
+                        $(jQuery('#encryption_algorithm_row')).show();
+                        $(jQuery('#encryption_method_row')).show();
 
                         if (!supportGrantCode && !supportImplicit) {
                             $(jQuery('#callback_row')).hide();
@@ -275,14 +277,13 @@
                         }
 
                         if (!idTokenEncryptionEnabled) {
-                            $(jQuery('#encryption_algorithm_row')).hide();
-                            $(jQuery('#encryption_method_row')).hide();
+                            $('select[name=idTokenEncryptionAlgorithm]').prop('disabled', true);
+                            $('select[name=idTokenEncryptionMethod]').prop('disabled', true);
                         } else {
-                            $(jQuery('#encryption_algorithm_row')).show();
-                            $(jQuery('#encryption_method_row')).show();
+                            $('select[name=idTokenEncryptionAlgorithm]').prop('disabled', false);
+                            $('select[name=idTokenEncryptionMethod]').prop('disabled', false);
                         }
                     }
-
                 }
 
                 function toggleAudienceRestriction(chkbx) {

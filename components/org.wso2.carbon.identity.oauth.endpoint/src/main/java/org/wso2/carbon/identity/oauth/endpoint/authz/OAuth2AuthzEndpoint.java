@@ -179,7 +179,6 @@ public class OAuth2AuthzEndpoint {
     private static final String DISPLAY_NAME = "DisplayName";
     private static final String ID_TOKEN = "id_token";
     private static final String ACCESS_CODE = "code";
-    private static final String SESSIONID_CLAIM = "sid";
 
     private String sessionId;
 
@@ -2205,11 +2204,33 @@ public class OAuth2AuthzEndpoint {
     private void addSidToSessionStateFromIdToken(String idToken, OIDCSessionState sessionState) {
 
         try {
-            sessionId = (String) SignedJWT.parse(idToken).getJWTClaimsSet().getClaim(SESSIONID_CLAIM);
+            if (isIDTokenEncrypted(idToken)) {
+                // ID token is encrypted.
+                OIDCBackChannelAuthCodeCacheKey authCacheKey =
+                        new OIDCBackChannelAuthCodeCacheKey(OAuthConstants.OIDCClaims.SESSION_ID_CLAIM);
+                OIDCBackChannelAuthCodeCacheEntry sidEntry =
+                        OIDCBackChannelAuthCodeCache.getInstance().getValueFromCache(authCacheKey);
+                sessionId = sidEntry.getSessionId();
+            } else {
+                sessionId = (String) SignedJWT.parse(idToken).getJWTClaimsSet().getClaim(
+                        OAuthConstants.OIDCClaims.SESSION_ID_CLAIM);
+            }
+
             setSidClaimToSessionState(sessionState);
         } catch (ParseException e) {
             log.error("Error while decoding the ID Token ", e);
         }
+    }
+
+    /**
+     * Return true if the id token is encrypted.
+     *
+     * @param idToken String JWT ID token.
+     * @return  Boolean state of encryption.
+     */
+    private boolean isIDTokenEncrypted(String idToken) {
+        // Encrypted ID token contains 5 base64 encoded components separated by periods.
+        return StringUtils.countMatches(idToken, ".") == 4;
     }
 
     /**

@@ -17,6 +17,7 @@
  */
 package org.wso2.carbon.identity.oidc.session.backChannelLogout;
 
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.http.NameValuePair;
@@ -69,10 +70,7 @@ public class LogoutRequestSender {
     public void sendLogoutRequests(HttpServletRequest request) {
 
         Map<String, String> logoutTokenList = getLogoutTokenList(request);
-        if (!logoutTokenList.isEmpty()) {
-            if (logoutTokenList == null) {
-                return;
-            }
+        if (MapUtils.isNotEmpty(logoutTokenList)) {
             // For each logoutReq, create a new task and submit it to the thread pool.
             for (Map.Entry<String, String> logoutTokenMap : logoutTokenList.entrySet()) {
                 String logoutToken = logoutTokenMap.getKey();
