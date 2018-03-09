@@ -17,13 +17,18 @@
  */
 package org.wso2.carbon.identity.oidc.session.backChannelLogout;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionState;
 import org.wso2.carbon.identity.oidc.session.cache.OIDCBackChannelAuthCodeCache;
@@ -43,16 +48,14 @@ import java.util.UUID;
 public class ClaimProviderImpl implements ClaimProvider {
 
     private static Log log = LogFactory.getLog(ClaimProviderImpl.class);
-    private String claimValue;
-    private String name;
-
 
     @Override
     public Map<String, Object> getAdditionalClaims(OAuthAuthzReqMessageContext oAuthAuthzReqMessageContext,
                                                    OAuth2AuthorizeRespDTO oAuth2AuthorizeRespDTO)
             throws IdentityOAuth2Exception {
+
         Map<String, Object> additionalClaims = new HashMap<>();
-        this.name = "sid";
+        String claimValue;
         OIDCSessionState previousSession = getSessionState(oAuthAuthzReqMessageContext);
         if (previousSession == null) {
             // If there is no previous browser session, generate new sid value.
@@ -67,15 +70,49 @@ public class ClaimProviderImpl implements ClaimProvider {
                 log.debug("sid claim is found in the session state");
             }
         }
-        additionalClaims.put(name, claimValue);
+        additionalClaims.put(OAuthConstants.OIDCClaims.SESSION_ID_CLAIM, claimValue);
+
+        addSidToCacheWhenIDTokenIsEncrypted(oAuthAuthzReqMessageContext, claimValue);
+
         return additionalClaims;
+    }
+
+    /**
+     * Add session id to cache when ID token encryption is enabled.
+     *
+     * @param oAuthAuthzReqMessageContext OAuthAuthzReqMessageContext object.
+     * @param claimValue                  Session ID to be inserted to the cache.
+     * @throws IdentityOAuth2Exception
+     */
+    private void addSidToCacheWhenIDTokenIsEncrypted(OAuthAuthzReqMessageContext oAuthAuthzReqMessageContext,
+                                                     String claimValue) throws IdentityOAuth2Exception {
+        try {
+            OAuthAppDO app = OAuth2Util.getAppInformationByClientId(
+                    oAuthAuthzReqMessageContext.getAuthorizationReqDTO().getConsumerKey());
+            if (app.isIdTokenEncryptionEnabled()) {
+                // Add sid to cache for the instances where id token is encrypted.
+                OIDCBackChannelAuthCodeCacheKey authCacheKey = new OIDCBackChannelAuthCodeCacheKey(
+                        OAuthConstants.OIDCClaims.SESSION_ID_CLAIM);
+                OIDCBackChannelAuthCodeCacheEntry sidCacheEntry = new OIDCBackChannelAuthCodeCacheEntry();
+                sidCacheEntry.setSessionId(claimValue);
+                OIDCBackChannelAuthCodeCache.getInstance().addToCache(authCacheKey, sidCacheEntry);
+                if (log.isDebugEnabled()) {
+                    log.debug("Adding sid to OIDCBackChannelAuthCodeCache since id token encryption is enabled.");
+                }
+            }
+        } catch (InvalidOAuthClientException e) {
+            throw new IdentityOAuth2Exception("Retrieving OAuthAppDO failed for the client id: " +
+                    oAuthAuthzReqMessageContext.getAuthorizationReqDTO().getConsumerKey(), e);
+        }
     }
 
     @Override
     public Map<String, Object> getAdditionalClaims(OAuthTokenReqMessageContext oAuthTokenReqMessageContext,
                                                    OAuth2AccessTokenRespDTO oAuth2AccessTokenRespDTO)
             throws IdentityOAuth2Exception {
+
         Map<String, Object> additionalClaims = new HashMap<>();
+        String claimValue = null;
         String accessCode = oAuthTokenReqMessageContext.getOauth2AccessTokenReqDTO().getAuthorizationCode();
         OIDCBackChannelAuthCodeCacheEntry cacheEntry = getOIDCBackChannelAuthCodeCacheEntry(accessCode);
         if (cacheEntry != null) {
@@ -97,6 +134,7 @@ public class ClaimProviderImpl implements ClaimProvider {
      * @return OIDCSession state
      */
     private OIDCSessionState getSessionState(OAuthAuthzReqMessageContext oAuthAuthzReqMessageContext) {
+
         Cookie[] cookies = oAuthAuthzReqMessageContext.getAuthorizationReqDTO().getCookie();
         if (cookies != null) {
             for (Cookie cookie : cookies) {
@@ -117,9 +155,16 @@ public class ClaimProviderImpl implements ClaimProvider {
      * @return OIDCBackChannelAuthCodeCacheEntry
      */
     private OIDCBackChannelAuthCodeCacheEntry getOIDCBackChannelAuthCodeCacheEntry(String authCode) {
+
+        if (StringUtils.isBlank(authCode)) {
+            if (log.isDebugEnabled()) {
+                log.debug("getOIDCBackChannelAuthCodeCacheEntry returned null.");
+            }
+            return null;
+        }
         OIDCBackChannelAuthCodeCacheKey cacheKey = new OIDCBackChannelAuthCodeCacheKey(authCode);
-        OIDCBackChannelAuthCodeCacheEntry cacheEntry = OIDCBackChannelAuthCodeCache.getInstance().getValueFromCache
-                (cacheKey);
+        OIDCBackChannelAuthCodeCacheEntry cacheEntry =
+                OIDCBackChannelAuthCodeCache.getInstance().getValueFromCache(cacheKey);
         return cacheEntry;
     }
 }

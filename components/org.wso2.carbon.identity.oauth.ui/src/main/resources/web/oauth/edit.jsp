@@ -314,11 +314,11 @@
                     $(jQuery('#bclogout_row').hide());
 
                     if (!idTokenEncryptionEnabled) {
-                        $(jQuery('#encryption_algorithm_row')).hide();
-                        $(jQuery('#encryption_method_row')).hide();
+                        $('select[name=idTokenEncryptionAlgorithm]').prop('disabled', true);
+                        $('select[name=idTokenEncryptionMethod]').prop('disabled', true);
                     } else {
-                        $(jQuery('#encryption_algorithm_row')).show();
-                        $(jQuery('#encryption_method_row')).show();
+                        $('select[name=idTokenEncryptionAlgorithm]').prop('disabled', false);
+                        $('select[name=idTokenEncryptionMethod]').prop('disabled', false);
                     }
                 }
 
