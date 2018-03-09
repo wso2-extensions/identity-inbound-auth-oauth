@@ -70,6 +70,8 @@ import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.text.SimpleDateFormat;
+
 
 /**
  * Data Access Layer functionality for Token management in OAuth 2.0 implementation. This includes
@@ -1153,7 +1155,14 @@ public class TokenMgtDAO {
             prepStmt = connection.prepareStatement(sql);
 
             prepStmt.setString(1, hashingPersistenceProcessor.getProcessedAccessTokenIdentifier(accessTokenIdentifier));
+
+            if (log.isDebugEnabled()) {
+                log.debug("Execution of retrieveAccessToken sql query for: " + accessTokenIdentifier + " started at " + new SimpleDateFormat("[yyyy.MM.dd HH:mm:ss,SSS zzz]").format(new Date()));
+            }
             resultSet = prepStmt.executeQuery();
+            if (log.isDebugEnabled()) {
+                log.debug("Execution of retrieveAccessToken sql query for: " + accessTokenIdentifier + " ended at " + new SimpleDateFormat("[yyyy.MM.dd HH:mm:ss,SSS zzz]").format(new Date()));
+            }
 
             int iterateId = 0;
             List<String> scopes = new ArrayList<>();
@@ -1805,7 +1814,15 @@ public class TokenMgtDAO {
                 PreparedStatement ps = connection.prepareStatement(sql);) {
 
             ps.setString(1, resourceUri);
+
+            if (log.isDebugEnabled()) {
+                log.debug("Execution of findScopeOfResource sql query for: " + resourceUri + " started at " + new SimpleDateFormat("[yyyy.MM.dd HH:mm:ss,SSS zzz]").format(new Date()));
+            }
             try (ResultSet rs = ps.executeQuery()) {
+
+                if (log.isDebugEnabled()) {
+                    log.debug("Execution of findScopeOfResource sql query for: " + resourceUri + " ended at " + new SimpleDateFormat("[yyyy.MM.dd HH:mm:ss,SSS zzz]").format(new Date()));
+                }
                 if (rs.next()) {
                     return rs.getString("NAME");
                 }
