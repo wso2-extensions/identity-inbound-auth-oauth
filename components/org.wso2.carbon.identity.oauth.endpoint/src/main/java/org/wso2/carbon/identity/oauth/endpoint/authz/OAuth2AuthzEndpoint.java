@@ -65,8 +65,11 @@ import org.wso2.carbon.identity.oauth.cache.SessionDataCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.endpoint.OAuthRequestWrapper;
 import org.wso2.carbon.identity.oauth.endpoint.exception.ConsentHandlingFailedException;
+import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidApplicationClientException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
@@ -115,6 +118,7 @@ import java.util.StringJoiner;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
+import javax.management.InvalidApplicationException;
 import javax.servlet.ServletException;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
@@ -390,7 +394,7 @@ public class OAuth2AuthzEndpoint {
 
             List<Integer> approvedClaimIds = getUserConsentClaimIds(oAuthMessage);
             if (isConsentHandlingRequired(approvedClaimIds)) {
-                serviceProvider = OAuth2Util.getServiceProvider(clientId, tenantDomain);
+                serviceProvider = getServiceProvider(clientId);
                 /*
                     With the current implementation of the SSOConsentService we need to send back the original
                     ConsentClaimsData object we got during pre consent stage. Currently we are repeating the API call
@@ -404,10 +408,6 @@ public class OAuth2AuthzEndpoint {
                 // Call framework and create the consent receipt.
                 getSSOConsentService().processConsent(approvedClaimIds, serviceProvider, loggedInUser, value);
             }
-        } catch (IdentityOAuth2Exception e) {
-            String msg = "Error while retrieving service provider for client_id: " + clientId + " of tenantDomain: "
-                    + tenantDomain + " to handle consent.";
-            throw new ConsentHandlingFailedException(msg, e);
         } catch (OAuthSystemException | SSOConsentServiceException e) {
             String msg = "Error while processing consent of user: " + loggedInUser.toFullQualifiedUsername() + " for " +
                     "client_id: " + clientId + " of tenantDomain: " + tenantDomain;
@@ -1245,11 +1245,10 @@ public class OAuth2AuthzEndpoint {
         params.setDisplay(oauthRequest.getParam(OAuthConstants.OAuth20Params.DISPLAY));
         params.setIDTokenHint(oauthRequest.getParam(OAuthConstants.OAuth20Params.ID_TOKEN_HINT));
         params.setLoginHint(oauthRequest.getParam(OAuthConstants.OAuth20Params.LOGIN_HINT));
-        if (StringUtils.isNotEmpty(oauthRequest.getParam(MultitenantConstants.TENANT_DOMAIN))) {
-            params.setTenantDomain(oauthRequest.getParam(MultitenantConstants.TENANT_DOMAIN));
-        } else {
-            params.setTenantDomain(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
-        }
+
+        // Set the service provider tenant domain.
+        params.setTenantDomain(getSpTenantDomain(clientId));
+
         if (StringUtils.isNotBlank(oauthRequest.getParam(ACR_VALUES)) && !"null".equals(oauthRequest.getParam
                 (ACR_VALUES))) {
             List acrValuesList = Arrays.asList(oauthRequest.getParam(ACR_VALUES).split(" "));
@@ -1280,6 +1279,18 @@ public class OAuth2AuthzEndpoint {
         }
 
         return null;
+    }
+
+    private String getSpTenantDomain(String clientId) throws InvalidRequestException {
+
+        try {
+            // At this point we have verified that a valid app exists for the client_id. So we directly get the SP
+            // tenantDomain.
+            return OAuth2Util.getTenantDomainOfOauthApp(clientId);
+        } catch (InvalidOAuthClientException | IdentityOAuth2Exception e) {
+            throw new InvalidRequestException("Error retrieving Service Provider tenantDomain for client_id: "
+                    + clientId);
+        }
     }
 
     private void handleMaxAgeParameter(OAuthAuthzRequest oauthRequest,
