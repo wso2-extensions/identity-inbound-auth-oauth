@@ -2604,9 +2604,14 @@ public class TokenMgtDAO {
         PreparedStatement ps = null;
         ResultSet rs = null;
         Set<String> bindings = new HashSet<>();
+        String sql;
 
         try {
-            String sql = SQLQueries.RETRIEVE_BINDINGS_OF_SCOPE;
+            if (connection.getMetaData().getDriverName().contains("Oracle")) {
+                sql = SQLQueries.RETRIEVE_BINDINGS_OF_SCOPE_ORACLE;
+            } else {
+                sql = SQLQueries.RETRIEVE_BINDINGS_OF_SCOPE;
+            }
 
             ps = connection.prepareStatement(sql);
             ps.setString(1, scopeName);
@@ -2654,9 +2659,14 @@ public class TokenMgtDAO {
         PreparedStatement ps = null;
         ResultSet rs = null;
         Set<String> bindings = new HashSet<>();
+        String sql;
 
         try {
-            String sql = SQLQueries.RETRIEVE_BINDINGS_OF_SCOPE_FOR_TENANT;
+            if (connection.getMetaData().getDriverName().contains("Oracle")) {
+                sql = SQLQueries.RETRIEVE_BINDINGS_OF_SCOPE_FOR_TENANT_ORACLE;
+            } else {
+                sql = SQLQueries.RETRIEVE_BINDINGS_OF_SCOPE_FOR_TENANT;
+            }
 
             ps = connection.prepareStatement(sql);
             ps.setString(1, scopeName);

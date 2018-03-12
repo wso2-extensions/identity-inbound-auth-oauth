@@ -461,6 +461,11 @@ public class SQLQueries {
             "LEFT JOIN IDN_OAUTH2_SCOPE_BINDING AS ScopeBindings ON Scopes.SCOPE_ID=ScopeBindings.SCOPE_ID " +
             "WHERE Scopes.TENANT_ID=?";
 
+    public static final String RETRIEVE_ALL_SCOPES_ORACLE = "SELECT Scopes.SCOPE_ID, Scopes.NAME, Scopes.DISPLAY_NAME, Scopes.DESCRIPTION, " +
+            "ScopeBindings.SCOPE_BINDING FROM IDN_OAUTH2_SCOPE Scopes " +
+            "LEFT JOIN IDN_OAUTH2_SCOPE_BINDING ScopeBindings ON Scopes.SCOPE_ID=ScopeBindings.SCOPE_ID " +
+            "WHERE Scopes.TENANT_ID=?";
+
     public static final String RETRIEVE_SCOPES_WITH_PAGINATION_MYSQL =
             "SELECT filteredScopes.SCOPE_ID, filteredScopes.NAME, filteredScopes.DISPLAY_NAME, filteredScopes.DESCRIPTION, ScopeBindings.SCOPE_BINDING FROM " +
                     "(SELECT Scopes.SCOPE_ID, Scopes.NAME, Scopes.DISPLAY_NAME, Scopes.DESCRIPTION FROM IDN_OAUTH2_SCOPE AS Scopes " +
@@ -471,10 +476,10 @@ public class SQLQueries {
 
     public static final String RETRIEVE_SCOPES_WITH_PAGINATION_ORACLE =
             "SELECT filteredScopes.SCOPE_ID, filteredScopes.NAME, filteredScopes.DISPLAY_NAME, filteredScopes.DESCRIPTION, ScopeBindings.SCOPE_BINDING FROM " +
-                    "(SELECT Scopes.SCOPE_ID, Scopes.NAME, Scopes.DISPLAY_NAME, Scopes.DESCRIPTION FROM IDN_OAUTH2_SCOPE AS Scopes " +
+                    "(SELECT Scopes.SCOPE_ID, Scopes.NAME, Scopes.DISPLAY_NAME, Scopes.DESCRIPTION FROM IDN_OAUTH2_SCOPE Scopes " +
                     "WHERE Scopes.TENANT_ID = :" + Oauth2ScopeConstants.SQLPlaceholders.TENANT_ID +
-                    "; AND ROWNUM < :limit;) AS filteredScopes " +
-                    "LEFT JOIN IDN_OAUTH2_SCOPE_BINDING AS ScopeBindings ON filteredScopes.SCOPE_ID=ScopeBindings.SCOPE_ID";
+                    "; AND ROWNUM < :limit;) filteredScopes " +
+                    "LEFT JOIN IDN_OAUTH2_SCOPE_BINDING ScopeBindings ON filteredScopes.SCOPE_ID=ScopeBindings.SCOPE_ID";
 
     public static final String RETRIEVE_SCOPES_WITH_PAGINATION_DB2SQL =
             "SELECT filteredScopes.SCOPE_ID, filteredScopes.NAME, filteredScopes.DISPLAY_NAME, filteredScopes.DESCRIPTION, ScopeBindings.SCOPE_BINDING FROM " +
@@ -510,18 +515,28 @@ public class SQLQueries {
             "LEFT JOIN IDN_OAUTH2_SCOPE_BINDING AS ScopeBindings ON Scopes.SCOPE_ID=ScopeBindings.SCOPE_ID " +
             "WHERE Scopes.NAME=? AND Scopes.TENANT_ID=?";
 
+    public static final String RETRIEVE_SCOPE_BY_NAME_ORACLE = "SELECT Scopes.NAME, Scopes.DISPLAY_NAME, Scopes.DESCRIPTION, " +
+            "ScopeBindings.SCOPE_BINDING FROM IDN_OAUTH2_SCOPE Scopes " +
+            "LEFT JOIN IDN_OAUTH2_SCOPE_BINDING ScopeBindings ON Scopes.SCOPE_ID=ScopeBindings.SCOPE_ID " +
+            "WHERE Scopes.NAME=? AND Scopes.TENANT_ID=?";
+
     public static final String  RETRIEVE_SCOPE_ID_BY_NAME = "SELECT SCOPE_ID FROM IDN_OAUTH2_SCOPE " +
             "WHERE NAME=? AND TENANT_ID=?";
 
     public static final String DELETE_SCOPE_BY_NAME = "DELETE FROM IDN_OAUTH2_SCOPE WHERE NAME = ? AND TENANT_ID = ?";
 
-
-
     public static final String RETRIEVE_SCOPE_NAME_FOR_RESOURCE = "SELECT Scopes.NAME FROM IDN_OAUTH2_SCOPE AS Scopes, " +
             "IDN_OAUTH2_RESOURCE_SCOPE AS ScopeResources WHERE RESOURCE_PATH = ? AND ScopeResources.SCOPE_ID = Scopes.SCOPE_ID";
 
+    public static final String RETRIEVE_SCOPE_NAME_FOR_RESOURCE_ORACLE = "SELECT Scopes.NAME FROM IDN_OAUTH2_SCOPE Scopes, " +
+            "IDN_OAUTH2_RESOURCE_SCOPE ScopeResources WHERE RESOURCE_PATH = ? AND ScopeResources.SCOPE_ID = Scopes.SCOPE_ID";
+
     public static final String RETRIEVE_SCOPE_WITH_TENANT_FOR_RESOURCE = "SELECT Scopes.NAME, Scopes.TENANT_ID FROM " +
             "IDN_OAUTH2_SCOPE AS Scopes, IDN_OAUTH2_RESOURCE_SCOPE AS ScopeResources WHERE RESOURCE_PATH = ? AND " +
+            "ScopeResources.SCOPE_ID = Scopes.SCOPE_ID";
+
+    public static final String RETRIEVE_SCOPE_WITH_TENANT_FOR_RESOURCE_ORACLE = "SELECT Scopes.NAME, Scopes.TENANT_ID " +
+            "FROM IDN_OAUTH2_SCOPE Scopes, IDN_OAUTH2_RESOURCE_SCOPE ScopeResources WHERE RESOURCE_PATH = ? AND " +
             "ScopeResources.SCOPE_ID = Scopes.SCOPE_ID";
 
     public static final String RETRIEVE_BINDINGS_OF_SCOPE =
@@ -529,9 +544,19 @@ public class SQLQueries {
                     "LEFT JOIN IDN_OAUTH2_SCOPE_BINDING AS ScopeBindings ON Scopes.SCOPE_ID=ScopeBindings.SCOPE_ID " +
                     "WHERE Scopes.NAME = ?";
 
+    public static final String RETRIEVE_BINDINGS_OF_SCOPE_ORACLE =
+            "SELECT ScopeBindings.SCOPE_BINDING FROM IDN_OAUTH2_SCOPE Scopes " +
+                    "LEFT JOIN IDN_OAUTH2_SCOPE_BINDING ScopeBindings ON Scopes.SCOPE_ID=ScopeBindings.SCOPE_ID " +
+                    "WHERE Scopes.NAME = ?";
+
     public static final String RETRIEVE_BINDINGS_OF_SCOPE_FOR_TENANT =
             "SELECT ScopeBindings.SCOPE_BINDING FROM IDN_OAUTH2_SCOPE AS Scopes " +
                     "LEFT JOIN IDN_OAUTH2_SCOPE_BINDING AS ScopeBindings ON Scopes.SCOPE_ID=ScopeBindings.SCOPE_ID " +
+                    "WHERE Scopes.NAME = ? AND TENANT_ID = ?";
+
+    public static final String RETRIEVE_BINDINGS_OF_SCOPE_FOR_TENANT_ORACLE =
+            "SELECT ScopeBindings.SCOPE_BINDING FROM IDN_OAUTH2_SCOPE Scopes " +
+                    "LEFT JOIN IDN_OAUTH2_SCOPE_BINDING ScopeBindings ON Scopes.SCOPE_ID=ScopeBindings.SCOPE_ID " +
                     "WHERE Scopes.NAME = ? AND TENANT_ID = ?";
 
     private SQLQueries() {
