@@ -34,7 +34,6 @@ import org.wso2.carbon.identity.application.mgt.listener.ApplicationMgtListener;
 import org.wso2.carbon.identity.base.IdentityRuntimeException;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
-import org.wso2.carbon.identity.entitlement.EntitlementService;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
@@ -65,6 +64,26 @@ import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkAudienceEnabl
 public class OAuth2ServiceComponent {
     private static Log log = LogFactory.getLog(OAuth2ServiceComponent.class);
     private BundleContext bundleContext;
+
+    @Reference(
+            name = "framework.authentication.context.method.name.translator",
+            service = AuthenticationMethodNameTranslator.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetAuthenticationMethodNameTranslator"
+    )
+    protected static void setAuthenticationMethodNameTranslator(
+            AuthenticationMethodNameTranslator authenticationMethodNameTranslator) {
+        OAuth2ServiceComponentHolder.setAuthenticationMethodNameTranslator(authenticationMethodNameTranslator);
+    }
+
+    protected static void unsetAuthenticationMethodNameTranslator(
+            AuthenticationMethodNameTranslator authenticationMethodNameTranslator) {
+        if (OAuth2ServiceComponentHolder.getAuthenticationMethodNameTranslator() ==
+                authenticationMethodNameTranslator) {
+            OAuth2ServiceComponentHolder.setAuthenticationMethodNameTranslator(null);
+        }
+    }
 
     protected void activate(ComponentContext context) {
         try {
@@ -121,7 +140,7 @@ public class OAuth2ServiceComponent {
             }
 
             ServiceRegistration oauthApplicationMgtListenerSR = bundleContext.registerService(ApplicationMgtListener
-                            .class.getName(), new OAuthApplicationMgtListener(), null);
+                    .class.getName(), new OAuthApplicationMgtListener(), null);
             if (oauthApplicationMgtListenerSR != null) {
                 if (log.isDebugEnabled()) {
                     log.debug("OAuth - ApplicationMgtListener registered.");
@@ -263,26 +282,6 @@ public class OAuth2ServiceComponent {
     }
 
     @Reference(
-            name = "framework.authentication.context.method.name.translator",
-            service = AuthenticationMethodNameTranslator.class,
-            cardinality = ReferenceCardinality.MANDATORY,
-            policy = ReferencePolicy.DYNAMIC,
-            unbind = "unsetAuthenticationMethodNameTranslator"
-    )
-    protected static void setAuthenticationMethodNameTranslator(
-            AuthenticationMethodNameTranslator authenticationMethodNameTranslator) {
-        OAuth2ServiceComponentHolder.setAuthenticationMethodNameTranslator(authenticationMethodNameTranslator);
-    }
-
-    protected static void unsetAuthenticationMethodNameTranslator(
-            AuthenticationMethodNameTranslator authenticationMethodNameTranslator) {
-        if (OAuth2ServiceComponentHolder.getAuthenticationMethodNameTranslator() ==
-                authenticationMethodNameTranslator) {
-            OAuth2ServiceComponentHolder.setAuthenticationMethodNameTranslator(null);
-        }
-    }
-
-    @Reference(
             name = "oauth.client.authenticator",
             service = OAuthClientAuthenticator.class,
             cardinality = ReferenceCardinality.MULTIPLE,
@@ -301,28 +300,5 @@ public class OAuth2ServiceComponent {
             log.debug("UnSetting the Registry Service");
         }
         OAuth2ServiceComponentHolder.getAuthenticationHandlers().remove(oAuthClientAuthenticator);
-    }
-
-    @Reference(
-            name = "identity.entitlement.service",
-            service = EntitlementService.class,
-            cardinality = ReferenceCardinality.MANDATORY,
-            policy = ReferencePolicy.DYNAMIC,
-            unbind = "unsetEntitlementService"
-    )
-    protected void setEntitlementService(EntitlementService entitlementService) {
-
-        if (log.isDebugEnabled()) {
-            log.debug("Setting the Entitlement Service");
-        }
-        OAuth2ServiceComponentHolder.setEntitlementService(entitlementService);
-    }
-
-    protected void unsetEntitlementService(EntitlementService entitlementService) {
-
-        if (log.isDebugEnabled()) {
-            log.debug("Unsetting the EntitlementService");
-        }
-        OAuth2ServiceComponentHolder.setEntitlementService(null);
     }
 }
