@@ -96,7 +96,7 @@ public class ScopeMgtDAO {
         String sql;
 
         try (Connection conn = IdentityDatabaseUtil.getDBConnection()) {
-            if (conn.getMetaData().getDriverName().contains("Oracle")) {
+            if (conn.getMetaData().getDriverName().contains(Oauth2ScopeConstants.DataBaseType.ORACLE)) {
                 sql = SQLQueries.RETRIEVE_ALL_SCOPES_ORACLE;
             } else {
                 sql = SQLQueries.RETRIEVE_ALL_SCOPES;
@@ -247,7 +247,7 @@ public class ScopeMgtDAO {
         String sql;
         try (Connection conn = IdentityDatabaseUtil.getDBConnection()) {
 
-            if (conn.getMetaData().getDriverName().contains("Oracle")) {
+            if (conn.getMetaData().getDriverName().contains(Oauth2ScopeConstants.DataBaseType.ORACLE)) {
                 sql = SQLQueries.RETRIEVE_SCOPE_BY_NAME_ORACLE;
             } else {
                 sql = SQLQueries.RETRIEVE_SCOPE_BY_NAME;

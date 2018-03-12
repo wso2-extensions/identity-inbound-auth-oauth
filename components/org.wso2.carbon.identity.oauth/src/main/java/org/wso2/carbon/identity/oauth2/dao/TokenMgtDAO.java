@@ -39,6 +39,7 @@ import org.wso2.carbon.identity.oauth.tokenprocessor.HashingPersistenceProcessor
 import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
@@ -2607,7 +2608,7 @@ public class TokenMgtDAO {
         String sql;
 
         try {
-            if (connection.getMetaData().getDriverName().contains("Oracle")) {
+            if (connection.getMetaData().getDriverName().contains(Oauth2ScopeConstants.DataBaseType.ORACLE)) {
                 sql = SQLQueries.RETRIEVE_BINDINGS_OF_SCOPE_ORACLE;
             } else {
                 sql = SQLQueries.RETRIEVE_BINDINGS_OF_SCOPE;
@@ -2662,7 +2663,7 @@ public class TokenMgtDAO {
         String sql;
 
         try {
-            if (connection.getMetaData().getDriverName().contains("Oracle")) {
+            if (connection.getMetaData().getDriverName().contains(Oauth2ScopeConstants.DataBaseType.ORACLE)) {
                 sql = SQLQueries.RETRIEVE_BINDINGS_OF_SCOPE_FOR_TENANT_ORACLE;
             } else {
                 sql = SQLQueries.RETRIEVE_BINDINGS_OF_SCOPE_FOR_TENANT;

@@ -108,7 +108,7 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
 
         try (Connection conn = IdentityDatabaseUtil.getDBConnection()) {
 
-            if (conn.getMetaData().getDriverName().contains("Oracle")) {
+            if (conn.getMetaData().getDriverName().contains(Oauth2ScopeConstants.DataBaseType.ORACLE)) {
                 sql = SQLQueries.RETRIEVE_ALL_SCOPES_ORACLE;
             } else {
                 sql = SQLQueries.RETRIEVE_ALL_SCOPES;
@@ -262,7 +262,7 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
         String sql;
 
         try (Connection conn = IdentityDatabaseUtil.getDBConnection()) {
-            if (conn.getMetaData().getDriverName().contains("Oracle")) {
+            if (conn.getMetaData().getDriverName().contains(Oauth2ScopeConstants.DataBaseType.ORACLE)) {
                 sql = SQLQueries.RETRIEVE_SCOPE_BY_NAME_ORACLE;
             } else {
                 sql = SQLQueries.RETRIEVE_SCOPE_BY_NAME;
@@ -477,7 +477,7 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
         }
         String sql;
         try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
-            if (connection.getMetaData().getDriverName().contains("Oracle")) {
+            if (connection.getMetaData().getDriverName().contains(Oauth2ScopeConstants.DataBaseType.ORACLE)) {
                 sql = SQLQueries.RETRIEVE_SCOPE_NAME_FOR_RESOURCE_ORACLE;
             } else {
                 sql = SQLQueries.RETRIEVE_SCOPE_NAME_FOR_RESOURCE;
@@ -527,7 +527,7 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
 
         try {
 
-            if (connection.getMetaData().getDriverName().contains("Oracle")) {
+            if (connection.getMetaData().getDriverName().contains(Oauth2ScopeConstants.DataBaseType.ORACLE)) {
                 sql = SQLQueries.RETRIEVE_BINDINGS_OF_SCOPE_FOR_TENANT_ORACLE;
             } else {
                 sql = SQLQueries.RETRIEVE_BINDINGS_OF_SCOPE_FOR_TENANT;
@@ -584,7 +584,7 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
         String sql;
 
         try {
-            if (connection.getMetaData().getDriverName().contains("Oracle")) {
+            if (connection.getMetaData().getDriverName().contains(Oauth2ScopeConstants.DataBaseType.ORACLE)) {
                 sql = SQLQueries.RETRIEVE_BINDINGS_OF_SCOPE_ORACLE;
             } else {
                 sql = SQLQueries.RETRIEVE_BINDINGS_OF_SCOPE;
