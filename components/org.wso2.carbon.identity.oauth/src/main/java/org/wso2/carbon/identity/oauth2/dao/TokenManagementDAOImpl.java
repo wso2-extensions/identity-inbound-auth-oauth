@@ -34,6 +34,7 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -203,20 +204,27 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
         if (log.isDebugEnabled()) {
             log.debug("Retrieving tenant and scope for resource: " + resourceUri);
         }
-        String sql = SQLQueries.RETRIEVE_SCOPE_WITH_TENANT_FOR_RESOURCE;
-        try (Connection connection = IdentityDatabaseUtil.getDBConnection();
-             PreparedStatement ps = connection.prepareStatement(sql)) {
+        String sql;
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
 
-            ps.setString(1, resourceUri);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    String scopeName = rs.getString("NAME");
-                    int tenantId = rs.getInt("TENANT_ID");
-                    if (log.isDebugEnabled()) {
-                        log.debug("Found tenant id: " + tenantId + " and scope: " + scopeName + " for resource: " +
-                                resourceUri);
+            if (connection.getMetaData().getDriverName().contains(Oauth2ScopeConstants.DataBaseType.ORACLE)) {
+                sql = SQLQueries.RETRIEVE_SCOPE_WITH_TENANT_FOR_RESOURCE_ORACLE;
+            } else {
+                sql = SQLQueries.RETRIEVE_SCOPE_WITH_TENANT_FOR_RESOURCE;
+            }
+
+            try (PreparedStatement ps = connection.prepareStatement(sql)) {
+                ps.setString(1, resourceUri);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        String scopeName = rs.getString("NAME");
+                        int tenantId = rs.getInt("TENANT_ID");
+                        if (log.isDebugEnabled()) {
+                            log.debug("Found tenant id: " + tenantId + " and scope: " + scopeName + " for resource: " +
+                                    resourceUri);
+                        }
+                        return Pair.of(scopeName, tenantId);
                     }
-                    return Pair.of(scopeName, tenantId);
                 }
             }
             return null;

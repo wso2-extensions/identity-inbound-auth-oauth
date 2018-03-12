@@ -39,6 +39,7 @@ import org.wso2.carbon.identity.oauth.tokenprocessor.HashingPersistenceProcessor
 import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
@@ -2604,9 +2605,14 @@ public class TokenMgtDAO {
         PreparedStatement ps = null;
         ResultSet rs = null;
         Set<String> bindings = new HashSet<>();
+        String sql;
 
         try {
-            String sql = SQLQueries.RETRIEVE_BINDINGS_OF_SCOPE;
+            if (connection.getMetaData().getDriverName().contains(Oauth2ScopeConstants.DataBaseType.ORACLE)) {
+                sql = SQLQueries.RETRIEVE_BINDINGS_OF_SCOPE_ORACLE;
+            } else {
+                sql = SQLQueries.RETRIEVE_BINDINGS_OF_SCOPE;
+            }
 
             ps = connection.prepareStatement(sql);
             ps.setString(1, scopeName);
@@ -2654,9 +2660,14 @@ public class TokenMgtDAO {
         PreparedStatement ps = null;
         ResultSet rs = null;
         Set<String> bindings = new HashSet<>();
+        String sql;
 
         try {
-            String sql = SQLQueries.RETRIEVE_BINDINGS_OF_SCOPE_FOR_TENANT;
+            if (connection.getMetaData().getDriverName().contains(Oauth2ScopeConstants.DataBaseType.ORACLE)) {
+                sql = SQLQueries.RETRIEVE_BINDINGS_OF_SCOPE_FOR_TENANT_ORACLE;
+            } else {
+                sql = SQLQueries.RETRIEVE_BINDINGS_OF_SCOPE_FOR_TENANT;
+            }
 
             ps = connection.prepareStatement(sql);
             ps.setString(1, scopeName);
