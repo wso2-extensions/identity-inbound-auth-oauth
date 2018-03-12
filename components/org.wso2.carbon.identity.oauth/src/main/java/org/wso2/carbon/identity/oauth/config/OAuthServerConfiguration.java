@@ -728,13 +728,14 @@ public class OAuthServerConfiguration {
 
 
                 if (builderTypeElement == null) {
-                    log.warn("Empty configuration element for Type.");
+                    log.warn("Empty configuration element for <Type> under <RequestObjectBuilder> configuration.");
                     //Empty configuration element for Type, ignore
                     continue;
                 }
 
                 if (requestObjectImplClassElement == null) {
-                    log.warn("Request Object Builder is not defined for the Type: " + builderTypeElement);
+                    log.warn("No <ClassName> tag to define RequestObjectBuilder implementation found under " +
+                            "<RequestObjectBuilder> configuration.");
                     continue;
                 }
 
