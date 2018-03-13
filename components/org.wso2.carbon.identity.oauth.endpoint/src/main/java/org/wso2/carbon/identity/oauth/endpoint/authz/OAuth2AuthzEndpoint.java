@@ -43,7 +43,6 @@ import org.wso2.carbon.identity.application.authentication.framework.context.Aut
 import org.wso2.carbon.identity.application.authentication.framework.context.SessionContext;
 import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.ClaimMetaData;
 import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.ConsentClaimsData;
-import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.SSOConsentService;
 import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.exception.SSOConsentServiceException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticationResult;
@@ -66,10 +65,8 @@ import org.wso2.carbon.identity.oauth.cache.SessionDataCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
-import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.endpoint.OAuthRequestWrapper;
 import org.wso2.carbon.identity.oauth.endpoint.exception.ConsentHandlingFailedException;
-import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidApplicationClientException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
@@ -93,7 +90,6 @@ import org.wso2.carbon.identity.openidconnect.OIDCRequestObjectUtil;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.registry.core.utils.UUIDGenerator;
 import org.wso2.carbon.utils.CarbonUtils;
-import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -118,7 +114,6 @@ import java.util.StringJoiner;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
-import javax.management.InvalidApplicationException;
 import javax.servlet.ServletException;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
@@ -368,8 +363,19 @@ public class OAuth2AuthzEndpoint {
     }
 
     private boolean isConsentHandlingFromFrameworkSkipped(OAuth2Parameters oAuth2Parameters) throws OAuthSystemException {
+
         ServiceProvider sp = getServiceProvider(oAuth2Parameters.getClientId());
-        return isNotOIDCRequest(oAuth2Parameters) || isConsentMgtDisabled(sp);
+        boolean consentMgtDisabled = isConsentMgtDisabled(sp);
+        if (consentMgtDisabled) {
+            if (log.isDebugEnabled()) {
+                String clientId = oAuth2Parameters.getClientId();
+                String spTenantDomain = oAuth2Parameters.getTenantDomain();
+                log.debug("Consent Management disabled for client_id: " + clientId + " of tenantDomain: "
+                        + spTenantDomain + ". Therefore skipping consent handling for user.");
+            }
+        }
+
+        return isNotOIDCRequest(oAuth2Parameters) || consentMgtDisabled;
     }
 
     private boolean isNotOIDCRequest(OAuth2Parameters oAuth2Parameters) {
@@ -383,17 +389,28 @@ public class OAuth2AuthzEndpoint {
     private void handlePostConsent(OAuthMessage oAuthMessage) throws ConsentHandlingFailedException {
 
         OAuth2Parameters oauth2Params = getOauth2Params(oAuthMessage);
-        String tenantDomain = oauth2Params.getTenantDomain();
+        String spTenantDomain = oauth2Params.getTenantDomain();
         AuthenticatedUser loggedInUser = getLoggedInUser(oAuthMessage);
         String clientId = oauth2Params.getClientId();
         ServiceProvider serviceProvider;
+
+        if (log.isDebugEnabled()) {
+            log.debug("Initiating post user consent handling for user: " + loggedInUser.toFullQualifiedUsername()
+                    + " for client_id: " + clientId + " of tenantDomain: " + spTenantDomain);
+        }
+
         try {
             if (isConsentHandlingFromFrameworkSkipped(oauth2Params)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Consent handling from framework skipped for client_id: " + clientId + " of tenantDomain: "
+                            + spTenantDomain + " for user: " + loggedInUser.toFullQualifiedUsername() + ". " +
+                            "Therefore handling post consent is not applicable.");
+                }
                 return;
             }
 
             List<Integer> approvedClaimIds = getUserConsentClaimIds(oAuthMessage);
-            if (isConsentHandlingRequired(approvedClaimIds)) {
+            if (isPostConsentHandlingRequired(approvedClaimIds)) {
                 serviceProvider = getServiceProvider(clientId);
                 /*
                     With the current implementation of the SSOConsentService we need to send back the original
@@ -406,11 +423,20 @@ public class OAuth2AuthzEndpoint {
                  */
                 ConsentClaimsData value = getConsentRequiredClaims(loggedInUser, serviceProvider, oauth2Params);
                 // Call framework and create the consent receipt.
+                if (log.isDebugEnabled()) {
+                    log.debug("Creating user consent receipt for user: " + loggedInUser.toFullQualifiedUsername() +
+                            " for client_id: " + clientId + " of tenantDomain: " + spTenantDomain);
+                }
                 getSSOConsentService().processConsent(approvedClaimIds, serviceProvider, loggedInUser, value);
+            } else {
+                if (log.isDebugEnabled()) {
+                    log.debug("Post consent handling not required for user: " + loggedInUser.toFullQualifiedUsername() +
+                            " for client_id: " + clientId + " of tenantDomain: " + spTenantDomain + ".");
+                }
             }
         } catch (OAuthSystemException | SSOConsentServiceException e) {
             String msg = "Error while processing consent of user: " + loggedInUser.toFullQualifiedUsername() + " for " +
-                    "client_id: " + clientId + " of tenantDomain: " + tenantDomain;
+                    "client_id: " + clientId + " of tenantDomain: " + spTenantDomain;
             throw new ConsentHandlingFailedException(msg, e);
         }
     }
@@ -427,7 +453,7 @@ public class OAuth2AuthzEndpoint {
         }
     }
 
-    private boolean isConsentHandlingRequired(List<Integer> approvedClaimIds) {
+    private boolean isPostConsentHandlingRequired(List<Integer> approvedClaimIds) {
         return CollectionUtils.isNotEmpty(approvedClaimIds);
     }
 
@@ -1465,8 +1491,9 @@ public class OAuth2AuthzEndpoint {
             String clientId = oauth2Params.getClientId();
             OpenIDConnectUserRPStore.getInstance().removeConsentForUser(authenticatedUser, clientId);
             if (log.isDebugEnabled()) {
-                log.debug("Existing consents for user: " + authenticatedUser.toFullQualifiedUsername() +
-                        " for oauth app with clientId: " + clientId + " revoked.");
+                log.debug("Prompt parameter contains 'consent'. Existing consents for user: "
+                        + authenticatedUser.toFullQualifiedUsername() + " for oauth app with clientId: " + clientId
+                        + " are revoked and user will be prompted to give consent again.");
             }
 
             // Need to prompt for consent and get user consent for claims as well.
@@ -1520,11 +1547,22 @@ public class OAuth2AuthzEndpoint {
                                                   AuthenticatedUser user, boolean ignoreExistingConsents)
             throws ConsentHandlingFailedException, OAuthSystemException {
 
+        String clientId = oauth2Params.getClientId();
+        String tenantDomain = oauth2Params.getTenantDomain();
+
         String preConsent;
         if (ignoreExistingConsents) {
             // Ignore existing consents and prompt for all SP mandatory and requested claims.
+            if (log.isDebugEnabled()) {
+                log.debug("Initiating consent handling for user: " + user.toFullQualifiedUsername() + " for client_id: "
+                        + clientId + "  of tenantDomain: " + tenantDomain + " excluding existing consents." );
+            }
             preConsent = handlePreConsentExcludingExistingConsents(oauth2Params, user);
         } else {
+            if (log.isDebugEnabled()) {
+                log.debug("Initiating consent handling for user: " + user.toFullQualifiedUsername() + " for client_id: "
+                        + clientId + "  of tenantDomain: " + tenantDomain + " including existing consents." );
+            }
             preConsent = handlePreConsentIncludingExistingConsents(oauth2Params, user);
         }
 
@@ -1593,7 +1631,16 @@ public class OAuth2AuthzEndpoint {
         String spTenantDomain = oauth2Params.getTenantDomain();
         ServiceProvider serviceProvider = getServiceProvider(clientId);
 
+        if (log.isDebugEnabled()) {
+            log.debug("Initiating consent handling for user: " + user.toFullQualifiedUsername() + " for client_id: "
+                    + clientId + " of tenantDomain: " + spTenantDomain);
+        }
+
         if (isConsentHandlingFromFrameworkSkipped(oauth2Params)) {
+            if (log.isDebugEnabled()) {
+                log.debug("Consent handling from framework skipped for client_id: " + clientId + " of tenantDomain: "
+                        + spTenantDomain + " for user: " + user.toFullQualifiedUsername());
+            }
             return StringUtils.EMPTY;
         }
 
@@ -1613,13 +1660,19 @@ public class OAuth2AuthzEndpoint {
                             buildConsentClaimString(claimsForApproval.getMandatoryClaims());
                 }
 
-                return buildQueryParamString(requestClaimsQueryParam, mandatoryClaimsQueryParam);
+                additionalQueryParam = buildQueryParamString(requestClaimsQueryParam, mandatoryClaimsQueryParam);
             }
         } catch (UnsupportedEncodingException | SSOConsentServiceException e) {
             String msg = "Error while handling user consent for claim for user: " + user.toFullQualifiedUsername() +
                     " for client_id: " + clientId + " of tenantDomain: " + spTenantDomain;
             throw new ConsentHandlingFailedException(msg, e);
         }
+
+        if (log.isDebugEnabled()) {
+            log.debug("Additional Query param to be sent to consent page for user: " + user.toFullQualifiedUsername() +
+                    " for client_id: " + clientId + " is '" + additionalQueryParam + "'");
+        }
+
         return additionalQueryParam;
     }
 
