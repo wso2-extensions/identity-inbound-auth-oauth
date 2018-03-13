@@ -92,6 +92,10 @@
             <groupId>org.wso2.orbit.joda-time</groupId>
             <artifactId>joda-time</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
+            <artifactId>org.wso2.carbon.identity.oauth.client.authn.filter</artifactId>
+        </dependency>
     </dependencies>
 
     <build>
@@ -125,6 +129,14 @@
                                     <overWrite>true</overWrite>
                                     <outputDirectory>${basedir}/src/main/resources/</outputDirectory>
                                     <destFileName>api#identity#oauth2#v1.0.war</destFileName>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
+                                    <artifactId>org.wso2.carbon.identity.oauth.client.authn.filter</artifactId>
+                                    <version>${project.version}</version>
+                                    <type>jar</type>
+                                    <overWrite>true</overWrite>
+                                    <outputDirectory>${basedir}/src/main/resources/runtimes/cxf</outputDirectory>
                                 </artifactItem>
                             </artifactItems>
                         </configuration>
