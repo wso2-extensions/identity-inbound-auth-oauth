@@ -146,8 +146,7 @@ public class RequestObjectValidatorImplTest extends PowerMockTestCase {
         RequestParamRequestObjectBuilder requestParamRequestObjectBuilder = new RequestParamRequestObjectBuilder();
         when((oauthServerConfigurationMock.getRequestObjectValidator())).thenReturn(requestObjectValidator);
 
-        PowerMockito.doReturn(SOME_SERVER_URL).when(requestObjectValidator, "getTokenEpURL",
-                anyString());
+        PowerMockito.doReturn(SOME_SERVER_URL).when(requestObjectValidator, "getTokenEpURL", anyString());
 
         RequestObject requestObject = requestParamRequestObjectBuilder.buildRequestObject(jwt, oAuth2Parameters);
 

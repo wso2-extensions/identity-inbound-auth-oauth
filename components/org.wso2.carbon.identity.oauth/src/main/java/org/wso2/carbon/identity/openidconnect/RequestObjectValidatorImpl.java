@@ -27,9 +27,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
+import org.wso2.carbon.identity.application.common.model.Property;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.base.IdentityConstants;
+import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -47,6 +49,7 @@ import java.security.interfaces.RSAPublicKey;
 import java.util.List;
 
 import static org.apache.commons.lang.StringUtils.isEmpty;
+import static org.apache.commons.lang.StringUtils.isNotEmpty;
 import static org.wso2.carbon.identity.openidconnect.model.Constants.RS;
 
 /**
@@ -56,6 +59,8 @@ import static org.wso2.carbon.identity.openidconnect.model.Constants.RS;
 
 public class RequestObjectValidatorImpl implements RequestObjectValidator {
 
+    private static final String OIDC_IDP_ENTITY_ID = "IdPEntityId";
+    private static final String OIDC_ID_TOKEN_ISSUER_ID = "OAuth.OpenIDConnect.IDTokenIssuerID";
     private static Log log = LogFactory.getLog(RequestObjectValidatorImpl.class);
 
     @Override
@@ -131,7 +136,7 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
     }
 
     /**
-     * Return globally set audience or the token endpoint of the server
+     * Return the alias of the resident IDP to validate the audience value of the Request Object.
      *
      * @param tenantDomain
      * @return tokenEndpoint of the Issuer
@@ -139,17 +144,21 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
      */
     protected String getTokenEpURL(String tenantDomain) throws RequestObjectException {
 
-        String tokenEndpoint;
+        String residentIdpAlias = StringUtils.EMPTY;
         IdentityProvider residentIdP;
         try {
             residentIdP = IdentityProviderManager.getInstance().getResidentIdP(tenantDomain);
             FederatedAuthenticatorConfig oidcFedAuthn = IdentityApplicationManagementUtil
                     .getFederatedAuthenticator(residentIdP.getFederatedAuthenticatorConfigs(),
                             IdentityApplicationConstants.Authenticator.OIDC.NAME);
-            tokenEndpoint = IdentityApplicationManagementUtil.getProperty(oidcFedAuthn.getProperties(),
-                    IdentityApplicationConstants.Authenticator.OIDC.OAUTH2_TOKEN_URL).getValue();
-            if (log.isDebugEnabled()) {
-                log.debug("Found Token Endpoint URL: " + tokenEndpoint);
+
+            Property idPEntityIdProperty =
+                    IdentityApplicationManagementUtil.getProperty(oidcFedAuthn.getProperties(), OIDC_IDP_ENTITY_ID);
+            if (idPEntityIdProperty != null) {
+                residentIdpAlias = idPEntityIdProperty.getValue();
+                if (log.isDebugEnabled()) {
+                    log.debug("Found IdPEntityID: " + residentIdpAlias + " for tenantDomain: " + tenantDomain);
+                }
             }
         } catch (IdentityProviderManagementException e) {
             log.error("Error while loading OAuth2TokenEPUrl of the resident IDP of tenant:" + tenantDomain, e);
@@ -157,10 +166,16 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
                     "of Request Object.");
         }
 
-        if (isEmpty(tokenEndpoint)) {
-            tokenEndpoint = IdentityUtil.getServerURL(IdentityConstants.OAuth.TOKEN, true, false);
+        if (isEmpty(residentIdpAlias)) {
+            residentIdpAlias = IdentityUtil.getProperty(OIDC_ID_TOKEN_ISSUER_ID);
+            if (isNotEmpty(residentIdpAlias)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("'IdPEntityID' property was empty for tenantDomain: " + tenantDomain + ". Using " +
+                            "OIDC IDToken Issuer value: " + residentIdpAlias + " as alias to identify Resident IDP.");
+                }
+            }
         }
-        return tokenEndpoint;
+        return residentIdpAlias;
     }
 
     protected boolean isValidIssuer(RequestObject requestObject, OAuth2Parameters oAuth2Parameters) {
@@ -189,8 +204,7 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
                 return true;
             }
         }
-        return logAndReturnFalse("None of the audience values matched the tokenEndpoint Alias: "
-                + currentAudience);
+        return logAndReturnFalse("None of the audience values matched the tokenEndpoint Alias: " + currentAudience);
     }
 
 
@@ -211,6 +225,7 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
      * @return X509Certificate object containing the public certificate of the Service Provider.
      */
     protected Certificate getX509CertOfOAuthApp(String clientId, String tenantDomain) throws RequestObjectException {
+
 
         try {
             return OAuth2Util.getX509CertOfOAuthApp(clientId, tenantDomain);
