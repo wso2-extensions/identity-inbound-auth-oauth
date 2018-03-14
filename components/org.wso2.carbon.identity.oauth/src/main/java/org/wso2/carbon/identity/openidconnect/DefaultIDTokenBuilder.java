@@ -553,7 +553,9 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
     private List<String> getOIDCAudience(String clientId, String tenantDomain) {
         List<String> oidcAudiences = getDefinedCustomOIDCAudiences(clientId, tenantDomain);
         // Need to add client_id as an audience value according to the spec.
-        oidcAudiences.add(clientId);
+        if (!oidcAudiences.contains(clientId)) {
+            oidcAudiences.add(clientId);
+        }
         return oidcAudiences;
     }
 
