@@ -27,7 +27,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
     <artifactId>identity-inbound-auth-oauth</artifactId>
-    <version>5.6.63-SNAPSHOT</version>
+    <version>5.6.63</version>
     <packaging>pom</packaging>
     <name>WSO2 Carbon OAuth module</name>
     <url>http://wso2.org</url>
@@ -36,7 +36,7 @@
         <url>https://github.com/wso2-extensions/identity-inbound-auth-oauth.git</url>
         <developerConnection>scm:git:https://github.com/wso2-extensions/identity-inbound-auth-oauth.git</developerConnection>
         <connection>scm:git:https://github.com/wso2-extensions/identity-inbound-auth-oauth.git</connection>
-        <tag>HEAD</tag>
+        <tag>v5.6.63</tag>
     </scm>
 
     <modules>
