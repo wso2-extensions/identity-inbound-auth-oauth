@@ -811,17 +811,22 @@ public class OAuth2AuthzEndpoint {
         if (isFormPostModeAndResponseBodyExists(oauth2Params, oauthResponse)) {
             return oauthResponse.getBody();
         } else {
-            //When responseType equal to "id_token" the resulting token is passed back as a query parameter
-            //According to the specification it should pass as URL Fragment
-            if (OAuthConstants.ID_TOKEN.equalsIgnoreCase(responseType)) {
-                return buildIdTokenQueryParam(oauthResponse, authzRespDTO);
+            // When responseType contains "id_token", the resulting token is passed back as a URI fragment
+            // as per the specification: http://openid.net/specs/openid-connect-core-1_0.html#HybridCallback
+            if (hasIDTokenInResponseType(responseType)) {
+                return buildOIDCResponseWithURIFragment(oauthResponse, authzRespDTO);
             } else {
                 return appendAuthenticatedIDPs(oAuthMessage.getSessionDataCacheEntry(), oauthResponse.getLocationUri());
             }
         }
     }
 
-    private String buildIdTokenQueryParam(OAuthResponse oauthResponse, OAuth2AuthorizeRespDTO authzRespDTO) {
+    private boolean hasIDTokenInResponseType(String responseType) {
+
+        return StringUtils.isNotBlank(responseType) && responseType.toLowerCase().contains(OAuthConstants.ID_TOKEN);
+    }
+
+    private String buildOIDCResponseWithURIFragment(OAuthResponse oauthResponse, OAuth2AuthorizeRespDTO authzRespDTO) {
         if (authzRespDTO.getCallbackURI().contains("?")) {
             return authzRespDTO.getCallbackURI() + "#" + StringUtils.substring(oauthResponse.getLocationUri()
                     , authzRespDTO.getCallbackURI().length() + 1);
