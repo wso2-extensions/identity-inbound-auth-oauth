@@ -165,6 +165,7 @@ public class OAuth2AuthzEndpoint {
     private static final String ACR_VALUES = "acr_values";
     private static final String CLAIMS = "claims";
     public static final String COMMA_SEPARATOR = ",";
+    public static final String SPACE_SEPARATOR = " ";
     private boolean isCacheAvailable = false;
 
     private static final String REDIRECT_URI = "redirect_uri";
@@ -1401,7 +1402,7 @@ public class OAuth2AuthzEndpoint {
 
             if (StringUtils.isNotEmpty(requestObject.getClaimValue(SCOPE))) {
                 String scopeString = requestObject.getClaimValue(SCOPE);
-                params.setScopes(new HashSet<>(Arrays.asList(scopeString.split(COMMA_SEPARATOR))));
+                params.setScopes(new HashSet<>(Arrays.asList(scopeString.split(SPACE_SEPARATOR))));
             }
             if (StringUtils.isNotEmpty(requestObject.getClaimValue(MAX_AGE))) {
                 params.setMaxAge(Integer.parseInt(requestObject.getClaimValue(MAX_AGE)));
