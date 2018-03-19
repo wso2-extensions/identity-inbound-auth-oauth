@@ -83,6 +83,30 @@ public class RequestObjectService {
     }
 
     /**
+     * To invoke the RequestObjectPersistenceFactory to retrieve request object.
+     *
+     * @param sessionDataKey session data key
+     * @return list of claims which have marked as essential in the request object.
+     * @throws RequestObjectException
+     */
+    private List<RequestedClaim> getRequestedClaimsBySessionDataKey(String sessionDataKey, boolean isUserInfo)
+            throws RequestObjectException {
+
+        List<RequestedClaim> essentialClaims;
+        if (log.isDebugEnabled()) {
+            log.debug("Invoking the RequestObjectPersistenceFactory to retrieve essential claims list.");
+        }
+
+        try {
+            essentialClaims = OAuthTokenPersistenceFactory.getInstance().getRequestObjectDAO()
+                    .getRequestedClaims(sessionDataKey, isUserInfo);
+        } catch (IdentityOAuth2Exception e) {
+            throw new RequestObjectException(e.getMessage());
+        }
+        return essentialClaims;
+    }
+
+    /**
      * To invoke the RequestObjectPersistenceFactory to retrieve request object for id_token.
      *
      * @param token  access token Id
@@ -103,6 +127,32 @@ public class RequestObjectService {
     public List<RequestedClaim> getRequestedClaimsForUserInfo(String token) throws RequestObjectException {
 
         return getRequestedClaims(token, true);
+    }
+
+    /**
+     * To invoke the RequestObjectPersistenceFactory to retrieve request object for id_token.
+     *
+     * @param sessionDataKey session data key
+     * @return list of claims which have marked as essential in the request object.
+     * @throws RequestObjectException
+     */
+    public List<RequestedClaim> getRequestedClaimsForIDTokenBySessionDataKey(String sessionDataKey)
+            throws RequestObjectException {
+
+        return getRequestedClaimsBySessionDataKey(sessionDataKey, false);
+    }
+
+    /**
+     * To invoke the RequestObjectPersistenceFactory to retrieve request object for id_token.
+     *
+     * @param sessionDataKey session data key
+     * @return list of claims which have marked as essential in the request object.
+     * @throws RequestObjectException
+     */
+    public List<RequestedClaim> getRequestedClaimsForUserInfoBySessionDataKey(String sessionDataKey)
+            throws RequestObjectException {
+
+        return getRequestedClaimsBySessionDataKey(sessionDataKey, true);
     }
 
 }

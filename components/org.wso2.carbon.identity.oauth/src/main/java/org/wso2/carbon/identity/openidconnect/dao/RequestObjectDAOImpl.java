@@ -279,6 +279,49 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
         return essentialClaims;
     }
 
+    /**
+     * Retrieve essential claims for the id token and user info endpoint.
+     *
+     * @param sessionDataKey session Data Key
+     * @param isUserInfo     return true if the claims are requested from user info end point.
+     * @return
+     * @throws IdentityOAuth2Exception
+     */
+    @Override
+    public List<RequestedClaim> getRequestedClaimsBySessionDataKey(String sessionDataKey, boolean isUserInfo)
+            throws IdentityOAuth2Exception {
+        Connection connection = null;
+        PreparedStatement prepStmt = null;
+        ResultSet resultSet = null;
+        List<RequestedClaim> essentialClaims = new ArrayList<>();
+        try {
+            connection = IdentityDatabaseUtil.getDBConnection();
+            String sql = SQLQueries.RETRIEVE_REQUESTED_CLAIMS_BY_SESSION_DATA_KEY;
+            String tokenId = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO().
+                    getTokenIdByAccessToken(sessionDataKey);
+
+            prepStmt = connection.prepareStatement(sql);
+            prepStmt.setString(1, tokenId);
+            prepStmt.setString(2, isUserInfo ? "1" : "0");
+            resultSet = prepStmt.executeQuery();
+
+            while (resultSet.next()) {
+                RequestedClaim requestedClaim = new RequestedClaim();
+                requestedClaim.setName(resultSet.getString(1));
+                requestedClaim.setEssential(!"0".equals(resultSet.getString(2)));
+                requestedClaim.setValue(resultSet.getString(3));
+                essentialClaims.add(requestedClaim);
+            }
+            connection.commit();
+        } catch (SQLException e) {
+            String errorMsg = "Error occurred while retrieving request object using session data key.";
+            throw new IdentityOAuth2Exception(errorMsg, e);
+        } finally {
+            IdentityDatabaseUtil.closeAllConnections(connection, resultSet, prepStmt);
+        }
+        return essentialClaims;
+    }
+
     @Override
     public void refreshRequestObjectReference(String oldAccessTokenId, String newAccessTokenId)
             throws IdentityOAuth2Exception {

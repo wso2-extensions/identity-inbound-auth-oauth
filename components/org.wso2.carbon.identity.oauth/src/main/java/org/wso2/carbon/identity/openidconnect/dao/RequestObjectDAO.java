@@ -95,6 +95,17 @@ public interface RequestObjectDAO {
             IdentityOAuth2Exception;
 
     /**
+     * Retrieve essential claims for the id token and user info endpoint.
+     *
+     * @param sessionDataKey session Data Key
+     * @param isUserInfo     return true if the claims are requested from user info end point.
+     * @return
+     * @throws IdentityOAuth2Exception
+     */
+    List<RequestedClaim> getRequestedClaimsBySessionDataKey(String sessionDataKey, boolean isUserInfo)
+            throws IdentityOAuth2Exception;
+
+    /**
      * Updates refresh token whe refresh token is issued.
      *
      * @param oldAccessToken old access token id
