@@ -126,6 +126,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
         mockStatic(OAuthServerConfiguration.class);
         when(OAuthServerConfiguration.getInstance()).thenReturn(mockedOAuthServerConfiguration);
         when(mockedOAuthServerConfiguration.getPersistenceProcessor()).thenReturn(new PlainTextPersistenceProcessor());
+        when(mockedOAuthServerConfiguration.getInstance().getHashAlgorithm()).thenReturn("SHA-256");
         tokenMgtDAO = new TokenMgtDAO();
 
         OAuthComponentServiceHolder.getInstance().setRealmService(mockedRealmService);

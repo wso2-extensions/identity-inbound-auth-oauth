@@ -21,11 +21,15 @@ package org.wso2.carbon.identity.oauth2.token.handlers.grant;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
@@ -109,6 +113,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         }
 
         setTokenDataToMessageContext(tokReqMsgCtx, accessTokenBean);
+        addUserAttributesToCache(accessTokenBean, tokReqMsgCtx);
         return buildTokenResponse(tokReqMsgCtx, accessTokenBean);
     }
 
@@ -525,5 +530,28 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             }
         }
         return refreshTokenValidityPeriod;
+    }
+
+    private static void addUserAttributesToCache(AccessTokenDO accessTokenBean,
+                                                 OAuthTokenReqMessageContext msgCtx) {
+
+        RefreshTokenValidationDataDO oldAccessToken =
+                (RefreshTokenValidationDataDO) msgCtx.getProperty(PREV_ACCESS_TOKEN);
+        AuthorizationGrantCacheKey oldAuthorizationGrantCacheKey = new AuthorizationGrantCacheKey(oldAccessToken
+                .getAccessToken());
+        AuthorizationGrantCacheEntry grantCacheEntry = AuthorizationGrantCache.getInstance()
+                .getValueFromCacheByToken(oldAuthorizationGrantCacheKey);
+
+        if (grantCacheEntry != null) {
+            AuthorizationGrantCacheKey authorizationGrantCacheKey = new AuthorizationGrantCacheKey(accessTokenBean
+                    .getAccessToken());
+
+            if (StringUtils.isNotBlank(accessTokenBean.getTokenId())) {
+                grantCacheEntry.setTokenId(accessTokenBean.getTokenId());
+            }
+
+            AuthorizationGrantCache.getInstance().clearCacheEntryByToken(oldAuthorizationGrantCacheKey);
+            AuthorizationGrantCache.getInstance().addToCacheByToken(authorizationGrantCacheKey, grantCacheEntry);
+        }
     }
 }

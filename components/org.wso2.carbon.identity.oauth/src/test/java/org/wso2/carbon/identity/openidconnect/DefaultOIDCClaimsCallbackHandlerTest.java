@@ -21,7 +21,10 @@ import com.nimbusds.jwt.JWTClaimsSet;
 import net.minidev.json.JSONArray;
 import org.apache.commons.lang.StringUtils;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.Spy;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 import org.opensaml.saml2.core.Assertion;
 import org.opensaml.saml2.core.Attribute;
 import org.opensaml.saml2.core.AttributeStatement;
@@ -64,6 +67,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
+import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.registry.api.RegistryException;
 import org.wso2.carbon.registry.core.Resource;
 import org.wso2.carbon.registry.core.ResourceImpl;
@@ -86,6 +90,7 @@ import java.util.Properties;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
+import static org.mockito.Matchers.anyMap;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.doReturn;
@@ -144,6 +149,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
 
     @Mock
     private ApplicationManagementService applicationManagementService;
+
 
     private static final String CUSTOM_ATTRIBUTE_NAME = "CustomAttributeName";
 
@@ -212,53 +218,26 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
     @BeforeClass
     public void setUp() throws Exception {
         System.setProperty(CarbonBaseConstants.CARBON_HOME, CARBON_HOME);
-
         mockStatic(FrameworkUtils.class);
         when(FrameworkUtils.getMultiAttributeSeparator()).thenReturn(MULTI_ATTRIBUTE_SEPARATOR_DEFAULT);
 
-        OpenIDConnectServiceComponentHolder.getInstance()
-                .getOpenIDConnectClaimFilters()
-                .add(new OpenIDConnectClaimFilterImpl());
+        RequestObjectService requestObjectService = Mockito.mock(RequestObjectService.class);
+        List<RequestedClaim> requestedClaims =  Collections.emptyList();
+        when(requestObjectService.getRequestedClaimsForIDToken(anyString())).
+                thenReturn(requestedClaims);
+        when(requestObjectService.getRequestedClaimsForUserInfo(anyString())).
+                thenReturn(requestedClaims);
 
+        // Skipping filtering with user consent.
+        // TODO: Remove mocking claims filtering based on consent when fixing https://github.com/wso2/product-is/issues/2676
+        OpenIDConnectClaimFilterImpl openIDConnectClaimFilter = spy(new OpenIDConnectClaimFilterImpl());
+        when(openIDConnectClaimFilter
+                .getClaimsFilteredByUserConsent(anyMap(), any(AuthenticatedUser.class), anyString(), anyString()))
+                .thenAnswer(invocation -> invocation.getArguments()[0]);
+        OpenIDConnectServiceComponentHolder.getInstance().getOpenIDConnectClaimFilters().add(openIDConnectClaimFilter);
+
+        OpenIDConnectServiceComponentHolder.setRequestObjectService(requestObjectService);
         defaultOIDCClaimsCallbackHandler = new DefaultOIDCClaimsCallbackHandler();
-    }
-
-    @DataProvider(name = "samlAttributeValueProvider")
-    public Object[][] provideSamlAttributeValues() {
-        return new Object[][]{
-                // Empty attribute value
-                {new String[]{""}, ""},
-                // Single attribute value
-                {new String[]{"value1"}, "value1"},
-                // Multiple attribute values
-                {new String[]{"value1", "value2"}, "value1" + MULTI_ATTRIBUTE_SEPARATOR_DEFAULT + "value2"},
-                // Multiple attribute values with an empty value
-                {new String[]{"value1", "", "value2"}, "value1" + MULTI_ATTRIBUTE_SEPARATOR_DEFAULT + "value2"}
-        };
-    }
-
-    @Test(dataProvider = "samlAttributeValueProvider")
-    public void testCustomClaimForOAuthTokenReqMessageContext(String[] attributeValues,
-                                                              String expectedClaimValue) throws Exception {
-        mockStatic(FrameworkUtils.class);
-        when(FrameworkUtils.getMultiAttributeSeparator()).thenReturn(MULTI_ATTRIBUTE_SEPARATOR_DEFAULT);
-
-        JWTClaimsSet jwtClaimsSet = new JWTClaimsSet();
-        Assertion assertion = getAssertion(attributeValues);
-
-        OAuth2AccessTokenReqDTO accessTokenReqDTO = new OAuth2AccessTokenReqDTO();
-        accessTokenReqDTO.setClientId(DUMMY_CLIENT_ID);
-
-        OAuthTokenReqMessageContext requestMsgCtx = new OAuthTokenReqMessageContext(accessTokenReqDTO);
-        requestMsgCtx.addProperty(OAuthConstants.OAUTH_SAML2_ASSERTION, assertion);
-
-        defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSet, requestMsgCtx);
-
-        // Assert whether the custom attribute from SAML Assertion was set as a claim.
-        assertFalse(jwtClaimsSet.getCustomClaims().isEmpty());
-        assertNotNull(jwtClaimsSet.getCustomClaim(CUSTOM_ATTRIBUTE_NAME));
-        // Assert whether multi value attribute values were joined correctly.
-        assertEquals(jwtClaimsSet.getCustomClaim(CUSTOM_ATTRIBUTE_NAME), expectedClaimValue);
     }
 
     /**
@@ -771,39 +750,6 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
     }
 
     @Test
-    public void testCustomClaimForOAuthTokenReqMessageContextWithNullAssertionSubject() throws Exception {
-        JWTClaimsSet jwtClaimsSet = new JWTClaimsSet();
-        OAuthTokenReqMessageContext requestMsgCtx = mock(OAuthTokenReqMessageContext.class);
-
-        mockSubject = mock(Subject.class);
-        assertion = mock(Assertion.class);
-        nameID = mock(NameID.class);
-        when(assertion.getSubject()).thenReturn(mockSubject);
-        when(mockSubject.getNameID()).thenReturn(nameID);
-        when(nameID.getValue()).thenReturn(" C=US, O=NCSA-TEST, OU=User, CN=trscavo@uiuc.edu");
-
-        AttributeStatement statement = mock(AttributeStatement.class);
-        List<AttributeStatement> attributeStatementList = null;
-        when(assertion.getAttributeStatements()).thenReturn(attributeStatementList);
-
-        List<Attribute> attributesList = new ArrayList<>();
-        Attribute attribute = new AttributeBuilder().buildObject("urn:oasis:names:tc:SAML:2.0:assertion",
-                "Attribute", "saml2");
-        XMLObject obj = mock(XMLObject.class);
-        attribute.getAttributeValues().add(obj);
-
-        Element ele = mock(Element.class);
-        when(obj.getDOM()).thenReturn(ele);
-        attributesList.add(attribute);
-        when(statement.getAttributes()).thenReturn(attributesList);
-
-        when(requestMsgCtx.getProperty(OAuthConstants.OAUTH_SAML2_ASSERTION)).thenReturn(assertion);
-        defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSet, requestMsgCtx);
-
-        assertEquals(jwtClaimsSet.getAllClaims().size(), 8, "Claims are not successfully set.");
-    }
-
-    @Test
     public void testCustomClaimForOAuthTokenReqMessageContextWithNullAssertion() throws Exception {
         JWTClaimsSet jwtClaimsSet = new JWTClaimsSet();
         OAuthTokenReqMessageContext requestMsgCtx = mock(OAuthTokenReqMessageContext.class);
@@ -897,8 +843,6 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
 
         when(registryService.getConfigSystemRegistry(anyInt())).thenReturn(userRegistry);
         when(userRegistry.get(OAuthConstants.SCOPE_RESOURCE_PATH)).thenReturn(resource);
-
-
     }
 
     private Assertion getAssertion(String[] attributeValues) throws ConfigurationException {

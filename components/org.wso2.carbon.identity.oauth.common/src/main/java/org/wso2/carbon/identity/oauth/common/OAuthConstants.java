@@ -20,6 +20,11 @@ package org.wso2.carbon.identity.oauth.common;
 
 public final class OAuthConstants {
 
+    //OIDC request headers.
+    public static final String AMR = "amr";
+    public static final String ACR = "acr";
+    public static final String AT_HASH = "at_hash";
+
     //OAuth2 request headers.
     public static final String HTTP_REQ_HEADER_AUTHZ = "Authorization";
 
@@ -118,6 +123,7 @@ public final class OAuthConstants {
     public static final String OAUTH_INTERCEPTOR_PROXY = "OauthDataInterceptorHandlerProxy";
 
     public static final String RESPONSE_HEADERS_PROPERTY = "RESPONSE_HEADERS";
+    public static final String CLIENT_AUTHN_CONTEXT = "oauth.client.authentication.context";
 
 
     //Constants used for multiple scopes
@@ -308,8 +314,19 @@ public final class OAuthConstants {
         public static final String MAX_AGE = "max_age";
         // OIDC Specification : http://openid.net/specs/openid-connect-core-1_0.html
         public static final String C_HASH = "c_hash";
+        public static final String SESSION_ID_CLAIM = "sid";
 
         private OIDCClaims() {}
+    }
+
+    public static class OIDCConfigProperties {
+        public static final String REQUEST_OBJECT_SIGNED = "requestObjectSigned";
+        public static final String ID_TOKEN_ENCRYPTED = "idTokenEncrypted";
+        public static final String ID_TOKEN_ENCRYPTION_ALGORITHM = "idTokenEncryptionAlgorithm";
+        public static final String ID_TOKEN_ENCRYPTION_METHOD = "idTokenEncryptionMethod";
+        public static final String BACK_CHANNEL_LOGOUT_URL = "backChannelLogoutURL";
+
+        private OIDCConfigProperties() { }
     }
 
     public static class SignatureAlgorithms {

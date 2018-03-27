@@ -29,6 +29,7 @@ import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.base.ServerConfiguration;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationRequestCacheEntry;
+import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.SSOConsentService;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticationRequest;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
@@ -49,6 +50,7 @@ import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
+import org.wso2.carbon.identity.openidconnect.RequestObjectService;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.webfinger.DefaultWebFingerProcessor;
@@ -80,6 +82,16 @@ public class EndpointUtil {
     }
 
     /**
+     * Returns the registered {@code {@link SSOConsentService}} instance
+     *
+     * @return
+     */
+    public static SSOConsentService getSSOConsentService() {
+        return (SSOConsentService) PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                .getOSGiService(SSOConsentService.class, null);
+    }
+
+    /**
      * Returns the {@code DefaultWebFingerProcessor} instance
      *
      * @return DefaultWebFingerProcessor
@@ -107,6 +119,17 @@ public class EndpointUtil {
     public static DefaultOIDCProcessor getOIDCService() {
         return (DefaultOIDCProcessor) PrivilegedCarbonContext.getThreadLocalCarbonContext().getOSGiService
                 (OIDCProcessor.class, null);
+    }
+
+    /**
+     * Returns the {@code RequestObjectService} instance
+     *
+     * @return RequestObjectService
+     */
+    public static RequestObjectService getRequestObjectService() {
+
+        return (RequestObjectService) PrivilegedCarbonContext.getThreadLocalCarbonContext().getOSGiService
+                (RequestObjectService.class, null);
     }
 
     /**
@@ -224,8 +247,17 @@ public class EndpointUtil {
 
         String errorPageUrl = OAuth2Util.OAuthURL.getOAuth2ErrorPageUrl();
         try {
-            errorPageUrl += "?" + OAuthConstants.OAUTH_ERROR_CODE + "=" + URLEncoder.encode(errorCode, UTF_8) +
-                    "&" + OAuthConstants.OAUTH_ERROR_MESSAGE + "=" + URLEncoder.encode(errorMessage, UTF_8);
+
+            if (StringUtils.isNotBlank(errorCode)) {
+                errorPageUrl = FrameworkUtils.appendQueryParamsStringToUrl(errorPageUrl,
+                        OAuthConstants.OAUTH_ERROR_CODE + "=" + URLEncoder.encode(errorCode, UTF_8));
+            }
+
+            if (StringUtils.isNotBlank(errorMessage)) {
+                errorPageUrl = FrameworkUtils.appendQueryParamsStringToUrl(errorPageUrl,
+                        OAuthConstants.OAUTH_ERROR_MESSAGE + "=" + URLEncoder.encode(errorMessage, UTF_8));
+            }
+
         } catch (UnsupportedEncodingException e) {
             //ignore
             if (log.isDebugEnabled()){
@@ -459,7 +491,7 @@ public class EndpointUtil {
      */
     public static ApplicationManagementService getApplicationManagementService() {
         return (ApplicationManagementService) PrivilegedCarbonContext.getThreadLocalCarbonContext().getOSGiService
-                (ApplicationManagementService.class);
+                (ApplicationManagementService.class, null);
     }
     public static String getRealmInfo() {
         return "Basic realm=" + getHostName();

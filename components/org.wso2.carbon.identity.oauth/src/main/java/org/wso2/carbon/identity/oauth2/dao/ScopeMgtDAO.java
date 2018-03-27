@@ -93,10 +93,15 @@ public class ScopeMgtDAO {
 
         Set<Scope> scopes = new HashSet<>();
         Map<Integer, Scope> scopeMap = new HashMap<>();
+        String sql;
 
         try (Connection conn = IdentityDatabaseUtil.getDBConnection()) {
-
-            try (PreparedStatement ps = conn.prepareStatement(SQLQueries.RETRIEVE_ALL_SCOPES)) {
+            if (conn.getMetaData().getDriverName().contains(Oauth2ScopeConstants.DataBaseType.ORACLE)) {
+                sql = SQLQueries.RETRIEVE_ALL_SCOPES_ORACLE;
+            } else {
+                sql = SQLQueries.RETRIEVE_ALL_SCOPES;
+            }
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
                 ps.setInt(1, tenantID);
                 try (ResultSet rs = ps.executeQuery()) {
                     while (rs.next()) {
@@ -239,10 +244,15 @@ public class ScopeMgtDAO {
         }
 
         Scope scope = null;
-
+        String sql;
         try (Connection conn = IdentityDatabaseUtil.getDBConnection()) {
 
-            try (PreparedStatement ps = conn.prepareStatement(SQLQueries.RETRIEVE_SCOPE_BY_NAME)) {
+            if (conn.getMetaData().getDriverName().contains(Oauth2ScopeConstants.DataBaseType.ORACLE)) {
+                sql = SQLQueries.RETRIEVE_SCOPE_BY_NAME_ORACLE;
+            } else {
+                sql = SQLQueries.RETRIEVE_SCOPE_BY_NAME;
+            }
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
                 ps.setString(1, name);
                 ps.setInt(2, tenantID);
                 try (ResultSet rs = ps.executeQuery()) {

@@ -1,6 +1,7 @@
 package org.wso2.carbon.identity.oauth.endpoint.user.impl;
 
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.testng.PowerMockObjectFactory;
@@ -45,6 +46,7 @@ import java.util.Map;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
+import static org.mockito.Matchers.anyMap;
 import static org.mockito.Matchers.anyString;
 import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
@@ -123,9 +125,13 @@ public class UserInfoResponseBaseTest extends PowerMockTestCase {
 
     @BeforeClass
     public void setUp() {
-        OpenIDConnectServiceComponentHolder.getInstance()
-                .getOpenIDConnectClaimFilters()
-                .add(new OpenIDConnectClaimFilterImpl());
+        // Skipping filtering with user consent.
+        // TODO: Remove mocking claims filtering based on consent when fixing https://github.com/wso2/product-is/issues/2676
+        OpenIDConnectClaimFilterImpl openIDConnectClaimFilter = Mockito.spy(new OpenIDConnectClaimFilterImpl());
+        when(openIDConnectClaimFilter
+                .getClaimsFilteredByUserConsent(anyMap(), any(AuthenticatedUser.class), anyString(), anyString()))
+                .thenAnswer(invocation -> invocation.getArguments()[0]);
+        OpenIDConnectServiceComponentHolder.getInstance().getOpenIDConnectClaimFilters().add(openIDConnectClaimFilter);
         resource = new ResourceImpl();
     }
 
