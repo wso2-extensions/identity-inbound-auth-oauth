@@ -71,6 +71,11 @@
             <artifactId>org.wso2.carbon.identity.application.authentication.framework</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.wso2.carbon.identity.framework</groupId>
+            <artifactId>org.wso2.carbon.identity.event</artifactId>
+            <version>5.10.47-SNAPSHOT</version>
+        </dependency>
+        <dependency>
             <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
             <artifactId>org.wso2.carbon.identity.oauth</artifactId>
         </dependency>
@@ -188,7 +193,7 @@
                             org.wso2.carbon.utils.*; version="${carbon.kernel.imp.pkg.version.range}",
                             org.wso2.carbon.core.util.*; version="${carbon.kernel.imp.pkg.version.range}",
                             org.wso2.carbon.context.*; version="${carbon.kernel.imp.pkg.version.range}",
-
+                            *,
                         </Import-Package>
                         <Export-Package>
                             !org.wso2.carbon.identity.oidc.session.internal,
