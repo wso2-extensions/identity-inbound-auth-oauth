@@ -25,6 +25,7 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.tokenprocessor.HashingPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -52,17 +53,27 @@ abstract class AbstractOAuthDAO {
     protected static final String AUTHZ_USER = "AUTHZ_USER";
     protected static final String LOWER_AUTHZ_USER = "LOWER(AUTHZ_USER)";
 
-    private TokenPersistenceProcessor persistenceProcessor;
+    private TokenPersistenceProcessor persistenceProcessor, hashingPersistenceProcessor;
 
     public AbstractOAuthDAO() {
 
         persistenceProcessor = createPersistenceProcessor();
+        hashingPersistenceProcessor = new HashingPersistenceProcessor();
 
     }
 
     protected TokenPersistenceProcessor getPersistenceProcessor() {
 
         return persistenceProcessor;
+    }
+
+    /**
+     * Method to get HashingPersistenceProcessor instance
+     * @return an instance of HashingPersistenceProcessor
+     */
+    protected TokenPersistenceProcessor getHashingPersistenceProcessor() {
+
+        return hashingPersistenceProcessor;
     }
 
     protected TokenPersistenceProcessor createPersistenceProcessor() {

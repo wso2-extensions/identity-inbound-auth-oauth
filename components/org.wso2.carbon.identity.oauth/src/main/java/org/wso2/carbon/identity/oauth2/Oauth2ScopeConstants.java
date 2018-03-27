@@ -73,4 +73,8 @@ public class Oauth2ScopeConstants {
         public static final String OFFSET = "offset";
     }
 
+    public static final class DataBaseType {
+        public static final String ORACLE = "Oracle";
+    }
+
 }

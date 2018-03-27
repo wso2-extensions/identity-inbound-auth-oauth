@@ -21,7 +21,7 @@ package org.wso2.carbon.identity.oauth.endpoint.user.impl;
 import com.nimbusds.jwt.JWT;
 import com.nimbusds.jwt.JWTParser;
 import com.nimbusds.jwt.ReadOnlyJWTClaimsSet;
-import org.mockito.Spy;
+import org.mockito.Mockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
@@ -29,12 +29,19 @@ import org.testng.annotations.Test;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
+import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
+import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImpl;
+import org.wso2.carbon.identity.openidconnect.RequestObjectService;
+import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
+import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
@@ -50,9 +57,19 @@ public class UserInfoJWTResponseTest extends UserInfoResponseBaseTest {
     private UserInfoJWTResponse userInfoJWTResponse;
 
     @BeforeClass
-    public void setup() {
+    public void setup() throws RequestObjectException {
         userInfoJWTResponse = new UserInfoJWTResponse();
+        RequestObjectService requestObjectService = Mockito.mock(RequestObjectService.class);
+        List<RequestedClaim> requestedClaims = Collections.EMPTY_LIST;
+        when(requestObjectService.getRequestedClaimsForIDToken(anyString())).
+                thenReturn(requestedClaims);
+        when(requestObjectService.getRequestedClaimsForUserInfo(anyString())).
+                thenReturn(requestedClaims);
+        OpenIDConnectServiceComponentHolder.getInstance().getOpenIDConnectClaimFilters()
+                .add(new OpenIDConnectClaimFilterImpl());
+        OpenIDConnectServiceComponentHolder.setRequestObjectService(requestObjectService);
     }
+
     @DataProvider(name = "subjectClaimDataProvider")
     public Object[][] provideSubjectData() {
         return getSubjectClaimTestData();

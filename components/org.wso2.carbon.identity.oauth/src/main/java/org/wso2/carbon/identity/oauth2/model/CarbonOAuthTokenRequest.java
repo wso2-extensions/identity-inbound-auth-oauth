@@ -28,6 +28,7 @@ import org.apache.oltu.oauth2.common.utils.OAuthUtils;
 import org.apache.oltu.oauth2.common.validators.OAuthValidator;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 
 import java.util.ArrayList;
 import java.util.Enumeration;
@@ -47,6 +48,7 @@ public class CarbonOAuthTokenRequest extends OAuthTokenRequest {
     private String pkceCodeVerifier;
     private RequestParameter[] requestParameters;
     private HttpRequestHeader[] httpRequestHeaders;
+    private OAuthClientAuthnContext oAuthClientAuthnContext;
 
     /**
      * Constructs CarbonOAuthTokenRequest from the given HttpServletRequest
@@ -62,6 +64,7 @@ public class CarbonOAuthTokenRequest extends OAuthTokenRequest {
         assertion = request.getParameter(OAuth.OAUTH_ASSERTION);
         windows_token = request.getParameter(OAuthConstants.WINDOWS_TOKEN);
         pkceCodeVerifier = request.getParameter(OAuthConstants.OAUTH_PKCE_CODE_VERIFIER);
+        setClientAuthnContext(request);
 
         // Store all request parameters
         if (request.getParameterNames() != null) {
@@ -94,7 +97,6 @@ public class CarbonOAuthTokenRequest extends OAuthTokenRequest {
             }
             httpRequestHeaders = httpHeaderList.toArray(new HttpRequestHeader[httpHeaderList.size()]);
         }
-
     }
 
     /**
@@ -191,5 +193,25 @@ public class CarbonOAuthTokenRequest extends OAuthTokenRequest {
      */
     public HttpRequestHeader[] getHttpRequestHeaders() {
         return httpRequestHeaders;
+    }
+
+    public OAuthClientAuthnContext getoAuthClientAuthnContext() {
+        return oAuthClientAuthnContext;
+    }
+
+    public void setoAuthClientAuthnContext(OAuthClientAuthnContext oAuthClientAuthnContext) {
+        this.oAuthClientAuthnContext = oAuthClientAuthnContext;
+    }
+
+    private void setClientAuthnContext(HttpServletRequest request) {
+        Object oauthClientAuthnContextObj = request.getAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT);
+        if (oauthClientAuthnContextObj instanceof OAuthClientAuthnContext) {
+            oAuthClientAuthnContext = (OAuthClientAuthnContext) oauthClientAuthnContextObj;
+        } else {
+            oAuthClientAuthnContext = new OAuthClientAuthnContext();
+            oAuthClientAuthnContext.setAuthenticated(false);
+            oAuthClientAuthnContext.setErrorMessage("Client Authentication Failed");
+            oAuthClientAuthnContext.setErrorCode(OAuthError.TokenResponse.INVALID_REQUEST);
+        }
     }
 }

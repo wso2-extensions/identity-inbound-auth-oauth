@@ -19,16 +19,18 @@
 <%@ page import="org.apache.axis2.context.ConfigurationContext"%>
 <%@ page import="org.owasp.encoder.Encode" %>
 <%@ page import="org.wso2.carbon.CarbonConstants"%>
+<%@ page import="org.wso2.carbon.identity.core.util.IdentityUtil"%>
 <%@ page import="org.wso2.carbon.identity.oauth.common.OAuthConstants"%>
 <%@ page import="org.wso2.carbon.identity.oauth.stub.dto.OAuthConsumerAppDTO"%>
 <%@ page import="org.wso2.carbon.identity.oauth.ui.client.OAuthAdminClient"%>
-<%@ page import="org.wso2.carbon.ui.CarbonUIMessage"%>
-<%@ page import="org.wso2.carbon.ui.CarbonUIUtil"%>
-<%@ page import="org.wso2.carbon.utils.ServerConstants"%>
-<%@ page import="org.wso2.carbon.identity.core.util.IdentityUtil" %>
+<%@ page import="org.wso2.carbon.identity.oauth.ui.util.OAuthUIUtil"%>
+<%@ page import="org.wso2.carbon.ui.CarbonUIMessage" %>
 
+<%@ page import="org.wso2.carbon.ui.CarbonUIUtil" %>
+<%@ page import="org.wso2.carbon.utils.ServerConstants" %>
+<%@ page import="java.util.ArrayList" %>
+<%@ page import="java.util.List" %>
 <%@ page import="java.util.ResourceBundle" %>
-<%@ page import="org.wso2.carbon.identity.oauth.ui.util.OAuthUIUtil" %>
 
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt"%>
 <%@ taglib uri="http://wso2.org/projects/carbon/taglibs/carbontags.jar" prefix="carbon"%>
@@ -52,9 +54,11 @@
     String userAccessTokenExpiryTime = request.getParameter("userAccessTokenExpiryTime");
     String applicationAccessTokenExpiryTime = request.getParameter("applicationAccessTokenExpiryTime");
     String refreshTokenExpiryTime = request.getParameter("refreshTokenExpiryTime");
+    String backchannelLogoutUrl = request.getParameter("backChannelLogout");
 
 	boolean pkceMandatory = false;
 	boolean pkceSupportPlain = false;
+
 
 	if(request.getParameter("pkce") != null) {
 		pkceMandatory = true;
@@ -62,9 +66,14 @@
 	if(request.getParameter("pkce_plain") != null) {
 		pkceSupportPlain = true;
 	}
+    
+    // OIDC related properties
+    boolean isRequestObjectSignatureValidated = Boolean.parseBoolean(request.getParameter("validateRequestObjectSignature"));
+    boolean isIdTokenEncrypted = Boolean.parseBoolean(request.getParameter("encryptIdToken"));
+    String idTokenEncryptionAlgorithm = request.getParameter("idTokenEncryptionAlgorithm");
+    String idTokenEncryptionMethod = request.getParameter("idTokenEncryptionMethod");
 
-
-	String forwardTo = "index.jsp";
+    String forwardTo = "index.jsp";
 	String BUNDLE = "org.wso2.carbon.identity.oauth.ui.i18n.Resources";
 	ResourceBundle resourceBundle = ResourceBundle.getBundle(BUNDLE, request.getLocale());
 	OAuthConsumerAppDTO app = new OAuthConsumerAppDTO();
@@ -74,7 +83,7 @@
 	boolean isError = false;
 	OAuthConsumerAppDTO consumerApp = null;
 
-	try {
+    try {
         if (OAuthUIUtil.isValidURI(callback) || callback.startsWith(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX)) {
             String cookie = (String) session.getAttribute(ServerConstants.ADMIN_SERVICE_COOKIE);
             String backendServerURL = CarbonUIUtil.getServerURL(config.getServletContext(), session);
@@ -84,6 +93,7 @@
             OAuthAdminClient client = new OAuthAdminClient(cookie, backendServerURL, configContext);
             app.setApplicationName(applicationName);
             app.setCallbackUrl(callback);
+            app.setBackChannelLogoutUrl(backchannelLogoutUrl);
             app.setOAuthVersion(oauthVersion);
             app.setUserAccessTokenExpiryTime(Long.parseLong(userAccessTokenExpiryTime));
             app.setApplicationAccessTokenExpiryTime(Long.parseLong(applicationAccessTokenExpiryTime));
@@ -98,11 +108,20 @@
                     buff.append(grantType + " ");
                 }
             }
-
             grants = buff.toString();
+
+            List<String> registeredScopeValidators = new ArrayList<String>();
+            String[] allowedValidators = client.getAllowedScopeValidators();
+            for (String allowedValidator : allowedValidators) {
+                String scopeValidatorValue = request.getParameter(OAuthUIUtil.getScopeValidatorId(allowedValidator));
+                if (scopeValidatorValue != null) {
+                    registeredScopeValidators.add(allowedValidator);
+                }
+            }
 
             if (OAuthConstants.OAuthVersions.VERSION_2.equals(oauthVersion)) {
                 app.setGrantTypes(grants);
+                app.setScopeValidators(registeredScopeValidators.toArray(new String[registeredScopeValidators.size()]));
             }
 
             if (Boolean.parseBoolean(request.getParameter("enableAudienceRestriction"))) {
@@ -117,6 +136,14 @@
             }
             app.setPkceMandatory(pkceMandatory);
             app.setPkceSupportPlain(pkceSupportPlain);
+            
+            // Set OIDC related configuration properties.
+            app.setRequestObjectSignatureValidationEnabled(isRequestObjectSignatureValidated);
+            app.setIdTokenEncryptionEnabled(isIdTokenEncrypted);
+            if (isIdTokenEncrypted) {
+                app.setIdTokenEncryptionAlgorithm(idTokenEncryptionAlgorithm);
+                app.setIdTokenEncryptionMethod(idTokenEncryptionMethod);
+            }
 
             client.registerOAuthApplicationData(app);
 
@@ -129,7 +156,6 @@
             String message = resourceBundle.getString("callback.is.not.url");
             CarbonUIMessage.sendCarbonUIMessage(message, CarbonUIMessage.ERROR, request);
         }
-
     } catch (Exception e) {
         isError = true;
         String message = resourceBundle.getString("error.while.adding.app") + " : " + e.getMessage();

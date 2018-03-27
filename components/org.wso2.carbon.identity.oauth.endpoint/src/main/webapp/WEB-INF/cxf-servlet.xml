@@ -39,6 +39,7 @@
         </jaxrs:providers>
     </jaxrs:server>
 
+    <bean id="oauthClientAuthnBean" class="org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthenticatorProxy"/>
     <bean id="authzEndpointBean" class="org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpoint"/>
     <bean id="tokenEndpointBean" class="org.wso2.carbon.identity.oauth.endpoint.token.OAuth2TokenEndpoint"/>
     <bean id="introspectionEndpointBean" class="org.wso2.carbon.identity.oauth.endpoint.introspection.OAuth2IntrospectionEndpoint"/>

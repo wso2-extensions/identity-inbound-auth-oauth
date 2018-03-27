@@ -28,6 +28,7 @@ import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.endpoint.exception.AccessDeniedException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.BadRequestException;
+import org.wso2.carbon.identity.oauth.endpoint.exception.ConsentHandlingFailedException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidApplicationClientException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
@@ -121,7 +122,19 @@ public class InvalidRequestExceptionMapper implements ExceptionMapper<InvalidReq
                 }
                 return handleInternalServerError();
             }
+        } else if (exception instanceof ConsentHandlingFailedException) {
+            try {
+                return buildErrorResponseConsentHandlingFailure(exception);
+            } catch (URISyntaxException e) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Error while getting endpoint error page URL", e);
+                }
+                return handleInternalServerError();
+            }
         } else {
+            if (log.isDebugEnabled()) {
+                log.debug("OAuth System error while processing request: ", exception);
+            }
             return handleInternalServerError();
         }
     }
@@ -138,6 +151,17 @@ public class InvalidRequestExceptionMapper implements ExceptionMapper<InvalidReq
         }
         return Response.status(status).location(new URI(EndpointUtil.getErrorPageURL(errorCode,
                 exception.getMessage(), null))).build();
+    }
+
+    private Response buildErrorResponseConsentHandlingFailure(InvalidRequestParentException exception)
+            throws URISyntaxException {
+
+        if (log.isDebugEnabled()) {
+            log.debug("System Error while handling consent: ", exception);
+        }
+        return Response.status(HttpServletResponse.SC_FOUND).location(new URI(
+                EndpointUtil.getErrorPageURL(OAuth2ErrorCodes.SERVER_ERROR, "Error while handling consent.", null)))
+                .build();
     }
 
     private Response buildErrorResponse(int status, InvalidRequestParentException exception, String errorCode)

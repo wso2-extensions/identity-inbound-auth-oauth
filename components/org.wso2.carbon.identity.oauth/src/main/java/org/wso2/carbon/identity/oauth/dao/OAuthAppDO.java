@@ -33,13 +33,20 @@ public class OAuthAppDO implements Serializable {
     private AuthenticatedUser user;
     private String oauthVersion;
     private String grantTypes;
+    private String[] scopeValidators;
     private boolean pkceSupportPlain;
     private boolean pkceMandatory;
     private String state;
     private long userAccessTokenExpiryTime;
     private long applicationAccessTokenExpiryTime;
     private long refreshTokenExpiryTime;
-    private String[] audiences;
+    private String[] audiences = new String[0];
+    // OIDC related properties.
+    private boolean requestObjectSignatureValidationEnabled;
+    private boolean idTokenEncryptionEnabled;
+    private String idTokenEncryptionAlgorithm;
+    private String idTokenEncryptionMethod;
+    private String backChannelLogoutUrl;
 
     public AuthenticatedUser getUser() {
         return user;
@@ -95,6 +102,14 @@ public class OAuthAppDO implements Serializable {
 
     public void setGrantTypes(String grantTypes) {
         this.grantTypes = grantTypes;
+    }
+
+    public String[] getScopeValidators() {
+        return scopeValidators;
+    }
+
+    public void setScopeValidators(String[] scopeValidators) {
+        this.scopeValidators = scopeValidators;
     }
 
     public int getId() {
@@ -159,5 +174,45 @@ public class OAuthAppDO implements Serializable {
 
     public void setAudiences(String[] audiences) {
         this.audiences = audiences;
+    }
+
+    public boolean isRequestObjectSignatureValidationEnabled() {
+        return requestObjectSignatureValidationEnabled;
+    }
+
+    public void setRequestObjectSignatureValidationEnabled(boolean requestObjectSignatureValidationEnabled) {
+        this.requestObjectSignatureValidationEnabled = requestObjectSignatureValidationEnabled;
+    }
+
+    public boolean isIdTokenEncryptionEnabled() {
+        return idTokenEncryptionEnabled;
+    }
+
+    public void setIdTokenEncryptionEnabled(boolean idTokenEncryptionEnabled) {
+        this.idTokenEncryptionEnabled = idTokenEncryptionEnabled;
+    }
+
+    public String getIdTokenEncryptionAlgorithm() {
+        return idTokenEncryptionAlgorithm;
+    }
+
+    public void setIdTokenEncryptionAlgorithm(String idTokenEncryptionAlgorithm) {
+        this.idTokenEncryptionAlgorithm = idTokenEncryptionAlgorithm;
+    }
+
+    public String getIdTokenEncryptionMethod() {
+        return idTokenEncryptionMethod;
+    }
+
+    public void setIdTokenEncryptionMethod(String idTokenEncryptionMethod) {
+        this.idTokenEncryptionMethod = idTokenEncryptionMethod;
+    }
+
+    public void setBackChannelLogoutUrl(String backChannelLogoutUrl) {
+        this.backChannelLogoutUrl = backChannelLogoutUrl;
+    }
+
+    public String getBackChannelLogoutUrl() {
+        return backChannelLogoutUrl;
     }
 }

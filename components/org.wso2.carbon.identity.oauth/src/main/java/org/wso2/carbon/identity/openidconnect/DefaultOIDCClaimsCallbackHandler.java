@@ -17,17 +17,11 @@ package org.wso2.carbon.identity.openidconnect;
 
 import com.nimbusds.jwt.JWTClaimsSet;
 import net.minidev.json.JSONArray;
-import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
-import org.opensaml.saml2.core.Assertion;
-import org.opensaml.saml2.core.Attribute;
-import org.opensaml.saml2.core.AttributeStatement;
-import org.opensaml.xml.XMLObject;
-import org.w3c.dom.Element;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.application.authentication.framework.exception.FrameworkException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -46,11 +40,13 @@ import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
-import org.wso2.carbon.identity.openidconnect.model.RequestObject;
+import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.user.api.UserRealm;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
@@ -65,7 +61,9 @@ import java.util.regex.Pattern;
 
 import static org.apache.commons.collections.MapUtils.isEmpty;
 import static org.apache.commons.collections.MapUtils.isNotEmpty;
-import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.LOCAL_ROLE_CLAIM_URI;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants
+        .LOCAL_ROLE_CLAIM_URI;
+import static org.wso2.carbon.identity.oauth.common.GrantType.SAML20_BEARER;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ACCESS_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.AUTHZ_CODE;
 
@@ -78,24 +76,16 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
     private final static Log log = LogFactory.getLog(DefaultOIDCClaimsCallbackHandler.class);
     private final static String OAUTH2 = "oauth2";
     private final static String OIDC_DIALECT = "http://wso2.org/oidc/claim";
-    private static final String REQUEST_OBJECT = "requestObject";
     private final static String ATTRIBUTE_SEPARATOR = FrameworkUtils.getMultiAttributeSeparator();
 
     @Override
     public void handleCustomClaims(JWTClaimsSet jwtClaimsSet, OAuthTokenReqMessageContext tokenReqMessageContext) {
-        if (isSAMLAssertionPresent(tokenReqMessageContext)) {
-            // If there is a SAML Assertion present in the context we populate claims using the AttributeStatements
-            // TODO - remove retrieving claims from SAML Assertion and instead provision the user locally or have a
-            // claim store for federated claims.
-            handleClaimsInSAMLAssertion(jwtClaimsSet, tokenReqMessageContext);
-        } else {
-            try {
-                Map<String, Object> userClaimsInOIDCDialect = getUserClaimsInOIDCDialect(tokenReqMessageContext);
-                setClaimsToJwtClaimSet(jwtClaimsSet, userClaimsInOIDCDialect);
-            } catch (OAuthSystemException e) {
-                log.error("Error occurred while adding claims of user: " + tokenReqMessageContext.getAuthorizedUser() +
-                        " to the JWTClaimSet used to build the id_token.", e);
-            }
+        try {
+            Map<String, Object> userClaimsInOIDCDialect = getUserClaimsInOIDCDialect(tokenReqMessageContext);
+            setClaimsToJwtClaimSet(jwtClaimsSet, userClaimsInOIDCDialect);
+        } catch (OAuthSystemException e) {
+            log.error("Error occurred while adding claims of user: " + tokenReqMessageContext.getAuthorizedUser() +
+                    " to the JWTClaimSet used to build the id_token.", e);
         }
     }
 
@@ -129,23 +119,6 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
     }
 
     /**
-     * Filter user claims based on the essential claims of the request object which comes with the oidc authz request.
-     *
-     * @param type             id_token or userinfo
-     * @param requestObject     request object
-     * @param userClaims        Map of user claims
-     * @return essential claims
-     */
-    protected Map<String, Object> filterClaimsByEssentialClaims(Map<String, Object> userClaims,
-                                                                String type,
-                                                                RequestObject requestObject) {
-
-        return OpenIDConnectServiceComponentHolder.getInstance()
-                .getHighestPriorityOpenIDConnectClaimFilter().getClaimsFilteredByEssentialClaims(userClaims, type,
-                        requestObject);
-    }
-
-    /**
      * Get response map
      *
      * @param requestMsgCtx Token request message context
@@ -171,16 +144,86 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
             userClaimsInOIDCDialect = getOIDCClaimMapFromUserAttributes(userAttributes);
         }
 
+        if (isPreserverClaimUrisInAssertion(requestMsgCtx)) {
+            return userClaimsInOIDCDialect;
+        } else {
+            return filterOIDCClaims(requestMsgCtx, userClaimsInOIDCDialect);
+        }
+    }
+
+    private Map<String, Object> filterOIDCClaims(OAuthTokenReqMessageContext requestMsgCtx,
+                                                 Map<String, Object> userClaimsInOIDCDialect) throws OAuthSystemException {
+
+        AuthenticatedUser user = requestMsgCtx.getAuthorizedUser();
         String clientId = requestMsgCtx.getOauth2AccessTokenReqDTO().getClientId();
         String spTenantDomain = requestMsgCtx.getOauth2AccessTokenReqDTO().getTenantDomain();
-        RequestObject requestObject = (RequestObject) requestMsgCtx.getProperty(REQUEST_OBJECT);
-        Map<String, Object> filterClaimsByScopesAndEssentialClaims = new HashMap<>();
-        filterClaimsByScopesAndEssentialClaims.putAll(filterClaimsByScope(userClaimsInOIDCDialect, requestMsgCtx.getScope(),
-                clientId, spTenantDomain));
-        filterClaimsByScopesAndEssentialClaims.putAll(filterClaimsByEssentialClaims(userClaimsInOIDCDialect,
-                OAuthConstants.ID_TOKEN, requestObject));
-        // Restrict Claims going into the token based on the scope and the essential claims
-        return filterClaimsByScopesAndEssentialClaims;
+        String[] approvedScopes = requestMsgCtx.getScope();
+        String token = getAccessToken(requestMsgCtx);
+        String grantType = requestMsgCtx.getOauth2AccessTokenReqDTO().getGrantType();
+
+        return filterOIDCClaims(token, grantType, userClaimsInOIDCDialect, user, approvedScopes, clientId, spTenantDomain);
+    }
+
+
+    private Map<String, Object> filterOIDCClaims(String accessToken,
+                                                 String grantType,
+                                                 Map<String, Object> userClaimsInOIDCDialect,
+                                                 AuthenticatedUser authenticatedUser,
+                                                 String[] approvedScopes,
+                                                 String clientId,
+                                                 String spTenantDomain) throws OAuthSystemException {
+
+        if (isEmpty(userClaimsInOIDCDialect)) {
+            if (log.isDebugEnabled()) {
+                log.debug("No claims to filter for user: " + authenticatedUser.toFullQualifiedUsername() + " for " +
+                        "client_id: " + clientId + " in tenantDomain: " + spTenantDomain);
+            }
+            return new HashMap<>();
+        }
+
+        Map<String, Object> filteredUserClaimsByOIDCScopes =
+                filterClaimsByScope(userClaimsInOIDCDialect, approvedScopes, clientId, spTenantDomain);
+
+        // TODO: Get claims filtered by essential claims and add to returning claims
+        // https://github.com/wso2/product-is/issues/2680
+
+        // Handle essential claims of the request object
+        Map<String, Object> claimsFromRequestObject =
+                filterClaimsFromRequestObject(userClaimsInOIDCDialect, accessToken);
+        filteredUserClaimsByOIDCScopes.putAll(claimsFromRequestObject);
+
+        // Restrict the claims based on user consent given
+        return getUserConsentedClaims(filteredUserClaimsByOIDCScopes, authenticatedUser, grantType, clientId,
+                spTenantDomain);
+    }
+
+    private boolean isPreserverClaimUrisInAssertion(OAuthTokenReqMessageContext requestMsgCtx) {
+        return SAML20_BEARER.toString().equals(requestMsgCtx.getOauth2AccessTokenReqDTO().getGrantType()) &&
+                !OAuthServerConfiguration.getInstance().isConvertOriginalClaimsFromAssertionsToOIDCDialect();
+    }
+
+    private Map<String, Object> filterClaimsFromRequestObject(Map<String, Object> userAttributes,
+                                                              String token) throws OAuthSystemException {
+
+        try {
+            List<RequestedClaim> requestedClaims = OpenIDConnectServiceComponentHolder.getRequestObjectService().
+                    getRequestedClaimsForIDToken(token);
+            return OpenIDConnectServiceComponentHolder.getInstance()
+                    .getHighestPriorityOpenIDConnectClaimFilter()
+                    .getClaimsFilteredByEssentialClaims(userAttributes, requestedClaims);
+        } catch (RequestObjectException e) {
+            throw new OAuthSystemException("Unable to retrieve requested claims from Request Object." + e);
+        }
+    }
+
+    private Map<String, Object> getUserConsentedClaims(Map<String, Object> userClaims,
+                                                       AuthenticatedUser authenticatedUser,
+                                                       String grantType,
+                                                       String clientId,
+                                                       String spTenantDomain) {
+
+        return OIDCClaimUtil.filterUserClaimsBasedOnConsent(userClaims, authenticatedUser, clientId,
+                spTenantDomain, grantType);
     }
 
     private Map<ClaimMapping, String> getCachedUserAttributes(OAuthTokenReqMessageContext requestMsgCtx) {
@@ -248,16 +291,21 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
             userClaimsInOIDCDialect = getOIDCClaimMapFromUserAttributes(userAttributes);
         }
 
+        return filterOIDCClaims(authzReqMessageContext, userClaimsInOIDCDialect);
+    }
+
+    private Map<String, Object> filterOIDCClaims(OAuthAuthzReqMessageContext authzReqMessageContext,
+                                                 Map<String, Object> userClaimsInOIDCDialect) throws OAuthSystemException {
+
+        AuthenticatedUser user = authzReqMessageContext.getAuthorizationReqDTO().getUser();
         String clientId = authzReqMessageContext.getAuthorizationReqDTO().getConsumerKey();
         String spTenantDomain = authzReqMessageContext.getAuthorizationReqDTO().getTenantDomain();
         String[] approvedScopes = authzReqMessageContext.getApprovedScope();
-        RequestObject requestObject = authzReqMessageContext.getAuthorizationReqDTO().getRequestObject();
-        Map<String, Object> filterClaimsByScopesAndEssentialClaims = new HashMap<>();
-        filterClaimsByScopesAndEssentialClaims.putAll(filterClaimsByScope(userClaimsInOIDCDialect, approvedScopes,
-                clientId, spTenantDomain));
-        filterClaimsByScopesAndEssentialClaims.putAll(filterClaimsByEssentialClaims(userClaimsInOIDCDialect,
-                OAuthConstants.ID_TOKEN, requestObject));
-        return filterClaimsByScopesAndEssentialClaims;
+        String accessToken = getAccessToken(authzReqMessageContext);
+        String grantType = OAuthConstants.GrantTypes.IMPLICIT;
+
+        return filterOIDCClaims(accessToken, grantType, userClaimsInOIDCDialect, user, approvedScopes,
+                clientId, spTenantDomain);
     }
 
     private Map<String, Object> retrieveClaimsForLocalUser(OAuthAuthzReqMessageContext authzReqMessageContext) {
@@ -541,83 +589,5 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
 
     private boolean isMultiValuedAttribute(String claimValue) {
         return StringUtils.contains(claimValue, ATTRIBUTE_SEPARATOR);
-    }
-
-    private void handleClaimsInSAMLAssertion(JWTClaimsSet jwtClaimsSet,
-                                             OAuthTokenReqMessageContext tokenReqMessageContext) {
-        if (log.isDebugEnabled()) {
-            log.debug("SAML Assertion found in OAuthTokenReqMessageContext to process claims.");
-        }
-        addSubjectClaimFromAssertion(jwtClaimsSet, getSAMLAssertion(tokenReqMessageContext));
-        addCustomClaimsFromAssertion(jwtClaimsSet, getSAMLAssertion(tokenReqMessageContext));
-    }
-
-    private Assertion getSAMLAssertion(OAuthTokenReqMessageContext tokenReqMessageContext) {
-        return (Assertion) tokenReqMessageContext.getProperty(OAuthConstants.OAUTH_SAML2_ASSERTION);
-    }
-
-    private boolean isSAMLAssertionPresent(OAuthTokenReqMessageContext tokenReqMessageContext) {
-        return tokenReqMessageContext.getProperty(OAuthConstants.OAUTH_SAML2_ASSERTION) != null;
-    }
-
-    private void addCustomClaimsFromAssertion(JWTClaimsSet jwtClaimsSet, Assertion assertion) {
-        List<AttributeStatement> attributeStatementList = assertion.getAttributeStatements();
-        if (CollectionUtils.isNotEmpty(attributeStatementList)) {
-            for (AttributeStatement statement : attributeStatementList) {
-                List<Attribute> attributesList = statement.getAttributes();
-                for (Attribute attribute : attributesList) {
-                    setAttributeValuesAsClaim(jwtClaimsSet, attribute);
-                }
-            }
-        } else {
-            if (log.isDebugEnabled()) {
-                log.debug("No <AttributeStatement> elements found in the SAML Assertion to process claims.");
-            }
-        }
-    }
-
-    private void addSubjectClaimFromAssertion(JWTClaimsSet jwtClaimsSet, Assertion assertion) {
-        // Process <Subject> element in the SAML Assertion and populate subject claim in the JWTClaimSet.
-        if (assertion.getSubject() != null) {
-            String subject = assertion.getSubject().getNameID().getValue();
-            if (log.isDebugEnabled()) {
-                log.debug("Setting subject: " + subject + " found in <NameID> of the SAML Assertion.");
-            }
-            jwtClaimsSet.setSubject(subject);
-        }
-    }
-
-    private void setAttributeValuesAsClaim(JWTClaimsSet jwtClaimsSet, Attribute attribute) {
-        List<XMLObject> values = attribute.getAttributeValues();
-        if (values != null) {
-            List<String> attributeValues = getNonEmptyAttributeValues(attribute, values);
-            if (log.isDebugEnabled()) {
-                log.debug("Claim: " + attribute.getName() + " Value: " + attributeValues + " set in the JWTClaimSet.");
-            }
-            String joinedAttributeString = StringUtils.join(attributeValues, FrameworkUtils.getMultiAttributeSeparator());
-            jwtClaimsSet.setClaim(attribute.getName(), joinedAttributeString);
-        }
-    }
-
-    private List<String> getNonEmptyAttributeValues(Attribute attribute, List<XMLObject> values) {
-        String attributeName = attribute.getName();
-        List<String> attributeValues = new ArrayList<>();
-        // Iterate the attribute values and combine them with the multi attribute separator to
-        // form a single claim value.
-        // Eg: value1 and value2 = value1,,,value2 (multi-attribute separator = ,,,)
-        for (int i = 0; i < values.size(); i++) {
-            Element value = attribute.getAttributeValues().get(i).getDOM();
-            // Get the attribute value
-            String attributeValue = value.getTextContent();
-            if (StringUtils.isBlank(attributeValue)) {
-                log.warn("Ignoring empty attribute value found for attribute: " + attributeName);
-            } else {
-                if (log.isDebugEnabled()) {
-                    log.debug("AttributeValue: " + attributeValue + " found for Attribute: " + attributeName + ".");
-                }
-                attributeValues.add(attributeValue);
-            }
-        }
-        return attributeValues;
     }
 }

@@ -34,8 +34,8 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
+import org.wso2.carbon.identity.oauth2.util.OAuth2TokenUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
-import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -48,6 +48,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.TimeZone;
+
 /*
 NOTE
 This is the very first step of moving to simplified architecture for token persistence. New set of DAO classes  for
@@ -106,7 +107,9 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                 prepStmt.setString(10, authzCodeDO.getAuthorizedUser().getAuthenticatedSubjectIdentifier());
                 prepStmt.setString(11, authzCodeDO.getPkceCodeChallenge());
                 prepStmt.setString(12, authzCodeDO.getPkceCodeChallengeMethod());
-                prepStmt.setString(13, getPersistenceProcessor().getProcessedClientId(consumerKey));
+                //insert the hash value of the authorization code
+                prepStmt.setString(13, getHashingPersistenceProcessor().getProcessedAuthzCode(authzCode));
+                prepStmt.setString(14, getPersistenceProcessor().getProcessedClientId(consumerKey));
 
             } else {
                 prepStmt = connection.prepareStatement(SQLQueries.STORE_AUTHORIZATION_CODE);
@@ -122,7 +125,9 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                         Calendar.getInstance(TimeZone.getTimeZone(UTC)));
                 prepStmt.setLong(9, authzCodeDO.getValidityPeriod());
                 prepStmt.setString(10, authzCodeDO.getAuthorizedUser().getAuthenticatedSubjectIdentifier());
-                prepStmt.setString(11, getPersistenceProcessor().getProcessedClientId(consumerKey));
+                //insert the hash value of the authorization code
+                prepStmt.setString(11, getHashingPersistenceProcessor().getProcessedAuthzCode(authzCode));
+                prepStmt.setString(12, getPersistenceProcessor().getProcessedClientId(consumerKey));
 
             }
 
@@ -169,12 +174,15 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             prepStmt = connection.prepareStatement(SQLQueries.DEACTIVATE_AUTHZ_CODE_AND_INSERT_CURRENT_TOKEN);
             for (AuthzCodeDO authzCodeDO : authzCodeDOs) {
                 prepStmt.setString(1, authzCodeDO.getOauthTokenId());
-                prepStmt.setString(2, getPersistenceProcessor()
-                        .getPreprocessedAuthzCode(authzCodeDO.getAuthorizationCode()));
+                prepStmt.setString(2, getHashingPersistenceProcessor()
+                        .getProcessedAuthzCode(authzCodeDO.getAuthorizationCode()));
                 prepStmt.addBatch();
             }
             prepStmt.executeBatch();
             connection.commit();
+
+            // To revoke request objects which are persisted against the code.
+            OAuth2TokenUtil.postRevokeCodes(authzCodeDOs, OAuthConstants.AuthorizationCodeState.INACTIVE);
         } catch (SQLException e) {
             throw new IdentityOAuth2Exception("Error when deactivating authorization code", e);
         } finally {
@@ -219,7 +227,8 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
 
                 prepStmt = connection.prepareStatement(SQLQueries.VALIDATE_AUTHZ_CODE_WITH_PKCE);
                 prepStmt.setString(1, getPersistenceProcessor().getProcessedClientId(consumerKey));
-                prepStmt.setString(2, getPersistenceProcessor().getProcessedAuthzCode(authorizationKey));
+                //use hash value for search
+                prepStmt.setString(2, getHashingPersistenceProcessor().getProcessedAuthzCode(authorizationKey));
                 resultSet = prepStmt.executeQuery();
 
                 if (resultSet.next()) {
@@ -260,7 +269,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             } else {
                 prepStmt = connection.prepareStatement(SQLQueries.VALIDATE_AUTHZ_CODE);
                 prepStmt.setString(1, getPersistenceProcessor().getProcessedClientId(consumerKey));
-                prepStmt.setString(2, getPersistenceProcessor().getProcessedAuthzCode(authorizationKey));
+                prepStmt.setString(2, getHashingPersistenceProcessor().getProcessedAuthzCode(authorizationKey));
                 resultSet = prepStmt.executeQuery();
 
                 if (resultSet.next()) {
@@ -331,9 +340,13 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                     authCodeStoreTable);
             prepStmt = connection.prepareStatement(sqlQuery);
             prepStmt.setString(1, newState);
-            prepStmt.setString(2, getPersistenceProcessor().getPreprocessedAuthzCode(authzCode));
+            prepStmt.setString(2, getHashingPersistenceProcessor().getProcessedAuthzCode(authzCode));
             prepStmt.execute();
             connection.commit();
+
+            //If the code state is updated to inactive or expired request object which is persisted against the code
+            // should be updated/removed.
+            OAuth2TokenUtil.postRevokeCode(authzCode, newState, null);
         } catch (SQLException e) {
             IdentityDatabaseUtil.rollBack(connection);
             throw new IdentityOAuth2Exception("Error occurred while updating the state of Authorization Code : " +
@@ -362,9 +375,13 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
         try {
             prepStmt = connection.prepareStatement(SQLQueries.DEACTIVATE_AUTHZ_CODE_AND_INSERT_CURRENT_TOKEN);
             prepStmt.setString(1, authzCodeDO.getOauthTokenId());
-            prepStmt.setString(2, getPersistenceProcessor().getPreprocessedAuthzCode(authzCodeDO.getAuthorizationCode()));
+            prepStmt.setString(2, getHashingPersistenceProcessor().getProcessedAuthzCode(authzCodeDO.getAuthorizationCode()));
             prepStmt.executeUpdate();
             connection.commit();
+
+            // To revoke the request object which is persisted against the code.
+            OAuth2TokenUtil.postRevokeCode(authzCodeDO.getAuthzCodeId(), OAuthConstants.
+                    AuthorizationCodeState.INACTIVE, authzCodeDO.getOauthTokenId());
         } catch (SQLException e) {
             throw new IdentityOAuth2Exception("Error when deactivating authorization code", e);
         } finally {
@@ -658,7 +675,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             String sql = SQLQueries.RETRIEVE_CODE_ID_BY_AUTHORIZATION_CODE;
 
             prepStmt = connection.prepareStatement(sql);
-            prepStmt.setString(1, getPersistenceProcessor().getProcessedAuthzCode(authzCode));
+            prepStmt.setString(1, getHashingPersistenceProcessor().getProcessedAuthzCode(authzCode));
             resultSet = prepStmt.executeQuery();
 
             if (resultSet.next()) {

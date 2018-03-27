@@ -29,6 +29,8 @@
 
 <%@ page import="java.util.ResourceBundle" %>
 <%@ page import="org.wso2.carbon.identity.oauth.ui.util.OAuthUIUtil" %>
+<%@ page import="java.util.ArrayList" %>
+<%@ page import="java.util.List" %>
 
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt"%>
 <%@ taglib uri="http://wso2.org/projects/carbon/taglibs/carbontags.jar" prefix="carbon"%>
@@ -48,6 +50,7 @@
 
     String consumerkey = request.getParameter("consumerkey");
     String callback = request.getParameter("callback");
+    String backchannelLogoutUrl = request.getParameter("backChannelLogout");
     String applicationName = request.getParameter("application");
     String consumersecret = request.getParameter("consumersecret");
     String oauthVersion = request.getParameter("oauthVersion");
@@ -65,16 +68,22 @@
     if(request.getParameter("pkce_plain") != null) {
         pkceSupportPlain = true;
     }
-
-	String forwardTo = "index.jsp";
+    
+    // OIDC related properties
+    boolean isRequestObjectSignatureValidated = Boolean.parseBoolean(request.getParameter("validateRequestObjectSignature"));
+    boolean isIdTokenEncrypted = Boolean.parseBoolean(request.getParameter("encryptIdToken"));
+    String idTokenEncryptionAlgorithm = request.getParameter("idTokenEncryptionAlgorithm");
+    String idTokenEncryptionMethod = request.getParameter("idTokenEncryptionMethod");
+    
+    String forwardTo = "index.jsp";
     String BUNDLE = "org.wso2.carbon.identity.oauth.ui.i18n.Resources";
 	ResourceBundle resourceBundle = ResourceBundle.getBundle(BUNDLE, request.getLocale());
 	OAuthConsumerAppDTO app = new OAuthConsumerAppDTO();
-	
+
 	String spName = (String) session.getAttribute("application-sp-name");
 	session.removeAttribute("application-sp-name");
 	boolean isError = false;
-	
+
     try {
         if (OAuthUIUtil.isValidURI(callback) || callback.startsWith(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX)) {
             String cookie = (String) session.getAttribute(ServerConstants.ADMIN_SERVICE_COOKIE);
@@ -86,6 +95,7 @@
             app.setOauthConsumerSecret(consumersecret);
             app.setCallbackUrl(callback);
             app.setApplicationName(applicationName);
+            app.setBackChannelLogoutUrl(backchannelLogoutUrl);
             app.setOAuthVersion(oauthVersion);
             app.setPkceMandatory(pkceMandatory);
             app.setPkceSupportPlain(pkceSupportPlain);
@@ -100,8 +110,19 @@
                 }
             }
             grants = buff.toString();
+
+            List<String> scopeValidators = new ArrayList<String>();
+            String[] allowedValidators = client.getAllowedScopeValidators();
+            for (String allowedValidator : allowedValidators) {
+                String scopeValidatorValue = request.getParameter(OAuthUIUtil.getScopeValidatorId(allowedValidator));
+                if (scopeValidatorValue != null) {
+                    scopeValidators.add(allowedValidator);
+                }
+            }
+
             if (OAuthConstants.OAuthVersions.VERSION_2.equals(oauthVersion)) {
                 app.setGrantTypes(grants);
+                app.setScopeValidators(scopeValidators.toArray(new String[scopeValidators.size()]));
             }
             if (Boolean.parseBoolean(request.getParameter("enableAudienceRestriction"))) {
                 String audiencesCountParameter = request.getParameter("audiencePropertyCounter");
@@ -113,6 +134,14 @@
                     }
                 }
             }
+            
+            app.setRequestObjectSignatureValidationEnabled(isRequestObjectSignatureValidated);
+            app.setIdTokenEncryptionEnabled(isIdTokenEncrypted);
+            if (isIdTokenEncrypted) {
+                app.setIdTokenEncryptionAlgorithm(idTokenEncryptionAlgorithm);
+                app.setIdTokenEncryptionMethod(idTokenEncryptionMethod);
+            }
+            
             client.updateOAuthApplicationData(app);
             String message = resourceBundle.getString("app.updated.successfully");
             CarbonUIMessage.sendCarbonUIMessage(message, CarbonUIMessage.INFO, request);
@@ -123,10 +152,10 @@
         }
 
     } catch (Exception e) {
-    	isError = false;
-    	String message = resourceBundle.getString("error.while.updating.app");
-    	CarbonUIMessage.sendCarbonUIMessage(message, CarbonUIMessage.ERROR, request,e);
-        forwardTo ="../admin/error.jsp";
+        isError = false;
+        String message = resourceBundle.getString("error.while.updating.app");
+        CarbonUIMessage.sendCarbonUIMessage(message, CarbonUIMessage.ERROR, request, e);
+        forwardTo = "../admin/error.jsp";
     }
 %>
 

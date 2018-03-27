@@ -24,6 +24,7 @@ import org.apache.axis2.client.ServiceClient;
 import org.apache.axis2.context.ConfigurationContext;
 import org.wso2.carbon.identity.oauth.stub.OAuthAdminServiceStub;
 import org.wso2.carbon.identity.oauth.stub.dto.OAuthConsumerAppDTO;
+import org.wso2.carbon.identity.oauth.stub.dto.OAuthIDTokenAlgorithmDTO;
 import org.wso2.carbon.identity.oauth.stub.dto.OAuthTokenExpiryTimeDTO;
 import org.wso2.carbon.identity.oauth.stub.dto.OAuthRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth.stub.dto.OAuthRevocationResponseDTO;
@@ -33,6 +34,7 @@ import java.rmi.RemoteException;
 public class OAuthAdminClient {
 
     private static String[] allowedGrantTypes = null;
+    private static String[] scopeValidators = null;
     private OAuthAdminServiceStub stub;
     /**
      * Instantiates OAuthAdminClient
@@ -125,5 +127,31 @@ public class OAuthAdminClient {
 
     public OAuthTokenExpiryTimeDTO getOAuthTokenExpiryTimeDTO() throws RemoteException {
         return stub.getTokenExpiryTimes();
+    }
+
+    /**
+     * Get the registered scope validators from OAuth server configuration file.
+     *
+     * @return list of string containing simple names of the registered validator class
+     * @throws RemoteException exception occured during remote call
+     */
+    public String[] getAllowedScopeValidators() throws RemoteException {
+        if (scopeValidators == null) {
+            scopeValidators = stub.getAllowedScopeValidators();
+            if (scopeValidators == null) {
+                scopeValidators = new String[0];
+            }
+        }
+        return scopeValidators;
+    }
+
+    /**
+     * Return supported algorithms read from identity.xml configuration file.
+     *
+     * @return OAuthIDTokenAlgorithmDTO object.
+     * @throws RemoteException
+     */
+    public OAuthIDTokenAlgorithmDTO getSupportedIDTokenAlgorithms() throws RemoteException {
+        return stub.getSupportedIDTokenAlgorithms();
     }
 }
