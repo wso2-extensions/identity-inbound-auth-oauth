@@ -28,6 +28,7 @@
         <class name="org.wso2.carbon.identity.oidc.session.OIDCSessionStateTest"/>
         <class name="org.wso2.carbon.identity.oidc.session.cache.OIDCSessionParticipantCacheTest"/>
         <class name="org.wso2.carbon.identity.oidc.session.config.OIDCSessionManagementConfigurationTest" />
+        <class name="org.wso2.carbon.identity.oidc.session.backChannelLogout.OIDCLogoutListenerTest"/>
     </classes>
 </test>
     <test name="OIDCSessionMgt-Tests-with-info-logs" preserve-order="true" parallel="false">
