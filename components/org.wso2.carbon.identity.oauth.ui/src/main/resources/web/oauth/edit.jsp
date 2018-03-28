@@ -219,11 +219,7 @@
                     var userTokenExpiryTime = document.getElementById("userAccessTokenExpiryTime").value;
                     var applicationTokenExpiryTime = document.getElementById("userAccessTokenExpiryTime").value;
                     var refreshTokenExpiryTime = document.getElementById("refreshTokenExpiryTime").value;
-<<<<<<< .merge_file_GeB4P3
-                    var backChannelLogoutUrl = document.getElementById("backChannelLogout").value;
-=======
                     var backChannelLogoutUrl = document.getElementsByName("bclogout")[0].value;
->>>>>>> .merge_file_0m9MA3
 
                     if (callbackUrl.indexOf("#") !== -1) {
                         CARBON.showWarningDialog('<fmt:message key="callback.is.fragment"/>');
