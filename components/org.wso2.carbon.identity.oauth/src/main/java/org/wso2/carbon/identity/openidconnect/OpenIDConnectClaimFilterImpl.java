@@ -194,7 +194,7 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
         Map<String, Object> filteredClaims = new HashMap<>();
         List<String> claimUrisInRequestedScope = getClaimUrisInSupportedOidcScope(oidcScopeProperties, oidcScope);
         for (String scopeClaim : claimUrisInRequestedScope) {
-            String oidcClaimUri = getOIDCClaimUri(scopeClaim);
+            String oidcClaimUri = getOIDCClaimUri(scopeClaim).trim().replaceAll("\n", "");
             // Check whether the user claims contain the permitted claim uri
             if (userClaimsInOIDCDialect.containsKey(oidcClaimUri)) {
                 Object claimValue = userClaimsInOIDCDialect.get(oidcClaimUri);
