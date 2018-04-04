@@ -30,7 +30,7 @@ public class OIDCSessionManager {
     /**
      * Stores the session state against the provided session id
      *
-     * @param sessionId session id value
+     * @param sessionId    session id value
      * @param sessionState OIDCSessionState instance
      */
     public void storeOIDCSessionState(String sessionId, OIDCSessionState sessionState) {

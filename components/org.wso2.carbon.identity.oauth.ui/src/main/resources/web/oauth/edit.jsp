@@ -219,7 +219,7 @@
                     var userTokenExpiryTime = document.getElementById("userAccessTokenExpiryTime").value;
                     var applicationTokenExpiryTime = document.getElementById("userAccessTokenExpiryTime").value;
                     var refreshTokenExpiryTime = document.getElementById("refreshTokenExpiryTime").value;
-                    var backChannelLogoutUrl = document.getElementsByName("bclogout")[0].value;
+                    var backChannelLogoutUrl = document.getElementById("backChannelLogout").value;
 
                     if (callbackUrl.indexOf("#") !== -1) {
                         CARBON.showWarningDialog('<fmt:message key="callback.is.fragment"/>');
@@ -311,7 +311,7 @@
                     /**
                      * Backchannel logout feature is kept hidden in the UI for now.
                      */
-                    $(jQuery('#bclogout_row').hide());
+                    $(jQuery('#bclogout_row').show());
 
                     if (!idTokenEncryptionEnabled) {
                         $('select[name=idTokenEncryptionAlgorithm]').prop('disabled', true);

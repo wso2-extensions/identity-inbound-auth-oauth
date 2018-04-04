@@ -78,7 +78,6 @@ public class LogoutRequestSender {
                 threadPool.submit(new LogoutReqSenderTask(logoutToken, bcLogoutUrl));
                 if (log.isDebugEnabled()) {
                     log.debug("A logoutReqSenderTask is assigned to the thread pool");
-
                 }
             }
         }

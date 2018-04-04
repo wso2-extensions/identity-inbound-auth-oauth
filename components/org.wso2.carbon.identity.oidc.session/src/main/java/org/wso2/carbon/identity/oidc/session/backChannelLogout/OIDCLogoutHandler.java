@@ -24,12 +24,17 @@ import org.wso2.carbon.identity.event.IdentityEventException;
 import org.wso2.carbon.identity.event.event.Event;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
+import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
 
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 
-public class OIDCLogoutListener extends AbstractEventHandler {
-    private static Log log = LogFactory.getLog(OIDCLogoutListener.class);
+/**
+ * Handle OIDC logouts from backchannel.
+ */
+public class OIDCLogoutHandler extends AbstractEventHandler {
+
+    private static Log log = LogFactory.getLog(OIDCLogoutHandler.class);
 
     @Override
     public void handleEvent(Event event) throws IdentityEventException {
@@ -52,6 +57,8 @@ public class OIDCLogoutListener extends AbstractEventHandler {
             }
             if (StringUtils.isNotBlank(opbsCookieValue)) {
                 LogoutRequestSender.getInstance().sendLogoutRequests(request);
+                Cookie opBrowserStateCookie = OIDCSessionManagementUtil.getOPBrowserStateCookie(request);
+                OIDCSessionManagementUtil.getSessionManager().removeOIDCSessionState(opBrowserStateCookie.getValue());
 
             } else {
                 if (log.isDebugEnabled()) {
@@ -64,6 +71,6 @@ public class OIDCLogoutListener extends AbstractEventHandler {
 
     @Override
     public String getName() {
-        return "OIDC_LOGOUT_LISTENER";
+        return "OIDCLogoutHandler";
     }
 }

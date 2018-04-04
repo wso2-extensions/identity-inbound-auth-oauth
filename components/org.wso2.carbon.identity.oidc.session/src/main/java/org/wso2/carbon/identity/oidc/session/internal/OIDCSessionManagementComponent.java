@@ -30,7 +30,7 @@ import org.osgi.service.http.HttpService;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.oidc.session.backChannelLogout.ClaimProviderImpl;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
-import org.wso2.carbon.identity.oidc.session.backChannelLogout.OIDCLogoutListener;
+import org.wso2.carbon.identity.oidc.session.backChannelLogout.OIDCLogoutHandler;
 import org.wso2.carbon.identity.oidc.session.servlet.OIDCLogoutServlet;
 import org.wso2.carbon.identity.oidc.session.servlet.OIDCSessionIFrameServlet;
 import org.wso2.carbon.identity.openidconnect.ClaimProvider;
@@ -88,7 +88,7 @@ public class OIDCSessionManagementComponent {
             log.debug("ClaimProvider bundle is activated");
         }
 
-        context.getBundleContext().registerService(AbstractEventHandler.class.getName(),  new OIDCLogoutListener(), null);
+        context.getBundleContext().registerService(AbstractEventHandler.class.getName(),  new OIDCLogoutHandler(), null);
 
     }
 

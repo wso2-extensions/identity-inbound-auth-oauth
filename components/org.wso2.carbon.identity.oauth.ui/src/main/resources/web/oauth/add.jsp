@@ -142,7 +142,7 @@
 
                 function validate() {
                     var callbackUrl = document.getElementById('callback').value;
-                    var backChannelLogoutUrl = document.getElementById('bclogout').value;
+                    var backChannelLogoutUrl = document.getElementById('backChannelLogout').value;
                     var userTokenExpiryTime = document.getElementById("userAccessTokenExpiryTime").value;
                     var applicationTokenExpiryTime = document.getElementById("userAccessTokenExpiryTime").value;
                     var refreshTokenExpiryTime = document.getElementById("refreshTokenExpiryTime").value;
@@ -254,7 +254,7 @@
                         /**
                          * Backchannel logout feature is kept hidden in the UI for now.
                          */
-                        $(jQuery('#bclogout_row').hide());
+                        $(jQuery('#bclogout_row').show());
                         $(jQuery("#audience_enable").show());
                         $(jQuery("#add_audience").show());
                         $(jQuery("#audience_table").show());
