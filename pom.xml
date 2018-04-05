@@ -713,12 +713,12 @@
         <carbon.kernel.registry.imp.pkg.version.range>[1.0.1, 2.0.0)</carbon.kernel.registry.imp.pkg.version.range>
 
         <!-- Carbon Identity Framework version -->
-        <carbon.identity.framework.version>5.11.153-SNAPSHOT</carbon.identity.framework.version>
+        <carbon.identity.framework.version>5.11.162-SNAPSHOT</carbon.identity.framework.version>
         <carbon.identity.framework.imp.pkg.version.range>[5.0.0, 6.0.0)
         </carbon.identity.framework.imp.pkg.version.range>
 
         <!--SAML component version-->
-        <carbon.identity.sso.saml.version>5.3.0</carbon.identity.sso.saml.version>
+        <carbon.identity.sso.saml.version>5.4.7-SNAPSHOT</carbon.identity.sso.saml.version>
 
         <!--Carbon component version-->
         <carbon.base.imp.pkg.version.range>[1.0.0, 2.0.0)</carbon.base.imp.pkg.version.range>
