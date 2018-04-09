@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2018, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -21,13 +21,20 @@ package org.wso2.carbon.identity.oauth2.token.handlers.grant.saml;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang.StringUtils;
 import org.joda.time.DateTime;
+import org.opensaml.Configuration;
 import org.opensaml.DefaultBootstrap;
 import org.opensaml.security.SAMLSignatureProfileValidator;
+import org.opensaml.xml.XMLObject;
+import org.opensaml.xml.io.Unmarshaller;
+import org.opensaml.xml.io.UnmarshallerFactory;
+import org.opensaml.xml.io.UnmarshallingException;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.reflect.internal.WhiteboxImpl;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.base.api.ServerConfigurationService;
 import org.wso2.carbon.core.internal.CarbonCoreDataHolder;
@@ -54,13 +61,16 @@ import org.wso2.carbon.idp.mgt.internal.IdpMgtServiceComponentHolder;
 import org.wso2.carbon.registry.core.service.RegistryService;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.tenant.TenantManager;
+import org.xml.sax.SAXException;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathFactory;
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
@@ -86,8 +96,9 @@ import static org.testng.AssertJUnit.assertEquals;
 @WithH2Database(files = {"dbScripts/idp.sql"})
 @WithAxisConfiguration
 @WithRealmService(tenantDomain = TestConstants.TENANT_DOMAIN, initUserStoreManager = true)
-@PrepareForTest({XPathFactory.class, DocumentBuilderFactory.class, OAuth2Util.class,
-        IdentityProviderManager.class,IdentityApplicationManagementUtil.class})
+//@PrepareForTest({XPathFactory.class, DocumentBuilderFactory.class, OAuth2Util.class,IdentityUtil.class,
+//        IdentityProviderManager.class, IdentityApplicationManagementUtil.class})
+@PrepareForTest({IdentityUtil.class})
 public class SAML1BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
 
     private static final String ISSUER1 = "idp1";
@@ -226,11 +237,17 @@ public class SAML1BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
         WhiteboxImpl.setInternalState(IdentityUtil.class, "configuration", configuration);
         saml1BearerGrantHandler.profileValidator = new SAMLSignatureProfileValidator();
 
-        this.mockXPath();
-        this.mockDocumentFactory();
-        this.mockAuthenticatedUser();
-        this.mockIdentityProvider(assertion);
-        this.mockX509Certificate(cert);
+//        this.mockXPath();
+//        this.mockDocumentFactory();
+//        this.mockAuthenticatedUser();
+//        this.mockIdentityProvider(assertion);
+//        this.mockX509Certificate(cert);
+
+        spy(IdentityUtil.class);
+        XMLObject xmlObject = this.unmarshall(assertion);
+        when(IdentityUtil.unmarshall(anyString())).thenReturn(xmlObject);
+
+
         assertEquals(saml1BearerGrantHandler.validateGrant(oAuthTokenReqMessageContext), expectedResult);
         WhiteboxImpl.setInternalState(IdentityUtil.class, "configuration", new HashMap<>());
     }
@@ -270,7 +287,7 @@ public class SAML1BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
     }
 
 
-    private void mockDocumentFactory() throws Exception{
+    private void mockDocumentFactory() throws Exception {
         DocumentBuilderFactory documentBuilderFactory = IdentityUtil.getSecuredDocumentBuilderFactory();
         DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
         DocumentBuilderFactory documentBuilderFactoryMock = mock(DocumentBuilderFactory.class);
@@ -281,7 +298,7 @@ public class SAML1BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
         when(documentBuilderFactoryMock.newDocumentBuilder()).thenReturn(documentBuilder);
     }
 
-    private void mockAuthenticatedUser() throws Exception{
+    private void mockAuthenticatedUser() throws Exception {
         AuthenticatedUser authenticatedUser = mock(AuthenticatedUser.class);
         doNothing().when(authenticatedUser).setAuthenticatedSubjectIdentifier(anyString());
         doNothing().when(authenticatedUser).setFederatedUser(true);
@@ -289,7 +306,7 @@ public class SAML1BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
         when(OAuth2Util.getUserFromUserName(anyString())).thenReturn(authenticatedUser);
     }
 
-    private void mockIdentityProvider(String assertion) throws Exception{
+    private void mockIdentityProvider(String assertion) throws Exception {
         IdentityProvider identityProvider = mock(IdentityProvider.class);
         when(identityProvider.getAlias()).thenReturn("https://sp.example.com/samlsso");
         if (assertion.contains(ISSUER1)) {
@@ -316,18 +333,18 @@ public class SAML1BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
         Property propertyObjectName = mock(Property.class);
         Property propertyObecctUrl = mock(Property.class);
         FederatedAuthenticatorConfig[] federatedAuthenticatorConfigs = {federatedAuthenticatorConfigObject};
-        Property[] properties = {propertyObjectName,propertyObecctUrl};
+        Property[] properties = {propertyObjectName, propertyObecctUrl};
         when(identityProvider.getFederatedAuthenticatorConfigs()).thenReturn(federatedAuthenticatorConfigs);
         when(federatedAuthenticatorConfigObject.getProperties()).thenReturn(properties);
 
         mockStatic(IdentityApplicationManagementUtil.class);
-        when(IdentityApplicationManagementUtil.getFederatedAuthenticator(any(),anyString()))
+        when(IdentityApplicationManagementUtil.getFederatedAuthenticator(any(), anyString()))
                 .thenReturn(federatedAuthenticatorConfigObject);
         when(IdentityApplicationManagementUtil
                 .getProperty(properties, IdentityApplicationConstants.Authenticator.OIDC.NAME))
                 .thenReturn(propertyObjectName);
         when(IdentityApplicationManagementUtil
-                .getProperty(properties,  IdentityApplicationConstants.Authenticator.OIDC.OAUTH2_TOKEN_URL))
+                .getProperty(properties, IdentityApplicationConstants.Authenticator.OIDC.OAUTH2_TOKEN_URL))
                 .thenReturn(propertyObjectName);
         when(propertyObjectName.getValue()).thenReturn("LOCAL");
         when(propertyObecctUrl.getValue()).thenReturn("https://sp.example.com/samlsso");
@@ -337,6 +354,26 @@ public class SAML1BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
     private void mockX509Certificate(X509Certificate cert) throws CertificateException {
         when(IdentityApplicationManagementUtil.decodeCertificate(anyString()))
                 .thenReturn(cert);
+    }
+
+
+    private XMLObject unmarshall(String samlString) {
+        XMLObject xmlObject = null;
+        try {
+            DocumentBuilderFactory documentBuilderFactory = IdentityUtil.getSecuredDocumentBuilderFactory();
+            documentBuilderFactory.setIgnoringComments(true);
+            DocumentBuilder docBuilder = documentBuilderFactory.newDocumentBuilder();
+            ByteArrayInputStream inputStream = new ByteArrayInputStream(samlString.getBytes());
+            Document document = docBuilder.parse(inputStream);
+            Element element = document.getDocumentElement();
+            UnmarshallerFactory unmarshallerFactory = Configuration.getUnmarshallerFactory();
+            Unmarshaller unmarshaller = unmarshallerFactory.getUnmarshaller(element);
+            xmlObject = unmarshaller.unmarshall(element);
+        } catch (UnmarshallingException | SAXException | IOException | ParserConfigurationException e) {
+            String message = "Error in constructing XML Object from the encoded String";
+        }
+        return xmlObject;
+
     }
 
 }

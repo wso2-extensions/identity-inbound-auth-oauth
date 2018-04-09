@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2018, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,17 +44,9 @@ public class OIDCLogoutHandler extends AbstractEventHandler {
             return;
 
         } else {
-            HttpServletRequest request = (HttpServletRequest) event.getEventProperties().get(EventProperty.REQUEST);
-            if (request != null) {
-                Cookie[] cookies = request.getCookies();
-                if (cookies != null) {
-                    for (Cookie cookie : cookies) {
-                        if (StringUtils.equals(cookie.getName(), OIDCSessionConstants.OPBS_COOKIE_ID)) {
-                            opbsCookieValue = cookie.getValue();
-                        }
-                    }
-                }
-            }
+            HttpServletRequest request = getHttpRequestFromEvent(event);
+            opbsCookieValue = getOIDCCookieFromRequest(request);
+
             if (StringUtils.isNotBlank(opbsCookieValue)) {
                 LogoutRequestSender.getInstance().sendLogoutRequests(request);
                 Cookie opBrowserStateCookie = OIDCSessionManagementUtil.getOPBrowserStateCookie(request);
@@ -72,5 +64,25 @@ public class OIDCLogoutHandler extends AbstractEventHandler {
     @Override
     public String getName() {
         return "OIDCLogoutHandler";
+    }
+
+
+    private HttpServletRequest getHttpRequestFromEvent(Event event){
+        return (HttpServletRequest) event.getEventProperties().get(EventProperty.REQUEST);
+    }
+
+    private String getOIDCCookieFromRequest(HttpServletRequest request){
+        String opbsCookieValue = null;
+        if (request != null) {
+            Cookie[] cookies = request.getCookies();
+            if (cookies != null) {
+                for (Cookie cookie : cookies) {
+                    if (StringUtils.equals(cookie.getName(), OIDCSessionConstants.OPBS_COOKIE_ID)) {
+                        opbsCookieValue = cookie.getValue();
+                    }
+                }
+            }
+        }
+        return opbsCookieValue;
     }
 }

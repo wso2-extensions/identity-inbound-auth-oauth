@@ -65,6 +65,11 @@
         <dependencies>
             <!-- Carbon Kernel dependencies -->
             <dependency>
+                <groupId>com.sun.org.apache</groupId>
+                <artifactId>jaxp-ri</artifactId>
+                <version>1.4</version>
+            </dependency>
+            <dependency>
                 <groupId>org.apache.felix</groupId>
                 <artifactId>org.apache.felix.scr.ds-annotations</artifactId>
                 <version>${apache.felix.scr.ds.annotations.version}</version>

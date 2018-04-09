@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2018, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  *  Version 2.0 (the "License"); you may not use this file except
@@ -74,7 +74,8 @@ import static org.powermock.api.mockito.PowerMockito.when;
         IdentityProviderManager.class, IdentityApplicationManagementUtil.class, OAuth2Util.class})
 public class OIDCLogoutHandlerTest extends PowerMockIdentityBaseTest {
 
-    private static final String SESSION_ID = "090907ce-eab0-40d2-a46d-acd4bb33f0d0";
+    private static final String SESSION_ID_ONE = "090907ce-eab0-40d2-a46d-acd4bb33f0d0";
+    private static final String SESSION_ID_TWO = "090907ce-eab0-40d2-a46d-acd4bb33f0c0";
     private static final int TENANT_ID = -1234;
 
     private OIDCSessionManager oidcSessionManager;
@@ -96,12 +97,12 @@ public class OIDCLogoutHandlerTest extends PowerMockIdentityBaseTest {
     @Mock
     private Property property;
 
+
     @BeforeMethod
     public void setUp() throws Exception {
 
         authenticatedUser = new AuthenticatedUser() {
         };
-        ;
         System.setProperty("carbon.home", System.getProperty("user.dir"));
         PowerMockito.mockStatic(IdentityUtil.class);
         PowerMockito.when(IdentityUtil.getIdentityConfigDirPath())
@@ -125,7 +126,8 @@ public class OIDCLogoutHandlerTest extends PowerMockIdentityBaseTest {
         oidcSessionState.addSessionParticipant(OIDCLogoutConstants.clientIdOne);
         oidcSessionState.addSessionParticipant(OIDCLogoutConstants.clientIdTwo);
         TestUtil.startTenantFlow(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
-        oidcSessionManager.storeOIDCSessionState(SESSION_ID, oidcSessionState);
+        oidcSessionManager.storeOIDCSessionState(SESSION_ID_ONE, oidcSessionState);
+        oidcSessionManager.storeOIDCSessionState(SESSION_ID_TWO, oidcSessionState);
 
         // create application dtos
         authenticatedUser.setTenantDomain(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
@@ -140,7 +142,6 @@ public class OIDCLogoutHandlerTest extends PowerMockIdentityBaseTest {
 
 
         // creating mocks
-
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME))
                 .thenReturn(TENANT_ID);
@@ -184,7 +185,8 @@ public class OIDCLogoutHandlerTest extends PowerMockIdentityBaseTest {
         Event eventOne = setupEvent(IdentityEventConstants.EventName.SESSION_TERMINATE.name(), OIDCLogoutConstants.idTokenOne);
         OIDCLogoutHandler oidcLogoutHandler = new OIDCLogoutHandler();
         oidcLogoutHandler.handleEvent(eventOne);
-        Assert.assertNull(oidcSessionManager.getOIDCSessionState(SESSION_ID));
+        Assert.assertNull(oidcSessionManager.getOIDCSessionState(SESSION_ID_ONE));
+        Assert.assertNotNull(oidcSessionManager.getOIDCSessionState(SESSION_ID_TWO));
     }
 
     @Test
@@ -198,12 +200,12 @@ public class OIDCLogoutHandlerTest extends PowerMockIdentityBaseTest {
     private Event setupEvent(String eventName, String idToken) {
 
         HttpServletRequest request = mock(HttpServletRequest.class);
-        HashMap eventProperties = new HashMap();
+        HashMap<String, Object> eventProperties = new HashMap<>();
         AuthenticationContext context = new AuthenticationContext();
         eventProperties.put(IdentityEventConstants.EventProperty.REQUEST, request);
         eventProperties.put(IdentityEventConstants.EventProperty.CONTEXT, context);
         Cookie[] cookies = new Cookie[1];
-        Cookie cookie = new Cookie("opbs", SESSION_ID);
+        Cookie cookie = new Cookie("opbs", SESSION_ID_ONE);
         cookies[0] = cookie;
         when(request.getCookies()).thenReturn(cookies);
         when(request.getParameter(OIDCSessionConstants.OIDC_ID_TOKEN_HINT_PARAM))
