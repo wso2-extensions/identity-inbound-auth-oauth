@@ -60,18 +60,19 @@ public class OIDCLogoutHandler extends AbstractEventHandler {
         }
     }
 
-
     @Override
     public String getName() {
+
         return "OIDCLogoutHandler";
     }
 
+    private HttpServletRequest getHttpRequestFromEvent(Event event) {
 
-    private HttpServletRequest getHttpRequestFromEvent(Event event){
         return (HttpServletRequest) event.getEventProperties().get(EventProperty.REQUEST);
     }
 
-    private String getOIDCCookieFromRequest(HttpServletRequest request){
+    private String getOIDCCookieFromRequest(HttpServletRequest request) {
+
         String opbsCookieValue = null;
         if (request != null) {
             Cookie[] cookies = request.getCookies();

@@ -17,7 +17,6 @@
  */
 package org.wso2.carbon.identity.oidc.session.backChannelLogout;
 
-
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.powermock.api.mockito.PowerMockito;
@@ -50,8 +49,6 @@ import org.wso2.carbon.identity.oidc.session.servlet.TestUtil;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequest;
 import java.io.File;
 import java.lang.reflect.Field;
 import java.security.KeyStore;
@@ -60,12 +57,13 @@ import java.security.PublicKey;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.util.HashMap;
+import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletRequest;
 
 import static org.mockito.Matchers.anyString;
 import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
-
 
 /**
  * Unit Tests for OIDCLogoutHandler.
@@ -96,7 +94,6 @@ public class OIDCLogoutHandlerTest extends PowerMockIdentityBaseTest {
     private FederatedAuthenticatorConfig oidcAuthenticatorConfig;
     @Mock
     private Property property;
-
 
     @BeforeMethod
     public void setUp() throws Exception {
@@ -139,7 +136,6 @@ public class OIDCLogoutHandlerTest extends PowerMockIdentityBaseTest {
         oAuthAppDOTwo.setBackChannelLogoutUrl(OIDCLogoutConstants.backChannelUrlTwo);
         oAuthAppDOTwo.setUser(authenticatedUser);
         AppInfoCache.getInstance().addToCache(OIDCLogoutConstants.clientIdTwo, oAuthAppDOTwo);
-
 
         // creating mocks
         mockStatic(IdentityTenantUtil.class);
