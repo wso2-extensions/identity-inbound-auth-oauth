@@ -343,6 +343,7 @@ public class SAML1BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
             xmlObject = unmarshaller.unmarshall(element);
         } catch (UnmarshallingException | SAXException | IOException | ParserConfigurationException e) {
             String message = "Error in constructing XML Object from the encoded String";
+
         }
         return xmlObject;
 

@@ -138,6 +138,12 @@ public class OIDCLogoutHandlerTest extends PowerMockIdentityBaseTest {
         AppInfoCache.getInstance().addToCache(OIDCLogoutConstants.clientIdTwo, oAuthAppDOTwo);
 
         // creating mocks
+        createMocks();
+
+    }
+
+    private void createMocks() throws Exception {
+
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME))
                 .thenReturn(TENANT_ID);
@@ -172,7 +178,6 @@ public class OIDCLogoutHandlerTest extends PowerMockIdentityBaseTest {
         when(IdentityApplicationManagementUtil.getProperty(oidcAuthenticatorConfig.getProperties(),
                 "IdPEntityId")).thenReturn(property);
         when(property.getValue()).thenReturn("IDP");
-
     }
 
     @Test
