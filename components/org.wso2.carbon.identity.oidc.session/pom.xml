@@ -198,8 +198,6 @@
                             org.wso2.carbon.base,
                             org.wso2.carbon.identity.event.*,
 
-
-                            <!--*,-->
                         </Import-Package>
                         <Export-Package>
                             !org.wso2.carbon.identity.oidc.session.internal,
