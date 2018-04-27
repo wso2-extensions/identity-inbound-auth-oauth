@@ -33,6 +33,7 @@
 
 <%
     String httpMethod = request.getMethod();
+    Boolean isHashDisabled = false;
     if (!"post".equalsIgnoreCase(httpMethod)) {
         response.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
         return;
@@ -61,6 +62,7 @@
                 (ConfigurationContext) config.getServletContext()
                         .getAttribute(CarbonConstants.CONFIGURATION_CONTEXT);
         client = new OAuthAdminClient(cookie, backendServerURL, configContext);
+        isHashDisabled = client.isHashDisabled();
 
         if (appName != null) {
             app = client.getOAuthApplicationDataByAppName(appName);
@@ -68,13 +70,22 @@
             app = client.getOAuthApplicationData(consumerkey);
         }
 
+        OAuthConsumerAppDTO consumerApp = null;
         if (OAuthConstants.ACTION_REGENERATE.equalsIgnoreCase(action)) {
             String oauthAppState = client.getOauthApplicationState(consumerkey);
-            client.regenerateSecretKey(consumerkey);
+            if (isHashDisabled) {
+                client.regenerateSecretKey(consumerkey);
+            } else {
+                consumerApp = client.regenerateAndRetrieveOauthSecretKey(consumerkey);
+            }
             if(OAuthConstants.OauthAppStates.APP_STATE_REVOKED.equalsIgnoreCase(oauthAppState)) {
                 client.updateOauthApplicationState(consumerkey, OAuthConstants.OauthAppStates.APP_STATE_ACTIVE);
             }
-            app.setOauthConsumerSecret(client.getOAuthApplicationData(consumerkey).getOauthConsumerSecret());
+            if (isHashDisabled) {
+                app.setOauthConsumerSecret(client.getOAuthApplicationData(consumerkey).getOauthConsumerSecret());
+            } else {
+                app.setOauthConsumerSecret(consumerApp.getOauthConsumerSecret());
+            }
             CarbonUIMessage.sendCarbonUIMessage("Client Secret successfully updated for Client ID: " + consumerkey,
                     CarbonUIMessage.INFO, request);
 
@@ -101,9 +112,14 @@
     if ((action != null) && ("revoke".equalsIgnoreCase(action) || "regenerate".equalsIgnoreCase(action))) {
         session.setAttribute("oauth-consum-secret", app.getOauthConsumerSecret());
 
-        String returnString =
-                "../application/configure-service-provider.jsp?action=" + action + "&display=oauthapp&spName=" +
-                        applicationSPName + "&oauthapp=" + app.getOauthConsumerKey() + "";
+        String returnString;
+        if (!isHashDisabled && "regenerate".equalsIgnoreCase(action)) {
+            returnString = "../oauth/application-details.jsp?action=" + action + "&display=oauthapp&spName=" +
+                                                applicationSPName + "&oauthapp=" + app.getOauthConsumerKey() + "";
+        } else {
+            returnString = "../application/configure-service-provider.jsp?action=" + action +
+                        "&display=oauthapp&spName=" + applicationSPName + "&oauthapp=" + app.getOauthConsumerKey() + "";
+        }
 
             response.addHeader("redirectUrl",returnString);
 

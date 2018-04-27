@@ -83,6 +83,7 @@ public class TokenMgtDAO {
     public static final String LOWER_AUTHZ_USER = "LOWER(AUTHZ_USER)";
     private static final String UTC = "UTC";
     private static TokenPersistenceProcessor persistenceProcessor, hashingPersistenceProcessor;
+    private Boolean isHashDisabled = OAuth2Util.isHashDisabled();
 
     private boolean persistAccessTokenAlias = OAuthServerConfiguration.getInstance().usePersistedAccessTokenAlias();
     private OauthTokenIssuer oauthIssuerImpl = OAuthServerConfiguration.getInstance().getIdentityOauthTokenIssuer();
@@ -465,7 +466,7 @@ public class TokenMgtDAO {
         Connection connection = IdentityDatabaseUtil.getDBConnection();
         try {
             connection.setAutoCommit(false);
-            if (existingAccessTokenDO != null) {
+            if (existingAccessTokenDO != null && isHashDisabled) {
                 //  Mark the existing access token as expired on database if a token exist for the user
                 setAccessTokenState(connection, existingAccessTokenDO.getTokenId(), OAuthConstants.TokenStates
                         .TOKEN_STATE_EXPIRED, UUID.randomUUID().toString(), userStoreDomain);
@@ -584,11 +585,15 @@ public class TokenMgtDAO {
                     }
                 }
                 if (returnToken) {
-                    String accessToken = persistenceProcessor.getPreprocessedAccessTokenIdentifier(
-                            resultSet.getString(1));
+                    String accessToken = null;
+                    if (isHashDisabled) {
+                        accessToken = persistenceProcessor.getPreprocessedAccessTokenIdentifier(resultSet.getString(1));
+                    }
                     String refreshToken = null;
                     if (resultSet.getString(2) != null) {
-                        refreshToken = persistenceProcessor.getPreprocessedRefreshToken(resultSet.getString(2));
+                        if (isHashDisabled) {
+                            refreshToken = persistenceProcessor.getPreprocessedRefreshToken(resultSet.getString(2));
+                        }
                     }
                     long issuedTime = resultSet.getTimestamp(3, Calendar.getInstance(TimeZone.getTimeZone(UTC)))
                             .getTime();
@@ -686,11 +691,15 @@ public class TokenMgtDAO {
             resultSet = prepStmt.executeQuery();
 
             while (resultSet.next()) {
-                String accessToken = persistenceProcessor.
-                        getPreprocessedAccessTokenIdentifier(resultSet.getString(1));
+                String accessToken = null;
+                if (isHashDisabled) {
+                    accessToken = persistenceProcessor.getPreprocessedAccessTokenIdentifier(resultSet.getString(1));
+                }
                 if (accessTokenDOMap.get(accessToken) == null) {
-                    String refreshToken = persistenceProcessor.
-                            getPreprocessedRefreshToken(resultSet.getString(2));
+                    String refreshToken = null;
+                    if (isHashDisabled) {
+                        refreshToken = persistenceProcessor.getPreprocessedRefreshToken(resultSet.getString(2));
+                    }
                     Timestamp issuedTime = resultSet.getTimestamp(3, Calendar.getInstance(TimeZone.getTimeZone(UTC)));
                     Timestamp refreshTokenIssuedTime = resultSet.getTimestamp(4, Calendar.getInstance(TimeZone
                             .getTimeZone(UTC)));
@@ -1075,8 +1084,10 @@ public class TokenMgtDAO {
             while (resultSet.next()) {
 
                 if (iterateId == 0) {
-                    validationDataDO.setAccessToken(persistenceProcessor.getPreprocessedAccessTokenIdentifier(
-                            resultSet.getString(1)));
+                    if (isHashDisabled) {
+                        validationDataDO.setAccessToken(persistenceProcessor.getPreprocessedAccessTokenIdentifier(
+                                resultSet.getString(1)));
+                    }
                     String userName = resultSet.getString(2);
                     int tenantId = resultSet.getInt(3);
                     String userDomain = resultSet.getString(4);
@@ -1448,7 +1459,9 @@ public class TokenMgtDAO {
             ps.setString(4, authenticatedUser.getUserStoreDomain());
             rs = ps.executeQuery();
             while (rs.next()) {
-                accessTokens.add(persistenceProcessor.getPreprocessedAccessTokenIdentifier(rs.getString(1)));
+                if (isHashDisabled) {
+                    accessTokens.add(persistenceProcessor.getPreprocessedAccessTokenIdentifier(rs.getString(1)));
+                }
             }
             connection.commit();
         } catch (SQLException e) {
@@ -1502,7 +1515,9 @@ public class TokenMgtDAO {
 
                 // if authorization code is not expired.
                 if (OAuth2Util.getTimeToExpire(issuedTimeInMillis, validityPeriodInMillis) > 1000) {
-                    authorizationCodes.add(persistenceProcessor.getPreprocessedAuthzCode(rs.getString(1)));
+                    if (isHashDisabled) {
+                        authorizationCodes.add(persistenceProcessor.getPreprocessedAuthzCode(rs.getString(1)));
+                    }
                 }
             }
             connection.commit();
@@ -1564,7 +1579,9 @@ public class TokenMgtDAO {
             ps.setString(2, OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
             rs = ps.executeQuery();
             while (rs.next()) {
-                accessTokens.add(persistenceProcessor.getPreprocessedAccessTokenIdentifier(rs.getString(1)));
+                if (isHashDisabled) {
+                    accessTokens.add(persistenceProcessor.getPreprocessedAccessTokenIdentifier(rs.getString(1)));
+                }
             }
             connection.commit();
         } catch (SQLException e) {
@@ -1684,7 +1701,9 @@ public class TokenMgtDAO {
             ps.setString(1, consumerKey);
             rs = ps.executeQuery();
             while (rs.next()) {
-                authorizationCodes.add(persistenceProcessor.getPreprocessedAuthzCode(rs.getString(1)));
+                if (isHashDisabled) {
+                    authorizationCodes.add(persistenceProcessor.getPreprocessedAuthzCode(rs.getString(1)));
+                }
             }
             connection.commit();
         } catch (SQLException e) {
@@ -1714,7 +1733,9 @@ public class TokenMgtDAO {
             ps.setString(2, OAuthConstants.AuthorizationCodeState.ACTIVE);
             rs = ps.executeQuery();
             while (rs.next()) {
-                authorizationCodes.add(persistenceProcessor.getPreprocessedAuthzCode(rs.getString(1)));
+                if (isHashDisabled) {
+                    authorizationCodes.add(persistenceProcessor.getPreprocessedAuthzCode(rs.getString(1)));
+                }
             }
             connection.commit();
         } catch (SQLException e) {
@@ -2090,11 +2111,15 @@ public class TokenMgtDAO {
             resultSet = prepStmt.executeQuery();
 
             while (resultSet.next()) {
-                String accessToken = persistenceProcessor.
-                        getPreprocessedAccessTokenIdentifier(resultSet.getString(1));
+                String accessToken = null;
+                if (isHashDisabled) {
+                    accessToken = persistenceProcessor.getPreprocessedAccessTokenIdentifier(resultSet.getString(1));
+                }
                 if (accessTokenDOMap.get(accessToken) == null) {
-                    String refreshToken = persistenceProcessor.
-                            getPreprocessedRefreshToken(resultSet.getString(2));
+                    String refreshToken = null;
+                    if (isHashDisabled) {
+                        refreshToken = persistenceProcessor.getPreprocessedRefreshToken(resultSet.getString(2));
+                    }
                     Timestamp issuedTime = resultSet.getTimestamp(3, Calendar.getInstance(TimeZone.getTimeZone(UTC)));
                     Timestamp refreshTokenIssuedTime = resultSet.getTimestamp(4, Calendar.getInstance(TimeZone
                             .getTimeZone(UTC)));
@@ -2161,10 +2186,15 @@ public class TokenMgtDAO {
             resultSet = prepStmt.executeQuery();
 
             while (resultSet.next()) {
-                String accessToken = persistenceProcessor.getPreprocessedAccessTokenIdentifier(resultSet.getString(1));
+                String accessToken = null;
+                if (isHashDisabled) {
+                    accessToken = persistenceProcessor.getPreprocessedAccessTokenIdentifier(resultSet.getString(1));
+                }
                 if (accessTokenDOMap.get(accessToken) == null) {
-                    String refreshToken = persistenceProcessor.
-                            getPreprocessedRefreshToken(resultSet.getString(2));
+                    String refreshToken = null;
+                    if (isHashDisabled) {
+                        refreshToken = persistenceProcessor.getPreprocessedRefreshToken(resultSet.getString(2));
+                    }
                     Timestamp issuedTime = resultSet.getTimestamp(3, Calendar.getInstance(TimeZone.getTimeZone(UTC)));
                     Timestamp refreshTokenIssuedTime = resultSet.getTimestamp(4, Calendar.getInstance(TimeZone
                             .getTimeZone(UTC)));
@@ -2972,11 +3002,16 @@ public class TokenMgtDAO {
 
                 if (latestIssuedTime == issuedTime) {
                     String tokenState = resultSet.getString(7);
-                    String accessToken = persistenceProcessor.getPreprocessedAccessTokenIdentifier(
-                            resultSet.getString(1));
+                    String accessToken = null;
+                    if (isHashDisabled) {
+                        accessToken = persistenceProcessor.getPreprocessedAccessTokenIdentifier(
+                                resultSet.getString(1));
+                    }
                     String refreshToken = null;
                     if (resultSet.getString(2) != null) {
-                        refreshToken = persistenceProcessor.getPreprocessedRefreshToken(resultSet.getString(2));
+                        if (isHashDisabled) {
+                            refreshToken = persistenceProcessor.getPreprocessedRefreshToken(resultSet.getString(2));
+                        }
                     }
                     long refreshTokenIssuedTime = resultSet.getTimestamp(4, Calendar.getInstance(TimeZone.getTimeZone
                             ("UTC"))).getTime();
@@ -3119,11 +3154,15 @@ public class TokenMgtDAO {
             AccessTokenDO accessTokenDO = null;
 
             if (resultSet.next()) {
-                String accessToken = persistenceProcessor.getPreprocessedAccessTokenIdentifier(
-                        resultSet.getString(1));
+                String accessToken = null;
+                if (isHashDisabled) {
+                    accessToken = persistenceProcessor.getPreprocessedAccessTokenIdentifier(resultSet.getString(1));
+                }
                 String refreshToken = null;
                 if (resultSet.getString(2) != null) {
-                    refreshToken = persistenceProcessor.getPreprocessedRefreshToken(resultSet.getString(2));
+                    if (isHashDisabled) {
+                        refreshToken = persistenceProcessor.getPreprocessedRefreshToken(resultSet.getString(2));
+                    }
                 }
                 long issuedTime = resultSet.getTimestamp(3, Calendar.getInstance(TimeZone.getTimeZone("UTC")))
                         .getTime();

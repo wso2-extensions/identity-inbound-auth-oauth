@@ -63,6 +63,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     protected OAuthCache oauthCache;
     protected static final String EXISTING_TOKEN_ISSUED = "existingTokenUsed";
     protected static final int SECONDS_TO_MILISECONDS_FACTOR = 1000;
+    private Boolean isHashDisabled = OAuth2Util.isHashDisabled();
 
     @Override
     public void init() throws IdentityOAuth2Exception {
@@ -108,8 +109,11 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         String authorizedUser = tokReqMsgCtx.getAuthorizedUser().toString();
 
         synchronized ((consumerKey + ":" + authorizedUser + ":" + scope).intern()) {
-            AccessTokenDO existingTokenBean = getExistingToken(tokReqMsgCtx,
-                    getOAuthCacheKey(scope, consumerKey, authorizedUser));
+            AccessTokenDO existingTokenBean = null;
+            if(isHashDisabled) {
+                existingTokenBean = getExistingToken(tokReqMsgCtx,
+                        getOAuthCacheKey(scope, consumerKey, authorizedUser));
+            }
             // Return a new access token in each request when JWTTokenIssuer is used.
             if (accessTokenNotRenewedPerRequest()) {
                 if (existingTokenBean != null) {
@@ -692,7 +696,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     }
 
     private boolean isRefreshTokenValid(AccessTokenDO existingAccessTokenDO, long validityPeriod, String consumerKey) {
-        if (existingAccessTokenDO != null) {
+        if (existingAccessTokenDO != null && isHashDisabled) {
             long refreshTokenExpireTime = OAuth2Util.getRefreshTokenExpireTimeMillis(existingAccessTokenDO);
             if (TOKEN_STATE_ACTIVE.equals(existingAccessTokenDO.getTokenState())) {
                 if (!isRefreshTokenExpired(validityPeriod, refreshTokenExpireTime)) {

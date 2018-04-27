@@ -36,6 +36,7 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthConsumerDAO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth.tokenprocessor.HashingPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
@@ -104,6 +105,9 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
 
     @Mock
     private TokenPersistenceProcessor tokenPersistenceProcessorMock;
+
+    @Mock
+    private HashingPersistenceProcessor tokenHashPersistenceProcessorMock;
 
     @Mock
     private OAuthComponentServiceHolder oAuthComponentServiceHolderMock;
@@ -280,6 +284,28 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         when(oAuthConsumerDAO.getOAuthConsumerSecret(anyString())).thenReturn(dummyClientSecret);
 
         assertEquals(OAuth2Util.authenticateClient(clientId, clientSecret), expectedResult);
+    }
+
+    @Test(dataProvider = "AuthenticateClient")
+    public void testAuthenticateClientWithHashPersistenceProcessor(Object cacheResult, String dummyClientSecret,
+                                                                        boolean expectedResult) throws Exception {
+        mockStatic(OAuthCache.class);
+        when(OAuthCache.getInstance()).thenReturn(oAuthCacheMock);
+        when(oAuthCacheMock.getValueFromCache(any(OAuthCacheKey.class))).thenReturn((CacheEntry) cacheResult);
+        OAuthConsumerDAO oAuthConsumerDAO = mock(OAuthConsumerDAO.class);
+        tokenHashPersistenceProcessorMock = new HashingPersistenceProcessor();
+        when(oauthServerConfigurationMock.getPersistenceProcessor()).thenReturn(tokenHashPersistenceProcessorMock);
+        whenNew(OAuthConsumerDAO.class).withNoArguments().thenReturn(oAuthConsumerDAO);
+        when(oAuthConsumerDAO.getOAuthConsumerSecret(anyString())).thenReturn(dummyClientSecret);
+
+        assertEquals(OAuth2Util.authenticateClient(clientId, clientSecret), expectedResult);
+    }
+
+    @Test
+    public void testIsHashDisabled() {
+        when(OAuthServerConfiguration.getInstance().isHashEnabled()).thenReturn(true);
+
+        assertEquals(OAuth2Util.isHashDisabled().booleanValue(), false);
     }
 
     @DataProvider(name = "AuthenticateUsername")

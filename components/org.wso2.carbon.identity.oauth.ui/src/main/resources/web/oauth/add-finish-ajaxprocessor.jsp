@@ -48,6 +48,7 @@
         return;
     }
 
+    Boolean isHashDisabled = false;
     String applicationName = request.getParameter("application");
     String callback = request.getParameter("callback");
     String oauthVersion = request.getParameter("oauthVersion");
@@ -91,6 +92,7 @@
                     (ConfigurationContext) config.getServletContext()
                             .getAttribute(CarbonConstants.CONFIGURATION_CONTEXT);
             OAuthAdminClient client = new OAuthAdminClient(cookie, backendServerURL, configContext);
+            isHashDisabled = client.isHashDisabled();
             app.setApplicationName(applicationName);
             app.setCallbackUrl(callback);
             app.setBackChannelLogoutUrl(backchannelLogoutUrl);
@@ -145,9 +147,12 @@
                 app.setIdTokenEncryptionMethod(idTokenEncryptionMethod);
             }
 
-            client.registerOAuthApplicationData(app);
-
-            consumerApp = client.getOAuthApplicationDataByAppName(applicationName);
+            if (isHashDisabled) {
+                client.registerOAuthApplicationData(app);
+                consumerApp = client.getOAuthApplicationDataByAppName(applicationName);
+            } else {
+                consumerApp = client.registerAndRetrieveOAuthApplicationData(app);
+            }
 
             String message = resourceBundle.getString("app.added.successfully");
             CarbonUIMessage.sendCarbonUIMessage(message, CarbonUIMessage.INFO, request);
@@ -172,9 +177,17 @@ if (qpplicationComponentFound) {
 	if (!isError) {
 		session.setAttribute("oauth-consum-secret", consumerApp.getOauthConsumerSecret());
 %>
+    <% if (isHashDisabled) { %>
     location.href = '../application/configure-service-provider.jsp?action=update&display=oauthapp&spName=<%=Encode.forUriComponent(spName)%>&oauthapp=<%=Encode.forUriComponent(consumerApp.getOauthConsumerKey())%>';
+    <% } else { %>
+    location.href = 'application-details.jsp?action=update&display=oauthapp&spName=<%=Encode.forUriComponent(spName)%>&oauthapp=<%=Encode.forUriComponent(consumerApp.getOauthConsumerKey())%>';
+    <% } %>
 <% } else { %>
+    <% if (isHashDisabled) { %>
     location.href = '../application/configure-service-provider.jsp?display=oauthapp&spName=<%=Encode.forUriComponent(spName)%>&action=cancel';
+    <% } else { %>
+    location.href = 'application-details.jsp?display=oauthapp&spName=<%=Encode.forUriComponent(spName)%>&action=cancel';
+    <% } %>
 <% }
 } else {%>
     location.href = 'index.jsp';

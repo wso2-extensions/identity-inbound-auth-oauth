@@ -90,13 +90,23 @@
             app = client.getOAuthApplicationData(consumerkey);
         }
 
+        OAuthConsumerAppDTO consumerApp = null;
         if (OAuthConstants.ACTION_REGENERATE.equalsIgnoreCase(action)) {
             String oauthAppState = client.getOauthApplicationState(consumerkey);
-            client.regenerateSecretKey(consumerkey);
+            Boolean isHashDisabled = client.isHashDisabled();
+            if (isHashDisabled) {
+                client.regenerateSecretKey(consumerkey);
+            } else {
+                consumerApp = client.regenerateAndRetrieveOauthSecretKey(consumerkey);
+            }
             if (OAuthConstants.OauthAppStates.APP_STATE_REVOKED.equalsIgnoreCase(oauthAppState)) {
                 client.updateOauthApplicationState(consumerkey, OAuthConstants.OauthAppStates.APP_STATE_ACTIVE);
             }
-            app.setOauthConsumerSecret(client.getOAuthApplicationData(consumerkey).getOauthConsumerSecret());
+            if (isHashDisabled) {
+                app.setOauthConsumerSecret(client.getOAuthApplicationData(consumerkey).getOauthConsumerSecret());
+            } else {
+                app.setOauthConsumerSecret(consumerApp.getOauthConsumerSecret());
+            }
             CarbonUIMessage.sendCarbonUIMessage("Client Secret successfully updated for Client ID: " + consumerkey,
                     CarbonUIMessage.INFO, request);
 
