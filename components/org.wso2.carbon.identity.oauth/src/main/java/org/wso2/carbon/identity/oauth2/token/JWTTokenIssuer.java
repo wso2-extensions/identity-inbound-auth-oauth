@@ -24,6 +24,7 @@ import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSSigner;
 import com.nimbusds.jose.crypto.RSASSASigner;
+import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jwt.JWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.JWTParser;
@@ -283,7 +284,11 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             }
 
             JWSSigner signer = new RSASSASigner((RSAPrivateKey) privateKey);
-            SignedJWT signedJWT = new SignedJWT(new JWSHeader((JWSAlgorithm) signatureAlgorithm), jwtClaimsSet);
+            JWSHeader header = new JWSHeader((JWSAlgorithm) signatureAlgorithm);
+            String certThumbPrint = OAuth2Util.getThumbPrint(tenantDomain, tenantId);
+            header.setKeyID(certThumbPrint);
+            header.setX509CertThumbprint(new Base64URL(certThumbPrint));
+            SignedJWT signedJWT = new SignedJWT(header, jwtClaimsSet);
             signedJWT.sign(signer);
             return signedJWT.serialize();
         } catch (JOSEException | InvalidOAuthClientException e) {
