@@ -17,7 +17,7 @@
  */
 package org.wso2.carbon.identity.oauth.endpoint.authz;
 
-import com.nimbusds.jwt.ReadOnlyJWTClaimsSet;
+import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import org.apache.axis2.transport.http.HTTPConstants;
 import org.apache.commons.collections.CollectionUtils;
@@ -186,9 +186,6 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
     @Mock
     SignedJWT signedJWT;
-
-    @Mock
-    ReadOnlyJWTClaimsSet readOnlyJWTClaimsSet;
 
     @Mock
     OIDCSessionManager oidcSessionManager;
@@ -1058,8 +1055,10 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         } else {
             when(SignedJWT.parse(anyString())).thenReturn(signedJWT);
         }
-        when(signedJWT.getJWTClaimsSet()).thenReturn(readOnlyJWTClaimsSet);
-        when(readOnlyJWTClaimsSet.getSubject()).thenReturn(idTokenHintSubject);
+        JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
+        jwtClaimsSetBuilder.subject(idTokenHintSubject);
+        JWTClaimsSet jwtClaimsSet = jwtClaimsSetBuilder.build();
+        when(signedJWT.getJWTClaimsSet()).thenReturn(jwtClaimsSet);
         when(oAuth2Service.getOauthApplicationState(CLIENT_ID_VALUE)).thenReturn("ACTIVE");
 
         mockApplicationManagementService();

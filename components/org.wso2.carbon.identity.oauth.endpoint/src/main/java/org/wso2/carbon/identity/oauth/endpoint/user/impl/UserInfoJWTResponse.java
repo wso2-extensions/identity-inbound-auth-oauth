@@ -56,9 +56,11 @@ public class UserInfoJWTResponse extends AbstractUserInfoResponseBuilder {
                                    String spTenantDomain,
                                    Map<String, Object> filteredUserClaims) throws UserInfoEndpointException {
 
-        JWTClaimsSet jwtClaimsSet = new JWTClaimsSet();
-        jwtClaimsSet.setAllClaims(filteredUserClaims);
-        return buildJWTResponse(tokenResponse, spTenantDomain, jwtClaimsSet);
+        JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
+        for (Map.Entry<String, Object> entry : filteredUserClaims.entrySet()) {
+            jwtClaimsSetBuilder.claim(entry.getKey(), entry.getValue());
+        }
+        return buildJWTResponse(tokenResponse, spTenantDomain, jwtClaimsSetBuilder.build());
     }
 
     private String buildJWTResponse(OAuth2TokenValidationResponseDTO tokenResponse,

@@ -79,26 +79,29 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
     private final static String ATTRIBUTE_SEPARATOR = FrameworkUtils.getMultiAttributeSeparator();
 
     @Override
-    public void handleCustomClaims(JWTClaimsSet jwtClaimsSet, OAuthTokenReqMessageContext tokenReqMessageContext) {
+    public JWTClaimsSet handleCustomClaims(JWTClaimsSet.Builder jwtClaimsSetBuilder, OAuthTokenReqMessageContext
+            tokenReqMessageContext) {
         try {
             Map<String, Object> userClaimsInOIDCDialect = getUserClaimsInOIDCDialect(tokenReqMessageContext);
-            setClaimsToJwtClaimSet(jwtClaimsSet, userClaimsInOIDCDialect);
+            return setClaimsToJwtClaimSet(jwtClaimsSetBuilder, userClaimsInOIDCDialect);
         } catch (OAuthSystemException e) {
             log.error("Error occurred while adding claims of user: " + tokenReqMessageContext.getAuthorizedUser() +
                     " to the JWTClaimSet used to build the id_token.", e);
         }
+        return null;
     }
 
     @Override
-    public void handleCustomClaims(JWTClaimsSet jwtClaimsSet, OAuthAuthzReqMessageContext authzReqMessageContext) {
+    public JWTClaimsSet handleCustomClaims(JWTClaimsSet.Builder jwtClaimsSet, OAuthAuthzReqMessageContext authzReqMessageContext) {
         try {
             Map<String, Object> userClaimsInOIDCDialect = getUserClaimsInOIDCDialect(authzReqMessageContext);
-            setClaimsToJwtClaimSet(jwtClaimsSet, userClaimsInOIDCDialect);
+            return setClaimsToJwtClaimSet(jwtClaimsSet, userClaimsInOIDCDialect);
         } catch (OAuthSystemException e) {
             log.error("Error occurred while adding claims of user: " +
                     authzReqMessageContext.getAuthorizationReqDTO().getUser() + " to the JWTClaimSet used to " +
                     "build the id_token.", e);
         }
+        return null;
     }
 
     /**
@@ -548,10 +551,11 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
     /**
      * Set user claims in OIDC dialect to the JWTClaimSet. Additionally we process multi values attributes here.
      *
-     * @param jwtClaimsSet
+     * @param jwtClaimsSetBuilder
      * @param userClaimsInOIDCDialect
      */
-    private void setClaimsToJwtClaimSet(JWTClaimsSet jwtClaimsSet, Map<String, Object> userClaimsInOIDCDialect) {
+    private JWTClaimsSet setClaimsToJwtClaimSet(JWTClaimsSet.Builder jwtClaimsSetBuilder, Map<String, Object>
+            userClaimsInOIDCDialect) {
         for (Map.Entry<String, Object> claimEntry : userClaimsInOIDCDialect.entrySet()) {
             String claimValue = claimEntry.getValue().toString();
             if (isMultiValuedAttribute(claimValue)) {
@@ -562,11 +566,12 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
                         claimValues.add(attributeValue);
                     }
                 }
-                jwtClaimsSet.setClaim(claimEntry.getKey(), claimValues);
+                jwtClaimsSetBuilder.claim(claimEntry.getKey(), claimValues);
             } else {
-                jwtClaimsSet.setClaim(claimEntry.getKey(), claimEntry.getValue());
+                jwtClaimsSetBuilder.claim(claimEntry.getKey(), claimEntry.getValue());
             }
         }
+        return jwtClaimsSetBuilder.build();
     }
 
     private String getAuthorizationCode(OAuthTokenReqMessageContext requestMsgCtx) {

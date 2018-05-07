@@ -91,23 +91,23 @@ public class TestUtils {
         long curTimeInMillis = Calendar.getInstance().getTimeInMillis();
 
         // Set claims to jwt token.
-        JWTClaimsSet jwtClaimsSet = new JWTClaimsSet();
-        jwtClaimsSet.setIssuer(issuer);
-        jwtClaimsSet.setSubject(subject);
-        jwtClaimsSet.setAudience(Arrays.asList(audience));
-        jwtClaimsSet.setJWTID(jti);
-        jwtClaimsSet.setExpirationTime(new Date(curTimeInMillis + lifetimeInMillis));
-        jwtClaimsSet.setIssueTime(new Date(curTimeInMillis));
+        JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
+        jwtClaimsSetBuilder.issuer(issuer);
+        jwtClaimsSetBuilder.subject(subject);
+        jwtClaimsSetBuilder.audience(Arrays.asList(audience));
+        jwtClaimsSetBuilder.jwtID(jti);
+        jwtClaimsSetBuilder.expirationTime(new Date(curTimeInMillis + lifetimeInMillis));
+        jwtClaimsSetBuilder.issueTime(new Date(curTimeInMillis));
 
         if (notBeforeMillis > 0) {
-            jwtClaimsSet.setNotBeforeTime(new Date(curTimeInMillis + notBeforeMillis));
+            jwtClaimsSetBuilder.notBeforeTime(new Date(curTimeInMillis + notBeforeMillis));
         }
         if (claims != null && !claims.isEmpty()) {
             for (Map.Entry entry : claims.entrySet()) {
-                jwtClaimsSet.setClaim(entry.getKey().toString(), entry.getValue());
+                jwtClaimsSetBuilder.claim(entry.getKey().toString(), entry.getValue());
             }
         }
-        return jwtClaimsSet;
+        return jwtClaimsSetBuilder.build();
     }
 
     public static String buildJWT(String issuer, String subject, String jti, String audience, String algorythm,
@@ -122,17 +122,18 @@ public class TestUtils {
             lifetimeInMillis = 3600 * 1000;
         }
         // Set claims to jwt token.
-        JWTClaimsSet jwtClaimsSet = new JWTClaimsSet();
-        jwtClaimsSet.setIssuer(issuer);
-        jwtClaimsSet.setSubject(subject);
-        jwtClaimsSet.setAudience(Arrays.asList(audience));
-        jwtClaimsSet.setJWTID(jti);
-        jwtClaimsSet.setExpirationTime(new Date(issuedTime + lifetimeInMillis));
-        jwtClaimsSet.setIssueTime(new Date(issuedTime));
+        JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
+        jwtClaimsSetBuilder.issuer(issuer);
+        jwtClaimsSetBuilder.subject(subject);
+        jwtClaimsSetBuilder.audience(Arrays.asList(audience));
+        jwtClaimsSetBuilder.jwtID(jti);
+        jwtClaimsSetBuilder.expirationTime(new Date(issuedTime + lifetimeInMillis));
+        jwtClaimsSetBuilder.issueTime(new Date(issuedTime));
 
         if (notBeforeMillis > 0) {
-            jwtClaimsSet.setNotBeforeTime(new Date(issuedTime + notBeforeMillis));
+            jwtClaimsSetBuilder.notBeforeTime(new Date(issuedTime + notBeforeMillis));
         }
+        JWTClaimsSet jwtClaimsSet = jwtClaimsSetBuilder.build();
         if (JWSAlgorithm.NONE.getName().equals(algorythm)) {
             return new PlainJWT(jwtClaimsSet).serialize();
         }

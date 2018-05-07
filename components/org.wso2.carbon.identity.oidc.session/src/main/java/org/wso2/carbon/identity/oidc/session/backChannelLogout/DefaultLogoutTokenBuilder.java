@@ -132,17 +132,17 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
         JSONObject event = new JSONObject().put("http://schemas.openidnet/event/backchannel-logout",
                 new JSONObject());
 
-        JWTClaimsSet jwtClaimsSet = new JWTClaimsSet();
-        jwtClaimsSet.setSubject(sub);
-        jwtClaimsSet.setIssuer(iss);
-        jwtClaimsSet.setAudience(audience);
-        jwtClaimsSet.setClaim("jti", jti);
-        jwtClaimsSet.setClaim("event", event);
-        jwtClaimsSet.setExpirationTime(new Date(currentTimeInMillis + logoutTokenValidityInMillis));
-        jwtClaimsSet.setClaim("iat", iat);
-        jwtClaimsSet.setClaim("sid", sid);
+        JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
+        jwtClaimsSetBuilder.subject(sub);
+        jwtClaimsSetBuilder.issuer(iss);
+        jwtClaimsSetBuilder.audience(audience);
+        jwtClaimsSetBuilder.claim("jti", jti);
+        jwtClaimsSetBuilder.claim("event", event);
+        jwtClaimsSetBuilder.expirationTime(new Date(currentTimeInMillis + logoutTokenValidityInMillis));
+        jwtClaimsSetBuilder.claim("iat", iat);
+        jwtClaimsSetBuilder.claim("sid", sid);
 
-        return jwtClaimsSet;
+        return jwtClaimsSetBuilder.build();
     }
 
     /**

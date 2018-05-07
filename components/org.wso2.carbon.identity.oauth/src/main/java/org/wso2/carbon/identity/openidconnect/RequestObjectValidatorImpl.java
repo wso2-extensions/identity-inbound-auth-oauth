@@ -18,8 +18,8 @@
 package org.wso2.carbon.identity.openidconnect;
 
 import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSVerifier;
-import com.nimbusds.jose.ReadOnlyJWSHeader;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jwt.SignedJWT;
 import org.apache.commons.lang.StringUtils;
@@ -251,7 +251,7 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
     protected boolean isSignatureVerified(SignedJWT signedJWT, Certificate x509Certificate) {
 
         JWSVerifier verifier;
-        ReadOnlyJWSHeader header = signedJWT.getHeader();
+        JWSHeader header = signedJWT.getHeader();
         if (x509Certificate == null) {
             return logAndReturnFalse("Unable to locate certificate for JWT " + header.toString());
         }

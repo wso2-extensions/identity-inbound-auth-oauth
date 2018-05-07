@@ -16,8 +16,8 @@
 package org.wso2.carbon.identity.openidconnect.model;
 
 
+import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.PlainJWT;
-import com.nimbusds.jwt.ReadOnlyJWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
@@ -46,7 +46,7 @@ public class RequestObject implements Serializable {
 
     private SignedJWT signedJWT;
     private PlainJWT plainJWT;
-    private ReadOnlyJWTClaimsSet claimsSet;
+    private JWTClaimsSet claimsSet;
 
     /**
      * To store the claims requestor and the the requested claim list. claim requestor can be either userinfo or
@@ -124,11 +124,11 @@ public class RequestObject implements Serializable {
         }
     }
 
-    public void setClaimSet(ReadOnlyJWTClaimsSet claimSet) {
+    public void setClaimSet(JWTClaimsSet claimSet) {
         this.claimsSet = claimSet;
     }
 
-    public ReadOnlyJWTClaimsSet getClaimsSet() {
+    public JWTClaimsSet getClaimsSet() {
         return claimsSet;
     }
 

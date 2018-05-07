@@ -160,11 +160,12 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         // Set claims to jwt token.
         JWTClaimsSet jwtClaimsSet = createJWTClaimSet(null, request, request.getOauth2AccessTokenReqDTO()
                 .getClientId());
+        JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder(jwtClaimsSet);
 
         if (request.getScope() != null && Arrays.asList((request.getScope())).contains(AUDIENCE)) {
-            jwtClaimsSet.setAudience(Arrays.asList(request.getScope()));
+            jwtClaimsSetBuilder.audience(Arrays.asList(request.getScope()));
         }
-
+        jwtClaimsSet = jwtClaimsSetBuilder.build();
         if (JWSAlgorithm.NONE.getName().equals(signatureAlgorithm.getName())) {
             return new PlainJWT(jwtClaimsSet).serialize();
         }
@@ -182,11 +183,14 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     protected String buildJWTToken(OAuthAuthzReqMessageContext request) throws IdentityOAuth2Exception {
 
         // Set claims to jwt token.
-        JWTClaimsSet jwtClaimsSet = createJWTClaimSet(request, null, request.getAuthorizationReqDTO().getConsumerKey());
+        JWTClaimsSet jwtClaimsSet = createJWTClaimSet(request, null, request.getAuthorizationReqDTO()
+                .getConsumerKey());
+        JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder(jwtClaimsSet);
 
         if (request.getApprovedScope() != null && Arrays.asList((request.getApprovedScope())).contains(AUDIENCE)) {
-            jwtClaimsSet.setAudience(Arrays.asList(request.getApprovedScope()));
+            jwtClaimsSetBuilder.audience(Arrays.asList(request.getApprovedScope()));
         }
+        jwtClaimsSet = jwtClaimsSetBuilder.build();
 
         if (JWSAlgorithm.NONE.getName().equals(signatureAlgorithm.getName())) {
             return new PlainJWT(jwtClaimsSet).serialize();
@@ -284,11 +288,11 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             }
 
             JWSSigner signer = new RSASSASigner((RSAPrivateKey) privateKey);
-            JWSHeader header = new JWSHeader((JWSAlgorithm) signatureAlgorithm);
+            JWSHeader.Builder headerBuilder = new JWSHeader.Builder((JWSAlgorithm) signatureAlgorithm);
             String certThumbPrint = OAuth2Util.getThumbPrint(tenantDomain, tenantId);
-            header.setKeyID(certThumbPrint);
-            header.setX509CertThumbprint(new Base64URL(certThumbPrint));
-            SignedJWT signedJWT = new SignedJWT(header, jwtClaimsSet);
+            headerBuilder.keyID(certThumbPrint);
+            headerBuilder.x509CertThumbprint(new Base64URL(certThumbPrint));
+            SignedJWT signedJWT = new SignedJWT(headerBuilder.build(), jwtClaimsSet);
             signedJWT.sign(signer);
             return signedJWT.serialize();
         } catch (JOSEException | InvalidOAuthClientException e) {
@@ -389,23 +393,24 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         long curTimeInMillis = Calendar.getInstance().getTimeInMillis();
 
         // Set the default claims.
-        JWTClaimsSet jwtClaimsSet = new JWTClaimsSet();
-        jwtClaimsSet.setIssuer(issuer);
-        jwtClaimsSet.setSubject(user.getAuthenticatedSubjectIdentifier());
-        jwtClaimsSet.setClaim(AUTHORIZATION_PARTY, consumerKey);
-        jwtClaimsSet.setExpirationTime(new Date(curTimeInMillis + accessTokenLifeTimeInMillis));
-        jwtClaimsSet.setIssueTime(new Date(curTimeInMillis));
-        jwtClaimsSet.setJWTID(UUID.randomUUID().toString());
+        JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
+        jwtClaimsSetBuilder.issuer(issuer);
+        jwtClaimsSetBuilder.subject(user.getAuthenticatedSubjectIdentifier());
+        jwtClaimsSetBuilder.claim(AUTHORIZATION_PARTY, consumerKey);
+        jwtClaimsSetBuilder.expirationTime(new Date(curTimeInMillis + accessTokenLifeTimeInMillis));
+        jwtClaimsSetBuilder.issueTime(new Date(curTimeInMillis));
+        jwtClaimsSetBuilder.jwtID(UUID.randomUUID().toString());
 
         // This is a spec (openid-connect-core-1_0:2.0) requirement for ID tokens. But we are keeping this in JWT
         // as well.
-        jwtClaimsSet.setAudience(Collections.singletonList(consumerKey));
+        jwtClaimsSetBuilder.audience(Collections.singletonList(consumerKey));
+        JWTClaimsSet jwtClaimsSet;
 
         // Handle custom claims
         if (authAuthzReqMessageContext != null) {
-            handleCustomClaims(jwtClaimsSet, authAuthzReqMessageContext);
+            jwtClaimsSet = handleCustomClaims(jwtClaimsSetBuilder, authAuthzReqMessageContext);
         } else {
-            handleCustomClaims(jwtClaimsSet, tokenReqMessageContext);
+            jwtClaimsSet = handleCustomClaims(jwtClaimsSetBuilder, tokenReqMessageContext);
         }
 
         return jwtClaimsSet;
@@ -494,29 +499,29 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     /**
      * Populate custom claims (For implicit grant)
      *
-     * @param jwtClaimsSet
+     * @param jwtClaimsSetBuilder
      * @param tokenReqMessageContext
      * @throws IdentityOAuth2Exception
      */
-    protected void handleCustomClaims(JWTClaimsSet jwtClaimsSet,
+    protected JWTClaimsSet handleCustomClaims(JWTClaimsSet.Builder jwtClaimsSetBuilder,
                                       OAuthTokenReqMessageContext tokenReqMessageContext) throws IdentityOAuth2Exception {
         CustomClaimsCallbackHandler claimsCallBackHandler =
                 OAuthServerConfiguration.getInstance().getOpenIDConnectCustomClaimsCallbackHandler();
-        claimsCallBackHandler.handleCustomClaims(jwtClaimsSet, tokenReqMessageContext);
+        return claimsCallBackHandler.handleCustomClaims(jwtClaimsSetBuilder, tokenReqMessageContext);
     }
 
     /**
      * Populate custom claims
      *
-     * @param jwtClaimsSet
+     * @param jwtClaimsSetBuilder
      * @param authzReqMessageContext
      * @throws IdentityOAuth2Exception
      */
-    protected void handleCustomClaims(JWTClaimsSet jwtClaimsSet,
+    protected JWTClaimsSet handleCustomClaims(JWTClaimsSet.Builder jwtClaimsSetBuilder,
                                       OAuthAuthzReqMessageContext authzReqMessageContext) throws IdentityOAuth2Exception {
         CustomClaimsCallbackHandler claimsCallBackHandler =
                 OAuthServerConfiguration.getInstance().getOpenIDConnectCustomClaimsCallbackHandler();
-        claimsCallBackHandler.handleCustomClaims(jwtClaimsSet, authzReqMessageContext);
+        return claimsCallBackHandler.handleCustomClaims(jwtClaimsSetBuilder, authzReqMessageContext);
     }
 
 

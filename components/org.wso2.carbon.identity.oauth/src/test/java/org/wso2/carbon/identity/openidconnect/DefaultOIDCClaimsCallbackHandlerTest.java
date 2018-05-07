@@ -245,16 +245,17 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
      */
     @Test
     public void testHandleCustomClaimsWithOAuthTokenReqMsgCtxtNoValidSp() throws Exception {
-        JWTClaimsSet jwtClaimsSet = new JWTClaimsSet();
+        JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
         OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForLocalUser();
 
         ServiceProvider serviceProvider = new ServiceProvider();
         serviceProvider.setApplicationName(SERVICE_PROVIDER_NAME);
         mockApplicationManagementService();
 
-        defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSet, requestMsgCtx);
+        JWTClaimsSet jwtClaimsSet = defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSetBuilder,
+                requestMsgCtx);
         assertNotNull(jwtClaimsSet);
-        assertTrue(jwtClaimsSet.getCustomClaims().isEmpty());
+        assertTrue(jwtClaimsSet.getClaims().isEmpty());
     }
 
     /**
@@ -262,15 +263,16 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
      */
     @Test
     public void testHandleCustomClaimsWithOAuthTokenReqMsgCtxtNoSpRequestedClaims() throws Exception {
-        JWTClaimsSet jwtClaimsSet = new JWTClaimsSet();
+        JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
         OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForLocalUser();
 
         ServiceProvider serviceProvider = getSpWithDefaultRequestedClaimsMappings();
         mockApplicationManagementService(serviceProvider);
 
-        defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSet, requestMsgCtx);
+        JWTClaimsSet jwtClaimsSet = defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSetBuilder,
+                requestMsgCtx);
         assertNotNull(jwtClaimsSet);
-        assertTrue(jwtClaimsSet.getCustomClaims().isEmpty());
+        assertTrue(jwtClaimsSet.getClaims().isEmpty());
     }
 
     private ServiceProvider getSpWithDefaultRequestedClaimsMappings() {
@@ -293,21 +295,22 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
 
     @Test
     public void testHandleCustomClaimsWithOAuthTokenReqMsgCtxtNoRealmFound() throws Exception {
-        JWTClaimsSet jwtClaimsSet = new JWTClaimsSet();
+        JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
         OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForLocalUser();
 
         ServiceProvider serviceProvider = new ServiceProvider();
         serviceProvider.setApplicationName(SERVICE_PROVIDER_NAME);
         mockApplicationManagementService(serviceProvider);
 
-        defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSet, requestMsgCtx);
+        JWTClaimsSet jwtClaimsSet = defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSetBuilder,
+                requestMsgCtx);
         assertNotNull(jwtClaimsSet);
-        assertTrue(jwtClaimsSet.getCustomClaims().isEmpty());
+        assertTrue(jwtClaimsSet.getClaims().isEmpty());
     }
 
     @Test
     public void testHandleCustomClaimsWithOAuthTokenReqMsgCtxtNoUserClaims() throws Exception {
-        JWTClaimsSet jwtClaimsSet = new JWTClaimsSet();
+        JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
         OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForLocalUser();
 
         ServiceProvider serviceProvider = getSpWithDefaultRequestedClaimsMappings();
@@ -318,14 +321,15 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
 
         mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm);
 
-        defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSet, requestMsgCtx);
+        JWTClaimsSet jwtClaimsSet = defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSetBuilder,
+                requestMsgCtx);
         assertNotNull(jwtClaimsSet);
-        assertTrue(jwtClaimsSet.getCustomClaims().isEmpty());
+        assertTrue(jwtClaimsSet.getClaims().isEmpty());
     }
 
     @Test
     public void testHandleCustomClaimsWithOAuthTokenReqMsgCtxtUserNotFoundInUserStore() throws Exception {
-        JWTClaimsSet jwtClaimsSet = new JWTClaimsSet();
+        JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
         OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForLocalUser();
 
         ServiceProvider serviceProvider = getSpWithDefaultRequestedClaimsMappings();
@@ -334,14 +338,14 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
         UserRealm userRealm = getExceptionThrowingUserRealm(new UserStoreException(USER_NOT_FOUND));
         mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm);
 
-        defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSet, requestMsgCtx);
+        JWTClaimsSet jwtClaimsSet = defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSetBuilder, requestMsgCtx);
         assertNotNull(jwtClaimsSet);
-        assertTrue(jwtClaimsSet.getCustomClaims().isEmpty());
+        assertTrue(jwtClaimsSet.getClaims().isEmpty());
     }
 
     @Test
     public void testHandleCustomClaimsWithOAuthTokenReqMsgCtxtUserStoreException() throws Exception {
-        JWTClaimsSet jwtClaimsSet = new JWTClaimsSet();
+        JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
         OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForLocalUser();
 
         ServiceProvider serviceProvider = getSpWithDefaultRequestedClaimsMappings();
@@ -350,14 +354,15 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
         UserRealm userRealm = getExceptionThrowingUserRealm(new UserStoreException(""));
         mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm);
 
-        defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSet, requestMsgCtx);
+        JWTClaimsSet jwtClaimsSet = defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSetBuilder,
+                requestMsgCtx);
         assertNotNull(jwtClaimsSet);
-        assertTrue(jwtClaimsSet.getCustomClaims().isEmpty());
+        assertTrue(jwtClaimsSet.getClaims().isEmpty());
     }
 
     @Test
     public void testHandleCustomClaimsWithOAuthTokenReqMsgCtxtEmptyUserClaims() throws Exception {
-        JWTClaimsSet jwtClaimsSet = new JWTClaimsSet();
+        JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
         OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForLocalUser();
 
         ServiceProvider serviceProvider = getSpWithDefaultRequestedClaimsMappings();
@@ -366,16 +371,17 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
         UserRealm userRealm = getUserRealmWithUserClaims(Collections.emptyMap());
         mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm);
 
-        defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSet, requestMsgCtx);
+        JWTClaimsSet jwtClaimsSet = defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSetBuilder,
+                requestMsgCtx);
         assertNotNull(jwtClaimsSet);
-        assertTrue(jwtClaimsSet.getCustomClaims().isEmpty());
+        assertTrue(jwtClaimsSet.getClaims().isEmpty());
     }
 
     @Test
     public void testHandleCustomClaimsWithOAuthTokenReqMsgCtxtRegistryError() throws Exception {
         try {
             PrivilegedCarbonContext.startTenantFlow();
-            JWTClaimsSet jwtClaimsSet = new JWTClaimsSet();
+            JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
             OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForLocalUser();
 
             ServiceProvider serviceProvider = getSpWithDefaultRequestedClaimsMappings();
@@ -386,9 +392,10 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
 
             mockClaimHandler();
 
-            defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSet, requestMsgCtx);
+            JWTClaimsSet jwtClaimsSet = defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSetBuilder,
+                    requestMsgCtx);
             assertNotNull(jwtClaimsSet);
-            assertTrue(jwtClaimsSet.getCustomClaims().isEmpty());
+            assertTrue(jwtClaimsSet.getClaims().isEmpty());
         } finally {
             PrivilegedCarbonContext.endTenantFlow();
         }
@@ -398,7 +405,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
     public void testHandleCustomClaimsWithOAuthTokenReqMsgCtxtNoOIDCScopes() throws Exception {
         try {
             PrivilegedCarbonContext.startTenantFlow();
-            JWTClaimsSet jwtClaimsSet = new JWTClaimsSet();
+            JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
             OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForLocalUser();
 
             ServiceProvider serviceProvider = getSpWithDefaultRequestedClaimsMappings();
@@ -410,9 +417,10 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
             mockClaimHandler();
             mockOIDCScopeResource();
 
-            defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSet, requestMsgCtx);
+            JWTClaimsSet jwtClaimsSet = defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSetBuilder,
+                    requestMsgCtx);
             assertNotNull(jwtClaimsSet);
-            assertTrue(jwtClaimsSet.getCustomClaims().isEmpty());
+            assertTrue(jwtClaimsSet.getClaims().isEmpty());
         } finally {
             PrivilegedCarbonContext.endTenantFlow();
         }
@@ -422,7 +430,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
     public void testHandleCustomClaimsWithOAuthTokenReqMsgCtxtWithOIDCScopes() throws Exception {
         try {
             PrivilegedCarbonContext.startTenantFlow();
-            JWTClaimsSet jwtClaimsSet = new JWTClaimsSet();
+            JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
             OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForLocalUser();
 
             ServiceProvider serviceProvider = getSpWithDefaultRequestedClaimsMappings();
@@ -438,15 +446,16 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
             oidcProperties.setProperty(OIDC_SCOPE, StringUtils.join(oidcScopeClaims, ","));
             mockOIDCScopeResource(oidcProperties);
 
-            defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSet, requestMsgCtx);
+            JWTClaimsSet jwtClaimsSet = defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSetBuilder,
+                    requestMsgCtx);
             assertNotNull(jwtClaimsSet);
-            assertNull(jwtClaimsSet.getCustomClaim(EMAIL));
+            assertNull(jwtClaimsSet.getClaim(EMAIL));
 
-            assertNotNull(jwtClaimsSet.getCustomClaim(USERNAME));
-            assertEquals(jwtClaimsSet.getCustomClaim(USERNAME), USER_NAME);
+            assertNotNull(jwtClaimsSet.getClaim(USERNAME));
+            assertEquals(jwtClaimsSet.getClaim(USERNAME), USER_NAME);
 
-            assertNotNull(jwtClaimsSet.getCustomClaim(ROLE));
-            JSONArray jsonArray = (JSONArray) jwtClaimsSet.getCustomClaim(ROLE);
+            assertNotNull(jwtClaimsSet.getClaim(ROLE));
+            JSONArray jsonArray = (JSONArray) jwtClaimsSet.getClaim(ROLE);
             String[] expectedRoles = new String[]{ROLE1, ROLE2, ROLE3};
             for (String role : expectedRoles) {
                 assertTrue(jsonArray.contains(role));
@@ -460,7 +469,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
     public void testHandleCustomClaimsWithOAuthTokenReqMsgCtxtWithSpRoleMappings() throws Exception {
         try {
             PrivilegedCarbonContext.startTenantFlow();
-            JWTClaimsSet jwtClaimsSet = new JWTClaimsSet();
+            JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
             OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForLocalUser();
 
             ServiceProvider serviceProvider = getSpWithDefaultRequestedClaimsMappings();
@@ -482,15 +491,16 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
             oidcProperties.setProperty(OIDC_SCOPE, StringUtils.join(oidcScopeClaims, ","));
             mockOIDCScopeResource(oidcProperties);
 
-            defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSet, requestMsgCtx);
+            JWTClaimsSet jwtClaimsSet = defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSetBuilder,
+                    requestMsgCtx);
 
             assertNotNull(jwtClaimsSet);
-            assertNull(jwtClaimsSet.getCustomClaim(EMAIL));
-            assertNotNull(jwtClaimsSet.getCustomClaim(USERNAME));
-            assertEquals(jwtClaimsSet.getCustomClaim(USERNAME), USER_NAME);
+            assertNull(jwtClaimsSet.getClaim(EMAIL));
+            assertNotNull(jwtClaimsSet.getClaim(USERNAME));
+            assertEquals(jwtClaimsSet.getClaim(USERNAME), USER_NAME);
 
-            assertNotNull(jwtClaimsSet.getCustomClaim(ROLE));
-            JSONArray jsonArray = (JSONArray) jwtClaimsSet.getCustomClaim(ROLE);
+            assertNotNull(jwtClaimsSet.getClaim(ROLE));
+            JSONArray jsonArray = (JSONArray) jwtClaimsSet.getClaim(ROLE);
             String[] expectedRoles = new String[]{ROLE1, SP_ROLE_2, ROLE3};
             for (String role : expectedRoles) {
                 assertTrue(jsonArray.contains(role));
@@ -514,7 +524,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
             throws Exception {
         try {
             PrivilegedCarbonContext.startTenantFlow();
-            JWTClaimsSet jwtClaimsSet = new JWTClaimsSet();
+            JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
             OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForLocalUser();
             requestMsgCtx.setScope(new String[]{OIDC_SCOPE});
 
@@ -546,18 +556,19 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
             oidcProperties.setProperty(OIDC_SCOPE, StringUtils.join(oidcScopeClaims, ","));
             mockOIDCScopeResource(oidcProperties);
 
-            defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSet, requestMsgCtx);
+            JWTClaimsSet jwtClaimsSet = defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSetBuilder,
+                    requestMsgCtx);
 
             assertNotNull(jwtClaimsSet);
-            assertNotNull(jwtClaimsSet.getCustomClaim(UPDATED_AT));
-            assertTrue(jwtClaimsSet.getCustomClaim(UPDATED_AT) instanceof Integer ||
-                    jwtClaimsSet.getCustomClaim(UPDATED_AT) instanceof Long);
+            assertNotNull(jwtClaimsSet.getClaim(UPDATED_AT));
+            assertTrue(jwtClaimsSet.getClaim(UPDATED_AT) instanceof Integer ||
+                    jwtClaimsSet.getClaim(UPDATED_AT) instanceof Long);
 
-            assertNotNull(jwtClaimsSet.getCustomClaim(PHONE_NUMBER_VERIFIED));
-            assertTrue(jwtClaimsSet.getCustomClaim(PHONE_NUMBER_VERIFIED) instanceof Boolean);
+            assertNotNull(jwtClaimsSet.getClaim(PHONE_NUMBER_VERIFIED));
+            assertTrue(jwtClaimsSet.getClaim(PHONE_NUMBER_VERIFIED) instanceof Boolean);
 
-            assertNotNull(jwtClaimsSet.getCustomClaim(EMAIL_VERIFIED));
-            assertTrue(jwtClaimsSet.getCustomClaim(EMAIL_VERIFIED) instanceof Boolean);
+            assertNotNull(jwtClaimsSet.getClaim(EMAIL_VERIFIED));
+            assertTrue(jwtClaimsSet.getClaim(EMAIL_VERIFIED) instanceof Boolean);
         } finally {
             PrivilegedCarbonContext.endTenantFlow();
         }
@@ -584,7 +595,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
     public void testHandleCustomClaimsWithOAuthTokenReqMsgCtxtAddressClaim(Properties oidcProperties) throws Exception {
         try {
             PrivilegedCarbonContext.startTenantFlow();
-            JWTClaimsSet jwtClaimsSet = new JWTClaimsSet();
+            JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
             OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForLocalUser();
 
             ClaimMapping claimMappings[] = new ClaimMapping[]{
@@ -607,10 +618,11 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
             mockOIDCScopeResource(oidcProperties);
             mockClaimHandler();
 
-            defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSet, requestMsgCtx);
+            JWTClaimsSet jwtClaimsSet = defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSetBuilder,
+                    requestMsgCtx);
 
             assertNotNull(jwtClaimsSet);
-            assertNotNull(jwtClaimsSet.getCustomClaim(ADDRESS));
+            assertNotNull(jwtClaimsSet.getClaim(ADDRESS));
 
         } finally {
             PrivilegedCarbonContext.endTenantFlow();
@@ -693,7 +705,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
         try {
             PrivilegedCarbonContext.startTenantFlow();
 
-            JWTClaimsSet jwtClaimsSet = new JWTClaimsSet();
+            JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
             OAuthAuthzReqMessageContext oAuthAuthzReqMessageContext = mock(OAuthAuthzReqMessageContext.class);
             when(oAuthAuthzReqMessageContext.getApprovedScope()).thenReturn(APPROVED_SCOPES);
             when(oAuthAuthzReqMessageContext.getProperty(OAuthConstants.ACCESS_TOKEN))
@@ -710,8 +722,9 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
 
             mockOIDCScopeResource();
 
-            defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSet, oAuthAuthzReqMessageContext);
-            assertEquals(jwtClaimsSet.getAllClaims().size(), 8, "Claims are not successfully set.");
+            JWTClaimsSet jwtClaimsSet = defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSetBuilder,
+                    oAuthAuthzReqMessageContext);
+            assertEquals(jwtClaimsSet.getClaims().size(), 0, "Claims are not successfully set.");
         } finally {
             PrivilegedCarbonContext.endTenantFlow();
         }
@@ -751,7 +764,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
 
     @Test
     public void testCustomClaimForOAuthTokenReqMessageContextWithNullAssertion() throws Exception {
-        JWTClaimsSet jwtClaimsSet = new JWTClaimsSet();
+        JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
         OAuthTokenReqMessageContext requestMsgCtx = mock(OAuthTokenReqMessageContext.class);
 
         when(requestMsgCtx.getScope()).thenReturn(APPROVED_SCOPES);
@@ -772,8 +785,9 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
         mockApplicationManagementService();
         getMockOIDCScopeResource();
 
-        defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSet, requestMsgCtx);
-        assertEquals(jwtClaimsSet.getAllClaims().size(), 8, "Claims are not successfully set.");
+        JWTClaimsSet jwtClaimsSet = defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSetBuilder,
+                requestMsgCtx);
+        assertEquals(jwtClaimsSet.getClaims().size(), 0, "Claims are not successfully set.");
     }
 
     private void mockApplicationManagementService() throws Exception {
@@ -791,7 +805,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
 
     @Test
     public void testHandleClaimsForOAuthAuthzReqMessageContextNullAccessToken() throws Exception {
-        JWTClaimsSet jwtClaimsSet = new JWTClaimsSet();
+        JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
 
         AuthenticatedUser authenticatedUser = getDefaultAuthenticatedUserFederatedUser();
         OAuth2AuthorizeReqDTO authorizeReqDTO = new OAuth2AuthorizeReqDTO();
@@ -815,8 +829,9 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
 
         mockApplicationManagementService(serviceProvider);
 
-        defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSet, authzReqMessageContext);
-        assertEquals(jwtClaimsSet.getAllClaims().size(), 8, "Claims are not successfully set.");
+        JWTClaimsSet jwtClaimsSet = defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSetBuilder,
+                authzReqMessageContext);
+        assertEquals(jwtClaimsSet.getClaims().size(), 0, "Claims are not successfully set.");
     }
 
     private AuthenticatedUser getDefaultAuthenticatedLocalUser() {

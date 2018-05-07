@@ -26,8 +26,8 @@ import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
  */
 public interface CustomClaimsCallbackHandler {
 
-    public void handleCustomClaims(JWTClaimsSet builder, OAuthTokenReqMessageContext request);
+    public JWTClaimsSet handleCustomClaims(JWTClaimsSet.Builder builder, OAuthTokenReqMessageContext request);
 
-    public void handleCustomClaims(JWTClaimsSet builder, OAuthAuthzReqMessageContext request);
+    public JWTClaimsSet handleCustomClaims(JWTClaimsSet.Builder builder, OAuthAuthzReqMessageContext request);
 
 }
