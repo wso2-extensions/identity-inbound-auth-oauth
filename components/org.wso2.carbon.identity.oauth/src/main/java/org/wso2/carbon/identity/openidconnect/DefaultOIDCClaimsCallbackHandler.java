@@ -187,10 +187,12 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         // TODO: Get claims filtered by essential claims and add to returning claims
         // https://github.com/wso2/product-is/issues/2680
 
-        // Handle essential claims of the request object
-        Map<String, Object> claimsFromRequestObject =
-                filterClaimsFromRequestObject(userClaimsInOIDCDialect, accessToken);
-        filteredUserClaimsByOIDCScopes.putAll(claimsFromRequestObject);
+        if (accessToken != null) {
+            // Handle essential claims of the request object
+            Map<String, Object> claimsFromRequestObject =
+                    filterClaimsFromRequestObject(userClaimsInOIDCDialect, accessToken);
+            filteredUserClaimsByOIDCScopes.putAll(claimsFromRequestObject);
+        }
 
         // Restrict the claims based on user consent given
         return getUserConsentedClaims(filteredUserClaimsByOIDCScopes, authenticatedUser, grantType, clientId,

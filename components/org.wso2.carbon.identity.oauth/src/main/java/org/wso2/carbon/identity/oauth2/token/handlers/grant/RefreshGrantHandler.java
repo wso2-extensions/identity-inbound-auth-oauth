@@ -395,7 +395,11 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
     private boolean isRefreshTokenExpired(RefreshTokenValidationDataDO validationBean) {
         long issuedTime = validationBean.getIssuedTime().getTime();
         long refreshValidity = validationBean.getValidityPeriodInMillis();
-        return OAuth2Util.getTimeToExpire(issuedTime, refreshValidity) < ALLOWED_MINIMUM_VALIDITY_PERIOD;
+        if (refreshValidity < 0) {
+            return false;
+        } else {
+            return OAuth2Util.getTimeToExpire(issuedTime, refreshValidity) < ALLOWED_MINIMUM_VALIDITY_PERIOD;
+        }
     }
 
     private void setTokenData(AccessTokenDO accessTokenDO, OAuthTokenReqMessageContext tokReqMsgCtx,
