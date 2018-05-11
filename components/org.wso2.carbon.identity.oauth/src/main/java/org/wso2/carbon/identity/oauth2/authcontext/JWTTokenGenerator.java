@@ -214,14 +214,14 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
         long expireIn = currentTime + 1000 * 60 * getTTL();
 
         // Prepare JWT with claims set
-        JWTClaimsSet claimsSet = new JWTClaimsSet();
-        claimsSet.setIssuer(API_GATEWAY_ID);
-        claimsSet.setSubject(authzUser);
-        claimsSet.setIssueTime(new Date(issuedTime));
-        claimsSet.setExpirationTime(new Date(expireIn));
-        claimsSet.setClaim(API_GATEWAY_ID+"/subscriber",subscriber);
-        claimsSet.setClaim(API_GATEWAY_ID+"/applicationname",applicationName);
-        claimsSet.setClaim(API_GATEWAY_ID+"/enduser",authzUser);
+        JWTClaimsSet.Builder claimsSetBuilder = new JWTClaimsSet.Builder();
+        claimsSetBuilder.issuer(API_GATEWAY_ID);
+        claimsSetBuilder.subject(authzUser);
+        claimsSetBuilder.issueTime(new Date(issuedTime));
+        claimsSetBuilder.expirationTime(new Date(expireIn));
+        claimsSetBuilder.claim(API_GATEWAY_ID+"/subscriber",subscriber);
+        claimsSetBuilder.claim(API_GATEWAY_ID+"/applicationname",applicationName);
+        claimsSetBuilder.claim(API_GATEWAY_ID+"/enduser",authzUser);
 
         if(claimsRetriever != null){
 
@@ -279,14 +279,15 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
                                 claimList.add(attValue);
                             }
                         }
-                        claimsSet.setClaim(claimURI, claimList.toArray(new String[claimList.size()]));
+                        claimsSetBuilder.claim(claimURI, claimList.toArray(new String[claimList.size()]));
                     } else {
-                        claimsSet.setClaim(claimURI, claimVal);
+                        claimsSetBuilder.claim(claimURI, claimVal);
                     }
                 }
             }
         }
 
+        JWTClaimsSet claimsSet = claimsSetBuilder.build();
         JWT jwt = null;
         if(!JWSAlgorithm.NONE.equals(signatureAlgorithm)){
             jwt = OAuth2Util.signJWT(claimsSet, signatureAlgorithm, tenantDomain);

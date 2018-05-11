@@ -19,10 +19,10 @@
 package org.wso2.carbon.identity.oauth2.validators;
 
 import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSVerifier;
-import com.nimbusds.jose.ReadOnlyJWSHeader;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
-import com.nimbusds.jwt.ReadOnlyJWTClaimsSet;
+import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -59,7 +59,7 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
             throws IdentityOAuth2Exception {
         try {
             SignedJWT signedJWT = getSignedJWT(validationReqDTO);
-            ReadOnlyJWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
+            JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
             if (claimsSet == null) {
                 throw new IdentityOAuth2Exception("Claim values are empty in the given Token.");
             }
@@ -88,7 +88,7 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
      * @return the resolved X509 Certificate, to be used to validate the JWT signature.
      * @throws IdentityOAuth2Exception something goes wrong.
      */
-    protected X509Certificate resolveSignerCertificate(ReadOnlyJWSHeader header,
+    protected X509Certificate resolveSignerCertificate(JWSHeader header,
                                                        IdentityProvider idp) throws IdentityOAuth2Exception {
         X509Certificate x509Certificate;
         String tenantDomain = getTenantDomain();
@@ -106,7 +106,7 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
         return SignedJWT.parse(validationReqDTO.getRequestDTO().getAccessToken().getIdentifier());
     }
 
-    private String resolveSubject(ReadOnlyJWTClaimsSet claimsSet) {
+    private String resolveSubject(JWTClaimsSet claimsSet) {
         return claimsSet.getSubject();
     }
 
@@ -140,7 +140,7 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
             throws JOSEException, IdentityOAuth2Exception {
 
         JWSVerifier verifier = null;
-        ReadOnlyJWSHeader header = signedJWT.getHeader();
+        JWSHeader header = signedJWT.getHeader();
         X509Certificate x509Certificate = resolveSignerCertificate(header, idp);
         if (x509Certificate == null) {
             throw new IdentityOAuth2Exception("Unable to locate certificate for Identity Provider: " + idp
@@ -222,7 +222,7 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
         return true;
     }
 
-    private boolean validateRequiredFields(ReadOnlyJWTClaimsSet claimsSet) throws IdentityOAuth2Exception {
+    private boolean validateRequiredFields(JWTClaimsSet claimsSet) throws IdentityOAuth2Exception {
 
         String subject = resolveSubject(claimsSet);
         List<String> audience = claimsSet.getAudience();

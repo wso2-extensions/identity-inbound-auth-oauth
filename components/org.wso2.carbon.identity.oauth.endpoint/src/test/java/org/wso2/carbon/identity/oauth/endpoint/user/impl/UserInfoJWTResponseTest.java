@@ -19,8 +19,8 @@
 package org.wso2.carbon.identity.oauth.endpoint.user.impl;
 
 import com.nimbusds.jwt.JWT;
+import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.JWTParser;
-import com.nimbusds.jwt.ReadOnlyJWTClaimsSet;
 import org.mockito.Mockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.annotations.BeforeClass;
@@ -129,7 +129,7 @@ public class UserInfoJWTResponseTest extends UserInfoResponseBaseTest {
         assertNotNull(jwt);
         assertNotNull(jwt.getJWTClaimsSet());
 
-        Map<String, Object> claimsInResponse = jwt.getJWTClaimsSet().getAllClaims();
+        Map<String, Object> claimsInResponse = jwt.getJWTClaimsSet().getClaims();
         assertSubjectClaimPresent(claimsInResponse);
         assertNotNull(claimsInResponse.get(claimUri));
         assertEquals(claimsInResponse.get(claimUri), Boolean.parseBoolean(claimValue));
@@ -144,7 +144,7 @@ public class UserInfoJWTResponseTest extends UserInfoResponseBaseTest {
         assertNotNull(jwt);
         assertNotNull(jwt.getJWTClaimsSet());
 
-        Map<String, Object> claimsInResponse = jwt.getJWTClaimsSet().getAllClaims();
+        Map<String, Object> claimsInResponse = jwt.getJWTClaimsSet().getClaims();
         assertSubjectClaimPresent(claimsInResponse);
         assertNotNull(claimsInResponse.get(claimUri));
         assertTrue(claimsInResponse.get(claimUri) instanceof Integer || claimsInResponse.get(claimUri) instanceof Long);
@@ -168,12 +168,12 @@ public class UserInfoJWTResponseTest extends UserInfoResponseBaseTest {
                             getTokenResponseDTO(AUTHORIZED_USER_FULL_QUALIFIED, requestedScopes));
 
             JWT jwt = JWTParser.parse(responseString);
-            ReadOnlyJWTClaimsSet jwtClaimsSet = jwt.getJWTClaimsSet();
+            JWTClaimsSet jwtClaimsSet = jwt.getJWTClaimsSet();
             assertNotNull(jwtClaimsSet);
             assertNotNull(jwtClaimsSet.getSubject());
 
             for (Map.Entry<String, Object> expectedClaimEntry : expectedClaims.entrySet()) {
-                assertTrue(jwtClaimsSet.getAllClaims().containsKey(expectedClaimEntry.getKey()));
+                assertTrue(jwtClaimsSet.getClaims().containsKey(expectedClaimEntry.getKey()));
                 assertNotNull(jwtClaimsSet.getClaim(expectedClaimEntry.getKey()));
                 assertEquals(
                         expectedClaimEntry.getValue(),

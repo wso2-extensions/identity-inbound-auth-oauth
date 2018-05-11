@@ -178,32 +178,31 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
 
         List<String> audience = getOIDCAudience(clientId, spTenantDomain);
 
-        JWTClaimsSet jwtClaimsSet = new JWTClaimsSet();
-        jwtClaimsSet.setIssuer(idTokenIssuer);
-        jwtClaimsSet.setAudience(audience);
-        jwtClaimsSet.setClaim(AZP, clientId);
-        jwtClaimsSet.setExpirationTime(getIdTokenExpiryInMillis(idTokenValidityInMillis, currentTimeInMillis));
-        jwtClaimsSet.setIssueTime(new Date(currentTimeInMillis));
+        JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
+        jwtClaimsSetBuilder.issuer(idTokenIssuer);
+        jwtClaimsSetBuilder.audience(audience);
+        jwtClaimsSetBuilder.claim(AZP, clientId);
+        jwtClaimsSetBuilder.expirationTime(getIdTokenExpiryInMillis(idTokenValidityInMillis, currentTimeInMillis));
+        jwtClaimsSetBuilder.issueTime(new Date(currentTimeInMillis));
         if (authTime != 0) {
-            jwtClaimsSet.setClaim(AUTH_TIME, authTime / 1000);
+            jwtClaimsSetBuilder.claim(AUTH_TIME, authTime / 1000);
         }
         if (nonceValue != null) {
-            jwtClaimsSet.setClaim(NONCE, nonceValue);
+            jwtClaimsSetBuilder.claim(NONCE, nonceValue);
         }
         if (StringUtils.isNotEmpty(acrValue)) {
-            jwtClaimsSet.setClaim(OAuthConstants.ACR, acrValue);
+            jwtClaimsSetBuilder.claim(OAuthConstants.ACR, acrValue);
         }
         if (amrValues != null) {
-            jwtClaimsSet.setClaim(OAuthConstants.AMR, translateAmrToResponse(amrValues));
+            jwtClaimsSetBuilder.claim(OAuthConstants.AMR, translateAmrToResponse(amrValues));
         }
 
-        setAdditionalClaims(tokenReqMsgCtxt, tokenRespDTO, jwtClaimsSet);
+        setAdditionalClaims(tokenReqMsgCtxt, tokenRespDTO, jwtClaimsSetBuilder.build());
 
         tokenReqMsgCtxt.addProperty(OAuthConstants.ACCESS_TOKEN, accessToken);
         tokenReqMsgCtxt.addProperty(MultitenantConstants.TENANT_DOMAIN, getSpTenantDomain(tokenReqMsgCtxt));
-
-        handleOIDCCustomClaims(tokenReqMsgCtxt, jwtClaimsSet);
-        jwtClaimsSet.setSubject(subjectClaim);
+        jwtClaimsSetBuilder.subject(subjectClaim);
+        JWTClaimsSet jwtClaimsSet = handleOIDCCustomClaims(tokenReqMsgCtxt, jwtClaimsSetBuilder);
 
         if (isInvalidToken(jwtClaimsSet)) {
             throw new IDTokenValidationFailureException("Error while validating ID Token token for required claims");
@@ -250,38 +249,37 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
             log.debug(buildDebugMessage(issuer, subject, nonceValue, idTokenLifeTimeInMillis, currentTimeInMillis));
         }
 
-        JWTClaimsSet jwtClaimsSet = new JWTClaimsSet();
-        jwtClaimsSet.setIssuer(issuer);
+        JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
+        jwtClaimsSetBuilder.issuer(issuer);
 
         // Set the audience
         List<String> audience = getOIDCAudience(clientId, spTenantDomain);
-        jwtClaimsSet.setAudience(audience);
+        jwtClaimsSetBuilder.audience(audience);
 
-        jwtClaimsSet.setClaim(AZP, clientId);
-        jwtClaimsSet.setExpirationTime(getIdTokenExpiryInMillis(idTokenLifeTimeInMillis, currentTimeInMillis));
-        jwtClaimsSet.setIssueTime(new Date(currentTimeInMillis));
+        jwtClaimsSetBuilder.claim(AZP, clientId);
+        jwtClaimsSetBuilder.expirationTime(getIdTokenExpiryInMillis(idTokenLifeTimeInMillis, currentTimeInMillis));
+        jwtClaimsSetBuilder.issueTime(new Date(currentTimeInMillis));
 
         long authTime = getAuthTime(authzReqMessageContext);
         if (authTime != 0) {
-            jwtClaimsSet.setClaim(AUTH_TIME, authTime / 1000);
+            jwtClaimsSetBuilder.claim(AUTH_TIME, authTime / 1000);
         }
         if (nonceValue != null) {
-            jwtClaimsSet.setClaim(OAuthConstants.OIDCClaims.NONCE, nonceValue);
+            jwtClaimsSetBuilder.claim(OAuthConstants.OIDCClaims.NONCE, nonceValue);
         }
         if (StringUtils.isNotEmpty(acrValue)) {
-            jwtClaimsSet.setClaim("acr", acrValue);
+            jwtClaimsSetBuilder.claim("acr", acrValue);
         }
         if (amrValues != null) {
-            jwtClaimsSet.setClaim("amr", translateAmrToResponse(amrValues));
+            jwtClaimsSetBuilder.claim("amr", translateAmrToResponse(amrValues));
         }
 
-        setAdditionalClaims(authzReqMessageContext, tokenRespDTO, jwtClaimsSet);
+        setAdditionalClaims(authzReqMessageContext, tokenRespDTO, jwtClaimsSetBuilder.build());
 
         authzReqMessageContext.addProperty(OAuthConstants.ACCESS_TOKEN, accessToken);
-        authzReqMessageContext
-                .addProperty(MultitenantConstants.TENANT_DOMAIN, getSpTenantDomain(authzReqMessageContext));
-        handleCustomOIDCClaims(authzReqMessageContext, jwtClaimsSet);
-        jwtClaimsSet.setSubject(subject);
+        authzReqMessageContext.addProperty(MultitenantConstants.TENANT_DOMAIN, getSpTenantDomain(authzReqMessageContext));
+        jwtClaimsSetBuilder.subject(subject);
+        JWTClaimsSet jwtClaimsSet = handleCustomOIDCClaims(authzReqMessageContext, jwtClaimsSetBuilder);
 
         if (isUnsignedIDToken()) {
             return new PlainJWT(jwtClaimsSet).serialize();
@@ -296,7 +294,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
             throw new IdentityOAuth2Exception(error, e);
         }
 
-        return getIDToken(clientId, spTenantDomain, jwtClaimsSet, oAuthAppDO,
+        return getIDToken(clientId, spTenantDomain, jwtClaimsSetBuilder.build(), oAuthAppDO,
                 getSigningTenantDomain(authzReqMessageContext));
     }
 
@@ -430,10 +428,11 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         return tokReqMsgCtx.getOauth2AccessTokenReqDTO().getTenantDomain();
     }
 
-    private void handleOIDCCustomClaims(OAuthTokenReqMessageContext tokReqMsgCtx, JWTClaimsSet jwtClaimsSet) {
+    private JWTClaimsSet handleOIDCCustomClaims(OAuthTokenReqMessageContext tokReqMsgCtx, JWTClaimsSet.Builder
+            jwtClaimsSetBuilder) {
         CustomClaimsCallbackHandler claimsCallBackHandler =
                 OAuthServerConfiguration.getInstance().getOpenIDConnectCustomClaimsCallbackHandler();
-        claimsCallBackHandler.handleCustomClaims(jwtClaimsSet, tokReqMsgCtx);
+        return claimsCallBackHandler.handleCustomClaims(jwtClaimsSetBuilder, tokReqMsgCtx);
     }
 
     private String getSubjectClaimForLocalUser(ServiceProvider serviceProvider,
@@ -620,10 +619,10 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         return new Date(currentTimeInMillis + lifetimeInMillis);
     }
 
-    private void handleCustomOIDCClaims(OAuthAuthzReqMessageContext request, JWTClaimsSet jwtClaimsSet) {
+    private JWTClaimsSet handleCustomOIDCClaims(OAuthAuthzReqMessageContext request, JWTClaimsSet.Builder jwtClaimsSetBuilder) {
         CustomClaimsCallbackHandler claimsCallBackHandler =
                 OAuthServerConfiguration.getInstance().getOpenIDConnectCustomClaimsCallbackHandler();
-        claimsCallBackHandler.handleCustomClaims(jwtClaimsSet, request);
+        return claimsCallBackHandler.handleCustomClaims(jwtClaimsSetBuilder, request);
     }
 
     private String getSpTenantDomain(OAuthAuthzReqMessageContext request) {
@@ -934,7 +933,10 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
      * @param additionalIdTokenClaims a map with claim names and corresponding claim values
      */
     private void setAdditionalClaimSet(JWTClaimsSet jwtClaimsSet, Map<String, Object> additionalIdTokenClaims) {
-        jwtClaimsSet.setAllClaims(additionalIdTokenClaims);
+        JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder(jwtClaimsSet);
+        for (Map.Entry<String, Object> entry : additionalIdTokenClaims.entrySet()) {
+            jwtClaimsSetBuilder.claim(entry.getKey(), entry.getValue());
+        }
         if (log.isDebugEnabled()) {
             for (Map.Entry<String, Object> entry : additionalIdTokenClaims.entrySet()) {
                 log.debug("Additional claim added to JWTClaimSet, key: " + entry.getKey() + ", value: " +

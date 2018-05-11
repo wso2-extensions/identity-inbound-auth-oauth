@@ -1791,11 +1791,11 @@ public class OAuth2Util {
             Certificate publicCert = getX509CertOfOAuthApp(clientId, spTenantDomain);
             Key publicKey = publicCert.getPublicKey();
 
-            JWEHeader header = new JWEHeader(encryptionAlgorithm, encryptionMethod);
+            JWEHeader.Builder headerBuilder = new JWEHeader.Builder(encryptionAlgorithm, encryptionMethod);
             String thumbPrint = getThumbPrint(publicCert);
-            header.setKeyID(thumbPrint);
-            header.setX509CertThumbprint(new Base64URL(thumbPrint));
-
+            headerBuilder.keyID(thumbPrint);
+            headerBuilder.x509CertThumbprint(new Base64URL(thumbPrint));
+            JWEHeader header = headerBuilder.build();
             EncryptedJWT encryptedJWT = new EncryptedJWT(header, jwtClaimsSet);
 
             if (log.isDebugEnabled()) {
@@ -1868,10 +1868,10 @@ public class OAuth2Util {
             int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
             Key privateKey = getPrivateKey(tenantDomain, tenantId);
             JWSSigner signer = new RSASSASigner((RSAPrivateKey) privateKey);
-            JWSHeader header = new JWSHeader((JWSAlgorithm) signatureAlgorithm);
-            header.setKeyID(getThumbPrint(tenantDomain, tenantId));
-            header.setX509CertThumbprint(new Base64URL(getThumbPrint(tenantDomain, tenantId)));
-            SignedJWT signedJWT = new SignedJWT(header, jwtClaimsSet);
+            JWSHeader.Builder headerBuilder = new JWSHeader.Builder((JWSAlgorithm) signatureAlgorithm);
+            headerBuilder.keyID(getThumbPrint(tenantDomain, tenantId));
+            headerBuilder.x509CertThumbprint(new Base64URL(getThumbPrint(tenantDomain, tenantId)));
+            SignedJWT signedJWT = new SignedJWT(headerBuilder.build(), jwtClaimsSet);
             signedJWT.sign(signer);
             return signedJWT;
         } catch (JOSEException e) {
