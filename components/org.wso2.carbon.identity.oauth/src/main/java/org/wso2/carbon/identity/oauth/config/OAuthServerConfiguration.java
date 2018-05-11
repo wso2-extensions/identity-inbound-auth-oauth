@@ -191,6 +191,8 @@ public class OAuthServerConfiguration {
 
     // Property added to preserve the backward compatibility to send the original claim uris comes in the assertion.
     private boolean convertOriginalClaimsFromAssertionsToOIDCDialect = false;
+    // This property will decide whether to send only mapped roles received from the federated IdP
+    private boolean returnOnlyMappedLocalRoles = false;
 
     private OAuth2ScopeValidator oAuth2ScopeValidator;
     private Set<OAuth2ScopeValidator> oAuth2ScopeValidators = new HashSet<>();
@@ -1132,6 +1134,10 @@ public class OAuthServerConfiguration {
 
     public boolean isConvertOriginalClaimsFromAssertionsToOIDCDialect() {
         return convertOriginalClaimsFromAssertionsToOIDCDialect;
+    }
+
+    public boolean isReturnOnlyMappedLocalRoles() {
+        return returnOnlyMappedLocalRoles;
     }
 
     public boolean isMapFederatedUsersToLocal() {
@@ -2186,6 +2192,11 @@ public class OAuthServerConfiguration {
                                 .OPENID_CONNECT_CONVERT_ORIGINAL_CLAIMS_FROM_ASSERTIONS_TO_OIDCDIALECT)).getText()
                         .trim());
             }
+
+            if (IdentityUtil.getProperty(ConfigElements.SEND_ONLY_LOCALLY_MAPPED_ROLES_OF_IDP) != null) {
+                returnOnlyMappedLocalRoles = Boolean
+                        .parseBoolean(IdentityUtil.getProperty(ConfigElements.SEND_ONLY_LOCALLY_MAPPED_ROLES_OF_IDP));
+            }
         }
     }
 
@@ -2340,6 +2351,8 @@ public class OAuthServerConfiguration {
         public static final String OPENID_CONNECT_IDTOKEN_CUSTOM_CLAIM_CALLBACK_HANDLER = "IDTokenCustomClaimsCallBackHandler";
         public static final String OPENID_CONNECT_CONVERT_ORIGINAL_CLAIMS_FROM_ASSERTIONS_TO_OIDCDIALECT =
                 "ConvertOriginalClaimsFromAssertionsToOIDCDialect";
+        public static final String SEND_ONLY_LOCALLY_MAPPED_ROLES_OF_IDP = "FederatedRoleManagement"
+                + ".ReturnOnlyMappedLocalRoles";
         public static final String SUPPORTED_CLAIMS = "OpenIDConnectClaims";
         public static final String REQUEST_OBJECT = "RequestObject";
         public static final String REQUEST_OBJECT_VALIDATOR = "RequestObjectValidator";
