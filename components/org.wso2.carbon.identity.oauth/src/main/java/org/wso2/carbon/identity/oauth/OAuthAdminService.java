@@ -178,6 +178,7 @@ public class OAuthAdminService extends AbstractAdmin {
                 dto.setUserAccessTokenExpiryTime(app.getUserAccessTokenExpiryTime());
                 dto.setApplicationAccessTokenExpiryTime(app.getApplicationAccessTokenExpiryTime());
                 dto.setRefreshTokenExpiryTime(app.getRefreshTokenExpiryTime());
+                dto.setIdTokenExpiryTime(app.getIdTokenExpiryTime());
                 dto.setAudiences(app.getAudiences());
                 dto.setRequestObjectSignatureValidationEnabled(app.isRequestObjectSignatureValidationEnabled());
                 dto.setIdTokenEncryptionEnabled(app.isIdTokenEncryptionEnabled());
@@ -221,6 +222,7 @@ public class OAuthAdminService extends AbstractAdmin {
                 dto.setUserAccessTokenExpiryTime(app.getUserAccessTokenExpiryTime());
                 dto.setApplicationAccessTokenExpiryTime(app.getApplicationAccessTokenExpiryTime());
                 dto.setRefreshTokenExpiryTime(app.getRefreshTokenExpiryTime());
+                dto.setIdTokenExpiryTime(app.getIdTokenExpiryTime());
                 dto.setAudiences(app.getAudiences());
                 dto.setRequestObjectSignatureValidationEnabled(app.isRequestObjectSignatureValidationEnabled());
                 dto.setIdTokenEncryptionEnabled(app.isIdTokenEncryptionEnabled());
@@ -312,6 +314,7 @@ public class OAuthAdminService extends AbstractAdmin {
                     app.setUserAccessTokenExpiryTime(application.getUserAccessTokenExpiryTime());
                     app.setApplicationAccessTokenExpiryTime(application.getApplicationAccessTokenExpiryTime());
                     app.setRefreshTokenExpiryTime(application.getRefreshTokenExpiryTime());
+                    app.setIdTokenExpiryTime(application.getIdTokenExpiryTime());
 
                     // Set OIDC Config Properties.
                     app.setRequestObjectSignatureValidationEnabled(application
@@ -403,6 +406,7 @@ public class OAuthAdminService extends AbstractAdmin {
         oauthappdo.setUserAccessTokenExpiryTime(consumerAppDTO.getUserAccessTokenExpiryTime());
         oauthappdo.setApplicationAccessTokenExpiryTime(consumerAppDTO.getApplicationAccessTokenExpiryTime());
         oauthappdo.setRefreshTokenExpiryTime(consumerAppDTO.getRefreshTokenExpiryTime());
+        oauthappdo.setIdTokenExpiryTime(consumerAppDTO.getIdTokenExpiryTime());
         if (OAuthConstants.OAuthVersions.VERSION_2.equals(consumerAppDTO.getOAuthVersion())) {
             List<String> allowedGrantsTypes = new ArrayList<>(Arrays.asList(getAllowedGrantTypes()));
             String[] requestGrants = consumerAppDTO.getGrantTypes().split("\\s");
@@ -886,6 +890,8 @@ public class OAuthAdminService extends AbstractAdmin {
                 .getInstance().getApplicationAccessTokenValidityPeriodInSeconds());
         tokenExpiryTime.setRefreshTokenExpiryTime(OAuthServerConfiguration
                 .getInstance().getRefreshTokenValidityPeriodInSeconds());
+        tokenExpiryTime.setIdTokenExpiryTime(OAuthServerConfiguration
+                .getInstance().getOpenIDConnectIDTokenExpiryTimeInSeconds());
         return tokenExpiryTime;
     }
 

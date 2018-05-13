@@ -54,6 +54,7 @@
     String userAccessTokenExpiryTime = request.getParameter("userAccessTokenExpiryTime");
     String applicationAccessTokenExpiryTime = request.getParameter("applicationAccessTokenExpiryTime");
     String refreshTokenExpiryTime = request.getParameter("refreshTokenExpiryTime");
+    String idTokenExpiryTime = request.getParameter("idTokenExpiryTime");
     String backchannelLogoutUrl = request.getParameter("backChannelLogout");
 
 	boolean pkceMandatory = false;
@@ -98,6 +99,7 @@
             app.setUserAccessTokenExpiryTime(Long.parseLong(userAccessTokenExpiryTime));
             app.setApplicationAccessTokenExpiryTime(Long.parseLong(applicationAccessTokenExpiryTime));
             app.setRefreshTokenExpiryTime(Long.parseLong(refreshTokenExpiryTime));
+            app.setIdTokenExpiryTime(Long.parseLong(idTokenExpiryTime));
 
             String grants;
             StringBuffer buff = new StringBuffer();

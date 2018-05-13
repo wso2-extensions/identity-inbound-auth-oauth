@@ -565,6 +565,13 @@
                                         <fmt:message key='seconds'/>
                                     </td>
                                 </tr>
+                                <tr>
+                                    <td class="leftCol-med"><fmt:message key='id.token.expiry.time'/></td>
+                                    <td>
+                                        <input id="idTokenExpiryTime" name="idTokenExpiryTime" type="text" value="<%=Encode.forHtmlAttribute(Long.toString(app.getIdTokenExpiryTime()))%>"/>
+                                        <fmt:message key='seconds'/>
+                                    </td>
+                                </tr>
                                 <!-- EnableAudienceRestriction -->
                                 <%
                                     audienceTableStyle = app.getAudiences() != null ? "" :
