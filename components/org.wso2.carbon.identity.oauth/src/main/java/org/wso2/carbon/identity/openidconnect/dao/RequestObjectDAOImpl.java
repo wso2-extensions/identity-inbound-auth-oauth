@@ -21,6 +21,7 @@
 package org.wso2.carbon.identity.openidconnect.dao;
 
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
@@ -39,7 +40,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
 
@@ -166,8 +169,8 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
             throws IdentityOAuth2Exception {
 
         String sqlStmt = SQLQueries.STORE_IDN_OIDC_REQ_OBJECT_CLAIMS;
-        ResultSet rs;
         PreparedStatement prepStmt = null;
+        Map<Integer, List<String>> claimValues = new HashMap<>();
         try {
             String dbProductName = connection.getMetaData().getDatabaseProductName();
             prepStmt = connection.prepareStatement(sqlStmt, new String[]{
@@ -184,24 +187,27 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
                         prepStmt.setString(5, "0");
                     }
                     prepStmt.addBatch();
-                    prepStmt.executeBatch();
-                    rs = prepStmt.getGeneratedKeys();
-                    int requestObjectClaimId = -1;
-                    if (rs.next()) {
-                        requestObjectClaimId = rs.getInt(1);
-                    } else {
-                        log.warn("Unable to persist the Request Object claim : " + claim.getName());
-                    }
-                    connection.commit();
-                    if (requestObjectClaimId > -1) {
-                        if (log.isDebugEnabled()) {
-                            log.debug("Successfully stored the Request Object claim: " + claim.getName());
-                        }
-                        if (CollectionUtils.isNotEmpty(claim.getValues()) && claim.getValues().size() > 0) {
-                            insertRequestObjectClaimValues(requestObjectClaimId, claim.getValues(), connection);
-                        }
+                    if (log.isDebugEnabled()) {
+                        log.debug("Claim :" + claim.getName() + "is added to the batch against :" + claim.getType());
                     }
                 }
+                prepStmt.executeBatch();
+                connection.commit();
+            }
+            Map<Integer, String> insertedRequestObjectClaims = getInsertedRequestObjectClaims(requestObjectId);
+            if (MapUtils.isNotEmpty(insertedRequestObjectClaims)) {
+                for (Map.Entry<Integer, String> entry : insertedRequestObjectClaims.entrySet()) {
+                    for (List<RequestedClaim> list : claims) {
+                        for (RequestedClaim claim : list) {
+                            if (claim.getName().equals(entry.getValue())) {
+                                claimValues.put(entry.getKey(), claim.getValues());
+                            }
+
+                        }
+
+                    }
+                }
+                insertRequestObjectClaimValues(claimValues, connection);
             }
         } catch (SQLException e) {
             String errorMessage = "Error when storing the request object claims.";
@@ -212,7 +218,35 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
         }
     }
 
-    private void insertRequestObjectClaimValues(int requestObjectClaimId, List<String> values, Connection connection)
+    private Map<Integer, String> getInsertedRequestObjectClaims(int requestObjectId) throws IdentityOAuth2Exception {
+
+        Connection connection = IdentityDatabaseUtil.getDBConnection();
+        Map<Integer, String> insertedRequestObjectClaims = new HashMap<>();
+
+        PreparedStatement prepStmt = null;
+        ResultSet resultSet = null;
+        try {
+            String sql = SQLQueries.RETRIEVE_REQUESTED_CLAIMS_ID;
+
+            prepStmt = connection.prepareStatement(sql);
+            prepStmt.setInt(1, requestObjectId);
+            resultSet = prepStmt.executeQuery();
+
+            if (resultSet.next()) {
+                insertedRequestObjectClaims.put(resultSet.getInt(1), resultSet.getString(2));
+            }
+            connection.commit();
+
+        } catch (SQLException e) {
+            log.error("Error when retrieving inserted claim attributes details.", e);
+            throw new IdentityOAuth2Exception("Error when storing the request object claims", e);
+        } finally {
+            IdentityDatabaseUtil.closeAllConnections(connection, resultSet, prepStmt);
+        }
+        return insertedRequestObjectClaims;
+    }
+
+    private void insertRequestObjectClaimValues(Map<Integer, List<String>> claimValues, Connection connection)
             throws IdentityOAuth2Exception {
 
         String sqlStmt = SQLQueries.STORE_IDN_OIDC_REQ_OBJECT_CLAIM_VALUES;
@@ -220,10 +254,16 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
         try {
             prepStmt = connection.prepareStatement(sqlStmt);
 
-            for (String value : values) {
-                prepStmt.setInt(1, requestObjectClaimId);
-                prepStmt.setString(2, value);
-                prepStmt.addBatch();
+            for (Map.Entry<Integer, List<String>> entry : claimValues.entrySet()) {
+                List<String> claimValuesList = entry.getValue();
+                for (String value : claimValuesList) {
+                    prepStmt.setInt(1, entry.getKey());
+                    prepStmt.setString(2, value);
+                    prepStmt.addBatch();
+                    if (log.isDebugEnabled()) {
+                        log.debug("Claim value :" + value + " is added to the batch.");
+                    }
+                }
             }
             prepStmt.executeBatch();
             connection.commit();
