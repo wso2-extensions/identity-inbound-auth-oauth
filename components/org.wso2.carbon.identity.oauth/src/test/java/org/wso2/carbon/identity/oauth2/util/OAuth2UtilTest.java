@@ -305,7 +305,7 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
     public void testIsHashDisabled() {
         when(OAuthServerConfiguration.getInstance().isHashEnabled()).thenReturn(true);
 
-        assertEquals(OAuth2Util.isHashDisabled().booleanValue(), false);
+        assertEquals(OAuth2Util.isHashDisabled(), false);
     }
 
     @DataProvider(name = "AuthenticateUsername")

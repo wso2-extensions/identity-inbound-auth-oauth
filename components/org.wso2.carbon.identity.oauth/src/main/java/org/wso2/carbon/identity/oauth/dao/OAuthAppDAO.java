@@ -74,7 +74,7 @@ public class OAuthAppDAO {
     private static final String USERNAME = "USERNAME";
     private static final String LOWER_USERNAME = "LOWER(USERNAME)";
     private TokenPersistenceProcessor persistenceProcessor;
-    private Boolean isHashDisabled = OAuth2Util.isHashDisabled();
+    private boolean isHashDisabled = OAuth2Util.isHashDisabled();
 
     public OAuthAppDAO() {
 

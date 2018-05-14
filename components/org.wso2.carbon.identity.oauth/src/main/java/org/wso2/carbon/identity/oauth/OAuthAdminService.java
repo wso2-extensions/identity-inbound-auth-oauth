@@ -256,7 +256,7 @@ public class OAuthAdminService extends AbstractAdmin {
             throws IdentityOAuthAdminException {
 
         String tenantAwareUser = CarbonContext.getThreadLocalCarbonContext().getUsername();
-        OAuthConsumerAppDTO dto = new OAuthConsumerAppDTO();
+        OAuthConsumerAppDTO oAuthConsumerAppDTO = new OAuthConsumerAppDTO();
         if (tenantAwareUser != null) {
             String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
 
@@ -264,23 +264,23 @@ public class OAuthAdminService extends AbstractAdmin {
             OAuthAppDO app = new OAuthAppDO();
             if (application != null) {
                 app.setApplicationName(application.getApplicationName());
-                dto.setApplicationName(application.getApplicationName());
+                oAuthConsumerAppDTO.setApplicationName(application.getApplicationName());
                 if ((application.getGrantTypes().contains(AUTHORIZATION_CODE) || application.getGrantTypes()
                         .contains(IMPLICIT)) && StringUtils.isEmpty(application.getCallbackUrl())) {
                     throw new IdentityOAuthAdminException("Callback Url is required for Code or Implicit grant types");
                 }
                 app.setCallbackUrl(application.getCallbackUrl());
-                dto.setCallbackUrl(application.getCallbackUrl());
+                oAuthConsumerAppDTO.setCallbackUrl(application.getCallbackUrl());
                 if (application.getOauthConsumerKey() == null) {
                     app.setOauthConsumerKey(OAuthUtil.getRandomNumber());
-                    dto.setOauthConsumerKey(app.getOauthConsumerKey());
+                    oAuthConsumerAppDTO.setOauthConsumerKey(app.getOauthConsumerKey());
                     app.setOauthConsumerSecret(OAuthUtil.getRandomNumber());
-                    dto.setOauthConsumerSecret(app.getOauthConsumerSecret());
+                    oAuthConsumerAppDTO.setOauthConsumerSecret(app.getOauthConsumerSecret());
                 } else {
                     app.setOauthConsumerKey(application.getOauthConsumerKey());
-                    dto.setOauthConsumerKey(app.getOauthConsumerKey());
+                    oAuthConsumerAppDTO.setOauthConsumerKey(app.getOauthConsumerKey());
                     app.setOauthConsumerSecret(application.getOauthConsumerSecret());
-                    dto.setOauthConsumerSecret(app.getOauthConsumerSecret());
+                    oAuthConsumerAppDTO.setOauthConsumerSecret(app.getOauthConsumerSecret());
                 }
 
                 AuthenticatedUser user = buildAuthenticatedUser(tenantAwareUser, tenantDomain);
@@ -308,10 +308,10 @@ public class OAuthAdminService extends AbstractAdmin {
                 app.setUser(user);
                 if (application.getOAuthVersion() != null) {
                     app.setOauthVersion(application.getOAuthVersion());
-                    dto.setOAuthVersion(application.getOAuthVersion());
+                    oAuthConsumerAppDTO.setOAuthVersion(application.getOAuthVersion());
                 } else {   // by default, assume OAuth 2.0, if it is not set.
                     app.setOauthVersion(OAuthConstants.OAuthVersions.VERSION_2);
-                    dto.setOAuthVersion(OAuthConstants.OAuthVersions.VERSION_2);
+                    oAuthConsumerAppDTO.setOAuthVersion(OAuthConstants.OAuthVersions.VERSION_2);
                 }
                 if (OAuthConstants.OAuthVersions.VERSION_2.equals(application.getOAuthVersion())) {
                     List<String> allowedGrantTypes = new ArrayList<>(Arrays.asList(getAllowedGrantTypes()));
@@ -325,13 +325,13 @@ public class OAuthAdminService extends AbstractAdmin {
                         }
                     }
                     app.setGrantTypes(application.getGrantTypes());
-                    dto.setGrantTypes(application.getGrantTypes());
+                    oAuthConsumerAppDTO.setGrantTypes(application.getGrantTypes());
                     app.setScopeValidators(filterScopeValidators(application));
                     app.setAudiences(application.getAudiences());
                     app.setPkceMandatory(application.getPkceMandatory());
-                    dto.setPkceMandatory(application.getPkceMandatory());
+                    oAuthConsumerAppDTO.setPkceMandatory(application.getPkceMandatory());
                     app.setPkceSupportPlain(application.getPkceSupportPlain());
-                    dto.setPkceSupportPlain(application.getPkceSupportPlain());
+                    oAuthConsumerAppDTO.setPkceSupportPlain(application.getPkceSupportPlain());
                     // Validate access token expiry configurations.
                     validateTokenExpiryConfigurations(application);
                     app.setUserAccessTokenExpiryTime(application.getUserAccessTokenExpiryTime());
@@ -370,8 +370,7 @@ public class OAuthAdminService extends AbstractAdmin {
             }
             throw new IdentityOAuthAdminException("No authenticated user found. Failed to register OAuth App");
         }
-        return dto;
-
+        return oAuthConsumerAppDTO;
     }
 
     /**
@@ -383,6 +382,7 @@ public class OAuthAdminService extends AbstractAdmin {
     public void updateConsumerApplication(OAuthConsumerAppDTO consumerAppDTO) throws IdentityOAuthAdminException {
 
         String errorMessage = "Error while updating the app information.";
+        boolean isHashDisabled = OAuth2Util.isHashDisabled();
         if (StringUtils.isEmpty(consumerAppDTO.getOauthConsumerKey()) || StringUtils.isEmpty(consumerAppDTO
                 .getOauthConsumerSecret())) {
             errorMessage = "OauthConsumerKey or OauthConsumerSecret is not provided for " +
@@ -407,7 +407,8 @@ public class OAuthAdminService extends AbstractAdmin {
                 }
                 throw new IdentityOAuthAdminException(errorMessage);
             }
-            if (!consumerAppDTO.getOauthConsumerSecret().equals(oauthappdo.getOauthConsumerSecret())) {
+            if (isHashDisabled && !consumerAppDTO.getOauthConsumerSecret().
+                    equals(oauthappdo.getOauthConsumerSecret())) {
                 if (log.isDebugEnabled()) {
                     log.debug("Invalid oauthConsumerSecret is provided for updating the OAuth" +
                             " application with ConsumerKey: " + consumerAppDTO.getOauthConsumerKey());

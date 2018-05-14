@@ -83,7 +83,7 @@ public class TokenMgtDAO {
     public static final String LOWER_AUTHZ_USER = "LOWER(AUTHZ_USER)";
     private static final String UTC = "UTC";
     private static TokenPersistenceProcessor persistenceProcessor, hashingPersistenceProcessor;
-    private Boolean isHashDisabled = OAuth2Util.isHashDisabled();
+    private boolean isHashDisabled = OAuth2Util.isHashDisabled();
 
     private boolean persistAccessTokenAlias = OAuthServerConfiguration.getInstance().usePersistedAccessTokenAlias();
     private OauthTokenIssuer oauthIssuerImpl = OAuthServerConfiguration.getInstance().getIdentityOauthTokenIssuer();
@@ -466,7 +466,7 @@ public class TokenMgtDAO {
         Connection connection = IdentityDatabaseUtil.getDBConnection();
         try {
             connection.setAutoCommit(false);
-            if (existingAccessTokenDO != null && isHashDisabled) {
+            if (isHashDisabled && existingAccessTokenDO != null) {
                 //  Mark the existing access token as expired on database if a token exist for the user
                 setAccessTokenState(connection, existingAccessTokenDO.getTokenId(), OAuthConstants.TokenStates
                         .TOKEN_STATE_EXPIRED, UUID.randomUUID().toString(), userStoreDomain);

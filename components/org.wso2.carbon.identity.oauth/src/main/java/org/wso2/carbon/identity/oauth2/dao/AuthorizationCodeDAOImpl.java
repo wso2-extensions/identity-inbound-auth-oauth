@@ -61,7 +61,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
     private final Log log = LogFactory.getLog(AuthorizationCodeDAOImpl.class);
 
     private static final String IDN_OAUTH2_AUTHORIZATION_CODE = "IDN_OAUTH2_AUTHORIZATION_CODE";
-    private Boolean isHashDisabled = OAuth2Util.isHashDisabled();
+    private boolean isHashDisabled = OAuth2Util.isHashDisabled();
 
     @Override
     public void insertAuthorizationCode(String authzCode, String consumerKey, String callbackUrl,

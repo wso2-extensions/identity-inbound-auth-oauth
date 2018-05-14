@@ -48,7 +48,7 @@
         return;
     }
 
-    Boolean isHashDisabled = false;
+    boolean isHashDisabled = false;
     String applicationName = request.getParameter("application");
     String callback = request.getParameter("callback");
     String oauthVersion = request.getParameter("oauthVersion");
@@ -150,12 +150,11 @@
             if (isHashDisabled) {
                 client.registerOAuthApplicationData(app);
                 consumerApp = client.getOAuthApplicationDataByAppName(applicationName);
+                String message = resourceBundle.getString("app.added.successfully");
+                CarbonUIMessage.sendCarbonUIMessage(message, CarbonUIMessage.INFO, request);
             } else {
                 consumerApp = client.registerAndRetrieveOAuthApplicationData(app);
             }
-
-            String message = resourceBundle.getString("app.added.successfully");
-            CarbonUIMessage.sendCarbonUIMessage(message, CarbonUIMessage.INFO, request);
         } else {
             isError = true;
             String message = resourceBundle.getString("callback.is.not.url");
@@ -177,17 +176,9 @@ if (qpplicationComponentFound) {
 	if (!isError) {
 		session.setAttribute("oauth-consum-secret", consumerApp.getOauthConsumerSecret());
 %>
-    <% if (isHashDisabled) { %>
-    location.href = '../application/configure-service-provider.jsp?action=update&display=oauthapp&spName=<%=Encode.forUriComponent(spName)%>&oauthapp=<%=Encode.forUriComponent(consumerApp.getOauthConsumerKey())%>';
-    <% } else { %>
-    location.href = 'application-details.jsp?action=update&display=oauthapp&spName=<%=Encode.forUriComponent(spName)%>&oauthapp=<%=Encode.forUriComponent(consumerApp.getOauthConsumerKey())%>';
-    <% } %>
+    location.href = '../application/configure-service-provider.jsp?action=update&display=oauthapp&spName=<%=Encode.forUriComponent(spName)%>&oauthapp=<%=Encode.forUriComponent(consumerApp.getOauthConsumerKey())%>&isHashDisabled=<%=isHashDisabled%>&operation=add';
 <% } else { %>
-    <% if (isHashDisabled) { %>
-    location.href = '../application/configure-service-provider.jsp?display=oauthapp&spName=<%=Encode.forUriComponent(spName)%>&action=cancel';
-    <% } else { %>
-    location.href = 'application-details.jsp?display=oauthapp&spName=<%=Encode.forUriComponent(spName)%>&action=cancel';
-    <% } %>
+    location.href = '../application/configure-service-provider.jsp?display=oauthapp&spName=<%=Encode.forUriComponent(spName)%>&action=cancel&isHashDisabled=<%=isHashDisabled%>&operation=add';
 <% }
 } else {%>
     location.href = 'index.jsp';

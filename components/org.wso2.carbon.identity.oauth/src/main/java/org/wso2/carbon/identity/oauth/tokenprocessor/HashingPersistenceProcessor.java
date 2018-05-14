@@ -106,7 +106,7 @@ public class HashingPersistenceProcessor implements TokenPersistenceProcessor {
     private String hash(String plainText) throws IdentityOAuth2Exception {
 
         if (StringUtils.isEmpty(plainText)) {
-            throw new IllegalArgumentException("Invalid plainText value to be hash.");
+            throw new IdentityOAuth2Exception("plainText value is null or empty to be hash.");
         }
 
         MessageDigest messageDigest = null;

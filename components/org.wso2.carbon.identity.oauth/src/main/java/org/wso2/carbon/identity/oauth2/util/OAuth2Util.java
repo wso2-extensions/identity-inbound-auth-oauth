@@ -396,7 +396,7 @@ public class OAuth2Util {
         }
 
         // Cache miss
-        Boolean isHashDisabled = isHashDisabled();
+        boolean isHashDisabled = isHashDisabled();
         OAuthConsumerDAO oAuthConsumerDAO = new OAuthConsumerDAO();
         if (isHashDisabled) {
             if (clientSecret == null) {
@@ -408,7 +408,7 @@ public class OAuth2Util {
 
             if (clientSecret == null) {
                 if (log.isDebugEnabled()) {
-                    log.debug("Provided Client ID : " + clientId + "is not valid.");
+                    log.debug("Provided Client ID : " + clientId + " is not valid.");
                 }
                 return false;
             }
@@ -455,8 +455,8 @@ public class OAuth2Util {
      *
      * @return Whether hash feature is disabled or not.
      */
-    public static Boolean isHashDisabled() {
-        Boolean isHashEnabled = OAuthServerConfiguration.getInstance().isHashEnabled();
+    public static boolean isHashDisabled() {
+        boolean isHashEnabled = OAuthServerConfiguration.getInstance().isHashEnabled();
         return !isHashEnabled;
 
     }

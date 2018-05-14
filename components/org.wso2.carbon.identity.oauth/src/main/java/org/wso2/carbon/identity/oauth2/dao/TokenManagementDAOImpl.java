@@ -72,7 +72,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
     private static final String UTC = "UTC";
     private static final int DEFAULT_POOL_SIZE = 0;
     private static final boolean DEFAULT_PERSIST_ENABLED = true;
-    private Boolean isHashDisabled = OAuth2Util.isHashDisabled();
+    private boolean isHashDisabled = OAuth2Util.isHashDisabled();
 
     // These config properties are defined in identity.xml
     private static final String OAUTH_TOKEN_PERSISTENCE_ENABLE = "OAuth.TokenPersistence.Enable";
@@ -142,8 +142,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                     if (isHashDisabled) {
                         validationDataDO.setAccessToken(getPersistenceProcessor().getPreprocessedAccessTokenIdentifier(
                                 resultSet.getString(1)));
-                    }
-                    else {
+                    } else {
                         validationDataDO.setAccessToken(resultSet.getString(1));
                     }
                     String userName = resultSet.getString(2);

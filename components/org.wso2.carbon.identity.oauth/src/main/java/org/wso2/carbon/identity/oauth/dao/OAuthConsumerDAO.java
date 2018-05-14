@@ -40,7 +40,7 @@ public class OAuthConsumerDAO {
 
     public static final Log log = LogFactory.getLog(OAuthConsumerDAO.class);
     private TokenPersistenceProcessor persistenceProcessor;
-    private Boolean isHashDisabled = OAuth2Util.isHashDisabled();
+    private boolean isHashDisabled = OAuth2Util.isHashDisabled();
 
     public OAuthConsumerDAO() {
 
@@ -103,7 +103,8 @@ public class OAuthConsumerDAO {
      * @return Check the provided consumerKey, consumerSecret combination is exist or not.
      * @throws IdentityOAuthAdminException Error when reading consumer key, consumer secret from the database.
      */
-    public boolean isConsumerSecretExist(String consumerKey, String consumerSecret) throws IdentityOAuthAdminException {
+    public boolean isConsumerSecretExist(String consumerKey, String consumerSecret)
+            throws IdentityOAuthAdminException {
 
         PreparedStatement prepStmt = null;
         ResultSet resultSet = null;

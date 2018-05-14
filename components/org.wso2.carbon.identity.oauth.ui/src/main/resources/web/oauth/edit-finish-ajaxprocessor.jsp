@@ -42,6 +42,7 @@
 <jsp:include page="../dialog/display_messages.jsp" />
 
 <%
+    boolean isHashDisabled = false;
     String httpMethod = request.getMethod();
     if (!"post".equalsIgnoreCase(httpMethod)) {
         response.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
@@ -91,6 +92,8 @@
             ConfigurationContext configContext =
                     (ConfigurationContext) config.getServletContext().getAttribute(CarbonConstants.CONFIGURATION_CONTEXT);
             OAuthAdminClient client = new OAuthAdminClient(cookie, backendServerURL, configContext);
+            isHashDisabled = client.isHashDisabled();
+
             app.setOauthConsumerKey(consumerkey);
             app.setOauthConsumerSecret(consumersecret);
             app.setCallbackUrl(callback);
@@ -166,9 +169,9 @@ boolean qpplicationComponentFound = CarbonUIUtil.isContextRegistered(config, "/a
 if (qpplicationComponentFound) {
 	if (!isError) {
 %>
-    location.href = '../application/configure-service-provider.jsp?action=update&display=oauthapp&spName=<%=Encode.forUriComponent(spName)%>&oauthapp=<%=Encode.forUriComponent(consumerkey)%>';
+    location.href = '../application/configure-service-provider.jsp?action=update&display=oauthapp&spName=<%=Encode.forUriComponent(spName)%>&oauthapp=<%=Encode.forUriComponent(consumerkey)%>&isHashDisabled=<%=isHashDisabled%>';
 <%  } else { %>
-    location.href = '../application/configure-service-provider.jsp?action=cancel&display=oauthapp&spName=<%=Encode.forUriComponent(spName)%>';
+    location.href = '../application/configure-service-provider.jsp?action=cancel&display=oauthapp&spName=<%=Encode.forUriComponent(spName)%>&isHashDisabled=<%=isHashDisabled%>';
 <%
     }
 }else {

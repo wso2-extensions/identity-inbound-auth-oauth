@@ -138,7 +138,7 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
 
             AccessTokenDO existingAccessTokenDO = null;
             // check if valid access token exists in cache
-            if (cacheEnabled && isHashDisabled) {
+            if (isHashDisabled && cacheEnabled) {
                 existingAccessTokenDO = (AccessTokenDO) OAuthCache.getInstance().getValueFromCache(cacheKey);
                 if (existingAccessTokenDO != null) {
                     if (log.isDebugEnabled()) {
@@ -209,7 +209,7 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
 
             // if access token is not found in cache, check if the last issued access token is still active and valid
             // in the database
-            if (existingAccessTokenDO == null && isHashDisabled) {
+            if (isHashDisabled && existingAccessTokenDO == null) {
 
                 existingAccessTokenDO = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                         .getLatestAccessToken(consumerKey, authorizationReqDTO.getUser(), userStoreDomain, scope,

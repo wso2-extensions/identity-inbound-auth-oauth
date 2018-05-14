@@ -130,7 +130,7 @@ public class DCRManagementService {
         // Acting as the provided user. When creating Service Provider/OAuth App,
         // username is fetched from CarbonContext
         PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(userName);
-        Boolean isHashDisabled = OAuth2Util.isHashDisabled();
+        boolean isHashDisabled = OAuth2Util.isHashDisabled();
 
         try {
             // Create the Service Provider

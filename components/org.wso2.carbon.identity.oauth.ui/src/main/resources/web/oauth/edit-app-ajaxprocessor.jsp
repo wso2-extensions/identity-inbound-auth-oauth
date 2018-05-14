@@ -33,7 +33,7 @@
 
 <%
     String httpMethod = request.getMethod();
-    Boolean isHashDisabled = false;
+    boolean isHashDisabled = false;
     if (!"post".equalsIgnoreCase(httpMethod)) {
         response.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
         return;
@@ -83,12 +83,11 @@
             }
             if (isHashDisabled) {
                 app.setOauthConsumerSecret(client.getOAuthApplicationData(consumerkey).getOauthConsumerSecret());
+                CarbonUIMessage.sendCarbonUIMessage("Client Secret successfully updated for Client ID: " + consumerkey,
+                    CarbonUIMessage.INFO, request);
             } else {
                 app.setOauthConsumerSecret(consumerApp.getOauthConsumerSecret());
             }
-            CarbonUIMessage.sendCarbonUIMessage("Client Secret successfully updated for Client ID: " + consumerkey,
-                    CarbonUIMessage.INFO, request);
-
         } else if (OAuthConstants.ACTION_REVOKE.equalsIgnoreCase(action)) {
             String oauthAppState = client.getOauthApplicationState(consumerkey);
             if(OAuthConstants.OauthAppStates.APP_STATE_REVOKED.equalsIgnoreCase(oauthAppState)) {
@@ -112,14 +111,10 @@
     if ((action != null) && ("revoke".equalsIgnoreCase(action) || "regenerate".equalsIgnoreCase(action))) {
         session.setAttribute("oauth-consum-secret", app.getOauthConsumerSecret());
 
-        String returnString;
-        if (!isHashDisabled && "regenerate".equalsIgnoreCase(action)) {
-            returnString = "../oauth/application-details.jsp?action=" + action + "&display=oauthapp&spName=" +
-                                                applicationSPName + "&oauthapp=" + app.getOauthConsumerKey() + "";
-        } else {
-            returnString = "../application/configure-service-provider.jsp?action=" + action +
-                        "&display=oauthapp&spName=" + applicationSPName + "&oauthapp=" + app.getOauthConsumerKey() + "";
-        }
+        String returnString =
+                "../application/configure-service-provider.jsp?action=" + action + "&display=oauthapp&spName=" +
+                        applicationSPName + "&oauthapp=" + app.getOauthConsumerKey() +
+                        "&isHashDisabled=" + isHashDisabled + "";
 
             response.addHeader("redirectUrl",returnString);
 
