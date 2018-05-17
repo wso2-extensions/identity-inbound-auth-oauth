@@ -256,31 +256,24 @@ public class OAuthAdminService extends AbstractAdmin {
             throws IdentityOAuthAdminException {
 
         String tenantAwareUser = CarbonContext.getThreadLocalCarbonContext().getUsername();
-        OAuthConsumerAppDTO oAuthConsumerAppDTO = new OAuthConsumerAppDTO();
+        OAuthAppDO app = new OAuthAppDO();
         if (tenantAwareUser != null) {
             String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
 
             OAuthAppDAO dao = new OAuthAppDAO();
-            OAuthAppDO app = new OAuthAppDO();
             if (application != null) {
                 app.setApplicationName(application.getApplicationName());
-                oAuthConsumerAppDTO.setApplicationName(application.getApplicationName());
                 if ((application.getGrantTypes().contains(AUTHORIZATION_CODE) || application.getGrantTypes()
                         .contains(IMPLICIT)) && StringUtils.isEmpty(application.getCallbackUrl())) {
                     throw new IdentityOAuthAdminException("Callback Url is required for Code or Implicit grant types");
                 }
                 app.setCallbackUrl(application.getCallbackUrl());
-                oAuthConsumerAppDTO.setCallbackUrl(application.getCallbackUrl());
                 if (application.getOauthConsumerKey() == null) {
                     app.setOauthConsumerKey(OAuthUtil.getRandomNumber());
-                    oAuthConsumerAppDTO.setOauthConsumerKey(app.getOauthConsumerKey());
                     app.setOauthConsumerSecret(OAuthUtil.getRandomNumber());
-                    oAuthConsumerAppDTO.setOauthConsumerSecret(app.getOauthConsumerSecret());
                 } else {
                     app.setOauthConsumerKey(application.getOauthConsumerKey());
-                    oAuthConsumerAppDTO.setOauthConsumerKey(app.getOauthConsumerKey());
                     app.setOauthConsumerSecret(application.getOauthConsumerSecret());
-                    oAuthConsumerAppDTO.setOauthConsumerSecret(app.getOauthConsumerSecret());
                 }
 
                 AuthenticatedUser user = buildAuthenticatedUser(tenantAwareUser, tenantDomain);
@@ -308,10 +301,8 @@ public class OAuthAdminService extends AbstractAdmin {
                 app.setUser(user);
                 if (application.getOAuthVersion() != null) {
                     app.setOauthVersion(application.getOAuthVersion());
-                    oAuthConsumerAppDTO.setOAuthVersion(application.getOAuthVersion());
                 } else {   // by default, assume OAuth 2.0, if it is not set.
                     app.setOauthVersion(OAuthConstants.OAuthVersions.VERSION_2);
-                    oAuthConsumerAppDTO.setOAuthVersion(OAuthConstants.OAuthVersions.VERSION_2);
                 }
                 if (OAuthConstants.OAuthVersions.VERSION_2.equals(application.getOAuthVersion())) {
                     List<String> allowedGrantTypes = new ArrayList<>(Arrays.asList(getAllowedGrantTypes()));
@@ -325,13 +316,10 @@ public class OAuthAdminService extends AbstractAdmin {
                         }
                     }
                     app.setGrantTypes(application.getGrantTypes());
-                    oAuthConsumerAppDTO.setGrantTypes(application.getGrantTypes());
                     app.setScopeValidators(filterScopeValidators(application));
                     app.setAudiences(application.getAudiences());
                     app.setPkceMandatory(application.getPkceMandatory());
-                    oAuthConsumerAppDTO.setPkceMandatory(application.getPkceMandatory());
                     app.setPkceSupportPlain(application.getPkceSupportPlain());
-                    oAuthConsumerAppDTO.setPkceSupportPlain(application.getPkceSupportPlain());
                     // Validate access token expiry configurations.
                     validateTokenExpiryConfigurations(application);
                     app.setUserAccessTokenExpiryTime(application.getUserAccessTokenExpiryTime());
@@ -370,6 +358,25 @@ public class OAuthAdminService extends AbstractAdmin {
             }
             throw new IdentityOAuthAdminException("No authenticated user found. Failed to register OAuth App");
         }
+        return getConsumerApplicationDetails(app);
+    }
+
+    /**
+     * Get created oauth application details.
+     *
+     * @param application <code>OAuthAppDO</code> with created application information.
+     * @return OAuthConsumerAppDTO Created OAuth application details.
+     */
+    private OAuthConsumerAppDTO getConsumerApplicationDetails(OAuthAppDO application) {
+
+        OAuthConsumerAppDTO oAuthConsumerAppDTO = new OAuthConsumerAppDTO();
+        oAuthConsumerAppDTO.setApplicationName(application.getApplicationName());
+        oAuthConsumerAppDTO.setCallbackUrl(application.getCallbackUrl());
+        oAuthConsumerAppDTO.setOauthConsumerKey(application.getOauthConsumerKey());
+        oAuthConsumerAppDTO.setOauthConsumerSecret(application.getOauthConsumerSecret());
+        oAuthConsumerAppDTO.setGrantTypes(application.getGrantTypes());
+        oAuthConsumerAppDTO.setOAuthVersion(application.getOauthVersion());
+
         return oAuthConsumerAppDTO;
     }
 

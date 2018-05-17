@@ -41,6 +41,7 @@ import org.wso2.carbon.identity.oauth.common.IDTokenResponseValidator;
 import org.wso2.carbon.identity.oauth.common.IDTokenTokenResponseValidator;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.SAML2GrantValidator;
+import org.wso2.carbon.identity.oauth.tokenprocessor.HashingPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -2254,13 +2255,21 @@ public class OAuthServerConfiguration {
 
     private void parseEnableHashMode(OMElement oauthConfigElem) {
 
-        OMElement hashModeElement = oauthConfigElem
-                .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.ENABLE_CLIENT_SECRET_HASH));
-        if (hashModeElement != null) {
-            isClientSecretHashEnabled = Boolean.parseBoolean(hashModeElement.getText());
+        try {
+            persistenceProcessor = getPersistenceProcessor();
+        } catch (IdentityOAuth2Exception e) {
+            log.error("Error while getting an instance of TokenPersistenceProcessor.");
         }
-        if (log.isDebugEnabled()) {
-            log.debug("Is client secret hashing enabled: " + isClientSecretHashEnabled);
+
+        if (persistenceProcessor instanceof HashingPersistenceProcessor) {
+            OMElement hashModeElement = oauthConfigElem
+                    .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.ENABLE_CLIENT_SECRET_HASH));
+            if (hashModeElement != null) {
+                isClientSecretHashEnabled = Boolean.parseBoolean(hashModeElement.getText());
+            }
+            if (log.isDebugEnabled()) {
+                log.debug("Is client secret hashing enabled: " + isClientSecretHashEnabled);
+            }
         }
     }
 
