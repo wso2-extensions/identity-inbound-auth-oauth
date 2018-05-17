@@ -62,33 +62,37 @@ public class OAuthConsumerDAO {
      */
     public String getOAuthConsumerSecret(String consumerKey) throws IdentityOAuthAdminException {
         String consumerSecret = null;
-        Connection connection = IdentityDatabaseUtil.getDBConnection();
-        PreparedStatement prepStmt = null;
-        ResultSet resultSet = null;
+        if (isHashDisabled) {
+            Connection connection = IdentityDatabaseUtil.getDBConnection();
+            PreparedStatement prepStmt = null;
+            ResultSet resultSet = null;
 
-        try {
-            prepStmt = connection.prepareStatement(SQLQueries.OAuthConsumerDAOSQLQueries.GET_CONSUMER_SECRET);
-            prepStmt.setString(1, persistenceProcessor.getProcessedClientId(consumerKey));
-            resultSet = prepStmt.executeQuery();
+            try {
+                prepStmt = connection.prepareStatement(SQLQueries.OAuthConsumerDAOSQLQueries.GET_CONSUMER_SECRET);
+                prepStmt.setString(1, persistenceProcessor.getProcessedClientId(consumerKey));
+                resultSet = prepStmt.executeQuery();
 
-            if (resultSet.next()) {
-                if (isHashDisabled) {
-                    consumerSecret = persistenceProcessor.getPreprocessedClientSecret(resultSet.getString(1));
+                if (resultSet.next()) {
+                        consumerSecret = persistenceProcessor.getPreprocessedClientSecret(resultSet.getString(1));
+                } else {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Invalid Consumer Key : " + consumerKey);
+                    }
                 }
-            } else {
-                if(log.isDebugEnabled()) {
-                    log.debug("Invalid Consumer Key : " + consumerKey);
-                }
+                connection.commit();
+            } catch (SQLException e) {
+                throw new IdentityOAuthAdminException("Error when reading the consumer secret for consumer key : " +
+                        consumerKey, e);
+            } catch (IdentityOAuth2Exception e) {
+                throw new IdentityOAuthAdminException("Error occurred while processing client id and client secret by " +
+                        "TokenPersistenceProcessor", e);
+            } finally {
+                IdentityDatabaseUtil.closeAllConnections(connection, resultSet, prepStmt);
             }
-            connection.commit();
-        } catch (SQLException e) {
-            throw new IdentityOAuthAdminException("Error when reading the consumer secret for consumer key : " +
-                    consumerKey, e);
-        } catch (IdentityOAuth2Exception e) {
-            throw new IdentityOAuthAdminException("Error occurred while processing client id and client secret by " +
-                    "TokenPersistenceProcessor", e);
-        } finally {
-            IdentityDatabaseUtil.closeAllConnections(connection, resultSet, prepStmt);
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug("Consumer secret hashing enabled. Returning client secret as null.");
+            }
         }
 
         return consumerSecret;

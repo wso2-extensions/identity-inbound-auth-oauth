@@ -1051,8 +1051,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             ps.setString(3, OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
             ps.setString(4, authenticatedUser.getUserStoreDomain());
             rs = ps.executeQuery();
-            while (rs.next()) {
-                if (isHashDisabled) {
+            if (isHashDisabled) {
+                while (rs.next()) {
                     accessTokens.add(getPersistenceProcessor().getPreprocessedAccessTokenIdentifier(rs.getString(1)));
                 }
             }
@@ -1115,9 +1115,11 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             ps.setString(1, consumerKey);
             ps.setString(2, OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
             rs = ps.executeQuery();
-            while (rs.next()) {
-                if (isHashDisabled) {
+
+            if (isHashDisabled) {
+                while (rs.next()) {
                     accessTokens.add(getPersistenceProcessor().getPreprocessedAccessTokenIdentifier(rs.getString(1)));
+
                 }
             }
             connection.commit();
