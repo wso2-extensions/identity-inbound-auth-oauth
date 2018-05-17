@@ -213,7 +213,7 @@ public class OAuthServerConfiguration {
     private String tokenValueGeneratorClassName;
     //property to define hashing algorithm when enabling hashing of tokens and authorization codes.
     private String hashAlgorithm = "SHA-256";
-    private boolean isHashEnabled = false;
+    private boolean isClientSecretHashEnabled = false;
 
 
     // Property added to determine the expiration of logout token in oidc back-channel logout.
@@ -717,8 +717,8 @@ public class OAuthServerConfiguration {
         return hashAlgorithm;
     }
 
-    public boolean isHashEnabled() {
-        return isHashEnabled;
+    public boolean isClientSecretHashEnabled() {
+        return isClientSecretHashEnabled;
     }
 
     private void parseRequestObjectConfig(OMElement requestObjectBuildersElem) {
@@ -2255,12 +2255,12 @@ public class OAuthServerConfiguration {
     private void parseEnableHashMode(OMElement oauthConfigElem) {
 
         OMElement hashModeElement = oauthConfigElem
-                .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.ENABLE_HASH_MODE));
+                .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.ENABLE_CLIENT_SECRET_HASH));
         if (hashModeElement != null) {
-            isHashEnabled = Boolean.parseBoolean(hashModeElement.getText());
+            isClientSecretHashEnabled = Boolean.parseBoolean(hashModeElement.getText());
         }
         if (log.isDebugEnabled()) {
-            log.debug("Hash mode was set to : " + isHashEnabled);
+            log.debug("Is client secret hashing enabled: " + isClientSecretHashEnabled);
         }
     }
 
@@ -2461,7 +2461,7 @@ public class OAuthServerConfiguration {
 
         //Hash algorithm configs
         private static final String HASH_ALGORITHM = "HashAlgorithm";
-        private static final String ENABLE_HASH_MODE = "EnableTokenHashMode";
+        private static final String ENABLE_CLIENT_SECRET_HASH = "EnableClientSecretHash";
 
     }
 
