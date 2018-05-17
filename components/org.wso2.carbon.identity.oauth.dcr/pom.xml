@@ -144,6 +144,7 @@
                             javax.servlet.http; version="${imp.pkg.version.javax.servlet}",
                             org.wso2.carbon.user.api; version="${carbon.user.api.imp.pkg.version.range}",
                             org.wso2.carbon.identity.oauth.*;version="${identity.inbound.auth.oauth.imp.pkg.version.range}",
+                            org.wso2.carbon.identity.oauth2.*;version="${identity.inbound.auth.oauth.imp.pkg.version.range}",
                         </Import-Package>
                         <Export-Package>
                             !org.wso2.carbon.identity.oauth.dcr.internal,

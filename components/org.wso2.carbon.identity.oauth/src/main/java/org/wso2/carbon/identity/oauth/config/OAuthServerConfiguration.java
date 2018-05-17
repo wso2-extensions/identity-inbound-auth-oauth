@@ -41,6 +41,7 @@ import org.wso2.carbon.identity.oauth.common.IDTokenResponseValidator;
 import org.wso2.carbon.identity.oauth.common.IDTokenTokenResponseValidator;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.SAML2GrantValidator;
+import org.wso2.carbon.identity.oauth.tokenprocessor.HashingPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -213,6 +214,7 @@ public class OAuthServerConfiguration {
     private String tokenValueGeneratorClassName;
     //property to define hashing algorithm when enabling hashing of tokens and authorization codes.
     private String hashAlgorithm = "SHA-256";
+    private boolean isClientSecretHashEnabled = false;
 
 
     // Property added to determine the expiration of logout token in oidc back-channel logout.
@@ -339,6 +341,8 @@ public class OAuthServerConfiguration {
         parseShowDisplayNameInConsentPage(oauthElem);
         // read hash algorithm type config
         parseHashAlgorithm(oauthElem);
+        // read hash mode config
+        parseEnableHashMode(oauthElem);
     }
 
     private void parseShowDisplayNameInConsentPage(OMElement oauthElem) {
@@ -712,6 +716,10 @@ public class OAuthServerConfiguration {
 
     public String getHashAlgorithm() {
         return hashAlgorithm;
+    }
+
+    public boolean isClientSecretHashEnabled() {
+        return isClientSecretHashEnabled;
     }
 
     private void parseRequestObjectConfig(OMElement requestObjectBuildersElem) {
@@ -2245,6 +2253,26 @@ public class OAuthServerConfiguration {
         }
     }
 
+    private void parseEnableHashMode(OMElement oauthConfigElem) {
+
+        try {
+            persistenceProcessor = getPersistenceProcessor();
+        } catch (IdentityOAuth2Exception e) {
+            log.error("Error while getting an instance of TokenPersistenceProcessor.");
+        }
+
+        if (persistenceProcessor instanceof HashingPersistenceProcessor) {
+            OMElement hashModeElement = oauthConfigElem
+                    .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.ENABLE_CLIENT_SECRET_HASH));
+            if (hashModeElement != null) {
+                isClientSecretHashEnabled = Boolean.parseBoolean(hashModeElement.getText());
+            }
+            if (log.isDebugEnabled()) {
+                log.debug("Is client secret hashing enabled: " + isClientSecretHashEnabled);
+            }
+        }
+    }
+
     public OAuth2ScopeValidator getoAuth2ScopeValidator() {
         return oAuth2ScopeValidator;
     }
@@ -2442,6 +2470,7 @@ public class OAuthServerConfiguration {
 
         //Hash algorithm configs
         private static final String HASH_ALGORITHM = "HashAlgorithm";
+        private static final String ENABLE_CLIENT_SECRET_HASH = "EnableClientSecretHash";
 
     }
 

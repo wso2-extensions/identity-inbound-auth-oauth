@@ -43,7 +43,7 @@
 <jsp:include page="../dialog/display_messages.jsp"/>
 
 <%
-
+    boolean isHashDisabled = false;
     String consumerkey = request.getParameter("consumerkey");
     String appName = request.getParameter("appName");
 
@@ -90,13 +90,23 @@
             app = client.getOAuthApplicationData(consumerkey);
         }
 
+        OAuthConsumerAppDTO consumerApp = null;
         if (OAuthConstants.ACTION_REGENERATE.equalsIgnoreCase(action)) {
             String oauthAppState = client.getOauthApplicationState(consumerkey);
-            client.regenerateSecretKey(consumerkey);
+            isHashDisabled = client.isHashDisabled();
+            if (isHashDisabled) {
+                client.regenerateSecretKey(consumerkey);
+            } else {
+                consumerApp = client.regenerateAndRetrieveOauthSecretKey(consumerkey);
+            }
             if (OAuthConstants.OauthAppStates.APP_STATE_REVOKED.equalsIgnoreCase(oauthAppState)) {
                 client.updateOauthApplicationState(consumerkey, OAuthConstants.OauthAppStates.APP_STATE_ACTIVE);
             }
-            app.setOauthConsumerSecret(client.getOAuthApplicationData(consumerkey).getOauthConsumerSecret());
+            if (isHashDisabled) {
+                app.setOauthConsumerSecret(client.getOAuthApplicationData(consumerkey).getOauthConsumerSecret());
+            } else {
+                app.setOauthConsumerSecret(consumerApp.getOauthConsumerSecret());
+            }
             CarbonUIMessage.sendCarbonUIMessage("Client Secret successfully updated for Client ID: " + consumerkey,
                     CarbonUIMessage.INFO, request);
 
@@ -166,7 +176,7 @@
         session.setAttribute("oauth-consum-secret", app.getOauthConsumerSecret());
 %>
 <script>
-    location.href = '../application/configure-service-provider.jsp?action=<%=action%>&display=oauthapp&spName=<%=Encode.forUriComponent(applicationSPName)%>&oauthapp=<%=Encode.forUriComponent(app.getOauthConsumerKey())%>';
+    location.href = '../application/configure-service-provider.jsp?action=<%=action%>&display=oauthapp&spName=<%=Encode.forUriComponent(applicationSPName)%>&oauthapp=<%=Encode.forUriComponent(app.getOauthConsumerKey())%>&isHashDisabled=<%=isHashDisabled%>';
 </script>
 <%  } else {
 %>
@@ -760,7 +770,7 @@
                                 if (applicationComponentFound) {
                             %>
                             <input type="button" class="button"
-                                   onclick="javascript:location.href='../application/configure-service-provider.jsp?spName=<%=Encode.forUriComponent(applicationSPName)%>'"
+                                   onclick="javascript:location.href='../application/configure-service-provider.jsp?spName=<%=Encode.forUriComponent(applicationSPName)%>&isHashDisabled=<%=isHashDisabled%>'"
                                    value="<fmt:message key='cancel'/>"/>
                             <% } else { %>
 

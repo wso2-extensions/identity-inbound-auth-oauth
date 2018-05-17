@@ -37,6 +37,7 @@ import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcess
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
@@ -73,6 +74,7 @@ public class OAuthAppDAO {
     private static final String USERNAME = "USERNAME";
     private static final String LOWER_USERNAME = "LOWER(USERNAME)";
     private TokenPersistenceProcessor persistenceProcessor;
+    private boolean isHashDisabled = OAuth2Util.isHashDisabled();
 
     public OAuthAppDAO() {
 
@@ -249,12 +251,12 @@ public class OAuthAppDAO {
                                     (1));
 
                             oauthApp.setOauthConsumerKey(preprocessedClientId);
-                            oauthApp.setOauthConsumerSecret(persistenceProcessor.getPreprocessedClientSecret(rSet
-                                    .getString(2)));
                             oauthApp.setOauthConsumerKey(persistenceProcessor.getPreprocessedClientId(rSet.getString
                                     (1)));
-                            oauthApp.setOauthConsumerSecret(persistenceProcessor.getPreprocessedClientSecret(rSet
-                                    .getString(2)));
+                            if (isHashDisabled) {
+                                oauthApp.setOauthConsumerSecret(persistenceProcessor.getPreprocessedClientSecret(rSet
+                                        .getString(2)));
+                            }
                             oauthApp.setApplicationName(rSet.getString(3));
                             oauthApp.setOauthVersion(rSet.getString(4));
                             oauthApp.setCallbackUrl(rSet.getString(5));
@@ -330,8 +332,10 @@ public class OAuthAppDAO {
                         if (rSet.getString(4) != null && rSet.getString(4).length() > 0) {
                             oauthApp = new OAuthAppDO();
                             oauthApp.setOauthConsumerKey(consumerKey);
-                            oauthApp.setOauthConsumerSecret(persistenceProcessor.getPreprocessedClientSecret(rSet
-                                    .getString(1)));
+                            if (isHashDisabled) {
+                                oauthApp.setOauthConsumerSecret(persistenceProcessor.getPreprocessedClientSecret(rSet
+                                        .getString(1)));
+                            }
                             AuthenticatedUser authenticatedUser = new AuthenticatedUser();
                             authenticatedUser.setUserName(rSet.getString(2));
                             oauthApp.setApplicationName(rSet.getString(3));
@@ -408,8 +412,10 @@ public class OAuthAppDAO {
                         // There is at least one application associated with a given key
                         appExists = true;
                         if (rSet.getString(4) != null && rSet.getString(4).length() > 0) {
-                            oauthApp.setOauthConsumerSecret(persistenceProcessor.getPreprocessedClientSecret(rSet
-                                    .getString(1)));
+                            if (isHashDisabled) {
+                                oauthApp.setOauthConsumerSecret(persistenceProcessor.getPreprocessedClientSecret(rSet
+                                        .getString(1)));
+                            }
                             user.setUserName(rSet.getString(2));
                             user.setUserStoreDomain(rSet.getString(3));
                             oauthApp.setUser(user);
