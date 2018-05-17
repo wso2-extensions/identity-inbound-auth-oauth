@@ -169,9 +169,9 @@ boolean qpplicationComponentFound = CarbonUIUtil.isContextRegistered(config, "/a
 if (qpplicationComponentFound) {
 	if (!isError) {
 %>
-    location.href = '../application/configure-service-provider.jsp?action=update&display=oauthapp&spName=<%=Encode.forUriComponent(spName)%>&oauthapp=<%=Encode.forUriComponent(consumerkey)%>&isHashDisabled=<%=isHashDisabled%>';
+    location.href = '../application/configure-service-provider.jsp?action=update&display=oauthapp&spName=<%=Encode.forUriComponent(spName)%>&oauthapp=<%=Encode.forUriComponent(consumerkey)%>&isHashDisabled=<%=Encode.forUriComponent(isHashDisabled)%>';
 <%  } else { %>
-    location.href = '../application/configure-service-provider.jsp?action=cancel&display=oauthapp&spName=<%=Encode.forUriComponent(spName)%>&isHashDisabled=<%=isHashDisabled%>';
+    location.href = '../application/configure-service-provider.jsp?action=cancel&display=oauthapp&spName=<%=Encode.forUriComponent(spName)%>&isHashDisabled=<%=Encode.forUriComponent(isHashDisabled)%>';
 <%
     }
 }else {
