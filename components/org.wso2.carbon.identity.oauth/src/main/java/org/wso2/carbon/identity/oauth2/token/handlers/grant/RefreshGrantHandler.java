@@ -63,6 +63,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
     public static final int ALLOWED_MINIMUM_VALIDITY_PERIOD = 1000;
     public static final String DEACTIVATED_ACCESS_TOKEN = "DeactivatedAccessToken";
     private static Log log = LogFactory.getLog(RefreshGrantHandler.class);
+    private boolean isHashDisabled = OAuth2Util.isHashDisabled();
 
     @Override
     public boolean validateGrant(OAuthTokenReqMessageContext tokReqMsgCtx)
@@ -286,7 +287,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
 
     private void updateCacheIfEnabled(OAuthTokenReqMessageContext tokReqMsgCtx, AccessTokenDO accessTokenBean,
                                       String clientId, RefreshTokenValidationDataDO oldAccessToken) {
-        if (cacheEnabled) {
+        if (isHashDisabled && cacheEnabled) {
             // Remove old access token from the OAuthCache
             String scope = OAuth2Util.buildScopeString(tokReqMsgCtx.getScope());
             String authorizedUser = tokReqMsgCtx.getAuthorizedUser().toString();

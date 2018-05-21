@@ -376,6 +376,19 @@ public class OAuthAdminService extends AbstractAdmin {
         oAuthConsumerAppDTO.setOauthConsumerSecret(application.getOauthConsumerSecret());
         oAuthConsumerAppDTO.setGrantTypes(application.getGrantTypes());
         oAuthConsumerAppDTO.setOAuthVersion(application.getOauthVersion());
+        oAuthConsumerAppDTO.setScopeValidators(application.getScopeValidators());
+        oAuthConsumerAppDTO.setAudiences(application.getAudiences());
+        oAuthConsumerAppDTO.setUserAccessTokenExpiryTime(application.getUserAccessTokenExpiryTime());
+        oAuthConsumerAppDTO.setApplicationAccessTokenExpiryTime(application.getApplicationAccessTokenExpiryTime());
+        oAuthConsumerAppDTO.setRefreshTokenExpiryTime(application.getRefreshTokenExpiryTime());
+        oAuthConsumerAppDTO.setRequestObjectSignatureValidationEnabled(
+                application.isRequestObjectSignatureValidationEnabled());
+        oAuthConsumerAppDTO.setIdTokenEncryptionEnabled(application.isIdTokenEncryptionEnabled());
+        oAuthConsumerAppDTO.setIdTokenEncryptionAlgorithm(application.getIdTokenEncryptionAlgorithm());
+        oAuthConsumerAppDTO.setIdTokenEncryptionMethod(application.getIdTokenEncryptionMethod());
+        oAuthConsumerAppDTO.setBackChannelLogoutUrl(application.getBackChannelLogoutUrl());
+        oAuthConsumerAppDTO.setPkceMandatory(application.isPkceMandatory());
+        oAuthConsumerAppDTO.setPkceSupportPlain(application.isPkceSupportPlain());
 
         return oAuthConsumerAppDTO;
     }
@@ -414,8 +427,7 @@ public class OAuthAdminService extends AbstractAdmin {
                 }
                 throw new IdentityOAuthAdminException(errorMessage);
             }
-            if (isHashDisabled && !consumerAppDTO.getOauthConsumerSecret().
-                    equals(oauthappdo.getOauthConsumerSecret())) {
+            if (!consumerAppDTO.getOauthConsumerSecret().equals(oauthappdo.getOauthConsumerSecret())) {
                 if (log.isDebugEnabled()) {
                     log.debug("Invalid oauthConsumerSecret is provided for updating the OAuth" +
                             " application with ConsumerKey: " + consumerAppDTO.getOauthConsumerKey());

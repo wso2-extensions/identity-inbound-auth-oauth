@@ -65,6 +65,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenStates.T
 public class ResponseTypeHandlerUtil {
     public static final int SECOND_TO_MILLISECONDS_FACTOR = 1000;
     private static Log log = LogFactory.getLog(ResponseTypeHandlerUtil.class);
+    private static boolean isHashDisabled = OAuth2Util.isHashDisabled();
 
     public static void triggerPreListeners(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) {
         OAuthEventInterceptor oAuthEventInterceptorProxy = OAuthComponentServiceHolder.getInstance()
@@ -437,7 +438,7 @@ public class ResponseTypeHandlerUtil {
         persistAccessTokenInDB(oauthAuthzMsgCtx, existingTokenBean, newTokenBean);
         deactivateCurrentAuthorizationCode(newTokenBean.getAuthorizationCode(), newTokenBean.getTokenId());
         //update cache with newly added token
-        if (cacheEnabled) {
+        if (isHashDisabled && cacheEnabled) {
             addTokenToCache(getOAuthCacheKey(consumerKey, scope, authorizedUser), newTokenBean);
         }
         return newTokenBean;

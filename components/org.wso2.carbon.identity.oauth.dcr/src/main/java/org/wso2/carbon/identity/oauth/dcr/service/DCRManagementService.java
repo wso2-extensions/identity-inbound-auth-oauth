@@ -44,7 +44,6 @@ import org.wso2.carbon.identity.oauth.dcr.util.DCRConstants;
 import org.wso2.carbon.identity.oauth.dcr.util.DCRMUtils;
 import org.wso2.carbon.identity.oauth.dcr.util.ErrorCodes;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
-import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.registry.core.Registry;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
@@ -130,7 +129,6 @@ public class DCRManagementService {
         // Acting as the provided user. When creating Service Provider/OAuth App,
         // username is fetched from CarbonContext
         PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(userName);
-        boolean isHashDisabled = OAuth2Util.isHashDisabled();
 
         try {
             // Create the Service Provider
@@ -209,13 +207,9 @@ public class DCRManagementService {
                 log.debug("Creating OAuth App " + applicationName);
             }
 
-            OAuthConsumerAppDTO createdApp = null;
+            OAuthConsumerAppDTO createdApp;
             try {
-                if (isHashDisabled) {
-                    oAuthAdminService.registerOAuthApplicationData(oAuthConsumerApp);
-                } else {
-                    createdApp = oAuthAdminService.registerAndRetrieveOAuthApplicationData(oAuthConsumerApp);
-                }
+                createdApp = oAuthAdminService.registerAndRetrieveOAuthApplicationData(oAuthConsumerApp);
             } catch (IdentityOAuthAdminException e) {
                 throw IdentityException.error(DCRException.class,
                         ErrorCodes.META_DATA_VALIDATION_FAILED.toString(), e.getMessage());
@@ -223,16 +217,6 @@ public class DCRManagementService {
 
             if (log.isDebugEnabled()) {
                 log.debug("Created OAuth App " + applicationName);
-            }
-
-            try {
-                if (isHashDisabled) {
-                    createdApp = oAuthAdminService
-                            .getOAuthApplicationDataByAppName(oAuthConsumerApp.getApplicationName());
-                }
-            } catch (IdentityOAuthAdminException e) {
-                throw IdentityException.error(DCRException.class, ErrorCodes.BAD_REQUEST.toString(), e.getMessage());
-
             }
 
             if (log.isDebugEnabled()) {

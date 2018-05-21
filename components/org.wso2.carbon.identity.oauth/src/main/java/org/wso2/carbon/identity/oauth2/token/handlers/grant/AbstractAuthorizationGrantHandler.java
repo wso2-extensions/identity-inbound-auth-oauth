@@ -357,7 +357,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     }
 
     private void updateCacheIfEnabled(AccessTokenDO newTokenBean, String scope) {
-        if (cacheEnabled) {
+        if (isHashDisabled && cacheEnabled) {
             OAuthCacheKey cacheKey = getOAuthCacheKey(scope, newTokenBean.getConsumerKey(), newTokenBean.getAuthzUser().toString());
             oauthCache.addToCache(cacheKey, newTokenBean);
             // Adding AccessTokenDO to improve validation performance
@@ -444,7 +444,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     }
 
     private void addTokenToCache(OAuthCacheKey cacheKey, AccessTokenDO existingAccessTokenDO) {
-        if (cacheEnabled) {
+        if (isHashDisabled && cacheEnabled) {
             oauthCache.addToCache(cacheKey, existingAccessTokenDO);
             // Adding AccessTokenDO to improve validation performance
             OAuthCacheKey accessTokenCacheKey = new OAuthCacheKey(existingAccessTokenDO.getAccessToken());
