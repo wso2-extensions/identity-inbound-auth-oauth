@@ -176,9 +176,9 @@ if (qpplicationComponentFound) {
 	if (!isError) {
 		session.setAttribute("oauth-consum-secret", consumerApp.getOauthConsumerSecret());
 %>
-    location.href = '../application/configure-service-provider.jsp?action=update&display=oauthapp&spName=<%=Encode.forUriComponent(spName)%>&oauthapp=<%=Encode.forUriComponent(consumerApp.getOauthConsumerKey())%>&isHashDisabled=<%=Encode.forUriComponent(isHashDisabled)%>&operation=add';
+    location.href = '../application/configure-service-provider.jsp?action=update&display=oauthapp&spName=<%=Encode.forUriComponent(spName)%>&oauthapp=<%=Encode.forUriComponent(consumerApp.getOauthConsumerKey())%>&isHashDisabled=<%=Encode.forUriComponent(String.valueOf(isHashDisabled))%>&operation=add';
 <% } else { %>
-    location.href = '../application/configure-service-provider.jsp?display=oauthapp&spName=<%=Encode.forUriComponent(spName)%>&action=cancel&isHashDisabled=<%=Encode.forUriComponent(isHashDisabled)%>&operation=add';
+    location.href = '../application/configure-service-provider.jsp?display=oauthapp&spName=<%=Encode.forUriComponent(spName)%>&action=cancel&isHashDisabled=<%=Encode.forUriComponent(String.valueOf(isHashDisabled))%>&operation=add';
 <% }
 } else {%>
     location.href = 'index.jsp';

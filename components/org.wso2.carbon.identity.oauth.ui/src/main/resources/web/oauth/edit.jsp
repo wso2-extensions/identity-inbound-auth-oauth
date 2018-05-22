@@ -176,7 +176,7 @@
         session.setAttribute("oauth-consum-secret", app.getOauthConsumerSecret());
 %>
 <script>
-    location.href = '../application/configure-service-provider.jsp?action=<%=action%>&display=oauthapp&spName=<%=Encode.forUriComponent(applicationSPName)%>&oauthapp=<%=Encode.forUriComponent(app.getOauthConsumerKey())%>&isHashDisabled=<%=Encode.forUriComponent(isHashDisabled)%>';
+    location.href = '../application/configure-service-provider.jsp?action=<%=action%>&display=oauthapp&spName=<%=Encode.forUriComponent(applicationSPName)%>&oauthapp=<%=Encode.forUriComponent(app.getOauthConsumerKey())%>&isHashDisabled=<%=Encode.forUriComponent(String.valueOf(isHashDisabled))%>';
 </script>
 <%  } else {
 %>
@@ -770,7 +770,7 @@
                                 if (applicationComponentFound) {
                             %>
                             <input type="button" class="button"
-                                   onclick="javascript:location.href='../application/configure-service-provider.jsp?spName=<%=Encode.forUriComponent(applicationSPName)%>&isHashDisabled=<%=Encode.forUriComponent(isHashDisabled)%>'"
+                                   onclick="javascript:location.href='../application/configure-service-provider.jsp?spName=<%=Encode.forUriComponent(applicationSPName)%>&isHashDisabled=<%=Encode.forUriComponent(String.valueOf(isHashDisabled))%>'"
                                    value="<fmt:message key='cancel'/>"/>
                             <% } else { %>
 
