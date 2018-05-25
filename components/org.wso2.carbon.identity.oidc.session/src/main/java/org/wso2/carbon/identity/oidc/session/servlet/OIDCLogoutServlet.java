@@ -45,9 +45,12 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.backChannelLogout.LogoutRequestSender;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
+import org.wso2.carbon.identity.oidc.session.OIDCSessionManagementException;
 import org.wso2.carbon.identity.oidc.session.cache.OIDCSessionDataCache;
 import org.wso2.carbon.identity.oidc.session.cache.OIDCSessionDataCacheEntry;
 import org.wso2.carbon.identity.oidc.session.cache.OIDCSessionDataCacheKey;
+import org.wso2.carbon.identity.oidc.session.handler.OIDCLogoutHandler;
+import org.wso2.carbon.identity.oidc.session.internal.OIDCSessionManagementComponentServiceHolder;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
@@ -61,6 +64,7 @@ import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -402,6 +406,17 @@ public class OIDCLogoutServlet extends HttpServlet {
     private void sendToFrameworkForLogout(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
+        try {
+            triggerLogoutHandlersForPreLogout(request, response);
+        } catch (OIDCSessionManagementException e) {
+            log.error("Error executing logout handlers on pre logout.");
+            if (log.isDebugEnabled()) {
+                log.debug("Error executing logout handlers on pre logout.", e);
+            }
+            response.sendRedirect(
+                    OIDCSessionManagementUtil.getErrorPageURL(OAuth2ErrorCodes.SERVER_ERROR, "User logout failed."));
+        }
+
         // Generate a SessionDataKey. Authentication framework expects this parameter
         String sessionDataKey = UUID.randomUUID().toString();
 
@@ -446,6 +461,18 @@ public class OIDCLogoutServlet extends HttpServlet {
             if (redirectURL == null) {
                 redirectURL = OIDCSessionManagementUtil.getOIDCLogoutURL();
             }
+
+            try {
+                triggerLogoutHandlersForPostLogout(request, response);
+            } catch (OIDCSessionManagementException e) {
+                log.error("Error executing logout handlers on post logout.");
+                if (log.isDebugEnabled()) {
+                    log.debug("Error executing logout handlers on post logout.", e);
+                }
+                response.sendRedirect(
+                        OIDCSessionManagementUtil.getErrorPageURL(OAuth2ErrorCodes.SERVER_ERROR, "User logout failed."));
+            }
+
             redirectURL = appendStateQueryParam(redirectURL, cacheEntry.getState());
             removeSessionDataFromCache(sessionDataKey);
             Cookie opBrowserStateCookie = OIDCSessionManagementUtil.removeOPBrowserStateCookie(request, response);
@@ -454,6 +481,28 @@ public class OIDCLogoutServlet extends HttpServlet {
         } else {
             response.sendRedirect(
                     OIDCSessionManagementUtil.getErrorPageURL(OAuth2ErrorCodes.SERVER_ERROR, "User logout failed"));
+        }
+    }
+
+    private void triggerLogoutHandlersForPostLogout(HttpServletRequest request,
+                                                    HttpServletResponse response) throws OIDCSessionManagementException {
+
+        List<OIDCLogoutHandler> oidcLogoutHandlers =
+                OIDCSessionManagementComponentServiceHolder.getOIDCLogoutHandlers();
+
+        for (OIDCLogoutHandler oidcLogoutHandler : oidcLogoutHandlers) {
+            oidcLogoutHandler.handlePostLogout(request, response);
+        }
+    }
+
+    private void triggerLogoutHandlersForPreLogout(HttpServletRequest request,
+                                                    HttpServletResponse response) throws OIDCSessionManagementException {
+
+        List<OIDCLogoutHandler> oidcLogoutHandlers =
+                OIDCSessionManagementComponentServiceHolder.getOIDCLogoutHandlers();
+
+        for (OIDCLogoutHandler oidcLogoutHandler : oidcLogoutHandlers) {
+            oidcLogoutHandler.handlePreLogout(request, response);
         }
     }
 

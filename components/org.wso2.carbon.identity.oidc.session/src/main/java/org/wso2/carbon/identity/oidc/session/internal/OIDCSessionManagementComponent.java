@@ -29,6 +29,7 @@ import org.osgi.service.component.annotations.ReferencePolicy;
 import org.osgi.service.http.HttpService;
 import org.wso2.carbon.identity.oidc.session.backChannelLogout.ClaimProviderImpl;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
+import org.wso2.carbon.identity.oidc.session.handler.OIDCLogoutHandler;
 import org.wso2.carbon.identity.oidc.session.servlet.OIDCLogoutServlet;
 import org.wso2.carbon.identity.oidc.session.servlet.OIDCSessionIFrameServlet;
 import org.wso2.carbon.identity.openidconnect.ClaimProvider;
@@ -138,5 +139,26 @@ public class OIDCSessionManagementComponent {
             log.debug("Unsetting the Realm Service.");
         }
         OIDCSessionManagementComponentServiceHolder.setRealmService(null);
+    }
+
+    @Reference(
+            name = "oidc.logout.handlers",
+            service = OIDCLogoutHandler.class,
+            cardinality = ReferenceCardinality.MULTIPLE,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unregisterOIDCLogoutHandler"
+    )
+    protected void registerOIDCLogoutHandler(OIDCLogoutHandler oidcLogoutHandler) {
+        if (log.isDebugEnabled()) {
+            log.debug("Registering OIDC Logout Handler: " + oidcLogoutHandler.getClass().getName());
+        }
+        OIDCSessionManagementComponentServiceHolder.addPostLogoutHandler(oidcLogoutHandler);
+    }
+
+    protected void unregisterOIDCLogoutHandler(OIDCLogoutHandler oidcLogoutHandler) {
+        if (log.isDebugEnabled()) {
+            log.debug("Un-registering OIDC Logout Handler: " + oidcLogoutHandler.getClass().getName());
+        }
+        OIDCSessionManagementComponentServiceHolder.removePostLogoutHandler(oidcLogoutHandler);
     }
 }
