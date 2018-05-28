@@ -1015,8 +1015,10 @@ public class OAuth2AuthzEndpoint {
         if (ArrayUtils.isNotEmpty(sessionIds)) {
             String commonAuthSessionId = sessionIds[0];
             SessionContext sessionContext = FrameworkUtils.getSessionContextFromCache(commonAuthSessionId);
-            String selectedAcr = sessionContext.getSessionAuthHistory().getSelectedAcrValue();
-            authorizationGrantCacheEntry.setSelectedAcrValue(selectedAcr);
+            if (sessionContext != null) {
+                String selectedAcr = sessionContext.getSessionAuthHistory().getSelectedAcrValue();
+                authorizationGrantCacheEntry.setSelectedAcrValue(selectedAcr);
+            }
         }
 
         String[] amrEntries = sessionDataCacheEntry.getParamMap().get(OAuthConstants.AMR);
