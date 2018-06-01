@@ -58,7 +58,7 @@ import java.util.UUID;
  */
 public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
 
-    private static final String PREV_ACCESS_TOKEN = "previousAccessToken";
+    public static final String PREV_ACCESS_TOKEN = "previousAccessToken";
     public static final int LAST_ACCESS_TOKEN_RETRIEVAL_LIMIT = 10;
     public static final int ALLOWED_MINIMUM_VALIDITY_PERIOD = 1000;
     public static final String DEACTIVATED_ACCESS_TOKEN = "DeactivatedAccessToken";

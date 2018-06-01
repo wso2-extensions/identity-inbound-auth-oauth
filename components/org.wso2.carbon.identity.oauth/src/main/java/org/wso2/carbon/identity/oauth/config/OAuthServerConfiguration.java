@@ -193,6 +193,9 @@ public class OAuthServerConfiguration {
     // Property added to preserve the backward compatibility to send the original claim uris comes in the assertion.
     private boolean convertOriginalClaimsFromAssertionsToOIDCDialect = false;
 
+    // Property to check whether to add remaining user attributes
+    private boolean addUnmappedUserAttributes = false;
+
     private OAuth2ScopeValidator oAuth2ScopeValidator;
     private Set<OAuth2ScopeValidator> oAuth2ScopeValidators = new HashSet<>();
     private Set<OAuth2ScopeHandler> oAuth2ScopeHandlers = new HashSet<>();
@@ -1140,6 +1143,15 @@ public class OAuthServerConfiguration {
 
     public boolean isConvertOriginalClaimsFromAssertionsToOIDCDialect() {
         return convertOriginalClaimsFromAssertionsToOIDCDialect;
+    }
+
+    /**
+     * Check whether addUnmappedUserAttributes is allowed.
+     *
+     * @return if the server configuration for addUnmappedUserAttributes is set.
+     */
+    public boolean isAddUnmappedUserAttributes() {
+        return addUnmappedUserAttributes;
     }
 
     public boolean isMapFederatedUsersToLocal() {
@@ -2187,12 +2199,18 @@ public class OAuthServerConfiguration {
                                 .getText().trim();
 
             }
-            if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements
-                    .OPENID_CONNECT_CONVERT_ORIGINAL_CLAIMS_FROM_ASSERTIONS_TO_OIDCDIALECT)) != null) {
-                convertOriginalClaimsFromAssertionsToOIDCDialect = Boolean.parseBoolean(openIDConnectConfigElem
-                        .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements
-                                .OPENID_CONNECT_CONVERT_ORIGINAL_CLAIMS_FROM_ASSERTIONS_TO_OIDCDIALECT)).getText()
-                        .trim());
+
+            OMElement convertOriginalClaimsFromAssertionsToOIDCDialectElement = openIDConnectConfigElem
+                    .getFirstChildWithName(getQNameWithIdentityNS(
+                            ConfigElements.OPENID_CONNECT_CONVERT_ORIGINAL_CLAIMS_FROM_ASSERTIONS_TO_OIDCDIALECT));
+            if (convertOriginalClaimsFromAssertionsToOIDCDialectElement != null) {
+                convertOriginalClaimsFromAssertionsToOIDCDialect = Boolean
+                        .parseBoolean(convertOriginalClaimsFromAssertionsToOIDCDialectElement.getText().trim());
+            }
+            OMElement addUnmappedUserAttributesElement = openIDConnectConfigElem.getFirstChildWithName(
+                    getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_ADD_UN_MAPPED_USER_ATTRIBUTES));
+            if (addUnmappedUserAttributesElement != null) {
+                addUnmappedUserAttributes = Boolean.parseBoolean(addUnmappedUserAttributesElement.getText().trim());
             }
         }
     }
@@ -2368,6 +2386,7 @@ public class OAuthServerConfiguration {
         public static final String OPENID_CONNECT_IDTOKEN_CUSTOM_CLAIM_CALLBACK_HANDLER = "IDTokenCustomClaimsCallBackHandler";
         public static final String OPENID_CONNECT_CONVERT_ORIGINAL_CLAIMS_FROM_ASSERTIONS_TO_OIDCDIALECT =
                 "ConvertOriginalClaimsFromAssertionsToOIDCDialect";
+        public static final String OPENID_CONNECT_ADD_UN_MAPPED_USER_ATTRIBUTES = "AddUnmappedUserAttributes";
         public static final String SUPPORTED_CLAIMS = "OpenIDConnectClaims";
         public static final String REQUEST_OBJECT = "RequestObject";
         public static final String REQUEST_OBJECT_VALIDATOR = "RequestObjectValidator";
