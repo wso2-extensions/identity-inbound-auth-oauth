@@ -385,11 +385,9 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         AuthenticatedUser user;
         long accessTokenLifeTimeInMillis;
         if (authAuthzReqMessageContext != null) {
-            user = authAuthzReqMessageContext.getAuthorizationReqDTO().getUser();
             accessTokenLifeTimeInMillis =
                     getAccessTokenLifeTimeInMillis(authAuthzReqMessageContext, oAuthAppDO, consumerKey);
         } else {
-            user = tokenReqMessageContext.getAuthorizedUser();
             accessTokenLifeTimeInMillis =
                     getAccessTokenLifeTimeInMillis(tokenReqMessageContext, oAuthAppDO, consumerKey);
         }
@@ -400,17 +398,19 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         // Set the default claims.
         JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
         jwtClaimsSetBuilder.issuer(issuer);
-        jwtClaimsSetBuilder.subject(user.getAuthenticatedSubjectIdentifier());
+        jwtClaimsSetBuilder
+                .subject(getAuthenticatedSubjectIdentifier(authAuthzReqMessageContext, tokenReqMessageContext));
         jwtClaimsSetBuilder.claim(AUTHORIZATION_PARTY, consumerKey);
-        jwtClaimsSetBuilder.expirationTime(new Date(curTimeInMillis + accessTokenLifeTimeInMillis));
         jwtClaimsSetBuilder.issueTime(new Date(curTimeInMillis));
         jwtClaimsSetBuilder.jwtID(UUID.randomUUID().toString());
 
-        String scope = getScope(authAuthzReqMessageContext, tokenReqMessageContext, jwtClaimsSetBuilder.build());
+        String scope = getScope(authAuthzReqMessageContext, tokenReqMessageContext);
         if (StringUtils.isNotEmpty(scope)) {
             jwtClaimsSetBuilder.claim(SCOPE, scope);
         }
-        jwtClaimsSetBuilder.expirationTime(getExpiryTime(tokenReqMessageContext, jwtClaimsSetBuilder.build()));
+
+        jwtClaimsSetBuilder.expirationTime(
+                getExpiryTime(tokenReqMessageContext, new Date(curTimeInMillis + accessTokenLifeTimeInMillis)));
 
         // This is a spec (openid-connect-core-1_0:2.0) requirement for ID tokens. But we are keeping this in JWT
         // as well.
@@ -428,15 +428,33 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     }
 
     /**
+     * To get authenticated subject identifier.
+     *
+     * @param authAuthzReqMessageContext Auth Request Message Context.
+     * @param tokenReqMessageContext     Token request message context.
+     * @return authenticated subject identifier.
+     */
+    private String getAuthenticatedSubjectIdentifier(OAuthAuthzReqMessageContext authAuthzReqMessageContext,
+            OAuthTokenReqMessageContext tokenReqMessageContext) {
+
+        AuthenticatedUser authenticatedUser;
+        if (authAuthzReqMessageContext != null) {
+            authenticatedUser = authAuthzReqMessageContext.getAuthorizationReqDTO().getUser();
+        } else {
+            authenticatedUser = tokenReqMessageContext.getAuthorizedUser();
+        }
+        return authenticatedUser != null ? authenticatedUser.getAuthenticatedSubjectIdentifier() : null;
+    }
+
+    /**
      * To get the scope of the token to be added to the JWT claims.
      *
      * @param authAuthzReqMessageContext Auth Request Message Context.
      * @param tokenReqMessageContext     Token Request Message Context.
-     * @param jwtClaimsSet               Relevant JWT Claim Set.
      * @return scope of token.
      */
     private String getScope(OAuthAuthzReqMessageContext authAuthzReqMessageContext,
-            OAuthTokenReqMessageContext tokenReqMessageContext, JWTClaimsSet jwtClaimsSet) {
+            OAuthTokenReqMessageContext tokenReqMessageContext) {
 
         String[] scope;
         String scopeString = null;
@@ -448,8 +466,8 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         if (ArrayUtils.isNotEmpty(scope)) {
             scopeString = OAuth2Util.buildScopeString(scope);
             if (log.isDebugEnabled()) {
-                log.debug("Scope exist for the jwt access token with subject " + jwtClaimsSet.getSubject() + " and "
-                        + "the scope is " + scopeString);
+                log.debug("Scope exist for the jwt access token with subject " + getAuthenticatedSubjectIdentifier(
+                        authAuthzReqMessageContext, tokenReqMessageContext) + " and the scope is " + scopeString);
             }
         }
         return scopeString;
@@ -459,12 +477,11 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
      * To get the expiry time claim of the JWT token, based on the previous assertion expiry time.
      *
      * @param tokenReqMessageContext Token request message context.
-     * @param jwtClaimsSet           JWT Claim set.
+     * @param originalExpiryTime     Original expiry time
      * @return expiry time of the token.
      */
-    private Date getExpiryTime(OAuthTokenReqMessageContext tokenReqMessageContext, JWTClaimsSet jwtClaimsSet) {
+    private Date getExpiryTime(OAuthTokenReqMessageContext tokenReqMessageContext, Date originalExpiryTime) {
 
-        Date originalExpiryTime = jwtClaimsSet.getExpirationTime();
         if (tokenReqMessageContext != null) {
             Object assertionExpiryTime = tokenReqMessageContext.getProperty(EXPIRY_TIME_JWT);
             if (assertionExpiryTime != null) {
