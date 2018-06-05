@@ -360,7 +360,7 @@ public class SAML2BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
         return assertion;
     }
 
-    private ClaimMapping buildClaimMapping(String claimUri) {
+    public static ClaimMapping buildClaimMapping(String claimUri) {
 
         ClaimMapping claimMapping = new ClaimMapping();
         Claim claim = new Claim();
