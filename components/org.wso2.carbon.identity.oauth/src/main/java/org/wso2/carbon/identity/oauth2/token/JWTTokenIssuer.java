@@ -435,7 +435,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
      * @return authenticated subject identifier.
      */
     private String getAuthenticatedSubjectIdentifier(OAuthAuthzReqMessageContext authAuthzReqMessageContext,
-            OAuthTokenReqMessageContext tokenReqMessageContext) {
+            OAuthTokenReqMessageContext tokenReqMessageContext) throws IdentityOAuth2Exception {
 
         AuthenticatedUser authenticatedUser;
         if (authAuthzReqMessageContext != null) {
@@ -443,7 +443,11 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         } else {
             authenticatedUser = tokenReqMessageContext.getAuthorizedUser();
         }
-        return authenticatedUser != null ? authenticatedUser.getAuthenticatedSubjectIdentifier() : null;
+
+        if (authenticatedUser == null) {
+            throw new IdentityOAuth2Exception("Authenticated user is null for the request.");
+        }
+        return authenticatedUser.getAuthenticatedSubjectIdentifier();
     }
 
     /**
@@ -454,7 +458,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
      * @return scope of token.
      */
     private String getScope(OAuthAuthzReqMessageContext authAuthzReqMessageContext,
-            OAuthTokenReqMessageContext tokenReqMessageContext) {
+            OAuthTokenReqMessageContext tokenReqMessageContext) throws IdentityOAuth2Exception {
 
         String[] scope;
         String scopeString = null;
