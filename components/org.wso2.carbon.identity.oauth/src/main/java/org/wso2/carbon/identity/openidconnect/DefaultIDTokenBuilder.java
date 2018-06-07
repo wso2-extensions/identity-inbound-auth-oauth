@@ -144,7 +144,16 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         String idTokenIssuer = getIdTokenIssuer(spTenantDomain);
         String accessToken = tokenRespDTO.getAccessToken();
 
-        long idTokenValidityInMillis = getIDTokenExpiryInMillis();
+        // Initialize OAuthAppDO using the client ID.
+        OAuthAppDO oAuthAppDO;
+        try {
+            oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
+        } catch (InvalidOAuthClientException e) {
+            String error = "Error occurred while getting app information for client_id: " + clientId;
+            throw new IdentityOAuth2Exception(error, e);
+        }
+
+        long idTokenValidityInMillis = getIDTokenExpiryInMillis(oAuthAppDO);
         long currentTimeInMillis = Calendar.getInstance().getTimeInMillis();
 
         AuthenticatedUser authorizedUser = tokenReqMsgCtxt.getAuthorizedUser();
@@ -212,14 +221,6 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
             return new PlainJWT(jwtClaimsSet).serialize();
         }
 
-        // Initialize OAuthAppDO using the client ID.
-        OAuthAppDO oAuthAppDO;
-        try {
-            oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
-        } catch (InvalidOAuthClientException e) {
-            String error = "Error occurred while getting app information for client_id: " + clientId;
-            throw new IdentityOAuth2Exception(error, e);
-        }
 
         return getIDToken(clientId, spTenantDomain, jwtClaimsSet, oAuthAppDO, getSigningTenantDomain(tokenReqMsgCtxt));
     }
@@ -242,7 +243,16 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         String acrValue = authzReqMessageContext.getAuthorizationReqDTO().getSelectedAcr();
         List<String> amrValues = Collections.emptyList(); //TODO:
 
-        long idTokenLifeTimeInMillis = getIDTokenExpiryInMillis();
+        // Initialize OAuthAppDO using the client ID.
+        OAuthAppDO oAuthAppDO;
+        try {
+            oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
+        } catch (InvalidOAuthClientException e) {
+            String error = "Error occurred while getting app information for client_id: " + clientId;
+            throw new IdentityOAuth2Exception(error, e);
+        }
+
+        long idTokenLifeTimeInMillis = getIDTokenExpiryInMillis(oAuthAppDO);
         long currentTimeInMillis = Calendar.getInstance().getTimeInMillis();
 
         if (log.isDebugEnabled()) {
@@ -283,15 +293,6 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
 
         if (isUnsignedIDToken()) {
             return new PlainJWT(jwtClaimsSet).serialize();
-        }
-
-        // Initialize OAuthAppDO using the client ID.
-        OAuthAppDO oAuthAppDO;
-        try {
-            oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
-        } catch (InvalidOAuthClientException e) {
-            String error = "Error occurred while getting app information for client_id: " + clientId;
-            throw new IdentityOAuth2Exception(error, e);
         }
 
         return getIDToken(clientId, spTenantDomain, jwtClaimsSetBuilder.build(), oAuthAppDO,
@@ -876,8 +877,8 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         return true;
     }
 
-    private long getIDTokenExpiryInMillis() {
-        return OAuthServerConfiguration.getInstance().getOpenIDConnectIDTokenExpiryTimeInSeconds() * 1000L;
+    private long getIDTokenExpiryInMillis(OAuthAppDO oAuthAppDO) {
+        return oAuthAppDO.getIdTokenExpiryTime() * 1000L;
     }
 
     /**

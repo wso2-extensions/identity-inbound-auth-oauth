@@ -285,6 +285,7 @@
                     <xs:element minOccurs="0" name="idTokenEncryptionAlgorithm" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="idTokenEncryptionEnabled" type="xs:boolean"/>
                     <xs:element minOccurs="0" name="idTokenEncryptionMethod" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="idTokenExpiryTime" type="xs:long"/>
                     <xs:element minOccurs="0" name="oauthConsumerKey" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="oauthConsumerSecret" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="pkceMandatory" type="xs:boolean"/>
@@ -315,6 +316,7 @@
             <xs:complexType name="OAuthTokenExpiryTimeDTO">
                 <xs:sequence>
                     <xs:element minOccurs="0" name="applicationAccessTokenExpiryTime" type="xs:long"/>
+                    <xs:element minOccurs="0" name="idTokenExpiryTime" type="xs:long"/>
                     <xs:element minOccurs="0" name="refreshTokenExpiryTime" type="xs:long"/>
                     <xs:element minOccurs="0" name="userAccessTokenExpiryTime" type="xs:long"/>
                 </xs:sequence>

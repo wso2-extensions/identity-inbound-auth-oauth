@@ -23,6 +23,7 @@ public class OAuthTokenExpiryTimeDTO {
     private long userAccessTokenExpiryTime;
     private long applicationAccessTokenExpiryTime;
     private long refreshTokenExpiryTime;
+    private long idTokenExpiryTime;
 
     public long getUserAccessTokenExpiryTime() {
         return userAccessTokenExpiryTime;
@@ -47,4 +48,13 @@ public class OAuthTokenExpiryTimeDTO {
     public void setRefreshTokenExpiryTime(long refreshTokenExpiryTime) {
         this.refreshTokenExpiryTime = refreshTokenExpiryTime;
     }
+
+    public long getIdTokenExpiryTime() {
+        return idTokenExpiryTime;
+    }
+
+    public void setIdTokenExpiryTime(long idTokenExpiryTime) {
+        this.idTokenExpiryTime = idTokenExpiryTime;
+    }
+
 }
