@@ -57,6 +57,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 public class ClaimsUtil {
 
@@ -646,6 +647,8 @@ public class ClaimsUtil {
             authorizationGrantCacheEntry.setTokenId(tokenRespDTO.getTokenId());
         }
 
+        long validityPeriod = TimeUnit.MILLISECONDS.toNanos(tokenRespDTO.getExpiresInMillis());
+        authorizationGrantCacheEntry.setValidityPeriod(validityPeriod);
         AuthorizationGrantCache.getInstance()
                 .addToCacheByToken(authorizationGrantCacheKey, authorizationGrantCacheEntry);
     }

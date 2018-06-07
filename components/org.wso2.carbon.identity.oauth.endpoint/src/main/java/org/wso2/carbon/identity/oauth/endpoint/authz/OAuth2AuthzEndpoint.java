@@ -671,12 +671,12 @@ public class OAuth2AuthzEndpoint {
 
     private void addToSessionDataCache(OAuthMessage oAuthMessage, AuthenticationResult authnResult, AuthenticatedUser authenticatedUser) {
 
-        SessionDataCacheEntry entry = oAuthMessage.getSessionDataCacheEntry();
-        entry.setLoggedInUser(authenticatedUser);
-        entry.setAuthenticatedIdPs(authnResult.getAuthenticatedIdPs());
+        oAuthMessage.getSessionDataCacheEntry().setLoggedInUser(authenticatedUser);
+        oAuthMessage.getSessionDataCacheEntry().setAuthenticatedIdPs(authnResult.getAuthenticatedIdPs());
+        oAuthMessage.getSessionDataCacheEntry().setValidityPeriod(
+                TimeUnit.MINUTES.toNanos(IdentityUtil.getTempDataCleanUpTimeout()));
         SessionDataCacheKey cacheKey = new SessionDataCacheKey(getSessionDataKeyFromLogin(oAuthMessage));
-        entry.setValidityPeriod(TimeUnit.MINUTES.toNanos(IdentityUtil.getTempDataCleanUpTimeout()));
-        SessionDataCache.getInstance().addToCache(cacheKey, entry);
+        SessionDataCache.getInstance().addToCache(cacheKey, oAuthMessage.getSessionDataCacheEntry());
     }
 
     private void updateAuthTimeInSessionDataCacheEntry(OAuthMessage oAuthMessage) {
