@@ -53,6 +53,7 @@ public class DCRMUtils {
         appRegistrationRequest.setClientName(registrationRequestDTO.getClientName());
         appRegistrationRequest.setRedirectUris(registrationRequestDTO.getRedirectUris());
         appRegistrationRequest.setGrantTypes(registrationRequestDTO.getGrantTypes());
+        appRegistrationRequest.setTokenType(registrationRequestDTO.getTokenType());
         return appRegistrationRequest;
 
     }
@@ -63,6 +64,7 @@ public class DCRMUtils {
         applicationUpdateRequest.setClientName(updateRequestDTO.getClientName());
         applicationUpdateRequest.setRedirectUris(updateRequestDTO.getRedirectUris());
         applicationUpdateRequest.setGrantTypes(updateRequestDTO.getGrantTypes());
+        applicationUpdateRequest.setTokenType(updateRequestDTO.getTokenType());
         return applicationUpdateRequest;
 
     }

@@ -63,12 +63,12 @@ public class OAuthAppDO implements Serializable {
     private String idTokenEncryptionMethod;
     private String backChannelLogoutUrl;
     private AuthenticatedUser appOwner;
+    private String tokenType;
 
     public AuthenticatedUser getAppOwner() {
 
         return appOwner;
     }
-
     public void setAppOwner(AuthenticatedUser appOwner) {
 
         this.appOwner = appOwner;
@@ -248,7 +248,14 @@ public class OAuthAppDO implements Serializable {
     }
 
     public void setIdTokenExpiryTime(long idTokenExpiryTime) {
-
         this.idTokenExpiryTime = idTokenExpiryTime;
+    }
+
+    public String getTokenType() {
+        return tokenType;
+    }
+
+    public void setTokenType(String tokenType) {
+        this.tokenType = tokenType;
     }
 }

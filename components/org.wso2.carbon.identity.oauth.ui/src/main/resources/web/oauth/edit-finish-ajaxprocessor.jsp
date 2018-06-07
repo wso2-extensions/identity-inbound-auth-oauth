@@ -59,6 +59,7 @@
     String applicationAccessTokenExpiryTime = request.getParameter("applicationAccessTokenExpiryTime");
     String refreshTokenExpiryTime = request.getParameter("refreshTokenExpiryTime");
     String idTokenExpiryTime = request.getParameter("idTokenExpiryTime");
+    String tokenType = request.getParameter("tokenType");
     String grants;
    	StringBuffer buff = new StringBuffer();
     boolean pkceMandatory = false;
@@ -107,6 +108,7 @@
             app.setApplicationAccessTokenExpiryTime(Long.parseLong(applicationAccessTokenExpiryTime));
             app.setRefreshTokenExpiryTime(Long.parseLong(refreshTokenExpiryTime));
             app.setIdTokenExpiryTime(Long.parseLong(idTokenExpiryTime));
+            app.setTokenType(tokenType);
             String[] grantTypes = client.getAllowedOAuthGrantTypes();
             for (String grantType : grantTypes) {
                 String grant = request.getParameter("grant_" + grantType);

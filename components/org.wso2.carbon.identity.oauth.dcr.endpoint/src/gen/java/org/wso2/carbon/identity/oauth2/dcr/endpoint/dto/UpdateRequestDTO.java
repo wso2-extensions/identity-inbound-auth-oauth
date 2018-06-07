@@ -25,6 +25,9 @@ public class UpdateRequestDTO  {
   
   private List<String> grantTypes = new ArrayList<String>();
 
+
+  private String tokenType = null;
+
   
   /**
    **/
@@ -61,7 +64,16 @@ public class UpdateRequestDTO  {
     this.grantTypes = grantTypes;
   }
 
-  
+
+  @ApiModelProperty(value = "")
+  @JsonProperty("token_type")
+  public String getTokenType() {
+    return tokenType;
+  }
+
+  public void setTokenType(String tokenType) {
+    this.tokenType = tokenType;
+  }
 
   @Override
   public String toString()  {
@@ -71,6 +83,7 @@ public class UpdateRequestDTO  {
     sb.append("  redirect_uris: ").append(redirectUris).append("\n");
     sb.append("  client_name: ").append(clientName).append("\n");
     sb.append("  grant_types: ").append(grantTypes).append("\n");
+    sb.append("  token_type: ").append(tokenType).append("\n");
     sb.append("}\n");
     return sb.toString();
   }

@@ -46,6 +46,9 @@ public class RegistrationRequestDTO  {
   
   private List<String> responseTypes = new ArrayList<String>();
 
+
+  private String tokenType = null;
+
   
   /**
    **/
@@ -166,7 +169,16 @@ public class RegistrationRequestDTO  {
     this.responseTypes = responseTypes;
   }
 
-  
+
+  @ApiModelProperty(value = "")
+  @JsonProperty("token_type")
+  public String getTokenType() {
+    return tokenType;
+  }
+
+  public void setTokenType(String tokenType) {
+    this.tokenType = tokenType;
+  }
 
   @Override
   public String toString()  {
@@ -183,6 +195,7 @@ public class RegistrationRequestDTO  {
     sb.append("  post_logout_redirect_uris: ").append(postLogoutRedirectUris).append("\n");
     sb.append("  request_uris: ").append(requestUris).append("\n");
     sb.append("  response_types: ").append(responseTypes).append("\n");
+    sb.append("  token_type: ").append(tokenType).append("\n");
     sb.append("}\n");
     return sb.toString();
   }

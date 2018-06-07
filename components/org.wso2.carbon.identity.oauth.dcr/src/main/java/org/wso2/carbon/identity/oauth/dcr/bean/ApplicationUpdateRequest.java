@@ -29,6 +29,7 @@ public class ApplicationUpdateRequest implements Serializable {
     private List<String> redirectUris = new ArrayList<String>();
     private String clientName = null;
     private List<String> grantTypes = new ArrayList<String>();
+    private String tokenType = null;
 
     public List<String> getRedirectUris() {
         return redirectUris;
@@ -52,5 +53,13 @@ public class ApplicationUpdateRequest implements Serializable {
 
     public void setGrantTypes(List<String> grantTypes) {
         this.grantTypes = grantTypes;
+    }
+
+    public String getTokenType() {
+        return tokenType;
+    }
+
+    public void setTokenType(String tokenType) {
+        this.tokenType = tokenType;
     }
 }

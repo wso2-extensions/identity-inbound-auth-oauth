@@ -294,6 +294,18 @@
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
+            <xs:element name="getSupportedTokenTypes">
+                <xs:complexType>
+                    <xs:sequence/>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="getSupportedTokenTypesResponse">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element maxOccurs="unbounded" minOccurs="0" name="return" nillable="true" type="xs:string"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
             <xs:element name="isPKCESupportEnabled">
                 <xs:complexType>
                     <xs:sequence/>
@@ -470,6 +482,12 @@
     <wsdl:message name="getOauthApplicationStateResponse">
         <wsdl:part name="parameters" element="ns1:getOauthApplicationStateResponse"/>
     </wsdl:message>
+    <wsdl:message name="getSupportedTokenTypesRequest">
+        <wsdl:part name="parameters" element="ns1:getSupportedTokenTypes"/>
+    </wsdl:message>
+    <wsdl:message name="getSupportedTokenTypesResponse">
+        <wsdl:part name="parameters" element="ns1:getSupportedTokenTypesResponse"/>
+    </wsdl:message>
     <wsdl:message name="isPKCESupportEnabledRequest">
         <wsdl:part name="parameters" element="ns1:isPKCESupportEnabled"/>
     </wsdl:message>
@@ -615,6 +633,10 @@
             <wsdl:input message="tns:getOauthApplicationStateRequest" wsaw:Action="urn:getOauthApplicationState"/>
             <wsdl:output message="tns:getOauthApplicationStateResponse" wsaw:Action="urn:getOauthApplicationStateResponse"/>
             <wsdl:fault message="tns:OAuthAdminServiceIdentityOAuthAdminException" name="OAuthAdminServiceIdentityOAuthAdminException" wsaw:Action="urn:getOauthApplicationStateOAuthAdminServiceIdentityOAuthAdminException"/>
+        </wsdl:operation>
+        <wsdl:operation name="getSupportedTokenTypes">
+            <wsdl:input message="tns:getSupportedTokenTypesRequest" wsaw:Action="urn:getSupportedTokenTypes"/>
+            <wsdl:output message="tns:getSupportedTokenTypesResponse" wsaw:Action="urn:getSupportedTokenTypesResponse"/>
         </wsdl:operation>
         <wsdl:operation name="isPKCESupportEnabled">
             <wsdl:input message="tns:isPKCESupportEnabledRequest" wsaw:Action="urn:isPKCESupportEnabled"/>
@@ -819,6 +841,15 @@
             <wsdl:fault name="OAuthAdminServiceIdentityOAuthAdminException">
                 <soap:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
             </wsdl:fault>
+        </wsdl:operation>
+        <wsdl:operation name="getSupportedTokenTypes">
+            <soap:operation soapAction="urn:getSupportedTokenTypes" style="document"/>
+            <wsdl:input>
+                <soap:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap:body use="literal"/>
+            </wsdl:output>
         </wsdl:operation>
         <wsdl:operation name="isPKCESupportEnabled">
             <soap:operation soapAction="urn:isPKCESupportEnabled" style="document"/>
@@ -1141,6 +1172,15 @@
                 <soap12:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
             </wsdl:fault>
         </wsdl:operation>
+        <wsdl:operation name="getSupportedTokenTypes">
+            <soap12:operation soapAction="urn:getSupportedTokenTypes" style="document"/>
+            <wsdl:input>
+                <soap12:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap12:body use="literal"/>
+            </wsdl:output>
+        </wsdl:operation>
         <wsdl:operation name="isPKCESupportEnabled">
             <soap12:operation soapAction="urn:isPKCESupportEnabled" style="document"/>
             <wsdl:input>
@@ -1431,6 +1471,15 @@
         </wsdl:operation>
         <wsdl:operation name="getOauthApplicationState">
             <http:operation location="getOauthApplicationState"/>
+            <wsdl:input>
+                <mime:content type="text/xml" part="parameters"/>
+            </wsdl:input>
+            <wsdl:output>
+                <mime:content type="text/xml" part="parameters"/>
+            </wsdl:output>
+        </wsdl:operation>
+        <wsdl:operation name="getSupportedTokenTypes">
+            <http:operation location="getSupportedTokenTypes"/>
             <wsdl:input>
                 <mime:content type="text/xml" part="parameters"/>
             </wsdl:input>

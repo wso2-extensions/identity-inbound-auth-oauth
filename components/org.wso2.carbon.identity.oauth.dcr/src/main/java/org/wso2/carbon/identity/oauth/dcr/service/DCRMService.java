@@ -134,6 +134,10 @@ public class DCRMService {
                 String callbackUrl = validateAndSetCallbackURIs(updateRequest.getRedirectUris(), updateRequest.getGrantTypes());
                 appDTO.setCallbackUrl(callbackUrl);
             }
+
+            if(updateRequest.getTokenType() != null) {
+                appDTO.setTokenType(updateRequest.getTokenType());
+            }
             oAuthAdminService.updateConsumerApplication(appDTO);
         } catch (IdentityOAuthAdminException e) {
             throw DCRMUtils.generateServerException(
@@ -258,6 +262,7 @@ public class DCRMService {
         String grantType = StringUtils.join(registrationRequest.getGrantTypes(), GRANT_TYPE_SEPARATOR);
         oAuthConsumerApp.setGrantTypes(grantType);
         oAuthConsumerApp.setOAuthVersion(OAUTH_VERSION);
+        oAuthConsumerApp.setTokenType(registrationRequest.getTokenType());
         if (log.isDebugEnabled()) {
             log.debug("Creating OAuth Application: " + spName + " in tenant: " + tenantDomain);
         }

@@ -146,6 +146,7 @@ public class OAuthServerConfiguration {
     private Map<String, ResponseTypeHandler> supportedResponseTypes;
     private Map<String, String> supportedResponseTypeValidatorNames = new HashMap<>();
     private Map<String, Class<? extends OAuthValidator<HttpServletRequest>>> supportedResponseTypeValidators;
+    private Map<String, String> supportedTokenTypes = new HashMap<>();
     private String[] supportedClaims = null;
     private Map<String, Properties> supportedClientAuthHandlerData = new HashMap<>();
     private String saml2TokenCallbackHandlerName = null;
@@ -295,6 +296,9 @@ public class OAuthServerConfiguration {
 
         // read supported grant types
         parseSupportedGrantTypesConfig(oauthElem);
+
+        //read supported token types
+        parseSupportedTokenTypesConfig(oauthElem);
 
         // Read <UserConsentEnabledGrantTypes> under <OAuth> tag and populate data.
         parseUserConsentEnabledGrantTypesConfig(oauthElem);
@@ -1798,6 +1802,40 @@ public class OAuthServerConfiguration {
         }
     }
 
+    private void parseSupportedTokenTypesConfig(OMElement oauthConfigElem) {
+        OMElement supportedTokenTypesElem = oauthConfigElem
+                .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.SUPPORTED_TOKEN_TYPES));
+
+        if (supportedTokenTypesElem != null) {
+            Iterator<OMElement> iterator = supportedTokenTypesElem
+                    .getChildrenWithName(getQNameWithIdentityNS(ConfigElements.SUPPORTED_TOKEN_TYPE));
+
+            while (iterator.hasNext()) {
+                OMElement supportedTokenTypeElement = iterator.next();
+                OMElement tokenTypeNameElement = supportedTokenTypeElement
+                        .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.TOKEN_TYPE_NAME));
+
+
+                String tokenTypeName = null;
+                if (tokenTypeNameElement != null) {
+                    tokenTypeName = tokenTypeNameElement.getText();
+                }
+
+                OMElement tokenTypeImplClassElement = supportedTokenTypeElement
+                        .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.TOKEN_TYPE_IMPL_CLASS));
+
+                String tokenTypeImplClass = null;
+                if (tokenTypeImplClassElement != null) {
+                    tokenTypeImplClass = tokenTypeImplClassElement.getText();
+                }
+
+                if(StringUtils.isNotEmpty(tokenTypeName) && StringUtils.isNotEmpty(tokenTypeImplClass)) {
+                    supportedTokenTypes.put(tokenTypeName, tokenTypeImplClass);
+                }
+            }
+        }
+    }
+
     private void parseUserConsentEnabledGrantTypesConfig(OMElement oauthConfigElem) {
 
         OMElement userConsentEnabledGrantTypesElement =
@@ -2314,6 +2352,10 @@ public class OAuthServerConfiguration {
         return oAuth2ScopeValidators;
     }
 
+    public Map<String, String> getSupportedTokenTypes() {
+        return supportedTokenTypes;
+    }
+
     public void setOAuth2ScopeValidators(Set<OAuth2ScopeValidator> oAuth2ScopeValidators) {
         this.oAuth2ScopeValidators = oAuth2ScopeValidators;
     }
@@ -2324,6 +2366,14 @@ public class OAuthServerConfiguration {
 
     public void setOAuth2ScopeHandlers(Set<OAuth2ScopeHandler> oAuth2ScopeHandlers) {
         this.oAuth2ScopeHandlers = oAuth2ScopeHandlers;
+    }
+
+    public void setOauthIdentityTokenGeneratorClassName(String tokenType) {
+        String tokenGeneratorClass = this.supportedTokenTypes.get(tokenType);
+        if(!tokenGeneratorClass.equals(oauthIdentityTokenGeneratorClassName)) {
+            this.oauthIdentityTokenGenerator = null;
+            this.oauthIdentityTokenGeneratorClassName = tokenGeneratorClass;
+        }
     }
 
     private void parseUseSPTenantDomainConfig(OMElement oauthElem) {
@@ -2455,6 +2505,11 @@ public class OAuthServerConfiguration {
         private static final String SUPPORTED_GRANT_TYPE = "SupportedGrantType";
         private static final String GRANT_TYPE_NAME = "GrantTypeName";
 
+        //Supported Token Types
+        private static final String SUPPORTED_TOKEN_TYPES = "SupportedTokenTypes";
+        private static final String SUPPORTED_TOKEN_TYPE = "SupportedTokenType";
+        private static final String TOKEN_TYPE_NAME = "TokenTypeName";
+
         private static final String USER_CONSENT_ENABLED_GRANT_TYPES = "UserConsentEnabledGrantTypes";
         private static final String USER_CONSENT_ENABLED_GRANT_TYPE = "UserConsentEnabledGrantType";
         private static final String USER_CONSENT_ENABLED_GRANT_TYPE_NAME = "GrantTypeName";
@@ -2464,6 +2519,7 @@ public class OAuthServerConfiguration {
         private static final String GRANT_TYPE_HANDLER_IMPL_CLASS = "GrantTypeHandlerImplClass";
         private static final String GRANT_TYPE_VALIDATOR_IMPL_CLASS = "GrantTypeValidatorImplClass";
         private static final String RESPONSE_TYPE_VALIDATOR_IMPL_CLASS = "ResponseTypeValidatorImplClass";
+        private static final String TOKEN_TYPE_IMPL_CLASS = "TokenTypeImplClass";
         // Supported Client Authentication Methods
         private static final String CLIENT_AUTH_HANDLERS = "ClientAuthHandlers";
         private static final String CLIENT_AUTH_HANDLER_IMPL_CLASS = "ClientAuthHandler";

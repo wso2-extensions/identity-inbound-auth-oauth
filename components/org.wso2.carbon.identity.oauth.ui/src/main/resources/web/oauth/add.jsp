@@ -55,6 +55,7 @@
     client = new OAuthAdminClient(cookie, backendServerURL, configContext);
     List<String> allowedGrants = new ArrayList<String>();
     List<String> scopeValidators = new ArrayList<String>();
+    List<String> tokenTypes = new ArrayList<String>();
 
     String defaultIdTokenEncryptionAlgorithm = client.getSupportedIDTokenAlgorithms().getDefaultIdTokenEncryptionAlgorithm();
     String[] supportedIdTokenEncryptionAlgorithms =
@@ -84,6 +85,7 @@
         scopeValidators = new ArrayList<String>(Arrays.asList(client.getAllowedScopeValidators()));
         // Sorting the list to display the scope validators in alphabetical order
         Collections.sort(scopeValidators);
+        tokenTypes = new ArrayList<String>(Arrays.asList(client.getSupportedTokenTypes()));
     } catch (Exception e) {
         String message = resourceBundle.getString("error.while.getting.scope.validators") + " : " + e.getMessage();
         CarbonUIMessage.sendCarbonUIMessage(message, CarbonUIMessage.ERROR, request, e);
@@ -654,6 +656,29 @@
                                             <script type="text/javascript">
                                                 forward();
                                             </script>
+                                            <%
+                                                }
+                                            %>
+                                        </table>
+                                    </td>
+                                </tr>
+                                <!--Access Token types-->
+                                <tr id="access_token_type_row" name="access_token_type_row">
+                                    <td class="leftCol-med"><fmt:message key='accessTokenTypes'/></td>
+                                    <td>
+                                        <table>
+                                            <%
+                                                for (String tokenType : tokenTypes) {
+                                            %>
+                                            <tr>
+                                                <td><label><input type="radio" name="tokenType"
+                                                                  id=<%=  OAuthUIUtil.getTokenTypeId(tokenType)%>
+                                                                          value=<%=Encode.forHtmlAttribute(tokenType)%>
+                                                        <%if(tokenType.equalsIgnoreCase("default")) {
+                                                        %> checked="checked" <%}%> />
+                                                    <%=Encode.forHtmlAttribute(tokenType)%>
+                                                </label></td>
+                                            </tr>
                                             <%
                                                 }
                                             %>

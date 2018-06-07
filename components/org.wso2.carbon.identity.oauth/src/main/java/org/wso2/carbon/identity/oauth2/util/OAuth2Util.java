@@ -146,6 +146,8 @@ public class OAuth2Util {
     public static final String ENABLE_OPENID_CONNECT_AUDIENCES = "EnableAudiences";
     public static final String OPENID_CONNECT_AUDIENCE = "audience";
 
+    public static final String DEFAULT_TOKEN_TYPE = "Default";
+
     private static final String ALGORITHM_NONE = "NONE";
     /*
      * OPTIONAL. A JSON string containing a space-separated list of scopes associated with this token, in the format
@@ -1563,6 +1565,11 @@ public class OAuth2Util {
             return oAuthAppDO;
         } else {
             oAuthAppDO = new OAuthAppDAO().getAppInformation(clientId);
+            String tokenType = oAuthAppDO.getTokenType();
+            if(tokenType == null) {
+                tokenType = DEFAULT_TOKEN_TYPE;
+            }
+            OAuthServerConfiguration.getInstance().setOauthIdentityTokenGeneratorClassName(tokenType);
             AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO);
             return oAuthAppDO;
         }
