@@ -25,6 +25,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
@@ -52,6 +53,7 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Grant Type handler for Grant Type refresh_token which is used to get a new access token.
@@ -556,6 +558,8 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
                 grantCacheEntry.setTokenId(null);
             }
 
+            grantCacheEntry.setValidityPeriod(
+                    TimeUnit.MILLISECONDS.toNanos(accessTokenBean.getValidityPeriodInMillis()));
             AuthorizationGrantCache.getInstance().clearCacheEntryByToken(oldAuthorizationGrantCacheKey);
             AuthorizationGrantCache.getInstance().addToCacheByToken(authorizationGrantCacheKey, grantCacheEntry);
         }

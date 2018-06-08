@@ -54,6 +54,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @deprecated use {@link AccessTokenResponseTypeHandler} instead.
@@ -550,6 +551,7 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
                 }
                 authorizationGrantCacheEntry.setSubjectClaim(sub);
             }
+            authorizationGrantCacheEntry.setValidityPeriod(TimeUnit.MILLISECONDS.toNanos(accessTokenDO.getValidityPeriodInMillis()));
             AuthorizationGrantCache.getInstance().addToCacheByToken(authorizationGrantCacheKey,
                     authorizationGrantCacheEntry);
         }
