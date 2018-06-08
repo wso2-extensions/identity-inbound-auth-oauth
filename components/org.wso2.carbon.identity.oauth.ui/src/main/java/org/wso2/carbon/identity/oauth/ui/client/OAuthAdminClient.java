@@ -72,6 +72,18 @@ public class OAuthAdminClient {
         stub.registerOAuthApplicationData(application);
     }
 
+    /**
+     * Registers an OAuth consumer application and retrieve application details.
+     *
+     * @param application <code>OAuthConsumerAppDTO</code> with application information.
+     * @return OAuthConsumerAppDTO Created OAuth application details.
+     * @throws Exception Error while registering an application.
+     */
+    public OAuthConsumerAppDTO registerAndRetrieveOAuthApplicationData(OAuthConsumerAppDTO application)
+            throws Exception {
+        return stub.registerAndRetrieveOAuthApplicationData(application);
+    }
+
     // TODO : this method should be removed once above is done
     public OAuthConsumerAppDTO getOAuthApplicationDataByName(String applicationName) throws Exception {
         OAuthConsumerAppDTO[] dtos = stub.getAllOAuthApplicationData();
@@ -106,6 +118,17 @@ public class OAuthAdminClient {
         return stub.isPKCESupportEnabled();
     }
 
+    /**
+     * Check whether hashing oauth keys (consumer secret, access token, refresh token and authorization code)
+     * configuration is disabled or not in identity.xml file.
+     *
+     * @return Whether hash feature is disabled or not.
+     * @throws Exception Error while getting the oAuth configuration.
+     */
+    public boolean isHashDisabled() throws Exception {
+        return stub.isHashDisabled();
+    }
+
     public String[] getAllowedOAuthGrantTypes() throws Exception {
         if (allowedGrantTypes == null) {
             allowedGrantTypes = stub.getAllowedGrantTypes();
@@ -115,6 +138,17 @@ public class OAuthAdminClient {
 
     public void regenerateSecretKey(String consumerkey) throws Exception {
         stub.updateOauthSecretKey(consumerkey);
+    }
+
+    /**
+     * Regenerate consumer secret for the application and retrieve application details.
+     *
+     * @param consumerKey Consumer key for the application.
+     * @return OAuthConsumerAppDTO oAuth application details.
+     * @throws Exception Error while regenerating the consumer secret.
+     */
+    public OAuthConsumerAppDTO regenerateAndRetrieveOauthSecretKey(String consumerKey) throws Exception {
+        return stub.updateAndRetrieveOauthSecretKey(consumerKey);
     }
 
     public String getOauthApplicationState(String consumerKey) throws Exception {

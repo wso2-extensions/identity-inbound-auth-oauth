@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth.dcr.service;
 
+import org.mockito.Mock;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.annotations.BeforeTest;
@@ -31,6 +32,7 @@ import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.base.IdentityValidationException;
 import org.wso2.carbon.identity.oauth.OAuthAdminService;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dcr.DCRException;
 import org.wso2.carbon.identity.oauth.dcr.internal.DCRDataHolder;
 import org.wso2.carbon.identity.oauth.dcr.model.RegistrationRequestProfile;
@@ -41,6 +43,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.whenNew;
@@ -54,7 +57,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AParam
 /**
  * Unit test covering DCRManagementService
  */
-@PrepareForTest(DCRManagementService.class)
+@PrepareForTest({DCRManagementService.class, OAuthServerConfiguration.class})
 public class DCRManagementServiceTest extends PowerMockTestCase {
 
     private DCRManagementService dcrManagementService;
@@ -65,6 +68,9 @@ public class DCRManagementServiceTest extends PowerMockTestCase {
 
     private RegistrationRequestProfile registrationRequestProfile;
     private ApplicationManagementService mockApplicationManagementService;
+
+    @Mock
+    private OAuthServerConfiguration mockOAuthServerConfiguration;
 
     @BeforeTest
     public void getInstanceTest() {
@@ -278,6 +284,8 @@ public class DCRManagementServiceTest extends PowerMockTestCase {
 
     private void registerOAuthApplication() {
 
+        mockStatic(OAuthServerConfiguration.class);
+        when(OAuthServerConfiguration.getInstance()).thenReturn(mockOAuthServerConfiguration);
         String clientName = "dummyClientName";
         registrationRequestProfile.setClientName(clientName);
         String ownerName = "dummyOwner";

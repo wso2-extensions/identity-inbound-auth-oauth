@@ -945,10 +945,13 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
         when(oAuthServerConfiguration.getOpenIDConnectSkipeUserConsentConfig()).thenReturn(skipConsent);
 
+        mockStatic(OAuthServerConfiguration.class);
+        when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
+        when(oAuthServerConfiguration.getAuthorizationCodeValidityPeriodInSeconds()).thenReturn(300L);
+
         mockStatic(OAuth2Util.class);
         when(OAuth2Util.getServiceProvider(CLIENT_ID_VALUE)).thenReturn(new ServiceProvider());
         mockApplicationManagementService();
-
         Response response;
         try {
             response = oAuth2AuthzEndpoint.authorize(httpServletRequest, httpServletResponse);

@@ -42,6 +42,7 @@
 <jsp:include page="../dialog/display_messages.jsp" />
 
 <%
+    boolean isHashDisabled = false;
     String httpMethod = request.getMethod();
     if (!"post".equalsIgnoreCase(httpMethod)) {
         response.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
@@ -57,6 +58,7 @@
     String userAccessTokenExpiryTime = request.getParameter("userAccessTokenExpiryTime");
     String applicationAccessTokenExpiryTime = request.getParameter("applicationAccessTokenExpiryTime");
     String refreshTokenExpiryTime = request.getParameter("refreshTokenExpiryTime");
+    String idTokenExpiryTime = request.getParameter("idTokenExpiryTime");
     String grants;
    	StringBuffer buff = new StringBuffer();
     boolean pkceMandatory = false;
@@ -91,6 +93,8 @@
             ConfigurationContext configContext =
                     (ConfigurationContext) config.getServletContext().getAttribute(CarbonConstants.CONFIGURATION_CONTEXT);
             OAuthAdminClient client = new OAuthAdminClient(cookie, backendServerURL, configContext);
+            isHashDisabled = client.isHashDisabled();
+
             app.setOauthConsumerKey(consumerkey);
             app.setOauthConsumerSecret(consumersecret);
             app.setCallbackUrl(callback);
@@ -102,6 +106,7 @@
             app.setUserAccessTokenExpiryTime(Long.parseLong(userAccessTokenExpiryTime));
             app.setApplicationAccessTokenExpiryTime(Long.parseLong(applicationAccessTokenExpiryTime));
             app.setRefreshTokenExpiryTime(Long.parseLong(refreshTokenExpiryTime));
+            app.setIdTokenExpiryTime(Long.parseLong(idTokenExpiryTime));
             String[] grantTypes = client.getAllowedOAuthGrantTypes();
             for (String grantType : grantTypes) {
                 String grant = request.getParameter("grant_" + grantType);
@@ -166,9 +171,9 @@ boolean qpplicationComponentFound = CarbonUIUtil.isContextRegistered(config, "/a
 if (qpplicationComponentFound) {
 	if (!isError) {
 %>
-    location.href = '../application/configure-service-provider.jsp?action=update&display=oauthapp&spName=<%=Encode.forUriComponent(spName)%>&oauthapp=<%=Encode.forUriComponent(consumerkey)%>';
+    location.href = '../application/configure-service-provider.jsp?action=update&display=oauthapp&spName=<%=Encode.forUriComponent(spName)%>&oauthapp=<%=Encode.forUriComponent(consumerkey)%>&isHashDisabled=<%=Encode.forUriComponent(String.valueOf(isHashDisabled))%>';
 <%  } else { %>
-    location.href = '../application/configure-service-provider.jsp?action=cancel&display=oauthapp&spName=<%=Encode.forUriComponent(spName)%>';
+    location.href = '../application/configure-service-provider.jsp?action=cancel&display=oauthapp&spName=<%=Encode.forUriComponent(spName)%>&isHashDisabled=<%=Encode.forUriComponent(String.valueOf(isHashDisabled))%>';
 <%
     }
 }else {

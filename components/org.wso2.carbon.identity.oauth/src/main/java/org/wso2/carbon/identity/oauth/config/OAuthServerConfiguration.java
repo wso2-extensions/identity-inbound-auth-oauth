@@ -41,6 +41,7 @@ import org.wso2.carbon.identity.oauth.common.IDTokenResponseValidator;
 import org.wso2.carbon.identity.oauth.common.IDTokenTokenResponseValidator;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.SAML2GrantValidator;
+import org.wso2.carbon.identity.oauth.tokenprocessor.HashingPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -194,6 +195,9 @@ public class OAuthServerConfiguration {
     // This property will decide whether to send only mapped roles received from the federated IdP
     private boolean returnOnlyMappedLocalRoles = false;
 
+    // Property to check whether to add remaining user attributes
+    private boolean addUnmappedUserAttributes = false;
+
     private OAuth2ScopeValidator oAuth2ScopeValidator;
     private Set<OAuth2ScopeValidator> oAuth2ScopeValidators = new HashSet<>();
     private Set<OAuth2ScopeHandler> oAuth2ScopeHandlers = new HashSet<>();
@@ -215,6 +219,7 @@ public class OAuthServerConfiguration {
     private String tokenValueGeneratorClassName;
     //property to define hashing algorithm when enabling hashing of tokens and authorization codes.
     private String hashAlgorithm = "SHA-256";
+    private boolean isClientSecretHashEnabled = false;
 
 
     // Property added to determine the expiration of logout token in oidc back-channel logout.
@@ -341,6 +346,8 @@ public class OAuthServerConfiguration {
         parseShowDisplayNameInConsentPage(oauthElem);
         // read hash algorithm type config
         parseHashAlgorithm(oauthElem);
+        // read hash mode config
+        parseEnableHashMode(oauthElem);
     }
 
     private void parseShowDisplayNameInConsentPage(OMElement oauthElem) {
@@ -714,6 +721,10 @@ public class OAuthServerConfiguration {
 
     public String getHashAlgorithm() {
         return hashAlgorithm;
+    }
+
+    public boolean isClientSecretHashEnabled() {
+        return isClientSecretHashEnabled;
     }
 
     private void parseRequestObjectConfig(OMElement requestObjectBuildersElem) {
@@ -1138,6 +1149,15 @@ public class OAuthServerConfiguration {
 
     public boolean isReturnOnlyMappedLocalRoles() {
         return returnOnlyMappedLocalRoles;
+    }
+
+    /**
+     * Check whether addUnmappedUserAttributes is allowed.
+     *
+     * @return if the server configuration for addUnmappedUserAttributes is set.
+     */
+    public boolean isAddUnmappedUserAttributes() {
+        return addUnmappedUserAttributes;
     }
 
     public boolean isMapFederatedUsersToLocal() {
@@ -2185,12 +2205,18 @@ public class OAuthServerConfiguration {
                                 .getText().trim();
 
             }
-            if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements
-                    .OPENID_CONNECT_CONVERT_ORIGINAL_CLAIMS_FROM_ASSERTIONS_TO_OIDCDIALECT)) != null) {
-                convertOriginalClaimsFromAssertionsToOIDCDialect = Boolean.parseBoolean(openIDConnectConfigElem
-                        .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements
-                                .OPENID_CONNECT_CONVERT_ORIGINAL_CLAIMS_FROM_ASSERTIONS_TO_OIDCDIALECT)).getText()
-                        .trim());
+
+            OMElement convertOriginalClaimsFromAssertionsToOIDCDialectElement = openIDConnectConfigElem
+                    .getFirstChildWithName(getQNameWithIdentityNS(
+                            ConfigElements.OPENID_CONNECT_CONVERT_ORIGINAL_CLAIMS_FROM_ASSERTIONS_TO_OIDCDIALECT));
+            if (convertOriginalClaimsFromAssertionsToOIDCDialectElement != null) {
+                convertOriginalClaimsFromAssertionsToOIDCDialect = Boolean
+                        .parseBoolean(convertOriginalClaimsFromAssertionsToOIDCDialectElement.getText().trim());
+            }
+            OMElement addUnmappedUserAttributesElement = openIDConnectConfigElem.getFirstChildWithName(
+                    getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_ADD_UN_MAPPED_USER_ATTRIBUTES));
+            if (addUnmappedUserAttributesElement != null) {
+                addUnmappedUserAttributes = Boolean.parseBoolean(addUnmappedUserAttributesElement.getText().trim());
             }
 
             if (IdentityUtil.getProperty(ConfigElements.SEND_ONLY_LOCALLY_MAPPED_ROLES_OF_IDP) != null) {
@@ -2253,6 +2279,26 @@ public class OAuthServerConfiguration {
         }
         if (log.isDebugEnabled()) {
             log.debug("Hash algorithm was set to : " + hashAlgorithm);
+        }
+    }
+
+    private void parseEnableHashMode(OMElement oauthConfigElem) {
+
+        try {
+            persistenceProcessor = getPersistenceProcessor();
+        } catch (IdentityOAuth2Exception e) {
+            log.error("Error while getting an instance of TokenPersistenceProcessor.");
+        }
+
+        if (persistenceProcessor instanceof HashingPersistenceProcessor) {
+            OMElement hashModeElement = oauthConfigElem
+                    .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.ENABLE_CLIENT_SECRET_HASH));
+            if (hashModeElement != null) {
+                isClientSecretHashEnabled = Boolean.parseBoolean(hashModeElement.getText());
+            }
+            if (log.isDebugEnabled()) {
+                log.debug("Is client secret hashing enabled: " + isClientSecretHashEnabled);
+            }
         }
     }
 
@@ -2353,6 +2399,7 @@ public class OAuthServerConfiguration {
                 "ConvertOriginalClaimsFromAssertionsToOIDCDialect";
         public static final String SEND_ONLY_LOCALLY_MAPPED_ROLES_OF_IDP = "FederatedRoleManagement"
                 + ".ReturnOnlyMappedLocalRoles";
+        public static final String OPENID_CONNECT_ADD_UN_MAPPED_USER_ATTRIBUTES = "AddUnmappedUserAttributes";
         public static final String SUPPORTED_CLAIMS = "OpenIDConnectClaims";
         public static final String REQUEST_OBJECT = "RequestObject";
         public static final String REQUEST_OBJECT_VALIDATOR = "RequestObjectValidator";
@@ -2455,6 +2502,7 @@ public class OAuthServerConfiguration {
 
         //Hash algorithm configs
         private static final String HASH_ALGORITHM = "HashAlgorithm";
+        private static final String ENABLE_CLIENT_SECRET_HASH = "EnableClientSecretHash";
 
     }
 

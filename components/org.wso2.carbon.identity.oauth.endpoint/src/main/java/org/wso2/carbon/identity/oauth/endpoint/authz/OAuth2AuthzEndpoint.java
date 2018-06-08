@@ -113,6 +113,7 @@ import java.util.Set;
 import java.util.StringJoiner;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import javax.servlet.ServletException;
 import javax.servlet.http.Cookie;
@@ -672,6 +673,8 @@ public class OAuth2AuthzEndpoint {
 
         oAuthMessage.getSessionDataCacheEntry().setLoggedInUser(authenticatedUser);
         oAuthMessage.getSessionDataCacheEntry().setAuthenticatedIdPs(authnResult.getAuthenticatedIdPs());
+        oAuthMessage.getSessionDataCacheEntry().setValidityPeriod(
+                TimeUnit.MINUTES.toNanos(IdentityUtil.getTempDataCleanUpTimeout()));
         SessionDataCacheKey cacheKey = new SessionDataCacheKey(getSessionDataKeyFromLogin(oAuthMessage));
         SessionDataCache.getInstance().addToCache(cacheKey, oAuthMessage.getSessionDataCacheEntry());
     }
@@ -1015,8 +1018,10 @@ public class OAuth2AuthzEndpoint {
         if (ArrayUtils.isNotEmpty(sessionIds)) {
             String commonAuthSessionId = sessionIds[0];
             SessionContext sessionContext = FrameworkUtils.getSessionContextFromCache(commonAuthSessionId);
-            String selectedAcr = sessionContext.getSessionAuthHistory().getSelectedAcrValue();
-            authorizationGrantCacheEntry.setSelectedAcrValue(selectedAcr);
+            if (sessionContext != null) {
+                String selectedAcr = sessionContext.getSessionAuthHistory().getSelectedAcrValue();
+                authorizationGrantCacheEntry.setSelectedAcrValue(selectedAcr);
+            }
         }
 
         String[] amrEntries = sessionDataCacheEntry.getParamMap().get(OAuthConstants.AMR);
@@ -1122,6 +1127,7 @@ public class OAuth2AuthzEndpoint {
         if (oAuthMessage.getRequest().getParameterMap() != null) {
             sessionDataCacheEntryNew.setParamMap(new ConcurrentHashMap<>(oAuthMessage.getRequest().getParameterMap()));
         }
+        sessionDataCacheEntryNew.setValidityPeriod(TimeUnit.MINUTES.toNanos(IdentityUtil.getTempDataCleanUpTimeout()));
         SessionDataCache.getInstance().addToCache(cacheKey, sessionDataCacheEntryNew);
     }
 
