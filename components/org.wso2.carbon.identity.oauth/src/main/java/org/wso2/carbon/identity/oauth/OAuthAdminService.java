@@ -140,6 +140,7 @@ public class OAuthAdminService extends AbstractAdmin {
                 dto.setUserAccessTokenExpiryTime(app.getUserAccessTokenExpiryTime());
                 dto.setApplicationAccessTokenExpiryTime(app.getApplicationAccessTokenExpiryTime());
                 dto.setRefreshTokenExpiryTime(app.getRefreshTokenExpiryTime());
+                dto.setIdTokenExpiryTime(app.getIdTokenExpiryTime());
                 dto.setAudiences(app.getAudiences());
                 dto.setRequestObjectSignatureValidationEnabled(app.isRequestObjectSignatureValidationEnabled());
                 dto.setIdTokenEncryptionEnabled(app.isIdTokenEncryptionEnabled());
@@ -306,7 +307,7 @@ public class OAuthAdminService extends AbstractAdmin {
                 } else {   // by default, assume OAuth 2.0, if it is not set.
                     app.setOauthVersion(OAuthConstants.OAuthVersions.VERSION_2);
                 }
-                if (OAuthConstants.OAuthVersions.VERSION_2.equals(application.getOAuthVersion())) {
+                if (OAuthConstants.OAuthVersions.VERSION_2.equals(app.getOauthVersion())) {
                     List<String> allowedGrantTypes = new ArrayList<>(Arrays.asList(getAllowedGrantTypes()));
                     String[] requestGrants = application.getGrantTypes().split("\\s");
                     for (String requestedGrant : requestGrants) {
@@ -693,6 +694,7 @@ public class OAuthAdminService extends AbstractAdmin {
                                 appDTO.setUserAccessTokenExpiryTime(appDO.getUserAccessTokenExpiryTime());
                                 appDTO.setApplicationAccessTokenExpiryTime(appDO.getApplicationAccessTokenExpiryTime());
                                 appDTO.setRefreshTokenExpiryTime(appDO.getRefreshTokenExpiryTime());
+                                appDTO.setIdTokenExpiryTime(appDO.getIdTokenExpiryTime());
                                 appDTO.setAudiences(appDO.getAudiences());
                                 appDTO.setRequestObjectSignatureValidationEnabled(appDO
                                         .isRequestObjectSignatureValidationEnabled());
@@ -977,6 +979,13 @@ public class OAuthAdminService extends AbstractAdmin {
                     OAuthServerConfiguration.getInstance().getRefreshTokenValidityPeriodInSeconds());
             logOnInvalidConfig(oAuthConsumerAppDTO.getApplicationName(), "refresh token",
                     oAuthConsumerAppDTO.getRefreshTokenExpiryTime());
+        }
+
+        if (oAuthConsumerAppDTO.getIdTokenExpiryTime() == 0) {
+            oAuthConsumerAppDTO.setIdTokenExpiryTime(
+                    OAuthServerConfiguration.getInstance().getOpenIDConnectIDTokenExpiryTimeInSeconds());
+            logOnInvalidConfig(oAuthConsumerAppDTO.getApplicationName(), "id token",
+                    oAuthConsumerAppDTO.getIdTokenExpiryTime());
         }
     }
 
