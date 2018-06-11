@@ -83,6 +83,8 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.ClientCredentialDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
+import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
+import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuerImpl;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.registry.core.Registry;
 import org.wso2.carbon.registry.core.Resource;
@@ -1483,6 +1485,52 @@ public class OAuth2Util {
         return spTokenTimeObject;
     }
 
+    /**
+     * Returns oauth token issuer registered in the service provider app
+     *
+     * @param clientId client id of the oauth app
+     * @return oauth token issuer
+     * @throws IdentityOAuth2Exception
+     * @throws InvalidOAuthClientException
+     */
+    public static OauthTokenIssuer getOAuthTokenIssuerForOAuthApp(String clientId)
+            throws IdentityOAuth2Exception, InvalidOAuthClientException {
+        OAuthAppDO appDO = getAppInformationByClientId(clientId);
+        OauthTokenIssuer oauthIdentityTokenGenerator;
+        if (appDO.getTokenType() != null) {
+            String tokenGeneratorClass = OAuthServerConfiguration.getInstance().getSupportedTokenTypes()
+                    .get(appDO.getTokenType());
+            if (tokenGeneratorClass != null) {
+                try {
+                    Class clazz = Class.forName(tokenGeneratorClass);
+                    oauthIdentityTokenGenerator = (OauthTokenIssuer) clazz.newInstance();
+                    if(log.isDebugEnabled()) {
+                        log.debug("An instance of " + tokenGeneratorClass
+                                + " is created for Identity OAuth token generation.");
+                    }
+                } catch (Exception e) {
+                    String errorMsg = "Error when instantiating the OAuthIssuer : "
+                            + tokenGeneratorClass + ". Defaulting to OAuthIssuerImpl";
+                    log.error(errorMsg, e);
+                    oauthIdentityTokenGenerator = new OauthTokenIssuerImpl();
+                }
+            } else {
+                oauthIdentityTokenGenerator = new OauthTokenIssuerImpl();
+                if(log.isDebugEnabled()) {
+                    log.debug("The default Identity OAuth token issuer will be used. No custom token generator" +
+                            " is set.");
+                }
+            }
+        } else {
+            oauthIdentityTokenGenerator = new OauthTokenIssuerImpl();
+            if(log.isDebugEnabled()) {
+                log.debug("The default Identity OAuth token issuer will be used. No custom token generator" +
+                        " is set.");
+            }
+        }
+        return oauthIdentityTokenGenerator;
+    }
+
     private static List<ScopeDTO> loadScopeConfigFile() {
 
         List<ScopeDTO> listOIDCScopesClaims = new ArrayList<>();
@@ -1565,11 +1613,6 @@ public class OAuth2Util {
             return oAuthAppDO;
         } else {
             oAuthAppDO = new OAuthAppDAO().getAppInformation(clientId);
-            String tokenType = oAuthAppDO.getTokenType();
-            if(tokenType == null) {
-                tokenType = DEFAULT_TOKEN_TYPE;
-            }
-            OAuthServerConfiguration.getInstance().setOauthIdentityTokenGeneratorClassName(tokenType);
             AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO);
             return oAuthAppDO;
         }

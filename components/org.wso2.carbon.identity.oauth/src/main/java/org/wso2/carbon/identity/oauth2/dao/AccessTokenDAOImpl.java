@@ -36,7 +36,9 @@ import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
@@ -115,17 +117,29 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     "Authorized user should be available for further execution.");
         }
 
-        if (OAuthServerConfiguration.getInstance().usePersistedAccessTokenAlias()) {
+        String tokenType = OAuth2Util.DEFAULT_TOKEN_TYPE;
+        try {
+            OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(consumerKey);
+            if(oAuthAppDO.getTokenType() != null) {
+                tokenType = oAuthAppDO.getTokenType();
+            }
+        } catch (InvalidOAuthClientException e) {
+            throw new IdentityOAuth2Exception("Error while retrieving app information for clientId: " + consumerKey, e);
+        }
+        if (OAuthServerConfiguration.getInstance().getPersistAccessTokenMap().get(tokenType)) {
             try {
-                accessToken = OAuthServerConfiguration.getInstance().getIdentityOauthTokenIssuer()
+                accessToken = OAuth2Util.getOAuthTokenIssuerForOAuthApp(consumerKey)
                         .getAccessTokenHash(accessToken);
             } catch (OAuthSystemException e) {
-                if (log.isDebugEnabled() &&
-                        IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
-                    log.debug("Error while getting access token hash for token(hashed): " +
-                            DigestUtils.sha256Hex(accessToken));
+                if (log.isDebugEnabled() && IdentityUtil
+                        .isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                    log.debug("Error while getting access token hash for token(hashed): " + DigestUtils
+                            .sha256Hex(accessToken));
                 }
                 throw new IdentityOAuth2Exception("Error while getting access token hash.");
+            } catch (InvalidOAuthClientException e) {
+                throw new IdentityOAuth2Exception("Error while retrieving app information for clientId: " +
+                        consumerKey, e);
             }
         }
 

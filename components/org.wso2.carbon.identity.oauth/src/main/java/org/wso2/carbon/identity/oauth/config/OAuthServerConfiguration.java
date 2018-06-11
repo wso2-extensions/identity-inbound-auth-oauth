@@ -99,6 +99,11 @@ public class OAuthServerConfiguration {
     // Request object builder class.
     private static final String REQUEST_PARAM_VALUE_BUILDER_CLASS =
             "org.wso2.carbon.identity.openidconnect.RequestParamRequestObjectBuilder";
+    //token issuer classes
+    private static final String DEFAULT_OAUTH_TOKEN_ISSUER_CLASS =
+            "org.wso2.carbon.identity.oauth2.token.OauthTokenIssuerImpl";
+    private static final String JWT_TOKEN_ISSUER_CLASS =
+            "org.wso2.carbon.identity.oauth2.token.JWTTokenIssuer";
     private static final String REQUEST_PARAM_VALUE_BUILDER = "request_param_value_builder";
     private static Log log = LogFactory.getLog(OAuthServerConfiguration.class);
     private static OAuthServerConfiguration instance;
@@ -147,6 +152,7 @@ public class OAuthServerConfiguration {
     private Map<String, String> supportedResponseTypeValidatorNames = new HashMap<>();
     private Map<String, Class<? extends OAuthValidator<HttpServletRequest>>> supportedResponseTypeValidators;
     private Map<String, String> supportedTokenTypes = new HashMap<>();
+    private Map<String, Boolean> persistAccessTokenMap = new HashMap<>();
     private String[] supportedClaims = null;
     private Map<String, Properties> supportedClientAuthHandlerData = new HashMap<>();
     private String saml2TokenCallbackHandlerName = null;
@@ -168,6 +174,10 @@ public class OAuthServerConfiguration {
     private String authContextTTL = "15L";
     // property added to fix IDENTITY-4551 in backward compatible manner
     private boolean useMultiValueSeparatorForAuthContextToken = true;
+
+    //default token types
+    private static final String DEFAULT_TOKEN_TYPE = "Default";
+    private static final String JWT_TOKEN_TYPE = "JWT";
 
     // OpenID Connect configurations
     private String openIDConnectIDTokenBuilderClassName = "org.wso2.carbon.identity.openidconnect.DefaultIDTokenBuilder";
@@ -1815,7 +1825,6 @@ public class OAuthServerConfiguration {
                 OMElement tokenTypeNameElement = supportedTokenTypeElement
                         .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.TOKEN_TYPE_NAME));
 
-
                 String tokenTypeName = null;
                 if (tokenTypeNameElement != null) {
                     tokenTypeName = tokenTypeNameElement.getText();
@@ -1829,10 +1838,29 @@ public class OAuthServerConfiguration {
                     tokenTypeImplClass = tokenTypeImplClassElement.getText();
                 }
 
+                OMElement persistAccessTokenAliasElement = supportedTokenTypeElement.getFirstChildWithName(
+                        getQNameWithIdentityNS(ConfigElements.IDENTITY_OAUTH_PERSIST_TOKEN_ALIAS));
+
+                String persistAccessTokenAlias = null;
+                if(persistAccessTokenAliasElement != null) {
+                    persistAccessTokenAlias = persistAccessTokenAliasElement.getText();
+                }
+
                 if(StringUtils.isNotEmpty(tokenTypeName) && StringUtils.isNotEmpty(tokenTypeImplClass)) {
                     supportedTokenTypes.put(tokenTypeName, tokenTypeImplClass);
                 }
+
+                if(StringUtils.isNotEmpty(tokenTypeName) && StringUtils.isNotEmpty(persistAccessTokenAlias)) {
+                    persistAccessTokenMap.put(tokenTypeName, Boolean.valueOf(persistAccessTokenAlias));
+                } else {
+                    persistAccessTokenMap.put(tokenTypeName, true);
+                }
             }
+        } else {
+            supportedTokenTypes.put(DEFAULT_TOKEN_TYPE, DEFAULT_OAUTH_TOKEN_ISSUER_CLASS);
+            persistAccessTokenMap.put(DEFAULT_TOKEN_TYPE, true);
+            supportedTokenTypes.put(JWT_TOKEN_TYPE, JWT_TOKEN_ISSUER_CLASS);
+            persistAccessTokenMap.put(JWT_TOKEN_TYPE, true);
         }
     }
 
@@ -2368,12 +2396,8 @@ public class OAuthServerConfiguration {
         this.oAuth2ScopeHandlers = oAuth2ScopeHandlers;
     }
 
-    public void setOauthIdentityTokenGeneratorClassName(String tokenType) {
-        String tokenGeneratorClass = this.supportedTokenTypes.get(tokenType);
-        if(!tokenGeneratorClass.equals(oauthIdentityTokenGeneratorClassName)) {
-            this.oauthIdentityTokenGenerator = null;
-            this.oauthIdentityTokenGeneratorClassName = tokenGeneratorClass;
-        }
+    public Map<String, Boolean> getPersistAccessTokenMap() {
+        return persistAccessTokenMap;
     }
 
     private void parseUseSPTenantDomainConfig(OMElement oauthElem) {

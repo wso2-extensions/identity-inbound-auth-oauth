@@ -103,10 +103,14 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
 
     @Override
     public OAuth2AccessTokenRespDTO issue(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
-        oauthIssuerImpl = OAuthServerConfiguration.getInstance().getIdentityOauthTokenIssuer();
         String scope = OAuth2Util.buildScopeString(tokReqMsgCtx.getScope());
         String consumerKey = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId();
         String authorizedUser = tokReqMsgCtx.getAuthorizedUser().toString();
+        try {
+            oauthIssuerImpl = OAuth2Util.getOAuthTokenIssuerForOAuthApp(consumerKey);
+        } catch (InvalidOAuthClientException e) {
+            throw new IdentityOAuth2Exception("Error while retrieving app information for clientId: " + consumerKey, e);
+        }
 
         synchronized ((consumerKey + ":" + authorizedUser + ":" + scope).intern()) {
             AccessTokenDO existingTokenBean = null;
