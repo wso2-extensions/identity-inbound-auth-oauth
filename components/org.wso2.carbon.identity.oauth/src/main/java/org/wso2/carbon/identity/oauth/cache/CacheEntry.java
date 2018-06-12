@@ -18,13 +18,11 @@
 
 package org.wso2.carbon.identity.oauth.cache;
 
-import java.io.Serializable;
-
 /**
  * Represents a cache entry. Any value that needs to be included in the
  * cache must be encapsulated with a class deriving from this class.
  */
-public abstract class CacheEntry implements Serializable {
+public abstract class CacheEntry extends org.wso2.carbon.identity.application.common.cache.CacheEntry {
 
     private static final long serialVersionUID = 1591693579088522864L;
 

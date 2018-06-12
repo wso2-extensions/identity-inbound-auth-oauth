@@ -140,6 +140,7 @@ public class OAuthAdminService extends AbstractAdmin {
                 dto.setUserAccessTokenExpiryTime(app.getUserAccessTokenExpiryTime());
                 dto.setApplicationAccessTokenExpiryTime(app.getApplicationAccessTokenExpiryTime());
                 dto.setRefreshTokenExpiryTime(app.getRefreshTokenExpiryTime());
+                dto.setIdTokenExpiryTime(app.getIdTokenExpiryTime());
                 dto.setAudiences(app.getAudiences());
                 dto.setRequestObjectSignatureValidationEnabled(app.isRequestObjectSignatureValidationEnabled());
                 dto.setIdTokenEncryptionEnabled(app.isIdTokenEncryptionEnabled());
@@ -178,6 +179,7 @@ public class OAuthAdminService extends AbstractAdmin {
                 dto.setUserAccessTokenExpiryTime(app.getUserAccessTokenExpiryTime());
                 dto.setApplicationAccessTokenExpiryTime(app.getApplicationAccessTokenExpiryTime());
                 dto.setRefreshTokenExpiryTime(app.getRefreshTokenExpiryTime());
+                dto.setIdTokenExpiryTime(app.getIdTokenExpiryTime());
                 dto.setAudiences(app.getAudiences());
                 dto.setRequestObjectSignatureValidationEnabled(app.isRequestObjectSignatureValidationEnabled());
                 dto.setIdTokenEncryptionEnabled(app.isIdTokenEncryptionEnabled());
@@ -221,6 +223,7 @@ public class OAuthAdminService extends AbstractAdmin {
                 dto.setUserAccessTokenExpiryTime(app.getUserAccessTokenExpiryTime());
                 dto.setApplicationAccessTokenExpiryTime(app.getApplicationAccessTokenExpiryTime());
                 dto.setRefreshTokenExpiryTime(app.getRefreshTokenExpiryTime());
+                dto.setIdTokenExpiryTime(app.getIdTokenExpiryTime());
                 dto.setAudiences(app.getAudiences());
                 dto.setRequestObjectSignatureValidationEnabled(app.isRequestObjectSignatureValidationEnabled());
                 dto.setIdTokenEncryptionEnabled(app.isIdTokenEncryptionEnabled());
@@ -238,16 +241,29 @@ public class OAuthAdminService extends AbstractAdmin {
      * Registers an OAuth consumer application.
      *
      * @param application <code>OAuthConsumerAppDTO</code> with application information
-     * @throws Exception Error when persisting the application information to the persistence store
+     * @throws IdentityOAuthAdminException Error when persisting the application information to the persistence store.
      */
     public void registerOAuthApplicationData(OAuthConsumerAppDTO application) throws IdentityOAuthAdminException {
 
+        registerAndRetrieveOAuthApplicationData(application);
+    }
+
+    /**
+     * Registers an OAuth consumer application and retrieve application details.
+     *
+     * @param application <code>OAuthConsumerAppDTO</code> with application information.
+     * @return OAuthConsumerAppDTO Created OAuth application details.
+     * @throws IdentityOAuthAdminException Error when persisting the application information to the persistence store.
+     */
+    public OAuthConsumerAppDTO registerAndRetrieveOAuthApplicationData(OAuthConsumerAppDTO application)
+            throws IdentityOAuthAdminException {
+
         String tenantAwareUser = CarbonContext.getThreadLocalCarbonContext().getUsername();
+        OAuthAppDO app = new OAuthAppDO();
         if (tenantAwareUser != null) {
             String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
 
             OAuthAppDAO dao = new OAuthAppDAO();
-            OAuthAppDO app = new OAuthAppDO();
             if (application != null) {
                 app.setApplicationName(application.getApplicationName());
                 if ((application.getGrantTypes().contains(AUTHORIZATION_CODE) || application.getGrantTypes()
@@ -291,7 +307,7 @@ public class OAuthAdminService extends AbstractAdmin {
                 } else {   // by default, assume OAuth 2.0, if it is not set.
                     app.setOauthVersion(OAuthConstants.OAuthVersions.VERSION_2);
                 }
-                if (OAuthConstants.OAuthVersions.VERSION_2.equals(application.getOAuthVersion())) {
+                if (OAuthConstants.OAuthVersions.VERSION_2.equals(app.getOauthVersion())) {
                     List<String> allowedGrantTypes = new ArrayList<>(Arrays.asList(getAllowedGrantTypes()));
                     String[] requestGrants = application.getGrantTypes().split("\\s");
                     for (String requestedGrant : requestGrants) {
@@ -312,6 +328,7 @@ public class OAuthAdminService extends AbstractAdmin {
                     app.setUserAccessTokenExpiryTime(application.getUserAccessTokenExpiryTime());
                     app.setApplicationAccessTokenExpiryTime(application.getApplicationAccessTokenExpiryTime());
                     app.setRefreshTokenExpiryTime(application.getRefreshTokenExpiryTime());
+                    app.setIdTokenExpiryTime(application.getIdTokenExpiryTime());
 
                     // Set OIDC Config Properties.
                     app.setRequestObjectSignatureValidationEnabled(application
@@ -345,6 +362,26 @@ public class OAuthAdminService extends AbstractAdmin {
             }
             throw new IdentityOAuthAdminException("No authenticated user found. Failed to register OAuth App");
         }
+        return getConsumerApplicationDetails(app);
+    }
+
+    /**
+     * Get created oauth application details.
+     *
+     * @param application <code>OAuthAppDO</code> with created application information.
+     * @return OAuthConsumerAppDTO Created OAuth application details.
+     */
+    private OAuthConsumerAppDTO getConsumerApplicationDetails(OAuthAppDO application) {
+
+        OAuthConsumerAppDTO oAuthConsumerAppDTO = new OAuthConsumerAppDTO();
+        oAuthConsumerAppDTO.setApplicationName(application.getApplicationName());
+        oAuthConsumerAppDTO.setCallbackUrl(application.getCallbackUrl());
+        oAuthConsumerAppDTO.setOauthConsumerKey(application.getOauthConsumerKey());
+        oAuthConsumerAppDTO.setOauthConsumerSecret(application.getOauthConsumerSecret());
+        oAuthConsumerAppDTO.setGrantTypes(application.getGrantTypes());
+        oAuthConsumerAppDTO.setOAuthVersion(application.getOauthVersion());
+
+        return oAuthConsumerAppDTO;
     }
 
     /**
@@ -356,6 +393,7 @@ public class OAuthAdminService extends AbstractAdmin {
     public void updateConsumerApplication(OAuthConsumerAppDTO consumerAppDTO) throws IdentityOAuthAdminException {
 
         String errorMessage = "Error while updating the app information.";
+        boolean isHashDisabled = OAuth2Util.isHashDisabled();
         if (StringUtils.isEmpty(consumerAppDTO.getOauthConsumerKey()) || StringUtils.isEmpty(consumerAppDTO
                 .getOauthConsumerSecret())) {
             errorMessage = "OauthConsumerKey or OauthConsumerSecret is not provided for " +
@@ -380,7 +418,8 @@ public class OAuthAdminService extends AbstractAdmin {
                 }
                 throw new IdentityOAuthAdminException(errorMessage);
             }
-            if (!consumerAppDTO.getOauthConsumerSecret().equals(oauthappdo.getOauthConsumerSecret())) {
+            if (isHashDisabled && !consumerAppDTO.getOauthConsumerSecret().
+                    equals(oauthappdo.getOauthConsumerSecret())) {
                 if (log.isDebugEnabled()) {
                     log.debug("Invalid oauthConsumerSecret is provided for updating the OAuth" +
                             " application with ConsumerKey: " + consumerAppDTO.getOauthConsumerKey());
@@ -403,6 +442,7 @@ public class OAuthAdminService extends AbstractAdmin {
         oauthappdo.setUserAccessTokenExpiryTime(consumerAppDTO.getUserAccessTokenExpiryTime());
         oauthappdo.setApplicationAccessTokenExpiryTime(consumerAppDTO.getApplicationAccessTokenExpiryTime());
         oauthappdo.setRefreshTokenExpiryTime(consumerAppDTO.getRefreshTokenExpiryTime());
+        oauthappdo.setIdTokenExpiryTime(consumerAppDTO.getIdTokenExpiryTime());
         if (OAuthConstants.OAuthVersions.VERSION_2.equals(consumerAppDTO.getOAuthVersion())) {
             List<String> allowedGrantsTypes = new ArrayList<>(Arrays.asList(getAllowedGrantTypes()));
             String[] requestGrants = consumerAppDTO.getGrantTypes().split("\\s");
@@ -475,13 +515,30 @@ public class OAuthAdminService extends AbstractAdmin {
     }
 
     /**
-     * @param consumerKey
-     * @throws IdentityOAuthAdminException
+     * Regenerate consumer secret for the application.
+     *
+     * @param consumerKey Consumer key for the application.
+     * @throws IdentityOAuthAdminException Error while regenerating the consumer secret.
      */
     public void updateOauthSecretKey(String consumerKey) throws IdentityOAuthAdminException {
 
+        updateAndRetrieveOauthSecretKey(consumerKey);
+    }
+
+    /**
+     * Regenerate consumer secret for the application and retrieve application details.
+     *
+     * @param consumerKey Consumer key for the application.
+     * @return OAuthConsumerAppDTO OAuth application details.
+     * @throws IdentityOAuthAdminException Error while regenerating the consumer secret.
+     */
+    public OAuthConsumerAppDTO updateAndRetrieveOauthSecretKey(String consumerKey) throws IdentityOAuthAdminException {
+
+        OAuthConsumerAppDTO oAuthConsumerAppDTO = new OAuthConsumerAppDTO();
         String newSecretKey = OAuthUtil.getRandomNumber();
         CacheEntry clientCredentialDO = new ClientCredentialDO(newSecretKey);
+        oAuthConsumerAppDTO.setOauthConsumerKey(consumerKey);
+        oAuthConsumerAppDTO.setOauthConsumerSecret(newSecretKey);
         Properties properties = new Properties();
         properties.setProperty(OAuthConstants.OAUTH_APP_NEW_SECRET_KEY, newSecretKey);
         properties.setProperty(OAuthConstants.ACTION_PROPERTY_KEY, OAuthConstants.ACTION_REGENERATE);
@@ -490,6 +547,8 @@ public class OAuthAdminService extends AbstractAdmin {
         if (log.isDebugEnabled()) {
             log.debug("Client Secret for OAuth app with consumerKey: " + consumerKey + " updated in OAuthCache.");
         }
+        return oAuthConsumerAppDTO;
+
     }
 
     private void updateAppAndRevokeTokensAndAuthzCodes(String consumerKey,
@@ -635,6 +694,7 @@ public class OAuthAdminService extends AbstractAdmin {
                                 appDTO.setUserAccessTokenExpiryTime(appDO.getUserAccessTokenExpiryTime());
                                 appDTO.setApplicationAccessTokenExpiryTime(appDO.getApplicationAccessTokenExpiryTime());
                                 appDTO.setRefreshTokenExpiryTime(appDO.getRefreshTokenExpiryTime());
+                                appDTO.setIdTokenExpiryTime(appDO.getIdTokenExpiryTime());
                                 appDTO.setAudiences(appDO.getAudiences());
                                 appDTO.setRequestObjectSignatureValidationEnabled(appDO
                                         .isRequestObjectSignatureValidationEnabled());
@@ -886,6 +946,8 @@ public class OAuthAdminService extends AbstractAdmin {
                 .getInstance().getApplicationAccessTokenValidityPeriodInSeconds());
         tokenExpiryTime.setRefreshTokenExpiryTime(OAuthServerConfiguration
                 .getInstance().getRefreshTokenValidityPeriodInSeconds());
+        tokenExpiryTime.setIdTokenExpiryTime(OAuthServerConfiguration
+                .getInstance().getOpenIDConnectIDTokenExpiryTimeInSeconds());
         return tokenExpiryTime;
     }
 
@@ -917,6 +979,13 @@ public class OAuthAdminService extends AbstractAdmin {
                     OAuthServerConfiguration.getInstance().getRefreshTokenValidityPeriodInSeconds());
             logOnInvalidConfig(oAuthConsumerAppDTO.getApplicationName(), "refresh token",
                     oAuthConsumerAppDTO.getRefreshTokenExpiryTime());
+        }
+
+        if (oAuthConsumerAppDTO.getIdTokenExpiryTime() == 0) {
+            oAuthConsumerAppDTO.setIdTokenExpiryTime(
+                    OAuthServerConfiguration.getInstance().getOpenIDConnectIDTokenExpiryTimeInSeconds());
+            logOnInvalidConfig(oAuthConsumerAppDTO.getApplicationName(), "id token",
+                    oAuthConsumerAppDTO.getIdTokenExpiryTime());
         }
     }
 
@@ -967,4 +1036,15 @@ public class OAuthAdminService extends AbstractAdmin {
                 OAuthServerConfiguration.getInstance().getSupportedIdTokenEncryptionMethods());
         return oAuthIDTokenAlgorithmDTO;
     }
+
+    /**
+     * Check whether hashing oauth keys (consumer secret, access token, refresh token and authorization code)
+     * configuration is disabled or not in identity.xml file.
+     *
+     * @return Whether hash feature is disabled or not.
+     */
+    public boolean isHashDisabled() {
+        return OAuth2Util.isHashDisabled();
+    }
+
 }

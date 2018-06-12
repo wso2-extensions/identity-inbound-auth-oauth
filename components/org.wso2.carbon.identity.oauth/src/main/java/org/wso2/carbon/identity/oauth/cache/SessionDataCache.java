@@ -35,7 +35,7 @@ public class SessionDataCache extends BaseCache<SessionDataCacheKey, SessionData
     private boolean isTemporarySessionDataPersistEnabled = false;
 
     private SessionDataCache() {
-        super(SESSION_DATA_CACHE_NAME);
+        super(SESSION_DATA_CACHE_NAME, true);
         if (IdentityUtil.getProperty("JDBCPersistenceManager.SessionDataPersist.Temporary") != null) {
             isTemporarySessionDataPersistEnabled = Boolean.parseBoolean(
                     IdentityUtil.getProperty("JDBCPersistenceManager.SessionDataPersist.Temporary"));

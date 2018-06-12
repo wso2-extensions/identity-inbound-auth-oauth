@@ -56,6 +56,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE;
 
@@ -324,6 +325,7 @@ public class ResponseTypeHandlerUtil {
             userAttributes.put(key, sub);
         }
 
+        authorizationGrantCacheEntry.setValidityPeriod(TimeUnit.MILLISECONDS.toNanos(accessTokenDO.getValidityPeriodInMillis()));
         AuthorizationGrantCache.getInstance().addToCacheByToken(authorizationGrantCacheKey,
                 authorizationGrantCacheEntry);
     }

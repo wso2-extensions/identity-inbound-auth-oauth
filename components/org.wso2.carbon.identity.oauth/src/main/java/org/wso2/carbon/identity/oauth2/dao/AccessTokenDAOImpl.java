@@ -76,6 +76,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
     private static final String OAUTH_TOKEN_PERSISTENCE_RETRY_COUNT = "OAuth.TokenPersistence.RetryCount";
     private static final int DEFAULT_TOKEN_PERSIST_RETRY_COUNT = 5;
     private static final String IDN_OAUTH2_ACCESS_TOKEN = "IDN_OAUTH2_ACCESS_TOKEN";
+    private boolean isHashDisabled = OAuth2Util.isHashDisabled();
 
     private Log log = LogFactory.getLog(AccessTokenDAOImpl.class);
 
@@ -395,11 +396,16 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     }
                 }
                 if (returnToken) {
-                    String accessToken = getPersistenceProcessor().getPreprocessedAccessTokenIdentifier(
-                            resultSet.getString(1));
+                    String accessToken = null;
+                    if (isHashDisabled) {
+                        accessToken = getPersistenceProcessor().getPreprocessedAccessTokenIdentifier(
+                                resultSet.getString(1));
+                    }
                     String refreshToken = null;
                     if (resultSet.getString(2) != null) {
-                        refreshToken = getPersistenceProcessor().getPreprocessedRefreshToken(resultSet.getString(2));
+                        if (isHashDisabled) {
+                            refreshToken = getPersistenceProcessor().getPreprocessedRefreshToken(resultSet.getString(2));
+                        }
                     }
                     long issuedTime = resultSet.getTimestamp(3, Calendar.getInstance(TimeZone.getTimeZone(UTC)))
                             .getTime();
@@ -547,11 +553,16 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             AccessTokenDO accessTokenDO = null;
 
             if (resultSet.next()) {
-                String accessToken = getPersistenceProcessor().getPreprocessedAccessTokenIdentifier(
-                        resultSet.getString(1));
+                String accessToken = null;
+                if (isHashDisabled) {
+                    accessToken = getPersistenceProcessor().getPreprocessedAccessTokenIdentifier(
+                            resultSet.getString(1));
+                }
                 String refreshToken = null;
                 if (resultSet.getString(2) != null) {
-                    refreshToken = getPersistenceProcessor().getPreprocessedRefreshToken(resultSet.getString(2));
+                    if (isHashDisabled) {
+                        refreshToken = getPersistenceProcessor().getPreprocessedRefreshToken(resultSet.getString(2));
+                    }
                 }
                 long issuedTime = resultSet.getTimestamp(3, Calendar.getInstance(TimeZone.getTimeZone("UTC")))
                         .getTime();
@@ -644,11 +655,16 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             resultSet = prepStmt.executeQuery();
 
             while (resultSet.next()) {
-                String accessToken = getPersistenceProcessor().
-                        getPreprocessedAccessTokenIdentifier(resultSet.getString(1));
+                String accessToken = null;
+                if (isHashDisabled) {
+                    accessToken = getPersistenceProcessor().
+                            getPreprocessedAccessTokenIdentifier(resultSet.getString(1));
+                }
                 if (accessTokenDOMap.get(accessToken) == null) {
-                    String refreshToken = getPersistenceProcessor().
-                            getPreprocessedRefreshToken(resultSet.getString(2));
+                    String refreshToken = null;
+                    if (isHashDisabled) {
+                        refreshToken = getPersistenceProcessor().getPreprocessedRefreshToken(resultSet.getString(2));
+                    }
                     Timestamp issuedTime = resultSet.getTimestamp(3, Calendar.getInstance(TimeZone.getTimeZone(UTC)));
                     Timestamp refreshTokenIssuedTime = resultSet.getTimestamp(4, Calendar.getInstance(TimeZone
                             .getTimeZone(UTC)));
@@ -1035,8 +1051,10 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             ps.setString(3, OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
             ps.setString(4, authenticatedUser.getUserStoreDomain());
             rs = ps.executeQuery();
-            while (rs.next()) {
-                accessTokens.add(getPersistenceProcessor().getPreprocessedAccessTokenIdentifier(rs.getString(1)));
+            if (isHashDisabled) {
+                while (rs.next()) {
+                    accessTokens.add(getPersistenceProcessor().getPreprocessedAccessTokenIdentifier(rs.getString(1)));
+                }
             }
             connection.commit();
         } catch (SQLException e) {
@@ -1097,8 +1115,12 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             ps.setString(1, consumerKey);
             ps.setString(2, OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
             rs = ps.executeQuery();
-            while (rs.next()) {
-                accessTokens.add(getPersistenceProcessor().getPreprocessedAccessTokenIdentifier(rs.getString(1)));
+
+            if (isHashDisabled) {
+                while (rs.next()) {
+                    accessTokens.add(getPersistenceProcessor().getPreprocessedAccessTokenIdentifier(rs.getString(1)));
+
+                }
             }
             connection.commit();
         } catch (SQLException e) {
@@ -1309,11 +1331,16 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             resultSet = prepStmt.executeQuery();
 
             while (resultSet.next()) {
-                String accessToken = getPersistenceProcessor().
-                        getPreprocessedAccessTokenIdentifier(resultSet.getString(1));
+                String accessToken = null;
+                if (isHashDisabled) {
+                    accessToken = getPersistenceProcessor().
+                            getPreprocessedAccessTokenIdentifier(resultSet.getString(1));
+                }
                 if (accessTokenDOMap.get(accessToken) == null) {
-                    String refreshToken = getPersistenceProcessor().
-                            getPreprocessedRefreshToken(resultSet.getString(2));
+                    String refreshToken = null;
+                    if (isHashDisabled) {
+                        refreshToken = getPersistenceProcessor().getPreprocessedRefreshToken(resultSet.getString(2));
+                    }
                     Timestamp issuedTime = resultSet.getTimestamp(3, Calendar.getInstance(TimeZone.getTimeZone(UTC)));
                     Timestamp refreshTokenIssuedTime = resultSet.getTimestamp(4, Calendar.getInstance(TimeZone
                             .getTimeZone(UTC)));
@@ -1381,10 +1408,15 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             resultSet = prepStmt.executeQuery();
 
             while (resultSet.next()) {
-                String accessToken = getPersistenceProcessor().getPreprocessedAccessTokenIdentifier(resultSet.getString(1));
+                String accessToken = null;
+                if (isHashDisabled) {
+                    accessToken = getPersistenceProcessor().getPreprocessedAccessTokenIdentifier(resultSet.getString(1));
+                }
                 if (accessTokenDOMap.get(accessToken) == null) {
-                    String refreshToken = getPersistenceProcessor().
-                            getPreprocessedRefreshToken(resultSet.getString(2));
+                    String refreshToken = null;
+                    if (isHashDisabled) {
+                        refreshToken = getPersistenceProcessor().getPreprocessedRefreshToken(resultSet.getString(2));
+                    }
                     Timestamp issuedTime = resultSet.getTimestamp(3, Calendar.getInstance(TimeZone.getTimeZone(UTC)));
                     Timestamp refreshTokenIssuedTime = resultSet.getTimestamp(4, Calendar.getInstance(TimeZone
                             .getTimeZone(UTC)));
@@ -1815,11 +1847,16 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
 
                 if (latestIssuedTime == issuedTime) {
                     String tokenState = resultSet.getString(7);
-                    String accessToken = getPersistenceProcessor().getPreprocessedAccessTokenIdentifier(
-                            resultSet.getString(1));
+                    String accessToken = null;
+                    if (isHashDisabled) {
+                        accessToken = getPersistenceProcessor().getPreprocessedAccessTokenIdentifier(
+                                resultSet.getString(1));
+                    }
                     String refreshToken = null;
                     if (resultSet.getString(2) != null) {
-                        refreshToken = getPersistenceProcessor().getPreprocessedRefreshToken(resultSet.getString(2));
+                        if (isHashDisabled) {
+                            refreshToken = getPersistenceProcessor().getPreprocessedRefreshToken(resultSet.getString(2));
+                        }
                     }
                     long refreshTokenIssuedTime = resultSet.getTimestamp(4, Calendar.getInstance(TimeZone.getTimeZone
                             ("UTC"))).getTime();

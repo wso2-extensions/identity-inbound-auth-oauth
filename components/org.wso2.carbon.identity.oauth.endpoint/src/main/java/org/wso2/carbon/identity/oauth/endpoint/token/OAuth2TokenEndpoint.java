@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth.endpoint.token;
 
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.cxf.interceptor.InInterceptors;
@@ -156,6 +157,12 @@ public class OAuth2TokenEndpoint {
 
         if (oauth2AccessTokenResp.getIDToken() != null) {
             oAuthRespBuilder.setParam(OAuthConstants.ID_TOKEN, oauth2AccessTokenResp.getIDToken());
+        }
+
+        // Set custom parameters in token response if supported
+        if (MapUtils.isNotEmpty(oauth2AccessTokenResp.getParameters())) {
+            oauth2AccessTokenResp.getParameters().forEach((paramKey, paramValue) -> oAuthRespBuilder.setParam
+                    (paramKey, paramValue));
         }
 
         OAuthResponse response = oAuthRespBuilder.buildJSONMessage();
