@@ -33,7 +33,7 @@ public class TenantCreationEventListener implements TenantMgtListener {
     @Override
     public void onTenantCreate(TenantInfoBean tenantInfoBean) throws StratosException {
         int tenantId = tenantInfoBean.getTenantId();
-        OAuth2Util.initiateOIDCScopes(tenantId);
+        OAuth2Util.initiateOIDCScopesAndClaims(tenantId);
     }
 
     @Override

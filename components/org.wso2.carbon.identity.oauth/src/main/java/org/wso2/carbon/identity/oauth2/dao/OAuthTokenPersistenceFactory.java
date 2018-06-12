@@ -20,6 +20,8 @@
 
 package org.wso2.carbon.identity.oauth2.dao;
 
+import org.wso2.carbon.identity.openidconnect.dao.DefaultScopeClaimMappingDAO;
+import org.wso2.carbon.identity.openidconnect.dao.DefaultScopeClaimMappingDAOImpl;
 import org.wso2.carbon.identity.openidconnect.dao.RequestObjectDAO;
 import org.wso2.carbon.identity.openidconnect.dao.RequestObjectDAOImpl;
 
@@ -38,6 +40,7 @@ public class OAuthTokenPersistenceFactory {
     private OAuthScopeDAO scopeDAO;
     private TokenManagementDAO managementDAO;
     private RequestObjectDAO requestObjectDAO;
+    private DefaultScopeClaimMappingDAO scopeClaimMappingDAO;
 
     public OAuthTokenPersistenceFactory() {
 
@@ -46,6 +49,7 @@ public class OAuthTokenPersistenceFactory {
         this.scopeDAO = new OAuthScopeDAOImpl();
         this.managementDAO = new TokenManagementDAOImpl();
         this.requestObjectDAO = new RequestObjectDAOImpl();
+        this.scopeClaimMappingDAO = new DefaultScopeClaimMappingDAOImpl();
     }
 
     public static OAuthTokenPersistenceFactory getInstance() {
@@ -79,5 +83,10 @@ public class OAuthTokenPersistenceFactory {
     public RequestObjectDAO getRequestObjectDAO() {
 
         return requestObjectDAO;
+    }
+
+    public DefaultScopeClaimMappingDAO getScopeClaimMappingDAO() {
+
+        return scopeClaimMappingDAO;
     }
 }
