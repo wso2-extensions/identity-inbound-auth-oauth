@@ -383,7 +383,16 @@ public class OIDCLogoutServlet extends HttpServlet {
      */
     private String extractClientFromIdToken(String idToken) throws ParseException {
 
-        return SignedJWT.parse(idToken).getJWTClaimsSet().getAudience().get(0);
+        String clientId = (String) SignedJWT.parse(idToken).getJWTClaimsSet()
+                .getClaims().get(OIDCSessionConstants.OIDC_ID_TOKEN_AZP_CLAIM);
+
+        if (StringUtils.isBlank(clientId)) {
+            clientId = SignedJWT.parse(idToken).getJWTClaimsSet().getAudience().get(0);
+            log.info("Provided ID Token does not contain azp claim with client ID. " +
+                    "Client ID is extracted from the aud claim in the ID Token.");
+        }
+
+        return clientId;
     }
 
     /**
