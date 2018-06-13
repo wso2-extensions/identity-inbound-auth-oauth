@@ -34,6 +34,8 @@ public class OIDCSessionConstants {
 
     public static final String OIDC_CACHE_CLIENT_ID_PARAM = "client_id";
 
+    public static final String OIDC_ID_TOKEN_AZP_CLAIM = "azp";
+
     public static class OIDCConfigElements {
         public static final String OIDC_LOGOUT_CONSENT_PAGE_URL = "OIDCLogoutConsentPage";
         public static final String OIDC_LOGOUT_PAGE_URL = "OIDCLogoutPage";
