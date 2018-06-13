@@ -42,6 +42,7 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.util.OAuth2TokenUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
@@ -117,16 +118,11 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     "Authorized user should be available for further execution.");
         }
 
-        String tokenType = OAuth2Util.DEFAULT_TOKEN_TYPE;
         try {
-            OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(consumerKey);
-            if (oAuthAppDO.getTokenType() != null) {
-                tokenType = oAuthAppDO.getTokenType();
-            }
-
+            OauthTokenIssuer oauthTokenIssuer = OAuth2Util.getOAuthTokenIssuerForOAuthApp(consumerKey);
             //check for persist alias for the token type
-            if (OAuthServerConfiguration.getInstance().getPersistAccessTokenMap().get(tokenType)) {
-                accessToken = OAuth2Util.getOAuthTokenIssuerForOAuthApp(consumerKey).getAccessTokenHash(accessToken);
+            if (oauthTokenIssuer.usePersistedAccessTokenAlias()) {
+                accessToken = oauthTokenIssuer.getAccessTokenHash(accessToken);
             }
         } catch (OAuthSystemException e) {
             if (log.isDebugEnabled() && IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
@@ -135,7 +131,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             }
             throw new IdentityOAuth2Exception("Error while getting access token hash.");
         } catch (InvalidOAuthClientException e) {
-            throw new IdentityOAuth2Exception("Error while retrieving app information for clientId: " + consumerKey, e);
+            throw new IdentityOAuth2Exception(
+                    "Error while retrieving oauth issuer for the app with clientId: " + consumerKey, e);
         }
 
         if (log.isDebugEnabled()) {
