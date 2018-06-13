@@ -153,7 +153,6 @@ public class OAuthServerConfiguration {
     private Map<String, String> supportedResponseTypeValidatorNames = new HashMap<>();
     private Map<String, Class<? extends OAuthValidator<HttpServletRequest>>> supportedResponseTypeValidators;
     private Map<String, TokenIssuerDO> supportedTokenIssuers = new HashMap<>();
-    private Map<String, Boolean> persistAccessTokenMap = new HashMap<>();
     private Map<String, OauthTokenIssuer> oauthTokenIssuerMap = new HashMap<>();
     private String[] supportedClaims = null;
     private Map<String, Properties> supportedClientAuthHandlerData = new HashMap<>();
@@ -526,7 +525,11 @@ public class OAuthServerConfiguration {
     }
 
     public OauthTokenIssuer getDefaultIdentityOauthTokenIssuer() {
-        return new OauthTokenIssuerImpl();
+        if (oauthIdentityTokenGenerator == null) {
+            return new OauthTokenIssuerImpl();
+        } else {
+            return oauthIdentityTokenGenerator;
+        }
     }
 
     public boolean usePersistedAccessTokenAlias() {
@@ -1879,6 +1882,12 @@ public class OAuthServerConfiguration {
         }
     }
 
+    /**
+     * Adds oauth token issuer instances used for token generation
+     * @param tokenType registered token type
+     * @return token issuer instance
+     * @throws IdentityOAuth2Exception
+     */
     public OauthTokenIssuer addAndReturnTokenIssuerInstance(String tokenType) throws IdentityOAuth2Exception {
         String tokenTypeImplClass = supportedTokenIssuers.get(tokenType).getTokenImplClass();
         OauthTokenIssuer oauthTokenIssuer = null;

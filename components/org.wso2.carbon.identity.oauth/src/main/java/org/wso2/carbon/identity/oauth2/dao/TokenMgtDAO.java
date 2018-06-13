@@ -298,8 +298,8 @@ public class TokenMgtDAO {
             throws IdentityOAuth2Exception {
         try {
             OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(consumerKey);
-            boolean persistAccessTokenAlias = OAuthServerConfiguration.getInstance().getPersistAccessTokenMap()
-                    .get(oAuthAppDO.getTokenType());
+            boolean persistAccessTokenAlias = OAuthServerConfiguration.getInstance().getSupportedTokenIssuers()
+                    .get(oAuthAppDO.getTokenType()).isPersistAccessTokenAlias();
             if (persistAccessTokenAlias) {
                 oauthIssuerImpl = OAuth2Util.getOAuthTokenIssuerForOAuthApp(oAuthAppDO);
                 accessToken = oauthIssuerImpl.getAccessTokenHash(accessToken);

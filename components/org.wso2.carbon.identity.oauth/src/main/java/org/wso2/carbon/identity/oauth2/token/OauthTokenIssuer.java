@@ -52,6 +52,10 @@ public interface OauthTokenIssuer {
         return false;
     }
 
+    /**
+     * Set true if the access token alias is used to stored in the database instead of access token.
+     * @param persistAccessTokenAlias access token alias
+     */
     void setPersistAccessTokenAlias(boolean persistAccessTokenAlias);
 
     /**

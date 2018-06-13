@@ -1494,8 +1494,13 @@ public class OAuth2Util {
      * @throws InvalidOAuthClientException
      */
     public static OauthTokenIssuer getOAuthTokenIssuerForOAuthApp(String clientId)
-            throws IdentityOAuth2Exception, InvalidOAuthClientException {
-        OAuthAppDO appDO = getAppInformationByClientId(clientId);
+            throws  IdentityOAuth2Exception, InvalidOAuthClientException {
+        OAuthAppDO appDO = null;
+        try {
+            appDO = getAppInformationByClientId(clientId);
+        } catch (IdentityOAuth2Exception e) {
+            throw new IdentityOAuth2Exception("Error while retrieving app information for clientId: " + clientId, e);
+        }
         return getOAuthTokenIssuerForOAuthApp(appDO);
     }
 
@@ -1507,7 +1512,7 @@ public class OAuth2Util {
      * @throws IdentityOAuth2Exception
      * @throws InvalidOAuthClientException
      */
-    public static OauthTokenIssuer getOAuthTokenIssuerForOAuthApp(OAuthAppDO appDO) {
+    public static OauthTokenIssuer getOAuthTokenIssuerForOAuthApp(OAuthAppDO appDO) throws IdentityOAuth2Exception {
         OauthTokenIssuer oauthIdentityTokenGenerator;
         if (appDO.getTokenType() != null) {
             oauthIdentityTokenGenerator = OAuthServerConfiguration.getInstance()
@@ -1517,7 +1522,8 @@ public class OAuth2Util {
                         .getDefaultIdentityOauthTokenIssuer();
             }
         } else {
-            oauthIdentityTokenGenerator = new OauthTokenIssuerImpl();
+            oauthIdentityTokenGenerator = OAuthServerConfiguration.getInstance()
+                    .getDefaultIdentityOauthTokenIssuer();
             log.info("Token type in not set for service provider app with client Id: " + appDO.getOauthConsumerKey()
                     + ". Hence the default Identity OAuth token issuer will be used. No custom token generator is set.");
         }

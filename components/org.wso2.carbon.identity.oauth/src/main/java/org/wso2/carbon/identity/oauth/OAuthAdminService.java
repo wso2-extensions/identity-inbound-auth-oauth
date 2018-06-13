@@ -52,6 +52,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.ClientCredentialDO;
+import org.wso2.carbon.identity.oauth2.model.TokenIssuerDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeValidator;
 import org.wso2.carbon.user.api.UserStoreException;
@@ -1106,7 +1107,7 @@ public class OAuthAdminService extends AbstractAdmin {
     public List<String> getSupportedTokenTypes() {
         if (supportedTokenTypes == null) {
             supportedTokenTypes = new ArrayList<>();
-            Map<String, String> supportedTokenTypesMap = OAuthServerConfiguration.getInstance().getSupportedTokenTypes();
+            Map<String, TokenIssuerDO> supportedTokenTypesMap = OAuthServerConfiguration.getInstance().getSupportedTokenIssuers();
             for (Object tokenTypeObj : supportedTokenTypesMap.keySet()) {
                 supportedTokenTypes.add(tokenTypeObj.toString());
             }

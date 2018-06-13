@@ -51,6 +51,7 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
+import org.wso2.carbon.identity.oauth2.model.TokenIssuerDO;
 import org.wso2.carbon.identity.testutil.IdentityBaseTest;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.service.RealmService;
@@ -152,9 +153,12 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
         } else {
             OAuth2ServiceComponentHolder.setPkceEnabled(false);
         }
-        Map<String, Boolean> persistantTokenMap = new HashMap();
-        persistantTokenMap.put("Default", false);
-        when(mockedOAuthServerConfiguration.getInstance().getPersistAccessTokenMap()).thenReturn(persistantTokenMap);
+        Map<String, TokenIssuerDO> tokenIssuerMap = new HashMap();
+        TokenIssuerDO issuerDO = new TokenIssuerDO();
+        issuerDO.setTokenType("Default");
+        issuerDO.setPersistAccessTokenAlias(false);
+        tokenIssuerMap.put("Default", issuerDO);
+        when(mockedOAuthServerConfiguration.getInstance().getSupportedTokenIssuers()).thenReturn(tokenIssuerMap);
     }
 
     @BeforeMethod

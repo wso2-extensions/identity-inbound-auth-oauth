@@ -109,7 +109,8 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         try {
             oauthIssuerImpl = OAuth2Util.getOAuthTokenIssuerForOAuthApp(consumerKey);
         } catch (InvalidOAuthClientException e) {
-            throw new IdentityOAuth2Exception("Error while retrieving app information for clientId: " + consumerKey, e);
+            throw new IdentityOAuth2Exception(
+                    "Error while retrieving oauth issuer for the app with clientId: " + consumerKey, e);
         }
 
         synchronized ((consumerKey + ":" + authorizedUser + ":" + scope).intern()) {
