@@ -46,6 +46,7 @@ import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcess
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.handlers.ResponseTypeHandler;
+import org.wso2.carbon.identity.oauth2.model.TokenIssuerDO;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuerImpl;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
@@ -151,7 +152,7 @@ public class OAuthServerConfiguration {
     private Map<String, ResponseTypeHandler> supportedResponseTypes;
     private Map<String, String> supportedResponseTypeValidatorNames = new HashMap<>();
     private Map<String, Class<? extends OAuthValidator<HttpServletRequest>>> supportedResponseTypeValidators;
-    private Map<String, String> supportedTokenTypes = new HashMap<>();
+    private Map<String, TokenIssuerDO> supportedTokenIssuers = new HashMap<>();
     private Map<String, Boolean> persistAccessTokenMap = new HashMap<>();
     private Map<String, OauthTokenIssuer> oauthTokenIssuerMap = new HashMap<>();
     private String[] supportedClaims = null;
@@ -1856,43 +1857,48 @@ public class OAuthServerConfiguration {
                     persistAccessTokenAlias = persistAccessTokenAliasElement.getText();
                 }
 
-                if (StringUtils.isNotEmpty(tokenTypeName) && StringUtils.isNotEmpty(tokenTypeImplClass)) {
-                    supportedTokenTypes.put(tokenTypeName, tokenTypeImplClass);
-                }
+                if (StringUtils.isNotEmpty(tokenTypeName)) {
+                    TokenIssuerDO tokenIssuerDO = new TokenIssuerDO();
+                    if (StringUtils.isNotEmpty(tokenTypeImplClass)) {
+                        tokenIssuerDO.setTokenType(tokenTypeName);
+                        tokenIssuerDO.setTokenImplClass(tokenTypeImplClass);
+                    }
 
-                if (StringUtils.isNotEmpty(tokenTypeName) && StringUtils.isNotEmpty(persistAccessTokenAlias)) {
-                    persistAccessTokenMap.put(tokenTypeName, Boolean.valueOf(persistAccessTokenAlias));
-                } else {
-                    persistAccessTokenMap.put(tokenTypeName, true);
+                    if (StringUtils.isNotEmpty(persistAccessTokenAlias)) {
+                        tokenIssuerDO.setPersistAccessTokenAlias(Boolean.valueOf(persistAccessTokenAlias));
+                    } else {
+                        tokenIssuerDO.setPersistAccessTokenAlias(true);
+                    }
+                    supportedTokenIssuers.put(tokenTypeName, tokenIssuerDO);
                 }
             }
         } else {
-            supportedTokenTypes.put(DEFAULT_TOKEN_TYPE, DEFAULT_OAUTH_TOKEN_ISSUER_CLASS);
-            persistAccessTokenMap.put(DEFAULT_TOKEN_TYPE, true);
-            supportedTokenTypes.put(JWT_TOKEN_TYPE, JWT_TOKEN_ISSUER_CLASS);
-            persistAccessTokenMap.put(JWT_TOKEN_TYPE, true);
+            supportedTokenIssuers.put(DEFAULT_TOKEN_TYPE,
+                    new TokenIssuerDO(DEFAULT_TOKEN_TYPE, DEFAULT_OAUTH_TOKEN_ISSUER_CLASS, true));
+            supportedTokenIssuers.put(JWT_TOKEN_TYPE, new TokenIssuerDO(JWT_TOKEN_TYPE, JWT_TOKEN_ISSUER_CLASS, true));
         }
     }
 
-    public OauthTokenIssuer addAndReturnTokenIssuerInstance(String tokenType) {
-        String tokenTypeImplClass = supportedTokenTypes.get(tokenType);
+    public OauthTokenIssuer addAndReturnTokenIssuerInstance(String tokenType) throws IdentityOAuth2Exception {
+        String tokenTypeImplClass = supportedTokenIssuers.get(tokenType).getTokenImplClass();
         OauthTokenIssuer oauthTokenIssuer = null;
         if (tokenTypeImplClass != null) {
             try {
                 if (oauthTokenIssuerMap.get(tokenType) == null) {
                     Class clazz = this.getClass().getClassLoader().loadClass(tokenTypeImplClass);
                     oauthTokenIssuer = (OauthTokenIssuer) clazz.newInstance();
+                    oauthTokenIssuer.setPersistAccessTokenAlias(
+                            supportedTokenIssuers.get(tokenType).isPersistAccessTokenAlias());
                     oauthTokenIssuerMap.put(tokenType, oauthTokenIssuer);
                     log.info("An instance of " + tokenTypeImplClass
                             + " is created for Identity OAuth token generation.");
-                    return oauthTokenIssuer;
                 } else {
-                    return oauthTokenIssuerMap.get(tokenType);
+                    oauthTokenIssuer = oauthTokenIssuerMap.get(tokenType);
                 }
             } catch (Exception e) {
                 String errorMsg = "Error when instantiating the OAuthIssuer : " + tokenTypeImplClass
                         + ". Defaulting to OAuthIssuerImpl";
-                log.error(errorMsg, e);
+                throw new IdentityOAuth2Exception(errorMsg, e);
             }
         }
         return oauthTokenIssuer;
@@ -2414,8 +2420,8 @@ public class OAuthServerConfiguration {
         return oAuth2ScopeValidators;
     }
 
-    public Map<String, String> getSupportedTokenTypes() {
-        return supportedTokenTypes;
+    public Map<String, TokenIssuerDO> getSupportedTokenIssuers() {
+        return supportedTokenIssuers;
     }
 
     public void setOAuth2ScopeValidators(Set<OAuth2ScopeValidator> oAuth2ScopeValidators) {
@@ -2428,10 +2434,6 @@ public class OAuthServerConfiguration {
 
     public void setOAuth2ScopeHandlers(Set<OAuth2ScopeHandler> oAuth2ScopeHandlers) {
         this.oAuth2ScopeHandlers = oAuth2ScopeHandlers;
-    }
-
-    public Map<String, Boolean> getPersistAccessTokenMap() {
-        return persistAccessTokenMap;
     }
 
     private void parseUseSPTenantDomainConfig(OMElement oauthElem) {
