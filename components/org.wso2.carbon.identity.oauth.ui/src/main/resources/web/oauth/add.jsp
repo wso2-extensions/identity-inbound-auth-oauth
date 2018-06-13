@@ -42,6 +42,7 @@
 <%
     String forwardTo = "index.jsp";
     String BUNDLE = "org.wso2.carbon.identity.oauth.ui.i18n.Resources";
+    String DEFAULT_TOKEN_TYPE = "default";
     ResourceBundle resourceBundle = ResourceBundle.getBundle(BUNDLE, request.getLocale());
     String applicationSPName = request.getParameter("spName");
     session.setAttribute("application-sp-name", applicationSPName);
@@ -674,7 +675,8 @@
                                                 <td><label><input type="radio" name="tokenType"
                                                                   id=<%=  OAuthUIUtil.getTokenTypeId(tokenType)%>
                                                                           value=<%=Encode.forHtmlAttribute(tokenType)%>
-                                                        <%if(tokenType.equalsIgnoreCase("default")) {
+                                                        <%
+                                                            if (tokenType.equalsIgnoreCase(DEFAULT_TOKEN_TYPE)) {
                                                         %> checked="checked" <%}%> />
                                                     <%=Encode.forHtmlAttribute(tokenType)%>
                                                 </label></td>

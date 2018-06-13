@@ -20,7 +20,6 @@ package org.wso2.carbon.identity.oauth.config;
 
 import org.apache.axiom.om.OMElement;
 import org.apache.axis2.util.JavaUtils;
-import org.apache.commons.collections.map.HashedMap;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -1853,15 +1852,15 @@ public class OAuthServerConfiguration {
                         getQNameWithIdentityNS(ConfigElements.IDENTITY_OAUTH_PERSIST_TOKEN_ALIAS));
 
                 String persistAccessTokenAlias = null;
-                if(persistAccessTokenAliasElement != null) {
+                if (persistAccessTokenAliasElement != null) {
                     persistAccessTokenAlias = persistAccessTokenAliasElement.getText();
                 }
 
-                if(StringUtils.isNotEmpty(tokenTypeName) && StringUtils.isNotEmpty(tokenTypeImplClass)) {
+                if (StringUtils.isNotEmpty(tokenTypeName) && StringUtils.isNotEmpty(tokenTypeImplClass)) {
                     supportedTokenTypes.put(tokenTypeName, tokenTypeImplClass);
                 }
 
-                if(StringUtils.isNotEmpty(tokenTypeName) && StringUtils.isNotEmpty(persistAccessTokenAlias)) {
+                if (StringUtils.isNotEmpty(tokenTypeName) && StringUtils.isNotEmpty(persistAccessTokenAlias)) {
                     persistAccessTokenMap.put(tokenTypeName, Boolean.valueOf(persistAccessTokenAlias));
                 } else {
                     persistAccessTokenMap.put(tokenTypeName, true);
@@ -1875,21 +1874,28 @@ public class OAuthServerConfiguration {
         }
     }
 
-    public void addAndReturnTokenIssuerInstance(String tokenType) {
+    public OauthTokenIssuer addAndReturnTokenIssuerInstance(String tokenType) {
         String tokenTypeImplClass = supportedTokenTypes.get(tokenType);
+        OauthTokenIssuer oauthTokenIssuer = null;
         if (tokenTypeImplClass != null) {
             try {
-                if(oauthTokenIssuerMap.get(tokenType) == null) {
+                if (oauthTokenIssuerMap.get(tokenType) == null) {
                     Class clazz = this.getClass().getClassLoader().loadClass(tokenTypeImplClass);
-                    oauthTokenIssuerMap.put(tokenType, (OauthTokenIssuer) clazz.newInstance());
-                    log.info("An instance of " + tokenTypeImplClass + " is created for Identity OAuth token generation.");
+                    oauthTokenIssuer = (OauthTokenIssuer) clazz.newInstance();
+                    oauthTokenIssuerMap.put(tokenType, oauthTokenIssuer);
+                    log.info("An instance of " + tokenTypeImplClass
+                            + " is created for Identity OAuth token generation.");
+                    return oauthTokenIssuer;
+                } else {
+                    return oauthTokenIssuerMap.get(tokenType);
                 }
             } catch (Exception e) {
-                String errorMsg = "Error when instantiating the OAuthIssuer : "
-                        + tokenTypeImplClass + ". Defaulting to OAuthIssuerImpl";
+                String errorMsg = "Error when instantiating the OAuthIssuer : " + tokenTypeImplClass
+                        + ". Defaulting to OAuthIssuerImpl";
                 log.error(errorMsg, e);
             }
         }
+        return oauthTokenIssuer;
     }
 
     private void parseUserConsentEnabledGrantTypesConfig(OMElement oauthConfigElem) {

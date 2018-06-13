@@ -135,7 +135,7 @@ public class DCRMService {
                 appDTO.setCallbackUrl(callbackUrl);
             }
 
-            if(updateRequest.getTokenType() != null) {
+            if (updateRequest.getTokenType() != null) {
                 appDTO.setTokenType(updateRequest.getTokenType());
             }
             oAuthAdminService.updateConsumerApplication(appDTO);

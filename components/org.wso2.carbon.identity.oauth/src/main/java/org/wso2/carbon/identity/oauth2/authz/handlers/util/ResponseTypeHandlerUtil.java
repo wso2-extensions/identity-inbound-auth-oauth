@@ -110,6 +110,9 @@ public class ResponseTypeHandlerUtil {
         try {
              oauthTokenIssuer = OAuth2Util.getOAuthTokenIssuerForOAuthApp(consumerKey);
         } catch (InvalidOAuthClientException e) {
+            String errorMsg = "Error when instantiating the OAuthIssuer for service provider app with client Id: " +
+                    consumerKey + ". Defaulting to OAuthIssuerImpl";
+            log.error(errorMsg, e);
             oauthTokenIssuer = OAuthServerConfiguration.getInstance().getDefaultIdentityOauthTokenIssuer();
         }
         return generateAccessToken(oauthAuthzMsgCtx, cacheEnabled, oauthTokenIssuer);

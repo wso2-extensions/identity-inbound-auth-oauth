@@ -1104,9 +1104,9 @@ public class OAuthAdminService extends AbstractAdmin {
      * @return List of supported oauth token types
      */
     public List<String> getSupportedTokenTypes() {
-        if(supportedTokenTypes == null) {
+        if (supportedTokenTypes == null) {
             supportedTokenTypes = new ArrayList<>();
-            Map supportedTokenTypesMap = OAuthServerConfiguration.getInstance().getSupportedTokenTypes();
+            Map<String, String> supportedTokenTypesMap = OAuthServerConfiguration.getInstance().getSupportedTokenTypes();
             for (Object tokenTypeObj : supportedTokenTypesMap.keySet()) {
                 supportedTokenTypes.add(tokenTypeObj.toString());
             }

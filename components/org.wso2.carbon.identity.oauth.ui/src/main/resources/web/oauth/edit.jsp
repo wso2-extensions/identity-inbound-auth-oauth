@@ -50,6 +50,7 @@
     OAuthConsumerAppDTO app = null;
     String forwardTo = null;
     String BUNDLE = "org.wso2.carbon.identity.oauth.ui.i18n.Resources";
+    String DEFAULT_TOKEN_TYPE = "default";
     ResourceBundle resourceBundle = ResourceBundle.getBundle(BUNDLE, request.getLocale());
     String id = null;
     String secret = null;
@@ -780,9 +781,12 @@
                                                 <td><label><input type="radio" name="tokenType"
                                                                   id=<%=  OAuthUIUtil.getTokenTypeId(tokenType)%>
                                                                           value=<%=Encode.forHtmlAttribute(tokenType)%>
-                                                        <%if(app.getTokenType() == null && tokenType.equalsIgnoreCase("default")) {
+                                                        <%
+                                                            if (app.getTokenType() == null && tokenType
+                                                                    .equalsIgnoreCase(DEFAULT_TOKEN_TYPE)) {
                                                         %> checked="checked"<%
-                                                        } else if(tokenType.equals(app.getTokenType())) { %> checked="checked"<%} %>/>
+                                                            } else if (tokenType.equals(app.getTokenType())) { %>
+                                                                  checked="checked"<%} %>/>
                                                     <%=Encode.forHtmlAttribute(tokenType)%>
                                                 </label></td>
                                             </tr>

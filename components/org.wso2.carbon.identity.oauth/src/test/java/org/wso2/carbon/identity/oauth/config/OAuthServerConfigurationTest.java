@@ -365,8 +365,8 @@ public class OAuthServerConfigurationTest extends PowerMockIdentityBaseTest {
 
     @Test
     public void testGetSupportedTokenTypes() throws Exception {
-        Assert.assertTrue(OAuthServerConfiguration.getInstance()
-                .getSupportedTokenTypes().size() == 2, "Expected value not returned from getter");
+        Assert.assertEquals(OAuthServerConfiguration.getInstance().getSupportedTokenTypes().size(), 2,
+                "Expected value not returned from getter");
     }
 
     @Test

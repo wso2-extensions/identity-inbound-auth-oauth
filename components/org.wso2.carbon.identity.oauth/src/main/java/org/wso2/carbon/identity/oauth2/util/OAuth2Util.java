@@ -1510,19 +1510,16 @@ public class OAuth2Util {
     public static OauthTokenIssuer getOAuthTokenIssuerForOAuthApp(OAuthAppDO appDO) {
         OauthTokenIssuer oauthIdentityTokenGenerator;
         if (appDO.getTokenType() != null) {
-            OAuthServerConfiguration.getInstance().addAndReturnTokenIssuerInstance(appDO.getTokenType());
-            oauthIdentityTokenGenerator = OAuthServerConfiguration.getInstance().getOauthTokenIssuerMap()
-                    .get(appDO.getTokenType());
+            oauthIdentityTokenGenerator = OAuthServerConfiguration.getInstance()
+                    .addAndReturnTokenIssuerInstance(appDO.getTokenType());
             if (oauthIdentityTokenGenerator == null) {
                 oauthIdentityTokenGenerator = OAuthServerConfiguration.getInstance()
                         .getDefaultIdentityOauthTokenIssuer();
             }
         } else {
             oauthIdentityTokenGenerator = new OauthTokenIssuerImpl();
-            if (log.isDebugEnabled()) {
-                log.debug("The default Identity OAuth token issuer will be used. No custom token generator" +
-                        " is set.");
-            }
+            log.info("Token type in not set for service provider app with client Id: " + appDO.getOauthConsumerKey()
+                    + ". Hence the default Identity OAuth token issuer will be used. No custom token generator is set.");
         }
         return oauthIdentityTokenGenerator;
     }
