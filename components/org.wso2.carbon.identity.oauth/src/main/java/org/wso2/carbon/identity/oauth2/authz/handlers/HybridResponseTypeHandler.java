@@ -48,22 +48,19 @@ public class HybridResponseTypeHandler extends AbstractResponseTypeHandler {
 
         // Generating authorization code and generating response for authorization code flow.
         if (isAuthorizationCodeIssued(responseType)) {
-            AuthzCodeDO authzCodeDO = ResponseTypeHandlerUtil.generateAuthorizationCode(oauthAuthzMsgCtx, cacheEnabled,
-                    oauthIssuerImpl);
+            AuthzCodeDO authzCodeDO = ResponseTypeHandlerUtil.generateAuthorizationCode(oauthAuthzMsgCtx, cacheEnabled);
             ResponseTypeHandlerUtil.buildAuthorizationCodeResponseDTO(respDTO, authzCodeDO);
         }
 
         // Generating access token and generating response for access token flow.
         if (isAccessTokenIssued(responseType)) {
-            AccessTokenDO accessTokenDO = ResponseTypeHandlerUtil.generateAccessToken(oauthAuthzMsgCtx, cacheEnabled,
-                    oauthIssuerImpl);
+            AccessTokenDO accessTokenDO = ResponseTypeHandlerUtil.generateAccessToken(oauthAuthzMsgCtx, cacheEnabled);
             ResponseTypeHandlerUtil.buildAccessTokenResponseDTO(respDTO, accessTokenDO);
         }
 
         // Generating id_token and generating response for id_token flow.
         if (isIDTokenIssued(responseType)) {
-            AccessTokenDO accessTokenDO = ResponseTypeHandlerUtil.generateAccessToken(oauthAuthzMsgCtx, cacheEnabled,
-                    oauthIssuerImpl);
+            AccessTokenDO accessTokenDO = ResponseTypeHandlerUtil.generateAccessToken(oauthAuthzMsgCtx, cacheEnabled);
             ResponseTypeHandlerUtil.buildIDTokenResponseDTO(respDTO, accessTokenDO, oauthAuthzMsgCtx);
         }
 

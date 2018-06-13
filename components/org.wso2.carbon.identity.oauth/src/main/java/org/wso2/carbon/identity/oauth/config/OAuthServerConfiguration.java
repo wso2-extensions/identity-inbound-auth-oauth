@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth.config;
 
 import org.apache.axiom.om.OMElement;
 import org.apache.axis2.util.JavaUtils;
+import org.apache.commons.collections.map.HashedMap;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -153,6 +154,7 @@ public class OAuthServerConfiguration {
     private Map<String, Class<? extends OAuthValidator<HttpServletRequest>>> supportedResponseTypeValidators;
     private Map<String, String> supportedTokenTypes = new HashMap<>();
     private Map<String, Boolean> persistAccessTokenMap = new HashMap<>();
+    private Map<String, OauthTokenIssuer> oauthTokenIssuerMap = new HashMap<>();
     private String[] supportedClaims = null;
     private Map<String, Properties> supportedClientAuthHandlerData = new HashMap<>();
     private String saml2TokenCallbackHandlerName = null;
@@ -494,6 +496,7 @@ public class OAuthServerConfiguration {
         return tokenValueGenerator;
     }
 
+    @Deprecated
     public OauthTokenIssuer getIdentityOauthTokenIssuer() {
         if (oauthIdentityTokenGenerator == null) {
             synchronized (this) {
@@ -520,6 +523,10 @@ public class OAuthServerConfiguration {
             }
         }
         return oauthIdentityTokenGenerator;
+    }
+
+    public OauthTokenIssuer getDefaultIdentityOauthTokenIssuer() {
+        return new OauthTokenIssuerImpl();
     }
 
     public boolean usePersistedAccessTokenAlias() {
@@ -568,6 +575,10 @@ public class OAuthServerConfiguration {
 
     public boolean isRefreshTokenRenewalEnabled() {
         return isRefreshTokenRenewalEnabled;
+    }
+
+    public Map<String, OauthTokenIssuer> getOauthTokenIssuerMap() {
+        return oauthTokenIssuerMap;
     }
 
     public Map<String, AuthorizationGrantHandler> getSupportedGrantTypes() {
@@ -1861,6 +1872,23 @@ public class OAuthServerConfiguration {
             persistAccessTokenMap.put(DEFAULT_TOKEN_TYPE, true);
             supportedTokenTypes.put(JWT_TOKEN_TYPE, JWT_TOKEN_ISSUER_CLASS);
             persistAccessTokenMap.put(JWT_TOKEN_TYPE, true);
+        }
+    }
+
+    public void addAndReturnTokenIssuerInstance(String tokenType) {
+        String tokenTypeImplClass = supportedTokenTypes.get(tokenType);
+        if (tokenTypeImplClass != null) {
+            try {
+                if(oauthTokenIssuerMap.get(tokenType) == null) {
+                    Class clazz = this.getClass().getClassLoader().loadClass(tokenTypeImplClass);
+                    oauthTokenIssuerMap.put(tokenType, (OauthTokenIssuer) clazz.newInstance());
+                    log.info("An instance of " + tokenTypeImplClass + " is created for Identity OAuth token generation.");
+                }
+            } catch (Exception e) {
+                String errorMsg = "Error when instantiating the OAuthIssuer : "
+                        + tokenTypeImplClass + ". Defaulting to OAuthIssuerImpl";
+                log.error(errorMsg, e);
+            }
         }
     }
 

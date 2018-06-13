@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth2.dao;
 
 import org.apache.commons.lang.StringUtils;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.IObjectFactory;
 import org.testng.annotations.BeforeClass;
@@ -34,13 +35,15 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.application.common.model.LocalAndOutboundAuthenticationConfig;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dao.SQLQueries;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
-import org.wso2.carbon.identity.oauth.tokenprocessor.EncryptionDecryptionPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.dao.util.DAOConstants;
 import org.wso2.carbon.identity.oauth2.dao.util.DAOUtils;
@@ -58,11 +61,14 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
 
+import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
@@ -88,7 +94,8 @@ import static org.wso2.carbon.identity.oauth2.dao.util.DAOConstants.VALID_SCOPE_
 /**
  * Unit tests for TokenMgtDAO.
  */
-@PrepareForTest({IdentityDatabaseUtil.class, IdentityUtil.class, OAuthServerConfiguration.class})
+@WithCarbonHome
+@PrepareForTest({IdentityDatabaseUtil.class, IdentityUtil.class, OAuthServerConfiguration.class, AppInfoCache.class})
 public class TokenMgtDAOTest extends IdentityBaseTest {
 
     private static final String DB_NAME = "TOKEN_DB";
@@ -145,6 +152,9 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
         } else {
             OAuth2ServiceComponentHolder.setPkceEnabled(false);
         }
+        Map<String, Boolean> persistantTokenMap = new HashMap();
+        persistantTokenMap.put("Default", false);
+        when(mockedOAuthServerConfiguration.getInstance().getPersistAccessTokenMap()).thenReturn(persistantTokenMap);
     }
 
     @BeforeMethod
@@ -248,6 +258,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
         AuthenticatedUser authenticatedUser = getAuthenticatedUser(tenantDomain, userStoreDomain);
         AccessTokenDO accessTokenDO = getAccessTokenDO(consumerKey, authenticatedUser, applicationType, tenantId,
                 grantType);
+        getMockOauthAppDO(consumerKey);
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
             tokenMgtDAO.storeAccessToken(accessTokenDO.getAccessToken(), consumerKey, accessTokenDO, connection,
                     userStoreDomain);
@@ -284,6 +295,9 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
 
         AccessTokenDO existingAccessTokenDO = getAccessTokenDO(consumerKey, authenticatedUser, applicationType,
                 tenantId, grantType);
+
+        getMockOauthAppDO(consumerKey);
+
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
             tokenMgtDAO.storeAccessToken(existingAccessTokenDO.getAccessToken(), consumerKey, existingAccessTokenDO,
                     connection, userStoreDomain);
@@ -329,6 +343,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
 
         AccessTokenDO existingAccessTokenDO = getAccessTokenDO(consumerKey, authenticatedUser, applicationType,
                 tenantId, grantType);
+        getMockOauthAppDO(consumerKey);
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
             tokenMgtDAO.storeAccessToken(existingAccessTokenDO.getAccessToken(), consumerKey, existingAccessTokenDO,
                     connection, userStoreDomain);
@@ -366,6 +381,8 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
         String consumerKey = UUID.randomUUID().toString();
         createApplication(consumerKey, UUID.randomUUID().toString(), tenantId);
         AuthenticatedUser authenticatedUser = getAuthenticatedUser(tenantDomain, userStoreDomain);
+
+        getMockOauthAppDO(consumerKey);
 
         AccessTokenDO expiredAccessToken = getAccessTokenDO(consumerKey, authenticatedUser, applicationType,
                 tenantId, grantType);
@@ -447,6 +464,8 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
         AccessTokenDO expiredAccessToken = getAccessTokenDO(consumerKey, authenticatedUser, applicationType,
                 tenantId, grantType);
         expiredAccessToken.setTokenState(OAuthConstants.TokenStates.TOKEN_STATE_EXPIRED);
+        getMockOauthAppDO(consumerKey);
+
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
             tokenMgtDAO.storeAccessToken(expiredAccessToken.getAccessToken(), consumerKey, expiredAccessToken,
                     connection, userStoreDomain);
@@ -642,6 +661,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
     public void testValidateRefreshToken(String tenantDomain, int tenantId, String userStoreDomain,
                                          String applicationType, String grantType) throws Exception {
 
+        getMockOauthAppDO(UUID.randomUUID().toString());
         AccessTokenDO accessTokenDO = persistAccessToken(UUID.randomUUID().toString(), tenantDomain, tenantId,
                 userStoreDomain, applicationType, grantType, OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE, true, null);
 
@@ -672,6 +692,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
     public void testRetrieveAccessToken(String tenantDomain, int tenantId, String userStoreDomain, String
             applicationType, String grantType, boolean includeExpired) throws Exception {
 
+        getMockOauthAppDO(UUID.randomUUID().toString());
         AccessTokenDO accessTokenDO;
         if (includeExpired) {
             accessTokenDO = persistAccessToken(UUID.randomUUID().toString(), tenantDomain, tenantId, userStoreDomain,
@@ -708,6 +729,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
     public void testSetAccessTokenState(String tenantDomain, int tenantId, String userStoreDomain,
                                         String applicationType, String grantType, String tokenState) throws Exception {
 
+        getMockOauthAppDO(UUID.randomUUID().toString());
         AccessTokenDO accessTokenDO = persistAccessToken(UUID.randomUUID().toString(), tenantDomain, tenantId,
                 userStoreDomain, applicationType, grantType, OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE, true, null);
 
@@ -738,6 +760,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
                                  String grantType) throws Exception {
 
         String consumerKey = UUID.randomUUID().toString();
+        getMockOauthAppDO(consumerKey);
         AccessTokenDO accessTokenDO1 = persistAccessToken(consumerKey, tenantDomain, tenantId, userStoreDomain,
                 applicationType, grantType, OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE, true, null);
         AccessTokenDO accessTokenDO2 = persistAccessToken(consumerKey, tenantDomain, tenantId, userStoreDomain,
@@ -760,6 +783,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
                                       String grantType) throws Exception {
 
         String consumerKey = UUID.randomUUID().toString();
+        getMockOauthAppDO(UUID.randomUUID().toString());
         AccessTokenDO accessTokenDO1 = persistAccessToken(consumerKey, tenantDomain, tenantId, userStoreDomain,
                 applicationType, grantType, OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE, true, null);
         AccessTokenDO accessTokenDO2 = persistAccessToken(consumerKey, tenantDomain, tenantId, userStoreDomain,
@@ -782,6 +806,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
             applicationType, String grantType) throws Exception {
 
         String consumerKey = UUID.randomUUID().toString();
+        getMockOauthAppDO(consumerKey);
         AccessTokenDO accessTokenDO1 = persistAccessToken(consumerKey, tenantDomain, tenantId, userStoreDomain,
                 applicationType, grantType, OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE, true, null);
         AccessTokenDO accessTokenDO2 = persistAccessToken(consumerKey, tenantDomain, tenantId, userStoreDomain,
@@ -803,6 +828,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
     public void testRevokeToken(String tenantDomain, int tenantId, String userStoreDomain, String
             applicationType, String grantType) throws Exception {
 
+        getMockOauthAppDO(UUID.randomUUID().toString());
         AccessTokenDO accessTokenDO = persistAccessToken(UUID.randomUUID().toString(), tenantDomain, tenantId,
                 userStoreDomain, applicationType, grantType, OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE, true, null);
 
@@ -831,6 +857,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
     public void testGetAccessTokensForUser(String tenantDomain, int tenantId, String userStoreDomain, String
             applicationType, String grantType) throws Exception {
 
+        getMockOauthAppDO(UUID.randomUUID().toString());
         AccessTokenDO accessTokenDO1 = persistAccessToken(UUID.randomUUID().toString(), tenantDomain, tenantId,
                 userStoreDomain, applicationType, grantType, OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE, true, null);
         AccessTokenDO accessTokenDO2 = persistAccessToken(UUID.randomUUID().toString(), tenantDomain, tenantId,
@@ -905,6 +932,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
         AccessTokenDO accessTokenDO3 = getAccessTokenDO(consumerKey, authenticatedUser, applicationType,
                 tenantId, grantType);
         accessTokenDO3.setTokenState(OAuthConstants.TokenStates.TOKEN_STATE_EXPIRED);
+        getMockOauthAppDO(consumerKey);
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
             tokenMgtDAO.storeAccessToken(accessTokenDO1.getAccessToken(), consumerKey, accessTokenDO1,
                     connection, userStoreDomain);
@@ -939,6 +967,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
         AccessTokenDO accessTokenDO3 = getAccessTokenDO(consumerKey, authenticatedUser, applicationType,
                 tenantId, grantType);
         accessTokenDO3.setTokenState(OAuthConstants.TokenStates.TOKEN_STATE_EXPIRED);
+        getMockOauthAppDO(consumerKey);
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
             tokenMgtDAO.storeAccessToken(accessTokenDO1.getAccessToken(), consumerKey, accessTokenDO1,
                     connection, userStoreDomain);
@@ -1052,6 +1081,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
 
         AccessTokenDO existingAccessTokenDO = getAccessTokenDO(consumerKey, authenticatedUser, applicationType,
                 tenantId, grantType);
+        getMockOauthAppDO(consumerKey);
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
             tokenMgtDAO.storeAccessToken(existingAccessTokenDO.getAccessToken(), consumerKey, existingAccessTokenDO,
                     connection, userStoreDomain);
@@ -1086,6 +1116,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
         AccessTokenDO accessTokenDO3 = getAccessTokenDO(consumerKey, authenticatedUser, applicationType,
                 tenantId, grantType);
         accessTokenDO3.setTokenState(OAuthConstants.TokenStates.TOKEN_STATE_EXPIRED);
+        getMockOauthAppDO(consumerKey);
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
             tokenMgtDAO.storeAccessToken(accessTokenDO1.getAccessToken(), consumerKey, accessTokenDO1,
                     connection, userStoreDomain);
@@ -1126,6 +1157,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
         AccessTokenDO accessTokenDO3 = getAccessTokenDO(consumerKey, authenticatedUser, applicationType,
                 tenantId, grantType);
         accessTokenDO3.setTokenState(OAuthConstants.TokenStates.TOKEN_STATE_EXPIRED);
+        getMockOauthAppDO(consumerKey);
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
             tokenMgtDAO.storeAccessToken(accessTokenDO1.getAccessToken(), consumerKey, accessTokenDO1,
                     connection, userStoreDomain);
@@ -1155,6 +1187,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
             applicationType, String grantType, boolean includeExpiredTokens) throws Exception {
 
         String consumerKey = UUID.randomUUID().toString();
+        getMockOauthAppDO(consumerKey);
         createApplication(consumerKey, UUID.randomUUID().toString(), tenantId);
         AuthenticatedUser authenticatedUser = getAuthenticatedUser(tenantDomain, userStoreDomain);
 
@@ -1224,6 +1257,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
         accessTokenDO3.setScope(new String[]{scope1});
         accessTokenDO3.setTokenState(OAuthConstants.TokenStates.TOKEN_STATE_EXPIRED);
         accessTokenDO3.setIssuedTime(timestamp);
+        getMockOauthAppDO(consumerKey);
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
             tokenMgtDAO.storeAccessToken(accessTokenDO1.getAccessToken(), consumerKey, accessTokenDO1,
                     connection, userStoreDomain);
@@ -1266,6 +1300,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
         AccessTokenDO accessTokenDO2 = getAccessTokenDO(consumerKey, authenticatedUser, applicationType,
                 tenantId, grantType);
         accessTokenDO2.setScope(new String[]{scope2});
+        getMockOauthAppDO(consumerKey);
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
             tokenMgtDAO.storeAccessToken(accessTokenDO1.getAccessToken(), consumerKey, accessTokenDO1,
                     connection, userStoreDomain);
@@ -1433,5 +1468,19 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
     public IObjectFactory getObjectFactory() {
 
         return new org.powermock.modules.testng.PowerMockObjectFactory();
+    }
+
+    private void getMockOauthAppDO(String consumerKey) {
+        OAuthAppDO oAuthAppDO = new OAuthAppDO();
+        if(consumerKey.isEmpty()) {
+            consumerKey = "testConsumerKey";
+        }
+        oAuthAppDO.setOauthConsumerKey(consumerKey);
+        oAuthAppDO.setTokenType("Default");
+        mockStatic(AppInfoCache.class);
+        AppInfoCache appInfoCache = Mockito.mock(AppInfoCache.class);
+        when(AppInfoCache.getInstance()).thenReturn(appInfoCache);
+        when(appInfoCache.getValueFromCache(any(String.class))).
+                thenReturn(oAuthAppDO);
     }
 }

@@ -218,6 +218,17 @@
                 <GrantTypeHandlerImplClass>org.wso2.carbon.identity.oauth2.token.handlers.grant.iwa.ntlm.NTLMAuthenticationGrantHandler</GrantTypeHandlerImplClass>
             </SupportedGrantType>
         </SupportedGrantTypes>
+        <!-- Supported Token Types -->
+        <SupportedTokenTypes>
+            <SupportedTokenType>
+                <TokenTypeName>Default</TokenTypeName>
+                <TokenTypeImplClass>org.wso2.carbon.identity.oauth2.token.OauthTokenIssuerImpl</TokenTypeImplClass>
+            </SupportedTokenType>
+            <SupportedTokenType>
+                <TokenTypeName>JWT</TokenTypeName>
+                <TokenTypeImplClass>org.wso2.carbon.identity.oauth2.token.JWTTokenIssuer</TokenTypeImplClass>
+            </SupportedTokenType>
+        </SupportedTokenTypes>
         <OAuthCallbackHandlers>
             <OAuthCallbackHandler Class="org.wso2.carbon.identity.oauth.callback.DefaultCallbackHandler"/>
         </OAuthCallbackHandlers>

@@ -120,27 +120,22 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         String tokenType = OAuth2Util.DEFAULT_TOKEN_TYPE;
         try {
             OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(consumerKey);
-            if(oAuthAppDO.getTokenType() != null) {
+            if (oAuthAppDO.getTokenType() != null) {
                 tokenType = oAuthAppDO.getTokenType();
             }
+
+            //check for persist alias for the token type
+            if (OAuthServerConfiguration.getInstance().getPersistAccessTokenMap().get(tokenType)) {
+                accessToken = OAuth2Util.getOAuthTokenIssuerForOAuthApp(consumerKey).getAccessTokenHash(accessToken);
+            }
+        } catch (OAuthSystemException e) {
+            if (log.isDebugEnabled() && IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                log.debug("Error while getting access token hash for token(hashed): " + DigestUtils
+                        .sha256Hex(accessToken));
+            }
+            throw new IdentityOAuth2Exception("Error while getting access token hash.");
         } catch (InvalidOAuthClientException e) {
             throw new IdentityOAuth2Exception("Error while retrieving app information for clientId: " + consumerKey, e);
-        }
-        if (OAuthServerConfiguration.getInstance().getPersistAccessTokenMap().get(tokenType)) {
-            try {
-                accessToken = OAuth2Util.getOAuthTokenIssuerForOAuthApp(consumerKey)
-                        .getAccessTokenHash(accessToken);
-            } catch (OAuthSystemException e) {
-                if (log.isDebugEnabled() && IdentityUtil
-                        .isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
-                    log.debug("Error while getting access token hash for token(hashed): " + DigestUtils
-                            .sha256Hex(accessToken));
-                }
-                throw new IdentityOAuth2Exception("Error while getting access token hash.");
-            } catch (InvalidOAuthClientException e) {
-                throw new IdentityOAuth2Exception("Error while retrieving app information for clientId: " +
-                        consumerKey, e);
-            }
         }
 
         if (log.isDebugEnabled()) {

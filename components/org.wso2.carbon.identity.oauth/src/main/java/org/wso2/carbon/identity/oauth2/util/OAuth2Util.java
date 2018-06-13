@@ -1496,34 +1496,30 @@ public class OAuth2Util {
     public static OauthTokenIssuer getOAuthTokenIssuerForOAuthApp(String clientId)
             throws IdentityOAuth2Exception, InvalidOAuthClientException {
         OAuthAppDO appDO = getAppInformationByClientId(clientId);
+        return getOAuthTokenIssuerForOAuthApp(appDO);
+    }
+
+    /**
+     * Returns oauth token issuer registered in the service provider app
+     *
+     * @param appDO oauth app data object
+     * @return oauth token issuer
+     * @throws IdentityOAuth2Exception
+     * @throws InvalidOAuthClientException
+     */
+    public static OauthTokenIssuer getOAuthTokenIssuerForOAuthApp(OAuthAppDO appDO) {
         OauthTokenIssuer oauthIdentityTokenGenerator;
         if (appDO.getTokenType() != null) {
-            String tokenGeneratorClass = OAuthServerConfiguration.getInstance().getSupportedTokenTypes()
+            OAuthServerConfiguration.getInstance().addAndReturnTokenIssuerInstance(appDO.getTokenType());
+            oauthIdentityTokenGenerator = OAuthServerConfiguration.getInstance().getOauthTokenIssuerMap()
                     .get(appDO.getTokenType());
-            if (tokenGeneratorClass != null) {
-                try {
-                    Class clazz = Class.forName(tokenGeneratorClass);
-                    oauthIdentityTokenGenerator = (OauthTokenIssuer) clazz.newInstance();
-                    if(log.isDebugEnabled()) {
-                        log.debug("An instance of " + tokenGeneratorClass
-                                + " is created for Identity OAuth token generation.");
-                    }
-                } catch (Exception e) {
-                    String errorMsg = "Error when instantiating the OAuthIssuer : "
-                            + tokenGeneratorClass + ". Defaulting to OAuthIssuerImpl";
-                    log.error(errorMsg, e);
-                    oauthIdentityTokenGenerator = new OauthTokenIssuerImpl();
-                }
-            } else {
-                oauthIdentityTokenGenerator = new OauthTokenIssuerImpl();
-                if(log.isDebugEnabled()) {
-                    log.debug("The default Identity OAuth token issuer will be used. No custom token generator" +
-                            " is set.");
-                }
+            if (oauthIdentityTokenGenerator == null) {
+                oauthIdentityTokenGenerator = OAuthServerConfiguration.getInstance()
+                        .getDefaultIdentityOauthTokenIssuer();
             }
         } else {
             oauthIdentityTokenGenerator = new OauthTokenIssuerImpl();
-            if(log.isDebugEnabled()) {
+            if (log.isDebugEnabled()) {
                 log.debug("The default Identity OAuth token issuer will be used. No custom token generator" +
                         " is set.");
             }
