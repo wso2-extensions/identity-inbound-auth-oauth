@@ -87,8 +87,6 @@ public class TokenMgtDAO {
     private static TokenPersistenceProcessor persistenceProcessor, hashingPersistenceProcessor;
     private boolean isHashDisabled = OAuth2Util.isHashDisabled();
 
-    private OauthTokenIssuer oauthIssuerImpl = OAuthServerConfiguration.getInstance().getIdentityOauthTokenIssuer();
-
     private static final int DEFAULT_POOL_SIZE = 0;
     private static final int DEFAULT_TOKEN_PERSIST_RETRY_COUNT = 5;
     private static final boolean DEFAULT_PERSIST_ENABLED = true;
@@ -301,7 +299,7 @@ public class TokenMgtDAO {
             boolean persistAccessTokenAlias = OAuthServerConfiguration.getInstance().getSupportedTokenIssuers()
                     .get(oAuthAppDO.getTokenType()).isPersistAccessTokenAlias();
             if (persistAccessTokenAlias) {
-                oauthIssuerImpl = OAuth2Util.getOAuthTokenIssuerForOAuthApp(oAuthAppDO);
+                OauthTokenIssuer oauthIssuerImpl = OAuth2Util.getOAuthTokenIssuerForOAuthApp(oAuthAppDO);
                 accessToken = oauthIssuerImpl.getAccessTokenHash(accessToken);
             }
         } catch (InvalidOAuthClientException e) {

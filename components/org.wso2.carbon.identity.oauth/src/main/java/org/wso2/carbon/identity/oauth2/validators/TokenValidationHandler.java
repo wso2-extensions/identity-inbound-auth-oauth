@@ -53,8 +53,6 @@ public class TokenValidationHandler {
     AuthorizationContextTokenGenerator tokenGenerator = null;
     private Log log = LogFactory.getLog(TokenValidationHandler.class);
     private Map<String, OAuth2TokenValidator> tokenValidators = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-    private OauthTokenIssuer oauthIssuerImpl = OAuthServerConfiguration.getInstance().getIdentityOauthTokenIssuer();
-    private boolean usePersistedAccessTokenAlias = OAuthServerConfiguration.getInstance().usePersistedAccessTokenAlias();
     private static final String BUILD_FQU_FROM_SP_CONFIG = "OAuth.BuildSubjectIdentifierFromSPConfig";
 
     private TokenValidationHandler() {
@@ -484,9 +482,14 @@ public class TokenValidationHandler {
      * @throws IdentityOAuth2Exception
      */
     private AccessTokenDO findAccessToken(String tokenIdentifier) throws IdentityOAuth2Exception {
+        String consumerKey = null;
         try {
-            if (usePersistedAccessTokenAlias) {
-                return OAuth2Util.getAccessTokenDOfromTokenIdentifier(oauthIssuerImpl.getAccessTokenHash(tokenIdentifier));
+            consumerKey = OAuth2Util.getClientIdForAccessToken(tokenIdentifier);
+            OauthTokenIssuer oauthTokenIssuer = OAuth2Util.getOAuthTokenIssuerForOAuthApp(consumerKey);
+
+            if (oauthTokenIssuer.usePersistedAccessTokenAlias()) {
+                return OAuth2Util
+                        .getAccessTokenDOfromTokenIdentifier(oauthTokenIssuer.getAccessTokenHash(tokenIdentifier));
             } else {
                 return OAuth2Util.getAccessTokenDOfromTokenIdentifier(tokenIdentifier);
             }
@@ -499,6 +502,9 @@ public class TokenValidationHandler {
                 }
             }
             throw new IdentityOAuth2Exception("Error while getting access token hash.", e);
+        } catch (InvalidOAuthClientException e) {
+            throw new IdentityOAuth2Exception(
+                    "Error while retrieving oauth issuer for the app with clientId: " + consumerKey, e);
         }
     }
 
