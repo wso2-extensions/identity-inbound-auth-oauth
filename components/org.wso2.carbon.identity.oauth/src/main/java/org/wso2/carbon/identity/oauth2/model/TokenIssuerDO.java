@@ -18,7 +18,7 @@
 package org.wso2.carbon.identity.oauth2.model;
 
 /**
- * This is used to store the supported token issuer configuration details from the identity.xml
+ * This is used to store the supported token issuer configuration details from the identity.xml.
  *
  * i.e:
  * 	<SupportedTokenTypes>

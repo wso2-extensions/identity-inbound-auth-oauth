@@ -104,7 +104,7 @@ public class ResponseTypeHandlerUtil {
     }
 
     /**
-     * Generates access token for the issuer type registered in the service provider app
+     * Generates access token for the issuer type registered in the service provider app.
      *
      * @param oauthAuthzMsgCtx
      * @param cacheEnabled
@@ -113,6 +113,7 @@ public class ResponseTypeHandlerUtil {
      */
     public static AccessTokenDO generateAccessToken(OAuthAuthzReqMessageContext oauthAuthzMsgCtx, boolean cacheEnabled)
             throws IdentityOAuth2Exception {
+
         String consumerKey = oauthAuthzMsgCtx.getAuthorizationReqDTO().getConsumerKey();
         OauthTokenIssuer oauthTokenIssuer;
         try {
@@ -127,7 +128,7 @@ public class ResponseTypeHandlerUtil {
     }
 
     /**
-     * Generates access token for the given oauth issuer
+     * Generates access token for the given oauth issuer.
      *
      * @param oauthAuthzMsgCtx
      * @param cacheEnabled

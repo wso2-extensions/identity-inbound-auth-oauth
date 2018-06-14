@@ -46,6 +46,7 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
+import org.wso2.carbon.identity.oauth2.model.TokenIssuerDO;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
@@ -294,10 +295,15 @@ public class TokenMgtDAO {
     private void storeAccessToken(String accessToken, String consumerKey, AccessTokenDO accessTokenDO,
             Connection connection, String userStoreDomain, int retryAttempt)
             throws IdentityOAuth2Exception {
+
         try {
             OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(consumerKey);
-            boolean persistAccessTokenAlias = OAuthServerConfiguration.getInstance().getSupportedTokenIssuers()
-                    .get(oAuthAppDO.getTokenType()).isPersistAccessTokenAlias();
+            boolean persistAccessTokenAlias = false;
+            TokenIssuerDO tokenIssuerDO = OAuthServerConfiguration.getInstance().getSupportedTokenIssuers()
+                    .get(oAuthAppDO.getTokenType());
+            if (tokenIssuerDO != null) {
+                persistAccessTokenAlias = tokenIssuerDO.isPersistAccessTokenAlias();
+            }
             if (persistAccessTokenAlias) {
                 OauthTokenIssuer oauthIssuerImpl = OAuth2Util.getOAuthTokenIssuerForOAuthApp(oAuthAppDO);
                 accessToken = oauthIssuerImpl.getAccessTokenHash(accessToken);

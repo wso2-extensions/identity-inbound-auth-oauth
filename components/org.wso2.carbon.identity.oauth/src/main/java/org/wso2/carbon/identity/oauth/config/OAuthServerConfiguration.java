@@ -308,8 +308,6 @@ public class OAuthServerConfiguration {
         // read supported grant types
         parseSupportedGrantTypesConfig(oauthElem);
 
-        //read supported token types
-        parseSupportedTokenTypesConfig(oauthElem);
 
         // Read <UserConsentEnabledGrantTypes> under <OAuth> tag and populate data.
         parseUserConsentEnabledGrantTypesConfig(oauthElem);
@@ -347,6 +345,9 @@ public class OAuthServerConfiguration {
 
         // parse identity OAuth 2.0 token generator
         parseOAuthTokenIssuerConfig(oauthElem);
+
+        //read supported token types
+        parseSupportedTokenTypesConfig(oauthElem);
 
         // Parse Persist Access Token Alias element.
         parsePersistAccessTokenAliasConfig(oauthElem);
@@ -525,6 +526,7 @@ public class OAuthServerConfiguration {
     }
 
     public OauthTokenIssuer getDefaultIdentityOauthTokenIssuer() {
+
         if (oauthIdentityTokenGenerator == null) {
             return new OauthTokenIssuerImpl();
         } else {
@@ -1827,6 +1829,7 @@ public class OAuthServerConfiguration {
     }
 
     private void parseSupportedTokenTypesConfig(OMElement oauthConfigElem) {
+
         OMElement supportedTokenTypesElem = oauthConfigElem
                 .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.SUPPORTED_TOKEN_TYPES));
 
@@ -1875,20 +1878,43 @@ public class OAuthServerConfiguration {
                     supportedTokenIssuers.put(tokenTypeName, tokenIssuerDO);
                 }
             }
-        } else {
+        }
+
+        //Adding default token types if not added in the configuration
+        if(!supportedTokenIssuers.containsKey(DEFAULT_TOKEN_TYPE)) {
             supportedTokenIssuers.put(DEFAULT_TOKEN_TYPE,
                     new TokenIssuerDO(DEFAULT_TOKEN_TYPE, DEFAULT_OAUTH_TOKEN_ISSUER_CLASS, true));
+        }
+        if(!supportedTokenIssuers.containsKey(JWT_TOKEN_TYPE)) {
             supportedTokenIssuers.put(JWT_TOKEN_TYPE, new TokenIssuerDO(JWT_TOKEN_TYPE, JWT_TOKEN_ISSUER_CLASS, true));
+        }
+
+        boolean isRegistered = false;
+        //Adding global token issuer configured in the identity xml as a supported token issuer
+        for (Map.Entry<String, TokenIssuerDO> entry : supportedTokenIssuers.entrySet()) {
+            TokenIssuerDO issuerDO = entry.getValue();
+            if (oauthIdentityTokenGeneratorClassName != null && oauthIdentityTokenGeneratorClassName
+                    .equals(issuerDO.getTokenImplClass())) {
+                isRegistered = true;
+                break;
+            }
+        }
+
+        if (!isRegistered) {
+            supportedTokenIssuers.put(oauthIdentityTokenGeneratorClassName,
+                    new TokenIssuerDO(oauthIdentityTokenGeneratorClassName, oauthIdentityTokenGeneratorClassName,
+                            true));
         }
     }
 
     /**
-     * Adds oauth token issuer instances used for token generation
+     * Adds oauth token issuer instances used for token generation.
      * @param tokenType registered token type
      * @return token issuer instance
      * @throws IdentityOAuth2Exception
      */
     public OauthTokenIssuer addAndReturnTokenIssuerInstance(String tokenType) throws IdentityOAuth2Exception {
+
         String tokenTypeImplClass = supportedTokenIssuers.get(tokenType).getTokenImplClass();
         OauthTokenIssuer oauthTokenIssuer = null;
         if (tokenTypeImplClass != null) {
