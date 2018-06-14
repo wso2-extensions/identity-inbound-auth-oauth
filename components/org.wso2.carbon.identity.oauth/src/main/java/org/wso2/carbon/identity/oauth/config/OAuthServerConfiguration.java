@@ -346,11 +346,11 @@ public class OAuthServerConfiguration {
         // parse identity OAuth 2.0 token generator
         parseOAuthTokenIssuerConfig(oauthElem);
 
-        //read supported token types
-        parseSupportedTokenTypesConfig(oauthElem);
-
         // Parse Persist Access Token Alias element.
         parsePersistAccessTokenAliasConfig(oauthElem);
+
+        //read supported token types
+        parseSupportedTokenTypesConfig(oauthElem);
 
         // Parse token value generator class name.
         parseOAuthTokenValueGenerator(oauthElem);
@@ -1881,11 +1881,11 @@ public class OAuthServerConfiguration {
         }
 
         //Adding default token types if not added in the configuration
-        if(!supportedTokenIssuers.containsKey(DEFAULT_TOKEN_TYPE)) {
+        if (!supportedTokenIssuers.containsKey(DEFAULT_TOKEN_TYPE)) {
             supportedTokenIssuers.put(DEFAULT_TOKEN_TYPE,
                     new TokenIssuerDO(DEFAULT_TOKEN_TYPE, DEFAULT_OAUTH_TOKEN_ISSUER_CLASS, true));
         }
-        if(!supportedTokenIssuers.containsKey(JWT_TOKEN_TYPE)) {
+        if (!supportedTokenIssuers.containsKey(JWT_TOKEN_TYPE)) {
             supportedTokenIssuers.put(JWT_TOKEN_TYPE, new TokenIssuerDO(JWT_TOKEN_TYPE, JWT_TOKEN_ISSUER_CLASS, true));
         }
 
@@ -1900,10 +1900,14 @@ public class OAuthServerConfiguration {
             }
         }
 
-        if (!isRegistered) {
+        if (!isRegistered && oauthIdentityTokenGeneratorClassName != null) {
+            boolean isPersistTokenAlias = true;
+            if (persistAccessTokenAlias != null) {
+                isPersistTokenAlias = Boolean.valueOf(persistAccessTokenAlias);
+            }
             supportedTokenIssuers.put(oauthIdentityTokenGeneratorClassName,
                     new TokenIssuerDO(oauthIdentityTokenGeneratorClassName, oauthIdentityTokenGeneratorClassName,
-                            true));
+                            isPersistTokenAlias));
         }
     }
 
