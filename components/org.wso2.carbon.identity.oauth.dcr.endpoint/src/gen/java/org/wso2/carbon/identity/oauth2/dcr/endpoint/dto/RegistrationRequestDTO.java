@@ -171,7 +171,7 @@ public class RegistrationRequestDTO  {
 
 
   @ApiModelProperty(value = "")
-  @JsonProperty("token_type")
+  @JsonProperty("token_type_extension")
   public String getTokenType() {
     return tokenType;
   }
@@ -195,7 +195,7 @@ public class RegistrationRequestDTO  {
     sb.append("  post_logout_redirect_uris: ").append(postLogoutRedirectUris).append("\n");
     sb.append("  request_uris: ").append(requestUris).append("\n");
     sb.append("  response_types: ").append(responseTypes).append("\n");
-    sb.append("  token_type: ").append(tokenType).append("\n");
+    sb.append("  token_type_extension: ").append(tokenType).append("\n");
     sb.append("}\n");
     return sb.toString();
   }

@@ -66,7 +66,7 @@ public class UpdateRequestDTO  {
 
 
   @ApiModelProperty(value = "")
-  @JsonProperty("token_type")
+  @JsonProperty("token_type_extension")
   public String getTokenType() {
     return tokenType;
   }
@@ -83,7 +83,7 @@ public class UpdateRequestDTO  {
     sb.append("  redirect_uris: ").append(redirectUris).append("\n");
     sb.append("  client_name: ").append(clientName).append("\n");
     sb.append("  grant_types: ").append(grantTypes).append("\n");
-    sb.append("  token_type: ").append(tokenType).append("\n");
+    sb.append("  token_type_extension: ").append(tokenType).append("\n");
     sb.append("}\n");
     return sb.toString();
   }
