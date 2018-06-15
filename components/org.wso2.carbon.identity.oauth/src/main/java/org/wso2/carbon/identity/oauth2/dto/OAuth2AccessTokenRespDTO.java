@@ -20,6 +20,10 @@ package org.wso2.carbon.identity.oauth2.dto;
 
 import org.wso2.carbon.identity.oauth2.ResponseHeader;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+
 public class OAuth2AccessTokenRespDTO {
     String tokenType;
     String accessToken;
@@ -34,6 +38,7 @@ public class OAuth2AccessTokenRespDTO {
     ResponseHeader[] responseHeaders;
     String authorizedScopes;
     private String idToken;
+    private Map<String, String> parameters;
 
     public ResponseHeader[] getResponseHeaders() {
         if (responseHeaders == null) {
@@ -146,5 +151,45 @@ public class OAuth2AccessTokenRespDTO {
 
     public void setTokenId(String tokenId) {
         this.tokenId = tokenId;
+    }
+
+    /**
+     * Add a custom parameter to the OAuth2 token response.
+     *
+     * @param key   parameter key
+     * @param value parameter value
+     */
+    public void addParameter(String key, String value) {
+
+        getParameterMap().put(key, value);
+    }
+
+    /**
+     * Get the custom parameter value associated to the key.
+     *
+     * @param key parameter key
+     * @return value associated with the key
+     */
+    public String getParameter(String key) {
+
+        return getParameterMap().get(key);
+    }
+
+    /**
+     * Get all custom parameters.
+     *
+     * @return a key value map of all custom parameters
+     */
+    public Map<String, String> getParameters() {
+
+        return Collections.unmodifiableMap(getParameterMap());
+    }
+
+    private Map<String, String> getParameterMap() {
+
+        if (parameters == null) {
+            parameters = new HashMap<>();
+        }
+        return parameters;
     }
 }

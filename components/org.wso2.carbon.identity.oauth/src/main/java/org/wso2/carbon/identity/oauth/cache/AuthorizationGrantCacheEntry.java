@@ -60,6 +60,8 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
 
     private RequestObject requestObject;
 
+    private boolean hasNonOIDCClaims;
+
     /*
         OIDC sub claim. This should be formatted based on the Service Provider configurations to append
         userStoreDomain and tenantDomain.
@@ -172,6 +174,22 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
 
     public void setPkceCodeChallengeMethod(String pkceCodeChallengeMethod) {
         this.pkceCodeChallengeMethod = pkceCodeChallengeMethod;
+    }
+
+    /**
+     * To check whether particular cache entry has non OIDC claims in it.
+     *
+     * @return true if the cache entry has non OIDC claims
+     */
+    public boolean isHasNonOIDCClaims() {
+        return hasNonOIDCClaims;
+    }
+
+    /**
+     * To set hasNonOIDCClaims.
+     */
+    public void setHasNonOIDCClaims(boolean hasNonOIDCClaims) {
+        this.hasNonOIDCClaims = hasNonOIDCClaims;
     }
 
     /**

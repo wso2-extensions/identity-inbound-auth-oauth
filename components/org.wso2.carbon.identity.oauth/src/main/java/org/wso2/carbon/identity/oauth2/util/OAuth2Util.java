@@ -403,29 +403,42 @@ public class OAuth2Util {
         }
 
         // Cache miss
-        if (clientSecret == null) {
-            OAuthConsumerDAO oAuthConsumerDAO = new OAuthConsumerDAO();
-            clientSecret = oAuthConsumerDAO.getOAuthConsumerSecret(clientId);
-            if (log.isDebugEnabled()) {
-                log.debug("Client credentials were fetched from the database.");
-            }
-        }
-
-        if (clientSecret == null) {
-            if (log.isDebugEnabled()) {
-                log.debug("Provided Client ID : " + clientId + "is not valid.");
-            }
-            return false;
-        }
-
-        if (!clientSecret.equals(clientSecretProvided)) {
-
-            if (log.isDebugEnabled()) {
-                log.debug("Provided the Client ID : " + clientId +
-                        " and Client Secret do not match with the issued credentials.");
+        boolean isHashDisabled = isHashDisabled();
+        OAuthConsumerDAO oAuthConsumerDAO = new OAuthConsumerDAO();
+        if (isHashDisabled) {
+            if (clientSecret == null) {
+                clientSecret = oAuthConsumerDAO.getOAuthConsumerSecret(clientId);
+                if (log.isDebugEnabled()) {
+                    log.debug("Client credentials were fetched from the database.");
+                }
             }
 
-            return false;
+            if (clientSecret == null) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Provided Client ID : " + clientId + " is not valid.");
+                }
+                return false;
+            }
+
+            if (!clientSecret.equals(clientSecretProvided)) {
+
+                if (log.isDebugEnabled()) {
+                    log.debug("Provided the Client ID : " + clientId +
+                            " and Client Secret do not match with the issued credentials.");
+                }
+
+                return false;
+            }
+        } else {
+            // Check whether the provided consumerKey, consumerSecret combination is exist or not in the database.
+            if (!oAuthConsumerDAO.isConsumerSecretExist(clientId, clientSecretProvided)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Provided the Client ID : " + clientId +
+                            " and Client Secret do not match with the issued credentials.");
+                }
+
+                return false;
+            }
         }
 
         if (log.isDebugEnabled()) {
@@ -444,6 +457,23 @@ public class OAuth2Util {
     }
 
     /**
+     * Check whether hashing oauth keys (consumer secret, access token, refresh token and authorization code)
+     * configuration is disabled or not in identity.xml file.
+     *
+     * @return Whether hash feature is disabled or not.
+     */
+    public static boolean isHashDisabled() {
+        boolean isHashEnabled = OAuthServerConfiguration.getInstance().isClientSecretHashEnabled();
+        return !isHashEnabled;
+
+    }
+
+    /**
+     * @deprecated
+     *
+     * Authenticate the OAuth consumer and return the username of user which own the provided client id and client
+     * secret.
+     *
      * @param clientId             Consumer Key/Id
      * @param clientSecretProvided Consumer Secret issued during the time of registration
      * @return Username of the user which own client id and client secret if authentication is

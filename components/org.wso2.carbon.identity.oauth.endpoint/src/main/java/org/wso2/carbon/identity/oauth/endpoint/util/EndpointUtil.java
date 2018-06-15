@@ -62,6 +62,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MultivaluedMap;
@@ -442,6 +443,7 @@ public class EndpointUtil {
                     log.debug("Cache Entry is Null from SessionDataCache ");
                 }
             } else {
+                entry.setValidityPeriod(TimeUnit.MINUTES.toNanos(IdentityUtil.getTempDataCleanUpTimeout()));
                 sessionDataCache.addToCache(new SessionDataCacheKey(sessionDataKeyConsent),entry);
                 if (entry.getQueryString() != null) {
                     queryString = URLEncoder.encode(entry.getQueryString(), UTF_8);

@@ -96,6 +96,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
     private static final int USER_ACCESS_TOKEN_EXPIRY_TIME = 3000;
     private static final int APPLICATION_ACCESS_TOKEN_EXPIRY_TIME = 2000;
     private static final int REFRESH_TOKEN_EXPIRY_TIME = 10000;
+    private static final int ID_TOKEN_EXPIRY_TIME = 5000;
 
     private static final String DB_NAME = "OAuthAppDAO";
 
@@ -243,7 +244,8 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
 
         final String GET_APP_FIELDS = "SELECT APP_NAME,GRANT_TYPES,CALLBACK_URL," +
                 "APP_ACCESS_TOKEN_EXPIRE_TIME,USER_ACCESS_TOKEN_EXPIRE_TIME,REFRESH_TOKEN_EXPIRE_TIME, " +
-                "PKCE_MANDATORY, PKCE_SUPPORT_PLAIN, ID FROM IDN_OAUTH_CONSUMER_APPS WHERE CONSUMER_KEY=?";
+                "ID_TOKEN_EXPIRE_TIME, PKCE_MANDATORY, PKCE_SUPPORT_PLAIN, ID " +
+                "FROM IDN_OAUTH_CONSUMER_APPS WHERE CONSUMER_KEY=?";
 
         final String GET_SCOPE_VALIDATORS = "SELECT SCOPE_VALIDATOR FROM IDN_OAUTH2_SCOPE_VALIDATORS " +
                 "WHERE APP_ID=?";
@@ -268,12 +270,13 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 assertEquals(resultSet.getLong(4), APPLICATION_ACCESS_TOKEN_EXPIRY_TIME);
                 assertEquals(resultSet.getLong(5), USER_ACCESS_TOKEN_EXPIRY_TIME);
                 assertEquals(resultSet.getLong(6), REFRESH_TOKEN_EXPIRY_TIME);
+                assertEquals(resultSet.getLong(7), ID_TOKEN_EXPIRY_TIME);
                 if (isPkceEnabled) {
                     // These asserts are only relevant if PKCE is enabled
-                    assertEquals(resultSet.getBoolean(7), false);
                     assertEquals(resultSet.getBoolean(8), false);
+                    assertEquals(resultSet.getBoolean(9), false);
                 }
-                appDO.setId(resultSet.getInt(9));
+                appDO.setId(resultSet.getInt(10));
             }
             preparedStatementGetValidators.setInt(1,appDO.getId());
             List<String> scopeValidators = new ArrayList<>();
@@ -639,6 +642,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
         appDO.setApplicationAccessTokenExpiryTime(APPLICATION_ACCESS_TOKEN_EXPIRY_TIME);
         appDO.setUserAccessTokenExpiryTime(USER_ACCESS_TOKEN_EXPIRY_TIME);
         appDO.setRefreshTokenExpiryTime(REFRESH_TOKEN_EXPIRY_TIME);
+        appDO.setIdTokenExpiryTime(ID_TOKEN_EXPIRY_TIME);
         return appDO;
     }
 
