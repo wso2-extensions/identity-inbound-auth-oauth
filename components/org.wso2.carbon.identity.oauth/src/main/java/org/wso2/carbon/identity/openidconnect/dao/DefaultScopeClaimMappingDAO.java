@@ -20,24 +20,59 @@
 
 package org.wso2.carbon.identity.openidconnect.dao;
 
+import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.openidconnect.model.Scope;
 
-import java.util.Map;
+import java.util.List;
 
 /**
- * This interface handles all the DAO layer activities which are related to OIDC scope claim persistence.
+ * Interface used in OIDC to handle all the scope claim mapping related db operations.
  */
 public interface DefaultScopeClaimMappingDAO {
 
     /**
-     * To store oidc scopes.
+     * To insert oidc scopes and claims in the related db tables.
      *
-     * @param tenantId      tenant Id
-     * @param ScopeClaimMap oidc scopes claims mapping
-     * @throws IdentityOAuth2Exception
+     * @param tenantId           tenant Id
+     * @param listOIDCScopeClaim list of oidc scope claims mapping object
+     * @throws IdentityOAuth2Exception if an error occurs when inserting scopes or claims.
      */
-    void insertAllScopes(int tenantId, Map<String, String> ScopeClaimMap, boolean isOnActivate) throws IdentityOAuth2Exception;
+    void insertAllScopesAndClaims(int tenantId, List<Scope> listOIDCScopeClaim) throws IdentityOAuth2Exception;
 
-    Map<String, String> loadScopesClaimsMapping(int tenantId) throws IdentityOAuth2Exception;
+    /**
+     * To retrieve all persisted oidc scopes with mapped claims.
+     *
+     * @param tenantId tenant Id
+     * @return all persisted scopes and claims
+     * @throws IdentityOAuth2Exception if an error occurs when loading scopes and claims.
+     */
+    List<Scope> loadScopesClaimsMapping(int tenantId) throws IdentityOAuth2Exception;
+
+    /**
+     * To remove persisted scopes and claims.
+     *
+     * @param scope oidc scope
+     * @throws IdentityOAuthAdminException if an error occurs when deleting scopes and claims.
+     */
+    void deleteScopeAndClaims(String scope, int tenantId) throws IdentityOAuthAdminException;
+
+    /**
+     * To add new claims for an existing scope.
+     *
+     * @param scope    scope
+     * @param tenantId tenant Id
+     * @param claims   list of oidc claims
+     * @throws IdentityOAuth2Exception if an error occurs when adding a new claim for a scope.
+     */
+    void addNewClaimsForScope(String scope, List<String> claims, int tenantId) throws IdentityOAuth2Exception;
+
+    /**
+     * To load top record of the scope table
+     *
+     * @return scope id
+     * @throws IdentityOAuth2Exception if an error occurs when loading the top scope record.
+     */
+    int loadSingleScopeRecord(int tenantId) throws IdentityOAuth2Exception;
 
 }

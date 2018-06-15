@@ -82,6 +82,7 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.ClientCredentialDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
+import org.wso2.carbon.identity.openidconnect.model.Scope;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.registry.core.Registry;
 import org.wso2.carbon.registry.core.Resource;
@@ -1251,38 +1252,21 @@ public class OAuth2Util {
         return false;
     }
 
+    /**
+     * To populate the database in the very first server startup.
+     *
+     * @param tenantId tenant id
+     */
     public static void initiateOIDCScopes(int tenantId) {
 
+        List<Scope> scopeClaimsList = loadScopeConfigFile();
         try {
-            Map<String, String> scopes = loadScopeConfigFile();
-            Registry registry = OAuth2ServiceComponentHolder.getRegistryService().getConfigSystemRegistry(tenantId);
-
-            if (!registry
-                    .resourceExists(OAuthConstants.SCOPE_RESOURCE_PATH)) {
-
-                Resource resource = registry.newResource();
-                if (scopes.size() > 0) {
-                    for (Map.Entry<String, String> entry : scopes.entrySet()) {
-                        resource.setProperty(entry.getKey(), entry.getValue());
-                    }
-                }
-
-                registry.put(OAuthConstants.SCOPE_RESOURCE_PATH, resource);
-            }
-        } catch (RegistryException e) {
-            log.error("Error while creating registry collection for :" + OAuthConstants.SCOPE_RESOURCE_PATH, e);
-        }
-    }
-
-    public static void initiateOIDCScopesAndClaims(int tenantId) {
-
-        Map<String, String> scopesClaimsMap = loadOIDCScopeConfigFile();
-        try {
-            OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().insertAllScopes(tenantId,
-                    scopesClaimsMap, true);
+            OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().insertAllScopesAndClaims(tenantId,
+                    scopeClaimsList);
         } catch (IdentityOAuth2Exception e) {
-            log.error("Error while persisting oidc scopes and claims in the db.", e);
+            log.error(e.getMessage(), e);
         }
+
     }
 
     public static List<String> getOIDCScopes(String tenantDomain) {
@@ -1473,9 +1457,9 @@ public class OAuth2Util {
         return spTokenTimeObject;
     }
 
-    private static Map<String, String> loadScopeConfigFile() {
+    private static List<Scope> loadScopeConfigFile() {
 
-        Map<String, String> scopes = new HashMap<>();
+        List<Scope> listOIDCScopesClaims = new ArrayList<>();
         String configDirPath = CarbonUtils.getCarbonConfigDirPath();
         String confXml =
                 Paths.get(configDirPath, "identity", OAuthConstants.OIDC_SCOPE_CONFIG_PATH)
@@ -1496,10 +1480,13 @@ public class OAuth2Util {
             OMElement documentElement = builder.getDocumentElement();
             Iterator iterator = documentElement.getChildElements();
             while (iterator.hasNext()) {
+                Scope scope = new Scope();
                 OMElement omElement = (OMElement) iterator.next();
                 String configType = omElement.getAttributeValue(new QName(
                         "id"));
-                scopes.put(configType, loadClaimConfig(omElement));
+                scope.setName(configType);
+                scope.setClaim(loadClaimConfig(omElement));
+                listOIDCScopesClaims.add(scope);
             }
         } catch (XMLStreamException e) {
             log.warn("Error while loading scope config.", e);
@@ -1517,57 +1504,10 @@ public class OAuth2Util {
                 log.error("Error while closing XML stream", e);
             }
         }
-        return scopes;
+        return listOIDCScopesClaims;
     }
 
-    private static Map<String, String> loadOIDCScopeConfigFile() {
-
-        Map<String, String> scopes = new HashMap<>();
-        String configDirPath = CarbonUtils.getCarbonConfigDirPath();
-        String confXml =
-                Paths.get(configDirPath, "identity", OAuthConstants.OIDC_SCOPE_CONFIG_PATH)
-                        .toString();
-        File configfile = new File(confXml);
-        if (!configfile.exists()) {
-            log.warn("OIDC scope-claim Configuration File is not present at: " + confXml);
-        }
-
-        XMLStreamReader parser = null;
-        InputStream stream = null;
-
-        try {
-            stream = new FileInputStream(configfile);
-            parser = XMLInputFactory.newInstance()
-                    .createXMLStreamReader(stream);
-            StAXOMBuilder builder = new StAXOMBuilder(parser);
-            OMElement documentElement = builder.getDocumentElement();
-            Iterator iterator = documentElement.getChildElements();
-            while (iterator.hasNext()) {
-                OMElement omElement = (OMElement) iterator.next();
-                String configType = omElement.getAttributeValue(new QName(
-                        "id"));
-                scopes.put(configType, loadClaimConfig(omElement));
-            }
-        } catch (XMLStreamException e) {
-            log.warn("Error while loading scope config.", e);
-        } catch (FileNotFoundException e) {
-            log.warn("Error while loading email config.", e);
-        } finally {
-            try {
-                if (parser != null) {
-                    parser.close();
-                }
-                if (stream != null) {
-                    IdentityIOStreamUtils.closeInputStream(stream);
-                }
-            } catch (XMLStreamException e) {
-                log.error("Error while closing XML stream", e);
-            }
-        }
-        return scopes;
-    }
-
-    private static String loadClaimConfig(OMElement configElement) {
+    private static List<String> loadClaimConfig(OMElement configElement) {
 
         StringBuilder claimConfig = new StringBuilder();
         Iterator it = configElement.getChildElements();
@@ -1580,7 +1520,7 @@ public class OAuth2Util {
                 }
             }
         }
-        return claimConfig.toString();
+        return Arrays.asList(claimConfig.toString().split(","));
     }
 
     /**
