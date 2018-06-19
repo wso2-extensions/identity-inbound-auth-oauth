@@ -20,17 +20,16 @@ package org.wso2.carbon.identity.openidconnect;
 import com.nimbusds.jwt.JWTClaimsSet;
 import net.minidev.json.JSONArray;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.Spy;
-import org.opensaml.saml2.core.Assertion;
 import org.opensaml.saml2.core.Attribute;
-import org.opensaml.saml2.core.AttributeStatement;
-import org.opensaml.saml2.core.impl.AssertionBuilder;
 import org.opensaml.saml2.core.impl.AttributeBuilder;
-import org.opensaml.saml2.core.impl.AttributeStatementBuilder;
 import org.opensaml.xml.ConfigurationException;
 import org.opensaml.xml.XMLObject;
+import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.Assert;
@@ -53,6 +52,7 @@ import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataHandler;
+import org.wso2.carbon.identity.core.persistence.JDBCPersistenceManager;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
@@ -67,6 +67,7 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.saml.SAML2BearerGrantHandlerTest;
+import org.wso2.carbon.identity.openidconnect.dao.DefaultScopeClaimMappingDAOImpl;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.registry.api.RegistryException;
@@ -82,12 +83,16 @@ import org.wso2.carbon.user.core.util.UserCoreUtil;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.nio.file.Paths;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+
+import javax.sql.DataSource;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
@@ -102,15 +107,15 @@ import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
-import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 import static org.wso2.carbon.identity.core.util.IdentityCoreConstants.MULTI_ATTRIBUTE_SEPARATOR_DEFAULT;
 import static org.wso2.carbon.identity.core.util.IdentityCoreConstants.USER_NOT_FOUND;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.ADDRESS;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.EMAIL_VERIFIED;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.PHONE_NUMBER_VERIFIED;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.UPDATED_AT;
 import static org.wso2.carbon.identity.oauth2.token.handlers.grant.RefreshGrantHandler.PREV_ACCESS_TOKEN;
+import static org.wso2.carbon.identity.openidconnect.util.TestUtils.getConnection;
+import static org.wso2.carbon.identity.openidconnect.util.TestUtils.initiateH2Base;
 import static org.wso2.carbon.user.core.UserCoreConstants.DOMAIN_SEPARATOR;
 
 /**
@@ -121,7 +126,9 @@ import static org.wso2.carbon.user.core.UserCoreConstants.DOMAIN_SEPARATOR;
         AuthorizationGrantCache.class,
         IdentityTenantUtil.class,
         UserCoreUtil.class,
-        FrameworkUtils.class
+        FrameworkUtils.class,
+        JDBCPersistenceManager.class,
+        OAuthServerConfiguration.class
 })
 public class DefaultOIDCClaimsCallbackHandlerTest {
 
@@ -132,17 +139,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
     private AuthorizationGrantCache authorizationGrantCache;
 
     @Mock
-    private RegistryService registryService;
-
-    @Mock
-    private Resource resource;
-
-    @Mock
-    private UserRegistry userRegistry;
-
-    @Mock
     private ApplicationManagementService applicationManagementService;
-
 
     private static final String CUSTOM_ATTRIBUTE_NAME = "CustomAttributeName";
 
@@ -174,6 +171,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
     private static final String LOCAL_COUNTRY_CLAIM_URI = "http://wso2.org/claims/country";
     private static final String LOCAL_STREET_CLAIM_URI = "http://wso2.org/claims/street";
     private static final String LOCAL_PROVINCE_CLAIM_URI = "http://wso2.org/claims/province";
+    private static final String LOCAL_ADDRESS_CLAIM_URI = "http://wso2.org/claims/addresses";
 
     // OIDC Claims
     private static final String EMAIL = "email";
@@ -187,6 +185,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
     private static final String COUNTRY = "country";
     private static final String STREET = "street";
     private static final String PROVINCE = "province";
+    private static final String ADDRESS = "address";
 
     private static final String ROLE1 = "role1";
     private static final String ROLE2 = "role2";
@@ -208,14 +207,18 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
         put(LOCAL_ROLE_CLAIM_URI, ROLE_CLAIM_DEFAULT_VALUE);
     }};
 
+    private final Log log = LogFactory.getLog(DefaultOIDCClaimsCallbackHandlerTest.class);
+
     @BeforeClass
     public void setUp() throws Exception {
+
         System.setProperty(CarbonBaseConstants.CARBON_HOME, CARBON_HOME);
+        initiateH2Base();
         mockStatic(FrameworkUtils.class);
         when(FrameworkUtils.getMultiAttributeSeparator()).thenReturn(MULTI_ATTRIBUTE_SEPARATOR_DEFAULT);
 
         RequestObjectService requestObjectService = Mockito.mock(RequestObjectService.class);
-        List<RequestedClaim> requestedClaims =  Collections.emptyList();
+        List<RequestedClaim> requestedClaims = Collections.emptyList();
         when(requestObjectService.getRequestedClaimsForIDToken(anyString())).
                 thenReturn(requestedClaims);
         when(requestObjectService.getRequestedClaimsForUserInfo(anyString())).
@@ -238,6 +241,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
      */
     @Test
     public void testHandleCustomClaimsWithOAuthTokenReqMsgCtxtNoValidSp() throws Exception {
+
         JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
         OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForLocalUser();
 
@@ -245,8 +249,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
         serviceProvider.setApplicationName(SERVICE_PROVIDER_NAME);
         mockApplicationManagementService();
 
-        JWTClaimsSet jwtClaimsSet = defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSetBuilder,
-                requestMsgCtx);
+        JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx);
         assertNotNull(jwtClaimsSet);
         assertTrue(jwtClaimsSet.getClaims().isEmpty());
     }
@@ -256,23 +259,25 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
      */
     @Test
     public void testHandleCustomClaimsWithOAuthTokenReqMsgCtxtNoSpRequestedClaims() throws Exception {
+
         JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
         OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForLocalUser();
 
         ServiceProvider serviceProvider = getSpWithDefaultRequestedClaimsMappings();
         mockApplicationManagementService(serviceProvider);
 
-        JWTClaimsSet jwtClaimsSet = defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSetBuilder,
-                requestMsgCtx);
+        JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx);
         assertNotNull(jwtClaimsSet);
         assertTrue(jwtClaimsSet.getClaims().isEmpty());
     }
 
     private ServiceProvider getSpWithDefaultRequestedClaimsMappings() {
+
         return getSpWithRequestedClaimsMappings(DEFAULT_REQUESTED_CLAIMS);
     }
 
     private ServiceProvider getSpWithRequestedClaimsMappings(ClaimMapping[] claimMappings) {
+
         ServiceProvider serviceProvider = new ServiceProvider();
         serviceProvider.setApplicationName(SERVICE_PROVIDER_NAME);
 
@@ -288,6 +293,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
 
     @Test
     public void testHandleCustomClaimsWithOAuthTokenReqMsgCtxtNoRealmFound() throws Exception {
+
         JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
         OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForLocalUser();
 
@@ -295,14 +301,14 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
         serviceProvider.setApplicationName(SERVICE_PROVIDER_NAME);
         mockApplicationManagementService(serviceProvider);
 
-        JWTClaimsSet jwtClaimsSet = defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSetBuilder,
-                requestMsgCtx);
+        JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx);
         assertNotNull(jwtClaimsSet);
         assertTrue(jwtClaimsSet.getClaims().isEmpty());
     }
 
     @Test
     public void testHandleCustomClaimsWithOAuthTokenReqMsgCtxtNoUserClaims() throws Exception {
+
         JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
         OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForLocalUser();
 
@@ -314,14 +320,14 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
 
         mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm);
 
-        JWTClaimsSet jwtClaimsSet = defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSetBuilder,
-                requestMsgCtx);
+        JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx);
         assertNotNull(jwtClaimsSet);
         assertTrue(jwtClaimsSet.getClaims().isEmpty());
     }
 
     @Test
     public void testHandleCustomClaimsWithOAuthTokenReqMsgCtxtUserNotFoundInUserStore() throws Exception {
+
         JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
         OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForLocalUser();
 
@@ -331,13 +337,14 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
         UserRealm userRealm = getExceptionThrowingUserRealm(new UserStoreException(USER_NOT_FOUND));
         mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm);
 
-        JWTClaimsSet jwtClaimsSet = defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSetBuilder, requestMsgCtx);
+        JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx);
         assertNotNull(jwtClaimsSet);
         assertTrue(jwtClaimsSet.getClaims().isEmpty());
     }
 
     @Test
     public void testHandleCustomClaimsWithOAuthTokenReqMsgCtxtUserStoreException() throws Exception {
+
         JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
         OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForLocalUser();
 
@@ -347,8 +354,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
         UserRealm userRealm = getExceptionThrowingUserRealm(new UserStoreException(""));
         mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm);
 
-        JWTClaimsSet jwtClaimsSet = defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSetBuilder,
-                requestMsgCtx);
+        JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx);
         assertNotNull(jwtClaimsSet);
         assertTrue(jwtClaimsSet.getClaims().isEmpty());
     }
@@ -364,23 +370,14 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
         userAttributes.put(SAML2BearerGrantHandlerTest.buildClaimMapping(EMAIL), TestConstants.CLAIM_VALUE2);
         OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForFederatedUser(userAttributes);
 
-        // Add the relevant oidc claims to scop resource.
-        Properties oidcProperties = new Properties();
-        String[] oidcScopeClaims = new String[] { COUNTRY, EMAIL };
-        oidcProperties.setProperty(OIDC_SCOPE, StringUtils.join(oidcScopeClaims, ","));
-        mockOIDCScopeResource(oidcProperties);
-
         // Mock to return all the scopes when the consent is asked for.
         UserRealm userRealm = getUserRealmWithUserClaims(USER_CLAIMS_MAP);
         mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm);
-        JWTClaimsSet jwtClaimsSet = defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSetBuilder,
-                requestMsgCtx);
+        JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx);
         assertNotNull(jwtClaimsSet, "JWT Custom claim handling failed.");
         assertFalse(jwtClaimsSet.getClaims().isEmpty(), "JWT custom claim handling failed");
         Assert.assertEquals(jwtClaimsSet.getClaims().size(), userAttributes.size(),
                 "Expected custom claims are not set.");
-        Assert.assertEquals(jwtClaimsSet.getClaim(COUNTRY), TestConstants.CLAIM_VALUE1,
-                "OIDC claim " + COUNTRY + " is not added with the JWT token");
         Assert.assertEquals(jwtClaimsSet.getClaim(EMAIL), TestConstants.CLAIM_VALUE2,
                 "OIDC claim " + EMAIL + " is not added with the JWT token");
     }
@@ -393,9 +390,8 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
         OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForFederatedUser(null);
         // Add the relevant oidc claims to scop resource.
         Properties oidcProperties = new Properties();
-        String[] oidcScopeClaims = new String[] { USERNAME, EMAIL };
+        String[] oidcScopeClaims = new String[]{USERNAME, EMAIL};
         oidcProperties.setProperty(OIDC_SCOPE, StringUtils.join(oidcScopeClaims, ","));
-        mockOIDCScopeResource(oidcProperties);
 
         Map<ClaimMapping, String> userAttributes = new HashMap<>();
         userAttributes.put(SAML2BearerGrantHandlerTest.buildClaimMapping(USERNAME), TestConstants.CLAIM_VALUE1);
@@ -413,34 +409,23 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
 
         UserRealm userRealm = getUserRealmWithUserClaims(USER_CLAIMS_MAP);
         mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm);
-        JWTClaimsSet jwtClaimsSet = defaultOIDCClaimsCallbackHandler
-                .handleCustomClaims(jwtClaimsSetBuilder, requestMsgCtx);
+        JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx);
 
         Assert.assertFalse(jwtClaimsSet.getClaims().isEmpty(),
                 "JWT custom claim list is empty. Custom claim handling failed in refresh flow");
         Assert.assertEquals(jwtClaimsSet.getClaim(USERNAME), TestConstants.CLAIM_VALUE1,
                 "Incomplete list of custom claims returned.");
-        Assert.assertEquals(jwtClaimsSet.getClaim(PHONE_NUMBER_VERIFIED), TestConstants.CLAIM_VALUE2,
-                "Claims that are not added to mapping is not returned");
 
-        OAuthServerConfiguration oAuthServerConfiguration = OAuthServerConfiguration.getInstance();
-
-        Field convertOriginalClaimsFromAssertionsToOIDCDialect = OAuthServerConfiguration.class
-                .getDeclaredField("convertOriginalClaimsFromAssertionsToOIDCDialect");
-        convertOriginalClaimsFromAssertionsToOIDCDialect.setAccessible(true);
-        convertOriginalClaimsFromAssertionsToOIDCDialect.set(oAuthServerConfiguration, true);
         jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
         jwtClaimsSet = defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSetBuilder, requestMsgCtx);
 
         Assert.assertFalse(jwtClaimsSet.getClaims().isEmpty(),
                 "JWT custom claim list is empty. Custom claim handling failed in refresh flow");
-        Assert.assertNull(jwtClaimsSet.getClaim(PHONE_NUMBER_VERIFIED),
-                "Claims that are not in oidc scope is returned.");
-        convertOriginalClaimsFromAssertionsToOIDCDialect.set(oAuthServerConfiguration, false);
     }
 
     @Test
     public void testHandleCustomClaimsWithOAuthTokenReqMsgCtxtEmptyUserClaims() throws Exception {
+
         JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
         OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForLocalUser();
 
@@ -450,264 +435,175 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
         UserRealm userRealm = getUserRealmWithUserClaims(Collections.emptyMap());
         mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm);
 
-        JWTClaimsSet jwtClaimsSet = defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSetBuilder,
-                requestMsgCtx);
+        JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx);
         assertNotNull(jwtClaimsSet);
         assertTrue(jwtClaimsSet.getClaims().isEmpty());
     }
 
     @Test
-    public void testHandleCustomClaimsWithOAuthTokenReqMsgCtxtRegistryError() throws Exception {
-        try {
-            PrivilegedCarbonContext.startTenantFlow();
-            JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
-            OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForLocalUser();
-
-            ServiceProvider serviceProvider = getSpWithDefaultRequestedClaimsMappings();
-            mockApplicationManagementService(serviceProvider);
-
-            UserRealm userRealm = getUserRealmWithUserClaims(USER_CLAIMS_MAP);
-            mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm);
-
-            mockClaimHandler();
-
-            JWTClaimsSet jwtClaimsSet = defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSetBuilder,
-                    requestMsgCtx);
-            assertNotNull(jwtClaimsSet);
-            assertTrue(jwtClaimsSet.getClaims().isEmpty());
-        } finally {
-            PrivilegedCarbonContext.endTenantFlow();
-        }
-    }
-
-    @Test
     public void testHandleCustomClaimsWithOAuthTokenReqMsgCtxtNoOIDCScopes() throws Exception {
-        try {
-            PrivilegedCarbonContext.startTenantFlow();
-            JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
-            OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForLocalUser();
 
-            ServiceProvider serviceProvider = getSpWithDefaultRequestedClaimsMappings();
-            mockApplicationManagementService(serviceProvider);
+        JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
+        OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForLocalUser();
 
-            UserRealm userRealm = getUserRealmWithUserClaims(USER_CLAIMS_MAP);
-            mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm);
+        ServiceProvider serviceProvider = getSpWithDefaultRequestedClaimsMappings();
+        mockApplicationManagementService(serviceProvider);
 
-            mockClaimHandler();
-            mockOIDCScopeResource();
+        UserRealm userRealm = getUserRealmWithUserClaims(USER_CLAIMS_MAP);
+        mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm);
 
-            JWTClaimsSet jwtClaimsSet = defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSetBuilder,
-                    requestMsgCtx);
-            assertNotNull(jwtClaimsSet);
-            assertTrue(jwtClaimsSet.getClaims().isEmpty());
-        } finally {
-            PrivilegedCarbonContext.endTenantFlow();
-        }
+        mockClaimHandler();
+        String[] arr = new String[1];
+        arr[0] = "test";
+        requestMsgCtx.setScope(arr);
+        JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx);
+        assertNotNull(jwtClaimsSet);
+        assertTrue(jwtClaimsSet.getClaims().isEmpty());
     }
 
     @Test
     public void testHandleCustomClaimsWithOAuthTokenReqMsgCtxtWithOIDCScopes() throws Exception {
-        try {
-            PrivilegedCarbonContext.startTenantFlow();
-            JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
-            OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForLocalUser();
 
-            ServiceProvider serviceProvider = getSpWithDefaultRequestedClaimsMappings();
-            mockApplicationManagementService(serviceProvider);
+        JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
+        OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForLocalUser();
 
-            UserRealm userRealm = getUserRealmWithUserClaims(USER_CLAIMS_MAP);
-            mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm);
+        ServiceProvider serviceProvider = getSpWithDefaultRequestedClaimsMappings();
+        mockApplicationManagementService(serviceProvider);
 
-            mockClaimHandler();
+        UserRealm userRealm = getUserRealmWithUserClaims(USER_CLAIMS_MAP);
+        mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm);
 
-            Properties oidcProperties = new Properties();
-            String[] oidcScopeClaims = new String[]{ROLE, USERNAME};
-            oidcProperties.setProperty(OIDC_SCOPE, StringUtils.join(oidcScopeClaims, ","));
-            mockOIDCScopeResource(oidcProperties);
+        mockClaimHandler();
 
-            JWTClaimsSet jwtClaimsSet = defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSetBuilder,
-                    requestMsgCtx);
-            assertNotNull(jwtClaimsSet);
-            assertNull(jwtClaimsSet.getClaim(EMAIL));
+        JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx);
+        assertNotNull(jwtClaimsSet);
+        assertNotNull(jwtClaimsSet.getClaim("username"));
 
-            assertNotNull(jwtClaimsSet.getClaim(USERNAME));
-            assertEquals(jwtClaimsSet.getClaim(USERNAME), USER_NAME);
-
-            assertNotNull(jwtClaimsSet.getClaim(ROLE));
-            JSONArray jsonArray = (JSONArray) jwtClaimsSet.getClaim(ROLE);
-            String[] expectedRoles = new String[]{ROLE1, ROLE2, ROLE3};
-            for (String role : expectedRoles) {
-                assertTrue(jsonArray.contains(role));
-            }
-        } finally {
-            PrivilegedCarbonContext.endTenantFlow();
-        }
     }
 
     @Test
     public void testHandleCustomClaimsWithOAuthTokenReqMsgCtxtWithSpRoleMappings() throws Exception {
-        try {
-            PrivilegedCarbonContext.startTenantFlow();
-            JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
-            OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForLocalUser();
 
-            ServiceProvider serviceProvider = getSpWithDefaultRequestedClaimsMappings();
-            // Add a SP role mapping
-            RoleMapping[] roleMappings = new RoleMapping[]{
-                    new RoleMapping(new LocalRole(USER_STORE_DOMAIN, ROLE2), SP_ROLE_2),
-            };
-            serviceProvider.getPermissionAndRoleConfig().setRoleMappings(roleMappings);
-            mockApplicationManagementService(serviceProvider);
+        JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
+        OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForLocalUser();
 
-            UserRealm userRealm = getUserRealmWithUserClaims(USER_CLAIMS_MAP);
-            mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm);
+        ServiceProvider serviceProvider = getSpWithDefaultRequestedClaimsMappings();
+        // Add a SP role mapping
+        RoleMapping[] roleMappings = new RoleMapping[]{
+                new RoleMapping(new LocalRole(USER_STORE_DOMAIN, ROLE2), SP_ROLE_2),
+        };
+        serviceProvider.getPermissionAndRoleConfig().setRoleMappings(roleMappings);
+        mockApplicationManagementService(serviceProvider);
 
-            mockClaimHandler();
+        UserRealm userRealm = getUserRealmWithUserClaims(USER_CLAIMS_MAP);
+        mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm);
 
-            // Define OIDC Scope property
-            Properties oidcProperties = new Properties();
-            String[] oidcScopeClaims = new String[]{ROLE, USERNAME};
-            oidcProperties.setProperty(OIDC_SCOPE, StringUtils.join(oidcScopeClaims, ","));
-            mockOIDCScopeResource(oidcProperties);
+        mockClaimHandler();
 
-            JWTClaimsSet jwtClaimsSet = defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSetBuilder,
-                    requestMsgCtx);
+        // Define OIDC Scope property
+        Properties oidcProperties = new Properties();
+        String[] oidcScopeClaims = new String[]{ROLE, USERNAME};
+        oidcProperties.setProperty(OIDC_SCOPE, StringUtils.join(oidcScopeClaims, ","));
 
-            assertNotNull(jwtClaimsSet);
-            assertNull(jwtClaimsSet.getClaim(EMAIL));
-            assertNotNull(jwtClaimsSet.getClaim(USERNAME));
-            assertEquals(jwtClaimsSet.getClaim(USERNAME), USER_NAME);
+        JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx);
 
-            assertNotNull(jwtClaimsSet.getClaim(ROLE));
-            JSONArray jsonArray = (JSONArray) jwtClaimsSet.getClaim(ROLE);
-            String[] expectedRoles = new String[]{ROLE1, SP_ROLE_2, ROLE3};
-            for (String role : expectedRoles) {
-                assertTrue(jsonArray.contains(role));
-            }
-        } finally {
-            PrivilegedCarbonContext.endTenantFlow();
+        assertNotNull(jwtClaimsSet);
+        assertNotNull(jwtClaimsSet.getClaim(EMAIL));
+        assertNotNull(jwtClaimsSet.getClaim(USERNAME));
+        assertEquals(jwtClaimsSet.getClaim(USERNAME), USER_NAME);
+
+        assertNotNull(jwtClaimsSet.getClaim(ROLE));
+        JSONArray jsonArray = (JSONArray) jwtClaimsSet.getClaim(ROLE);
+        String[] expectedRoles = new String[]{ROLE1, SP_ROLE_2, ROLE3};
+        for (String role : expectedRoles) {
+            assertTrue(jsonArray.contains(role));
         }
     }
 
-    @DataProvider(name="customSpecialClaimsProvider")
+    @DataProvider(name = "customSpecialClaimsProvider")
     public Object[][] provideCustomSpecialClaims() {
 
-        return new Object[][] {
-                {new String [] { "12343454", "false", "true"}},
-                {new String [] { "2017-12-06T16:52:12", "false", "true"}}
+        return new Object[][]{
+                {new String[]{"12343454", "false", "true"}},
+                {new String[]{"2017-12-06T16:52:12", "false", "true"}}
         };
     }
 
     @Test(dataProvider = "customSpecialClaimsProvider")
-    public void testHandleCustomClaimsWithOAuthTokenReqMsgCtxtWithSpecialFormattedClaims(String [] customClaims)
+    public void testHandleCustomClaimsWithOAuthTokenReqMsgCtxtWithSpecialFormattedClaims(String[] customClaims)
             throws Exception {
-        try {
-            PrivilegedCarbonContext.startTenantFlow();
-            JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
-            OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForLocalUser();
-            requestMsgCtx.setScope(new String[]{OIDC_SCOPE});
 
-            ClaimMapping claimMappings[] = new ClaimMapping[]{
-                    ClaimMapping.build(LOCAL_UPDATED_AT_CLAIM_URI, UPDATED_AT, "", true),
-                    ClaimMapping.build(LOCAL_EMAIL_VERIFIED_CLAIM_URI, EMAIL_VERIFIED, "", true),
-                    ClaimMapping.build(LOCAL_PHONE_VERIFIED_CLAIM_URI, PHONE_NUMBER_VERIFIED, "", true),
-                    ClaimMapping.build(LOCAL_COUNTRY_CLAIM_URI, ADDRESS_COUNTRY, "", true),
-                    ClaimMapping.build(LOCAL_STREET_CLAIM_URI, ADDRESS_STREET, "", true),
-                    ClaimMapping.build(LOCAL_PROVINCE_CLAIM_URI, ADDRESS_PROVINCE, "", true),
-            };
+        JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
+        OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForLocalUser();
+        requestMsgCtx.setScope(new String[]{OIDC_SCOPE});
 
-            ServiceProvider serviceProvider = getSpWithRequestedClaimsMappings(claimMappings);
-            mockApplicationManagementService(serviceProvider);
-
-            Map<String, String> userClaims = new HashMap<>();
-            userClaims.put(LOCAL_UPDATED_AT_CLAIM_URI, customClaims[0]);
-            userClaims.put(LOCAL_EMAIL_VERIFIED_CLAIM_URI, customClaims[1]);
-            userClaims.put(LOCAL_PHONE_VERIFIED_CLAIM_URI, customClaims[2]);
-
-            UserRealm userRealm = getUserRealmWithUserClaims(userClaims);
-            mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm);
-
-            mockClaimHandler();
-
-            // Define OIDC Scope properties
-            Properties oidcProperties = new Properties();
-            String[] oidcScopeClaims = new String[]{UPDATED_AT, PHONE_NUMBER_VERIFIED, EMAIL_VERIFIED};
-            oidcProperties.setProperty(OIDC_SCOPE, StringUtils.join(oidcScopeClaims, ","));
-            mockOIDCScopeResource(oidcProperties);
-
-            JWTClaimsSet jwtClaimsSet = defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSetBuilder,
-                    requestMsgCtx);
-
-            assertNotNull(jwtClaimsSet);
-            assertNotNull(jwtClaimsSet.getClaim(UPDATED_AT));
-            assertTrue(jwtClaimsSet.getClaim(UPDATED_AT) instanceof Integer ||
-                    jwtClaimsSet.getClaim(UPDATED_AT) instanceof Long);
-
-            assertNotNull(jwtClaimsSet.getClaim(PHONE_NUMBER_VERIFIED));
-            assertTrue(jwtClaimsSet.getClaim(PHONE_NUMBER_VERIFIED) instanceof Boolean);
-
-            assertNotNull(jwtClaimsSet.getClaim(EMAIL_VERIFIED));
-            assertTrue(jwtClaimsSet.getClaim(EMAIL_VERIFIED) instanceof Boolean);
-        } finally {
-            PrivilegedCarbonContext.endTenantFlow();
-        }
-    }
-
-    @DataProvider(name = "addressClaimData")
-    public Object[][] provideAddressClaimData() {
-        Properties oidcProperties = new Properties();
-        String[] oidcScopeClaims = new String[]{
-                ADDRESS_COUNTRY, ADDRESS_PROVINCE, ADDRESS_STREET
+        ClaimMapping claimMappings[] = new ClaimMapping[]{
+                ClaimMapping.build(LOCAL_UPDATED_AT_CLAIM_URI, UPDATED_AT, "", true),
+                ClaimMapping.build(LOCAL_EMAIL_VERIFIED_CLAIM_URI, EMAIL_VERIFIED, "", true),
+                ClaimMapping.build(LOCAL_PHONE_VERIFIED_CLAIM_URI, PHONE_NUMBER_VERIFIED, "", true),
+                ClaimMapping.build(LOCAL_COUNTRY_CLAIM_URI, ADDRESS_COUNTRY, "", true),
+                ClaimMapping.build(LOCAL_STREET_CLAIM_URI, ADDRESS_STREET, "", true),
+                ClaimMapping.build(LOCAL_PROVINCE_CLAIM_URI, ADDRESS_PROVINCE, "", true),
         };
 
-        oidcProperties.setProperty(OIDC_SCOPE, StringUtils.join(oidcScopeClaims, ","));
+        ServiceProvider serviceProvider = getSpWithRequestedClaimsMappings(claimMappings);
+        mockApplicationManagementService(serviceProvider);
 
-        Properties oidcPropertiesWithAddressScope = new Properties();
-        String[] addressScopeClaims = new String[]{COUNTRY, PROVINCE, STREET};
-        oidcPropertiesWithAddressScope.setProperty(OIDC_SCOPE, StringUtils.join(addressScopeClaims, ","));
-        oidcPropertiesWithAddressScope.setProperty(ADDRESS, StringUtils.join(addressScopeClaims, ","));
+        Map<String, String> userClaims = new HashMap<>();
+        userClaims.put(LOCAL_UPDATED_AT_CLAIM_URI, customClaims[0]);
+        userClaims.put(LOCAL_EMAIL_VERIFIED_CLAIM_URI, customClaims[1]);
+        userClaims.put(LOCAL_PHONE_VERIFIED_CLAIM_URI, customClaims[2]);
 
-        return new Object[][]{{oidcProperties}, {oidcPropertiesWithAddressScope}};
+        UserRealm userRealm = getUserRealmWithUserClaims(userClaims);
+        mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm);
+
+        mockClaimHandler();
+
+        JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx);
+        assertNotNull(jwtClaimsSet);
+        assertNotNull(jwtClaimsSet.getClaim(UPDATED_AT));
+        assertTrue(jwtClaimsSet.getClaim(UPDATED_AT) instanceof Integer ||
+                jwtClaimsSet.getClaim(UPDATED_AT) instanceof Long);
+
+        assertNotNull(jwtClaimsSet.getClaim(PHONE_NUMBER_VERIFIED));
+        assertTrue(jwtClaimsSet.getClaim(PHONE_NUMBER_VERIFIED) instanceof Boolean);
+
+        assertNotNull(jwtClaimsSet.getClaim(EMAIL_VERIFIED));
+        assertTrue(jwtClaimsSet.getClaim(EMAIL_VERIFIED) instanceof Boolean);
     }
 
-    @Test(dataProvider = "addressClaimData")
-    public void testHandleCustomClaimsWithOAuthTokenReqMsgCtxtAddressClaim(Properties oidcProperties) throws Exception {
-        try {
-            PrivilegedCarbonContext.startTenantFlow();
-            JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
-            OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForLocalUser();
+    @Test
+    public void testHandleCustomClaimsWithOAuthTokenReqMsgCtxtAddressClaim() throws Exception {
 
-            ClaimMapping claimMappings[] = new ClaimMapping[]{
-                    ClaimMapping.build(LOCAL_COUNTRY_CLAIM_URI, ADDRESS, "", true),
-                    ClaimMapping.build(LOCAL_STREET_CLAIM_URI, STREET, "", true),
-                    ClaimMapping.build(LOCAL_PROVINCE_CLAIM_URI, PROVINCE, "", true),
-            };
+        JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
+        OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForLocalUser();
 
-            ServiceProvider serviceProvider = getSpWithRequestedClaimsMappings(claimMappings);
-            mockApplicationManagementService(serviceProvider);
+        ClaimMapping claimMappings[] = new ClaimMapping[]{
+                ClaimMapping.build(LOCAL_COUNTRY_CLAIM_URI, ADDRESS, "", true),
+                ClaimMapping.build(LOCAL_STREET_CLAIM_URI, STREET, "", true),
+                ClaimMapping.build(LOCAL_PROVINCE_CLAIM_URI, PROVINCE, "", true),
+                ClaimMapping.build(LOCAL_ADDRESS_CLAIM_URI, ADDRESS, "", true),
+        };
 
+        ServiceProvider serviceProvider = getSpWithRequestedClaimsMappings(claimMappings);
+        mockApplicationManagementService(serviceProvider);
 
-            Map<String, String> userClaims = new HashMap<>();
-            userClaims.put(LOCAL_COUNTRY_CLAIM_URI, "Sri Lanka");
-            userClaims.put(LOCAL_STREET_CLAIM_URI, "Lily Avenue");
-            userClaims.put(LOCAL_PROVINCE_CLAIM_URI, "Western");
+        Map<String, String> userClaims = new HashMap<>();
+        userClaims.put(LOCAL_COUNTRY_CLAIM_URI, "Sri Lanka");
+        userClaims.put(LOCAL_STREET_CLAIM_URI, "Lily Avenue");
+        userClaims.put(LOCAL_PROVINCE_CLAIM_URI, "Western");
+        userClaims.put(LOCAL_ADDRESS_CLAIM_URI, "matara");
 
-            UserRealm userRealm = getUserRealmWithUserClaims(userClaims);
-            mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm);
-            mockOIDCScopeResource(oidcProperties);
-            mockClaimHandler();
+        UserRealm userRealm = getUserRealmWithUserClaims(userClaims);
+        mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm);
+        mockClaimHandler();
 
-            JWTClaimsSet jwtClaimsSet = defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSetBuilder,
-                    requestMsgCtx);
+        JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx);
 
-            assertNotNull(jwtClaimsSet);
-            assertNotNull(jwtClaimsSet.getClaim(ADDRESS));
+        assertNotNull(jwtClaimsSet);
+        assertNotNull(jwtClaimsSet.getClaim(ADDRESS));
 
-        } finally {
-            PrivilegedCarbonContext.endTenantFlow();
-        }
     }
-
 
     private void mockClaimHandler() throws Exception {
 
@@ -732,6 +628,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
     private void setStaticField(Class classname,
                                 String fieldName,
                                 Object value) throws NoSuchFieldException, IllegalAccessException {
+
         Field declaredField = classname.getDeclaredField(fieldName);
         declaredField.setAccessible(true);
 
@@ -743,12 +640,14 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
     }
 
     private void mockUserRealm(String username, UserRealm userRealm) throws IdentityException {
+
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId(TENANT_DOMAIN)).thenReturn(TENANT_ID);
         when(IdentityTenantUtil.getRealm(TENANT_DOMAIN, username)).thenReturn(userRealm);
     }
 
     private UserRealm getExceptionThrowingUserRealm(UserStoreException e) throws UserStoreException {
+
         UserStoreManager userStoreManager = mock(UserStoreManager.class);
         when(userStoreManager.getUserClaimValues(eq(TENANT_AWARE_USERNAME), any(), eq(null)))
                 .thenThrow(e);
@@ -759,6 +658,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
     }
 
     private UserRealm getUserRealmWithUserClaims(Map<String, String> userClaims) throws UserStoreException {
+
         UserStoreManager userStoreManager = mock(UserStoreManager.class);
         when(userStoreManager.getUserClaimValues(eq(TENANT_AWARE_USERNAME), any(), eq(null))).thenReturn(userClaims);
 
@@ -768,6 +668,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
     }
 
     private OAuthTokenReqMessageContext getTokenReqMessageContextForLocalUser() {
+
         OAuth2AccessTokenReqDTO accessTokenReqDTO = new OAuth2AccessTokenReqDTO();
         accessTokenReqDTO.setTenantDomain(TENANT_DOMAIN);
         accessTokenReqDTO.setClientId(DUMMY_CLIENT_ID);
@@ -822,10 +723,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
             oAuth2AuthorizeReqDTO.setUser(authenticatedUser);
             when(authenticatedUser.isFederatedUser()).thenReturn(true);
 
-            mockOIDCScopeResource();
-
-            JWTClaimsSet jwtClaimsSet = defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSetBuilder,
-                    oAuthAuthzReqMessageContext);
+            JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, oAuthAuthzReqMessageContext);
             assertEquals(jwtClaimsSet.getClaims().size(), 0, "Claims are not successfully set.");
         } finally {
             PrivilegedCarbonContext.endTenantFlow();
@@ -833,6 +731,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
     }
 
     private void mockAuthorizationGrantCache(AuthorizationGrantCacheEntry authorizationGrantCacheEntry) {
+
         mockStatic(AuthorizationGrantCache.class);
         authorizationGrantCache = mock(AuthorizationGrantCache.class);
 
@@ -846,31 +745,9 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
                 thenReturn(authorizationGrantCacheEntry);
     }
 
-    private void mockOIDCScopeResource() throws Exception {
-        when(registryService.getConfigSystemRegistry(TENANT_ID)).thenReturn(userRegistry);
-        Resource resource = spy(new ResourceImpl());
-        when(userRegistry.get(OAuthConstants.SCOPE_RESOURCE_PATH)).thenReturn(resource);
-        setRegistryMockService(registryService);
-    }
-
-    private void mockOIDCScopeResource(Properties properties) throws Exception {
-        when(registryService.getConfigSystemRegistry(TENANT_ID)).thenReturn(userRegistry);
-        Resource resource = spy(new ResourceImpl());
-        for (Map.Entry<Object, Object> propertyEntry : properties.entrySet()) {
-            resource.setProperty((String) propertyEntry.getKey(), (String) propertyEntry.getValue());
-        }
-
-        when(userRegistry.get(OAuthConstants.SCOPE_RESOURCE_PATH)).thenReturn(resource);
-        setRegistryMockService(registryService);
-    }
-
-
-    private void setRegistryMockService(RegistryService registryMockService) throws Exception {
-        setStaticField(OAuth2ServiceComponentHolder.class, "registryService", registryMockService);
-    }
-
     @Test
     public void testCustomClaimForOAuthTokenReqMessageContextWithNullAssertion() throws Exception {
+
         JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
         OAuthTokenReqMessageContext requestMsgCtx = mock(OAuthTokenReqMessageContext.class);
 
@@ -890,21 +767,20 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
         when(oAuth2AccessTokenReqDTO.getClientId()).thenReturn(DUMMY_CLIENT_ID);
 
         mockApplicationManagementService();
-        getMockOIDCScopeResource();
 
-        JWTClaimsSet jwtClaimsSet = defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSetBuilder,
-                requestMsgCtx);
+        JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx);
         assertEquals(jwtClaimsSet.getClaims().size(), 0, "Claims are not successfully set.");
     }
 
     private void mockApplicationManagementService() throws Exception {
+
         when(applicationManagementService.getServiceProviderNameByClientId(anyString(), anyString(), anyString()))
                 .thenReturn(SERVICE_PROVIDER_NAME);
         setStaticField(OAuth2ServiceComponentHolder.class, "applicationMgtService", applicationManagementService);
     }
 
-
     private void mockApplicationManagementService(ServiceProvider sp) throws Exception {
+
         mockApplicationManagementService();
         when(applicationManagementService.getApplicationExcludingFileBasedSPs(sp.getApplicationName(), TENANT_DOMAIN))
                 .thenReturn(sp);
@@ -912,6 +788,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
 
     @Test
     public void testHandleClaimsForOAuthAuthzReqMessageContextNullAccessToken() throws Exception {
+
         JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
 
         AuthenticatedUser authenticatedUser = getDefaultAuthenticatedUserFederatedUser();
@@ -942,6 +819,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
     }
 
     private AuthenticatedUser getDefaultAuthenticatedLocalUser() {
+
         AuthenticatedUser authenticatedUser = new AuthenticatedUser();
         authenticatedUser.setUserName(USER_NAME);
         authenticatedUser.setUserStoreDomain(USER_STORE_DOMAIN);
@@ -951,43 +829,15 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
     }
 
     private AuthenticatedUser getDefaultAuthenticatedUserFederatedUser() {
+
         AuthenticatedUser authenticatedUser = new AuthenticatedUser();
         authenticatedUser.setUserName(USER_NAME);
         authenticatedUser.setFederatedUser(true);
         return authenticatedUser;
     }
 
-    private void getMockOIDCScopeResource() throws RegistryException {
-        System.setProperty(CarbonBaseConstants.CARBON_HOME, CARBON_HOME);
-
-        mockStatic(IdentityTenantUtil.class);
-        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(TENANT_ID);
-
-        when(registryService.getConfigSystemRegistry(anyInt())).thenReturn(userRegistry);
-        when(userRegistry.get(OAuthConstants.SCOPE_RESOURCE_PATH)).thenReturn(resource);
-    }
-
-    private Assertion getAssertion(String[] attributeValues) throws ConfigurationException {
-        // Build the SAML Attribute
-        List<Attribute> attributesList = new ArrayList<>();
-        Attribute attribute = buildAttribute(CUSTOM_ATTRIBUTE_NAME, attributeValues);
-        attributesList.add(attribute);
-
-        // Build the SAML Attribute statement
-        AttributeStatement statement =
-                new AttributeStatementBuilder().buildObject(AttributeStatement.DEFAULT_ELEMENT_NAME);
-        statement.getAttributes().addAll(attributesList);
-
-        List<AttributeStatement> attributeStatementList = new ArrayList<>();
-        attributeStatementList.add(statement);
-
-        // Build the SAML Assertion
-        Assertion assertion = new AssertionBuilder().buildObject(Assertion.DEFAULT_ELEMENT_NAME);
-        assertion.getAttributeStatements().addAll(attributeStatementList);
-        return assertion;
-    }
-
     private Attribute buildAttribute(String attributeName, String[] attributeValues) throws ConfigurationException {
+
         Attribute attribute = new AttributeBuilder().buildObject(Attribute.DEFAULT_ELEMENT_NAME);
         attribute.setName(attributeName);
 
@@ -1007,6 +857,55 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
 
     @ObjectFactory
     public IObjectFactory getObjectFactory() {
+
         return new org.powermock.modules.testng.PowerMockObjectFactory();
+    }
+
+    private JWTClaimsSet getJwtClaimSet(JWTClaimsSet.Builder jwtClaimsSetBuilder, OAuthTokenReqMessageContext requestMsgCtx) {
+
+        OAuthServerConfiguration mockOAuthServerConfiguration = PowerMockito.mock(OAuthServerConfiguration.class);
+        DataSource dataSource = mock(DataSource.class);
+        mockStatic(JDBCPersistenceManager.class);
+        JDBCPersistenceManager jdbcPersistenceManager = mock(JDBCPersistenceManager.class);
+        mockStatic(OAuthServerConfiguration.class);
+        when(OAuthServerConfiguration.getInstance()).thenReturn(mockOAuthServerConfiguration);
+        when(mockOAuthServerConfiguration.isConvertOriginalClaimsFromAssertionsToOIDCDialect()).thenReturn(true);
+        JWTClaimsSet jwtClaimsSet = null;
+        try (Connection connection = getConnection()) {
+
+            Mockito.when(dataSource.getConnection()).thenReturn(connection);
+            Mockito.when(jdbcPersistenceManager.getInstance()).thenReturn(jdbcPersistenceManager);
+            Mockito.when(jdbcPersistenceManager.getDataSource()).thenReturn(dataSource);
+            jwtClaimsSet = defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSetBuilder,
+                    requestMsgCtx);
+
+        } catch (SQLException e) {
+            log.error("Error while obtaining the datasource. ");
+        }
+        return jwtClaimsSet;
+    }
+
+    private JWTClaimsSet getJwtClaimSet(JWTClaimsSet.Builder jwtClaimsSetBuilder, OAuthAuthzReqMessageContext requestMsgCtx) {
+
+        OAuthServerConfiguration mockOAuthServerConfiguration = PowerMockito.mock(OAuthServerConfiguration.class);
+        DataSource dataSource = mock(DataSource.class);
+        mockStatic(JDBCPersistenceManager.class);
+        JDBCPersistenceManager jdbcPersistenceManager = mock(JDBCPersistenceManager.class);
+        mockStatic(OAuthServerConfiguration.class);
+        when(OAuthServerConfiguration.getInstance()).thenReturn(mockOAuthServerConfiguration);
+        when(mockOAuthServerConfiguration.isConvertOriginalClaimsFromAssertionsToOIDCDialect()).thenReturn(true);
+        JWTClaimsSet jwtClaimsSet = null;
+        try (Connection connection = getConnection()) {
+
+            Mockito.when(dataSource.getConnection()).thenReturn(connection);
+            Mockito.when(jdbcPersistenceManager.getInstance()).thenReturn(jdbcPersistenceManager);
+            Mockito.when(jdbcPersistenceManager.getDataSource()).thenReturn(dataSource);
+            jwtClaimsSet = defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSetBuilder,
+                    requestMsgCtx);
+
+        } catch (SQLException e) {
+            log.error("Error while obtaining the datasource. ");
+        }
+        return jwtClaimsSet;
     }
 }
