@@ -635,8 +635,19 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         assertEquals(OAuth2Util.getUserIdFromAccessToken(apiKey), userId);
     }
 
-    @Test
-    public void testGetTokenExpireTimeMillis() throws Exception {
+    @DataProvider(name = "TestGetTokenExpireTimeMillisDataProvider")
+    public Object[][] getTokenExpireTimeMillisData() {
+        return new Object[][] {
+                {issuedTime, refreshTokenIssuedTime, validityPeriodInMillis, refreshTokenValidityPeriodInMillis},
+                // Refresh token validity period is infinite
+                {issuedTime, refreshTokenIssuedTime, validityPeriodInMillis, -1000L}
+        };
+    }
+
+    @Test(dataProvider = "TestGetTokenExpireTimeMillisDataProvider")
+    public void testGetTokenExpireTimeMillis(Timestamp issuedTime, Timestamp refreshTokenIssuedTime, long
+            validityPeriodInMillis, long refreshTokenValidityPeriodInMillis) throws Exception {
+
         AccessTokenDO accessTokenDO = new AccessTokenDO(clientId, authzUser, scopeArraySorted, issuedTime,
                 refreshTokenIssuedTime, validityPeriodInMillis, refreshTokenValidityPeriodInMillis, tokenType,
                 authorizationCode);
