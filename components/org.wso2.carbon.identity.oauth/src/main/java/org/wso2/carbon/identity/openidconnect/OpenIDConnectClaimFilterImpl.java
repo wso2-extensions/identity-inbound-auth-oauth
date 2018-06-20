@@ -262,17 +262,28 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
             String oidcClaimUri = scopeClaim;
             boolean isAddressClaim = false;
             if (isAddressClaim(scopeClaim, addressScopeClaimUris)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Identified an address claim: " + scopeClaim + ". Removing \"address.\" prefix from " +
+                            "the claimUri");
+                }
                 oidcClaimUri = removeAddressPrefix(scopeClaim);
                 isAddressClaim = true;
             }
             // Check whether the user claims contain the permitted claim uri
             if (userClaimsInOIDCDialect.containsKey(oidcClaimUri)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Adding claim:" + oidcClaimUri + " into the filtered claims");
+                }
                 Object claimValue = userClaimsInOIDCDialect.get(oidcClaimUri);
                 // User claim is allowed for this scope.
                 if (isAddressClaim) {
                     addressScopeClaims.put(oidcClaimUri, claimValue);
                 } else {
                     filteredClaims.put(oidcClaimUri, claimValue);
+                }
+            } else {
+                if (log.isDebugEnabled()) {
+                    log.debug("No valid user claim value found for the claimUri:" + oidcClaimUri);
                 }
             }
         }
@@ -290,7 +301,7 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
      */
     private String removeAddressPrefix(String scopeClaim) {
 
-        return StringUtils.contains(scopeClaim, ADDRESS_PREFIX) ?
+        return StringUtils.startsWith(scopeClaim, ADDRESS_PREFIX) ?
                 StringUtils.substringAfterLast(scopeClaim, ADDRESS_PREFIX) : scopeClaim;
     }
 
