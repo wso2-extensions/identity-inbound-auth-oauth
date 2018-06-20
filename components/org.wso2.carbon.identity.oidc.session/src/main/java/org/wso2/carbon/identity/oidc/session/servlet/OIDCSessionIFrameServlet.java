@@ -30,15 +30,19 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionManagerException;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
+import org.wso2.carbon.utils.CarbonUtils;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.HashMap;
+import java.util.Map;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.HashMap;
-import java.util.Map;
 
 public class OIDCSessionIFrameServlet extends HttpServlet {
 
@@ -142,16 +146,32 @@ public class OIDCSessionIFrameServlet extends HttpServlet {
     }
 
     private void loadOPIFrame() {
+
         opIFrame = new StringBuilder();
+        Path opIframeHtmlPath = Paths
+                .get(CarbonUtils.getCarbonHome(), "repository", "resources", "identity", "pages", "op_iframe.html");
 
-        try (InputStream inputStream = getClass().getClassLoader().getResourceAsStream(OP_IFRAME_RESOURCE)) {
-            int i;
-            while ((i = inputStream.read()) > 0) {
-                opIFrame.append((char) i);
+        if (Files.exists(opIframeHtmlPath)) {
+            try (InputStream inputStream = Files.newInputStream(opIframeHtmlPath)) {
+                int i;
+                while ((i = inputStream.read()) > 0) {
+                    opIFrame.append((char) i);
+                }
+            } catch (IOException e) {
+                log.error("Failed to load OP IFrame", e);
             }
-
-        } catch (IOException e) {
-            log.error("Failed to load OP IFrame", e);
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug("Failed to load OP IFrame from external directory path: " + opIframeHtmlPath);
+            }
+            try (InputStream inputStream = getClass().getClassLoader().getResourceAsStream(OP_IFRAME_RESOURCE)) {
+                int i;
+                while ((i = inputStream.read()) > 0) {
+                    opIFrame.append((char) i);
+                }
+            } catch (IOException e) {
+                log.error("Failed to load OP IFrame", e);
+            }
         }
     }
 }
