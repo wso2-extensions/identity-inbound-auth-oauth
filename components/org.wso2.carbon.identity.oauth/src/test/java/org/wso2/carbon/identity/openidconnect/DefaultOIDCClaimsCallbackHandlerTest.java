@@ -174,6 +174,10 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
     private static final String LOCAL_COUNTRY_CLAIM_URI = "http://wso2.org/claims/country";
     private static final String LOCAL_STREET_CLAIM_URI = "http://wso2.org/claims/street";
     private static final String LOCAL_PROVINCE_CLAIM_URI = "http://wso2.org/claims/province";
+    private static final String LOCAL_DIVISION_CLAIM_URI = "http://wso2.org/claims/division";
+    private static final String LOCAL_DIVISION_CLAIM_WITH_PUNCUTATIONMARK_URI = "http://wso2.org/claims/division1";
+    private static final String LOCAL_DIVISION_CLAIM_WITH_PUNCUTATIONMARK_IN_URL_FORMAT_URI =
+            "http://wso2.org/claims/division2";
 
     // OIDC Claims
     private static final String EMAIL = "email";
@@ -187,6 +191,10 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
     private static final String COUNTRY = "country";
     private static final String STREET = "street";
     private static final String PROVINCE = "province";
+
+    private static final String DIVISION = "division";
+    private static final String DIVISION_WITH_DOT = "org.division";
+    private static final String DIVISION_WITH_DOT_IN_URL = "http://wso2.com.division";
 
     private static final String ROLE1 = "role1";
     private static final String ROLE2 = "role2";
@@ -673,6 +681,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
     @Test(dataProvider = "addressClaimData")
     public void testHandleCustomClaimsWithOAuthTokenReqMsgCtxtAddressClaim(Properties oidcProperties) throws Exception {
         try {
+
             PrivilegedCarbonContext.startTenantFlow();
             JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
             OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForLocalUser();
@@ -708,6 +717,57 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
         }
     }
 
+    @Test()
+    public void testHandleCustomClaimsWithOAuthTokenReqMsgCtxtWithPunctuationMarkInOIDCClaim()
+            throws Exception {
+        try {
+            PrivilegedCarbonContext.startTenantFlow();
+            JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
+            OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForLocalUser();
+
+            ClaimMapping claimMappings[] = new ClaimMapping[]{
+                    ClaimMapping.build(LOCAL_DIVISION_CLAIM_URI, DIVISION, "", true),
+                    ClaimMapping.build(LOCAL_DIVISION_CLAIM_WITH_PUNCUTATIONMARK_URI, DIVISION_WITH_DOT, "", true),
+                    ClaimMapping.build(LOCAL_DIVISION_CLAIM_WITH_PUNCUTATIONMARK_IN_URL_FORMAT_URI, DIVISION_WITH_DOT_IN_URL, "",
+                            true),
+                    ClaimMapping.build(LOCAL_COUNTRY_CLAIM_URI, ADDRESS_COUNTRY, "", true)
+            };
+
+            ServiceProvider serviceProvider = getSpWithRequestedClaimsMappings(claimMappings);
+            mockApplicationManagementService(serviceProvider);
+
+
+            Map<String, String> userClaims = new HashMap<>();
+            userClaims.put(LOCAL_DIVISION_CLAIM_URI, "Division 01");
+            userClaims.put(LOCAL_DIVISION_CLAIM_WITH_PUNCUTATIONMARK_URI, "Division 02");
+            userClaims.put(LOCAL_DIVISION_CLAIM_WITH_PUNCUTATIONMARK_IN_URL_FORMAT_URI, "Division 03");
+            userClaims.put(LOCAL_COUNTRY_CLAIM_URI, "LK");
+
+            // Define OIDC Scope properties
+            Properties oidcProperties = new Properties();
+            String[] oidcScopeClaims = new String[]{DIVISION, DIVISION_WITH_DOT, DIVISION_WITH_DOT_IN_URL, COUNTRY};
+            oidcProperties.setProperty(OIDC_SCOPE, StringUtils.join(oidcScopeClaims, ","));
+            mockOIDCScopeResource(oidcProperties);
+
+
+            UserRealm userRealm = getUserRealmWithUserClaims(userClaims);
+            mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm);
+            mockOIDCScopeResource(oidcProperties);
+            mockClaimHandler();
+
+            JWTClaimsSet jwtClaimsSet = defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSetBuilder, requestMsgCtx);
+
+            assertNotNull(jwtClaimsSet);
+            assertNotNull(jwtClaimsSet.getClaim(DIVISION));
+            assertNotNull(jwtClaimsSet.getClaim(DIVISION_WITH_DOT));
+            assertNotNull(jwtClaimsSet.getClaim(DIVISION_WITH_DOT_IN_URL));
+            assertNotNull(jwtClaimsSet.getClaim(COUNTRY));
+
+        } finally {
+            PrivilegedCarbonContext.endTenantFlow();
+        }
+    }
+
 
     private void mockClaimHandler() throws Exception {
 
@@ -721,6 +781,9 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
         claimMappings.put(STREET, LOCAL_STREET_CLAIM_URI);
         claimMappings.put(PROVINCE, LOCAL_PROVINCE_CLAIM_URI);
         claimMappings.put(COUNTRY, LOCAL_COUNTRY_CLAIM_URI);
+        claimMappings.put(DIVISION, LOCAL_DIVISION_CLAIM_URI);
+        claimMappings.put(DIVISION_WITH_DOT,LOCAL_DIVISION_CLAIM_WITH_PUNCUTATIONMARK_URI);
+        claimMappings.put(DIVISION_WITH_DOT_IN_URL, LOCAL_DIVISION_CLAIM_WITH_PUNCUTATIONMARK_IN_URL_FORMAT_URI);
 
         ClaimMetadataHandler claimMetadataHandler = spy(ClaimMetadataHandler.class);
         doReturn(claimMappings).when(claimMetadataHandler).getMappingsMapFromOtherDialectToCarbon(OIDC_DIALECT, null,
