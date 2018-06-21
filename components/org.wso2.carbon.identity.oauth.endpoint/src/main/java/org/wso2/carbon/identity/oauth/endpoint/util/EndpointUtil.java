@@ -67,6 +67,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MultivaluedMap;
 
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.HTTP_REQ_HEADER_AUTH_METHOD_BASIC;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
 
 public class EndpointUtil {
@@ -221,17 +222,22 @@ public class EndpointUtil {
         if (authorizationHeader == null) {
             throw new OAuthClientException("Authorization header value is null");
         }
+        String errMsg = "Error decoding authorization header. Space delimited \"<authMethod> <base64encoded" +
+                "(username:password)>\" format violated.";
         String[] splitValues = authorizationHeader.trim().split(" ");
         if (splitValues.length == 2) {
-            byte[] decodedBytes = Base64Utils.decode(splitValues[1].trim());
-            String userNamePassword = new String(decodedBytes, Charsets.UTF_8);
-            String[] credentials = userNamePassword.split(":");
-            if (credentials.length == 2) {
-                return credentials;
+            if (HTTP_REQ_HEADER_AUTH_METHOD_BASIC.equals(splitValues[0])) {
+                byte[] decodedBytes = Base64Utils.decode(splitValues[1].trim());
+                String userNamePassword = new String(decodedBytes, Charsets.UTF_8);
+                String[] credentials = userNamePassword.split(":");
+                if (credentials.length == 2) {
+                    return credentials;
+                }
+            } else {
+                errMsg = "Error decoding authorization header.Unsupported authentication type:" + splitValues[0] + "" +
+                        " is provided in the Authorization Header.";
             }
         }
-        String errMsg = "Error decoding authorization header. Space delimited \"<authMethod> <base64Hash>\" format " +
-                "violated.";
         throw new OAuthClientException(errMsg);
     }
 
