@@ -160,9 +160,11 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
     public Object[][] provideAuthzHeader() {
 
         String authzValue = "Basic " + Base64Utils.encode((username + ":" + password).getBytes());
+        String incorrectAuthzValue = "SomeValue " + Base64Utils.encode((username + ":" + password).getBytes());
 
         return new Object[][] {
                 { authzValue, username, null},
+                { incorrectAuthzValue, username, "Error decoding authorization header"},
                 { username, null, "Error decoding authorization header"},
                 { "Basic " + Base64Utils.encode(username.getBytes()), null, "Error decoding authorization header"},
                 { null, null, "Authorization header value is null"},
