@@ -40,6 +40,7 @@
     </scm>
 
     <modules>
+        <module>service-stubs/org.wso2.carbon.claim.metadata.mgt.stub</module>
         <module>test-utils/org.wso2.carbon.identity.oauth.common.testng</module>
         <module>components/org.wso2.carbon.identity.oauth</module>
         <module>components/org.wso2.carbon.identity.oauth.common</module>
@@ -68,6 +69,11 @@
                 <groupId>org.apache.felix</groupId>
                 <artifactId>org.apache.felix.scr.ds-annotations</artifactId>
                 <version>${apache.felix.scr.ds.annotations.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
+                <artifactId>org.wso2.carbon.claim.metadata.mgt.stub.depend</artifactId>
+                <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.wso2.eclipse.osgi</groupId>
@@ -812,6 +818,8 @@
         <h2database.version>1.0.60</h2database.version>
         <commons-codec.test.version>1.4</commons-codec.test.version>
         <org.wso2.carbon.identity.testutil.version>5.10.0</org.wso2.carbon.identity.testutil.version>
+
+        <claim.metadata.version.range>[5.0.0,7.0.0)</claim.metadata.version.range>
     </properties>
 
 </project>

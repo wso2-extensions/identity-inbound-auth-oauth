@@ -38,6 +38,10 @@
             <artifactId>axis2</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
+            <artifactId>org.wso2.carbon.claim.metadata.mgt.stub.depend</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.wso2.carbon</groupId>
             <artifactId>org.wso2.carbon.ui</artifactId>
         </dependency>
@@ -123,7 +127,9 @@
                             org.wso2.carbon.ui; version="${carbon.kernel.imp.pkg.version.range}",
                             org.wso2.carbon.ui.util; version="${carbon.kernel.imp.pkg.version.range}",
                             org.wso2.carbon.utils; version="${carbon.kernel.imp.pkg.version.range}",
-                            org.wso2.carbon.identity.core.util.*;version="${carbon.identity.framework.imp.pkg.version.range}"
+                            org.wso2.carbon.identity.claim.metadata.mgt.*; version="${claim.metadata.version.range}",
+                            org.wso2.carbon.identity.core.util.*;version="${carbon.identity.framework.imp.pkg.version.range}",
+
                         </Import-Package>
                         <Export-Package>
                             !org.wso2.carbon.identity.oauth.ui.internal,

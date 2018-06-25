@@ -31,19 +31,20 @@ import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataExcept
 import org.wso2.carbon.identity.claim.metadata.mgt.model.Claim;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
-import org.wso2.carbon.identity.openidconnect.model.Scope;
 import org.wso2.carbon.registry.api.RegistryException;
 import org.wso2.carbon.registry.api.Resource;
 import org.wso2.carbon.registry.core.service.RegistryService;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
@@ -98,9 +99,9 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
         Map<String, List<String>> scopeClaimsMap = new HashMap<>();
         int tenantId = IdentityTenantUtil.getTenantId(spTenantDomain);
         //load oidc scopes and mapped claims from the cache or db.
-        List<Scope> oidcScopeClaimList = getOIDCScopeCalimsList(tenantId);
-        for (Scope scope : oidcScopeClaimList) {
-            scopeClaimsMap.put(scope.getName(), scope.getClaim());
+        List<ScopeDTO> oidcScopeClaimList = getOIDCScopeCalimsList(tenantId);
+        for (ScopeDTO scope : oidcScopeClaimList) {
+            scopeClaimsMap.put(scope.getName(), Arrays.asList(scope.getClaim()));
         }
         if (MapUtils.isNotEmpty(scopeClaimsMap)) {
             List<String> addressScopeClaimUris = getAddressScopeClaimUris(scopeClaimsMap);
@@ -260,12 +261,11 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
         return propertiesToReturn;
     }
 
-    private List<Scope> getOIDCScopeCalimsList(int tenantId) {
+    private List<ScopeDTO> getOIDCScopeCalimsList(int tenantId) {
 
-        List<Scope> oidcScopesClaimsList = new ArrayList<>();
+        List<ScopeDTO> oidcScopesClaimsList = new ArrayList<>();
         try {
-            oidcScopesClaimsList = OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
-                    loadScopesClaimsMapping(tenantId);
+           oidcScopesClaimsList = OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().         loadScopesClaimsMapping(tenantId);
         } catch (IdentityOAuth2Exception e) {
             log.error("Error while loading oidc scopes and claims for the tenant: " + tenantId);
         }

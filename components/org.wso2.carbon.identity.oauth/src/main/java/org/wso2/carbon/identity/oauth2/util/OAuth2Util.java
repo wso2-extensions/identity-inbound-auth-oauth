@@ -73,6 +73,7 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dao.OAuthConsumerDAO;
+import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
@@ -82,7 +83,6 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.ClientCredentialDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
-import org.wso2.carbon.identity.openidconnect.model.Scope;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.registry.core.Registry;
 import org.wso2.carbon.registry.core.Resource;
@@ -463,17 +463,13 @@ public class OAuth2Util {
      * @return Whether hash feature is disabled or not.
      */
     public static boolean isHashDisabled() {
+
         boolean isHashEnabled = OAuthServerConfiguration.getInstance().isClientSecretHashEnabled();
         return !isHashEnabled;
 
     }
 
     /**
-     * @deprecated
-     *
-     * Authenticate the OAuth consumer and return the username of user which own the provided client id and client
-     * secret.
-     *
      * @param clientId             Consumer Key/Id
      * @param clientSecretProvided Consumer Secret issued during the time of registration
      * @return Username of the user which own client id and client secret if authentication is
@@ -1289,14 +1285,13 @@ public class OAuth2Util {
      */
     public static void initiateOIDCScopes(int tenantId) {
 
-        List<Scope> scopeClaimsList = loadScopeConfigFile();
+        List<ScopeDTO> scopeClaimsList = loadScopeConfigFile();
         try {
             OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().insertAllScopesAndClaims(tenantId,
                     scopeClaimsList);
         } catch (IdentityOAuth2Exception e) {
             log.error(e.getMessage(), e);
         }
-
     }
 
     public static List<String> getOIDCScopes(String tenantDomain) {
@@ -1487,9 +1482,9 @@ public class OAuth2Util {
         return spTokenTimeObject;
     }
 
-    private static List<Scope> loadScopeConfigFile() {
+    private static List<ScopeDTO> loadScopeConfigFile() {
 
-        List<Scope> listOIDCScopesClaims = new ArrayList<>();
+        List<ScopeDTO> listOIDCScopesClaims = new ArrayList<>();
         String configDirPath = CarbonUtils.getCarbonConfigDirPath();
         String confXml =
                 Paths.get(configDirPath, "identity", OAuthConstants.OIDC_SCOPE_CONFIG_PATH)
@@ -1510,7 +1505,7 @@ public class OAuth2Util {
             OMElement documentElement = builder.getDocumentElement();
             Iterator iterator = documentElement.getChildElements();
             while (iterator.hasNext()) {
-                Scope scope = new Scope();
+                ScopeDTO scope = new ScopeDTO();
                 OMElement omElement = (OMElement) iterator.next();
                 String configType = omElement.getAttributeValue(new QName(
                         "id"));
@@ -1537,7 +1532,23 @@ public class OAuth2Util {
         return listOIDCScopesClaims;
     }
 
-    private static List<String> loadClaimConfig(OMElement configElement) {
+    private static String[] loadClaimConfig(OMElement configElement) {
+
+        StringBuilder claimConfig = new StringBuilder();
+        Iterator it = configElement.getChildElements();
+        while (it.hasNext()) {
+            OMElement element = (OMElement) it.next();
+            if ("Claim".equals(element.getLocalName())) {
+                String commaSeparatedClaimNames = element.getText();
+                if (StringUtils.isNotBlank(commaSeparatedClaimNames)) {
+                    claimConfig.append(commaSeparatedClaimNames.trim());
+                }
+            }
+        }
+        return (claimConfig.toString().split(","));
+    }
+
+    private static List<String> loadClaimConfig1(OMElement configElement) {
 
         StringBuilder claimConfig = new StringBuilder();
         Iterator it = configElement.getChildElements();

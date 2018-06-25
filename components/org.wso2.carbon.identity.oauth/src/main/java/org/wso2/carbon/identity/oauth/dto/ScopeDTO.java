@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.wso2.carbon.identity.openidconnect.model;
+package org.wso2.carbon.identity.oauth.dto;
 
 import java.io.Serializable;
 import java.util.List;
@@ -22,11 +22,11 @@ import java.util.List;
  * The model representing an OIDC scope.
  */
 
-public class Scope implements Serializable {
+public class ScopeDTO implements Serializable {
 
     private static final long serialVersionUID = 6372165740005867083L;
     private String name;
-    private List<String> claim;
+    private String[] claim;
 
     public String getName() {
 
@@ -38,12 +38,12 @@ public class Scope implements Serializable {
         this.name = name;
     }
 
-    public List<String> getClaim() {
+    public String[] getClaim() {
 
         return claim;
     }
 
-    public void setClaim(List<String> claim) {
+    public void setClaim(String[] claim) {
 
         this.claim = claim;
     }

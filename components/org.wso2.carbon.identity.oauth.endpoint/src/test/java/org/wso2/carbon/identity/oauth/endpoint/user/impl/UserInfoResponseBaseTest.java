@@ -354,7 +354,6 @@ public class UserInfoResponseBaseTest extends PowerMockTestCase {
 
         final Map<String, Object> expectedClaimMapForCustomScope = new HashMap<>();
         expectedClaimMapForCustomScope.put(FIRST_NAME, FIRST_NAME_VALUE);
-        expectedClaimMapForCustomScope.put(CUSTOM_CLAIM, CUSTOM_CLAIM_VALUE);
 
         return new Object[][]{
                 // Input User Claims,

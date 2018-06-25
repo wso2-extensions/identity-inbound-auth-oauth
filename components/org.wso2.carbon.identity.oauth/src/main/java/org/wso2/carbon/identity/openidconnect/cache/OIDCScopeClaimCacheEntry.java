@@ -19,25 +19,25 @@
 package org.wso2.carbon.identity.openidconnect.cache;
 
 import org.wso2.carbon.identity.application.common.cache.CacheEntry;
-import org.wso2.carbon.identity.openidconnect.model.Scope;
+import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Cache Entry which will use in {@link OIDCScopeClaimCache}.
  */
 public class OIDCScopeClaimCacheEntry extends CacheEntry {
 
-    private List<Scope> scopeClaimMapping;
+    private List<ScopeDTO> scopeList;
 
-    public List<Scope> getList() {
+    public List<ScopeDTO> getScopeClaimMapping() {
 
-        return scopeClaimMapping;
+        return scopeList;
     }
 
-    public void setList(List<Scope> scopeClaimMapping) {
+    public void setScopeClaimMapping(List<ScopeDTO> scopeList) {
 
-        this.scopeClaimMapping = scopeClaimMapping;
+        this.scopeList = scopeList;
     }
-
 }
