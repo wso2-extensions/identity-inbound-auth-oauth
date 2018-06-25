@@ -849,7 +849,7 @@ public class OAuth2Util {
         long accessTokenValidity = getAccessTokenExpireMillis(accessTokenDO);
         long refreshTokenValidity = getRefreshTokenExpireTimeMillis(accessTokenDO);
 
-        if (accessTokenValidity > 1000 && refreshTokenValidity > 1000) {
+        if (accessTokenValidity > 1000 && (refreshTokenValidity > 1000 || refreshTokenValidity < 0)) {
             return accessTokenValidity;
         }
         return 0;
