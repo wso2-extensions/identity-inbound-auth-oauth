@@ -1520,11 +1520,11 @@ public class OAuth2Util {
             oauthIdentityTokenGenerator = OAuthServerConfiguration.getInstance()
                     .addAndReturnTokenIssuerInstance(appDO.getTokenType());
             if (oauthIdentityTokenGenerator == null) {
-                oauthIdentityTokenGenerator = OAuthServerConfiguration.getInstance()
-                        .getDefaultIdentityOauthTokenIssuer();
+                //get server level configured token issuer
+                oauthIdentityTokenGenerator = OAuthServerConfiguration.getInstance().getIdentityOauthTokenIssuer();
             }
         } else {
-            oauthIdentityTokenGenerator = OAuthServerConfiguration.getInstance().getDefaultIdentityOauthTokenIssuer();
+            oauthIdentityTokenGenerator = OAuthServerConfiguration.getInstance().getIdentityOauthTokenIssuer();
             if (log.isDebugEnabled()) {
                 log.debug("Token type is not set for service provider app with client Id: " +
                         appDO.getOauthConsumerKey() + ". Hence the default Identity OAuth token issuer will be used. "

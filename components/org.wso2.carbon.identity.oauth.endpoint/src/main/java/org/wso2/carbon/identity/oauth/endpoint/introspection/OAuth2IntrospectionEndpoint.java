@@ -45,21 +45,18 @@ public class OAuth2IntrospectionEndpoint {
     private final static String JWT_TOKEN_TYPE = "JWT";
 
     /**
-     * @param token access token or refresh token
+     * Token introspection endpoint
+     *
+     * @param token          access token or refresh token
+     * @param tokenTypeHint  hint for the type of the token submitted for introspection
+     * @param requiredClaims comma separated list of claims to be returned in JWT
+     * @param tokenIdentifierType    token issuer
      * @return
      */
     @POST
-    public Response introspect(@FormParam("token") String token) {
-        return introspect(token, DEFAULT_TOKEN_TYPE_HINT);
-    }
-
-    /**
-     * @param token         access token or refresh token
-     * @param tokenTypeHint hint for the type of the token submitted for introspection
-     * @return
-     */
-    @POST
-    public Response introspect(@FormParam("token") String token, @FormParam("token_type_hint") String tokenTypeHint) {
+    public Response introspect(@FormParam("token") String token,
+            @FormParam("token_type_hint") String tokenTypeHint, @FormParam("required_claims") String requiredClaims,
+            @FormParam("token_identifier_type") String tokenIdentifierType) {
 
         OAuth2TokenValidationRequestDTO introspectionRequest;
         OAuth2IntrospectionResponseDTO introspectionResponse;
@@ -81,6 +78,7 @@ public class OAuth2IntrospectionEndpoint {
         OAuth2TokenValidationRequestDTO.OAuth2AccessToken accessToken = introspectionRequest.new OAuth2AccessToken();
         accessToken.setIdentifier(token);
         accessToken.setTokenType(tokenTypeHint);
+        accessToken.setIssuer(tokenIdentifierType);
         introspectionRequest.setAccessToken(accessToken);
 
         OAuth2TokenValidationService tokenService = (OAuth2TokenValidationService) PrivilegedCarbonContext

@@ -39,7 +39,7 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
-import org.wso2.carbon.user.core.util.UserCoreUtil;
+
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -159,7 +159,7 @@ public class TokenValidationHandler {
         }
 
         try {
-            accessTokenDO = findAccessToken(requestDTO.getAccessToken().getIdentifier());
+            accessTokenDO = findAccessToken(requestDTO.getAccessToken());
         } catch (IllegalArgumentException e) {
             // Access token not found in the system.
             return buildClientAppErrorResponse(e.getMessage());
@@ -262,7 +262,7 @@ public class TokenValidationHandler {
         } else {
 
             try {
-                accessTokenDO = findAccessToken(validationRequest.getAccessToken().getIdentifier());
+                accessTokenDO = findAccessToken(validationRequest.getAccessToken());
             } catch (IllegalArgumentException e) {
                 // access token not found in the system.
                 return buildIntrospectionErrorResponse(e.getMessage());
@@ -477,34 +477,46 @@ public class TokenValidationHandler {
     }
 
     /**
-     * @param tokenIdentifier
+     * Find access token for token validation
+     *
+     * @param accessToken access token data object from the validation request
      * @return
      * @throws IdentityOAuth2Exception
      */
-    private AccessTokenDO findAccessToken(String tokenIdentifier) throws IdentityOAuth2Exception {
-        String consumerKey = null;
+    private AccessTokenDO findAccessToken(OAuth2TokenValidationRequestDTO.OAuth2AccessToken accessToken)
+            throws IdentityOAuth2Exception {
+
+        OauthTokenIssuer oauthTokenIssuer = null;
         try {
-            consumerKey = OAuth2Util.getClientIdForAccessToken(tokenIdentifier);
-            OauthTokenIssuer oauthTokenIssuer = OAuth2Util.getOAuthTokenIssuerForOAuthApp(consumerKey);
+            if (accessToken.getIssuer() != null) {
+                oauthTokenIssuer = OAuthServerConfiguration.getInstance()
+                        .addAndReturnTokenIssuerInstance(accessToken.getIssuer());
+            }
+
+            if (oauthTokenIssuer == null) {
+                //server level token issuer
+                oauthTokenIssuer = OAuthServerConfiguration.getInstance().getIdentityOauthTokenIssuer();
+                if (log.isDebugEnabled()) {
+                    log.debug("Invalid access token issuer type provided as: " + accessToken.getIssuer()
+                            + ". Hence default token issuer is used.");
+                }
+            }
 
             if (oauthTokenIssuer.usePersistedAccessTokenAlias()) {
-                return OAuth2Util
-                        .getAccessTokenDOfromTokenIdentifier(oauthTokenIssuer.getAccessTokenHash(tokenIdentifier));
+                return OAuth2Util.getAccessTokenDOfromTokenIdentifier(
+                        oauthTokenIssuer.getAccessTokenHash(accessToken.getIdentifier()));
             } else {
-                return OAuth2Util.getAccessTokenDOfromTokenIdentifier(tokenIdentifier);
+                return OAuth2Util.getAccessTokenDOfromTokenIdentifier(accessToken.getIdentifier());
             }
         } catch (OAuthSystemException e) {
             if (log.isDebugEnabled()) {
                 if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
-                    log.debug("Error while getting access token hash from token: " + tokenIdentifier, e);
+                    log.debug("Error while getting access token hash from token: " + accessToken.getIdentifier(), e);
                 } else {
                     log.debug("Error while getting access token hash.", e);
                 }
             }
             throw new IdentityOAuth2Exception("Error while getting access token hash.", e);
-        } catch (InvalidOAuthClientException e) {
-            throw new IdentityOAuth2Exception(
-                    "Error while retrieving oauth issuer for the app with clientId: " + consumerKey, e);
         }
     }
 

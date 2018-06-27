@@ -122,7 +122,7 @@ public class ResponseTypeHandlerUtil {
             String errorMsg = "Error when instantiating the OAuthIssuer for service provider app with client Id: " +
                     consumerKey + ". Defaulting to OAuthIssuerImpl";
             log.error(errorMsg, e);
-            oauthTokenIssuer = OAuthServerConfiguration.getInstance().getDefaultIdentityOauthTokenIssuer();
+            oauthTokenIssuer = OAuthServerConfiguration.getInstance().getIdentityOauthTokenIssuer();
         }
         return generateAccessToken(oauthAuthzMsgCtx, cacheEnabled, oauthTokenIssuer);
     }

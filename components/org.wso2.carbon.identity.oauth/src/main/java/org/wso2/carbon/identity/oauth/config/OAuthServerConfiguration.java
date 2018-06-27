@@ -496,7 +496,11 @@ public class OAuthServerConfiguration {
         return tokenValueGenerator;
     }
 
-    @Deprecated
+    /**
+     * Returns server level default identity oauth token issuer
+     *
+     * @return instance of default identity oauth token issuer
+     */
     public OauthTokenIssuer getIdentityOauthTokenIssuer() {
         if (oauthIdentityTokenGenerator == null) {
             synchronized (this) {
@@ -523,15 +527,6 @@ public class OAuthServerConfiguration {
             }
         }
         return oauthIdentityTokenGenerator;
-    }
-
-    public OauthTokenIssuer getDefaultIdentityOauthTokenIssuer() {
-
-        if (oauthIdentityTokenGenerator == null) {
-            return new OauthTokenIssuerImpl();
-        } else {
-            return oauthIdentityTokenGenerator;
-        }
     }
 
     public boolean usePersistedAccessTokenAlias() {
@@ -1919,23 +1914,23 @@ public class OAuthServerConfiguration {
      */
     public OauthTokenIssuer addAndReturnTokenIssuerInstance(String tokenType) throws IdentityOAuth2Exception {
 
-        String tokenTypeImplClass = supportedTokenIssuers.get(tokenType).getTokenImplClass();
+        TokenIssuerDO tokenIssuerDO = supportedTokenIssuers.get(tokenType);
         OauthTokenIssuer oauthTokenIssuer = null;
-        if (tokenTypeImplClass != null) {
+        if (tokenIssuerDO != null && tokenIssuerDO.getTokenImplClass() != null) {
             try {
                 if (oauthTokenIssuerMap.get(tokenType) == null) {
-                    Class clazz = this.getClass().getClassLoader().loadClass(tokenTypeImplClass);
+                    Class clazz = this.getClass().getClassLoader().loadClass(tokenIssuerDO.getTokenImplClass());
                     oauthTokenIssuer = (OauthTokenIssuer) clazz.newInstance();
                     oauthTokenIssuer.setPersistAccessTokenAlias(
                             supportedTokenIssuers.get(tokenType).isPersistAccessTokenAlias());
                     oauthTokenIssuerMap.put(tokenType, oauthTokenIssuer);
-                    log.info("An instance of " + tokenTypeImplClass
+                    log.info("An instance of " + tokenIssuerDO.getTokenImplClass()
                             + " is created for Identity OAuth token generation.");
                 } else {
                     oauthTokenIssuer = oauthTokenIssuerMap.get(tokenType);
                 }
             } catch (Exception e) {
-                String errorMsg = "Error when instantiating the OAuthIssuer : " + tokenTypeImplClass
+                String errorMsg = "Error when instantiating the OAuthIssuer : " + tokenIssuerDO.getTokenImplClass()
                         + ". Defaulting to OAuthIssuerImpl";
                 throw new IdentityOAuth2Exception(errorMsg, e);
             }
