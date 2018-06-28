@@ -717,7 +717,7 @@ public class OAuthAppDAO {
         }
     }
 
-    private boolean isDuplicateApplication(String username, int tenantId, String userDomain, OAuthAppDO
+    public boolean isDuplicateApplication(String username, int tenantId, String userDomain, OAuthAppDO
             consumerAppDTO)
             throws IdentityOAuthAdminException {
 
@@ -753,7 +753,7 @@ public class OAuthAppDAO {
         return isDuplicateApp;
     }
 
-    private boolean isDuplicateConsumer(String consumerKey) throws IdentityOAuthAdminException {
+    public boolean isDuplicateConsumer(String consumerKey) throws IdentityOAuthAdminException {
 
         boolean isDuplicateConsumer = false;
 
