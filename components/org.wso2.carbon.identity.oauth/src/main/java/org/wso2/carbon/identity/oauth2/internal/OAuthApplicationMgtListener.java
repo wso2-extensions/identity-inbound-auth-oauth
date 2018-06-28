@@ -21,17 +21,22 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
+import org.wso2.carbon.identity.application.common.IdentityApplicationManagementValidationException;
 import org.wso2.carbon.identity.application.common.model.InboundAuthenticationConfig;
 import org.wso2.carbon.identity.application.common.model.InboundAuthenticationRequestConfig;
 import org.wso2.carbon.identity.application.common.model.Property;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.application.mgt.listener.AbstractApplicationMgtListener;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
+import org.wso2.carbon.identity.oauth.OAuthAdminService;
+import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
@@ -39,14 +44,31 @@ import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dao.OAuthConsumerDAO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
+import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeValidator;
+import org.wso2.carbon.user.api.UserStoreException;
+import org.wso2.carbon.user.core.util.UserCoreUtil;
 
+import java.io.ByteArrayInputStream;
+import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.Marshaller;
+import javax.xml.bind.Unmarshaller;
+
 
 public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener {
     public static final String OAUTH2 = "oauth2";
@@ -62,6 +84,8 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
 
     public boolean doPreUpdateApplication(ServiceProvider serviceProvider, String tenantDomain, String userName)
             throws IdentityApplicationManagementException {
+
+        validateOAuthInbound(serviceProvider);
         storeSaaSPropertyValue(serviceProvider);
         removeClientSecret(serviceProvider);
         return true;
@@ -108,6 +132,83 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
             removeOauthConsumerAppProperties(serviceProvider, tenantDomain);
         }
         return true;
+    }
+
+    @Override
+    public void doImportServiceProvider(ServiceProvider serviceProvider) throws IdentityApplicationManagementException {
+
+        try {
+            if (serviceProvider.getInboundAuthenticationConfig() != null &&
+                    serviceProvider.getInboundAuthenticationConfig().getInboundAuthenticationRequestConfigs() != null) {
+
+                for (InboundAuthenticationRequestConfig authConfig : serviceProvider.getInboundAuthenticationConfig()
+                        .getInboundAuthenticationRequestConfigs()) {
+                    if (StringUtils.equals(authConfig.getInboundAuthType(), OAUTH) ||
+                            StringUtils.equals(authConfig.getInboundAuthType(), OAUTH2)) {
+                        String inboundConfiguration = authConfig.getInboundConfiguration();
+                        if (inboundConfiguration == null || "".equals(inboundConfiguration)) {
+                            String errorMSg = String.format("No inbound configurations found for oauth in the " +
+                                            "imported %s", serviceProvider.getApplicationName());
+                            throw new IdentityApplicationManagementException(errorMSg);
+                        }
+                        User owner = serviceProvider.getOwner();
+                        OAuthAppDO oAuthAppDO = marshelOAuthDO(authConfig.getInboundConfiguration(),
+                                serviceProvider.getApplicationName(), owner.getTenantDomain());
+                        oAuthAppDO.setUser(buildAuthenticatedUser(owner));
+
+                        if (oAuthAppDO.getOauthConsumerSecret() == null) {
+                            oAuthAppDO.setOauthConsumerSecret(OAuthUtil.getRandomNumber());
+                        }
+                        OAuthAppDAO dao = new OAuthAppDAO();
+                        if (dao.isDuplicateConsumer(oAuthAppDO.getOauthConsumerKey())) {
+                            dao.updateConsumerApplication(oAuthAppDO);
+                        } else {
+                            dao.addOAuthApplication(oAuthAppDO);
+                        }
+                        return;
+                    }
+                }
+            }
+        } catch (IdentityOAuthAdminException e) {
+            throw new IdentityApplicationManagementException("Error occurred when importing OAuth application ", e);
+        }
+    }
+
+    @Override
+    public void doExportServiceProvider(ServiceProvider serviceProvider, Boolean exportSecrets)
+            throws IdentityApplicationManagementException {
+
+        try {
+            if (serviceProvider.getInboundAuthenticationConfig() != null &&
+                    serviceProvider.getInboundAuthenticationConfig()
+                            .getInboundAuthenticationRequestConfigs() != null) {
+
+                for (InboundAuthenticationRequestConfig authConfig : serviceProvider.getInboundAuthenticationConfig()
+                        .getInboundAuthenticationRequestConfigs()) {
+                    if (StringUtils.equals(authConfig.getInboundAuthType(), OAUTH) ||
+                            StringUtils.equals(authConfig.getInboundAuthType(), OAUTH2)) {
+                        OAuthAppDAO dao = new OAuthAppDAO();
+                        OAuthAppDO authApplication = dao.getAppInformationByAppName(serviceProvider
+                                .getApplicationName());
+                        String tokenProcessorName = OAuthServerConfiguration.getInstance().getPersistenceProcessor()
+                                .getClass().getName();
+                        if (!"org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor"
+                                .equals(tokenProcessorName) || !exportSecrets) {
+                            authApplication.setOauthConsumerSecret(null);
+                        }
+
+                        Property[] properties = authConfig.getProperties();
+                        authConfig.setProperties(Arrays.stream(properties).filter(property ->
+                                !"oauthConsumerSecret".equals(property.getName())).toArray(Property[]::new));
+
+                        authConfig.setInboundConfiguration(unmarshelOAuthDO(authApplication));
+                        return;
+                    }
+                }
+            }
+        } catch (InvalidOAuthClientException | IdentityOAuth2Exception e) {
+            throw new IdentityApplicationManagementException("Error occurred when retrieving OAuth application ", e);
+        }
     }
 
     private void removeClientSecret(ServiceProvider serviceProvider) {
@@ -380,6 +481,187 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
         } catch (IdentityOAuthAdminException ex) {
             throw new IdentityApplicationManagementException("Error occurred while removing OIDC properties " +
                     "for application:" + serviceProvider.getApplicationName() + " in tenant domain: " + tenantDomain);
+        }
+    }
+
+    /**
+     * Validate Oauth inbound config.
+     *
+     * @param serviceProvider service provider.
+     * @throws IdentityApplicationManagementValidationException Identity Application Management Exception
+     */
+    private void validateOAuthInbound(ServiceProvider serviceProvider) throws
+            IdentityApplicationManagementValidationException {
+
+        List<String> validationMsg = new ArrayList<>();
+
+        if (serviceProvider.getInboundAuthenticationConfig() != null &&
+                serviceProvider.getInboundAuthenticationConfig().getInboundAuthenticationRequestConfigs() != null) {
+
+            for (InboundAuthenticationRequestConfig authConfig : serviceProvider.getInboundAuthenticationConfig()
+                    .getInboundAuthenticationRequestConfigs()) {
+                if (StringUtils.equals(authConfig.getInboundAuthType(), "oauth") ||
+                        StringUtils.equals(authConfig.getInboundAuthType(), "oauth2")) {
+                    String inboundConfiguration = authConfig.getInboundConfiguration();
+                    if (inboundConfiguration == null) {
+                        return;
+                    }
+                    String inboundAuthKey = authConfig.getInboundAuthKey();
+                    OAuthAppDAO dao = new OAuthAppDAO();
+                    OAuthAppDO oAuthAppDO;
+
+                    String tenantDomain = serviceProvider.getOwner().getTenantDomain();
+                    String userName = serviceProvider.getOwner().getUserName();
+
+                    try {
+                        oAuthAppDO = marshelOAuthDO(inboundConfiguration,
+                                serviceProvider.getApplicationName(), tenantDomain);
+                    } catch (IdentityApplicationManagementException e) {
+                        validationMsg.add("OAuth inbound configuration in the file is not valid.");
+                        break;
+                    }
+                    if (!inboundAuthKey.equals(oAuthAppDO.getOauthConsumerKey())) {
+                        validationMsg.add(String.format("The Inbound Auth Key of the  application name %s " +
+                                        "is not match with Oauth Consumer Key %s.", authConfig.getInboundAuthKey(),
+                                oAuthAppDO.getOauthConsumerKey()));
+                    }
+                    try {
+                        if (dao.isDuplicateConsumer(inboundAuthKey)) {
+                            try {
+                                OAuthAppDO appInformation = dao.getAppInformation(inboundAuthKey);
+                                if (!appInformation.getApplicationName().equals(serviceProvider.getApplicationName())) {
+                                    validationMsg.add(String.format("There is already an oauth application %s " +
+                                                    "available with %s as consumer key",
+                                            appInformation.getApplicationName(), inboundAuthKey));
+                                }
+                            } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+                                // Do nothing, the application does exists.
+                            }
+                        } else if (dao.isDuplicateApplication(userName, IdentityTenantUtil.getTenantId(tenantDomain),
+                                tenantDomain, oAuthAppDO)) {
+                            validationMsg.add(String.format("There is already an oauth application available with" +
+                                    " %s as application name", oAuthAppDO.getApplicationName()));
+                        }
+                    } catch (IdentityOAuthAdminException e) {
+                        // Do nothing, the key does exists.
+                    }
+
+                    if ((oAuthAppDO.getGrantTypes().contains(OAuthConstants.GrantTypes.AUTHORIZATION_CODE)
+                            || oAuthAppDO.getGrantTypes().contains(OAuthConstants.GrantTypes.IMPLICIT))
+                            && StringUtils.isEmpty(oAuthAppDO.getCallbackUrl())) {
+                        validationMsg.add("Callback Url is required for Code or Implicit grant types");
+                    }
+
+                    validateScopeValidators(oAuthAppDO.getScopeValidators(), validationMsg);
+
+                    if (OAuthConstants.OAuthVersions.VERSION_2.equals(oAuthAppDO.getOauthVersion())) {
+                        validateGrants(oAuthAppDO.getGrantTypes().split("\\s"), validationMsg);
+                    }
+
+                    break;
+                }
+            }
+        }
+        if (!validationMsg.isEmpty()) {
+            throw new IdentityApplicationManagementValidationException(validationMsg.toArray(new String[0]));
+        }
+    }
+
+    /**
+     * Validate requested grants in the oauth app.
+     *
+     * @param requestedGrants list of requested grants
+     * @param validationMsg      validation msg list
+     */
+    private void validateGrants(String[] requestedGrants, List<String> validationMsg) {
+
+        OAuthAdminService oAuthAdminService = new OAuthAdminService();
+        List<String> allowedGrants = new ArrayList<>(Arrays.asList(oAuthAdminService.getAllowedGrantTypes()));
+        for (String requestedGrant : requestedGrants) {
+            if (StringUtils.isBlank(requestedGrant)) {
+                continue;
+            }
+            if (!allowedGrants.contains(requestedGrant)) {
+                validationMsg.add(String.format("Grant type %s not allowed", requestedGrant));
+            }
+        }
+    }
+
+    /**
+     * Validate scope validators in the oauth app.
+     *
+     * @param appScopeValidators list of scope validators
+     * @param validationMsg      validation msg list
+     */
+    private void validateScopeValidators(String[] appScopeValidators, List<String> validationMsg) {
+
+        OAuthAdminService oAuthAdminService = new OAuthAdminService();
+        List<String> scopeValidators = new ArrayList<>(Arrays.asList(oAuthAdminService.getAllowedScopeValidators()));
+        Arrays.stream(appScopeValidators).forEach(validator -> {
+            if (!scopeValidators.contains(validator)) {
+                validationMsg.add(String.format("The scope validator %s is not available in the " +
+                        "server configuration. ", validator));
+            }
+        });
+    }
+
+    /**
+     * Creates authenticated user obj form user obj.
+     *
+     * @param user user
+     * @return authenticated user
+     */
+    private AuthenticatedUser buildAuthenticatedUser(User user) {
+
+        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+        authenticatedUser.setUserName(user.getUserName());
+        authenticatedUser.setTenantDomain(user.getTenantDomain());
+        authenticatedUser.setUserStoreDomain(user.getUserStoreDomain());
+        return authenticatedUser;
+    }
+
+    /**
+     * Unmarshal oauth application to string.
+     *
+     * @param authApplication oauth application to be marshaled
+     * @return string
+     * @throws IdentityApplicationManagementException Identity Application Management Exception
+     */
+    private String unmarshelOAuthDO(OAuthAppDO authApplication) throws IdentityApplicationManagementException {
+
+        try {
+            JAXBContext jaxbContext = JAXBContext.newInstance(OAuthAppDO.class);
+            Marshaller jaxbMarshaller = jaxbContext.createMarshaller();
+            jaxbMarshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
+            StringWriter sw = new StringWriter();
+            jaxbMarshaller.marshal(authApplication, sw);
+            return sw.toString();
+        } catch (JAXBException e) {
+            throw new IdentityApplicationManagementException(String.format("Error in exporting OAuth application " +
+                    "%s@%s", authApplication.getApplicationName(), authApplication.getUser().getTenantDomain()), e);
+        }
+    }
+
+    /**
+     * Marshel oauth application.
+     *
+     * @param authConfig          xml of the oauth app
+     * @param serviceProviderName service provider name
+     * @param tenantDomain        tenant domain
+     * @return OAuthAppDO
+     * @throws IdentityApplicationManagementException Identity Application Management Exception
+     */
+    private OAuthAppDO marshelOAuthDO(String authConfig, String serviceProviderName, String tenantDomain) throws
+            IdentityApplicationManagementException {
+
+        try {
+            JAXBContext jaxbContext = JAXBContext.newInstance(OAuthAppDO.class);
+            Unmarshaller unmarshaller = jaxbContext.createUnmarshaller();
+            return (OAuthAppDO) unmarshaller.unmarshal(new ByteArrayInputStream(
+                    authConfig.getBytes(StandardCharsets.UTF_8)));
+        } catch (JAXBException e) {
+            throw new IdentityApplicationManagementException(String.format("Error in unmarshelling OAuth application " +
+                    "%s@%s", serviceProviderName, tenantDomain), e);
         }
     }
 }
