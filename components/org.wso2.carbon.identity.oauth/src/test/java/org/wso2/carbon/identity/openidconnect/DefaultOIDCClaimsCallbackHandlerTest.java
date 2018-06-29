@@ -852,9 +852,8 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
             JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx);
 
             assertNotNull(jwtClaimsSet);
-            assertNotNull(jwtClaimsSet.getClaim(DIVISION));
             assertNotNull(jwtClaimsSet.getClaim(DIVISION_WITH_DOT));
-           // assertNotNull(jwtClaimsSet.getClaim(DIVISION_WITH_DOT_IN_URL));
+            //assertNotNull(jwtClaimsSet.getClaim(DIVISION_WITH_DOT_IN_URL));
 
     }
 

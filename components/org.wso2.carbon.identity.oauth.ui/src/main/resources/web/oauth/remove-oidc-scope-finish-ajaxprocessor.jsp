@@ -29,13 +29,7 @@
 <%@ page import="java.text.MessageFormat" %>
 <%@ page import="static org.wso2.carbon.identity.oauth.ui.util.OAuthUIConstants.SCOPE_NAME" %>
 <jsp:include page="../dialog/display_messages.jsp"/>
-
-<fmt:bundle
-        basename="org.wso2.carbon.consent.mgt.ui.i18n.Resources">
-    <carbon:breadcrumb label="consent.mgt"
-                       resourceBundle="org.wso2.carbon.consents.mgt.ui.i18n.Resources"
-                       topPage="true" request="<%=request%>"/>
-    
+ 
     <div id="middle">
         <div id="workArea">
             
@@ -46,10 +40,9 @@
                     return;
                 }
                 
-                String forwardTo = null;
-                String BUNDLE = "org.wso2.carbon.consent.mgt.ui.i18n.Resources";
+                String forwardTo = "list-oidc-scopes.jsp";
+                String BUNDLE = "org.wso2.carbon.identity.oauth.ui.i18n.Resources";
                 ResourceBundle resourceBundle = ResourceBundle.getBundle(BUNDLE, request.getLocale());
-                
                 String scopeName = request.getParameter(SCOPE_NAME);
                 
                 try {
@@ -60,12 +53,10 @@
                             config.getServletContext().getAttribute(CarbonConstants.CONFIGURATION_CONTEXT);
                     String cookie = (String) session.getAttribute(ServerConstants.ADMIN_SERVICE_COOKIE);
                     OAuthAdminClient oAuthAdminClient = new OAuthAdminClient(cookie, serverURL, configContext);
-                    oAuthAdminClient.deleteOIDCScopesAndClaimsByScope(scopeName, tenantId);
-                    forwardTo = "list-oidc-scopes.jsp";
+                    oAuthAdminClient.deleteScope(scopeName, tenantId);
                 } catch (Exception e) {
                     String message = MessageFormat.format(resourceBundle.getString("error.while.deleting.scope"), scopeName);
                     CarbonUIMessage.sendCarbonUIMessage(message, CarbonUIMessage.ERROR, request, e);
-                    forwardTo = "list-oidc-scopes.jsp";
                 }
             %>
             
@@ -79,4 +70,3 @@
         
         </div>
     </div>
-</fmt:bundle>

@@ -12,6 +12,28 @@
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
+            <xs:element name="addScope">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element minOccurs="0" name="tenantId" type="xs:int"/>
+                        <xs:element maxOccurs="unbounded" minOccurs="0" name="oidcScopeClaimMap" nillable="true" type="ax2402:ScopeDTO"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="getScopes">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element minOccurs="0" name="tenantId" type="xs:int"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="getScopesResponse">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element maxOccurs="unbounded" minOccurs="0" name="return" nillable="true" type="xs:string"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
             <xs:element name="registerOAuthConsumer">
                 <xs:complexType>
                     <xs:sequence/>
@@ -118,29 +140,21 @@
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
-            <xs:element name="addOIDCScopesAndClaims">
-                <xs:complexType>
-                    <xs:sequence>
-                        <xs:element minOccurs="0" name="tenantId" type="xs:int"/>
-                        <xs:element maxOccurs="unbounded" minOccurs="0" name="oidcScopeClaimMap" nillable="true" type="ax2402:ScopeDTO"/>
-                    </xs:sequence>
-                </xs:complexType>
-            </xs:element>
-            <xs:element name="loadAllODCScopesAndClaims">
+            <xs:element name="getScopesClaims">
                 <xs:complexType>
                     <xs:sequence>
                         <xs:element minOccurs="0" name="tenantId" type="xs:int"/>
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
-            <xs:element name="loadAllODCScopesAndClaimsResponse">
+            <xs:element name="getScopesClaimsResponse">
                 <xs:complexType>
                     <xs:sequence>
                         <xs:element maxOccurs="unbounded" minOccurs="0" name="return" nillable="true" type="ax2402:ScopeDTO"/>
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
-            <xs:element name="deleteScopeAndClaimsByScope">
+            <xs:element name="deleteScope">
                 <xs:complexType>
                     <xs:sequence>
                         <xs:element minOccurs="0" name="scope" nillable="true" type="xs:string"/>
@@ -148,21 +162,7 @@
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
-            <xs:element name="loadAllODCScopes">
-                <xs:complexType>
-                    <xs:sequence>
-                        <xs:element minOccurs="0" name="tenantId" type="xs:int"/>
-                    </xs:sequence>
-                </xs:complexType>
-            </xs:element>
-            <xs:element name="loadAllODCScopesResponse">
-                <xs:complexType>
-                    <xs:sequence>
-                        <xs:element maxOccurs="unbounded" minOccurs="0" name="return" nillable="true" type="xs:string"/>
-                    </xs:sequence>
-                </xs:complexType>
-            </xs:element>
-            <xs:element name="loadAllODCClaims">
+            <xs:element name="getClaimByScope">
                 <xs:complexType>
                     <xs:sequence>
                         <xs:element minOccurs="0" name="tenantId" type="xs:int"/>
@@ -170,7 +170,7 @@
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
-            <xs:element name="loadAllODCClaimsResponse">
+            <xs:element name="getClaimByScopeResponse">
                 <xs:complexType>
                     <xs:sequence>
                         <xs:element maxOccurs="unbounded" minOccurs="0" name="return" nillable="true" type="xs:string"/>
@@ -184,16 +184,17 @@
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
-            <xs:element name="addNewClaimsForExistingScope">
+            <xs:element name="updateScope">
                 <xs:complexType>
                     <xs:sequence>
                         <xs:element minOccurs="0" name="scope" nillable="true" type="xs:string"/>
                         <xs:element maxOccurs="unbounded" minOccurs="0" name="claims" nillable="true" type="xs:string"/>
                         <xs:element minOccurs="0" name="tenantId" type="xs:int"/>
+                        <xs:element minOccurs="0" name="isAdd" type="xs:boolean"/>
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
-            <xs:element name="loadScopeId">
+            <xs:element name="isScopeExist">
                 <xs:complexType>
                     <xs:sequence>
                         <xs:element minOccurs="0" name="tenantId" type="xs:int"/>
@@ -201,23 +202,7 @@
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
-            <xs:element name="loadScopeIdResponse">
-                <xs:complexType>
-                    <xs:sequence>
-                        <xs:element minOccurs="0" name="return" type="xs:int"/>
-                    </xs:sequence>
-                </xs:complexType>
-            </xs:element>
-            <xs:element name="isScopeClaimMappingExisting">
-                <xs:complexType>
-                    <xs:sequence>
-                        <xs:element minOccurs="0" name="scope" nillable="true" type="xs:string"/>
-                        <xs:element minOccurs="0" name="claim" nillable="true" type="xs:string"/>
-                        <xs:element minOccurs="0" name="tenantId" type="xs:int"/>
-                    </xs:sequence>
-                </xs:complexType>
-            </xs:element>
-            <xs:element name="isScopeClaimMappingExistingResponse">
+            <xs:element name="isScopeExistResponse">
                 <xs:complexType>
                     <xs:sequence>
                         <xs:element minOccurs="0" name="return" type="xs:boolean"/>
@@ -390,6 +375,12 @@
             </xs:complexType>
         </xs:schema>
         <xs:schema attributeFormDefault="qualified" elementFormDefault="qualified" targetNamespace="http://dto.oauth.identity.carbon.wso2.org/xsd">
+            <xs:complexType name="ScopeDTO">
+                <xs:sequence>
+                    <xs:element maxOccurs="unbounded" minOccurs="0" name="claim" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="name" nillable="true" type="xs:string"/>
+                </xs:sequence>
+            </xs:complexType>
             <xs:complexType name="OAuthConsumerAppDTO">
                 <xs:sequence>
                     <xs:element minOccurs="0" name="OAuthVersion" nillable="true" type="xs:string"/>
@@ -413,12 +404,6 @@
                     <xs:element minOccurs="0" name="state" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="userAccessTokenExpiryTime" type="xs:long"/>
                     <xs:element minOccurs="0" name="username" nillable="true" type="xs:string"/>
-                </xs:sequence>
-            </xs:complexType>
-            <xs:complexType name="ScopeDTO">
-                <xs:sequence>
-                    <xs:element maxOccurs="unbounded" minOccurs="0" name="claim" nillable="true" type="xs:string"/>
-                    <xs:element minOccurs="0" name="name" nillable="true" type="xs:string"/>
                 </xs:sequence>
             </xs:complexType>
             <xs:complexType name="OAuthRevocationRequestDTO">
@@ -499,23 +484,17 @@
     <wsdl:message name="getOAuthApplicationDataResponse">
         <wsdl:part name="parameters" element="ns1:getOAuthApplicationDataResponse"/>
     </wsdl:message>
-    <wsdl:message name="isPKCESupportEnabledRequest">
-        <wsdl:part name="parameters" element="ns1:isPKCESupportEnabled"/>
-    </wsdl:message>
-    <wsdl:message name="isPKCESupportEnabledResponse">
-        <wsdl:part name="parameters" element="ns1:isPKCESupportEnabledResponse"/>
-    </wsdl:message>
     <wsdl:message name="getOauthApplicationStateRequest">
         <wsdl:part name="parameters" element="ns1:getOauthApplicationState"/>
     </wsdl:message>
     <wsdl:message name="getOauthApplicationStateResponse">
         <wsdl:part name="parameters" element="ns1:getOauthApplicationStateResponse"/>
     </wsdl:message>
-    <wsdl:message name="isScopeClaimMappingExistingRequest">
-        <wsdl:part name="parameters" element="ns1:isScopeClaimMappingExisting"/>
+    <wsdl:message name="isPKCESupportEnabledRequest">
+        <wsdl:part name="parameters" element="ns1:isPKCESupportEnabled"/>
     </wsdl:message>
-    <wsdl:message name="isScopeClaimMappingExistingResponse">
-        <wsdl:part name="parameters" element="ns1:isScopeClaimMappingExistingResponse"/>
+    <wsdl:message name="isPKCESupportEnabledResponse">
+        <wsdl:part name="parameters" element="ns1:isPKCESupportEnabledResponse"/>
     </wsdl:message>
     <wsdl:message name="getOAuthApplicationDataByAppNameRequest">
         <wsdl:part name="parameters" element="ns1:getOAuthApplicationDataByAppName"/>
@@ -527,11 +506,8 @@
         <wsdl:part name="parameters" element="ns1:updateConsumerApplication"/>
     </wsdl:message>
     <wsdl:message name="updateConsumerApplicationResponse"/>
-    <wsdl:message name="loadScopeIdRequest">
-        <wsdl:part name="parameters" element="ns1:loadScopeId"/>
-    </wsdl:message>
-    <wsdl:message name="loadScopeIdResponse">
-        <wsdl:part name="parameters" element="ns1:loadScopeIdResponse"/>
+    <wsdl:message name="addScopeRequest">
+        <wsdl:part name="parameters" element="ns1:addScope"/>
     </wsdl:message>
     <wsdl:message name="registerOAuthConsumerRequest">
         <wsdl:part name="parameters" element="ns1:registerOAuthConsumer"/>
@@ -549,8 +525,23 @@
         <wsdl:part name="parameters" element="ns1:updateConsumerAppState"/>
     </wsdl:message>
     <wsdl:message name="updateConsumerAppStateResponse"/>
+    <wsdl:message name="isScopeExistRequest">
+        <wsdl:part name="parameters" element="ns1:isScopeExist"/>
+    </wsdl:message>
+    <wsdl:message name="isScopeExistResponse">
+        <wsdl:part name="parameters" element="ns1:isScopeExistResponse"/>
+    </wsdl:message>
+    <wsdl:message name="deleteScopeRequest">
+        <wsdl:part name="parameters" element="ns1:deleteScope"/>
+    </wsdl:message>
     <wsdl:message name="getAudiencesRequest"/>
     <wsdl:message name="getAudiencesResponse"/>
+    <wsdl:message name="getScopesClaimsRequest">
+        <wsdl:part name="parameters" element="ns1:getScopesClaims"/>
+    </wsdl:message>
+    <wsdl:message name="getScopesClaimsResponse">
+        <wsdl:part name="parameters" element="ns1:getScopesClaimsResponse"/>
+    </wsdl:message>
     <wsdl:message name="getAllowedScopeValidatorsRequest">
         <wsdl:part name="parameters" element="ns1:getAllowedScopeValidators"/>
     </wsdl:message>
@@ -569,8 +560,17 @@
     <wsdl:message name="getAppsAuthorizedByUserResponse">
         <wsdl:part name="parameters" element="ns1:getAppsAuthorizedByUserResponse"/>
     </wsdl:message>
-    <wsdl:message name="deleteScopeAndClaimsByScopeRequest">
-        <wsdl:part name="parameters" element="ns1:deleteScopeAndClaimsByScope"/>
+    <wsdl:message name="updateScopeRequest">
+        <wsdl:part name="parameters" element="ns1:updateScope"/>
+    </wsdl:message>
+    <wsdl:message name="OAuthAdminServiceIdentityOAuth2Exception">
+        <wsdl:part name="parameters" element="ns1:OAuthAdminServiceIdentityOAuth2Exception"/>
+    </wsdl:message>
+    <wsdl:message name="getClaimByScopeRequest">
+        <wsdl:part name="parameters" element="ns1:getClaimByScope"/>
+    </wsdl:message>
+    <wsdl:message name="getClaimByScopeResponse">
+        <wsdl:part name="parameters" element="ns1:getClaimByScopeResponse"/>
     </wsdl:message>
     <wsdl:message name="getTokenExpiryTimesRequest">
         <wsdl:part name="parameters" element="ns1:getTokenExpiryTimes"/>
@@ -578,38 +578,17 @@
     <wsdl:message name="getTokenExpiryTimesResponse">
         <wsdl:part name="parameters" element="ns1:getTokenExpiryTimesResponse"/>
     </wsdl:message>
-    <wsdl:message name="loadAllODCScopesAndClaimsRequest">
-        <wsdl:part name="parameters" element="ns1:loadAllODCScopesAndClaims"/>
+    <wsdl:message name="getScopesRequest">
+        <wsdl:part name="parameters" element="ns1:getScopes"/>
     </wsdl:message>
-    <wsdl:message name="loadAllODCScopesAndClaimsResponse">
-        <wsdl:part name="parameters" element="ns1:loadAllODCScopesAndClaimsResponse"/>
-    </wsdl:message>
-    <wsdl:message name="loadAllODCClaimsRequest">
-        <wsdl:part name="parameters" element="ns1:loadAllODCClaims"/>
-    </wsdl:message>
-    <wsdl:message name="loadAllODCClaimsResponse">
-        <wsdl:part name="parameters" element="ns1:loadAllODCClaimsResponse"/>
-    </wsdl:message>
-    <wsdl:message name="addNewClaimsForExistingScopeRequest">
-        <wsdl:part name="parameters" element="ns1:addNewClaimsForExistingScope"/>
-    </wsdl:message>
-    <wsdl:message name="OAuthAdminServiceIdentityOAuth2Exception">
-        <wsdl:part name="parameters" element="ns1:OAuthAdminServiceIdentityOAuth2Exception"/>
+    <wsdl:message name="getScopesResponse">
+        <wsdl:part name="parameters" element="ns1:getScopesResponse"/>
     </wsdl:message>
     <wsdl:message name="revokeAuthzForAppsByResoureOwnerRequest">
         <wsdl:part name="parameters" element="ns1:revokeAuthzForAppsByResoureOwner"/>
     </wsdl:message>
     <wsdl:message name="revokeAuthzForAppsByResoureOwnerResponse">
         <wsdl:part name="parameters" element="ns1:revokeAuthzForAppsByResoureOwnerResponse"/>
-    </wsdl:message>
-    <wsdl:message name="loadAllODCScopesRequest">
-        <wsdl:part name="parameters" element="ns1:loadAllODCScopes"/>
-    </wsdl:message>
-    <wsdl:message name="loadAllODCScopesResponse">
-        <wsdl:part name="parameters" element="ns1:loadAllODCScopesResponse"/>
-    </wsdl:message>
-    <wsdl:message name="addOIDCScopesAndClaimsRequest">
-        <wsdl:part name="parameters" element="ns1:addOIDCScopesAndClaims"/>
     </wsdl:message>
     <wsdl:message name="getSupportedIDTokenAlgorithmsRequest">
         <wsdl:part name="parameters" element="ns1:getSupportedIDTokenAlgorithms"/>
@@ -656,19 +635,14 @@
             <wsdl:output message="tns:getOAuthApplicationDataResponse" wsaw:Action="urn:getOAuthApplicationDataResponse"/>
             <wsdl:fault message="tns:OAuthAdminServiceIdentityOAuthAdminException" name="OAuthAdminServiceIdentityOAuthAdminException" wsaw:Action="urn:getOAuthApplicationDataOAuthAdminServiceIdentityOAuthAdminException"/>
         </wsdl:operation>
-        <wsdl:operation name="isPKCESupportEnabled">
-            <wsdl:input message="tns:isPKCESupportEnabledRequest" wsaw:Action="urn:isPKCESupportEnabled"/>
-            <wsdl:output message="tns:isPKCESupportEnabledResponse" wsaw:Action="urn:isPKCESupportEnabledResponse"/>
-        </wsdl:operation>
         <wsdl:operation name="getOauthApplicationState">
             <wsdl:input message="tns:getOauthApplicationStateRequest" wsaw:Action="urn:getOauthApplicationState"/>
             <wsdl:output message="tns:getOauthApplicationStateResponse" wsaw:Action="urn:getOauthApplicationStateResponse"/>
             <wsdl:fault message="tns:OAuthAdminServiceIdentityOAuthAdminException" name="OAuthAdminServiceIdentityOAuthAdminException" wsaw:Action="urn:getOauthApplicationStateOAuthAdminServiceIdentityOAuthAdminException"/>
         </wsdl:operation>
-        <wsdl:operation name="isScopeClaimMappingExisting">
-            <wsdl:input message="tns:isScopeClaimMappingExistingRequest" wsaw:Action="urn:isScopeClaimMappingExisting"/>
-            <wsdl:output message="tns:isScopeClaimMappingExistingResponse" wsaw:Action="urn:isScopeClaimMappingExistingResponse"/>
-            <wsdl:fault message="tns:OAuthAdminServiceIdentityOAuthAdminException" name="OAuthAdminServiceIdentityOAuthAdminException" wsaw:Action="urn:isScopeClaimMappingExistingOAuthAdminServiceIdentityOAuthAdminException"/>
+        <wsdl:operation name="isPKCESupportEnabled">
+            <wsdl:input message="tns:isPKCESupportEnabledRequest" wsaw:Action="urn:isPKCESupportEnabled"/>
+            <wsdl:output message="tns:isPKCESupportEnabledResponse" wsaw:Action="urn:isPKCESupportEnabledResponse"/>
         </wsdl:operation>
         <wsdl:operation name="getOAuthApplicationDataByAppName">
             <wsdl:input message="tns:getOAuthApplicationDataByAppNameRequest" wsaw:Action="urn:getOAuthApplicationDataByAppName"/>
@@ -680,10 +654,9 @@
             <wsdl:output message="tns:updateConsumerApplicationResponse" wsaw:Action="urn:updateConsumerApplicationResponse"/>
             <wsdl:fault message="tns:OAuthAdminServiceIdentityOAuthAdminException" name="OAuthAdminServiceIdentityOAuthAdminException" wsaw:Action="urn:updateConsumerApplicationOAuthAdminServiceIdentityOAuthAdminException"/>
         </wsdl:operation>
-        <wsdl:operation name="loadScopeId">
-            <wsdl:input message="tns:loadScopeIdRequest" wsaw:Action="urn:loadScopeId"/>
-            <wsdl:output message="tns:loadScopeIdResponse" wsaw:Action="urn:loadScopeIdResponse"/>
-            <wsdl:fault message="tns:OAuthAdminServiceIdentityOAuthAdminException" name="OAuthAdminServiceIdentityOAuthAdminException" wsaw:Action="urn:loadScopeIdOAuthAdminServiceIdentityOAuthAdminException"/>
+        <wsdl:operation name="addScope">
+            <wsdl:input message="tns:addScopeRequest" wsaw:Action="urn:addScope"/>
+            <wsdl:fault message="tns:OAuthAdminServiceIdentityOAuthAdminException" name="OAuthAdminServiceIdentityOAuthAdminException" wsaw:Action="urn:addScopeOAuthAdminServiceIdentityOAuthAdminException"/>
         </wsdl:operation>
         <wsdl:operation name="registerOAuthConsumer">
             <wsdl:input message="tns:registerOAuthConsumerRequest" wsaw:Action="urn:registerOAuthConsumer"/>
@@ -700,9 +673,23 @@
             <wsdl:output message="tns:updateConsumerAppStateResponse" wsaw:Action="urn:updateConsumerAppStateResponse"/>
             <wsdl:fault message="tns:OAuthAdminServiceIdentityOAuthAdminException" name="OAuthAdminServiceIdentityOAuthAdminException" wsaw:Action="urn:updateConsumerAppStateOAuthAdminServiceIdentityOAuthAdminException"/>
         </wsdl:operation>
+        <wsdl:operation name="isScopeExist">
+            <wsdl:input message="tns:isScopeExistRequest" wsaw:Action="urn:isScopeExist"/>
+            <wsdl:output message="tns:isScopeExistResponse" wsaw:Action="urn:isScopeExistResponse"/>
+            <wsdl:fault message="tns:OAuthAdminServiceIdentityOAuthAdminException" name="OAuthAdminServiceIdentityOAuthAdminException" wsaw:Action="urn:isScopeExistOAuthAdminServiceIdentityOAuthAdminException"/>
+        </wsdl:operation>
+        <wsdl:operation name="deleteScope">
+            <wsdl:input message="tns:deleteScopeRequest" wsaw:Action="urn:deleteScope"/>
+            <wsdl:fault message="tns:OAuthAdminServiceIdentityOAuthAdminException" name="OAuthAdminServiceIdentityOAuthAdminException" wsaw:Action="urn:deleteScopeOAuthAdminServiceIdentityOAuthAdminException"/>
+        </wsdl:operation>
         <wsdl:operation name="getAudiences">
             <wsdl:input message="tns:getAudiencesRequest" wsaw:Action="urn:getAudiences"/>
             <wsdl:output message="tns:getAudiencesResponse" wsaw:Action="urn:getAudiencesResponse"/>
+        </wsdl:operation>
+        <wsdl:operation name="getScopesClaims">
+            <wsdl:input message="tns:getScopesClaimsRequest" wsaw:Action="urn:getScopesClaims"/>
+            <wsdl:output message="tns:getScopesClaimsResponse" wsaw:Action="urn:getScopesClaimsResponse"/>
+            <wsdl:fault message="tns:OAuthAdminServiceIdentityOAuthAdminException" name="OAuthAdminServiceIdentityOAuthAdminException" wsaw:Action="urn:getScopesClaimsOAuthAdminServiceIdentityOAuthAdminException"/>
         </wsdl:operation>
         <wsdl:operation name="getAllowedScopeValidators">
             <wsdl:input message="tns:getAllowedScopeValidatorsRequest" wsaw:Action="urn:getAllowedScopeValidators"/>
@@ -718,41 +705,28 @@
             <wsdl:output message="tns:getAppsAuthorizedByUserResponse" wsaw:Action="urn:getAppsAuthorizedByUserResponse"/>
             <wsdl:fault message="tns:OAuthAdminServiceIdentityOAuthAdminException" name="OAuthAdminServiceIdentityOAuthAdminException" wsaw:Action="urn:getAppsAuthorizedByUserOAuthAdminServiceIdentityOAuthAdminException"/>
         </wsdl:operation>
-        <wsdl:operation name="deleteScopeAndClaimsByScope">
-            <wsdl:input message="tns:deleteScopeAndClaimsByScopeRequest" wsaw:Action="urn:deleteScopeAndClaimsByScope"/>
-            <wsdl:fault message="tns:OAuthAdminServiceIdentityOAuthAdminException" name="OAuthAdminServiceIdentityOAuthAdminException" wsaw:Action="urn:deleteScopeAndClaimsByScopeOAuthAdminServiceIdentityOAuthAdminException"/>
+        <wsdl:operation name="updateScope">
+            <wsdl:input message="tns:updateScopeRequest" wsaw:Action="urn:updateScope"/>
+            <wsdl:fault message="tns:OAuthAdminServiceIdentityOAuth2Exception" name="OAuthAdminServiceIdentityOAuth2Exception" wsaw:Action="urn:updateScopeOAuthAdminServiceIdentityOAuth2Exception"/>
+        </wsdl:operation>
+        <wsdl:operation name="getClaimByScope">
+            <wsdl:input message="tns:getClaimByScopeRequest" wsaw:Action="urn:getClaimByScope"/>
+            <wsdl:output message="tns:getClaimByScopeResponse" wsaw:Action="urn:getClaimByScopeResponse"/>
+            <wsdl:fault message="tns:OAuthAdminServiceIdentityOAuthAdminException" name="OAuthAdminServiceIdentityOAuthAdminException" wsaw:Action="urn:getClaimByScopeOAuthAdminServiceIdentityOAuthAdminException"/>
         </wsdl:operation>
         <wsdl:operation name="getTokenExpiryTimes">
             <wsdl:input message="tns:getTokenExpiryTimesRequest" wsaw:Action="urn:getTokenExpiryTimes"/>
             <wsdl:output message="tns:getTokenExpiryTimesResponse" wsaw:Action="urn:getTokenExpiryTimesResponse"/>
         </wsdl:operation>
-        <wsdl:operation name="loadAllODCScopesAndClaims">
-            <wsdl:input message="tns:loadAllODCScopesAndClaimsRequest" wsaw:Action="urn:loadAllODCScopesAndClaims"/>
-            <wsdl:output message="tns:loadAllODCScopesAndClaimsResponse" wsaw:Action="urn:loadAllODCScopesAndClaimsResponse"/>
-            <wsdl:fault message="tns:OAuthAdminServiceIdentityOAuthAdminException" name="OAuthAdminServiceIdentityOAuthAdminException" wsaw:Action="urn:loadAllODCScopesAndClaimsOAuthAdminServiceIdentityOAuthAdminException"/>
-        </wsdl:operation>
-        <wsdl:operation name="loadAllODCClaims">
-            <wsdl:input message="tns:loadAllODCClaimsRequest" wsaw:Action="urn:loadAllODCClaims"/>
-            <wsdl:output message="tns:loadAllODCClaimsResponse" wsaw:Action="urn:loadAllODCClaimsResponse"/>
-            <wsdl:fault message="tns:OAuthAdminServiceIdentityOAuthAdminException" name="OAuthAdminServiceIdentityOAuthAdminException" wsaw:Action="urn:loadAllODCClaimsOAuthAdminServiceIdentityOAuthAdminException"/>
-        </wsdl:operation>
-        <wsdl:operation name="addNewClaimsForExistingScope">
-            <wsdl:input message="tns:addNewClaimsForExistingScopeRequest" wsaw:Action="urn:addNewClaimsForExistingScope"/>
-            <wsdl:fault message="tns:OAuthAdminServiceIdentityOAuth2Exception" name="OAuthAdminServiceIdentityOAuth2Exception" wsaw:Action="urn:addNewClaimsForExistingScopeOAuthAdminServiceIdentityOAuth2Exception"/>
+        <wsdl:operation name="getScopes">
+            <wsdl:input message="tns:getScopesRequest" wsaw:Action="urn:getScopes"/>
+            <wsdl:output message="tns:getScopesResponse" wsaw:Action="urn:getScopesResponse"/>
+            <wsdl:fault message="tns:OAuthAdminServiceIdentityOAuthAdminException" name="OAuthAdminServiceIdentityOAuthAdminException" wsaw:Action="urn:getScopesOAuthAdminServiceIdentityOAuthAdminException"/>
         </wsdl:operation>
         <wsdl:operation name="revokeAuthzForAppsByResoureOwner">
             <wsdl:input message="tns:revokeAuthzForAppsByResoureOwnerRequest" wsaw:Action="urn:revokeAuthzForAppsByResoureOwner"/>
             <wsdl:output message="tns:revokeAuthzForAppsByResoureOwnerResponse" wsaw:Action="urn:revokeAuthzForAppsByResoureOwnerResponse"/>
             <wsdl:fault message="tns:OAuthAdminServiceIdentityOAuthAdminException" name="OAuthAdminServiceIdentityOAuthAdminException" wsaw:Action="urn:revokeAuthzForAppsByResoureOwnerOAuthAdminServiceIdentityOAuthAdminException"/>
-        </wsdl:operation>
-        <wsdl:operation name="loadAllODCScopes">
-            <wsdl:input message="tns:loadAllODCScopesRequest" wsaw:Action="urn:loadAllODCScopes"/>
-            <wsdl:output message="tns:loadAllODCScopesResponse" wsaw:Action="urn:loadAllODCScopesResponse"/>
-            <wsdl:fault message="tns:OAuthAdminServiceIdentityOAuthAdminException" name="OAuthAdminServiceIdentityOAuthAdminException" wsaw:Action="urn:loadAllODCScopesOAuthAdminServiceIdentityOAuthAdminException"/>
-        </wsdl:operation>
-        <wsdl:operation name="addOIDCScopesAndClaims">
-            <wsdl:input message="tns:addOIDCScopesAndClaimsRequest" wsaw:Action="urn:addOIDCScopesAndClaims"/>
-            <wsdl:fault message="tns:OAuthAdminServiceIdentityOAuthAdminException" name="OAuthAdminServiceIdentityOAuthAdminException" wsaw:Action="urn:addOIDCScopesAndClaimsOAuthAdminServiceIdentityOAuthAdminException"/>
         </wsdl:operation>
         <wsdl:operation name="getSupportedIDTokenAlgorithms">
             <wsdl:input message="tns:getSupportedIDTokenAlgorithmsRequest" wsaw:Action="urn:getSupportedIDTokenAlgorithms"/>
@@ -851,15 +825,6 @@
                 <soap:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
             </wsdl:fault>
         </wsdl:operation>
-        <wsdl:operation name="isPKCESupportEnabled">
-            <soap:operation soapAction="urn:isPKCESupportEnabled" style="document"/>
-            <wsdl:input>
-                <soap:body use="literal"/>
-            </wsdl:input>
-            <wsdl:output>
-                <soap:body use="literal"/>
-            </wsdl:output>
-        </wsdl:operation>
         <wsdl:operation name="getOauthApplicationState">
             <soap:operation soapAction="urn:getOauthApplicationState" style="document"/>
             <wsdl:input>
@@ -872,17 +837,14 @@
                 <soap:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
             </wsdl:fault>
         </wsdl:operation>
-        <wsdl:operation name="isScopeClaimMappingExisting">
-            <soap:operation soapAction="urn:isScopeClaimMappingExisting" style="document"/>
+        <wsdl:operation name="isPKCESupportEnabled">
+            <soap:operation soapAction="urn:isPKCESupportEnabled" style="document"/>
             <wsdl:input>
                 <soap:body use="literal"/>
             </wsdl:input>
             <wsdl:output>
                 <soap:body use="literal"/>
             </wsdl:output>
-            <wsdl:fault name="OAuthAdminServiceIdentityOAuthAdminException">
-                <soap:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
-            </wsdl:fault>
         </wsdl:operation>
         <wsdl:operation name="getOAuthApplicationDataByAppName">
             <soap:operation soapAction="urn:getOAuthApplicationDataByAppName" style="document"/>
@@ -908,14 +870,11 @@
                 <soap:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
             </wsdl:fault>
         </wsdl:operation>
-        <wsdl:operation name="loadScopeId">
-            <soap:operation soapAction="urn:loadScopeId" style="document"/>
+        <wsdl:operation name="addScope">
+            <soap:operation soapAction="urn:addScope" style="document"/>
             <wsdl:input>
                 <soap:body use="literal"/>
             </wsdl:input>
-            <wsdl:output>
-                <soap:body use="literal"/>
-            </wsdl:output>
             <wsdl:fault name="OAuthAdminServiceIdentityOAuthAdminException">
                 <soap:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
             </wsdl:fault>
@@ -956,6 +915,27 @@
                 <soap:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
             </wsdl:fault>
         </wsdl:operation>
+        <wsdl:operation name="isScopeExist">
+            <soap:operation soapAction="urn:isScopeExist" style="document"/>
+            <wsdl:input>
+                <soap:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap:body use="literal"/>
+            </wsdl:output>
+            <wsdl:fault name="OAuthAdminServiceIdentityOAuthAdminException">
+                <soap:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
+            </wsdl:fault>
+        </wsdl:operation>
+        <wsdl:operation name="deleteScope">
+            <soap:operation soapAction="urn:deleteScope" style="document"/>
+            <wsdl:input>
+                <soap:body use="literal"/>
+            </wsdl:input>
+            <wsdl:fault name="OAuthAdminServiceIdentityOAuthAdminException">
+                <soap:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
+            </wsdl:fault>
+        </wsdl:operation>
         <wsdl:operation name="getAudiences">
             <soap:operation soapAction="urn:getAudiences" style="document"/>
             <wsdl:input>
@@ -964,6 +944,18 @@
             <wsdl:output>
                 <soap:body use="literal"/>
             </wsdl:output>
+        </wsdl:operation>
+        <wsdl:operation name="getScopesClaims">
+            <soap:operation soapAction="urn:getScopesClaims" style="document"/>
+            <wsdl:input>
+                <soap:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap:body use="literal"/>
+            </wsdl:output>
+            <wsdl:fault name="OAuthAdminServiceIdentityOAuthAdminException">
+                <soap:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
+            </wsdl:fault>
         </wsdl:operation>
         <wsdl:operation name="getAllowedScopeValidators">
             <soap:operation soapAction="urn:getAllowedScopeValidators" style="document"/>
@@ -998,11 +990,23 @@
                 <soap:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
             </wsdl:fault>
         </wsdl:operation>
-        <wsdl:operation name="deleteScopeAndClaimsByScope">
-            <soap:operation soapAction="urn:deleteScopeAndClaimsByScope" style="document"/>
+        <wsdl:operation name="updateScope">
+            <soap:operation soapAction="urn:updateScope" style="document"/>
             <wsdl:input>
                 <soap:body use="literal"/>
             </wsdl:input>
+            <wsdl:fault name="OAuthAdminServiceIdentityOAuth2Exception">
+                <soap:fault use="literal" name="OAuthAdminServiceIdentityOAuth2Exception"/>
+            </wsdl:fault>
+        </wsdl:operation>
+        <wsdl:operation name="getClaimByScope">
+            <soap:operation soapAction="urn:getClaimByScope" style="document"/>
+            <wsdl:input>
+                <soap:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap:body use="literal"/>
+            </wsdl:output>
             <wsdl:fault name="OAuthAdminServiceIdentityOAuthAdminException">
                 <soap:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
             </wsdl:fault>
@@ -1016,8 +1020,8 @@
                 <soap:body use="literal"/>
             </wsdl:output>
         </wsdl:operation>
-        <wsdl:operation name="loadAllODCScopesAndClaims">
-            <soap:operation soapAction="urn:loadAllODCScopesAndClaims" style="document"/>
+        <wsdl:operation name="getScopes">
+            <soap:operation soapAction="urn:getScopes" style="document"/>
             <wsdl:input>
                 <soap:body use="literal"/>
             </wsdl:input>
@@ -1026,27 +1030,6 @@
             </wsdl:output>
             <wsdl:fault name="OAuthAdminServiceIdentityOAuthAdminException">
                 <soap:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
-            </wsdl:fault>
-        </wsdl:operation>
-        <wsdl:operation name="loadAllODCClaims">
-            <soap:operation soapAction="urn:loadAllODCClaims" style="document"/>
-            <wsdl:input>
-                <soap:body use="literal"/>
-            </wsdl:input>
-            <wsdl:output>
-                <soap:body use="literal"/>
-            </wsdl:output>
-            <wsdl:fault name="OAuthAdminServiceIdentityOAuthAdminException">
-                <soap:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
-            </wsdl:fault>
-        </wsdl:operation>
-        <wsdl:operation name="addNewClaimsForExistingScope">
-            <soap:operation soapAction="urn:addNewClaimsForExistingScope" style="document"/>
-            <wsdl:input>
-                <soap:body use="literal"/>
-            </wsdl:input>
-            <wsdl:fault name="OAuthAdminServiceIdentityOAuth2Exception">
-                <soap:fault use="literal" name="OAuthAdminServiceIdentityOAuth2Exception"/>
             </wsdl:fault>
         </wsdl:operation>
         <wsdl:operation name="revokeAuthzForAppsByResoureOwner">
@@ -1057,27 +1040,6 @@
             <wsdl:output>
                 <soap:body use="literal"/>
             </wsdl:output>
-            <wsdl:fault name="OAuthAdminServiceIdentityOAuthAdminException">
-                <soap:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
-            </wsdl:fault>
-        </wsdl:operation>
-        <wsdl:operation name="loadAllODCScopes">
-            <soap:operation soapAction="urn:loadAllODCScopes" style="document"/>
-            <wsdl:input>
-                <soap:body use="literal"/>
-            </wsdl:input>
-            <wsdl:output>
-                <soap:body use="literal"/>
-            </wsdl:output>
-            <wsdl:fault name="OAuthAdminServiceIdentityOAuthAdminException">
-                <soap:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
-            </wsdl:fault>
-        </wsdl:operation>
-        <wsdl:operation name="addOIDCScopesAndClaims">
-            <soap:operation soapAction="urn:addOIDCScopesAndClaims" style="document"/>
-            <wsdl:input>
-                <soap:body use="literal"/>
-            </wsdl:input>
             <wsdl:fault name="OAuthAdminServiceIdentityOAuthAdminException">
                 <soap:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
             </wsdl:fault>
@@ -1184,15 +1146,6 @@
                 <soap12:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
             </wsdl:fault>
         </wsdl:operation>
-        <wsdl:operation name="isPKCESupportEnabled">
-            <soap12:operation soapAction="urn:isPKCESupportEnabled" style="document"/>
-            <wsdl:input>
-                <soap12:body use="literal"/>
-            </wsdl:input>
-            <wsdl:output>
-                <soap12:body use="literal"/>
-            </wsdl:output>
-        </wsdl:operation>
         <wsdl:operation name="getOauthApplicationState">
             <soap12:operation soapAction="urn:getOauthApplicationState" style="document"/>
             <wsdl:input>
@@ -1205,17 +1158,14 @@
                 <soap12:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
             </wsdl:fault>
         </wsdl:operation>
-        <wsdl:operation name="isScopeClaimMappingExisting">
-            <soap12:operation soapAction="urn:isScopeClaimMappingExisting" style="document"/>
+        <wsdl:operation name="isPKCESupportEnabled">
+            <soap12:operation soapAction="urn:isPKCESupportEnabled" style="document"/>
             <wsdl:input>
                 <soap12:body use="literal"/>
             </wsdl:input>
             <wsdl:output>
                 <soap12:body use="literal"/>
             </wsdl:output>
-            <wsdl:fault name="OAuthAdminServiceIdentityOAuthAdminException">
-                <soap12:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
-            </wsdl:fault>
         </wsdl:operation>
         <wsdl:operation name="getOAuthApplicationDataByAppName">
             <soap12:operation soapAction="urn:getOAuthApplicationDataByAppName" style="document"/>
@@ -1241,14 +1191,11 @@
                 <soap12:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
             </wsdl:fault>
         </wsdl:operation>
-        <wsdl:operation name="loadScopeId">
-            <soap12:operation soapAction="urn:loadScopeId" style="document"/>
+        <wsdl:operation name="addScope">
+            <soap12:operation soapAction="urn:addScope" style="document"/>
             <wsdl:input>
                 <soap12:body use="literal"/>
             </wsdl:input>
-            <wsdl:output>
-                <soap12:body use="literal"/>
-            </wsdl:output>
             <wsdl:fault name="OAuthAdminServiceIdentityOAuthAdminException">
                 <soap12:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
             </wsdl:fault>
@@ -1289,6 +1236,27 @@
                 <soap12:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
             </wsdl:fault>
         </wsdl:operation>
+        <wsdl:operation name="isScopeExist">
+            <soap12:operation soapAction="urn:isScopeExist" style="document"/>
+            <wsdl:input>
+                <soap12:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap12:body use="literal"/>
+            </wsdl:output>
+            <wsdl:fault name="OAuthAdminServiceIdentityOAuthAdminException">
+                <soap12:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
+            </wsdl:fault>
+        </wsdl:operation>
+        <wsdl:operation name="deleteScope">
+            <soap12:operation soapAction="urn:deleteScope" style="document"/>
+            <wsdl:input>
+                <soap12:body use="literal"/>
+            </wsdl:input>
+            <wsdl:fault name="OAuthAdminServiceIdentityOAuthAdminException">
+                <soap12:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
+            </wsdl:fault>
+        </wsdl:operation>
         <wsdl:operation name="getAudiences">
             <soap12:operation soapAction="urn:getAudiences" style="document"/>
             <wsdl:input>
@@ -1297,6 +1265,18 @@
             <wsdl:output>
                 <soap12:body use="literal"/>
             </wsdl:output>
+        </wsdl:operation>
+        <wsdl:operation name="getScopesClaims">
+            <soap12:operation soapAction="urn:getScopesClaims" style="document"/>
+            <wsdl:input>
+                <soap12:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap12:body use="literal"/>
+            </wsdl:output>
+            <wsdl:fault name="OAuthAdminServiceIdentityOAuthAdminException">
+                <soap12:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
+            </wsdl:fault>
         </wsdl:operation>
         <wsdl:operation name="getAllowedScopeValidators">
             <soap12:operation soapAction="urn:getAllowedScopeValidators" style="document"/>
@@ -1331,11 +1311,23 @@
                 <soap12:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
             </wsdl:fault>
         </wsdl:operation>
-        <wsdl:operation name="deleteScopeAndClaimsByScope">
-            <soap12:operation soapAction="urn:deleteScopeAndClaimsByScope" style="document"/>
+        <wsdl:operation name="updateScope">
+            <soap12:operation soapAction="urn:updateScope" style="document"/>
             <wsdl:input>
                 <soap12:body use="literal"/>
             </wsdl:input>
+            <wsdl:fault name="OAuthAdminServiceIdentityOAuth2Exception">
+                <soap12:fault use="literal" name="OAuthAdminServiceIdentityOAuth2Exception"/>
+            </wsdl:fault>
+        </wsdl:operation>
+        <wsdl:operation name="getClaimByScope">
+            <soap12:operation soapAction="urn:getClaimByScope" style="document"/>
+            <wsdl:input>
+                <soap12:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap12:body use="literal"/>
+            </wsdl:output>
             <wsdl:fault name="OAuthAdminServiceIdentityOAuthAdminException">
                 <soap12:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
             </wsdl:fault>
@@ -1349,8 +1341,8 @@
                 <soap12:body use="literal"/>
             </wsdl:output>
         </wsdl:operation>
-        <wsdl:operation name="loadAllODCScopesAndClaims">
-            <soap12:operation soapAction="urn:loadAllODCScopesAndClaims" style="document"/>
+        <wsdl:operation name="getScopes">
+            <soap12:operation soapAction="urn:getScopes" style="document"/>
             <wsdl:input>
                 <soap12:body use="literal"/>
             </wsdl:input>
@@ -1359,27 +1351,6 @@
             </wsdl:output>
             <wsdl:fault name="OAuthAdminServiceIdentityOAuthAdminException">
                 <soap12:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
-            </wsdl:fault>
-        </wsdl:operation>
-        <wsdl:operation name="loadAllODCClaims">
-            <soap12:operation soapAction="urn:loadAllODCClaims" style="document"/>
-            <wsdl:input>
-                <soap12:body use="literal"/>
-            </wsdl:input>
-            <wsdl:output>
-                <soap12:body use="literal"/>
-            </wsdl:output>
-            <wsdl:fault name="OAuthAdminServiceIdentityOAuthAdminException">
-                <soap12:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
-            </wsdl:fault>
-        </wsdl:operation>
-        <wsdl:operation name="addNewClaimsForExistingScope">
-            <soap12:operation soapAction="urn:addNewClaimsForExistingScope" style="document"/>
-            <wsdl:input>
-                <soap12:body use="literal"/>
-            </wsdl:input>
-            <wsdl:fault name="OAuthAdminServiceIdentityOAuth2Exception">
-                <soap12:fault use="literal" name="OAuthAdminServiceIdentityOAuth2Exception"/>
             </wsdl:fault>
         </wsdl:operation>
         <wsdl:operation name="revokeAuthzForAppsByResoureOwner">
@@ -1390,27 +1361,6 @@
             <wsdl:output>
                 <soap12:body use="literal"/>
             </wsdl:output>
-            <wsdl:fault name="OAuthAdminServiceIdentityOAuthAdminException">
-                <soap12:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
-            </wsdl:fault>
-        </wsdl:operation>
-        <wsdl:operation name="loadAllODCScopes">
-            <soap12:operation soapAction="urn:loadAllODCScopes" style="document"/>
-            <wsdl:input>
-                <soap12:body use="literal"/>
-            </wsdl:input>
-            <wsdl:output>
-                <soap12:body use="literal"/>
-            </wsdl:output>
-            <wsdl:fault name="OAuthAdminServiceIdentityOAuthAdminException">
-                <soap12:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
-            </wsdl:fault>
-        </wsdl:operation>
-        <wsdl:operation name="addOIDCScopesAndClaims">
-            <soap12:operation soapAction="urn:addOIDCScopesAndClaims" style="document"/>
-            <wsdl:input>
-                <soap12:body use="literal"/>
-            </wsdl:input>
             <wsdl:fault name="OAuthAdminServiceIdentityOAuthAdminException">
                 <soap12:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
             </wsdl:fault>
@@ -1499,15 +1449,6 @@
                 <mime:content type="text/xml" part="parameters"/>
             </wsdl:output>
         </wsdl:operation>
-        <wsdl:operation name="isPKCESupportEnabled">
-            <http:operation location="isPKCESupportEnabled"/>
-            <wsdl:input>
-                <mime:content type="text/xml" part="parameters"/>
-            </wsdl:input>
-            <wsdl:output>
-                <mime:content type="text/xml" part="parameters"/>
-            </wsdl:output>
-        </wsdl:operation>
         <wsdl:operation name="getOauthApplicationState">
             <http:operation location="getOauthApplicationState"/>
             <wsdl:input>
@@ -1517,8 +1458,8 @@
                 <mime:content type="text/xml" part="parameters"/>
             </wsdl:output>
         </wsdl:operation>
-        <wsdl:operation name="isScopeClaimMappingExisting">
-            <http:operation location="isScopeClaimMappingExisting"/>
+        <wsdl:operation name="isPKCESupportEnabled">
+            <http:operation location="isPKCESupportEnabled"/>
             <wsdl:input>
                 <mime:content type="text/xml" part="parameters"/>
             </wsdl:input>
@@ -1544,14 +1485,11 @@
                 <mime:content type="text/xml" part="parameters"/>
             </wsdl:output>
         </wsdl:operation>
-        <wsdl:operation name="loadScopeId">
-            <http:operation location="loadScopeId"/>
+        <wsdl:operation name="addScope">
+            <http:operation location="addScope"/>
             <wsdl:input>
                 <mime:content type="text/xml" part="parameters"/>
             </wsdl:input>
-            <wsdl:output>
-                <mime:content type="text/xml" part="parameters"/>
-            </wsdl:output>
         </wsdl:operation>
         <wsdl:operation name="registerOAuthConsumer">
             <http:operation location="registerOAuthConsumer"/>
@@ -1580,8 +1518,32 @@
                 <mime:content type="text/xml" part="parameters"/>
             </wsdl:output>
         </wsdl:operation>
+        <wsdl:operation name="isScopeExist">
+            <http:operation location="isScopeExist"/>
+            <wsdl:input>
+                <mime:content type="text/xml" part="parameters"/>
+            </wsdl:input>
+            <wsdl:output>
+                <mime:content type="text/xml" part="parameters"/>
+            </wsdl:output>
+        </wsdl:operation>
+        <wsdl:operation name="deleteScope">
+            <http:operation location="deleteScope"/>
+            <wsdl:input>
+                <mime:content type="text/xml" part="parameters"/>
+            </wsdl:input>
+        </wsdl:operation>
         <wsdl:operation name="getAudiences">
             <http:operation location="getAudiences"/>
+            <wsdl:input>
+                <mime:content type="text/xml" part="parameters"/>
+            </wsdl:input>
+            <wsdl:output>
+                <mime:content type="text/xml" part="parameters"/>
+            </wsdl:output>
+        </wsdl:operation>
+        <wsdl:operation name="getScopesClaims">
+            <http:operation location="getScopesClaims"/>
             <wsdl:input>
                 <mime:content type="text/xml" part="parameters"/>
             </wsdl:input>
@@ -1616,11 +1578,20 @@
                 <mime:content type="text/xml" part="parameters"/>
             </wsdl:output>
         </wsdl:operation>
-        <wsdl:operation name="deleteScopeAndClaimsByScope">
-            <http:operation location="deleteScopeAndClaimsByScope"/>
+        <wsdl:operation name="updateScope">
+            <http:operation location="updateScope"/>
             <wsdl:input>
                 <mime:content type="text/xml" part="parameters"/>
             </wsdl:input>
+        </wsdl:operation>
+        <wsdl:operation name="getClaimByScope">
+            <http:operation location="getClaimByScope"/>
+            <wsdl:input>
+                <mime:content type="text/xml" part="parameters"/>
+            </wsdl:input>
+            <wsdl:output>
+                <mime:content type="text/xml" part="parameters"/>
+            </wsdl:output>
         </wsdl:operation>
         <wsdl:operation name="getTokenExpiryTimes">
             <http:operation location="getTokenExpiryTimes"/>
@@ -1631,29 +1602,14 @@
                 <mime:content type="text/xml" part="parameters"/>
             </wsdl:output>
         </wsdl:operation>
-        <wsdl:operation name="loadAllODCScopesAndClaims">
-            <http:operation location="loadAllODCScopesAndClaims"/>
+        <wsdl:operation name="getScopes">
+            <http:operation location="getScopes"/>
             <wsdl:input>
                 <mime:content type="text/xml" part="parameters"/>
             </wsdl:input>
             <wsdl:output>
                 <mime:content type="text/xml" part="parameters"/>
             </wsdl:output>
-        </wsdl:operation>
-        <wsdl:operation name="loadAllODCClaims">
-            <http:operation location="loadAllODCClaims"/>
-            <wsdl:input>
-                <mime:content type="text/xml" part="parameters"/>
-            </wsdl:input>
-            <wsdl:output>
-                <mime:content type="text/xml" part="parameters"/>
-            </wsdl:output>
-        </wsdl:operation>
-        <wsdl:operation name="addNewClaimsForExistingScope">
-            <http:operation location="addNewClaimsForExistingScope"/>
-            <wsdl:input>
-                <mime:content type="text/xml" part="parameters"/>
-            </wsdl:input>
         </wsdl:operation>
         <wsdl:operation name="revokeAuthzForAppsByResoureOwner">
             <http:operation location="revokeAuthzForAppsByResoureOwner"/>
@@ -1663,21 +1619,6 @@
             <wsdl:output>
                 <mime:content type="text/xml" part="parameters"/>
             </wsdl:output>
-        </wsdl:operation>
-        <wsdl:operation name="loadAllODCScopes">
-            <http:operation location="loadAllODCScopes"/>
-            <wsdl:input>
-                <mime:content type="text/xml" part="parameters"/>
-            </wsdl:input>
-            <wsdl:output>
-                <mime:content type="text/xml" part="parameters"/>
-            </wsdl:output>
-        </wsdl:operation>
-        <wsdl:operation name="addOIDCScopesAndClaims">
-            <http:operation location="addOIDCScopesAndClaims"/>
-            <wsdl:input>
-                <mime:content type="text/xml" part="parameters"/>
-            </wsdl:input>
         </wsdl:operation>
         <wsdl:operation name="getSupportedIDTokenAlgorithms">
             <http:operation location="getSupportedIDTokenAlgorithms"/>

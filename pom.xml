@@ -72,7 +72,7 @@
             </dependency>
             <dependency>
                 <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
-                <artifactId>org.wso2.carbon.claim.metadata.mgt.stub.depend</artifactId>
+                <artifactId>org.wso2.carbon.claim.metadata.mgt.stub.depen</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

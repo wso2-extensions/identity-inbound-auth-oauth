@@ -49,7 +49,7 @@
                         var scopeName = sName;
                         $.ajax({
                             type: 'POST',
-                            url: 'remove-oidc-scope-finish.jsp',
+                            url: 'remove-oidc-scope-finish-ajaxprocessor.jsp',
                             headers: {
                                 Accept: "text/html"
                             },
@@ -82,10 +82,10 @@
                             config.getServletContext().getAttribute(CarbonConstants.CONFIGURATION_CONTEXT);
                     String cookie = (String) session.getAttribute(ServerConstants.ADMIN_SERVICE_COOKIE);
                     OAuthAdminClient oAuthAdminClient = new OAuthAdminClient(cookie, serverURL, configContext);
-                    scopes = oAuthAdminClient.loadAllOIDCScopes(tenantId);
+                    scopes = oAuthAdminClient.getScopes(tenantId);
                     
                 } catch (Exception e) {
-                    String message = resourceBundle.getString("error.while.listing.purpose");
+                    String message = resourceBundle.getString("error.while.listing.scopes");
                     CarbonUIMessage.sendCarbonUIMessage(message, CarbonUIMessage.ERROR, request, e);
                 }
             %>
@@ -119,25 +119,25 @@
                     %>
                     
                     <td style="width: 100px; white-space: nowrap;"><a
-                            title="View OIDC Claims"
-                            href="view-oidc-claims.jsp?scopeName=<%=Encode.forUriComponent(scope)%>"
+                            title="Update OIDC Scope"
+                            href="edit-oidc-claims.jsp?scopeName=<%=Encode.forUriComponent(scope)%>"
                             class="icon-link"
                             style="background-image: url(../admin/images/edit.gif)"><fmt:message
-                            key='view.claims'/></a>
+                            key='edit'/></a>
                         
-                        <a title="Delete Claims"
+                        <a title="Delete OIDC Scope"
                            onclick="removeItem('<%=Encode.forJavaScriptAttribute(scope)%>');return
                                    false;" href="#"
                            class="icon-link"
                            style="background-image: url(../admin/images/delete.gif)"><fmt:message
                                 key='delete'/>
                         </a>
-    
-                        <a title="Edit Claims"
-                           href="edit-oidc-claims.jsp?scopeName=<%=Encode.forUriComponent(scope)%>"
+                        
+                        <a title="Add OIDC Claims for Scope"
+                           href="add-oidc-claims.jsp?scopeName=<%=Encode.forUriComponent(scope)%>"
                            class="icon-link"
                            style="background-image: url(../admin/images/edit.gif)"><fmt:message
-                                key='edit'/>
+                                key='add.claims'/>
                         </a>
                     
                     </td>

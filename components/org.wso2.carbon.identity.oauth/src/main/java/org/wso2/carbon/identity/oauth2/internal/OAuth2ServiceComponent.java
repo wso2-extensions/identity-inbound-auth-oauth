@@ -55,7 +55,6 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.List;
 
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkAudienceEnabled;
 
@@ -94,9 +93,9 @@ public class OAuth2ServiceComponent {
 
         try {
             int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
-            int insertedScopeId = OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
-                    loadSingleScopeRecord(tenantId);
-            if (insertedScopeId <= -1) {
+            boolean isRecordExist = OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
+                    isScopeExist(tenantId);
+            if (!isRecordExist) {
                 OAuth2Util.initiateOIDCScopes(tenantId);
             }
             TenantCreationEventListener scopeTenantMgtListener = new TenantCreationEventListener();

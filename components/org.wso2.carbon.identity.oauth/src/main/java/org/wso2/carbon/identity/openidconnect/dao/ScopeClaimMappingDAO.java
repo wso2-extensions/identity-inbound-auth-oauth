@@ -38,7 +38,7 @@ public interface ScopeClaimMappingDAO {
      * @param scopeClaimsMap map of oidc scope claims
      * @throws IdentityOAuth2Exception if an error occurs when inserting scopes or claims.
      */
-    void insertAllScopesAndClaims(int tenantId, List<ScopeDTO> scopeClaimsMap) throws IdentityOAuth2Exception;
+    void addScope(int tenantId, List<ScopeDTO> scopeClaimsMap) throws IdentityOAuth2Exception;
 
     /**
      * To retrieve all persisted oidc scopes with mapped claims.
@@ -47,7 +47,7 @@ public interface ScopeClaimMappingDAO {
      * @return all persisted scopes and claims
      * @throws IdentityOAuth2Exception if an error occurs when loading scopes and claims.
      */
-    List<ScopeDTO> loadScopesClaimsMapping(int tenantId) throws IdentityOAuth2Exception;
+    List<ScopeDTO> getScopesClaims(int tenantId) throws IdentityOAuth2Exception;
 
     /**
      * To retrieve all persisted oidc scopes.
@@ -56,17 +56,7 @@ public interface ScopeClaimMappingDAO {
      * @return list of scopes persisted.
      * @throws IdentityOAuth2Exception if an error occurs when loading oidc scopes.
      */
-    List<String> loadScopes(int tenantId) throws IdentityOAuth2Exception;
-
-    /**
-     * To retrieve oidc claims mapped to an oidc scope.
-     *
-     * @param tenantId tenant Id
-     * @param scope    scope
-     * @return list of claims which are mapped to the oidc scope.
-     * @throws IdentityOAuth2Exception if an error occurs when lading oidc claims.
-     */
-    List<String> loadClaims(int tenantId, String scope) throws IdentityOAuth2Exception;
+    List<String> getScopes(int tenantId) throws IdentityOAuth2Exception;
 
     /**
      * To remove persisted scopes and claims.
@@ -74,7 +64,7 @@ public interface ScopeClaimMappingDAO {
      * @param scope oidc scope
      * @throws IdentityOAuthAdminException if an error occurs when deleting scopes and claims.
      */
-    void deleteScopeAndClaims(String scope, int tenantId) throws IdentityOAuthAdminException;
+    void deleteScope(String scope, int tenantId) throws IdentityOAuthAdminException;
 
     /**
      * To add new claims for an existing scope.
@@ -84,7 +74,17 @@ public interface ScopeClaimMappingDAO {
      * @param claims   list of oidc claims
      * @throws IdentityOAuth2Exception if an error occurs when adding a new claim for a scope.
      */
-    void addNewClaimsForScope(String scope, List<String> claims, int tenantId) throws IdentityOAuth2Exception;
+    void updateScope(String scope, int tenantId, boolean isAdd, List<String> claims) throws IdentityOAuth2Exception;
+
+    /**
+     * To retrieve oidc claims mapped to an oidc scope.
+     *
+     * @param scope    scope
+     * @param tenantId tenant Id
+     * @return list of claims which are mapped to the oidc scope.
+     * @throws IdentityOAuth2Exception if an error occurs when lading oidc claims.
+     */
+    List<String> getClaimsByScope(String scope, int tenantId) throws IdentityOAuth2Exception;
 
     /**
      * To load top record of the scope table.
@@ -92,26 +92,16 @@ public interface ScopeClaimMappingDAO {
      * @return scope id
      * @throws IdentityOAuth2Exception if an error occurs when loading the top scope record.
      */
-    int loadSingleScopeRecord(int tenantId) throws IdentityOAuth2Exception;
+    boolean isScopeExist(int tenantId) throws IdentityOAuth2Exception;
 
     /**
-     * To load id of the scope table.
+     * To check whether the scope is existing.
      *
-     * @param scope scope name
+     * @param scope    scope name
      * @param tenantId tenant id
-     * @return id of the given scope
-     * @throws IdentityOAuth2Exception if an error occurs when loading scope id.
+     * @return true if the scope is already existing.
+     * @throws IdentityOAuth2Exception
      */
-    int loadScopeId(String scope, int tenantId) throws IdentityOAuth2Exception;
-
-    /**
-     * To check whether the scope claim mapping is existing.
-     * @param scope scope name
-     * @param claim claim url
-     * @param tenantId tenant id
-     * @return true if the scope claim mapping is existing.
-     * @throws IdentityOAuth2Exception if an error occurs when checking scope claim mapping.
-     */
-    boolean isScopeClaimMappingExisting(String scope, String claim, int tenantId) throws IdentityOAuth2Exception;
+    boolean isScopeExist(String scope, int tenantId) throws IdentityOAuth2Exception;
 
 }

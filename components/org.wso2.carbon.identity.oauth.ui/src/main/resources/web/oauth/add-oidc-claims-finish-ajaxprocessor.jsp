@@ -22,7 +22,6 @@
 <%@ page import="org.wso2.carbon.ui.CarbonUIMessage" %>
 <%@ page import="java.util.ResourceBundle" %>
 <%@ page import="org.wso2.carbon.ui.CarbonUIUtil" %>
-<%@ page import="java.util.Map" %>
 <%@ page import="org.wso2.carbon.identity.oauth.ui.client.OAuthAdminClient" %>
 <%@ page import="org.wso2.carbon.utils.ServerConstants" %>
 <%@ page import="org.wso2.carbon.CarbonConstants" %>
@@ -45,7 +44,6 @@
     String BUNDLE = "org.wso2.carbon.identity.oauth.ui.i18n.Resources";
     ResourceBundle resourceBundle = ResourceBundle.getBundle(BUNDLE, request.getLocale());
     String forwardTo = null;
-    boolean isSkipAdding = false;
     try {
         String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
@@ -54,7 +52,7 @@
                 config.getServletContext().getAttribute(CarbonConstants.CONFIGURATION_CONTEXT);
         String cookie = (String) session.getAttribute(ServerConstants.ADMIN_SERVICE_COOKIE);
         OAuthAdminClient oAuthAdminClient = new OAuthAdminClient(cookie, serverURL, configContext);
-        
+        boolean isAdd = Boolean.parseBoolean(request.getParameter("add"));
         scopeName = request.getParameter(SCOPE_NAME);
         int categoryCount = Integer.parseInt(request.getParameter("claimrow_name_count"));
         String oidcClaim = null;
@@ -69,28 +67,23 @@
             }
             
             if (StringUtils.isNotBlank(oidcClaim)) {
-                if (oAuthAdminClient.isScopeClaimMappingExisting(scopeName, oidcClaim, tenantId)) {
-                    String message = MessageFormat.format(resourceBundle.getString
-                            ("scope.claim.mapping.is.already.existing"), scopeName);
-                    isSkipAdding = true;
-                    CarbonUIMessage.sendCarbonUIMessage(message, CarbonUIMessage.ERROR, request);
-                } else {
-                    claims[i] = oidcClaim;
-                }
+                claims[i] = oidcClaim;
             }
         }
-        if (!isSkipAdding) {
-            oAuthAdminClient.addNewClaimsForExistingScope(scopeName, claims, tenantId);
-            String message = MessageFormat.format(resourceBundle.getString("updated.the.scope.successfully"), scopeName);
-            CarbonUIMessage.sendCarbonUIMessage(message, CarbonUIMessage.INFO, request);
-            
+        
+        oAuthAdminClient.updateScope(scopeName, claims, tenantId, true);
+        String message = MessageFormat.format(resourceBundle.getString("updated.the.scope.successfully"), scopeName);
+        CarbonUIMessage.sendCarbonUIMessage(message, CarbonUIMessage.INFO, request);
+        
+        if (isAdd) {
+            forwardTo = "add-oidc-claims.jsp?scopeName=" + scopeName;
+        } else {
+            forwardTo = "list-oidc-scopes.jsp";
         }
-        forwardTo = "list-oidc-scopes.jsp";
     } catch (Exception e) {
         String message = MessageFormat.format(resourceBundle.getString("failed.to.update.the.scope"), scopeName);
         CarbonUIMessage.sendCarbonUIMessage(message, CarbonUIMessage.ERROR, request);
     }
-
 
 %>
 

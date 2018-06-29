@@ -44,7 +44,7 @@
         return;
     }
     
-    String name = null;
+    String scopeName = null;
     int categoryCount = 0;
     String forwardTo = "add-oidc-scope.jsp";
     String BUNDLE = "org.wso2.carbon.identity.oauth.ui.i18n.Resources";
@@ -59,7 +59,7 @@
         String cookie = (String) session.getAttribute(ServerConstants.ADMIN_SERVICE_COOKIE);
         OAuthAdminClient oAuthAdminClient = new OAuthAdminClient(cookie, serverURL, configContext);
         
-        name = request.getParameter(SCOPE_NAME);
+        scopeName = request.getParameter(SCOPE_NAME);
         String claimRowCount = request.getParameter("claimrow_name_count");
         List<String> claimsList = new ArrayList<String>();
         
@@ -80,23 +80,23 @@
                 }
             }
         }
-        scopeClaimMap.put(name, claimsList);
-        int scopeId = oAuthAdminClient.loadScopeId(tenantId, name);
+        scopeClaimMap.put(scopeName, claimsList);
+        boolean isScopeExist = oAuthAdminClient.isScopeExist(tenantId, scopeName);
         String message;
         String messageType;
-        if (scopeId == -1) {
-            oAuthAdminClient.addOIDCScopesAndClaims(tenantId, scopeClaimMap);
-            message = MessageFormat.format(resourceBundle.getString("scope.add.successful"), name);
+        if (!isScopeExist) {
+            oAuthAdminClient.addScope(tenantId, scopeClaimMap);
+            message = MessageFormat.format(resourceBundle.getString("scope.add.successful"), scopeName);
             messageType = CarbonUIMessage.INFO;
             forwardTo = "list-oidc-scopes.jsp";
         } else {
-            message = MessageFormat.format(resourceBundle.getString("scope.is.existing"), name);
+            message = MessageFormat.format(resourceBundle.getString("scope.is.existing"), scopeName);
             messageType = CarbonUIMessage.ERROR;
         }
         CarbonUIMessage.sendCarbonUIMessage(message, messageType, request);
         
     } catch (Exception e) {
-        String message = MessageFormat.format(resourceBundle.getString("error.while.saving.scope.info"), name);
+        String message = MessageFormat.format(resourceBundle.getString("error.while.saving.scope.info"), scopeName);
         CarbonUIMessage.sendCarbonUIMessage(message, CarbonUIMessage.ERROR, request);
     }
 

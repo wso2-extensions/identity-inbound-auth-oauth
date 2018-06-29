@@ -224,11 +224,11 @@ public class OAuthAdminClient {
      * @throws RemoteException                              if an exception occured during remote call.
      * @throws OAuthAdminServiceIdentityOAuthAdminException if an error occurs when adding scopes or claims
      */
-    public void addOIDCScopesAndClaims(int tenantId, Map<String, List<String>> scopeClaimMap) throws RemoteException,
+    public void addScope(int tenantId, Map<String, List<String>> scopeClaimMap) throws RemoteException,
             OAuthAdminServiceIdentityOAuthAdminException {
 
         ScopeDTO[] scpDTO = convertMapToArray(scopeClaimMap);
-        stub.addOIDCScopesAndClaims(tenantId, scpDTO);
+        stub.addScope(tenantId, scpDTO);
     }
 
     /**
@@ -240,10 +240,10 @@ public class OAuthAdminClient {
      * @throws OAuthAdminServiceIdentityOAuthAdminException if an error occurs when loading scopes and claims.
      */
 
-    public ScopeDTO[] loadAllOIDCScopesAndClaims(int tenantId) throws OAuthAdminServiceIdentityOAuthAdminException,
+    public ScopeDTO[] getScopesClaims(int tenantId) throws OAuthAdminServiceIdentityOAuthAdminException,
             RemoteException {
 
-        return stub.loadAllODCScopesAndClaims(tenantId);
+        return stub.getScopesClaims(tenantId);
     }
 
     /**
@@ -254,10 +254,10 @@ public class OAuthAdminClient {
      * @throws OAuthAdminServiceIdentityOAuthAdminException if an error occurs when loading oidc scopes.
      * @throws RemoteException                              if an exception occured during remote call.
      */
-    public String[] loadAllOIDCScopes(int tenantId) throws OAuthAdminServiceIdentityOAuthAdminException,
+    public String[] getScopes(int tenantId) throws OAuthAdminServiceIdentityOAuthAdminException,
             RemoteException {
 
-        return stub.loadAllODCScopes(tenantId);
+        return stub.getScopes(tenantId);
     }
 
     /**
@@ -269,10 +269,10 @@ public class OAuthAdminClient {
      * @throws OAuthAdminServiceIdentityOAuthAdminException if an error occurs when lading oidc claims.
      * @throws RemoteException                              if an exception occured during remote call.
      */
-    public String[] loadAllOIDCClaims(int tenantId, String scope) throws OAuthAdminServiceIdentityOAuthAdminException,
+    public String[] getClaimByScope(int tenantId, String scope) throws OAuthAdminServiceIdentityOAuthAdminException,
             RemoteException {
 
-        return stub.loadAllODCClaims(tenantId, scope);
+        return stub.getClaimByScope(tenantId, scope);
     }
 
     /**
@@ -284,9 +284,9 @@ public class OAuthAdminClient {
      * @throws OAuthAdminServiceIdentityOAuthAdminException if an error occurs while loading scope id.
      * @throws RemoteException                              if an exception occured during remote call.
      */
-    public int loadScopeId(int tenantId, String scope) throws OAuthAdminServiceIdentityOAuthAdminException, RemoteException {
+    public boolean isScopeExist(int tenantId, String scope) throws OAuthAdminServiceIdentityOAuthAdminException, RemoteException {
 
-        return stub.loadScopeId(tenantId, scope);
+        return stub.isScopeExist(tenantId, scope);
     }
 
     /**
@@ -297,10 +297,10 @@ public class OAuthAdminClient {
      * @throws OAuthAdminServiceIdentityOAuthAdminException if an error occurs when deleting scopes and claims.
      * @throws RemoteException                              if an exception occured during remote call.
      */
-    public void deleteOIDCScopesAndClaimsByScope(String scope, int tenantId)
+    public void deleteScope(String scope, int tenantId)
             throws OAuthAdminServiceIdentityOAuthAdminException, RemoteException {
 
-        stub.deleteScopeAndClaimsByScope(scope, tenantId);
+        stub.deleteScope(scope, tenantId);
     }
 
     /**
@@ -312,27 +312,10 @@ public class OAuthAdminClient {
      * @throws RemoteException                          if an exception occured during remote call.
      * @throws OAuthAdminServiceIdentityOAuth2Exception if an error occurs when adding new claims for scope.
      */
-    public void addNewClaimsForExistingScope(String scope, String[] claims, int tenantId) throws RemoteException,
+    public void updateScope(String scope, String[] claims, int tenantId, boolean isAdd) throws RemoteException,
             OAuthAdminServiceIdentityOAuth2Exception {
 
-        stub.addNewClaimsForExistingScope(scope, claims, tenantId);
-    }
-
-    /**
-     * To check whether the scope claim mapping is existing.
-     *
-     * @param scope    scope name
-     * @param claim    claim uri
-     * @param tenantId tenant id
-     * @return true if the scope claim mapping is existing.
-     * @throws OAuthAdminServiceIdentityOAuthAdminException if an error occurs when checking scope claim mapping.
-     * @throws RemoteException                              if an exception occured during remote call.
-     */
-    public boolean isScopeClaimMappingExisting(String scope, String claim, int tenantId)
-            throws OAuthAdminServiceIdentityOAuthAdminException,
-            RemoteException {
-
-        return stub.isScopeClaimMappingExisting(scope, claim, tenantId);
+        stub.updateScope(scope, claims, tenantId, isAdd);
     }
 
     /**

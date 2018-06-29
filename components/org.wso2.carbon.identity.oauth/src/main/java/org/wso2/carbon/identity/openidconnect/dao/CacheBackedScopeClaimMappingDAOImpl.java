@@ -20,8 +20,8 @@
 
 package org.wso2.carbon.identity.openidconnect.dao;
 
-import edu.emory.mathcs.backport.java.util.Arrays;
-import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
@@ -31,6 +31,7 @@ import org.wso2.carbon.identity.openidconnect.cache.OIDCScopeClaimCache;
 import org.wso2.carbon.identity.openidconnect.cache.OIDCScopeClaimCacheEntry;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -44,70 +45,48 @@ public class CacheBackedScopeClaimMappingDAOImpl extends ScopeClaimMappingDAOImp
     private ScopeClaimMappingDAO defaultScopeClaimMappingDAO = new ScopeClaimMappingDAOImpl();
 
     @Override
-    public void insertAllScopesAndClaims(int tenantId, List<ScopeDTO> scopeClaimsMap) throws IdentityOAuth2Exception {
+    public void addScope(int tenantId, List<ScopeDTO> scopeClaimsMap) throws IdentityOAuth2Exception {
 
         oidcScopeClaimCache.clearScopeClaimMap(tenantId);
-        super.insertAllScopesAndClaims(tenantId, scopeClaimsMap);
+        super.addScope(tenantId, scopeClaimsMap);
         if (log.isDebugEnabled()) {
             log.debug("The cache oidcScopeClaimCache is cleared for the tenant : " + tenantId);
         }
     }
 
     @Override
-    public List<ScopeDTO> loadScopesClaimsMapping(int tenantId) throws IdentityOAuth2Exception {
+    public List<ScopeDTO> getScopesClaims(int tenantId) throws IdentityOAuth2Exception {
 
         OIDCScopeClaimCacheEntry oidcScopeClaimCacheEntry = oidcScopeClaimCache.getScopeClaimMap(tenantId);
-        if (oidcScopeClaimCacheEntry == null) {
-            if (log.isDebugEnabled()) {
-                log.debug("Cache miss for OIDC scopes claims mapping for tenant: " + tenantId);
-            }
-            oidcScopeClaimCacheEntry = new OIDCScopeClaimCacheEntry();
-            oidcScopeClaimCacheEntry.setScopeClaimMapping(defaultScopeClaimMappingDAO.loadScopesClaimsMapping(tenantId));
-            oidcScopeClaimCache.addScopeClaimMap(tenantId, oidcScopeClaimCacheEntry);
-            if (log.isDebugEnabled()) {
-                log.debug("OIDC scopes and mapped claims are loaded from the database and inserted to the cache for " +
-                        "the tenant : " + tenantId);
-            }
-        }
+        oidcScopeClaimCacheEntry = getOidcScopeClaimCacheEntry(tenantId, oidcScopeClaimCacheEntry);
         return oidcScopeClaimCacheEntry.getScopeClaimMapping();
     }
 
     @Override
-    public void deleteScopeAndClaims(String scope, int tenantId) throws IdentityOAuthAdminException {
+    public void deleteScope(String scope, int tenantId) throws IdentityOAuthAdminException {
 
         oidcScopeClaimCache.clearScopeClaimMap(tenantId);
-        super.deleteScopeAndClaims(scope, tenantId);
+        super.deleteScope(scope, tenantId);
         if (log.isDebugEnabled()) {
             log.debug("OIDC scope claims mapping deleted from the oidcScopeClaimCache for tenant: " + tenantId);
         }
     }
 
     @Override
-    public void addNewClaimsForScope(String scope, List<String> claims, int tenantId) throws IdentityOAuth2Exception {
+    public void updateScope(String scope, int tenantId, boolean isAdd, List<String> claims) throws IdentityOAuth2Exception {
 
         oidcScopeClaimCache.clearScopeClaimMap(tenantId);
-        super.addNewClaimsForScope(scope, claims, tenantId);
+        super.updateScope(scope, tenantId, isAdd, claims);
         if (log.isDebugEnabled()) {
             log.debug("The cache oidcScopeClaimCache is cleared for the tenant : " + tenantId);
         }
     }
 
     @Override
-    public List<String> loadScopes(int tenantId) throws IdentityOAuth2Exception {
+    public List<String> getScopes(int tenantId) throws IdentityOAuth2Exception {
 
         OIDCScopeClaimCacheEntry oidcScopeClaimCacheEntry = oidcScopeClaimCache.getScopeClaimMap(tenantId);
-        if (oidcScopeClaimCacheEntry == null) {
-            if (log.isDebugEnabled()) {
-                log.debug("Cache miss for OIDC scopes claims mapping for tenant: " + tenantId);
-            }
-            oidcScopeClaimCacheEntry = new OIDCScopeClaimCacheEntry();
-            oidcScopeClaimCacheEntry.setScopeClaimMapping(defaultScopeClaimMappingDAO.loadScopesClaimsMapping(tenantId));
-            oidcScopeClaimCache.addScopeClaimMap(tenantId, oidcScopeClaimCacheEntry);
-            if (log.isDebugEnabled()) {
-                log.debug("OIDC scopes and mapped claims are loaded from the database and inserted to the cache for " +
-                        "the tenant : " + tenantId);
-            }
-        }
+        oidcScopeClaimCacheEntry = getOidcScopeClaimCacheEntry(tenantId, oidcScopeClaimCacheEntry);
         List<String> scopes = new ArrayList<>();
         for (ScopeDTO scopeDTO : oidcScopeClaimCacheEntry.getScopeClaimMapping()) {
             scopes.add(scopeDTO.getName());
@@ -116,31 +95,45 @@ public class CacheBackedScopeClaimMappingDAOImpl extends ScopeClaimMappingDAOImp
     }
 
     @Override
-    public List<String> loadClaims(int tenantId, String scope) throws IdentityOAuth2Exception {
+    public List<String> getClaimsByScope(String scope, int tenantId) throws IdentityOAuth2Exception {
 
         OIDCScopeClaimCacheEntry oidcScopeClaimCacheEntry = oidcScopeClaimCache.getScopeClaimMap(tenantId);
         List<String> claimsList = new ArrayList<>();
+        oidcScopeClaimCacheEntry = getOidcScopeClaimCacheEntry(tenantId, oidcScopeClaimCacheEntry);
+
+        for (ScopeDTO scopeDTO : oidcScopeClaimCacheEntry.getScopeClaimMapping()) {
+            if (scope.equals(scopeDTO.getName()) && scopeDTO.getClaim() != null) {
+                Collections.addAll(claimsList, scopeDTO.getClaim());
+            }
+        }
+        return claimsList;
+    }
+
+    private OIDCScopeClaimCacheEntry getOidcScopeClaimCacheEntry(int tenantId, OIDCScopeClaimCacheEntry
+            oidcScopeClaimCacheEntry) throws IdentityOAuth2Exception {
+
         if (oidcScopeClaimCacheEntry == null) {
             if (log.isDebugEnabled()) {
                 log.debug("Cache miss for OIDC scopes claims mapping for tenant: " + tenantId);
             }
             oidcScopeClaimCacheEntry = new OIDCScopeClaimCacheEntry();
-            oidcScopeClaimCacheEntry.setScopeClaimMapping(defaultScopeClaimMappingDAO.loadScopesClaimsMapping(tenantId));
+            List<ScopeDTO> scopeClaims = defaultScopeClaimMappingDAO.getScopesClaims(tenantId);
+
+            //get scopes which does not have any associated claims.
+            List<String> scopesList = defaultScopeClaimMappingDAO.getScopes(tenantId);
+            if (CollectionUtils.isNotEmpty(scopesList) && CollectionUtils.isNotEmpty(scopeClaims))
+                for (String scope : scopesList) {
+                    ScopeDTO scopeDTO = new ScopeDTO();
+                    scopeDTO.setName(scope);
+                    scopeClaims.add(scopeDTO);
+                }
+            oidcScopeClaimCacheEntry.setScopeClaimMapping(scopeClaims);
             oidcScopeClaimCache.addScopeClaimMap(tenantId, oidcScopeClaimCacheEntry);
             if (log.isDebugEnabled()) {
                 log.debug("OIDC scopes and mapped claims are loaded from the database and inserted to the cache for " +
                         "the tenant : " + tenantId);
             }
         }
-        String[] claims = null;
-        for (ScopeDTO scopeDTO : oidcScopeClaimCacheEntry.getScopeClaimMapping()) {
-            if (scope.equals(scopeDTO.getName())) {
-                claims = scopeDTO.getClaim();
-            }
-        }
-        if (ArrayUtils.isNotEmpty(claims)) {
-            claimsList = Arrays.asList(claims);
-        }
-        return claimsList;
+        return oidcScopeClaimCacheEntry;
     }
 }

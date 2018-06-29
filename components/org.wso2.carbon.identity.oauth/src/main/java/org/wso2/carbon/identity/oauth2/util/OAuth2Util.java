@@ -117,7 +117,6 @@ import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -1287,7 +1286,7 @@ public class OAuth2Util {
 
         List<ScopeDTO> scopeClaimsList = loadScopeConfigFile();
         try {
-            OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().insertAllScopesAndClaims(tenantId,
+            OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().addScope(tenantId,
                     scopeClaimsList);
         } catch (IdentityOAuth2Exception e) {
             log.error(e.getMessage(), e);

@@ -26,32 +26,25 @@
 <%@ page import="org.wso2.carbon.CarbonConstants" %>
 <%@ page import="org.wso2.carbon.utils.ServerConstants" %>
 <%@ page import="org.wso2.carbon.identity.oauth.ui.client.OAuthAdminClient" %>
-<%! public static final String LOGGED_USER = "logged-user";
-    public static final String PURPOSE_NAME = "purposeName";
+<%@ page import="static org.wso2.carbon.identity.oauth.ui.util.OAuthUIConstants.SCOPE_NAME" %>
 %>
 <jsp:include page="../dialog/display_messages.jsp"/>
-
-<fmt:bundle
-        basename="org.wso2.carbon.consent.mgt.ui.i18n.Resources">
-    <carbon:breadcrumb label="consent.mgt"
-                       resourceBundle="org.wso2.carbon.consents.mgt.ui.i18n.Resources"
-                       topPage="true" request="<%=request%>"/>
     
     <div id="middle">
         <div id="workArea">
             
             <%
+                
                 String httpMethod = request.getMethod();
                 if (!"post".equalsIgnoreCase(httpMethod)) {
                     response.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
                     return;
                 }
-                
                 String forwardTo = null;
-                String BUNDLE = "org.wso2.carbon.consent.mgt.ui.i18n.Resources";
+                String BUNDLE = "org.wso2.carbon.identity.oauth.ui.i18n.Resources";
                 ResourceBundle resourceBundle = ResourceBundle.getBundle(BUNDLE, request.getLocale());
                 
-                String purposeName = request.getParameter(PURPOSE_NAME);
+                String scopeName = request.getParameter(SCOPE_NAME);
                 
                 try {
                     String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
@@ -61,10 +54,17 @@
                             config.getServletContext().getAttribute(CarbonConstants.CONFIGURATION_CONTEXT);
                     String cookie = (String) session.getAttribute(ServerConstants.ADMIN_SERVICE_COOKIE);
                     OAuthAdminClient oAuthAdminClient = new OAuthAdminClient(cookie, serverURL, configContext);
-                    oAuthAdminClient.deleteOIDCScopesAndClaimsByScope(purposeName, tenantId);
-                    forwardTo = "list-oidc-scopes.jsp";
+                    
+                    String[] selectedClaims = request.getParameterValues("selectedClaims");
+                    boolean isUpdate = Boolean.parseBoolean(request.getParameter("update"));
+                    oAuthAdminClient.updateScope(scopeName, selectedClaims, tenantId, false);
+                    if (isUpdate) {
+                        forwardTo = "edit-oidc-claims.jsp?scopeName=" + scopeName;
+                    } else {
+                        forwardTo = "list-oidc-scopes.jsp";
+                    }
                 } catch (Exception e) {
-                    String message = resourceBundle.getString("error.while.delete.purpose");
+                    String message = resourceBundle.getString("error.while.editing.claims");
                     CarbonUIMessage.sendCarbonUIMessage(message, CarbonUIMessage.ERROR, request, e);
                     forwardTo = "list-oidc-scopes.jsp";
                 }
@@ -80,4 +80,3 @@
         
         </div>
     </div>
-</fmt:bundle>

@@ -23,7 +23,6 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.omg.CORBA.PUBLIC_MEMBER;
 import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.core.AbstractAdmin;
@@ -493,12 +492,12 @@ public class OAuthAdminService extends AbstractAdmin {
      * @param oidcScopeClaimMap array of oidc scope claims
      * @throws IdentityOAuthAdminException if an error occurs when inserting scopes or claims.
      */
-    public void addOIDCScopesAndClaims(int tenantId, ScopeDTO[] oidcScopeClaimMap)
+    public void addScope(int tenantId, ScopeDTO[] oidcScopeClaimMap)
             throws IdentityOAuthAdminException {
 
         try {
             if (ArrayUtils.isNotEmpty(oidcScopeClaimMap)) {
-                OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().insertAllScopesAndClaims(tenantId,
+                OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().addScope(tenantId,
                         Arrays.asList(oidcScopeClaimMap));
             } else {
                 log.warn("Scope claim mapping is empty for the tenant: " + tenantId);
@@ -515,12 +514,12 @@ public class OAuthAdminService extends AbstractAdmin {
      * @return all persisted scopes and claims
      * @throws IdentityOAuth2Exception if an error occurs when loading scopes and claims.
      */
-    public ScopeDTO[] loadAllODCScopesAndClaims(int tenantId) throws IdentityOAuthAdminException {
+    public ScopeDTO[] getScopesClaims(int tenantId) throws IdentityOAuthAdminException {
 
         try {
 
             List<ScopeDTO> scopeDTOList = OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
-                    loadScopesClaimsMapping(tenantId);
+                    getScopesClaims(tenantId);
             if (CollectionUtils.isNotEmpty(scopeDTOList)) {
                 return scopeDTOList.toArray(new ScopeDTO[scopeDTOList.size()]);
             } else {
@@ -540,9 +539,9 @@ public class OAuthAdminService extends AbstractAdmin {
      * @param scope oidc scope
      * @throws IdentityOAuthAdminException if an error occurs when deleting scopes and claims.
      */
-    public void deleteScopeAndClaimsByScope(String scope, int tenantId) throws IdentityOAuthAdminException {
+    public void deleteScope(String scope, int tenantId) throws IdentityOAuthAdminException {
 
-        OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().deleteScopeAndClaims(scope, tenantId);
+        OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().deleteScope(scope, tenantId);
     }
 
     /**
@@ -552,11 +551,11 @@ public class OAuthAdminService extends AbstractAdmin {
      * @return list of scopes persisted.
      * @throws IdentityOAuth2Exception if an error occurs when loading oidc scopes.
      */
-    public String[] loadAllODCScopes(int tenantId) throws IdentityOAuthAdminException {
+    public String[] getScopes(int tenantId) throws IdentityOAuthAdminException {
 
         try {
             List<String> scopeDTOList = OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
-                    loadScopes(tenantId);
+                    getScopes(tenantId);
             if (CollectionUtils.isNotEmpty(scopeDTOList)) {
                 return scopeDTOList.toArray(new String[scopeDTOList.size()]);
             } else {
@@ -578,11 +577,11 @@ public class OAuthAdminService extends AbstractAdmin {
      * @return list of claims which are mapped to the oidc scope.
      * @throws IdentityOAuth2Exception if an error occurs when lading oidc claims.
      */
-    public String[] loadAllODCClaims(int tenantId, String scope) throws IdentityOAuthAdminException {
+    public String[] getClaimByScope(int tenantId, String scope) throws IdentityOAuthAdminException {
 
         try {
             List<String> claimsDTOList = OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
-                    loadClaims(tenantId, scope);
+                    getClaimsByScope(scope, tenantId);
             if (CollectionUtils.isNotEmpty(claimsDTOList)) {
                 return claimsDTOList.toArray(new String[claimsDTOList.size()]);
             } else {
@@ -604,10 +603,12 @@ public class OAuthAdminService extends AbstractAdmin {
      * @param claims   list of oidc claims
      * @throws IdentityOAuth2Exception if an error occurs when adding a new claim for a scope.
      */
-    public void addNewClaimsForExistingScope(String scope, String[] claims, int tenantId) throws IdentityOAuth2Exception {
+    public void updateScope(String scope, String[] claims, int tenantId, boolean isAdd) throws IdentityOAuth2Exception {
 
-        OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
-                addNewClaimsForScope(scope, Arrays.asList(claims), tenantId);
+        if (claims != null) {
+            OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
+                    updateScope(scope, tenantId, isAdd, Arrays.asList(claims));
+        }
     }
 
     /**
@@ -618,34 +619,14 @@ public class OAuthAdminService extends AbstractAdmin {
      * @return id of the given scope
      * @throws IdentityOAuth2Exception if an error occurs when loading scope id.
      */
-    public int loadScopeId(int tenantId, String scope) throws IdentityOAuthAdminException {
-
-        int scopeId;
-        try {
-            scopeId = OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().loadScopeId(scope, tenantId);
-        } catch (IdentityOAuth2Exception e) {
-            throw handleError("Error while inserting the scopes", e);
-        }
-        return scopeId;
-    }
-
-    /**
-     * To check whether the scope claim mapping is existing.
-     *
-     * @param scope    scope name
-     * @param claim    claim url
-     * @param tenantId tenant id
-     * @return true if the scope claim mapping is existing.
-     * @throws IdentityOAuth2Exception if an error occurs when checking scope claim mapping.
-     */
-    public boolean isScopeClaimMappingExisting(String scope, String claim, int tenantId) throws IdentityOAuthAdminException {
+    public boolean isScopeExist(int tenantId, String scope) throws IdentityOAuthAdminException {
 
         try {
-            return OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().isScopeClaimMappingExisting
-                    (scope, claim, tenantId);
+            return OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().isScopeExist(scope, tenantId);
         } catch (IdentityOAuth2Exception e) {
-            throw handleError("Error while editing the scopes.", e);
+            throw handleError("Error while inserting the scopes.", e);
         }
+
     }
 
     /**
