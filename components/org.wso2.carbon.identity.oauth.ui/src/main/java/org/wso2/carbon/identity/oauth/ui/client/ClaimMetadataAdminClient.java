@@ -66,6 +66,7 @@ public class ClaimMetadataAdminClient {
      */
     public ExternalClaimDTO[] getExternalClaims(String externalClaimDialect) throws RemoteException,
             ClaimMetadataManagementServiceClaimMetadataException {
+
         try {
             return stub.getExternalClaims(externalClaimDialect);
         } catch (RemoteException e) {

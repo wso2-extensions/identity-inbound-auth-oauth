@@ -64,27 +64,27 @@ import java.util.Map;
 public class TestUtils {
 
     public static final String DB_NAME = "jdbc/WSO2CarbonDB";
-    public static final String H2_SCRIPT_NAME = "h2.sql";
+    public static final String H2_SCRIPT_NAME = "scope_claim.sql";
     public static Map<String, BasicDataSource> dataSourceMap = new HashMap<>();
 
 
-    public static void initiateH2Base() throws Exception {
+    public static void initiateH2Base() throws SQLException {
 
         BasicDataSource dataSource = new BasicDataSource();
         dataSource.setDriverClassName("org.h2.Driver");
         dataSource.setUsername("username");
         dataSource.setPassword("password");
         dataSource.setUrl("jdbc:h2:mem:test" + DB_NAME);
-        try (Connection connection = dataSource.getConnection()) {
+            Connection connection = dataSource.getConnection();
             connection.createStatement().executeUpdate("RUNSCRIPT FROM '" + getFilePath(H2_SCRIPT_NAME) + "'");
-        }
+
         dataSourceMap.put(DB_NAME, dataSource);
     }
 
     public static String getFilePath(String fileName) {
 
         if (StringUtils.isNotBlank(fileName)) {
-            return Paths.get(System.getProperty("user.dir"), "src", "test", "resources", "dbscripts",
+            return Paths.get(System.getProperty("user.dir"), "src", "test", "resources", "dbScripts",
                     fileName).toString();
         }
         throw new IllegalArgumentException("DB Script file name cannot be empty.");

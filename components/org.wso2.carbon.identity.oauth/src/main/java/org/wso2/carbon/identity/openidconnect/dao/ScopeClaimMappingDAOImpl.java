@@ -51,7 +51,7 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
     private final Log log = LogFactory.getLog(ScopeClaimMappingDAOImpl.class);
 
     @Override
-    public void addScope(int tenantId, List<ScopeDTO> scopeClaimsList) throws IdentityOAuth2Exception {
+    public void addScopes(int tenantId, List<ScopeDTO> scopeClaimsList) throws IdentityOAuth2Exception {
 
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
         //scopeClaimsList is not a null.
@@ -82,14 +82,41 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
     }
 
     @Override
-    public List<ScopeDTO> getScopesClaims(int tenantId) throws IdentityOAuth2Exception {
+    public void addScope(int tenantId, String scope, String[] claims) throws IdentityOAuth2Exception {
+
+        if (!isScopeExist(scope, tenantId)) {
+            JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
+            try {
+                int scopeClaimMappingId = jdbcTemplate.executeInsert(SQLQueries.STORE_IDN_OIDC_SCOPES,
+                        (preparedStatement -> {
+                            preparedStatement.setString(1, scope);
+                            preparedStatement.setInt(2, tenantId);
+                        }), null, true);
+                if (scopeClaimMappingId > 0 && ArrayUtils.isNotEmpty(claims)) {
+                    Set<String> claimsSet = new HashSet<>(Arrays.asList(claims));
+                    insertClaims(tenantId, scopeClaimMappingId, claimsSet);
+                }
+                if (log.isDebugEnabled() && ArrayUtils.isNotEmpty(claims)) {
+                    log.debug("The scope: " + scope + " and the claims: " + Arrays.asList(claims) + "are successfully" +
+                            " inserted for the tenant: " + tenantId);
+                }
+            } catch (DataAccessException e) {
+                String errorMessage = "Error while persisting scopes for the tenant: " + tenantId;
+                throw new IdentityOAuth2Exception(errorMessage, e);
+            }
+        } else {
+            log.warn("The Scope: " + scope + " is already existing.");
+        }
+    }
+
+    @Override
+    public List<ScopeDTO> getScopes(int tenantId) throws IdentityOAuth2Exception {
 
         String sql = SQLQueries.GET_IDN_OIDC_SCOPES_CLAIMS;
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
         List<ScopeDTO> oidcScopeClaimList;
 
         try {
-
             Map<String, List<String>> scopeClaimMap = new HashMap<>();
             jdbcTemplate.executeQuery(sql, (RowMapper<ScopeDTO>) (resultSet, i) -> {
                 List<String> claimsList;
@@ -119,7 +146,7 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
     }
 
     @Override
-    public List<String> getScopes(int tenantId) throws IdentityOAuth2Exception {
+    public List<String> getScopeNames(int tenantId) throws IdentityOAuth2Exception {
 
         String sql = SQLQueries.GET_IDN_OIDC_SCOPES;
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
@@ -138,29 +165,27 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
     }
 
     @Override
-    public List<String> getClaimsByScope(String scope, int tenantId) throws IdentityOAuth2Exception {
+    public ScopeDTO getClaims(String scope, int tenantId) throws IdentityOAuth2Exception {
 
         String sql = SQLQueries.GET_IDN_OIDC_CLAIMS;
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
+        ScopeDTO scopeDTO = new ScopeDTO();
+
         try {
-            List<String> claimList = jdbcTemplate.executeQuery(sql, (resultSet, i) -> resultSet.getString(1),
-                    preparedStatement ->
+            List<String> claimsList = jdbcTemplate.executeQuery(sql, (resultSet, i) -> resultSet.getString(1)
+                    , preparedStatement ->
                     {
                         preparedStatement.setString(1, scope);
                         preparedStatement.setInt(2, tenantId);
                     });
-
-            if (log.isDebugEnabled()) {
-                if (log.isDebugEnabled()) {
-                    log.debug("The claims: " + String.join(",", claimList) + " are successfully loaded for the tenant: " +
-                            scope);
-                }
-            }
-            return claimList;
+            scopeDTO.setName(scope);
+            String[] claimsArr = new String[claimsList.size()];
+            scopeDTO.setClaim(claimsList.toArray(claimsArr));
         } catch (DataAccessException e) {
             String errorMessage = "Error while loading OIDC claims for the scope: " + scope;
             throw new IdentityOAuth2Exception(errorMessage, e);
         }
+        return scopeDTO;
     }
 
     @Override
@@ -183,15 +208,17 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
     }
 
     @Override
-    public void updateScope(String scope, int tenantId, boolean isAdd, List<String> claims) throws IdentityOAuth2Exception {
+    public void updateScope(String scope, int tenantId, List<String> addClaims, List<String> deleteClaims)
+            throws IdentityOAuth2Exception {
 
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
         int scopeClaimMappingId = -1;
         try {
-            if (isAdd) {
-                addClaimsByScope(scope, tenantId, claims, jdbcTemplate, scopeClaimMappingId);
-            } else {
-                deleteClaimsByScope(scope, tenantId, claims, jdbcTemplate, scopeClaimMappingId);
+            if (CollectionUtils.isNotEmpty(addClaims)) {
+                addClaimsByScope(scope, tenantId, addClaims, jdbcTemplate, scopeClaimMappingId);
+            }
+            if(CollectionUtils.isNotEmpty(deleteClaims)){
+                deleteClaimsByScope(scope, tenantId, deleteClaims, jdbcTemplate, scopeClaimMappingId);
             }
         } catch (TransactionException e) {
             String errorMsg = "Error while inserting new claims for the scope: " + scope;
@@ -245,7 +272,7 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
         });
     }
 
-    public boolean isScopeExist(int tenantId) throws IdentityOAuth2Exception {
+    public boolean hasScopesPopulated(int tenantId) throws IdentityOAuth2Exception {
 
         Integer id;
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
@@ -263,6 +290,31 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
             }
         } catch (TransactionException e) {
             String errorMessage = "Error while loading the top scope id.";
+            throw new IdentityOAuth2Exception(errorMessage, e);
+        }
+        return true;
+    }
+
+    @Override
+    public boolean isScopeExist(String scope, int tenantId) throws IdentityOAuth2Exception {
+
+        Integer scopeId;
+        try {
+            JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
+            scopeId = jdbcTemplate.withTransaction(template -> template.fetchSingleRecord
+                    (SQLQueries.GET_IDN_OIDC_SCOPE_ID, (resultSet, rowNumber) ->
+                            resultSet.getInt(1), preparedStatement -> {
+                        preparedStatement.setString(1, scope);
+                        preparedStatement.setInt(2, tenantId);
+                    }));
+            if (scopeId == null) {
+                return false;
+            }
+            if (log.isDebugEnabled()) {
+                log.debug("Scope id: " + scopeId + "is returned for the tenant: " + tenantId + "and scope: " + scope);
+            }
+        } catch (TransactionException e) {
+            String errorMessage = "Error fetching data for oidc scope: " + scope;
             throw new IdentityOAuth2Exception(errorMessage, e);
         }
         return true;
@@ -290,30 +342,6 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
             throw new IdentityOAuth2Exception(errorMessage, e);
         }
         return scopeId;
-    }
-
-    public boolean isScopeExist(String scope, int tenantId) throws IdentityOAuth2Exception {
-
-        Integer scopeId;
-        try {
-            JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
-            scopeId = jdbcTemplate.withTransaction(template -> template.fetchSingleRecord
-                    (SQLQueries.GET_IDN_OIDC_SCOPE_ID, (resultSet, rowNumber) ->
-                            resultSet.getInt(1), preparedStatement -> {
-                        preparedStatement.setString(1, scope);
-                        preparedStatement.setInt(2, tenantId);
-                    }));
-            if (scopeId == null) {
-                return false;
-            }
-            if (log.isDebugEnabled()) {
-                log.debug("Scope id: " + scopeId + "is returned for the tenant: " + tenantId + "and scope: " + scope);
-            }
-        } catch (TransactionException e) {
-            String errorMessage = "Error fetching data for oidc scope: " + scope;
-            throw new IdentityOAuth2Exception(errorMessage, e);
-        }
-        return true;
     }
 
     private int loadOIDCClaimId(String claim, int tenantId) throws IdentityOAuth2Exception {

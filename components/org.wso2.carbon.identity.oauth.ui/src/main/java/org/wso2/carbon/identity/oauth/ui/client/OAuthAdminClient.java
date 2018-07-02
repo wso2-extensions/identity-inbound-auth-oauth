@@ -190,45 +190,18 @@ public class OAuthAdminClient {
         return stub.getTokenExpiryTimes();
     }
 
-    private ScopeDTO[] convertMapToArray(Map<String, List<String>> scopeClaimMap) {
-
-        Set<Map.Entry<String, List<String>>> scopeClaimEntries = scopeClaimMap.entrySet();
-        List<ScopeDTO> scopeClaimsList = new ArrayList<>();
-        //scopeClaimMap is not null.
-        ScopeDTO[] scpDTOArr = new ScopeDTO[scopeClaimMap.size()];
-        ScopeDTO scopeDTO = new ScopeDTO();
-        for (Map.Entry<String, List<String>> entry : scopeClaimEntries) {
-            String scopeName = entry.getKey();
-            List<String> claimValues = entry.getValue();
-            if (claimValues != null) {
-                String[] arr = new String[claimValues.size()];
-                for (int i = 0; i < claimValues.size(); i++) {
-                    arr[i] = claimValues.get(i);
-                }
-                scopeDTO.setClaim(arr);
-            }
-            scopeDTO.setName(scopeName);
-            scopeClaimsList.add(scopeDTO);
-        }
-        for (int i = 0; i < scopeClaimsList.size(); i++) {
-            scpDTOArr[i] = scopeClaimsList.get(i);
-        }
-        return scpDTOArr;
-    }
-
     /**
      * To add oidc scopes and claims
      *
-     * @param tenantId      tenant Id
-     * @param scopeClaimMap map of oidc scope claims
+     * @param tenantId tenant Id
+     * @param scope    an OIDC scope
      * @throws RemoteException                              if an exception occured during remote call.
      * @throws OAuthAdminServiceIdentityOAuthAdminException if an error occurs when adding scopes or claims
      */
-    public void addScope(int tenantId, Map<String, List<String>> scopeClaimMap) throws RemoteException,
+    public void addScope(int tenantId, String scope, String[] claims) throws RemoteException,
             OAuthAdminServiceIdentityOAuthAdminException {
 
-        ScopeDTO[] scpDTO = convertMapToArray(scopeClaimMap);
-        stub.addScope(tenantId, scpDTO);
+        stub.addScope(tenantId, scope, claims);
     }
 
     /**
@@ -307,15 +280,15 @@ public class OAuthAdminClient {
      * To add new claims for an existing scope.
      *
      * @param scope    scope name
-     * @param claims   claims
+     * @param addClaims   addClaims
      * @param tenantId tenant id
      * @throws RemoteException                          if an exception occured during remote call.
      * @throws OAuthAdminServiceIdentityOAuth2Exception if an error occurs when adding new claims for scope.
      */
-    public void updateScope(String scope, String[] claims, int tenantId, boolean isAdd) throws RemoteException,
+    public void updateScope(String scope, int tenantId, String[] addClaims, String[] deleteClaims) throws RemoteException,
             OAuthAdminServiceIdentityOAuth2Exception {
 
-        stub.updateScope(scope, claims, tenantId, isAdd);
+        stub.updateScope(scope, tenantId, addClaims, deleteClaims);
     }
 
     /**

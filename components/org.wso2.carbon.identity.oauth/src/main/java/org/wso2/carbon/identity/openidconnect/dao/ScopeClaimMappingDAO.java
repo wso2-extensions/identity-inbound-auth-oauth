@@ -32,13 +32,22 @@ import java.util.List;
 public interface ScopeClaimMappingDAO {
 
     /**
-     * To insert oidc scopes and claims in the related db tables.
+     * To add OIDC scopes and claims in the related db tables.
      *
      * @param tenantId       tenant Id
      * @param scopeClaimsMap map of oidc scope claims
      * @throws IdentityOAuth2Exception if an error occurs when inserting scopes or claims.
      */
-    void addScope(int tenantId, List<ScopeDTO> scopeClaimsMap) throws IdentityOAuth2Exception;
+    void addScopes(int tenantId, List<ScopeDTO> scopeClaimsMap) throws IdentityOAuth2Exception;
+
+    /**
+     * To add OIDC scope for a specific tenant.
+     *
+     * @param tenantId tenant Id
+     * @param scope    scope
+     * @throws IdentityOAuth2Exception if an error occurs when adding a scope.
+     */
+    void addScope(int tenantId, String scope, String[] claimsList) throws IdentityOAuth2Exception;
 
     /**
      * To retrieve all persisted oidc scopes with mapped claims.
@@ -47,7 +56,7 @@ public interface ScopeClaimMappingDAO {
      * @return all persisted scopes and claims
      * @throws IdentityOAuth2Exception if an error occurs when loading scopes and claims.
      */
-    List<ScopeDTO> getScopesClaims(int tenantId) throws IdentityOAuth2Exception;
+    List<ScopeDTO> getScopes(int tenantId) throws IdentityOAuth2Exception;
 
     /**
      * To retrieve all persisted oidc scopes.
@@ -56,7 +65,7 @@ public interface ScopeClaimMappingDAO {
      * @return list of scopes persisted.
      * @throws IdentityOAuth2Exception if an error occurs when loading oidc scopes.
      */
-    List<String> getScopes(int tenantId) throws IdentityOAuth2Exception;
+    List<String> getScopeNames(int tenantId) throws IdentityOAuth2Exception;
 
     /**
      * To remove persisted scopes and claims.
@@ -69,12 +78,13 @@ public interface ScopeClaimMappingDAO {
     /**
      * To add new claims for an existing scope.
      *
-     * @param scope    scope name
-     * @param tenantId tenant Id
-     * @param claims   list of oidc claims
+     * @param scope        scope name
+     * @param tenantId     tenant Id
+     * @param addClaims    list of oidc claims to be added
+     * @param deleteClaims list of oidc claims to be deleted
      * @throws IdentityOAuth2Exception if an error occurs when adding a new claim for a scope.
      */
-    void updateScope(String scope, int tenantId, boolean isAdd, List<String> claims) throws IdentityOAuth2Exception;
+    void updateScope(String scope, int tenantId, List<String> addClaims, List<String> deleteClaims) throws IdentityOAuth2Exception;
 
     /**
      * To retrieve oidc claims mapped to an oidc scope.
@@ -84,7 +94,7 @@ public interface ScopeClaimMappingDAO {
      * @return list of claims which are mapped to the oidc scope.
      * @throws IdentityOAuth2Exception if an error occurs when lading oidc claims.
      */
-    List<String> getClaimsByScope(String scope, int tenantId) throws IdentityOAuth2Exception;
+    ScopeDTO getClaims(String scope, int tenantId) throws IdentityOAuth2Exception;
 
     /**
      * To load top record of the scope table.
@@ -92,7 +102,7 @@ public interface ScopeClaimMappingDAO {
      * @return scope id
      * @throws IdentityOAuth2Exception if an error occurs when loading the top scope record.
      */
-    boolean isScopeExist(int tenantId) throws IdentityOAuth2Exception;
+    boolean hasScopesPopulated(int tenantId) throws IdentityOAuth2Exception;
 
     /**
      * To check whether the scope is existing.

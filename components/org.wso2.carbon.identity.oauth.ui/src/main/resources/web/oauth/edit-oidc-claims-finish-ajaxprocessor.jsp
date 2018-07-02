@@ -29,54 +29,54 @@
 <%@ page import="static org.wso2.carbon.identity.oauth.ui.util.OAuthUIConstants.SCOPE_NAME" %>
 %>
 <jsp:include page="../dialog/display_messages.jsp"/>
-    
-    <div id="middle">
-        <div id="workArea">
+
+<div id="middle">
+    <div id="workArea">
+        
+        <%
             
-            <%
+            String httpMethod = request.getMethod();
+            if (!"post".equalsIgnoreCase(httpMethod)) {
+                response.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
+                return;
+            }
+            String forwardTo = null;
+            String BUNDLE = "org.wso2.carbon.identity.oauth.ui.i18n.Resources";
+            ResourceBundle resourceBundle = ResourceBundle.getBundle(BUNDLE, request.getLocale());
+            
+            String scopeName = request.getParameter(SCOPE_NAME);
+            
+            try {
+                String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+                int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
+                String serverURL = CarbonUIUtil.getServerURL(config.getServletContext(), session);
+                ConfigurationContext configContext = (ConfigurationContext)
+                        config.getServletContext().getAttribute(CarbonConstants.CONFIGURATION_CONTEXT);
+                String cookie = (String) session.getAttribute(ServerConstants.ADMIN_SERVICE_COOKIE);
+                OAuthAdminClient oAuthAdminClient = new OAuthAdminClient(cookie, serverURL, configContext);
                 
-                String httpMethod = request.getMethod();
-                if (!"post".equalsIgnoreCase(httpMethod)) {
-                    response.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
-                    return;
-                }
-                String forwardTo = null;
-                String BUNDLE = "org.wso2.carbon.identity.oauth.ui.i18n.Resources";
-                ResourceBundle resourceBundle = ResourceBundle.getBundle(BUNDLE, request.getLocale());
-                
-                String scopeName = request.getParameter(SCOPE_NAME);
-                
-                try {
-                    String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
-                    int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
-                    String serverURL = CarbonUIUtil.getServerURL(config.getServletContext(), session);
-                    ConfigurationContext configContext = (ConfigurationContext)
-                            config.getServletContext().getAttribute(CarbonConstants.CONFIGURATION_CONTEXT);
-                    String cookie = (String) session.getAttribute(ServerConstants.ADMIN_SERVICE_COOKIE);
-                    OAuthAdminClient oAuthAdminClient = new OAuthAdminClient(cookie, serverURL, configContext);
-                    
-                    String[] selectedClaims = request.getParameterValues("selectedClaims");
-                    boolean isUpdate = Boolean.parseBoolean(request.getParameter("update"));
-                    oAuthAdminClient.updateScope(scopeName, selectedClaims, tenantId, false);
-                    if (isUpdate) {
-                        forwardTo = "edit-oidc-claims.jsp?scopeName=" + scopeName;
-                    } else {
-                        forwardTo = "list-oidc-scopes.jsp";
-                    }
-                } catch (Exception e) {
-                    String message = resourceBundle.getString("error.while.editing.claims");
-                    CarbonUIMessage.sendCarbonUIMessage(message, CarbonUIMessage.ERROR, request, e);
+                String[] selectedClaims = request.getParameterValues("selectedClaims");
+                boolean isUpdate = Boolean.parseBoolean(request.getParameter("update"));
+                oAuthAdminClient.updateScope(scopeName, tenantId, null, selectedClaims);
+                if (isUpdate) {
+                    forwardTo = "edit-oidc-claims.jsp?scopeName=" + scopeName;
+                } else {
                     forwardTo = "list-oidc-scopes.jsp";
                 }
-            %>
-            
-            <script type="text/javascript">
-                function forward() {
-                    location.href = "<%=forwardTo%>";
-                }
-
-                forward();
-            </script>
+            } catch (Exception e) {
+                String message = resourceBundle.getString("error.while.editing.claims");
+                CarbonUIMessage.sendCarbonUIMessage(message, CarbonUIMessage.ERROR, request, e);
+                forwardTo = "list-oidc-scopes.jsp";
+            }
+        %>
         
-        </div>
+        <script type="text/javascript">
+            function forward() {
+                location.href = "<%=forwardTo%>";
+            }
+
+            forward();
+        </script>
+    
     </div>
+</div>

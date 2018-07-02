@@ -22,7 +22,6 @@ import com.nimbusds.jwt.JWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.JWTParser;
 import org.apache.commons.dbcp.BasicDataSource;
-import org.apache.commons.lang.StringUtils;
 import org.mockito.Mockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.IObjectFactory;
@@ -60,9 +59,6 @@ import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
-import static org.wso2.carbon.identity.oauth.endpoint.user.impl.TestUtils.H2_SCRIPT_NAME;
-import static org.wso2.carbon.identity.oauth.endpoint.user.impl.TestUtils.getConnection;
-import static org.wso2.carbon.identity.oauth.endpoint.user.impl.TestUtils.initiateH2Base;
 
 /**
  * Test class to test UserInfoJWTResponse.
@@ -72,23 +68,14 @@ import static org.wso2.carbon.identity.oauth.endpoint.user.impl.TestUtils.initia
 public class UserInfoJWTResponseTest extends UserInfoResponseBaseTest {
 
     private UserInfoJWTResponse userInfoJWTResponse;
-    Connection connection1 = null;
+    Connection con = null;
 
     @BeforeClass
-    public void setup() throws RequestObjectException {
+    public void setup() throws Exception {
 
+        TestUtils.initiateH2Base();
+        con = TestUtils.getConnection();
         userInfoJWTResponse = new UserInfoJWTResponse();
-        BasicDataSource dataSource1 = new BasicDataSource();
-        dataSource1.setDriverClassName("org.h2.Driver");
-        dataSource1.setUsername("username");
-        dataSource1.setPassword("password");
-        dataSource1.setUrl("jdbc:h2:mem:test" + "jdbc/WSO2CarbonDB");
-        try {
-            connection1 = dataSource1.getConnection();
-            connection1.createStatement().executeUpdate("RUNSCRIPT FROM 'src/test/resources/dbScripts/h2.sql'");
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
 
         RequestObjectService requestObjectService = Mockito.mock(RequestObjectService.class);
         List<RequestedClaim> requestedClaims = Collections.EMPTY_LIST;
@@ -124,7 +111,7 @@ public class UserInfoJWTResponseTest extends UserInfoResponseBaseTest {
             mockStatic(JDBCPersistenceManager.class);
             DataSource dataSource = mock(DataSource.class);
             JDBCPersistenceManager jdbcPersistenceManager = mock(JDBCPersistenceManager.class);
-            Mockito.when(dataSource.getConnection()).thenReturn(connection1);
+            Mockito.when(dataSource.getConnection()).thenReturn(con);
             Mockito.when(jdbcPersistenceManager.getInstance()).thenReturn(jdbcPersistenceManager);
             Mockito.when(jdbcPersistenceManager.getDataSource()).thenReturn(dataSource);
             String responseString =
@@ -143,10 +130,11 @@ public class UserInfoJWTResponseTest extends UserInfoResponseBaseTest {
     @Test
     public void testUpdateAtClaim() throws Exception {
 
+        userInfoJWTResponse = new UserInfoJWTResponse();
         mockStatic(JDBCPersistenceManager.class);
         DataSource dataSource = mock(DataSource.class);
         JDBCPersistenceManager jdbcPersistenceManager = mock(JDBCPersistenceManager.class);
-        Mockito.when(dataSource.getConnection()).thenReturn(connection1);
+        Mockito.when(dataSource.getConnection()).thenReturn(con);
         Mockito.when(jdbcPersistenceManager.getInstance()).thenReturn(jdbcPersistenceManager);
         Mockito.when(jdbcPersistenceManager.getDataSource()).thenReturn(dataSource);
         String updateAtValue = "1509556412";
@@ -158,8 +146,6 @@ public class UserInfoJWTResponseTest extends UserInfoResponseBaseTest {
 
         String emailVerifiedClaimValue = "true";
         mockStatic(JDBCPersistenceManager.class);
-        DataSource dataSource = mock(DataSource.class);
-
         testBooleanClaimInUserInfoResponse(EMAIL_VERIFIED, emailVerifiedClaimValue);
     }
 
@@ -189,6 +175,7 @@ public class UserInfoJWTResponseTest extends UserInfoResponseBaseTest {
 
     private void testLongClaimInUserInfoResponse(String claimUri, String claimValue) throws Exception {
 
+        userInfoJWTResponse = new UserInfoJWTResponse();
         initSingleClaimTest(claimUri, claimValue);
         mockDataSource();
         String responseString =
@@ -248,15 +235,12 @@ public class UserInfoJWTResponseTest extends UserInfoResponseBaseTest {
         return new org.powermock.modules.testng.PowerMockObjectFactory();
     }
 
-    private void mockDataSource(){
+    private void mockDataSource() throws SQLException {
+
         mockStatic(JDBCPersistenceManager.class);
         DataSource dataSource = Mockito.mock(DataSource.class);
         JDBCPersistenceManager jdbcPersistenceManager = Mockito.mock(JDBCPersistenceManager.class);
-        try {
-            Mockito.when(dataSource.getConnection()).thenReturn(connection1);
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        Mockito.when(dataSource.getConnection()).thenReturn(con);
         Mockito.when(jdbcPersistenceManager.getInstance()).thenReturn(jdbcPersistenceManager);
         Mockito.when(jdbcPersistenceManager.getDataSource()).thenReturn(dataSource);
     }

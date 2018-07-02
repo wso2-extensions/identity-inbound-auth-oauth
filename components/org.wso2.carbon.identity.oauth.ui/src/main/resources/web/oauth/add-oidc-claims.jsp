@@ -51,11 +51,12 @@
     String cookie = (String) session.getAttribute(ServerConstants.ADMIN_SERVICE_COOKIE);
     ClaimMetadataAdminClient client = new ClaimMetadataAdminClient(cookie, serverURL, configContext);
     List<ExternalClaimDTO> externalClaims = null;
+    String[] claims = null;
     try {
         ExternalClaimDTO[] externalClaimDTOS = client.getExternalClaims(OIDC_CLAIM_DIALECT);
         
         OAuthAdminClient oAuthAdminClient = new OAuthAdminClient(cookie, serverURL, configContext);
-        String[] claims = oAuthAdminClient.getClaimByScope(tenantId, scope);
+        claims = oAuthAdminClient.getClaimByScope(tenantId, scope);
         List<ExternalClaimDTO> externalClaimsTemp = new ArrayList<ExternalClaimDTO>();
         externalClaims = new ArrayList<ExternalClaimDTO>(Arrays.asList(externalClaimDTOS));
         if (claims != null)
@@ -125,7 +126,7 @@
             }
             return true
         }
-        
+
         var claimRowId = -1;
         jQuery(document).ready(function () {
             jQuery('#claimAddLink').click(function () {
@@ -228,6 +229,41 @@
                     </tbody>
                 </table>
             </form>
+        </div>
+        <br/>
+        <br/>
+        <div id="view">
+            <table class="styledLeft" width="100%" id="oidcClaims">
+                <%
+                    if (claims != null && claims.length > 0) {
+                %>
+                <tbody>
+                <%
+                    for (String claim : claims) {
+                %>
+                <tr>
+                    <td>
+                        <%if (claim != null) {%>
+                        <%=Encode.forHtml(claim)%>
+                        <%} else {%>
+                        <label>No associated claims found.</label>
+                        <%}%>
+                    
+                    </td>
+                
+                </tr>
+                <%
+                    }
+                %>
+                </tbody>
+                <% } else { %>
+                <tbody>
+                <tr>
+                    <td colspan="3"><i><fmt:message key="no.claims.found"/></i></td>
+                </tr>
+                </tbody>
+                <% } %>
+            </table>
         </div>
     </div>
 </fmt:bundle>

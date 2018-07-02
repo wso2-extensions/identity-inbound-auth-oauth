@@ -79,6 +79,10 @@
                 CARBON.showWarningDialog('<fmt:message key="scope.name.cannot.be.empty"/>');
                 return false;
             }
+            if(claimRowId<=-1){
+                CARBON.showWarningDialog('<fmt:message key="scope.without.claims"/>');
+                return false;
+            }
             return true
         }
 

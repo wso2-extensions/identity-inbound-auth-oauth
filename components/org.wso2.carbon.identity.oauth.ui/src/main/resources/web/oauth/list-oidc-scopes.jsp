@@ -29,8 +29,6 @@
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%@ taglib uri="http://wso2.org/projects/carbon/taglibs/carbontags.jar"
            prefix="carbon" %>
-<%! private static final String DEFAULT = "DEFAULT";
-%>
 <jsp:include page="../dialog/display_messages.jsp"/>
 
 <fmt:bundle
@@ -109,21 +107,13 @@
                 <tr>
                     <td><%=Encode.forHtml(scope)%>
                     </td>
-                    <%
-                        if (DEFAULT.equals(scope)) {
-                    %>
-                    <td style="width: 100px; white-space: nowrap;">
-                    </td>
-                    <%
-                    } else {
-                    %>
                     
                     <td style="width: 100px; white-space: nowrap;"><a
                             title="Update OIDC Scope"
                             href="edit-oidc-claims.jsp?scopeName=<%=Encode.forUriComponent(scope)%>"
                             class="icon-link"
                             style="background-image: url(../admin/images/edit.gif)"><fmt:message
-                            key='edit'/></a>
+                            key='update'/></a>
                         
                         <a title="Delete OIDC Scope"
                            onclick="removeItem('<%=Encode.forJavaScriptAttribute(scope)%>');return
@@ -141,11 +131,7 @@
                         </a>
                     
                     </td>
-                    <%
-                        
-                        }
                     
-                    %>
                 </tr>
                 <%
                         }

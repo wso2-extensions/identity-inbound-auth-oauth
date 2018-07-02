@@ -147,12 +147,12 @@ public class DefaultIDTokenBuilderTest extends IdentityBaseTest {
 
     }
 
-
     @Test
     public void testBuildIDToken() throws Exception {
+
         RealmService realmService = IdentityTenantUtil.getRealmService();
         PrivilegedCarbonContext.getThreadLocalCarbonContext()
-                               .setUserRealm(realmService.getTenantUserRealm(SUPER_TENANT_ID));
+                .setUserRealm(realmService.getTenantUserRealm(SUPER_TENANT_ID));
         IdpMgtServiceComponentHolder.getInstance().setRealmService(IdentityTenantUtil.getRealmService());
         defaultIDTokenBuilder.buildIDToken(messageContext, tokenRespDTO);
     }

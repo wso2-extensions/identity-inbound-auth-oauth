@@ -94,7 +94,7 @@ public class OAuth2ServiceComponent {
         try {
             int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
             boolean isRecordExist = OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
-                    isScopeExist(tenantId);
+                    hasScopesPopulated(tenantId);
             if (!isRecordExist) {
                 OAuth2Util.initiateOIDCScopes(tenantId);
             }

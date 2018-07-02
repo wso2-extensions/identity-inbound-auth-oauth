@@ -18,15 +18,12 @@
 
 package org.wso2.carbon.identity.oauth.endpoint.user.impl;
 
-import org.apache.commons.dbcp.BasicDataSource;
 import org.apache.oltu.oauth2.common.utils.JSONUtils;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.IObjectFactory;
 import org.testng.annotations.BeforeClass;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.BeforeTest;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
@@ -56,18 +53,15 @@ import java.util.Map;
 
 import javax.sql.DataSource;
 
+import static org.junit.Assert.assertNull;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
-import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
-import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
-import static org.wso2.carbon.identity.oauth.endpoint.user.impl.TestUtils.getConnection;
-import static org.wso2.carbon.identity.oauth.endpoint.user.impl.TestUtils.initiateH2Base;
 
 /**
  * This class contains tests for UserInfoJSONResponseBuilder.
@@ -79,26 +73,18 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
 
     private UserInfoJSONResponseBuilder userInfoJSONResponseBuilder;
 
-    Connection connection1 = null;
+    Connection con = null;
 
     @Mock
     private RequestObjectService requestObjectService;
 
     @BeforeClass
-    public void setUpTest() throws RequestObjectException {
+    public void setUpTest() throws Exception {
 
         userInfoJSONResponseBuilder = new UserInfoJSONResponseBuilder();
-        BasicDataSource dataSource1 = new BasicDataSource();
-        dataSource1.setDriverClassName("org.h2.Driver");
-        dataSource1.setUsername("username");
-        dataSource1.setPassword("password");
-        dataSource1.setUrl("jdbc:h2:mem:test" + "jdbc/WSO2CarbonDB");
-        try {
-            connection1 = dataSource1.getConnection();
-            connection1.createStatement().executeUpdate("RUNSCRIPT FROM 'src/test/resources/dbScripts/h2.sql'");
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        TestUtils.initiateH2Base();
+        con = TestUtils.getConnection();
+
     }
 
     @ObjectFactory
@@ -120,15 +106,12 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
         OpenIDConnectServiceComponentHolder.setRequestObjectService(requestObjectService);
     }
 
-    private void mockDataSource(){
+    private void mockDataSource() throws SQLException {
+
         mockStatic(JDBCPersistenceManager.class);
         DataSource dataSource = Mockito.mock(DataSource.class);
         JDBCPersistenceManager jdbcPersistenceManager = Mockito.mock(JDBCPersistenceManager.class);
-        try {
-            Mockito.when(dataSource.getConnection()).thenReturn(connection1);
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        Mockito.when(dataSource.getConnection()).thenReturn(con);
         Mockito.when(jdbcPersistenceManager.getInstance()).thenReturn(jdbcPersistenceManager);
         Mockito.when(jdbcPersistenceManager.getDataSource()).thenReturn(dataSource);
     }
@@ -198,11 +181,11 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
         assertNotNull(claimsInResponse.get(SUB));
 
         // Assert that claims not in scope were not sent
-       // assertNull(claimsInResponse.get(LAST_NAME));
+        assertNull(claimsInResponse.get(LAST_NAME));
 
         // Assert claim in scope was sent
-      //  assertNotNull(claimsInResponse.get(FIRST_NAME));
-      //  assertEquals(claimsInResponse.get(FIRST_NAME), FIRST_NAME_VALUE);
+        assertNotNull(claimsInResponse.get(FIRST_NAME));
+        assertEquals(claimsInResponse.get(FIRST_NAME), FIRST_NAME_VALUE);
 
         // Assert whether essential claims are available even though they were not in requested scope.
         assertNotNull(claimsInResponse.get(EMAIL));

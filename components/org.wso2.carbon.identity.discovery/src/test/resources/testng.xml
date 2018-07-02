@@ -21,7 +21,7 @@
 
     <test name="Discovery_Unit_Tests">
         <classes>
-            <class name="org.wso2.carbon.identity.discovery.DefaultOIDCProcessorTest"/>
+           <!-- <class name="org.wso2.carbon.identity.discovery.DefaultOIDCProcessorTest"/>-->
             <class name="org.wso2.carbon.identity.discovery.builders.DefaultOIDCProviderRequestBuilderTest"/>
             <class name="org.wso2.carbon.identity.discovery.builders.ProviderConfigBuilderTest"/>
             <class name="org.wso2.carbon.identity.discovery.internal.OIDCDiscoveryDataHolderTest"/>

@@ -17,24 +17,25 @@
   --%>
 
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
-<%@page import="org.apache.commons.lang.StringUtils" %>
 <%@page import="org.json.JSONObject" %>
 <%@ page import="org.wso2.carbon.ui.CarbonUIMessage" %>
 <%@ page import="java.text.MessageFormat" %>
-<%@ page import="java.util.ArrayList" %>
-<%@ page import="java.util.List" %>
 <%@ page import="java.util.ResourceBundle" %>
 <%@ page import="org.wso2.carbon.ui.CarbonUIUtil" %>
-<%@ page import="java.util.HashMap" %>
-<%@ page import="java.util.Map" %>
 <%@ page import="org.wso2.carbon.identity.oauth.ui.client.OAuthAdminClient" %>
 <%@ page import="org.wso2.carbon.utils.ServerConstants" %>
 <%@ page import="org.wso2.carbon.CarbonConstants" %>
 <%@ page import="org.apache.axis2.context.ConfigurationContext" %>
 <%@ page import="org.wso2.carbon.context.PrivilegedCarbonContext" %>
 <%@ page import="org.wso2.carbon.identity.core.util.IdentityTenantUtil" %>
-<%@ page import="static org.wso2.carbon.identity.oauth.ui.util.OAuthUIConstants.CLAIM_URI" %>
 <%@ page import="static org.wso2.carbon.identity.oauth.ui.util.OAuthUIConstants.SCOPE_NAME" %>
+<%@ page import="org.apache.commons.lang.StringUtils" %>
+<%@ page import="java.util.List" %>
+<%@ page import="java.util.ArrayList" %>
+<%@ page import="java.util.Map" %>
+<%@ page import="java.util.HashMap" %>
+<%@ page import="static org.wso2.carbon.identity.oauth.ui.util.OAuthUIConstants.CLAIM_URI" %>
+<%@ page import="java.util.Arrays" %>
 <jsp:include page="../dialog/display_messages.jsp"/>
 
 <%
@@ -61,12 +62,11 @@
         
         scopeName = request.getParameter(SCOPE_NAME);
         String claimRowCount = request.getParameter("claimrow_name_count");
-        List<String> claimsList = new ArrayList<String>();
         
         if (StringUtils.isNotBlank(claimRowCount)) {
             categoryCount = Integer.parseInt(claimRowCount);
         }
-        Map<String, List<String>> scopeClaimMap = new HashMap<String, List<String>>();
+        String[] claims = new String[categoryCount];
         for (int i = 0; i < categoryCount; i++) {
             String claimInfo = request.getParameter("claimrow_name_wso2_" + i);
             if (StringUtils.isNotBlank(claimInfo)) {
@@ -75,17 +75,16 @@
                 if (jsonObject.get(CLAIM_URI) != null && jsonObject.get(CLAIM_URI) instanceof String) {
                     oidcClaimName = (String) jsonObject.get(CLAIM_URI);
                 }
-                if (StringUtils.isNotBlank(oidcClaimName) && !claimsList.contains(oidcClaimName) ) {
-                    claimsList.add(oidcClaimName);
+                if (StringUtils.isNotBlank(oidcClaimName) && !Arrays.asList(claims).contains(oidcClaimName)) {
+                    claims[i] = oidcClaimName;
                 }
             }
         }
-        scopeClaimMap.put(scopeName, claimsList);
         boolean isScopeExist = oAuthAdminClient.isScopeExist(tenantId, scopeName);
         String message;
         String messageType;
         if (!isScopeExist) {
-            oAuthAdminClient.addScope(tenantId, scopeClaimMap);
+            oAuthAdminClient.addScope(tenantId, scopeName, claims);
             message = MessageFormat.format(resourceBundle.getString("scope.add.successful"), scopeName);
             messageType = CarbonUIMessage.INFO;
             forwardTo = "list-oidc-scopes.jsp";

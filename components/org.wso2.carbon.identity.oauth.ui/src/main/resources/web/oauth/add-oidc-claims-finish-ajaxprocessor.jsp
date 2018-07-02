@@ -71,7 +71,7 @@
             }
         }
         
-        oAuthAdminClient.updateScope(scopeName, claims, tenantId, true);
+        oAuthAdminClient.updateScope(scopeName, tenantId, claims, null);
         String message = MessageFormat.format(resourceBundle.getString("updated.the.scope.successfully"), scopeName);
         CarbonUIMessage.sendCarbonUIMessage(message, CarbonUIMessage.INFO, request);
         

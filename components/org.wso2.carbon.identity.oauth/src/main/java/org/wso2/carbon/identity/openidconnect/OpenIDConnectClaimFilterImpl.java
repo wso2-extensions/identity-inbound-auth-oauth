@@ -264,7 +264,7 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
 
         List<ScopeDTO> oidcScopesClaimsList = new ArrayList<>();
         try {
-           oidcScopesClaimsList = OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().getScopesClaims(tenantId);
+           oidcScopesClaimsList = OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().getScopes(tenantId);
         } catch (IdentityOAuth2Exception e) {
             log.error("Error while loading oidc scopes and claims for the tenant: " + tenantId);
         }

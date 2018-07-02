@@ -30,7 +30,7 @@ import java.util.Map;
 public class TestUtils {
 
     public static final String DB_NAME = "jdbc/WSO2CarbonDB";
-    public static final String H2_SCRIPT_NAME = "h2.sql";
+    public static final String H2_SCRIPT_NAME = "scope.sql";
     public static Map<String, BasicDataSource> dataSourceMap = new HashMap<>();
 
 

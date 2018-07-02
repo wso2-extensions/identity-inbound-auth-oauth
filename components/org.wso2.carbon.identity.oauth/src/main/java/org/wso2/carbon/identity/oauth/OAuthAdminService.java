@@ -488,17 +488,16 @@ public class OAuthAdminService extends AbstractAdmin {
     /**
      * To insert oidc scopes and claims in the related db tables.
      *
-     * @param tenantId          tenant id
-     * @param oidcScopeClaimMap array of oidc scope claims
+     * @param tenantId tenant id
+     * @param scope    an oidc scope
      * @throws IdentityOAuthAdminException if an error occurs when inserting scopes or claims.
      */
-    public void addScope(int tenantId, ScopeDTO[] oidcScopeClaimMap)
+    public void addScope(int tenantId, String scope, String[] claims)
             throws IdentityOAuthAdminException {
 
         try {
-            if (ArrayUtils.isNotEmpty(oidcScopeClaimMap)) {
-                OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().addScope(tenantId,
-                        Arrays.asList(oidcScopeClaimMap));
+            if (StringUtils.isNotEmpty(scope)) {
+                OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().addScope(tenantId, scope, claims);
             } else {
                 log.warn("Scope claim mapping is empty for the tenant: " + tenantId);
             }
@@ -519,7 +518,7 @@ public class OAuthAdminService extends AbstractAdmin {
         try {
 
             List<ScopeDTO> scopeDTOList = OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
-                    getScopesClaims(tenantId);
+                    getScopes(tenantId);
             if (CollectionUtils.isNotEmpty(scopeDTOList)) {
                 return scopeDTOList.toArray(new ScopeDTO[scopeDTOList.size()]);
             } else {
@@ -555,7 +554,7 @@ public class OAuthAdminService extends AbstractAdmin {
 
         try {
             List<String> scopeDTOList = OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
-                    getScopes(tenantId);
+                    getScopeNames(tenantId);
             if (CollectionUtils.isNotEmpty(scopeDTOList)) {
                 return scopeDTOList.toArray(new String[scopeDTOList.size()]);
             } else {
@@ -580,10 +579,10 @@ public class OAuthAdminService extends AbstractAdmin {
     public String[] getClaimByScope(int tenantId, String scope) throws IdentityOAuthAdminException {
 
         try {
-            List<String> claimsDTOList = OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
-                    getClaimsByScope(scope, tenantId);
-            if (CollectionUtils.isNotEmpty(claimsDTOList)) {
-                return claimsDTOList.toArray(new String[claimsDTOList.size()]);
+            ScopeDTO scopeDTO = OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
+                    getClaims(scope, tenantId);
+            if (scopeDTO != null && ArrayUtils.isNotEmpty(scopeDTO.getClaim())) {
+                return scopeDTO.getClaim();
             } else {
                 if (log.isDebugEnabled()) {
                     log.debug("Could not load oidc claims. Hence returning an empty array.");
@@ -598,17 +597,16 @@ public class OAuthAdminService extends AbstractAdmin {
     /**
      * To add new claims for an existing scope.
      *
-     * @param scope    scope name
-     * @param tenantId tenant Id
-     * @param claims   list of oidc claims
+     * @param scope        scope name
+     * @param tenantId     tenant Id
+     * @param addClaims    list of oidc claims to be added
+     * @param deleteClaims list of oidc claims to be deleted
      * @throws IdentityOAuth2Exception if an error occurs when adding a new claim for a scope.
      */
-    public void updateScope(String scope, String[] claims, int tenantId, boolean isAdd) throws IdentityOAuth2Exception {
+    public void updateScope(String scope, int tenantId, String[] addClaims, String[] deleteClaims) throws IdentityOAuth2Exception {
 
-        if (claims != null) {
-            OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
-                    updateScope(scope, tenantId, isAdd, Arrays.asList(claims));
-        }
+        OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
+                updateScope(scope, tenantId, Arrays.asList(addClaims), Arrays.asList(deleteClaims));
     }
 
     /**

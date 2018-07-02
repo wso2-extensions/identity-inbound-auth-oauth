@@ -19,6 +19,7 @@ package org.wso2.carbon.identity.openidconnect;
 
 import com.nimbusds.jwt.JWTClaimsSet;
 import net.minidev.json.JSONArray;
+import org.apache.commons.dbcp.BasicDataSource;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -208,12 +209,22 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
     }};
 
     private final Log log = LogFactory.getLog(DefaultOIDCClaimsCallbackHandlerTest.class);
+    public static final String DB_NAME = "jdbc/WSO2CarbonDB";
+    public static final String H2_SCRIPT_NAME = "scope_claim.sql";
+    Connection connection = null;
 
     @BeforeClass
     public void setUp() throws Exception {
 
         System.setProperty(CarbonBaseConstants.CARBON_HOME, CARBON_HOME);
-        initiateH2Base();
+        BasicDataSource dataSource1 = new BasicDataSource();
+        dataSource1.setDriverClassName("org.h2.Driver");
+        dataSource1.setUsername("username");
+        dataSource1.setPassword("password");
+        dataSource1.setUrl("jdbc:h2:mem:test" + DB_NAME);
+        connection = dataSource1.getConnection();
+        connection.createStatement().executeUpdate("RUNSCRIPT FROM '" + getFilePath(H2_SCRIPT_NAME) + "'");
+
         mockStatic(FrameworkUtils.class);
         when(FrameworkUtils.getMultiAttributeSeparator()).thenReturn(MULTI_ATTRIBUTE_SEPARATOR_DEFAULT);
 
@@ -234,6 +245,16 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
 
         OpenIDConnectServiceComponentHolder.setRequestObjectService(requestObjectService);
         defaultOIDCClaimsCallbackHandler = new DefaultOIDCClaimsCallbackHandler();
+
+    }
+
+    public static String getFilePath(String fileName) {
+
+        if (StringUtils.isNotBlank(fileName)) {
+            return Paths.get(System.getProperty("user.dir"), "src", "test", "resources", "dbScripts",
+                    fileName).toString();
+        }
+        throw new IllegalArgumentException("DB Script file name cannot be empty.");
     }
 
     /**
@@ -619,7 +640,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
         claimMappings.put(COUNTRY, LOCAL_COUNTRY_CLAIM_URI);
         claimMappings.put(DIVISION, LOCAL_DIVISION_CLAIM_URI);
         claimMappings.put(DIVISION_WITH_DOT, LOCAL_DIVISION_CLAIM_WITH_PUNCUTATIONMARK_URI);
-       // claimMappings.put(DIVISION_WITH_DOT_IN_URL, LOCAL_DIVISION_CLAIM_WITH_PUNCUTATIONMARK_IN_URL_FORMAT_URI);
+        // claimMappings.put(DIVISION_WITH_DOT_IN_URL, LOCAL_DIVISION_CLAIM_WITH_PUNCUTATIONMARK_IN_URL_FORMAT_URI);
 
         ClaimMetadataHandler claimMetadataHandler = spy(ClaimMetadataHandler.class);
         doReturn(claimMappings).when(claimMetadataHandler).getMappingsMapFromOtherDialectToCarbon(OIDC_DIALECT, null,
@@ -825,35 +846,35 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
     public void testHandleCustomClaimsWithOAuthTokenReqMsgCtxtWithPunctuationMarkInOIDCClaim()
             throws Exception {
 
-            JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
-            OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForLocalUser();
+        JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
+        OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForLocalUser();
 
-            ClaimMapping claimMappings[] = new ClaimMapping[]{
-                    ClaimMapping.build(LOCAL_DIVISION_CLAIM_URI, DIVISION, "", true),
-                    ClaimMapping.build(LOCAL_DIVISION_CLAIM_WITH_PUNCUTATIONMARK_URI, DIVISION_WITH_DOT, "", true),
-                    ClaimMapping.build(LOCAL_DIVISION_CLAIM_WITH_PUNCUTATIONMARK_IN_URL_FORMAT_URI, DIVISION_WITH_DOT_IN_URL, "",
-                            true),
-                    ClaimMapping.build(LOCAL_COUNTRY_CLAIM_URI, ADDRESS_COUNTRY, "", true)
-            };
+        ClaimMapping claimMappings[] = new ClaimMapping[]{
+                ClaimMapping.build(LOCAL_DIVISION_CLAIM_URI, DIVISION, "", true),
+                ClaimMapping.build(LOCAL_DIVISION_CLAIM_WITH_PUNCUTATIONMARK_URI, DIVISION_WITH_DOT, "", true),
+                ClaimMapping.build(LOCAL_DIVISION_CLAIM_WITH_PUNCUTATIONMARK_IN_URL_FORMAT_URI, DIVISION_WITH_DOT_IN_URL, "",
+                        true),
+                ClaimMapping.build(LOCAL_COUNTRY_CLAIM_URI, ADDRESS_COUNTRY, "", true)
+        };
 
-            ServiceProvider serviceProvider = getSpWithRequestedClaimsMappings(claimMappings);
-            mockApplicationManagementService(serviceProvider);
+        ServiceProvider serviceProvider = getSpWithRequestedClaimsMappings(claimMappings);
+        mockApplicationManagementService(serviceProvider);
 
-            Map<String, String> userClaims = new HashMap<>();
-            userClaims.put(LOCAL_DIVISION_CLAIM_URI, "Division 01");
-            userClaims.put(LOCAL_DIVISION_CLAIM_WITH_PUNCUTATIONMARK_URI, "Division 02");
-            userClaims.put(LOCAL_DIVISION_CLAIM_WITH_PUNCUTATIONMARK_IN_URL_FORMAT_URI, "Division 03");
-            userClaims.put(LOCAL_COUNTRY_CLAIM_URI, "LK");
+        Map<String, String> userClaims = new HashMap<>();
+        userClaims.put(LOCAL_DIVISION_CLAIM_URI, "Division 01");
+        userClaims.put(LOCAL_DIVISION_CLAIM_WITH_PUNCUTATIONMARK_URI, "Division 02");
+        userClaims.put(LOCAL_DIVISION_CLAIM_WITH_PUNCUTATIONMARK_IN_URL_FORMAT_URI, "Division 03");
+        userClaims.put(LOCAL_COUNTRY_CLAIM_URI, "LK");
 
-            UserRealm userRealm = getUserRealmWithUserClaims(userClaims);
-            mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm);
-            mockClaimHandler();
+        UserRealm userRealm = getUserRealmWithUserClaims(userClaims);
+        mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm);
+        mockClaimHandler();
 
-            JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx);
+        JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx);
 
-            assertNotNull(jwtClaimsSet);
-            assertNotNull(jwtClaimsSet.getClaim(DIVISION_WITH_DOT));
-            //assertNotNull(jwtClaimsSet.getClaim(DIVISION_WITH_DOT_IN_URL));
+        assertNotNull(jwtClaimsSet);
+        assertNotNull(jwtClaimsSet.getClaim(DIVISION_WITH_DOT));
+        //assertNotNull(jwtClaimsSet.getClaim(DIVISION_WITH_DOT_IN_URL));
 
     }
 
@@ -910,17 +931,33 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
         when(OAuthServerConfiguration.getInstance()).thenReturn(mockOAuthServerConfiguration);
         when(mockOAuthServerConfiguration.isConvertOriginalClaimsFromAssertionsToOIDCDialect()).thenReturn(true);
         JWTClaimsSet jwtClaimsSet = null;
-        try (Connection connection = getConnection()) {
 
-            Mockito.when(dataSource.getConnection()).thenReturn(connection);
-            Mockito.when(jdbcPersistenceManager.getInstance()).thenReturn(jdbcPersistenceManager);
-            Mockito.when(jdbcPersistenceManager.getDataSource()).thenReturn(dataSource);
-            jwtClaimsSet = defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSetBuilder,
-                    requestMsgCtx);
+        try {
+            if (connection.isClosed()) {
 
-        } catch (SQLException e) {
+                BasicDataSource dataSource1 = new BasicDataSource();
+                dataSource1.setDriverClassName("org.h2.Driver");
+                dataSource1.setUsername("username");
+                dataSource1.setPassword("password");
+                dataSource1.setUrl("jdbc:h2:mem:test" + DB_NAME);
+                Connection connection1 = null;
+                connection1 = dataSource1.getConnection();
+                Mockito.when(dataSource.getConnection()).thenReturn(connection1);
+
+            } else {
+                Mockito.when(dataSource.getConnection()).thenReturn(connection);
+            }
+        } catch (Exception e) {
             log.error("Error while obtaining the datasource. ");
         }
+
+        Mockito.when(jdbcPersistenceManager.getInstance()).thenReturn(jdbcPersistenceManager);
+        Mockito.when(jdbcPersistenceManager.getDataSource()).thenReturn(dataSource);
+        jwtClaimsSet = defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSetBuilder,
+                requestMsgCtx);
+
+        //return jwtClaimsSet;
+
         return jwtClaimsSet;
     }
 
@@ -934,7 +971,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
         when(OAuthServerConfiguration.getInstance()).thenReturn(mockOAuthServerConfiguration);
         when(mockOAuthServerConfiguration.isConvertOriginalClaimsFromAssertionsToOIDCDialect()).thenReturn(true);
         JWTClaimsSet jwtClaimsSet = null;
-        try (Connection connection = getConnection()) {
+        try {
 
             Mockito.when(dataSource.getConnection()).thenReturn(connection);
             Mockito.when(jdbcPersistenceManager.getInstance()).thenReturn(jdbcPersistenceManager);
