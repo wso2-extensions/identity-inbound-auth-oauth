@@ -80,7 +80,7 @@
                             config.getServletContext().getAttribute(CarbonConstants.CONFIGURATION_CONTEXT);
                     String cookie = (String) session.getAttribute(ServerConstants.ADMIN_SERVICE_COOKIE);
                     OAuthAdminClient oAuthAdminClient = new OAuthAdminClient(cookie, serverURL, configContext);
-                    scopes = oAuthAdminClient.getScopes(tenantId);
+                    scopes = oAuthAdminClient.getScopeNames(tenantId);
                     
                 } catch (Exception e) {
                     String message = resourceBundle.getString("error.while.listing.scopes");

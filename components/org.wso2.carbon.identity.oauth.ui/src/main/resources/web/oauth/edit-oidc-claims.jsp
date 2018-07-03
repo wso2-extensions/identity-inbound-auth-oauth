@@ -43,7 +43,7 @@
     OAuthAdminClient oAuthAdminClient = new OAuthAdminClient(cookie, serverURL, configContext);
     String[] oidcClaims = null;
     try {
-        oidcClaims = oAuthAdminClient.getClaimByScope(tenantId, scope);
+        oidcClaims = oAuthAdminClient.getClaims(tenantId, scope);
     } catch (Exception e) {
         String message = resourceBundle.getString("error.while.listing.scopes");
         CarbonUIMessage.sendCarbonUIMessage(message, CarbonUIMessage.ERROR, request, e);

@@ -34,7 +34,6 @@
     <div id="workArea">
         
         <%
-            
             String httpMethod = request.getMethod();
             if (!"post".equalsIgnoreCase(httpMethod)) {
                 response.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED);

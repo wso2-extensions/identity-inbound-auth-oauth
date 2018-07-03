@@ -69,7 +69,7 @@ public class CacheBackedScopeClaimMappingDAOImpl extends ScopeClaimMappingDAOImp
     }
 
     @Override
-    public void deleteScope(String scope, int tenantId) throws IdentityOAuthAdminException {
+    public void deleteScope(String scope, int tenantId) throws IdentityOAuth2Exception {
 
         oidcScopeClaimCache.clearScopeClaimMap(tenantId);
         super.deleteScope(scope, tenantId);
@@ -79,7 +79,8 @@ public class CacheBackedScopeClaimMappingDAOImpl extends ScopeClaimMappingDAOImp
     }
 
     @Override
-    public void updateScope(String scope, int tenantId, List<String> addClaims, List<String> deleteClaims) throws IdentityOAuth2Exception {
+    public void updateScope(String scope, int tenantId, List<String> addClaims, List<String> deleteClaims)
+            throws IdentityOAuth2Exception {
 
         oidcScopeClaimCache.clearScopeClaimMap(tenantId);
         super.updateScope(scope, tenantId, addClaims, deleteClaims);

@@ -84,7 +84,6 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
         userInfoJSONResponseBuilder = new UserInfoJSONResponseBuilder();
         TestUtils.initiateH2Base();
         con = TestUtils.getConnection();
-
     }
 
     @ObjectFactory

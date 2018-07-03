@@ -30,10 +30,6 @@
 <%@ page import="org.wso2.carbon.identity.core.util.IdentityTenantUtil" %>
 <%@ page import="static org.wso2.carbon.identity.oauth.ui.util.OAuthUIConstants.SCOPE_NAME" %>
 <%@ page import="org.apache.commons.lang.StringUtils" %>
-<%@ page import="java.util.List" %>
-<%@ page import="java.util.ArrayList" %>
-<%@ page import="java.util.Map" %>
-<%@ page import="java.util.HashMap" %>
 <%@ page import="static org.wso2.carbon.identity.oauth.ui.util.OAuthUIConstants.CLAIM_URI" %>
 <%@ page import="java.util.Arrays" %>
 <jsp:include page="../dialog/display_messages.jsp"/>
@@ -44,7 +40,6 @@
         response.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
         return;
     }
-    
     String scopeName = null;
     int categoryCount = 0;
     String forwardTo = "add-oidc-scope.jsp";
@@ -98,8 +93,6 @@
         String message = MessageFormat.format(resourceBundle.getString("error.while.saving.scope.info"), scopeName);
         CarbonUIMessage.sendCarbonUIMessage(message, CarbonUIMessage.ERROR, request);
     }
-
-
 %>
 
 <script type="text/javascript">

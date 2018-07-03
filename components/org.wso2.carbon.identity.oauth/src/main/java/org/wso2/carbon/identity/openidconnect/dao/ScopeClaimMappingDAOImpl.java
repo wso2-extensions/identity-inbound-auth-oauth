@@ -115,7 +115,6 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
         String sql = SQLQueries.GET_IDN_OIDC_SCOPES_CLAIMS;
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
         List<ScopeDTO> oidcScopeClaimList;
-
         try {
             Map<String, List<String>> scopeClaimMap = new HashMap<>();
             jdbcTemplate.executeQuery(sql, (RowMapper<ScopeDTO>) (resultSet, i) -> {
@@ -170,7 +169,6 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
         String sql = SQLQueries.GET_IDN_OIDC_CLAIMS;
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
         ScopeDTO scopeDTO = new ScopeDTO();
-
         try {
             List<String> claimsList = jdbcTemplate.executeQuery(sql, (resultSet, i) -> resultSet.getString(1)
                     , preparedStatement ->
@@ -189,7 +187,7 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
     }
 
     @Override
-    public void deleteScope(String scope, int tenantId) throws IdentityOAuthAdminException {
+    public void deleteScope(String scope, int tenantId) throws IdentityOAuth2Exception {
 
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
         try {
@@ -197,13 +195,12 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
                         preparedStatement.setString(1, scope);
                         preparedStatement.setInt(2, tenantId);
                     }
-
             );
             if (log.isDebugEnabled()) {
                 log.debug("The scope: " + scope + "in the tenant: " + tenantId + "is successfully deleted.");
             }
         } catch (DataAccessException e) {
-            throw handleError("Error while deleting the scope: " + scope + " and related claims.", e);
+            throw new IdentityOAuth2Exception("Error while deleting the scope: " + scope + " and related claims.", e);
         }
     }
 
@@ -215,9 +212,10 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
         int scopeClaimMappingId = -1;
         try {
             if (CollectionUtils.isNotEmpty(addClaims)) {
-                addClaimsByScope(scope, tenantId, addClaims, jdbcTemplate, scopeClaimMappingId);
+                int scopeId = getScopeId(scope, tenantId);
+                addClaimsByScope(scopeId, tenantId, addClaims, jdbcTemplate, scopeClaimMappingId);
             }
-            if(CollectionUtils.isNotEmpty(deleteClaims)){
+            if (CollectionUtils.isNotEmpty(deleteClaims)) {
                 deleteClaimsByScope(scope, tenantId, deleteClaims, jdbcTemplate, scopeClaimMappingId);
             }
         } catch (TransactionException e) {
@@ -226,15 +224,13 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
         }
     }
 
-    private void addClaimsByScope(String scope, int tenantId, List<String> claims, JdbcTemplate jdbcTemplate, int
+    private void addClaimsByScope(int scopeId, int tenantId, List<String> claims, JdbcTemplate jdbcTemplate, int
             scopeClaimMappingId) throws TransactionException {
 
         jdbcTemplate.withTransaction(template -> {
             template.executeBatchInsert(SQLQueries.INSERT_NEW_CLAIMS_FOR_SCOPE, (preparedStatement -> {
 
                 try {
-                    //Get the scope id of the existing scope.
-                    int scopeId = getScopeId(scope, tenantId);
                     for (String claim : claims) {
                         //Get the claim id for the related claim_uri
                         int claimId = loadOIDCClaimId(claim, tenantId);
@@ -244,7 +240,7 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
                         preparedStatement.addBatch();
                     }
                 } catch (IdentityOAuth2Exception e) {
-                    String errorMessage = "Error while fetching scope id and claims id for scope: " + scope;
+                    String errorMessage = "Error while fetching claims id. ";
                     log.error(errorMessage);
                 }
 
@@ -289,7 +285,7 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
                 log.debug("Scope id: " + id + "is returned for the tenant: " + tenantId);
             }
         } catch (TransactionException e) {
-            String errorMessage = "Error while loading the top scope id.";
+            String errorMessage = "Error while loading the top scope id for the tenant: " + tenantId;
             throw new IdentityOAuth2Exception(errorMessage, e);
         }
         return true;
@@ -391,7 +387,7 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
                 return null;
             });
         } catch (TransactionException e) {
-            String errorMessage = "Error when storing oidc claims.";
+            String errorMessage = "Error when storing oidc claims for tenant: " + tenantId;
             throw new IdentityOAuth2Exception(errorMessage, e);
         }
     }

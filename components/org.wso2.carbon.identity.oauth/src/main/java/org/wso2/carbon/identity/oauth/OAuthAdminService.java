@@ -513,7 +513,7 @@ public class OAuthAdminService extends AbstractAdmin {
      * @return all persisted scopes and claims
      * @throws IdentityOAuth2Exception if an error occurs when loading scopes and claims.
      */
-    public ScopeDTO[] getScopesClaims(int tenantId) throws IdentityOAuthAdminException {
+    public ScopeDTO[] getScopes(int tenantId) throws IdentityOAuthAdminException {
 
         try {
 
@@ -528,7 +528,7 @@ public class OAuthAdminService extends AbstractAdmin {
                 return new ScopeDTO[0];
             }
         } catch (IdentityOAuth2Exception e) {
-            throw handleError("Error while loading OIDC scopes and claims.", e);
+            throw handleError("Error while loading OIDC scopes and claims for tenant: " + tenantId, e);
         }
     }
 
@@ -540,7 +540,11 @@ public class OAuthAdminService extends AbstractAdmin {
      */
     public void deleteScope(String scope, int tenantId) throws IdentityOAuthAdminException {
 
-        OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().deleteScope(scope, tenantId);
+        try {
+            OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().deleteScope(scope, tenantId);
+        } catch (IdentityOAuth2Exception e) {
+            throw handleError("Error while deleting OIDC scope: " + scope, e);
+        }
     }
 
     /**
@@ -550,7 +554,7 @@ public class OAuthAdminService extends AbstractAdmin {
      * @return list of scopes persisted.
      * @throws IdentityOAuth2Exception if an error occurs when loading oidc scopes.
      */
-    public String[] getScopes(int tenantId) throws IdentityOAuthAdminException {
+    public String[] getScopeNames(int tenantId) throws IdentityOAuthAdminException {
 
         try {
             List<String> scopeDTOList = OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
@@ -564,7 +568,7 @@ public class OAuthAdminService extends AbstractAdmin {
                 return new String[0];
             }
         } catch (IdentityOAuth2Exception e) {
-            throw handleError("Error while loading OIDC scopes and claims.", e);
+            throw handleError("Error while loading OIDC scopes and claims for tenant: " + tenantId, e);
         }
     }
 
@@ -576,7 +580,7 @@ public class OAuthAdminService extends AbstractAdmin {
      * @return list of claims which are mapped to the oidc scope.
      * @throws IdentityOAuth2Exception if an error occurs when lading oidc claims.
      */
-    public String[] getClaimByScope(int tenantId, String scope) throws IdentityOAuthAdminException {
+    public String[] getClaims(int tenantId, String scope) throws IdentityOAuthAdminException {
 
         try {
             ScopeDTO scopeDTO = OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
@@ -590,7 +594,7 @@ public class OAuthAdminService extends AbstractAdmin {
                 return new String[0];
             }
         } catch (IdentityOAuth2Exception e) {
-            throw handleError("Error while loading OIDC claims for the scope: " + scope, e);
+            throw handleError("Error while loading OIDC claims for the scope: " + scope + "in tenant: " + tenantId, e);
         }
     }
 
@@ -603,10 +607,15 @@ public class OAuthAdminService extends AbstractAdmin {
      * @param deleteClaims list of oidc claims to be deleted
      * @throws IdentityOAuth2Exception if an error occurs when adding a new claim for a scope.
      */
-    public void updateScope(String scope, int tenantId, String[] addClaims, String[] deleteClaims) throws IdentityOAuth2Exception {
+    public void updateScope(String scope, int tenantId, String[] addClaims, String[] deleteClaims)
+            throws IdentityOAuthAdminException {
 
-        OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
-                updateScope(scope, tenantId, Arrays.asList(addClaims), Arrays.asList(deleteClaims));
+        try {
+            OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
+                    updateScope(scope, tenantId, Arrays.asList(addClaims), Arrays.asList(deleteClaims));
+        } catch (IdentityOAuth2Exception e) {
+            throw handleError("Error while updating OIDC claims for the scope: " + scope + "in tenant: " + tenantId, e);
+        }
     }
 
     /**
@@ -624,7 +633,6 @@ public class OAuthAdminService extends AbstractAdmin {
         } catch (IdentityOAuth2Exception e) {
             throw handleError("Error while inserting the scopes.", e);
         }
-
     }
 
     /**

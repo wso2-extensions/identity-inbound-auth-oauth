@@ -818,7 +818,6 @@
         <h2database.version>1.0.60</h2database.version>
         <commons-codec.test.version>1.4</commons-codec.test.version>
         <org.wso2.carbon.identity.testutil.version>5.10.0</org.wso2.carbon.identity.testutil.version>
-
         <claim.metadata.version.range>[5.0.0,7.0.0)</claim.metadata.version.range>
     </properties>
 

@@ -213,10 +213,10 @@ public class OAuthAdminClient {
      * @throws OAuthAdminServiceIdentityOAuthAdminException if an error occurs when loading scopes and claims.
      */
 
-    public ScopeDTO[] getScopesClaims(int tenantId) throws OAuthAdminServiceIdentityOAuthAdminException,
+    public ScopeDTO[] getScopes(int tenantId) throws OAuthAdminServiceIdentityOAuthAdminException,
             RemoteException {
 
-        return stub.getScopesClaims(tenantId);
+        return stub.getScopes(tenantId);
     }
 
     /**
@@ -227,10 +227,10 @@ public class OAuthAdminClient {
      * @throws OAuthAdminServiceIdentityOAuthAdminException if an error occurs when loading oidc scopes.
      * @throws RemoteException                              if an exception occured during remote call.
      */
-    public String[] getScopes(int tenantId) throws OAuthAdminServiceIdentityOAuthAdminException,
+    public String[] getScopeNames(int tenantId) throws OAuthAdminServiceIdentityOAuthAdminException,
             RemoteException {
 
-        return stub.getScopes(tenantId);
+        return stub.getScopeNames(tenantId);
     }
 
     /**
@@ -242,10 +242,10 @@ public class OAuthAdminClient {
      * @throws OAuthAdminServiceIdentityOAuthAdminException if an error occurs when lading oidc claims.
      * @throws RemoteException                              if an exception occured during remote call.
      */
-    public String[] getClaimByScope(int tenantId, String scope) throws OAuthAdminServiceIdentityOAuthAdminException,
+    public String[] getClaims(int tenantId, String scope) throws OAuthAdminServiceIdentityOAuthAdminException,
             RemoteException {
 
-        return stub.getClaimByScope(tenantId, scope);
+        return stub.getClaims(tenantId, scope);
     }
 
     /**

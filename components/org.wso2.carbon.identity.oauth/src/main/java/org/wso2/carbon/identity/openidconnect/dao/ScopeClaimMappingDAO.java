@@ -73,7 +73,7 @@ public interface ScopeClaimMappingDAO {
      * @param scope oidc scope
      * @throws IdentityOAuthAdminException if an error occurs when deleting scopes and claims.
      */
-    void deleteScope(String scope, int tenantId) throws IdentityOAuthAdminException;
+    void deleteScope(String scope, int tenantId) throws IdentityOAuth2Exception;
 
     /**
      * To add new claims for an existing scope.
@@ -84,7 +84,8 @@ public interface ScopeClaimMappingDAO {
      * @param deleteClaims list of oidc claims to be deleted
      * @throws IdentityOAuth2Exception if an error occurs when adding a new claim for a scope.
      */
-    void updateScope(String scope, int tenantId, List<String> addClaims, List<String> deleteClaims) throws IdentityOAuth2Exception;
+    void updateScope(String scope, int tenantId, List<String> addClaims, List<String> deleteClaims)
+            throws IdentityOAuth2Exception;
 
     /**
      * To retrieve oidc claims mapped to an oidc scope.

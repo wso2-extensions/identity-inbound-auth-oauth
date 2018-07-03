@@ -22,7 +22,6 @@ import org.wso2.carbon.identity.application.common.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * Cache Entry which will use in {@link OIDCScopeClaimCache}.

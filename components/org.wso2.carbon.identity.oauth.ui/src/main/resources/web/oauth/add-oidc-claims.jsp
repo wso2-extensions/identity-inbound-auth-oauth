@@ -56,7 +56,7 @@
         ExternalClaimDTO[] externalClaimDTOS = client.getExternalClaims(OIDC_CLAIM_DIALECT);
         
         OAuthAdminClient oAuthAdminClient = new OAuthAdminClient(cookie, serverURL, configContext);
-        claims = oAuthAdminClient.getClaimByScope(tenantId, scope);
+        claims = oAuthAdminClient.getClaims(tenantId, scope);
         List<ExternalClaimDTO> externalClaimsTemp = new ArrayList<ExternalClaimDTO>();
         externalClaims = new ArrayList<ExternalClaimDTO>(Arrays.asList(externalClaimDTOS));
         if (claims != null)
@@ -72,7 +72,6 @@
         String message = MessageFormat.format(resourceBundle.getString("error.while.adding.claims"), scope);
         CarbonUIMessage.sendCarbonUIMessage(message, CarbonUIMessage.ERROR, request);
     }
-
 %>
 
 <fmt:bundle
@@ -169,9 +168,7 @@
         }
     </script>
     <div id="middleArea">
-    
     <div id="workArea">
-        
         <div id="mainArea">
             <form method="post" action="add-oidc-claims-finish-ajaxprocessor.jsp" name="dataForm"
                   onsubmit="return doValidation();">

@@ -84,7 +84,6 @@
         String message = MessageFormat.format(resourceBundle.getString("failed.to.update.the.scope"), scopeName);
         CarbonUIMessage.sendCarbonUIMessage(message, CarbonUIMessage.ERROR, request);
     }
-
 %>
 
 <script type="text/javascript">
