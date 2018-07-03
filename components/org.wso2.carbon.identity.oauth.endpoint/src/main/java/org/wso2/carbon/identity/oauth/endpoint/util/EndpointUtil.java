@@ -306,6 +306,9 @@ public class EndpointUtil {
             appName) {
 
         String redirectURL = getErrorPageURL(errorCode, errorMessage, appName);
+        if (request == null) {
+            return redirectURL;
+        }
         return getRedirectURL(redirectURL, request);
     }
 
@@ -322,6 +325,9 @@ public class EndpointUtil {
             params) {
 
         String redirectURL = getErrorRedirectURL(ex, params);
+        if (request == null) {
+            return redirectURL;
+        }
         return getRedirectURL(redirectURL, request);
     }
 

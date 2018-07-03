@@ -20,8 +20,6 @@ package org.wso2.carbon.identity.oidc.session.servlet;
 import edu.emory.mathcs.backport.java.util.Arrays;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.annotations.AfterTest;
 import org.testng.annotations.BeforeTest;
@@ -34,6 +32,7 @@ import org.wso2.carbon.identity.application.authentication.framework.Authenticat
 import org.wso2.carbon.identity.application.authentication.framework.CommonAuthenticationHandler;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
+import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
@@ -42,7 +41,9 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionManager;
+import org.wso2.carbon.identity.oidc.session.internal.OIDCSessionManagementComponentServiceHolder;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
+
 import java.security.KeyStore;
 import java.util.Collections;
 import javax.servlet.ServletException;
@@ -61,7 +62,8 @@ import static org.testng.Assert.assertTrue;
 
 @PrepareForTest({OIDCSessionManagementUtil.class, OIDCSessionManager.class, FrameworkUtils.class,
         IdentityConfigParser.class, OAuthServerConfiguration.class, IdentityTenantUtil.class, KeyStoreManager.class,
-        CarbonCoreDataHolder.class, IdentityDatabaseUtil.class, OAuth2Util.class})
+        CarbonCoreDataHolder.class, IdentityDatabaseUtil.class, OAuth2Util.class,
+        OIDCSessionManagementComponentServiceHolder.class})
 /**
  * Unit test coverage for OIDCLogoutServlet class
  */
@@ -96,6 +98,9 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
 
     @Mock
     OAuthAppDO oAuthAppDO;
+
+    @Mock
+    private ApplicationManagementService mockedApplicationManagementService;
 
     @Mock
     KeyStore keyStore;
@@ -312,6 +317,11 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
         when(keyStoreManager.getDefaultPublicKey())
                 .thenReturn(TestUtil.getPublicKey(TestUtil.loadKeyStoreFromFileSystem(TestUtil
                         .getFilePath("wso2carbon.jks"), "wso2carbon", "JKS"), "wso2carbon"));
+
+        mockStatic(OIDCSessionManagementComponentServiceHolder.class);
+        when(OIDCSessionManagementComponentServiceHolder.getApplicationMgtService()).thenReturn(mockedApplicationManagementService);
+        when(mockedApplicationManagementService.getServiceProviderNameByClientId(
+                anyString(), anyString(), anyString())).thenReturn("SP1");
 
         mockStatic(OAuthServerConfiguration.class);
         when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
