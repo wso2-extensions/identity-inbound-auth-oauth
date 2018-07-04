@@ -44,7 +44,6 @@ import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticatorFlowStatus;
 import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationResultCacheEntry;
 import org.wso2.carbon.identity.application.authentication.framework.context.SessionContext;
-import org.wso2.carbon.identity.application.authentication.framework.exception.FrameworkException;
 import org.wso2.carbon.identity.application.authentication.framework.handler.request.RequestCoordinator;
 import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.ConsentClaimsData;
 import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.SSOConsentService;
@@ -59,6 +58,7 @@ import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCache;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheKey;
@@ -119,10 +119,8 @@ import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyMap;
 import static org.mockito.Matchers.anySet;
 import static org.mockito.Matchers.anyString;
-import static org.mockito.Matchers.eq;
 import static org.mockito.MockitoAnnotations.initMocks;
 import static org.powermock.api.mockito.PowerMockito.doAnswer;
-import static org.powermock.api.mockito.PowerMockito.doCallRealMethod;
 import static org.powermock.api.mockito.PowerMockito.doNothing;
 import static org.powermock.api.mockito.PowerMockito.doReturn;
 import static org.powermock.api.mockito.PowerMockito.doThrow;
@@ -139,7 +137,7 @@ import static org.testng.FileAssert.fail;
 @PrepareForTest({ OAuth2Util.class, SessionDataCache.class, OAuthServerConfiguration.class, IdentityDatabaseUtil.class,
         EndpointUtil.class, FrameworkUtils.class, EndpointUtil.class, OpenIDConnectUserRPStore.class,
         CarbonOAuthAuthzRequest.class, IdentityTenantUtil.class, OAuthResponse.class, SignedJWT.class,
-        OIDCSessionManagementUtil.class, CarbonUtils.class, SessionDataCache.class})
+        OIDCSessionManagementUtil.class, CarbonUtils.class, SessionDataCache.class, IdentityUtil.class})
 public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
     @Mock
@@ -513,9 +511,13 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
         mockHttpRequest(requestParams, requestAttributes, HttpMethod.POST);
 
-        mockStatic(FrameworkUtils.class);
-        when(FrameworkUtils.getAuthenticationResultFromCache(anyString())).thenReturn(authResultCacheEntry);
-        when(FrameworkUtils.appendQueryParamsStringToUrl(anyString(), anyString())).thenCallRealMethod();
+        spy(FrameworkUtils.class);
+        doReturn(requestCoordinator).when(FrameworkUtils.class, "getRequestCoordinator");
+
+        spy(IdentityUtil.class);
+        doReturn("https://localhost:9443/carbon").when(IdentityUtil.class, "getServerURL", anyString(), anyBoolean
+                (), anyBoolean());
+
 
         OAuth2Parameters oAuth2Params = setOAuth2Parameters(scopes, APP_NAME, responseMode, redirectUri);
         oAuth2Params.setClientId(CLIENT_ID_VALUE);
@@ -1280,9 +1282,8 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
             }
         }).when(httpServletResponse).sendRedirect(anyString());
 
-        mockStatic(FrameworkUtils.class);
-        when(FrameworkUtils.getRequestCoordinator()).thenReturn(requestCoordinator);
-        when(FrameworkUtils.appendQueryParamsStringToUrl(anyString(), anyString())).thenCallRealMethod();
+        spy(FrameworkUtils.class);
+        doReturn(requestCoordinator).when(FrameworkUtils.class, "getRequestCoordinator");
 
         doAnswer(new Answer<Object>() {
             @Override

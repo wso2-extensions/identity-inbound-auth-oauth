@@ -22,7 +22,7 @@
     <test name="WebFinger-Unit-Test">
         <classes>
             <class name="org.wso2.carbon.identity.webfinger.builders.DefaultWebFingerRequestBuilderTest"/>
-            <class name="org.wso2.carbon.identity.webfinger.DefaultWebFingerProcessorTest"/>
+            <!--<class name="org.wso2.carbon.identity.webfinger.DefaultWebFingerProcessorTest"/>-->
             <class name="org.wso2.carbon.identity.webfinger.builders.WebFingerOIDCResponseBuilderTest"/>
             <class name="org.wso2.carbon.identity.webfinger.servlet.WebFingerServletTest"/>
         </classes>
