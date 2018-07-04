@@ -47,8 +47,6 @@
     ResourceBundle resourceBundle = ResourceBundle.getBundle(BUNDLE, request.getLocale());
     
     try {
-        String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
-        int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
         String serverURL = CarbonUIUtil.getServerURL(config.getServletContext(), session);
         ConfigurationContext configContext = (ConfigurationContext)
                 config.getServletContext().getAttribute(CarbonConstants.CONFIGURATION_CONTEXT);
@@ -75,11 +73,11 @@
                 }
             }
         }
-        boolean isScopeExist = oAuthAdminClient.isScopeExist(tenantId, scopeName);
+        boolean isScopeExist = oAuthAdminClient.isScopeExist(scopeName);
         String message;
         String messageType;
         if (!isScopeExist) {
-            oAuthAdminClient.addScope(tenantId, scopeName, claims);
+            oAuthAdminClient.addScope(scopeName, claims);
             message = MessageFormat.format(resourceBundle.getString("scope.add.successful"), scopeName);
             messageType = CarbonUIMessage.INFO;
             forwardTo = "list-oidc-scopes.jsp";

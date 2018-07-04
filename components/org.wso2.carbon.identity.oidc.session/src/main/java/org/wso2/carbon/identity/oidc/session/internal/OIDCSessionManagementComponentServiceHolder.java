@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oidc.session.internal;
 
 import org.osgi.service.http.HttpService;
+import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.oidc.session.handler.OIDCLogoutHandler;
 import org.wso2.carbon.user.core.service.RealmService;
 
@@ -30,6 +31,7 @@ public class OIDCSessionManagementComponentServiceHolder {
     private static HttpService httpService;
     private static RealmService realmService;
     private static List<OIDCLogoutHandler> OIDCPostLogoutHandlers = new ArrayList<>();
+    private static ApplicationManagementService applicationMgtService;
 
     private OIDCSessionManagementComponentServiceHolder() {
 
@@ -60,5 +62,23 @@ public class OIDCSessionManagementComponentServiceHolder {
 
     public static void removePostLogoutHandler(OIDCLogoutHandler OIDCPostLogoutHandler) {
         OIDCPostLogoutHandlers.remove(OIDCPostLogoutHandler);
+    }
+
+    /**
+     * Get Application management service
+     *
+     * @return ApplicationManagementService
+     */
+    public static ApplicationManagementService getApplicationMgtService() {
+        return OIDCSessionManagementComponentServiceHolder.applicationMgtService;
+    }
+
+    /**
+     * Set Application management service
+     *
+     * @param applicationMgtService ApplicationManagementService
+     */
+    public static void setApplicationMgtService(ApplicationManagementService applicationMgtService) {
+        OIDCSessionManagementComponentServiceHolder.applicationMgtService = applicationMgtService;
     }
 }

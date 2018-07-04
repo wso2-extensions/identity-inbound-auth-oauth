@@ -34,8 +34,6 @@
     String scope = request.getParameter(SCOPE_NAME);
     String BUNDLE = "org.wso2.carbon.identity.oauth.ui.i18n.Resources";
     ResourceBundle resourceBundle = ResourceBundle.getBundle(BUNDLE, request.getLocale());
-    String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
-    int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
     String serverURL = CarbonUIUtil.getServerURL(config.getServletContext(), session);
     ConfigurationContext configContext = (ConfigurationContext)
             config.getServletContext().getAttribute(CarbonConstants.CONFIGURATION_CONTEXT);
@@ -43,7 +41,7 @@
     OAuthAdminClient oAuthAdminClient = new OAuthAdminClient(cookie, serverURL, configContext);
     String[] oidcClaims = null;
     try {
-        oidcClaims = oAuthAdminClient.getClaims(tenantId, scope);
+        oidcClaims = oAuthAdminClient.getClaims(scope);
     } catch (Exception e) {
         String message = resourceBundle.getString("error.while.listing.scopes");
         CarbonUIMessage.sendCarbonUIMessage(message, CarbonUIMessage.ERROR, request, e);

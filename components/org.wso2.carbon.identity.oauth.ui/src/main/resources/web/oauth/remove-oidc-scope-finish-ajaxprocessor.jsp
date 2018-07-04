@@ -29,44 +29,42 @@
 <%@ page import="java.text.MessageFormat" %>
 <%@ page import="static org.wso2.carbon.identity.oauth.ui.util.OAuthUIConstants.SCOPE_NAME" %>
 <jsp:include page="../dialog/display_messages.jsp"/>
- 
-    <div id="middle">
-        <div id="workArea">
-            
-            <%
-                String httpMethod = request.getMethod();
-                if (!"post".equalsIgnoreCase(httpMethod)) {
-                    response.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
-                    return;
-                }
-                
-                String forwardTo = "list-oidc-scopes.jsp";
-                String BUNDLE = "org.wso2.carbon.identity.oauth.ui.i18n.Resources";
-                ResourceBundle resourceBundle = ResourceBundle.getBundle(BUNDLE, request.getLocale());
-                String scopeName = request.getParameter(SCOPE_NAME);
-                
-                try {
-                    String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
-                    int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
-                    String serverURL = CarbonUIUtil.getServerURL(config.getServletContext(), session);
-                    ConfigurationContext configContext = (ConfigurationContext)
-                            config.getServletContext().getAttribute(CarbonConstants.CONFIGURATION_CONTEXT);
-                    String cookie = (String) session.getAttribute(ServerConstants.ADMIN_SERVICE_COOKIE);
-                    OAuthAdminClient oAuthAdminClient = new OAuthAdminClient(cookie, serverURL, configContext);
-                    oAuthAdminClient.deleteScope(scopeName, tenantId);
-                } catch (Exception e) {
-                    String message = MessageFormat.format(resourceBundle.getString("error.while.deleting.scope"), scopeName);
-                    CarbonUIMessage.sendCarbonUIMessage(message, CarbonUIMessage.ERROR, request, e);
-                }
-            %>
-            
-            <script type="text/javascript">
-                function forward() {
-                    location.href = "<%=forwardTo%>";
-                }
 
-                forward();
-            </script>
+<div id="middle">
+    <div id="workArea">
         
-        </div>
+        <%
+            String httpMethod = request.getMethod();
+            if (!"post".equalsIgnoreCase(httpMethod)) {
+                response.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
+                return;
+            }
+            
+            String forwardTo = "list-oidc-scopes.jsp";
+            String BUNDLE = "org.wso2.carbon.identity.oauth.ui.i18n.Resources";
+            ResourceBundle resourceBundle = ResourceBundle.getBundle(BUNDLE, request.getLocale());
+            String scopeName = request.getParameter(SCOPE_NAME);
+            
+            try {
+                String serverURL = CarbonUIUtil.getServerURL(config.getServletContext(), session);
+                ConfigurationContext configContext = (ConfigurationContext)
+                        config.getServletContext().getAttribute(CarbonConstants.CONFIGURATION_CONTEXT);
+                String cookie = (String) session.getAttribute(ServerConstants.ADMIN_SERVICE_COOKIE);
+                OAuthAdminClient oAuthAdminClient = new OAuthAdminClient(cookie, serverURL, configContext);
+                oAuthAdminClient.deleteScope(scopeName);
+            } catch (Exception e) {
+                String message = MessageFormat.format(resourceBundle.getString("error.while.deleting.scope"), scopeName);
+                CarbonUIMessage.sendCarbonUIMessage(message, CarbonUIMessage.ERROR, request, e);
+            }
+        %>
+        
+        <script type="text/javascript">
+            function forward() {
+                location.href = "<%=forwardTo%>";
+            }
+
+            forward();
+        </script>
+    
     </div>
+</div>

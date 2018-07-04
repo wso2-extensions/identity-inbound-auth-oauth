@@ -46,8 +46,6 @@
             String scopeName = request.getParameter(SCOPE_NAME);
             
             try {
-                String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
-                int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
                 String serverURL = CarbonUIUtil.getServerURL(config.getServletContext(), session);
                 ConfigurationContext configContext = (ConfigurationContext)
                         config.getServletContext().getAttribute(CarbonConstants.CONFIGURATION_CONTEXT);
@@ -56,7 +54,7 @@
                 
                 String[] selectedClaims = request.getParameterValues("selectedClaims");
                 boolean isUpdate = Boolean.parseBoolean(request.getParameter("update"));
-                oAuthAdminClient.updateScope(scopeName, tenantId, null, selectedClaims);
+                oAuthAdminClient.updateScope(scopeName, null, selectedClaims);
                 if (isUpdate) {
                     forwardTo = "edit-oidc-claims.jsp?scopeName=" + scopeName;
                 } else {

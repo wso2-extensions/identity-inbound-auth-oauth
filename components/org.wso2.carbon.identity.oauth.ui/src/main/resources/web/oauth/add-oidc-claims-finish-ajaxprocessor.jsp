@@ -45,8 +45,6 @@
     ResourceBundle resourceBundle = ResourceBundle.getBundle(BUNDLE, request.getLocale());
     String forwardTo = null;
     try {
-        String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
-        int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
         String serverURL = CarbonUIUtil.getServerURL(config.getServletContext(), session);
         ConfigurationContext configContext = (ConfigurationContext)
                 config.getServletContext().getAttribute(CarbonConstants.CONFIGURATION_CONTEXT);
@@ -71,7 +69,7 @@
             }
         }
         
-        oAuthAdminClient.updateScope(scopeName, tenantId, claims, null);
+        oAuthAdminClient.updateScope(scopeName, claims, null);
         String message = MessageFormat.format(resourceBundle.getString("updated.the.scope.successfully"), scopeName);
         CarbonUIMessage.sendCarbonUIMessage(message, CarbonUIMessage.INFO, request);
         

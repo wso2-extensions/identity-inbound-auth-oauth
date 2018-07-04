@@ -488,13 +488,13 @@ public class OAuthAdminService extends AbstractAdmin {
     /**
      * To insert oidc scopes and claims in the related db tables.
      *
-     * @param tenantId tenant id
-     * @param scope    an oidc scope
+     * @param scope an oidc scope
      * @throws IdentityOAuthAdminException if an error occurs when inserting scopes or claims.
      */
-    public void addScope(int tenantId, String scope, String[] claims)
+    public void addScope(String scope, String[] claims)
             throws IdentityOAuthAdminException {
 
+        int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
         try {
             if (StringUtils.isNotEmpty(scope)) {
                 OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().addScope(tenantId, scope, claims);
@@ -509,14 +509,13 @@ public class OAuthAdminService extends AbstractAdmin {
     /**
      * To retrieve all persisted oidc scopes with mapped claims.
      *
-     * @param tenantId tenant Id
      * @return all persisted scopes and claims
      * @throws IdentityOAuth2Exception if an error occurs when loading scopes and claims.
      */
-    public ScopeDTO[] getScopes(int tenantId) throws IdentityOAuthAdminException {
+    public ScopeDTO[] getScopes() throws IdentityOAuthAdminException {
 
+        int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
         try {
-
             List<ScopeDTO> scopeDTOList = OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
                     getScopes(tenantId);
             if (CollectionUtils.isNotEmpty(scopeDTOList)) {
@@ -538,8 +537,9 @@ public class OAuthAdminService extends AbstractAdmin {
      * @param scope oidc scope
      * @throws IdentityOAuthAdminException if an error occurs when deleting scopes and claims.
      */
-    public void deleteScope(String scope, int tenantId) throws IdentityOAuthAdminException {
+    public void deleteScope(String scope) throws IdentityOAuthAdminException {
 
+        int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
         try {
             OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().deleteScope(scope, tenantId);
         } catch (IdentityOAuth2Exception e) {
@@ -550,12 +550,12 @@ public class OAuthAdminService extends AbstractAdmin {
     /**
      * To retrieve all persisted oidc scopes.
      *
-     * @param tenantId tenant Id
      * @return list of scopes persisted.
      * @throws IdentityOAuth2Exception if an error occurs when loading oidc scopes.
      */
-    public String[] getScopeNames(int tenantId) throws IdentityOAuthAdminException {
+    public String[] getScopeNames() throws IdentityOAuthAdminException {
 
+        int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
         try {
             List<String> scopeDTOList = OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
                     getScopeNames(tenantId);
@@ -575,13 +575,13 @@ public class OAuthAdminService extends AbstractAdmin {
     /**
      * To retrieve oidc claims mapped to an oidc scope.
      *
-     * @param tenantId tenant Id
-     * @param scope    scope
+     * @param scope scope
      * @return list of claims which are mapped to the oidc scope.
      * @throws IdentityOAuth2Exception if an error occurs when lading oidc claims.
      */
-    public String[] getClaims(int tenantId, String scope) throws IdentityOAuthAdminException {
+    public String[] getClaims(String scope) throws IdentityOAuthAdminException {
 
+        int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
         try {
             ScopeDTO scopeDTO = OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
                     getClaims(scope, tenantId);
@@ -602,14 +602,14 @@ public class OAuthAdminService extends AbstractAdmin {
      * To add new claims for an existing scope.
      *
      * @param scope        scope name
-     * @param tenantId     tenant Id
      * @param addClaims    list of oidc claims to be added
      * @param deleteClaims list of oidc claims to be deleted
      * @throws IdentityOAuth2Exception if an error occurs when adding a new claim for a scope.
      */
-    public void updateScope(String scope, int tenantId, String[] addClaims, String[] deleteClaims)
+    public void updateScope(String scope, String[] addClaims, String[] deleteClaims)
             throws IdentityOAuthAdminException {
 
+        int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
         try {
             OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
                     updateScope(scope, tenantId, Arrays.asList(addClaims), Arrays.asList(deleteClaims));
@@ -621,13 +621,13 @@ public class OAuthAdminService extends AbstractAdmin {
     /**
      * To load id of the scope table.
      *
-     * @param scope    scope name
-     * @param tenantId tenant id
+     * @param scope scope name
      * @return id of the given scope
      * @throws IdentityOAuth2Exception if an error occurs when loading scope id.
      */
-    public boolean isScopeExist(int tenantId, String scope) throws IdentityOAuthAdminException {
+    public boolean isScopeExist(String scope) throws IdentityOAuthAdminException {
 
+        int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
         try {
             return OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().isScopeExist(scope, tenantId);
         } catch (IdentityOAuth2Exception e) {

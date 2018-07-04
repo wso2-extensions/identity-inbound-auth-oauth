@@ -73,14 +73,12 @@
                 ResourceBundle resourceBundle = ResourceBundle.getBundle(BUNDLE, request.getLocale());
                 
                 try {
-                    String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
-                    int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
                     String serverURL = CarbonUIUtil.getServerURL(config.getServletContext(), session);
                     ConfigurationContext configContext = (ConfigurationContext)
                             config.getServletContext().getAttribute(CarbonConstants.CONFIGURATION_CONTEXT);
                     String cookie = (String) session.getAttribute(ServerConstants.ADMIN_SERVICE_COOKIE);
                     OAuthAdminClient oAuthAdminClient = new OAuthAdminClient(cookie, serverURL, configContext);
-                    scopes = oAuthAdminClient.getScopeNames(tenantId);
+                    scopes = oAuthAdminClient.getScopeNames();
                     
                 } catch (Exception e) {
                     String message = resourceBundle.getString("error.while.listing.scopes");

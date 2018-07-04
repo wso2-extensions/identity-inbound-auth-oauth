@@ -43,8 +43,6 @@
     String BUNDLE = "org.wso2.carbon.identity.oauth.ui.i18n.Resources";
     ResourceBundle resourceBundle = ResourceBundle.getBundle(BUNDLE, request.getLocale());
     String scope = request.getParameter(SCOPE_NAME);
-    String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
-    int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
     String serverURL = CarbonUIUtil.getServerURL(config.getServletContext(), session);
     ConfigurationContext configContext = (ConfigurationContext)
             config.getServletContext().getAttribute(CarbonConstants.CONFIGURATION_CONTEXT);
@@ -56,7 +54,7 @@
         ExternalClaimDTO[] externalClaimDTOS = client.getExternalClaims(OIDC_CLAIM_DIALECT);
         
         OAuthAdminClient oAuthAdminClient = new OAuthAdminClient(cookie, serverURL, configContext);
-        claims = oAuthAdminClient.getClaims(tenantId, scope);
+        claims = oAuthAdminClient.getClaims(scope);
         List<ExternalClaimDTO> externalClaimsTemp = new ArrayList<ExternalClaimDTO>();
         externalClaims = new ArrayList<ExternalClaimDTO>(Arrays.asList(externalClaimDTOS));
         if (claims != null)

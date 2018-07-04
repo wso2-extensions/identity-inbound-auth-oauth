@@ -1,10 +1,9 @@
-<wsdl:definitions xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" xmlns:ax2399="http://base.identity.carbon.wso2.org/xsd" xmlns:ax2402="http://dto.oauth.identity.carbon.wso2.org/xsd" xmlns:ax2404="http://oauth2.identity.carbon.wso2.org/xsd" xmlns:wsaw="http://www.w3.org/2006/05/addressing/wsdl" xmlns:mime="http://schemas.xmlsoap.org/wsdl/mime/" xmlns:soap12="http://schemas.xmlsoap.org/wsdl/soap12/" xmlns:ns1="http://org.apache.axis2/xsd" xmlns:ax2398="http://oauth.identity.carbon.wso2.org/xsd" xmlns:tns="http://oauth.identity.carbon.wso2.org" xmlns:http="http://schemas.xmlsoap.org/wsdl/http/" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" targetNamespace="http://oauth.identity.carbon.wso2.org">
+<wsdl:definitions xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" xmlns:ax2399="http://base.identity.carbon.wso2.org/xsd" xmlns:ax2402="http://dto.oauth.identity.carbon.wso2.org/xsd" xmlns:wsaw="http://www.w3.org/2006/05/addressing/wsdl" xmlns:mime="http://schemas.xmlsoap.org/wsdl/mime/" xmlns:tns="http://oauth.identity.carbon.wso2.org" xmlns:http="http://schemas.xmlsoap.org/wsdl/http/" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://schemas.xmlsoap.org/wsdl/soap12/" xmlns:ns1="http://org.apache.axis2/xsd" xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:ax2398="http://oauth.identity.carbon.wso2.org/xsd" targetNamespace="http://oauth.identity.carbon.wso2.org">
     <wsdl:documentation>OAuthAdminService</wsdl:documentation>
     <wsdl:types>
-        <xs:schema xmlns:ax2401="http://oauth.identity.carbon.wso2.org/xsd" xmlns:ax2403="http://dto.oauth.identity.carbon.wso2.org/xsd" xmlns:ns="http://org.apache.axis2/xsd" xmlns:ax2406="http://oauth2.identity.carbon.wso2.org/xsd" attributeFormDefault="qualified" elementFormDefault="qualified" targetNamespace="http://org.apache.axis2/xsd">
+        <xs:schema xmlns:ax2401="http://oauth.identity.carbon.wso2.org/xsd" xmlns:ax2403="http://dto.oauth.identity.carbon.wso2.org/xsd" xmlns:ns="http://org.apache.axis2/xsd" attributeFormDefault="qualified" elementFormDefault="qualified" targetNamespace="http://org.apache.axis2/xsd">
             <xs:import namespace="http://oauth.identity.carbon.wso2.org/xsd"/>
             <xs:import namespace="http://dto.oauth.identity.carbon.wso2.org/xsd"/>
-            <xs:import namespace="http://oauth2.identity.carbon.wso2.org/xsd"/>
             <xs:element name="OAuthAdminServiceIdentityOAuthAdminException">
                 <xs:complexType>
                     <xs:sequence>
@@ -12,10 +11,21 @@
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
+            <xs:element name="getScopes">
+                <xs:complexType>
+                    <xs:sequence/>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="getScopesResponse">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element maxOccurs="unbounded" minOccurs="0" name="return" nillable="true" type="ax2402:ScopeDTO"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
             <xs:element name="getClaims">
                 <xs:complexType>
                     <xs:sequence>
-                        <xs:element minOccurs="0" name="tenantId" type="xs:int"/>
                         <xs:element minOccurs="0" name="scope" nillable="true" type="xs:string"/>
                     </xs:sequence>
                 </xs:complexType>
@@ -27,17 +37,11 @@
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
-            <xs:element name="getScopes">
+            <xs:element name="addScope">
                 <xs:complexType>
                     <xs:sequence>
-                        <xs:element minOccurs="0" name="tenantId" type="xs:int"/>
-                    </xs:sequence>
-                </xs:complexType>
-            </xs:element>
-            <xs:element name="getScopesResponse">
-                <xs:complexType>
-                    <xs:sequence>
-                        <xs:element maxOccurs="unbounded" minOccurs="0" name="return" nillable="true" type="ax2402:ScopeDTO"/>
+                        <xs:element minOccurs="0" name="scope" nillable="true" type="xs:string"/>
+                        <xs:element maxOccurs="unbounded" minOccurs="0" name="claims" nillable="true" type="xs:string"/>
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
@@ -50,15 +54,6 @@
                 <xs:complexType>
                     <xs:sequence>
                         <xs:element maxOccurs="unbounded" minOccurs="0" name="return" nillable="true" type="xs:string"/>
-                    </xs:sequence>
-                </xs:complexType>
-            </xs:element>
-            <xs:element name="addScope">
-                <xs:complexType>
-                    <xs:sequence>
-                        <xs:element minOccurs="0" name="tenantId" type="xs:int"/>
-                        <xs:element minOccurs="0" name="scope" nillable="true" type="xs:string"/>
-                        <xs:element maxOccurs="unbounded" minOccurs="0" name="claims" nillable="true" type="xs:string"/>
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
@@ -160,15 +155,12 @@
                 <xs:complexType>
                     <xs:sequence>
                         <xs:element minOccurs="0" name="scope" nillable="true" type="xs:string"/>
-                        <xs:element minOccurs="0" name="tenantId" type="xs:int"/>
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
             <xs:element name="getScopeNames">
                 <xs:complexType>
-                    <xs:sequence>
-                        <xs:element minOccurs="0" name="tenantId" type="xs:int"/>
-                    </xs:sequence>
+                    <xs:sequence/>
                 </xs:complexType>
             </xs:element>
             <xs:element name="getScopeNamesResponse">
@@ -178,18 +170,10 @@
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
-            <xs:element name="OAuthAdminServiceIdentityOAuth2Exception">
-                <xs:complexType>
-                    <xs:sequence>
-                        <xs:element minOccurs="0" name="IdentityOAuth2Exception" nillable="true" type="ax2404:IdentityOAuth2Exception"/>
-                    </xs:sequence>
-                </xs:complexType>
-            </xs:element>
             <xs:element name="updateScope">
                 <xs:complexType>
                     <xs:sequence>
                         <xs:element minOccurs="0" name="scope" nillable="true" type="xs:string"/>
-                        <xs:element minOccurs="0" name="tenantId" type="xs:int"/>
                         <xs:element maxOccurs="unbounded" minOccurs="0" name="addClaims" nillable="true" type="xs:string"/>
                         <xs:element maxOccurs="unbounded" minOccurs="0" name="deleteClaims" nillable="true" type="xs:string"/>
                     </xs:sequence>
@@ -198,7 +182,6 @@
             <xs:element name="isScopeExist">
                 <xs:complexType>
                     <xs:sequence>
-                        <xs:element minOccurs="0" name="tenantId" type="xs:int"/>
                         <xs:element minOccurs="0" name="scope" nillable="true" type="xs:string"/>
                     </xs:sequence>
                 </xs:complexType>
@@ -353,16 +336,6 @@
                 <xs:sequence>
                     <xs:element minOccurs="0" name="errorCode" nillable="true" type="xs:string"/>
                 </xs:sequence>
-            </xs:complexType>
-        </xs:schema>
-        <xs:schema xmlns:ax2405="http://base.identity.carbon.wso2.org/xsd" attributeFormDefault="qualified" elementFormDefault="qualified" targetNamespace="http://oauth2.identity.carbon.wso2.org/xsd">
-            <xs:import namespace="http://base.identity.carbon.wso2.org/xsd"/>
-            <xs:complexType name="IdentityOAuth2Exception">
-                <xs:complexContent>
-                    <xs:extension base="ax2399:IdentityException">
-                        <xs:sequence/>
-                    </xs:extension>
-                </xs:complexContent>
             </xs:complexType>
         </xs:schema>
         <xs:schema xmlns:ax2400="http://base.identity.carbon.wso2.org/xsd" attributeFormDefault="qualified" elementFormDefault="qualified" targetNamespace="http://oauth.identity.carbon.wso2.org/xsd">
@@ -564,9 +537,6 @@
     <wsdl:message name="updateScopeRequest">
         <wsdl:part name="parameters" element="ns1:updateScope"/>
     </wsdl:message>
-    <wsdl:message name="OAuthAdminServiceIdentityOAuth2Exception">
-        <wsdl:part name="parameters" element="ns1:OAuthAdminServiceIdentityOAuth2Exception"/>
-    </wsdl:message>
     <wsdl:message name="getTokenExpiryTimesRequest">
         <wsdl:part name="parameters" element="ns1:getTokenExpiryTimes"/>
     </wsdl:message>
@@ -708,7 +678,7 @@
         </wsdl:operation>
         <wsdl:operation name="updateScope">
             <wsdl:input message="tns:updateScopeRequest" wsaw:Action="urn:updateScope"/>
-            <wsdl:fault message="tns:OAuthAdminServiceIdentityOAuth2Exception" name="OAuthAdminServiceIdentityOAuth2Exception" wsaw:Action="urn:updateScopeOAuthAdminServiceIdentityOAuth2Exception"/>
+            <wsdl:fault message="tns:OAuthAdminServiceIdentityOAuthAdminException" name="OAuthAdminServiceIdentityOAuthAdminException" wsaw:Action="urn:updateScopeOAuthAdminServiceIdentityOAuthAdminException"/>
         </wsdl:operation>
         <wsdl:operation name="getTokenExpiryTimes">
             <wsdl:input message="tns:getTokenExpiryTimesRequest" wsaw:Action="urn:getTokenExpiryTimes"/>
@@ -996,8 +966,8 @@
             <wsdl:input>
                 <soap:body use="literal"/>
             </wsdl:input>
-            <wsdl:fault name="OAuthAdminServiceIdentityOAuth2Exception">
-                <soap:fault use="literal" name="OAuthAdminServiceIdentityOAuth2Exception"/>
+            <wsdl:fault name="OAuthAdminServiceIdentityOAuthAdminException">
+                <soap:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
             </wsdl:fault>
         </wsdl:operation>
         <wsdl:operation name="getTokenExpiryTimes">
@@ -1317,8 +1287,8 @@
             <wsdl:input>
                 <soap12:body use="literal"/>
             </wsdl:input>
-            <wsdl:fault name="OAuthAdminServiceIdentityOAuth2Exception">
-                <soap12:fault use="literal" name="OAuthAdminServiceIdentityOAuth2Exception"/>
+            <wsdl:fault name="OAuthAdminServiceIdentityOAuthAdminException">
+                <soap12:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
             </wsdl:fault>
         </wsdl:operation>
         <wsdl:operation name="getTokenExpiryTimes">
