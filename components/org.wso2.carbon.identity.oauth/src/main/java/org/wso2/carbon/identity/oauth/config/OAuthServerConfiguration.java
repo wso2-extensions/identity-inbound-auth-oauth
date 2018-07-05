@@ -27,7 +27,6 @@ import org.apache.oltu.oauth2.as.issuer.OAuthIssuer;
 import org.apache.oltu.oauth2.as.issuer.OAuthIssuerImpl;
 import org.apache.oltu.oauth2.as.issuer.UUIDValueGenerator;
 import org.apache.oltu.oauth2.as.issuer.ValueGenerator;
-import org.apache.oltu.oauth2.as.validator.CodeTokenValidator;
 import org.apache.oltu.oauth2.as.validator.CodeValidator;
 import org.apache.oltu.oauth2.as.validator.TokenValidator;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
@@ -37,6 +36,7 @@ import org.wso2.carbon.identity.application.common.cache.BaseCache;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.common.CodeTokenResponseValidator;
 import org.wso2.carbon.identity.oauth.common.IDTokenResponseValidator;
 import org.wso2.carbon.identity.oauth.common.IDTokenTokenResponseValidator;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -658,12 +658,16 @@ public class OAuthServerConfiguration {
                             .put(ResponseType.CODE.toString(), CodeValidator.class);
                     supportedResponseTypeValidatorsTemp.put(ResponseType.TOKEN.toString(),
                             TokenValidator.class);
-                    supportedResponseTypeValidatorsTemp.put(OAuthConstants.ID_TOKEN, IDTokenResponseValidator.class);
-                    supportedResponseTypeValidatorsTemp.put(OAuthConstants.IDTOKEN_TOKEN, IDTokenTokenResponseValidator.class);
-                    supportedResponseTypeValidatorsTemp.put(OAuthConstants.CODE_TOKEN, CodeTokenValidator.class);
-                    supportedResponseTypeValidatorsTemp.put(OAuthConstants.CODE_IDTOKEN, CodeTokenValidator.class);
-                    supportedResponseTypeValidatorsTemp.put(OAuthConstants.CODE_IDTOKEN_TOKEN, CodeTokenValidator.class);
-
+                    supportedResponseTypeValidatorsTemp.put(OAuthConstants.ID_TOKEN,
+                            IDTokenResponseValidator.class);
+                    supportedResponseTypeValidatorsTemp.put(OAuthConstants.IDTOKEN_TOKEN,
+                            IDTokenTokenResponseValidator.class);
+                    supportedResponseTypeValidatorsTemp.put(OAuthConstants.CODE_TOKEN,
+                            CodeTokenResponseValidator.class);
+                    supportedResponseTypeValidatorsTemp.put(OAuthConstants.CODE_IDTOKEN,
+                            CodeTokenResponseValidator.class);
+                    supportedResponseTypeValidatorsTemp.put(OAuthConstants.CODE_IDTOKEN_TOKEN,
+                            CodeTokenResponseValidator.class);
                     if (supportedResponseTypeValidatorNames != null) {
                         // Load configured grant type validators
                         for (Map.Entry<String, String> entry : supportedResponseTypeValidatorNames
