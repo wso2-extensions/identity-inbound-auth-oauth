@@ -296,7 +296,8 @@ public class ResponseTypeHandlerUtil {
         }
     }
 
-    private static void addUserAttributesToCache(String accessToken, OAuthAuthzReqMessageContext msgCtx) {
+    private static void addUserAttributesToCache(String accessToken, OAuthAuthzReqMessageContext msgCtx)
+    throws IdentityOAuth2Exception {
 
         OAuth2AuthorizeReqDTO authorizeReqDTO = msgCtx.getAuthorizationReqDTO();
         Map<ClaimMapping, String> userAttributes = authorizeReqDTO.getUser().getUserAttributes();
@@ -312,7 +313,7 @@ public class ResponseTypeHandlerUtil {
         key.setRemoteClaim(claimOfKey);
         String sub = userAttributes.get(key);
 
-        AccessTokenDO accessTokenDO = (AccessTokenDO) msgCtx.getProperty(OAuth2Util.ACCESS_TOKEN_DO);
+        AccessTokenDO accessTokenDO = getAccessTokenDO(accessToken, msgCtx);
         if (accessTokenDO != null && StringUtils.isNotBlank(accessTokenDO.getTokenId())) {
             authorizationGrantCacheEntry.setTokenId(accessTokenDO.getTokenId());
         }
@@ -328,6 +329,16 @@ public class ResponseTypeHandlerUtil {
         authorizationGrantCacheEntry.setValidityPeriod(TimeUnit.MILLISECONDS.toNanos(accessTokenDO.getValidityPeriodInMillis()));
         AuthorizationGrantCache.getInstance().addToCacheByToken(authorizationGrantCacheKey,
                 authorizationGrantCacheEntry);
+    }
+
+    private static AccessTokenDO getAccessTokenDO(String accessToken,
+                                                  OAuthAuthzReqMessageContext msgCtx) throws IdentityOAuth2Exception {
+
+        Object accessTokenObject = msgCtx.getProperty(OAuth2Util.ACCESS_TOKEN_DO);
+        if (accessTokenObject instanceof AccessTokenDO) {
+            return (AccessTokenDO) accessTokenObject;
+        }
+        return OAuth2Util.getAccessTokenDOfromTokenIdentifier(accessToken);
     }
 
     private static void deactivateCurrentAuthorizationCode(String authorizationCode, String tokenId)
