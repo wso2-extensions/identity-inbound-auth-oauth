@@ -28,7 +28,6 @@ import org.wso2.carbon.database.utils.jdbc.JdbcTemplate;
 import org.wso2.carbon.database.utils.jdbc.RowMapper;
 import org.wso2.carbon.database.utils.jdbc.exceptions.DataAccessException;
 import org.wso2.carbon.database.utils.jdbc.exceptions.TransactionException;
-import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.util.JdbcUtils;
@@ -41,7 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
+import static org.wso2.carbon.identity.core.util.LambdaExceptionUtils.rethrowConsumer;
 
 /**
  * Default implementation of {@link ScopeClaimMappingDAO}. This handles {@link ScopeDTO} related db layer operations.
@@ -54,17 +53,18 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
     public void addScopes(int tenantId, List<ScopeDTO> scopeClaimsList) throws IdentityOAuth2Exception {
 
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
-        //scopeClaimsList is not a null.
-        for (ScopeDTO scopeDTO : scopeClaimsList) {
+
+        scopeClaimsList.forEach(rethrowConsumer(scopeDTO -> {
             String scope = scopeDTO.getName();
             String[] claims = scopeDTO.getClaim();
-            if (!isScopeExist(scope, tenantId)) {
-                try {
-                    int scopeClaimMappingId = jdbcTemplate.executeInsert(SQLQueries.STORE_IDN_OIDC_SCOPES,
-                            (preparedStatement -> {
-                                preparedStatement.setString(1, scope);
-                                preparedStatement.setInt(2, tenantId);
-                            }), null, true);
+            try {
+                if (!isScopeExist(scope, tenantId)) {
+                    int scopeClaimMappingId = jdbcTemplate.withTransaction(tempate ->
+                            tempate.executeInsert(SQLQueries.STORE_IDN_OIDC_SCOPES,
+                                    (preparedStatement -> {
+                                        preparedStatement.setString(1, scope);
+                                        preparedStatement.setInt(2, tenantId);
+                                    }), null, true));
                     if (scopeClaimMappingId > 0 && ArrayUtils.isNotEmpty(claims)) {
                         Set<String> claimsSet = new HashSet<>(Arrays.asList(claims));
                         insertClaims(tenantId, scopeClaimMappingId, claimsSet);
@@ -73,12 +73,17 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
                         log.debug("The scope: " + scope + " and the claims: " + Arrays.asList(claims) + "are successfully" +
                                 " inserted for the tenant: " + tenantId);
                     }
-                } catch (DataAccessException e) {
-                    String errorMessage = "Error while persisting new claims for the scope for the tenant: " + tenantId;
-                    throw new IdentityOAuth2Exception(errorMessage, e);
+                } else {
+                    String errorMessage = "Error while adding scopes. Duplicate scopes can not be added for the tenant: "
+                            + tenantId;
+                    throw new IdentityOAuth2Exception(errorMessage);
                 }
+            } catch (TransactionException e) {
+                String errorMessage = "Error while persisting new claims for the scope for the tenant: " + tenantId;
+                throw new IdentityOAuth2Exception(errorMessage, e);
             }
-        }
+
+        }));
     }
 
     @Override
@@ -105,7 +110,8 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
                 throw new IdentityOAuth2Exception(errorMessage, e);
             }
         } else {
-            log.warn("The Scope: " + scope + " is already existing.");
+            String errorMessage = "The Scope: " + scope + " is already existing.";
+            throw new IdentityOAuth2Exception(errorMessage);
         }
     }
 
@@ -191,13 +197,18 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
 
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
         try {
-            jdbcTemplate.executeUpdate(SQLQueries.DELETE_SCOPE_CLAIM_MAPPING, preparedStatement -> {
-                        preparedStatement.setString(1, scope);
-                        preparedStatement.setInt(2, tenantId);
-                    }
-            );
-            if (log.isDebugEnabled()) {
-                log.debug("The scope: " + scope + "in the tenant: " + tenantId + "is successfully deleted.");
+            if (isScopeExist(scope, tenantId)) {
+                jdbcTemplate.executeUpdate(SQLQueries.DELETE_SCOPE_CLAIM_MAPPING, preparedStatement -> {
+                            preparedStatement.setString(1, scope);
+                            preparedStatement.setInt(2, tenantId);
+                        }
+                );
+                if (log.isDebugEnabled()) {
+                    log.debug("The scope: " + scope + "in the tenant: " + tenantId + "is successfully deleted.");
+                }
+            } else {
+                String errorMessage = "The scope: " + scope + "does not exist to delete.";
+                throw new IdentityOAuth2Exception(errorMessage);
             }
         } catch (DataAccessException e) {
             throw new IdentityOAuth2Exception("Error while deleting the scope: " + scope + " and related claims.", e);

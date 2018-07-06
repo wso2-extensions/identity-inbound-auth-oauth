@@ -499,7 +499,7 @@ public class OAuthAdminService extends AbstractAdmin {
             if (StringUtils.isNotEmpty(scope)) {
                 OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().addScope(tenantId, scope, claims);
             } else {
-                log.warn("Scope claim mapping is empty for the tenant: " + tenantId);
+                throw new IdentityOAuthAdminException("The scope can not be empty.");
             }
         } catch (IdentityOAuth2Exception e) {
             throw handleError("Error while inserting OIDC scopes and claims.", e);

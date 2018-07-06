@@ -535,10 +535,7 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
         key.setRemoteClaim(claimOfKey);
         String sub = userAttributes.get(key);
 
-        AccessTokenDO accessTokenDO = (AccessTokenDO)msgCtx.getProperty(OAuth2Util.ACCESS_TOKEN_DO);
-        if (accessTokenDO == null) {
-            accessTokenDO = OAuth2Util.getAccessTokenDOfromTokenIdentifier(accessToken);
-        }
+        AccessTokenDO accessTokenDO = getAccessTokenDO(accessToken, msgCtx);
 
         if (accessTokenDO != null && StringUtils.isNotBlank(accessTokenDO.getTokenId())) {
             authorizationGrantCacheEntry.setTokenId(accessTokenDO.getTokenId());
@@ -564,5 +561,15 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
             log.debug("Access Token renew per request: " + isRenew);
         }
         return !isRenew;
+    }
+
+    private static AccessTokenDO getAccessTokenDO(String accessToken,
+                                                  OAuthAuthzReqMessageContext msgCtx) throws IdentityOAuth2Exception {
+
+        Object accessTokenObject = msgCtx.getProperty(OAuth2Util.ACCESS_TOKEN_DO);
+        if (accessTokenObject instanceof AccessTokenDO) {
+            return (AccessTokenDO) accessTokenObject;
+        }
+        return OAuth2Util.getAccessTokenDOfromTokenIdentifier(accessToken);
     }
 }

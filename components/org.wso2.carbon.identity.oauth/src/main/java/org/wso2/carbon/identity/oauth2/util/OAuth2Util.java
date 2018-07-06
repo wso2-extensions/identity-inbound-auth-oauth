@@ -1547,22 +1547,6 @@ public class OAuth2Util {
         return (claimConfig.toString().split(","));
     }
 
-    private static List<String> loadClaimConfig1(OMElement configElement) {
-
-        StringBuilder claimConfig = new StringBuilder();
-        Iterator it = configElement.getChildElements();
-        while (it.hasNext()) {
-            OMElement element = (OMElement) it.next();
-            if ("Claim".equals(element.getLocalName())) {
-                String commaSeparatedClaimNames = element.getText();
-                if (StringUtils.isNotBlank(commaSeparatedClaimNames)) {
-                    claimConfig.append(commaSeparatedClaimNames.trim());
-                }
-            }
-        }
-        return Arrays.asList(claimConfig.toString().split(","));
-    }
-
     /**
      * Get Oauth application information
      *

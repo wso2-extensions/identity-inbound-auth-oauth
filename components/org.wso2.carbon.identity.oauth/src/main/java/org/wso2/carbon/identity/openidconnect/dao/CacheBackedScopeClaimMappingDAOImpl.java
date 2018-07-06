@@ -22,7 +22,6 @@ package org.wso2.carbon.identity.openidconnect.dao;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.openidconnect.cache.OIDCScopeClaimCache;
@@ -44,8 +43,10 @@ public class CacheBackedScopeClaimMappingDAOImpl extends ScopeClaimMappingDAOImp
     @Override
     public void addScopes(int tenantId, List<ScopeDTO> scopeClaimsMap) throws IdentityOAuth2Exception {
 
-        oidcScopeClaimCache.clearScopeClaimMap(tenantId);
         super.addScopes(tenantId, scopeClaimsMap);
+        OIDCScopeClaimCacheEntry oidcScopeClaimCacheEntry = new OIDCScopeClaimCacheEntry();
+        oidcScopeClaimCacheEntry.setScopeClaimMapping(scopeClaimsMap);
+        oidcScopeClaimCache.addScopeClaimMap(tenantId, oidcScopeClaimCacheEntry);
         if (log.isDebugEnabled()) {
             log.debug("The cache oidcScopeClaimCache is cleared for the tenant : " + tenantId);
         }
@@ -64,15 +65,15 @@ public class CacheBackedScopeClaimMappingDAOImpl extends ScopeClaimMappingDAOImp
     public List<ScopeDTO> getScopes(int tenantId) throws IdentityOAuth2Exception {
 
         OIDCScopeClaimCacheEntry oidcScopeClaimCacheEntry = oidcScopeClaimCache.getScopeClaimMap(tenantId);
-        oidcScopeClaimCacheEntry = getOidcScopeClaimCacheEntry(tenantId, oidcScopeClaimCacheEntry);
+        oidcScopeClaimCacheEntry = loadOIDCScopeClaims(tenantId, oidcScopeClaimCacheEntry);
         return oidcScopeClaimCacheEntry.getScopeClaimMapping();
     }
 
     @Override
     public void deleteScope(String scope, int tenantId) throws IdentityOAuth2Exception {
 
-        oidcScopeClaimCache.clearScopeClaimMap(tenantId);
         super.deleteScope(scope, tenantId);
+        oidcScopeClaimCache.clearScopeClaimMap(tenantId);
         if (log.isDebugEnabled()) {
             log.debug("OIDC scope claims mapping deleted from the oidcScopeClaimCache for tenant: " + tenantId);
         }
@@ -82,8 +83,8 @@ public class CacheBackedScopeClaimMappingDAOImpl extends ScopeClaimMappingDAOImp
     public void updateScope(String scope, int tenantId, List<String> addClaims, List<String> deleteClaims)
             throws IdentityOAuth2Exception {
 
-        oidcScopeClaimCache.clearScopeClaimMap(tenantId);
         super.updateScope(scope, tenantId, addClaims, deleteClaims);
+        oidcScopeClaimCache.clearScopeClaimMap(tenantId);
         if (log.isDebugEnabled()) {
             log.debug("The cache oidcScopeClaimCache is cleared for the tenant : " + tenantId);
         }
@@ -93,7 +94,7 @@ public class CacheBackedScopeClaimMappingDAOImpl extends ScopeClaimMappingDAOImp
     public List<String> getScopeNames(int tenantId) throws IdentityOAuth2Exception {
 
         OIDCScopeClaimCacheEntry oidcScopeClaimCacheEntry = oidcScopeClaimCache.getScopeClaimMap(tenantId);
-        oidcScopeClaimCacheEntry = getOidcScopeClaimCacheEntry(tenantId, oidcScopeClaimCacheEntry);
+        oidcScopeClaimCacheEntry = loadOIDCScopeClaims(tenantId, oidcScopeClaimCacheEntry);
         List<String> scopes = new ArrayList<>();
         for (ScopeDTO scopeDTO : oidcScopeClaimCacheEntry.getScopeClaimMapping()) {
             scopes.add(scopeDTO.getName());
@@ -105,7 +106,7 @@ public class CacheBackedScopeClaimMappingDAOImpl extends ScopeClaimMappingDAOImp
     public ScopeDTO getClaims(String scope, int tenantId) throws IdentityOAuth2Exception {
 
         OIDCScopeClaimCacheEntry oidcScopeClaimCacheEntry = oidcScopeClaimCache.getScopeClaimMap(tenantId);
-        oidcScopeClaimCacheEntry = getOidcScopeClaimCacheEntry(tenantId, oidcScopeClaimCacheEntry);
+        oidcScopeClaimCacheEntry = loadOIDCScopeClaims(tenantId, oidcScopeClaimCacheEntry);
         ScopeDTO scopeDTO = new ScopeDTO();
         for (ScopeDTO scopeObj : oidcScopeClaimCacheEntry.getScopeClaimMapping()) {
             if (scope.equals(scopeObj.getName()) && scopeObj.getClaim() != null) {
@@ -115,7 +116,7 @@ public class CacheBackedScopeClaimMappingDAOImpl extends ScopeClaimMappingDAOImp
         return scopeDTO;
     }
 
-    private OIDCScopeClaimCacheEntry getOidcScopeClaimCacheEntry(int tenantId, OIDCScopeClaimCacheEntry
+    private OIDCScopeClaimCacheEntry loadOIDCScopeClaims(int tenantId, OIDCScopeClaimCacheEntry
             oidcScopeClaimCacheEntry) throws IdentityOAuth2Exception {
 
         if (oidcScopeClaimCacheEntry == null || oidcScopeClaimCacheEntry.getScopeClaimMapping().size() == 0) {
