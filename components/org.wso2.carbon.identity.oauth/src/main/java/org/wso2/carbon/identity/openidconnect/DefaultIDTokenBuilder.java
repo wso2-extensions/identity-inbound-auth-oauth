@@ -206,7 +206,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
             jwtClaimsSetBuilder.claim(OAuthConstants.AMR, translateAmrToResponse(amrValues));
         }
 
-        setAdditionalClaims(tokenReqMsgCtxt, tokenRespDTO, jwtClaimsSetBuilder.build());
+        setAdditionalClaims(tokenReqMsgCtxt, tokenRespDTO, jwtClaimsSetBuilder);
 
         tokenReqMsgCtxt.addProperty(OAuthConstants.ACCESS_TOKEN, accessToken);
         tokenReqMsgCtxt.addProperty(MultitenantConstants.TENANT_DOMAIN, getSpTenantDomain(tokenReqMsgCtxt));
@@ -284,7 +284,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
             jwtClaimsSetBuilder.claim("amr", translateAmrToResponse(amrValues));
         }
 
-        setAdditionalClaims(authzReqMessageContext, tokenRespDTO, jwtClaimsSetBuilder.build());
+        setAdditionalClaims(authzReqMessageContext, tokenRespDTO, jwtClaimsSetBuilder);
 
         authzReqMessageContext.addProperty(OAuthConstants.ACCESS_TOKEN, accessToken);
         authzReqMessageContext.addProperty(MultitenantConstants.TENANT_DOMAIN, getSpTenantDomain(authzReqMessageContext));
@@ -888,18 +888,19 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
      *
      * @param tokenReqMsgCtxt OAuthTokenReqMessageContext
      * @param tokenRespDTO OAuth2AccessTokenRespDTO
-     * @param jwtClaimsSet contains JWT body
+     * @param jwtClaimsSetBuilder contains JWT body
      * @throws IdentityOAuth2Exception
      */
     private void setAdditionalClaims(OAuthTokenReqMessageContext tokenReqMsgCtxt,
-                                     OAuth2AccessTokenRespDTO tokenRespDTO, JWTClaimsSet jwtClaimsSet)
+                                     OAuth2AccessTokenRespDTO tokenRespDTO,
+                                     JWTClaimsSet.Builder jwtClaimsSetBuilder)
             throws IdentityOAuth2Exception {
         List<ClaimProvider> claimProviders = getClaimProviders();
         if (CollectionUtils.isNotEmpty(claimProviders)) {
             for (ClaimProvider claimProvider : claimProviders) {
                 Map<String, Object> additionalIdTokenClaims =
                         claimProvider.getAdditionalClaims(tokenReqMsgCtxt, tokenRespDTO);
-                setAdditionalClaimSet(jwtClaimsSet, additionalIdTokenClaims);
+                setAdditionalClaimSet(jwtClaimsSetBuilder, additionalIdTokenClaims);
             }
         }
     }
@@ -909,18 +910,19 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
      *
      * @param authzReqMessageContext OAuthAuthzReqMessageContext
      * @param authorizeRespDTO OAuth2AuthorizeRespDTO
-     * @param jwtClaimsSet contains JWT body
+     * @param jwtClaimsSetBuilder contains JWT body
      * @throws IdentityOAuth2Exception
      */
     private void setAdditionalClaims(OAuthAuthzReqMessageContext authzReqMessageContext,
-                                     OAuth2AuthorizeRespDTO authorizeRespDTO, JWTClaimsSet jwtClaimsSet)
+                                     OAuth2AuthorizeRespDTO authorizeRespDTO,
+                                     JWTClaimsSet.Builder jwtClaimsSetBuilder)
             throws IdentityOAuth2Exception {
         List<ClaimProvider> claimProviders = getClaimProviders();
         if (CollectionUtils.isNotEmpty(claimProviders)) {
             for (ClaimProvider claimProvider : claimProviders) {
                 Map<String, Object> additionalIdTokenClaims =
                         claimProvider.getAdditionalClaims(authzReqMessageContext, authorizeRespDTO);
-                setAdditionalClaimSet(jwtClaimsSet, additionalIdTokenClaims);
+                setAdditionalClaimSet(jwtClaimsSetBuilder, additionalIdTokenClaims);
             }
         }
     }
@@ -932,11 +934,12 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
     /**
      * A map with claim names and corresponding claim values is passed and all are inserted into jwtClaimSet.
      *
-     * @param jwtClaimsSet contains JWT body
+     * @param jwtClaimsSetBuilder contains JWT body
      * @param additionalIdTokenClaims a map with claim names and corresponding claim values
      */
-    private void setAdditionalClaimSet(JWTClaimsSet jwtClaimsSet, Map<String, Object> additionalIdTokenClaims) {
-        JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder(jwtClaimsSet);
+    private void setAdditionalClaimSet(JWTClaimsSet.Builder jwtClaimsSetBuilder,
+                                       Map<String, Object> additionalIdTokenClaims) {
+
         for (Map.Entry<String, Object> entry : additionalIdTokenClaims.entrySet()) {
             jwtClaimsSetBuilder.claim(entry.getKey(), entry.getValue());
         }
