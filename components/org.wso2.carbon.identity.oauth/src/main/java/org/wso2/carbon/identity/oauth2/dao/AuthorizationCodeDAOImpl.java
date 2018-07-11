@@ -61,6 +61,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
     private final Log log = LogFactory.getLog(AuthorizationCodeDAOImpl.class);
 
     private static final String IDN_OAUTH2_AUTHORIZATION_CODE = "IDN_OAUTH2_AUTHORIZATION_CODE";
+    private boolean isHashDisabled = OAuth2Util.isHashDisabled();
 
     @Override
     public void insertAuthorizationCode(String authzCode, String consumerKey, String callbackUrl,
@@ -425,7 +426,9 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
 
                 // if authorization code is not expired.
                 if (OAuth2Util.calculateValidityInMillis(issuedTimeInMillis, validityPeriodInMillis) > 1000) {
-                    authorizationCodes.add(getPersistenceProcessor().getPreprocessedAuthzCode(rs.getString(1)));
+                    if (isHashDisabled) {
+                        authorizationCodes.add(getPersistenceProcessor().getPreprocessedAuthzCode(rs.getString(1)));
+                    }
                 }
             }
             connection.commit();
@@ -457,7 +460,9 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             ps.setString(1, consumerKey);
             rs = ps.executeQuery();
             while (rs.next()) {
-                authorizationCodes.add(getPersistenceProcessor().getPreprocessedAuthzCode(rs.getString(1)));
+                if (isHashDisabled) {
+                    authorizationCodes.add(getPersistenceProcessor().getPreprocessedAuthzCode(rs.getString(1)));
+                }
             }
             connection.commit();
         } catch (SQLException e) {
@@ -488,7 +493,9 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             ps.setString(2, OAuthConstants.AuthorizationCodeState.ACTIVE);
             rs = ps.executeQuery();
             while (rs.next()) {
-                authorizationCodes.add(getPersistenceProcessor().getPreprocessedAuthzCode(rs.getString(1)));
+                if (isHashDisabled) {
+                    authorizationCodes.add(getPersistenceProcessor().getPreprocessedAuthzCode(rs.getString(1)));
+                }
             }
             connection.commit();
         } catch (SQLException e) {

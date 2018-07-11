@@ -52,6 +52,7 @@ import org.wso2.carbon.utils.CarbonUtils;
 import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
 
@@ -408,6 +409,8 @@ public class AccessTokenIssuer {
                         log.debug("Adding AuthorizationGrantCache entry for the access token");
                     }
                 }
+                authorizationGrantCacheEntry.setValidityPeriod(
+                        TimeUnit.MILLISECONDS.toNanos(tokenRespDTO.getExpiresInMillis()));
                 AuthorizationGrantCache.getInstance().addToCacheByToken(newCacheKey, authorizationGrantCacheEntry);
                 AuthorizationGrantCache.getInstance().clearCacheEntryByCode(oldCacheKey);
             }

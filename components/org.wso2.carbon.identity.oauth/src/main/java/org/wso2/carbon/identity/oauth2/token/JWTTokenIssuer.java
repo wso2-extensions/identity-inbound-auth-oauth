@@ -30,6 +30,7 @@ import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.JWTParser;
 import com.nimbusds.jwt.PlainJWT;
 import com.nimbusds.jwt.SignedJWT;
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -80,6 +81,10 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     private static final String KEY_STORE_EXTENSION = ".jks";
     private static final String AUTHORIZATION_PARTY = "azp";
     private static final String AUDIENCE = "aud";
+    private static final String SCOPE = "scope";
+
+    // To keep track of the expiry time provided in the original jwt assertion, when JWT grant type is used.
+    private static final String EXPIRY_TIME_JWT = "EXPIRY_TIME_JWT";
 
     private static final Log log = LogFactory.getLog(JWTTokenIssuer.class);
 
@@ -380,11 +385,9 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         AuthenticatedUser user;
         long accessTokenLifeTimeInMillis;
         if (authAuthzReqMessageContext != null) {
-            user = authAuthzReqMessageContext.getAuthorizationReqDTO().getUser();
             accessTokenLifeTimeInMillis =
                     getAccessTokenLifeTimeInMillis(authAuthzReqMessageContext, oAuthAppDO, consumerKey);
         } else {
-            user = tokenReqMessageContext.getAuthorizedUser();
             accessTokenLifeTimeInMillis =
                     getAccessTokenLifeTimeInMillis(tokenReqMessageContext, oAuthAppDO, consumerKey);
         }
@@ -395,11 +398,19 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         // Set the default claims.
         JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
         jwtClaimsSetBuilder.issuer(issuer);
-        jwtClaimsSetBuilder.subject(user.getAuthenticatedSubjectIdentifier());
+        jwtClaimsSetBuilder
+                .subject(getAuthenticatedSubjectIdentifier(authAuthzReqMessageContext, tokenReqMessageContext));
         jwtClaimsSetBuilder.claim(AUTHORIZATION_PARTY, consumerKey);
-        jwtClaimsSetBuilder.expirationTime(new Date(curTimeInMillis + accessTokenLifeTimeInMillis));
         jwtClaimsSetBuilder.issueTime(new Date(curTimeInMillis));
         jwtClaimsSetBuilder.jwtID(UUID.randomUUID().toString());
+
+        String scope = getScope(authAuthzReqMessageContext, tokenReqMessageContext);
+        if (StringUtils.isNotEmpty(scope)) {
+            jwtClaimsSetBuilder.claim(SCOPE, scope);
+        }
+
+        jwtClaimsSetBuilder.expirationTime(
+                getExpiryTime(tokenReqMessageContext, new Date(curTimeInMillis + accessTokenLifeTimeInMillis)));
 
         // This is a spec (openid-connect-core-1_0:2.0) requirement for ID tokens. But we are keeping this in JWT
         // as well.
@@ -414,6 +425,85 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         }
 
         return jwtClaimsSet;
+    }
+
+    /**
+     * To get authenticated subject identifier.
+     *
+     * @param authAuthzReqMessageContext Auth Request Message Context.
+     * @param tokenReqMessageContext     Token request message context.
+     * @return authenticated subject identifier.
+     */
+    private String getAuthenticatedSubjectIdentifier(OAuthAuthzReqMessageContext authAuthzReqMessageContext,
+            OAuthTokenReqMessageContext tokenReqMessageContext) throws IdentityOAuth2Exception {
+
+        AuthenticatedUser authenticatedUser;
+        if (authAuthzReqMessageContext != null) {
+            authenticatedUser = authAuthzReqMessageContext.getAuthorizationReqDTO().getUser();
+        } else {
+            authenticatedUser = tokenReqMessageContext.getAuthorizedUser();
+        }
+
+        if (authenticatedUser == null) {
+            throw new IdentityOAuth2Exception("Authenticated user is null for the request.");
+        }
+        return authenticatedUser.getAuthenticatedSubjectIdentifier();
+    }
+
+    /**
+     * To get the scope of the token to be added to the JWT claims.
+     *
+     * @param authAuthzReqMessageContext Auth Request Message Context.
+     * @param tokenReqMessageContext     Token Request Message Context.
+     * @return scope of token.
+     */
+    private String getScope(OAuthAuthzReqMessageContext authAuthzReqMessageContext,
+            OAuthTokenReqMessageContext tokenReqMessageContext) throws IdentityOAuth2Exception {
+
+        String[] scope;
+        String scopeString = null;
+        if (tokenReqMessageContext != null) {
+            scope = tokenReqMessageContext.getScope();
+        } else {
+            scope = authAuthzReqMessageContext.getApprovedScope();
+        }
+        if (ArrayUtils.isNotEmpty(scope)) {
+            scopeString = OAuth2Util.buildScopeString(scope);
+            if (log.isDebugEnabled()) {
+                log.debug("Scope exist for the jwt access token with subject " + getAuthenticatedSubjectIdentifier(
+                        authAuthzReqMessageContext, tokenReqMessageContext) + " and the scope is " + scopeString);
+            }
+        }
+        return scopeString;
+    }
+
+    /**
+     * To get the expiry time claim of the JWT token, based on the previous assertion expiry time.
+     *
+     * @param tokenReqMessageContext Token request message context.
+     * @param originalExpiryTime     Original expiry time
+     * @return expiry time of the token.
+     */
+    private Date getExpiryTime(OAuthTokenReqMessageContext tokenReqMessageContext, Date originalExpiryTime) {
+
+        if (tokenReqMessageContext != null) {
+            Object assertionExpiryTime = tokenReqMessageContext.getProperty(EXPIRY_TIME_JWT);
+            if (assertionExpiryTime != null) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Expiry time from the previous token " + ((Date) assertionExpiryTime).getTime());
+                }
+
+                if (originalExpiryTime.after((Date) assertionExpiryTime)) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Expiry time of newly generated token as per the configurations " + originalExpiryTime
+                                + ", since this time is after assertion expiry time " + assertionExpiryTime
+                                + " setting, " + assertionExpiryTime + " as the expiry time");
+                    }
+                    originalExpiryTime = (Date) assertionExpiryTime;
+                }
+            }
+        }
+        return originalExpiryTime;
     }
 
     /**

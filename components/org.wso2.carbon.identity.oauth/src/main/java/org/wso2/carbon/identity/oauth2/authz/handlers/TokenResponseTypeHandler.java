@@ -54,6 +54,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @deprecated use {@link AccessTokenResponseTypeHandler} instead.
@@ -63,6 +64,7 @@ import java.util.UUID;
 public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
 
     private static Log log = LogFactory.getLog(TokenResponseTypeHandler.class);
+    private Boolean isHashDisabled = OAuth2Util.isHashDisabled();
 
     @Override
     public OAuth2AuthorizeRespDTO issue(OAuthAuthzReqMessageContext oauthAuthzMsgCtx)
@@ -137,7 +139,7 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
 
             AccessTokenDO existingAccessTokenDO = null;
             // check if valid access token exists in cache
-            if (cacheEnabled) {
+            if (isHashDisabled && cacheEnabled) {
                 existingAccessTokenDO = (AccessTokenDO) OAuthCache.getInstance().getValueFromCache(cacheKey);
                 if (existingAccessTokenDO != null) {
                     if (log.isDebugEnabled()) {
@@ -208,7 +210,7 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
 
             // if access token is not found in cache, check if the last issued access token is still active and valid
             // in the database
-            if (existingAccessTokenDO == null) {
+            if (isHashDisabled && existingAccessTokenDO == null) {
 
                 existingAccessTokenDO = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                         .getLatestAccessToken(consumerKey, authorizationReqDTO.getUser(), userStoreDomain, scope,
@@ -533,10 +535,7 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
         key.setRemoteClaim(claimOfKey);
         String sub = userAttributes.get(key);
 
-        AccessTokenDO accessTokenDO = (AccessTokenDO)msgCtx.getProperty(OAuth2Util.ACCESS_TOKEN_DO);
-        if (accessTokenDO == null) {
-            accessTokenDO = OAuth2Util.getAccessTokenDOfromTokenIdentifier(accessToken);
-        }
+        AccessTokenDO accessTokenDO = getAccessTokenDO(accessToken, msgCtx);
 
         if (accessTokenDO != null && StringUtils.isNotBlank(accessTokenDO.getTokenId())) {
             authorizationGrantCacheEntry.setTokenId(accessTokenDO.getTokenId());
@@ -549,6 +548,7 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
                 }
                 authorizationGrantCacheEntry.setSubjectClaim(sub);
             }
+            authorizationGrantCacheEntry.setValidityPeriod(TimeUnit.MILLISECONDS.toNanos(accessTokenDO.getValidityPeriodInMillis()));
             AuthorizationGrantCache.getInstance().addToCacheByToken(authorizationGrantCacheKey,
                     authorizationGrantCacheEntry);
         }
@@ -561,5 +561,15 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
             log.debug("Access Token renew per request: " + isRenew);
         }
         return !isRenew;
+    }
+
+    private static AccessTokenDO getAccessTokenDO(String accessToken,
+                                                  OAuthAuthzReqMessageContext msgCtx) throws IdentityOAuth2Exception {
+
+        Object accessTokenObject = msgCtx.getProperty(OAuth2Util.ACCESS_TOKEN_DO);
+        if (accessTokenObject instanceof AccessTokenDO) {
+            return (AccessTokenDO) accessTokenObject;
+        }
+        return OAuth2Util.getAccessTokenDOfromTokenIdentifier(accessToken);
     }
 }

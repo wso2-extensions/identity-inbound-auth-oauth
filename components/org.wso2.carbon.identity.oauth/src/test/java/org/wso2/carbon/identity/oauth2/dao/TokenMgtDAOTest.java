@@ -1371,6 +1371,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
             prepStmt.setLong(10, 3600L);
             prepStmt.setLong(11, 3600L);
             prepStmt.setLong(12, 84600L);
+            prepStmt.setLong(13, 3600L);
             prepStmt.execute();
             connection.commit();
         }

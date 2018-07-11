@@ -27,6 +27,7 @@ public final class OAuthConstants {
 
     //OAuth2 request headers.
     public static final String HTTP_REQ_HEADER_AUTHZ = "Authorization";
+    public static final String HTTP_REQ_HEADER_AUTH_METHOD_BASIC = "Basic";
 
     // OAuth2 response headers
     public static final String HTTP_RESP_HEADER_CACHE_CONTROL = "Cache-Control";
@@ -306,6 +307,7 @@ public final class OAuthConstants {
         public static final String PHONE_NUMBER_VERIFIED = "phone_number_verified";
         public static final String EMAIL_VERIFIED = "email_verified";
         public static final String ADDRESS = "address";
+        public static final String CUSTOM = "custom";
         public static final String AZP = "azp";
         public static final String AUTH_TIME = "auth_time";
         public static final String AT_HASH = "at_hash";

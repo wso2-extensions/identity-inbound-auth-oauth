@@ -43,8 +43,10 @@ import org.wso2.carbon.identity.oauth.cache.SessionDataCache;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.common.exception.OAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidApplicationClientException;
 import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -56,16 +58,20 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.webfinger.DefaultWebFingerProcessor;
 import org.wso2.carbon.identity.webfinger.WebFingerProcessor;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
+
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MultivaluedMap;
 
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.HTTP_REQ_HEADER_AUTH_METHOD_BASIC;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils.getRedirectURL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
 
 public class EndpointUtil {
@@ -220,17 +226,22 @@ public class EndpointUtil {
         if (authorizationHeader == null) {
             throw new OAuthClientException("Authorization header value is null");
         }
+        String errMsg = "Error decoding authorization header. Space delimited \"<authMethod> <base64encoded" +
+                "(username:password)>\" format violated.";
         String[] splitValues = authorizationHeader.trim().split(" ");
         if (splitValues.length == 2) {
-            byte[] decodedBytes = Base64Utils.decode(splitValues[1].trim());
-            String userNamePassword = new String(decodedBytes, Charsets.UTF_8);
-            String[] credentials = userNamePassword.split(":");
-            if (credentials.length == 2) {
-                return credentials;
+            if (HTTP_REQ_HEADER_AUTH_METHOD_BASIC.equals(splitValues[0])) {
+                byte[] decodedBytes = Base64Utils.decode(splitValues[1].trim());
+                String userNamePassword = new String(decodedBytes, Charsets.UTF_8);
+                String[] credentials = userNamePassword.split(":");
+                if (credentials.length == 2) {
+                    return credentials;
+                }
+            } else {
+                errMsg = "Error decoding authorization header.Unsupported authentication type:" + splitValues[0] + "" +
+                        " is provided in the Authorization Header.";
             }
         }
-        String errMsg = "Error decoding authorization header. Space delimited \"<authMethod> <base64Hash>\" format " +
-                "violated.";
         throw new OAuthClientException(errMsg);
     }
 
@@ -277,6 +288,47 @@ public class EndpointUtil {
         }
 
         return errorPageUrl;
+    }
+
+    /**
+     * Returns the error page URL. If appName is not <code>null</code> it will be added as query parameter
+     * to be displayed to the user. If redirect_uri is <code>null</code> the common error page URL will be returned.
+     * If sp name and tenant domain available in the request (as a parameter or using the referer header) those will
+     * be added as query params.
+     *
+     * @param request      HttpServletRequest
+     * @param errorCode    Error Code.
+     * @param errorMessage Error Message.
+     * @param appName      Application Name.
+     * @return redirect error page url.
+     */
+    public static String getErrorPageURL(HttpServletRequest request, String errorCode, String errorMessage, String
+            appName) {
+
+        String redirectURL = getErrorPageURL(errorCode, errorMessage, appName);
+        if (request == null) {
+            return redirectURL;
+        }
+        return getRedirectURL(redirectURL, request);
+    }
+
+    /**
+     * Returns the error page URL. If sp name and tenant domain available in the request (as a parameter or using the
+     * referer header) those will be added as query params.
+     *
+     * @param request HttpServletRequest.
+     * @param ex      OAuthProblemException.
+     * @param params  oAuth2 Parameters.
+     * @return redirect error page url
+     */
+    public static String getErrorRedirectURL(HttpServletRequest request, OAuthProblemException ex, OAuth2Parameters
+            params) {
+
+        String redirectURL = getErrorRedirectURL(ex, params);
+        if (request == null) {
+            return redirectURL;
+        }
+        return getRedirectURL(redirectURL, request);
     }
 
     public static String getErrorRedirectURL(OAuthProblemException ex, OAuth2Parameters params) {
@@ -442,6 +494,7 @@ public class EndpointUtil {
                     log.debug("Cache Entry is Null from SessionDataCache ");
                 }
             } else {
+                entry.setValidityPeriod(TimeUnit.MINUTES.toNanos(IdentityUtil.getTempDataCleanUpTimeout()));
                 sessionDataCache.addToCache(new SessionDataCacheKey(sessionDataKeyConsent),entry);
                 if (entry.getQueryString() != null) {
                     queryString = URLEncoder.encode(entry.getQueryString(), UTF_8);
@@ -463,6 +516,8 @@ public class EndpointUtil {
                 } else {
                     consentPage += URLEncoder.encode(params.getApplicationName(), UTF_8);
                 }
+                consentPage += "&tenantDomain=" + getSPTenantDomainFromClientId(params.getClientId());
+
                 consentPage = consentPage + "&" + OAuthConstants.OAuth20Params.SCOPE + "=" + URLEncoder.encode
                         (EndpointUtil.getScope(params), UTF_8) + "&" + OAuthConstants.SESSION_DATA_KEY_CONSENT
                         + "=" + URLEncoder.encode(sessionDataKeyConsent, UTF_8) + "&spQueryParams=" + queryString;
@@ -580,5 +635,16 @@ public class EndpointUtil {
 
     private static boolean isNotActiveState(String appState) {
         return !APP_STATE_ACTIVE.equalsIgnoreCase(appState);
+    }
+
+    public static String getSPTenantDomainFromClientId(String clientId) {
+
+        try {
+            OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
+            return OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
+        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+            log.error("Error while getting oauth app for client Id: " + clientId, e);
+            return MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
+        }
     }
 }

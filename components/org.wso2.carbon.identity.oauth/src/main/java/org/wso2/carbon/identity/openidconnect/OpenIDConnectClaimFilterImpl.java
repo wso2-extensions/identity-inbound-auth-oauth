@@ -23,7 +23,6 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
-import org.wso2.carbon.identity.application.authentication.framework.exception.FrameworkException;
 import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.ClaimMetaData;
 import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.exception.SSOConsentServiceException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -42,7 +41,6 @@ import org.wso2.carbon.registry.api.Resource;
 import org.wso2.carbon.registry.core.service.RegistryService;
 
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -75,7 +73,6 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
     private static final String ADDRESS_SCOPE = "address";
     private static final String OIDC_SCOPE_CLAIM_SEPARATOR = ",";
 
-    private static final String SCOPE_CLAIM_PREFIX = ".";
     private static final Log log = LogFactory.getLog(OpenIDConnectClaimFilterImpl.class);
     private static final int DEFAULT_PRIORITY = 100;
 
@@ -262,15 +259,31 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
         Map<String, Object> filteredClaims = new HashMap<>();
         List<String> claimUrisInRequestedScope = getClaimUrisInSupportedOidcScope(oidcScopeProperties, oidcScope);
         for (String scopeClaim : claimUrisInRequestedScope) {
-            String oidcClaimUri = getOIDCClaimUri(scopeClaim);
+            String oidcClaimUri = scopeClaim;
+            boolean isAddressClaim = false;
+            if (isAddressClaim(scopeClaim, addressScopeClaimUris)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Identified an address claim: " + scopeClaim + ". Removing \"address.\" prefix from " +
+                            "the claimUri");
+                }
+                oidcClaimUri = removeAddressPrefix(scopeClaim);
+                isAddressClaim = true;
+            }
             // Check whether the user claims contain the permitted claim uri
             if (userClaimsInOIDCDialect.containsKey(oidcClaimUri)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Adding claim:" + oidcClaimUri + " into the filtered claims");
+                }
                 Object claimValue = userClaimsInOIDCDialect.get(oidcClaimUri);
                 // User claim is allowed for this scope.
-                if (isAddressClaim(scopeClaim, addressScopeClaimUris)) {
+                if (isAddressClaim) {
                     addressScopeClaims.put(oidcClaimUri, claimValue);
                 } else {
                     filteredClaims.put(oidcClaimUri, claimValue);
+                }
+            } else {
+                if (log.isDebugEnabled()) {
+                    log.debug("No valid user claim value found for the claimUri:" + oidcClaimUri);
                 }
             }
         }
@@ -286,11 +299,10 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
      * @param scopeClaim claim uri defined in the OIDC Scope
      * @return Scope prefix removed claim URI
      */
-    private String getOIDCClaimUri(String scopeClaim) {
+    private String removeAddressPrefix(String scopeClaim) {
 
-        return StringUtils.contains(scopeClaim, SCOPE_CLAIM_PREFIX) ?
-                StringUtils.substringAfterLast(scopeClaim, SCOPE_CLAIM_PREFIX) :
-                StringUtils.substringBefore(scopeClaim, SCOPE_CLAIM_PREFIX);
+        return StringUtils.startsWith(scopeClaim, ADDRESS_PREFIX) ?
+                StringUtils.substringAfterLast(scopeClaim, ADDRESS_PREFIX) : scopeClaim;
     }
 
     private void handleAddressClaim(Map<String, Object> returnedClaims,

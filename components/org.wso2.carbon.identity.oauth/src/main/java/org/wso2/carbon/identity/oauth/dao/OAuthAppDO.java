@@ -40,6 +40,7 @@ public class OAuthAppDO implements Serializable {
     private long userAccessTokenExpiryTime;
     private long applicationAccessTokenExpiryTime;
     private long refreshTokenExpiryTime;
+    private long idTokenExpiryTime;
     private String[] audiences = new String[0];
     // OIDC related properties.
     private boolean requestObjectSignatureValidationEnabled;
@@ -225,5 +226,15 @@ public class OAuthAppDO implements Serializable {
 
     public String getBackChannelLogoutUrl() {
         return backChannelLogoutUrl;
+    }
+
+    public long getIdTokenExpiryTime() {
+
+        return idTokenExpiryTime;
+    }
+
+    public void setIdTokenExpiryTime(long idTokenExpiryTime) {
+
+        this.idTokenExpiryTime = idTokenExpiryTime;
     }
 }

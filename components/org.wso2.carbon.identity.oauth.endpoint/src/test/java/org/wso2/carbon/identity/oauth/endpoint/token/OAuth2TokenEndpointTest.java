@@ -165,61 +165,70 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
         ResponseHeader[] headers2 = new ResponseHeader[]{null};
         ResponseHeader[] headers3 = new ResponseHeader[0];
 
+        Map<String, String> customResponseParamMap = new HashMap<>();
+        customResponseParamMap.put("param_key_1", "param_value_1");
+        customResponseParamMap.put("param_key_2", "param_value_2");
+
         return new Object[][] {
                 // Request with multivalued client_id parameter. Will return bad request error
-                {CLIENT_ID_VALUE + ",clientId2", null, new MultivaluedHashMap<String, String>(),
-                        GrantType.PASSWORD.toString(), null, null, null, HttpServletResponse.SC_BAD_REQUEST,
-                        OAuth2ErrorCodes.INVALID_REQUEST },
+                {CLIENT_ID_VALUE + ",clientId2", null, new MultivaluedHashMap<String, String>(), GrantType.PASSWORD
+                        .toString(), null, null, null, null, HttpServletResponse.SC_BAD_REQUEST, OAuth2ErrorCodes
+                        .INVALID_REQUEST},
 
                 // Request with invalid authorization header. Will return bad request error
                 {CLIENT_ID_VALUE, inCorrectAuthzHeader, mapWithClientId, GrantType.PASSWORD.toString(), null, null,
-                        null, HttpServletResponse.SC_BAD_REQUEST, OAuth2ErrorCodes.INVALID_REQUEST },
+                        null, null, HttpServletResponse.SC_BAD_REQUEST, OAuth2ErrorCodes.INVALID_REQUEST},
 
                 // Request from inactive client. Will give correct response, inactive client state should be handled
                 // in access token issuer
-                {INACTIVE_CLIENT_ID_VALUE, inactiveClientHeader, new MultivaluedHashMap<String, String>(),
-                        GrantType.PASSWORD.toString(), null, null, null, HttpServletResponse.SC_OK, "" },
+                {INACTIVE_CLIENT_ID_VALUE, inactiveClientHeader, new MultivaluedHashMap<String, String>(), GrantType
+                        .PASSWORD.toString(), null, null, null, null, HttpServletResponse.SC_OK, ""},
 
                 // Request from invalid client. Will give correct response, invalid-id is handles in access token issuer
-                {"invalidId", invalidClientHeader, new MultivaluedHashMap<String, String>(),
-                        GrantType.PASSWORD.toString(), null, null, null, HttpServletResponse.SC_OK,"" },
+                {"invalidId", invalidClientHeader, new MultivaluedHashMap<String, String>(), GrantType.PASSWORD
+                        .toString(), null, null, null, null, HttpServletResponse.SC_OK, ""},
 
                 // Request without client id and authz header. Will give bad request error
-                {null, null, new MultivaluedHashMap<String, String>(), GrantType.PASSWORD.toString(), null, null, null,
-                        HttpServletResponse.SC_BAD_REQUEST, OAuth2ErrorCodes.INVALID_REQUEST },
+                {null, null, new MultivaluedHashMap<String, String>(), GrantType.PASSWORD.toString(), null, null,
+                        null, null, HttpServletResponse.SC_BAD_REQUEST, OAuth2ErrorCodes.INVALID_REQUEST},
 
                 // Request with client id but no authz header. Will give bad request error
-                {CLIENT_ID_VALUE, null, new MultivaluedHashMap<String, String>(), GrantType.PASSWORD.toString(), null,
-                        null, null, HttpServletResponse.SC_BAD_REQUEST, null },
+                {CLIENT_ID_VALUE, null, new MultivaluedHashMap<String, String>(), GrantType.PASSWORD.toString(),
+                        null, null, null, null, HttpServletResponse.SC_BAD_REQUEST, null},
 
                 // Request with unsupported grant type. Will give bad request error
                 {CLIENT_ID_VALUE, AUTHORIZATION_HEADER, new MultivaluedHashMap<String, String>(), "dummyGrant", null,
-                        null, null, HttpServletResponse.SC_BAD_REQUEST, null },
+                        null, null, null, HttpServletResponse.SC_BAD_REQUEST, null},
 
                 // Successful request without id token request. No headers
-                {CLIENT_ID_VALUE, AUTHORIZATION_HEADER, new MultivaluedHashMap<String, String>(),
-                        GrantType.PASSWORD.toString(), null, null, null, HttpServletResponse.SC_OK, null },
+                {CLIENT_ID_VALUE, AUTHORIZATION_HEADER, new MultivaluedHashMap<String, String>(), GrantType.PASSWORD
+                        .toString(), null, null, null, null, HttpServletResponse.SC_OK, null},
 
                 // Successful request with id token request. With header values
-                {CLIENT_ID_VALUE, AUTHORIZATION_HEADER, new MultivaluedHashMap<String, String>(),
-                        GrantType.PASSWORD.toString(), "idTokenValue", headers1, null, HttpServletResponse.SC_OK, null },
+                {CLIENT_ID_VALUE, AUTHORIZATION_HEADER, new MultivaluedHashMap<String, String>(), GrantType.PASSWORD
+                        .toString(), "idTokenValue", headers1, null, null, HttpServletResponse.SC_OK, null},
 
                 // Successful request with id token request. With header which contains null values
-                {CLIENT_ID_VALUE, AUTHORIZATION_HEADER, new MultivaluedHashMap<String, String>(),
-                        GrantType.PASSWORD.toString(), "idTokenValue", headers2, null, HttpServletResponse.SC_OK, null },
+                {CLIENT_ID_VALUE, AUTHORIZATION_HEADER, new MultivaluedHashMap<String, String>(), GrantType.PASSWORD
+                        .toString(), "idTokenValue", headers2, null, null, HttpServletResponse.SC_OK, null},
 
                 // Successful request with id token request. With empty header array
-                {CLIENT_ID_VALUE, AUTHORIZATION_HEADER, new MultivaluedHashMap<String, String>(),
-                        GrantType.PASSWORD.toString(), "idTokenValue", headers3, null, HttpServletResponse.SC_OK, null }
+                {CLIENT_ID_VALUE, AUTHORIZATION_HEADER, new MultivaluedHashMap<String, String>(), GrantType.PASSWORD
+                        .toString(), "idTokenValue", headers3, null, null, HttpServletResponse.SC_OK, null},
+
+                // Successful token request that will return custom response parameters in response.
+                {CLIENT_ID_VALUE, AUTHORIZATION_HEADER, new MultivaluedHashMap<String, String>(), GrantType.PASSWORD
+                        .toString(), null, null, customResponseParamMap, null, HttpServletResponse.SC_OK, null}
         };
     }
 
     @Test(dataProvider = "testIssueAccessTokenDataProvider", groups = "testWithConnection")
     public void testIssueAccessToken(String clientId, String authzHeader, Object paramMapObj, String grantType,
-                                     String idToken, Object headerObj, Exception e, int expectedStatus,
-                                     String expectedErrorCode) throws Exception {
+                                     String idToken, Object headerObj, Object customResponseParamObj, Exception e,
+                                     int expectedStatus, String expectedErrorCode) throws Exception {
         MultivaluedMap<String, String> paramMap = (MultivaluedMap<String, String>) paramMapObj;
         ResponseHeader[] responseHeaders = (ResponseHeader[]) headerObj;
+        Map<String, String> customResponseParameters = (Map<String, String>) customResponseParamObj;
 
         Map<String, String[]> requestParams = new HashMap<>();
 
@@ -248,6 +257,7 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
         when(oAuth2AccessTokenRespDTO.getAuthorizedScopes()).thenReturn("scope1");
         when(oAuth2AccessTokenRespDTO.getIDToken()).thenReturn(idToken);
         when(oAuth2AccessTokenRespDTO.getResponseHeaders()).thenReturn(responseHeaders);
+        when(oAuth2AccessTokenRespDTO.getParameters()).thenReturn(customResponseParameters);
 
         mockOAuthServerConfiguration();
         mockStatic(IdentityDatabaseUtil.class);
@@ -272,10 +282,16 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
 
         assertNotNull(response.getEntity(), "Response entity is null");
 
+        final String responseBody = response.getEntity().toString();
+        if (customResponseParameters != null) {
+            customResponseParameters.forEach((key, value) -> assertTrue(responseBody.contains(key) && responseBody
+                    .contains(value), "Expected custom response parameter: " + key + " not found in token response."));
+        }
+
         if (expectedErrorCode != null) {
-            assertTrue(response.getEntity().toString().contains(expectedErrorCode), "Expected error code not found");
+            assertTrue(responseBody.contains(expectedErrorCode), "Expected error code not found");
         } else if (HttpServletResponse.SC_OK == expectedStatus) {
-            assertTrue(response.getEntity().toString().contains(ACCESS_TOKEN),
+            assertTrue(responseBody.contains(ACCESS_TOKEN),
                     "Successful response should contain access token");
         }
     }

@@ -26,23 +26,23 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oidc.session.DefaultOIDCSessionStateManager;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionManager;
+import org.wso2.carbon.identity.oidc.session.OIDCSessionStateManager;
 import org.wso2.carbon.identity.oidc.session.config.OIDCSessionManagementConfiguration;
 
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLEncoder;
-import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
-import java.util.UUID;
+import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 /**
  * This class includes all the utility methods with regard to OIDC session management
@@ -51,8 +51,10 @@ public class OIDCSessionManagementUtil {
 
     private static final String RANDOM_ALG_SHA1 = "SHA1PRNG";
     private static final String DIGEST_ALG_SHA256 = "SHA-256";
+    private static final String OIDC_SESSION_STATE_MANAGER_CONFIG = "OAuth.OIDCSessionStateManager";
 
     private static final OIDCSessionManager sessionManager = new OIDCSessionManager();
+    private static OIDCSessionStateManager oidcSessionStateManager;
 
     private static final Log log = LogFactory.getLog(OIDCSessionManagementUtil.class);
 
@@ -79,18 +81,7 @@ public class OIDCSessionManagementUtil {
      */
     public static String getSessionStateParam(String clientId, String rpCallBackUrl, String opBrowserState) {
 
-        try {
-            String salt = generateSaltValue();
-
-            String sessionStateDataString =
-                    clientId + " " + getOrigin(rpCallBackUrl) + " " + opBrowserState + " " + salt;
-
-            MessageDigest digest = MessageDigest.getInstance(DIGEST_ALG_SHA256);
-            digest.update(sessionStateDataString.getBytes());
-            return bytesToHex(digest.digest()) + "." + salt;
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("Error while calculating session state.", e);
-        }
+        return getOIDCessionStateManager().getSessionStateParam(clientId, rpCallBackUrl, opBrowserState);
     }
 
     /**
@@ -172,13 +163,7 @@ public class OIDCSessionManagementUtil {
      */
     public static Cookie addOPBrowserStateCookie(HttpServletResponse response) {
 
-        Cookie cookie =
-                new Cookie(OIDCSessionConstants.OPBS_COOKIE_ID, UUID.randomUUID().toString());
-        cookie.setSecure(true);
-        cookie.setPath("/");
-
-        response.addCookie(cookie);
-        return cookie;
+        return getOIDCessionStateManager().addOPBrowserStateCookie(response);
     }
 
     /**
@@ -308,5 +293,43 @@ public class OIDCSessionManagementUtil {
             result.append(Integer.toString((byt & 0xff) + 0x100, 16).substring(1));
         }
         return result.toString();
+    }
+
+    public static OIDCSessionStateManager getOIDCessionStateManager() {
+
+        if (oidcSessionStateManager == null) {
+            synchronized (OIDCSessionManagementUtil.class) {
+                if (oidcSessionStateManager == null) {
+                    initOIDCSessionStateManager();
+                }
+            }
+        }
+        return oidcSessionStateManager;
+    }
+
+    private static void initOIDCSessionStateManager() {
+
+        String oidcSessionStateManagerClassName = IdentityUtil.getProperty(OIDC_SESSION_STATE_MANAGER_CONFIG);
+        if (StringUtils.isNotBlank(oidcSessionStateManagerClassName)) {
+            try {
+                Class clazz = Thread.currentThread().getContextClassLoader()
+                        .loadClass(oidcSessionStateManagerClassName);
+                oidcSessionStateManager = (OIDCSessionStateManager) clazz.newInstance();
+
+                if (log.isDebugEnabled()) {
+                    log.debug("An instance of " + oidcSessionStateManagerClassName
+                            + " is created for OIDCSessionManagementUtil.");
+                }
+
+            } catch (ClassNotFoundException | IllegalAccessException | InstantiationException e) {
+                String errorMsg =
+                        "Error when instantiating the OIDCSessionStateManager : " + oidcSessionStateManagerClassName
+                                + ". Defaulting to DefaultOIDCSessionStateManager";
+                log.error(errorMsg, e);
+                oidcSessionStateManager = new DefaultOIDCSessionStateManager();
+            }
+        } else {
+            oidcSessionStateManager = new DefaultOIDCSessionStateManager();
+        }
     }
 }

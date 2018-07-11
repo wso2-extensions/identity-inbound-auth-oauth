@@ -34,8 +34,13 @@ import org.wso2.carbon.utils.ConfigurationContextService;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
 import java.io.File;
+import java.util.Properties;
 
+import static org.mockito.Matchers.anyString;
 import static org.powermock.api.mockito.PowerMockito.doNothing;
+import static org.powermock.api.mockito.PowerMockito.doThrow;
+import static org.powermock.api.mockito.PowerMockito.mockStatic;
+import static org.powermock.api.mockito.PowerMockito.spy;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.powermock.api.mockito.PowerMockito.whenNew;
 
@@ -43,12 +48,14 @@ import static org.powermock.api.mockito.PowerMockito.whenNew;
 /*@PrepareForTest({CarbonContext.class, IdentityUtil.class, MultitenantUtils.class, OAuthAppDAO.class,
                  OAuthAdminService.class, OAuthServerConfiguration.class,
                  IdentityCoreServiceComponent.class, ConfigurationContextService.class})*/
-@PrepareForTest({OAuthAdminService.class, IdentityCoreServiceComponent.class, ConfigurationContextService.class,
+@PrepareForTest({OAuthAdminService.class, IdentityCoreServiceComponent.class, ConfigurationContextService.class, OAuthUtil.class,
         OAuthAppDAO.class})
+
 public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
 
     private static final String CONSUMER_KEY = "consumer:key";
     private static final String CONSUMER_SECRET = "consumer:secret";
+    private static final String UPDATED_CONSUMER_SECRET = "updated:consumer:secret";
 
     @Mock
     private RealmConfiguration realmConfiguration;
@@ -79,7 +86,6 @@ public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
     }
 
     private void initConfigsAndRealm() throws Exception {
-
         IdentityCoreServiceComponent identityCoreServiceComponent = new IdentityCoreServiceComponent();
         ConfigurationContextService configurationContextService = new ConfigurationContextService
                 (configurationContext, null);
@@ -87,8 +93,10 @@ public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
                 configurationContextService);
         when(configurationContext.getAxisConfiguration()).thenReturn(axisConfiguration);
 
+
         IdentityTenantUtil.setRealmService(realmService);
         when(realmService.getBootstrapRealmConfiguration()).thenReturn(realmConfiguration);
+
 
         when(userRealm.getUserStoreManager()).thenReturn(userStoreManager);
 
@@ -104,6 +112,7 @@ public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
         IdentityTenantUtil.setRealmService(realmService);
         when(realmService.getBootstrapRealmConfiguration()).thenReturn(realmConfiguration);
 
+
         whenNew(OAuthAppDAO.class).withNoArguments().thenReturn(oAtuhAppDAO);
         when(oAtuhAppDAO.addOAuthConsumer("admin", -1234, "PRIMARY")).thenReturn(new String[]{"consumer:key",
                 "consumer:secret"});
@@ -118,7 +127,6 @@ public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
 
     @DataProvider(name = "getDataForAllOAuthApplicationData")
     public Object[][] getDataForAllOAuthApplicationData() {
-
         return new Object[][]{{"admin"}, {null}};
     }
 
@@ -149,9 +157,9 @@ public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
         }
     }
 
+
     @DataProvider(name = "getRegisterOAuthApplicationData")
     public Object[][] getRegisterOAuthApplicationData() {
-
         return new Object[][]{{OAuthConstants.OAuthVersions.VERSION_2, "admin"},
                 {OAuthConstants.OAuthVersions.VERSION_2, null},
                 {null, "admin"}
@@ -160,6 +168,7 @@ public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
 
     @Test(dataProvider = "getRegisterOAuthApplicationData")
     public void testRegisterOAuthApplicationData(String oauthVersion, String userName) throws Exception {
+
 
         initConfigsAndRealm();
 
@@ -192,6 +201,7 @@ public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
             Assert.fail("Error while registering OAuth APP");
         }
     }
+
 
     @Test
     public void testGetAllOAuthApplicationData() throws Exception {
@@ -247,7 +257,6 @@ public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
 
     @DataProvider(name = "getAppInformationExceptions")
     public Object[][] getAppInformationExceptions() {
-
         return new Object[][]{{"InvalidOAuthClientException"}, {"IdentityOAuth2Exception"}};
     }
 
@@ -330,7 +339,6 @@ public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
 
     @Test
     public void testUpdateConsumerApplication() throws Exception {
-
         String consumerKey = "some-consumer-key";
 
         OAuthAppDO app = getDummyOAuthApp("some-user-name");
@@ -369,10 +377,29 @@ public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
 
     @Test
     public void testUpdateOauthSecretKey() throws Exception {
+        initConfigsAndRealm();
 
-      /*  initConfigsAndRealm();
-        OAuthAdminService oAuthAdminService = new OAuthAdminService();
-        oAuthAdminService.updateOauthSecretKey(CONSUMER_KEY);*/
+        mockStatic(OAuthUtil.class);
+        when(OAuthUtil.getRandomNumber()).thenReturn(UPDATED_CONSUMER_SECRET);
+        OAuthAdminService oAuthAdminService = spy(new OAuthAdminService());
+        doNothing().when(oAuthAdminService, "updateAppAndRevokeTokensAndAuthzCodes", anyString(),
+                Matchers.any(Properties.class));
+        OAuthConsumerAppDTO oAuthConsumerAppDTO;
+        oAuthConsumerAppDTO = oAuthAdminService.updateAndRetrieveOauthSecretKey(CONSUMER_KEY);
+
+        Assert.assertEquals(oAuthConsumerAppDTO.getOauthConsumerSecret(), UPDATED_CONSUMER_SECRET);
+    }
+
+    @Test(expectedExceptions = IdentityOAuthAdminException.class)
+    public void testUpdateOauthSecretKeyWithException() throws Exception {
+        initConfigsAndRealm();
+
+        mockStatic(OAuthUtil.class);
+        when(OAuthUtil.getRandomNumber()).thenReturn(UPDATED_CONSUMER_SECRET);
+        OAuthAdminService oAuthAdminService = spy(new OAuthAdminService());
+        doThrow(new IdentityOAuthAdminException("Error while regenerating consumer secret")).when(oAuthAdminService,
+                "updateAppAndRevokeTokensAndAuthzCodes", anyString(), Matchers.any(Properties.class));
+        oAuthAdminService.updateAndRetrieveOauthSecretKey(CONSUMER_KEY);
     }
 
     @Test

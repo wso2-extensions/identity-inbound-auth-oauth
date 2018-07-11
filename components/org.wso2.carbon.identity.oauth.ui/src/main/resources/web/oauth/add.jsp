@@ -519,6 +519,13 @@
                                         <fmt:message key='seconds'/>
                                     </td>
                                 </tr>
+                                <tr id="idTokenPlain">
+                                    <td class="leftCol-med"><fmt:message key='id.token.expiry.time'/></td>
+                                    <td>
+                                        <input id="idTokenExpiryTime" name="idTokenExpiryTime" type="text" value="<%=client.getOAuthTokenExpiryTimeDTO().getIdTokenExpiryTime()%>" />
+                                        <fmt:message key='seconds'/>
+                                    </td>
+                                </tr>
                                 <tr id="audience_enable">
                                     <td colspan="2">
                                         <label title="Enable Audience Restriction to restrict the audience. You may add audience members using the Audience text box and clicking the Add button">

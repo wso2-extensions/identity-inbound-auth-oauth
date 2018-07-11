@@ -19,6 +19,7 @@
  */
 package org.wso2.carbon.identity.oauth.tokenprocessor;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -103,6 +104,10 @@ public class HashingPersistenceProcessor implements TokenPersistenceProcessor {
      * @return hashed value
      */
     private String hash(String plainText) throws IdentityOAuth2Exception {
+
+        if (StringUtils.isEmpty(plainText)) {
+            throw new IdentityOAuth2Exception("plainText value is null or empty to be hash.");
+        }
 
         MessageDigest messageDigest = null;
         byte[] hash = null;

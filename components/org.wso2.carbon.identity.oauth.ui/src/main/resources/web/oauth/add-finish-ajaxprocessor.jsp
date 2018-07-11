@@ -48,12 +48,14 @@
         return;
     }
 
+    boolean isHashDisabled = false;
     String applicationName = request.getParameter("application");
     String callback = request.getParameter("callback");
     String oauthVersion = request.getParameter("oauthVersion");
     String userAccessTokenExpiryTime = request.getParameter("userAccessTokenExpiryTime");
     String applicationAccessTokenExpiryTime = request.getParameter("applicationAccessTokenExpiryTime");
     String refreshTokenExpiryTime = request.getParameter("refreshTokenExpiryTime");
+    String idTokenExpiryTime = request.getParameter("idTokenExpiryTime");
     String backchannelLogoutUrl = request.getParameter("backChannelLogout");
 
 	boolean pkceMandatory = false;
@@ -91,6 +93,7 @@
                     (ConfigurationContext) config.getServletContext()
                             .getAttribute(CarbonConstants.CONFIGURATION_CONTEXT);
             OAuthAdminClient client = new OAuthAdminClient(cookie, backendServerURL, configContext);
+            isHashDisabled = client.isHashDisabled();
             app.setApplicationName(applicationName);
             app.setCallbackUrl(callback);
             app.setBackChannelLogoutUrl(backchannelLogoutUrl);
@@ -98,6 +101,7 @@
             app.setUserAccessTokenExpiryTime(Long.parseLong(userAccessTokenExpiryTime));
             app.setApplicationAccessTokenExpiryTime(Long.parseLong(applicationAccessTokenExpiryTime));
             app.setRefreshTokenExpiryTime(Long.parseLong(refreshTokenExpiryTime));
+            app.setIdTokenExpiryTime(Long.parseLong(idTokenExpiryTime));
 
             String grants;
             StringBuffer buff = new StringBuffer();
@@ -145,12 +149,14 @@
                 app.setIdTokenEncryptionMethod(idTokenEncryptionMethod);
             }
 
-            client.registerOAuthApplicationData(app);
-
-            consumerApp = client.getOAuthApplicationDataByAppName(applicationName);
-
-            String message = resourceBundle.getString("app.added.successfully");
-            CarbonUIMessage.sendCarbonUIMessage(message, CarbonUIMessage.INFO, request);
+            if (isHashDisabled) {
+                client.registerOAuthApplicationData(app);
+                consumerApp = client.getOAuthApplicationDataByAppName(applicationName);
+                String message = resourceBundle.getString("app.added.successfully");
+                CarbonUIMessage.sendCarbonUIMessage(message, CarbonUIMessage.INFO, request);
+            } else {
+                consumerApp = client.registerAndRetrieveOAuthApplicationData(app);
+            }
         } else {
             isError = true;
             String message = resourceBundle.getString("callback.is.not.url");
@@ -172,9 +178,9 @@ if (qpplicationComponentFound) {
 	if (!isError) {
 		session.setAttribute("oauth-consum-secret", consumerApp.getOauthConsumerSecret());
 %>
-    location.href = '../application/configure-service-provider.jsp?action=update&display=oauthapp&spName=<%=Encode.forUriComponent(spName)%>&oauthapp=<%=Encode.forUriComponent(consumerApp.getOauthConsumerKey())%>';
+    location.href = '../application/configure-service-provider.jsp?action=update&display=oauthapp&spName=<%=Encode.forUriComponent(spName)%>&oauthapp=<%=Encode.forUriComponent(consumerApp.getOauthConsumerKey())%>&isHashDisabled=<%=Encode.forUriComponent(String.valueOf(isHashDisabled))%>&operation=add';
 <% } else { %>
-    location.href = '../application/configure-service-provider.jsp?display=oauthapp&spName=<%=Encode.forUriComponent(spName)%>&action=cancel';
+    location.href = '../application/configure-service-provider.jsp?display=oauthapp&spName=<%=Encode.forUriComponent(spName)%>&action=cancel&isHashDisabled=<%=Encode.forUriComponent(String.valueOf(isHashDisabled))%>&operation=add';
 <% }
 } else {%>
     location.href = 'index.jsp';

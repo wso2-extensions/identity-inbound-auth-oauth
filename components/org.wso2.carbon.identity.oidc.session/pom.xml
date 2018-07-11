@@ -22,7 +22,7 @@
         <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
         <artifactId>identity-inbound-auth-oauth</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <version>6.0.2-SNAPSHOT</version>
+        <version>6.0.21-SNAPSHOT</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -195,6 +195,7 @@
                             !org.wso2.carbon.identity.oidc.session.internal,
                             org.wso2.carbon.identity.oidc.session.*;version="${identity.inbound.auth.oauth.exp.pkg.version}",
                         </Export-Package>
+                        <DynamicImport-Package>*</DynamicImport-Package>
                     </instructions>
                 </configuration>
             </plugin>
