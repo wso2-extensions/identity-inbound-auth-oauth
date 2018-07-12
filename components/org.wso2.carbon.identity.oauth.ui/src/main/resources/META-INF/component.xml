@@ -33,4 +33,42 @@
             <ResourceId>/permission/admin/manage/identity/pep</ResourceId>
         </ManagementPermission>
     </ManagementPermissions>
+
+    <menus>
+        <menu>
+            <id>scope_menu</id>
+            <i18n-key>OIDC Scopes</i18n-key>
+            <i18n-bundle>org.wso2.carbon.identity.oauth.ui.i18n.Resource</i18n-bundle>
+            <parent-menu>manage_menu</parent-menu>
+            <link>#</link>
+            <region>region1</region>
+            <order>4</order>
+            <style-class>manage</style-class>
+            <icon>../oauth/images/oauth.gif</icon>
+            <require-not-logged-in>false</require-not-logged-in>
+        </menu>
+        <menu>
+            <id>add_scope_menu</id>
+            <i18n-key>Add</i18n-key>
+            <i18n-bundle>org.wso2.carbon.identity.oauth.ui.i18n.Resource</i18n-bundle>
+            <parent-menu>scope_menu</parent-menu>
+            <link>../oauth/add-oidc-scope.jsp</link>
+            <region>region1</region>
+            <order>1</order>
+            <style-class>manage</style-class>
+            <icon>../oauth/images/add.gif</icon>
+        </menu>
+        <menu>
+            <id>list_scope_menu</id>
+            <i18n-key>List</i18n-key>
+            <i18n-bundle>org.wso2.carbon.identity.oauth.ui.i18n.Resource</i18n-bundle>
+            <parent-menu>scope_menu</parent-menu>
+            <link>../oauth/list-oidc-scopes.jsp</link>
+            <region>region1</region>
+            <order>2</order>
+            <style-class>manage</style-class>
+            <icon>../oauth/images/list.gif</icon>
+        </menu>
+    </menus>
+
 </component>

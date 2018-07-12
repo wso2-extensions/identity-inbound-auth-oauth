@@ -18,7 +18,8 @@
 
 package org.wso2.carbon.identity.oauth;
 
-
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -44,6 +45,7 @@ import org.wso2.carbon.identity.oauth.dto.OAuthIDTokenAlgorithmDTO;
 import org.wso2.carbon.identity.oauth.dto.OAuthRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth.dto.OAuthRevocationResponseDTO;
 import org.wso2.carbon.identity.oauth.dto.OAuthTokenExpiryTimeDTO;
+import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -478,8 +480,159 @@ public class OAuthAdminService extends AbstractAdmin {
      * @throws IdentityOAuthAdminException
      */
     public String getOauthApplicationState(String consumerKey) throws IdentityOAuthAdminException {
+
         OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
         return oAuthAppDAO.getConsumerAppState(consumerKey);
+    }
+
+    /**
+     * To insert oidc scopes and claims in the related db tables.
+     *
+     * @param scope an oidc scope
+     * @throws IdentityOAuthAdminException if an error occurs when inserting scopes or claims.
+     */
+    public void addScope(String scope, String[] claims)
+            throws IdentityOAuthAdminException {
+
+        int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
+        try {
+            if (StringUtils.isNotEmpty(scope)) {
+                OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().addScope(tenantId, scope, claims);
+            } else {
+                throw new IdentityOAuthAdminException("The scope can not be empty.");
+            }
+        } catch (IdentityOAuth2Exception e) {
+            throw handleError("Error while inserting OIDC scopes and claims.", e);
+        }
+    }
+
+    /**
+     * To retrieve all persisted oidc scopes with mapped claims.
+     *
+     * @return all persisted scopes and claims
+     * @throws IdentityOAuth2Exception if an error occurs when loading scopes and claims.
+     */
+    public ScopeDTO[] getScopes() throws IdentityOAuthAdminException {
+
+        int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
+        try {
+            List<ScopeDTO> scopeDTOList = OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
+                    getScopes(tenantId);
+            if (CollectionUtils.isNotEmpty(scopeDTOList)) {
+                return scopeDTOList.toArray(new ScopeDTO[scopeDTOList.size()]);
+            } else {
+                if (log.isDebugEnabled()) {
+                    log.debug("Could not find scope claim mapping. Hence returning an empty array.");
+                }
+                return new ScopeDTO[0];
+            }
+        } catch (IdentityOAuth2Exception e) {
+            throw handleError("Error while loading OIDC scopes and claims for tenant: " + tenantId, e);
+        }
+    }
+
+    /**
+     * To remove persisted scopes and claims.
+     *
+     * @param scope oidc scope
+     * @throws IdentityOAuthAdminException if an error occurs when deleting scopes and claims.
+     */
+    public void deleteScope(String scope) throws IdentityOAuthAdminException {
+
+        int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
+        try {
+            OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().deleteScope(scope, tenantId);
+        } catch (IdentityOAuth2Exception e) {
+            throw handleError("Error while deleting OIDC scope: " + scope, e);
+        }
+    }
+
+    /**
+     * To retrieve all persisted oidc scopes.
+     *
+     * @return list of scopes persisted.
+     * @throws IdentityOAuth2Exception if an error occurs when loading oidc scopes.
+     */
+    public String[] getScopeNames() throws IdentityOAuthAdminException {
+
+        int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
+        try {
+            List<String> scopeDTOList = OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
+                    getScopeNames(tenantId);
+            if (CollectionUtils.isNotEmpty(scopeDTOList)) {
+                return scopeDTOList.toArray(new String[scopeDTOList.size()]);
+            } else {
+                if (log.isDebugEnabled()) {
+                    log.debug("Could not load oidc scopes. Hence returning an empty array.");
+                }
+                return new String[0];
+            }
+        } catch (IdentityOAuth2Exception e) {
+            throw handleError("Error while loading OIDC scopes and claims for tenant: " + tenantId, e);
+        }
+    }
+
+    /**
+     * To retrieve oidc claims mapped to an oidc scope.
+     *
+     * @param scope scope
+     * @return list of claims which are mapped to the oidc scope.
+     * @throws IdentityOAuth2Exception if an error occurs when lading oidc claims.
+     */
+    public String[] getClaims(String scope) throws IdentityOAuthAdminException {
+
+        int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
+        try {
+            ScopeDTO scopeDTO = OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
+                    getClaims(scope, tenantId);
+            if (scopeDTO != null && ArrayUtils.isNotEmpty(scopeDTO.getClaim())) {
+                return scopeDTO.getClaim();
+            } else {
+                if (log.isDebugEnabled()) {
+                    log.debug("Could not load oidc claims. Hence returning an empty array.");
+                }
+                return new String[0];
+            }
+        } catch (IdentityOAuth2Exception e) {
+            throw handleError("Error while loading OIDC claims for the scope: " + scope + "in tenant: " + tenantId, e);
+        }
+    }
+
+    /**
+     * To add new claims for an existing scope.
+     *
+     * @param scope        scope name
+     * @param addClaims    list of oidc claims to be added
+     * @param deleteClaims list of oidc claims to be deleted
+     * @throws IdentityOAuth2Exception if an error occurs when adding a new claim for a scope.
+     */
+    public void updateScope(String scope, String[] addClaims, String[] deleteClaims)
+            throws IdentityOAuthAdminException {
+
+        int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
+        try {
+            OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
+                    updateScope(scope, tenantId, Arrays.asList(addClaims), Arrays.asList(deleteClaims));
+        } catch (IdentityOAuth2Exception e) {
+            throw handleError("Error while updating OIDC claims for the scope: " + scope + "in tenant: " + tenantId, e);
+        }
+    }
+
+    /**
+     * To load id of the scope table.
+     *
+     * @param scope scope name
+     * @return id of the given scope
+     * @throws IdentityOAuth2Exception if an error occurs when loading scope id.
+     */
+    public boolean isScopeExist(String scope) throws IdentityOAuthAdminException {
+
+        int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
+        try {
+            return OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().isScopeExist(scope, tenantId);
+        } catch (IdentityOAuth2Exception e) {
+            throw handleError("Error while inserting the scopes.", e);
+        }
     }
 
     /**
@@ -553,6 +706,7 @@ public class OAuthAdminService extends AbstractAdmin {
 
     private void updateAppAndRevokeTokensAndAuthzCodes(String consumerKey,
                                                        Properties properties) throws IdentityOAuthAdminException {
+
         int countToken = 0;
         try {
             Set<AccessTokenDO> activeDetailedTokens = OAuthTokenPersistenceFactory.getInstance()
@@ -842,6 +996,7 @@ public class OAuthAdminService extends AbstractAdmin {
      */
     public OAuthRevocationResponseDTO updateApproveAlwaysForAppConsentByResourceOwner(String appName, String state)
             throws IdentityOAuthAdminException {
+
         OAuthRevocationResponseDTO revokeRespDTO = new OAuthRevocationResponseDTO();
         String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         String tenantAwareUserName = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
@@ -877,6 +1032,7 @@ public class OAuthAdminService extends AbstractAdmin {
 
     private void triggerPostRevokeListeners(OAuthRevocationRequestDTO revokeRequestDTO,
                                             OAuthRevocationResponseDTO revokeRespDTO, AccessTokenDO[] accessTokenDOs) {
+
         OAuthEventInterceptor oAuthEventInterceptorProxy = OAuthComponentServiceHolder.getInstance()
                 .getOAuthEventInterceptorProxy();
 
@@ -934,6 +1090,7 @@ public class OAuthAdminService extends AbstractAdmin {
      * @return true if PKCE is supported by the database, false if not
      */
     public boolean isPKCESupportEnabled() {
+
         return OAuth2Util.isPKCESupportEnabled();
     }
 
@@ -952,6 +1109,7 @@ public class OAuthAdminService extends AbstractAdmin {
     }
 
     private AuthenticatedUser buildAuthenticatedUser(String tenantAwareUser, String tenantDomain) {
+
         AuthenticatedUser user = new AuthenticatedUser();
         user.setUserName(UserCoreUtil.removeDomainFromName(tenantAwareUser));
         user.setTenantDomain(tenantDomain);
@@ -960,6 +1118,7 @@ public class OAuthAdminService extends AbstractAdmin {
     }
 
     private void validateTokenExpiryConfigurations(OAuthConsumerAppDTO oAuthConsumerAppDTO) {
+
         if (oAuthConsumerAppDTO.getUserAccessTokenExpiryTime() == 0) {
             oAuthConsumerAppDTO.setUserAccessTokenExpiryTime(
                     OAuthServerConfiguration.getInstance().getUserAccessTokenValidityPeriodInSeconds());
@@ -990,6 +1149,7 @@ public class OAuthAdminService extends AbstractAdmin {
     }
 
     private void logOnInvalidConfig(String appName, String tokenType, long defaultValue) {
+
         if (log.isDebugEnabled()) {
             log.debug("Invalid expiry time value '0' set for " + tokenType + " in ServiceProvider: " + appName + ". "
                     + "Defaulting to expiry value: " + defaultValue + " seconds.");
@@ -997,11 +1157,11 @@ public class OAuthAdminService extends AbstractAdmin {
     }
 
     /**
-     *  Get the scope validators registered by the user and filter the allowed ones.
+     * Get the scope validators registered by the user and filter the allowed ones.
      *
      * @param application Application user have registered.
      * @return List of scope validators.
-     * @throws IdentityOAuthAdminException  Identity OAuthAdmin exception.
+     * @throws IdentityOAuthAdminException Identity OAuthAdmin exception.
      */
     private String[] filterScopeValidators(OAuthConsumerAppDTO application) throws IdentityOAuthAdminException {
 
@@ -1021,7 +1181,7 @@ public class OAuthAdminService extends AbstractAdmin {
     /**
      * Get supported algorithms from OAuthServerConfiguration and construct an OAuthIDTokenAlgorithmDTO object.
      *
-     * @return  Constructed OAuthIDTokenAlgorithmDTO object with supported algorithms.
+     * @return Constructed OAuthIDTokenAlgorithmDTO object with supported algorithms.
      */
     public OAuthIDTokenAlgorithmDTO getSupportedIDTokenAlgorithms() {
 
@@ -1044,6 +1204,7 @@ public class OAuthAdminService extends AbstractAdmin {
      * @return Whether hash feature is disabled or not.
      */
     public boolean isHashDisabled() {
+
         return OAuth2Util.isHashDisabled();
     }
 

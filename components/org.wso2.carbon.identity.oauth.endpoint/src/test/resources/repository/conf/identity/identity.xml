@@ -94,7 +94,7 @@
         -->
 
         <!-- Specify full qualified class name of the class which going to use as private association store -->
-        <!-- 
+        <!--
 		<OpenIDPrivateAssociationStoreClass>org.wso2.carbon.identity.provider.openid.PrivateAssociationCryptoStore</OpenIDPrivateAssociationStoreClass>
 	-->
 
@@ -537,7 +537,7 @@
          -->
         <CacheManager name="IdentityApplicationManagementCacheManager">
             <Cache name="AppAuthFrameworkSessionContextCache"
-                                                     enable="true" timeout="300" capacity="5000" isDistributed="false"/>
+                   enable="true" timeout="300" capacity="5000" isDistributed="false"/>
             <Cache name="AuthenticationContextCache" enable="true" timeout="300" capacity="5000" isDistributed="false"/>
             <Cache name="AuthenticationRequestCache" enable="true" timeout="300" capacity="5000" isDistributed="false"/>
             <Cache name="AuthenticationResultCache"  enable="true" timeout="300" capacity="5000" isDistributed="false"/>

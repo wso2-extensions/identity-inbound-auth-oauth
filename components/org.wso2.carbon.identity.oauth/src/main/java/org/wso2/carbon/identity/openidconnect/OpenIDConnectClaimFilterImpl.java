@@ -31,7 +31,9 @@ import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataExcept
 import org.wso2.carbon.identity.claim.metadata.mgt.model.Claim;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
@@ -42,6 +44,7 @@ import org.wso2.carbon.registry.core.service.RegistryService;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
@@ -92,20 +95,27 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
         Map<String, Object> addressScopeClaims = new HashMap<>();
 
         // Map<"openid", "first_name,last_name,username">
-        Properties oidcScopeProperties = getOIDCScopeProperties(spTenantDomain);
-        if (isNotEmpty(oidcScopeProperties)) {
-            List<String> addressScopeClaimUris = getAddressScopeClaimUris(oidcScopeProperties);
+        Map<String, List<String>> scopeClaimsMap = new HashMap<>();
+        int tenantId = IdentityTenantUtil.getTenantId(spTenantDomain);
+        //load oidc scopes and mapped claims from the cache or db.
+        List<ScopeDTO> oidcScopeClaimList = getOIDCScopeCalimsList(tenantId);
+        for (ScopeDTO scope : oidcScopeClaimList) {
+            scopeClaimsMap.put(scope.getName(), Arrays.asList(scope.getClaim()));
+        }
+        if (MapUtils.isNotEmpty(scopeClaimsMap)) {
+            List<String> addressScopeClaimUris = getAddressScopeClaimUris(scopeClaimsMap);
             // Iterate through scopes requested in the OAuth2/OIDC request to filter claims
             for (String requestedScope : requestedScopes) {
                 // Check if requested scope is a supported OIDC scope value
-                if (oidcScopeProperties.containsKey(requestedScope)) {
+
+                if (scopeClaimsMap.containsKey(requestedScope)) {
                     if (log.isDebugEnabled()) {
                         log.debug("Requested scope: " + requestedScope + " is a defined OIDC Scope in tenantDomain: " +
                                 spTenantDomain + ". Filtering claims based on the permitted claims in the scope.");
                     }
                     // Requested scope is an registered OIDC scope. Filter and return the claims belonging to the scope.
                     Map<String, Object> filteredClaims =
-                            handleRequestedOIDCScope(userClaims, addressScopeClaims, oidcScopeProperties,
+                            handleRequestedOIDCScope(userClaims, addressScopeClaims, scopeClaimsMap,
                                     addressScopeClaimUris, requestedScope);
                     claimsToBeReturned.putAll(filteredClaims);
                 } else {
@@ -250,14 +260,25 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
         return propertiesToReturn;
     }
 
+    private List<ScopeDTO> getOIDCScopeCalimsList(int tenantId) {
+
+        List<ScopeDTO> oidcScopesClaimsList = new ArrayList<>();
+        try {
+           oidcScopesClaimsList = OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().getScopes(tenantId);
+        } catch (IdentityOAuth2Exception e) {
+            log.error("Error while loading oidc scopes and claims for the tenant: " + tenantId);
+        }
+        return oidcScopesClaimsList;
+    }
+
     private Map<String, Object> handleRequestedOIDCScope(Map<String, Object> userClaimsInOIDCDialect,
                                                          Map<String, Object> addressScopeClaims,
-                                                         Properties oidcScopeProperties,
+                                                         Map<String, List<String>> scopeClaimsMap,
                                                          List<String> addressScopeClaimUris,
                                                          String oidcScope) {
 
         Map<String, Object> filteredClaims = new HashMap<>();
-        List<String> claimUrisInRequestedScope = getClaimUrisInSupportedOidcScope(oidcScopeProperties, oidcScope);
+        List<String> claimUrisInRequestedScope = getClaimUrisInSupportedOIDCScope(scopeClaimsMap, oidcScope);
         for (String scopeClaim : claimUrisInRequestedScope) {
             String oidcClaimUri = scopeClaim;
             boolean isAddressClaim = false;
@@ -317,9 +338,9 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
         }
     }
 
-    private List<String> getAddressScopeClaimUris(Properties oidcProperties) {
+    private List<String> getAddressScopeClaimUris(Map<String, List<String>> scopeClaimsMap) {
 
-        return getClaimUrisInSupportedOidcScope(oidcProperties, ADDRESS_SCOPE);
+        return getClaimUrisInSupportedOIDCScope(scopeClaimsMap, ADDRESS_SCOPE);
     }
 
     private boolean isAddressClaim(String scopeClaim, List<String> addressScopeClaims) {
@@ -327,15 +348,11 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
         return StringUtils.startsWith(scopeClaim, ADDRESS_PREFIX) || addressScopeClaims.contains(scopeClaim);
     }
 
-    private List<String> getClaimUrisInSupportedOidcScope(Properties properties, String requestedScope) {
+    private List<String> getClaimUrisInSupportedOIDCScope(Map<String, List<String>> scopeClaimsMap, String requestedScope) {
 
-        String[] requestedScopeClaimsArray;
         List<String> requestedScopeClaimsList = new ArrayList<>();
-        if (StringUtils.isNotBlank(properties.getProperty(requestedScope))) {
-            requestedScopeClaimsArray = properties.getProperty(requestedScope).split(OIDC_SCOPE_CLAIM_SEPARATOR);
-            for (String requestedScopeClaim : requestedScopeClaimsArray) {
-                requestedScopeClaimsList.add(requestedScopeClaim.trim());
-            }
+        if (scopeClaimsMap.containsKey(requestedScope)) {
+            requestedScopeClaimsList = scopeClaimsMap.get(requestedScope);
         }
         return requestedScopeClaimsList;
     }

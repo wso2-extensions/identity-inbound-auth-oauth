@@ -23,7 +23,7 @@
         <classes>
             <class name="org.wso2.carbon.identity.discovery.DefaultOIDCProcessorTest"/>
             <class name="org.wso2.carbon.identity.discovery.builders.DefaultOIDCProviderRequestBuilderTest"/>
-            <class name="org.wso2.carbon.identity.discovery.builders.ProviderConfigBuilderTest"/>
+            <!--<class name="org.wso2.carbon.identity.discovery.builders.ProviderConfigBuilderTest"/>-->
             <class name="org.wso2.carbon.identity.discovery.internal.OIDCDiscoveryDataHolderTest"/>
             <class name="org.wso2.carbon.identity.discovery.internal.OIDCDiscoveryServiceComponentTest"/>
             <class name="org.wso2.carbon.identity.discovery.MessageContextTest"/>

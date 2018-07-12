@@ -20,12 +20,16 @@ package org.wso2.carbon.identity.oauth.endpoint.user.impl;
 
 import org.apache.oltu.oauth2.common.utils.JSONUtils;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.testng.annotations.BeforeTest;
+import org.testng.IObjectFactory;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
+import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.core.persistence.JDBCPersistenceManager;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
@@ -40,39 +44,57 @@ import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceCompo
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.registry.core.service.RegistryService;
 
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.sql.DataSource;
+
+import static org.junit.Assert.assertNull;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
+import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
-import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 
 /**
  * This class contains tests for UserInfoJSONResponseBuilder.
  */
 @PrepareForTest({OAuthServerConfiguration.class, OAuth2Util.class, IdentityTenantUtil.class, RegistryService.class,
-        AuthorizationGrantCache.class, ClaimUtil.class, IdentityUtil.class, UserInfoEndpointConfig.class})
+        AuthorizationGrantCache.class, ClaimUtil.class, IdentityUtil.class, UserInfoEndpointConfig.class, JDBCPersistenceManager.class,
+        OAuthServerConfiguration.class})
 public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
 
     private UserInfoJSONResponseBuilder userInfoJSONResponseBuilder;
 
-   @Mock
-   private RequestObjectService requestObjectService;
+    Connection con = null;
 
-    @BeforeTest
-    public void setUpTest() throws RequestObjectException {
+    @Mock
+    private RequestObjectService requestObjectService;
+
+    @BeforeClass
+    public void setUpTest() throws Exception {
+
         userInfoJSONResponseBuilder = new UserInfoJSONResponseBuilder();
+        TestUtils.initiateH2Base();
+        con = TestUtils.getConnection();
+    }
+
+    @ObjectFactory
+    public IObjectFactory getObjectFactory() {
+
+        return new org.powermock.modules.testng.PowerMockObjectFactory();
     }
 
     private void setUpRequestObjectService() throws RequestObjectException {
-        List<RequestedClaim> requestedClaims =  Collections.emptyList();
+
+        List<RequestedClaim> requestedClaims = Collections.emptyList();
         when(requestObjectService.getRequestedClaimsForIDToken(anyString())).
                 thenReturn(requestedClaims);
         when(requestObjectService.getRequestedClaimsForUserInfo(anyString())).
@@ -83,8 +105,19 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
         OpenIDConnectServiceComponentHolder.setRequestObjectService(requestObjectService);
     }
 
+    private void mockDataSource() throws SQLException {
+
+        mockStatic(JDBCPersistenceManager.class);
+        DataSource dataSource = Mockito.mock(DataSource.class);
+        JDBCPersistenceManager jdbcPersistenceManager = Mockito.mock(JDBCPersistenceManager.class);
+        Mockito.when(dataSource.getConnection()).thenReturn(con);
+        Mockito.when(jdbcPersistenceManager.getInstance()).thenReturn(jdbcPersistenceManager);
+        Mockito.when(jdbcPersistenceManager.getDataSource()).thenReturn(dataSource);
+    }
+
     @DataProvider(name = "responseStringInputs")
     public Object[][] responseStringInputs() {
+
         return getOidcScopeFilterTestData();
     }
 
@@ -98,6 +131,7 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
         try {
             setUpRequestObjectService();
             prepareForResponseClaimTest(inputClaims, oidcScopeMap, getClaimsFromCache);
+            mockDataSource();
             String responseString =
                     userInfoJSONResponseBuilder.getResponseString(
                             getTokenResponseDTO(AUTHORIZED_USER_FULL_QUALIFIED, requestedScopes));
@@ -137,7 +171,7 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
         // Mock for essential claims.
         when(OAuth2Util.getEssentialClaims(anyString(), anyString())).thenReturn(essentialClaims);
         when(authorizationGrantCacheEntry.getEssentialClaims()).thenReturn(ESSENTIAL_CLAIM_JSON);
-
+        mockDataSource();
         String responseString =
                 userInfoJSONResponseBuilder.getResponseString(getTokenResponseDTO(AUTHORIZED_USER_FULL_QUALIFIED));
 
@@ -159,18 +193,21 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
 
     @Test
     public void testUpdateAtClaim() throws Exception {
+
         String updateAtValue = "1509556412";
         testLongClaimInUserInfoResponse(UPDATED_AT, updateAtValue);
     }
 
     @Test
     public void testEmailVerified() throws Exception {
+
         String emailVerifiedClaimValue = "true";
         testBooleanClaimInUserInfoResponse(EMAIL_VERIFIED, emailVerifiedClaimValue);
     }
 
     @Test
     public void testPhoneNumberVerified() throws Exception {
+
         String phoneNumberVerifiedClaimValue = "true";
         testBooleanClaimInUserInfoResponse(PHONE_NUMBER_VERIFIED, phoneNumberVerifiedClaimValue);
     }
@@ -180,7 +217,7 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
         initSingleClaimTest(claimUri, claimValue);
 
         setUpRequestObjectService();
-
+        mockDataSource();
         String responseString =
                 userInfoJSONResponseBuilder.getResponseString(getTokenResponseDTO(AUTHORIZED_USER_FULL_QUALIFIED));
 
@@ -192,7 +229,9 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
     }
 
     private void testLongClaimInUserInfoResponse(String claimUri, String claimValue) throws Exception {
+
         initSingleClaimTest(claimUri, claimValue);
+        mockDataSource();
         String responseString =
                 userInfoJSONResponseBuilder.getResponseString(getTokenResponseDTO(AUTHORIZED_USER_FULL_QUALIFIED));
 
@@ -204,6 +243,7 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
 
     @DataProvider(name = "subjectClaimDataProvider")
     public Object[][] provideSubjectData() {
+
         return getSubjectClaimTestData();
     }
 
@@ -213,13 +253,14 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
                                  boolean appendTenantDomain,
                                  boolean appendUserStoreDomain,
                                  String expectedSubjectValue) throws Exception {
+
         try {
             AuthenticatedUser authzUser = (AuthenticatedUser) authorizedUsername;
             prepareForSubjectClaimTest(authzUser, inputClaims, appendTenantDomain, appendUserStoreDomain);
 
             when(userInfoJSONResponseBuilder.retrieveUserClaims(any(OAuth2TokenValidationResponseDTO.class)))
                     .thenReturn(inputClaims);
-
+            mockDataSource();
             String responseString =
                     userInfoJSONResponseBuilder.getResponseString(getTokenResponseDTO((authzUser).toFullQualifiedUsername()));
 
