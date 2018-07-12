@@ -156,18 +156,20 @@ public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
         }
     }
 
-
     @DataProvider(name = "getRegisterOAuthApplicationData")
     public Object[][] getRegisterOAuthApplicationData() {
-        return new Object[][]{{OAuthConstants.OAuthVersions.VERSION_2, "admin"},
-                {OAuthConstants.OAuthVersions.VERSION_2, null},
-                {null, "admin"}
+
+        return new String[][]{{OAuthConstants.OAuthVersions.VERSION_2, "admin", null, null},
+                {OAuthConstants.OAuthVersions.VERSION_2, "admin", CONSUMER_KEY, CONSUMER_SECRET},
+                {OAuthConstants.OAuthVersions.VERSION_2, "admin", CONSUMER_KEY, null},
+                {OAuthConstants.OAuthVersions.VERSION_2, "admin", null, CONSUMER_SECRET},
+                {null, "admin", CONSUMER_KEY, CONSUMER_SECRET}
         };
     }
 
     @Test(dataProvider = "getRegisterOAuthApplicationData")
-    public void testRegisterOAuthApplicationData(String oauthVersion, String userName) throws Exception {
-
+    public void testRegisterOAuthApplicationData(String oauthVersion, String userName, String consumerKey, String
+            consumerSecret) throws Exception {
 
         initConfigsAndRealm();
 
@@ -183,8 +185,8 @@ public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
         oAuthConsumerAppDTO.setApplicationAccessTokenExpiryTime(1234585);
         oAuthConsumerAppDTO.setGrantTypes("");
         oAuthConsumerAppDTO.setUsername(userName);
-        oAuthConsumerAppDTO.setOauthConsumerKey(CONSUMER_KEY);
-        oAuthConsumerAppDTO.setOauthConsumerSecret(CONSUMER_SECRET);
+        oAuthConsumerAppDTO.setOauthConsumerKey(consumerKey);
+        oAuthConsumerAppDTO.setOauthConsumerSecret(consumerSecret);
         oAuthConsumerAppDTO.setOAuthVersion(oauthVersion);
 
         whenNew(OAuthAppDAO.class).withNoArguments().thenReturn(oAtuhAppDAO);
