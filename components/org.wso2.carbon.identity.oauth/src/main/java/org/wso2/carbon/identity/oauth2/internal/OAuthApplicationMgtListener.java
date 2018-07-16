@@ -52,9 +52,6 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dao.OAuthConsumerDAO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
-import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeValidator;
-import org.wso2.carbon.user.api.UserStoreException;
-import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.io.ByteArrayInputStream;
 import java.io.StringWriter;
@@ -85,7 +82,6 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
     public boolean doPreUpdateApplication(ServiceProvider serviceProvider, String tenantDomain, String userName)
             throws IdentityApplicationManagementException {
 
-        validateOAuthInbound(serviceProvider);
         storeSaaSPropertyValue(serviceProvider);
         removeClientSecret(serviceProvider);
         return true;
@@ -134,7 +130,12 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
         return true;
     }
 
-    @Override
+    public void onPreCreateInbound(ServiceProvider serviceProvider, boolean isUpdate) throws
+            IdentityApplicationManagementException {
+
+        validateOAuthInbound(serviceProvider, isUpdate);
+    }
+        @Override
     public void doImportServiceProvider(ServiceProvider serviceProvider) throws IdentityApplicationManagementException {
 
         try {
@@ -143,8 +144,8 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
 
                 for (InboundAuthenticationRequestConfig authConfig : serviceProvider.getInboundAuthenticationConfig()
                         .getInboundAuthenticationRequestConfigs()) {
-                    if (StringUtils.equals(authConfig.getInboundAuthType(), OAUTH) ||
-                            StringUtils.equals(authConfig.getInboundAuthType(), OAUTH2)) {
+                    if (OAUTH.equals(authConfig.getInboundAuthType()) ||
+                            OAUTH2.equals(authConfig.getInboundAuthType())) {
                         String inboundConfiguration = authConfig.getInboundConfiguration();
                         if (inboundConfiguration == null || "".equals(inboundConfiguration)) {
                             String errorMSg = String.format("No inbound configurations found for oauth in the " +
@@ -185,8 +186,9 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
 
                 for (InboundAuthenticationRequestConfig authConfig : serviceProvider.getInboundAuthenticationConfig()
                         .getInboundAuthenticationRequestConfigs()) {
-                    if (StringUtils.equals(authConfig.getInboundAuthType(), OAUTH) ||
-                            StringUtils.equals(authConfig.getInboundAuthType(), OAUTH2)) {
+                    if (OAUTH.equals(authConfig.getInboundAuthType()) ||
+                            OAUTH2.equals(authConfig.getInboundAuthType())) {
+
                         OAuthAppDAO dao = new OAuthAppDAO();
                         OAuthAppDO authApplication = dao.getAppInformationByAppName(serviceProvider
                                 .getApplicationName());
@@ -488,9 +490,10 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
      * Validate Oauth inbound config.
      *
      * @param serviceProvider service provider.
+     * @param isUpdate        whether the application update or create
      * @throws IdentityApplicationManagementValidationException Identity Application Management Exception
      */
-    private void validateOAuthInbound(ServiceProvider serviceProvider) throws
+    private void validateOAuthInbound(ServiceProvider serviceProvider, boolean isUpdate) throws
             IdentityApplicationManagementValidationException {
 
         List<String> validationMsg = new ArrayList<>();
@@ -500,8 +503,7 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
 
             for (InboundAuthenticationRequestConfig authConfig : serviceProvider.getInboundAuthenticationConfig()
                     .getInboundAuthenticationRequestConfigs()) {
-                if (StringUtils.equals(authConfig.getInboundAuthType(), "oauth") ||
-                        StringUtils.equals(authConfig.getInboundAuthType(), "oauth2")) {
+                if (OAUTH.equals(authConfig.getInboundAuthType()) || OAUTH2.equals(authConfig.getInboundAuthType())) {
                     String inboundConfiguration = authConfig.getInboundConfiguration();
                     if (inboundConfiguration == null) {
                         return;
@@ -526,21 +528,27 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                                 oAuthAppDO.getOauthConsumerKey()));
                     }
                     try {
-                        if (dao.isDuplicateConsumer(inboundAuthKey)) {
-                            try {
-                                OAuthAppDO appInformation = dao.getAppInformation(inboundAuthKey);
-                                if (!appInformation.getApplicationName().equals(serviceProvider.getApplicationName())) {
-                                    validationMsg.add(String.format("There is already an oauth application %s " +
-                                                    "available with %s as consumer key",
-                                            appInformation.getApplicationName(), inboundAuthKey));
+                        if (!isUpdate) {
+                            if (dao.isDuplicateConsumer(inboundAuthKey)) {
+                                try {
+                                    OAuthAppDO appInformation = dao.getAppInformation(inboundAuthKey);
+                                    if (!appInformation.getApplicationName().equals(
+                                            serviceProvider.getApplicationName())) {
+
+                                        validationMsg.add(String.format("There is already an oauth application %s " +
+                                                        "available with %s as consumer key",
+                                                appInformation.getApplicationName(), inboundAuthKey));
+                                        break;
+                                    }
+                                } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+                                    // Do nothing, the application does exists.
                                 }
-                            } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
-                                // Do nothing, the application does exists.
+                            } else if (dao.isDuplicateApplication(userName,
+                                    IdentityTenantUtil.getTenantId(tenantDomain), tenantDomain, oAuthAppDO)) {
+                                validationMsg.add(String.format("There is already an oauth application available with" +
+                                        " %s as application name", oAuthAppDO.getApplicationName()));
+                                break;
                             }
-                        } else if (dao.isDuplicateApplication(userName, IdentityTenantUtil.getTenantId(tenantDomain),
-                                tenantDomain, oAuthAppDO)) {
-                            validationMsg.add(String.format("There is already an oauth application available with" +
-                                    " %s as application name", oAuthAppDO.getApplicationName()));
                         }
                     } catch (IdentityOAuthAdminException e) {
                         // Do nothing, the key does exists.
