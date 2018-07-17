@@ -17,7 +17,6 @@
  */
 package org.wso2.carbon.identity.oidc.session.servlet;
 
-import edu.emory.mathcs.backport.java.util.Arrays;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.powermock.core.classloader.annotations.PrepareForTest;
@@ -45,6 +44,7 @@ import org.wso2.carbon.identity.oidc.session.internal.OIDCSessionManagementCompo
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
 
 import java.security.KeyStore;
+import java.util.Arrays;
 import java.util.Collections;
 import javax.servlet.ServletException;
 import javax.servlet.http.Cookie;
