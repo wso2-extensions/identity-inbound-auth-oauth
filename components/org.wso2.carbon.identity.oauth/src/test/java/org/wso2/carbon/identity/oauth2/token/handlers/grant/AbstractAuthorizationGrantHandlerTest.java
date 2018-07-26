@@ -28,9 +28,11 @@ import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithH2Database;
 import org.wso2.carbon.identity.common.testng.WithRealmService;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.common.GrantType;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthCallbackHandlerMetaData;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
@@ -44,6 +46,7 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuerImpl;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeHandler;
 
 import java.util.Collections;
@@ -53,7 +56,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import static org.mockito.Matchers.anyBoolean;
+import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.verify;
+import static org.powermock.api.mockito.PowerMockito.mockStatic;
+import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
@@ -75,10 +82,12 @@ public class AbstractAuthorizationGrantHandlerTest {
     private String clientId;
     private String tokenId;
     private String appId = "TestApp1";
+    private static final String OAUTH_APP_PROPERTY = "OAuthAppDO";
 
     private static final String CUSTOM_GRANT = "custom grant";
     private static final String DEFAULT_CALLBACK_HANDLER_CLASS_NAME = "org.wso2.carbon.identity.oauth.callback.DefaultCallbackHandler";
     private static final String PASSWORD_GRANT = "password";
+    private OAuthAppDO oAuthAppDO;
 
     @BeforeMethod
     public void setUp() throws IdentityOAuthAdminException, IdentityOAuth2Exception {
@@ -99,7 +108,7 @@ public class AbstractAuthorizationGrantHandlerTest {
         handler.init();
 
         OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
-        OAuthAppDO oAuthAppDO = new OAuthAppDO();
+        oAuthAppDO = new OAuthAppDO();
         oAuthAppDO.setApplicationName(appId);
         oAuthAppDO.setOauthConsumerKey(clientId);
         oAuthAppDO.setUser(authenticatedUser);
@@ -308,11 +317,12 @@ public class AbstractAuthorizationGrantHandlerTest {
 
     @Test(dataProvider = "BuildTokenRequestMessageContext")
     public void testValidateScope(Object tokenRequestMessageContext, Set<OAuth2ScopeHandler> scopeHandlers,
-            boolean expectedValue) throws IdentityOAuth2Exception, IllegalAccessException, NoSuchFieldException {
+            boolean expectedValue) throws IdentityOAuth2Exception, IllegalAccessException, NoSuchFieldException, InvalidOAuthClientException {
 
         OAuthTokenReqMessageContext tokReqMsgCtx = (OAuthTokenReqMessageContext) tokenRequestMessageContext;
         OAuthServerConfiguration serverConfiguration = OAuthServerConfiguration.getInstance();
         serverConfiguration.setOAuth2ScopeHandlers(scopeHandlers);
+        tokReqMsgCtx.addProperty(OAUTH_APP_PROPERTY, oAuthAppDO);
         assertEquals(handler.validateScope(tokReqMsgCtx), expectedValue);
     }
 

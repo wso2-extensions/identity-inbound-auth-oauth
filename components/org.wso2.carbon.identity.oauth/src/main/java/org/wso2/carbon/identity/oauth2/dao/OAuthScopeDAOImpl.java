@@ -540,7 +540,7 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
 
             while (rs.next()) {
                 String binding = rs.getString("SCOPE_BINDING");
-                if (!binding.isEmpty()) {
+                if (StringUtils.isNotEmpty(binding)) {
                     bindings.add(binding);
                 }
             }

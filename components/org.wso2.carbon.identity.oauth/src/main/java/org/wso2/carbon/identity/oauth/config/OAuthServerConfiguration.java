@@ -124,6 +124,7 @@ public class OAuthServerConfiguration {
     private String oauthTokenGeneratorClassName;
     private OAuthIssuer oauthTokenGenerator;
     private String oauthIdentityTokenGeneratorClassName;
+    private String clientIdValidationRegex = "[a-zA-Z0-9_]{15,30}";
     private String persistAccessTokenAlias;
     private OauthTokenIssuer oauthIdentityTokenGenerator;
     private boolean cacheEnabled = false;
@@ -332,6 +333,9 @@ public class OAuthServerConfiguration {
 
         // parse identity OAuth 2.0 token generator
         parseOAuthTokenIssuerConfig(oauthElem);
+
+        // parse client is validation regex pattern
+        parseClientIdValidationRegex(oauthElem);
 
         // Parse Persist Access Token Alias element.
         parsePersistAccessTokenAliasConfig(oauthElem);
@@ -542,6 +546,10 @@ public class OAuthServerConfiguration {
 
     public long getTimeStampSkewInSeconds() {
         return timeStampSkewInSeconds;
+    }
+
+    public String getClientIdValidationRegex() {
+        return clientIdValidationRegex;
     }
 
     /**
@@ -1694,6 +1702,18 @@ public class OAuthServerConfiguration {
         }
     }
 
+    private void parseClientIdValidationRegex(OMElement oauthConfigElem) {
+
+        OMElement clientIdValidationRegexConfigElem = oauthConfigElem
+                .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.CLIENT_ID_VALIDATE_REGEX));
+        if (clientIdValidationRegexConfigElem != null && !"".equals(clientIdValidationRegexConfigElem.getText().trim())) {
+            clientIdValidationRegex = clientIdValidationRegexConfigElem.getText().trim();
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("Client id validation regex is set to: " + clientIdValidationRegex);
+        }
+    }
+
     private void parsePersistAccessTokenAliasConfig(OMElement oauthConfigElem) {
 
         OMElement tokenIssuerClassConfigElem = oauthConfigElem
@@ -2446,6 +2466,7 @@ public class OAuthServerConfiguration {
         // Token issuer generator.
         private static final String OAUTH_TOKEN_GENERATOR = "OAuthTokenGenerator";
         private static final String IDENTITY_OAUTH_TOKEN_GENERATOR = "IdentityOAuthTokenGenerator";
+        private static final String CLIENT_ID_VALIDATE_REGEX = "ClientIdValidationRegex";
 
         // Persist token alias
         private static final String IDENTITY_OAUTH_PERSIST_TOKEN_ALIAS = "PersistAccessTokenAlias";

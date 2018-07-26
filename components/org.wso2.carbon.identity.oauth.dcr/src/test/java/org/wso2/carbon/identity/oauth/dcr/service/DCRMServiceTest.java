@@ -112,16 +112,18 @@ public class DCRMServiceTest extends PowerMockTestCase {
 
         if (dtoStatus == null) {
             when(mockOAuthAdminService.getOAuthApplicationData(dummyConsumerKey)).thenReturn(null);
+            when(mockOAuthAdminService.getAllOAuthApplicationData()).thenReturn(new OAuthConsumerAppDTO[0]);
         } else {
             OAuthConsumerAppDTO dto = new OAuthConsumerAppDTO();
             dto.setApplicationName("");
             when(mockOAuthAdminService.getOAuthApplicationData(dummyConsumerKey)).thenReturn(dto);
+            when(mockOAuthAdminService.getAllOAuthApplicationData()).thenReturn(new OAuthConsumerAppDTO[]{dto});
         }
         Whitebox.setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
         try {
             dcrmService.getApplication(dummyConsumerKey);
         } catch (IdentityException ex) {
-            assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.NOT_FOUND_APPLICATION_WITH_ID.toString());
+            assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.FORBIDDEN_UNAUTHORIZED_USER.toString());
             return;
         }
         fail("Expected exception IdentityException not thrown by getApplication method");
@@ -132,11 +134,13 @@ public class DCRMServiceTest extends PowerMockTestCase {
 
         doThrow(new IdentityOAuthAdminException("")).when(mockOAuthAdminService).getOAuthApplicationData(dummyConsumerKey);
 
+        when(mockOAuthAdminService.getAllOAuthApplicationData()).thenReturn(new OAuthConsumerAppDTO[0]);
+
         Whitebox.setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
         try {
             dcrmService.getApplication(dummyConsumerKey);
         } catch (IdentityException ex) {
-            assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.FAILED_TO_GET_APPLICATION_BY_ID.toString());
+            assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.FORBIDDEN_UNAUTHORIZED_USER.toString());
             return;
         }
         fail("Expected exception IdentityException not thrown by getApplication method");
@@ -147,12 +151,13 @@ public class DCRMServiceTest extends PowerMockTestCase {
 
         doThrow(new IdentityOAuthAdminException("", new InvalidOAuthClientException(""))).when(mockOAuthAdminService)
                 .getOAuthApplicationData(dummyConsumerKey);
+        when(mockOAuthAdminService.getAllOAuthApplicationData()).thenReturn(new OAuthConsumerAppDTO[0]);
 
         Whitebox.setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
         try {
             dcrmService.getApplication(dummyConsumerKey);
         } catch (IdentityException ex) {
-            assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.NOT_FOUND_APPLICATION_WITH_ID.toString());
+            assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.FORBIDDEN_UNAUTHORIZED_USER.toString());
             return;
         }
         fail("Expected exception IdentityException not thrown by getApplication method");
@@ -169,7 +174,10 @@ public class DCRMServiceTest extends PowerMockTestCase {
         String dummyCallbackUrl = "dummyCallbackUrl";
         dto.setCallbackUrl(dummyCallbackUrl);
 
+        OAuthConsumerAppDTO[] oAuthConsumerAppDTOS = new OAuthConsumerAppDTO[]{dto};
+
         when(mockOAuthAdminService.getOAuthApplicationData(dummyConsumerKey)).thenReturn(dto);
+        when(mockOAuthAdminService.getAllOAuthApplicationData()).thenReturn(oAuthConsumerAppDTOS);
 
         Whitebox.setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
         Application application = dcrmService.getApplication(dummyConsumerKey);

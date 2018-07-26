@@ -181,6 +181,13 @@ public class IntrospectionResponseBuilder {
         return this;
     }
 
+    public IntrospectionResponseBuilder setTokenString(String tokenString) {
+        if (StringUtils.isNotBlank(tokenString)) {
+            parameters.put(IntrospectionResponse.TOKEN_STRING, tokenString);
+        }
+        return this;
+    }
+
     /**
      * @param errorCode Error Code
      * @return IntrospectionResponseBuilder

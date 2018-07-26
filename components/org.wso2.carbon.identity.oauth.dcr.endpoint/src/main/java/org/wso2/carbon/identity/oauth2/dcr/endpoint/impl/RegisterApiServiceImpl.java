@@ -21,7 +21,6 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.oauth.dcr.bean.Application;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMClientException;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMServerException;
-import org.wso2.carbon.identity.oauth2.dcr.endpoint.Exceptions.DCRMEndpointException;
 import org.wso2.carbon.identity.oauth2.dcr.endpoint.RegisterApiService;
 import org.wso2.carbon.identity.oauth2.dcr.endpoint.dto.RegistrationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dcr.endpoint.dto.UpdateRequestDTO;
@@ -102,6 +101,23 @@ public class RegisterApiServiceImpl extends RegisterApiService {
         } catch (DCRMServerException e) {
             DCRMUtils.handleErrorResponse(Response.Status.INTERNAL_SERVER_ERROR, e, true, LOG);
 
+        } catch (Throwable throwable) {
+            DCRMUtils.handleErrorResponse(Response.Status.INTERNAL_SERVER_ERROR, throwable, true, LOG);
+        }
+        return Response.status(Response.Status.OK).entity(application).build();
+    }
+
+    @Override
+    public Response getApplicationByName(String name) {
+
+        Application application = null;
+        try {
+            application = DCRMUtils.getOAuth2DCRMService().getApplicationByName(name);
+        } catch (DCRMClientException e) {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Client error while retrieving application by name : " + name, e);
+            }
+            DCRMUtils.handleErrorResponse(e, LOG);
         } catch (Throwable throwable) {
             DCRMUtils.handleErrorResponse(Response.Status.INTERNAL_SERVER_ERROR, throwable, true, LOG);
         }
