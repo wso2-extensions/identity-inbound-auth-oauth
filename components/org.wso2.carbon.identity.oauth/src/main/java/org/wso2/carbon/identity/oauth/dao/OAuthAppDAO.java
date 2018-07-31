@@ -79,7 +79,6 @@ public class OAuthAppDAO {
     private static final String USERNAME = "USERNAME";
     private static final String LOWER_USERNAME = "LOWER(USERNAME)";
     private TokenPersistenceProcessor persistenceProcessor;
-    public static final String PERMISSION_APPLICATION_MGT = "/permission/admin/manage/identity/applicationmgt";
     private boolean isHashDisabled = OAuth2Util.isHashDisabled();
 
     public OAuthAppDAO() {
@@ -533,13 +532,6 @@ public class OAuthAppDAO {
             if (!isUserExist) {
                 throw new IdentityOAuthAdminException("User validation failed for owner update in the application: " +
                         oAuthAppDO.getApplicationName() + " as user is not existing.");
-            }
-
-            boolean isPermitted = realm.getAuthorizationManager().isUserAuthorized(userName, PERMISSION_APPLICATION_MGT,
-                    UserMgtConstants.EXECUTE_ACTION);
-            if (!isPermitted) {
-                throw new IdentityOAuthAdminException("User validation failed for owner update in the application: " +
-                        oAuthAppDO.getApplicationName() + " as the user does not have required permissions.");
             }
         } catch (UserStoreException e) {
             throw handleError("User validation failed for owner update in the application: " +
