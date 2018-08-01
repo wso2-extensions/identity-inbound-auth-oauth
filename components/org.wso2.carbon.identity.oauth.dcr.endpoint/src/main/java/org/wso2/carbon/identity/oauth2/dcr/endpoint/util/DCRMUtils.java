@@ -23,7 +23,6 @@ import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.oauth.dcr.DCRMConstants;
 import org.wso2.carbon.identity.oauth.dcr.bean.ApplicationRegistrationRequest;
 import org.wso2.carbon.identity.oauth.dcr.bean.ApplicationUpdateRequest;
-import org.wso2.carbon.identity.oauth.dcr.exception.DCRMClientException;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMException;
 import org.wso2.carbon.identity.oauth.dcr.service.DCRMService;
 import org.wso2.carbon.identity.oauth2.dcr.endpoint.Exceptions.DCRMEndpointException;
@@ -57,6 +56,7 @@ public class DCRMUtils {
         appRegistrationRequest.setTokenType(registrationRequestDTO.getTokenType());
         appRegistrationRequest.setConsumerKey(registrationRequestDTO.getClientId());
         appRegistrationRequest.setConsumerSecret(registrationRequestDTO.getClientSecret());
+        appRegistrationRequest.setSpTemplateName(registrationRequestDTO.getSpTemplateName());
         return appRegistrationRequest;
 
     }

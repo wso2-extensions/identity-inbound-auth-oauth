@@ -282,6 +282,8 @@ definitions:
         type: array
         items:
           type: string
+      ext_param_sp_template:
+        type: string
 #-----------------------------------------------------
 # The Application Update Request Object
 #-----------------------------------------------------
