@@ -301,6 +301,9 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 appDO.setPkceSupportPlain(true);
             }
 
+            AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+            appDO.setAppOwner(authenticatedUser);
+            appDO.getAppOwner().setUserName("testUser");
             appDAO.updateConsumerApplication(appDO);
 
             preparedStatement.setString(1, CONSUMER_KEY);
@@ -345,6 +348,9 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
             oAuthAppDO.setBackChannelLogoutUrl("CHANGED_BACKCHANNEL_LOGOUT");
 
             OAuthAppDAO AppDAO = new OAuthAppDAO();
+            AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+            oAuthAppDO.setAppOwner(authenticatedUser);
+            oAuthAppDO.getAppOwner().setUserName("testUser");
             AppDAO.updateConsumerApplication(oAuthAppDO);
         }
     }

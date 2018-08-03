@@ -62,6 +62,17 @@ public class OAuthAppDO implements Serializable {
     private String idTokenEncryptionAlgorithm;
     private String idTokenEncryptionMethod;
     private String backChannelLogoutUrl;
+    private AuthenticatedUser appOwner;
+
+    public AuthenticatedUser getAppOwner() {
+
+        return appOwner;
+    }
+
+    public void setAppOwner(AuthenticatedUser appOwner) {
+
+        this.appOwner = appOwner;
+    }
 
     public AuthenticatedUser getUser() {
         return user;
