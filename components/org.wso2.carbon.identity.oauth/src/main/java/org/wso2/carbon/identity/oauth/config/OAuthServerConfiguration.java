@@ -132,6 +132,8 @@ public class OAuthServerConfiguration {
     private String oauthIdentityTokenGeneratorClassName;
     private String clientIdValidationRegex = "[a-zA-Z0-9_]{15,30}";
     private String persistAccessTokenAlias;
+    private String retainOldAccessTokens;
+    private String tokenCleanupFeatureEnable;
     private OauthTokenIssuer oauthIdentityTokenGenerator;
     private boolean cacheEnabled = false;
     private boolean isRefreshTokenRenewalEnabled = true;
@@ -367,6 +369,12 @@ public class OAuthServerConfiguration {
         parseHashAlgorithm(oauthElem);
         // read hash mode config
         parseEnableHashMode(oauthElem);
+
+        // Parse retain Access Tokens config.
+        parseRetainOldAccessTokensConfig(oauthElem);
+
+        // Parse old  Access Tokens cleanup enable  config.
+        tokenCleanupFeatureConfig(oauthElem);
     }
 
     private void parseShowDisplayNameInConsentPage(OMElement oauthElem) {
@@ -534,6 +542,13 @@ public class OAuthServerConfiguration {
 
     public boolean usePersistedAccessTokenAlias() {
         return persistAccessTokenAlias != null ? Boolean.TRUE.toString().equalsIgnoreCase(persistAccessTokenAlias) : true;
+    }
+
+    public boolean useRetainOldAccessTokens() {
+        return ((retainOldAccessTokens != null) && Boolean.TRUE.toString().equalsIgnoreCase(retainOldAccessTokens))  ? true : false;
+    }
+    public boolean isTokenCleanupEnabled() {
+        return ((tokenCleanupFeatureEnable != null) && Boolean.TRUE.toString().equalsIgnoreCase(tokenCleanupFeatureEnable))  ? true : false;
     }
 
     public String getOIDCConsentPageUrl() {
@@ -1758,6 +1773,52 @@ public class OAuthServerConfiguration {
         }
     }
 
+    private void parseRetainOldAccessTokensConfig(OMElement oauthCleanupConfigElem) {
+
+        OMElement tokenCleanElem = oauthCleanupConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OAUTH2_TOKEN_CLEAN_ELEM));
+
+        if(tokenCleanElem!=null) {
+            OMElement oldTokenRetainConfigElem = tokenCleanElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.RETAIN_OLD_ACCESS_TOKENS));
+            if (oldTokenRetainConfigElem != null && !"".equals(oldTokenRetainConfigElem.getText().trim())) {
+                retainOldAccessTokens = oldTokenRetainConfigElem.getText().trim();
+                if (log.isDebugEnabled()) {
+                    log.debug("Retain old access token is set to : " + retainOldAccessTokens);
+                }
+            } else {
+                retainOldAccessTokens = "false";
+                if (log.isDebugEnabled()) {
+                    log.debug("Retain old access token  is not defined.Default config will be used");
+                }
+            }
+        }else
+        {
+            tokenCleanupFeatureEnable = "false";
+        }
+    }
+    private void tokenCleanupFeatureConfig(OMElement oauthCleanupConfigElem) {
+
+        OMElement tokenCleanElem = oauthCleanupConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OAUTH2_TOKEN_CLEAN_ELEM));
+
+        if(tokenCleanElem!=null) {
+            OMElement tokenCleanupConfigElem = tokenCleanElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.TOKEN_CLEANUP_FEATURE));
+            if (tokenCleanupConfigElem != null && !"".equals(tokenCleanupConfigElem.getText().trim())) {
+                tokenCleanupFeatureEnable = tokenCleanupConfigElem.getText().trim();
+                if (log.isDebugEnabled()) {
+                    log.debug("Old token cleanup process enable is set to : " + tokenCleanupFeatureEnable);
+                }
+            } else {
+                tokenCleanupFeatureEnable = "false";
+                if (log.isDebugEnabled()) {
+                    log.debug("Old token cleanup process enable  is not defined.Default config will be used");
+                }
+            }
+        }
+        else
+        {
+            tokenCleanupFeatureEnable = "false";
+        }
+    }
+
     private void parseSupportedGrantTypesConfig(OMElement oauthConfigElem) {
 
         OMElement supportedGrantTypesElem =
@@ -2617,6 +2678,12 @@ public class OAuthServerConfiguration {
 
         // Persist token alias
         private static final String IDENTITY_OAUTH_PERSIST_TOKEN_ALIAS = "PersistAccessTokenAlias";
+        //token cleanup config
+        private static final String OAUTH2_TOKEN_CLEAN_ELEM = "TokenCleanup";
+        // old access token cleanup feature
+        private static final String TOKEN_CLEANUP_FEATURE = "EnableTokenCleanup";
+        // Retain old access token
+        private static final String RETAIN_OLD_ACCESS_TOKENS = "RetainOldAccessToken";
 
         // Supported Grant Types
         private static final String SUPPORTED_GRANT_TYPES = "SupportedGrantTypes";
