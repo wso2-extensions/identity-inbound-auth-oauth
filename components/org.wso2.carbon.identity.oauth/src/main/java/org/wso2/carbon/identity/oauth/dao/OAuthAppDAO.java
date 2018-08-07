@@ -524,7 +524,7 @@ public class OAuthAppDAO {
             }
 
             UserRealm realm = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUserRealm();
-            if (realm == null) {
+            if (realm == null || StringUtils.isEmpty(usernameWithDomain)) {
                 return false;
             }
 
