@@ -20,19 +20,31 @@ package org.wso2.carbon.identity.oauth.dao;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 
 import java.io.Serializable;
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlElementWrapper;
+import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlTransient;
 
+@XmlRootElement
+@XmlAccessorType(XmlAccessType.FIELD)
 public class OAuthAppDO implements Serializable {
 
     private static final long serialVersionUID = -6453843721358989519L;
 
+    @XmlTransient
     private int id;
     private String oauthConsumerKey;
     private String oauthConsumerSecret;
     private String applicationName;
     private String callbackUrl;
+    @XmlTransient
     private AuthenticatedUser user;
     private String oauthVersion;
     private String grantTypes;
+    @XmlElementWrapper(name="scopeValidators")
+    @XmlElement(name = "scopeValidator")
     private String[] scopeValidators;
     private boolean pkceSupportPlain;
     private boolean pkceMandatory;
@@ -41,6 +53,8 @@ public class OAuthAppDO implements Serializable {
     private long applicationAccessTokenExpiryTime;
     private long refreshTokenExpiryTime;
     private long idTokenExpiryTime;
+    @XmlElementWrapper(name="audiences")
+    @XmlElement(name = "audience")
     private String[] audiences = new String[0];
     // OIDC related properties.
     private boolean requestObjectSignatureValidationEnabled;
@@ -48,6 +62,17 @@ public class OAuthAppDO implements Serializable {
     private String idTokenEncryptionAlgorithm;
     private String idTokenEncryptionMethod;
     private String backChannelLogoutUrl;
+    private AuthenticatedUser appOwner;
+
+    public AuthenticatedUser getAppOwner() {
+
+        return appOwner;
+    }
+
+    public void setAppOwner(AuthenticatedUser appOwner) {
+
+        this.appOwner = appOwner;
+    }
 
     public AuthenticatedUser getUser() {
         return user;
