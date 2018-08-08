@@ -22,6 +22,7 @@ import org.apache.axis2.AxisFault;
 import org.apache.axis2.client.Options;
 import org.apache.axis2.client.ServiceClient;
 import org.apache.axis2.context.ConfigurationContext;
+import org.apache.commons.lang.ArrayUtils;
 import org.wso2.carbon.identity.oauth.stub.OAuthAdminServiceIdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.stub.OAuthAdminServiceStub;
 import org.wso2.carbon.identity.oauth.stub.dto.OAuthConsumerAppDTO;
@@ -38,7 +39,7 @@ public class OAuthAdminClient {
 
     private static String[] allowedGrantTypes = null;
     private static String[] scopeValidators = null;
-    private String[] supportedTokenTypes = null;
+    private String[] supportedTokenTypes = ArrayUtils.EMPTY_STRING_ARRAY;
     private OAuthAdminServiceStub stub;
 
     /**
@@ -303,11 +304,8 @@ public class OAuthAdminClient {
      * @throws RemoteException exception occured during remote call
      */
     public String[] getSupportedTokenTypes() throws RemoteException {
-        if (supportedTokenTypes == null) {
+        if (stub.getSupportedTokenTypes() != null) {
             supportedTokenTypes = stub.getSupportedTokenTypes();
-            if (supportedTokenTypes == null) {
-                supportedTokenTypes = new String[0];
-            }
         }
         return supportedTokenTypes;
     }
