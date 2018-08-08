@@ -67,16 +67,6 @@ public class DCRMService {
      */
     public Application getApplication(String clientId) throws DCRMException {
 
-        if (StringUtils.isEmpty(clientId)) {
-            String errorMessage = "Invalid client_id";
-            throw DCRMUtils.generateClientException(
-                    DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_INPUT, errorMessage);
-        }
-
-        if (!isUserAuthorized(clientId)) {
-            throw DCRMUtils.generateClientException(
-                    DCRMConstants.ErrorMessages.FORBIDDEN_UNAUTHORIZED_USER, clientId);
-        }
         return buildResponse(getApplicationById(clientId));
     }
 
@@ -101,22 +91,12 @@ public class DCRMService {
         }
 
         try {
-            // Need to check whether logged in user owns the app
-            // oAuthConsumerAppDTOS will contain applications owned by the logged in user.
-            OAuthConsumerAppDTO[] oAuthConsumerAppDTOS = oAuthAdminService.getAllOAuthApplicationData();
-            boolean userAuthorized = false;
-            for (OAuthConsumerAppDTO appDTO : oAuthConsumerAppDTOS) {
-                if (clientName.equals(appDTO.getApplicationName())) {
-                    userAuthorized =true;
-                    break;
-                }
-            }
-            if (!userAuthorized) {
+            OAuthConsumerAppDTO oAuthConsumerAppDTO =
+                    oAuthAdminService.getOAuthApplicationDataByAppName(clientName);
+            if (!isUserAuthorized(oAuthConsumerAppDTO.getOauthConsumerKey())) {
                 throw DCRMUtils.generateClientException(
                         DCRMConstants.ErrorMessages.FORBIDDEN_UNAUTHORIZED_USER, clientName);
             }
-            OAuthConsumerAppDTO oAuthConsumerAppDTO =
-                    oAuthAdminService.getOAuthApplicationDataByAppName(clientName);
             return buildResponse(oAuthConsumerAppDTO);
         } catch (IdentityOAuthAdminException e) {
             throw DCRMUtils.generateServerException(
@@ -207,10 +187,15 @@ public class DCRMService {
             throw DCRMUtils.generateClientException(
                     DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_INPUT, errorMessage);
         }
+
         try {
             OAuthConsumerAppDTO dto = oAuthAdminService.getOAuthApplicationData(clientId);
             if (dto == null || StringUtils.isEmpty(dto.getApplicationName())) {
-                throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.NOT_FOUND_APPLICATION_WITH_ID, clientId);
+                throw DCRMUtils.generateClientException(
+                        DCRMConstants.ErrorMessages.NOT_FOUND_APPLICATION_WITH_ID, clientId);
+            } else if (!isUserAuthorized(clientId)) {
+                throw DCRMUtils.generateClientException(
+                        DCRMConstants.ErrorMessages.FORBIDDEN_UNAUTHORIZED_USER, clientId);
             }
             return dto;
         } catch (IdentityOAuthAdminException e) {

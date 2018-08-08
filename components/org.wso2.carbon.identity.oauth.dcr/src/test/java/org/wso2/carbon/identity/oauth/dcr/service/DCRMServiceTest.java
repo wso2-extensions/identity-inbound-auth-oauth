@@ -123,7 +123,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
         try {
             dcrmService.getApplication(dummyConsumerKey);
         } catch (IdentityException ex) {
-            assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.FORBIDDEN_UNAUTHORIZED_USER.toString());
+            assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.NOT_FOUND_APPLICATION_WITH_ID.toString());
             return;
         }
         fail("Expected exception IdentityException not thrown by getApplication method");
@@ -140,7 +140,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
         try {
             dcrmService.getApplication(dummyConsumerKey);
         } catch (IdentityException ex) {
-            assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.FORBIDDEN_UNAUTHORIZED_USER.toString());
+            assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.FAILED_TO_GET_APPLICATION_BY_ID.toString());
             return;
         }
         fail("Expected exception IdentityException not thrown by getApplication method");
@@ -157,7 +157,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
         try {
             dcrmService.getApplication(dummyConsumerKey);
         } catch (IdentityException ex) {
-            assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.FORBIDDEN_UNAUTHORIZED_USER.toString());
+            assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.NOT_FOUND_APPLICATION_WITH_ID.toString());
             return;
         }
         fail("Expected exception IdentityException not thrown by getApplication method");
@@ -525,6 +525,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
                 .getOAuthApplicationDataByAppName(dummyClientName)).thenReturn(oAuthConsumerApp);
         when(mockOAuthAdminService
                 .getOAuthApplicationData("dummyConsumerKey")).thenReturn(oAuthConsumerApp);
+        when(mockOAuthAdminService.getAllOAuthApplicationData()).thenReturn(new OAuthConsumerAppDTO[]{oAuthConsumerApp});
 
         doThrow(new IdentityApplicationManagementException("ehweh")).when(mockApplicationManagementService)
                 .updateApplication(serviceProvider, dummyTenantDomain, dummyUserName);
@@ -562,6 +563,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
         dcrDataHolder.setApplicationManagementService(mockApplicationManagementService);
         when(mockApplicationManagementService.getServiceProvider(dummyClientName, dummyTenantDomain)).thenReturn
                 (serviceProvider);
+        when(mockOAuthAdminService.getAllOAuthApplicationData()).thenReturn(new OAuthConsumerAppDTO[0]);
 
         doNothing().when(mockApplicationManagementService).updateApplication(serviceProvider, dummyTenantDomain,
                 dummyUserName);
@@ -573,7 +575,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
             startTenantFlow();
             dcrmService.updateApplication(applicationUpdateRequest, dummyClientId);
         } catch (IdentityException ex) {
-            assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.FAILED_TO_UPDATE_APPLICATION.toString());
+            assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.FORBIDDEN_UNAUTHORIZED_USER.toString());
             return;
         } finally {
             PrivilegedCarbonContext.endTenantFlow();
