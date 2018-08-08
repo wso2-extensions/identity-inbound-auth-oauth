@@ -308,7 +308,6 @@ public class OAuthServerConfiguration {
         // read supported grant types
         parseSupportedGrantTypesConfig(oauthElem);
 
-
         // Read <UserConsentEnabledGrantTypes> under <OAuth> tag and populate data.
         parseUserConsentEnabledGrantTypesConfig(oauthElem);
 

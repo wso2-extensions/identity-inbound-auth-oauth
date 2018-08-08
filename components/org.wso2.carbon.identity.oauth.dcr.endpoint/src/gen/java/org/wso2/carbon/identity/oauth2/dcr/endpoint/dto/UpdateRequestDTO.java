@@ -28,7 +28,6 @@ public class UpdateRequestDTO  {
 
   private String tokenType = null;
 
-  
   /**
    **/
   @ApiModelProperty(value = "")

@@ -134,7 +134,6 @@ public class DCRMService {
                 String callbackUrl = validateAndSetCallbackURIs(updateRequest.getRedirectUris(), updateRequest.getGrantTypes());
                 appDTO.setCallbackUrl(callbackUrl);
             }
-
             if (updateRequest.getTokenType() != null) {
                 appDTO.setTokenType(updateRequest.getTokenType());
             }

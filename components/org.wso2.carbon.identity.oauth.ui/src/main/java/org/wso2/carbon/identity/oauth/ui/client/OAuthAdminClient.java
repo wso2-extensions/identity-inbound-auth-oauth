@@ -304,6 +304,7 @@ public class OAuthAdminClient {
      * @throws RemoteException exception occured during remote call
      */
     public String[] getSupportedTokenTypes() throws RemoteException {
+
         if (stub.getSupportedTokenTypes() != null) {
             supportedTokenTypes = stub.getSupportedTokenTypes();
         }
