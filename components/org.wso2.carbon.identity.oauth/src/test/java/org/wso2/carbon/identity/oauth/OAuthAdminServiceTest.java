@@ -30,6 +30,7 @@ import org.wso2.carbon.user.api.UserRealm;
 import org.wso2.carbon.user.api.UserStoreManager;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.service.RealmService;
+import org.wso2.carbon.user.core.tenant.TenantManager;
 import org.wso2.carbon.utils.ConfigurationContextService;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
@@ -45,12 +46,8 @@ import static org.powermock.api.mockito.PowerMockito.when;
 import static org.powermock.api.mockito.PowerMockito.whenNew;
 
 @PowerMockIgnore({"javax.net.*", "javax.security.*", "javax.crypto.*"})
-/*@PrepareForTest({CarbonContext.class, IdentityUtil.class, MultitenantUtils.class, OAuthAppDAO.class,
-                 OAuthAdminService.class, OAuthServerConfiguration.class,
-                 IdentityCoreServiceComponent.class, ConfigurationContextService.class})*/
 @PrepareForTest({OAuthAdminService.class, IdentityCoreServiceComponent.class, ConfigurationContextService.class, OAuthUtil.class,
         OAuthAppDAO.class})
-
 public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
 
     private static final String CONSUMER_KEY = "consumer:key";
@@ -70,10 +67,9 @@ public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
     @Mock
     private ConfigurationContext configurationContext;
     @Mock
-    private ConfigurationContextService configurationContextService;
-
-    @Mock
     private AxisConfiguration axisConfiguration;
+    @Mock
+    private TenantManager tenantManager;
 
     @BeforeMethod
     public void setUp() throws Exception {
@@ -82,7 +78,9 @@ public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
         System.setProperty("carbon.home",
                 System.getProperty("user.dir") + File.separator + "src" + File.separator + "test"
                         + File.separator + "resources");
-
+        IdentityTenantUtil.setRealmService(realmService);
+        when(realmService.getTenantManager()).thenReturn(tenantManager);
+        when(realmService.getBootstrapRealmConfiguration()).thenReturn(realmConfiguration);
     }
 
     private void initConfigsAndRealm() throws Exception {
