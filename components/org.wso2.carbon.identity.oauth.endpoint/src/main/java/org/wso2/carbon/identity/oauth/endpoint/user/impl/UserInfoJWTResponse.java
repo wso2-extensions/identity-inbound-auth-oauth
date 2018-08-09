@@ -119,7 +119,7 @@ public class UserInfoJWTResponse extends AbstractUserInfoResponseBuilder {
             try {
                 tokenIdentifier = tokenIssuer.getAccessTokenHash(accessToken);
             } catch (OAuthSystemException e) {
-                log.error("Error while getting token identifier");
+                log.error("Error while getting token identifier", e);
             }
             accessTokenDO = OAuth2Util.getAccessTokenDOfromTokenIdentifier(tokenIdentifier);
         } catch (IdentityOAuth2Exception e) {
