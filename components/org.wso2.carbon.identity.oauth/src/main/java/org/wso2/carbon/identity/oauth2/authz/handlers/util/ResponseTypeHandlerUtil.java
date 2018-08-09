@@ -209,6 +209,7 @@ public class ResponseTypeHandlerUtil {
         // set the validity period. this is needed by downstream handlers.
         // if this is set before - then this will override it by the calculated new value.
         oauthAuthzMsgCtx.setValidityPeriod(validityPeriod);
+        oauthAuthzMsgCtx.setAuthorizationCodeValidityPeriod(validityPeriod);
 
         // set code issued time.this is needed by downstream handlers.
         oauthAuthzMsgCtx.setCodeIssuedTime(timestamp.getTime());
@@ -658,7 +659,7 @@ public class ResponseTypeHandlerUtil {
 
         long validityPeriodInMillis;
 
-        long callbackValidityPeriod = oauthAuthzMsgCtx.getValidityPeriod();
+        long callbackValidityPeriod = oauthAuthzMsgCtx.getAccessTokenValidityPeriod();
         if (callbackValidityPeriod != OAuthConstants.UNASSIGNED_VALIDITY_PERIOD && callbackValidityPeriod > 0) {
             // If a valid validity period is set through the callback, use it.
             validityPeriodInMillis = callbackValidityPeriod * SECOND_TO_MILLISECONDS_FACTOR;

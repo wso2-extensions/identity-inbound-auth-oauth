@@ -74,6 +74,14 @@ public class OAuthCallback implements Callback {
      * validity period for
      */
     private long validityPeriod = OAuthConstants.UNASSIGNED_VALIDITY_PERIOD;
+    /**
+     * validity period for OAuthorization Code
+     */
+    private long authorizationCodeValidityPeriod = OAuthConstants.UNASSIGNED_VALIDITY_PERIOD;
+    /**
+     * validity period for Access Token
+     */
+    private long accessTokenValidityPeriod = OAuthConstants.UNASSIGNED_VALIDITY_PERIOD;
 
     /**
      * Creates an instance of the OAuthCallback
@@ -249,6 +257,37 @@ public class OAuthCallback implements Callback {
      */
     public void setValidityPeriod(long validityPeriod) {
         this.validityPeriod = validityPeriod;
+    }
+
+    /**
+     * Get the validity period
+     *
+     * @return validity period of the Authorization Code when applicable
+     */
+    public long getAuthorizationCodeValidityPeriod() {
+        return authorizationCodeValidityPeriod;
+    }
+    /**
+     * Set Authorization Code validity period
+     *
+     */
+    public void setAuthorizationCodeValidityPeriod(long oauthoizationCodeValidityPeriod) {
+        this.authorizationCodeValidityPeriod = oauthoizationCodeValidityPeriod;
+    }
+    /**
+     * Get the validity period
+     *
+     * @return validity period of the Access Token when applicable
+     */
+    public long getAccessTokenValidityPeriod() {
+        return accessTokenValidityPeriod;
+    }
+    /**
+     * Set AccessToken validity period
+     *
+     */
+    public void setAccessTokenValidityPeriod(long accessTokenValidityPeriod) {
+        this.accessTokenValidityPeriod = accessTokenValidityPeriod;
     }
 
     /**

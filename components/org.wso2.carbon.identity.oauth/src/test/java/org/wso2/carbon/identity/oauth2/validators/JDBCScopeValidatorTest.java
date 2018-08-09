@@ -22,11 +22,15 @@ import org.apache.commons.lang.StringUtils;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
+import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithH2Database;
+import org.wso2.carbon.identity.common.testng.WithRealmService;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.ResourceScopeCacheEntry;
 import org.wso2.carbon.identity.testutil.IdentityBaseTest;
@@ -38,12 +42,14 @@ import static org.testng.Assert.assertEquals;
  */
 @WithCarbonHome
 @WithH2Database(files = {"dbScripts/scope.sql"})
+@WithRealmService(tenantId = MultitenantConstants.SUPER_TENANT_ID)
 public class JDBCScopeValidatorTest extends IdentityBaseTest {
 
     private JDBCScopeValidator validator;
 
     @BeforeMethod
-    public void setUp() {
+    public void setUp()
+    {
         validator = new JDBCScopeValidator();
     }
 
@@ -61,7 +67,7 @@ public class JDBCScopeValidatorTest extends IdentityBaseTest {
                 {new String[0], "scope3", "testResource", true},
                 {scopeArray1, null, "testResource", true},
                 {scopeArray1, "scope4", "testResource", false},
-                {scopeArray1, "scope1", "testResource", true}
+                {scopeArray1, "scope1", "testResource", false}
         };
     }
 
@@ -70,9 +76,12 @@ public class JDBCScopeValidatorTest extends IdentityBaseTest {
             Exception {
         AccessTokenDO accessTokenDO = new AccessTokenDO();
         accessTokenDO.setScope(scopes);
-        accessTokenDO.setAuthzUser(new AuthenticatedUser());
+        AuthenticatedUser user1 = new AuthenticatedUser();
+        OAuthComponentServiceHolder.getInstance().setRealmService(IdentityTenantUtil.getRealmService());
+        user1.setUserName("user1@carbon.super");
+        accessTokenDO.setAuthzUser(user1);
         ResourceScopeCacheEntry result = new ResourceScopeCacheEntry(scope);
-        result.setTenantId(1);
+        result.setTenantId(-1234);
         OAuthCache oAuthCache = OAuthCache.getInstance();
         OAuthCacheKey oAuthCacheKey;
         if (StringUtils.isNotEmpty(resource)) {

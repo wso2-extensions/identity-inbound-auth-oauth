@@ -27,7 +27,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
     <artifactId>identity-inbound-auth-oauth</artifactId>
-    <version>6.0.28-SNAPSHOT</version>
+    <version>6.0.31-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>WSO2 Carbon OAuth module</name>
     <url>http://wso2.org</url>
@@ -719,9 +719,10 @@
         <carbon.kernel.registry.imp.pkg.version.range>[1.0.1, 2.0.0)</carbon.kernel.registry.imp.pkg.version.range>
 
         <!-- Carbon Identity Framework version -->
-        <carbon.identity.framework.version>5.12.35</carbon.identity.framework.version>
+        <carbon.identity.framework.version>5.12.96</carbon.identity.framework.version>
         <carbon.identity.framework.imp.pkg.version.range>[5.0.0, 6.0.0)
         </carbon.identity.framework.imp.pkg.version.range>
+        <claim.metadata.version.range>[5.0.0,7.0.0)</claim.metadata.version.range>
 
         <!--SAML component version-->
         <carbon.identity.sso.saml.version>5.3.0</carbon.identity.sso.saml.version>
@@ -815,10 +816,10 @@
         <powermock.version>1.6.6</powermock.version>
         <maven.surefire.plugin.version>2.18.1</maven.surefire.plugin.version>
         <javaee.web.api.version>7.0</javaee.web.api.version>
-        <h2database.version>1.0.60</h2database.version>
+        <h2database.version>1.3.175</h2database.version>
         <commons-codec.test.version>1.4</commons-codec.test.version>
-        <org.wso2.carbon.identity.testutil.version>5.10.0</org.wso2.carbon.identity.testutil.version>
-        <claim.metadata.version.range>[5.0.0,7.0.0)</claim.metadata.version.range>
+        <org.wso2.carbon.identity.testutil.version>5.12.49</org.wso2.carbon.identity.testutil.version>
+        
     </properties>
 
 </project>

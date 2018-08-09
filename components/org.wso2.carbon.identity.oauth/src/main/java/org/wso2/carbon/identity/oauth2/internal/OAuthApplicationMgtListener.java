@@ -123,9 +123,15 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
     public boolean doPreDeleteApplication(String applicationName, String tenantDomain, String userName) throws IdentityApplicationManagementException {
         ApplicationManagementService applicationMgtService = OAuth2ServiceComponentHolder.getApplicationMgtService();
         ServiceProvider serviceProvider = applicationMgtService.getApplicationExcludingFileBasedSPs(applicationName, tenantDomain);
-        removeEntriesFromCache(serviceProvider, tenantDomain, userName);
-        if (OAuth2ServiceComponentHolder.isAudienceEnabled()) {
-            removeOauthConsumerAppProperties(serviceProvider, tenantDomain);
+        if (serviceProvider != null) {
+            removeEntriesFromCache(serviceProvider, tenantDomain, userName);
+            if (OAuth2ServiceComponentHolder.isAudienceEnabled()) {
+                removeOauthConsumerAppProperties(serviceProvider, tenantDomain);
+            }
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug("Service Provider not found with name: " + applicationName);
+            }
         }
         return true;
     }

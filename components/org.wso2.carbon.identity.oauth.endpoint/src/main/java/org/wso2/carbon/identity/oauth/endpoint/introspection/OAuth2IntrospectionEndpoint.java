@@ -54,8 +54,8 @@ public class OAuth2IntrospectionEndpoint {
      */
     @POST
     public Response introspect(@FormParam("token") String token, @FormParam("token_type_hint") String tokenTypeHint,
-            @FormParam("required_claims") String requiredClaims) {
-
+                               @FormParam("required_claims") String requiredClaims) {
+      
         OAuth2TokenValidationRequestDTO introspectionRequest;
         OAuth2IntrospectionResponseDTO introspectionResponse;
 
@@ -71,12 +71,20 @@ public class OAuth2IntrospectionEndpoint {
             return Response.status(Response.Status.BAD_REQUEST).entity("{\"error\": \"Invalid input\"}").build();
         }
 
+        String[] claimsUris;
+        if (StringUtils.isNotEmpty(requiredClaims)) {
+            claimsUris = requiredClaims.split(",");
+        } else {
+            claimsUris = new String[0];
+        }
+
         // validate the access token against the OAuth2TokenValidationService OSGi service.
         introspectionRequest = new OAuth2TokenValidationRequestDTO();
         OAuth2TokenValidationRequestDTO.OAuth2AccessToken accessToken = introspectionRequest.new OAuth2AccessToken();
         accessToken.setIdentifier(token);
         accessToken.setTokenType(tokenTypeHint);
         introspectionRequest.setAccessToken(accessToken);
+        introspectionRequest.setRequiredClaimURIs(claimsUris);
 
         OAuth2TokenValidationService tokenService = (OAuth2TokenValidationService) PrivilegedCarbonContext
                 .getThreadLocalCarbonContext().getOSGiService(OAuth2TokenValidationService.class);
@@ -106,6 +114,11 @@ public class OAuth2IntrospectionEndpoint {
                     .setSubject(introspectionResponse.getSub())
                     .setTokenType(JWT_TOKEN_TYPE)
                     .setIssuer(introspectionResponse.getIss());
+        }
+
+        //provide jwt in the response only if claims are requested
+        if (introspectionResponse.getUserContext() != null && requiredClaims != null) {
+            respBuilder.setTokenString(introspectionResponse.getUserContext());
         }
 
         try {

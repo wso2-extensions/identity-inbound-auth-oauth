@@ -31,11 +31,13 @@ import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.OAuthAdminService;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dcr.DCRMConstants;
 import org.wso2.carbon.identity.oauth.dcr.bean.Application;
 import org.wso2.carbon.identity.oauth.dcr.bean.ApplicationRegistrationRequest;
 import org.wso2.carbon.identity.oauth.dcr.bean.ApplicationUpdateRequest;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMException;
+import org.wso2.carbon.identity.oauth.dcr.exception.DCRMServerException;
 import org.wso2.carbon.identity.oauth.dcr.internal.DCRDataHolder;
 import org.wso2.carbon.identity.oauth.dcr.util.DCRConstants;
 import org.wso2.carbon.identity.oauth.dcr.util.DCRMUtils;
@@ -44,6 +46,7 @@ import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 
 
 /**
@@ -56,6 +59,7 @@ public class DCRMService {
     private static final String AUTH_TYPE_OAUTH_2 = "oauth2";
     private static final String OAUTH_VERSION = "OAuth-2.0";
     private static final String GRANT_TYPE_SEPARATOR = " ";
+    private static Pattern clientIdRegexPattern = null;
 
     /**
      * Get OAuth2/OIDC application information with client_id
@@ -64,7 +68,43 @@ public class DCRMService {
      * @throws DCRMException
      */
     public Application getApplication(String clientId) throws DCRMException {
+
         return buildResponse(getApplicationById(clientId));
+    }
+
+    /**
+     * Get OAuth2/OIDC application information with client name
+     *
+     * @param clientName
+     * @return Application
+     * @throws DCRMException
+     */
+    public Application getApplicationByName(String clientName) throws DCRMException {
+
+        if (StringUtils.isEmpty(clientName)) {
+            throw DCRMUtils.generateClientException(
+                    DCRMConstants.ErrorMessages.BAD_REQUEST_INSUFFICIENT_DATA, null);
+        }
+
+        String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        if (!isServiceProviderExist(clientName, tenantDomain)) {
+            throw DCRMUtils.generateClientException(
+                    DCRMConstants.ErrorMessages.NOT_FOUND_APPLICATION_WITH_NAME, clientName);
+        }
+
+        try {
+            OAuthConsumerAppDTO oAuthConsumerAppDTO =
+                    oAuthAdminService.getOAuthApplicationDataByAppName(clientName);
+            if (!isUserAuthorized(oAuthConsumerAppDTO.getOauthConsumerKey())) {
+                throw DCRMUtils.generateClientException(
+                        DCRMConstants.ErrorMessages.FORBIDDEN_UNAUTHORIZED_USER, clientName);
+            }
+            return buildResponse(oAuthConsumerAppDTO);
+        } catch (IdentityOAuthAdminException e) {
+            throw DCRMUtils.generateServerException(
+                    DCRMConstants.ErrorMessages.FAILED_TO_GET_APPLICATION, clientName, e);
+        }
+
     }
 
     /**
@@ -109,8 +149,8 @@ public class DCRMService {
         if (StringUtils.isNotEmpty(clientName)) {
             // Regex validation of the application name.
             if (!DCRMUtils.isRegexValidated(clientName)) {
-                throw new DCRMException("The Application name: " + clientName + " is not valid! It is not adhering to" +
-                        " the regex: " + DCRConstants.APP_NAME_VALIDATING_REGEX);
+                throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_SP_NAME,
+                        DCRConstants.APP_NAME_VALIDATING_REGEX, null);
             }
             sp.setApplicationName(clientName);
             updateServiceProvider(sp, tenantDomain, applicationOwner);
@@ -121,8 +161,8 @@ public class DCRMService {
             if (StringUtils.isNotEmpty(clientName)) {
                 // Regex validation of the application name.
                 if (!DCRMUtils.isRegexValidated(clientName)) {
-                    throw new DCRMException("The Application name: " + clientName + " is not valid! It is not adhering to" +
-                            " the regex: " + DCRConstants.APP_NAME_VALIDATING_REGEX);
+                    throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_SP_NAME,
+                            DCRConstants.APP_NAME_VALIDATING_REGEX, null);
                 }
                 appDTO.setApplicationName(clientName);
             }
@@ -152,10 +192,15 @@ public class DCRMService {
             throw DCRMUtils.generateClientException(
                     DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_INPUT, errorMessage);
         }
+
         try {
             OAuthConsumerAppDTO dto = oAuthAdminService.getOAuthApplicationData(clientId);
             if (dto == null || StringUtils.isEmpty(dto.getApplicationName())) {
-                throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.NOT_FOUND_APPLICATION_WITH_ID, clientId);
+                throw DCRMUtils.generateClientException(
+                        DCRMConstants.ErrorMessages.NOT_FOUND_APPLICATION_WITH_ID, clientId);
+            } else if (!isUserAuthorized(clientId)) {
+                throw DCRMUtils.generateClientException(
+                        DCRMConstants.ErrorMessages.FORBIDDEN_UNAUTHORIZED_USER, clientId);
             }
             return dto;
         } catch (IdentityOAuthAdminException e) {
@@ -176,13 +221,19 @@ public class DCRMService {
 
         // Regex validation of the application name.
         if (!DCRMUtils.isRegexValidated(spName)) {
-            throw new DCRMException("The Application name: " + spName + " is not valid! It is not adhering to" +
-                    " the regex: " + DCRConstants.APP_NAME_VALIDATING_REGEX);
+            throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_SP_NAME,
+                    DCRConstants.APP_NAME_VALIDATING_REGEX, null);
         }
 
         // Check whether a service provider already exists for the name we are trying to register the OAuth app with.
         if (isServiceProviderExist(spName, tenantDomain)) {
             throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.CONFLICT_EXISTING_APPLICATION, spName);
+        }
+
+        if (StringUtils.isNotEmpty(registrationRequest.getConsumerKey()) && isClientIdExist(
+                registrationRequest.getConsumerKey())) {
+            throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.CONFLICT_EXISTING_CLIENT_ID,
+                    registrationRequest.getConsumerKey());
         }
 
         // Create a service provider.
@@ -262,6 +313,20 @@ public class DCRMService {
         oAuthConsumerApp.setGrantTypes(grantType);
         oAuthConsumerApp.setOAuthVersion(OAUTH_VERSION);
         oAuthConsumerApp.setTokenType(registrationRequest.getTokenType());
+
+        if (StringUtils.isNotEmpty(registrationRequest.getConsumerKey())) {
+            String clientIdRegex = OAuthServerConfiguration.getInstance().getClientIdValidationRegex();
+            if (clientIdRegexPattern.matcher(registrationRequest.getConsumerKey()).matches()) {
+                oAuthConsumerApp.setOauthConsumerKey(registrationRequest.getConsumerKey());
+            } else {
+                throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.BAD_REQUEST_CLIENT_ID_VIOLATES_PATTERN,
+                        clientIdRegex);
+            }
+        }
+
+        if (StringUtils.isNotEmpty(registrationRequest.getConsumerSecret())) {
+            oAuthConsumerApp.setOauthConsumerSecret(registrationRequest.getConsumerSecret());
+        }
         if (log.isDebugEnabled()) {
             log.debug("Creating OAuth Application: " + spName + " in tenant: " + tenantDomain);
         }
@@ -329,10 +394,22 @@ public class DCRMService {
         try {
             serviceProvider = getServiceProvider(serviceProviderName, tenantDomain);
         } catch (DCRMException e) {
-            log.error("Error while retriving service provider: " + serviceProviderName + " in tenant: " + tenantDomain);
+            log.error("Error while retrieving service provider: " + serviceProviderName + " in tenant: " + tenantDomain);
         }
 
         return serviceProvider != null;
+    }
+
+    private boolean isClientIdExist(String clientId) {
+
+        OAuthConsumerAppDTO app = null;
+        try {
+            app = getApplicationById(clientId);
+        } catch (DCRMException e) {
+            log.error("Error while retrieving oauth application with client id: " + clientId);
+        }
+
+        return app != null;
     }
 
     private ServiceProvider getServiceProvider(String applicationName, String tenantDomain) throws DCRMException {
@@ -428,5 +505,36 @@ public class DCRMService {
             regexPattern.append(")");
         }
         return regexPattern.toString();
+    }
+
+    private boolean isUserAuthorized(String clientId) throws DCRMServerException {
+
+        OAuthConsumerAppDTO[] oAuthConsumerAppDTOS;
+        try {
+            // Get applications owned by the user
+            oAuthConsumerAppDTOS = oAuthAdminService.getAllOAuthApplicationData();
+            for (OAuthConsumerAppDTO appDTO : oAuthConsumerAppDTOS) {
+                if (clientId.equals(appDTO.getOauthConsumerKey())) {
+                    return true;
+                }
+            }
+        } catch (IdentityOAuthAdminException e) {
+            throw DCRMUtils.generateServerException(
+                    DCRMConstants.ErrorMessages.FAILED_TO_GET_APPLICATION_BY_ID, clientId, e);
+        }
+        return false;
+    }
+
+    /**
+     * Validate client id according to the regex
+     *
+     * @return validated or not
+     */
+    private static boolean clientIdMatchesRegex(String clientId, String clientIdValidatorRegex) {
+
+        if (clientIdRegexPattern == null) {
+            clientIdRegexPattern = Pattern.compile(clientIdValidatorRegex);
+        }
+        return clientIdRegexPattern.matcher(clientId).matches();
     }
 }

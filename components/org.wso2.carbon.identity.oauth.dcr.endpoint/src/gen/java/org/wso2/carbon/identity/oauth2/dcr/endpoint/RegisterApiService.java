@@ -20,5 +20,6 @@ public abstract class RegisterApiService {
     public abstract Response getApplication(String clientId);
     public abstract Response registerApplication(RegistrationRequestDTO registrationRequest);
     public abstract Response updateApplication(UpdateRequestDTO updateRequest,String clientId);
+    public abstract Response getApplicationByName(String clientName);
 }
 

@@ -42,6 +42,10 @@ public final class IntrospectionResponse {
     public static final String TOKEN_TYPE = "token_type";
 
     // OPTIONAL
+    //JWT token String if available
+    public static final String TOKEN_STRING = "token_string";
+
+    // OPTIONAL
     // time-stamp to indicate when this token is not to be used before
     public static final String NBF = "nbf";
 

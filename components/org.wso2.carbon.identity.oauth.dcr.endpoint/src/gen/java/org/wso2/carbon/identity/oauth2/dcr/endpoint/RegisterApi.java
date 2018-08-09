@@ -97,5 +97,21 @@ public class RegisterApi  {
     {
     return delegate.updateApplication(updateRequest,clientId);
     }
+    @GET
+
+    @Consumes({ "application/json" })
+    @Produces({ "application/json" })
+    @io.swagger.annotations.ApiOperation(value = "Get OAuth2 application information\n", notes = "This API is used to get/retrieve an OAuth2 application by client_name.\n", response = ApplicationDTO.class)
+    @io.swagger.annotations.ApiResponses(value = {
+            @io.swagger.annotations.ApiResponse(code = 200, message = "Successfully Retrieved"),
+
+            @io.swagger.annotations.ApiResponse(code = 401, message = "Unauthorized"),
+
+            @io.swagger.annotations.ApiResponse(code = 500, message = "Server Error") })
+
+    public Response getApplicationWithName(@ApiParam(value = "Client name provided during registration.",required=true ) @QueryParam("client_name") String clientName)
+    {
+     return delegate.getApplicationByName(clientName);
+    }
 }
 

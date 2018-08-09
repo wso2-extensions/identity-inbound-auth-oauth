@@ -395,11 +395,15 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         String issuer = OAuth2Util.getIDTokenIssuer();
         long curTimeInMillis = Calendar.getInstance().getTimeInMillis();
 
+        String sub = getAuthenticatedSubjectIdentifier(authAuthzReqMessageContext, tokenReqMessageContext);
+        if (StringUtils.isEmpty(sub)) {
+            sub = getAuthenticatedUser(authAuthzReqMessageContext, tokenReqMessageContext).toFullQualifiedUsername();
+        }
+
         // Set the default claims.
         JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
         jwtClaimsSetBuilder.issuer(issuer);
-        jwtClaimsSetBuilder
-                .subject(getAuthenticatedSubjectIdentifier(authAuthzReqMessageContext, tokenReqMessageContext));
+        jwtClaimsSetBuilder.subject(sub);
         jwtClaimsSetBuilder.claim(AUTHORIZATION_PARTY, consumerKey);
         jwtClaimsSetBuilder.issueTime(new Date(curTimeInMillis));
         jwtClaimsSetBuilder.jwtID(UUID.randomUUID().toString());
@@ -437,6 +441,21 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     private String getAuthenticatedSubjectIdentifier(OAuthAuthzReqMessageContext authAuthzReqMessageContext,
             OAuthTokenReqMessageContext tokenReqMessageContext) throws IdentityOAuth2Exception {
 
+        AuthenticatedUser authenticatedUser = getAuthenticatedUser(authAuthzReqMessageContext, tokenReqMessageContext);
+        return authenticatedUser.getAuthenticatedSubjectIdentifier();
+    }
+
+    /**
+     * Get authentication request object from message context
+     *
+     * @param authAuthzReqMessageContext
+     * @param tokenReqMessageContext
+     *
+     * @return AuthenticatedUser
+     */
+    private AuthenticatedUser getAuthenticatedUser(OAuthAuthzReqMessageContext authAuthzReqMessageContext,
+                                                   OAuthTokenReqMessageContext tokenReqMessageContext)
+            throws IdentityOAuth2Exception {
         AuthenticatedUser authenticatedUser;
         if (authAuthzReqMessageContext != null) {
             authenticatedUser = authAuthzReqMessageContext.getAuthorizationReqDTO().getUser();
@@ -447,7 +466,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         if (authenticatedUser == null) {
             throw new IdentityOAuth2Exception("Authenticated user is null for the request.");
         }
-        return authenticatedUser.getAuthenticatedSubjectIdentifier();
+        return authenticatedUser;
     }
 
     /**

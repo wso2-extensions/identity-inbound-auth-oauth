@@ -30,6 +30,8 @@ public class ApplicationRegistrationRequest implements Serializable {
     private String clientName = null;
     private List<String> grantTypes = new ArrayList<String>();
     private String tokenType = null;
+    private String consumerKey = null;
+    private String consumerSecret = null;
 
     public List<String> getRedirectUris() {
         return redirectUris;
@@ -55,11 +57,27 @@ public class ApplicationRegistrationRequest implements Serializable {
         this.grantTypes = grantTypes;
     }
 
+
     public String getTokenType() {
         return tokenType;
     }
 
     public void setTokenType(String tokenType) {
         this.tokenType = tokenType;
+
+    public String getConsumerKey() {
+        return consumerKey;
+    }
+
+    public void setConsumerKey(String consumerKey) {
+        this.consumerKey = consumerKey;
+    }
+
+    public String getConsumerSecret() {
+        return consumerSecret;
+    }
+
+    public void setConsumerSecret(String consumerSecret) {
+        this.consumerSecret = consumerSecret;
     }
 }
