@@ -66,7 +66,7 @@ import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENA
 @WithCarbonHome
 @WithKeyStore
 @WithAxisConfiguration
-@WithH2Database(jndiName = "jdbc/WSO2CarbonDB", files = {"dbscripts/identity_req_obj.sql"}, dbName = "testdb2")
+@WithH2Database(jndiName = "jdbc/WSO2CarbonDB", files = {"dbScripts/identity_req_obj.sql"}, dbName = "testdb2")
 @PrepareForTest({RequestObjectValidatorImpl.class, IdentityUtil.class, IdentityTenantUtil.class,
         OAuthServerConfiguration.class, OAuth2Util.class})
 @PowerMockIgnore({"javax.crypto.*"})

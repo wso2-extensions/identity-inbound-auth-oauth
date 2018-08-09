@@ -43,19 +43,15 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.test.common.testng.utils.MockAuthenticatedUser;
-import org.wso2.carbon.identity.test.common.testng.utils.WhiteBox;
+import org.wso2.carbon.identity.testutil.Whitebox;
 
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertNotNull;
-import static org.testng.Assert.assertTrue;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenStates.TOKEN_STATE_EXPIRED;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenStates.TOKEN_STATE_INACTIVE;
+import static org.testng.Assert.*;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenStates.*;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.UNASSIGNED_VALIDITY_PERIOD;
 
 /**
@@ -85,7 +81,7 @@ public class RefreshGrantHandlerTest {
     @BeforeMethod
     protected void setUpMethod() throws Exception {
         ApplicationManagementServiceComponent applicationManagementServiceComponent = new ApplicationManagementServiceComponent();
-        WhiteBox.invokeMethod(applicationManagementServiceComponent, "buildFileBasedSPList", null);
+        Whitebox.invokeMethod(applicationManagementServiceComponent, "buildFileBasedSPList", null);
     }
 
     @DataProvider(name = "GetValidateGrantData")

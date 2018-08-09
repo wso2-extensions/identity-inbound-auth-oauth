@@ -210,7 +210,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
 
     private final Log log = LogFactory.getLog(DefaultOIDCClaimsCallbackHandlerTest.class);
     public static final String DB_NAME = "jdbc/WSO2CarbonDB";
-    public static final String H2_SCRIPT_NAME = "scope_claim.sql";
+    public static final String H2_SCRIPT_NAME = "dbScripts/scope_claim.sql";
     Connection connection = null;
 
     @BeforeClass
@@ -251,8 +251,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
     public static String getFilePath(String fileName) {
 
         if (StringUtils.isNotBlank(fileName)) {
-            return Paths.get(System.getProperty("user.dir"), "src", "test", "resources", "dbScripts",
-                    fileName).toString();
+            return DefaultOIDCClaimsCallbackHandlerTest.class.getClassLoader().getResource(fileName).getPath();
         }
         throw new IllegalArgumentException("DB Script file name cannot be empty.");
     }
@@ -397,7 +396,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
         JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx);
         assertNotNull(jwtClaimsSet, "JWT Custom claim handling failed.");
         assertFalse(jwtClaimsSet.getClaims().isEmpty(), "JWT custom claim handling failed");
-        Assert.assertEquals(jwtClaimsSet.getClaims().size(), userAttributes.size(),
+        Assert.assertEquals(jwtClaimsSet.getClaims().size(), 3,
                 "Expected custom claims are not set.");
         Assert.assertEquals(jwtClaimsSet.getClaim(EMAIL), TestConstants.CLAIM_VALUE2,
                 "OIDC claim " + EMAIL + " is not added with the JWT token");
