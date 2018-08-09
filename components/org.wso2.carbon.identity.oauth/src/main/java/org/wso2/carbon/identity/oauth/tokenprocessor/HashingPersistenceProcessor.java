@@ -36,6 +36,8 @@ import java.security.NoSuchAlgorithmException;
 public class HashingPersistenceProcessor implements TokenPersistenceProcessor {
 
     protected Log log = LogFactory.getLog(HashingPersistenceProcessor.class);
+    public static final String ALGORITHM = "algorithm";
+    public static final String HASH = "hash";
 
     @Override
     public String getProcessedClientId(String clientId) throws IdentityOAuth2Exception {
@@ -123,9 +125,8 @@ public class HashingPersistenceProcessor implements TokenPersistenceProcessor {
                     "Error while retrieving MessageDigest for the provided hash algorithm: " + hashAlgorithm, e);
         }
         JSONObject object = new JSONObject();
-        object.put("algorithm", hashAlgorithm);
-        object.put("hash", bytesToHex(hash));
-
+        object.put(ALGORITHM, hashAlgorithm);
+        object.put(HASH, bytesToHex(hash));
         return object.toString();
     }
 

@@ -427,7 +427,7 @@ public class OAuthAdminService extends AbstractAdmin {
                 }
                 throw new IdentityOAuthAdminException(errorMessage);
             }
-            if (!consumerAppDTO.getOauthConsumerSecret().equals(oauthappdo.getOauthConsumerSecret())) {
+            if (!StringUtils.equals(consumerAppDTO.getOauthConsumerSecret(), oauthappdo.getOauthConsumerSecret())) {
                 if (log.isDebugEnabled()) {
                     log.debug("Invalid oauthConsumerSecret is provided for updating the OAuth" +
                             " application with ConsumerKey: " + consumerAppDTO.getOauthConsumerKey());

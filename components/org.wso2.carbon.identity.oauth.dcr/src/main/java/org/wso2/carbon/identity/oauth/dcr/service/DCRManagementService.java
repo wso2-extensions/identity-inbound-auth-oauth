@@ -217,11 +217,9 @@ public class DCRManagementService {
 
             if (log.isDebugEnabled()) {
                 log.debug("Created OAuth App " + applicationName);
-            }
-
-            if (log.isDebugEnabled()) {
                 log.debug("Retrieved Details for OAuth App " + createdApp.getApplicationName());
             }
+
             // Set the OAuthApp in InboundAuthenticationConfig
             InboundAuthenticationConfig inboundAuthenticationConfig = new InboundAuthenticationConfig();
             List<InboundAuthenticationRequestConfig> inboundAuthenticationRequestConfigs = new ArrayList<>();
