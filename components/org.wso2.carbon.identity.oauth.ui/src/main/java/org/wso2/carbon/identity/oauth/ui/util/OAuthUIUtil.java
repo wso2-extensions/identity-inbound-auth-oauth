@@ -36,6 +36,7 @@ public class OAuthUIUtil {
 
     private static final Log log = LogFactory.getLog(OAuthUIUtil.class);
     private static final String SCOPE_VALIDATOR_PREFIX = "scope_validator_";
+    private static final String TOKEN_TYPE_PREFIX = "token_type_";
 
     private OAuthUIUtil() {
 
@@ -123,5 +124,9 @@ public class OAuthUIUtil {
      */
     public static String getScopeValidatorId(String name) {
         return SCOPE_VALIDATOR_PREFIX + name.replaceAll(" ", "_");
+    }
+
+    public static String getTokenTypeId(String type) {
+        return TOKEN_TYPE_PREFIX + type.replaceAll(" ", "_");
     }
 }

@@ -82,6 +82,8 @@ public class OAuth2TokenValidationRequestDTO {
 
         private String identifier;
 
+        private String issuer;
+
         public String getTokenType() {
             return tokenType;
         }
@@ -98,5 +100,12 @@ public class OAuth2TokenValidationRequestDTO {
             this.identifier = identifier;
         }
 
+        public String getIssuer() {
+            return issuer;
+        }
+
+        public void setIssuer(String issuer) {
+            this.issuer = issuer;
+        }
     }
 }

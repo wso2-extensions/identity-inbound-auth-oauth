@@ -51,4 +51,18 @@ public interface OauthTokenIssuer {
     default boolean renewAccessTokenPerRequest() {
         return false;
     }
+
+    /**
+     * Set true if the access token alias is used to stored in the database instead of access token.
+     * @param persistAccessTokenAlias access token alias
+     */
+    void setPersistAccessTokenAlias(boolean persistAccessTokenAlias);
+
+    /**
+     * Gets property value whether access token alias is stored in the database instead of access token
+     * @return true if access token alias is stored in the database instead of access token
+     */
+    default boolean usePersistedAccessTokenAlias() {
+        return true;
+    }
 }

@@ -45,15 +45,17 @@ public class OAuth2IntrospectionEndpoint {
     private final static String JWT_TOKEN_TYPE = "JWT";
 
     /**
-     * @param token             access token or refresh token
-     * @param tokenTypeHint     hint for the type of the token submitted for introspection
-     * @param requiredClaims   comma separated list of claims to be returned in JWT
+     * Token introspection endpoint.
+     *
+     * @param token          access token or refresh token
+     * @param tokenTypeHint  hint for the type of the token submitted for introspection
+     * @param requiredClaims comma separated list of claims to be returned in JWT
      * @return
      */
     @POST
     public Response introspect(@FormParam("token") String token, @FormParam("token_type_hint") String tokenTypeHint,
                                @FormParam("required_claims") String requiredClaims) {
-
+      
         OAuth2TokenValidationRequestDTO introspectionRequest;
         OAuth2IntrospectionResponseDTO introspectionResponse;
 

@@ -50,6 +50,7 @@
     OAuthConsumerAppDTO app = null;
     String forwardTo = null;
     String BUNDLE = "org.wso2.carbon.identity.oauth.ui.i18n.Resources";
+    String DEFAULT_TOKEN_TYPE = "default";
     ResourceBundle resourceBundle = ResourceBundle.getBundle(BUNDLE, request.getLocale());
     String id = null;
     String secret = null;
@@ -65,6 +66,7 @@
     String audienceTableStyle = "display:none";
     List<String> allowedScopeValidators = new ArrayList<String>();
     List<String> scopeValidators = new ArrayList<String>();
+    List<String> tokenTypes = new ArrayList<String>();
     String[] supportedIdTokenEncryptionAlgorithms = null;
     String[] supportedIdTokenEncryptionMethods = null;
 
@@ -131,6 +133,7 @@
             allowedScopeValidators = new ArrayList<String>(Arrays.asList(client.getAllowedScopeValidators()));
             // Sorting the list to display the scope validators in alphabetical order
             Collections.sort(allowedScopeValidators);
+            tokenTypes = new ArrayList<String>(Arrays.asList(client.getSupportedTokenTypes()));
             if (OAuthConstants.OAuthVersions.VERSION_2.equals(app.getOAuthVersion())) {
                 id = resourceBundle.getString("consumerkey.oauth20");
                 secret = resourceBundle.getString("consumersecret.oauth20");
@@ -757,6 +760,34 @@
                                                                   id=<%=  OAuthUIUtil.getScopeValidatorId(scopeValidator)%>
                                                                           name=<%= OAuthUIUtil.getScopeValidatorId(scopeValidator)%>
                                                                   value=<%=Encode.forHtmlAttribute(OAuthUIUtil.getScopeValidatorId(scopeValidator))%> <%=(scopeValidators.contains(scopeValidator) ? "checked=\"checked\"" : "")%>/><%=Encode.forHtmlAttribute(scopeValidator)%>
+                                                </label></td>
+                                            </tr>
+                                            <%
+                                                }
+                                            %>
+                                        </table>
+                                    </td>
+                                </tr>
+
+                                <!--Access Token types-->
+                                <tr id="access_token_type_row" name="access_token_type_row">
+                                    <td class="leftCol-med"><fmt:message key='accessTokenTypes'/></td>
+                                    <td>
+                                        <table>
+                                            <%
+                                                for (String tokenType : tokenTypes) {
+                                            %>
+                                            <tr>
+                                                <td><label><input type="radio" name="tokenType"
+                                                                  id=<%=  OAuthUIUtil.getTokenTypeId(tokenType)%>
+                                                                          value=<%=Encode.forHtmlAttribute(tokenType)%>
+                                                        <%
+                                                            if (app.getTokenType() == null && tokenType
+                                                                    .equalsIgnoreCase(DEFAULT_TOKEN_TYPE)) {
+                                                        %> checked="checked"<%
+                                                            } else if (tokenType.equals(app.getTokenType())) { %>
+                                                                  checked="checked"<%} %>/>
+                                                    <%=Encode.forHtmlAttribute(tokenType)%>
                                                 </label></td>
                                             </tr>
                                             <%

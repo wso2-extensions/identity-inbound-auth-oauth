@@ -56,8 +56,7 @@ public class AccessTokenResponseTypeHandler extends AbstractResponseTypeHandler 
         // Starting to trigger pre listeners.
         ResponseTypeHandlerUtil.triggerPreListeners(oauthAuthzMsgCtx);
         // Generating access token.
-        AccessTokenDO accessTokenDO = ResponseTypeHandlerUtil.generateAccessToken(oauthAuthzMsgCtx, cacheEnabled,
-                 oauthIssuerImpl);
+        AccessTokenDO accessTokenDO = ResponseTypeHandlerUtil.generateAccessToken(oauthAuthzMsgCtx, cacheEnabled);
         // Generating response for access token flow.
         OAuth2AuthorizeRespDTO respDTO = buildResponseDTO(oauthAuthzMsgCtx, accessTokenDO);
         // Starting to trigger post listeners.

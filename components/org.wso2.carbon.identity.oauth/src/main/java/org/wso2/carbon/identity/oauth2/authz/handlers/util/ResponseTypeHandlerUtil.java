@@ -103,6 +103,39 @@ public class ResponseTypeHandlerUtil {
         }
     }
 
+    /**
+     * Generates access token for the issuer type registered in the service provider app.
+     *
+     * @param oauthAuthzMsgCtx
+     * @param cacheEnabled
+     * @return
+     * @throws IdentityOAuth2Exception
+     */
+    public static AccessTokenDO generateAccessToken(OAuthAuthzReqMessageContext oauthAuthzMsgCtx, boolean cacheEnabled)
+            throws IdentityOAuth2Exception {
+
+        String consumerKey = oauthAuthzMsgCtx.getAuthorizationReqDTO().getConsumerKey();
+        OauthTokenIssuer oauthTokenIssuer;
+        try {
+             oauthTokenIssuer = OAuth2Util.getOAuthTokenIssuerForOAuthApp(consumerKey);
+        } catch (InvalidOAuthClientException e) {
+            String errorMsg = "Error when instantiating the OAuthIssuer for service provider app with client Id: " +
+                    consumerKey + ". Defaulting to OAuthIssuerImpl";
+            log.error(errorMsg, e);
+            oauthTokenIssuer = OAuthServerConfiguration.getInstance().getIdentityOauthTokenIssuer();
+        }
+        return generateAccessToken(oauthAuthzMsgCtx, cacheEnabled, oauthTokenIssuer);
+    }
+
+    /**
+     * Generates access token for the given oauth issuer.
+     *
+     * @param oauthAuthzMsgCtx
+     * @param cacheEnabled
+     * @param oauthIssuerImpl
+     * @return
+     * @throws IdentityOAuth2Exception
+     */
     public static AccessTokenDO generateAccessToken(OAuthAuthzReqMessageContext oauthAuthzMsgCtx, boolean cacheEnabled,
                                               OauthTokenIssuer oauthIssuerImpl)
             throws IdentityOAuth2Exception {
@@ -137,6 +170,19 @@ public class ResponseTypeHandlerUtil {
         }
     }
 
+    public static AuthzCodeDO generateAuthorizationCode(OAuthAuthzReqMessageContext oauthAuthzMsgCtx, boolean cacheEnabled)
+            throws IdentityOAuth2Exception {
+        OAuth2AuthorizeReqDTO authorizationReqDTO = oauthAuthzMsgCtx.getAuthorizationReqDTO();
+        String consumerKey = authorizationReqDTO.getConsumerKey();
+        try {
+            OauthTokenIssuer oauthTokenIssuer = OAuth2Util.getOAuthTokenIssuerForOAuthApp(consumerKey);
+            return generateAuthorizationCode(oauthAuthzMsgCtx, cacheEnabled, oauthTokenIssuer);
+        } catch (InvalidOAuthClientException e) {
+            throw new IdentityOAuth2Exception(
+                    "Error while retrieving oauth issuer for the app with clientId: " + consumerKey, e);
+        }
+    }
+
     public static AuthzCodeDO generateAuthorizationCode(OAuthAuthzReqMessageContext oauthAuthzMsgCtx, boolean cacheEnabled,
                                                  OauthTokenIssuer oauthIssuerImpl)
             throws IdentityOAuth2Exception {
@@ -145,15 +191,6 @@ public class ResponseTypeHandlerUtil {
         String authorizationCode;
         String codeId = UUID.randomUUID().toString();
         Timestamp timestamp = new Timestamp(new Date().getTime());
-
-        // Loading the stored application data.
-        String consumerKey = authorizationReqDTO.getConsumerKey();
-        OAuthAppDO oAuthAppDO = null;
-        try {
-            oAuthAppDO = OAuth2Util.getAppInformationByClientId(consumerKey);
-        } catch (InvalidOAuthClientException e) {
-            throw new IdentityOAuth2Exception("Error while retrieving app information for clientId: " + consumerKey, e);
-        }
 
         long validityPeriod = OAuthServerConfiguration.getInstance()
                 .getAuthorizationCodeValidityPeriodInSeconds();
