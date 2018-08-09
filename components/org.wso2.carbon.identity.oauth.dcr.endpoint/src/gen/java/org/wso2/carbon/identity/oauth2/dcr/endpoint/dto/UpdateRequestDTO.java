@@ -75,6 +75,7 @@ public class UpdateRequestDTO  {
 
   public void setTokenType(String tokenType) {
     this.tokenType = tokenType;
+  }
 
   @JsonProperty("client_id")
   public String getClientId() {
