@@ -118,8 +118,8 @@ public class RegisterApiServiceImpl extends RegisterApiService {
                 LOG.debug("Client error while retrieving application by name : " + name, e);
             }
             DCRMUtils.handleErrorResponse(e, LOG);
-        } catch (Throwable throwable) {
-            DCRMUtils.handleErrorResponse(Response.Status.INTERNAL_SERVER_ERROR, throwable, true, LOG);
+        } catch (Exception e) {
+            DCRMUtils.handleErrorResponse(Response.Status.INTERNAL_SERVER_ERROR, e, true, LOG);
         }
         return Response.status(Response.Status.OK).entity(application).build();
     }

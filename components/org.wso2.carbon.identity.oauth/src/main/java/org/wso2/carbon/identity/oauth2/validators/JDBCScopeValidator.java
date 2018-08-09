@@ -291,8 +291,7 @@ public class JDBCScopeValidator extends OAuth2ScopeValidator {
 
     private int getTenantId (User user) throws UserStoreException {
 
-        RealmService realmService = OAuthComponentServiceHolder.getInstance().getRealmService();
-        int tenantId = realmService.getTenantManager().getTenantId(user.getTenantDomain());
+        int tenantId = IdentityTenantUtil.getTenantId(user.getTenantDomain());
 
         if (tenantId == 0 || tenantId == -1) {
             tenantId = IdentityTenantUtil.getTenantIdOfUser(user.getUserName());

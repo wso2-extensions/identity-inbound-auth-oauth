@@ -33,6 +33,7 @@ import java.util.regex.Pattern;
 public class DCRMUtils {
 
     private static final Log log = LogFactory.getLog(DCRMUtils.class);
+    private static Pattern spNameRegexPattern = null;
 
     public static boolean isRedirectionUriValid(String redirectUri) {
 
@@ -121,10 +122,13 @@ public class DCRMUtils {
      */
     public static boolean isRegexValidated(String applicationName) {
 
-        String spValidatorRegex = DCRConstants.APP_NAME_VALIDATING_REGEX;
-        return isRegexValidated(applicationName, spValidatorRegex);
+        if (spNameRegexPattern == null) {
+            spNameRegexPattern = Pattern.compile(DCRConstants.APP_NAME_VALIDATING_REGEX);
+        }
+        return spNameRegexPattern.matcher(applicationName).matches();
     }
 
+    @Deprecated
     public static boolean isRegexValidated(String providedString, String regex) {
 
         Pattern regexPattern = Pattern.compile(regex);

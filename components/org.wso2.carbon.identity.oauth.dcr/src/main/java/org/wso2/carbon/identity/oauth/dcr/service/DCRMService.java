@@ -46,6 +46,7 @@ import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 
 
 /**
@@ -58,6 +59,7 @@ public class DCRMService {
     private static final String AUTH_TYPE_OAUTH_2 = "oauth2";
     private static final String OAUTH_VERSION = "OAuth-2.0";
     private static final String GRANT_TYPE_SEPARATOR = " ";
+    private static Pattern clientIdRegexPattern = null;
 
     /**
      * Get OAuth2/OIDC application information with client_id
@@ -310,7 +312,7 @@ public class DCRMService {
 
         if (StringUtils.isNotEmpty(registrationRequest.getConsumerKey())) {
             String clientIdRegex = OAuthServerConfiguration.getInstance().getClientIdValidationRegex();
-            if (DCRMUtils.isRegexValidated(registrationRequest.getConsumerKey(), clientIdRegex)) {
+            if (clientIdRegexPattern.matcher(registrationRequest.getConsumerKey()).matches()) {
                 oAuthConsumerApp.setOauthConsumerKey(registrationRequest.getConsumerKey());
             } else {
                 throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.BAD_REQUEST_CLIENT_ID_VIOLATES_PATTERN,
@@ -517,5 +519,18 @@ public class DCRMService {
                     DCRMConstants.ErrorMessages.FAILED_TO_GET_APPLICATION_BY_ID, clientId, e);
         }
         return false;
+    }
+
+    /**
+     * Validate client id according to the regex
+     *
+     * @return validated or not
+     */
+    private static boolean clientIdMatchesRegex(String clientId, String clientIdValidatorRegex) {
+
+        if (clientIdRegexPattern == null) {
+            clientIdRegexPattern = Pattern.compile(clientIdValidatorRegex);
+        }
+        return clientIdRegexPattern.matcher(clientId).matches();
     }
 }
