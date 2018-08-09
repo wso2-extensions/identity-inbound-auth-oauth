@@ -112,10 +112,12 @@ public class DCRMServiceTest extends PowerMockTestCase {
 
         if (dtoStatus == null) {
             when(mockOAuthAdminService.getOAuthApplicationData(dummyConsumerKey)).thenReturn(null);
+            when(mockOAuthAdminService.getAllOAuthApplicationData()).thenReturn(new OAuthConsumerAppDTO[0]);
         } else {
             OAuthConsumerAppDTO dto = new OAuthConsumerAppDTO();
             dto.setApplicationName("");
             when(mockOAuthAdminService.getOAuthApplicationData(dummyConsumerKey)).thenReturn(dto);
+            when(mockOAuthAdminService.getAllOAuthApplicationData()).thenReturn(new OAuthConsumerAppDTO[]{dto});
         }
         Whitebox.setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
         try {
@@ -132,6 +134,8 @@ public class DCRMServiceTest extends PowerMockTestCase {
 
         doThrow(new IdentityOAuthAdminException("")).when(mockOAuthAdminService).getOAuthApplicationData(dummyConsumerKey);
 
+        when(mockOAuthAdminService.getAllOAuthApplicationData()).thenReturn(new OAuthConsumerAppDTO[0]);
+
         Whitebox.setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
         try {
             dcrmService.getApplication(dummyConsumerKey);
@@ -147,6 +151,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
 
         doThrow(new IdentityOAuthAdminException("", new InvalidOAuthClientException(""))).when(mockOAuthAdminService)
                 .getOAuthApplicationData(dummyConsumerKey);
+        when(mockOAuthAdminService.getAllOAuthApplicationData()).thenReturn(new OAuthConsumerAppDTO[0]);
 
         Whitebox.setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
         try {
@@ -169,7 +174,10 @@ public class DCRMServiceTest extends PowerMockTestCase {
         String dummyCallbackUrl = "dummyCallbackUrl";
         dto.setCallbackUrl(dummyCallbackUrl);
 
+        OAuthConsumerAppDTO[] oAuthConsumerAppDTOS = new OAuthConsumerAppDTO[]{dto};
+
         when(mockOAuthAdminService.getOAuthApplicationData(dummyConsumerKey)).thenReturn(dto);
+        when(mockOAuthAdminService.getAllOAuthApplicationData()).thenReturn(oAuthConsumerAppDTOS);
 
         Whitebox.setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
         Application application = dcrmService.getApplication(dummyConsumerKey);
@@ -517,6 +525,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
                 .getOAuthApplicationDataByAppName(dummyClientName)).thenReturn(oAuthConsumerApp);
         when(mockOAuthAdminService
                 .getOAuthApplicationData("dummyConsumerKey")).thenReturn(oAuthConsumerApp);
+        when(mockOAuthAdminService.getAllOAuthApplicationData()).thenReturn(new OAuthConsumerAppDTO[]{oAuthConsumerApp});
 
         doThrow(new IdentityApplicationManagementException("ehweh")).when(mockApplicationManagementService)
                 .updateApplication(serviceProvider, dummyTenantDomain, dummyUserName);
@@ -554,6 +563,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
         dcrDataHolder.setApplicationManagementService(mockApplicationManagementService);
         when(mockApplicationManagementService.getServiceProvider(dummyClientName, dummyTenantDomain)).thenReturn
                 (serviceProvider);
+        when(mockOAuthAdminService.getAllOAuthApplicationData()).thenReturn(new OAuthConsumerAppDTO[0]);
 
         doNothing().when(mockApplicationManagementService).updateApplication(serviceProvider, dummyTenantDomain,
                 dummyUserName);
@@ -565,7 +575,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
             startTenantFlow();
             dcrmService.updateApplication(applicationUpdateRequest, dummyClientId);
         } catch (IdentityException ex) {
-            assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.FAILED_TO_UPDATE_APPLICATION.toString());
+            assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.FORBIDDEN_UNAUTHORIZED_USER.toString());
             return;
         } finally {
             PrivilegedCarbonContext.endTenantFlow();

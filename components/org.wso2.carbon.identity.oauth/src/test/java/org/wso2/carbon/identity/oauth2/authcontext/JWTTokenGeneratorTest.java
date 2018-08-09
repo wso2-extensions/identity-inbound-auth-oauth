@@ -65,6 +65,7 @@ public class JWTTokenGeneratorTest extends PowerMockIdentityBaseTest {
     private OAuth2TokenValidationRequestDTO oAuth2TokenValidationRequestDTO;
     private OAuth2TokenValidationResponseDTO oAuth2TokenValidationResponseDTO;
     private OAuth2TokenValidationMessageContext oAuth2TokenValidationMessageContext;
+    private OAuth2TokenValidationRequestDTO.OAuth2AccessToken accessToken;
 
     private JWTTokenGenerator jwtTokenGenerator;
     private boolean includeClaims = true;
@@ -85,6 +86,8 @@ public class JWTTokenGeneratorTest extends PowerMockIdentityBaseTest {
                 mock(OAuth2TokenValidationRequestDTO.TokenValidationContextParam.class);
         tokenValidationContextParam.setKey("sampleKey");
         tokenValidationContextParam.setValue("sampleValue");
+
+        accessToken = oAuth2TokenValidationRequestDTO.new OAuth2AccessToken();
 
         OAuth2TokenValidationRequestDTO.TokenValidationContextParam[]
                 tokenValidationContextParams = {tokenValidationContextParam};
@@ -134,6 +137,10 @@ public class JWTTokenGeneratorTest extends PowerMockIdentityBaseTest {
         privateKeys.put(-1234, ReadCertStoreSampleUtil.createKeyStore(getClass())
                                                       .getKey("wso2carbon", "wso2carbon".toCharArray()));
         setFinalStatic(OAuth2Util.class.getDeclaredField("privateKeys"), privateKeys);
+
+        accessToken.setTokenType("Bearer");
+        oAuth2TokenValidationRequestDTO.setAccessToken(accessToken);
+
         jwtTokenGenerator.generateToken(oAuth2TokenValidationMessageContext);
 
         Assert.assertNotNull(oAuth2TokenValidationMessageContext.getResponseDTO().getAuthorizationContextToken()

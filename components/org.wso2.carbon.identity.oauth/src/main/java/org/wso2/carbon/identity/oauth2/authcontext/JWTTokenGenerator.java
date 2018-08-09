@@ -76,7 +76,9 @@ import java.util.Map;
 import java.util.SortedMap;
 import java.util.StringTokenizer;
 import java.util.TreeSet;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.text.ParseException;
 
 /**
  * This class represents the JSON Web Token generator.
@@ -117,6 +119,7 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
 
     private boolean useMultiValueSeparator = true;
 
+    private final static String JWT_TOKEN_TYPE = "JWT";
 
     //constructor for testing purposes
     public JWTTokenGenerator(boolean includeClaims, boolean enableSigning) {
@@ -222,6 +225,9 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
         claimsSetBuilder.claim(API_GATEWAY_ID+"/subscriber",subscriber);
         claimsSetBuilder.claim(API_GATEWAY_ID+"/applicationname",applicationName);
         claimsSetBuilder.claim(API_GATEWAY_ID+"/enduser",authzUser);
+        //TODO: check setting audience
+
+
 
         if(claimsRetriever != null){
 
@@ -563,5 +569,9 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
                       "returned", e);
         }
         return null;
+    }
+
+    private SignedJWT getSignedJWT(String tokenIdentifier) throws ParseException {
+        return SignedJWT.parse(tokenIdentifier);
     }
 }

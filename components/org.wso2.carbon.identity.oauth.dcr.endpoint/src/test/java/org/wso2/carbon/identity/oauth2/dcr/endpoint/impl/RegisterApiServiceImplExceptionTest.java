@@ -146,7 +146,7 @@ public class RegisterApiServiceImplExceptionTest extends PowerMockTestCase {
         try {
             registerApiService.registerApplication(registrationRequestDTO);
         } catch (DCRMEndpointException e){
-            assertEquals(e.getResponse().getStatus(),Response.Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            assertEquals(e.getResponse().getStatus(),Response.Status.BAD_REQUEST.getStatusCode());
         }
     }
 
@@ -171,7 +171,7 @@ public class RegisterApiServiceImplExceptionTest extends PowerMockTestCase {
         try {
             registerApiService.registerApplication(registrationRequestDTO);
         } catch (DCRMEndpointException e){
-            assertEquals(e.getResponse().getStatus(),Response.Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            assertEquals(e.getResponse().getStatus(),Response.Status.BAD_REQUEST.getStatusCode());
         }
 
     }

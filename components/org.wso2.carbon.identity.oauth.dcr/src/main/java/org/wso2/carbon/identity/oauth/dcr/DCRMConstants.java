@@ -32,9 +32,16 @@ public class DCRMConstants {
         FAILED_TO_GET_APPLICATION_BY_ID("Error occurred while retrieving application with client key: %s" ),
         FAILED_TO_UPDATE_APPLICATION("Error occurred while updating application with client key: %s" ),
         BAD_REQUEST_INVALID_REDIRECT_URI("Invalid redirect URI: %s"),
+        BAD_REQUEST_INVALID_SP_NAME("Client Name is not adhering to the regex: %s"),
         BAD_REQUEST_INVALID_INPUT("%s"),
+        BAD_REQUEST_INSUFFICIENT_DATA("Insufficient data in the request"),
         NOT_FOUND_APPLICATION_WITH_ID("Application not available for given client key: %s"),
+        NOT_FOUND_APPLICATION_WITH_NAME("Application not available for given client name: %s"),
+        CONFLICT_EXISTING_CLIENT_ID("Client id %s already exist in the system"),
+        BAD_REQUEST_CLIENT_ID_VIOLATES_PATTERN("Provided client id is not adhering to the provided regex %s"),
+        FORBIDDEN_UNAUTHORIZED_USER("User does not have access to the application %s"),
         ERROR_CODE_UNEXPECTED("Unexpected error");
+
 
         private final String message;
 

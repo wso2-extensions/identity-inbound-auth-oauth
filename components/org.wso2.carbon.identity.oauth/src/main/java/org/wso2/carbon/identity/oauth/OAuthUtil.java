@@ -133,11 +133,13 @@ public final class OAuthUtil {
      * @return
      */
     public static IdentityOAuthAdminException handleError(String message, Exception exception) {
+        log.error(message);
         if (exception == null) {
-            log.error(message);
             return new IdentityOAuthAdminException(message);
         } else {
-            log.error(message, exception);
+            if (log.isDebugEnabled()) {
+                log.debug(exception);
+            }
             return new IdentityOAuthAdminException(message, exception);
         }
     }

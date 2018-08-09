@@ -104,7 +104,7 @@
                             <directory>src/main/webapp</directory>
                         </resource>
                     </webResources>
-                    <warName>api#identity#oauth2#dcr#v1.0</warName>
+                    <warName>api#identity#oauth2#dcr#v1.1</warName>
                 </configuration>
             </plugin>
             <!-- Plugin for generating the swagger server stubs-->

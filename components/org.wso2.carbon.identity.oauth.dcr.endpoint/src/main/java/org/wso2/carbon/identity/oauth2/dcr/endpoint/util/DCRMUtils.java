@@ -41,6 +41,7 @@ public class DCRMUtils {
     private static final String CONFLICT_STATUS = "CONFLICT_";
     private static final String BAD_REQUEST_STATUS = "BAD_REQUEST_";
     private static final String NOT_FOUND_STATUS = "NOT_FOUND_";
+    private static final String FORBIDDEN_STATUS = "FORBIDDEN_";
 
     public static DCRMService getOAuth2DCRMService() {
         return (DCRMService) PrivilegedCarbonContext.getThreadLocalCarbonContext()
@@ -53,6 +54,8 @@ public class DCRMUtils {
         appRegistrationRequest.setClientName(registrationRequestDTO.getClientName());
         appRegistrationRequest.setRedirectUris(registrationRequestDTO.getRedirectUris());
         appRegistrationRequest.setGrantTypes(registrationRequestDTO.getGrantTypes());
+        appRegistrationRequest.setConsumerKey(registrationRequestDTO.getClientId());
+        appRegistrationRequest.setConsumerSecret(registrationRequestDTO.getClientSecret());
         return appRegistrationRequest;
 
     }
@@ -80,6 +83,8 @@ public class DCRMUtils {
                 isStatusOnly = false;
             } else if (errorCode.startsWith(NOT_FOUND_STATUS)) {
                 status = Response.Status.UNAUTHORIZED;
+            } else if (errorCode.startsWith(FORBIDDEN_STATUS)) {
+                status = Response.Status.FORBIDDEN;
             }
         }
         throw buildDCRMEndpointException(status, errorCode, dcrmException.getMessage(), isStatusOnly);
