@@ -18,7 +18,7 @@
 
 package org.wso2.carbon.identity.oauth.dcr.service;
 
-import org.mockito.Mock;
+import org.mockito.Matchers;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.annotations.BeforeTest;
@@ -32,7 +32,6 @@ import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.base.IdentityValidationException;
 import org.wso2.carbon.identity.oauth.OAuthAdminService;
-import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dcr.DCRException;
 import org.wso2.carbon.identity.oauth.dcr.internal.DCRDataHolder;
 import org.wso2.carbon.identity.oauth.dcr.model.RegistrationRequestProfile;
@@ -43,7 +42,6 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.whenNew;
@@ -57,7 +55,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AParam
 /**
  * Unit test covering DCRManagementService
  */
-@PrepareForTest({DCRManagementService.class, OAuthServerConfiguration.class})
+@PrepareForTest({DCRManagementService.class})
 public class DCRManagementServiceTest extends PowerMockTestCase {
 
     private DCRManagementService dcrManagementService;
@@ -68,9 +66,6 @@ public class DCRManagementServiceTest extends PowerMockTestCase {
 
     private RegistrationRequestProfile registrationRequestProfile;
     private ApplicationManagementService mockApplicationManagementService;
-
-    @Mock
-    private OAuthServerConfiguration mockOAuthServerConfiguration;
 
     @BeforeTest
     public void getInstanceTest() {
@@ -276,6 +271,9 @@ public class DCRManagementServiceTest extends PowerMockTestCase {
         when(mockOAuthAdminService
                 .getOAuthApplicationDataByAppName(applicationName)).thenReturn(oAuthConsumerApp);
 
+        when(mockOAuthAdminService.registerAndRetrieveOAuthApplicationData(
+                Matchers.any(OAuthConsumerAppDTO.class))).thenReturn(oAuthConsumerApp);
+
         RegistrationResponseProfile registrationRqstProfile = dcrManagementService.registerOAuthApplication
                 (registrationRequestProfile);
         assertEquals(registrationRqstProfile.getGrantTypes(), dummyGrantType);
@@ -284,8 +282,6 @@ public class DCRManagementServiceTest extends PowerMockTestCase {
 
     private void registerOAuthApplication() {
 
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(mockOAuthServerConfiguration);
         String clientName = "dummyClientName";
         registrationRequestProfile.setClientName(clientName);
         String ownerName = "dummyOwner";

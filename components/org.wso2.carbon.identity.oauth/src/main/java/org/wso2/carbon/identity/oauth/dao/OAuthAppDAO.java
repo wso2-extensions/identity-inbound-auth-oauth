@@ -348,6 +348,8 @@ public class OAuthAppDAO {
                             if (isHashDisabled) {
                                 oauthApp.setOauthConsumerSecret(persistenceProcessor.getPreprocessedClientSecret(rSet
                                         .getString(1)));
+                            } else {
+                                oauthApp.setOauthConsumerSecret(rSet.getString(1));
                             }
                             AuthenticatedUser authenticatedUser = new AuthenticatedUser();
                             authenticatedUser.setUserName(rSet.getString(2));
@@ -430,6 +432,8 @@ public class OAuthAppDAO {
                             if (isHashDisabled) {
                                 oauthApp.setOauthConsumerSecret(persistenceProcessor.getPreprocessedClientSecret(rSet
                                         .getString(1)));
+                            } else {
+                                oauthApp.setOauthConsumerSecret(rSet.getString(1));
                             }
                             user.setUserName(rSet.getString(2));
                             user.setUserStoreDomain(rSet.getString(3));
