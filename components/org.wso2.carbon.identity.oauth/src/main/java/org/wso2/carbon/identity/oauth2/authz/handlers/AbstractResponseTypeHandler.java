@@ -75,6 +75,8 @@ public abstract class AbstractResponseTypeHandler implements ResponseTypeHandler
         callbackManager.handleCallback(authzCallback);
 
         oauthAuthzMsgCtx.setValidityPeriod(authzCallback.getValidityPeriod());
+        oauthAuthzMsgCtx.setAuthorizationCodeValidityPeriod(authzCallback.getAuthorizationCodeValidityPeriod());
+        oauthAuthzMsgCtx.setAccessTokenIssuedTime(authzCallback.getAccessTokenValidityPeriod());
         return authzCallback.isAuthorized();
     }
 
@@ -89,6 +91,9 @@ public abstract class AbstractResponseTypeHandler implements ResponseTypeHandler
         callbackManager.handleCallback(scopeValidationCallback);
 
         oauthAuthzMsgCtx.setValidityPeriod(scopeValidationCallback.getValidityPeriod());
+        oauthAuthzMsgCtx.setAuthorizationCodeValidityPeriod(scopeValidationCallback
+                .getAuthorizationCodeValidityPeriod());
+        oauthAuthzMsgCtx.setAccessTokenIssuedTime(scopeValidationCallback.getAccessTokenValidityPeriod());
         oauthAuthzMsgCtx.setApprovedScope(scopeValidationCallback.getApprovedScope());
         return scopeValidationCallback.isValidScope();
     }

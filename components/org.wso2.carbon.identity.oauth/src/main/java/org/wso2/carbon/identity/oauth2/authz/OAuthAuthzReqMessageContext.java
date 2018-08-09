@@ -29,6 +29,10 @@ public class OAuthAuthzReqMessageContext {
     private String[] approvedScope;
 
     private long validityPeriod;
+
+    private long authorizationCodeValidityPeriod;
+
+    private long accessTokenValidityPeriod;
     
     private long refreshTokenvalidityPeriod;
     
@@ -61,12 +65,36 @@ public class OAuthAuthzReqMessageContext {
         this.approvedScope = approvedScope;
     }
 
+    @Deprecated
+    /**
+     * @deprecated Avoid using this, use getAccessTokenValidityPeriod or getOAuthorizationCodeValidityPeriod instead
+     */
     public long getValidityPeriod() {
         return validityPeriod;
     }
 
+    @Deprecated
+    /**
+     * @deprecated Avoid using this, use setAccessTokenValidityPeriod or setOAuthorizationCodeValidityPeriod instead
+     */
     public void setValidityPeriod(long validityPeriod) {
         this.validityPeriod = validityPeriod;
+    }
+
+    public long getAuthorizationCodeValidityPeriod() {
+        return authorizationCodeValidityPeriod;
+    }
+
+    public void setAuthorizationCodeValidityPeriod(long oauthorizationCodeValidityPeriod) {
+        this.authorizationCodeValidityPeriod = oauthorizationCodeValidityPeriod;
+    }
+
+    public long getAccessTokenValidityPeriod() {
+        return accessTokenValidityPeriod;
+    }
+
+    public void setAccessTokenValidityPeriod(long accessTokenValidityPeriod) {
+        this.accessTokenValidityPeriod = accessTokenValidityPeriod;
     }
 
     public void addProperty(Object propName, Object propValue) {
