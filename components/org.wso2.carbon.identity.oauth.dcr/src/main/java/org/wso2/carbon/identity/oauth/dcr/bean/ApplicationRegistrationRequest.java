@@ -64,6 +64,7 @@ public class ApplicationRegistrationRequest implements Serializable {
 
     public void setTokenType(String tokenType) {
         this.tokenType = tokenType;
+    }
 
     public String getConsumerKey() {
         return consumerKey;
