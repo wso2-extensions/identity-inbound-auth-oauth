@@ -2287,7 +2287,10 @@ public class OAuth2Util {
      */
     public static AuthenticatedUser getAuthenticatedUser(AccessTokenDO accessTokenDO) {
 
-        AuthenticatedUser authenticatedUser = accessTokenDO.getAuthzUser();
+        AuthenticatedUser authenticatedUser = null;
+        if (accessTokenDO != null) {
+            authenticatedUser = accessTokenDO.getAuthzUser();
+        }
         if (authenticatedUser != null) {
             authenticatedUser.setFederatedUser(isFederatedUser(authenticatedUser));
         }

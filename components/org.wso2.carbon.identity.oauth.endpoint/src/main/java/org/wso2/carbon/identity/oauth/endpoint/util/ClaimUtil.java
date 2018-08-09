@@ -353,7 +353,10 @@ public class ClaimUtil {
         OauthTokenIssuer tokenIssuer = OAuthServerConfiguration.getInstance().getIdentityOauthTokenIssuer();
         String tokenIdentifier = null;
         try {
-            tokenIdentifier = tokenIssuer.getAccessTokenHash(tokenResponse.getAuthorizationContextToken().getTokenString());
+            if (tokenIssuer != null) {
+                tokenIdentifier = tokenIssuer
+                        .getAccessTokenHash(tokenResponse.getAuthorizationContextToken().getTokenString());
+            }
         } catch (OAuthSystemException e) {
             log.error("Error while getting token identifier");
         }

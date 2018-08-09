@@ -370,7 +370,9 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
         String tokenIdentifier = null;
         try {
             OauthTokenIssuer tokenIssuer = OAuth2Util.getTokenIssuer(accessToken);
-            tokenIdentifier = tokenIssuer.getAccessTokenHash(accessToken);
+            if (tokenIssuer != null) {
+                tokenIdentifier = tokenIssuer.getAccessTokenHash(accessToken);
+            }
         } catch (OAuthSystemException e) {
             log.error("Error while getting token identifier");
             throw new OAuthSystemException(e);
