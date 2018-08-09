@@ -541,6 +541,15 @@ public class OAuth2AuthzEndpoint {
                 authenticatedIdPs, sessionStateValue)).build();
     }
 
+    private Response handleFormPostResponseModeError(OAuthMessage oAuthMessage, String sessionStateParam,
+                                                     OAuthProblemException oauthProblemException, String redirectURL) {
+
+        OAuth2Parameters oauth2Params = oAuthMessage.getSessionDataCacheEntry().getoAuth2Parameters();
+
+        return Response.ok(createErrorFormPage(oauth2Params.getRedirectURI(), oauthProblemException
+                , sessionStateParam)).build();
+    }
+
     private Response handleDenyConsent(OAuthMessage oAuthMessage) throws OAuthSystemException, URISyntaxException {
 
         OAuth2Parameters oauth2Params = getOauth2Params(oAuthMessage);
@@ -550,7 +559,8 @@ public class OAuth2AuthzEndpoint {
                 getOauth2Params(oAuthMessage).getApplicationName(),
                 false, oauth2Params.getClientId());
         // return an error if user denied
-        OAuthProblemException ex = OAuthProblemException.error(OAuth2ErrorCodes.ACCESS_DENIED);
+        OAuthProblemException ex = OAuthProblemException.error(OAuth2ErrorCodes.ACCESS_DENIED,
+                "User denied the consent");
         String denyResponse = EndpointUtil.getErrorRedirectURL(oAuthMessage.getRequest(), ex, oauth2Params);
 
         if (isOIDCRequest) {
@@ -560,6 +570,9 @@ public class OAuth2AuthzEndpoint {
                     .addSessionStateToURL(denyResponse, oauth2Params.getClientId(),
                             oauth2Params.getRedirectURI(), opBrowserStateCookie,
                             oauth2Params.getResponseType());
+        }
+        if (StringUtils.equals(oauth2Params.getResponseMode(), RESPONSE_MODE_FORM_POST)) {
+            return handleFailedState(oAuthMessage,oauth2Params, ex);
         }
         return Response.status(HttpServletResponse.SC_FOUND).location(new URI(denyResponse)).build();
     }
@@ -606,7 +619,17 @@ public class OAuth2AuthzEndpoint {
         addToSessionDataCache(oAuthMessage, authenticationResult, authenticatedUser);
 
         OIDCSessionState sessionState = new OIDCSessionState();
-        String redirectURL = doUserAuthorization(oAuthMessage, getSessionDataKeyFromLogin(oAuthMessage), sessionState);
+        String redirectURL = null;
+
+        try {
+            redirectURL = doUserAuthorization(oAuthMessage, oAuthMessage.getSessionDataKeyFromLogin(), sessionState);
+        } catch (OAuthProblemException ex) {
+            if (StringUtils.equals(oauth2Params.getResponseMode(), RESPONSE_MODE_FORM_POST)) {
+                return handleFailedState(oAuthMessage, oauth2Params, ex);
+            } else {
+                redirectURL = EndpointUtil.getErrorRedirectURL(ex, oauth2Params);
+            }
+        }
 
         if (isFormPostResponseMode(oAuthMessage, redirectURL)) {
             return handleFormPostMode(oAuthMessage, oauth2Params, redirectURL, isOIDCRequest, sessionState);
@@ -625,17 +648,32 @@ public class OAuth2AuthzEndpoint {
         return oAuthMessage.getSessionDataKeyFromLogin();
     }
 
-    private Response handleFailedAuthentication(OAuthMessage oAuthMessage, OAuth2Parameters oauth2Params,
-                                                AuthenticationResult authnResult) throws URISyntaxException {
+    private Response handleFailedState(OAuthMessage oAuthMessage, OAuth2Parameters oauth2Params,
+                                       OAuthProblemException oauthException) throws URISyntaxException {
 
         boolean isOIDCRequest = OAuth2Util.isOIDCAuthzRequest(oauth2Params.getScopes());
-        OAuthProblemException oauthException = buildOAuthProblemException(authnResult);
-        String redirectURL = EndpointUtil.getErrorRedirectURL(oAuthMessage.getRequest(), oauthException, oauth2Params);
+        String redirectURL = EndpointUtil.getErrorRedirectURL(oauthException, oauth2Params);
         if (isOIDCRequest) {
             redirectURL = handleOIDCSessionState(oAuthMessage, oauth2Params, redirectURL);
         }
-        return Response.status(HttpServletResponse.SC_FOUND).location(new URI(redirectURL)).build();
+        if (StringUtils.equals(oauth2Params.getResponseMode(), RESPONSE_MODE_FORM_POST)) {
+            Cookie opBrowserStateCookie = OIDCSessionManagementUtil.getOPBrowserStateCookie
+                    (oAuthMessage.getRequest());
+            String sessionStateParam = OIDCSessionManagementUtil.getSessionStateParam(oauth2Params.getClientId(),
+                    oauth2Params.getRedirectURI(), opBrowserStateCookie == null ? null :
+                            opBrowserStateCookie.getValue());
 
+            return handleFormPostResponseModeError(oAuthMessage, sessionStateParam, oauthException, redirectURL);
+        } else {
+            return Response.status(HttpServletResponse.SC_FOUND).location(new URI(redirectURL)).build();
+        }
+    }
+
+    private Response handleFailedAuthentication(OAuthMessage oAuthMessage, OAuth2Parameters oauth2Params,
+                                                AuthenticationResult authnResult) throws URISyntaxException {
+
+        OAuthProblemException oauthException = buildOAuthProblemException(authnResult);
+        return handleFailedState(oAuthMessage, oauth2Params, oauthException);
     }
 
     private String handleOIDCSessionState(OAuthMessage oAuthMessage, OAuth2Parameters oauth2Params, String redirectURL) {
@@ -735,13 +773,12 @@ public class OAuth2AuthzEndpoint {
         return true;
     }
 
-    private String createFormPage(String jsonPayLoad, String redirectURI, String authenticatedIdPs,
-                                  String sessionStateValue) {
+    private String createBaseFormPage(String params, String redirectURI) {
 
         if (StringUtils.isNotBlank(formPostRedirectPage)) {
             String newPage = formPostRedirectPage;
             String pageWithRedirectURI = newPage.replace("$redirectURI", redirectURI);
-            return pageWithRedirectURI.replace("<!--$params-->", buildParams(jsonPayLoad, authenticatedIdPs, sessionStateValue));
+            return pageWithRedirectURI.replace("<!--$params-->", params);
         }
 
         String formHead = "<html>\n" +
@@ -756,9 +793,23 @@ public class OAuth2AuthzEndpoint {
                 "</html>";
 
         StringBuilder form = new StringBuilder(formHead);
-        form.append(buildParams(jsonPayLoad, authenticatedIdPs, sessionStateValue));
+        form.append(params);
         form.append(formBottom);
         return form.toString();
+    }
+
+    private String createFormPage(String jsonPayLoad, String redirectURI, String authenticatedIdPs,
+                                  String sessionStateValue) {
+
+        String params = buildParams(jsonPayLoad, authenticatedIdPs, sessionStateValue);
+        return createBaseFormPage(params, redirectURI);
+    }
+
+    private String createErrorFormPage(String redirectURI, OAuthProblemException oauthProblemException,
+                                       String sessionStateValue) {
+
+        String params = buildErrorParams(oauthProblemException, sessionStateValue);
+        return createBaseFormPage(params, redirectURI);
     }
 
     private String buildParams(String jsonPayLoad, String authenticatedIdPs, String sessionStateValue) {
@@ -781,6 +832,30 @@ public class OAuth2AuthzEndpoint {
         }
 
         if (sessionStateValue != null && !sessionStateValue.isEmpty()) {
+            paramStringBuilder.append("<input type=\"hidden\" name=\"session_state\" value=\"")
+                    .append(sessionStateValue)
+                    .append("\"/>\n");
+        }
+        return paramStringBuilder.toString();
+    }
+
+    private String buildErrorParams(OAuthProblemException oauthProblemException, String sessionStateValue) {
+
+        StringBuilder paramStringBuilder = new StringBuilder();
+
+        if (StringUtils.isNotEmpty(oauthProblemException.getError())) {
+            paramStringBuilder.append("<input type=\"hidden\" name=\"error\" value=\"")
+                    .append(oauthProblemException.getError())
+                    .append("\"/>\n");
+        }
+
+        if (StringUtils.isNotEmpty(oauthProblemException.getDescription())) {
+            paramStringBuilder.append("<input type=\"hidden\" name=\"error_description\" value=\"")
+                    .append(oauthProblemException.getDescription())
+                    .append("\"/>\n");
+        }
+
+        if (StringUtils.isNotEmpty(sessionStateValue)) {
             paramStringBuilder.append("<input type=\"hidden\" name=\"session_state\" value=\"")
                     .append(sessionStateValue)
                     .append("\"/>\n");
@@ -1510,7 +1585,7 @@ public class OAuth2AuthzEndpoint {
      */
     private String doUserAuthorization(OAuthMessage oAuthMessage, String sessionDataKeyFromLogin,
                                        OIDCSessionState sessionState)
-            throws OAuthSystemException, ConsentHandlingFailedException {
+            throws OAuthSystemException, ConsentHandlingFailedException, OAuthProblemException {
 
         OAuth2Parameters oauth2Params = getOauth2Params(oAuthMessage);
         AuthenticatedUser authenticatedUser = getLoggedInUser(oAuthMessage);
@@ -1603,13 +1678,15 @@ public class OAuth2AuthzEndpoint {
                                     OIDCSessionState sessionState,
                                     OAuth2Parameters oauth2Params,
                                     AuthenticatedUser authenticatedUser,
-                                    boolean hasUserApproved) throws OAuthSystemException, ConsentHandlingFailedException {
+                                    boolean hasUserApproved) throws OAuthSystemException,
+            ConsentHandlingFailedException, OAuthProblemException {
 
         if (isUserSessionNotExists(authenticatedUser)) {
             // prompt=none but user is not logged in. Therefore throw error according to
             // http://openid.net/specs/openid-connect-core-1_0.html#AuthRequest
             sessionState.setAddSessionState(true);
-            return getErrorRedirectURL(oAuthMessage, oauth2Params, OAuth2ErrorCodes.LOGIN_REQUIRED);
+            throw OAuthProblemException.error(OAuth2ErrorCodes.LOGIN_REQUIRED,
+                    "Request with \'prompt=none\' but user session does not exist");
         }
 
         if (isIdTokenHintExists(oauth2Params)) {
@@ -1741,31 +1818,36 @@ public class OAuth2AuthzEndpoint {
                                      OIDCSessionState sessionState,
                                      OAuth2Parameters oauth2Params,
                                      AuthenticatedUser loggedInUser,
-                                     boolean hasUserApproved) throws OAuthSystemException, ConsentHandlingFailedException {
+                                     boolean hasUserApproved) throws OAuthSystemException,
+            ConsentHandlingFailedException, OAuthProblemException {
 
         sessionState.setAddSessionState(true);
         try {
             String idTokenHint = oauth2Params.getIDTokenHint();
             if (isIdTokenValidationFailed(idTokenHint)) {
-                return getErrorRedirectURL(oAuthMessage, oauth2Params, OAuth2ErrorCodes.ACCESS_DENIED);
+                throw OAuthProblemException.error(OAuth2ErrorCodes.ACCESS_DENIED,
+                        "Request with \'id_token_hint=" + idTokenHint +
+                                "\' but ID Token validation failed");
             }
 
             String loggedInUserSubjectId = loggedInUser.getAuthenticatedSubjectIdentifier();
             if (isIdTokenSubjectEqualsToLoggedInUser(loggedInUserSubjectId, idTokenHint)) {
                 return handlePreviouslyApprovedConsent(oAuthMessage, sessionState, oauth2Params, hasUserApproved);
             } else {
-                return getErrorRedirectURL(oAuthMessage, oauth2Params, OAuth2ErrorCodes.LOGIN_REQUIRED);
+                throw OAuthProblemException.error(OAuth2ErrorCodes.LOGIN_REQUIRED,
+                        "Request with \'id_token_hint=" + idTokenHint +
+                                "\' but user has denied the consent");
             }
         } catch (ParseException e) {
             String msg = "Error while getting clientId from the IdTokenHint.";
             log.error(msg, e);
-            return getErrorRedirectURL(oAuthMessage, oauth2Params, OAuth2ErrorCodes.ACCESS_DENIED);
+            throw OAuthProblemException.error(OAuth2ErrorCodes.ACCESS_DENIED, msg);
         }
     }
 
     private String handlePreviouslyApprovedConsent(OAuthMessage oAuthMessage, OIDCSessionState sessionState,
                                                    OAuth2Parameters oauth2Params, boolean hasUserApproved)
-            throws OAuthSystemException, ConsentHandlingFailedException {
+            throws OAuthSystemException, ConsentHandlingFailedException, OAuthProblemException {
 
         sessionState.setAddSessionState(true);
         if (isOpenIDConnectConsentSkipped()) {
@@ -1773,20 +1855,22 @@ public class OAuth2AuthzEndpoint {
         } else if (hasUserApproved) {
             return handleApprovedAlwaysWithoutPromptingForNewConsent(oAuthMessage, sessionState, oauth2Params);
         } else {
-            return getErrorRedirectURL(oAuthMessage, oauth2Params, OAuth2ErrorCodes.CONSENT_REQUIRED);
+            throw OAuthProblemException.error(OAuth2ErrorCodes.CONSENT_REQUIRED,
+                    "Required consent not found");
         }
     }
 
     private String handleApprovedAlwaysWithoutPromptingForNewConsent(OAuthMessage oAuthMessage,
                                                                      OIDCSessionState sessionState,
                                                                      OAuth2Parameters oauth2Params)
-            throws ConsentHandlingFailedException, OAuthSystemException {
+            throws ConsentHandlingFailedException, OAuthSystemException, OAuthProblemException {
 
         AuthenticatedUser authenticatedUser = getLoggedInUser(oAuthMessage);
         String preConsent = handlePreConsentIncludingExistingConsents(oauth2Params, authenticatedUser);
 
         if (isConsentFromUserRequired(preConsent)) {
-            return getErrorRedirectURL(oAuthMessage, oauth2Params, OAuth2ErrorCodes.CONSENT_REQUIRED);
+            throw OAuthProblemException.error(OAuth2ErrorCodes.CONSENT_REQUIRED,
+                    "Consent approved always without prompting for new consent");
         } else {
             return handleUserConsent(oAuthMessage, APPROVE, sessionState);
         }
@@ -1844,12 +1928,6 @@ public class OAuth2AuthzEndpoint {
 
     private boolean isPromptNone(OAuth2Parameters oauth2Params) {
         return (OAuthConstants.Prompt.NONE).equals(oauth2Params.getPrompt());
-    }
-
-    private String getErrorRedirectURL(OAuthMessage oAuthMessage, OAuth2Parameters oauth2Params, String errorCode) {
-
-        OAuthProblemException ex = OAuthProblemException.error(errorCode);
-        return EndpointUtil.getErrorRedirectURL(oAuthMessage.getRequest(), ex, oauth2Params);
     }
 
     private boolean hasPromptContainsConsent(OAuth2Parameters oauth2Params) {

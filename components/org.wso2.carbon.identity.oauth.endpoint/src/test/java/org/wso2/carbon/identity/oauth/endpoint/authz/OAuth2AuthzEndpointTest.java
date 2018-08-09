@@ -464,14 +464,14 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                         RESPONSE_MODE_FORM_POST, APP_REDIRECT_URL_JSON, HttpServletResponse.SC_OK},
 
                 {true, false, null, OAuth2ErrorCodes.INVALID_REQUEST, null, null, new HashSet<>(Arrays.asList("scope1")),
-                        RESPONSE_MODE_FORM_POST, APP_REDIRECT_URL, HttpServletResponse.SC_FOUND},
+                        RESPONSE_MODE_FORM_POST, APP_REDIRECT_URL, HttpServletResponse.SC_OK},
 
                 {true, false, null, null, "Error!", null, new HashSet<>(Arrays.asList(OAuthConstants.Scope.OPENID)),
-                        RESPONSE_MODE_FORM_POST, APP_REDIRECT_URL, HttpServletResponse.SC_FOUND},
+                        RESPONSE_MODE_FORM_POST, APP_REDIRECT_URL, HttpServletResponse.SC_OK},
 
                 {true, false, null, null, null, "http://localhost:8080/error",
                         new HashSet<>(Arrays.asList(OAuthConstants.Scope.OPENID)), RESPONSE_MODE_FORM_POST,
-                        APP_REDIRECT_URL, HttpServletResponse.SC_FOUND}
+                        APP_REDIRECT_URL, HttpServletResponse.SC_OK}
         };
     }
 
@@ -555,9 +555,9 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                         HttpServletResponse.SC_FOUND, OAuth2ErrorCodes.INVALID_REQUEST},
 
                 {"deny", APP_REDIRECT_URL, new HashSet<>(Arrays.asList(OAuthConstants.Scope.OPENID)),
-                        HttpServletResponse.SC_FOUND, OAuth2ErrorCodes.ACCESS_DENIED},
+                        HttpServletResponse.SC_OK, OAuth2ErrorCodes.ACCESS_DENIED},
 
-                {"deny", APP_REDIRECT_URL, new HashSet<>(Arrays.asList("scope1")), HttpServletResponse.SC_FOUND,
+                {"deny", APP_REDIRECT_URL, new HashSet<>(Arrays.asList("scope1")), HttpServletResponse.SC_OK,
                         OAuth2ErrorCodes.ACCESS_DENIED},
 
                 {"approve", APP_REDIRECT_URL, new HashSet<>(Arrays.asList(OAuthConstants.Scope.OPENID)),
@@ -632,11 +632,16 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
             assertNotNull(responseMetadata);
 
             if (expectedError != null) {
-                CollectionUtils.isNotEmpty(responseMetadata.get(HTTPConstants.HEADER_LOCATION));
-                assertTrue(CollectionUtils.isNotEmpty(responseMetadata.get(HTTPConstants.HEADER_LOCATION)),
-                        "Location header not found in the response");
-                String location = (String) responseMetadata.get(HTTPConstants.HEADER_LOCATION).get(0);
-                assertTrue(location.contains(expectedError), "Expected error code not found in URL");
+                if (response.getEntity() != null) {
+                    String htmlPost = response.getEntity().toString();
+                    assertTrue(htmlPost.contains(expectedError));
+                } else {
+                    CollectionUtils.isNotEmpty(responseMetadata.get(HTTPConstants.HEADER_LOCATION));
+                    assertTrue(CollectionUtils.isNotEmpty(responseMetadata.get(HTTPConstants.HEADER_LOCATION)),
+                            "Location header not found in the response");
+                    String location = (String) responseMetadata.get(HTTPConstants.HEADER_LOCATION).get(0);
+                    assertTrue(location.contains(expectedError), "Expected error code not found in URL");
+                }
             }
         }
     }
@@ -1086,7 +1091,6 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
             assertTrue(CollectionUtils.isNotEmpty(responseMetadata.get(HTTPConstants.HEADER_LOCATION)),
                     "Location header not found in the response");
             String location = (String) responseMetadata.get(HTTPConstants.HEADER_LOCATION).get(0);
-
             assertTrue(location.contains(errorCode), "Expected error code not found in URL");
         }
 

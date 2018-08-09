@@ -136,7 +136,7 @@ public class OAuthAdminService extends AbstractAdmin {
                 dto.setOAuthVersion(app.getOauthVersion());
                 dto.setGrantTypes(app.getGrantTypes());
                 dto.setScopeValidators(app.getScopeValidators());
-                dto.setUsername(app.getUser().toString());
+                dto.setUsername(UserCoreUtil.addDomainToName(app.getUser().getUserName(), app.getUser().getUserStoreDomain()));
                 dto.setPkceMandatory(app.isPkceMandatory());
                 dto.setPkceSupportPlain(app.isPkceSupportPlain());
                 dto.setUserAccessTokenExpiryTime(app.getUserAccessTokenExpiryTime());
@@ -436,6 +436,7 @@ public class OAuthAdminService extends AbstractAdmin {
         }
 
         String consumerKey = consumerAppDTO.getOauthConsumerKey();
+        setApplicationOwner(tenantDomain, consumerAppDTO, oauthappdo);
         oauthappdo.setOauthConsumerKey(consumerKey);
         oauthappdo.setOauthConsumerSecret(consumerAppDTO.getOauthConsumerSecret());
         oauthappdo.setCallbackUrl(consumerAppDTO.getCallbackUrl());
@@ -843,7 +844,8 @@ public class OAuthAdminService extends AbstractAdmin {
                                 appDO = appDAO.getAppInformation(scopedToken.getConsumerKey());
                                 appDTO.setOauthConsumerKey(scopedToken.getConsumerKey());
                                 appDTO.setApplicationName(appDO.getApplicationName());
-                                appDTO.setUsername(appDO.getUser().toString());
+                                appDTO.setUsername(UserCoreUtil.addDomainToName(appDO.getUser().getUserName(), appDO
+                                        .getUser().getUserStoreDomain()));
                                 appDTO.setGrantTypes(appDO.getGrantTypes());
                                 appDTO.setScopeValidators(appDO.getScopeValidators());
                                 appDTO.setPkceMandatory(appDO.isPkceMandatory());
@@ -1198,6 +1200,17 @@ public class OAuthAdminService extends AbstractAdmin {
         oAuthIDTokenAlgorithmDTO.setSupportedIdTokenEncryptionMethods(
                 OAuthServerConfiguration.getInstance().getSupportedIdTokenEncryptionMethods());
         return oAuthIDTokenAlgorithmDTO;
+    }
+
+    private void setApplicationOwner(String tenantDomain, OAuthConsumerAppDTO oAuthConsumerAppDTO, OAuthAppDO oauthappdo) {
+
+        if (oAuthConsumerAppDTO != null && oAuthConsumerAppDTO.getUsername() != null) {
+            AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+            authenticatedUser.setUserName(UserCoreUtil.removeDomainFromName(oAuthConsumerAppDTO.getUsername()));
+            authenticatedUser.setUserStoreDomain(IdentityUtil.extractDomainFromName(oAuthConsumerAppDTO.getUsername()));
+            authenticatedUser.setTenantDomain(tenantDomain);
+            oauthappdo.setAppOwner(authenticatedUser);
+        }
     }
 
     /**

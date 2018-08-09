@@ -185,6 +185,7 @@ public final class OAuthConstants {
         public static final String AUTH_TIME = "auth_time";
         public static final String ESSENTIAL = "essential";
         public static final String USERINFO = "userinfo";
+        public static final String CLIENT_ID = "client_id";
 
         private OAuth20Params() {
 
