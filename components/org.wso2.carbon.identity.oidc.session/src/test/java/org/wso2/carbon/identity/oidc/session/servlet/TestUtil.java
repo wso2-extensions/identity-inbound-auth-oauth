@@ -25,7 +25,11 @@ import java.io.FileInputStream;
 import java.nio.file.Paths;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.security.UnrecoverableKeyException;
+import java.security.cert.Certificate;
 
 public class TestUtil {
 
@@ -58,4 +62,12 @@ public class TestUtil {
         return keyStore.getCertificate(alias).getPublicKey();
     }
 
+    public static PrivateKey getPrivateKey(KeyStore keyStore,String alias,String password)
+            throws KeyStoreException,NoSuchAlgorithmException,UnrecoverableKeyException{
+        return (PrivateKey) keyStore.getKey(alias,password.toCharArray());
+    }
+
+    public static Certificate getCertificate(KeyStore keyStore,String alias) throws KeyStoreException{
+        return keyStore.getCertificate(alias);
+    }
 }

@@ -43,8 +43,8 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
-import org.wso2.carbon.identity.oidc.session.backChannelLogout.LogoutRequestSender;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
+import org.wso2.carbon.identity.oidc.session.backChannelLogout.LogoutRequestSender;
 import org.wso2.carbon.identity.oidc.session.cache.OIDCSessionDataCache;
 import org.wso2.carbon.identity.oidc.session.cache.OIDCSessionDataCacheEntry;
 import org.wso2.carbon.identity.oidc.session.cache.OIDCSessionDataCacheKey;
@@ -69,6 +69,16 @@ public class OIDCLogoutServlet extends HttpServlet {
 
     private static final Log log = LogFactory.getLog(OIDCLogoutServlet.class);
     private static final long serialVersionUID = -9203934217770142011L;
+
+    /**
+     * Returns the OpenIDConnect User Consent.
+     *
+     * @return
+     */
+    private static boolean getOpenIDConnectSkipeUserConsent() {
+        return OAuthServerConfiguration.getInstance().getOpenIDConnectSkipeUserConsentConfig();
+
+    }
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -174,7 +184,7 @@ public class OIDCLogoutServlet extends HttpServlet {
      * Validate Id token
      * Add OIDC parameters to cache
      *
-     * @param request Http servlet request
+     * @param request  Http servlet request
      * @param response Http servlet response
      * @return Redirect URI
      * @throws IOException
@@ -234,6 +244,7 @@ public class OIDCLogoutServlet extends HttpServlet {
 
     /**
      * Validate Id token signature
+     *
      * @param idToken Id token
      * @return validation state
      */
@@ -274,6 +285,7 @@ public class OIDCLogoutServlet extends HttpServlet {
      * Get tenant domain for signature validation.
      * There is a problem If Id token signed using SP's tenant and there is no direct way to get the tenant domain
      * using client id. So have iterate all the Tenants until get the right client id.
+     *
      * @param idToken id token
      * @return Tenant domain
      */
@@ -303,7 +315,8 @@ public class OIDCLogoutServlet extends HttpServlet {
 
     /**
      * Send request to consent URI
-     * @param request Http servlet request
+     *
+     * @param request  Http servlet request
      * @param response Http servlet response
      * @throws IOException
      */
@@ -332,8 +345,9 @@ public class OIDCLogoutServlet extends HttpServlet {
 
     /**
      * Append state query parameter
+     *
      * @param redirectURL redirect URL
-     * @param stateParam state query parameter
+     * @param stateParam  state query parameter
      * @return Redirect URL after appending state query param if exist
      */
     private String appendStateQueryParam(String redirectURL, String stateParam) {
@@ -346,7 +360,8 @@ public class OIDCLogoutServlet extends HttpServlet {
 
     /**
      * Validate post logout URI with registered callback URI
-     * @param postLogoutUri Post logout redirect URI
+     *
+     * @param postLogoutUri         Post logout redirect URI
      * @param registeredCallbackUri registered callback URI
      * @return Validation state
      */
@@ -373,6 +388,7 @@ public class OIDCLogoutServlet extends HttpServlet {
 
     /**
      * Extract Client Id from Id token
+     *
      * @param idToken id token
      * @return Client Id
      * @throws ParseException
@@ -384,6 +400,7 @@ public class OIDCLogoutServlet extends HttpServlet {
 
     /**
      * Extract Subject from id token
+     *
      * @param idToken id token
      * @return Authenticated Subject
      * @throws ParseException
@@ -408,9 +425,9 @@ public class OIDCLogoutServlet extends HttpServlet {
         //Add all parameters to authentication context before sending to authentication framework
         AuthenticationRequest authenticationRequest = new AuthenticationRequest();
         Map<String, String[]> map = new HashMap<>();
-        map.put(OIDCSessionConstants.OIDC_SESSION_DATA_KEY_PARAM, new String[] { sessionDataKey });
+        map.put(OIDCSessionConstants.OIDC_SESSION_DATA_KEY_PARAM, new String[]{sessionDataKey});
         authenticationRequest.setRequestQueryParams(map);
-        authenticationRequest.addRequestQueryParam(FrameworkConstants.RequestParams.LOGOUT, new String[] { "true" });
+        authenticationRequest.addRequestQueryParam(FrameworkConstants.RequestParams.LOGOUT, new String[]{"true"});
         authenticationRequest.setCommonAuthCallerPath(request.getRequestURI());
         authenticationRequest.setPost(true);
 
@@ -440,16 +457,14 @@ public class OIDCLogoutServlet extends HttpServlet {
         String sessionDataKey = request.getParameter(FrameworkConstants.SESSION_DATA_KEY);
         OIDCSessionDataCacheEntry cacheEntry = getSessionDataFromCache(sessionDataKey);
         if (cacheEntry != null) {
-            // BackChannel logout request.
-            doBackChannelLogout(request);
+
             String redirectURL = cacheEntry.getPostLogoutRedirectUri();
             if (redirectURL == null) {
                 redirectURL = OIDCSessionManagementUtil.getOIDCLogoutURL();
             }
             redirectURL = appendStateQueryParam(redirectURL, cacheEntry.getState());
             removeSessionDataFromCache(sessionDataKey);
-            Cookie opBrowserStateCookie = OIDCSessionManagementUtil.removeOPBrowserStateCookie(request, response);
-            OIDCSessionManagementUtil.getSessionManager().removeOIDCSessionState(opBrowserStateCookie.getValue());
+            OIDCSessionManagementUtil.removeOPBrowserStateCookie(request, response);
             response.sendRedirect(redirectURL);
         } else {
             response.sendRedirect(
@@ -504,16 +519,6 @@ public class OIDCLogoutServlet extends HttpServlet {
 
         OIDCSessionDataCacheKey cacheKey = new OIDCSessionDataCacheKey(sessionDataKey);
         OIDCSessionDataCache.getInstance().clearCacheEntry(cacheKey);
-    }
-
-    /**
-     * Returns the OpenIDConnect User Consent.
-     *
-     * @return
-     */
-    private static boolean getOpenIDConnectSkipeUserConsent() {
-        return OAuthServerConfiguration.getInstance().getOpenIDConnectSkipeUserConsentConfig();
-
     }
 
     /**

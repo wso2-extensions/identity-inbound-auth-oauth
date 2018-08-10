@@ -254,7 +254,7 @@
                         /**
                          * Backchannel logout feature is kept hidden in the UI for now.
                          */
-                        $(jQuery('#bclogout_row').hide());
+                        $(jQuery('#bclogout_row').show());
                         $(jQuery("#audience_enable").show());
                         $(jQuery("#add_audience").show());
                         $(jQuery("#audience_table").show());

@@ -71,6 +71,10 @@
             <artifactId>org.wso2.carbon.identity.application.authentication.framework</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.wso2.carbon.identity.framework</groupId>
+            <artifactId>org.wso2.carbon.identity.event</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
             <artifactId>org.wso2.carbon.identity.oauth</artifactId>
         </dependency>
@@ -175,6 +179,7 @@
                             org.wso2.carbon.identity.core.util;version="${carbon.identity.framework.imp.pkg.version.range}",
 
                             org.wso2.carbon.identity.oauth.common.exception;version="${identity.inbound.auth.oauth.imp.pkg.version.range}",
+                            org.wso2.carbon.identity.oauth.common;version="${identity.inbound.auth.oauth.imp.pkg.version.range}",
                             org.wso2.carbon.identity.oauth.config;version="${identity.inbound.auth.oauth.imp.pkg.version.range}",
                             org.wso2.carbon.identity.oauth.dao;version="${identity.inbound.auth.oauth.imp.pkg.version.range}",
                             org.wso2.carbon.identity.oauth2;version="${identity.inbound.auth.oauth.imp.pkg.version.range}",
@@ -189,6 +194,9 @@
                             org.wso2.carbon.utils.*; version="${carbon.kernel.imp.pkg.version.range}",
                             org.wso2.carbon.core.util.*; version="${carbon.kernel.imp.pkg.version.range}",
                             org.wso2.carbon.context.*; version="${carbon.kernel.imp.pkg.version.range}",
+
+                            org.wso2.carbon.base,
+                            org.wso2.carbon.identity.event.*,
 
                         </Import-Package>
                         <Export-Package>
