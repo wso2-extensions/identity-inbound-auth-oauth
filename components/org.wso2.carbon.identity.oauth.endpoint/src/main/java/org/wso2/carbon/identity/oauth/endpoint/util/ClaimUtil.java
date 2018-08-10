@@ -350,15 +350,17 @@ public class ClaimUtil {
 
     private static String getAccessTokenIdentifier(OAuth2TokenValidationResponseDTO tokenResponse) {
 
-        OauthTokenIssuer tokenIssuer = OAuthServerConfiguration.getInstance().getIdentityOauthTokenIssuer();
+        String accessToken = tokenResponse.getAuthorizationContextToken().getTokenString();
         String tokenIdentifier = null;
         try {
+            OauthTokenIssuer tokenIssuer = OAuth2Util.getTokenIssuer(accessToken);
             if (tokenIssuer != null) {
-                tokenIdentifier = tokenIssuer
-                        .getAccessTokenHash(tokenResponse.getAuthorizationContextToken().getTokenString());
+                tokenIdentifier = tokenIssuer.getAccessTokenHash(accessToken);
             }
         } catch (OAuthSystemException e) {
-            log.error("Error while getting token identifier");
+            log.error("Error while getting token identifier", e);
+        } catch (IdentityOAuth2Exception e) {
+            log.error("Error while retrieving token issuer", e);
         }
         return tokenIdentifier;
     }
