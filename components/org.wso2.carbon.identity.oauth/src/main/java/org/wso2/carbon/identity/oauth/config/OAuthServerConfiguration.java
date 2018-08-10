@@ -1776,7 +1776,6 @@ public class OAuthServerConfiguration {
     private void parseRetainOldAccessTokensConfig(OMElement oauthCleanupConfigElem) {
 
         OMElement tokenCleanElem = oauthCleanupConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OAUTH2_TOKEN_CLEAN_ELEM));
-
         if (tokenCleanElem != null) {
             OMElement oldTokenRetainConfigElem = tokenCleanElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.RETAIN_OLD_ACCESS_TOKENS));
             if (oldTokenRetainConfigElem != null && !"".equals(oldTokenRetainConfigElem.getText().trim())) {
@@ -1798,7 +1797,6 @@ public class OAuthServerConfiguration {
     private void tokenCleanupFeatureConfig(OMElement oauthCleanupConfigElem) {
 
         OMElement tokenCleanElem = oauthCleanupConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OAUTH2_TOKEN_CLEAN_ELEM));
-
         if (tokenCleanElem != null) {
             OMElement tokenCleanupConfigElem = tokenCleanElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.TOKEN_CLEANUP_FEATURE));
             if (tokenCleanupConfigElem != null && !"".equals(tokenCleanupConfigElem.getText().trim())) {

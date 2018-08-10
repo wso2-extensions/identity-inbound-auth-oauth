@@ -1322,8 +1322,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
 
             if (OAuthServerConfiguration.getInstance().isTokenCleanupEnabled() &&oldAccessTokenId != null) {
                     oldTokenCleanupObject.cleanupTokenByTokenId(oldAccessTokenId, connection);
-            }connection.commit();
-
+            }
+            connection.commit();
         } catch (SQLException e) {
             String errorMsg = "Error while regenerating access token";
             throw new IdentityOAuth2Exception(errorMsg, e);

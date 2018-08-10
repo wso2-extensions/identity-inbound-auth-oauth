@@ -41,7 +41,6 @@ public class OldTokensCleanDAO {
     private static Log log = LogFactory.getLog(OldTokensCleanDAO.class);
 
     public void cleanupTokenByTokenId(String tokenId, Connection connection) throws SQLException {
-
         if (OAuthServerConfiguration.getInstance().useRetainOldAccessTokens()) {
             PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.RETRIEVE_AND_STORE_IN_AUDIT);
             prepStmt.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
@@ -52,7 +51,6 @@ public class OldTokensCleanDAO {
     }
 
     public void cleanupTokenByTokenValue(String token, Connection connection) throws SQLException {
-
         OldAccessTokenDO oldAccessTokenObject = new OldAccessTokenDO();
         PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.RETRIEVE_OLD_TOKEN_BY_TOKEN_HASH);
         prepStmt.setString(1, token);
@@ -86,7 +84,6 @@ public class OldTokensCleanDAO {
     }
 
     private void saveTokenInAuditTable(OldAccessTokenDO oldAccessTokenDAO, Connection connection) throws SQLException {
-
         PreparedStatement insertintoaudittable = connection.prepareStatement(SQLQueries.STORE_OLD_TOKEN_IN_AUDIT);
         insertintoaudittable.setString(1, oldAccessTokenDAO.getTokenId());
         insertintoaudittable.setString(2, oldAccessTokenDAO.getAccessToken());
@@ -116,7 +113,6 @@ public class OldTokensCleanDAO {
 
     private void removeTokenFromMainTable(String oldAccessTokenID, Connection connection)
             throws SQLException {
-
         PreparedStatement deletefromaccesstokentable = connection.prepareStatement(SQLQueries.DELETE_OLD_TOKEN_BY_ID);
         deletefromaccesstokentable.setString(1, oldAccessTokenID);
         deletefromaccesstokentable.executeUpdate();
@@ -126,7 +122,6 @@ public class OldTokensCleanDAO {
     }
 
     public void cleanupTokensInBatch(List<String> oldTokens, Connection connection) throws SQLException {
-
         for (String token : oldTokens) {
             cleanupTokenByTokenValue(token, connection);
         }

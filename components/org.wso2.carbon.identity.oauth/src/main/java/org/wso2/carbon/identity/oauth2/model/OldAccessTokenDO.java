@@ -51,142 +51,114 @@ public class OldAccessTokenDO extends AccessTokenDO {
     private String refreshTokenHash;
 
     public void setConsumerKeyId(int consumerKeyId) {
-
         this.consumerKeyId = consumerKeyId;
     }
 
     public void setAuthzUser(String authzUser) {
-
         this.authzUser = authzUser;
     }
 
     public void setTenantId(int tenantId) {
-
         this.tenantId = tenantId;
     }
 
     public void setUserDomain(String userDomain) {
-
         this.userDomain = userDomain;
     }
 
     public void setUserType(String userType) {
-
         this.userType = userType;
     }
 
     public void setTimeCreated(Timestamp timeCreated) {
-
         setIssuedTime(timeCreated);
     }
 
     public void setRefreshTokenTimeCreated(Timestamp refreshTokenTimeCreated) {
-
         setRefreshTokenIssuedTime(refreshTokenTimeCreated);
     }
 
     public void setValdityPeriod(long valdityPeriod) {
-
         this.validityPeriod = valdityPeriod;
     }
 
     public void setRefreshTokenValidityPeriod(long refreshTokenValidityPeriod) {
-
         this.refreshTokenValidityPeriod = refreshTokenValidityPeriod;
     }
 
     public void setTokenScopeHash(String tokenScopeHash) {
-
         this.tokenScopeHash = tokenScopeHash;
     }
 
     public void setTokenStateId(String tokenStateId) {
-
         this.tokenStateId = tokenStateId;
     }
 
     public void setSubjectIdentifier(String subjectIdentifier) {
-
         this.subjectIdentifier = subjectIdentifier;
     }
 
     public void setAccessTokenHash(String accessTokenHash) {
-
         this.accessTokenHash = accessTokenHash;
     }
 
     public void setRefreshTokenHash(String refreshTokenHash) {
-
         this.refreshTokenHash = refreshTokenHash;
     }
 
     public int getConsumerKeyId() {
-
         return this.consumerKeyId;
     }
 
     public String getAuthzUserValue() {
-
         return authzUser;
     }
 
     public int getTenantId() {
-
         return this.tenantId;
     }
 
     public String getUserDomain() {
-
         return userDomain;
     }
 
     public String getUserType() {
-
         return userType;
     }
 
     public Timestamp getTimeCreated() {
-
         return getIssuedTime();
     }
 
     public Timestamp getRefreshTokenTimeCreated() {
-
         return getRefreshTokenIssuedTime();
     }
 
     public long getValdityPeriod() {
-
         return validityPeriod;
     }
 
     public long getRefreshTokenValidityPeriod() {
-
         return refreshTokenValidityPeriod;
     }
 
     public String getTokenScopeHash() {
-
         return tokenScopeHash;
     }
 
     public String getTokenStateId() {
-
         return tokenStateId;
     }
 
     public String getSubjectIdentifier() {
-
         return subjectIdentifier;
     }
 
     public String getAccessTokenHash() {
-
         return accessTokenHash;
     }
 
     public String getRefreshTokenHash() {
-
         return refreshTokenHash;
     }
 }
