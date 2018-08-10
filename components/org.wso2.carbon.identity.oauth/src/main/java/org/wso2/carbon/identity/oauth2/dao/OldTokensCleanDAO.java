@@ -15,6 +15,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.wso2.carbon.identity.oauth2.dao;
 
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -29,6 +30,7 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
 /**
  * This is DAO class for cleaning old Tokens. When new tokens is generated ,refreshed or revoked old access token
  * will be moved to Audit table and deleted from the Access token table. Token cleaning process can be enable or
@@ -46,7 +48,6 @@ public class OldTokensCleanDAO {
             prepStmt.setString(2, tokenId);
             prepStmt.executeUpdate();
         }
-
         removeTokenFromMainTable(tokenId, connection);
     }
 
@@ -56,10 +57,8 @@ public class OldTokensCleanDAO {
         PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.RETRIEVE_OLD_TOKEN_BY_TOKEN_HASH);
         prepStmt.setString(1, token);
         ResultSet resultSet = prepStmt.executeQuery();
-
         //iterate result set and insert to AccessTokenDO object.
         if (resultSet.next()) {
-
             oldAccessTokenObject.setTokenId(resultSet.getString(1));
             oldAccessTokenObject.setAccessToken(resultSet.getString(2));
             oldAccessTokenObject.setRefreshToken(resultSet.getString(3));
@@ -80,7 +79,6 @@ public class OldTokensCleanDAO {
             oldAccessTokenObject.setAccessTokenHash(resultSet.getString(18));
             oldAccessTokenObject.setRefreshTokenHash(resultSet.getString(19));
         }
-
         if (OAuthServerConfiguration.getInstance().useRetainOldAccessTokens()) {
             saveTokenInAuditTable(oldAccessTokenObject, connection);
         }
@@ -111,9 +109,8 @@ public class OldTokensCleanDAO {
         insertintoaudittable.setString(19, oldAccessTokenDAO.getRefreshTokenHash());
         insertintoaudittable.setTimestamp(20, new Timestamp(System.currentTimeMillis()));
         insertintoaudittable.execute();
-
         if (log.isDebugEnabled()) {
-            log.debug("successfully saved old access token in audit table");
+            log.debug("Successfully saved old access token in audit table");
         }
     }
 
@@ -123,9 +120,8 @@ public class OldTokensCleanDAO {
         PreparedStatement deletefromaccesstokentable = connection.prepareStatement(SQLQueries.DELETE_OLD_TOKEN_BY_ID);
         deletefromaccesstokentable.setString(1, oldAccessTokenID);
         deletefromaccesstokentable.executeUpdate();
-
         if (log.isDebugEnabled()) {
-            log.debug("successfully old access token deleted from access token table");
+            log.debug("Successfully old access token deleted from access token table");
         }
     }
 

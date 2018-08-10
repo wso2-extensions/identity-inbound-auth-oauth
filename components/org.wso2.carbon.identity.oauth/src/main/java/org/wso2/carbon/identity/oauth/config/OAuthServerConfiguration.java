@@ -1777,7 +1777,7 @@ public class OAuthServerConfiguration {
 
         OMElement tokenCleanElem = oauthCleanupConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OAUTH2_TOKEN_CLEAN_ELEM));
 
-        if(tokenCleanElem!=null) {
+        if (tokenCleanElem != null) {
             OMElement oldTokenRetainConfigElem = tokenCleanElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.RETAIN_OLD_ACCESS_TOKENS));
             if (oldTokenRetainConfigElem != null && !"".equals(oldTokenRetainConfigElem.getText().trim())) {
                 retainOldAccessTokens = oldTokenRetainConfigElem.getText().trim();
@@ -1790,16 +1790,16 @@ public class OAuthServerConfiguration {
                     log.debug("Retain old access token  is not defined.Default config will be used");
                 }
             }
-        }else
-        {
+        } else {
             tokenCleanupFeatureEnable = "false";
         }
     }
+
     private void tokenCleanupFeatureConfig(OMElement oauthCleanupConfigElem) {
 
         OMElement tokenCleanElem = oauthCleanupConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OAUTH2_TOKEN_CLEAN_ELEM));
 
-        if(tokenCleanElem!=null) {
+        if (tokenCleanElem != null) {
             OMElement tokenCleanupConfigElem = tokenCleanElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.TOKEN_CLEANUP_FEATURE));
             if (tokenCleanupConfigElem != null && !"".equals(tokenCleanupConfigElem.getText().trim())) {
                 tokenCleanupFeatureEnable = tokenCleanupConfigElem.getText().trim();
@@ -1812,9 +1812,7 @@ public class OAuthServerConfiguration {
                     log.debug("Old token cleanup process enable  is not defined.Default config will be used");
                 }
             }
-        }
-        else
-        {
+        } else {
             tokenCleanupFeatureEnable = "false";
         }
     }
@@ -2678,11 +2676,11 @@ public class OAuthServerConfiguration {
 
         // Persist token alias
         private static final String IDENTITY_OAUTH_PERSIST_TOKEN_ALIAS = "PersistAccessTokenAlias";
-        //token cleanup config
+        //Old access token cleanup
         private static final String OAUTH2_TOKEN_CLEAN_ELEM = "TokenCleanup";
-        // old access token cleanup feature
+        // Enable/Disable old access token cleanup feature
         private static final String TOKEN_CLEANUP_FEATURE = "EnableTokenCleanup";
-        // Retain old access token
+        // Enable/Disable retain old access token
         private static final String RETAIN_OLD_ACCESS_TOKENS = "RetainOldAccessToken";
 
         // Supported Grant Types
