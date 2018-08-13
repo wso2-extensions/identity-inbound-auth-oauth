@@ -82,7 +82,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
     private boolean isHashDisabled = OAuth2Util.isHashDisabled();
 
     private Log log = LogFactory.getLog(AccessTokenDAOImpl.class);
-    OldTokensCleanDAO oldTokenCleanupObject =new OldTokensCleanDAO();
+    OldTokensCleanDAO oldTokenCleanupObject = new OldTokensCleanDAO();
 
     @Override
     public void insertAccessToken(String accessToken, String consumerKey, AccessTokenDO accessTokenDO,
@@ -902,7 +902,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         PreparedStatement ps = null;
         if (tokens.length > 1) {
             try {
-                List<String> oldTokens=new ArrayList<>();
+                List<String> oldTokens = new ArrayList<>();
                 connection.setAutoCommit(false);
                 String sqlQuery = SQLQueries.REVOKE_ACCESS_TOKEN.replace(IDN_OAUTH2_ACCESS_TOKEN,
                         accessTokenStoreTable);
@@ -1320,8 +1320,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             // Post refresh access token event
             OAuth2TokenUtil.postRefreshAccessToken(oldAccessTokenId, accessTokenDO.getTokenId(), tokenState);
 
-            if (OAuthServerConfiguration.getInstance().isTokenCleanupEnabled() &&oldAccessTokenId != null) {
-                    oldTokenCleanupObject.cleanupTokenByTokenId(oldAccessTokenId, connection);
+            if (OAuthServerConfiguration.getInstance().isTokenCleanupEnabled() && oldAccessTokenId != null) {
+                oldTokenCleanupObject.cleanupTokenByTokenId(oldAccessTokenId, connection);
             }
             connection.commit();
         } catch (SQLException e) {

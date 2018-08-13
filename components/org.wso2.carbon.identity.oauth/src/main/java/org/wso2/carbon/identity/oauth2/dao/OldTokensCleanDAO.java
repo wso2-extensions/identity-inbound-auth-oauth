@@ -107,7 +107,7 @@ public class OldTokensCleanDAO {
         insertintoaudittable.setTimestamp(20, new Timestamp(System.currentTimeMillis()));
         insertintoaudittable.execute();
         if (log.isDebugEnabled()) {
-            log.debug("Successfully saved old access token in audit table");
+            log.debug("Successfully saved old access token in audit table. Token ID: "+oldAccessTokenDAO.getTokenId());
         }
     }
 
@@ -117,7 +117,7 @@ public class OldTokensCleanDAO {
         deletefromaccesstokentable.setString(1, oldAccessTokenID);
         deletefromaccesstokentable.executeUpdate();
         if (log.isDebugEnabled()) {
-            log.debug("Successfully old access token deleted from access token table");
+            log.debug("Successfully old access token deleted from access token table. Token ID: "+oldAccessTokenID);
         }
     }
 

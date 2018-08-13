@@ -370,10 +370,10 @@ public class OAuthServerConfiguration {
         // read hash mode config
         parseEnableHashMode(oauthElem);
 
-        // Parse retain Access Tokens config.
+        // Read the value of retain Access Tokens config. If true old token will be stored in Audit table else drop it.
         parseRetainOldAccessTokensConfig(oauthElem);
 
-        // Parse old  Access Tokens cleanup enable  config.
+        // Read the value of  old  Access Tokens cleanup enable  config. If true cleanup feature will be enable.
         tokenCleanupFeatureConfig(oauthElem);
     }
 
@@ -1807,7 +1807,7 @@ public class OAuthServerConfiguration {
             } else {
                 tokenCleanupFeatureEnable = "false";
                 if (log.isDebugEnabled()) {
-                    log.debug("Old token cleanup process enable  is not defined.Default config will be used");
+                    log.debug("Old token cleanup process enable  is not defined. Default config will be used");
                 }
             }
         } else {
