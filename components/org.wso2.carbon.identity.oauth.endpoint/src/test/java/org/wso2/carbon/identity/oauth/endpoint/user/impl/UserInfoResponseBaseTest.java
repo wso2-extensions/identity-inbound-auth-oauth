@@ -20,6 +20,7 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
+import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.endpoint.util.ClaimUtil;
 import org.wso2.carbon.identity.oauth.user.UserInfoClaimRetriever;
@@ -27,6 +28,8 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
+import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuerImpl;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImpl;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
@@ -302,12 +305,15 @@ public class UserInfoResponseBaseTest extends PowerMockTestCase {
         prepareClaimUtil(inputClaims);
     }
 
-    private void mockAccessTokenDOInOAuth2Util(AuthenticatedUser authorizedUser) throws IdentityOAuth2Exception {
+    private void mockAccessTokenDOInOAuth2Util(AuthenticatedUser authorizedUser)
+            throws IdentityOAuth2Exception, InvalidOAuthClientException {
         AccessTokenDO accessTokenDO = new AccessTokenDO();
         accessTokenDO.setAuthzUser(authorizedUser);
         when(OAuth2Util.getAccessTokenDOfromTokenIdentifier(ACCESS_TOKEN)).thenReturn(accessTokenDO);
 
         when(OAuth2Util.getAuthenticatedUser(any(AccessTokenDO.class))).thenCallRealMethod();
+        OauthTokenIssuer oauthTokenIssuer = new OauthTokenIssuerImpl();
+        when(OAuth2Util.getTokenIssuer(ACCESS_TOKEN)).thenReturn(oauthTokenIssuer);
     }
 
     protected void prepareForResponseClaimTest(Map<String, Object> inputClaims,

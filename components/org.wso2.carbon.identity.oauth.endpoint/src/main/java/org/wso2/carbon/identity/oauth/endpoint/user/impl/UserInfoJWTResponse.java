@@ -24,12 +24,14 @@ import com.nimbusds.jwt.PlainJWT;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.error.OAuthError;
+import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.endpoint.util.ClaimUtil;
 import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.AbstractUserInfoResponseBuilder;
 
@@ -112,7 +114,14 @@ public class UserInfoJWTResponse extends AbstractUserInfoResponseBuilder {
     private AccessTokenDO getAccessTokenDO(String accessToken) throws UserInfoEndpointException {
         AccessTokenDO accessTokenDO;
         try {
-            accessTokenDO = OAuth2Util.getAccessTokenDOfromTokenIdentifier(accessToken);
+            OauthTokenIssuer tokenIssuer = OAuth2Util.getTokenIssuer(accessToken);
+            String tokenIdentifier = null;
+            try {
+                tokenIdentifier = tokenIssuer.getAccessTokenHash(accessToken);
+            } catch (OAuthSystemException e) {
+                log.error("Error while getting token identifier", e);
+            }
+            accessTokenDO = OAuth2Util.getAccessTokenDOfromTokenIdentifier(tokenIdentifier);
         } catch (IdentityOAuth2Exception e) {
             throw new UserInfoEndpointException("Error occurred while signing JWT", e);
         }
