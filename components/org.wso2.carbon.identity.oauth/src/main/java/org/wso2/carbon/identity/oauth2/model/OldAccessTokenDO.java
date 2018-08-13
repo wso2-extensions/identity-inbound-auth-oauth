@@ -162,3 +162,4 @@ public class OldAccessTokenDO extends AccessTokenDO {
         return refreshTokenHash;
     }
 }
+
