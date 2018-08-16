@@ -68,6 +68,8 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigPro
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ID_TOKEN_ENCRYPTED;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.REQUEST_OBJECT_SIGNED;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_TYPE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.PUBLIC_CLIENT;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.OAUTH_PUBLIC_CLIENT_STATE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.OPENID_CONNECT_AUDIENCE;
 
 /**
@@ -670,6 +672,10 @@ public class OAuthAppDAO {
         addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties, TOKEN_TYPE,
                 oauthAppDO.getTokenType(), prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties, PUBLIC_CLIENT,
+                String.valueOf(oauthAppDO.isPublicClient()), prepStatementForPropertyAdd,
+                preparedStatementForPropertyUpdate);
+
         // Execute batched add/update/delete.
         prepStatementForPropertyAdd.executeBatch();
         preparedStatementForPropertyUpdate.executeBatch();
@@ -932,6 +938,42 @@ public class OAuthAppDAO {
         }
     }
 
+    /**
+     * Retrives the public client state for an oauth consumer app.
+     *
+     * @param tenantDomain Application tenant domain.
+     * @param consumerKey Client ID.
+     * @return Public client state.
+     * @throws IdentityOAuth2Exception
+     */
+    public boolean getPublicClientState(String tenantDomain, String consumerKey) throws IdentityOAuth2Exception {
+
+        boolean isPublicClient = false;
+        Connection connection = IdentityDatabaseUtil.getDBConnection();
+        PreparedStatement prepStmt = null;
+        ResultSet rSetAudiences = null;
+        try {
+            prepStmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.GET_SP_OIDC_PROPERTY);
+            prepStmt.setInt(1, IdentityTenantUtil.getTenantId(tenantDomain));
+            prepStmt.setString(2, consumerKey);
+            prepStmt.setString(3, OAUTH_PUBLIC_CLIENT_STATE);
+            rSetAudiences = prepStmt.executeQuery();
+            while (rSetAudiences.next()) {
+                String publicClientState = rSetAudiences.getString(1);
+                isPublicClient = Boolean.parseBoolean(publicClientState);
+            }
+            connection.commit();
+        } catch (SQLException e) {
+            String errorMsg = "Error occurred while retrieving Public Client state for client ID: " + consumerKey +
+                    " and tenant domain: " + tenantDomain;
+            IdentityDatabaseUtil.rollBack(connection);
+            throw new IdentityOAuth2Exception(errorMsg, e);
+        } finally {
+            IdentityDatabaseUtil.closeAllConnections(connection, rSetAudiences, prepStmt);
+        }
+        return isPublicClient;
+    }
+
     private void removeOauthOIDCPropertyTable(Connection connection, String tenantDomain, String consumerKey) throws
             SQLException {
 
@@ -1085,6 +1127,9 @@ public class OAuthAppDAO {
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                     TOKEN_TYPE, consumerAppDO.getTokenType());
 
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    PUBLIC_CLIENT, String.valueOf(consumerAppDO.isPublicClient()));
+
             prepStmtAddOIDCProperty.executeBatch();
         }
     }
@@ -1157,6 +1202,11 @@ public class OAuthAppDAO {
 
         String tokenType = getFirstPropertyValue(spOIDCProperties, TOKEN_TYPE);
         oauthApp.setTokenType(tokenType);
+
+        boolean isPublicClient = Boolean.parseBoolean(
+                getFirstPropertyValue(spOIDCProperties, PUBLIC_CLIENT));
+        oauthApp.setPublicClient(isPublicClient);
+
     }
 
     private String getFirstPropertyValue(Map<String, List<String>> propertyMap, String key) {

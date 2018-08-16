@@ -152,6 +152,7 @@ public class OAuthAdminService extends AbstractAdmin {
                 dto.setIdTokenEncryptionMethod(app.getIdTokenEncryptionMethod());
                 dto.setBackChannelLogoutUrl(app.getBackChannelLogoutUrl());
                 dto.setTokenType(app.getTokenType());
+                dto.setPublicClient(app.isPublicClient());
                 dtos[i] = dto;
             }
         }
@@ -191,6 +192,7 @@ public class OAuthAdminService extends AbstractAdmin {
                 dto.setIdTokenEncryptionAlgorithm(app.getIdTokenEncryptionAlgorithm());
                 dto.setIdTokenEncryptionMethod(app.getIdTokenEncryptionMethod());
                 dto.setTokenType(app.getTokenType());
+                dto.setPublicClient(app.isPublicClient());
 
                 if (log.isDebugEnabled()) {
                     log.debug("Found App :" + dto.getApplicationName() + " for consumerKey: " + consumerKey);
@@ -237,6 +239,7 @@ public class OAuthAdminService extends AbstractAdmin {
                 dto.setIdTokenEncryptionMethod(app.getIdTokenEncryptionMethod());
                 dto.setBackChannelLogoutUrl(app.getBackChannelLogoutUrl());
                 dto.setTokenType(app.getTokenType());
+                dto.setPublicClient(app.isPublicClient());
             }
             return dto;
         } catch (InvalidOAuthClientException | IdentityOAuth2Exception e) {
@@ -868,6 +871,7 @@ public class OAuthAdminService extends AbstractAdmin {
                                 appDTO.setIdTokenEncryptionAlgorithm(appDO.getIdTokenEncryptionAlgorithm());
                                 appDTO.setIdTokenEncryptionMethod(appDO.getIdTokenEncryptionMethod());
                                 appDTO.setTokenType(appDO.getTokenType());
+                                appDTO.setPublicClient(appDO.isPublicClient());
                                 appDTOs.add(appDTO);
                                 if (log.isDebugEnabled()) {
                                     log.debug("Found App: " + appDO.getApplicationName() + " for user: " + username);

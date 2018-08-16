@@ -35,6 +35,7 @@ public class OAuthConsumerAppDTO {
     private long applicationAccessTokenExpiryTime;
     private long refreshTokenExpiryTime;
     private String[] audiences;
+    private boolean isPublicClient;
     // OIDC related properties
     private boolean isRequestObjectSignatureValidationEnabled;
     private boolean isIdTokenEncryptionEnabled;
@@ -224,6 +225,14 @@ public class OAuthConsumerAppDTO {
 
     public void setTokenType(String tokenType) {
         this.tokenType = tokenType;
+    }
+
+    public boolean isPublicClient() {
+        return this.isPublicClient;
+    }
+
+    public void setPublicClient(boolean isPublicClient) {
+        this.isPublicClient = isPublicClient;
     }
 }
 

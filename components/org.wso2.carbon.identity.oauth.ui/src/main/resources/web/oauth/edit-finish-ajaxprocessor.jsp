@@ -64,12 +64,18 @@
    	StringBuffer buff = new StringBuffer();
     boolean pkceMandatory = false;
     boolean pkceSupportPlain = false;
+    boolean publicClient = false;
 
-    if(request.getParameter("pkce") != null) {
+    if (request.getParameter("pkce") != null) {
         pkceMandatory = true;
     }
-    if(request.getParameter("pkce_plain") != null) {
+
+    if (request.getParameter("pkce_plain") != null) {
         pkceSupportPlain = true;
+    }
+
+    if (request.getParameter("public_key") != null) {
+        publicClient = true;
     }
     
     // OIDC related properties
@@ -148,6 +154,7 @@
                 app.setIdTokenEncryptionAlgorithm(idTokenEncryptionAlgorithm);
                 app.setIdTokenEncryptionMethod(idTokenEncryptionMethod);
             }
+            app.setPublicClient(publicClient);
             
             client.updateOAuthApplicationData(app);
             String message = resourceBundle.getString("app.updated.successfully");

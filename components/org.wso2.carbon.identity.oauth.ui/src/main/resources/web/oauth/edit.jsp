@@ -557,6 +557,17 @@
                                 <% } %>
                                 <% } %>
 
+                                <tr id="public_client">
+                                    <td colspan="2">
+                                        <label>
+                                            <input type="checkbox" name="public_client" value="yes" <%=(app.isPublicClient() ? "checked" : "")%>>
+                                            <fmt:message key='publicclient.support.plain'/>
+                                        </label>
+                                        <div class="sectionHelp">
+                                            <fmt:message key='publicclient.support.plain.hint'/>
+                                        </div>
+                                    </td>
+                                </tr>
                                 <tr>
                                     <td class="leftCol-med"><fmt:message key='user.access.token.expiry.time'/></td>
                                     <td><input id="userAccessTokenExpiryTime" name="userAccessTokenExpiryTime"

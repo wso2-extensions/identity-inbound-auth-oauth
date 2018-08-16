@@ -147,6 +147,7 @@ public class OAuth2Util {
     public static final String OPENID_CONNECT = "OpenIDConnect";
     public static final String ENABLE_OPENID_CONNECT_AUDIENCES = "EnableAudiences";
     public static final String OPENID_CONNECT_AUDIENCE = "audience";
+    public static final String OAUTH_PUBLIC_CLIENT_STATE = "PublicClient";
 
     public static final String DEFAULT_TOKEN_TYPE = "Default";
 
