@@ -351,6 +351,7 @@ public class OAuthAdminService extends AbstractAdmin {
                     app.setIdTokenEncryptionMethod(application.getIdTokenEncryptionMethod());
                     app.setBackChannelLogoutUrl(application.getBackChannelLogoutUrl());
                     app.setTokenType(application.getTokenType());
+                    app.setPublicClient(application.isPublicClient());
                 }
                 dao.addOAuthApplication(app);
                 AppInfoCache.getInstance().addToCache(app.getOauthConsumerKey(), app);
@@ -459,6 +460,7 @@ public class OAuthAdminService extends AbstractAdmin {
         oauthappdo.setRefreshTokenExpiryTime(consumerAppDTO.getRefreshTokenExpiryTime());
         oauthappdo.setIdTokenExpiryTime(consumerAppDTO.getIdTokenExpiryTime());
         oauthappdo.setTokenType(consumerAppDTO.getTokenType());
+        oauthappdo.setPublicClient(consumerAppDTO.isPublicClient());
         if (OAuthConstants.OAuthVersions.VERSION_2.equals(consumerAppDTO.getOAuthVersion())) {
             List<String> allowedGrantsTypes = new ArrayList<>(Arrays.asList(getAllowedGrantTypes()));
             String[] requestGrants = consumerAppDTO.getGrantTypes().split("\\s");

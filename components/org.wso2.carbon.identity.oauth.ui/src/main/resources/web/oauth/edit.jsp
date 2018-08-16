@@ -560,7 +560,7 @@
                                 <tr id="public_client">
                                     <td colspan="2">
                                         <label>
-                                            <input type="checkbox" name="public_client" value="yes" <%=(app.isPublicClient() ? "checked" : "")%>>
+                                            <input type="checkbox" name="public_client" value="yes" <%=(app.getPublicClient() ? "checked" : "")%>>
                                             <fmt:message key='publicclient.support.plain'/>
                                         </label>
                                         <div class="sectionHelp">

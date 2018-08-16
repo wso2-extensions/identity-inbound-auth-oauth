@@ -261,7 +261,7 @@ public class OAuthAppDO implements Serializable {
     }
 
     public boolean isPublicClient() {
-        return this.isPublicClient;
+        return isPublicClient;
     }
 
     public void setPublicClient(boolean isPublicClient) {

@@ -228,7 +228,11 @@ public class OAuthConsumerAppDTO {
     }
 
     public boolean isPublicClient() {
-        return this.isPublicClient;
+        return isPublicClient;
+    }
+
+    public boolean getPublicClient() {
+        return isPublicClient;
     }
 
     public void setPublicClient(boolean isPublicClient) {
