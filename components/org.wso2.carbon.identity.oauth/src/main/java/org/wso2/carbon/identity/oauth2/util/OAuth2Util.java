@@ -147,7 +147,7 @@ public class OAuth2Util {
     public static final String OPENID_CONNECT = "OpenIDConnect";
     public static final String ENABLE_OPENID_CONNECT_AUDIENCES = "EnableAudiences";
     public static final String OPENID_CONNECT_AUDIENCE = "audience";
-    public static final String OAUTH_PUBLIC_CLIENT_STATE = "PublicClient";
+    public static final String OAUTH_PUBLIC_CLIENT_STATE = "publicClient";
 
     public static final String DEFAULT_TOKEN_TYPE = "Default";
 
@@ -2389,6 +2389,27 @@ public class OAuth2Util {
             throw new IdentityOAuth2Exception("Error while building X509 cert of oauth app with client_id: "
                     + clientId + " of tenantDomain: " + tenantDomain, e);
         }
+    }
+
+    /**
+     * Checks if a client is public or not.
+     *
+     * @param clientId Client ID.
+     * @return  True is public, False otherwise.
+     * @throws IdentityOAuth2Exception  Identity OAuth Exception.
+     * @throws InvalidOAuthClientException  Invalid OAuth Client Exception.
+     */
+    public static boolean isPublicClient(String clientId) throws IdentityOAuth2Exception, InvalidOAuthClientException {
+
+        OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
+        OAuthAppDO oAuthAppDO = AppInfoCache.getInstance().getValueFromCache(clientId);
+
+        if (oAuthAppDO == null) {
+            oAuthAppDO = oAuthAppDAO.getAppInformation(clientId);
+        }
+
+        return oAuthAppDO.isPublicClient();
+
     }
 }
 

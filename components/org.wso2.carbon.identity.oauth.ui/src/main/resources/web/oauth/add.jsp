@@ -266,7 +266,6 @@
                         $(jQuery("#encrypt_id_token_row").show());
                         $(jQuery('#encryption_algorithm_row')).show();
                         $(jQuery('#encryption_method_row')).show();
-                        $(jQuery('#public_client').show());
 
                         if (!supportGrantCode && !supportImplicit) {
                             $(jQuery('#callback_row')).hide();
@@ -278,9 +277,11 @@
                         if (supportGrantCode) {
                             $(jQuery("#pkce_enable").show());
                             $(jQuery("#pkce_support_plain").show());
+                            $(jQuery('#public_client').show());
                         } else {
                             $(jQuery("#pkce_enable").hide());
                             $(jQuery("#pkce_support_plain").hide());
+                            $(jQuery('#public_client').hide());
                         }
 
                         if (!idTokenEncryptionEnabled) {

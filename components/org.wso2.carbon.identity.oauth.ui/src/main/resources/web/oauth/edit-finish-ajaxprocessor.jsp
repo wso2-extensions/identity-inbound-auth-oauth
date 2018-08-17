@@ -74,10 +74,10 @@
         pkceSupportPlain = true;
     }
 
-    if (request.getParameter("public_key") != null) {
+    if (request.getParameter("public_client_enabled") != null) {
         publicClient = true;
     }
-    
+
     // OIDC related properties
     boolean isRequestObjectSignatureValidated = Boolean.parseBoolean(request.getParameter("validateRequestObjectSignature"));
     boolean isIdTokenEncrypted = Boolean.parseBoolean(request.getParameter("encryptIdToken"));
