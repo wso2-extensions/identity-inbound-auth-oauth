@@ -50,6 +50,7 @@ import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImpl;
 import org.wso2.carbon.identity.user.store.configuration.listener.UserStoreConfigListener;
 import org.wso2.carbon.registry.core.service.RegistryService;
 import org.wso2.carbon.stratos.common.listeners.TenantMgtListener;
+import org.wso2.carbon.identity.oauth2.client.authentication.PublicClientAuthenticator;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -124,6 +125,10 @@ public class OAuth2ServiceComponent {
             BasicAuthClientAuthenticator basicAuthClientAuthenticator = new BasicAuthClientAuthenticator();
             bundleContext.registerService(OAuthClientAuthenticator.class.getName(), basicAuthClientAuthenticator,
                     null);
+            PublicClientAuthenticator publicClientAuthenticator = new PublicClientAuthenticator();
+            bundleContext.registerService(OAuthClientAuthenticator.class.getName(), publicClientAuthenticator,
+                    null);
+
             if (log.isDebugEnabled()) {
                 log.debug("Identity OAuth bundle is activated");
             }
