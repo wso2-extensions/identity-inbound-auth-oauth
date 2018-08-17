@@ -31,14 +31,13 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
-
 import javax.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.Map;
 
 /**
  * This class is dedicated for authenticating 'Public Clients'. Public clients do not need a client secret to be
- * validated. This type of authentication is regularly utilised by native OAuth2 clients.
+ * authorised. This type of authentication is regularly utilised by native OAuth2 clients.
  */
 public class PublicClientAuthenticator extends AbstractOAuthClientAuthenticator {
 
@@ -74,7 +73,6 @@ public class PublicClientAuthenticator extends AbstractOAuthClientAuthenticator 
         return true;
     }
 
-
     /**
      * Returns whether the incoming request can be authenticated or not using the given inputs.
      *
@@ -95,7 +93,6 @@ public class PublicClientAuthenticator extends AbstractOAuthClientAuthenticator 
 
         try {
             context.setClientId(getClientId(request, bodyParams, context));
-
             if (isClientIdExistsAsParams(bodyParams)) {
                 if (OAuth2Util.isPublicClient(context.getClientId())) {
                     return true;
