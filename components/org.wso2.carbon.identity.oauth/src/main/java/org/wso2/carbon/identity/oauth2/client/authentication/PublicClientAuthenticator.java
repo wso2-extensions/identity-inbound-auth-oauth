@@ -251,22 +251,4 @@ public class PublicClientAuthenticator extends AbstractOAuthClientAuthenticator 
         context.setClientId(stringContent.get(OAuth.OAUTH_CLIENT_ID));
     }
 
-    /**
-     * Sets client id from header to the OAuth client authentication context.
-     *
-     * @param request HttpServletRequest.
-     * @param context OAuth client authentication context.
-     */
-    protected void setClientIdFromHeader(HttpServletRequest request, OAuthClientAuthnContext context) {
-        String[] credentials = new String[0];
-        try {
-            credentials = extractCredentialsFromAuthzHeader(getAuthorizationHeader(request));
-        } catch (OAuthClientAuthnException e) {
-            if (log.isDebugEnabled()) {
-                log.error("Could not extract client credentials from header.");
-            }
-        }
-        context.setClientId(credentials[0]);
-    }
-
 }
