@@ -11,18 +11,6 @@
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
-            <xs:element name="getScopes">
-                <xs:complexType>
-                    <xs:sequence/>
-                </xs:complexType>
-            </xs:element>
-            <xs:element name="getScopesResponse">
-                <xs:complexType>
-                    <xs:sequence>
-                        <xs:element maxOccurs="unbounded" minOccurs="0" name="return" nillable="true" type="ax2402:ScopeDTO"/>
-                    </xs:sequence>
-                </xs:complexType>
-            </xs:element>
             <xs:element name="getClaims">
                 <xs:complexType>
                     <xs:sequence>
@@ -37,6 +25,26 @@
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
+            <xs:element name="getScopes">
+                <xs:complexType>
+                    <xs:sequence/>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="getScopesResponse">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element maxOccurs="unbounded" minOccurs="0" name="return" nillable="true" type="ax2402:ScopeDTO"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="addScope">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element minOccurs="0" name="scope" nillable="true" type="xs:string"/>
+                        <xs:element maxOccurs="unbounded" minOccurs="0" name="claims" nillable="true" type="xs:string"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
             <xs:element name="registerOAuthConsumer">
                 <xs:complexType>
                     <xs:sequence/>
@@ -46,14 +54,6 @@
                 <xs:complexType>
                     <xs:sequence>
                         <xs:element maxOccurs="unbounded" minOccurs="0" name="return" nillable="true" type="xs:string"/>
-                    </xs:sequence>
-                </xs:complexType>
-            </xs:element>
-            <xs:element name="addScope">
-                <xs:complexType>
-                    <xs:sequence>
-                        <xs:element minOccurs="0" name="scope" nillable="true" type="xs:string"/>
-                        <xs:element maxOccurs="unbounded" minOccurs="0" name="claims" nillable="true" type="xs:string"/>
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
@@ -374,6 +374,7 @@
                     <xs:element minOccurs="0" name="applicationName" nillable="true" type="xs:string"/>
                     <xs:element maxOccurs="unbounded" minOccurs="0" name="audiences" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="backChannelLogoutUrl" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="bypassClientCredentials" type="xs:boolean"/>
                     <xs:element minOccurs="0" name="callbackUrl" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="grantTypes" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="idTokenEncryptionAlgorithm" nillable="true" type="xs:string"/>
@@ -384,7 +385,6 @@
                     <xs:element minOccurs="0" name="oauthConsumerSecret" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="pkceMandatory" type="xs:boolean"/>
                     <xs:element minOccurs="0" name="pkceSupportPlain" type="xs:boolean"/>
-                    <xs:element minOccurs="0" name="publicClient" type="xs:boolean"/>
                     <xs:element minOccurs="0" name="refreshTokenExpiryTime" type="xs:long"/>
                     <xs:element minOccurs="0" name="requestObjectSignatureValidationEnabled" type="xs:boolean"/>
                     <xs:element maxOccurs="unbounded" minOccurs="0" name="scopeValidators" nillable="true" type="xs:string"/>
@@ -1654,13 +1654,13 @@
     </wsdl:binding>
     <wsdl:service name="OAuthAdminService">
         <wsdl:port name="OAuthAdminServiceHttpsSoap11Endpoint" binding="tns:OAuthAdminServiceSoap11Binding">
-            <soap:address location="https://localhost:9443/services/OAuthAdminService.OAuthAdminServiceHttpsSoap11Endpoint/"/>
+            <soap:address location="https://wso2is.local:9443/services/OAuthAdminService.OAuthAdminServiceHttpsSoap11Endpoint/"/>
         </wsdl:port>
         <wsdl:port name="OAuthAdminServiceHttpsSoap12Endpoint" binding="tns:OAuthAdminServiceSoap12Binding">
-            <soap12:address location="https://localhost:9443/services/OAuthAdminService.OAuthAdminServiceHttpsSoap12Endpoint/"/>
+            <soap12:address location="https://wso2is.local:9443/services/OAuthAdminService.OAuthAdminServiceHttpsSoap12Endpoint/"/>
         </wsdl:port>
         <wsdl:port name="OAuthAdminServiceHttpsEndpoint" binding="tns:OAuthAdminServiceHttpBinding">
-            <http:address location="https://localhost:9443/services/OAuthAdminService.OAuthAdminServiceHttpsEndpoint/"/>
+            <http:address location="https://wso2is.local:9443/services/OAuthAdminService.OAuthAdminServiceHttpsEndpoint/"/>
         </wsdl:port>
     </wsdl:service>
 </wsdl:definitions>

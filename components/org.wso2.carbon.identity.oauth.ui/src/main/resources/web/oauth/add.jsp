@@ -245,7 +245,7 @@
                         $(jQuery('#encryption_method_row')).hide();
                         $(jQuery('#encryption_algorithm_row')).hide();
                         $(jQuery('#callback_row')).show();
-                        $(jQuery('#public_client').hide());
+                        $(jQuery('#bypass_client_credentials').hide());
 
                     } else if(oauthVersion == "<%=OAuthConstants.OAuthVersions.VERSION_2%>") {
                         $(jQuery('#grant_row')).show();
@@ -266,22 +266,19 @@
                         $(jQuery("#encrypt_id_token_row").show());
                         $(jQuery('#encryption_algorithm_row')).show();
                         $(jQuery('#encryption_method_row')).show();
+                        $(jQuery('#bypass_client_credentials').show());
 
                         if (!supportGrantCode && !supportImplicit) {
                             $(jQuery('#callback_row')).hide();
-                            $(jQuery('#public_client').hide());
                         } else {
                             $(jQuery('#callback_row')).show();
-                            $(jQuery('#public_client').show());
                         }
                         if (supportGrantCode) {
                             $(jQuery("#pkce_enable").show());
                             $(jQuery("#pkce_support_plain").show());
-                            $(jQuery('#public_client').show());
                         } else {
                             $(jQuery("#pkce_enable").hide());
                             $(jQuery("#pkce_support_plain").hide());
-                            $(jQuery('#public_client').hide());
                         }
 
                         if (!idTokenEncryptionEnabled) {
@@ -505,14 +502,14 @@
                                     </td>
                                 </tr>
                                 <% } %>
-                                <tr id="public_client">
+                                <tr id="bypass_client_credentials">
                                     <td colspan="2">
                                         <label>
-                                            <input type="checkbox" name="public_client" value="yes">
-                                            <fmt:message key='publicclient.support.plain'/>
+                                            <input type="checkbox" name="bypass_client_credentials" value="yes">
+                                            <fmt:message key='bypassclientcreds.support.plain'/>
                                         </label>
                                         <div class="sectionHelp">
-                                            <fmt:message key='publicclient.support.plain.hint'/>
+                                            <fmt:message key='bypassclientcreds.support.plain.hint'/>
                                         </div>
                                     </td>
                                 </tr>

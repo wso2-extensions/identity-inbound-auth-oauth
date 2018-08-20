@@ -84,7 +84,6 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.ClientCredentialDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
-import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuerImpl;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.registry.core.Registry;
 import org.wso2.carbon.registry.core.Resource;
@@ -147,7 +146,6 @@ public class OAuth2Util {
     public static final String OPENID_CONNECT = "OpenIDConnect";
     public static final String ENABLE_OPENID_CONNECT_AUDIENCES = "EnableAudiences";
     public static final String OPENID_CONNECT_AUDIENCE = "audience";
-    public static final String OAUTH_PUBLIC_CLIENT_STATE = "publicClient";
 
     public static final String DEFAULT_TOKEN_TYPE = "Default";
 
@@ -2392,14 +2390,14 @@ public class OAuth2Util {
     }
 
     /**
-     * Checks if a client is public or not.
+     * Checks if bypass client credentials option is enabled or not.
      *
      * @param clientId Client ID.
-     * @return  True is public, False otherwise.
+     * @return  True if enabled, False otherwise.
      * @throws IdentityOAuth2Exception  Identity OAuth Exception.
      * @throws InvalidOAuthClientException  Invalid OAuth Client Exception.
      */
-    public static boolean isPublicClient(String clientId) throws IdentityOAuth2Exception, InvalidOAuthClientException {
+    public static boolean isBypassClientCredentials(String clientId) throws IdentityOAuth2Exception, InvalidOAuthClientException {
 
         OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
         OAuthAppDO oAuthAppDO = AppInfoCache.getInstance().getValueFromCache(clientId);
@@ -2408,7 +2406,7 @@ public class OAuth2Util {
             oAuthAppDO = oAuthAppDAO.getAppInformation(clientId);
         }
 
-        return oAuthAppDO.isPublicClient();
+        return oAuthAppDO.isBypassClientCredentials();
 
     }
 }

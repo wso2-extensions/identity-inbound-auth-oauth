@@ -62,7 +62,7 @@
 	boolean pkceMandatory = false;
 	boolean pkceSupportPlain = false;
 
-	boolean isPublicClient = false;
+	boolean bypassClientCredentials = false;
 
 	if(request.getParameter("pkce") != null) {
 		pkceMandatory = true;
@@ -72,8 +72,8 @@
 		pkceSupportPlain = true;
 	}
 
-	if (request.getParameter("public_client") != null) {
-        isPublicClient = true;
+	if (request.getParameter("bypass_client_credentials") != null) {
+        bypassClientCredentials = true;
     }
     
     // OIDC related properties
@@ -148,7 +148,7 @@
             }
             app.setPkceMandatory(pkceMandatory);
             app.setPkceSupportPlain(pkceSupportPlain);
-            app.setPublicClient(isPublicClient);
+            app.setBypassClientCredentials(bypassClientCredentials);
             
             // Set OIDC related configuration properties.
             app.setRequestObjectSignatureValidationEnabled(isRequestObjectSignatureValidated);

@@ -85,16 +85,16 @@ public class PublicClientAuthenticator extends AbstractOAuthClientAuthenticator 
     public boolean canAuthenticate(HttpServletRequest request, Map<String, List> bodyParams, OAuthClientAuthnContext
             context) {
 
-        if (isAuthorizationHeaderExists(request)) {
-            if (isClientSecretExists(getAuthorizationHeader(request))) {
-                return false;
-            }
-        }
-
         try {
+            if (isAuthorizationHeaderExists(request)) {
+                if (isClientSecretExists(getAuthorizationHeader(request))) {
+                    return false;
+                }
+            }
+
             context.setClientId(getClientId(request, bodyParams, context));
             if (isClientIdExistsAsParams(bodyParams)) {
-                if (OAuth2Util.isPublicClient(context.getClientId())) {
+                if (OAuth2Util.isBypassClientCredentials(context.getClientId())) {
                     return true;
                 } else {
                     if (log.isDebugEnabled()) {

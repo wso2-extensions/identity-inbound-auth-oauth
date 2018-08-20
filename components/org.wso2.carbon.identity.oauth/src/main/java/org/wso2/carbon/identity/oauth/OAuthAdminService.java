@@ -152,7 +152,7 @@ public class OAuthAdminService extends AbstractAdmin {
                 dto.setIdTokenEncryptionMethod(app.getIdTokenEncryptionMethod());
                 dto.setBackChannelLogoutUrl(app.getBackChannelLogoutUrl());
                 dto.setTokenType(app.getTokenType());
-                dto.setPublicClient(app.isPublicClient());
+                dto.setBypassClientCredentials(app.isBypassClientCredentials());
                 dtos[i] = dto;
             }
         }
@@ -192,7 +192,7 @@ public class OAuthAdminService extends AbstractAdmin {
                 dto.setIdTokenEncryptionAlgorithm(app.getIdTokenEncryptionAlgorithm());
                 dto.setIdTokenEncryptionMethod(app.getIdTokenEncryptionMethod());
                 dto.setTokenType(app.getTokenType());
-                dto.setPublicClient(app.isPublicClient());
+                dto.setBypassClientCredentials(app.isBypassClientCredentials());
 
                 if (log.isDebugEnabled()) {
                     log.debug("Found App :" + dto.getApplicationName() + " for consumerKey: " + consumerKey);
@@ -239,7 +239,7 @@ public class OAuthAdminService extends AbstractAdmin {
                 dto.setIdTokenEncryptionMethod(app.getIdTokenEncryptionMethod());
                 dto.setBackChannelLogoutUrl(app.getBackChannelLogoutUrl());
                 dto.setTokenType(app.getTokenType());
-                dto.setPublicClient(app.isPublicClient());
+                dto.setBypassClientCredentials(app.isBypassClientCredentials());
             }
             return dto;
         } catch (InvalidOAuthClientException | IdentityOAuth2Exception e) {
@@ -351,7 +351,7 @@ public class OAuthAdminService extends AbstractAdmin {
                     app.setIdTokenEncryptionMethod(application.getIdTokenEncryptionMethod());
                     app.setBackChannelLogoutUrl(application.getBackChannelLogoutUrl());
                     app.setTokenType(application.getTokenType());
-                    app.setPublicClient(application.isPublicClient());
+                    app.setBypassClientCredentials(application.isBypassClientCredentials());
                 }
                 dao.addOAuthApplication(app);
                 AppInfoCache.getInstance().addToCache(app.getOauthConsumerKey(), app);
@@ -460,7 +460,7 @@ public class OAuthAdminService extends AbstractAdmin {
         oauthappdo.setRefreshTokenExpiryTime(consumerAppDTO.getRefreshTokenExpiryTime());
         oauthappdo.setIdTokenExpiryTime(consumerAppDTO.getIdTokenExpiryTime());
         oauthappdo.setTokenType(consumerAppDTO.getTokenType());
-        oauthappdo.setPublicClient(consumerAppDTO.isPublicClient());
+        oauthappdo.setBypassClientCredentials(consumerAppDTO.isBypassClientCredentials());
         if (OAuthConstants.OAuthVersions.VERSION_2.equals(consumerAppDTO.getOAuthVersion())) {
             List<String> allowedGrantsTypes = new ArrayList<>(Arrays.asList(getAllowedGrantTypes()));
             String[] requestGrants = consumerAppDTO.getGrantTypes().split("\\s");
@@ -873,7 +873,7 @@ public class OAuthAdminService extends AbstractAdmin {
                                 appDTO.setIdTokenEncryptionAlgorithm(appDO.getIdTokenEncryptionAlgorithm());
                                 appDTO.setIdTokenEncryptionMethod(appDO.getIdTokenEncryptionMethod());
                                 appDTO.setTokenType(appDO.getTokenType());
-                                appDTO.setPublicClient(appDO.isPublicClient());
+                                appDTO.setBypassClientCredentials(appDO.isBypassClientCredentials());
                                 appDTOs.add(appDTO);
                                 if (log.isDebugEnabled()) {
                                     log.debug("Found App: " + appDO.getApplicationName() + " for user: " + username);

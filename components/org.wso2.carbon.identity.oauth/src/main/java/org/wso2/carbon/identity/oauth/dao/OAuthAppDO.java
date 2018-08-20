@@ -56,7 +56,7 @@ public class OAuthAppDO implements Serializable {
     @XmlElementWrapper(name="audiences")
     @XmlElement(name = "audience")
     private String[] audiences = new String[0];
-    private boolean isPublicClient;
+    private boolean bypassClientCredentials;
     // OIDC related properties.
     private boolean requestObjectSignatureValidationEnabled;
     private boolean idTokenEncryptionEnabled;
@@ -260,11 +260,11 @@ public class OAuthAppDO implements Serializable {
         this.tokenType = tokenType;
     }
 
-    public boolean isPublicClient() {
-        return isPublicClient;
+    public boolean isBypassClientCredentials() {
+        return bypassClientCredentials;
     }
 
-    public void setPublicClient(boolean isPublicClient) {
-        this.isPublicClient = isPublicClient;
+    public void setBypassClientCredentials(boolean isPublicClient) {
+        this.bypassClientCredentials = isPublicClient;
     }
 }

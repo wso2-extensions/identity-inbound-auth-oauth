@@ -317,11 +317,9 @@
                     if(supportGrantCode) {
                         $(jQuery("#pkce_enable").show());
                         $(jQuery("#pkce_support_plain").show());
-                        $(jQuery('#public_client').show());
                     } else {
                         $(jQuery("#pkce_enable").hide());
                         $(jQuery("#pkce_support_plain").hide());
-                        $(jQuery('#public_client').hide());
                     }
                     /**
                      * Backchannel logout feature is kept hidden in the UI for now.
@@ -559,14 +557,14 @@
                                 <% } %>
                                 <% } %>
 
-                                <tr id="public_client">
+                                <tr id="bypass_client_credentials">
                                     <td colspan="2">
                                         <label>
-                                            <input type="checkbox" name="public_client_enabled" value="yes" <%=(app.getPublicClient() ? "checked" : "")%> />
-                                            <fmt:message key='publicclient.support.plain'/>
+                                            <input type="checkbox" name="bypass_client_credentials" value="yes" <%=(app.getBypassClientCredentials() ? "checked" : "")%> />
+                                            <fmt:message key='bypassclientcreds.support.plain'/>
                                         </label>
                                         <div class="sectionHelp">
-                                            <fmt:message key='publicclient.support.plain.hint'/>
+                                            <fmt:message key='bypassclientcreds.support.plain.hint'/>
                                         </div>
                                     </td>
                                 </tr>

@@ -35,7 +35,7 @@ public class OAuthConsumerAppDTO {
     private long applicationAccessTokenExpiryTime;
     private long refreshTokenExpiryTime;
     private String[] audiences;
-    private boolean isPublicClient;
+    private boolean bypassClientCredentials;
     // OIDC related properties
     private boolean isRequestObjectSignatureValidationEnabled;
     private boolean isIdTokenEncryptionEnabled;
@@ -227,16 +227,16 @@ public class OAuthConsumerAppDTO {
         this.tokenType = tokenType;
     }
 
-    public boolean isPublicClient() {
-        return isPublicClient;
+    public boolean isBypassClientCredentials() {
+        return bypassClientCredentials;
     }
 
-    public boolean getPublicClient() {
-        return isPublicClient;
+    public boolean getBypassClientCredentials() {
+        return bypassClientCredentials;
     }
 
-    public void setPublicClient(boolean isPublicClient) {
-        this.isPublicClient = isPublicClient;
+    public void setBypassClientCredentials(boolean isPublicClient) {
+        this.bypassClientCredentials = isPublicClient;
     }
 }
 

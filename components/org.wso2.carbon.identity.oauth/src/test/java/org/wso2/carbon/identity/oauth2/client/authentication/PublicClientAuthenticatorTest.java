@@ -19,8 +19,6 @@
 package org.wso2.carbon.identity.oauth2.client.authentication;
 
 import org.apache.axis2.transport.http.HTTPConstants;
-import org.apache.commons.lang.StringUtils;
-import org.apache.oltu.oauth2.common.OAuth;
 import org.mockito.Matchers;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
@@ -65,7 +63,7 @@ public class PublicClientAuthenticatorTest extends PowerMockIdentityBaseTest {
             InvalidOAuthClientException {
 
         PowerMockito.mockStatic(OAuth2Util.class);
-        PowerMockito.when(OAuth2Util.isPublicClient(Matchers.anyString())).thenReturn(publicClient);
+        PowerMockito.when(OAuth2Util.isBypassClientCredentials(Matchers.anyString())).thenReturn(publicClient);
 
         HttpServletRequest httpServletRequest = PowerMockito.mock(HttpServletRequest.class);
         PowerMockito.when(httpServletRequest.getHeader(headerName)).thenReturn(headerValue);
@@ -87,11 +85,11 @@ public class PublicClientAuthenticatorTest extends PowerMockIdentityBaseTest {
                         CLIENT_SECRET, null), new HashMap<String, List>(), true, false},
 
                 // Simple case authorization header value without "Basic" prefix. Also a Public client.
-                {SIMPLE_CASE_AUTHORIZATION_HEADER, "Gibberish value without Basic part", new HashMap<String, List>(),
+                {SIMPLE_CASE_AUTHORIZATION_HEADER, "Some value without Basic part", new HashMap<String, List>(),
                         true, false},
 
                 // Simple case authorization header value with "Basic" prefix. Also a Public client.
-                {SIMPLE_CASE_AUTHORIZATION_HEADER, "Basic Gibberish value with Basic part", new HashMap<String, List>(),
+                {SIMPLE_CASE_AUTHORIZATION_HEADER, "Basic some value with Basic part", new HashMap<String, List>(),
                         true, false},
 
                 // Simple authorization header with null value. Also a Public client.
