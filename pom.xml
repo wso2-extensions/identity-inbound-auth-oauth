@@ -27,7 +27,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
     <artifactId>identity-inbound-auth-oauth</artifactId>
-    <version>6.0.32</version>
+    <version>6.0.39-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>WSO2 Carbon OAuth module</name>
     <url>http://wso2.org</url>
@@ -36,7 +36,7 @@
         <url>https://github.com/wso2-extensions/identity-inbound-auth-oauth.git</url>
         <developerConnection>scm:git:https://github.com/wso2-extensions/identity-inbound-auth-oauth.git</developerConnection>
         <connection>scm:git:https://github.com/wso2-extensions/identity-inbound-auth-oauth.git</connection>
-        <tag>v6.0.32</tag>
+        <tag>HEAD</tag>
     </scm>
 
     <modules>
@@ -458,6 +458,11 @@
                 <artifactId>swagger-jaxrs</artifactId>
                 <version>${swagger-jaxrs.version}</version>
             </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.jaxrs</groupId>
+                <artifactId>jackson-jaxrs-json-provider</artifactId>
+                <version>${com.fasterxml.jackson.version}</version>
+            </dependency>
 
             <!--Test Dependencies-->
             <dependency>
@@ -803,8 +808,9 @@
 
         <!--Swagger Dependency Version-->
         <jackson.version>1.8.6</jackson.version>
+        <com.fasterxml.jackson.version>2.9.6</com.fasterxml.jackson.version>
         <spring-web.version>4.1.6.RELEASE</spring-web.version>
-        <swagger-jaxrs.version>1.5.2</swagger-jaxrs.version>
+        <swagger-jaxrs.version>1.5.20</swagger-jaxrs.version>
         <!-- httpclient dependency Version-->
         <http.client.version>4.3.6.wso2v1</http.client.version>
         <http.core.version>4.3.3.wso2v1</http.core.version>

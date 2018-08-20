@@ -419,8 +419,8 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
                         " and User Type : " + OAuthConstants.UserType.APPLICATION_USER);
             }
 
-            // Add the access token to the cache.
-            if (cacheEnabled) {
+            // Add the access token to the cache, if cacheEnabled and the hashing oauth key feature turn on.
+            if (isHashDisabled && cacheEnabled) {
                 OAuthCache.getInstance().addToCache(cacheKey, newAccessTokenDO);
                 // Adding AccessTokenDO to improve validation performance
                 OAuthCacheKey accessTokenCacheKey = new OAuthCacheKey(accessToken);

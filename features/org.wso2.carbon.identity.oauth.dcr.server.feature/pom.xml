@@ -22,7 +22,7 @@
         <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
         <artifactId>identity-inbound-auth-oauth</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <version>6.0.32</version>
+        <version>6.0.39-SNAPSHOT</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -109,7 +109,7 @@
                                     <type>war</type>
                                     <overWrite>true</overWrite>
                                     <outputDirectory>${basedir}/src/main/resources/</outputDirectory>
-                                    <destFileName>api#identity#oauth2#dcr#v1.0.war</destFileName>
+                                    <destFileName>api#identity#oauth2#dcr#v1.1.war</destFileName>
                                 </artifactItem>
                             </artifactItems>
                         </configuration>
@@ -131,7 +131,7 @@
                                 <resource>
                                     <directory>resources</directory>
                                     <includes>
-                                        <include>api#identity#oauth2#dcr#v1.0.war</include>
+                                        <include>api#identity#oauth2#dcr#v1.1.war</include>
                                         <include>p2.inf</include>
                                         <include>build.properties</include>
                                     </includes>

@@ -82,6 +82,7 @@ import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.ClientCredentialDO;
+import org.wso2.carbon.identity.oauth2.token.JWTTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
@@ -146,6 +147,7 @@ public class OAuth2Util {
     public static final String OPENID_CONNECT = "OpenIDConnect";
     public static final String ENABLE_OPENID_CONNECT_AUDIENCES = "EnableAudiences";
     public static final String OPENID_CONNECT_AUDIENCE = "audience";
+    private static final String DOT_SEPARATER = ".";
 
     public static final String DEFAULT_TOKEN_TYPE = "Default";
 
@@ -2284,7 +2286,10 @@ public class OAuth2Util {
      */
     public static AuthenticatedUser getAuthenticatedUser(AccessTokenDO accessTokenDO) {
 
-        AuthenticatedUser authenticatedUser = accessTokenDO.getAuthzUser();
+        AuthenticatedUser authenticatedUser = null;
+        if (accessTokenDO != null) {
+            authenticatedUser = accessTokenDO.getAuthzUser();
+        }
         if (authenticatedUser != null) {
             authenticatedUser.setFederatedUser(isFederatedUser(authenticatedUser));
         }
@@ -2390,7 +2395,53 @@ public class OAuth2Util {
     }
 
     /**
-     * Checks if bypass client credentials option is enabled or not.
+     * Return true if the token identifier is JWT.
+     *
+     * @param tokenIdentifier String JWT token identifier.
+     * @return  true for a JWT token.
+     */
+    public static boolean isJWT(String tokenIdentifier) {
+        // JWT token contains 3 base64 encoded components separated by periods.
+        return StringUtils.countMatches(tokenIdentifier, DOT_SEPARATER) == 2;
+    }
+
+    /**
+     * Return true if the JWT id token is encrypted.
+     *
+     * @param idToken String JWT ID token.
+     * @return  Boolean state of encryption.
+     */
+    public static boolean isIDTokenEncrypted(String idToken) {
+        // Encrypted ID token contains 5 base64 encoded components separated by periods.
+        return StringUtils.countMatches(idToken, DOT_SEPARATER) == 4;
+    }
+
+    public static OauthTokenIssuer getTokenIssuer(String accessToken) throws IdentityOAuth2Exception {
+
+        OauthTokenIssuer oauthTokenIssuer = null;
+        String consumerKey = null;
+        if (isJWT(accessToken) || isIDTokenEncrypted(accessToken)) {
+            oauthTokenIssuer = new JWTTokenIssuer();
+        } else {
+            try {
+                consumerKey = OAuth2Util.getClientIdForAccessToken(accessToken);
+                if (consumerKey != null) {
+                    oauthTokenIssuer = OAuth2Util.getOAuthTokenIssuerForOAuthApp(consumerKey);
+                }
+            } catch (IllegalArgumentException e) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Consumer key is not found for token identifier: " + accessToken, e);
+                }
+            } catch (InvalidOAuthClientException e) {
+                throw new IdentityOAuth2Exception(
+                        "Error while retrieving oauth issuer for the app with clientId: " + consumerKey, e);
+            }
+        }
+        return oauthTokenIssuer;
+    }
+
+    /**
+     * * Checks if bypass client credentials option is enabled or not.
      *
      * @param clientId Client ID.
      * @return  True if enabled, False otherwise.
@@ -2407,7 +2458,6 @@ public class OAuth2Util {
         }
 
         return oAuthAppDO.isBypassClientCredentials();
-
     }
 }
 
