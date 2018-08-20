@@ -2441,7 +2441,7 @@ public class OAuth2Util {
     }
 
     /**
-     * * Checks if bypass client credentials option is enabled or not.
+     * Checks if bypass client credentials option is enabled or not.
      *
      * @param clientId Client ID.
      * @return  True if enabled, False otherwise.
