@@ -2448,7 +2448,8 @@ public class OAuth2Util {
      * @throws IdentityOAuth2Exception  Identity OAuth Exception.
      * @throws InvalidOAuthClientException  Invalid OAuth Client Exception.
      */
-    public static boolean isBypassClientCredentials(String clientId) throws IdentityOAuth2Exception, InvalidOAuthClientException {
+    public static boolean isBypassClientCredentials(String clientId) throws IdentityOAuth2Exception,
+            InvalidOAuthClientException {
 
         OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
         OAuthAppDO oAuthAppDO = AppInfoCache.getInstance().getValueFromCache(clientId);

@@ -74,7 +74,7 @@
 
 	if (request.getParameter("bypass_client_credentials") != null) {
         bypassClientCredentials = true;
-    }
+	}
     
     // OIDC related properties
     boolean isRequestObjectSignatureValidated = Boolean.parseBoolean(request.getParameter("validateRequestObjectSignature"));
