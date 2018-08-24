@@ -54,7 +54,6 @@ public class DCRDataHolder {
         this.applicationManagementService = applicationManagementService;
     }
 
-
     public List<RegistrationHandler> getRegistrationHandlerList() {
         return registrationHandlerList;
     }
@@ -63,6 +62,7 @@ public class DCRDataHolder {
             List<RegistrationHandler> registrationHandlerList) {
         this.registrationHandlerList = registrationHandlerList;
     }
+
 
     public List<UnRegistrationHandler> getUnRegistrationHandlerList() {
         return unRegistrationHandlerList;

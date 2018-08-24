@@ -33,6 +33,7 @@ public class DCRMConstants {
         FAILED_TO_UPDATE_APPLICATION("Error occurred while updating application with client key: %s" ),
         BAD_REQUEST_INVALID_REDIRECT_URI("Invalid redirect URI: %s"),
         BAD_REQUEST_INVALID_SP_NAME("Client Name is not adhering to the regex: %s"),
+        BAD_REQUEST_INVALID_SP_TEMPLATE_NAME("Invalid service provider template name: %s"),
         BAD_REQUEST_INVALID_INPUT("%s"),
         BAD_REQUEST_INSUFFICIENT_DATA("Insufficient data in the request"),
         NOT_FOUND_APPLICATION_WITH_ID("Application not available for given client key: %s"),
