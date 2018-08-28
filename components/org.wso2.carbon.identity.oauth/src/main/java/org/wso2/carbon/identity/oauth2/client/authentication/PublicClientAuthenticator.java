@@ -18,14 +18,10 @@
 
 package org.wso2.carbon.identity.oauth2.client.authentication;
 
-import org.apache.axiom.util.base64.Base64Utils;
-import org.apache.axis2.transport.http.HTTPConstants;
-import org.apache.commons.io.Charsets;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.OAuth;
-import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
@@ -37,19 +33,16 @@ import java.util.Map;
 
 /**
  * This class is dedicated for authenticating 'Public Clients'. Public clients do not need a client secret to be
- * authorised. This type of authentication is regularly utilised by native OAuth2 clients.
+ * authenticated. This type of authentication is regularly utilised by native OAuth2 clients.
  */
 public class PublicClientAuthenticator extends AbstractOAuthClientAuthenticator {
 
     private static Log log = LogFactory.getLog(PublicClientAuthenticator.class);
-    private static String SIMPLE_CASE_AUTHORIZATION_HEADER = "authorization";
-    private static String CREDENTIAL_SEPARATOR = ":";
-    private static int CREDENTIAL_LENGTH = 2;
 
     /**
-     * Returns the execution order of this authenticator
+     * Returns the execution order of this authenticator.
      *
-     * @return Execution place within the order
+     * @return Execution place within the order.
      */
     @Override
     public int getPriority() {
@@ -85,41 +78,37 @@ public class PublicClientAuthenticator extends AbstractOAuthClientAuthenticator 
     public boolean canAuthenticate(HttpServletRequest request, Map<String, List> bodyParams, OAuthClientAuthnContext
             context) {
 
-        try {
-            if (isAuthorizationHeaderExists(request)) {
-                if (isClientSecretExists(getAuthorizationHeader(request))) {
-                    return false;
-                }
-            }
+        String clientId = getClientId(request, bodyParams, context);
 
-            context.setClientId(getClientId(request, bodyParams, context));
+        try {
             if (isClientIdExistsAsParams(bodyParams)) {
-                if (OAuth2Util.isBypassClientCredentials(context.getClientId())) {
+                if (canBypassClientCredentials(context.getClientId())) {
+                    if (clientId != null) {
+                        context.setClientId(clientId);
+                    }
                     return true;
                 } else {
-                    if (log.isDebugEnabled()) {
-                        log.debug("Client is not public.");
+                    if (log.isErrorEnabled()) {
+                        log.error("The client is not public.");
                     }
-                    return false;
                 }
             } else {
-                if (log.isDebugEnabled()) {
-                    log.debug("Client ID could not be retrieved.");
+                if (log.isErrorEnabled()) {
+                    log.error("Application with the given client ID " + context.getClientId() + "is not found");
                 }
             }
         } catch (InvalidOAuthClientException e) {
             if (log.isDebugEnabled()) {
-                log.debug("Client ID could not be retrieved.");
+                log.debug("Client ID could not be retrieved from the request.");
             }
         } catch (IdentityOAuth2Exception e) {
             if (log.isDebugEnabled()) {
-                log.debug("Client ID could not be retrieved.");
+                log.debug("Client ID could not be retrieved from the request.");
             }
         }
 
-        if (log.isDebugEnabled()) {
-            log.debug("Client ID not present as Authorization header nor as body params. Hence " +
-                    "returning false");
+        if (log.isErrorEnabled()) {
+            log.error("Client ID not present in the request.");
         }
 
         return false;
@@ -133,7 +122,7 @@ public class PublicClientAuthenticator extends AbstractOAuthClientAuthenticator 
     @Override
     public String getName() {
 
-        return "PublicOAuthClientAuthenticator";
+        return "PublicClientAuthenticator";
     }
 
     /**
@@ -143,7 +132,7 @@ public class PublicClientAuthenticator extends AbstractOAuthClientAuthenticator 
      * @param bodyParams              Body paarameter map of the incoming request.
      * @param oAuthClientAuthnContext OAuthClientAuthentication context.
      * @return Client ID of the OAuth2 client.
-     * @throws OAuthClientAuthnException OAuth client authentication context.
+     * @throws OAuthClientAuthnException OAuth client authentication exception.
      */
     @Override
     public String getClientId(HttpServletRequest request, Map<String, List> bodyParams, OAuthClientAuthnContext
@@ -154,17 +143,17 @@ public class PublicClientAuthenticator extends AbstractOAuthClientAuthenticator 
     }
 
     /**
-     * Checks for an authorization header.
-     *
-     * @param request HttpServletRequest.
-     * @return True if auth header exists, false otherwise.
+     * Checks if the client can bypass credentials.
+     * 
+     * @param clientId Client ID
+     * @return True is the client can bypass credentials, False otherwise.
+     * @throws IdentityOAuth2Exception OAuth2 exception.
+     * @throws InvalidOAuthClientException Invalid OAuth2 client exception.
      */
-    protected boolean isAuthorizationHeaderExists(HttpServletRequest request) {
-        String authorizationHeader = getAuthorizationHeader(request);
-        if (StringUtils.isNotEmpty(authorizationHeader)) {
-            return true;
-        }
-        return false;
+    private boolean canBypassClientCredentials(String clientId) throws IdentityOAuth2Exception,
+            InvalidOAuthClientException {
+
+        return OAuth2Util.getAppInformationByClientId(clientId).isBypassClientCredentials();
     }
 
     /**
@@ -173,68 +162,12 @@ public class PublicClientAuthenticator extends AbstractOAuthClientAuthenticator 
      * @param contentParam Request body parameters.
      * @return True if client ID exists as a body parameter, false otherwise.
      */
-    protected boolean isClientIdExistsAsParams(Map<String, List> contentParam) {
+    private boolean isClientIdExistsAsParams(Map<String, List> contentParam) {
 
         Map<String, String> stringContent = getBodyParameters(contentParam);
         return (StringUtils.isNotEmpty(stringContent.get(OAuth.OAUTH_CLIENT_ID)));
     }
 
-    /**
-     * Checks if the client secret exists in the header.
-     *
-     * @param authorizationHeader Authorization header.
-     * @return True if the client secret exists, false otherwise.
-     */
-    protected boolean isClientSecretExists(String authorizationHeader) {
-        try {
-            if (extractCredentialsFromAuthzHeader(authorizationHeader).length == CREDENTIAL_LENGTH) {
-                return true;
-            }
-        } catch (OAuthClientAuthnException e) {
-            if (log.isDebugEnabled()) {
-                log.error("Could not extract client credentials from header.");
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Extracts client id and secret from Authorization header.
-     *
-     * @param authorizationHeader     Authroization header.
-     * @return An array which has client id as the first element and secret as the second element.
-     * @throws OAuthClientAuthnException
-     */
-    protected static String[] extractCredentialsFromAuthzHeader(String authorizationHeader) throws OAuthClientAuthnException {
-
-        String[] splitValues = authorizationHeader.trim().split(" ");
-        if (splitValues.length == CREDENTIAL_LENGTH) {
-            byte[] decodedBytes = Base64Utils.decode(splitValues[1].trim());
-            String userNamePassword = new String(decodedBytes, Charsets.UTF_8);
-            String[] credentials = userNamePassword.split(CREDENTIAL_SEPARATOR);
-            if (credentials.length == CREDENTIAL_LENGTH) {
-                return credentials;
-            }
-        }
-        String errMsg = "Error decoding authorization header. Space delimited \"<authMethod> <base64Hash>\" format " +
-                "violated.";
-        throw new OAuthClientAuthnException(errMsg, OAuth2ErrorCodes.INVALID_REQUEST);
-    }
-
-    /**
-     * Retrieves the authorization header from the request.
-     *
-     * @param request HttpServletRequest.
-     * @return Authorization header of the request.
-     */
-    protected String getAuthorizationHeader(HttpServletRequest request) {
-
-        String authorizationHeader = request.getHeader(HTTPConstants.HEADER_AUTHORIZATION);
-        if (StringUtils.isEmpty(authorizationHeader)) {
-            authorizationHeader = request.getHeader(SIMPLE_CASE_AUTHORIZATION_HEADER);
-        }
-        return authorizationHeader;
-    }
 
     /**
      * Sets client id from body parameters to the OAuth client authentication context.
@@ -242,7 +175,7 @@ public class PublicClientAuthenticator extends AbstractOAuthClientAuthenticator 
      * @param params Body parameters of the incoming request.
      * @param context      OAuth client authentication context.
      */
-    protected void setClientCredentialsFromParam(Map<String, List> params, OAuthClientAuthnContext context) {
+    private void setClientCredentialsFromParam(Map<String, List> params, OAuthClientAuthnContext context) {
 
         Map<String, String> stringContent = getBodyParameters(params);
         context.setClientId(stringContent.get(OAuth.OAUTH_CLIENT_ID));

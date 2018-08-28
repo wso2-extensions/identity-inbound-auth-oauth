@@ -63,7 +63,8 @@ public class PublicClientAuthenticatorTest extends PowerMockIdentityBaseTest {
             InvalidOAuthClientException {
 
         PowerMockito.mockStatic(OAuth2Util.class);
-        PowerMockito.when(OAuth2Util.isBypassClientCredentials(Matchers.anyString())).thenReturn(publicClient);
+        PowerMockito.when(OAuth2Util.getAppInformationByClientId(Matchers.anyString()).isBypassClientCredentials()).
+                thenReturn(publicClient);
 
         HttpServletRequest httpServletRequest = PowerMockito.mock(HttpServletRequest.class);
         PowerMockito.when(httpServletRequest.getHeader(headerName)).thenReturn(headerValue);
@@ -97,7 +98,7 @@ public class PublicClientAuthenticatorTest extends PowerMockIdentityBaseTest {
 
                 // Simple authorization header but no value. But has client id and secret in body. Also a Public client.
                 {SIMPLE_CASE_AUTHORIZATION_HEADER, null, ClientAuthUtil.getBodyContentWithClientAndSecret(CLIENT_ID,
-                        CLIENT_SECRET), true, true},
+                        CLIENT_SECRET), true, false},
 
                 // No authorization header. but client id and secret present in the body and a public client.
                 {null, null, ClientAuthUtil.getBodyContentWithClientAndSecret(CLIENT_ID, CLIENT_SECRET), true, true},
@@ -106,10 +107,12 @@ public class PublicClientAuthenticatorTest extends PowerMockIdentityBaseTest {
                 {null, null, ClientAuthUtil.getBodyContentWithClientAndSecret(CLIENT_ID, CLIENT_SECRET), true, true},
 
                 // No authorization header. Only client secret is present in body and a public client.
-                {null, null, ClientAuthUtil.getBodyContentWithClientAndSecret(null, CLIENT_SECRET), true, false},
+                {null, null, ClientAuthUtil.getBodyContentWithClientAndSecret(null, CLIENT_SECRET),
+                        true, false},
 
                 // No authorization header. Only client secret is present in body and not a public client.
-                {null, null, ClientAuthUtil.getBodyContentWithClientAndSecret(null, CLIENT_SECRET), true, false},
+                {null, null, ClientAuthUtil.getBodyContentWithClientAndSecret(null, CLIENT_SECRET),
+                        true, false},
 
                 // No authorization header. Only client id is present in the body and a public client.
                 {null, null, ClientAuthUtil.getBodyContentWithClientAndSecret(CLIENT_ID, null), true, true},
@@ -117,10 +120,11 @@ public class PublicClientAuthenticatorTest extends PowerMockIdentityBaseTest {
                 // No authorization header. Only client id is present in the body and not a public client.
                 {null, null, ClientAuthUtil.getBodyContentWithClientAndSecret(CLIENT_ID, null), true, true},
 
-                // Neither authorization header nor body parameters present with client id and secret and a public client.
-                {null, null, ClientAuthUtil.getBodyContentWithClientAndSecret(null, null), true, false},
+                // Neither authorization header nor body parameters present and a public client.
+                {null, null, ClientAuthUtil.getBodyContentWithClientAndSecret(null, null),
+                        true, false},
 
-                // Neither authorization header nor body parameters present with client id and secret and not a public client.
+                // Neither authorization header nor body parameters present and not a public client.
                 {null, null, ClientAuthUtil.getBodyContentWithClientAndSecret(null, null), true, false},
         };
     }

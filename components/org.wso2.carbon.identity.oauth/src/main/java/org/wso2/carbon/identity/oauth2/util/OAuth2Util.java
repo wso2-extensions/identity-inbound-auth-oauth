@@ -2439,26 +2439,6 @@ public class OAuth2Util {
         }
         return oauthTokenIssuer;
     }
-
-    /**
-     * Checks if bypass client credentials option is enabled or not.
-     *
-     * @param clientId Client ID.
-     * @return  True if enabled, False otherwise.
-     * @throws IdentityOAuth2Exception  Identity OAuth Exception.
-     * @throws InvalidOAuthClientException  Invalid OAuth Client Exception.
-     */
-    public static boolean isBypassClientCredentials(String clientId) throws IdentityOAuth2Exception,
-            InvalidOAuthClientException {
-
-        OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
-        OAuthAppDO oAuthAppDO = AppInfoCache.getInstance().getValueFromCache(clientId);
-
-        if (oAuthAppDO == null) {
-            oAuthAppDO = oAuthAppDAO.getAppInformation(clientId);
-        }
-
-        return oAuthAppDO.isBypassClientCredentials();
-    }
+    
 }
 
