@@ -96,13 +96,9 @@ public class PublicClientAuthenticator extends AbstractOAuthClientAuthenticator 
                 log.error("Application with the given client ID " + clientId + "is not found");
             }
         } catch (InvalidOAuthClientException e) {
-            if (log.isDebugEnabled()) {
-                log.debug("Error in retrieving an Application (Service Provider) with client ID : " + clientId, e);
-            }
+            log.error("Error in retrieving an Application (Service Provider) with client ID : " + clientId, e);
         } catch (IdentityOAuth2Exception e) {
-            if (log.isDebugEnabled()) {
-                log.debug("Error in Application (Service Provider) with client ID : " + clientId, e);
-            }
+            log.error("Error in Application (Service Provider) with client ID : " + clientId, e);
         }
 
         if (log.isDebugEnabled()) {
