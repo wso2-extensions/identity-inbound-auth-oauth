@@ -97,7 +97,7 @@ public class JdbcUtils {
      */
     private static boolean isDBTypeOf(String dbType) throws DataAccessException {
 
-        JdbcTemplate jdbcTemplate = org.wso2.carbon.consent.mgt.core.util.JdbcUtils.getNewTemplate();
+        JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
         return jdbcTemplate.getDriverName().contains(dbType) || jdbcTemplate.getDatabaseProductName().contains(dbType);
     }
 }

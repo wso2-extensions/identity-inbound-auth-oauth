@@ -32,6 +32,7 @@ public class ApplicationRegistrationRequest implements Serializable {
     private String tokenType = null;
     private String consumerKey = null;
     private String consumerSecret = null;
+    private String spTemplateName = null;
 
     public List<String> getRedirectUris() {
         return redirectUris;
@@ -73,12 +74,28 @@ public class ApplicationRegistrationRequest implements Serializable {
     public void setConsumerKey(String consumerKey) {
         this.consumerKey = consumerKey;
     }
-
     public String getConsumerSecret() {
         return consumerSecret;
     }
-
     public void setConsumerSecret(String consumerSecret) {
         this.consumerSecret = consumerSecret;
+    }
+
+    /**
+     * Get SP template name.
+     *
+     * @return sp template name
+     */
+    public String getSpTemplateName() {
+        return spTemplateName;
+    }
+
+    /**
+     * Set SP template name.
+     *
+     * @param spTemplateName sp template name
+     */
+    public void setSpTemplateName(String spTemplateName) {
+        this.spTemplateName = spTemplateName;
     }
 }
