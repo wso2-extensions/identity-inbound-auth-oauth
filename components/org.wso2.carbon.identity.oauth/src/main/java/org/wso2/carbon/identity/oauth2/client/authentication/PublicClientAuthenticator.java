@@ -88,27 +88,26 @@ public class PublicClientAuthenticator extends AbstractOAuthClientAuthenticator 
                     }
                     return true;
                 } else {
-                    if (log.isErrorEnabled()) {
-                        log.error("The client is not public.");
-                    }
+                    log.error("The client under the given client ID: " + clientId + " can handle requests" +
+                            " without an authorization header only if the credentials bypass option has been enabled." +
+                            " You can do this by checking the \"Allow authentication without the client secret\"" +
+                            " option in the OAuth application settings page.");
                 }
             } else {
-                if (log.isErrorEnabled()) {
-                    log.error("Application with the given client ID " + context.getClientId() + "is not found");
-                }
+                log.error("Application with the given client ID: " + clientId + "is not found");
             }
         } catch (InvalidOAuthClientException e) {
             if (log.isDebugEnabled()) {
-                log.debug("Client ID could not be retrieved from the request.");
+                log.debug("Client ID could not be retrieved from the request.", e);
             }
         } catch (IdentityOAuth2Exception e) {
             if (log.isDebugEnabled()) {
-                log.debug("Client ID could not be retrieved from the request.");
+                log.debug("Client ID could not be retrieved from the request.", e);
             }
         }
 
         if (log.isErrorEnabled()) {
-            log.error("Client ID not present in the request.");
+            log.error("The Client ID not present in the request.");
         }
 
         return false;
@@ -144,7 +143,7 @@ public class PublicClientAuthenticator extends AbstractOAuthClientAuthenticator 
 
     /**
      * Checks if the client can bypass credentials.
-     * 
+     *
      * @param clientId Client ID
      * @return True is the client can bypass credentials, False otherwise.
      * @throws IdentityOAuth2Exception OAuth2 exception.
