@@ -36,6 +36,7 @@ import org.wso2.carbon.identity.oauth.dcr.DCRMConstants;
 import org.wso2.carbon.identity.oauth.dcr.bean.Application;
 import org.wso2.carbon.identity.oauth.dcr.bean.ApplicationRegistrationRequest;
 import org.wso2.carbon.identity.oauth.dcr.bean.ApplicationUpdateRequest;
+import org.wso2.carbon.identity.oauth.dcr.exception.DCRMClientException;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMException;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMServerException;
 import org.wso2.carbon.identity.oauth.dcr.internal.DCRDataHolder;
@@ -218,6 +219,7 @@ public class DCRMService {
         String applicationOwner = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
         String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         String spName = registrationRequest.getClientName();
+        String templateName = registrationRequest.getSpTemplateName();
 
         // Regex validation of the application name.
         if (!DCRMUtils.isRegexValidated(spName)) {
@@ -237,7 +239,7 @@ public class DCRMService {
         }
 
         // Create a service provider.
-        ServiceProvider serviceProvider = createServiceProvider(applicationOwner, tenantDomain, spName);
+        ServiceProvider serviceProvider = createServiceProvider(applicationOwner, tenantDomain, spName, templateName);
 
         OAuthConsumerAppDTO createdApp;
         try {
@@ -361,7 +363,7 @@ public class DCRMService {
     }
 
     private ServiceProvider createServiceProvider(String applicationOwner, String tenantDomain,
-                                                  String spName) throws DCRMException {
+                                                  String spName, String templateName) throws DCRMException {
         // Create the Service Provider
         ServiceProvider sp = new ServiceProvider();
         sp.setApplicationName(spName);
@@ -371,7 +373,7 @@ public class DCRMService {
         sp.setOwner(user);
         sp.setDescription("Service Provider for application " + spName);
 
-        createServiceProvider(sp, applicationOwner, tenantDomain);
+        createServiceProvider(sp, tenantDomain, applicationOwner, templateName);
 
         // Get created service provider.
         ServiceProvider clientSP = getServiceProvider(spName, tenantDomain);
@@ -433,14 +435,24 @@ public class DCRMService {
         }
     }
 
-    private void createServiceProvider(ServiceProvider serviceProvider,
-                                       String applicationName, String tenantDomain) throws DCRMException {
+    private void createServiceProvider(ServiceProvider serviceProvider, String tenantDomain, String username,
+                                       String templateName) throws DCRMException {
+
         try {
+            if (templateName != null) {
+                boolean isTemplateExists = DCRDataHolder.getInstance().getApplicationManagementService()
+                        .isExistingApplicationTemplate(templateName, tenantDomain);
+                if (!isTemplateExists) {
+                    throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages
+                                    .BAD_REQUEST_INVALID_SP_TEMPLATE_NAME, templateName);
+                }
+            }
             DCRDataHolder.getInstance().getApplicationManagementService()
-                    .createApplication(serviceProvider, tenantDomain, applicationName);
+                    .createApplicationWithTemplate(serviceProvider, tenantDomain, username, templateName);
         } catch (IdentityApplicationManagementException e) {
             String errorMessage =
-                    "Error while creating service provider: " + applicationName + " in tenant: " + tenantDomain;
+                    "Error while creating service provider: " + serviceProvider.getApplicationName() +
+                            " in tenant: " + tenantDomain;
             throw new DCRMException(ErrorCodes.BAD_REQUEST.toString(), errorMessage, e);
         }
     }

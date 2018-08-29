@@ -355,6 +355,7 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                             .getAuthorizationCodeDAO().getAuthorizationCodesByConsumerKey(oauthKey));
                     // Remove client credential from AppInfoCache
                     appInfoCache.clearCacheEntry(oauthKey);
+                    OAuthCache.getInstance().clearCacheEntry(new OAuthCacheKey(oauthKey));
                 }
             }
             if (accessTokens.size() > 0) {

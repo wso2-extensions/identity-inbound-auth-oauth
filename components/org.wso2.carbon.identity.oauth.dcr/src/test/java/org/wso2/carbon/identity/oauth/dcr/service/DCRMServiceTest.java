@@ -40,25 +40,23 @@ import org.wso2.carbon.identity.oauth.dcr.bean.ApplicationRegistrationRequest;
 import org.wso2.carbon.identity.oauth.dcr.bean.ApplicationUpdateRequest;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMException;
 import org.wso2.carbon.identity.oauth.dcr.internal.DCRDataHolder;
-import org.wso2.carbon.identity.oauth.dcr.util.ErrorCodes;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
-
-import static org.mockito.Matchers.any;
-import static org.powermock.api.mockito.PowerMockito.when;
-import static org.powermock.api.mockito.PowerMockito.whenNew;
-import static org.powermock.api.mockito.PowerMockito.mock;
-import static org.powermock.api.mockito.PowerMockito.doThrow;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.doNothing;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AParams.OAUTH_VERSION;
 
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.mockito.Matchers.any;
+import static org.powermock.api.mockito.PowerMockito.doNothing;
+import static org.powermock.api.mockito.PowerMockito.doThrow;
+import static org.powermock.api.mockito.PowerMockito.mock;
+import static org.powermock.api.mockito.PowerMockito.mockStatic;
+import static org.powermock.api.mockito.PowerMockito.when;
+import static org.powermock.api.mockito.PowerMockito.whenNew;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.fail;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AParams.OAUTH_VERSION;
 
 /**
  * Unit test covering DCRMService
@@ -72,6 +70,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
     private String dummyConsumerKey = "dummyConsumerKey";
     private ApplicationRegistrationRequest applicationRegistrationRequest;
     private String dummyClientName = "dummyClientName";
+    private String dummyInvalidClientName = "dummy@ClientName";
     private List<String> dummyGrantTypes = new ArrayList<>();
     private String dummyUserName = "dummyUserName";
     private String dummyTenantDomain = "dummyTenantDomain";
@@ -366,7 +365,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
     }
 
     @Test
-    public void registerApplicationTestWithBadRequestSP() throws Exception {
+    public void testRegisterApplicationWithInvalidSPName() throws Exception {
 
         mockApplicationManagementService = mock(ApplicationManagementService.class);
 
@@ -376,23 +375,12 @@ public class DCRMServiceTest extends PowerMockTestCase {
 
         dummyGrantTypes.add("implicit");
         applicationRegistrationRequest.setGrantTypes(dummyGrantTypes);
-
-        ServiceProvider serviceProvider = mock(ServiceProvider.class);
-
-        DCRDataHolder dcrDataHolder = DCRDataHolder.getInstance();
-        dcrDataHolder.setApplicationManagementService(mockApplicationManagementService);
-        when(mockApplicationManagementService.getServiceProvider(dummyClientName, dummyTenantDomain)).thenReturn
-                (null);
-
-        whenNew(ServiceProvider.class).withNoArguments().thenReturn(serviceProvider);
-        doThrow(new IdentityApplicationManagementException("")).when
-                (mockApplicationManagementService).createApplication(serviceProvider, dummyTenantDomain,
-                dummyUserName);
+        applicationRegistrationRequest.setClientName(dummyInvalidClientName);
 
         try {
             dcrmService.registerApplication(applicationRegistrationRequest);
         } catch (IdentityException ex) {
-            assertEquals(ex.getErrorCode(), ErrorCodes.BAD_REQUEST.toString());
+            assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_SP_NAME.toString());
             return;
         }
         fail("Expected exception IdentityException not thrown by registerApplication method");

@@ -36,7 +36,7 @@ paths:
           "redirect_uris":[""],
           "client_name": "application_1",
           "grant_types": ["password"] }'
-        "https://localhost:9443/api/identity/oauth2/dcr/v1.0/register"
+        "https://localhost:9443/api/identity/oauth2/dcr/v1.1/register"
       x-wso2-response: |
         "HTTP/1.1 201 Created"
         { "client_id": "s6BhdRkqt3",
@@ -80,7 +80,7 @@ paths:
       description: |
          This API is used to get/retrieve an OAuth2 application by client_name.
       x-wso2-request: |
-        curl -X GET -H "Authorization: Basic YWRtaW46YWRtaW4=" -H "Content-Type: application/json" -d '{}' "https://localhost:9443/api/identity/oauth2/dcr/v1.0/register?client_name=application_owner_application_1"
+        curl -X GET -H "Authorization: Basic YWRtaW46YWRtaW4=" -H "Content-Type: application/json" -d '{}' "https://localhost:9443/api/identity/oauth2/dcr/v1.1/register?client_name=application_owner_application_1"
       x-wso2-response: |
         "HTTP/1.1 200 OK"
         { "client_id": "s6BhdRkqt3",
@@ -118,7 +118,7 @@ paths:
       description: |
          This API is used to get/retrieve an OAuth2 application by client_id.
       x-wso2-request: |
-        curl -X GET -H "Authorization: Basic YWRtaW46YWRtaW4=" -H "Content-Type: application/json" -d '{}' "https://localhost:9443/api/identity/oauth2/dcr/v1.0/register/s6BhdRkqt3"
+        curl -X GET -H "Authorization: Basic YWRtaW46YWRtaW4=" -H "Content-Type: application/json" -d '{}' "https://localhost:9443/api/identity/oauth2/dcr/v1.1/register/s6BhdRkqt3"
       x-wso2-response: |
         "HTTP/1.1 200 OK"
         { "client_id": "s6BhdRkqt3",
@@ -155,7 +155,7 @@ paths:
       description: |
          This API is used to delete an OAuth2 application by client_id.
       x-wso2-request: |
-        curl -X DELETE -H "Authorization: Basic YWRtaW46YWRtaW4=" -H "Content-Type: application/json" -d '{}' "https://localhost:9443/api/identity/oauth2/dcr/v1.0/register/s6BhdRkqt3"
+        curl -X DELETE -H "Authorization: Basic YWRtaW46YWRtaW4=" -H "Content-Type: application/json" -d '{}' "https://localhost:9443/api/identity/oauth2/dcr/v1.1/register/s6BhdRkqt3"
       x-wso2-response: |
         "HTTP/1.1 204 No Content"
       operationId: deleteApplication
@@ -189,7 +189,7 @@ paths:
           "client_name": "application_1",
           "ext_param_owner": "application_owner",
           "grant_types": ["password"] }'
-        "https://localhost:9443/api/identity/oauth2/dcr/v1.0/register"
+        "https://localhost:9443/api/identity/oauth2/dcr/v1.1/register"
       x-wso2-response: |
         "HTTP/1.1 200 OK"
         { "client_id": "s6BhdRkqt3",
@@ -282,6 +282,8 @@ definitions:
         type: array
         items:
           type: string
+      ext_param_sp_template:
+        type: string
 #-----------------------------------------------------
 # The Application Update Request Object
 #-----------------------------------------------------

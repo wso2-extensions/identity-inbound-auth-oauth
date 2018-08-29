@@ -69,6 +69,7 @@ import java.util.Properties;
 import java.util.Set;
 
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
 
 public class OAuthAdminService extends AbstractAdmin {
 
@@ -278,6 +279,7 @@ public class OAuthAdminService extends AbstractAdmin {
                     throw new IdentityOAuthAdminException("Callback Url is required for Code or Implicit grant types");
                 }
                 app.setCallbackUrl(application.getCallbackUrl());
+                app.setState(APP_STATE_ACTIVE);
                 if (StringUtils.isEmpty(application.getOauthConsumerKey())) {
                     app.setOauthConsumerKey(OAuthUtil.getRandomNumber());
                     app.setOauthConsumerSecret(OAuthUtil.getRandomNumber());

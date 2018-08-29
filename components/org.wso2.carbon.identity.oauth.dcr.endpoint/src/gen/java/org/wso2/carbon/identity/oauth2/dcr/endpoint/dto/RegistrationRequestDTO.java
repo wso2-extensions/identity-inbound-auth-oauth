@@ -55,7 +55,10 @@ public class RegistrationRequestDTO  {
 
   private String tokenType = null;
 
-  
+
+  private String spTemplateName = null;
+
+
   /**
    **/
   @ApiModelProperty(required = true, value = "")
@@ -210,6 +213,17 @@ public class RegistrationRequestDTO  {
     this.tokenType = tokenType;
   }
 
+  /**
+   **/
+  @ApiModelProperty(value = "")
+  @JsonProperty("ext_param_sp_template")
+  public String getSpTemplateName() {
+    return spTemplateName;
+  }
+  public void setSpTemplateName(String spTemplateName) {
+    this.spTemplateName = spTemplateName;
+  }
+
   @Override
   public String toString()  {
     StringBuilder sb = new StringBuilder();
@@ -228,6 +242,7 @@ public class RegistrationRequestDTO  {
     sb.append("  request_uris: ").append(requestUris).append("\n");
     sb.append("  response_types: ").append(responseTypes).append("\n");
     sb.append("  token_type_extension: ").append(tokenType).append("\n");
+    sb.append("  ext_param_sp_template: ").append(spTemplateName).append("\n");
     sb.append("}\n");
     return sb.toString();
   }
