@@ -68,7 +68,7 @@ public class OAuth2ServiceComponent {
     @Reference(
             name = "framework.authentication.context.method.name.translator",
             service = AuthenticationMethodNameTranslator.class,
-            cardinality = ReferenceCardinality.MANDATORY,
+            cardinality = ReferenceCardinality.OPTIONAL,
             policy = ReferencePolicy.DYNAMIC,
             unbind = "unsetAuthenticationMethodNameTranslator"
     )
