@@ -126,7 +126,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                         getOAuthCacheKey(scope, consumerKey, authorizedUser));
             }
             // Return a new access token in each request when JWTTokenIssuer is used.
-            if (accessTokenNotRenewedPerRequest(oauthTokenIssuer)) {
+            if (accessTokenNotRenewedPerRequest(oauthTokenIssuer, tokReqMsgCtx)) {
                 if (existingTokenBean != null) {
                     long expireTime = getAccessTokenExpiryTimeMillis(existingTokenBean);
                     if (isExistingTokenValid(existingTokenBean, expireTime)) {
@@ -803,11 +803,16 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         return !(refreshTokenExpireTime > 0 && refreshTokenExpireTime > validityPeriod);
     }
 
-    private boolean accessTokenNotRenewedPerRequest(OauthTokenIssuer oauthTokenIssuer) {
-        boolean isRenew = oauthTokenIssuer.renewAccessTokenPerRequest();
+    private boolean accessTokenNotRenewedPerRequest(OauthTokenIssuer oauthTokenIssuer, OAuthTokenReqMessageContext tokReqMsgCtx) {
+        boolean isRenew1 = oauthTokenIssuer.renewAccessTokenPerRequest();
+        boolean isRenew2 = oauthIssuerImpl.renewAccessTokenPerRequest(tokReqMsgCtx);
         if (log.isDebugEnabled()) {
-            log.debug("Enable Access Token renew per request: " + isRenew);
+            log.debug("Enable Access Token renew per request: " + isRenew1);
+            log.debug("Enable Access Token renew per request considering OAuthTokenReqMessageContext: " + isRenew2);
         }
-        return !isRenew;
+        if (isRenew1 || isRenew2) {
+            return false;
+        }
+        return true;
     }
 }
