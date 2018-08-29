@@ -621,7 +621,7 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
     }
 
     /**
-     * Creates authenticated user obj form user obj.
+     * Creates authenticated user obj from user obj.
      *
      * @param user user
      * @return authenticated user

@@ -942,7 +942,7 @@ public class OAuthAdminService extends AbstractAdmin {
                     if (appDTO.getApplicationName().equals(appName)) {
                         Set<AccessTokenDO> accessTokenDOs;
                         try {
-                            //retrieve all ACTIVE or EXPIRED access tokens for particular client authorized by this user
+                            // Retrieve all ACTIVE or EXPIRED access tokens for particular client authorized by this user
                             accessTokenDOs = OAuthTokenPersistenceFactory.getInstance()
                                     .getAccessTokenDAO().getAccessTokens(appDTO.getOauthConsumerKey(),
                                             user, userStoreDomain, true);

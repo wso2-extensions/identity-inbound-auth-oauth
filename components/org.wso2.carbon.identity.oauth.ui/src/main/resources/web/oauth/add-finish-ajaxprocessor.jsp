@@ -61,8 +61,7 @@
 
 	boolean pkceMandatory = false;
 	boolean pkceSupportPlain = false;
-
-
+	
 	if(request.getParameter("pkce") != null) {
 		pkceMandatory = true;
 	}
