@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth2.validators;
 
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -73,7 +74,7 @@ public class DefaultOAuth2TokenValidator implements OAuth2TokenValidator {
                     "client id %s ", accessTokenDO.getConsumerKey()), e);
         }
 
-        if (scopeValidators == null || scopeValidators.length == 0) {
+        if (ArrayUtils.isEmpty(scopeValidators)) {
             if (log.isDebugEnabled()) {
                 log.debug(String.format("There is no scope validator registered for %s@%s", app.getApplicationName(),
                         OAuth2Util.getTenantDomainOfOauthApp(app)));
@@ -108,17 +109,19 @@ public class DefaultOAuth2TokenValidator implements OAuth2TokenValidator {
     }
 
     /**
-     *  Extract the resource from the access token validation request message
+     * Extract the resource from the access token validation request message
+     *
      * @param messageContext Message context of the token validation request
      * @return resource
      */
     private String getResourceFromMessageContext(OAuth2TokenValidationMessageContext messageContext) {
+
         String resource = null;
         if (messageContext.getRequestDTO().getContext() != null) {
-            //Iterate the array of context params to find the 'resource' context param.
+            // Iterate the array of context params to find the 'resource' context param.
             for (OAuth2TokenValidationRequestDTO.TokenValidationContextParam resourceParam :
                     messageContext.getRequestDTO().getContext()) {
-                //If the context param is the resource that is being accessed
+                // If the context param is the resource that is being accessed
                 if (resourceParam != null && RESOURCE.equals(resourceParam.getKey())) {
                     resource = resourceParam.getValue();
                     break;
