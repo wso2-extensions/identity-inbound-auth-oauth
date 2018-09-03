@@ -53,6 +53,15 @@ public interface OauthTokenIssuer {
     }
 
     /**
+     * Renew access token per request by token message context.
+     *
+     * @return true if new access token per each request
+     */
+    default boolean renewAccessTokenPerRequest(OAuthTokenReqMessageContext tokReqMsgCtx) {
+        return false;
+    }
+
+    /**
      * Set true if the access token alias is used to stored in the database instead of access token.
      * @param persistAccessTokenAlias access token alias
      */

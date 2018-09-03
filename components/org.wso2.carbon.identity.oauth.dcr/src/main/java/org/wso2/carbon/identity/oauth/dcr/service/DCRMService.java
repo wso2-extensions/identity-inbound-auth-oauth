@@ -318,7 +318,7 @@ public class DCRMService {
 
         if (StringUtils.isNotEmpty(registrationRequest.getConsumerKey())) {
             String clientIdRegex = OAuthServerConfiguration.getInstance().getClientIdValidationRegex();
-            if (clientIdRegexPattern.matcher(registrationRequest.getConsumerKey()).matches()) {
+            if (clientIdMatchesRegex(registrationRequest.getConsumerKey(), clientIdRegex)) {
                 oAuthConsumerApp.setOauthConsumerKey(registrationRequest.getConsumerKey());
             } else {
                 throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.BAD_REQUEST_CLIENT_ID_VIOLATES_PATTERN,

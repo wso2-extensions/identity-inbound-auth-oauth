@@ -39,6 +39,7 @@ import static org.powermock.api.mockito.PowerMockito.mock;
 @WithCarbonHome
 public class DefaultOAuth2TokenValidatorTest {
 
+    public static final String CONSUMER_KEY = "consumer-key";
     private DefaultOAuth2TokenValidator defaultOAuth2TokenValidator;
     private OAuth2TokenValidationRequestDTO oAuth2TokenValidationRequestDTO;
     private OAuth2TokenValidationResponseDTO oAuth2TokenValidationResponseDTO;
@@ -60,7 +61,7 @@ public class DefaultOAuth2TokenValidatorTest {
                         (oAuth2TokenValidationRequestDTO, oAuth2TokenValidationResponseDTO);
 
         AccessTokenDO accessTokenDO = new AccessTokenDO();
-        accessTokenDO.setConsumerKey("consumer-key");
+        accessTokenDO.setConsumerKey(CONSUMER_KEY);
         oAuth2TokenValidationMessageContext.addProperty("AccessTokenDO", accessTokenDO);
     }
 

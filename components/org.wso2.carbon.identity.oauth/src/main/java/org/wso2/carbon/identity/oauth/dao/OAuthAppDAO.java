@@ -158,10 +158,11 @@ public class OAuthAppDAO {
                         }
                     }
                 }
-                // some JDBC Drivers returns this in the result, some don't
+                // Some JDBC Drivers returns this in the result, some don't so need to check before continuing.
                 if (appId == 0) {
                     if (log.isDebugEnabled()) {
-                        log.debug("JDBC Driver did not return the app id, executing Select operation");
+                        log.debug("JDBC Driver did not returning the app id of the newly created app " +
+                                consumerAppDO.getApplicationName() + ". So executing select operation to get the id");
                     }
                     appId = getAppIdByClientId(connection, consumerAppDO.getOauthConsumerKey());
                 }
@@ -1043,7 +1044,7 @@ public class OAuthAppDAO {
             try (ResultSet rSet = prepStmt.executeQuery()) {
                 boolean rSetHasRows = false;
                 while (rSet.next()) {
-                    // There is at least one application associated with a given key
+                    // There is at least one application associated with a given key.
                     rSetHasRows = true;
                     appId = rSet.getInt(1);
                 }
