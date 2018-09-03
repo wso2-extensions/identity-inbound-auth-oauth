@@ -85,7 +85,6 @@ import org.wso2.carbon.identity.oauth2.model.ClientCredentialDO;
 import org.wso2.carbon.identity.oauth2.token.JWTTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
-import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuerImpl;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.registry.core.Registry;
 import org.wso2.carbon.registry.core.Resource;
@@ -2440,5 +2439,6 @@ public class OAuth2Util {
         }
         return oauthTokenIssuer;
     }
+    
 }
 
