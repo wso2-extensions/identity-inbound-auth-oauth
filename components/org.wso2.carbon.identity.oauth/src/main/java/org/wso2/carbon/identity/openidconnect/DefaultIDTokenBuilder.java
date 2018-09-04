@@ -193,6 +193,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         jwtClaimsSetBuilder.claim(AZP, clientId);
         jwtClaimsSetBuilder.expirationTime(getIdTokenExpiryInMillis(idTokenValidityInMillis, currentTimeInMillis));
         jwtClaimsSetBuilder.issueTime(new Date(currentTimeInMillis));
+        jwtClaimsSetBuilder.notBeforeTime(new Date(currentTimeInMillis));
         if (authTime != 0) {
             jwtClaimsSetBuilder.claim(AUTH_TIME, authTime / 1000);
         }

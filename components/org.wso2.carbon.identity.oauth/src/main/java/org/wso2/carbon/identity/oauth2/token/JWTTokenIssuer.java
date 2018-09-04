@@ -407,6 +407,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         jwtClaimsSetBuilder.claim(AUTHORIZATION_PARTY, consumerKey);
         jwtClaimsSetBuilder.issueTime(new Date(curTimeInMillis));
         jwtClaimsSetBuilder.jwtID(UUID.randomUUID().toString());
+        jwtClaimsSetBuilder.notBeforeTime(new Date(curTimeInMillis));
 
         String scope = getScope(authAuthzReqMessageContext, tokenReqMessageContext);
         if (StringUtils.isNotEmpty(scope)) {
