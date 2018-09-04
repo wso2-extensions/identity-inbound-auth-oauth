@@ -282,6 +282,8 @@ public class TokenValidationHandler {
                             1000);
             // should be in seconds
             introResp.setIat(accessTokenDO.getIssuedTime().getTime() / 1000);
+            // Not before time will be the same as issued time.
+            introResp.setNbf(accessTokenDO.getIssuedTime().getTime() / 1000);
             // token scopes
             introResp.setScope(OAuth2Util.buildScopeString((accessTokenDO.getScope())));
             // set user-name

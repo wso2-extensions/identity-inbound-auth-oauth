@@ -16,6 +16,8 @@
 package org.wso2.carbon.identity.oauth2.authcontext;
 
 import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jwt.JWT;
+import com.nimbusds.jwt.JWTParser;
 import org.mockito.internal.util.reflection.Whitebox;
 import org.testng.Assert;
 import org.testng.annotations.AfterTest;
@@ -46,6 +48,7 @@ import java.lang.reflect.Modifier;
 import java.security.Key;
 import java.security.cert.Certificate;
 import java.sql.Timestamp;
+import java.util.Date;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
@@ -148,6 +151,15 @@ public class JWTTokenGeneratorTest extends PowerMockIdentityBaseTest {
         Assert.assertEquals(oAuth2TokenValidationMessageContext.getResponseDTO().getAuthorizationContextToken()
                                                                .getTokenType(), "JWT");
 
+    }
+
+    @Test(dependsOnMethods = "testGenerateToken")
+    public void testNbfClaimInJWT() throws Exception {
+        String tokenString = oAuth2TokenValidationMessageContext.getResponseDTO().getAuthorizationContextToken()
+                                                                .getTokenString();
+        JWT jwt = JWTParser.parse(tokenString);
+        Date notBeforeTime = jwt.getJWTClaimsSet().getNotBeforeTime();
+        Assert.assertTrue(notBeforeTime.compareTo(new Date()) <= 0);
     }
 
     @Test(dependsOnMethods = "testGenerateToken")
