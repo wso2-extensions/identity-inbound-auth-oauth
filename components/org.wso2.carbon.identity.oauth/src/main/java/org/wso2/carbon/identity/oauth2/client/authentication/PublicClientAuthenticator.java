@@ -27,9 +27,9 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
-import javax.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.Map;
+import javax.servlet.http.HttpServletRequest;
 
 /**
  * This class is dedicated for authenticating 'Public Clients'. Public clients do not need a client secret to be
@@ -88,9 +88,11 @@ public class PublicClientAuthenticator extends AbstractOAuthClientAuthenticator 
                     }
                     return true;
                 } else {
-                    log.error("The Application (Service Provider) with client ID : " + clientId +
-                            " has not enabled the option \"Allow authentication without the client secret\" " +
-                            "and no valid Authorization Header exists in the request.");
+                    if (log.isDebugEnabled()) {
+                        log.debug("The Application (Service Provider) with client ID : " + clientId
+                                + " has not enabled the option \"Allow authentication without the client secret\" "
+                                + "and no valid Authorization Header exists in the request.");
+                    }
                 }
             } else {
                 log.error("Application with the given client ID " + clientId + "is not found");
