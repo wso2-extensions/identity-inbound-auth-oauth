@@ -134,7 +134,9 @@ public class PublicClientAuthenticator extends AbstractOAuthClientAuthenticator 
     public String getClientId(HttpServletRequest request, Map<String, List> bodyParams, OAuthClientAuthnContext
             oAuthClientAuthnContext) {
 
-        setClientCredentialsFromParam(bodyParams, oAuthClientAuthnContext);
+        if (StringUtils.isBlank(oAuthClientAuthnContext.getClientId())) {
+            setClientCredentialsFromParam(bodyParams, oAuthClientAuthnContext);
+        }
         return oAuthClientAuthnContext.getClientId();
     }
 
