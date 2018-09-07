@@ -968,7 +968,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
     }
 
     private List<String> translateToResponse(String internalValue) {
-        List<String> result = null;
+        List<String> result = Collections.EMPTY_LIST;
         AuthenticationMethodNameTranslator authenticationMethodNameTranslator = OAuth2ServiceComponentHolder
                 .getAuthenticationMethodNameTranslator();
         if (authenticationMethodNameTranslator != null) {
