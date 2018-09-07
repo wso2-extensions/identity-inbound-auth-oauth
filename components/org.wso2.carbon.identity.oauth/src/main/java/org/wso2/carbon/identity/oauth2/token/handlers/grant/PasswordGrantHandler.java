@@ -26,6 +26,7 @@ import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.base.IdentityRuntimeException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -136,7 +137,14 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
                 throw new IdentityOAuth2Exception("Authentication failed for " + tokenReq.getResourceOwnerUsername());
             }
         } catch (UserStoreException e) {
-            throw new IdentityOAuth2Exception("Error while authenticating user from user store");
+            String message;
+            // Set error code to message if available.
+            if (e.getCause() instanceof IdentityException && ((IdentityException) e.getCause()).getErrorCode() != null){
+                message = ((IdentityException) e.getCause()).getErrorCode() + " " + e.getMessage();
+            } else {
+                message = e.getMessage();
+            }
+            throw new IdentityOAuth2Exception(message, e);
         }
         return true;
     }
