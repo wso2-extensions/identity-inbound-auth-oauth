@@ -324,7 +324,7 @@
                     /**
                      * Backchannel logout feature is kept hidden in the UI for now.
                      */
-                    $(jQuery('#bclogout_row').show());
+                    $(jQuery('#bclogout_row').hide());
 
                     if (!idTokenEncryptionEnabled) {
                         $('select[name=idTokenEncryptionAlgorithm]').prop('disabled', true);

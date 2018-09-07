@@ -88,12 +88,13 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
             Set<String> sessionParticipants = getSessionParticipants(sessionState);
             if (!sessionParticipants.isEmpty()) {
                 for (String clientID : sessionParticipants) {
+                    OAuthAppDO oAuthAppDO = getOAuthAppDO(clientID);
+                    String backChannelLogoutUrl = oAuthAppDO.getBackChannelLogoutUrl();
+
                     if (StringUtils.equals(clientID, getClientId(request))) {
                         // No need to send logut token if the client id of the RP initiated logout is known.
                         continue;
                     }
-                    OAuthAppDO oAuthAppDO = getOAuthAppDO(clientID);
-                    String backChannelLogoutUrl = oAuthAppDO.getBackChannelLogoutUrl();
                     if (StringUtils.isNotBlank(backChannelLogoutUrl)) {
                         // Send back-channel logout request to all RPs those registered their back-channel logout uri.
 
