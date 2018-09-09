@@ -61,6 +61,7 @@ import javax.ws.rs.core.Response.ResponseBuilder;
 
 import static org.apache.commons.lang.StringUtils.isNotBlank;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.startSuperTenantFlow;
+import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.triggerOnTokenExceptionListeners;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.validateOauthApplication;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.validateParams;
 
@@ -94,6 +95,9 @@ public class OAuth2TokenEndpoint {
             } else {
                 return buildTokenResponse(oauth2AccessTokenResp);
             }
+        } catch (TokenEndpointBadRequestException | OAuthSystemException | InvalidApplicationClientException e) {
+            triggerOnTokenExceptionListeners(e, request, paramMap);
+            throw e;
         } finally {
             PrivilegedCarbonContext.endTenantFlow();
         }
