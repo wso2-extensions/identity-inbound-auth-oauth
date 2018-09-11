@@ -173,6 +173,7 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
         AccessTokenDO accessTokenDO = (AccessTokenDO)messageContext.getProperty("AccessTokenDO");
         String clientId = accessTokenDO.getConsumerKey();
         long issuedTime = accessTokenDO.getIssuedTime().getTime();
+        long validityPeriodInMillis = accessTokenDO.getValidityPeriodInMillis();
         String authzUser = messageContext.getResponseDTO().getAuthorizedUser();
         int tenantId = accessTokenDO.getTenantID();
         String tenantDomain = OAuth2Util.getTenantDomain(tenantId);
@@ -214,13 +215,14 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
 
         //generating expiring timestamp
         long currentTime = Calendar.getInstance().getTimeInMillis();
-        long expireIn = currentTime + 1000 * 60 * getTTL();
+        // Expiry time of the JWT.
+        long expireIn = validityPeriodInMillis + issuedTime;
 
         // Prepare JWT with claims set
         JWTClaimsSet.Builder claimsSetBuilder = new JWTClaimsSet.Builder();
         claimsSetBuilder.issuer(API_GATEWAY_ID);
         claimsSetBuilder.subject(authzUser);
-        claimsSetBuilder.issueTime(new Date(issuedTime));
+        claimsSetBuilder.issueTime(new Date(currentTime));
         claimsSetBuilder.expirationTime(new Date(expireIn));
         // Nbf is set to the issue time of the JWT and not the issue time of the access token.
         claimsSetBuilder.notBeforeTime(new Date(currentTime));
