@@ -61,8 +61,7 @@ paths:
       description: |
          This API is used to create a scope.
       x-wso2-request: |
-        curl -X POST -H "Authorization: Basic YWRtaW46YWRtaW4=" -H "Content-Type: application/json" -d '{"name": "profile", "displayName": "profile", "description": "get all profile information", "bindings": ["role1", "role2"]}' "https://localhost:9443/api/identity/oauth2/v1.0/scopes"
-
+        curl -X POST   https://localhost:9443/api/identity/oauth2/v1.0/scopes   -H 'authorization: Basic YWRtaW46YWRtaW4='   -H 'content-type: application/json'   -d '{"displayName": "scope_admin", "name": "scope_admin", "description": "get all profile information", "bindings": ["admin"]}'
       x-wso2-response: |
         "HTTP/1.1 201 Created"
         {"name":"profile","description":"get all profile information","displayName":"profile","bindings":["role1","role2"]}
