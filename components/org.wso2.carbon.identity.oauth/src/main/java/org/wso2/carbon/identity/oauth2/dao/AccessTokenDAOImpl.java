@@ -800,7 +800,6 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                         throw new IdentityOAuth2Exception("Error occurred while retrieving OAuth2 application data for client id " +
                                 consumerKey, e);
                     }
-                    user.setAuthenticatedSubjectIdentifier(subjectIdentifier, serviceProvider);
 
                     if (!OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && userDomain.startsWith
                             (OAuthConstants.UserType.FEDERATED_USER_DOMAIN_PREFIX)) {
@@ -810,6 +809,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                         }
                         user.setFederatedUser(true);
                     }
+
+                    user.setAuthenticatedSubjectIdentifier(subjectIdentifier, serviceProvider);
 
                     dataDO = new AccessTokenDO(consumerKey, user, scope, issuedTime, refreshTokenIssuedTime,
                             validityPeriodInMillis, refreshTokenValidityPeriodMillis, tokenType);
