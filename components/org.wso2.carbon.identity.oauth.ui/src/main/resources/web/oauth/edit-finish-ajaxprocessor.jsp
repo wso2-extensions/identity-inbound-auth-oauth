@@ -88,9 +88,8 @@
     String BUNDLE = "org.wso2.carbon.identity.oauth.ui.i18n.Resources";
 	ResourceBundle resourceBundle = ResourceBundle.getBundle(BUNDLE, request.getLocale());
 	OAuthConsumerAppDTO app = new OAuthConsumerAppDTO();
-
-	String spName = (String) session.getAttribute("application-sp-name");
-	session.removeAttribute("application-sp-name");
+    
+    String spName = request.getParameter("application");
 	boolean isError = false;
 
     try {

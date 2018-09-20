@@ -73,7 +73,6 @@
     try {
 
         applicationSPName = request.getParameter("appName");
-        session.setAttribute("application-sp-name", applicationSPName);
         action = request.getParameter("action");
 
         String cookie = (String) session.getAttribute(ServerConstants.ADMIN_SERVICE_COOKIE);

@@ -45,7 +45,6 @@
     String DEFAULT_TOKEN_TYPE = "default";
     ResourceBundle resourceBundle = ResourceBundle.getBundle(BUNDLE, request.getLocale());
     String applicationSPName = request.getParameter("spName");
-    session.setAttribute("application-sp-name", applicationSPName);
 
     OAuthAdminClient client = null;
     String audienceTableStyle = "display:none";
