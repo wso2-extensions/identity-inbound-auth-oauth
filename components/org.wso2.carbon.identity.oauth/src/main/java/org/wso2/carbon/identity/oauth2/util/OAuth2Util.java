@@ -143,6 +143,7 @@ public class OAuth2Util {
     public static final String ACCESS_TOKEN_DO = "AccessTokenDo";
     public static final String OAUTH2_VALIDATION_MESSAGE_CONTEXT = "OAuth2TokenValidationMessageContext";
     private static final String ESSENTAIL = "essential";
+    private static final String REG_HIDDEN_PROPERTY_PREFIX = "registry.";
     public static final String CONFIG_ELEM_OAUTH = "OAuth";
     public static final String OPENID_CONNECT = "OpenIDConnect";
     public static final String ENABLE_OPENID_CONNECT_AUDIENCES = "EnableAudiences";
@@ -1311,7 +1312,11 @@ public class OAuth2Util {
                 Enumeration e = properties.propertyNames();
                 List<String> scopes = new ArrayList<>();
                 while (e.hasMoreElements()) {
-                    scopes.add((String) e.nextElement());
+                    String scope = (String) e.nextElement();
+                    // Remove hidden registry properties from Scopes.
+                    if (StringUtils.isNotBlank(scope) && !scope.startsWith(REG_HIDDEN_PROPERTY_PREFIX)) {
+                        scopes.add(scope);
+                    }
                 }
                 return scopes;
             }
