@@ -42,25 +42,32 @@ import org.wso2.carbon.identity.discovery.builders.OIDCProviderRequestBuilder;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCache;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheKey;
+import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.common.exception.OAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.endpoint.exception.BadRequestException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidApplicationClientException;
+import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestException;
+import org.wso2.carbon.identity.oauth.endpoint.exception.TokenEndpointBadRequestException;
 import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
-import org.wso2.carbon.identity.openidconnect.RequestObjectService;
+import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
+import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.openidconnect.RequestObjectService;
 import org.wso2.carbon.identity.webfinger.DefaultWebFingerProcessor;
 import org.wso2.carbon.identity.webfinger.WebFingerProcessor;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -70,8 +77,9 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MultivaluedMap;
 
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.HTTP_REQ_HEADER_AUTH_METHOD_BASIC;
+import static org.apache.commons.lang.StringUtils.isNotBlank;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils.getRedirectURL;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.HTTP_REQ_HEADER_AUTH_METHOD_BASIC;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
 
 public class EndpointUtil {
@@ -82,6 +90,15 @@ public class EndpointUtil {
     private static final String OIDC = "oidc";
     private static final String OAUTH2_AUTHORIZE = "/oauth2/authorize";
     private static final String UTF_8 = "UTF-8";
+    private static final String PROP_CLIENT_ID = "client_id";
+    private static final String PROP_GRANT_TYPE = "response_type";
+    private static final String PROP_RESPONSE_TYPE = "response_type";
+    private static final String PROP_SCOPE = "scope";
+    private static final String PROP_ERROR = "error";
+    private static final String PROP_ERROR_DESCRIPTION = "error_description";
+    private static final String PROP_REDIRECT_URI = "redirect_uri";
+    private static final String NOT_AVAILABLE = "N/A";
+    private static final String UNKNOWN_ERROR = "unknown_error";
 
     private EndpointUtil() {
 
@@ -259,12 +276,12 @@ public class EndpointUtil {
         String errorPageUrl = OAuth2Util.OAuthURL.getOAuth2ErrorPageUrl();
         try {
 
-            if (StringUtils.isNotBlank(errorCode)) {
+            if (isNotBlank(errorCode)) {
                 errorPageUrl = FrameworkUtils.appendQueryParamsStringToUrl(errorPageUrl,
                         OAuthConstants.OAUTH_ERROR_CODE + "=" + URLEncoder.encode(errorCode, UTF_8));
             }
 
-            if (StringUtils.isNotBlank(errorMessage)) {
+            if (isNotBlank(errorMessage)) {
                 errorPageUrl = FrameworkUtils.appendQueryParamsStringToUrl(errorPageUrl,
                         OAuthConstants.OAUTH_ERROR_MESSAGE + "=" + URLEncoder.encode(errorMessage, UTF_8));
             }
@@ -336,7 +353,7 @@ public class EndpointUtil {
         String redirectURL = null;
         try {
             if (params != null) {
-                if (StringUtils.isNotBlank(params.getRedirectURI())) {
+                if (isNotBlank(params.getRedirectURI())) {
                     if (OAuth2Util.isImplicitResponseType(params.getResponseType())) {
                         if (OAuthServerConfiguration.getInstance().isImplicitErrorFragment()) {
                             redirectURL = OAuthASResponse.errorResponse(HttpServletResponse.SC_FOUND)
@@ -645,6 +662,124 @@ public class EndpointUtil {
         } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
             log.error("Error while getting oauth app for client Id: " + clientId, e);
             return MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
+        }
+    }
+
+    /**
+     * Extract information related to the token request and exception and publish the event to listeners.
+     *
+     * @param exception Exception occurred.
+     * @param request Token servlet request
+     * @param paramMap Additional parameters.
+     */
+    public static void triggerOnTokenExceptionListeners(Exception exception, HttpServletRequest request,
+                                                        MultivaluedMap<String, String> paramMap) {
+
+        Map<String, Object> params = new HashMap<>();
+        Object oauthClientAuthnContextObj = request.getAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT);
+        String clientId;
+        if (oauthClientAuthnContextObj instanceof OAuthClientAuthnContext) {
+            clientId = ((OAuthClientAuthnContext) oauthClientAuthnContextObj).getClientId();
+        } else {
+            clientId = NOT_AVAILABLE;
+        }
+        addStringToMap(PROP_CLIENT_ID, clientId, params);
+
+        if (paramMap != null) {
+            String grantType = paramMap.getFirst(PROP_GRANT_TYPE);
+            String scopeString = paramMap.getFirst(PROP_SCOPE);
+            addStringToMap(PROP_GRANT_TYPE, grantType, params);
+            addStringToMap(PROP_SCOPE, scopeString, params);
+        }
+
+        if (exception != null) {
+            params.put(PROP_ERROR_DESCRIPTION, exception.getMessage());
+            params.put(PROP_ERROR, getErrorCodeFromException(exception));
+        }
+
+        OAuth2Util.triggerOnTokenExceptionListeners(exception, params);
+    }
+
+    /**
+     * Extract information related to the token request and token validation error and publish the event to listeners.
+     *
+     * @param oAuthMessage OAuth message.
+     * @param validationResponse token validation response.
+     */
+    public static void triggerOnRequestValidationFailure(OAuthMessage oAuthMessage,
+                                                         OAuth2ClientValidationResponseDTO validationResponse) {
+        Map<String, Object> params = new HashMap<>();
+
+        String clientId = oAuthMessage.getRequest().getParameter(PROP_CLIENT_ID);
+        String responseType = oAuthMessage.getRequest().getParameter(PROP_RESPONSE_TYPE);
+        String scope = oAuthMessage.getRequest().getParameter(PROP_SCOPE);
+
+        addStringToMap(PROP_CLIENT_ID, clientId, params);
+        addStringToMap(PROP_RESPONSE_TYPE, responseType, params);
+        addStringToMap(PROP_SCOPE, scope, params);
+
+        params.put(PROP_ERROR, validationResponse.getErrorCode());
+        String errorDesc;
+        errorDesc = validationResponse.getErrorMsg();
+        if (OAuth2ErrorCodes.INVALID_CALLBACK.equals(validationResponse.getErrorCode())) {
+
+            errorDesc = validationResponse.getErrorMsg() + " Callback URL: " +
+                        oAuthMessage.getRequest().getParameter(PROP_REDIRECT_URI);
+        }
+        params.put(PROP_ERROR_DESCRIPTION, errorDesc);
+        OAuth2Util.triggerOnTokenExceptionListeners(null, params);
+    }
+
+    /**
+     * Extract information related to the authorization request and authorization request error and publish the event
+     * to listeners.
+     *
+     * @param exception
+     * @param request
+     */
+    public static void triggerOnAuthzRequestException(Exception exception, HttpServletRequest request) {
+
+        Map<String, Object> params = new HashMap<>();
+
+        String clientId = request.getParameter(PROP_CLIENT_ID);
+        String scope = request.getParameter(PROP_SCOPE);
+        String responseType = request.getParameter(PROP_RESPONSE_TYPE);
+
+        addStringToMap(PROP_CLIENT_ID, clientId, params);
+        addStringToMap(PROP_SCOPE, scope, params);
+        addStringToMap(PROP_RESPONSE_TYPE, responseType, params);
+
+        if (exception != null) {
+            params.put(PROP_ERROR_DESCRIPTION, exception.getMessage());
+            params.put(PROP_ERROR, getErrorCodeFromException(exception));
+        }
+
+        OAuth2Util.triggerOnTokenExceptionListeners(exception, params);
+    }
+
+    private static String getErrorCodeFromException(Exception exception) {
+
+        if (exception instanceof TokenEndpointBadRequestException) {
+            return OAuth2ErrorCodes.INVALID_REQUEST;
+        } else if (exception instanceof InvalidApplicationClientException) {
+            return OAuth2ErrorCodes.INVALID_CLIENT;
+        } else if (exception instanceof OAuthSystemException) {
+            return OAuth2ErrorCodes.SERVER_ERROR;
+        } else if (exception instanceof InvalidRequestException) {
+            return OAuth2ErrorCodes.INVALID_REQUEST;
+        } else if (exception instanceof BadRequestException) {
+            return OAuth2ErrorCodes.INVALID_REQUEST;
+        } else if (exception instanceof OAuthProblemException) {
+            return OAuth2ErrorCodes.INVALID_REQUEST;
+        } else {
+            return UNKNOWN_ERROR;
+        }
+    }
+
+    private static void addStringToMap(String name, String value, Map<String, Object> map) {
+
+        if (isNotBlank(name) && isNotBlank(value)) {
+            map.put(name, value);
         }
     }
 }

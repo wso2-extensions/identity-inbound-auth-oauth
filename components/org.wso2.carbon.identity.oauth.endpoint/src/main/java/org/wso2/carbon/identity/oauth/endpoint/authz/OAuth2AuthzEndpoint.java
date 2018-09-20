@@ -193,7 +193,16 @@ public class OAuth2AuthzEndpoint {
             throws URISyntaxException, InvalidRequestParentException {
 
         startSuperTenantFlow();
-        OAuthMessage oAuthMessage = buildOAuthMessage(request, response);
+        OAuthMessage oAuthMessage;
+
+        // Using a separate try-catch block as this next try block has operations in the final block.
+        try {
+            oAuthMessage = buildOAuthMessage(request, response);
+        } catch (InvalidRequestParentException e) {
+            EndpointUtil.triggerOnAuthzRequestException(e, request);
+            throw e;
+        }
+
         try {
             if (isPassthroughToFramework(oAuthMessage)) {
                 return handleAuthFlowThroughFramework(oAuthMessage);
@@ -207,8 +216,10 @@ public class OAuth2AuthzEndpoint {
                 return handleInvalidRequest(oAuthMessage);
             }
         } catch (OAuthProblemException e) {
+            EndpointUtil.triggerOnAuthzRequestException(e, request);
             return handleOAuthProblemException(oAuthMessage, e);
         } catch (OAuthSystemException e) {
+            EndpointUtil.triggerOnAuthzRequestException(e, request);
             return handleOAuthSystemException(oAuthMessage, e);
         } finally {
             handleRetainCache(oAuthMessage);
@@ -1147,6 +1158,7 @@ public class OAuth2AuthzEndpoint {
         OAuth2ClientValidationResponseDTO validationResponse = validateClient(oAuthMessage);
 
         if (!validationResponse.isValidClient()) {
+            EndpointUtil.triggerOnRequestValidationFailure(oAuthMessage, validationResponse);
             return getErrorPageURL(oAuthMessage.getRequest(), validationResponse.getErrorCode(), validationResponse
                     .getErrorMsg(), null);
         } else {

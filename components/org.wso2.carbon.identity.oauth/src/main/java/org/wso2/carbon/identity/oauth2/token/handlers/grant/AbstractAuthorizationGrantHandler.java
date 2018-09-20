@@ -131,6 +131,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                     long expireTime = getAccessTokenExpiryTimeMillis(existingTokenBean);
                     if (isExistingTokenValid(existingTokenBean, expireTime)) {
                         tokReqMsgCtx.addProperty(EXISTING_TOKEN_ISSUED, true);
+                        setDetailsToMessageContext(tokReqMsgCtx, existingTokenBean);
                         return createResponseWithTokenBean(existingTokenBean, expireTime, scope);
                     }
                 }
@@ -143,6 +144,16 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             }
             return generateNewAccessTokenResponse(tokReqMsgCtx, scope, consumerKey, existingTokenBean,
                     oauthTokenIssuer);
+        }
+    }
+
+    private void setDetailsToMessageContext(OAuthTokenReqMessageContext tokReqMsgCtx, AccessTokenDO existingToken) {
+
+        if (existingToken.getIssuedTime() != null) {
+            tokReqMsgCtx.setAccessTokenIssuedTime(existingToken.getIssuedTime().getTime());
+        }
+        if (existingToken.getRefreshTokenIssuedTime() != null) {
+            tokReqMsgCtx.setRefreshTokenIssuedTime(existingToken.getRefreshTokenIssuedTime().getTime());
         }
     }
 
