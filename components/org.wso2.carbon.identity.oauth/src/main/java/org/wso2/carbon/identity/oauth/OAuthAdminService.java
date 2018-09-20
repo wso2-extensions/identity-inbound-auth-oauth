@@ -809,16 +809,19 @@ public class OAuthAdminService extends AbstractAdmin {
     }
 
     /**
-     * Get apps that are authorized by the given user
+     * Get apps that are authorized for given username
      *
      * @return OAuth applications authorized by the user that have tokens in ACTIVE or EXPIRED state
      */
-    public OAuthConsumerAppDTO[] getAppsAuthorizedByUser() throws IdentityOAuthAdminException {
+    public OAuthConsumerAppDTO[] getAuthorizedApps(String username) throws IdentityOAuthAdminException {
+
+        return getoAuthConsumerAppDTOS(username);
+    }
+
+    private OAuthConsumerAppDTO[] getoAuthConsumerAppDTOS(String tenantAwareUserName) throws IdentityOAuthAdminException {
 
         OAuthAppDAO appDAO = new OAuthAppDAO();
-
         String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
-        String tenantAwareUserName = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
         AuthenticatedUser authenticatedUser = new AuthenticatedUser();
         authenticatedUser.setUserName(UserCoreUtil.removeDomainFromName(tenantAwareUserName));
         authenticatedUser.setUserStoreDomain(IdentityUtil.extractDomainFromName(tenantAwareUserName));
@@ -916,18 +919,53 @@ public class OAuthAdminService extends AbstractAdmin {
     }
 
     /**
-     * Revoke authorization for OAuth apps by resource owners
+     * Get apps that are authorized by the given user
+     *
+     * @return OAuth applications authorized by the user that have tokens in ACTIVE or EXPIRED state
+     */
+    public OAuthConsumerAppDTO[] getAppsAuthorizedByUser() throws IdentityOAuthAdminException {
+
+        return getoAuthConsumerAppDTOS(PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername());
+    }
+
+    public OAuthRevocationResponseDTO[] revokeAuthorization(String username) throws IdentityOAuthAdminException {
+
+        OAuthConsumerAppDTO oAuthConsumerAppDTOs[] = getAuthorizedApps(username);
+        OAuthRevocationResponseDTO oAuthRevocationResponseDTO[] = new
+                OAuthRevocationResponseDTO[oAuthConsumerAppDTOs.length];
+        for (int i = 0; i < oAuthConsumerAppDTOs.length; i++ ) {
+            OAuthConsumerAppDTO oAuthConsumerAppDTO = oAuthConsumerAppDTOs[i];
+            OAuthRevocationRequestDTO oAuthRevocationRequestDTO = new OAuthRevocationRequestDTO();
+            oAuthRevocationRequestDTO.setApps(new String[]{oAuthConsumerAppDTO.getApplicationName()});
+            oAuthRevocationRequestDTO.setAuthzUser(username);
+            oAuthRevocationRequestDTO.setConsumerKey(oAuthConsumerAppDTO.getOauthConsumerKey());
+            oAuthRevocationRequestDTO.setConsumerSecret(oAuthConsumerAppDTO.getOauthConsumerSecret());
+            if (log.isDebugEnabled()) {
+                log.debug("Revoking access tokens for Client ID: " + oAuthConsumerAppDTO.getOauthConsumerKey() +
+                        " & user: " + username);
+            }
+            oAuthRevocationResponseDTO[i] = revokeAuthzForApps(oAuthRevocationRequestDTO);
+        }
+        return oAuthRevocationResponseDTO;
+    }
+
+    /**
+     * Revoke authorization for OAuth apps by admin user
      *
      * @param revokeRequestDTO DTO representing authorized user and apps[]
      * @return revokeRespDTO DTO representing success or failure message
      */
-    public OAuthRevocationResponseDTO revokeAuthzForAppsByResoureOwner(
-            OAuthRevocationRequestDTO revokeRequestDTO) throws IdentityOAuthAdminException {
+    public OAuthRevocationResponseDTO revokeAuthzForApps (OAuthRevocationRequestDTO revokeRequestDTO) throws
+            IdentityOAuthAdminException {
+        String username = revokeRequestDTO.getAuthzUser();
+        return getoAuthRevocationResponseDTO(revokeRequestDTO, username);
+    }
 
+    private OAuthRevocationResponseDTO getoAuthRevocationResponseDTO(OAuthRevocationRequestDTO revokeRequestDTO,
+                                                                   String tenantAwareUserName) throws IdentityOAuthAdminException {
         triggerPreRevokeListeners(revokeRequestDTO);
         if (revokeRequestDTO.getApps() != null && revokeRequestDTO.getApps().length > 0) {
             String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
-            String tenantAwareUserName = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
             AuthenticatedUser user = new AuthenticatedUser();
             user.setUserName(UserCoreUtil.removeDomainFromName(tenantAwareUserName));
             user.setUserStoreDomain(IdentityUtil.extractDomainFromName(tenantAwareUserName));
@@ -1018,6 +1056,19 @@ public class OAuthAdminService extends AbstractAdmin {
             return revokeRespDTO;
         }
         return new OAuthRevocationResponseDTO();
+    }
+
+    /**
+     * Revoke authorization for OAuth apps by resource owners
+     *
+     * @param revokeRequestDTO DTO representing authorized user and apps[]
+     * @return revokeRespDTO DTO representing success or failure message
+     */
+    public OAuthRevocationResponseDTO revokeAuthzForAppsByResoureOwner(
+            OAuthRevocationRequestDTO revokeRequestDTO) throws IdentityOAuthAdminException {
+
+        String username = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
+        return getoAuthRevocationResponseDTO(revokeRequestDTO, username);
     }
 
     /**
