@@ -397,7 +397,7 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
         for (SubjectConfirmation subjectConfirmation : subjectConfirmations) {
             bearerFound = updateBearerFound(subjectConfirmation, bearerFound);
             if (subjectConfirmation.getSubjectConfirmationData() != null) {
-                recipientURLS = getRecipientUrls(subjectConfirmation.getSubjectConfirmationData());
+                recipientURLS.addAll(getRecipientUrls(subjectConfirmation.getSubjectConfirmationData()));
                 notOnOrAfterAndNotBeforeFromSubjectConfirmation =
                         getValidNotBeforeAndAfterDetails(subjectConfirmation.getSubjectConfirmationData(), timeSkew);
             }
