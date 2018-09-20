@@ -59,7 +59,9 @@
             <order>1</order>
             <style-class>manage</style-class>
             <icon>../oauth/images/add.gif</icon>
-            <require-permission>/permission/admin/manage/identity/claimmgt/metadata/view</require-permission>
+            <require-permission>/permission/admin/manage/identity/claimmgt/metadata/view,
+                /permission/admin/manage/identity/applicationmgt
+            </require-permission>
         </menu>
         <menu>
             <id>list_scope_menu</id>
