@@ -51,7 +51,6 @@
 
     String consumerkey = request.getParameter("consumerkey");
     String callback = request.getParameter("callback");
-    String backchannelLogoutUrl = request.getParameter("backChannelLogout");
     String applicationName = request.getParameter("application");
     String consumersecret = request.getParameter("consumersecret");
     String oauthVersion = request.getParameter("oauthVersion");
@@ -83,6 +82,9 @@
     boolean isIdTokenEncrypted = Boolean.parseBoolean(request.getParameter("encryptIdToken"));
     String idTokenEncryptionAlgorithm = request.getParameter("idTokenEncryptionAlgorithm");
     String idTokenEncryptionMethod = request.getParameter("idTokenEncryptionMethod");
+
+    boolean isBackChannelLogoutEnabled = Boolean.parseBoolean(request.getParameter(("enableBackchannelLogout")));
+    String backchannelLogoutUrl = request.getParameter("backChannelLogoutUrl");
     
     String forwardTo = "index.jsp";
     String BUNDLE = "org.wso2.carbon.identity.oauth.ui.i18n.Resources";
@@ -105,7 +107,6 @@
             app.setOauthConsumerSecret(consumersecret);
             app.setCallbackUrl(callback);
             app.setApplicationName(applicationName);
-            app.setBackChannelLogoutUrl(backchannelLogoutUrl);
             app.setOAuthVersion(oauthVersion);
             app.setPkceMandatory(pkceMandatory);
             app.setPkceSupportPlain(pkceSupportPlain);
@@ -154,6 +155,10 @@
                 app.setIdTokenEncryptionMethod(idTokenEncryptionMethod);
             }
             app.setBypassClientCredentials(bypassClientCredentials);
+
+            if (isBackChannelLogoutEnabled) {
+                app.setBackChannelLogoutUrl(backchannelLogoutUrl);
+            }
             
             client.updateOAuthApplicationData(app);
             String message = resourceBundle.getString("app.updated.successfully");

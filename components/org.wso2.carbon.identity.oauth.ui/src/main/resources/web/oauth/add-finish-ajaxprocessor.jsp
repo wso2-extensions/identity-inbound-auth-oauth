@@ -56,7 +56,7 @@
     String applicationAccessTokenExpiryTime = request.getParameter("applicationAccessTokenExpiryTime");
     String refreshTokenExpiryTime = request.getParameter("refreshTokenExpiryTime");
     String idTokenExpiryTime = request.getParameter("idTokenExpiryTime");
-    String backchannelLogoutUrl = request.getParameter("backChannelLogout");
+    String backchannelLogoutUrl = request.getParameter("backChannelLogoutUrl");
     String tokenType = request.getParameter("tokenType");
 
 	boolean pkceMandatory = false;
@@ -74,7 +74,7 @@
 	if (request.getParameter("bypass_client_credentials") != null) {
         bypassClientCredentials = true;
 	}
-    
+
     // OIDC related properties
     boolean isRequestObjectSignatureValidated = Boolean.parseBoolean(request.getParameter("validateRequestObjectSignature"));
     boolean isIdTokenEncrypted = Boolean.parseBoolean(request.getParameter("encryptIdToken"));
@@ -85,7 +85,7 @@
 	String BUNDLE = "org.wso2.carbon.identity.oauth.ui.i18n.Resources";
 	ResourceBundle resourceBundle = ResourceBundle.getBundle(BUNDLE, request.getLocale());
 	OAuthConsumerAppDTO app = new OAuthConsumerAppDTO();
-    
+
     String spName = request.getParameter("application");
 	boolean isError = false;
 	OAuthConsumerAppDTO consumerApp = null;
@@ -101,13 +101,16 @@
             isHashDisabled = client.isHashDisabled();
             app.setApplicationName(applicationName);
             app.setCallbackUrl(callback);
-            app.setBackChannelLogoutUrl(backchannelLogoutUrl);
             app.setOAuthVersion(oauthVersion);
             app.setUserAccessTokenExpiryTime(Long.parseLong(userAccessTokenExpiryTime));
             app.setApplicationAccessTokenExpiryTime(Long.parseLong(applicationAccessTokenExpiryTime));
             app.setRefreshTokenExpiryTime(Long.parseLong(refreshTokenExpiryTime));
             app.setIdTokenExpiryTime(Long.parseLong(idTokenExpiryTime));
             app.setTokenType(tokenType);
+
+            if (Boolean.parseBoolean(request.getParameter("enableBackchannelLogout"))) {
+                app.setBackChannelLogoutUrl(backchannelLogoutUrl);
+            }
 
             String grants;
             StringBuffer buff = new StringBuffer();
@@ -147,7 +150,7 @@
             app.setPkceMandatory(pkceMandatory);
             app.setPkceSupportPlain(pkceSupportPlain);
             app.setBypassClientCredentials(bypassClientCredentials);
-            
+
             // Set OIDC related configuration properties.
             app.setRequestObjectSignatureValidationEnabled(isRequestObjectSignatureValidated);
             app.setIdTokenEncryptionEnabled(isIdTokenEncrypted);

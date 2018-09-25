@@ -144,7 +144,7 @@
 
                 function validate() {
                     var callbackUrl = document.getElementById('callback').value;
-                    var backChannelLogoutUrl = document.getElementById('backChannelLogout').value;
+                    var backChannelLogoutUrl = document.getElementById('backChannelLogoutUrl').value;
                     var userTokenExpiryTime = document.getElementById("userAccessTokenExpiryTime").value;
                     var applicationTokenExpiryTime = document.getElementById("userAccessTokenExpiryTime").value;
                     var refreshTokenExpiryTime = document.getElementById("refreshTokenExpiryTime").value;
@@ -254,10 +254,7 @@
                         $(jQuery('#userAccessTokenPlain').show());
                         $(jQuery('#applicationAccessTokenPlain').show());
                         $(jQuery('#refreshTokenPlain').show());
-                        /**
-                         * Backchannel logout feature is kept hidden in the UI for now.
-                         */
-                        $(jQuery('#bclogout_row').hide());
+                        $(jQuery('#bclogout_row').show());
                         $(jQuery("#audience_enable").show());
                         $(jQuery("#add_audience").show());
                         $(jQuery("#audience_table").show());
@@ -293,6 +290,10 @@
                 function toggleAudienceRestriction(chkbx) {
                     document.addAppform.audience.disabled = !chkbx.checked;
                     document.addAppform.addAudience.disabled = !chkbx.checked;
+                }
+
+                function toggleBackchannelLogout(chkbx) {
+                    document.addAppform.backChannelLogoutUrl.disabled = !chkbx.checked;
                 }
 
                 function addAudienceFunc() {
@@ -408,10 +409,7 @@
                                                type="text" /></td>
                                 </tr>
                                 <% } %>
-                                <tr id="bclogout_row">
-                                    <td class="leftCol-med"><fmt:message key="bclogout"/></td>
-                                    <td><input class="text-box-big" id="backChannelLogout" name="backChannelLogout" type="text" white-list-patterns="https-url"/></td>
-                                </tr>
+
                                 <tr id="grant_row" name="grant_row">
                                     <td class="leftCol-med"><fmt:message key='grantTypes'/></td>
                                     <td>
@@ -637,6 +635,27 @@
                                     </td>
                                 </tr>
 
+                                <tr id="bclogout_enable">
+                                    <td colspan="2">
+                                        <label title="Enable OIDC Backchannel Logout. Add the Backchannel Logout Endpoint URL in the textbox below">
+                                            <input type="checkbox" name="enableBackchannelLogout"
+                                                   id="enableBackchannelLogout" value="true"
+                                                   onclick="toggleBackchannelLogout(this);"/>
+                                            <fmt:message key="enable.backchannel.logout"/>
+                                        </label>
+                                    </td>
+                                </tr>
+                                <tr id="bclogout_row">
+                                    <td class="leftCol-med" style="padding-left: 40px ! important;">
+                                        <fmt:message key="bclogout"/>
+                                    </td>
+                                    <td>
+                                        <input class="text-box-big" id="backChannelLogoutUrl"
+                                               name="backChannelLogoutUrl" type="text" white-list-patterns="https-url"
+                                               disabled="disabled"/>
+                                    </td>
+                                </tr>
+
                                     <%--Scope validators--%>
                                 <tr id="scope_validator_row" name="scope_validator_row">
                                     <td class="leftCol-med"><fmt:message key='scopeValidators'/></td>
@@ -720,7 +739,7 @@
                             <input type="button" class="button"
                                    onclick="javascript:location.href='index.jsp?region=region1&item=oauth_menu&ordinal=0'"
                                    value="<fmt:message key='cancel'/>"/>
-                            <%} %>
+                            <% } %>
                         </td>
                     </tr>
                     </tbody>
