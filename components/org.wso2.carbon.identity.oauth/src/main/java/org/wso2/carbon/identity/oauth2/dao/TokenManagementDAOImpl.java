@@ -33,6 +33,7 @@ import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
@@ -170,6 +171,17 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                         throw new IdentityOAuth2Exception("Error occurred while retrieving OAuth2 " +
                                 "application data for " + "client id " + consumerKey, e);
                     }
+
+                    if (!OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && userDomain.startsWith
+                            (OAuthConstants.UserType.FEDERATED_USER_DOMAIN_PREFIX)) {
+                        if (log.isDebugEnabled()) {
+                            log.debug("Federated prefix found in domain " + userDomain + " and " +
+                                    "federated users are not mapped to local users. " +
+                                    "Hence setting user to a federated user for client id" + consumerKey);
+                        }
+                        user.setFederatedUser(true);
+                    }
+
                     user.setAuthenticatedSubjectIdentifier(subjectIdentifier, serviceProvider);
                     validationDataDO.setAuthorizedUser(user);
 

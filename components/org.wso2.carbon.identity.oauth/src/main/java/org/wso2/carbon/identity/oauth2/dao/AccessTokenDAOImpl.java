@@ -800,16 +800,18 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                         throw new IdentityOAuth2Exception("Error occurred while retrieving OAuth2 application data for client id " +
                                 consumerKey, e);
                     }
-                    user.setAuthenticatedSubjectIdentifier(subjectIdentifier, serviceProvider);
 
                     if (!OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && userDomain.startsWith
                             (OAuthConstants.UserType.FEDERATED_USER_DOMAIN_PREFIX)) {
                         if (log.isDebugEnabled()) {
-                            log.debug("Federated prefix found in domain " + userDomain + "and federated users are not" +
-                                    " mapped to local users. Hence setting user to a federated user");
+                            log.debug("Federated prefix found in domain " + userDomain + " and " +
+                                    "federated users are not mapped to local users. " +
+                                    "Hence setting user to a federated user for client id" + consumerKey);
                         }
                         user.setFederatedUser(true);
                     }
+
+                    user.setAuthenticatedSubjectIdentifier(subjectIdentifier, serviceProvider);
 
                     dataDO = new AccessTokenDO(consumerKey, user, scope, issuedTime, refreshTokenIssuedTime,
                             validityPeriodInMillis, refreshTokenValidityPeriodMillis, tokenType);
