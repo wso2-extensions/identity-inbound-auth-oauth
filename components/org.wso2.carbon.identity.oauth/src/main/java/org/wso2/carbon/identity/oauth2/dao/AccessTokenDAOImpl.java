@@ -804,8 +804,9 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     if (!OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && userDomain.startsWith
                             (OAuthConstants.UserType.FEDERATED_USER_DOMAIN_PREFIX)) {
                         if (log.isDebugEnabled()) {
-                            log.debug("Federated prefix found in domain " + userDomain + "and federated users are not" +
-                                    " mapped to local users. Hence setting user to a federated user");
+                            log.debug("Federated prefix found in domain " + userDomain + " and " +
+                                    "federated users are not mapped to local users. " +
+                                    "Hence setting user to a federated user for client id" + consumerKey);
                         }
                         user.setFederatedUser(true);
                     }
