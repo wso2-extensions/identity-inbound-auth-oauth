@@ -103,6 +103,9 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
                                 OAuth2Util.signJWT(jwtClaimsSet, signatureAlgorithm, getSigningTenantDomain(oAuthAppDO))
                                         .serialize();
                         logoutTokenList.put(logoutToken, backChannelLogoutUrl);
+                        if (log.isDebugEnabled()) {
+                            log.debug("Logout token created for the client: " + clientID);
+                        }
                     }
                 }
             }

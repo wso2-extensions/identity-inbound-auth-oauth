@@ -478,6 +478,9 @@ public class OIDCLogoutServlet extends HttpServlet {
         String sessionDataKey = request.getParameter(FrameworkConstants.SESSION_DATA_KEY);
         OIDCSessionDataCacheEntry cacheEntry = getSessionDataFromCache(sessionDataKey);
         if (cacheEntry != null) {
+            if (log.isDebugEnabled()) {
+                log.debug("Session key cache entry of logout request: ." + cacheEntry);
+            }
             // BackChannel logout request.
             doBackChannelLogout(request);
             String redirectURL = cacheEntry.getPostLogoutRedirectUri();
@@ -596,6 +599,9 @@ public class OIDCLogoutServlet extends HttpServlet {
     private void doBackChannelLogout(HttpServletRequest request) {
 
         LogoutRequestSender.getInstance().sendLogoutRequests(request);
+        if (log.isDebugEnabled()) {
+            log.debug("Sending backchannel logout request.");
+        }
     }
 
     private void setSPAttributeToRequest(HttpServletRequest req, String spName, String tenantDomain) {
