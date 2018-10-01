@@ -482,15 +482,15 @@ public class OIDCLogoutServlet extends HttpServlet {
         if (log.isDebugEnabled()) {
             String clientId = cacheEntry.getParamMap().get(OIDCSessionConstants.OIDC_CACHE_CLIENT_ID_PARAM);
             String sidClaim;
-            log.debug("Backchannel Logout request received from Client:"+ clientId);
+            log.debug("Backchannel Logout request received from Client:" + clientId);
 
             Cookie opbsCookie = OIDCSessionManagementUtil.getOPBrowserStateCookie(request);
-            if (opbsCookie !=null) {
+            if (opbsCookie != null) {
                 String obpsCookieValue = opbsCookie.getValue();
                 OIDCSessionState sessionState = OIDCSessionManagementUtil.getSessionManager()
                         .getOIDCSessionState(obpsCookieValue);
                 sidClaim = sessionState.getSidClaim();
-                log.debug("Backchannel Logout request received for sid:" +sidClaim);
+                log.debug("Backchannel Logout request received for sid:" + sidClaim);
             }
         }
 

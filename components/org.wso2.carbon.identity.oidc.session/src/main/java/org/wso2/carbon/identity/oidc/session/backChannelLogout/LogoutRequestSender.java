@@ -122,7 +122,7 @@ public class LogoutRequestSender {
 
         @Override
         public void run() {
-            if(log.isDebugEnabled()){
+            if (log.isDebugEnabled()) {
                 log.debug("Starting Backchannel Logout request to " + backChannelLogouturl);
             }
 
@@ -150,7 +150,7 @@ public class LogoutRequestSender {
                     log.error("Error while sending logout token", e);
                 }
                 HttpResponse response = httpClient.execute(httpPost);
-                if(log.isDebugEnabled()){
+                if (log.isDebugEnabled()) {
                     log.debug("Backchannel logout response: " + response.getStatusLine());
                 }
 
