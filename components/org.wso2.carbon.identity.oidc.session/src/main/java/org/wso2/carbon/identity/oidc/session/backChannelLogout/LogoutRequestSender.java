@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oidc.session.backChannelLogout;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
@@ -121,6 +122,9 @@ public class LogoutRequestSender {
 
         @Override
         public void run() {
+            if (log.isDebugEnabled()) {
+                log.debug("Starting Backchannel Logout request to " + backChannelLogouturl);
+            }
 
             List<NameValuePair> logoutReqParams = new ArrayList<NameValuePair>();
             String hostNameVerificationEnabledProperty =
@@ -145,7 +149,10 @@ public class LogoutRequestSender {
                 } catch (UnsupportedEncodingException e) {
                     log.error("Error while sending logout token", e);
                 }
-                httpClient.execute(httpPost);
+                HttpResponse response = httpClient.execute(httpPost);
+                if (log.isDebugEnabled()) {
+                    log.debug("Backchannel logout response: " + response.getStatusLine());
+                }
 
             } catch (IOException e) {
                 log.error("Error sending logout requests to : " + backChannelLogouturl, e);
