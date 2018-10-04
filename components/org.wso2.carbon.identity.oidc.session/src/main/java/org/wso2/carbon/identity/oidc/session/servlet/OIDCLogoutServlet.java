@@ -47,6 +47,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionManagementException;
+import org.wso2.carbon.identity.oidc.session.OIDCSessionState;
 import org.wso2.carbon.identity.oidc.session.backChannelLogout.LogoutRequestSender;
 import org.wso2.carbon.identity.oidc.session.cache.OIDCSessionDataCache;
 import org.wso2.carbon.identity.oidc.session.cache.OIDCSessionDataCacheEntry;
@@ -477,7 +478,23 @@ public class OIDCLogoutServlet extends HttpServlet {
 
         String sessionDataKey = request.getParameter(FrameworkConstants.SESSION_DATA_KEY);
         OIDCSessionDataCacheEntry cacheEntry = getSessionDataFromCache(sessionDataKey);
+
+
         if (cacheEntry != null) {
+            if (log.isDebugEnabled()) {
+                String clientId = cacheEntry.getParamMap().get(OIDCSessionConstants.OIDC_CACHE_CLIENT_ID_PARAM);
+                String sidClaim;
+                log.debug("Logout request received from client: " + clientId);
+
+                Cookie opbsCookie = OIDCSessionManagementUtil.getOPBrowserStateCookie(request);
+                if (opbsCookie != null) {
+                    String obpsCookieValue = opbsCookie.getValue();
+                    OIDCSessionState sessionState = OIDCSessionManagementUtil.getSessionManager()
+                            .getOIDCSessionState(obpsCookieValue);
+                    sidClaim = sessionState.getSidClaim();
+                    log.debug("Logout request received for sid: " + sidClaim);
+                }
+            }
             // BackChannel logout request.
             doBackChannelLogout(request);
             String redirectURL = cacheEntry.getPostLogoutRedirectUri();
@@ -596,6 +613,9 @@ public class OIDCLogoutServlet extends HttpServlet {
     private void doBackChannelLogout(HttpServletRequest request) {
 
         LogoutRequestSender.getInstance().sendLogoutRequests(request);
+        if (log.isDebugEnabled()) {
+            log.debug("Sending backchannel logout request.");
+        }
     }
 
     private void setSPAttributeToRequest(HttpServletRequest req, String spName, String tenantDomain) {
