@@ -231,7 +231,7 @@
                     var userTokenExpiryTime = document.getElementById("userAccessTokenExpiryTime").value;
                     var applicationTokenExpiryTime = document.getElementById("userAccessTokenExpiryTime").value;
                     var refreshTokenExpiryTime = document.getElementById("refreshTokenExpiryTime").value;
-                    var backChannelLogoutUrl = document.getElementById("backChannelLogout").value;
+                    var backChannelLogoutUrl = document.getElementById("backChannelLogoutUrl").value;
 
                     if (callbackUrl.indexOf("#") !== -1) {
                         CARBON.showWarningDialog('<fmt:message key="callback.is.fragment"/>');
@@ -307,6 +307,7 @@
                     var supportGrantCode = $('input[name=grant_authorization_code]:checked').val() != null;
                     var supportImplicit = $('input[name=grant_implicit]:checked').val() != null;
                     var idTokenEncryptionEnabled = $('input[name=encryptIdToken]:checked').val() != null;
+                    var backChannelLogoutEnabled = $('input[name=enableBackchannelLogout]:checked').val() != null;
 
                     if(!supportGrantCode && !supportImplicit){
                         $(jQuery('#callback_row')).hide();
@@ -320,10 +321,14 @@
                         $(jQuery("#pkce_enable").hide());
                         $(jQuery("#pkce_support_plain").hide());
                     }
-                    /**
-                     * Backchannel logout feature is kept hidden in the UI for now.
-                     */
-                    $(jQuery('#bclogout_row').hide());
+
+                    $(jQuery('#bclogout_row').show());
+
+                    if (!backChannelLogoutEnabled) {
+                        $('select[name=backChannelLogoutUrl]').prop('disabled', true);
+                    } else {
+                        $('select[name=backChannelLogoutUrl]').prop('disabled', false);
+                    }
 
                     if (!idTokenEncryptionEnabled) {
                         $('select[name=idTokenEncryptionAlgorithm]').prop('disabled', true);
@@ -338,6 +343,11 @@
                     document.editAppform.audience.disabled = !chkbx.checked;
                     document.editAppform.addAudience.disabled = (!chkbx.checked);
                 }
+
+                function toggleBackchannelLogout(chkbx) {
+                    document.editAppform.backChannelLogoutUrl.disabled = !chkbx.checked;
+                }
+
 
                 function addAudienceFunc() {
                     var audience = $.trim(document.getElementById('audience').value);
@@ -453,11 +463,11 @@
                                                                                   type="hidden" value="<%=Encode.forHtmlAttribute(applicationSPName)%>" /></td>
                                 </tr>
                                 <%} %>
-                                <tr id="bclogout_row">
-                                    <td class="leftCol-med"><fmt:message key="bclogout"/></td>
-                                    <td><input class="text-box-big" id="backChannelLogout" name="backChannelLogout"
-                                               type="text" value="<%=Encode.forHtmlAttribute(app.getBackChannelLogoutUrl())%>"/></td>
-                                </tr>
+                                <%--<tr id="bclogout_row">--%>
+                                    <%--<td class="leftCol-med"><fmt:message key="bclogout"/></td>--%>
+                                    <%--<td><input class="text-box-big" id="backChannelLogout" name="backChannelLogout"--%>
+                                               <%--type="text" value="<%=Encode.forHtmlAttribute(app.getBackChannelLogoutUrl())%>"/></td>--%>
+                                <%--</tr>--%>
 
                                 <script>
                                     if(<%=app.getOAuthVersion().equals(OAuthConstants.OAuthVersions.VERSION_1A)%> || <%=codeGrant%> || <%=implicitGrant%>){
@@ -757,7 +767,32 @@
                                     </td>
                                 </tr>
 
-                                    <%--Scope validators--%>
+                                <tr id="bclogout_enable">
+                                    <td colspan="2">
+                                        <label title="Enable OIDC Backchannel Logout. Add the Backchannel Logout Endpoint URL in the textbox below">
+                                            <input type="checkbox" name="enableBackchannelLogout"
+                                                   id="enableBackchannelLogout" value="true"
+                                                   onclick="toggleBackchannelLogout(this);"
+                                                    <%= (app.getBackChannelLogoutUrl() != "" ? "checked" : "") %>
+                                            />
+                                            <fmt:message key="enable.backchannel.logout"/>
+                                        </label>
+                                    </td>
+                                </tr>
+                                <tr id="bclogout_row">
+                                    <td class="leftCol-med" style="padding-left: 40px ! important;">
+                                        <fmt:message key="bclogout"/>
+                                    </td>
+                                    <td>
+                                        <input class="text-box-big" id="backChannelLogoutUrl"
+                                               name="backChannelLogoutUrl" type="text" white-list-patterns="https-url"
+                                               value="<%=Encode.forHtmlAttribute(app.getBackChannelLogoutUrl())%>"
+                                                <%= (app.getBackChannelLogoutUrl() == "" ? "disabled" : "") %>
+                                        />
+                                    </td>
+                                </tr>
+
+                                <%--Scope validators--%>
                                 <tr id="scope_validator_row" name="scope_validator_row">
                                     <td class="leftCol-med"><fmt:message key='scopeValidators'/></td>
                                     <td>
