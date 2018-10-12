@@ -29,7 +29,7 @@ paths:
       description: |
         This API is used to create an OAuth2 application. If your want to create your application to use the implicit or authorization_code 
         grant types, you need to provide the redirect_uris field in your request. If you are using any other grant type, 
-        such as password, you don't need to send the redirect_uri field in the request. Check the example that is given below.
+        such as password, you don't need to send the redirect_uri field in the request. Check the sample request given below.
       x-wso2-request: |
         curl -X POST -H "Authorization: Basic YWRtaW46YWRtaW4=" -H
         "Content-Type: application/json" -d '{
@@ -44,6 +44,22 @@ paths:
         "client_secret_expires_at": 1577858400,
         "redirect_uris":[""],
         "client_name":"application_1" }
+      description: |
+        If you want to register an OAuth2 application with a specified client_id and secret, check the sample request given below.
+      x-wso2-request: |
+        curl -k -X POST -H "Authorization: Basic YWRtaW46YWRtaW4=" -H 
+        "Content-Type: application/json" -d '{
+         "client_name": "application_test",
+         "grant_types": ["password"], 
+         "ext_param_client_id":"provided_client_id0001", 
+         "ext_param_client_secret":"provided_client_secret0001" }' 
+        "https://localhost:9443/api/identity/oauth2/dcr/v1.0/register"
+      x-wso2-response: |
+        "HTTP/1.1 201 Created"
+        {"client_name”:"application_test",
+        "client_id":"provided_client_id0001",
+        "client_secret":"provided_client_secret0001",
+        "redirect_uris":[""]}
       summary: |
         Registers an OAuth2 application
       operationId: registerApplication
