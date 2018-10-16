@@ -144,7 +144,8 @@
 
                 function validate() {
                     var callbackUrl = document.getElementById('callback').value;
-                    var backChannelLogoutUrl = document.getElementById('backChannelLogoutUrl').value;
+                    var oidcLogoutType = $('input[name=logoutMechanism]:checked').val();
+                    var oidcLogoutUrl = document.getElementById('logout_url').value;
                     var userTokenExpiryTime = document.getElementById("userAccessTokenExpiryTime").value;
                     var applicationTokenExpiryTime = document.getElementById("userAccessTokenExpiryTime").value;
                     var refreshTokenExpiryTime = document.getElementById("refreshTokenExpiryTime").value;
@@ -153,34 +154,43 @@
                         CARBON.showWarningDialog('<fmt:message key="callback.is.fragment"/>');
                         return false;
                     }
-                    if (backChannelLogoutUrl.indexOf("#") !== -1) {
-                        CARBON.showWarningDialog('<fmt:message key="backchannel.logout.is.fragment"/>');
+
+                    if (oidcLogoutUrl.indexOf("#") !== -1) {
+                        CARBON.showWarningDialog('<fmt:message key="logout.url.is.fragment"/>');
                         return false;
                     }
 
-                    if ($(jQuery("#grant_authorization_code"))[0].checked || $(jQuery("#grant_implicit"))[0].checked) {
-                        // This is to support providing regex patterns for callback URLs
-                        if (callbackUrl.startsWith("regexp=")) {
-                            // skip validation
-                        } else if (!isWhiteListed(callbackUrl, ["url"])) {
-                            CARBON.showWarningDialog('<fmt:message key="callback.is.not.url"/>');
-                            return false;
-                        }
-                        if (!isWhiteListed(backChannelLogoutUrl, ["url"]) || !isNotBlackListed(backChannelLogoutUrl,
-                                ["uri-unsafe-exists"])) {
-                            CARBON.showWarningDialog('<fmt:message key="backchannel.logout.is.not.url"/>');
-                            return false;
-                        }
-                    }
                     var value = document.getElementsByName("application")[0].value;
                     if (value == '') {
                         CARBON.showWarningDialog('<fmt:message key="application.is.required"/>');
                         return false;
                     }
+
                     var version2Checked = document.getElementById("oauthVersion20").checked;
                     if (version2Checked) {
                         if (!$(jQuery("#grant_authorization_code"))[0].checked && !$(jQuery("#grant_implicit"))[0].checked) {
                             document.getElementsByName("callback")[0].value = '';
+                        } else {
+                            // This is to support providing regex patterns for callback URLs
+                            if (callbackUrl.startsWith("regexp=")) {
+                                // skip validation
+                            } else if (!(isWhiteListed(callbackUrl, ["https-url"]) || isWhiteListed(callbackUrl, ["http-url"])) || !isNotBlackListed(callbackUrl, ["uri-unsafe-exists"])) {
+                                CARBON.showWarningDialog('<fmt:message key="callback.is.not.url"/>');
+                                return false;
+                            }
+
+                            if (oidcLogoutType === "<%= OAuthConstants.OIDCConfigProperties.BACK_CHANNEL_LOGOUT_SELECTED%>") {
+                                if (!(isWhiteListed(oidcLogoutUrl, ["https-url"]) || isWhiteListed(oidcLogoutUrl, ["http-url"])) || !isNotBlackListed(oidcLogoutUrl,
+                                    ["uri-unsafe-exists"])) {
+                                    CARBON.showWarningDialog('<fmt:message key="logout.is.not.url"/>');
+                                    return false;
+                                }
+                            } else if (oidcLogoutType === "<%= OAuthConstants.OIDCConfigProperties.FRONT_CHANNEL_LOGOUT_SELECTED%>") {
+                                if (!isWhiteListed(oidcLogoutUrl, ["https-url"]) || !isNotBlackListed(oidcLogoutUrl, ["uri-unsafe-exists"])) {
+                                    CARBON.showWarningDialog('<fmt:message key="logout.is.not.https.url"/>');
+                                    return false;
+                                }
+                            }
                         }
                         if (!isWhiteListed(userTokenExpiryTime, ["digits-only"])) {
                             CARBON.showWarningDialog('<fmt:message key="invalid.user.access.token.expiry.time"/>');
@@ -195,26 +205,11 @@
                             return false;
                         }
                     } else {
-                        if (!isWhiteListed(callbackUrl, ["url"])) {
+                        // This is to support providing regex patterns for callback URLs
+                        if (callbackUrl.startsWith("regexp=")) {
+                            // skip validation
+                        } else if (!(isWhiteListed(callbackUrl, ["https-url"]) || isWhiteListed(callbackUrl, ["http-url"])) || !isNotBlackListed(callbackUrl, ["uri-unsafe-exists"])) {
                             CARBON.showWarningDialog('<fmt:message key="callback.is.not.url"/>');
-                            return false;
-
-                        }
-                        if (!isWhiteListed(backChannelLogoutUrl, ["url"]) || !isNotBlackListed(backChannelLogoutUrl,
-                                ["uri-unsafe-exists"])) {
-                            CARBON.showWarningDialog('<fmt:message key="backchannel.logout.is.not.url"/>');
-                            return false;
-                        }
-                        if (!isWhiteListed(userTokenExpiryTime, ["digits-only"])) {
-                            CARBON.showWarningDialog('<fmt:message key="invalid.user.access.token.expiry.time"/>');
-                            return false;
-                        }
-                        if (!isWhiteListed(applicationTokenExpiryTime, ["digits-only"])) {
-                            CARBON.showWarningDialog('<fmt:message key="invalid.application.access.token.expiry.time"/>');
-                            return false;
-                        }
-                        if (!isWhiteListed(refreshTokenExpiryTime, ["digits-only"])) {
-                            CARBON.showWarningDialog('<fmt:message key="invalid.refresh.token.expiry.time"/>');
                             return false;
                         }
                     }
@@ -230,12 +225,15 @@
                     if(oauthVersion == "<%=OAuthConstants.OAuthVersions.VERSION_1A%>") {
                         $(jQuery('#grant_row')).hide();
                         $(jQuery('#scope_validator_row')).hide();
+                        $(jQuery('#access_token_type_row')).hide();
                         $(jQuery("#pkce_enable").hide());
                         $(jQuery("#pkce_support_plain").hide());
                         $(jQuery('#userAccessTokenPlain').hide());
                         $(jQuery('#applicationAccessTokenPlain').hide());
                         $(jQuery('#refreshTokenPlain').hide());
-                        $(jQuery('#bclogout_row').hide());
+                        $(jQuery('#idTokenPlain').hide());
+                        $(jQuery('#logout_mechanism_row').hide());
+                        $(jQuery('#logout_url_row').hide());
                         $(jQuery("#audience_enable").hide());
                         $(jQuery("#add_audience").hide());
                         $(jQuery("#audience_table").hide());
@@ -249,12 +247,13 @@
                     } else if(oauthVersion == "<%=OAuthConstants.OAuthVersions.VERSION_2%>") {
                         $(jQuery('#grant_row')).show();
                         $(jQuery('#scope_validator_row')).show();
+                        $(jQuery('#access_token_type_row')).hide();
                         $(jQuery("#pkce_enable").show());
                         $(jQuery("#pkce_support_plain").show());
                         $(jQuery('#userAccessTokenPlain').show());
                         $(jQuery('#applicationAccessTokenPlain').show());
                         $(jQuery('#refreshTokenPlain').show());
-                        $(jQuery('#bclogout_row').show());
+                        $(jQuery('#idTokenPlain').show());
                         $(jQuery("#audience_enable").show());
                         $(jQuery("#add_audience").show());
                         $(jQuery("#audience_table").show());
@@ -266,8 +265,12 @@
 
                         if (!supportGrantCode && !supportImplicit) {
                             $(jQuery('#callback_row')).hide();
+                            $(jQuery('#logout_mechanism_row').hide());
+                            $(jQuery('#logout_url_row').hide());
                         } else {
                             $(jQuery('#callback_row')).show();
+                            $(jQuery('#logout_mechanism_row').show());
+                            $(jQuery('#logout_url_row').show());
                         }
                         if (supportGrantCode) {
                             $(jQuery("#pkce_enable").show());
@@ -292,8 +295,12 @@
                     document.addAppform.addAudience.disabled = !chkbx.checked;
                 }
 
-                function toggleBackchannelLogout(chkbx) {
-                    document.addAppform.backChannelLogoutUrl.disabled = !chkbx.checked;
+                function toggleOidcLogout(radiobtn) {
+                    if (radiobtn.value == "none") {
+                        document.addAppform.logoutUrl.disabled = true;
+                    } else {
+                        document.addAppform.logoutUrl.disabled = false;
+                    }
                 }
 
                 function addAudienceFunc() {
@@ -635,24 +642,51 @@
                                     </td>
                                 </tr>
 
-                                <tr id="bclogout_enable">
-                                    <td colspan="2">
-                                        <label title="Enable OIDC Backchannel Logout. Add the Backchannel Logout Endpoint URL in the textbox below">
-                                            <input type="checkbox" name="enableBackchannelLogout"
-                                                   id="enableBackchannelLogout" value="true"
-                                                   onclick="toggleBackchannelLogout(this);"/>
-                                            <fmt:message key="enable.backchannel.logout"/>
-                                        </label>
+                                    <%-- Logout Mechanisms --%>
+                                <tr id="logout_mechanism_row" name="logout_mechanism_row">
+                                    <td class="leftCol-med"><fmt:message key="logout.mechasnism"/></td>
+                                    <td>
+                                        <table>
+                                            <tr>
+                                                <td><label><input type="radio" name="logoutMechanism"
+                                                                  id="logout_none"
+                                                                  value="<%= Encode.forHtmlAttribute(OAuthConstants.OIDCConfigProperties.NO_LOGOUT_SELECTED)%>"
+                                                                  checked="checked" onclick="toggleOidcLogout(this)"/>
+                                                    <fmt:message key="no.logout.mechanism"/>
+                                                </label>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td><label><input type="radio" name="logoutMechanism"
+                                                                  id="frontchannel_logout"
+                                                                  value="<%= Encode.forHtmlAttribute(OAuthConstants.OIDCConfigProperties.FRONT_CHANNEL_LOGOUT_SELECTED)%>"
+                                                                  onclick="toggleOidcLogout(this)"/>
+                                                    <fmt:message key="oidc.frontchannel.logout"/>
+                                                </label>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td><label><input type="radio" name="logoutMechanism"
+                                                                  id="backchannel_logout"
+                                                                  value="<%= Encode.forHtmlAttribute(OAuthConstants.OIDCConfigProperties.BACK_CHANNEL_LOGOUT_SELECTED)%>"
+                                                                  onclick="toggleOidcLogout(this)"/>
+                                                    <fmt:message key="oidc.backchannel.logout"/>
+                                                </label>
+                                                </td>
+                                            </tr>
+                                        </table>
                                     </td>
                                 </tr>
-                                <tr id="bclogout_row">
+
+                                <tr id="logout_url_row">
                                     <td class="leftCol-med" style="padding-left: 40px ! important;">
-                                        <fmt:message key="bclogout"/>
+                                        <fmt:message key="logout.url"/>
                                     </td>
                                     <td>
-                                        <input class="text-box-big" id="backChannelLogoutUrl"
-                                               name="backChannelLogoutUrl" type="text" white-list-patterns="https-url"
-                                               disabled="disabled"/>
+                                        <input class="text-box-big" id="logout_url"
+                                               name="logoutUrl" type="text"
+                                               disabled="disabled"
+                                        />
                                     </td>
                                 </tr>
 

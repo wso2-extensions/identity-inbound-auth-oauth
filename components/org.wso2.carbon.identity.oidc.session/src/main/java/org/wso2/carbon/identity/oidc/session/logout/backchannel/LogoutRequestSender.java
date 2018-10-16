@@ -15,7 +15,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.wso2.carbon.identity.oidc.session.backChannelLogout;
+package org.wso2.carbon.identity.oidc.session.logout.backchannel;
 
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.logging.Log;

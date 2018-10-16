@@ -152,6 +152,7 @@ public class OAuthAdminService extends AbstractAdmin {
                 dto.setIdTokenEncryptionAlgorithm(app.getIdTokenEncryptionAlgorithm());
                 dto.setIdTokenEncryptionMethod(app.getIdTokenEncryptionMethod());
                 dto.setBackChannelLogoutUrl(app.getBackChannelLogoutUrl());
+                dto.setFrontchannelLogoutUrl(app.getFrontchannelLogoutUrl());
                 dto.setTokenType(app.getTokenType());
                 dto.setBypassClientCredentials(app.isBypassClientCredentials());
                 dtos[i] = dto;
@@ -239,6 +240,7 @@ public class OAuthAdminService extends AbstractAdmin {
                 dto.setIdTokenEncryptionAlgorithm(app.getIdTokenEncryptionAlgorithm());
                 dto.setIdTokenEncryptionMethod(app.getIdTokenEncryptionMethod());
                 dto.setBackChannelLogoutUrl(app.getBackChannelLogoutUrl());
+                dto.setFrontchannelLogoutUrl(app.getFrontchannelLogoutUrl());
                 dto.setTokenType(app.getTokenType());
                 dto.setBypassClientCredentials(app.isBypassClientCredentials());
             }
@@ -352,6 +354,7 @@ public class OAuthAdminService extends AbstractAdmin {
                     app.setIdTokenEncryptionAlgorithm(application.getIdTokenEncryptionAlgorithm());
                     app.setIdTokenEncryptionMethod(application.getIdTokenEncryptionMethod());
                     app.setBackChannelLogoutUrl(application.getBackChannelLogoutUrl());
+                    app.setFrontchannelLogoutUrl(application.getFrontchannelLogoutUrl());
                     app.setTokenType(application.getTokenType());
                     app.setBypassClientCredentials(application.isBypassClientCredentials());
                 }
@@ -408,6 +411,7 @@ public class OAuthAdminService extends AbstractAdmin {
         oAuthConsumerAppDTO.setIdTokenEncryptionAlgorithm(application.getIdTokenEncryptionAlgorithm());
         oAuthConsumerAppDTO.setIdTokenEncryptionMethod(application.getIdTokenEncryptionMethod());
         oAuthConsumerAppDTO.setBackChannelLogoutUrl(application.getBackChannelLogoutUrl());
+        oAuthConsumerAppDTO.setFrontchannelLogoutUrl(application.getFrontchannelLogoutUrl());
         oAuthConsumerAppDTO.setPkceMandatory(application.isPkceMandatory());
         oAuthConsumerAppDTO.setPkceSupportPlain(application.isPkceSupportPlain());
 
@@ -496,6 +500,7 @@ public class OAuthAdminService extends AbstractAdmin {
             oauthappdo.setIdTokenEncryptionAlgorithm(consumerAppDTO.getIdTokenEncryptionAlgorithm());
             oauthappdo.setIdTokenEncryptionMethod(consumerAppDTO.getIdTokenEncryptionMethod());
             oauthappdo.setBackChannelLogoutUrl(consumerAppDTO.getBackChannelLogoutUrl());
+            oauthappdo.setFrontchannelLogoutUrl(consumerAppDTO.getFrontchannelLogoutUrl());
         }
         dao.updateConsumerApplication(oauthappdo);
         AppInfoCache.getInstance().addToCache(oauthappdo.getOauthConsumerKey(), oauthappdo);
