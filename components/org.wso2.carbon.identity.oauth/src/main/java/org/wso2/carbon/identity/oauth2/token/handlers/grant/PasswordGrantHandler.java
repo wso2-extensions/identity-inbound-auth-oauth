@@ -137,12 +137,14 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
                 throw new IdentityOAuth2Exception("Authentication failed for " + tokenReq.getResourceOwnerUsername());
             }
         } catch (UserStoreException e) {
-            String message;
+            String message = e.getMessage();
+            if (!(e.getCause() instanceof IdentityException)) {
+                throw new IdentityOAuth2Exception(message, e);
+            }
+            IdentityException identityException = (IdentityException) (e.getCause());
             // Set error code to message if available.
-            if (e.getCause() instanceof IdentityException && ((IdentityException) e.getCause()).getErrorCode() != null){
-                message = ((IdentityException) e.getCause()).getErrorCode() + " " + e.getMessage();
-            } else {
-                message = e.getMessage();
+            if (StringUtils.isNotBlank(identityException.getErrorCode())) {
+                message = identityException.getErrorCode() + " " + e.getMessage();
             }
             throw new IdentityOAuth2Exception(message, e);
         }
