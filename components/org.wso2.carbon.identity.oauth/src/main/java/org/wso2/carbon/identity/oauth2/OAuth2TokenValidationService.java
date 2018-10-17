@@ -33,6 +33,8 @@ import org.wso2.carbon.identity.oauth2.validators.TokenValidationHandler;
 import java.util.HashMap;
 import java.util.Map;
 
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.triggerOnIntrospectionExceptionListeners;
+
 /**
  * This is the SOAP version of the OAuth validation service which will be used by the resource server.
  */
@@ -108,6 +110,7 @@ public class OAuth2TokenValidationService extends AbstractAdmin {
             OAuth2IntrospectionResponseDTO errRespDTO = new OAuth2IntrospectionResponseDTO();
             errRespDTO.setActive(false);
             errRespDTO.setError(e.getMessage());
+            triggerOnIntrospectionExceptionListeners(validationReq, errRespDTO);
             return errRespDTO;
         }
         try {
