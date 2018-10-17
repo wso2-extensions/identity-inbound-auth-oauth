@@ -80,6 +80,8 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.config.SpOAuth2ExpiryTimeConfiguration;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
+import org.wso2.carbon.identity.oauth2.dto.OAuth2IntrospectionResponseDTO;
+import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.ClientCredentialDO;
@@ -2472,6 +2474,36 @@ public class OAuth2Util {
             }
         }
     }
-    
+
+    /**
+     * Extract information related to the token introspection and publish the event on introspection error.
+     *
+     * @param
+     */
+    public static void triggerOnIntrospectionExceptionListeners(OAuth2TokenValidationRequestDTO introspectionRequest,
+                                                                OAuth2IntrospectionResponseDTO introspectionResponse) {
+
+        Map<String, Object> params = new HashMap<>();
+        params.put("error", introspectionResponse.getError());
+
+        try {
+            OAuthEventInterceptor oAuthEventInterceptorProxy = OAuthComponentServiceHolder.getInstance()
+                    .getOAuthEventInterceptorProxy();
+
+            if (oAuthEventInterceptorProxy != null) {
+                try {
+                    oAuthEventInterceptorProxy.onTokenValidationException(introspectionRequest, params);
+                } catch (IdentityOAuth2Exception e) {
+                    log.error("Error while invoking OAuthEventInterceptor for onTokenValidationException", e);
+                }
+            }
+        } catch (Throwable e) {
+            // Catching a throwable as we do no need to interrupt the code flow since these are logging purposes.
+            if (log.isDebugEnabled()) {
+                log.debug("Error occurred while executing oAuthEventInterceptorProxy for onTokenValidationException."
+                        , e);
+            }
+        }
+    }
 }
 
