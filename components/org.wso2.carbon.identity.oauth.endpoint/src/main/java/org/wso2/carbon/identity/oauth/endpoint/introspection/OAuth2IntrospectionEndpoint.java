@@ -75,7 +75,7 @@ public class OAuth2IntrospectionEndpoint {
             introspectionResponse.setError(INVALID_INPUT);
             triggerOnIntrospectionExceptionListeners(null, introspectionResponse);
             return Response.status(Response.Status.BAD_REQUEST).
-                    entity("{\"error\": \"" + INVALID_INPUT + "\" }").build();
+                    entity("{\"error\": \"" + INVALID_INPUT + "\"}").build();
         }
 
         String[] claimsUris;
