@@ -2482,7 +2482,7 @@ public class OAuth2Util {
      * @param
      */
     public static void triggerOnIntrospectionExceptionListeners(OAuth2TokenValidationRequestDTO introspectionRequest,
-                                                                OAuth2IntrospectionResponseDTO introspectionResponse) {
+            OAuth2IntrospectionResponseDTO introspectionResponse) {
 
         Map<String, Object> params = new HashMap<>();
         params.put("error", introspectionResponse.getError());
@@ -2501,8 +2501,8 @@ public class OAuth2Util {
         } catch (Throwable e) {
             // Catching a throwable as we do no need to interrupt the code flow since these are logging purposes.
             if (log.isDebugEnabled()) {
-                log.debug("Error occurred while executing oAuthEventInterceptorProxy for onTokenValidationException."
-                        , e);
+                log.debug("Error occurred while executing oAuthEventInterceptorProxy for onTokenValidationException.",
+                        e);
             }
         }
     }
