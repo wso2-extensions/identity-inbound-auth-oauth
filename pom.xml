@@ -750,6 +750,7 @@
         <commons-codec.wso2.osgi.version.range>[1.4.0,2.0.0)</commons-codec.wso2.osgi.version.range>
         <commons-lang.wso2.osgi.version.range>[2.6.0,3.0.0)</commons-lang.wso2.osgi.version.range>
         <commons-collections.wso2.osgi.version.range>[3.2.0,4.0.0)</commons-collections.wso2.osgi.version.range>
+        <commons-lang.version.range>[2.6.0,3.0.0)</commons-lang.version.range>
 
         <!-- Orbit dependency version -->
         <gdata-core.wso2.version>1.47.0.wso2v1</gdata-core.wso2.version>
