@@ -114,6 +114,7 @@
                             org.apache.axis2.client; version="${axis2.osgi.version.range}",
                             org.apache.axis2.context; version="${axis2.osgi.version.range}",
                             org.apache.commons.logging; version="${commons-logging.osgi.version.range}",
+                            org.apache.commons.lang.*; version="${commons-lang.version.range}",
 
                             org.eclipse.equinox.http.helper,
 
