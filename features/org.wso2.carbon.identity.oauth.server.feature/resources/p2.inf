@@ -10,5 +10,5 @@ org.eclipse.equinox.p2.touchpoint.natives.copy(source:${installFolder}/../featur
 org.eclipse.equinox.p2.touchpoint.natives.copy(source:${installFolder}/../features/org.wso2.carbon.identity.oauth.server_${feature.version}/api#identity#oauth2#v1.0.war,target:${installFolder}/../../deployment/server/webapps/api#identity#oauth2#v1.0.war,overwrite:true);\
 org.eclipse.equinox.p2.touchpoint.natives.mkdir(path:${installFolder}/../../../lib/); \
 org.eclipse.equinox.p2.touchpoint.natives.mkdir(path:${installFolder}/../../../lib/runtimes/); \
-org.eclipse.equinox.p2.touchpoint.natives.mkdir(path:${installFolder}/../../../lib/runtimes/cxf/); \
-org.eclipse.equinox.p2.touchpoint.natives.copy(source:${installFolder}/../features/org.wso2.carbon.identity.oauth.server_${feature.version}/runtimes/cxf/,target:${installFolder}/../../../lib/runtimes/cxf/,overwrite:true);\
+org.eclipse.equinox.p2.touchpoint.natives.mkdir(path:${installFolder}/../../../lib/runtimes/cxf3/); \
+org.eclipse.equinox.p2.touchpoint.natives.copy(source:${installFolder}/../features/org.wso2.carbon.identity.oauth.server_${feature.version}/runtimes/cxf3/,target:${installFolder}/../../../lib/runtimes/cxf3/,overwrite:true);\

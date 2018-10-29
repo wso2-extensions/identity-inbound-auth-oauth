@@ -136,7 +136,7 @@
                                     <version>${project.version}</version>
                                     <type>jar</type>
                                     <overWrite>true</overWrite>
-                                    <outputDirectory>${basedir}/src/main/resources/runtimes/cxf</outputDirectory>
+                                    <outputDirectory>${basedir}/src/main/resources/runtimes/cxf3</outputDirectory>
                                 </artifactItem>
                             </artifactItems>
                         </configuration>
