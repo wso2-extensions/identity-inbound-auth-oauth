@@ -567,6 +567,41 @@ public class SQLQueries {
                     "LEFT JOIN IDN_OAUTH2_SCOPE_BINDING SCOPEBINDINGS ON SCOPES.SCOPE_ID=SCOPEBINDINGS.SCOPE_ID " +
                     "WHERE SCOPES.NAME = ? AND TENANT_ID = ?";
 
+    public static final String RETRIEVE_REFRESH_TOKEN =
+            "SELECT CONSUMER_KEY, " +
+                    "AUTHZ_USER, " +
+                    "ACCESS_TOKEN_TABLE.TENANT_ID, " +
+                    "USER_DOMAIN, " +
+                    "TOKEN_SCOPE, " +
+                    "TIME_CREATED, " +
+                    "REFRESH_TOKEN_TIME_CREATED, " +
+                    "VALIDITY_PERIOD, " +
+                    "REFRESH_TOKEN_VALIDITY_PERIOD, " +
+                    "USER_TYPE, " +
+                    "ACCESS_TOKEN, " +
+                    "ACCESS_TOKEN_TABLE.TOKEN_ID, " +
+                    "GRANT_TYPE, " +
+                    "SUBJECT_IDENTIFIER " +
+            "FROM (SELECT TOKEN_ID, " +
+                          "CONSUMER_KEY, " +
+                          "AUTHZ_USER, " +
+                          "IDN_OAUTH2_ACCESS_TOKEN.TENANT_ID AS TENANT_ID, " +
+                          "IDN_OAUTH2_ACCESS_TOKEN.USER_DOMAIN AS USER_DOMAIN," +
+                          "TIME_CREATED, " +
+                          "REFRESH_TOKEN_TIME_CREATED, " +
+                          "VALIDITY_PERIOD, " +
+                          "REFRESH_TOKEN_VALIDITY_PERIOD, " +
+                          "USER_TYPE," +
+                          "REFRESH_TOKEN, " +
+                          "ACCESS_TOKEN, " +
+                          "IDN_OAUTH2_ACCESS_TOKEN.GRANT_TYPE AS GRANT_TYPE, " +
+                          "SUBJECT_IDENTIFIER " +
+                          "FROM (SELECT * " +
+                                "FROM IDN_OAUTH2_ACCESS_TOKEN " +
+                                "WHERE REFRESH_TOKEN_HASH = ? AND TOKEN_STATE='ACTIVE') IDN_OAUTH2_ACCESS_TOKEN " +
+                          "JOIN IDN_OAUTH_CONSUMER_APPS ON CONSUMER_KEY_ID = ID) ACCESS_TOKEN_TABLE " +
+            "LEFT JOIN IDN_OAUTH2_ACCESS_TOKEN_SCOPE ON ACCESS_TOKEN_TABLE.TOKEN_ID = IDN_OAUTH2_ACCESS_TOKEN_SCOPE.TOKEN_ID";
+
     private SQLQueries() {
 
     }

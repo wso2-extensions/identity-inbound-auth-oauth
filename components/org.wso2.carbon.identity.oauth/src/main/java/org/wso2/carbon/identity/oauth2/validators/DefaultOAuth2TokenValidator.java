@@ -65,6 +65,11 @@ public class DefaultOAuth2TokenValidator implements OAuth2TokenValidator {
 
         String[] scopeValidators;
         AccessTokenDO accessTokenDO = (AccessTokenDO) messageContext.getProperty(ACCESS_TOKEN_DO);
+
+        if (accessTokenDO == null) {
+            return false;
+        }
+
         OAuthAppDO app;
         try {
             app = OAuth2Util.getAppInformationByClientId(accessTokenDO.getConsumerKey());

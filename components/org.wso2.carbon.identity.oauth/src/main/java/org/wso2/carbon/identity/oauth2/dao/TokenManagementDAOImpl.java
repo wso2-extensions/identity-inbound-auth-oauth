@@ -37,6 +37,7 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
@@ -44,6 +45,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashSet;
@@ -205,6 +207,98 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
             IdentityDatabaseUtil.closeAllConnections(connection, resultSet, prepStmt);
         }
 
+        return validationDataDO;
+    }
+
+    @Override
+    public AccessTokenDO getRefreshToken(String refreshToken) throws IdentityOAuth2Exception {
+
+        if (log.isDebugEnabled()) {
+            if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.REFRESH_TOKEN)) {
+                log.debug("Validating refresh token(hashed): " + DigestUtils.sha256Hex(refreshToken));
+            }
+        }
+
+        AccessTokenDO validationDataDO = null;
+        Connection connection = IdentityDatabaseUtil.getDBConnection();
+        PreparedStatement prepStmt = null;
+        ResultSet resultSet = null;
+
+        String sql = SQLQueries.RETRIEVE_REFRESH_TOKEN;
+
+        try {
+            sql = OAuth2Util.getTokenPartitionedSqlByToken(sql, refreshToken);
+            prepStmt = connection.prepareStatement(sql);
+            prepStmt.setString(1, getHashingPersistenceProcessor().getProcessedRefreshToken(refreshToken));
+            resultSet = prepStmt.executeQuery();
+
+            int iterateId = 0;
+            List<String> scopes = new ArrayList<>();
+            while (resultSet.next()) {
+                if (iterateId == 0) {
+                    String consumerKey = getPersistenceProcessor().getPreprocessedClientId(resultSet.getString(1));
+                    String authorizedUser = resultSet.getString(2);
+                    int tenantId = resultSet.getInt(3);
+                    String tenantDomain = OAuth2Util.getTenantDomain(tenantId);
+                    String userDomain = resultSet.getString(4);
+                    String[] scope = OAuth2Util.buildScopeArray(resultSet.getString(5));
+                    Timestamp accessTokenIssuedTime = resultSet
+                            .getTimestamp(6, Calendar.getInstance(TimeZone.getTimeZone(UTC)));
+                    Timestamp refreshTokenIssuedTime = resultSet.getTimestamp(7,
+                            Calendar.getInstance(TimeZone.getTimeZone(UTC)));
+                    long validityPeriodInMillis = resultSet.getLong(8);
+                    long refreshTokenValidityPeriodMillis = resultSet.getLong(9);
+                    String tokenType = resultSet.getString(10);
+                    String accessTokenIdentifier = resultSet.getString(11);
+                    String tokenId = resultSet.getString(12);
+                    String grantType = resultSet.getString(13);
+                    String subjectIdentifier = resultSet.getString(14);
+
+                    AuthenticatedUser user = new AuthenticatedUser();
+                    user.setUserName(authorizedUser);
+                    user.setUserStoreDomain(userDomain);
+                    user.setTenantDomain(tenantDomain);
+                    ServiceProvider serviceProvider;
+                    try {
+                        serviceProvider = OAuth2ServiceComponentHolder.getApplicationMgtService().
+                                getServiceProviderByClientId(consumerKey, OAuthConstants.Scope.OAUTH2, tenantDomain);
+                    } catch (IdentityApplicationManagementException e) {
+                        throw new IdentityOAuth2Exception("Error occurred while retrieving OAuth2 application data " +
+                                "for client id " + consumerKey, e);
+                    }
+
+                    if (!OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && userDomain.startsWith
+                            (OAuthConstants.UserType.FEDERATED_USER_DOMAIN_PREFIX)) {
+                        if (log.isDebugEnabled()) {
+                            log.debug("Federated prefix found in domain " + userDomain + "and federated users are not" +
+                                    " mapped to local users. Hence setting user to a federated user");
+                        }
+                        user.setFederatedUser(true);
+                    }
+
+                    user.setAuthenticatedSubjectIdentifier(subjectIdentifier, serviceProvider);
+
+                    validationDataDO = new AccessTokenDO(consumerKey, user, scope, accessTokenIssuedTime,
+                            refreshTokenIssuedTime, validityPeriodInMillis, refreshTokenValidityPeriodMillis,
+                            tokenType);
+                    validationDataDO.setAccessToken(accessTokenIdentifier);
+                    validationDataDO.setTokenId(tokenId);
+                    validationDataDO.setGrantType(grantType);
+                    validationDataDO.setTenantID(tenantId);
+                } else {
+                    scopes.add(resultSet.getString(5));
+                }
+                iterateId++;
+            }
+            if (scopes.size() > 0 && validationDataDO != null) {
+                validationDataDO.setScope((String[]) ArrayUtils.addAll(validationDataDO.getScope(),
+                        scopes.toArray(new String[scopes.size()])));
+            }
+        } catch (SQLException e) {
+            throw new IdentityOAuth2Exception("Error while retrieving Refresh Token", e);
+        } finally {
+            IdentityDatabaseUtil.closeAllConnections(connection, resultSet, prepStmt);
+        }
         return validationDataDO;
     }
 
