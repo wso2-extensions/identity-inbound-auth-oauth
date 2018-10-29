@@ -568,7 +568,11 @@ public class OIDCLogoutServlet extends HttpServlet {
         if (object != null) {
             AuthenticatorFlowStatus status = (AuthenticatorFlowStatus) object;
             if (status == AuthenticatorFlowStatus.INCOMPLETE) {
-                response.sendRedirect(responseWrapper.getRedirectURL());
+                if (responseWrapper.isRedirect()) {
+                    response.sendRedirect(responseWrapper.getRedirectURL());
+                } else if (responseWrapper.getContent().length > 0) {
+                    responseWrapper.write();
+                }
             } else {
                 handleLogoutResponseFromFramework(requestWrapper, response);
             }
