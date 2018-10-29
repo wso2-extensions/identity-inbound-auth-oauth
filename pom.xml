@@ -262,6 +262,21 @@
                 <version>${cxf-bundle.wso2.version}</version>
             </dependency>
             <dependency>
+                <groupId>org.apache.cxf</groupId>
+                <artifactId>cxf-core</artifactId>
+                <version>${org.apache.cxf.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.cxf</groupId>
+                <artifactId>cxf-rt-frontend-jaxrs</artifactId>
+                <version>${org.apache.cxf.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.cxf</groupId>
+                <artifactId>cxf-rt-rs-extension-providers</artifactId>
+                <version>${org.apache.cxf.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>com.thetransactioncompany.wso2</groupId>
                 <artifactId>cors-filter</artifactId>
                 <version>${thetransactioncompany.cors-filter.wso2.version}</version>
@@ -548,6 +563,11 @@
                 <artifactId>httpcore</artifactId>
                 <version>${http.core.version}</version>
             </dependency>
+            <dependency>
+                <groupId>javax.ws.rs</groupId>
+                <artifactId>javax.ws.rs-api</artifactId>
+                <version>${javax.ws.rs-api.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -739,6 +759,7 @@
         <!-- Servlet API -->
         <servlet-api.version>2.5</servlet-api.version>
         <imp.pkg.version.javax.servlet>[2.6.0, 3.0.0)</imp.pkg.version.javax.servlet>
+        <javax.ws.rs-api.version>2.1.1</javax.ws.rs-api.version>
 
         <!-- Axis2 Version -->
         <axis2.wso2.version>1.6.1.wso2v12</axis2.wso2.version>
@@ -793,6 +814,7 @@
 
         <google.guava.wso2.version>12.0.0.wso2v1</google.guava.wso2.version>
         <cxf-bundle.wso2.version>2.7.16.wso2v1</cxf-bundle.wso2.version>
+        <org.apache.cxf.version>3.2.6</org.apache.cxf.version>
         <encoder.wso2.version>1.2.0.wso2v1</encoder.wso2.version>
         <json-simple.version>1.1.wso2v1</json-simple.version>
 
@@ -810,7 +832,7 @@
 
         <!--Swagger Dependency Version-->
         <jackson.version>1.8.6</jackson.version>
-        <com.fasterxml.jackson.version>2.9.6</com.fasterxml.jackson.version>
+        <com.fasterxml.jackson.version>2.9.7</com.fasterxml.jackson.version>
         <spring-web.version>4.1.6.RELEASE</spring-web.version>
         <swagger-jaxrs.version>1.5.20</swagger-jaxrs.version>
         <!-- httpclient dependency Version-->
