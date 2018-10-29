@@ -44,6 +44,8 @@ public class OAuth2IntrospectionEndpoint {
     private final static String DEFAULT_TOKEN_TYPE = "Bearer";
     private final static String JWT_TOKEN_TYPE = "JWT";
 
+    private final static String ACCESS_TOKEN_HINT = "access_token";
+
     /**
      * Token introspection endpoint.
      *
@@ -58,10 +60,6 @@ public class OAuth2IntrospectionEndpoint {
       
         OAuth2TokenValidationRequestDTO introspectionRequest;
         OAuth2IntrospectionResponseDTO introspectionResponse;
-
-        if (tokenTypeHint == null) {
-            tokenTypeHint = DEFAULT_TOKEN_TYPE_HINT;
-        }
 
         if (log.isDebugEnabled()) {
             log.debug("Token type hint: " + tokenTypeHint);
@@ -80,10 +78,16 @@ public class OAuth2IntrospectionEndpoint {
 
         // validate the access token against the OAuth2TokenValidationService OSGi service.
         introspectionRequest = new OAuth2TokenValidationRequestDTO();
-        OAuth2TokenValidationRequestDTO.OAuth2AccessToken accessToken = introspectionRequest.new OAuth2AccessToken();
-        accessToken.setIdentifier(token);
-        accessToken.setTokenType(tokenTypeHint);
-        introspectionRequest.setAccessToken(accessToken);
+        OAuth2TokenValidationRequestDTO.OAuth2AccessToken oAuth2Token = introspectionRequest.new OAuth2AccessToken();
+
+        if (tokenTypeHint == null || StringUtils.equals(tokenTypeHint, ACCESS_TOKEN_HINT)) {
+            oAuth2Token.setTokenType(DEFAULT_TOKEN_TYPE_HINT);
+        } else {
+            oAuth2Token.setTokenType(tokenTypeHint);
+        }
+
+        oAuth2Token.setIdentifier(token);
+        introspectionRequest.setAccessToken(oAuth2Token);
         introspectionRequest.setRequiredClaimURIs(claimsUris);
 
         OAuth2TokenValidationService tokenService = (OAuth2TokenValidationService) PrivilegedCarbonContext
@@ -108,7 +112,7 @@ public class OAuth2IntrospectionEndpoint {
                 .setIssuedAt(introspectionResponse.getIat())
                 .setExpiration(introspectionResponse.getExp());
 
-        if (tokenTypeHint.equalsIgnoreCase(JWT_TOKEN_TYPE)) {
+        if (StringUtils.equalsIgnoreCase(tokenTypeHint, JWT_TOKEN_TYPE)) {
             respBuilder.setAudience(introspectionResponse.getAud())
                     .setJwtId(introspectionResponse.getJti())
                     .setSubject(introspectionResponse.getSub())

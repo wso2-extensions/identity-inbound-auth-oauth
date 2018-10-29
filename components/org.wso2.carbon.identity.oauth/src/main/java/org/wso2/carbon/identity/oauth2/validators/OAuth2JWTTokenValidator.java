@@ -53,10 +53,16 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
     private static final String ALGO_PREFIX = "RS";
     private static final Log log = LogFactory.getLog(OAuth2JWTTokenValidator.class);
     private static final String OIDC_IDP_ENTITY_ID = "IdPEntityId";
+    private static final String DOT_SEPARATOR = ".";
 
     @Override
     public boolean validateAccessToken(OAuth2TokenValidationMessageContext validationReqDTO)
             throws IdentityOAuth2Exception {
+
+        if (!isJWT(validationReqDTO.getRequestDTO().getAccessToken().getIdentifier())) {
+            return false;
+        }
+
         try {
             SignedJWT signedJWT = getSignedJWT(validationReqDTO);
             JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
@@ -241,5 +247,16 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
             tenantDomain = MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
         }
         return tenantDomain;
+    }
+
+    /**
+     * Return true if the token identifier is JWT.
+     *
+     * @param tokenIdentifier String JWT token identifier.
+     * @return  true for a JWT token.
+     */
+    private boolean isJWT(String tokenIdentifier) {
+        // JWT token contains 3 base64 encoded components separated by periods.
+        return StringUtils.countMatches(tokenIdentifier, DOT_SEPARATOR) == 2;
     }
 }

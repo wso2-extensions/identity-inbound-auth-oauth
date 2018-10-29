@@ -24,6 +24,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
 
 import java.util.Properties;
@@ -40,6 +41,10 @@ public interface TokenManagementDAO {
 
     RefreshTokenValidationDataDO validateRefreshToken(String consumerKey, String refreshToken)
             throws IdentityOAuth2Exception;
+
+    default AccessTokenDO getRefreshToken(String refreshToken) throws IdentityOAuth2Exception {
+        return null;
+    }
 
     Pair<String, Integer> findTenantAndScopeOfResource(String resourceUri) throws IdentityOAuth2Exception;
 

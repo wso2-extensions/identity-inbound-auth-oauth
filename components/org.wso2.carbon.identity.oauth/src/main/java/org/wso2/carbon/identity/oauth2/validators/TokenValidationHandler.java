@@ -32,6 +32,7 @@ import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientExcepti
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authcontext.AuthorizationContextTokenGenerator;
+import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientApplicationDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2IntrospectionResponseDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
@@ -42,6 +43,8 @@ import org.wso2.carbon.identity.oauth2.token.JWTTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -58,8 +61,12 @@ public class TokenValidationHandler {
     private static final String BUILD_FQU_FROM_SP_CONFIG = "OAuth.BuildSubjectIdentifierFromSPConfig";
 
     private TokenValidationHandler() {
+
         tokenValidators.put(DefaultOAuth2TokenValidator.TOKEN_TYPE, new DefaultOAuth2TokenValidator());
-        for (Map.Entry<String, String> entry : OAuthServerConfiguration.getInstance().getTokenValidatorClassNames().entrySet()) {
+        tokenValidators.put(RefreshTokenValidator.TOKEN_TYPE, new RefreshTokenValidator());
+
+        for (Map.Entry<String, String> entry : OAuthServerConfiguration.getInstance().getTokenValidatorClassNames()
+                .entrySet()) {
             String className = null;
             try {
                 String type = entry.getKey();
@@ -79,7 +86,8 @@ public class TokenValidationHandler {
         // setting up the JWT if required
         if (OAuthServerConfiguration.getInstance().isAuthContextTokGenEnabled()) {
             try {
-                Class clazz = this.getClass().getClassLoader().loadClass(OAuthServerConfiguration.getInstance().getTokenGeneratorImplClass());
+                Class clazz = this.getClass().getClassLoader().loadClass(OAuthServerConfiguration.getInstance()
+                        .getTokenGeneratorImplClass());
                 tokenGenerator = (AuthorizationContextTokenGenerator) clazz.newInstance();
                 tokenGenerator.init();
                 if (log.isDebugEnabled()) {
@@ -167,7 +175,7 @@ public class TokenValidationHandler {
             return buildClientAppErrorResponse(e.getMessage());
         }
 
-        if (hasAcessTokenExpired(accessTokenDO)) {
+        if (hasAccessTokenExpired(accessTokenDO)) {
             return buildClientAppErrorResponse("Access token expired");
         }
         // Set the token expiration time
@@ -220,20 +228,145 @@ public class TokenValidationHandler {
         OAuth2TokenValidationMessageContext messageContext =
                 new OAuth2TokenValidationMessageContext(validationRequest, responseDTO);
 
-        OAuth2TokenValidationRequestDTO.OAuth2AccessToken accessToken = validationRequest.getAccessToken();
-        OAuth2TokenValidator tokenValidator = null;
-        AccessTokenDO accessTokenDO = null;
+        OAuth2TokenValidationRequestDTO.OAuth2AccessToken oAuth2Token = validationRequest.getAccessToken();
+
+        // To hold the applicable validators list from all the available validators. This list will be prioritized if we
+        // have a token_type_hint.
+        List<OAuth2TokenValidator> applicableValidators = new ArrayList<>();
+
+        // If we have a token type hint, we have to prioritize our list.
+        if (oAuth2Token.getTokenType() != null) {
+            if (tokenValidators.get(oAuth2Token.getTokenType()) != null) {
+                applicableValidators.add(tokenValidators.get(oAuth2Token.getTokenType()));
+            }
+        }
+
+        // Add the rest of the validators.
+        for (Map.Entry<String, OAuth2TokenValidator> oAuth2TokenValidator : tokenValidators.entrySet()) {
+            // Ignore if we added this already.
+            if (StringUtils.equals(oAuth2TokenValidator.getKey(), oAuth2Token.getTokenType())) {
+                continue;
+            }
+            if (oAuth2TokenValidator.getValue() != null) {
+                applicableValidators.add(oAuth2TokenValidator.getValue());
+            }
+        }
+
+        // Catch the latest exception and throw it if there aren't any active tokens.
+        Exception exception = null;
+        for (OAuth2TokenValidator tokenValidator : applicableValidators) {
+            try {
+                if (tokenValidator.validateAccessToken(messageContext)) {
+                    // We have to specially handle the access token and refresh token for further validations.
+                    if (tokenValidator instanceof DefaultOAuth2TokenValidator) {
+                        introResp = validateAccessToken(messageContext, validationRequest, tokenValidator);
+                    } else if (tokenValidator instanceof RefreshTokenValidator) {
+                        introResp = validateRefreshToken(messageContext, validationRequest, tokenValidator);
+                    }
+                    // If there aren't any errors from the above special validations.
+                    if (introResp.isActive()) {
+                        break;
+                    }
+                }
+            } catch (Exception ex) {
+                exception = ex;
+            }
+        }
+
+        // If there aren't any active tokens, then there should be an error or exception. If no error or exception
+        // as well, that means this token is not active. So show the generic error.
+        if (!introResp.isActive()) {
+            if (introResp.getError() != null) {
+                return introResp;
+            } else if (exception != null) {
+                throw new IdentityOAuth2Exception("Error occurred while validating token.", exception);
+            } else {
+                return buildIntrospectionErrorResponse("Token validation failed");
+            }
+        }
+
+        if (introResp.getUsername() != null) {
+            responseDTO.setAuthorizedUser(introResp.getUsername());
+        }
+
+        if (tokenGenerator != null) {
+            // add user attributes to the introspection response.
+            tokenGenerator.generateToken(messageContext);
+            if (log.isDebugEnabled()) {
+                log.debug(tokenGenerator.getClass().getName() + " generated token set to response");
+            }
+            if (responseDTO.getAuthorizationContextToken() != null) {
+                introResp.setUserContext(responseDTO.getAuthorizationContextToken().getTokenString());
+            }
+        }
+
+        introResp.getProperties().put(OAuth2Util.OAUTH2_VALIDATION_MESSAGE_CONTEXT, messageContext);
+        return introResp;
+    }
+
+    private OAuth2IntrospectionResponseDTO validateRefreshToken(OAuth2TokenValidationMessageContext messageContext,
+                                                                OAuth2TokenValidationRequestDTO validationRequest,
+                                                                OAuth2TokenValidator tokenValidator)
+            throws IdentityOAuth2Exception {
+
+        OAuth2IntrospectionResponseDTO introResp = new OAuth2IntrospectionResponseDTO();
+        AccessTokenDO refreshTokenDataDO;
 
         try {
-            tokenValidator = findAccessTokenValidator(accessToken);
+            refreshTokenDataDO = findRefreshToken(validationRequest.getAccessToken().getIdentifier());
         } catch (IllegalArgumentException e) {
-            // access token not provided.
+            // Refresh token not found in the system.
             return buildIntrospectionErrorResponse(e.getMessage());
         }
 
-        if (!tokenValidator.validateAccessToken(messageContext)) {
-            return buildIntrospectionErrorResponse("Access token validation failed");
+        if (refreshTokenDataDO == null || hasRefreshTokenExpired(refreshTokenDataDO)) {
+            // Token is not active. we do not need to worry about other details.
+            introResp.setActive(false);
+            return introResp;
         }
+
+        // should be in seconds
+        introResp.setExp((refreshTokenDataDO.getValidityPeriodInMillis() + refreshTokenDataDO.getIssuedTime().getTime())
+                / 1000);
+        // should be in seconds
+        introResp.setIat(refreshTokenDataDO.getIssuedTime().getTime() / 1000);
+        // Not before time will be the same as issued time.
+        introResp.setNbf(refreshTokenDataDO.getIssuedTime().getTime() / 1000);
+        // Token scopes.
+        introResp.setScope(OAuth2Util.buildScopeString((refreshTokenDataDO.getScope())));
+        // Set user-name.
+        introResp.setUsername(getAuthzUser(refreshTokenDataDO));
+        // Add client id.
+        introResp.setClientId(refreshTokenDataDO.getConsumerKey());
+        // Adding the AccessTokenDO as a context property for further use.
+        messageContext.addProperty("RefreshTokenDO", refreshTokenDataDO);
+
+        // Validate access delegation.
+        if (!tokenValidator.validateAccessDelegation(messageContext)) {
+            // This is redundant. But for sake of readability.
+            introResp.setActive(false);
+            return buildIntrospectionErrorResponse("Invalid access delegation");
+        }
+
+        // Validate scopes.
+        if (!tokenValidator.validateScope(messageContext)) {
+            // This is redundant. But for sake of readability.
+            introResp.setActive(false);
+            return buildIntrospectionErrorResponse("Scope validation failed");
+        }
+
+        // All set. mark the token active.
+        introResp.setActive(true);
+        return introResp;
+    }
+
+    private OAuth2IntrospectionResponseDTO validateAccessToken(OAuth2TokenValidationMessageContext messageContext,
+                                                               OAuth2TokenValidationRequestDTO validationRequest,
+                                                               OAuth2TokenValidator tokenValidator)
+            throws IdentityOAuth2Exception {
+
+        OAuth2IntrospectionResponseDTO introResp = new OAuth2IntrospectionResponseDTO();
+        AccessTokenDO accessTokenDO;
 
         if (messageContext.getProperty(OAuth2Util.REMOTE_ACCESS_TOKEN) != null
                 && "true".equalsIgnoreCase((String) messageContext.getProperty(OAuth2Util.REMOTE_ACCESS_TOKEN))) {
@@ -270,16 +403,15 @@ public class TokenValidationHandler {
                 return buildIntrospectionErrorResponse(e.getMessage());
             }
 
-            if (hasAcessTokenExpired(accessTokenDO)) {
+            if (hasAccessTokenExpired(accessTokenDO)) {
                 // token is not active. we do not need to worry about other details.
                 introResp.setActive(false);
                 return introResp;
             }
 
             // should be in seconds
-            introResp
-                    .setExp((accessTokenDO.getValidityPeriodInMillis() + accessTokenDO.getIssuedTime().getTime()) /
-                            1000);
+            introResp.setExp((accessTokenDO.getValidityPeriodInMillis() + accessTokenDO.getIssuedTime().getTime())
+                    / 1000);
             // should be in seconds
             introResp.setIat(accessTokenDO.getIssuedTime().getTime() / 1000);
             // Not before time will be the same as issued time.
@@ -292,16 +424,6 @@ public class TokenValidationHandler {
             introResp.setClientId(accessTokenDO.getConsumerKey());
             // adding the AccessTokenDO as a context property for further use
             messageContext.addProperty("AccessTokenDO", accessTokenDO);
-        }
-
-        responseDTO.setAuthorizedUser(introResp.getUsername());
-
-        if (!tokenValidator.validateAccessDelegation(messageContext)) {
-            return buildIntrospectionErrorResponse("Invalid access delegation");
-        }
-
-        if (!tokenValidator.validateScope(messageContext)) {
-            return buildIntrospectionErrorResponse("Scope validation failed");
         }
 
         if (messageContext.getProperty(OAuth2Util.JWT_ACCESS_TOKEN) != null
@@ -326,20 +448,22 @@ public class TokenValidationHandler {
             }
         }
 
-        // all set. mark the token active.
-        introResp.setActive(true);
-
-        if (tokenGenerator != null) {
-            // add user attributes to the introspection response.
-            tokenGenerator.generateToken(messageContext);
-            if (log.isDebugEnabled()) {
-                log.debug(tokenGenerator.getClass().getName() + " generated token set to response");
-            }
-            if (responseDTO.getAuthorizationContextToken() != null) {
-                introResp.setUserContext(responseDTO.getAuthorizationContextToken().getTokenString());
-            }
+        // Validate access delegation.
+        if (!tokenValidator.validateAccessDelegation(messageContext)) {
+            // This is redundant. But sake of readability.
+            introResp.setActive(false);
+            return buildIntrospectionErrorResponse("Invalid access delegation");
         }
-        introResp.getProperties().put(OAuth2Util.OAUTH2_VALIDATION_MESSAGE_CONTEXT, messageContext);
+
+        // Validate scopes.
+        if (!tokenValidator.validateScope(messageContext)) {
+            // This is redundant. But sake of readability.
+            introResp.setActive(false);
+            return buildIntrospectionErrorResponse("Scope validation failed");
+        }
+
+        // All set. mark the token active.
+        introResp.setActive(true);
         return introResp;
     }
 
@@ -414,6 +538,7 @@ public class TokenValidationHandler {
      * @return
      * @throws IdentityOAuth2Exception
      */
+    @Deprecated
     private OAuth2TokenValidator findAccessTokenValidator(OAuth2TokenValidationRequestDTO.OAuth2AccessToken accessToken)
             throws IdentityOAuth2Exception {
         // incomplete token validation request
@@ -462,7 +587,7 @@ public class TokenValidationHandler {
      * @return
      * @throws IdentityOAuth2Exception
      */
-    private boolean hasAcessTokenExpired(AccessTokenDO accessTokenDO) {
+    private boolean hasAccessTokenExpired(AccessTokenDO accessTokenDO) {
         // check whether the grant is expired
         if (accessTokenDO.getValidityPeriod() < 0) {
             if (log.isDebugEnabled()) {
@@ -470,6 +595,24 @@ public class TokenValidationHandler {
             }
         } else {
             if (OAuth2Util.getAccessTokenExpireMillis(accessTokenDO) == 0) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Access Token has expired");
+                }
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private boolean hasRefreshTokenExpired(AccessTokenDO accessTokenDO) {
+
+        if (accessTokenDO.getRefreshTokenValidityPeriodInMillis() < 0) {
+            if (log.isDebugEnabled()) {
+                log.debug("Access Token has infinite lifetime");
+            }
+        } else {
+            if (OAuth2Util.getRefreshTokenExpireTimeMillis(accessTokenDO) == 0) {
                 if (log.isDebugEnabled()) {
                     log.debug("Access Token has expired");
                 }
@@ -515,8 +658,8 @@ public class TokenValidationHandler {
             }
 
             if (oauthTokenIssuer.usePersistedAccessTokenAlias()) {
-                return OAuth2Util
-                        .getAccessTokenDOfromTokenIdentifier(oauthTokenIssuer.getAccessTokenHash(tokenIdentifier));
+                return OAuth2Util.getAccessTokenDOfromTokenIdentifier(oauthTokenIssuer
+                        .getAccessTokenHash(tokenIdentifier));
             } else {
                 return OAuth2Util.getAccessTokenDOfromTokenIdentifier(tokenIdentifier);
             }
@@ -533,6 +676,11 @@ public class TokenValidationHandler {
             throw new IdentityOAuth2Exception(
                     "Error while retrieving oauth issuer for the app with clientId: " + consumerKey, e);
         }
+    }
+
+    private AccessTokenDO findRefreshToken(String refreshToken) throws IdentityOAuth2Exception {
+
+        return OAuthTokenPersistenceFactory.getInstance().getTokenManagementDAO().getRefreshToken(refreshToken);
     }
 
     /**
