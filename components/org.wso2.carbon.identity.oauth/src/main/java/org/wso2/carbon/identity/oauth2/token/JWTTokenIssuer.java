@@ -38,6 +38,10 @@ import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.core.util.KeyStoreManager;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
+import org.wso2.carbon.identity.application.common.model.IdentityProvider;
+import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
+import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -49,6 +53,8 @@ import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.CustomClaimsCallbackHandler;
+import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
+import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 
 import java.security.Key;
 import java.security.interfaces.RSAPrivateKey;
@@ -77,6 +83,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     private static final String SHA256_WITH_EC = "SHA256withEC";
     private static final String SHA384_WITH_EC = "SHA384withEC";
     private static final String SHA512_WITH_EC = "SHA512withEC";
+    private static final String OPENID_IDP_ENTITY_ID = "IdPEntityId";
 
     private static final String KEY_STORE_EXTENSION = ".jks";
     private static final String AUTHORIZATION_PARTY = "azp";
@@ -384,15 +391,17 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
 
         AuthenticatedUser user;
         long accessTokenLifeTimeInMillis;
+        String issuer = OAuth2Util.getIDTokenIssuer();
         if (authAuthzReqMessageContext != null) {
             accessTokenLifeTimeInMillis =
                     getAccessTokenLifeTimeInMillis(authAuthzReqMessageContext, oAuthAppDO, consumerKey);
         } else {
             accessTokenLifeTimeInMillis =
                     getAccessTokenLifeTimeInMillis(tokenReqMessageContext, oAuthAppDO, consumerKey);
+            String spTenantDomain = getSpTenantDomain(tokenReqMessageContext);
+            issuer = (spTenantDomain != null) ? getIdTokenIssuer(spTenantDomain) : issuer;
         }
 
-        String issuer = OAuth2Util.getIDTokenIssuer();
         long curTimeInMillis = Calendar.getInstance().getTimeInMillis();
 
         String sub = getAuthenticatedSubjectIdentifier(authAuthzReqMessageContext, tokenReqMessageContext);
@@ -430,6 +439,31 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         }
 
         return jwtClaimsSet;
+    }
+
+    private String getSpTenantDomain(OAuthTokenReqMessageContext tokReqMsgCtx) {
+        return tokReqMsgCtx.getOauth2AccessTokenReqDTO().getTenantDomain();
+    }
+
+    private String getIdTokenIssuer(String tenantDomain) throws IdentityOAuth2Exception {
+        IdentityProvider identityProvider = getResidentIdp(tenantDomain);
+        FederatedAuthenticatorConfig[] fedAuthnConfigs = identityProvider.getFederatedAuthenticatorConfigs();
+        // Get OIDC authenticator
+        FederatedAuthenticatorConfig oidcAuthenticatorConfig =
+                IdentityApplicationManagementUtil.getFederatedAuthenticator(fedAuthnConfigs,
+                        IdentityApplicationConstants.Authenticator.OIDC.NAME);
+        return IdentityApplicationManagementUtil.getProperty(oidcAuthenticatorConfig.getProperties(),
+                OPENID_IDP_ENTITY_ID).getValue();
+    }
+
+    private IdentityProvider getResidentIdp(String tenantDomain) throws IdentityOAuth2Exception {
+        try {
+            return IdentityProviderManager.getInstance().getResidentIdP(tenantDomain);
+        } catch (IdentityProviderManagementException e) {
+            final String ERROR_GET_RESIDENT_IDP = "Error while getting Resident Identity Provider of '%s' tenant.";
+            String errorMsg = String.format(ERROR_GET_RESIDENT_IDP, tenantDomain);
+            throw new IdentityOAuth2Exception(errorMsg, e);
+        }
     }
 
     /**
