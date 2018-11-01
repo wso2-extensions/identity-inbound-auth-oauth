@@ -81,6 +81,7 @@
                 (ConfigurationContext) config.getServletContext()
                         .getAttribute(CarbonConstants.CONFIGURATION_CONTEXT);
         client = new OAuthAdminClient(cookie, backendServerURL, configContext);
+        isHashDisabled = client.isHashDisabled();
 
         supportedIdTokenEncryptionAlgorithms = client.getSupportedIDTokenAlgorithms().getSupportedIdTokenEncryptionAlgorithms();
         supportedIdTokenEncryptionMethods = client.getSupportedIDTokenAlgorithms().getSupportedIdTokenEncryptionMethods();
@@ -94,7 +95,6 @@
         OAuthConsumerAppDTO consumerApp = null;
         if (OAuthConstants.ACTION_REGENERATE.equalsIgnoreCase(action)) {
             String oauthAppState = client.getOauthApplicationState(consumerkey);
-            isHashDisabled = client.isHashDisabled();
             if (isHashDisabled) {
                 client.regenerateSecretKey(consumerkey);
             } else {
