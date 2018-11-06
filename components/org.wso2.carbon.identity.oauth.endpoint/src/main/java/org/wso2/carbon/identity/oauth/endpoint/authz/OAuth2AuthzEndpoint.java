@@ -30,6 +30,7 @@ import org.apache.http.client.utils.URIBuilder;
 import org.apache.oltu.oauth2.as.request.OAuthAuthzRequest;
 import org.apache.oltu.oauth2.as.response.OAuthASResponse;
 import org.apache.oltu.oauth2.common.OAuth;
+import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.message.OAuthResponse;
@@ -1184,6 +1185,8 @@ public class OAuth2AuthzEndpoint {
             return redirectURI;
         }
 
+        validateNonceParameterForImplicitFlow(params);
+
         addDataToSessionCache(oAuthMessage, params, sessionDataKey);
 
         try {
@@ -1195,6 +1198,31 @@ public class OAuth2AuthzEndpoint {
 
         } catch (IdentityOAuth2Exception e) {
             return handleException(e);
+        }
+    }
+
+    /**
+     * This method validates the mandatory nonce parameter for the implicit flow. Since the presence of nonce in the
+     * request object is honoured over oauth2 request parameters, this validation needs to consider both
+     * request object and oauth2 parameters.
+     *
+     * @param parameters Set of parameters from both oauth2 and request. Request object is honored.
+     * @throws OAuthProblemException Nonce parameter is not found.
+     */
+    private void validateNonceParameterForImplicitFlow(OAuth2Parameters parameters) throws OAuthProblemException{
+
+        if(!OAuthConstants.IDTOKEN_TOKEN.equals(parameters.getResponseType())
+                && !OAuthConstants.ID_TOKEN.equals(parameters.getResponseType())) {
+            if (log.isDebugEnabled()) {
+                log.debug("Non Implicit Flow. Skipping " + NONCE + " parameter validation " +
+                        "since it is not mandatory.");
+            }
+            return;
+        }
+        String nonce = parameters.getNonce();
+        if (StringUtils.isBlank(nonce)) {
+            throw OAuthProblemException.error(OAuthError.TokenResponse.INVALID_REQUEST)
+                    .description("\'response_type\' contains \'id_token\'; but \'nonce\' parameter not found");
         }
     }
 
