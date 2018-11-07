@@ -100,7 +100,12 @@ public class CodeTokenResponseValidatorTest {
         return new Object[][]{
                 {"GET", true},
                 {"POST", true},
+                {"HEAD", false},
                 {"DELETE", false},
+                {"OPTIONS", false},
+                {"PUT", false},
+                {"", false},
+                {null, false}
         };
     }
 
