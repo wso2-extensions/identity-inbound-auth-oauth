@@ -1212,9 +1212,7 @@ public class OAuth2AuthzEndpoint {
             return redirectURI;
         }
 
-        // Mandatory nonce parameter validation for the implicit flow
-        if (OAuthConstants.IDTOKEN_TOKEN.equals(params.getResponseType())
-                || OAuthConstants.ID_TOKEN.equals(params.getResponseType())) {
+        if (isNonceMandatory(params.getResponseType())) {
             validateNonceParameter(params.getNonce());
         }
 
@@ -1233,7 +1231,24 @@ public class OAuth2AuthzEndpoint {
     }
 
     /**
-     * This method validates the nonce parameter as mandatory.
+     * Checks whether the given authentication flow requires {@code nonce} as a mandatory parameter.
+     *
+     * @param responseType Response type from the authentication request.
+     * @return {@true} {@code true} if parameter is mandatory, {@code false} if not.
+     */
+    private boolean isNonceMandatory(String responseType) {
+
+        /*
+        nonce parameter is required for the implicit flow and the hybrid flow scenarios requesting ID_TOKEN.
+         */
+        return OAuthConstants.IDTOKEN_TOKEN.equals(responseType) ||
+                OAuthConstants.ID_TOKEN.equals(responseType) ||
+                OAuthConstants.CODE_IDTOKEN.equals(responseType) ||
+                OAuthConstants.CODE_IDTOKEN_TOKEN.equals(responseType);
+    }
+
+    /**
+     * Validates the nonce parameter as mandatory.
      *
      * @param nonce {@code nonce} parameter. Presence of nonce in the request object is honoured over
      *              oauth2 request parameters.
