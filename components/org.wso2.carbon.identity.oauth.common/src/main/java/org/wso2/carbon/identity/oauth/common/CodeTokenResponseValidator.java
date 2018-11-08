@@ -43,13 +43,7 @@ public class CodeTokenResponseValidator extends TokenValidator {
 
         super.validateRequiredParameters(request);
 
-        String nonce = request.getParameter(NONCE);
         String clientID = request.getParameter(CLIENT_ID);
-        if (StringUtils.isBlank(nonce)) {
-            throw OAuthProblemException.error(OAuthError.TokenResponse.INVALID_REQUEST)
-                    .description("Request with \'client_id\' = \'" + clientID + "\' has " +
-                            "\'response_type\' for \'hybrid flow\'; but \'nonce\' parameter not found");
-        }
 
         // For code token response type, the scope parameter should contain 'openid' as one of the scopes.
         String openIdScope = request.getParameter(SCOPE);

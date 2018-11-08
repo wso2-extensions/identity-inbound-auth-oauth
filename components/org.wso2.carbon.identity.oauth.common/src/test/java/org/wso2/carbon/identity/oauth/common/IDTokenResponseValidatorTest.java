@@ -36,22 +36,15 @@ public class IDTokenResponseValidatorTest {
 
     @DataProvider(name = "Request Provider")
     public Object[][] getRequestParams() {
-        Map<String, String> allParamPresentMap = new HashMap<>();
-        allParamPresentMap.put(NONCE, "nonce");
-        allParamPresentMap.put(SCOPE, OAuthConstants.Scope.OPENID);
+        Map<String, String> ValidOIDCScopeMap = new HashMap<>();
+        ValidOIDCScopeMap.put(SCOPE, OAuthConstants.Scope.OPENID);
         Map<String, String> nonOIDCScopeMap = new HashMap<>();
-        nonOIDCScopeMap.put(NONCE, "nonce");
         nonOIDCScopeMap.put(SCOPE, "notOpenid");
-        Map<String, String> blankNonceMap = new HashMap<>();
-        blankNonceMap.put(NONCE, "");
-        blankNonceMap.put(SCOPE, "notOpenid");
         Map<String, String> blankScopeMap = new HashMap<>();
-        blankScopeMap.put(NONCE, "nonce");
         blankScopeMap.put(SCOPE, "");
         return new Object[][]{
-                {allParamPresentMap, true},
+                {ValidOIDCScopeMap, true},
                 {nonOIDCScopeMap, false},
-                {blankNonceMap, false},
                 {blankScopeMap, false}
         };
     }

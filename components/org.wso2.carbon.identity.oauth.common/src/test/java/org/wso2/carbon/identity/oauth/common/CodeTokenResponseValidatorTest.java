@@ -57,31 +57,16 @@ public class CodeTokenResponseValidatorTest {
     @DataProvider(name = "Request Provider")
     public Object[][] getRequestParams() {
 
-        Map<String, String> allParamPresentMap = new HashMap<>();
-        allParamPresentMap.put(NONCE, "nonce");
-        allParamPresentMap.put(SCOPE, OAuthConstants.Scope.OPENID);
+        Map<String, String> validOIDCScopeMap = new HashMap<>();
+        validOIDCScopeMap.put(SCOPE, OAuthConstants.Scope.OPENID);
         Map<String, String> nonOIDCScopeMap = new HashMap<>();
-        nonOIDCScopeMap.put(NONCE, "nonce");
         nonOIDCScopeMap.put(SCOPE, "notOpenid");
-        Map<String, String> blankNonceMap = new HashMap<>();
-        blankNonceMap.put(NONCE, "");
-        blankNonceMap.put(SCOPE, "notOpenid");
         Map<String, String> blankScopeMap = new HashMap<>();
-        blankScopeMap.put(NONCE, "nonce");
         blankScopeMap.put(SCOPE, "");
-        Map<String, String> blankScopeNonceMap = new HashMap<>();
-        blankScopeNonceMap.put(NONCE, "");
-        blankScopeNonceMap.put(SCOPE, "");
-        Map<String, String> blankNonceOpenIDMap = new HashMap<>();
-        blankNonceOpenIDMap.put(NONCE, "");
-        blankNonceOpenIDMap.put(SCOPE, OAuthConstants.Scope.OPENID);
         return new Object[][]{
-                {allParamPresentMap, true},
+                {validOIDCScopeMap, true},
                 {nonOIDCScopeMap, false},
-                {blankNonceMap, false},
                 {blankScopeMap, false},
-                {blankScopeNonceMap, false},
-                {blankNonceOpenIDMap, false}
         };
     }
 

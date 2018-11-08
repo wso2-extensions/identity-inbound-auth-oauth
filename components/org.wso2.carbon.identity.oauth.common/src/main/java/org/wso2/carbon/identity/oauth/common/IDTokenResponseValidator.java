@@ -38,12 +38,6 @@ public class IDTokenResponseValidator extends TokenValidator {
 
         super.validateRequiredParameters(request);
 
-        String nonce = request.getParameter(NONCE);
-        if (StringUtils.isBlank(nonce)) {
-            throw OAuthProblemException.error(OAuthError.TokenResponse.INVALID_REQUEST)
-                    .description("\'response_type\' contains \'id_token\'; but \'nonce\' parameter not found");
-        }
-
         // for id_token response type, the scope parameter should contain 'openid' as one of the scopes.
         String openIdScope = request.getParameter(SCOPE);
         if (StringUtils.isBlank(openIdScope) || !containOIDCScope(openIdScope)) {
