@@ -1241,7 +1241,7 @@ public class OAuth2AuthzEndpoint {
         /*
         nonce parameter is required for the authorization grant types requesting ID_TOKEN.
          */
-        return Arrays.stream(responseType.split(" ")).anyMatch(OAuthConstants.ID_TOKEN::equals);
+        return Arrays.stream(responseType.split("\\s+")).anyMatch(OAuthConstants.ID_TOKEN::equals);
     }
 
     /**
