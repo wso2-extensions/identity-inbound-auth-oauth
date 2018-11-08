@@ -1258,7 +1258,7 @@ public class OAuth2AuthzEndpoint {
                     .description("\'response_type\' contains \'id_token\'; but \'nonce\' parameter not found");
         }
         if (log.isDebugEnabled()) {
-            log.debug("Mandatory " + NONCE + " parameter successfully validated for the implicit flow");
+            log.debug("Mandatory " + NONCE + " parameter is successfully validated");
         }
     }
 
