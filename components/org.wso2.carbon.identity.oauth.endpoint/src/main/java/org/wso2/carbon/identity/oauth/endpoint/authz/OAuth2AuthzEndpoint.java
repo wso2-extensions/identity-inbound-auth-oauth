@@ -2082,6 +2082,16 @@ public class OAuth2AuthzEndpoint {
         authzReqDTO.setMaxAge(oauth2Params.getMaxAge());
         authzReqDTO.setEssentialClaims(oauth2Params.getEssentialClaims());
         authzReqDTO.setSessionDataKey(oauth2Params.getSessionDataKey());
+        // Set Selected acr value.
+        String[] sessionIds = sessionDataCacheEntry.getParamMap().get(FrameworkConstants.SESSION_DATA_KEY);
+        if (ArrayUtils.isNotEmpty(sessionIds)) {
+            String commonAuthSessionId = sessionIds[0];
+            SessionContext sessionContext = FrameworkUtils.getSessionContextFromCache(commonAuthSessionId);
+            if (sessionContext != null && sessionContext.getSessionAuthHistory() != null) {
+                authzReqDTO.setSelectedAcr(sessionContext.getSessionAuthHistory().getSelectedAcrValue());
+
+            }
+        }
         // Adding Httprequest headers and cookies in AuthzDTO.
         authzReqDTO.setHttpRequestHeaders(httpRequestHeaderHandler.getHttpRequestHeaders());
         authzReqDTO.setCookie(httpRequestHeaderHandler.getCookies());
