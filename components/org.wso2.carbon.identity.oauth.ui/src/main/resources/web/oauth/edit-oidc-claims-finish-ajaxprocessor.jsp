@@ -19,14 +19,13 @@
 <%@ taglib uri="http://www.owasp.org/index.php/Category:OWASP_CSRFGuard_Project/Owasp.CsrfGuard.tld" prefix="csrf" %>
 <%@ page import="org.wso2.carbon.ui.CarbonUIMessage" %>
 <%@ page import="java.util.ResourceBundle" %>
-<%@ page import="org.wso2.carbon.context.PrivilegedCarbonContext" %>
-<%@ page import="org.wso2.carbon.identity.core.util.IdentityTenantUtil" %>
 <%@ page import="org.wso2.carbon.ui.CarbonUIUtil" %>
 <%@ page import="org.apache.axis2.context.ConfigurationContext" %>
 <%@ page import="org.wso2.carbon.CarbonConstants" %>
 <%@ page import="org.wso2.carbon.utils.ServerConstants" %>
 <%@ page import="org.wso2.carbon.identity.oauth.ui.client.OAuthAdminClient" %>
 <%@ page import="static org.wso2.carbon.identity.oauth.ui.util.OAuthUIConstants.SCOPE_NAME" %>
+<%@ page import="org.owasp.encoder.Encode" %>
 %>
 <jsp:include page="../dialog/display_messages.jsp"/>
 
@@ -56,7 +55,7 @@
                 boolean isUpdate = Boolean.parseBoolean(request.getParameter("update"));
                 oAuthAdminClient.updateScope(scopeName, null, selectedClaims);
                 if (isUpdate) {
-                    forwardTo = "edit-oidc-claims.jsp?scopeName=" + scopeName;
+                    forwardTo = "edit-oidc-claims.jsp?scopeName=" + Encode.forUriComponent(scopeName);
                 } else {
                     forwardTo = "list-oidc-scopes.jsp";
                 }
