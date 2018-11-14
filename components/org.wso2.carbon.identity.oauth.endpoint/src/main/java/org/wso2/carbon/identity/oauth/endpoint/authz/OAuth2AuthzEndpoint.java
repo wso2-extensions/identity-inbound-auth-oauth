@@ -2089,7 +2089,6 @@ public class OAuth2AuthzEndpoint {
             SessionContext sessionContext = FrameworkUtils.getSessionContextFromCache(commonAuthSessionId);
             if (sessionContext != null && sessionContext.getSessionAuthHistory() != null) {
                 authzReqDTO.setSelectedAcr(sessionContext.getSessionAuthHistory().getSelectedAcrValue());
-
             }
         }
         // Adding Httprequest headers and cookies in AuthzDTO.
