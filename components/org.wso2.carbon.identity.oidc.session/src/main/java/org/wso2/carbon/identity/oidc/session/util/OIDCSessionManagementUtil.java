@@ -201,9 +201,9 @@ public class OIDCSessionManagementUtil {
     public static String getOrigin(String url) {
 
         try {
-            URI uri = new URL(url).toURI();
+            URI uri = new URI(url);
             return uri.getScheme() + "://" + uri.getAuthority();
-        } catch (MalformedURLException | URISyntaxException e) {
+        } catch (URISyntaxException e) {
             log.error("Error while parsing URL origin of " + url + ". URL seems to be malformed.");
         }
 
