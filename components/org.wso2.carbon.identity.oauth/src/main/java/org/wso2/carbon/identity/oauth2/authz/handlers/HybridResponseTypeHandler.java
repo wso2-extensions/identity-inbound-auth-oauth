@@ -28,6 +28,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
+import org.wso2.carbon.identity.oauth2.util.OAuth2TokenUtil;
 
 /**
  * HybridResponseTypeHandler class will handle the response when response_type parameter is equal to
@@ -49,18 +50,25 @@ public class HybridResponseTypeHandler extends AbstractResponseTypeHandler {
         // Generating authorization code and generating response for authorization code flow.
         if (isAuthorizationCodeIssued(responseType)) {
             AuthzCodeDO authzCodeDO = ResponseTypeHandlerUtil.generateAuthorizationCode(oauthAuthzMsgCtx, cacheEnabled);
+            String sessionDataKey = oauthAuthzMsgCtx.getAuthorizationReqDTO().getSessionDataKey();
+            // Trigger an event to update request_object_reference table.
+            OAuth2TokenUtil.postIssueCode(authzCodeDO.getAuthzCodeId(), sessionDataKey);
             ResponseTypeHandlerUtil.buildAuthorizationCodeResponseDTO(respDTO, authzCodeDO);
         }
 
         // Generating access token and generating response for access token flow.
         if (isAccessTokenIssued(responseType)) {
             AccessTokenDO accessTokenDO = ResponseTypeHandlerUtil.generateAccessToken(oauthAuthzMsgCtx, cacheEnabled);
+            // Starting to trigger post listeners.
+            ResponseTypeHandlerUtil.triggerPostListeners(oauthAuthzMsgCtx, accessTokenDO, respDTO);
             ResponseTypeHandlerUtil.buildAccessTokenResponseDTO(respDTO, accessTokenDO);
         }
 
         // Generating id_token and generating response for id_token flow.
         if (isIDTokenIssued(responseType)) {
             AccessTokenDO accessTokenDO = ResponseTypeHandlerUtil.generateAccessToken(oauthAuthzMsgCtx, cacheEnabled);
+            // Starting to trigger post listeners.
+            ResponseTypeHandlerUtil.triggerPostListeners(oauthAuthzMsgCtx, accessTokenDO, respDTO);
             ResponseTypeHandlerUtil.buildIDTokenResponseDTO(respDTO, accessTokenDO, oauthAuthzMsgCtx);
         }
 

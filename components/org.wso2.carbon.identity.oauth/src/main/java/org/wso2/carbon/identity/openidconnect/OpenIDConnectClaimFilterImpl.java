@@ -220,7 +220,19 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
             for (RequestedClaim essentialClaim : requestParamClaims) {
                 String claimName = essentialClaim.getName();
                 if (essentialClaim.isEssential() && userClaims.get(claimName) != null) {
-                    essentialClaims.put(claimName, userClaims.get(claimName));
+                    List<String> values = essentialClaim.getValues();
+                    if (CollectionUtils.isEmpty(values) && StringUtils.isNotEmpty(essentialClaim.getValue())) {
+                        values = Collections.singletonList(essentialClaim.getValue());
+                    }
+                    if (CollectionUtils.isNotEmpty(values)) {
+                        String userClaimValue = (String) userClaims.get(claimName);
+                        if (values.contains(userClaimValue)) {
+                            essentialClaims.put(claimName, userClaims.get(claimName));
+                        }
+                    } else {
+                        essentialClaims.put(claimName, userClaims.get(claimName));
+                    }
+
                 }
             }
         }

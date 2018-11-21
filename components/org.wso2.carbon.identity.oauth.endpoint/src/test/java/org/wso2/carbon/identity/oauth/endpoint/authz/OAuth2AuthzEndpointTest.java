@@ -35,6 +35,7 @@ import org.mockito.Mock;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.testng.Assert;
 import org.testng.annotations.AfterTest;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.DataProvider;
@@ -84,11 +85,15 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionManager;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionState;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
+import org.wso2.carbon.identity.openidconnect.OIDCConstants;
 import org.wso2.carbon.identity.openidconnect.RequestObjectService;
+import org.wso2.carbon.identity.openidconnect.model.RequestObject;
+import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.utils.CarbonUtils;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.nio.file.Paths;
@@ -572,6 +577,50 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                 {"approve", APP_REDIRECT_URL_JSON, new HashSet<>(Arrays.asList("scope1")),
                         HttpServletResponse.SC_OK, null},
         };
+    }
+
+
+    @DataProvider(name = "provideRequestObject")
+    public Object[][] provideRequestObject() {
+
+        List<String> claimValues = Arrays.asList("test", "test1", "test2");
+        String claimValue = "test";
+
+        RequestObject requestObjectWithValue = new RequestObject();
+        Map<String, List<RequestedClaim>> claimsforRequestParameter = new HashMap<>();
+        RequestedClaim requestedClaim = new RequestedClaim();
+        requestedClaim.setName(OAuthConstants.ACR);
+        requestedClaim.setValue(claimValue);
+        requestedClaim.setEssential(true);
+        claimsforRequestParameter.put(OIDCConstants.ID_TOKEN, Collections.singletonList(requestedClaim));
+        requestObjectWithValue.setRequestedClaims(claimsforRequestParameter);
+
+        RequestObject requestObjectWithValues = new RequestObject();
+        requestedClaim = new RequestedClaim();
+        requestedClaim.setName(OAuthConstants.ACR);
+        requestedClaim.setEssential(true);
+        claimsforRequestParameter = new HashMap<>();
+        requestedClaim.setValues(claimValues);
+        claimsforRequestParameter.put(OIDCConstants.ID_TOKEN, Collections.singletonList(requestedClaim));
+        requestObjectWithValues.setRequestedClaims(claimsforRequestParameter);
+
+        return new Object[][] {
+                {null, null},
+                {new RequestObject(),null},
+                {requestObjectWithValue, Collections.singletonList(claimValue)},
+                {requestObjectWithValues, claimValues}
+        };
+    }
+
+    @Test(dataProvider = "provideRequestObject", description = "This test case tests the flow when the request object"
+            + " includes acr claims")
+    public void testGetAcrValues(Object requestObject, List<String> expectedAcrValues) throws NoSuchMethodException,
+            InvocationTargetException, IllegalAccessException {
+
+        Method method = authzEndpointObject.getClass().getDeclaredMethod("getAcrValues", RequestObject.class);
+        method.setAccessible(true);
+        Object acrValues = method.invoke(authzEndpointObject, requestObject);
+        Assert.assertEquals(acrValues, expectedAcrValues, "Actual ACR values does not match with expected ACR values");
     }
 
     @Test(dataProvider = "provideConsentData", groups = "testWithConnection")
