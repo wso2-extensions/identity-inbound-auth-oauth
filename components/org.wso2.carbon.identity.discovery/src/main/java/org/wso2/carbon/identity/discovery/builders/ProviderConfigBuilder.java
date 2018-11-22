@@ -95,6 +95,23 @@ public class ProviderConfigBuilder {
                 IdentityConstants.OAuth.OIDC_CHECK_SESSION_EP_URL));
         providerConfig.setEndSessionEndpoint(IdentityUtil.getProperty(
                 IdentityConstants.OAuth.OIDC_LOGOUT_EP_URL));
+
+        try {
+            providerConfig.setUserinfoSigningAlgValuesSupported(new String[] {
+                    OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(
+                            OAuthServerConfiguration.getInstance().getUserInfoJWTSignatureAlgorithm()).getName()
+            });
+        } catch (IdentityOAuth2Exception e) {
+            throw new ServerConfigurationException("Unsupported signature algorithm configured.", e);
+        }
+        providerConfig.setTokenEndpointAuthMethodsSupported(
+                OAuth2Util.getSupportedClientAuthenticationMethods().stream().toArray(String[]::new));
+        providerConfig.setGrantTypesSupported(OAuth2Util.getSupportedGrantTypes().stream().toArray(String[]::new));
+        providerConfig.setRequestParameterSupported(String.valueOf(OAuth2Util.isRequestParameterSupported()));
+        providerConfig.setClaimsParameterSupported(String.valueOf(OAuth2Util.isClaimsParameterSupported()));
+        providerConfig.setRequestObjectSigningAlgValuesSupported(
+                OAuth2Util.getRequestObjectSigningAlgValuesSupported().stream().toArray(String[]::new));
+
         return providerConfig;
     }
 }
