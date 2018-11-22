@@ -255,6 +255,7 @@ public class OAuth2Util {
     private static final String SHA256_WITH_EC = "SHA256withEC";
     private static final String SHA384_WITH_EC = "SHA384withEC";
     private static final String SHA512_WITH_EC = "SHA512withEC";
+    private static final String SHA256_WITH_PS = "SHA256withPS";
     private static final String SHA256 = "SHA-256";
     private static final String SHA384 = "SHA-384";
     private static final String SHA512 = "SHA-512";
@@ -1751,6 +1752,8 @@ public class OAuth2Util {
             return JWSAlgorithm.ES384;
         } else if (SHA512_WITH_EC.equals(signatureAlgorithm)) {
             return JWSAlgorithm.ES512;
+        } else if (SHA256_WITH_PS.equals(signatureAlgorithm)) {
+            return JWSAlgorithm.PS256;
         } else {
             log.error("Unsupported Signature Algorithm in identity.xml");
             throw new IdentityOAuth2Exception("Unsupported Signature Algorithm in identity.xml");
@@ -1864,7 +1867,7 @@ public class OAuth2Util {
     public static String mapDigestAlgorithm(Algorithm signatureAlgorithm) throws IdentityOAuth2Exception {
 
         if (JWSAlgorithm.RS256.equals(signatureAlgorithm) || JWSAlgorithm.HS256.equals(signatureAlgorithm) ||
-                JWSAlgorithm.ES256.equals(signatureAlgorithm)) {
+                JWSAlgorithm.ES256.equals(signatureAlgorithm) || JWSAlgorithm.PS256.equals(signatureAlgorithm)) {
             return SHA256;
         } else if (JWSAlgorithm.RS384.equals(signatureAlgorithm) || JWSAlgorithm.HS384.equals(signatureAlgorithm) ||
                 JWSAlgorithm.ES384.equals(signatureAlgorithm)) {
@@ -1962,7 +1965,7 @@ public class OAuth2Util {
             throws IdentityOAuth2Exception {
 
         if (JWSAlgorithm.RS256.equals(signatureAlgorithm) || JWSAlgorithm.RS384.equals(signatureAlgorithm) ||
-                JWSAlgorithm.RS512.equals(signatureAlgorithm)) {
+                JWSAlgorithm.RS512.equals(signatureAlgorithm) || JWSAlgorithm.PS256.equals(signatureAlgorithm)) {
             return signJWTWithRSA(jwtClaimsSet, signatureAlgorithm, tenantDomain);
         } else if (JWSAlgorithm.HS256.equals(signatureAlgorithm) || JWSAlgorithm.HS384.equals(signatureAlgorithm) ||
                 JWSAlgorithm.HS512.equals(signatureAlgorithm)) {
