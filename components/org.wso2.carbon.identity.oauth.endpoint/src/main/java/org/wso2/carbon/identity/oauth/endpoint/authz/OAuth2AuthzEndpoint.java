@@ -577,8 +577,6 @@ public class OAuth2AuthzEndpoint {
     private Response handleDenyConsent(OAuthMessage oAuthMessage) throws OAuthSystemException, URISyntaxException {
 
         OAuth2Parameters oauth2Params = getOauth2Params(oAuthMessage);
-        boolean isOIDCRequest = OAuth2Util.isOIDCAuthzRequest(oauth2Params.getScopes());
-
         OpenIDConnectUserRPStore.getInstance().putUserRPToStore(getLoggedInUser(oAuthMessage),
                 getOauth2Params(oAuthMessage).getApplicationName(),
                 false, oauth2Params.getClientId());
@@ -587,14 +585,6 @@ public class OAuth2AuthzEndpoint {
                 "User denied the consent");
         String denyResponse = EndpointUtil.getErrorRedirectURL(oAuthMessage.getRequest(), ex, oauth2Params);
 
-        if (isOIDCRequest) {
-            Cookie opBrowserStateCookie = OIDCSessionManagementUtil.getOPBrowserStateCookie
-                    (oAuthMessage.getRequest());
-            denyResponse = OIDCSessionManagementUtil
-                    .addSessionStateToURL(denyResponse, oauth2Params.getClientId(),
-                            oauth2Params.getRedirectURI(), opBrowserStateCookie,
-                            oauth2Params.getResponseType());
-        }
         if (StringUtils.equals(oauth2Params.getResponseMode(), RESPONSE_MODE_FORM_POST)) {
             return handleFailedState(oAuthMessage, oauth2Params, ex);
         }
