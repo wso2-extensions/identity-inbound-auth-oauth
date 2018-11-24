@@ -179,15 +179,6 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
                                                  String[] approvedScopes,
                                                  String clientId,
                                                  String spTenantDomain) throws OAuthSystemException {
-
-        if (isEmpty(userClaimsInOIDCDialect)) {
-            if (log.isDebugEnabled()) {
-                log.debug("No claims to filter for user: " + authenticatedUser.toFullQualifiedUsername() + " for " +
-                        "client_id: " + clientId + " in tenantDomain: " + spTenantDomain);
-            }
-            return new HashMap<>();
-        }
-
         Map<String, Object> filteredUserClaimsByOIDCScopes =
                 filterClaimsByScope(userClaimsInOIDCDialect, approvedScopes, clientId, spTenantDomain);
 

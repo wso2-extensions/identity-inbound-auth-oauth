@@ -240,7 +240,7 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
             prepStmt.setInt(1, requestObjectId);
             resultSet = prepStmt.executeQuery();
 
-            if (resultSet.next()) {
+            while (resultSet.next()) {
                 insertedRequestObjectClaims.put(resultSet.getInt(1), resultSet.getString(2));
             }
             connection.commit();
