@@ -87,8 +87,10 @@ import org.wso2.carbon.identity.oidc.session.cache.OIDCBackChannelAuthCodeCache;
 import org.wso2.carbon.identity.oidc.session.cache.OIDCBackChannelAuthCodeCacheEntry;
 import org.wso2.carbon.identity.oidc.session.cache.OIDCBackChannelAuthCodeCacheKey;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
+import org.wso2.carbon.identity.openidconnect.OIDCConstants;
 import org.wso2.carbon.identity.openidconnect.OIDCRequestObjectUtil;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
+import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.registry.core.utils.UUIDGenerator;
 import org.wso2.carbon.utils.CarbonUtils;
 
@@ -103,6 +105,7 @@ import java.nio.file.Paths;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -577,8 +580,6 @@ public class OAuth2AuthzEndpoint {
     private Response handleDenyConsent(OAuthMessage oAuthMessage) throws OAuthSystemException, URISyntaxException {
 
         OAuth2Parameters oauth2Params = getOauth2Params(oAuthMessage);
-        boolean isOIDCRequest = OAuth2Util.isOIDCAuthzRequest(oauth2Params.getScopes());
-
         OpenIDConnectUserRPStore.getInstance().putUserRPToStore(getLoggedInUser(oAuthMessage),
                 getOauth2Params(oAuthMessage).getApplicationName(),
                 false, oauth2Params.getClientId());
@@ -587,14 +588,6 @@ public class OAuth2AuthzEndpoint {
                 "User denied the consent");
         String denyResponse = EndpointUtil.getErrorRedirectURL(oAuthMessage.getRequest(), ex, oauth2Params);
 
-        if (isOIDCRequest) {
-            Cookie opBrowserStateCookie = OIDCSessionManagementUtil.getOPBrowserStateCookie
-                    (oAuthMessage.getRequest());
-            denyResponse = OIDCSessionManagementUtil
-                    .addSessionStateToURL(denyResponse, oauth2Params.getClientId(),
-                            oauth2Params.getRedirectURI(), opBrowserStateCookie,
-                            oauth2Params.getResponseType());
-        }
         if (StringUtils.equals(oauth2Params.getResponseMode(), RESPONSE_MODE_FORM_POST)) {
             return handleFailedState(oAuthMessage, oauth2Params, ex);
         }
@@ -1593,8 +1586,41 @@ public class OAuth2AuthzEndpoint {
                 params.setACRValues(new LinkedHashSet<>(Arrays.asList(acrString.split(COMMA_SEPARATOR))));
                 oAuthMessage.getRequest().setAttribute(ACR_VALUES,
                         new ArrayList<>(Arrays.asList(acrString.split(COMMA_SEPARATOR))));
+            } else {
+                List<String> acrRequestedValues = getAcrValues(requestObject);
+                if (CollectionUtils.isNotEmpty(acrRequestedValues)) {
+                    oAuthMessage.getRequest().setAttribute(ACR_VALUES, acrRequestedValues);
+                }
             }
         }
+    }
+
+    /**
+     * To get the value(s) for "acr" from request object.
+     *
+     * @param requestObject {@link RequestObject}
+     * @return list of acr value(s)
+     */
+    private List<String> getAcrValues(RequestObject requestObject) {
+
+        List<String> acrRequestedValues = null;
+        if (requestObject != null) {
+            Map<String, List<RequestedClaim>> requestedClaims = requestObject.getRequestedClaims();
+            List<RequestedClaim> requestedClaimsForIdToken = requestedClaims.get(OIDCConstants.ID_TOKEN);
+            if (CollectionUtils.isNotEmpty(requestedClaimsForIdToken)) {
+                for (RequestedClaim requestedClaim : requestedClaimsForIdToken) {
+                    if (OAuthConstants.ACR.equalsIgnoreCase(requestedClaim.getName()) && requestedClaim.isEssential()) {
+                        acrRequestedValues = requestedClaim.getValues();
+                        if (CollectionUtils.isEmpty(acrRequestedValues) && StringUtils
+                                .isNotEmpty(requestedClaim.getValue())) {
+                            acrRequestedValues = Collections.singletonList(requestedClaim.getValue());
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+        return acrRequestedValues;
     }
 
     private void replaceIfPresent(RequestObject requestObject, String claim, Consumer<String> consumer) {

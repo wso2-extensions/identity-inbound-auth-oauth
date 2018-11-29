@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth2.util;
 
+import com.nimbusds.jose.JWSAlgorithm;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.mockito.Mock;
 import org.powermock.core.classloader.annotations.PrepareForTest;
@@ -43,14 +44,18 @@ import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.ClientCredentialDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
+import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.tenant.TenantManager;
 
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
@@ -117,6 +122,9 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
 
     @Mock
     private TenantManager tenantManagerMock;
+
+    @Mock
+    private AuthorizationGrantHandler authorizationGrantHandlerMock;
 
     @BeforeMethod
     public void setUp() throws Exception {
@@ -1098,5 +1106,62 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
 
         AuthenticatedUser authzUser = OAuth2Util.getAuthenticatedUser(accessTokenDO);
         assertEquals(authzUser.isFederatedUser(), expectedIsFederatedValue);
+    }
+
+    @DataProvider(name = "supportedGrantTypes")
+    public Object[][] supportedGrantTypes() {
+        Map<String, AuthorizationGrantHandler> supportedGrantTypesMap = new HashMap<>();
+        supportedGrantTypesMap.put("testGrantType1", authorizationGrantHandlerMock);
+        supportedGrantTypesMap.put("testGrantType2", authorizationGrantHandlerMock);
+
+        List<String> supportedGrantTypes = new ArrayList<>();
+        supportedGrantTypes.add("testGrantType1");
+        supportedGrantTypes.add("testGrantType2");
+
+        return new Object[][] {
+                // supportedGrantTypesMap
+                // supportedGrantTypes
+                {supportedGrantTypesMap, supportedGrantTypes},
+                {new HashMap<>(), new ArrayList<>()},
+                {null, new ArrayList<>()}
+        };
+    }
+
+    @Test(dataProvider = "supportedGrantTypes")
+    public void testGetSuportedGrantTypes(Map<String, AuthorizationGrantHandler> supportedGrantTypesMap,
+            List<String> supportedGrantTypes) throws Exception {
+
+        when(oauthServerConfigurationMock.getSupportedGrantTypes()).thenReturn(supportedGrantTypesMap);
+        assertEquals(OAuth2Util.getSupportedGrantTypes(), supportedGrantTypes);
+    }
+
+    @Test
+    public void testGetSupportedClientAuthenticationMethods() throws Exception {
+        List<String> clientAuthenticationMethods = new ArrayList<>();
+        clientAuthenticationMethods.add("client_secret_basic");
+        clientAuthenticationMethods.add("client_secret_post");
+
+        assertEquals(OAuth2Util.getSupportedClientAuthenticationMethods(), clientAuthenticationMethods);
+    }
+
+    @Test
+    public void testGetRequestObjectSigningAlgValuesSupported() throws Exception {
+        List<String> requestObjectSigningAlgValues = new ArrayList<>();
+        requestObjectSigningAlgValues.add(JWSAlgorithm.RS256.getName());
+        requestObjectSigningAlgValues.add(JWSAlgorithm.RS384.getName());
+        requestObjectSigningAlgValues.add(JWSAlgorithm.RS512.getName());
+        requestObjectSigningAlgValues.add(JWSAlgorithm.NONE.getName());
+
+        assertEquals(OAuth2Util.getRequestObjectSigningAlgValuesSupported(), requestObjectSigningAlgValues);
+    }
+
+    @Test
+    public void testIsRequestParameterSupported() throws Exception {
+        assertTrue(OAuth2Util.isRequestParameterSupported());
+    }
+
+    @Test
+    public void testIsClaimsParameterSupported() throws Exception {
+        assertTrue(OAuth2Util.isClaimsParameterSupported());
     }
 }

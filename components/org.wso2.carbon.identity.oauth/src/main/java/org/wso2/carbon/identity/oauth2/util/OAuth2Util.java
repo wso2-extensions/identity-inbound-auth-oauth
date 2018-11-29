@@ -88,6 +88,7 @@ import org.wso2.carbon.identity.oauth2.model.ClientCredentialDO;
 import org.wso2.carbon.identity.oauth2.token.JWTTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
+import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.registry.core.Registry;
 import org.wso2.carbon.registry.core.Resource;
@@ -132,6 +133,7 @@ import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import javax.xml.namespace.QName;
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamException;
@@ -259,6 +261,11 @@ public class OAuth2Util {
     private static final String SHA256 = "SHA-256";
     private static final String SHA384 = "SHA-384";
     private static final String SHA512 = "SHA-512";
+
+    // Supported Client Authentication Methods
+    private static final String CLIENT_SECRET_BASIC = "client_secret_basic";
+    private static final String CLIENT_SECRET_POST = "client_secret_post";
+    private static final String PRIVATE_KEY_JWT = "private_key_jwt";
 
     private OAuth2Util() {
 
@@ -1306,29 +1313,24 @@ public class OAuth2Util {
 
     public static List<String> getOIDCScopes(String tenantDomain) {
 
+        List<String> scopes = new ArrayList<>();
         try {
             int tenantId = OAuthComponentServiceHolder.getInstance().getRealmService().getTenantManager()
                     .getTenantId(tenantDomain);
-            Registry registry = OAuth2ServiceComponentHolder.getRegistryService().getConfigSystemRegistry(tenantId);
+            // Get the scopes from the cache or the db
+            List<ScopeDTO> scopesDTOList = OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
+                    getScopes(tenantId);
 
-            if (registry.resourceExists(OAuthConstants.SCOPE_RESOURCE_PATH)) {
-                Resource resource = registry.get(OAuthConstants.SCOPE_RESOURCE_PATH);
-                Properties properties = resource.getProperties();
-                Enumeration e = properties.propertyNames();
-                List<String> scopes = new ArrayList<>();
-                while (e.hasMoreElements()) {
-                    String scope = (String) e.nextElement();
-                    // Remove hidden registry properties from Scopes.
-                    if (StringUtils.isNotBlank(scope) && !scope.startsWith(REG_HIDDEN_PROPERTY_PREFIX)) {
-                        scopes.add(scope);
-                    }
+            if (CollectionUtils.isNotEmpty(scopesDTOList)) {
+                for (ScopeDTO scope : scopesDTOList) {
+                    scopes.add(scope.getName());
                 }
-                return scopes;
             }
-        } catch (RegistryException | UserStoreException e) {
-            log.error("Error while retrieving registry collection for :" + OAuthConstants.SCOPE_RESOURCE_PATH, e);
+
+        } catch (UserStoreException | IdentityOAuth2Exception e) {
+            log.error("Error while retrieving OIDC scopes.", e);
         }
-        return new ArrayList<>();
+        return scopes;
     }
 
     public static AccessTokenDO getAccessTokenDOfromTokenIdentifier(String accessTokenIdentifier) throws
@@ -2509,5 +2511,70 @@ public class OAuth2Util {
             }
         }
     }
+
+    /**
+     * Get the supported oauth grant types
+     *
+     * @return list of grant types
+     */
+    public static List<String> getSupportedGrantTypes() {
+
+        Map<String, AuthorizationGrantHandler> supportedGrantTypesMap = OAuthServerConfiguration.getInstance()
+                .getSupportedGrantTypes();
+        List<String> supportedGrantTypes = new ArrayList<>();
+        if (supportedGrantTypesMap != null && !supportedGrantTypesMap.isEmpty()) {
+            supportedGrantTypes = supportedGrantTypesMap.keySet().stream().collect(Collectors.toList());
+        }
+        return supportedGrantTypes;
+    }
+
+    /**
+     * Get the supported client authentication methods
+     *
+     * @return list of client authentication methods
+     */
+    public static List<String> getSupportedClientAuthenticationMethods() {
+
+        List<String> clientAuthenticationMethods = new ArrayList<>();
+        clientAuthenticationMethods.add(CLIENT_SECRET_BASIC);
+        clientAuthenticationMethods.add(CLIENT_SECRET_POST);
+
+        return clientAuthenticationMethods;
+    }
+
+    /**
+     * Get the supported request object signing algorithms
+     *
+     * @return list of algorithms
+     */
+    public static List<String> getRequestObjectSigningAlgValuesSupported() {
+
+        List<String> requestObjectSigningAlgValues = new ArrayList<>();
+        requestObjectSigningAlgValues.add(JWSAlgorithm.RS256.getName());
+        requestObjectSigningAlgValues.add(JWSAlgorithm.RS384.getName());
+        requestObjectSigningAlgValues.add(JWSAlgorithm.RS512.getName());
+        requestObjectSigningAlgValues.add(JWSAlgorithm.NONE.getName());
+
+        return requestObjectSigningAlgValues;
+    }
+
+    /**
+     * Check whether the request object parameter is supported
+     *
+     * @return true if supported
+     */
+    public static boolean isRequestParameterSupported() {
+        return Boolean.TRUE;
+    }
+
+    /**
+     * Check whether the claims parameter is supported
+     *
+     * @return true if supported
+     */
+    public static boolean isClaimsParameterSupported() {
+        return Boolean.TRUE;
+    }
+
 }
 
