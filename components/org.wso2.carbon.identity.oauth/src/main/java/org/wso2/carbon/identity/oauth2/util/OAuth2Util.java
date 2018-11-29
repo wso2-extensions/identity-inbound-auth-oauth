@@ -2553,6 +2553,7 @@ public class OAuth2Util {
         requestObjectSigningAlgValues.add(JWSAlgorithm.RS256.getName());
         requestObjectSigningAlgValues.add(JWSAlgorithm.RS384.getName());
         requestObjectSigningAlgValues.add(JWSAlgorithm.RS512.getName());
+        requestObjectSigningAlgValues.add(JWSAlgorithm.PS256.getName());
         requestObjectSigningAlgValues.add(JWSAlgorithm.NONE.getName());
 
         return requestObjectSigningAlgValues;

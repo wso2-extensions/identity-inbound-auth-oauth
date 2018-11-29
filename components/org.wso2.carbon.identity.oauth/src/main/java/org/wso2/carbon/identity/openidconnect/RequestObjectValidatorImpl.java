@@ -51,6 +51,7 @@ import java.util.List;
 import static org.apache.commons.lang.StringUtils.isEmpty;
 import static org.apache.commons.lang.StringUtils.isNotEmpty;
 import static org.wso2.carbon.identity.openidconnect.model.Constants.RS;
+import static org.wso2.carbon.identity.openidconnect.model.Constants.PS;
 
 /**
  * This class validates request object parameter value which comes with the OIDC authorization request as an optional
@@ -260,7 +261,7 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
         if (log.isDebugEnabled()) {
             log.debug("Signature Algorithm found in the JWT Header: " + alg);
         }
-        if (alg.indexOf(RS) == 0) {
+        if (alg.indexOf(RS) == 0 || alg.indexOf(PS) == 0) {
             // At this point 'x509Certificate' will never be null.
             PublicKey publicKey = x509Certificate.getPublicKey();
             if (publicKey instanceof RSAPublicKey) {

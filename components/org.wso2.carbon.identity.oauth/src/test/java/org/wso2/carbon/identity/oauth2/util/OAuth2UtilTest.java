@@ -1150,6 +1150,7 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         requestObjectSigningAlgValues.add(JWSAlgorithm.RS256.getName());
         requestObjectSigningAlgValues.add(JWSAlgorithm.RS384.getName());
         requestObjectSigningAlgValues.add(JWSAlgorithm.RS512.getName());
+        requestObjectSigningAlgValues.add(JWSAlgorithm.PS256.getName());
         requestObjectSigningAlgValues.add(JWSAlgorithm.NONE.getName());
 
         assertEquals(OAuth2Util.getRequestObjectSigningAlgValuesSupported(), requestObjectSigningAlgValues);
