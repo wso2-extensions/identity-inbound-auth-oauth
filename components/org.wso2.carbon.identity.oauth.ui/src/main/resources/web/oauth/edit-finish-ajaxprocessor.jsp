@@ -59,6 +59,8 @@
     String refreshTokenExpiryTime = request.getParameter("refreshTokenExpiryTime");
     String idTokenExpiryTime = request.getParameter("idTokenExpiryTime");
     String tokenType = request.getParameter("tokenType");
+    String logoutMechanism = request.getParameter("logoutMechanism");
+    String logoutUrl = request.getParameter("logoutUrl");
     String grants;
    	StringBuffer buff = new StringBuffer();
     boolean pkceMandatory = false;
@@ -82,9 +84,6 @@
     boolean isIdTokenEncrypted = Boolean.parseBoolean(request.getParameter("encryptIdToken"));
     String idTokenEncryptionAlgorithm = request.getParameter("idTokenEncryptionAlgorithm");
     String idTokenEncryptionMethod = request.getParameter("idTokenEncryptionMethod");
-
-    boolean isBackChannelLogoutEnabled = Boolean.parseBoolean(request.getParameter(("enableBackchannelLogout")));
-    String backchannelLogoutUrl = request.getParameter("backChannelLogoutUrl");
     
     String forwardTo = "index.jsp";
     String BUNDLE = "org.wso2.carbon.identity.oauth.ui.i18n.Resources";
@@ -156,8 +155,10 @@
             }
             app.setBypassClientCredentials(bypassClientCredentials);
 
-            if (isBackChannelLogoutEnabled) {
-                app.setBackChannelLogoutUrl(backchannelLogoutUrl);
+            if (OAuthConstants.OIDCConfigProperties.BACK_CHANNEL_LOGOUT_SELECTED.equalsIgnoreCase(logoutMechanism)) {
+                app.setBackChannelLogoutUrl(logoutUrl);
+            } else if (OAuthConstants.OIDCConfigProperties.FRONT_CHANNEL_LOGOUT_SELECTED.equalsIgnoreCase(logoutMechanism)) {
+                app.setFrontchannelLogoutUrl(logoutUrl);
             }
             
             client.updateOAuthApplicationData(app);
