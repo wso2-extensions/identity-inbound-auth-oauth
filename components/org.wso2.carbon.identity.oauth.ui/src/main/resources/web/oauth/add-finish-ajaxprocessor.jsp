@@ -111,7 +111,8 @@
 
             if (OAuthConstants.OIDCConfigProperties.BACK_CHANNEL_LOGOUT_SELECTED.equalsIgnoreCase(logoutMechanism)) {
                 app.setBackChannelLogoutUrl(logoutUrl);
-            } else if (OAuthConstants.OIDCConfigProperties.FRONT_CHANNEL_LOGOUT_SELECTED.equalsIgnoreCase(logoutMechanism)) {
+            } else if (OAuthConstants.OIDCConfigProperties.FRONT_CHANNEL_LOGOUT_SELECTED
+                    .equalsIgnoreCase(logoutMechanism)) {
                 app.setFrontchannelLogoutUrl(logoutUrl);
             }
 
