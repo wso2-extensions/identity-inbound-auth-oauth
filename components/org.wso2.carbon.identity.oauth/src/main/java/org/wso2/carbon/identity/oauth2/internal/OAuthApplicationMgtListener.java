@@ -141,7 +141,8 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
 
         validateOAuthInbound(serviceProvider, isUpdate);
     }
-        @Override
+
+    @Override
     public void doImportServiceProvider(ServiceProvider serviceProvider) throws IdentityApplicationManagementException {
 
         try {
@@ -537,19 +538,9 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                     try {
                         if (!isUpdate) {
                             if (dao.isDuplicateConsumer(inboundAuthKey)) {
-                                try {
-                                    OAuthAppDO appInformation = dao.getAppInformation(inboundAuthKey);
-                                    if (!appInformation.getApplicationName().equals(
-                                            serviceProvider.getApplicationName())) {
-
-                                        validationMsg.add(String.format("There is already an oauth application %s " +
-                                                        "available with %s as consumer key",
-                                                appInformation.getApplicationName(), inboundAuthKey));
-                                        break;
-                                    }
-                                } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
-                                    // Do nothing, the application does exists.
-                                }
+                                validationMsg.add(String.format("There is already an oauth application " +
+                                        "exists in the system with %s as consumer key", inboundAuthKey));
+                                break;
                             } else if (dao.isDuplicateApplication(userName,
                                     IdentityTenantUtil.getTenantId(tenantDomain), tenantDomain, oAuthAppDO)) {
                                 validationMsg.add(String.format("There is already an oauth application available with" +
