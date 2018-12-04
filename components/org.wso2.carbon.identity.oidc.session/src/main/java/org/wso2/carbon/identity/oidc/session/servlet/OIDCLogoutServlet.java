@@ -48,16 +48,18 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionManagementException;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionState;
-import org.wso2.carbon.identity.oidc.session.backChannelLogout.LogoutRequestSender;
 import org.wso2.carbon.identity.oidc.session.cache.OIDCSessionDataCache;
 import org.wso2.carbon.identity.oidc.session.cache.OIDCSessionDataCacheEntry;
 import org.wso2.carbon.identity.oidc.session.cache.OIDCSessionDataCacheKey;
+import org.wso2.carbon.identity.oidc.session.logout.backchannel.LogoutRequestSender;
+import org.wso2.carbon.identity.oidc.session.logout.frontchannel.DynamicLogoutPageBuilderUtil;
 import org.wso2.carbon.identity.oidc.session.handler.OIDCLogoutHandler;
 import org.wso2.carbon.identity.oidc.session.internal.OIDCSessionManagementComponentServiceHolder;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
 import java.util.Enumeration;
@@ -479,7 +481,6 @@ public class OIDCLogoutServlet extends HttpServlet {
         String sessionDataKey = request.getParameter(FrameworkConstants.SESSION_DATA_KEY);
         OIDCSessionDataCacheEntry cacheEntry = getSessionDataFromCache(sessionDataKey);
 
-
         if (cacheEntry != null) {
             if (log.isDebugEnabled()) {
                 String clientId = cacheEntry.getParamMap().get(OIDCSessionConstants.OIDC_CACHE_CLIENT_ID_PARAM);
@@ -495,8 +496,13 @@ public class OIDCLogoutServlet extends HttpServlet {
                     log.debug("Logout request received for sid: " + sidClaim);
                 }
             }
+
             // BackChannel logout request.
             doBackChannelLogout(request);
+
+            // Building Frontchannel Logout HTML page
+            String frontchannelLogoutPage = DynamicLogoutPageBuilderUtil.buildPage(request);
+
             String redirectURL = cacheEntry.getPostLogoutRedirectUri();
             if (redirectURL == null) {
                 redirectURL = OIDCSessionManagementUtil.getOIDCLogoutURL();
@@ -517,7 +523,11 @@ public class OIDCLogoutServlet extends HttpServlet {
             removeSessionDataFromCache(sessionDataKey);
             Cookie opBrowserStateCookie = OIDCSessionManagementUtil.removeOPBrowserStateCookie(request, response);
             OIDCSessionManagementUtil.getSessionManager().removeOIDCSessionState(opBrowserStateCookie.getValue());
-            response.sendRedirect(getRedirectURL(redirectURL, request));
+
+            //Frontchannel logout request.
+            frontchannelLogoutPage = DynamicLogoutPageBuilderUtil.setRedirectURL(frontchannelLogoutPage,
+                    getRedirectURL(redirectURL, request));
+            doFrontchannelLogout(response, frontchannelLogoutPage);
         } else {
             response.sendRedirect(getRedirectURL(OIDCSessionManagementUtil.getErrorPageURL(OAuth2ErrorCodes
                     .SERVER_ERROR, "User logout failed"), request));
@@ -620,6 +630,18 @@ public class OIDCLogoutServlet extends HttpServlet {
         if (log.isDebugEnabled()) {
             log.debug("Sending backchannel logout request.");
         }
+    }
+
+    private void doFrontchannelLogout(HttpServletResponse response, String frontchannelLogoutPage)
+            throws IOException {
+
+        response.setContentType("text/html; charset=UTF-8");
+        PrintWriter out = response.getWriter();
+        out.println(frontchannelLogoutPage);
+        if (log.isDebugEnabled()) {
+            log.debug("Starting frontchannel logout.");
+        }
+        out.close();
     }
 
     private void setSPAttributeToRequest(HttpServletRequest req, String spName, String tenantDomain) {
