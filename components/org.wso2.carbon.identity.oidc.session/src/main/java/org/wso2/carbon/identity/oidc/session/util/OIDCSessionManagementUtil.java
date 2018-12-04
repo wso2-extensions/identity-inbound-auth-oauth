@@ -18,19 +18,36 @@
 
 package org.wso2.carbon.identity.oidc.session.util;
 
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JWSVerifier;
+import com.nimbusds.jose.crypto.RSASSAVerifier;
+import com.nimbusds.jwt.SignedJWT;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.core.util.KeyStoreManager;
+import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
+import org.wso2.carbon.identity.application.common.model.IdentityProvider;
+import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
+import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oidc.session.OIDCSessionState;
 import org.wso2.carbon.identity.oidc.session.DefaultOIDCSessionStateManager;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionManager;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionStateManager;
 import org.wso2.carbon.identity.oidc.session.config.OIDCSessionManagementConfiguration;
+import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
+import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
@@ -40,6 +57,9 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.security.interfaces.RSAPublicKey;
+import java.text.ParseException;
+import java.util.Set;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -55,6 +75,10 @@ public class OIDCSessionManagementUtil {
 
     private static final OIDCSessionManager sessionManager = new OIDCSessionManager();
     private static OIDCSessionStateManager oidcSessionStateManager;
+
+    private static final String OPENID_IDP_ENTITY_ID = "IdPEntityId";
+    private static final String ERROR_GET_RESIDENT_IDP =
+            "Error while getting Resident Identity Provider of '%s' tenant.";
 
     private static final Log log = LogFactory.getLog(OIDCSessionManagementUtil.class);
 
@@ -330,6 +354,249 @@ public class OIDCSessionManagementUtil {
             }
         } else {
             oidcSessionStateManager = new DefaultOIDCSessionStateManager();
+        }
+    }
+
+    /**
+     * Returns client id from servlet request.
+     *
+     * @param request
+     * @return Client ID
+     * @throws IdentityOAuth2Exception
+     * @throws InvalidOAuthClientException
+     */
+    public static String getClientId(HttpServletRequest request)
+            throws IdentityOAuth2Exception, InvalidOAuthClientException {
+
+        String clientId;
+        String idToken = getIdToken(request);
+        if (idToken != null) {
+            clientId = getClientIdFromIDTokenHint(idToken);
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug("IdTokenHint is not found in the request ");
+            }
+            return null;
+        }
+        if (validateIdTokenHint(clientId, idToken)) {
+            return clientId;
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug("Id Token is not valid");
+            }
+            return null;
+        }
+    }
+
+    /**
+     * Returns signing tenant domain.
+     *
+     * @param oAuthAppDO
+     * @return Signing Tenant Domain
+     */
+    public static String getSigningTenantDomain(OAuthAppDO oAuthAppDO) {
+
+        boolean isJWTSignedWithSPKey = OAuthServerConfiguration.getInstance().isJWTSignedWithSPKey();
+        String signingTenantDomain;
+
+        if (isJWTSignedWithSPKey) {
+            // Tenant domain of the SP.
+            signingTenantDomain = getTenantDomain(oAuthAppDO);
+        } else {
+            // Tenant domain of the user.
+            signingTenantDomain = oAuthAppDO.getUser().getTenantDomain();
+        }
+        return signingTenantDomain;
+    }
+
+
+    /**
+     * Returns the OIDCsessionState of the obps cookie
+     *
+     * @param request
+     * @return Session state
+     */
+    public static OIDCSessionState getSessionState(HttpServletRequest request) {
+
+        Cookie opbsCookie = OIDCSessionManagementUtil.getOPBrowserStateCookie(request);
+        if (opbsCookie != null) {
+            String obpsCookieValue = opbsCookie.getValue();
+            OIDCSessionState sessionState = OIDCSessionManagementUtil.getSessionManager()
+                    .getOIDCSessionState(obpsCookieValue);
+            return sessionState;
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * Return client id of all the RPs belong to same session.
+     *
+     * @param sessionState
+     * @return client id of all the RPs belong to same session
+     */
+    public static Set<String> getSessionParticipants(OIDCSessionState sessionState) {
+
+        Set<String> sessionParticipants = sessionState.getSessionParticipants();
+        return sessionParticipants;
+    }
+
+    /**
+     * Returns the sid of the all the RPs belong to same session.
+     *
+     * @param sessionState
+     * @return sid claim from session state
+     */
+    public static String getSidClaim(OIDCSessionState sessionState) {
+
+        String sidClaim = sessionState.getSidClaim();
+        return sidClaim;
+    }
+
+    public static IdentityProvider getResidentIdp(String tenantDomain) throws IdentityOAuth2Exception {
+
+        try {
+            return IdentityProviderManager.getInstance().getResidentIdP(tenantDomain);
+        } catch (IdentityProviderManagementException e) {
+            String errorMsg = String.format(ERROR_GET_RESIDENT_IDP, tenantDomain);
+            throw new IdentityOAuth2Exception(errorMsg, e);
+        }
+    }
+
+    /**
+     * Returning issuer of the tenant domain.
+     *
+     * @param tenantDomain
+     * @return issuer
+     * @throws IdentityOAuth2Exception
+     */
+    public static String getIssuer(String tenantDomain) throws IdentityOAuth2Exception {
+
+        IdentityProvider identityProvider = getResidentIdp(tenantDomain);
+        FederatedAuthenticatorConfig[] fedAuthnConfigs = identityProvider.getFederatedAuthenticatorConfigs();
+        // Get OIDC authenticator.
+        FederatedAuthenticatorConfig oidcAuthenticatorConfig =
+                IdentityApplicationManagementUtil.getFederatedAuthenticator(fedAuthnConfigs,
+                        IdentityApplicationConstants.Authenticator.OIDC.NAME);
+        // Setting issuer.
+        String issuer =
+                IdentityApplicationManagementUtil.getProperty(oidcAuthenticatorConfig.getProperties(),
+                        OPENID_IDP_ENTITY_ID).getValue();
+        return issuer;
+    }
+
+    /**
+     * Returns OAuthAppDo using clientID
+     *
+     * @param clientID
+     * @return OAuthAppDO of the specific client ID
+     * @throws IdentityOAuth2Exception
+     * @throws InvalidOAuthClientException
+     */
+    public static OAuthAppDO getOAuthAppDO(String clientID) throws IdentityOAuth2Exception, InvalidOAuthClientException {
+
+        OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientID);
+        return oAuthAppDO;
+    }
+
+    /**
+     * Returns tenant domain.
+     *
+     * @param oAuthAppDO
+     * @return Tenant domain for OAuth app
+     */
+    public static String getTenantDomain(OAuthAppDO oAuthAppDO) {
+
+        String tenantDomain = OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
+        return tenantDomain;
+    }
+
+    /**
+     * Returns ID Token
+     *
+     * @param request
+     * @return ID token
+     */
+    public static String getIdToken(HttpServletRequest request) {
+
+        String idTokenHint = request.getParameter(OIDCSessionConstants.OIDC_ID_TOKEN_HINT_PARAM);
+        if (idTokenHint != null) {
+            return idTokenHint;
+        }
+        return null;
+    }
+
+    /**
+     * Returns client ID from ID Token Hint.
+     *
+     * @param idTokenHint
+     * @return client ID from ID Token Hint
+     */
+    public static String getClientIdFromIDTokenHint(String idTokenHint) {
+
+        String clientId = null;
+        if (StringUtils.isNotBlank(idTokenHint)) {
+            try {
+                clientId = extractClientFromIdToken(idTokenHint);
+            } catch (ParseException e) {
+                log.error("Error while decoding the ID Token Hint.", e);
+            }
+        }
+        return clientId;
+    }
+
+    /**
+     * Extract client Id from ID Token Hint.
+     *
+     * @param idToken
+     * @return client Id from ID Token Hint
+     * @throws ParseException
+     */
+    public static String extractClientFromIdToken(String idToken) throws ParseException {
+
+        return SignedJWT.parse(idToken).getJWTClaimsSet().getAudience().get(0);
+    }
+
+    /**
+     * Validate Id Token Hint.
+     *
+     * @param clientId
+     * @param idToken
+     * @return validity of ID token
+     * @throws IdentityOAuth2Exception
+     * @throws InvalidOAuthClientException
+     */
+    public static Boolean validateIdTokenHint(String clientId, String idToken) throws IdentityOAuth2Exception,
+            InvalidOAuthClientException {
+
+        String tenantDomain = getSigningTenantDomain(getOAuthAppDO(clientId));
+        if (StringUtils.isEmpty(tenantDomain)) {
+            return false;
+        }
+        int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
+        RSAPublicKey publicKey;
+
+        try {
+            KeyStoreManager keyStoreManager = KeyStoreManager.getInstance(tenantId);
+
+            if (!tenantDomain.equals(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)) {
+                String ksName = tenantDomain.trim().replace(".", "-");
+                String jksName = ksName + ".jks";
+                publicKey = (RSAPublicKey) keyStoreManager.getKeyStore(jksName).getCertificate(tenantDomain)
+                        .getPublicKey();
+            } else {
+                publicKey = (RSAPublicKey) keyStoreManager.getDefaultPublicKey();
+            }
+            SignedJWT signedJWT = SignedJWT.parse(idToken);
+            JWSVerifier verifier = new RSASSAVerifier(publicKey);
+
+            return signedJWT.verify(verifier);
+        } catch (JOSEException | ParseException e) {
+            log.error("Error occurred while validating id token signature.", e);
+            return false;
+        } catch (Exception e) {
+            log.error("Error occurred while validating id token signature.", e);
+            return false;
         }
     }
 }
