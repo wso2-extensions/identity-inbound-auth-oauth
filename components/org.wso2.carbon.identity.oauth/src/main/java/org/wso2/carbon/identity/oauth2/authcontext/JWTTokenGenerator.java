@@ -33,11 +33,14 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.core.util.KeyStoreManager;
+import org.wso2.carbon.crypto.api.CryptoContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.common.cryptooperators.CryptoConstants;
+import org.wso2.carbon.identity.oauth.common.cryptooperators.CryptoServiceBasedRSASigner;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
@@ -327,9 +330,16 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
     protected SignedJWT signJWTWithRSA(SignedJWT signedJWT, JWSAlgorithm jwsAlgorithm, String tenantDomain,
                                        int tenantId)
             throws IdentityOAuth2Exception {
+
         try {
-            Key privateKey = getPrivateKey(tenantDomain, tenantId);
-            JWSSigner signer = new RSASSASigner((RSAPrivateKey) privateKey);
+            JWSSigner signer;
+            if (!OAuth2Util.isCryptoServiceEnabled()) {
+                Key privateKey = getPrivateKey(tenantDomain, tenantId);
+                signer = new RSASSASigner((RSAPrivateKey) privateKey);
+            } else {
+                signer = new CryptoServiceBasedRSASigner(CryptoContext.buildEmptyContext(tenantId, tenantDomain),
+                        CryptoConstants.DEFAULT_JCE_PROVIDER);
+            }
             signedJWT.sign(signer);
             return signedJWT;
         } catch (JOSEException e) {

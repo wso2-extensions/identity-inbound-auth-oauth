@@ -176,6 +176,7 @@ public class OAuthServerConfiguration {
     private List<String> supportedIdTokenEncryptionMethods = new ArrayList<>();
     private String userInfoJWTSignatureAlgorithm = "SHA256withRSA";
     private String authContextTTL = "15L";
+    private boolean cryptoServiceEnabled = false;
     // property added to fix IDENTITY-4551 in backward compatible manner
     private boolean useMultiValueSeparatorForAuthContextToken = true;
 
@@ -372,6 +373,9 @@ public class OAuthServerConfiguration {
 
         // Read the value of retain Access Tokens config. If true old token will be stored in Audit table else drop it.
         parseRetainOldAccessTokensConfig(oauthElem);
+
+        // read CryptoService config
+        parseEnableCryptoService(oauthElem);
 
         // Read the value of  old  Access Tokens cleanup enable  config. If true cleanup feature will be enable.
         tokenCleanupFeatureConfig(oauthElem);
@@ -999,6 +1003,8 @@ public class OAuthServerConfiguration {
     public boolean isUseMultiValueSeparatorForAuthContextToken() {
         return useMultiValueSeparatorForAuthContextToken;
     }
+
+    public boolean getCryptoServiceEnabled() { return cryptoServiceEnabled; }
 
     public TokenPersistenceProcessor getPersistenceProcessor() throws IdentityOAuth2Exception {
         if (persistenceProcessor == null) {
@@ -2567,6 +2573,22 @@ public class OAuthServerConfiguration {
         }
     }
 
+    private void parseEnableCryptoService(OMElement oauthConfigElement) {
+
+        OMElement cryptoServiceElement = oauthConfigElement
+                .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.CRYPTO_SERVICE));
+        if (cryptoServiceElement != null) {
+            OMElement enableElement = cryptoServiceElement
+                    .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.CRYPTO_SERVICE_ENABLED));
+            if (enableElement != null) {
+                cryptoServiceEnabled = Boolean.parseBoolean(enableElement.getText());
+            }
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("Is Crypto Service enabled: " + cryptoServiceEnabled);
+        }
+    }
+
     /**
      * Localpart names for the OAuth configuration in identity.xml.
      */
@@ -2744,6 +2766,9 @@ public class OAuthServerConfiguration {
         private static final String HASH_ALGORITHM = "HashAlgorithm";
         private static final String ENABLE_CLIENT_SECRET_HASH = "EnableClientSecretHash";
 
+        //CryptoService Configs
+        private static final String CRYPTO_SERVICE = "CryptoService";
+        private static final String CRYPTO_SERVICE_ENABLED = "Enable";
     }
 
 }

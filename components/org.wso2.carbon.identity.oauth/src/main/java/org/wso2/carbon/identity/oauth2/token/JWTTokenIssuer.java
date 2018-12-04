@@ -37,10 +37,13 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.core.util.KeyStoreManager;
+import org.wso2.carbon.crypto.api.CryptoContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.common.cryptooperators.CryptoConstants;
+import org.wso2.carbon.identity.oauth.common.cryptooperators.CryptoServiceBasedRSASigner;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
@@ -260,39 +263,38 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
                 throw new IdentityOAuth2Exception("Cannot resolve the tenant domain of the user.");
             }
 
+            JWSSigner signer;
             int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
-
-            Key privateKey;
-            if (privateKeys.containsKey(tenantId)) {
-
-                // PrivateKey will not be null because containsKey() true says given key is exist and ConcurrentHashMap
-                // does not allow to store null values.
-                privateKey = privateKeys.get(tenantId);
-            } else {
-
-                // Get tenant's key store manager.
-                KeyStoreManager tenantKSM = KeyStoreManager.getInstance(tenantId);
-                if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantDomain)) {
-                    try {
-                        privateKey = tenantKSM.getDefaultPrivateKey();
-                    } catch (Exception e) {
-                        throw new IdentityOAuth2Exception("Error while obtaining private key for super tenant", e);
-                    }
+            if (!OAuth2Util.isCryptoServiceEnabled()) {
+                Key privateKey;
+                if (privateKeys.containsKey(tenantId)) {
+                    // PrivateKey will not be null because containsKey() true says given key is exist and ConcurrentHashMap
+                    // does not allow to store null values.
+                    privateKey = privateKeys.get(tenantId);
                 } else {
-
-                    // Derive key store name.
-                    String ksName = tenantDomain.trim().replace(".", "-");
-                    String jksName = ksName + KEY_STORE_EXTENSION;
-
-                    // Obtain private key.
-                    privateKey = tenantKSM.getPrivateKey(jksName, tenantDomain);
+                    // Get tenant's key store manager.
+                    KeyStoreManager tenantKSM = KeyStoreManager.getInstance(tenantId);
+                    if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantDomain)) {
+                        try {
+                            privateKey = tenantKSM.getDefaultPrivateKey();
+                        } catch (Exception e) {
+                            throw new IdentityOAuth2Exception("Error while obtaining private key for super tenant", e);
+                        }
+                    } else {
+                        // Derive key store name.
+                        String ksName = tenantDomain.trim().replace(".", "-");
+                        String jksName = ksName + KEY_STORE_EXTENSION;
+                        // Obtain private key.
+                        privateKey = tenantKSM.getPrivateKey(jksName, tenantDomain);
+                    }
+                    // Add the private key to the static concurrent hash map for later uses.
+                    privateKeys.put(tenantId, privateKey);
                 }
-
-                // Add the private key to the static concurrent hash map for later uses.
-                privateKeys.put(tenantId, privateKey);
+                signer = new RSASSASigner((RSAPrivateKey) privateKey);
+            } else {
+                signer = new CryptoServiceBasedRSASigner(CryptoContext.buildEmptyContext(tenantId, tenantDomain),
+                        CryptoConstants.DEFAULT_JCE_PROVIDER);
             }
-
-            JWSSigner signer = new RSASSASigner((RSAPrivateKey) privateKey);
             JWSHeader.Builder headerBuilder = new JWSHeader.Builder((JWSAlgorithm) signatureAlgorithm);
             String certThumbPrint = OAuth2Util.getThumbPrint(tenantDomain, tenantId);
             headerBuilder.keyID(certThumbPrint);

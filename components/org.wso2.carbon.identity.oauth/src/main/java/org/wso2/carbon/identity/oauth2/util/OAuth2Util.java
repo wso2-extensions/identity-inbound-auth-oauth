@@ -50,6 +50,7 @@ import org.apache.oltu.oauth2.common.message.types.ResponseType;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.wso2.carbon.core.util.KeyStoreManager;
+import org.wso2.carbon.crypto.api.CryptoContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
@@ -68,6 +69,10 @@ import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.common.cryptooperators.CryptoConstants;
+import org.wso2.carbon.identity.oauth.common.cryptooperators.CryptoServiceBasedRSAEncrypter;
+import org.wso2.carbon.identity.oauth.common.cryptooperators.CryptoServiceBasedRSASigner;
+import org.wso2.carbon.identity.oauth.common.cryptooperators.CryptoServiceBasedRSAVerifier;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
@@ -1832,19 +1837,27 @@ public class OAuth2Util {
                 return false;
             }
             int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
-            RSAPublicKey publicKey;
-            KeyStoreManager keyStoreManager = KeyStoreManager.getInstance(tenantId);
+            JWSVerifier verifier;
 
-            if (!tenantDomain.equals(org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)) {
-                String ksName = tenantDomain.trim().replace(".", "-");
-                String jksName = ksName + ".jks";
-                publicKey = (RSAPublicKey) keyStoreManager.getKeyStore(jksName).getCertificate(tenantDomain)
-                        .getPublicKey();
+            if (isCryptoServiceEnabled()) {
+                CryptoContext cryptoContext = CryptoContext.buildEmptyContext(tenantId, tenantDomain);
+                verifier = new CryptoServiceBasedRSAVerifier(cryptoContext,
+                        CryptoConstants.DEFAULT_JCE_PROVIDER);
             } else {
-                publicKey = (RSAPublicKey) keyStoreManager.getDefaultPublicKey();
+                RSAPublicKey publicKey;
+                KeyStoreManager keyStoreManager = KeyStoreManager.getInstance(tenantId);
+
+                if (!tenantDomain.equals(org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)) {
+                    String ksName = tenantDomain.trim().replace(".", "-");
+                    String jksName = ksName + ".jks";
+                    publicKey = (RSAPublicKey) keyStoreManager.getKeyStore(jksName).getCertificate(tenantDomain)
+                            .getPublicKey();
+                } else {
+                    publicKey = (RSAPublicKey) keyStoreManager.getDefaultPublicKey();
+                }
+                verifier = new RSASSAVerifier(publicKey);
             }
             SignedJWT signedJWT = SignedJWT.parse(idToken);
-            JWSVerifier verifier = new RSASSAVerifier(publicKey);
 
             return signedJWT.verify(verifier);
         } catch (JOSEException | ParseException e) {
@@ -1926,7 +1939,9 @@ public class OAuth2Util {
                 }
             }
 
+            int tenantId = IdentityTenantUtil.getTenantId(spTenantDomain);
             Certificate publicCert = getX509CertOfOAuthApp(clientId, spTenantDomain);
+
             Key publicKey = publicCert.getPublicKey();
 
             JWEHeader.Builder headerBuilder = new JWEHeader.Builder(encryptionAlgorithm, encryptionMethod);
@@ -1941,7 +1956,14 @@ public class OAuth2Util {
                         encryptionMethod + ", tenant: " + spTenantDomain + " & header: " + header.toString());
             }
 
-            JWEEncrypter encrypter = new RSAEncrypter((RSAPublicKey) publicKey);
+            JWEEncrypter encrypter;
+            if (isCryptoServiceEnabled()) {
+                encrypter = new CryptoServiceBasedRSAEncrypter(new CryptoContext(tenantId, spTenantDomain,
+                        IdentityApplicationConstants.OAuth2.NAME, clientId, null, null),
+                        CryptoConstants.DEFAULT_JCE_PROVIDER);
+            } else {
+                encrypter = new RSAEncrypter((RSAPublicKey) publicKey);
+            }
             encryptedJWT.encrypt(encrypter);
 
             return encryptedJWT;
@@ -2003,10 +2025,15 @@ public class OAuth2Util {
                 log.debug("Signing JWT using the algorithm: " + signatureAlgorithm + " & key of the tenant: " +
                         tenantDomain);
             }
-
+            JWSSigner signer;
             int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
-            Key privateKey = getPrivateKey(tenantDomain, tenantId);
-            JWSSigner signer = new RSASSASigner((RSAPrivateKey) privateKey);
+            if (!isCryptoServiceEnabled()) {
+                Key privateKey = getPrivateKey(tenantDomain, tenantId);
+                signer = new RSASSASigner((RSAPrivateKey) privateKey);
+            } else {
+                signer = new CryptoServiceBasedRSASigner(CryptoContext.buildEmptyContext(tenantId, tenantDomain),
+                        CryptoConstants.DEFAULT_JCE_PROVIDER);
+            }
             JWSHeader.Builder headerBuilder = new JWSHeader.Builder((JWSAlgorithm) signatureAlgorithm);
             headerBuilder.keyID(getThumbPrint(tenantDomain, tenantId));
             headerBuilder.x509CertThumbprint(new Base64URL(getThumbPrint(tenantDomain, tenantId)));
@@ -2571,6 +2598,16 @@ public class OAuth2Util {
      */
     public static boolean isClaimsParameterSupported() {
         return Boolean.TRUE;
+    }
+
+    /**
+     * Check if Crypto Service is enabled.
+     *
+     * @return true if enabled.
+     */
+    public static boolean isCryptoServiceEnabled() {
+
+        return OAuthServerConfiguration.getInstance().getCryptoServiceEnabled();
     }
 
 }

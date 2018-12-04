@@ -42,6 +42,27 @@
             <groupId>org.wso2.orbit.org.apache.oltu.oauth2</groupId>
             <artifactId>oltu</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.wso2.orbit.com.nimbusds</groupId>
+            <artifactId>nimbus-jose-jwt</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.minidev</groupId>
+            <artifactId>json-smart</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon.identity.framework</groupId>
+            <artifactId>org.wso2.carbon.identity.application.mgt</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon.crypto</groupId>
+            <artifactId>org.wso2.carbon.crypto.api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.felix</groupId>
+            <artifactId>org.apache.felix.scr.ds-annotations</artifactId>
+            <scope>provided</scope>
+        </dependency>
         <!--Test Dependencies-->
         <dependency>
             <groupId>org.testng</groupId>
@@ -70,6 +91,10 @@
         <plugins>
             <plugin>
                 <groupId>org.apache.felix</groupId>
+                <artifactId>maven-scr-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.felix</groupId>
                 <artifactId>maven-bundle-plugin</artifactId>
                 <extensions>true</extensions>
                 <configuration>
@@ -77,16 +102,37 @@
                         <Bundle-SymbolicName>
                             ${project.artifactId}
                         </Bundle-SymbolicName>
+                        <Private-Package>
+                            org.wso2.carbon.identity.oauth.common.internal
+                        </Private-Package>
+                        <Export-Package>
+                            !org.wso2.carbon.identity.oauth.common.internal,
+                            org.wso2.carbon.identity.oauth.common.*;version="${identity.inbound.auth.oauth.exp.pkg.version}",
+                        </Export-Package>
                         <Import-Package>
+                            javax.crypto.spec,
+                            javax.servlet.http; version="${imp.pkg.version.javax.servlet}",
+                            net.minidev.json,
+
+                            org.osgi.framework; version="${osgi.framework.imp.pkg.version.range}",
+                            org.osgi.service.component; version="${osgi.service.component.imp.pkg.version.range}",
+
                             org.apache.oltu.oauth2.as.validator; version="${oltu.package.import.version.range}",
                             org.apache.oltu.oauth2.common.*; version="${oltu.package.import.version.range}",
                             org.apache.commons.lang.*; version="${commons-lang.version.range}",
+                            org.apache.commons.logging; version="${commons-logging.osgi.version.range}",
                             org.wso2.carbon.identity.base; version="${carbon.identity.framework.imp.pkg.version.range}",
-                            javax.servlet.http; version="${imp.pkg.version.javax.servlet}"
+
+                            com.nimbusds.jose.*; version="${nimbusds.osgi.version.range}",
+                            com.nimbusds.jwt; version="${nimbusds.osgi.version.range}",
+
+                            org.wso2.carbon.crypto.api; version="${carbon.crypto.api.imp.pkg.version.range}",
+                            org.wso2.carbon.base; version="${carbon.base.imp.pkg.version.range}",
+                            org.wso2.carbon.base.api; version="${carbon.base.imp.pkg.version.range}",
+                            org.wso2.carbon.identity.application.mgt; version="${carbon.identity.framework.imp.pkg.version.range}",
+                            org.wso2.carbon.identity.application.common.*;version="${carbon.identity.framework.imp.pkg.version.range}",
+                            org.wso2.carbon.identity.core.*; version="${carbon.identity.framework.imp.pkg.version.range}",
                         </Import-Package>
-                        <Export-Package>
-                            org.wso2.carbon.identity.oauth.common.*;version="${identity.inbound.auth.oauth.exp.pkg.version}"
-                        </Export-Package>
                     </instructions>
                 </configuration>
             </plugin>
@@ -152,7 +198,6 @@
                                         <limit implementation="org.jacoco.report.check.Limit">
                                             <counter>COMPLEXITY</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.80</minimum>
                                         </limit>
                                     </limits>
                                 </rule>

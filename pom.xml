@@ -131,6 +131,11 @@
                 <artifactId>org.wso2.carbon.identity.event</artifactId>
                 <version>${carbon.identity.framework.version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.wso2.carbon.crypto</groupId>
+                <artifactId>org.wso2.carbon.crypto.api</artifactId>
+                <version>${version.carbon.crypto.api}</version>
+            </dependency>
 
             <!-- Commons dependencies -->
             <dependency>
@@ -722,6 +727,8 @@
         <carbon.kernel.version>4.4.23</carbon.kernel.version>
         <carbon.kernel.imp.pkg.version.range>[4.4.0, 5.0.0)</carbon.kernel.imp.pkg.version.range>
         <carbon.kernel.registry.imp.pkg.version.range>[1.0.1, 2.0.0)</carbon.kernel.registry.imp.pkg.version.range>
+        <carbon.crypto.api.imp.pkg.version.range>[1.0.0, 1.1.0]</carbon.crypto.api.imp.pkg.version.range>
+        <version.carbon.crypto.api>1.0.3</version.carbon.crypto.api>
 
         <!-- Carbon Identity Framework version -->
         <carbon.identity.framework.version>5.12.118</carbon.identity.framework.version>

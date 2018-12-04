@@ -29,11 +29,14 @@ import org.apache.commons.logging.LogFactory;
 import org.json.JSONObject;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.core.util.KeyStoreManager;
+import org.wso2.carbon.crypto.api.CryptoContext;
 import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.oauth.common.cryptooperators.CryptoConstants;
+import org.wso2.carbon.identity.oauth.common.cryptooperators.CryptoServiceBasedRSAVerifier;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
@@ -385,21 +388,26 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
         }
         int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
         RSAPublicKey publicKey;
-
+        JWSVerifier verifier;
         try {
-            KeyStoreManager keyStoreManager = KeyStoreManager.getInstance(tenantId);
-
-            if (!tenantDomain.equals(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)) {
-                String ksName = tenantDomain.trim().replace(".", "-");
-                String jksName = ksName + ".jks";
-                publicKey = (RSAPublicKey) keyStoreManager.getKeyStore(jksName).getCertificate(tenantDomain)
-                        .getPublicKey();
-            } else {
-                publicKey = (RSAPublicKey) keyStoreManager.getDefaultPublicKey();
-            }
             SignedJWT signedJWT = SignedJWT.parse(idToken);
-            JWSVerifier verifier = new RSASSAVerifier(publicKey);
+            if (OAuth2Util.isCryptoServiceEnabled()) {
+                verifier = new CryptoServiceBasedRSAVerifier(CryptoContext.buildEmptyContext(tenantId, tenantDomain),
+                        CryptoConstants.DEFAULT_JCE_PROVIDER);
+            } else {
+                KeyStoreManager keyStoreManager = KeyStoreManager.getInstance(tenantId);
 
+                if (!tenantDomain.equals(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)) {
+                    String ksName = tenantDomain.trim().replace(".", "-");
+                    String jksName = ksName + ".jks";
+                    publicKey = (RSAPublicKey) keyStoreManager.getKeyStore(jksName).getCertificate(tenantDomain)
+                            .getPublicKey();
+                } else {
+                    publicKey = (RSAPublicKey) keyStoreManager.getDefaultPublicKey();
+                }
+                verifier = new RSASSAVerifier(publicKey);
+
+            }
             return signedJWT.verify(verifier);
         } catch (JOSEException | ParseException e) {
             log.error("Error occurred while validating id token signature.", e);
