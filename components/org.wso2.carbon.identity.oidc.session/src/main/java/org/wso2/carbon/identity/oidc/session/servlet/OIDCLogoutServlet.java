@@ -119,7 +119,10 @@ public class OIDCLogoutServlet extends HttpServlet {
             if (log.isDebugEnabled()) {
                 log.debug(msg);
             }
-            if (!OIDCSessionManagementUtil.handleAlreadyLoggedOutSessionsGracefully()) {
+            if (OIDCSessionManagementUtil.handleAlreadyLoggedOutSessionsGracefully()) {
+                handleMissingSessionStateGracefully(request, response);
+                return;
+            } else {
                 if (log.isDebugEnabled()) {
                     msg = "HandleAlreadyLoggedOutSessionsGracefully configuration disabled. Missing session state is " +
                             "handled by redirecting to error page instead of default logout page.";
@@ -129,8 +132,6 @@ public class OIDCLogoutServlet extends HttpServlet {
                 response.sendRedirect(getRedirectURL(redirectURL, request));
                 return;
             }
-            handleMissingSessionStateGracefully(request, response);
-            return;
         }
 
         if (!OIDCSessionManagementUtil.getSessionManager().sessionExists(opBrowserStateCookie.getValue())) {
@@ -138,7 +139,10 @@ public class OIDCLogoutServlet extends HttpServlet {
             if (log.isDebugEnabled()) {
                 log.debug(msg);
             }
-            if (!OIDCSessionManagementUtil.handleAlreadyLoggedOutSessionsGracefully()) {
+            if (OIDCSessionManagementUtil.handleAlreadyLoggedOutSessionsGracefully()) {
+                handleMissingSessionStateGracefully(request, response);
+                return;
+            } else {
                 if (log.isDebugEnabled()) {
                     msg = "HandleAlreadyLoggedOutSessionsGracefully configuration enabled. No valid session found is " +
                             "handled by redirecting to error page instead of default logout page.";
@@ -148,8 +152,6 @@ public class OIDCLogoutServlet extends HttpServlet {
                 response.sendRedirect(getRedirectURL(redirectURL, request));
                 return;
             }
-            handleMissingSessionStateGracefully(request, response);
-            return;
         }
 
         String consent = request.getParameter(OIDCSessionConstants.OIDC_LOGOUT_CONSENT_PARAM);
