@@ -39,6 +39,8 @@ public class OIDCSessionConstants {
     public static class OIDCConfigElements {
         public static final String OIDC_LOGOUT_CONSENT_PAGE_URL = "OIDCLogoutConsentPage";
         public static final String OIDC_LOGOUT_PAGE_URL = "OIDCLogoutPage";
+        public static final String HANDLE_ALREADY_LOGGED_OUT_SESSIONS_GRACEFULLY =
+                "HandleAlreadyLoggedOutSessionsGracefully";
     }
 
     public static class OIDCEndpoints {
