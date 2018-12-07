@@ -404,8 +404,8 @@ public class OIDCLogoutServlet extends HttpServlet {
             return true;
         } else if (registeredCallbackUri.equals(postLogoutUri)) {
             return true;
-        } else {    // Provided Post logout redirect URL does not match the registered callback url.
-            log.warn("Provided Post logout redirect URL does not match with the provided one.");
+        } else {
+            log.warn("Provided Post logout redirect URL does not match the registered callback url.");
             return false;
         }
     }
