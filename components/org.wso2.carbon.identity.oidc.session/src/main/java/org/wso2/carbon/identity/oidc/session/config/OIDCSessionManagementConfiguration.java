@@ -41,6 +41,7 @@ public class OIDCSessionManagementConfiguration {
 
     private String oidcLogoutConsentPageUrl = null;
     private String oidcLogoutPageUrl = null;
+    private boolean handleAlreadyLoggedOutSessionsGracefully = true;
 
     private static final String CONFIG_ELEM_OAUTH = "OAuth";
 
@@ -107,9 +108,25 @@ public class OIDCSessionManagementConfiguration {
                 oidcLogoutPageUrl = IdentityUtil.fillURLPlaceholders(element.getText());
             }
         }
+
+        element = oauthConfigElement.getFirstChildWithName(getQNameWithIdentityNS(
+                OIDCSessionConstants.OIDCConfigElements.HANDLE_ALREADY_LOGGED_OUT_SESSIONS_GRACEFULLY));
+        if (element != null) {
+            handleAlreadyLoggedOutSessionsGracefully = Boolean.parseBoolean(element.getText());
+        }
     }
 
     private QName getQNameWithIdentityNS(String localPart) {
         return new QName(IdentityCoreConstants.IDENTITY_DEFAULT_NAMESPACE, localPart);
+    }
+
+    /**
+     * Returns config for handling already logged out sessions gracefully.
+     *
+     * @return Return true if config is enabled.
+     */
+    public boolean handleAlreadyLoggedOutSessionsGracefully() {
+
+        return handleAlreadyLoggedOutSessionsGracefully;
     }
 }

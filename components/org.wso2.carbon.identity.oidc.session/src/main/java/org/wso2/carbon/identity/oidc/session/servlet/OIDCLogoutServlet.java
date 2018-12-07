@@ -119,8 +119,17 @@ public class OIDCLogoutServlet extends HttpServlet {
             if (log.isDebugEnabled()) {
                 log.debug(msg);
             }
-            redirectURL = OIDCSessionManagementUtil.getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, msg);
-            response.sendRedirect(getRedirectURL(redirectURL, request));
+            if (!OIDCSessionManagementUtil.handleAlreadyLoggedOutSessionsGracefully()) {
+                if (log.isDebugEnabled()) {
+                    msg = "HandleAlreadyLoggedOutSessionsGracefully configuration disabled. Missing session state is " +
+                            "handled by redirecting to error page instead of default logout page.";
+                    log.debug(msg);
+                }
+                redirectURL = OIDCSessionManagementUtil.getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, msg);
+                response.sendRedirect(getRedirectURL(redirectURL, request));
+                return;
+            }
+            handleMissingSessionStateGracefully(request, response);
             return;
         }
 
@@ -129,8 +138,17 @@ public class OIDCLogoutServlet extends HttpServlet {
             if (log.isDebugEnabled()) {
                 log.debug(msg);
             }
-            redirectURL = OIDCSessionManagementUtil.getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, msg);
-            response.sendRedirect(getRedirectURL(redirectURL, request));
+            if (!OIDCSessionManagementUtil.handleAlreadyLoggedOutSessionsGracefully()) {
+                if (log.isDebugEnabled()) {
+                    msg = "HandleAlreadyLoggedOutSessionsGracefully configuration enabled. No valid session found is " +
+                            "handled by redirecting to error page instead of default logout page.";
+                    log.debug(msg);
+                }
+                redirectURL = OIDCSessionManagementUtil.getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, msg);
+                response.sendRedirect(getRedirectURL(redirectURL, request));
+                return;
+            }
+            handleMissingSessionStateGracefully(request, response);
             return;
         }
 
@@ -638,5 +656,43 @@ public class OIDCLogoutServlet extends HttpServlet {
             log.error("Error while getting Service provider name for client Id:" + clientId + " in tenant: " + tenantDomain, e);
         }
         return spName;
+    }
+
+    private void handleMissingSessionStateGracefully(HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+
+        String redirectURL = OIDCSessionManagementUtil.getOIDCLogoutURL();
+        String idTokenHint = request.getParameter(OIDCSessionConstants.OIDC_ID_TOKEN_HINT_PARAM);
+        String postLogoutRedirectUri = request.getParameter(OIDCSessionConstants.OIDC_POST_LOGOUT_REDIRECT_URI_PARAM);
+        if (StringUtils.isEmpty(idTokenHint) || StringUtils.isEmpty(postLogoutRedirectUri)) {
+            response.sendRedirect(getRedirectURL(redirectURL, request));
+            return;
+        }
+        if (!validateIdToken(idTokenHint)) {
+            String msg = "ID token signature validation failed.";
+            log.error(msg);
+            redirectURL = OIDCSessionManagementUtil.getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, msg);
+            response.sendRedirect(getRedirectURL(redirectURL, request));
+            return;
+        }
+        try {
+            String clientId = extractClientFromIdToken(idTokenHint);
+            String callbackUrl = new OAuthAppDAO().getAppInformation(clientId).getCallbackUrl();
+            if (validatePostLogoutUri(postLogoutRedirectUri, callbackUrl)) {
+                redirectURL = postLogoutRedirectUri;
+            } else {
+                redirectURL = OIDCSessionManagementUtil.getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED,
+                        "Post logout URI does not match with registered callback URI.");
+            }
+        } catch (ParseException e) {
+            String msg = "Error occurred while getting application information.";
+            log.error(msg, e);
+            redirectURL = OIDCSessionManagementUtil.getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, msg);
+        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+            String msg = "Error occurred while getting application information. Client id not found.";
+            log.error(msg, e);
+            redirectURL = OIDCSessionManagementUtil.getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, msg);
+        }
+        response.sendRedirect(getRedirectURL(redirectURL, request));
     }
 }
