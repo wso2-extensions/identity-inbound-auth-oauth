@@ -70,6 +70,8 @@
     String[] supportedIdTokenEncryptionAlgorithms = null;
     String[] supportedIdTokenEncryptionMethods = null;
     String logoutUrl = null;
+    boolean isBackchannelLogoutEnabled = false;
+    boolean isFrontchannelLogoutEnabled = false;
 
     try {
 
@@ -133,10 +135,12 @@
                 app.setFrontchannelLogoutUrl("");
             }
 
-            if (app.getFrontchannelLogoutUrl() != "") {
-                logoutUrl = app.getFrontchannelLogoutUrl();
-            } else if (app.getBackChannelLogoutUrl() != "") {
+            if (app.getBackChannelLogoutUrl() != "") {
                 logoutUrl = app.getBackChannelLogoutUrl();
+                isBackchannelLogoutEnabled = true;
+            } else if (app.getFrontchannelLogoutUrl() != "") {
+                logoutUrl = app.getFrontchannelLogoutUrl();
+                isFrontchannelLogoutEnabled = true;
             } else {
                 logoutUrl = "";
             }
@@ -275,13 +279,13 @@
                                 return false;
                             }
 
-                            if (oidcLogoutType === "<%= OAuthConstants.OIDCConfigProperties.BACK_CHANNEL_LOGOUT_SELECTED%>") {
+                            if (oidcLogoutType === "<%= OAuthConstants.OIDCConfigProperties.BACK_CHANNEL_LOGOUT%>") {
                                 if (!((isWhiteListed(oidcLogoutUrl, ["https-url"]) || isWhiteListed(oidcLogoutUrl, ["http-url"]))) || !isNotBlackListed(oidcLogoutUrl,
                                     ["uri-unsafe-exists"])) {
                                     CARBON.showWarningDialog('<fmt:message key="logout.is.not.url"/>');
                                     return false;
                                 }
-                            } else if (oidcLogoutType === "<%= OAuthConstants.OIDCConfigProperties.FRONT_CHANNEL_LOGOUT_SELECTED%>") {
+                            } else if (oidcLogoutType === "<%= OAuthConstants.OIDCConfigProperties.FRONT_CHANNEL_LOGOUT%>") {
                                 if (!isWhiteListed(oidcLogoutUrl, ["https-url"]) || !isNotBlackListed(oidcLogoutUrl, ["uri-unsafe-exists"])) {
                                     CARBON.showWarningDialog('<fmt:message key="logout.is.not.https.url"/>');
                                     return false;
@@ -830,7 +834,7 @@
                                                                   id="logout_none"
                                                                   value="<%= Encode.forHtmlAttribute(OAuthConstants.OIDCConfigProperties.NO_LOGOUT_SELECTED)%>"
                                                                   onclick="toggleOidcLogout(this)"
-                                                        <%= (((app.getFrontchannelLogoutUrl() == "") && (app.getBackChannelLogoutUrl() == "")) ? "checked" : "")%>
+                                                        <%= (((!isFrontchannelLogoutEnabled && !isBackchannelLogoutEnabled)) ? "checked" : "")%>
                                                 />
                                                     <fmt:message key="no.logout.mechanism"/>
                                                 </label>
@@ -839,9 +843,9 @@
                                             <tr>
                                                 <td><label><input type="radio" name="logoutMechanism"
                                                                   id="frontchannel_logout"
-                                                                  value="<%= Encode.forHtmlAttribute(OAuthConstants.OIDCConfigProperties.FRONT_CHANNEL_LOGOUT_SELECTED)%>"
+                                                                  value="<%= Encode.forHtmlAttribute(OAuthConstants.OIDCConfigProperties.FRONT_CHANNEL_LOGOUT)%>"
                                                                   onclick="toggleOidcLogout(this)"
-                                                        <%= ((app.getFrontchannelLogoutUrl() != "") ? "checked" : "")%>
+                                                        <%= ((isFrontchannelLogoutEnabled && !isBackchannelLogoutEnabled) ? "checked" : "")%>
                                                 />
                                                     <fmt:message key="oidc.frontchannel.logout"/>
                                                 </label>
@@ -850,9 +854,9 @@
                                             <tr>
                                                 <td><label><input type="radio" name="logoutMechanism"
                                                                   id="backchannel_logout"
-                                                                  value="<%= Encode.forHtmlAttribute(OAuthConstants.OIDCConfigProperties.BACK_CHANNEL_LOGOUT_SELECTED)%>"
+                                                                  value="<%= Encode.forHtmlAttribute(OAuthConstants.OIDCConfigProperties.BACK_CHANNEL_LOGOUT)%>"
                                                                   onclick="toggleOidcLogout(this)"
-                                                        <%= ((app.getBackChannelLogoutUrl() != "") ? "checked" : "")%>
+                                                        <%= (isBackchannelLogoutEnabled ? "checked" : "")%>
                                                 />
                                                     <fmt:message key="oidc.backchannel.logout"/>
                                                 </label>

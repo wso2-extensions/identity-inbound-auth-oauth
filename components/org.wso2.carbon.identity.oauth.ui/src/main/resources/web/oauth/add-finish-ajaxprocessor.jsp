@@ -109,10 +109,9 @@
             app.setIdTokenExpiryTime(Long.parseLong(idTokenExpiryTime));
             app.setTokenType(tokenType);
 
-            if (OAuthConstants.OIDCConfigProperties.BACK_CHANNEL_LOGOUT_SELECTED.equalsIgnoreCase(logoutMechanism)) {
+            if (OAuthConstants.OIDCConfigProperties.BACK_CHANNEL_LOGOUT.equalsIgnoreCase(logoutMechanism)) {
                 app.setBackChannelLogoutUrl(logoutUrl);
-            } else if (OAuthConstants.OIDCConfigProperties.FRONT_CHANNEL_LOGOUT_SELECTED
-                    .equalsIgnoreCase(logoutMechanism)) {
+            } else if (OAuthConstants.OIDCConfigProperties.FRONT_CHANNEL_LOGOUT.equalsIgnoreCase(logoutMechanism)) {
                 app.setFrontchannelLogoutUrl(logoutUrl);
             }
 

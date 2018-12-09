@@ -328,8 +328,8 @@ public final class OAuthConstants {
         public static final String ID_TOKEN_ENCRYPTION_ALGORITHM = "idTokenEncryptionAlgorithm";
         public static final String ID_TOKEN_ENCRYPTION_METHOD = "idTokenEncryptionMethod";
         public static final String NO_LOGOUT_SELECTED = "none";
-        public static final String BACK_CHANNEL_LOGOUT_SELECTED = "backchannel";
-        public static final String FRONT_CHANNEL_LOGOUT_SELECTED = "frontchannel";
+        public static final String BACK_CHANNEL_LOGOUT = "backchannel";
+        public static final String FRONT_CHANNEL_LOGOUT = "frontchannel";
         public static final String BACK_CHANNEL_LOGOUT_URL = "backChannelLogoutURL";
         public static final String FRONT_CHANNEL_LOGOUT_URL = "frontchannelLogoutURL";
         public static final String TOKEN_TYPE = "tokenType";
