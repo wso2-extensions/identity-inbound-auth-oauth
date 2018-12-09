@@ -122,8 +122,8 @@ public class DynamicLogoutPageBuilderUtil {
             if (!sessionParticipants.isEmpty()) {
                 OAuthAppDO oAuthAppDO;
 
-                try {
-                    for (String clientID : sessionParticipants) {
+                for (String clientID : sessionParticipants) {
+                    try {
                         oAuthAppDO = OIDCSessionManagementUtil.getOAuthAppDO(clientID);
                         String frontchannelLogoutURL = oAuthAppDO.getFrontchannelLogoutUrl();
                         if (frontchannelLogoutURL != null) {
@@ -131,9 +131,11 @@ public class DynamicLogoutPageBuilderUtil {
                                 frontchannelLogoutURLs.add(frontchannelLogoutURL);
                             }
                         }
+                    } catch (IdentityOAuth2Exception e) {
+                        log.error("Error while getting Logout URL for client id: " + clientID, e);
+                    } catch (InvalidOAuthClientException e) {
+                        log.error("Client id " + clientID + "is invalid.", e);
                     }
-                } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
-                    log.error("Error while getting Frontchannel Logout URLs", e);
                 }
             }
         }
