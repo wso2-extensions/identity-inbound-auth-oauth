@@ -270,6 +270,7 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
         TestUtil.startTenantFlow(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
 
         mockStatic(OIDCSessionManagementUtil.class);
+        when(OIDCSessionManagementUtil.handleAlreadyLoggedOutSessionsGracefully()).thenReturn(false);
         when(OIDCSessionManagementUtil.getOPBrowserStateCookie(request)).thenReturn((Cookie) cookie);
         when(OIDCSessionManagementUtil.getErrorPageURL(anyString(), anyString())).thenReturn(redirectUrl);
 
@@ -335,6 +336,98 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
         when(OAuth2Util.getTenantDomainOfOauthApp(any(oAuthAppDO.getClass()))).thenReturn("wso2.com");
         when(keyStoreManager.getKeyStore(anyString())).thenReturn(TestUtil.loadKeyStoreFromFileSystem(TestUtil
                 .getFilePath("wso2carbon.jks"), "wso2carbon", "JKS"));
+
+        ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+        logoutServlet.doGet(request, response);
+        verify(response).sendRedirect(captor.capture());
+        assertTrue(captor.getValue().contains(expected));
+    }
+
+    @DataProvider(name = "provideDataForTestHandleMissingSessionStateGracefully")
+    public Object[][] provideDataForTestHandleMissingSessionStateGracefully() {
+
+        Cookie opbsCookie = new Cookie("opbs", OPBROWSER_STATE);
+
+        String idTokenHint =
+                "eyJ4NXQiOiJOVEF4Wm1NeE5ETXlaRGczTVRVMVpHTTBNekV6T0RKaFpXSTRORE5sWkRVMU9HRmtOakZpTVEiLCJr" +
+                        "aWQiOiJOVEF4Wm1NeE5ETXlaRGczTVRVMVpHTTBNekV6T0RKaFpXSTRORE5sWkRVMU9HRmtOakZpTVEiLCJhbGciOiJSUzI1" +
+                        "NiJ9.eyJzdWIiOiJhZG1pbiIsImF1ZCI6WyIzVDlsMnVVZjhBek5PZm1HUzlsUEVJc2RyUjhhIl0sImF6cCI6IjNUOWwydVVmO" +
+                        "EF6Tk9mbUdTOWxQRUlzZHJSOGEiLCJhdXRoX3RpbWUiOjE1MDcwMDk0MDQsImlzcyI6Imh0dHBzOlwvXC9sb2NhbGhvc3Q6OTQ0M" +
+                        "1wvb2F1dGgyXC90b2tlbiIsImV4cCI6MTUwNzAxMzAwNSwibm9uY2UiOiJDcXNVOXdabFFJWUdVQjg2IiwiaWF0IjoxNTA3MDA5ND" +
+                        "A1fQ.ivgnkuW-EFT7m55Mr1pyit1yALwVxrHjVqmgSley1lUhZNAlJMxefs6kjSbGStQg-mqEv0VQ7NJkZu0w1kYYD_76-KkjI1sk" +
+                        "P1zEqSXMhTyE8UtQ-CpR1w8bnTU7D50v-537z8vTf7PnTTA-wxpTuoYmv4ya2z0Rv-gFTM4KPdxsc7j6yFuQcfWg5SyP9lYpJdt-s-O" +
+                        "w9FY1rlUVvNbtF1u2Fruc1kj9jkjSbvFgSONRhizRH6P_25v0LpgNZrOpiLZF92CtkCBbAGQChWACN6RWDpy5Fj2JuQMNcCvkxlv" +
+                        "OVcx-7biH16qVnY9UFs4DxZo2cGzyWbXuH8sDTkzQBg";
+
+        String[] postLogoutUrl = {
+                "http://localhost:8080/playground2/oauth2client",
+                "http://localhost:8080/playground/oauth2client"
+        };
+
+        return new Object[][]{
+                // No id_token_hint.
+                {null, null, null, false, false, "oauth2_logout.do"},
+                // No post_logout_redirect_uri.
+                {null, idTokenHint, null, false, false, "oauth2_logout.do"},
+                // Valid id_token_hint and valid post_logout_redirect_uri.
+                {null, idTokenHint, postLogoutUrl[0], false, false, "playground2/oauth2client"},
+                // Invalid id_token_hint.
+                {null, idTokenHint, postLogoutUrl[0], true, false, "?oauthErrorCode=access_denied"},
+                // Invalid post_logout_redirect_uri.
+                {null, idTokenHint, postLogoutUrl[1], false, false, "?oauthErrorCode=access_denied"},
+                // Invalid session state.
+                {opbsCookie, null, null, false, false, "oauth2_logout.do"},
+        };
+    }
+
+    @Test(dataProvider = "provideDataForTestHandleMissingSessionStateGracefully")
+    public void testHandleMissingSessionStateGracefully(
+            Object cookie, String idTokenHint, String postLogoutUrl, boolean isJWTSignedWithSPKey,
+            boolean sessionExists, String expected) throws Exception {
+
+        String errorPageURL = "?oauthErrorCode=access_denied&oauthErrorMsg=any.";
+        String oidcLogoutURL = "https://localhost:9443/authenticationendpoint/oauth2_logout.do";
+
+        TestUtil.startTenantFlow(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+
+        mockStatic(OIDCSessionManagementUtil.class);
+        when(OIDCSessionManagementUtil.getOPBrowserStateCookie(request)).thenReturn((Cookie) cookie);
+        when(OIDCSessionManagementUtil.handleAlreadyLoggedOutSessionsGracefully()).thenReturn(true);
+        when(OIDCSessionManagementUtil.getErrorPageURL(anyString(), anyString())).thenReturn(errorPageURL);
+        when(OIDCSessionManagementUtil.getOIDCLogoutURL()).thenReturn(oidcLogoutURL);
+        when(OIDCSessionManagementUtil.getSessionManager()).thenReturn(oidcSessionManager);
+        when(oidcSessionManager.sessionExists(OPBROWSER_STATE)).thenReturn(sessionExists);
+
+        mockStatic(OAuthServerConfiguration.class);
+        when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
+        when(oAuthServerConfiguration.isJWTSignedWithSPKey()).thenReturn(isJWTSignedWithSPKey);
+        when(oAuthServerConfiguration.getPersistenceProcessor()).thenReturn(tokenPersistenceProcessor);
+        when(tokenPersistenceProcessor.getProcessedClientId(anyString())).thenAnswer(
+                invocation -> invocation.getArguments()[0]);
+
+        mockStatic(OAuth2Util.class);
+        when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(oAuthAppDO);
+        when(OAuth2Util.getTenantDomainOfOauthApp(any(oAuthAppDO.getClass()))).thenReturn("wso2.com");
+
+        mockStatic(IdentityTenantUtil.class);
+        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(TENANT_ID);
+
+        mockStatic(IdentityConfigParser.class);
+        when(IdentityConfigParser.getInstance()).thenReturn(identityConfigParser);
+
+        mockStatic(IdentityDatabaseUtil.class);
+        when(IdentityDatabaseUtil.getDBConnection()).thenAnswer(invocationOnMock -> dataSource.getConnection());
+
+        mockStatic(KeyStoreManager.class);
+        when(KeyStoreManager.getInstance(TENANT_ID)).thenReturn(keyStoreManager);
+        when(keyStoreManager.getDefaultPublicKey())
+                .thenReturn(TestUtil.getPublicKey(TestUtil.loadKeyStoreFromFileSystem(TestUtil
+                        .getFilePath("wso2carbon.jks"), "wso2carbon", "JKS"), "wso2carbon"));
+        when(keyStoreManager.getKeyStore(anyString())).thenReturn(TestUtil.loadKeyStoreFromFileSystem(TestUtil
+                .getFilePath("wso2carbon.jks"), "wso2carbon", "JKS"));
+
+        when(request.getParameter("id_token_hint")).thenReturn(idTokenHint);
+        when(request.getParameter("post_logout_redirect_uri")).thenReturn(postLogoutUrl);
 
         ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
         logoutServlet.doGet(request, response);

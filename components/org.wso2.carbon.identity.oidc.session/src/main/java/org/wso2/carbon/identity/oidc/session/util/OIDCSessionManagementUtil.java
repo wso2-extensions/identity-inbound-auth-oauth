@@ -332,4 +332,14 @@ public class OIDCSessionManagementUtil {
             oidcSessionStateManager = new DefaultOIDCSessionStateManager();
         }
     }
+
+    /**
+     * Returns config for handling already logged out sessions gracefully.
+     *
+     * @return Return true if config is enabled.
+     */
+    public static boolean handleAlreadyLoggedOutSessionsGracefully() {
+
+        return OIDCSessionManagementConfiguration.getInstance().handleAlreadyLoggedOutSessionsGracefully();
+    }
 }
