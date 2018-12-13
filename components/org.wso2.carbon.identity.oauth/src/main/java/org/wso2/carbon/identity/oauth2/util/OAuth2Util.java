@@ -122,12 +122,10 @@ import java.sql.Timestamp;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
@@ -2575,6 +2573,56 @@ public class OAuth2Util {
      */
     public static boolean isClaimsParameterSupported() {
         return Boolean.TRUE;
+    }
+
+    /**
+     * Returns the federated IdP resolved from the given domain.
+     * For a federated user the user store domain is in the format of FEDERATED:{federated-idp-name}
+     *
+     * @param userStoreDomain user store domain to be resolved from
+     * @return federated IdP name if user store domain is of format FEDERATED:{federated-idp-name}. Else returns null.
+     */
+    public static String getFederatedIdPFromDomain(String userStoreDomain) {
+
+        if (StringUtils.startsWith(userStoreDomain, OAuthConstants.UserType.FEDERATED_USER_DOMAIN_PREFIX)) {
+
+            String[] tokens = userStoreDomain.split(OAuthConstants.UserType.FEDERATED_USER_DOMAIN_SEPARATOR);
+            if (tokens.length == 2) {
+                return tokens[1];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Creates an instance on AuthenticatedUser{@link AuthenticatedUser} for the given parameters.
+     * If given user store domain is of format FEDERATED:{federated-idp-name}, the authenticated user instance will
+     * be flagged as a federated user.
+     *
+     * @param username        username of the user
+     * @param userStoreDomain user store domain
+     * @param tenantDomain    tenent domain
+     * @return an instance of AuthenticatedUser{@link AuthenticatedUser}
+     */
+    public static AuthenticatedUser createAuthenticatedUser(String username, String userStoreDomain, String tenantDomain) {
+
+        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+        authenticatedUser.setUserName(username);
+        authenticatedUser.setTenantDomain(tenantDomain);
+        if (StringUtils.startsWith(userStoreDomain, OAuthConstants.UserType.FEDERATED_USER_DOMAIN_PREFIX) &&
+                !OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal()) {
+            if (log.isDebugEnabled()) {
+                log.debug("Federated prefix found in domain: " + userStoreDomain + " for user: " + username + " in " +
+                        "tenant domain:" + tenantDomain + ". Flag user as a federated user.");
+            }
+            authenticatedUser.setFederatedUser(true);
+            authenticatedUser.setFederatedIdPName(OAuth2Util.getFederatedIdPFromDomain(userStoreDomain));
+        } else {
+            authenticatedUser.setUserStoreDomain(userStoreDomain);
+        }
+
+        return authenticatedUser;
     }
 
 }
