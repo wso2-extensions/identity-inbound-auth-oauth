@@ -22,7 +22,7 @@ import org.wso2.carbon.identity.application.common.cache.BaseCache;
 import org.wso2.carbon.utils.CarbonUtils;
 
 /**
- * JWKSCache is used to cache oauth application information.
+ * JWKS cache enables caching responses from JWK URIs
  */
 public class JWKSCache extends BaseCache<JWKSCacheKey, JWKSCacheEntry> {
 

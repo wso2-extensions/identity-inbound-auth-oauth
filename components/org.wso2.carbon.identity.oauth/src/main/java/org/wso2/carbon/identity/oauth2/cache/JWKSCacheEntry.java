@@ -21,7 +21,9 @@ package org.wso2.carbon.identity.oauth2.cache;
 import com.nimbusds.jose.jwk.source.RemoteJWKSet;
 import com.nimbusds.jose.proc.SecurityContext;
 
-
+/**
+ * JWKSCacheEntry wraps RemoteJWKSet cache value to make them serializable. This will be used with JWKSCache.
+ */
 public class JWKSCacheEntry extends org.wso2.carbon.identity.application.common.cache.CacheEntry {
 
     private transient RemoteJWKSet<SecurityContext> jwkSet;

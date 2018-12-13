@@ -21,6 +21,9 @@ package org.wso2.carbon.identity.oauth2.cache;
 
 import java.io.Serializable;
 
+/**
+ * Key attribute of JWKSCache is jwksUri. JWKS cache is stored against this key.
+ */
 public class JWKSCacheKey implements Serializable {
 
     private static final long serialVersionUID = 5023478840178743769L;
