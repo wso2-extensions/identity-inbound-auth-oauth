@@ -22,6 +22,7 @@ import com.nimbusds.jose.JWSAlgorithm;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.mockito.Mock;
 import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
@@ -49,6 +50,7 @@ import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.tenant.TenantManager;
+import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -1164,5 +1166,89 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
     @Test
     public void testIsClaimsParameterSupported() throws Exception {
         assertTrue(OAuth2Util.isClaimsParameterSupported());
+    }
+
+    public Object[][] getFederatedUserStoreDomainsWithNoIdP() {
+
+        return new Object[][]{
+                {OAuthConstants.UserType.FEDERATED_USER_DOMAIN_PREFIX},
+                {"federated"},
+                {null},
+                {""}
+        };
+    }
+
+    @Test(dataProvider = "getFederatedUserStoreDomainsWithNoIdP")
+    public void testGetFederatedIdPFromDomainForDomainsWithNoIdP(String userStoreDomain) throws Exception {
+
+        assertNull(OAuth2Util.getFederatedIdPFromDomain(userStoreDomain));
+    }
+
+    @Test
+    public void testGetFederatedIdPFromDomainForDomainWithIdP() throws Exception {
+
+        String federatedIdP = "facebook";
+        String userStoreDomain = String.join(OAuthConstants.UserType.FEDERATED_USER_DOMAIN_SEPARATOR, OAuthConstants
+                .UserType.FEDERATED_USER_DOMAIN_PREFIX, federatedIdP);
+
+        assertEquals(OAuth2Util.getFederatedIdPFromDomain(userStoreDomain), federatedIdP);
+    }
+
+    @Test
+    public void testCreateLocalAuthenticatedUser() throws Exception {
+
+        String username = "testuser1";
+        String userStoreDomain = "PRIMARY";
+        String tenantDomain = "carbon.super";
+
+        AuthenticatedUser authenticatedUser = OAuth2Util.createAuthenticatedUser(username, userStoreDomain,
+                tenantDomain);
+        Assert.assertEquals(authenticatedUser.getUserName(), username);
+        Assert.assertEquals(authenticatedUser.getUserStoreDomain(), userStoreDomain);
+        Assert.assertEquals(authenticatedUser.getTenantDomain(), tenantDomain);
+        Assert.assertEquals(authenticatedUser.toString(), UserCoreUtil.addTenantDomainToEntry(UserCoreUtil
+                .addDomainToName(username, userStoreDomain), tenantDomain), "When user store domain is not " +
+                "'FEDERATED' full qualified username of the user should be in " +
+                "{user-store-domain}/{username}@{tenant-domain} format.");
+    }
+
+    @Test
+    public void testCreateFederatedAuthenticatedUserWithoutAuthenticatedIdP() throws Exception {
+
+        String username = "testuser1";
+        String userStoreDomain = "FEDERATED";
+        String tenantDomain = "carbon.super";
+
+        AuthenticatedUser authenticatedUser = OAuth2Util.createAuthenticatedUser(username, userStoreDomain,
+                tenantDomain);
+        Assert.assertEquals(authenticatedUser.getUserName(), username);
+        Assert.assertEquals(authenticatedUser.getTenantDomain(), tenantDomain);
+        Assert.assertTrue(authenticatedUser.isFederatedUser(), "When user store domain is 'FEDERATED' user should be " +
+                "flagged as a federated user.");
+        Assert.assertEquals(authenticatedUser.toString(), UserCoreUtil.addTenantDomainToEntry(username, tenantDomain)
+                , "When user store domain is 'FEDERATED' full qualified username " +
+                        "of the user should be in {username}@{tenant-domain} format.");
+    }
+
+    @Test
+    public void testCreateFederatedAuthenticatedUserWithAuthenticatedIdP() throws Exception {
+
+        String username = "testuser1";
+        String federatedIdP = "facebook";
+        String userStoreDomain = String.join(OAuthConstants.UserType.FEDERATED_USER_DOMAIN_SEPARATOR, OAuthConstants
+                .UserType.FEDERATED_USER_DOMAIN_PREFIX, federatedIdP);
+        String tenantDomain = "carbon.super";
+
+        AuthenticatedUser authenticatedUser = OAuth2Util.createAuthenticatedUser(username, userStoreDomain,
+                tenantDomain);
+        Assert.assertEquals(authenticatedUser.getUserName(), username);
+        Assert.assertEquals(authenticatedUser.getTenantDomain(), tenantDomain);
+        Assert.assertEquals(authenticatedUser.getFederatedIdPName(), federatedIdP, "When user store domain is of " +
+                "format 'FEDERATED:{idp-name}' federatedIdPName of the user should match {idp-name}.");
+        Assert.assertTrue(authenticatedUser.isFederatedUser(), "When user store domain is 'FEDERATED' user should be " +
+                "flagged as a federated user.");
+        Assert.assertEquals(authenticatedUser.toString(), UserCoreUtil.addTenantDomainToEntry(username, tenantDomain)
+                , "When user store domain is 'FEDERATED' full qualified username " +
+                        "of the user should be in {username}@{tenant-domain} format.");
     }
 }
