@@ -42,6 +42,7 @@ public class OAuthConsumerAppDTO {
     private String idTokenEncryptionAlgorithm;
     private String idTokenEncryptionMethod;
     private String backChannelLogoutUrl;
+    private String frontchannelLogoutUrl;
     private long idTokenExpiryTime;
     private String tokenType;
 
@@ -208,6 +209,14 @@ public class OAuthConsumerAppDTO {
 
     public String getBackChannelLogoutUrl() {
         return backChannelLogoutUrl;
+    }
+
+    public String getFrontchannelLogoutUrl() {
+        return frontchannelLogoutUrl;
+    }
+
+    public void setFrontchannelLogoutUrl(String frontchannelLogoutUrl) {
+        this.frontchannelLogoutUrl = frontchannelLogoutUrl;
     }
 
     public long getIdTokenExpiryTime() {

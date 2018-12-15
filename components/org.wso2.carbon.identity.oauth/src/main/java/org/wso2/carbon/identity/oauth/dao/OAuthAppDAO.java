@@ -62,6 +62,7 @@ import java.util.Set;
 
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.BACK_CHANNEL_LOGOUT_URL;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.FRONT_CHANNEL_LOGOUT_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ID_TOKEN_ENCRYPTION_ALGORITHM;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ID_TOKEN_ENCRYPTION_METHOD;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ID_TOKEN_ENCRYPTED;
@@ -170,6 +171,7 @@ public class OAuthAppDAO {
                 // Handle OIDC Related Properties. These are persisted in IDN_OIDC_PROPERTY table.
                 addServiceProviderOIDCProperties(connection, consumerAppDO, processedClientId, spTenantId);
                 connection.commit();
+
             } catch (SQLException e) {
                 throw handleError(String.format("Error when executing SQL to create OAuth app %s@%s ",
                         consumerAppDO.getApplicationName(), consumerAppDO.getUser().getTenantDomain()), e);
@@ -672,6 +674,9 @@ public class OAuthAppDAO {
         addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties, BACK_CHANNEL_LOGOUT_URL,
                 oauthAppDO.getBackChannelLogoutUrl(), prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties, FRONT_CHANNEL_LOGOUT_URL,
+                oauthAppDO.getFrontchannelLogoutUrl(), prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
         addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties, TOKEN_TYPE,
                 oauthAppDO.getTokenType(), prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
@@ -699,6 +704,7 @@ public class OAuthAppDAO {
             addToBatchForOIDCPropertyAdd(preprocessedClientId, spTenantId, preparedStatementForPropertyAdd,
                     propertyKey, propertyValue);
         }
+
     }
 
     private void addToBatchForOIDCPropertyAdd(String consumerKey,
@@ -1092,6 +1098,9 @@ public class OAuthAppDAO {
                     BACK_CHANNEL_LOGOUT_URL, consumerAppDO.getBackChannelLogoutUrl());
 
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    FRONT_CHANNEL_LOGOUT_URL, consumerAppDO.getFrontchannelLogoutUrl());
+
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                     TOKEN_TYPE, consumerAppDO.getTokenType());
 
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
@@ -1130,6 +1139,7 @@ public class OAuthAppDAO {
                 String propertyValue = spOIDCPropertyResultSet.getString(2);
                 spOIDCProperties.computeIfAbsent(propertyKey, k -> new ArrayList<>()).add(propertyValue);
             }
+
         } catch (SQLException e) {
             String errorMsg = "Error occurred while retrieving OIDC properties for client ID: " + consumerKey +
                     " and tenant domain: " + spTenantDomain;
@@ -1166,6 +1176,9 @@ public class OAuthAppDAO {
 
         String backChannelLogoutUrl = getFirstPropertyValue(spOIDCProperties, BACK_CHANNEL_LOGOUT_URL);
         oauthApp.setBackChannelLogoutUrl(backChannelLogoutUrl);
+
+        String frontchannelLogoutUrl = getFirstPropertyValue(spOIDCProperties, FRONT_CHANNEL_LOGOUT_URL);
+        oauthApp.setFrontchannelLogoutUrl(frontchannelLogoutUrl);
 
         String tokenType = getFirstPropertyValue(spOIDCProperties, TOKEN_TYPE);
         oauthApp.setTokenType(tokenType);

@@ -63,6 +63,7 @@ public class OAuthAppDO implements Serializable {
     private String idTokenEncryptionAlgorithm;
     private String idTokenEncryptionMethod;
     private String backChannelLogoutUrl;
+    private String frontchannelLogoutUrl;
     private AuthenticatedUser appOwner;
     private String tokenType;
 
@@ -241,6 +242,14 @@ public class OAuthAppDO implements Serializable {
 
     public String getBackChannelLogoutUrl() {
         return backChannelLogoutUrl;
+    }
+
+    public String getFrontchannelLogoutUrl() {
+        return frontchannelLogoutUrl;
+    }
+
+    public void setFrontchannelLogoutUrl(String frontchannelLogoutUrl) {
+        this.frontchannelLogoutUrl = frontchannelLogoutUrl;
     }
 
     public long getIdTokenExpiryTime() {
