@@ -23,7 +23,6 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.error.OAuthError;
-import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.identity.application.authentication.framework.exception.FrameworkException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
@@ -49,7 +48,6 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
-import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.OIDCClaimUtil;
 import org.wso2.carbon.user.api.RealmConfiguration;
@@ -344,25 +342,8 @@ public class ClaimUtil {
         return cacheEntry.getUserAttributes();
     }
 
-    private static String getAccessToken(OAuth2TokenValidationResponseDTO tokenResponse) {
-        return tokenResponse.getAuthorizationContextToken().getTokenString();
-    }
-
     private static String getAccessTokenIdentifier(OAuth2TokenValidationResponseDTO tokenResponse) {
-
-        String accessToken = tokenResponse.getAuthorizationContextToken().getTokenString();
-        String tokenIdentifier = null;
-        try {
-            OauthTokenIssuer tokenIssuer = OAuth2Util.getTokenIssuer(accessToken);
-            if (tokenIssuer != null) {
-                tokenIdentifier = tokenIssuer.getAccessTokenHash(accessToken);
-            }
-        } catch (OAuthSystemException e) {
-            log.error("Error while getting token identifier", e);
-        } catch (IdentityOAuth2Exception e) {
-            log.error("Error while retrieving token issuer", e);
-        }
-        return tokenIdentifier;
+        return tokenResponse.getAuthorizationContextToken().getTokenString();
     }
 
 }
