@@ -182,6 +182,7 @@ public class OAuthAdminService extends AbstractAdmin {
                 dto.setOAuthVersion(app.getOauthVersion());
                 dto.setGrantTypes(app.getGrantTypes());
                 dto.setScopeValidators(app.getScopeValidators());
+                dto.setUsername(app.getUser().toString());
                 dto.setPkceMandatory(app.isPkceMandatory());
                 dto.setPkceSupportPlain(app.isPkceSupportPlain());
                 dto.setUserAccessTokenExpiryTime(app.getUserAccessTokenExpiryTime());
@@ -193,6 +194,8 @@ public class OAuthAdminService extends AbstractAdmin {
                 dto.setIdTokenEncryptionEnabled(app.isIdTokenEncryptionEnabled());
                 dto.setIdTokenEncryptionAlgorithm(app.getIdTokenEncryptionAlgorithm());
                 dto.setIdTokenEncryptionMethod(app.getIdTokenEncryptionMethod());
+                dto.setBackChannelLogoutUrl(app.getBackChannelLogoutUrl());
+                dto.setFrontchannelLogoutUrl(app.getFrontchannelLogoutUrl());
                 dto.setTokenType(app.getTokenType());
                 dto.setBypassClientCredentials(app.isBypassClientCredentials());
 
@@ -228,6 +231,7 @@ public class OAuthAdminService extends AbstractAdmin {
                 dto.setOAuthVersion(app.getOauthVersion());
                 dto.setGrantTypes(app.getGrantTypes());
                 dto.setScopeValidators(app.getScopeValidators());
+                dto.setUsername(app.getUser().toString());
                 dto.setPkceMandatory(app.isPkceMandatory());
                 dto.setPkceSupportPlain(app.isPkceSupportPlain());
                 dto.setUserAccessTokenExpiryTime(app.getUserAccessTokenExpiryTime());
