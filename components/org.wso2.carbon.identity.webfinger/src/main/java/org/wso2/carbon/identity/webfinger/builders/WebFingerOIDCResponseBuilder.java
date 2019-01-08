@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.webfinger.builders;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.base.ServerConfigurationException;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.webfinger.WebFingerConstants;
 import org.wso2.carbon.identity.webfinger.WebFingerEndpointException;
@@ -28,6 +29,9 @@ import org.wso2.carbon.identity.webfinger.WebFingerRequest;
 import org.wso2.carbon.identity.webfinger.WebFingerResponse;
 
 import java.net.URISyntaxException;
+
+import static org.wso2.carbon.identity.discovery.DiscoveryUtil.isUseEntityIdAsIssuerInOidcDiscovery;
+import static org.wso2.carbon.identity.openidconnect.OIDCClaimUtil.getIdTokenIssuer;
 
 /**
  * Build the WebFingerResponse only with the OpenID Provider Issuer.
@@ -41,15 +45,26 @@ public class WebFingerOIDCResponseBuilder {
             ServerConfigurationException {
 
         WebFingerResponse response;
-        String oidcDiscoveryUrl;
+        String oidcIssuerLocation;
         try {
-            oidcDiscoveryUrl = OAuth2Util.OAuthURL.getOidcDiscoveryEPUrl(request.getTenant());
-        } catch (URISyntaxException e) {
-            throw new ServerConfigurationException("Error while building discovery endpoint");
+            oidcIssuerLocation = getOidcIssuerLocation(request.getTenant());
+        } catch (URISyntaxException | IdentityOAuth2Exception e) {
+            throw new ServerConfigurationException("Error while building discovery endpoint", e);
         }
         response = new WebFingerResponse();
         response.setSubject(request.getResource());
-        response.addLink(WebFingerConstants.OPENID_CONNETCT_ISSUER_REL, oidcDiscoveryUrl);
+        response.addLink(WebFingerConstants.OPENID_CONNETCT_ISSUER_REL, oidcIssuerLocation);
         return response;
+    }
+
+    private String getOidcIssuerLocation(String tenantDomain) throws IdentityOAuth2Exception, URISyntaxException {
+
+        String oidcIssuerLocation;
+        if (isUseEntityIdAsIssuerInOidcDiscovery()) {
+            oidcIssuerLocation = getIdTokenIssuer(tenantDomain);
+        } else {
+            oidcIssuerLocation = OAuth2Util.OAuthURL.getOidcDiscoveryEPUrl(tenantDomain);
+        }
+        return oidcIssuerLocation;
     }
 }

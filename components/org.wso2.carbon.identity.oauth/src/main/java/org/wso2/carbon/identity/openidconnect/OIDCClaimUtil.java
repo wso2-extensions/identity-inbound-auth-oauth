@@ -21,13 +21,22 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.exception.FrameworkException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
+import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.RoleMapping;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
+import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
+import org.wso2.carbon.identity.base.IdentityConstants;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
+import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
+import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -44,6 +53,7 @@ import static org.apache.commons.lang.StringUtils.isNotBlank;
 public class OIDCClaimUtil {
 
     private static Log log = LogFactory.getLog(OIDCClaimUtil.class);
+    private static final String OPENID_IDP_ENTITY_ID = "IdPEntityId";
 
     private OIDCClaimUtil() {
     }
@@ -136,5 +146,26 @@ public class OIDCClaimUtil {
     private static boolean isUserConsentRequiredForClaims(String grantType) {
 
         return OAuthServerConfiguration.getInstance().isUserConsentRequiredForClaims(grantType);
+    }
+
+    public static String getIdTokenIssuer(String tenantDomain) throws IdentityOAuth2Exception {
+        IdentityProvider identityProvider = getResidentIdp(tenantDomain);
+        FederatedAuthenticatorConfig[] fedAuthnConfigs = identityProvider.getFederatedAuthenticatorConfigs();
+        // Get OIDC authenticator
+        FederatedAuthenticatorConfig oidcAuthenticatorConfig =
+                IdentityApplicationManagementUtil.getFederatedAuthenticator(fedAuthnConfigs,
+                        IdentityApplicationConstants.Authenticator.OIDC.NAME);
+        return IdentityApplicationManagementUtil.getProperty(oidcAuthenticatorConfig.getProperties(),
+                OPENID_IDP_ENTITY_ID).getValue();
+    }
+
+    private static IdentityProvider getResidentIdp(String tenantDomain) throws IdentityOAuth2Exception {
+        try {
+            return IdentityProviderManager.getInstance().getResidentIdP(tenantDomain);
+        } catch (IdentityProviderManagementException e) {
+            final String ERROR_GET_RESIDENT_IDP = "Error while getting Resident Identity Provider of '%s' tenant.";
+            String errorMsg = String.format(ERROR_GET_RESIDENT_IDP, tenantDomain);
+            throw new IdentityOAuth2Exception(errorMsg, e);
+        }
     }
 }
