@@ -362,7 +362,8 @@ public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
                 "Updated Application name should be same as the application name in consumerAppDTO data object.");
         Assert.assertEquals(updatedOAuthConsumerApp.getCallbackUrl(), consumerAppDTO.getCallbackUrl(),
                 "Updated Application callbackUrl should be same as the callbackUrl in consumerAppDTO data object.");
-        Assert.assertNull(updatedOAuthConsumerApp.getUsername(), "Application update should not set username.");
+        // Application update should not set the username.  It should be the username of the original owner
+        Assert.assertEquals(updatedOAuthConsumerApp.getUsername(), "some-user-name");
     }
 
     @Test
