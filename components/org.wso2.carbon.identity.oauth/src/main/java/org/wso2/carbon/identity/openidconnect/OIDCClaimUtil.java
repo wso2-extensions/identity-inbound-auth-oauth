@@ -147,25 +147,4 @@ public class OIDCClaimUtil {
 
         return OAuthServerConfiguration.getInstance().isUserConsentRequiredForClaims(grantType);
     }
-
-    public static String getIdTokenIssuer(String tenantDomain) throws IdentityOAuth2Exception {
-        IdentityProvider identityProvider = getResidentIdp(tenantDomain);
-        FederatedAuthenticatorConfig[] fedAuthnConfigs = identityProvider.getFederatedAuthenticatorConfigs();
-        // Get OIDC authenticator
-        FederatedAuthenticatorConfig oidcAuthenticatorConfig =
-                IdentityApplicationManagementUtil.getFederatedAuthenticator(fedAuthnConfigs,
-                        IdentityApplicationConstants.Authenticator.OIDC.NAME);
-        return IdentityApplicationManagementUtil.getProperty(oidcAuthenticatorConfig.getProperties(),
-                OPENID_IDP_ENTITY_ID).getValue();
-    }
-
-    private static IdentityProvider getResidentIdp(String tenantDomain) throws IdentityOAuth2Exception {
-        try {
-            return IdentityProviderManager.getInstance().getResidentIdP(tenantDomain);
-        } catch (IdentityProviderManagementException e) {
-            final String ERROR_GET_RESIDENT_IDP = "Error while getting Resident Identity Provider of '%s' tenant.";
-            String errorMsg = String.format(ERROR_GET_RESIDENT_IDP, tenantDomain);
-            throw new IdentityOAuth2Exception(errorMsg, e);
-        }
-    }
 }

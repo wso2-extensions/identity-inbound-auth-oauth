@@ -28,6 +28,7 @@ import javax.servlet.http.HttpServletRequest;
  * specified in the spec.
  */
 public interface OIDCProcessor {
+
     OIDProviderConfigResponse getResponse(HttpServletRequest request, String tenantDomain) throws
             OIDCDiscoveryEndPointException, ServerConfigurationException;
 

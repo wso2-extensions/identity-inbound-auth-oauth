@@ -31,7 +31,6 @@ import org.wso2.carbon.identity.webfinger.WebFingerResponse;
 import java.net.URISyntaxException;
 
 import static org.wso2.carbon.identity.discovery.DiscoveryUtil.isUseEntityIdAsIssuerInOidcDiscovery;
-import static org.wso2.carbon.identity.openidconnect.OIDCClaimUtil.getIdTokenIssuer;
 
 /**
  * Build the WebFingerResponse only with the OpenID Provider Issuer.
@@ -61,10 +60,11 @@ public class WebFingerOIDCResponseBuilder {
 
         String oidcIssuerLocation;
         if (isUseEntityIdAsIssuerInOidcDiscovery()) {
-            oidcIssuerLocation = getIdTokenIssuer(tenantDomain);
+            oidcIssuerLocation = OAuth2Util.getIdTokenIssuer(tenantDomain);
         } else {
             oidcIssuerLocation = OAuth2Util.OAuthURL.getOidcDiscoveryEPUrl(tenantDomain);
         }
         return oidcIssuerLocation;
     }
+
 }

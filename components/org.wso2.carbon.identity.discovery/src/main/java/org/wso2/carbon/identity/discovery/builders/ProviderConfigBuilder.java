@@ -39,7 +39,6 @@ import java.util.List;
 import java.util.Set;
 
 import static org.wso2.carbon.identity.discovery.DiscoveryUtil.isUseEntityIdAsIssuerInOidcDiscovery;
-import static org.wso2.carbon.identity.openidconnect.OIDCClaimUtil.getIdTokenIssuer;
 
 /**
  * ProviderConfigBuilder builds the OIDProviderConfigResponse
@@ -56,7 +55,7 @@ public class ProviderConfigBuilder {
         OIDProviderConfigResponse providerConfig = new OIDProviderConfigResponse();
         if (isUseEntityIdAsIssuerInOidcDiscovery()) {
             try {
-                providerConfig.setIssuer(getIdTokenIssuer(request.getTenantDomain()));
+                providerConfig.setIssuer(OAuth2Util.getIdTokenIssuer(request.getTenantDomain()));
             } catch (IdentityOAuth2Exception e) {
                 throw new ServerConfigurationException("Error while retrieving OIDC Id token issue", e);
             }

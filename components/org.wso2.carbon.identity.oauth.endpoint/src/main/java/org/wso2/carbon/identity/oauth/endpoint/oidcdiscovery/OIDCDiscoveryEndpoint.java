@@ -30,7 +30,6 @@ import org.wso2.carbon.identity.discovery.builders.OIDProviderResponseBuilder;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.endpoint.oidcdiscovery.impl.OIDProviderJSONResponseBuilder;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
-import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -41,7 +40,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 
-@Path("/{issuer}/.well-known/openid-configuration")
+@Path("/{discoveryEpPathComponent}/.well-known/openid-configuration")
 public class OIDCDiscoveryEndpoint {
 
     private static final Log log = LogFactory.getLog(OIDCDiscoveryEndpoint.class);
@@ -51,7 +50,7 @@ public class OIDCDiscoveryEndpoint {
     @GET
     @Produces("application/json")
     public Response getOIDProviderConfiguration(
-            @PathParam("issuer") String tokenEp, @Context HttpServletRequest request) {
+            @PathParam("discoveryEpPathComponent") String tokenEp, @Context HttpServletRequest request) {
 
         String tenantDomain = null;
         Object tenantObj = IdentityUtil.threadLocalProperties.get().get(OAuthConstants.TENANT_NAME_FROM_CONTEXT);
@@ -65,6 +64,10 @@ public class OIDCDiscoveryEndpoint {
             return this.getResponse(request, tenantDomain);
         } else {
             Response.ResponseBuilder errorResponse = Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            if(log.isDebugEnabled()) {
+                log.debug("The provided token endpoint is " + tokenEp + " . The expected token token endpoint is either '"
+                        + TOKEN_ENDPOINT_VALUE_TOKEN + "' or '" + TOKEN_ENDPOINT_VALUE_OIDCDISCOVERY );
+            }
             return errorResponse.entity("Error while loading the endpoint. Invalid path to the discovery document. " +
                     "The expected token endpoint is either '" + TOKEN_ENDPOINT_VALUE_TOKEN + "' or '"
                     + TOKEN_ENDPOINT_VALUE_OIDCDISCOVERY + "' but " + "received: " + tokenEp)
@@ -72,13 +75,13 @@ public class OIDCDiscoveryEndpoint {
         }
     }
 
-    private boolean isValidIssuer(String issuer) {
+    private boolean isValidIssuer(String discoveryEpPathComponent) {
 
-        if (TOKEN_ENDPOINT_VALUE_TOKEN.equals(issuer) || TOKEN_ENDPOINT_VALUE_OIDCDISCOVERY.equals(issuer)) {
+        if (TOKEN_ENDPOINT_VALUE_TOKEN.equals(discoveryEpPathComponent) || TOKEN_ENDPOINT_VALUE_OIDCDISCOVERY.equals(discoveryEpPathComponent)) {
             return true;
         }
         if (log.isDebugEnabled()) {
-            log.debug("Token endpoint validation failed. Token endpoint value: " + issuer + " must be either '"
+            log.debug("Token endpoint validation failed. Token endpoint value: " + discoveryEpPathComponent + ", not matched to '"
                     + TOKEN_ENDPOINT_VALUE_TOKEN + "' or '" + TOKEN_ENDPOINT_VALUE_OIDCDISCOVERY + "'");
         }
         return false;
@@ -95,7 +98,7 @@ public class OIDCDiscoveryEndpoint {
             Response.ResponseBuilder errorResponse = Response.status(processor.handleError(e));
             return errorResponse.entity(e.getMessage()).build();
         } catch (ServerConfigurationException e) {
-            log.error("Server Configuration error occured.", e);
+            log.error("Server Configuration error occurred.", e);
             Response.ResponseBuilder errorResponse = Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             return errorResponse.entity("Error in reading configuration.").build();
         }

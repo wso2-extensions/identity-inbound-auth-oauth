@@ -90,7 +90,6 @@ import static org.apache.commons.lang.StringUtils.isNotBlank;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.AUTH_TIME;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.AZP;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.NONCE;
-import static org.wso2.carbon.identity.openidconnect.OIDCClaimUtil.getIdTokenIssuer;
 
 /**
  * Default IDToken generator for the OpenID Connect Implementation.
@@ -140,7 +139,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
                                OAuth2AccessTokenRespDTO tokenRespDTO) throws IdentityOAuth2Exception {
         String clientId = tokenReqMsgCtxt.getOauth2AccessTokenReqDTO().getClientId();
         String spTenantDomain = getSpTenantDomain(tokenReqMsgCtxt);
-        String idTokenIssuer = getIdTokenIssuer(spTenantDomain);
+        String idTokenIssuer = OAuth2Util.getIdTokenIssuer(spTenantDomain);
         String accessToken = tokenRespDTO.getAccessToken();
 
         // Initialize OAuthAppDO using the client ID.
@@ -232,7 +231,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         String accessToken = tokenRespDTO.getAccessToken();
         String clientId = authzReqMessageContext.getAuthorizationReqDTO().getConsumerKey();
         String spTenantDomain = getSpTenantDomain(authzReqMessageContext);
-        String issuer = getIdTokenIssuer(spTenantDomain);
+        String issuer = OAuth2Util.getIdTokenIssuer(spTenantDomain);
 
         // Get subject from Authenticated Subject Identifier
         AuthenticatedUser authorizedUser = authzReqMessageContext.getAuthorizationReqDTO().getUser();
