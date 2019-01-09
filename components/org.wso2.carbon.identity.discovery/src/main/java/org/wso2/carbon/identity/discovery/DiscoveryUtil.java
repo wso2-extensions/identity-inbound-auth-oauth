@@ -31,14 +31,14 @@ public class DiscoveryUtil {
 
     /**
      * Resident Idp entity id is honoured as the OIDC issuer location based on the configuration. This addresses
-     * the issue <a href="http://google.com">https://github.com/wso2/product-is/issues/4277</a>.
+     * the issue <a href="https://github.com/wso2/product-is/issues/4277">wso2/product-is#4277</a>.
      */
     public static boolean isUseEntityIdAsIssuerInOidcDiscovery() {
 
         String useEntityIdAsIssuerInDiscovery =
                 IdentityUtil.getProperty(OIDC_USE_ENTITY_ID_AS_ISSUER_IN_DISCOVERY);
         if (StringUtils.isEmpty(useEntityIdAsIssuerInDiscovery)) {
-            return false;
+            return true;
         }
         return Boolean.parseBoolean(useEntityIdAsIssuerInDiscovery);
     }

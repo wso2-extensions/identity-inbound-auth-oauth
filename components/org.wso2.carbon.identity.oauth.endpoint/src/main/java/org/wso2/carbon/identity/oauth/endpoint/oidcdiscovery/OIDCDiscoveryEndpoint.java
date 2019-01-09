@@ -40,17 +40,17 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 
-@Path("/{discoveryEpPathComponent}/.well-known/openid-configuration")
+@Path("/{issuer}/.well-known/openid-configuration")
 public class OIDCDiscoveryEndpoint {
 
     private static final Log log = LogFactory.getLog(OIDCDiscoveryEndpoint.class);
-    private static final String TOKEN_ENDPOINT_VALUE_TOKEN = "token";
-    private static final String TOKEN_ENDPOINT_VALUE_OIDCDISCOVERY = "oidcdiscovery";
+    private static final String DISCOVERY_ENDPOINT_PATH_COMPONENT_VALUE_TOKEN = "token";
+    private static final String DISCOVERY_ENDPOINT_PATH_COMPONENT_VALUE_OIDCDISCOVERY = "oidcdiscovery";
 
     @GET
     @Produces("application/json")
     public Response getOIDProviderConfiguration(
-            @PathParam("discoveryEpPathComponent") String tokenEp, @Context HttpServletRequest request) {
+            @PathParam("issuer") String discoveryEpPathComponent, @Context HttpServletRequest request) {
 
         String tenantDomain = null;
         Object tenantObj = IdentityUtil.threadLocalProperties.get().get(OAuthConstants.TENANT_NAME_FROM_CONTEXT);
@@ -60,29 +60,29 @@ public class OIDCDiscoveryEndpoint {
         if (StringUtils.isEmpty(tenantDomain)) {
             tenantDomain = MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
         }
-        if (isValidIssuer(tokenEp)) {
+        if (isValidIssuer(discoveryEpPathComponent)) {
             return this.getResponse(request, tenantDomain);
         } else {
             Response.ResponseBuilder errorResponse = Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             if(log.isDebugEnabled()) {
-                log.debug("The provided token endpoint is " + tokenEp + " . The expected token token endpoint is either '"
-                        + TOKEN_ENDPOINT_VALUE_TOKEN + "' or '" + TOKEN_ENDPOINT_VALUE_OIDCDISCOVERY );
+                log.debug("The discovery path component is " + discoveryEpPathComponent + " . The expected discovery path component is either '"
+                        + DISCOVERY_ENDPOINT_PATH_COMPONENT_VALUE_TOKEN + "' or '" + DISCOVERY_ENDPOINT_PATH_COMPONENT_VALUE_OIDCDISCOVERY );
             }
-            return errorResponse.entity("Error while loading the endpoint. Invalid path to the discovery document. " +
-                    "The expected token endpoint is either '" + TOKEN_ENDPOINT_VALUE_TOKEN + "' or '"
-                    + TOKEN_ENDPOINT_VALUE_OIDCDISCOVERY + "' but " + "received: " + tokenEp)
+            return errorResponse.entity("Invalid path to the discovery document. Received path : " + discoveryEpPathComponent + " is not resolvable")
                     .build();
         }
     }
 
-    private boolean isValidIssuer(String discoveryEpPathComponent) {
+    private boolean isValidIssuer(String issuer) {
 
-        if (TOKEN_ENDPOINT_VALUE_TOKEN.equals(discoveryEpPathComponent) || TOKEN_ENDPOINT_VALUE_OIDCDISCOVERY.equals(discoveryEpPathComponent)) {
+        if (DISCOVERY_ENDPOINT_PATH_COMPONENT_VALUE_TOKEN.equals(issuer) || DISCOVERY_ENDPOINT_PATH_COMPONENT_VALUE_OIDCDISCOVERY
+                .equals(issuer)) {
             return true;
         }
         if (log.isDebugEnabled()) {
-            log.debug("Token endpoint validation failed. Token endpoint value: " + discoveryEpPathComponent + ", not matched to '"
-                    + TOKEN_ENDPOINT_VALUE_TOKEN + "' or '" + TOKEN_ENDPOINT_VALUE_OIDCDISCOVERY + "'");
+            log.debug("DiscoveryEndpointPathComponent validation failed. DiscoveryEndpointPathComponent value: " + issuer + ", not matched to '"
+                    + DISCOVERY_ENDPOINT_PATH_COMPONENT_VALUE_TOKEN + "' or '" +
+                    DISCOVERY_ENDPOINT_PATH_COMPONENT_VALUE_OIDCDISCOVERY + "'");
         }
         return false;
     }
