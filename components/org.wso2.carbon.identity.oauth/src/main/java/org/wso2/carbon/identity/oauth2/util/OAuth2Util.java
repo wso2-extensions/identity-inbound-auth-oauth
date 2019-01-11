@@ -497,8 +497,7 @@ public class OAuth2Util {
      * successful. Empty string otherwise.
      * @throws IdentityOAuthAdminException Error when looking up the credentials from the database
      * @deprecated Authenticate the OAuth consumer and return the username of user which own the provided client id
-     * and client
-     * secret.
+     * and client secret.
      */
     public static String getAuthenticatedUsername(String clientId, String clientSecretProvided)
             throws IdentityOAuthAdminException, IdentityOAuth2Exception, InvalidOAuthClientException {

@@ -30,15 +30,12 @@ import org.wso2.carbon.identity.webfinger.WebFingerEndpointException;
 import org.wso2.carbon.identity.webfinger.WebFingerRequest;
 import org.wso2.carbon.identity.webfinger.WebFingerResponse;
 
-//import java.net.URISyntaxException;
 
 import static org.mockito.Matchers.any;
-//import static org.mockito.Matchers.anyString;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertEquals;
 
-//OAuth2Util.OAuthURL.class,
 @PrepareForTest({OAuth2Util.class})
 /**
  * Unit test coverage for WebFingerOIDCResponseBuilder class
@@ -61,7 +58,6 @@ public class WebFingerOIDCResponseBuilderTest extends PowerMockTestCase {
     public void setUp() throws Exception {
         webFingerOIDCResponseBuilder = new WebFingerOIDCResponseBuilder();
         webFingerRequest = new WebFingerRequest();
-
         webFingerRequest.setResource(resource);
         webFingerRequest.setHost(host);
         webFingerRequest.setScheme(scheme);
@@ -69,13 +65,13 @@ public class WebFingerOIDCResponseBuilderTest extends PowerMockTestCase {
         webFingerRequest.setRel(rel);
         webFingerRequest.setTenant(tenant);
 
-//        mockStatic(OAuth2Util.OAuthURL.class);
+
         mockStatic(OAuth2Util.class);
     }
 
     @Test
     public void testBuildWebFingerResponse() throws Exception {
-//        when(OAuth2Util.OAuthURL.getOidcDiscoveryEPUrl(any(String.class))).thenReturn(oidcDiscoveryUrl);
+
         when(OAuth2Util.getIdTokenIssuer(any(String.class))).thenReturn(oidcDiscoveryUrl);
         WebFingerResponse webFingerResponse = webFingerOIDCResponseBuilder.buildWebFingerResponse(webFingerRequest);
         assertEquals(webFingerResponse.getLinks().get(0).getRel(), rel, "rel is properly assigned");
@@ -88,8 +84,7 @@ public class WebFingerOIDCResponseBuilderTest extends PowerMockTestCase {
     @Test(expectedExceptions = ServerConfigurationException.class)
     public void testBuildWebFingerException() throws WebFingerEndpointException, ServerConfigurationException,
             IdentityException {
-//        when(OAuth2Util.OAuthURL.getOidcDiscoveryEPUrl(anyString())).thenThrow
-//                (new URISyntaxException("Error", "Exception"));
+
         when(OAuth2Util.getIdTokenIssuer(any(String.class))).thenThrow
                 (new IdentityOAuth2Exception("Error"));
         webFingerOIDCResponseBuilder.buildWebFingerResponse(webFingerRequest);

@@ -124,7 +124,7 @@
                             com.google.gson;version="${com.google.code.gson.osgi.version.range}",
                             org.wso2.carbon.identity.oauth2.*,
                             org.wso2.carbon.identity.openidconnect.*,
-                            org.wso2.carbon.identity.discovery.*,
+                            org.wso2.carbon.identity.discovery.*
                         </Import-Package>
                         <Export-Package>
                             !org.wso2.carbon.identity.webfinger.internal,
