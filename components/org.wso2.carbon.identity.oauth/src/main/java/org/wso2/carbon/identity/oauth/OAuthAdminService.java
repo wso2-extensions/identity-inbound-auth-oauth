@@ -1171,9 +1171,8 @@ public class OAuthAdminService extends AbstractAdmin {
         AuthenticatedUser appOwner = buildAuthenticatedUser(tenantAwareLoggedInUser, tenantDomain);
 
         String applicationOwnerInRequest = application.getUsername();
-        String tenantAwareAppOwnerInRequest = MultitenantUtils.getTenantAwareUsername(applicationOwnerInRequest);
-
-        if (StringUtils.isNotBlank(tenantAwareAppOwnerInRequest)) {
+        if (StringUtils.isNotBlank(applicationOwnerInRequest)) {
+            String tenantAwareAppOwnerInRequest = MultitenantUtils.getTenantAwareUsername(applicationOwnerInRequest);
             try {
                 if (CarbonContext.getThreadLocalCarbonContext().getUserRealm().
                         getUserStoreManager().isExistingUser(tenantAwareAppOwnerInRequest)) {
