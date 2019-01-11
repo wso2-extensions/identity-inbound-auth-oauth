@@ -105,7 +105,6 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
     private static final String OPENID_CONNECT = "OpenIDConnect";
     private static final String OPENID_CONNECT_AUDIENCES = "Audiences";
     private static final String OPENID_CONNECT_AUDIENCE = "Audience";
-    private static final String OPENID_IDP_ENTITY_ID = "IdPEntityId";
 
     private static final Log log = LogFactory.getLog(DefaultIDTokenBuilder.class);
     private JWSAlgorithm signatureAlgorithm;
@@ -140,7 +139,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
                                OAuth2AccessTokenRespDTO tokenRespDTO) throws IdentityOAuth2Exception {
         String clientId = tokenReqMsgCtxt.getOauth2AccessTokenReqDTO().getClientId();
         String spTenantDomain = getSpTenantDomain(tokenReqMsgCtxt);
-        String idTokenIssuer = getIdTokenIssuer(spTenantDomain);
+        String idTokenIssuer = OAuth2Util.getIdTokenIssuer(spTenantDomain);
         String accessToken = tokenRespDTO.getAccessToken();
 
         // Initialize OAuthAppDO using the client ID.
@@ -232,7 +231,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         String accessToken = tokenRespDTO.getAccessToken();
         String clientId = authzReqMessageContext.getAuthorizationReqDTO().getConsumerKey();
         String spTenantDomain = getSpTenantDomain(authzReqMessageContext);
-        String issuer = getIdTokenIssuer(spTenantDomain);
+        String issuer = OAuth2Util.getIdTokenIssuer(spTenantDomain);
 
         // Get subject from Authenticated Subject Identifier
         AuthenticatedUser authorizedUser = authzReqMessageContext.getAuthorizationReqDTO().getUser();
@@ -575,17 +574,6 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         }
     }
 
-    private String getIdTokenIssuer(String tenantDomain) throws IdentityOAuth2Exception {
-        IdentityProvider identityProvider = getResidentIdp(tenantDomain);
-        FederatedAuthenticatorConfig[] fedAuthnConfigs = identityProvider.getFederatedAuthenticatorConfigs();
-        // Get OIDC authenticator
-        FederatedAuthenticatorConfig oidcAuthenticatorConfig =
-                IdentityApplicationManagementUtil.getFederatedAuthenticator(fedAuthnConfigs,
-                        IdentityApplicationConstants.Authenticator.OIDC.NAME);
-        return IdentityApplicationManagementUtil.getProperty(oidcAuthenticatorConfig.getProperties(),
-                OPENID_IDP_ENTITY_ID).getValue();
-    }
-
     private long getAuthTime(OAuthAuthzReqMessageContext authzReqMessageContext) {
         long authTime = 0;
         if (isAuthTimeRequired(authzReqMessageContext.getAuthorizationReqDTO())) {
@@ -835,16 +823,6 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
 
     private QName getQNameWithIdentityNS(String localPart) {
         return new QName(IdentityCoreConstants.IDENTITY_DEFAULT_NAMESPACE, localPart);
-    }
-
-    private IdentityProvider getResidentIdp(String tenantDomain) throws IdentityOAuth2Exception {
-        try {
-            return IdentityProviderManager.getInstance().getResidentIdP(tenantDomain);
-        } catch (IdentityProviderManagementException e) {
-            final String ERROR_GET_RESIDENT_IDP = "Error while getting Resident Identity Provider of '%s' tenant.";
-            String errorMsg = String.format(ERROR_GET_RESIDENT_IDP, tenantDomain);
-            throw new IdentityOAuth2Exception(errorMsg, e);
-        }
     }
 
     /**

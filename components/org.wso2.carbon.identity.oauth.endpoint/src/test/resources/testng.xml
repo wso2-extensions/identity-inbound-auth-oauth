@@ -40,6 +40,7 @@
             <class name="org.wso2.carbon.identity.oauth.endpoint.util.OpenIDConnectUserRPStoreTest" />
             <class name="org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpointTest" />
             <class name="org.wso2.carbon.identity.oauth.endpoint.user.OpenIDConnectUserEndpointTest" />
+            <class name="org.wso2.carbon.identity.oauth.endpoint.oidcdiscovery.OIDCDiscoveryEndpointTest" />
         </classes>
     </test>
 
