@@ -18,36 +18,32 @@
 
 package org.wso2.carbon.identity.webfinger;
 
-import org.apache.commons.collections.iterators.IteratorEnumeration;
-import org.mockito.Matchers;
-import org.mockito.Mockito;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
-import org.testng.annotations.DataProvider;
+        import org.apache.commons.collections.iterators.IteratorEnumeration;
+        import org.mockito.Matchers;
+        import org.mockito.Mockito;
+        import org.mockito.invocation.InvocationOnMock;
+        import org.mockito.stubbing.Answer;
+        import org.testng.annotations.DataProvider;
+        import org.testng.annotations.Test;
+        import org.wso2.carbon.identity.common.testng.WithCarbonHome;
+        import org.wso2.carbon.identity.common.testng.WithRealmService;
+        import org.wso2.carbon.identity.webfinger.internal.WebFingerServiceComponentHolder;
 
-import org.testng.annotations.Test;
-import org.wso2.carbon.identity.common.testng.WithCarbonHome;
-import org.wso2.carbon.identity.common.testng.WithRealmService;
-import org.wso2.carbon.identity.webfinger.internal.WebFingerServiceComponentHolder;
+        import java.util.HashMap;
+        import java.util.Map;
+        import javax.servlet.http.HttpServletRequest;
+        import javax.servlet.http.HttpServletResponse;
 
-
-import java.util.HashMap;
-import java.util.Map;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
-
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertNotNull;
-import static org.testng.Assert.fail;
+        import static org.testng.Assert.assertEquals;
+        import static org.testng.Assert.assertNotNull;
+        import static org.testng.Assert.fail;
 
 /**
  * Tests for DefaultWebFingerProcessor.
  */
-
 @WithCarbonHome
 @WithRealmService(injectToSingletons = { WebFingerServiceComponentHolder.class })
-public class DefaultWebFingerProcessorTest {
+public class BackwordDefaultWebfingerProcessorTest {
 
     @Test
     public void testGetResponse() throws Exception {
@@ -80,35 +76,36 @@ public class DefaultWebFingerProcessorTest {
 
         try {
             WebFingerResponse response = defaultWebFingerProcessor.getResponse(request);
-            assertNotNull(response);
             fail("WebFingerEndpointException should have been thrown");
         } catch (WebFingerEndpointException e) {
             //Expected exception
         }
 
-
+        parameterMap.put(WebFingerConstants.RESOURCE, "http://test.t/TestResource1");
+        WebFingerResponse response = defaultWebFingerProcessor.getResponse(request);
+        assertNotNull(response);
     }
 
     @Test(dataProvider = "dataProviderForHandleError")
-    public void testHandleError(WebFingerEndpointException exception, String expectedCode)  {
+    public void testHandleError(WebFingerEndpointException exception, int expectedCode) throws Exception {
         DefaultWebFingerProcessor defaultWebFingerProcessor = DefaultWebFingerProcessor.getInstance();
-        assertEquals(defaultWebFingerProcessor.handleError(exception), Integer.parseInt(expectedCode),
+        assertEquals(defaultWebFingerProcessor.handleError(exception), expectedCode,
                 "Status Code must match for Exception Type: " + exception.getErrorCode());
     }
 
     @DataProvider
     private Object[][] dataProviderForHandleError() {
-        return new Object[][] {
-                { new WebFingerEndpointException("400",
-                        WebFingerConstants.ERROR_CODE_INVALID_REQUEST), HttpServletResponse.SC_BAD_REQUEST },
-                { new WebFingerEndpointException("404",
+        return new Object[][] { { new WebFingerEndpointException(WebFingerConstants.ERROR_CODE_INVALID_REQUEST,
+                WebFingerConstants.ERROR_CODE_INVALID_REQUEST), HttpServletResponse.SC_BAD_REQUEST },
+                { new WebFingerEndpointException(WebFingerConstants.ERROR_CODE_INVALID_RESOURCE,
                         WebFingerConstants.ERROR_CODE_INVALID_RESOURCE), HttpServletResponse.SC_NOT_FOUND },
-                { new WebFingerEndpointException("500",
+                { new WebFingerEndpointException(WebFingerConstants.ERROR_CODE_INVALID_TENANT,
                         WebFingerConstants.ERROR_CODE_INVALID_TENANT), HttpServletResponse.SC_INTERNAL_SERVER_ERROR },
-                { new WebFingerEndpointException("415",
+                { new WebFingerEndpointException(WebFingerConstants.ERROR_CODE_JSON_EXCEPTION,
                         WebFingerConstants.ERROR_CODE_JSON_EXCEPTION), HttpServletResponse.SC_UNSUPPORTED_MEDIA_TYPE },
-                { new WebFingerEndpointException("404",
+                { new WebFingerEndpointException(WebFingerConstants.ERROR_CODE_NO_WEBFINGER_CONFIG,
                         WebFingerConstants.ERROR_CODE_NO_WEBFINGER_CONFIG), HttpServletResponse.SC_NOT_FOUND } };
     }
 
 }
+
