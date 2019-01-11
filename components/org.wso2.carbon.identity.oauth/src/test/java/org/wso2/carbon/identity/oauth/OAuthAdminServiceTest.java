@@ -18,6 +18,7 @@ import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.core.internal.IdentityCoreServiceComponent;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
@@ -31,8 +32,10 @@ import org.wso2.carbon.user.api.UserStoreManager;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.tenant.TenantManager;
+import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.ConfigurationContextService;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
+import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -386,15 +389,55 @@ public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
         return app;
     }
 
-    @Test
-    public void testUpdateConsumerApplication() throws Exception {
+    @DataProvider(name = "getUpdateConsumerAppTestData")
+    public Object[][] getUpdateConsumerAppTestData() {
 
-        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain("carbon.super");
-        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(-1234);
-        PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername("admin");
+        return new Object[][]{
+                // Logged In user , App Owner in Request , App Owner in request exists, Excepted App Owner after update
+                {"admin@carbon.super", "H2/new-app-owner@carbon.super", false, "admin@carbon.super"},
+                {"admin@carbon.super", "H2/new-app-owner@carbon.super", true, "H2/new-app-owner@carbon.super"},
+                {"admin@wso2.com", "H2/new-app-owner@wso2.com", false, "admin@wso2.com"},
+                {"admin@wso2.com", "H2/new-app-owner@wso2.com", true, "H2/new-app-owner@wso2.com"}
+        };
+    }
+
+    private AuthenticatedUser buildUser(String fullQualifiedUsername) {
+        String tenantDomain = MultitenantUtils.getTenantDomain(fullQualifiedUsername);
+        String userStoreDomain = UserCoreUtil.extractDomainFromName(fullQualifiedUsername);
+
+        String domainFreeName = UserCoreUtil.removeDomainFromName(fullQualifiedUsername);
+        String username = MultitenantUtils.getTenantAwareUsername(domainFreeName);
+
+        AuthenticatedUser user = new AuthenticatedUser();
+        user.setUserName(username);
+        user.setUserStoreDomain(userStoreDomain);
+        user.setTenantDomain(tenantDomain);
+
+        return user;
+    }
+
+    @Test(dataProvider = "getUpdateConsumerAppTestData")
+    public void testUpdateConsumerApplication(String loggedInUsername,
+                                              String appOwnerInRequest,
+                                              boolean appOwnerInRequestExists,
+                                              String expectedAppOwnerAfterUpdate) throws Exception {
+
+        AuthenticatedUser loggedInUser = buildUser(loggedInUsername);
+
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(loggedInUser.getTenantDomain());
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(
+                IdentityTenantUtil.getTenantId(loggedInUser.getTenantDomain()));
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(loggedInUser.getUserName());
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(userRealm);
+
+
+        AuthenticatedUser appOwner = buildUser(appOwnerInRequest);
+        String tenantAwareUsernameOfAppOwner =
+                MultitenantUtils.getTenantAwareUsername(appOwner.toFullQualifiedUsername());
+
+        when(userStoreManager.isExistingUser(tenantAwareUsernameOfAppOwner)).thenReturn(appOwnerInRequestExists);
 
         String consumerKey = "some-consumer-key";
-
         OAuthAppDO app = buildDummyOAuthAppDO("some-user-name");
         AuthenticatedUser originalOwner = app.getAppOwner();
 
@@ -412,21 +455,18 @@ public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
         consumerAppDTO.setOauthConsumerSecret("some-consumer-secret");
         consumerAppDTO.setOAuthVersion("new-oauth-version");
 
-        AuthenticatedUser newOwner = new AuthenticatedUser();
-        newOwner.setUserName("new-user-name");
-        newOwner.setUserStoreDomain("H2");
-        newOwner.setTenantDomain(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
 
-        consumerAppDTO.setUsername(newOwner.toFullQualifiedUsername());
+        consumerAppDTO.setUsername(appOwner.toFullQualifiedUsername());
         oAuthAdminService.updateConsumerApplication(consumerAppDTO);
         OAuthConsumerAppDTO updatedOAuthConsumerApp = oAuthAdminService.getOAuthApplicationData(consumerKey);
         Assert.assertEquals(updatedOAuthConsumerApp.getApplicationName(), consumerAppDTO.getApplicationName(),
                 "Updated Application name should be same as the application name in consumerAppDTO data object.");
         Assert.assertEquals(updatedOAuthConsumerApp.getCallbackUrl(), consumerAppDTO.getCallbackUrl(),
                 "Updated Application callbackUrl should be same as the callbackUrl in consumerAppDTO data object.");
+
         // Application update should change the app owner.
         Assert.assertNotEquals(updatedOAuthConsumerApp.getUsername(), originalOwner.toFullQualifiedUsername());
-        Assert.assertEquals(updatedOAuthConsumerApp.getUsername(), newOwner.toFullQualifiedUsername());
+        Assert.assertEquals(updatedOAuthConsumerApp.getUsername(), expectedAppOwnerAfterUpdate);
     }
 
     @Test
