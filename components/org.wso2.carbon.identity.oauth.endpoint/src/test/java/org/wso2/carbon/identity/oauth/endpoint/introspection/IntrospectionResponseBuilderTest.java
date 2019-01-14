@@ -17,13 +17,20 @@
  */
 package org.wso2.carbon.identity.oauth.endpoint.introspection;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertTrue;
 
 /**
  * This class does unit test coverage for RecoveryConfigImpl class
@@ -143,4 +150,45 @@ public class IntrospectionResponseBuilderTest {
                 "ERROR_DESCRIPTION already exists in the response builder");
     }
 
+    @Test (dependsOnMethods = "testResposeBuilderWithVal")
+    public void testResponseBuilderWithAdditionalProperties() throws Exception {
+
+        Map<String, Object> additionalData = new HashMap<>();
+        List<Map<String, Object>> permissions = new ArrayList<>();
+
+        Map<String, Object> resource1 = new HashMap<>();
+        String resourceIdKey = "resource_id";
+        String resourceScopesKey = "resource_scopes";
+        String permissionKey = "permission";
+
+        resource1.put(resourceIdKey, "resource-id-1");
+        List<String> scopesList1 = new ArrayList<>();
+        scopesList1.add("view");
+        scopesList1.add("edit");
+        resource1.put(resourceScopesKey, scopesList1);
+
+        Map<String, Object> resource2 = new HashMap<>();
+        resource2.put(resourceIdKey, "resource-id-2");
+        List<String> scopesList2 = new ArrayList<>();
+        scopesList2.add("view");
+        scopesList2.add("edit");
+        resource2.put(resourceScopesKey, scopesList2);
+
+        permissions.add(resource1);
+        permissions.add(resource2);
+
+        additionalData.put(permissionKey, permissions);
+        introspectionResponseBuilder1.setAdditionalData(additionalData);
+
+        JSONObject permissionEntry = new JSONObject(introspectionResponseBuilder1.build());
+        assertTrue(permissionEntry.has(permissionKey), permissionKey + " key not found in introspection response.");
+
+        JSONArray resourcesArray = permissionEntry.getJSONArray(permissionKey);
+        assertEquals(resourcesArray.length(), 2, "Resources array should contain 2 elements.");
+
+        JSONObject resourceEntry = resourcesArray.getJSONObject(1);
+        assertTrue(resourceEntry.has(resourceIdKey), resourceIdKey + " key not found in introspection response.");
+        assertTrue(resourceEntry.has(resourceScopesKey), resourceScopesKey + " key not found in introspection " +
+                                                         "response.");
+    }
 }
