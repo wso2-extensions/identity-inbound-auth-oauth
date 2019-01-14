@@ -205,4 +205,18 @@ public class IntrospectionResponseBuilder {
         parameters.put(IntrospectionResponse.Error.ERROR_DESCRIPTION, description);
         return this;
     }
+
+    /**
+     * Set additional response to the introspection response.
+     *
+     * @param additionalData Additional data to be added to the introspection response.
+     * @return IntrospectionResponseBuilder.
+     */
+    public IntrospectionResponseBuilder setAdditionalData(Map<String, Object> additionalData) {
+
+        if (additionalData != null) {
+            additionalData.entrySet().forEach(dataEntry -> parameters.put(dataEntry.getKey(), dataEntry.getValue()));
+        }
+        return this;
+    }
 }
