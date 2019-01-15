@@ -46,7 +46,7 @@
             <style-class>manage</style-class>
             <icon>../oauth/images/oauth.gif</icon>
             <require-not-logged-in>false</require-not-logged-in>
-            <at-least>/permission/admin/manage/identity/claimmgt/metadata/view</at-least>
+            <at-least>/permission/admin/manage/identity/applicationmgt/create</at-least>
             <at-least>/permission/admin/manage/identity/applicationmgt/view</at-least>
         </menu>
         <menu>
@@ -59,8 +59,8 @@
             <order>1</order>
             <style-class>manage</style-class>
             <icon>../oauth/images/add.gif</icon>
-            <require-permission>/permission/admin/manage/identity/claimmgt/metadata/view,
-                /permission/admin/manage/identity/applicationmgt
+            <require-permission>
+                /permission/admin/manage/identity/applicationmgt/create
             </require-permission>
         </menu>
         <menu>
