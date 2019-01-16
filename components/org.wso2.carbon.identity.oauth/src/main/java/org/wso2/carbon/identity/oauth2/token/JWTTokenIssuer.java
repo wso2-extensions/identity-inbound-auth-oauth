@@ -443,7 +443,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
      * @return authenticated subject identifier.
      */
     private String getAuthenticatedSubjectIdentifier(OAuthAuthzReqMessageContext authAuthzReqMessageContext,
-                                                     OAuthTokenReqMessageContext tokenReqMessageContext) throws IdentityOAuth2Exception {
+            OAuthTokenReqMessageContext tokenReqMessageContext) throws IdentityOAuth2Exception {
 
         AuthenticatedUser authenticatedUser = getAuthenticatedUser(authAuthzReqMessageContext, tokenReqMessageContext);
         return authenticatedUser.getAuthenticatedSubjectIdentifier();
@@ -454,6 +454,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
      *
      * @param authAuthzReqMessageContext
      * @param tokenReqMessageContext
+     *
      * @return AuthenticatedUser
      */
     private AuthenticatedUser getAuthenticatedUser(OAuthAuthzReqMessageContext authAuthzReqMessageContext,
@@ -480,7 +481,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
      * @return scope of token.
      */
     private String getScope(OAuthAuthzReqMessageContext authAuthzReqMessageContext,
-                            OAuthTokenReqMessageContext tokenReqMessageContext) throws IdentityOAuth2Exception {
+            OAuthTokenReqMessageContext tokenReqMessageContext) throws IdentityOAuth2Exception {
 
         String[] scope;
         String scopeString = null;
@@ -616,7 +617,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
      * @throws IdentityOAuth2Exception
      */
     protected JWTClaimsSet handleCustomClaims(JWTClaimsSet.Builder jwtClaimsSetBuilder,
-                                              OAuthTokenReqMessageContext tokenReqMessageContext) throws IdentityOAuth2Exception {
+                                      OAuthTokenReqMessageContext tokenReqMessageContext) throws IdentityOAuth2Exception {
         CustomClaimsCallbackHandler claimsCallBackHandler =
                 OAuthServerConfiguration.getInstance().getOpenIDConnectCustomClaimsCallbackHandler();
         return claimsCallBackHandler.handleCustomClaims(jwtClaimsSetBuilder, tokenReqMessageContext);
@@ -630,7 +631,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
      * @throws IdentityOAuth2Exception
      */
     protected JWTClaimsSet handleCustomClaims(JWTClaimsSet.Builder jwtClaimsSetBuilder,
-                                              OAuthAuthzReqMessageContext authzReqMessageContext) throws IdentityOAuth2Exception {
+                                      OAuthAuthzReqMessageContext authzReqMessageContext) throws IdentityOAuth2Exception {
         CustomClaimsCallbackHandler claimsCallBackHandler =
                 OAuthServerConfiguration.getInstance().getOpenIDConnectCustomClaimsCallbackHandler();
         return claimsCallBackHandler.handleCustomClaims(jwtClaimsSetBuilder, authzReqMessageContext);
