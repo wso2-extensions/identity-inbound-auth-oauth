@@ -383,16 +383,19 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         }
 
         AuthenticatedUser user;
+        String spTenantDomain;
         long accessTokenLifeTimeInMillis;
         if (authAuthzReqMessageContext != null) {
             accessTokenLifeTimeInMillis =
                     getAccessTokenLifeTimeInMillis(authAuthzReqMessageContext, oAuthAppDO, consumerKey);
+            spTenantDomain = authAuthzReqMessageContext.getAuthorizationReqDTO().getTenantDomain();
         } else {
             accessTokenLifeTimeInMillis =
                     getAccessTokenLifeTimeInMillis(tokenReqMessageContext, oAuthAppDO, consumerKey);
+            spTenantDomain = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getTenantDomain();
         }
 
-        String issuer = OAuth2Util.getIDTokenIssuer();
+        String issuer = OAuth2Util.getIdTokenIssuer(spTenantDomain);
         long curTimeInMillis = Calendar.getInstance().getTimeInMillis();
 
         String sub = getAuthenticatedSubjectIdentifier(authAuthzReqMessageContext, tokenReqMessageContext);
@@ -440,7 +443,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
      * @return authenticated subject identifier.
      */
     private String getAuthenticatedSubjectIdentifier(OAuthAuthzReqMessageContext authAuthzReqMessageContext,
-            OAuthTokenReqMessageContext tokenReqMessageContext) throws IdentityOAuth2Exception {
+                                                     OAuthTokenReqMessageContext tokenReqMessageContext) throws IdentityOAuth2Exception {
 
         AuthenticatedUser authenticatedUser = getAuthenticatedUser(authAuthzReqMessageContext, tokenReqMessageContext);
         return authenticatedUser.getAuthenticatedSubjectIdentifier();
@@ -451,7 +454,6 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
      *
      * @param authAuthzReqMessageContext
      * @param tokenReqMessageContext
-     *
      * @return AuthenticatedUser
      */
     private AuthenticatedUser getAuthenticatedUser(OAuthAuthzReqMessageContext authAuthzReqMessageContext,
@@ -478,7 +480,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
      * @return scope of token.
      */
     private String getScope(OAuthAuthzReqMessageContext authAuthzReqMessageContext,
-            OAuthTokenReqMessageContext tokenReqMessageContext) throws IdentityOAuth2Exception {
+                            OAuthTokenReqMessageContext tokenReqMessageContext) throws IdentityOAuth2Exception {
 
         String[] scope;
         String scopeString = null;
@@ -614,7 +616,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
      * @throws IdentityOAuth2Exception
      */
     protected JWTClaimsSet handleCustomClaims(JWTClaimsSet.Builder jwtClaimsSetBuilder,
-                                      OAuthTokenReqMessageContext tokenReqMessageContext) throws IdentityOAuth2Exception {
+                                              OAuthTokenReqMessageContext tokenReqMessageContext) throws IdentityOAuth2Exception {
         CustomClaimsCallbackHandler claimsCallBackHandler =
                 OAuthServerConfiguration.getInstance().getOpenIDConnectCustomClaimsCallbackHandler();
         return claimsCallBackHandler.handleCustomClaims(jwtClaimsSetBuilder, tokenReqMessageContext);
@@ -628,7 +630,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
      * @throws IdentityOAuth2Exception
      */
     protected JWTClaimsSet handleCustomClaims(JWTClaimsSet.Builder jwtClaimsSetBuilder,
-                                      OAuthAuthzReqMessageContext authzReqMessageContext) throws IdentityOAuth2Exception {
+                                              OAuthAuthzReqMessageContext authzReqMessageContext) throws IdentityOAuth2Exception {
         CustomClaimsCallbackHandler claimsCallBackHandler =
                 OAuthServerConfiguration.getInstance().getOpenIDConnectCustomClaimsCallbackHandler();
         return claimsCallBackHandler.handleCustomClaims(jwtClaimsSetBuilder, authzReqMessageContext);
