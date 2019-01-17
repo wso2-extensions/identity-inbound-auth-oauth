@@ -319,7 +319,8 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
             }
             connection.commit();
         } catch (SQLException e) {
-            String errorMsg = "Error occurred while retrieving request object by session data key.";
+            String errorMsg = "Error occurred while retrieving request object by session data key: " + sessionDataKey +
+                    ", isUserInfo: " + isUserInfo;
             throw new IdentityOAuth2Exception(errorMsg, e);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, resultSet, prepStmt);

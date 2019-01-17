@@ -24,6 +24,7 @@ import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -92,8 +93,10 @@ public interface RequestObjectDAO {
      * @return
      * @throws IdentityOAuth2Exception
      */
-    List<RequestedClaim> getRequestedClaimsbySessionDataKey(String sessionDataKey, boolean isUserInfo) throws
-            IdentityOAuth2Exception;
+    default List<RequestedClaim> getRequestedClaimsbySessionDataKey(String sessionDataKey, boolean isUserInfo) throws
+            IdentityOAuth2Exception{
+        return new ArrayList<>();
+    }
 
     /**
      * Retrieve essential claims for the id token and user info endpoint.
