@@ -88,10 +88,11 @@ public interface RequestObjectDAO {
      * Retrieve essential claims for the sessionDataKey and user info endpoint.
      *
      * @param sessionDataKey sessionDataKey
+     * @param isUserInfo isUserInfo
      * @return
      * @throws IdentityOAuth2Exception
      */
-    List<RequestedClaim> getRequestedClaimsbySessionDataKey(String sessionDataKey) throws
+    List<RequestedClaim> getRequestedClaimsbySessionDataKey(String sessionDataKey, boolean isUserInfo) throws
             IdentityOAuth2Exception;
 
     /**

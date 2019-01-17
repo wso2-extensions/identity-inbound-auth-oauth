@@ -291,10 +291,11 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
      * Retrieve Requested claims for the sessionDataKey and user info endpoint.
      *
      * @param sessionDataKey      sessionDataKey
+     * @param isUserInfo      isUserInfo
      * @throws IdentityOAuth2Exception
      */
     @Override
-    public List<RequestedClaim> getRequestedClaimsbySessionDataKey(String sessionDataKey) throws
+    public List<RequestedClaim> getRequestedClaimsbySessionDataKey(String sessionDataKey, boolean isUserInfo) throws
             IdentityOAuth2Exception {
         Connection connection = null;
         PreparedStatement prepStmt = null;
@@ -306,6 +307,7 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
 
             prepStmt = connection.prepareStatement(sql);
             prepStmt.setString(1, sessionDataKey);
+            prepStmt.setString(2, isUserInfo ? "1" : "0");
             resultSet = prepStmt.executeQuery();
 
             while (resultSet.next()) {
