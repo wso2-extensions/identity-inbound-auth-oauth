@@ -21,7 +21,7 @@
         <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
         <artifactId>identity-inbound-auth-oauth</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <version>6.0.82-SNAPSHOT</version>
+        <version>6.0.91-SNAPSHOT</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -43,6 +43,10 @@
         <dependency>
             <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
             <artifactId>org.wso2.carbon.identity.oauth</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
+            <artifactId>org.wso2.carbon.identity.discovery</artifactId>
         </dependency>
         <dependency>
             <groupId>com.google.code.gson</groupId>
@@ -118,7 +122,9 @@
                             org.wso2.carbon.user.core.*;version="${carbon.kernel.imp.pkg.version.range}",
                             org.wso2.carbon.utils.multitenancy;version="${carbon.kernel.imp.pkg.version.range}",
                             com.google.gson;version="${com.google.code.gson.osgi.version.range}",
-                            org.wso2.carbon.identity.oauth2.*
+                            org.wso2.carbon.identity.oauth2.*,
+                            org.wso2.carbon.identity.openidconnect.*,
+                            org.wso2.carbon.identity.discovery.*
                         </Import-Package>
                         <Export-Package>
                             !org.wso2.carbon.identity.webfinger.internal,

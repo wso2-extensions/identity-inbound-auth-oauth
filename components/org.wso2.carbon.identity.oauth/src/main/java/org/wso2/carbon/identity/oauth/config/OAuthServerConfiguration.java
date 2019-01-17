@@ -240,6 +240,9 @@ public class OAuthServerConfiguration {
     // Property added to determine the expiration of logout token in oidc back-channel logout.
     private String openIDConnectBCLogoutTokenExpiryInSeconds = "120";
 
+    // Property to determine whether data providers should be executed during token introspection.
+    private boolean enableIntrospectionDataProviders = false;
+
     private OAuthServerConfiguration() {
         buildOAuthServerConfiguration();
     }
@@ -375,6 +378,23 @@ public class OAuthServerConfiguration {
 
         // Read the value of  old  Access Tokens cleanup enable  config. If true cleanup feature will be enable.
         tokenCleanupFeatureConfig(oauthElem);
+
+        // Read token introspection related configurations.
+        parseTokenIntrospectionConfig(oauthElem);
+    }
+
+    private void parseTokenIntrospectionConfig(OMElement oauthElem) {
+
+        OMElement introspectionElem = oauthElem.getFirstChildWithName(getQNameWithIdentityNS(
+                ConfigElements.INTROSPECTION_CONFIG));
+        if (introspectionElem != null) {
+            // Reads 'EnableDataProviders' config.
+            OMElement enableDataProvidersElem = introspectionElem.getFirstChildWithName(
+                    getQNameWithIdentityNS(ConfigElements.ENABLE_DATA_PROVIDERS_CONFIG));
+            if (enableDataProvidersElem != null) {
+                enableIntrospectionDataProviders = Boolean.parseBoolean(enableDataProvidersElem.getText().trim());
+            }
+        }
     }
 
     private void parseShowDisplayNameInConsentPage(OMElement oauthElem) {
@@ -1154,6 +1174,15 @@ public class OAuthServerConfiguration {
         return isRevokeResponseHeadersEnabled;
     }
 
+    /**
+     * Returns whether introspection data providers should be enabled.
+     *
+     * @return true if introspection data providers should be enabled.
+     */
+    public boolean isEnableIntrospectionDataProviders() {
+
+        return enableIntrospectionDataProviders;
+    }
     /**
      * Return the value of whether the refresh token is allowed for this grant type. Null will be returned if there is
      * no tag or empty tag.
@@ -2744,6 +2773,9 @@ public class OAuthServerConfiguration {
         private static final String HASH_ALGORITHM = "HashAlgorithm";
         private static final String ENABLE_CLIENT_SECRET_HASH = "EnableClientSecretHash";
 
+        // Token introspection Configs
+        private static final String INTROSPECTION_CONFIG = "Introspection";
+        private static final String ENABLE_DATA_PROVIDERS_CONFIG = "EnableDataProviders";
     }
 
 }

@@ -56,8 +56,9 @@
     String applicationAccessTokenExpiryTime = request.getParameter("applicationAccessTokenExpiryTime");
     String refreshTokenExpiryTime = request.getParameter("refreshTokenExpiryTime");
     String idTokenExpiryTime = request.getParameter("idTokenExpiryTime");
-    String backchannelLogoutUrl = request.getParameter("backChannelLogoutUrl");
     String tokenType = request.getParameter("tokenType");
+    String logoutMechanism = request.getParameter("logoutMechanism");
+    String logoutUrl = request.getParameter("logoutUrl");
 
 	boolean pkceMandatory = false;
 	boolean pkceSupportPlain = false;
@@ -108,8 +109,10 @@
             app.setIdTokenExpiryTime(Long.parseLong(idTokenExpiryTime));
             app.setTokenType(tokenType);
 
-            if (Boolean.parseBoolean(request.getParameter("enableBackchannelLogout"))) {
-                app.setBackChannelLogoutUrl(backchannelLogoutUrl);
+            if (OAuthConstants.OIDCConfigProperties.BACK_CHANNEL_LOGOUT.equalsIgnoreCase(logoutMechanism)) {
+                app.setBackChannelLogoutUrl(logoutUrl);
+            } else if (OAuthConstants.OIDCConfigProperties.FRONT_CHANNEL_LOGOUT.equalsIgnoreCase(logoutMechanism)) {
+                app.setFrontchannelLogoutUrl(logoutUrl);
             }
 
             String grants;

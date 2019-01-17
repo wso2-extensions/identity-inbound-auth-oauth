@@ -38,6 +38,8 @@ import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Set;
 
+import static org.wso2.carbon.identity.discovery.DiscoveryUtil.isUseEntityIdAsIssuerInOidcDiscovery;
+
 /**
  * ProviderConfigBuilder builds the OIDProviderConfigResponse
  * giving the correct OprnIDConnect settings.
@@ -51,7 +53,15 @@ public class ProviderConfigBuilder {
     public OIDProviderConfigResponse buildOIDProviderConfig(OIDProviderRequest request) throws
             OIDCDiscoveryEndPointException, ServerConfigurationException {
         OIDProviderConfigResponse providerConfig = new OIDProviderConfigResponse();
-        providerConfig.setIssuer(OAuth2Util.getIDTokenIssuer());
+        if (isUseEntityIdAsIssuerInOidcDiscovery()) {
+            try {
+                providerConfig.setIssuer(OAuth2Util.getIdTokenIssuer(request.getTenantDomain()));
+            } catch (IdentityOAuth2Exception e) {
+                throw new ServerConfigurationException("Error while retrieving OIDC Id token issue", e);
+            }
+        } else {
+            providerConfig.setIssuer(OAuth2Util.getIDTokenIssuer());
+        }
         providerConfig.setAuthorizationEndpoint(OAuth2Util.OAuthURL.getOAuth2AuthzEPUrl());
         providerConfig.setTokenEndpoint(OAuth2Util.OAuthURL.getOAuth2TokenEPUrl());
         providerConfig.setUserinfoEndpoint(OAuth2Util.OAuthURL.getOAuth2UserInfoEPUrl());

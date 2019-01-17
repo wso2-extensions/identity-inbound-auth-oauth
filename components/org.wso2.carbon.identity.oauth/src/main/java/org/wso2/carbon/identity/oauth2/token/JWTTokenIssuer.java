@@ -383,16 +383,19 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         }
 
         AuthenticatedUser user;
+        String spTenantDomain;
         long accessTokenLifeTimeInMillis;
         if (authAuthzReqMessageContext != null) {
             accessTokenLifeTimeInMillis =
                     getAccessTokenLifeTimeInMillis(authAuthzReqMessageContext, oAuthAppDO, consumerKey);
+            spTenantDomain = authAuthzReqMessageContext.getAuthorizationReqDTO().getTenantDomain();
         } else {
             accessTokenLifeTimeInMillis =
                     getAccessTokenLifeTimeInMillis(tokenReqMessageContext, oAuthAppDO, consumerKey);
+            spTenantDomain = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getTenantDomain();
         }
 
-        String issuer = OAuth2Util.getIDTokenIssuer();
+        String issuer = OAuth2Util.getIdTokenIssuer(spTenantDomain);
         long curTimeInMillis = Calendar.getInstance().getTimeInMillis();
 
         String sub = getAuthenticatedSubjectIdentifier(authAuthzReqMessageContext, tokenReqMessageContext);

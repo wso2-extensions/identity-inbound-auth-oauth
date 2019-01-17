@@ -82,6 +82,8 @@
             <class name="org.wso2.carbon.identity.oauth2.authcontext.DefaultClaimsRetrieverTest"/>
             <class name="org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContextTest"/>
             <class name="org.wso2.carbon.identity.oauth2.bean.ScopeTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.cache.JWKSCacheKeyTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.cache.JWKSCacheTest"/>
             <class name="org.wso2.carbon.identity.oauth2.dao.AccessContextTokenDOTest"/>
             <class name="org.wso2.carbon.identity.oauth2.dao.AuthContextTokenDOTest"/>
             <class name="org.wso2.carbon.identity.oauth2.dao.ScopeMgtDAOTest"/>
@@ -151,6 +153,8 @@
             <class name="org.wso2.carbon.identity.oauth2.authcontext.DefaultClaimsRetrieverTest"/>
             <class name="org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContextTest"/>
             <class name="org.wso2.carbon.identity.oauth2.bean.ScopeTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.cache.JWKSCacheKeyTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.cache.JWKSCacheTest"/>
             <class name="org.wso2.carbon.identity.oauth2.dao.AccessContextTokenDOTest"/>
             <class name="org.wso2.carbon.identity.oauth2.dao.AuthContextTokenDOTest"/>
             <class name="org.wso2.carbon.identity.oauth2.dao.ScopeMgtDAOTest"/>

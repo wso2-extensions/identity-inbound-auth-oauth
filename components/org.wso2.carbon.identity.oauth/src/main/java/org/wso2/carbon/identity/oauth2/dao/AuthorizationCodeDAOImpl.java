@@ -246,10 +246,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                     subjectIdentifier = resultSet.getString(12);
                     pkceCodeChallenge = resultSet.getString(13);
                     pkceCodeChallengeMethod = resultSet.getString(14);
-                    user = new AuthenticatedUser();
-                    user.setUserName(authorizedUser);
-                    user.setTenantDomain(tenantDomain);
-                    user.setUserStoreDomain(userstoreDomain);
+                    user = OAuth2Util.createAuthenticatedUser(authorizedUser, userstoreDomain, tenantDomain);
                     ServiceProvider serviceProvider;
                     try {
                         serviceProvider = OAuth2ServiceComponentHolder.getApplicationMgtService().
@@ -286,10 +283,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                     codeId = resultSet.getString(11);
                     subjectIdentifier = resultSet.getString(12);
 
-                    user = new AuthenticatedUser();
-                    user.setUserName(authorizedUser);
-                    user.setTenantDomain(tenantDomain);
-                    user.setUserStoreDomain(userstoreDomain);
+                    user = OAuth2Util.createAuthenticatedUser(authorizedUser, userstoreDomain, tenantDomain);
                     ServiceProvider serviceProvider;
                     try {
                         serviceProvider = OAuth2ServiceComponentHolder.getApplicationMgtService().
@@ -536,7 +530,8 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                 String callbackUrl = rs.getString(8);
                 String userStoreDomain = rs.getString(9);
 
-                AuthenticatedUser user = new AuthenticatedUser();
+                AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(authzUser, userStoreDomain, OAuth2Util
+                        .getTenantDomain(tenantId));
                 user.setUserName(authzUser);
                 user.setUserStoreDomain(userStoreDomain);
                 user.setTenantDomain(OAuth2Util.getTenantDomain(tenantId));
@@ -585,10 +580,8 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                 long validityPeriodInMillis = rs.getLong(7);
                 String callbackUrl = rs.getString(8);
 
-                AuthenticatedUser user = new AuthenticatedUser();
-                user.setUserName(authzUser);
-                user.setUserStoreDomain(userStoreDomain);
-                user.setTenantDomain(OAuth2Util.getTenantDomain(tenantId));
+                AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(authzUser, userStoreDomain, OAuth2Util
+                        .getTenantDomain(tenantId));
                 latestAuthzCodes.add(new AuthzCodeDO(user, scope, issuedTime, validityPeriodInMillis, callbackUrl,
                         consumerKey, authzCode, authzCodeId));
             }

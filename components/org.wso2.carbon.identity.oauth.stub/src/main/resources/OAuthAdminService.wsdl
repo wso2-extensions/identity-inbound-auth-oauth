@@ -1,47 +1,25 @@
-<wsdl:definitions xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" xmlns:ax2399="http://base.identity.carbon.wso2.org/xsd" xmlns:ax2402="http://dto.oauth.identity.carbon.wso2.org/xsd" xmlns:wsaw="http://www.w3.org/2006/05/addressing/wsdl" xmlns:mime="http://schemas.xmlsoap.org/wsdl/mime/" xmlns:tns="http://oauth.identity.carbon.wso2.org" xmlns:http="http://schemas.xmlsoap.org/wsdl/http/" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://schemas.xmlsoap.org/wsdl/soap12/" xmlns:ns1="http://org.apache.axis2/xsd" xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:ax2398="http://oauth.identity.carbon.wso2.org/xsd" targetNamespace="http://oauth.identity.carbon.wso2.org">
+<wsdl:definitions xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" xmlns:ax2404="http://oauth.identity.carbon.wso2.org/xsd"
+                  xmlns:wsaw="http://www.w3.org/2006/05/addressing/wsdl"
+                  xmlns:ax2405="http://base.identity.carbon.wso2.org/xsd"
+                  xmlns:mime="http://schemas.xmlsoap.org/wsdl/mime/" xmlns:tns="http://oauth.identity.carbon.wso2.org"
+                  xmlns:ax2408="http://dto.oauth.identity.carbon.wso2.org/xsd"
+                  xmlns:http="http://schemas.xmlsoap.org/wsdl/http/" xmlns:xs="http://www.w3.org/2001/XMLSchema"
+                  xmlns:soap12="http://schemas.xmlsoap.org/wsdl/soap12/" xmlns:ns1="http://org.apache.axis2/xsd"
+                  xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+                  targetNamespace="http://oauth.identity.carbon.wso2.org">
     <wsdl:documentation>OAuthAdminService</wsdl:documentation>
     <wsdl:types>
-        <xs:schema xmlns:ax2401="http://oauth.identity.carbon.wso2.org/xsd" xmlns:ax2403="http://dto.oauth.identity.carbon.wso2.org/xsd" xmlns:ns="http://org.apache.axis2/xsd" attributeFormDefault="qualified" elementFormDefault="qualified" targetNamespace="http://org.apache.axis2/xsd">
+        <xs:schema xmlns:ax2407="http://oauth.identity.carbon.wso2.org/xsd"
+                   xmlns:ax2409="http://dto.oauth.identity.carbon.wso2.org/xsd" xmlns:ns="http://org.apache.axis2/xsd"
+                   attributeFormDefault="qualified" elementFormDefault="qualified"
+                   targetNamespace="http://org.apache.axis2/xsd">
             <xs:import namespace="http://oauth.identity.carbon.wso2.org/xsd"/>
             <xs:import namespace="http://dto.oauth.identity.carbon.wso2.org/xsd"/>
             <xs:element name="OAuthAdminServiceIdentityOAuthAdminException">
                 <xs:complexType>
                     <xs:sequence>
-                        <xs:element minOccurs="0" name="IdentityOAuthAdminException" nillable="true" type="ax2401:IdentityOAuthAdminException"/>
-                    </xs:sequence>
-                </xs:complexType>
-            </xs:element>
-            <xs:element name="getScopes">
-                <xs:complexType>
-                    <xs:sequence/>
-                </xs:complexType>
-            </xs:element>
-            <xs:element name="getScopesResponse">
-                <xs:complexType>
-                    <xs:sequence>
-                        <xs:element maxOccurs="unbounded" minOccurs="0" name="return" nillable="true" type="ax2402:ScopeDTO"/>
-                    </xs:sequence>
-                </xs:complexType>
-            </xs:element>
-            <xs:element name="getClaims">
-                <xs:complexType>
-                    <xs:sequence>
-                        <xs:element minOccurs="0" name="scope" nillable="true" type="xs:string"/>
-                    </xs:sequence>
-                </xs:complexType>
-            </xs:element>
-            <xs:element name="getClaimsResponse">
-                <xs:complexType>
-                    <xs:sequence>
-                        <xs:element maxOccurs="unbounded" minOccurs="0" name="return" nillable="true" type="xs:string"/>
-                    </xs:sequence>
-                </xs:complexType>
-            </xs:element>
-            <xs:element name="addScope">
-                <xs:complexType>
-                    <xs:sequence>
-                        <xs:element minOccurs="0" name="scope" nillable="true" type="xs:string"/>
-                        <xs:element maxOccurs="unbounded" minOccurs="0" name="claims" nillable="true" type="xs:string"/>
+                        <xs:element minOccurs="0" name="IdentityOAuthAdminException" nillable="true"
+                                    type="ax2404:IdentityOAuthAdminException"/>
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
@@ -65,7 +43,8 @@
             <xs:element name="getAllOAuthApplicationDataResponse">
                 <xs:complexType>
                     <xs:sequence>
-                        <xs:element maxOccurs="unbounded" minOccurs="0" name="return" nillable="true" type="ax2402:OAuthConsumerAppDTO"/>
+                        <xs:element maxOccurs="unbounded" minOccurs="0" name="return" nillable="true"
+                                    type="ax2408:OAuthConsumerAppDTO"/>
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
@@ -79,7 +58,7 @@
             <xs:element name="getOAuthApplicationDataResponse">
                 <xs:complexType>
                     <xs:sequence>
-                        <xs:element minOccurs="0" name="return" nillable="true" type="ax2402:OAuthConsumerAppDTO"/>
+                        <xs:element minOccurs="0" name="return" nillable="true" type="ax2408:OAuthConsumerAppDTO"/>
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
@@ -93,35 +72,36 @@
             <xs:element name="getOAuthApplicationDataByAppNameResponse">
                 <xs:complexType>
                     <xs:sequence>
-                        <xs:element minOccurs="0" name="return" nillable="true" type="ax2402:OAuthConsumerAppDTO"/>
+                        <xs:element minOccurs="0" name="return" nillable="true" type="ax2408:OAuthConsumerAppDTO"/>
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
             <xs:element name="registerOAuthApplicationData">
                 <xs:complexType>
                     <xs:sequence>
-                        <xs:element minOccurs="0" name="application" nillable="true" type="ax2402:OAuthConsumerAppDTO"/>
+                        <xs:element minOccurs="0" name="application" nillable="true" type="ax2408:OAuthConsumerAppDTO"/>
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
             <xs:element name="registerAndRetrieveOAuthApplicationData">
                 <xs:complexType>
                     <xs:sequence>
-                        <xs:element minOccurs="0" name="application" nillable="true" type="ax2402:OAuthConsumerAppDTO"/>
+                        <xs:element minOccurs="0" name="application" nillable="true" type="ax2408:OAuthConsumerAppDTO"/>
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
             <xs:element name="registerAndRetrieveOAuthApplicationDataResponse">
                 <xs:complexType>
                     <xs:sequence>
-                        <xs:element minOccurs="0" name="return" nillable="true" type="ax2402:OAuthConsumerAppDTO"/>
+                        <xs:element minOccurs="0" name="return" nillable="true" type="ax2408:OAuthConsumerAppDTO"/>
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
             <xs:element name="updateConsumerApplication">
                 <xs:complexType>
                     <xs:sequence>
-                        <xs:element minOccurs="0" name="consumerAppDTO" nillable="true" type="ax2402:OAuthConsumerAppDTO"/>
+                        <xs:element minOccurs="0" name="consumerAppDTO" nillable="true"
+                                    type="ax2408:OAuthConsumerAppDTO"/>
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
@@ -148,6 +128,14 @@
                 <xs:complexType>
                     <xs:sequence>
                         <xs:element minOccurs="0" name="return" nillable="true" type="xs:string"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="addScope">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element minOccurs="0" name="scope" nillable="true" type="xs:string"/>
+                        <xs:element maxOccurs="unbounded" minOccurs="0" name="claims" nillable="true" type="xs:string"/>
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
@@ -218,7 +206,7 @@
             <xs:element name="updateAndRetrieveOauthSecretKeyResponse">
                 <xs:complexType>
                     <xs:sequence>
-                        <xs:element minOccurs="0" name="return" nillable="true" type="ax2402:OAuthConsumerAppDTO"/>
+                        <xs:element minOccurs="0" name="return" nillable="true" type="ax2408:OAuthConsumerAppDTO"/>
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
@@ -237,21 +225,24 @@
             <xs:element name="getAppsAuthorizedByUserResponse">
                 <xs:complexType>
                     <xs:sequence>
-                        <xs:element maxOccurs="unbounded" minOccurs="0" name="return" nillable="true" type="ax2402:OAuthConsumerAppDTO"/>
+                        <xs:element maxOccurs="unbounded" minOccurs="0" name="return" nillable="true"
+                                    type="ax2408:OAuthConsumerAppDTO"/>
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
             <xs:element name="revokeAuthzForAppsByResoureOwner">
                 <xs:complexType>
                     <xs:sequence>
-                        <xs:element minOccurs="0" name="revokeRequestDTO" nillable="true" type="ax2402:OAuthRevocationRequestDTO"/>
+                        <xs:element minOccurs="0" name="revokeRequestDTO" nillable="true"
+                                    type="ax2408:OAuthRevocationRequestDTO"/>
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
             <xs:element name="revokeAuthzForAppsByResoureOwnerResponse">
                 <xs:complexType>
                     <xs:sequence>
-                        <xs:element minOccurs="0" name="return" nillable="true" type="ax2402:OAuthRevocationResponseDTO"/>
+                        <xs:element minOccurs="0" name="return" nillable="true"
+                                    type="ax2408:OAuthRevocationResponseDTO"/>
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
@@ -266,7 +257,8 @@
             <xs:element name="updateApproveAlwaysForAppConsentByResourceOwnerResponse">
                 <xs:complexType>
                     <xs:sequence>
-                        <xs:element minOccurs="0" name="return" nillable="true" type="ax2402:OAuthRevocationResponseDTO"/>
+                        <xs:element minOccurs="0" name="return" nillable="true"
+                                    type="ax2408:OAuthRevocationResponseDTO"/>
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
@@ -326,7 +318,7 @@
             <xs:element name="getTokenExpiryTimesResponse">
                 <xs:complexType>
                     <xs:sequence>
-                        <xs:element minOccurs="0" name="return" nillable="true" type="ax2402:OAuthTokenExpiryTimeDTO"/>
+                        <xs:element minOccurs="0" name="return" nillable="true" type="ax2408:OAuthTokenExpiryTimeDTO"/>
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
@@ -338,7 +330,34 @@
             <xs:element name="getSupportedIDTokenAlgorithmsResponse">
                 <xs:complexType>
                     <xs:sequence>
-                        <xs:element minOccurs="0" name="return" nillable="true" type="ax2402:OAuthIDTokenAlgorithmDTO"/>
+                        <xs:element minOccurs="0" name="return" nillable="true" type="ax2408:OAuthIDTokenAlgorithmDTO"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="getClaims">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element minOccurs="0" name="scope" nillable="true" type="xs:string"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="getClaimsResponse">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element maxOccurs="unbounded" minOccurs="0" name="return" nillable="true" type="xs:string"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="getScopes">
+                <xs:complexType>
+                    <xs:sequence/>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="getScopesResponse">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element maxOccurs="unbounded" minOccurs="0" name="return" nillable="true"
+                                    type="ax2408:ScopeDTO"/>
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
@@ -350,23 +369,18 @@
                 </xs:sequence>
             </xs:complexType>
         </xs:schema>
-        <xs:schema xmlns:ax2400="http://base.identity.carbon.wso2.org/xsd" attributeFormDefault="qualified" elementFormDefault="qualified" targetNamespace="http://oauth.identity.carbon.wso2.org/xsd">
+        <xs:schema xmlns:ax2406="http://base.identity.carbon.wso2.org/xsd" attributeFormDefault="qualified"
+                   elementFormDefault="qualified" targetNamespace="http://oauth.identity.carbon.wso2.org/xsd">
             <xs:import namespace="http://base.identity.carbon.wso2.org/xsd"/>
             <xs:complexType name="IdentityOAuthAdminException">
                 <xs:complexContent>
-                    <xs:extension base="ax2399:IdentityException">
+                    <xs:extension base="ax2405:IdentityException">
                         <xs:sequence/>
                     </xs:extension>
                 </xs:complexContent>
             </xs:complexType>
         </xs:schema>
         <xs:schema attributeFormDefault="qualified" elementFormDefault="qualified" targetNamespace="http://dto.oauth.identity.carbon.wso2.org/xsd">
-            <xs:complexType name="ScopeDTO">
-                <xs:sequence>
-                    <xs:element maxOccurs="unbounded" minOccurs="0" name="claim" nillable="true" type="xs:string"/>
-                    <xs:element minOccurs="0" name="name" nillable="true" type="xs:string"/>
-                </xs:sequence>
-            </xs:complexType>
             <xs:complexType name="OAuthConsumerAppDTO">
                 <xs:sequence>
                     <xs:element minOccurs="0" name="OAuthVersion" nillable="true" type="xs:string"/>
@@ -376,6 +390,7 @@
                     <xs:element minOccurs="0" name="backChannelLogoutUrl" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="bypassClientCredentials" type="xs:boolean"/>
                     <xs:element minOccurs="0" name="callbackUrl" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="frontchannelLogoutUrl" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="grantTypes" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="idTokenEncryptionAlgorithm" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="idTokenEncryptionEnabled" type="xs:boolean"/>
@@ -423,6 +438,12 @@
                     <xs:element minOccurs="0" name="defaultIdTokenEncryptionMethod" nillable="true" type="xs:string"/>
                     <xs:element maxOccurs="unbounded" minOccurs="0" name="supportedIdTokenEncryptionAlgorithms" nillable="true" type="xs:string"/>
                     <xs:element maxOccurs="unbounded" minOccurs="0" name="supportedIdTokenEncryptionMethods" nillable="true" type="xs:string"/>
+                </xs:sequence>
+            </xs:complexType>
+            <xs:complexType name="ScopeDTO">
+                <xs:sequence>
+                    <xs:element maxOccurs="unbounded" minOccurs="0" name="claim" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="name" nillable="true" type="xs:string"/>
                 </xs:sequence>
             </xs:complexType>
         </xs:schema>
@@ -563,17 +584,17 @@
     <wsdl:message name="getTokenExpiryTimesResponse">
         <wsdl:part name="parameters" element="ns1:getTokenExpiryTimesResponse"/>
     </wsdl:message>
-    <wsdl:message name="getScopesRequest">
-        <wsdl:part name="parameters" element="ns1:getScopes"/>
-    </wsdl:message>
-    <wsdl:message name="getScopesResponse">
-        <wsdl:part name="parameters" element="ns1:getScopesResponse"/>
-    </wsdl:message>
     <wsdl:message name="getScopeNamesRequest">
         <wsdl:part name="parameters" element="ns1:getScopeNames"/>
     </wsdl:message>
     <wsdl:message name="getScopeNamesResponse">
         <wsdl:part name="parameters" element="ns1:getScopeNamesResponse"/>
+    </wsdl:message>
+    <wsdl:message name="getScopesRequest">
+        <wsdl:part name="parameters" element="ns1:getScopes"/>
+    </wsdl:message>
+    <wsdl:message name="getScopesResponse">
+        <wsdl:part name="parameters" element="ns1:getScopesResponse"/>
     </wsdl:message>
     <wsdl:message name="revokeAuthzForAppsByResoureOwnerRequest">
         <wsdl:part name="parameters" element="ns1:revokeAuthzForAppsByResoureOwner"/>
@@ -708,15 +729,17 @@
             <wsdl:input message="tns:getTokenExpiryTimesRequest" wsaw:Action="urn:getTokenExpiryTimes"/>
             <wsdl:output message="tns:getTokenExpiryTimesResponse" wsaw:Action="urn:getTokenExpiryTimesResponse"/>
         </wsdl:operation>
+        <wsdl:operation name="getScopeNames">
+            <wsdl:input message="tns:getScopeNamesRequest" wsaw:Action="urn:getScopeNames"/>
+            <wsdl:output message="tns:getScopeNamesResponse" wsaw:Action="urn:getScopeNamesResponse"/>
+            <wsdl:fault message="tns:OAuthAdminServiceIdentityOAuthAdminException"
+                        name="OAuthAdminServiceIdentityOAuthAdminException"
+                        wsaw:Action="urn:getScopeNamesOAuthAdminServiceIdentityOAuthAdminException"/>
+        </wsdl:operation>
         <wsdl:operation name="getScopes">
             <wsdl:input message="tns:getScopesRequest" wsaw:Action="urn:getScopes"/>
             <wsdl:output message="tns:getScopesResponse" wsaw:Action="urn:getScopesResponse"/>
             <wsdl:fault message="tns:OAuthAdminServiceIdentityOAuthAdminException" name="OAuthAdminServiceIdentityOAuthAdminException" wsaw:Action="urn:getScopesOAuthAdminServiceIdentityOAuthAdminException"/>
-        </wsdl:operation>
-        <wsdl:operation name="getScopeNames">
-            <wsdl:input message="tns:getScopeNamesRequest" wsaw:Action="urn:getScopeNames"/>
-            <wsdl:output message="tns:getScopeNamesResponse" wsaw:Action="urn:getScopeNamesResponse"/>
-            <wsdl:fault message="tns:OAuthAdminServiceIdentityOAuthAdminException" name="OAuthAdminServiceIdentityOAuthAdminException" wsaw:Action="urn:getScopeNamesOAuthAdminServiceIdentityOAuthAdminException"/>
         </wsdl:operation>
         <wsdl:operation name="revokeAuthzForAppsByResoureOwner">
             <wsdl:input message="tns:revokeAuthzForAppsByResoureOwnerRequest" wsaw:Action="urn:revokeAuthzForAppsByResoureOwner"/>
@@ -1012,8 +1035,8 @@
                 <soap:body use="literal"/>
             </wsdl:output>
         </wsdl:operation>
-        <wsdl:operation name="getScopes">
-            <soap:operation soapAction="urn:getScopes" style="document"/>
+        <wsdl:operation name="getScopeNames">
+            <soap:operation soapAction="urn:getScopeNames" style="document"/>
             <wsdl:input>
                 <soap:body use="literal"/>
             </wsdl:input>
@@ -1024,8 +1047,8 @@
                 <soap:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
             </wsdl:fault>
         </wsdl:operation>
-        <wsdl:operation name="getScopeNames">
-            <soap:operation soapAction="urn:getScopeNames" style="document"/>
+        <wsdl:operation name="getScopes">
+            <soap:operation soapAction="urn:getScopes" style="document"/>
             <wsdl:input>
                 <soap:body use="literal"/>
             </wsdl:input>
@@ -1342,8 +1365,8 @@
                 <soap12:body use="literal"/>
             </wsdl:output>
         </wsdl:operation>
-        <wsdl:operation name="getScopes">
-            <soap12:operation soapAction="urn:getScopes" style="document"/>
+        <wsdl:operation name="getScopeNames">
+            <soap12:operation soapAction="urn:getScopeNames" style="document"/>
             <wsdl:input>
                 <soap12:body use="literal"/>
             </wsdl:input>
@@ -1354,8 +1377,8 @@
                 <soap12:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
             </wsdl:fault>
         </wsdl:operation>
-        <wsdl:operation name="getScopeNames">
-            <soap12:operation soapAction="urn:getScopeNames" style="document"/>
+        <wsdl:operation name="getScopes">
+            <soap12:operation soapAction="urn:getScopes" style="document"/>
             <wsdl:input>
                 <soap12:body use="literal"/>
             </wsdl:input>
@@ -1615,8 +1638,8 @@
                 <mime:content type="text/xml" part="parameters"/>
             </wsdl:output>
         </wsdl:operation>
-        <wsdl:operation name="getScopes">
-            <http:operation location="getScopes"/>
+        <wsdl:operation name="getScopeNames">
+            <http:operation location="getScopeNames"/>
             <wsdl:input>
                 <mime:content type="text/xml" part="parameters"/>
             </wsdl:input>
@@ -1624,8 +1647,8 @@
                 <mime:content type="text/xml" part="parameters"/>
             </wsdl:output>
         </wsdl:operation>
-        <wsdl:operation name="getScopeNames">
-            <http:operation location="getScopeNames"/>
+        <wsdl:operation name="getScopes">
+            <http:operation location="getScopes"/>
             <wsdl:input>
                 <mime:content type="text/xml" part="parameters"/>
             </wsdl:input>

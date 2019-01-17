@@ -18,35 +18,32 @@
 
 package org.wso2.carbon.identity.webfinger;
 
-import org.apache.commons.collections.iterators.IteratorEnumeration;
-import org.mockito.Matchers;
-import org.mockito.Mockito;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
-import org.testng.annotations.DataProvider;
+        import org.apache.commons.collections.iterators.IteratorEnumeration;
+        import org.mockito.Matchers;
+        import org.mockito.Mockito;
+        import org.mockito.invocation.InvocationOnMock;
+        import org.mockito.stubbing.Answer;
+        import org.testng.annotations.DataProvider;
+        import org.testng.annotations.Test;
+        import org.wso2.carbon.identity.common.testng.WithCarbonHome;
+        import org.wso2.carbon.identity.common.testng.WithRealmService;
+        import org.wso2.carbon.identity.webfinger.internal.WebFingerServiceComponentHolder;
 
-import org.testng.annotations.Test;
-import org.wso2.carbon.identity.common.testng.WithCarbonHome;
-import org.wso2.carbon.identity.common.testng.WithRealmService;
-import org.wso2.carbon.identity.webfinger.internal.WebFingerServiceComponentHolder;
+        import java.util.HashMap;
+        import java.util.Map;
+        import javax.servlet.http.HttpServletRequest;
+        import javax.servlet.http.HttpServletResponse;
 
-
-import java.util.HashMap;
-import java.util.Map;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
-
-import static org.testng.Assert.assertNotNull;
-import static org.testng.Assert.fail;
+        import static org.testng.Assert.assertEquals;
+        import static org.testng.Assert.assertNotNull;
+        import static org.testng.Assert.fail;
 
 /**
  * Tests for DefaultWebFingerProcessor.
  */
-
 @WithCarbonHome
 @WithRealmService(injectToSingletons = { WebFingerServiceComponentHolder.class })
-public class DefaultWebFingerProcessorTest {
+public class BackwordDefaultWebfingerProcessorTest {
 
     @Test
     public void testGetResponse() throws Exception {
@@ -79,35 +76,36 @@ public class DefaultWebFingerProcessorTest {
 
         try {
             WebFingerResponse response = defaultWebFingerProcessor.getResponse(request);
-            assertNotNull(response);
             fail("WebFingerEndpointException should have been thrown");
         } catch (WebFingerEndpointException e) {
             //Expected exception
         }
 
-
+        parameterMap.put(WebFingerConstants.RESOURCE, "http://test.t/TestResource1");
+        WebFingerResponse response = defaultWebFingerProcessor.getResponse(request);
+        assertNotNull(response);
     }
 
-    //TODO: Need to fix this test as it gives java.lang.IllegalArgumentException: argument type mismatch
-    //        at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
-    //        at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
-
-   /* @Test(dataProvider = "dataProviderForHandleError")
-    public void testHandleError(String code, String exception, String expectedCode)  {
+    @Test(dataProvider = "dataProviderForHandleError")
+    public void testHandleError(WebFingerEndpointException exception, int expectedCode) throws Exception {
         DefaultWebFingerProcessor defaultWebFingerProcessor = DefaultWebFingerProcessor.getInstance();
-        WebFingerEndpointException e = new WebFingerEndpointException(code, exception);
-        assertEquals(defaultWebFingerProcessor.handleError(e), Integer.parseInt(expectedCode),
-                "Status Code must match for Exception Type: " + e.getErrorCode());
-    }*/
+        assertEquals(defaultWebFingerProcessor.handleError(exception), expectedCode,
+                "Status Code must match for Exception Type: " + exception.getErrorCode());
+    }
 
     @DataProvider
     private Object[][] dataProviderForHandleError() {
-        return new Object[][] {
-                { "400", WebFingerConstants.ERROR_CODE_INVALID_REQUEST, HttpServletResponse.SC_BAD_REQUEST },
-                { "404", WebFingerConstants.ERROR_CODE_INVALID_RESOURCE, HttpServletResponse.SC_NOT_FOUND },
-                { "500", WebFingerConstants.ERROR_CODE_INVALID_TENANT, HttpServletResponse.SC_INTERNAL_SERVER_ERROR },
-                { "415", WebFingerConstants.ERROR_CODE_JSON_EXCEPTION, HttpServletResponse.SC_UNSUPPORTED_MEDIA_TYPE },
-                { "404", WebFingerConstants.ERROR_CODE_NO_WEBFINGER_CONFIG, HttpServletResponse.SC_NOT_FOUND } };
+        return new Object[][] { { new WebFingerEndpointException(WebFingerConstants.ERROR_CODE_INVALID_REQUEST,
+                WebFingerConstants.ERROR_CODE_INVALID_REQUEST), HttpServletResponse.SC_BAD_REQUEST },
+                { new WebFingerEndpointException(WebFingerConstants.ERROR_CODE_INVALID_RESOURCE,
+                        WebFingerConstants.ERROR_CODE_INVALID_RESOURCE), HttpServletResponse.SC_NOT_FOUND },
+                { new WebFingerEndpointException(WebFingerConstants.ERROR_CODE_INVALID_TENANT,
+                        WebFingerConstants.ERROR_CODE_INVALID_TENANT), HttpServletResponse.SC_INTERNAL_SERVER_ERROR },
+                { new WebFingerEndpointException(WebFingerConstants.ERROR_CODE_JSON_EXCEPTION,
+                        WebFingerConstants.ERROR_CODE_JSON_EXCEPTION), HttpServletResponse.SC_UNSUPPORTED_MEDIA_TYPE },
+                { new WebFingerEndpointException(WebFingerConstants.ERROR_CODE_NO_WEBFINGER_CONFIG,
+                        WebFingerConstants.ERROR_CODE_NO_WEBFINGER_CONFIG), HttpServletResponse.SC_NOT_FOUND } };
     }
 
 }
+

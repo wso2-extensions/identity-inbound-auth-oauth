@@ -39,8 +39,6 @@ public class OAuthAppDO implements Serializable {
     private String oauthConsumerSecret;
     private String applicationName;
     private String callbackUrl;
-    @XmlTransient
-    private AuthenticatedUser user;
     private String oauthVersion;
     private String grantTypes;
     @XmlElementWrapper(name="scopeValidators")
@@ -63,6 +61,8 @@ public class OAuthAppDO implements Serializable {
     private String idTokenEncryptionAlgorithm;
     private String idTokenEncryptionMethod;
     private String backChannelLogoutUrl;
+    private String frontchannelLogoutUrl;
+    @XmlTransient
     private AuthenticatedUser appOwner;
     private String tokenType;
 
@@ -75,12 +75,20 @@ public class OAuthAppDO implements Serializable {
         this.appOwner = appOwner;
     }
 
+    /**
+     * @deprecated use {@link #getAppOwner()} instead.
+     */
+    @Deprecated
     public AuthenticatedUser getUser() {
-        return user;
+        return this.getAppOwner();
     }
 
+    /**
+     * @deprecated use {@link #setAppOwner(AuthenticatedUser)} instead.
+     */
+    @Deprecated
     public void setUser(AuthenticatedUser user) {
-        this.user = user;
+        this.setAppOwner(user);
     }
 
     public String getOauthConsumerKey() {
@@ -241,6 +249,14 @@ public class OAuthAppDO implements Serializable {
 
     public String getBackChannelLogoutUrl() {
         return backChannelLogoutUrl;
+    }
+
+    public String getFrontchannelLogoutUrl() {
+        return frontchannelLogoutUrl;
+    }
+
+    public void setFrontchannelLogoutUrl(String frontchannelLogoutUrl) {
+        this.frontchannelLogoutUrl = frontchannelLogoutUrl;
     }
 
     public long getIdTokenExpiryTime() {
