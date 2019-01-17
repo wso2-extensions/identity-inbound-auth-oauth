@@ -288,6 +288,44 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
     }
 
     /**
+     * Retrieve Requested claims for the sessionDataKey and user info endpoint.
+     *
+     * @param sessionDataKey      sessionDataKey
+     * @throws IdentityOAuth2Exception
+     */
+    @Override
+    public List<RequestedClaim> getRequestedClaimsbySessionDataKey(String sessionDataKey) throws
+            IdentityOAuth2Exception {
+        Connection connection = null;
+        PreparedStatement prepStmt = null;
+        ResultSet resultSet = null;
+        List<RequestedClaim> essentialClaims = new ArrayList<>();
+        try {
+            connection = IdentityDatabaseUtil.getDBConnection();
+            String sql = SQLQueries.RETRIEVE_REQUESTED_CLAIMS_BY_SESSION_DATA_KEY;
+
+            prepStmt = connection.prepareStatement(sql);
+            prepStmt.setString(1, sessionDataKey);
+            resultSet = prepStmt.executeQuery();
+
+            while (resultSet.next()) {
+                RequestedClaim requestedClaim = new RequestedClaim();
+                requestedClaim.setName(resultSet.getString(1));
+                requestedClaim.setEssential(!"0".equals(resultSet.getString(2)));
+                requestedClaim.setValue(resultSet.getString(3));
+                essentialClaims.add(requestedClaim);
+            }
+            connection.commit();
+        } catch (SQLException e) {
+            String errorMsg = "Error occurred while retrieving request object by session data key.";
+            throw new IdentityOAuth2Exception(errorMsg, e);
+        } finally {
+            IdentityDatabaseUtil.closeAllConnections(connection, resultSet, prepStmt);
+        }
+        return essentialClaims;
+    }
+
+    /**
      * Retrieve Requested claims for the id token and user info endpoint.
      *
      * @param token      token

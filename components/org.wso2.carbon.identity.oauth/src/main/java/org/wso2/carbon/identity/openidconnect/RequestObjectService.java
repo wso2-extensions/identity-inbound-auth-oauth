@@ -61,6 +61,31 @@ public class RequestObjectService {
     /**
      * To invoke the RequestObjectPersistenceFactory to retrieve request object.
      *
+     * @param sessionDataKey sessionDataKey
+     * @return list of claims which have marked as essential in the request object.
+     * @throws RequestObjectException
+     */
+    private List<RequestedClaim> getRequestedClaimsbySessionDataKey(String sessionDataKey)
+            throws RequestObjectException {
+
+        List<RequestedClaim> essentialClaims;
+        if (log.isDebugEnabled()) {
+            log.debug("Invoking the RequestObjectPersistenceFactory to retrieve essential claims list " +
+                    "by using session data key.");
+        }
+
+        try {
+            essentialClaims = OAuthTokenPersistenceFactory.getInstance().getRequestObjectDAO()
+                    .getRequestedClaimsbySessionDataKey(sessionDataKey);
+        } catch (IdentityOAuth2Exception e) {
+            throw new RequestObjectException(e.getMessage());
+        }
+        return essentialClaims;
+    }
+
+    /**
+     * To invoke the RequestObjectPersistenceFactory to retrieve request object.
+     *
      * @param token access token Id
      * @return list of claims which have marked as essential in the request object.
      * @throws RequestObjectException
@@ -80,6 +105,19 @@ public class RequestObjectService {
             throw new RequestObjectException(e.getMessage());
         }
         return essentialClaims;
+    }
+
+    /**
+     * To invoke the RequestObjectPersistenceFactory to retrieve request object for sessionDataKey.
+     *
+     * @param sessionDataKey  sessionDataKey
+     * @return list of claims which have marked as essential in the request object.
+     * @throws RequestObjectException
+     */
+    public List<RequestedClaim> getRequestedClaimsForSessionDataKey(String sessionDataKey)
+            throws RequestObjectException {
+
+        return getRequestedClaimsbySessionDataKey(sessionDataKey);
     }
 
     /**

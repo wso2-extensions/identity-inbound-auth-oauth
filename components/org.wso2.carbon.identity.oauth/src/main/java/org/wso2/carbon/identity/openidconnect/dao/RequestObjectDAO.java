@@ -83,7 +83,18 @@ public interface RequestObjectDAO {
      */
     void deleteRequestObjectReferenceByTokenId(String tokenId) throws IdentityOAuthAdminException;
 
-     /**
+
+    /**
+     * Retrieve essential claims for the sessionDataKey and user info endpoint.
+     *
+     * @param sessionDataKey sessionDataKey
+     * @return
+     * @throws IdentityOAuth2Exception
+     */
+    List<RequestedClaim> getRequestedClaimsbySessionDataKey(String sessionDataKey) throws
+            IdentityOAuth2Exception;
+
+    /**
      * Retrieve essential claims for the id token and user info endpoint.
      *
      * @param token token id
