@@ -67,7 +67,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
     public static final String DEACTIVATED_ACCESS_TOKEN = "DeactivatedAccessToken";
     private static Log log = LogFactory.getLog(RefreshGrantHandler.class);
     private boolean isHashDisabled = OAuth2Util.isHashDisabled();
-
+    
     @Override
     public boolean validateGrant(OAuthTokenReqMessageContext tokReqMsgCtx)
             throws IdentityOAuth2Exception {
@@ -567,7 +567,10 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
 
             grantCacheEntry.setValidityPeriod(
                     TimeUnit.MILLISECONDS.toNanos(accessTokenBean.getValidityPeriodInMillis()));
-            AuthorizationGrantCache.getInstance().clearCacheEntryByToken(oldAuthorizationGrantCacheKey);
+
+            // This new method has introduced in order to resolve a regression occurred : wso2/product-is#4366.
+            AuthorizationGrantCache.getInstance().clearCacheEntryByTokenId(oldAuthorizationGrantCacheKey,
+                    oldAccessToken.getTokenId());
             AuthorizationGrantCache.getInstance().addToCacheByToken(authorizationGrantCacheKey, grantCacheEntry);
         }
     }
