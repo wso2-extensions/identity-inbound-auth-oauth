@@ -49,6 +49,7 @@ import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.authz.handlers.ResponseTypeHandler;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.ClientCredentialDO;
@@ -75,6 +76,8 @@ public class OAuthAdminService extends AbstractAdmin {
 
     public static final String IMPLICIT = "implicit";
     public static final String AUTHORIZATION_CODE = "authorization_code";
+    private static final String RESPONSE_TYPE_TOKEN = "token";
+    private static final String RESPONSE_TYPE_ID_TOKEN = "id_token";
     private static List<String> allowedGrants = null;
     private static String[] allowedScopeValidators = null;
     private static List<String> supportedTokenTypes = null;
@@ -993,7 +996,8 @@ public class OAuthAdminService extends AbstractAdmin {
                     Set<String> allowedGrantSet =
                             OAuthServerConfiguration.getInstance().getSupportedGrantTypes().keySet();
                     Set<String> modifiableGrantSet = new HashSet(allowedGrantSet);
-                    if (OAuthServerConfiguration.getInstance().getSupportedResponseTypes().containsKey("token")) {
+
+                    if (isImplicitGrantEnabled()) {
                         modifiableGrantSet.add(IMPLICIT);
                     }
                     allowedGrants = new ArrayList<>(modifiableGrantSet);
@@ -1001,6 +1005,17 @@ public class OAuthAdminService extends AbstractAdmin {
             }
         }
         return allowedGrants.toArray(new String[allowedGrants.size()]);
+    }
+
+    private boolean isImplicitGrantEnabled() {
+        Map<String, ResponseTypeHandler> responseTypeHandlers =
+                OAuthServerConfiguration.getInstance().getSupportedResponseTypes();
+        for (String responseType : responseTypeHandlers.keySet()) {
+            if (responseType.contains(RESPONSE_TYPE_TOKEN) || responseType.contains(RESPONSE_TYPE_ID_TOKEN)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
