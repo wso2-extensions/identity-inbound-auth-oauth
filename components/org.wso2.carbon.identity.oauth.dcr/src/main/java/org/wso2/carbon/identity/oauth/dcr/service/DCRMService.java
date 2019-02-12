@@ -27,6 +27,8 @@ import org.wso2.carbon.identity.application.common.model.InboundAuthenticationCo
 import org.wso2.carbon.identity.application.common.model.InboundAuthenticationRequestConfig;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.model.User;
+import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
+import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.OAuthAdminService;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -128,7 +130,28 @@ public class DCRMService {
         OAuthConsumerAppDTO appDTO = getApplicationById(clientId);
         String applicationOwner = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
         String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
-        deleteServiceProvider(appDTO.getApplicationName(), tenantDomain, applicationOwner);
+        String spName;
+        try {
+            spName = DCRDataHolder.getInstance().getApplicationManagementService()
+                    .getServiceProviderNameByClientId(appDTO.getOauthConsumerKey(), DCRMConstants.OAUTH2, tenantDomain);
+        } catch (IdentityApplicationManagementException e) {
+            throw new DCRMException("Error while retrieving the service provider.", e);
+        }
+
+        // If a SP name returned for the client ID then the application has an associated service provider.
+        if (!StringUtils.equals(spName, IdentityApplicationConstants.DEFAULT_SP_CONFIG)) {
+            if (log.isDebugEnabled()) {
+                log.debug("The application with consumer key: " + appDTO.getOauthConsumerKey() +
+                        " has an association with the service provider: " + spName);
+            }
+            deleteServiceProvider(spName, tenantDomain, applicationOwner);
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug("The application with consumer key: " + appDTO.getOauthConsumerKey() +
+                        " doesn't have an associated service provider.");
+            }
+            deleteOAuthApplicationWithoutAssociatedSP(appDTO, tenantDomain, applicationOwner);
+        }
     }
 
     /**
@@ -464,6 +487,58 @@ public class DCRMService {
                     .deleteApplication(applicationName, tenantDomain, userName);
         } catch (IdentityApplicationManagementException e) {
             throw DCRMUtils.generateServerException(DCRMConstants.ErrorMessages.FAILED_TO_DELETE_SP, applicationName, e);
+        }
+    }
+
+    /**
+     * Delete OAuth application when there is no associated service provider exists.
+     *
+     * @param appDTO       {@link OAuthConsumerAppDTO} object of the OAuth app to be deleted
+     * @param tenantDomain Tenant Domain
+     * @param username     User Name
+     * @throws DCRMException
+     */
+    private void deleteOAuthApplicationWithoutAssociatedSP(OAuthConsumerAppDTO appDTO, String tenantDomain,
+                                                           String username) throws DCRMException {
+
+        try {
+            if (log.isDebugEnabled()) {
+                log.debug("Delete OAuth application with the consumer key: " + appDTO.getOauthConsumerKey());
+            }
+            oAuthAdminService.removeOAuthApplicationData(appDTO.getOauthConsumerKey());
+        } catch (IdentityOAuthAdminException e) {
+            throw new DCRMException("Error while deleting the OAuth application with consumer key: " +
+                    appDTO.getOauthConsumerKey(), e);
+        }
+
+        ApplicationManagementService applicationManagementService = DCRDataHolder.getInstance()
+                .getApplicationManagementService();
+        try {
+            if (log.isDebugEnabled()) {
+                log.debug("Get service provider with application name: " + appDTO.getApplicationName());
+            }
+            ServiceProvider serviceProvider = applicationManagementService.getServiceProvider(appDTO
+                    .getApplicationName(), tenantDomain);
+            if (serviceProvider == null) {
+                if (log.isDebugEnabled()) {
+                    log.debug("There is no service provider exists with the name: " + appDTO.getApplicationName());
+                }
+            } else if (serviceProvider.getInboundAuthenticationConfig().getInboundAuthenticationRequestConfigs()
+                    .length == 0) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Delete the service provider: " + serviceProvider.getApplicationName());
+                }
+                applicationManagementService.deleteApplication(serviceProvider.getApplicationName(), tenantDomain,
+                        username);
+            } else {
+                if (log.isDebugEnabled()) {
+                    log.debug("Service provider with name: " + serviceProvider.getApplicationName() +
+                            " can not be deleted since it has association with other application/s");
+                }
+            }
+        } catch (IdentityApplicationManagementException e) {
+            throw new DCRMException("Error while deleting the service provider with the name: " +
+                    appDTO.getApplicationName(), e);
         }
     }
 

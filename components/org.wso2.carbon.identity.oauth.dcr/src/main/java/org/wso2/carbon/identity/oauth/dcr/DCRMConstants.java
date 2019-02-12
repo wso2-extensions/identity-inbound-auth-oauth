@@ -62,4 +62,6 @@ public class DCRMConstants {
         public static String INVALID_SOFTWARE_STATEMENT = "invalid_software_statement";
         public static String UNAPPROVED_SOFTWARE_STATEMENT = "unapproved_software_statement";
     }
+
+    public static final String OAUTH2 = "oauth2";
 }
