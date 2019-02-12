@@ -27,6 +27,7 @@ import org.wso2.carbon.identity.application.common.model.InboundAuthenticationCo
 import org.wso2.carbon.identity.application.common.model.InboundAuthenticationRequestConfig;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.model.User;
+import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.OAuthAdminService;
@@ -130,20 +131,15 @@ public class DCRMService {
         String applicationOwner = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
         String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         String spName;
-        String defaultSP;
-
-        ApplicationManagementService applicationManagementService = DCRDataHolder.getInstance()
-                .getApplicationManagementService();
         try {
-            spName = applicationManagementService.getServiceProviderNameByClientId(appDTO.getOauthConsumerKey(),
-                    DCRMConstants.OAUTH2, tenantDomain);
-            defaultSP = applicationManagementService.getDefaultServiceProvider().getApplicationName();
+            spName = DCRDataHolder.getInstance().getApplicationManagementService()
+                    .getServiceProviderNameByClientId(appDTO.getOauthConsumerKey(), DCRMConstants.OAUTH2, tenantDomain);
         } catch (IdentityApplicationManagementException e) {
             throw new DCRMException("Error while retrieving the service provider.", e);
         }
 
         // If a SP name returned for the client ID then the application has an associated service provider.
-        if (!StringUtils.equals(spName, defaultSP)) {
+        if (!StringUtils.equals(spName, IdentityApplicationConstants.DEFAULT_SP_CONFIG)) {
             if (log.isDebugEnabled()) {
                 log.debug("The application with consumer key: " + appDTO.getOauthConsumerKey() +
                         " has an association with the service provider: " + spName);
