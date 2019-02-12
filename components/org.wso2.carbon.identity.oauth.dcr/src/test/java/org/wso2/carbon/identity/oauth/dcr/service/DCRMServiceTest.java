@@ -500,6 +500,10 @@ public class DCRMServiceTest extends PowerMockTestCase {
         when(mockApplicationManagementService.getServiceProvider(dummyClientName, dummyTenantDomain)).thenReturn
                 (null, serviceProvider);
 
+        ServiceProvider defaultServiceProvider = new ServiceProvider();
+        defaultServiceProvider.setApplicationName("default");
+        when(mockApplicationManagementService.getDefaultServiceProvider()).thenReturn(defaultServiceProvider);
+
         applicationRegistrationRequest.setRedirectUris(redirectUri);
 
         OAuthConsumerAppDTO oAuthConsumerApp = new OAuthConsumerAppDTO();

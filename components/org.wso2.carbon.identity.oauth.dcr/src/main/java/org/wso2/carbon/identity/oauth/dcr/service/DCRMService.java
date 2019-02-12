@@ -505,30 +505,44 @@ public class DCRMService {
     private void deleteOAuthApplicationWithoutAssociatedSP(OAuthConsumerAppDTO appDTO, String tenantDomain,
                                                            String username) throws DCRMException {
 
-        ApplicationManagementService applicationManagementService = DCRDataHolder.getInstance()
-                .getApplicationManagementService();
         try {
             if (log.isDebugEnabled()) {
                 log.debug("Delete OAuth application with the consumer key: " + appDTO.getOauthConsumerKey());
             }
-            applicationManagementService.deleteOAuthApplication(appDTO.getOauthConsumerKey());
+            oAuthAdminService.removeOAuthApplicationData(appDTO.getOauthConsumerKey());
+        } catch (IdentityOAuthAdminException e) {
+            throw new DCRMException("Error while deleting the OAuth application with consumer key: " +
+                    appDTO.getOauthConsumerKey(), e);
+        }
 
+        ApplicationManagementService applicationManagementService = DCRDataHolder.getInstance()
+                .getApplicationManagementService();
+        try {
             if (log.isDebugEnabled()) {
                 log.debug("Get service provider with application name: " + appDTO.getApplicationName());
             }
             ServiceProvider serviceProvider = applicationManagementService.getServiceProvider(appDTO
                     .getApplicationName(), tenantDomain);
-
-            // Delete the service provider if it doesn't have association with any other application.
-            if (serviceProvider != null && serviceProvider.getInboundAuthenticationConfig()
-                    .getInboundAuthenticationRequestConfigs().length == 0) {
+            if (serviceProvider == null) {
+                if (log.isDebugEnabled()) {
+                    log.debug("There is no service provider exists with the name: " + appDTO.getApplicationName());
+                }
+            } else if (serviceProvider.getInboundAuthenticationConfig().getInboundAuthenticationRequestConfigs()
+                    .length == 0) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Delete the service provider: " + serviceProvider.getApplicationName());
+                }
                 applicationManagementService.deleteApplication(serviceProvider.getApplicationName(), tenantDomain,
                         username);
+            } else {
+                if (log.isDebugEnabled()) {
+                    log.debug("Service provider with name: " + serviceProvider.getApplicationName() +
+                            " can not be deleted since it has association with other application/s");
+                }
             }
-
         } catch (IdentityApplicationManagementException e) {
-            throw new DCRMException("Error while deleting the OAuth application with consumer key: " +
-                    appDTO.getOauthConsumerKey(), e);
+            throw new DCRMException("Error while deleting the service provider with the name: " +
+                    appDTO.getApplicationName(), e);
         }
     }
 
