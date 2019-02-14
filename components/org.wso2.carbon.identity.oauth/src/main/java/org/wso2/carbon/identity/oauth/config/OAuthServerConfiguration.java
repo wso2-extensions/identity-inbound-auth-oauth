@@ -136,6 +136,7 @@ public class OAuthServerConfiguration {
     private String tokenCleanupFeatureEnable;
     private OauthTokenIssuer oauthIdentityTokenGenerator;
     private boolean cacheEnabled = false;
+    private boolean isTokenRenewalPerRequestEnabled = false;
     private boolean isRefreshTokenRenewalEnabled = true;
     private boolean assertionsUserNameEnabled = false;
     private boolean accessTokenPartitioningEnabled = false;
@@ -240,6 +241,9 @@ public class OAuthServerConfiguration {
     // Property added to determine the expiration of logout token in oidc back-channel logout.
     private String openIDConnectBCLogoutTokenExpiryInSeconds = "120";
 
+    // Property to determine whether data providers should be executed during token introspection.
+    private boolean enableIntrospectionDataProviders = false;
+
     private OAuthServerConfiguration() {
         buildOAuthServerConfiguration();
     }
@@ -301,6 +305,10 @@ public class OAuthServerConfiguration {
 
         // read OAuth URLs
         parseOAuthURLs(oauthElem);
+
+        // read token renewal per request config.
+        // if enabled access token and refresh token will be renewed for each token endpoint call.
+        parseTokenRenewalPerRequestConfiguration(oauthElem);
 
         // read refresh token renewal config
         parseRefreshTokenRenewalConfiguration(oauthElem);
@@ -375,6 +383,23 @@ public class OAuthServerConfiguration {
 
         // Read the value of  old  Access Tokens cleanup enable  config. If true cleanup feature will be enable.
         tokenCleanupFeatureConfig(oauthElem);
+
+        // Read token introspection related configurations.
+        parseTokenIntrospectionConfig(oauthElem);
+    }
+
+    private void parseTokenIntrospectionConfig(OMElement oauthElem) {
+
+        OMElement introspectionElem = oauthElem.getFirstChildWithName(getQNameWithIdentityNS(
+                ConfigElements.INTROSPECTION_CONFIG));
+        if (introspectionElem != null) {
+            // Reads 'EnableDataProviders' config.
+            OMElement enableDataProvidersElem = introspectionElem.getFirstChildWithName(
+                    getQNameWithIdentityNS(ConfigElements.ENABLE_DATA_PROVIDERS_CONFIG));
+            if (enableDataProvidersElem != null) {
+                enableIntrospectionDataProviders = Boolean.parseBoolean(enableDataProvidersElem.getText().trim());
+            }
+        }
     }
 
     private void parseShowDisplayNameInConsentPage(OMElement oauthElem) {
@@ -601,6 +626,16 @@ public class OAuthServerConfiguration {
 
     public Map<String, OauthTokenIssuer> getOauthTokenIssuerMap() {
         return oauthTokenIssuerMap;
+    }
+
+    /**
+     * Check if token renewal is enabled for each call to the token endpoint.
+     *
+     * @return Returns true if the config is enabled.
+     */
+    public boolean isTokenRenewalPerRequestEnabled() {
+
+        return isTokenRenewalPerRequestEnabled;
     }
 
     public Map<String, AuthorizationGrantHandler> getSupportedGrantTypes() {
@@ -1154,6 +1189,15 @@ public class OAuthServerConfiguration {
         return isRevokeResponseHeadersEnabled;
     }
 
+    /**
+     * Returns whether introspection data providers should be enabled.
+     *
+     * @return true if introspection data providers should be enabled.
+     */
+    public boolean isEnableIntrospectionDataProviders() {
+
+        return enableIntrospectionDataProviders;
+    }
     /**
      * Return the value of whether the refresh token is allowed for this grant type. Null will be returned if there is
      * no tag or empty tag.
@@ -2567,6 +2611,18 @@ public class OAuthServerConfiguration {
         }
     }
 
+    private void parseTokenRenewalPerRequestConfiguration(OMElement oauthConfigElem) {
+
+        OMElement enableTokenRenewalElem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
+                ConfigElements.RENEW_TOKEN_PER_REQUEST));
+        if (enableTokenRenewalElem != null) {
+            isTokenRenewalPerRequestEnabled = Boolean.parseBoolean(enableTokenRenewalElem.getText());
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("RenewTokenPerRequest was set to : " + isTokenRenewalPerRequestEnabled);
+        }
+    }
+
     /**
      * Localpart names for the OAuth configuration in identity.xml.
      */
@@ -2744,6 +2800,12 @@ public class OAuthServerConfiguration {
         private static final String HASH_ALGORITHM = "HashAlgorithm";
         private static final String ENABLE_CLIENT_SECRET_HASH = "EnableClientSecretHash";
 
+        // Token introspection Configs
+        private static final String INTROSPECTION_CONFIG = "Introspection";
+        private static final String ENABLE_DATA_PROVIDERS_CONFIG = "EnableDataProviders";
+
+        // Enable/Disable token renewal on each request to the token endpoint
+        private static final String RENEW_TOKEN_PER_REQUEST = "RenewTokenPerRequest";
     }
 
 }

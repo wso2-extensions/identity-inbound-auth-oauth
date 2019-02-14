@@ -38,7 +38,6 @@ import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
-import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
@@ -434,10 +433,9 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     String tokenId = resultSet.getString(9);
                     String subjectIdentifier = resultSet.getString(10);
                     // data loss at dividing the validity period but can be neglected
-                    AuthenticatedUser user = new AuthenticatedUser();
-                    user.setUserName(tenantAwareUsernameWithNoUserDomain);
-                    user.setTenantDomain(tenantDomain);
-                    user.setUserStoreDomain(userDomain);
+                    AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(tenantAwareUsernameWithNoUserDomain,
+                            userDomain, tenantDomain);
+
                     ServiceProvider serviceProvider;
                     try {
                         serviceProvider = OAuth2ServiceComponentHolder.getApplicationMgtService().
@@ -595,10 +593,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 String tokenId = resultSet.getString(8);
                 String subjectIdentifier = resultSet.getString(9);
                 // data loss at dividing the validity period but can be neglected
-                AuthenticatedUser user = new AuthenticatedUser();
-                user.setUserName(tenantAwareUsernameWithNoUserDomain);
-                user.setTenantDomain(tenantDomain);
-                user.setUserStoreDomain(userDomain);
+                AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(tenantAwareUsernameWithNoUserDomain,
+                        userDomain, tenantDomain);
                 ServiceProvider serviceProvider;
                 try {
                     serviceProvider = OAuth2ServiceComponentHolder.getApplicationMgtService().
@@ -695,10 +691,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     String tokenId = resultSet.getString(9);
                     String subjectIdentifier = resultSet.getString(10);
 
-                    AuthenticatedUser user = new AuthenticatedUser();
-                    user.setUserName(tenantAwareUsernameWithNoUserDomain);
-                    user.setTenantDomain(tenantDomain);
-                    user.setUserStoreDomain(userDomain);
+                    AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(tenantAwareUsernameWithNoUserDomain,
+                            userDomain, tenantDomain);
                     ServiceProvider serviceProvider;
                     try {
                         serviceProvider = OAuth2ServiceComponentHolder.getApplicationMgtService().
@@ -788,10 +782,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     String grantType = resultSet.getString(13);
                     String subjectIdentifier = resultSet.getString(14);
 
-                    AuthenticatedUser user = new AuthenticatedUser();
-                    user.setUserName(authorizedUser);
-                    user.setUserStoreDomain(userDomain);
-                    user.setTenantDomain(tenantDomain);
+                    AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(authorizedUser,
+                            userDomain, tenantDomain);
                     ServiceProvider serviceProvider;
                     try {
                         serviceProvider = OAuth2ServiceComponentHolder.getApplicationMgtService().
@@ -1248,10 +1240,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     String userDomain = rs.getString(4);
                     String tokenSope = rs.getString(5);
                     String[] scope = OAuth2Util.buildScopeArray(tokenSope);
-                    AuthenticatedUser user = new AuthenticatedUser();
-                    user.setUserName(authzUser);
-                    user.setTenantDomain(OAuth2Util.getTenantDomain(tenentId));
-                    user.setUserStoreDomain(userDomain);
+                    AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(authzUser,
+                            userDomain, OAuth2Util.getTenantDomain(tenentId));
                     AccessTokenDO aTokenDetail = new AccessTokenDO();
                     aTokenDetail.setAccessToken(token);
                     aTokenDetail.setConsumerKey(consumerKey);
@@ -1406,10 +1396,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     userStoreDomain = resultSet.getString(11);
                     String consumerKey = resultSet.getString(12);
 
-                    AuthenticatedUser user = new AuthenticatedUser();
-                    user.setUserName(authzUser);
-                    user.setTenantDomain(OAuth2Util.getTenantDomain(tenantId));
-                    user.setUserStoreDomain(userStoreDomain);
+                    AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(authzUser, userStoreDomain,
+                            OAuth2Util.getTenantDomain(tenantId));
                     AccessTokenDO dataDO = new AccessTokenDO(consumerKey, user, scope, issuedTime,
                             refreshTokenIssuedTime, validityPeriodInMillis,
                             refreshTokenValidityPeriodMillis, tokenType);
@@ -1481,10 +1469,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     String authzUser = resultSet.getString(10);
                     String consumerKey = resultSet.getString(11);
 
-                    AuthenticatedUser user = new AuthenticatedUser();
-                    user.setUserName(authzUser);
-                    user.setTenantDomain(OAuth2Util.getTenantDomain(tenantId));
-                    user.setUserStoreDomain(userStoreDomain);
+                    AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(authzUser, userStoreDomain,
+                            OAuth2Util.getTenantDomain(tenantId));
                     AccessTokenDO dataDO = new AccessTokenDO(consumerKey, user, scope, issuedTime,
                             refreshTokenIssuedTime, validityPeriodInMillis,
                             refreshTokenValidityPeriodMillis, tokenType);
@@ -1920,10 +1906,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     String tokenId = resultSet.getString(9);
                     String subjectIdentifier = resultSet.getString(10);
                     // data loss at dividing the validity period but can be neglected
-                    AuthenticatedUser user = new AuthenticatedUser();
-                    user.setUserName(tenantAwareUsernameWithNoUserDomain);
-                    user.setTenantDomain(tenantDomain);
-                    user.setUserStoreDomain(userDomain);
+                    AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(tenantAwareUsernameWithNoUserDomain,
+                            userDomain, tenantDomain);
 
                     ServiceProvider serviceProvider;
                     try {

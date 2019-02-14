@@ -31,7 +31,6 @@ import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
-import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
 import org.wso2.carbon.identity.oauth.user.UserInfoResponseBuilder;
@@ -40,7 +39,6 @@ import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
-import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
@@ -63,7 +61,7 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
     public String getResponseString(OAuth2TokenValidationResponseDTO tokenResponse)
             throws UserInfoEndpointException, OAuthSystemException {
 
-        String clientId = getClientId(getAccessTokenIdentifier(tokenResponse));
+        String clientId = getClientId(getAccessToken(tokenResponse));
         String spTenantDomain = getServiceProviderTenantDomain(tokenResponse);
         // Retrieve user claims.
         Map<String, Object> userClaims = retrieveUserClaims(tokenResponse);
@@ -82,9 +80,9 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
                                                  Map<String, Object> userClaims)
             throws OAuthSystemException, UserInfoEndpointException {
 
-        if(MapUtils.isEmpty(userClaims)) {
+        if (MapUtils.isEmpty(userClaims)) {
             if (log.isDebugEnabled()) {
-                AuthenticatedUser authenticatedUser = getAuthenticatedUser(getAccessTokenIdentifier(tokenResponse));
+                AuthenticatedUser authenticatedUser = getAuthenticatedUser(getAccessToken(tokenResponse));
                 log.debug("No user claims available to be filtered for user: " +
                         authenticatedUser.toFullQualifiedUsername() + " for client_id: " + clientId +
                         " of tenantDomain: " + spTenantDomain);
@@ -94,19 +92,20 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
 
         // Filter user claims based on the requested scopes
         Map<String, Object> userClaimsFilteredByScope =
-                getUserClaimsFilteredByScope(tokenResponse,userClaims, tokenResponse.getScope(), clientId, spTenantDomain);
+                getUserClaimsFilteredByScope(tokenResponse, userClaims, tokenResponse.getScope(), clientId, spTenantDomain);
 
         // Handle essential claims
         Map<String, Object> essentialClaims = getEssentialClaims(tokenResponse, userClaims);
         userClaimsFilteredByScope.putAll(essentialClaims);
 
         //Handle essential claims of the request object
+
         Map<String, Object> filteredClaimsFromRequestObject =
                 filterClaimsFromRequestObject(userClaims, getAccessToken(tokenResponse));
         userClaimsFilteredByScope.putAll(filteredClaimsFromRequestObject);
 
         // Filter the user claims based on user consent
-        AuthenticatedUser authenticatedUser = getAuthenticatedUser(getAccessTokenIdentifier(tokenResponse));
+        AuthenticatedUser authenticatedUser = getAuthenticatedUser(getAccessToken(tokenResponse));
         return getUserClaimsFilteredByConsent(tokenResponse, userClaimsFilteredByScope, authenticatedUser, clientId,
                 spTenantDomain);
     }
@@ -114,12 +113,10 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
     private String getGrantType(OAuth2TokenValidationResponseDTO tokenResponse) throws UserInfoEndpointException {
 
         try {
-            return OAuth2Util.getAccessTokenDOfromTokenIdentifier(getAccessTokenIdentifier(tokenResponse)).getGrantType();
+            return OAuth2Util.getAccessTokenDOfromTokenIdentifier(getAccessToken(tokenResponse)).getGrantType();
         } catch (IdentityOAuth2Exception e) {
             throw new UserInfoEndpointException(
-                    "Error while retrieving access token information to derive the grant type." , e);
-        } catch (OAuthSystemException e) {
-            throw new UserInfoEndpointException("Error while retrieving access token identifier" , e);
+                    "Error while retrieving access token information to derive the grant type.", e);
         }
     }
 
@@ -156,13 +153,14 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
                                      OAuth2TokenValidationResponseDTO tokenResponse)
             throws UserInfoEndpointException, OAuthSystemException {
         // Get sub claim from AuthorizationGrantCache.
+
         String subjectClaim = OIDCClaimUtil.getSubjectClaimCachedAgainstAccessToken(getAccessToken(tokenResponse));
         if (StringUtils.isNotBlank(subjectClaim)) {
             // We expect the subject claim cached to have the correct format.
             return subjectClaim;
         }
 
-        AuthenticatedUser authenticatedUser = getAuthenticatedUser(getAccessTokenIdentifier(tokenResponse));
+        AuthenticatedUser authenticatedUser = getAuthenticatedUser(getAccessToken(tokenResponse));
         // Subject claim returned among claims user claims.
         subjectClaim = (String) userClaims.get(OAuth2Util.SUB);
         if (StringUtils.isBlank(subjectClaim)) {
@@ -223,7 +221,6 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
     }
 
 
-
     protected Map<String, Object> getEssentialClaims(OAuth2TokenValidationResponseDTO tokenResponse,
                                                      Map<String, Object> claims) throws UserInfoEndpointException {
 
@@ -278,12 +275,10 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
         String clientId = null;
         OAuthAppDO oAuthAppDO;
         try {
-            clientId = getClientId(getAccessTokenIdentifier(tokenResponse));
+            clientId = getClientId(getAccessToken(tokenResponse));
             oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
         } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
             throw new UserInfoEndpointException("Error while retrieving OAuth app information for clientId: " + clientId);
-        } catch (OAuthSystemException e) {
-            throw new UserInfoEndpointException("Error while retrieving token issuer ");
         }
         return OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
     }
@@ -353,33 +348,12 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
         return new ArrayList<>();
     }
 
-    private boolean isLocalUser(AuthenticatedUser authenticatedUser) {
-
-        return !authenticatedUser.isFederatedUser();
-    }
-
     private String getAccessToken(OAuth2TokenValidationResponseDTO tokenResponse) {
-
         return tokenResponse.getAuthorizationContextToken().getTokenString();
     }
 
-    private String getAccessTokenIdentifier(OAuth2TokenValidationResponseDTO tokenResponse)
-            throws OAuthSystemException {
+    private boolean isLocalUser(AuthenticatedUser authenticatedUser) {
 
-        String accessToken = tokenResponse.getAuthorizationContextToken().getTokenString();
-        String tokenIdentifier = null;
-        try {
-            OauthTokenIssuer tokenIssuer = OAuth2Util.getTokenIssuer(accessToken);
-            if (tokenIssuer != null) {
-                tokenIdentifier = tokenIssuer.getAccessTokenHash(accessToken);
-            }
-        } catch (OAuthSystemException e) {
-            log.error("Error while getting token identifier");
-            throw new OAuthSystemException(e);
-        } catch (IdentityOAuth2Exception e) {
-            log.error("Error while retrieving token issuer");
-            throw new OAuthSystemException(e);
-        }
-        return tokenIdentifier;
+        return !authenticatedUser.isFederatedUser();
     }
 }

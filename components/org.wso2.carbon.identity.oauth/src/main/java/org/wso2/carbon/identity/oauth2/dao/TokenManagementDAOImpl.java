@@ -161,10 +161,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                     validationDataDO.setTokenId(resultSet.getString(9));
                     validationDataDO.setGrantType(resultSet.getString(10));
                     String subjectIdentifier = resultSet.getString(11);
-                    AuthenticatedUser user = new AuthenticatedUser();
-                    user.setUserName(userName);
-                    user.setUserStoreDomain(userDomain);
-                    user.setTenantDomain(tenantDomain);
+                    AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(userName, userDomain, tenantDomain);
                     ServiceProvider serviceProvider;
                     try {
                         serviceProvider = OAuth2ServiceComponentHolder.getApplicationMgtService().

@@ -22,6 +22,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.model.Claim;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
@@ -41,10 +42,14 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
+import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
+import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationRequestDTO;
+import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationResponseDTO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
@@ -154,6 +159,24 @@ public class ResponseTypeHandlerUtil {
             // Return a new access token in each request when JWTTokenIssuer is used.
             if (isNotRenewAccessTokenPerRequest(oauthIssuerImpl)) {
                 if (existingTokenBean != null) {
+
+                    // Revoke token if RenewTokenPerRequest configuration is enabled.
+                    if (OAuthServerConfiguration.getInstance().isTokenRenewalPerRequestEnabled()) {
+
+                        if (log.isDebugEnabled()) {
+                            log.debug("RenewTokenPerRequest configuration active. " +
+                                    "Proceeding to revoke any existing active tokens for client Id: "
+                                    + consumerKey + ", user: " + authorizedUser + " and scope: " + scope + ".");
+                        }
+
+                        revokeExistingToken(existingTokenBean.getConsumerKey(), existingTokenBean.getAccessToken());
+
+                        // When revoking the token state will be set as REVOKED.
+                        // existingTokenBean.setTokenState(TOKEN_STATE_REVOKED) can be used instead of 'null' but
+                        // then the token state will again be updated to EXPIRED when a new token is generated.
+                        existingTokenBean = null;
+                    }
+
                     // Return existing token if it is still valid.
                     if (isAccessTokenValid(existingTokenBean)) {
                         return existingTokenBean;
@@ -870,6 +893,48 @@ public class ResponseTypeHandlerUtil {
                         "Therefore cleared it from cache.");
             }
         }
+    }
+
+    private static void revokeExistingToken(String clientId, String accessToken) throws IdentityOAuth2Exception {
+
+        // This is used to avoid client validation failure in revokeTokenByOAuthClient.
+        // This will not affect the flow negatively as the client is already authenticated by this point.
+        OAuthClientAuthnContext oAuthClientAuthnContext =
+                buildAuthenticatedOAuthClientAuthnContext(clientId);
+
+        OAuthRevocationRequestDTO revocationRequestDTO =
+                OAuth2Util.buildOAuthRevocationRequest(oAuthClientAuthnContext, accessToken);
+
+        OAuthRevocationResponseDTO revocationResponseDTO =
+                getOauth2Service().revokeTokenByOAuthClient(revocationRequestDTO);
+
+        if (revocationResponseDTO.isError()) {
+            String msg = "Error while revoking tokens for clientId:" + clientId +
+                    " Error Message:" + revocationResponseDTO.getErrorMsg();
+            log.error(msg);
+            throw new IdentityOAuth2Exception(msg);
+        }
+    }
+
+    private static OAuth2Service getOauth2Service() {
+
+        return (OAuth2Service) PrivilegedCarbonContext
+                .getThreadLocalCarbonContext().getOSGiService(OAuth2Service.class, null);
+    }
+
+    /**
+     * This method is used to avoid client validation failure in OAuth2Service.revokeTokenByOAuthClient.
+     *
+     * @param clientId client id of the application.
+     * @return Returns a OAuthClientAuthnContext with isAuthenticated set to true.
+     */
+    private static OAuthClientAuthnContext buildAuthenticatedOAuthClientAuthnContext(String clientId) {
+
+        OAuthClientAuthnContext oAuthClientAuthnContext = new OAuthClientAuthnContext();
+        oAuthClientAuthnContext.setAuthenticated(true);
+        oAuthClientAuthnContext.setClientId(clientId);
+
+        return oAuthClientAuthnContext;
     }
 }
 

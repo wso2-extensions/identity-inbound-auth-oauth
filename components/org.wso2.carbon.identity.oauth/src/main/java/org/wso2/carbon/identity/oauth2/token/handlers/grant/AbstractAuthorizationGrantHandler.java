@@ -25,6 +25,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
@@ -39,9 +40,13 @@ import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientExcepti
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.OAuth2Service;
+import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
+import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationRequestDTO;
+import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationResponseDTO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
@@ -127,6 +132,22 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             }
             // Return a new access token in each request when JWTTokenIssuer is used.
             if (accessTokenNotRenewedPerRequest(oauthTokenIssuer, tokReqMsgCtx)) {
+
+                // Revoke token if RenewTokenPerRequest configuration is enabled.
+                if (existingTokenBean != null &&
+                        OAuthServerConfiguration.getInstance().isTokenRenewalPerRequestEnabled()) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("RenewTokenPerRequest configuration active. " +
+                                "Proceeding to revoke any existing active tokens for client Id: "
+                                + consumerKey + ", user: " + authorizedUser + " and scope: " + scope + ".");
+                    }
+                    revokeExistingToken(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getoAuthClientAuthnContext(),
+                            existingTokenBean.getAccessToken());
+                    // When revoking the token state will be set as REVOKED.
+                    // existingTokenBean.setTokenState(TOKEN_STATE_REVOKED) can be used instead of 'null' but
+                    // then the token state will again be updated to EXPIRED when a new token is generated.
+                    existingTokenBean = null;
+                }
                 if (existingTokenBean != null) {
                     long expireTime = getAccessTokenExpiryTimeMillis(existingTokenBean);
                     if (isExistingTokenValid(existingTokenBean, expireTime)) {
@@ -825,5 +846,29 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             return false;
         }
         return true;
+    }
+
+
+    private void revokeExistingToken(OAuthClientAuthnContext oAuthClientAuthnContext, String accessToken) throws
+            IdentityOAuth2Exception {
+
+        OAuthRevocationRequestDTO revocationRequestDTO =
+                OAuth2Util.buildOAuthRevocationRequest(oAuthClientAuthnContext, accessToken);
+
+        OAuthRevocationResponseDTO revocationResponseDTO =
+                getOauth2Service().revokeTokenByOAuthClient(revocationRequestDTO);
+
+        if (revocationResponseDTO.isError()) {
+            String msg = "Error while revoking tokens for clientId:" + oAuthClientAuthnContext.getClientId() +
+                    " Error Message:" + revocationResponseDTO.getErrorMsg();
+            log.error(msg);
+            throw new IdentityOAuth2Exception(msg);
+        }
+    }
+
+    private OAuth2Service getOauth2Service() {
+
+        return (OAuth2Service) PrivilegedCarbonContext
+                .getThreadLocalCarbonContext().getOSGiService(OAuth2Service.class, null);
     }
 }
