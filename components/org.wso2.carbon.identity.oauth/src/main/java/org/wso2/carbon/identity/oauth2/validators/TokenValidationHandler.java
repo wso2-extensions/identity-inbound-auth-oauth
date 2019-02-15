@@ -265,6 +265,7 @@ public class TokenValidationHandler {
                     }
                     // If there aren't any errors from the above special validations.
                     if (introResp.isActive()) {
+                        introResp.setTokenType(tokenValidator.getTokenType());
                         break;
                     }
                 }

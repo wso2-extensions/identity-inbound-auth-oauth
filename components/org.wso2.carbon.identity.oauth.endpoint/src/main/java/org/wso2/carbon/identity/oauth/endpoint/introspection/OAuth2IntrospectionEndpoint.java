@@ -114,16 +114,16 @@ public class OAuth2IntrospectionEndpoint {
                 .setNotBefore(introspectionResponse.getNbf())
                 .setScope(introspectionResponse.getScope())
                 .setUsername(introspectionResponse.getUsername())
-                .setTokenType(DEFAULT_TOKEN_TYPE)
+                .setTokenType(introspectionResponse.getTokenType())
                 .setClientId(introspectionResponse.getClientId())
                 .setIssuedAt(introspectionResponse.getIat())
                 .setExpiration(introspectionResponse.getExp());
 
-        if (StringUtils.equalsIgnoreCase(tokenTypeHint, JWT_TOKEN_TYPE)) {
+        if (StringUtils.equalsIgnoreCase(introspectionResponse.getTokenType(), JWT_TOKEN_TYPE)) {
             respBuilder.setAudience(introspectionResponse.getAud())
                     .setJwtId(introspectionResponse.getJti())
                     .setSubject(introspectionResponse.getSub())
-                    .setTokenType(JWT_TOKEN_TYPE)
+                    .setTokenType(introspectionResponse.getTokenType())
                     .setIssuer(introspectionResponse.getIss());
         }
 

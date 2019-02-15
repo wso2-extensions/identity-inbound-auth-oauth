@@ -84,6 +84,12 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
         return true;
     }
 
+    @Override
+    public String getTokenType() {
+
+        return "JWT";
+    }
+
     /**
      * The default implementation resolves one certificate to Identity Provider and ignores the JWT header.
      * Override this method, to resolve and enforce the certificate in any other way
