@@ -187,7 +187,7 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
     private AuthenticatedUser getAuthenticatedUser(OAuth2AccessTokenReqDTO tokenReq, ServiceProvider serviceProvider) {
         String username = getFullQualifiedUsername(tokenReq);
         AuthenticatedUser user = OAuth2Util.getUserFromUserName(username);
-        user.setAuthenticatedSubjectIdentifier(user.toString(), serviceProvider);
+        user.setAuthenticatedSubjectIdentifier(user.getUserName(), serviceProvider);
         if (log.isDebugEnabled()) {
             log.debug("Token request with password grant type from user: " + user);
         }
