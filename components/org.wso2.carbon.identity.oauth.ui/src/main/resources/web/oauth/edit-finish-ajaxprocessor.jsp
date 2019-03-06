@@ -31,6 +31,7 @@
 <%@ page import="org.wso2.carbon.identity.oauth.ui.util.OAuthUIUtil" %>
 <%@ page import="java.util.ArrayList" %>
 <%@ page import="java.util.List" %>
+<%@ page import="java.util.Objects" %>
 
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt"%>
 <%@ taglib uri="http://wso2.org/projects/carbon/taglibs/carbontags.jar" prefix="carbon"%>
@@ -61,6 +62,7 @@
     String tokenType = request.getParameter("tokenType");
     String logoutMechanism = request.getParameter("logoutMechanism");
     String logoutUrl = request.getParameter("logoutUrl");
+    String isRenewRefreshTokenEnabled = request.getParameter("renewRefreshTokenPerApp");
     String grants;
    	StringBuffer buff = new StringBuffer();
     boolean pkceMandatory = false;
@@ -159,6 +161,10 @@
                 app.setBackChannelLogoutUrl(logoutUrl);
             } else if (OAuthConstants.OIDCConfigProperties.FRONT_CHANNEL_LOGOUT.equalsIgnoreCase(logoutMechanism)) {
                 app.setFrontchannelLogoutUrl(logoutUrl);
+            }
+
+            if (!Objects.equals(isRenewRefreshTokenEnabled, "notAssigned")){
+                app.setRenewRefreshTokenEnabled(String.valueOf(Boolean.parseBoolean(isRenewRefreshTokenEnabled)));
             }
             
             client.updateOAuthApplicationData(app);

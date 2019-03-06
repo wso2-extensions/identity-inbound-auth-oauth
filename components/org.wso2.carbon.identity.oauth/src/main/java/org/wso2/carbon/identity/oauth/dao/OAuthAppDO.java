@@ -55,6 +55,7 @@ public class OAuthAppDO implements Serializable {
     @XmlElement(name = "audience")
     private String[] audiences = new String[0];
     private boolean bypassClientCredentials;
+    private String renewRefreshTokenEnabled;
     // OIDC related properties.
     private boolean requestObjectSignatureValidationEnabled;
     private boolean idTokenEncryptionEnabled;
@@ -283,4 +284,11 @@ public class OAuthAppDO implements Serializable {
     public void setBypassClientCredentials(boolean isPublicClient) {
         this.bypassClientCredentials = isPublicClient;
     }
+
+    public void setRenewRefreshTokenEnabled(String renewRefreshTokenEnabled){
+
+        this.renewRefreshTokenEnabled = renewRefreshTokenEnabled;
+    }
+
+    public String getRenewRefreshTokenEnabled() { return renewRefreshTokenEnabled; }
 }

@@ -279,6 +279,7 @@ public class OAuthAdminService extends AbstractAdmin {
                     app.setFrontchannelLogoutUrl(application.getFrontchannelLogoutUrl());
                     app.setTokenType(application.getTokenType());
                     app.setBypassClientCredentials(application.isBypassClientCredentials());
+                    app.setRenewRefreshTokenEnabled(application.getRenewRefreshTokenEnabled());
                 }
                 dao.addOAuthApplication(app);
                 AppInfoCache.getInstance().addToCache(app.getOauthConsumerKey(), app);
@@ -340,6 +341,7 @@ public class OAuthAdminService extends AbstractAdmin {
         dto.setFrontchannelLogoutUrl(appDO.getFrontchannelLogoutUrl());
         dto.setTokenType(appDO.getTokenType());
         dto.setBypassClientCredentials(appDO.isBypassClientCredentials());
+        dto.setRenewRefreshTokenEnabled(appDO.getRenewRefreshTokenEnabled());
         return dto;
     }
 
@@ -429,6 +431,7 @@ public class OAuthAdminService extends AbstractAdmin {
             oauthappdo.setIdTokenEncryptionMethod(consumerAppDTO.getIdTokenEncryptionMethod());
             oauthappdo.setBackChannelLogoutUrl(consumerAppDTO.getBackChannelLogoutUrl());
             oauthappdo.setFrontchannelLogoutUrl(consumerAppDTO.getFrontchannelLogoutUrl());
+            oauthappdo.setRenewRefreshTokenEnabled(consumerAppDTO.getRenewRefreshTokenEnabled());
         }
         dao.updateConsumerApplication(oauthappdo);
         AppInfoCache.getInstance().addToCache(oauthappdo.getOauthConsumerKey(), oauthappdo);
@@ -1064,6 +1067,16 @@ public class OAuthAdminService extends AbstractAdmin {
             }
         }
         return supportedTokenTypes;
+    }
+
+    /**
+     * Get the renew refresh token property value from identity.xml file.
+     *
+     * @return renew refresh token property value
+     */
+    public boolean isRefreshTokenRenewalEnabled(){
+
+        return OAuthServerConfiguration.getInstance().isRefreshTokenRenewalEnabled();
     }
 
     /**

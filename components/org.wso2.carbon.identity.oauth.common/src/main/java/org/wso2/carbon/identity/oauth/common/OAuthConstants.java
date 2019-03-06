@@ -334,6 +334,7 @@ public final class OAuthConstants {
         public static final String FRONT_CHANNEL_LOGOUT_URL = "frontchannelLogoutURL";
         public static final String TOKEN_TYPE = "tokenType";
         public static final String BYPASS_CLIENT_CREDENTIALS = "bypassClientCredentials";
+        public static final String RENEW_REFRESH_TOKEN = "renewRefreshToken";
 
         private OIDCConfigProperties() { }
     }
