@@ -24,6 +24,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
+import org.owasp.encoder.Encode;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -479,7 +480,8 @@ public class AccessTokenIssuer {
             if (log.isDebugEnabled()) {
                 log.debug("A valid OAuth client could not be found for client_id: " + consumerKey);
             }
-            throw new InvalidOAuthClientException("A valid OAuth client could not be found for client_id: " + consumerKey);
+            throw new InvalidOAuthClientException("A valid OAuth client could not be found for client_id: " +
+                    Encode.forHtml(consumerKey));
         }
 
         if (isNotActiveState(appState)) {
