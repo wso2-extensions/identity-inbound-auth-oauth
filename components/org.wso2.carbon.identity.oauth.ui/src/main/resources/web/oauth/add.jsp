@@ -247,7 +247,7 @@
                     } else if(oauthVersion == "<%=OAuthConstants.OAuthVersions.VERSION_2%>") {
                         $(jQuery('#grant_row')).show();
                         $(jQuery('#scope_validator_row')).show();
-                        $(jQuery('#access_token_type_row')).hide();
+                        $(jQuery('#access_token_type_row')).show();
                         $(jQuery("#pkce_enable").show());
                         $(jQuery("#pkce_support_plain").show());
                         $(jQuery('#userAccessTokenPlain').show());
