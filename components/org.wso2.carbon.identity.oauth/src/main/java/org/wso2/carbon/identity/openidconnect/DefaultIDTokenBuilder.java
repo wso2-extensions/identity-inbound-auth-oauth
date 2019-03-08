@@ -295,7 +295,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
             return new PlainJWT(jwtClaimsSet).serialize();
         }
 
-        return getIDToken(clientId, spTenantDomain, jwtClaimsSetBuilder.build(), oAuthAppDO,
+        return getIDToken(clientId, spTenantDomain, jwtClaimsSet, oAuthAppDO,
                 getSigningTenantDomain(authzReqMessageContext));
     }
 
