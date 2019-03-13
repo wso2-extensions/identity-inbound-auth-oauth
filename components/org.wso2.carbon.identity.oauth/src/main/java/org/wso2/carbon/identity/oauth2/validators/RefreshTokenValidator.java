@@ -48,4 +48,10 @@ public class RefreshTokenValidator implements OAuth2TokenValidator {
         // issues.
         return true;
     }
+
+    @Override
+    public String getTokenType() {
+
+        return "Refresh";
+    }
 }

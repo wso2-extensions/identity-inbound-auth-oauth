@@ -146,4 +146,10 @@ public class DefaultOAuth2TokenValidator implements OAuth2TokenValidator {
         return true;
     }
 
+    @Override
+    public String getTokenType() {
+
+        return "Bearer";
+    }
+
 }
