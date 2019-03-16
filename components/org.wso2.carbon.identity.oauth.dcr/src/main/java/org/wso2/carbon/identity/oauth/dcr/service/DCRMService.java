@@ -38,7 +38,6 @@ import org.wso2.carbon.identity.oauth.dcr.DCRMConstants;
 import org.wso2.carbon.identity.oauth.dcr.bean.Application;
 import org.wso2.carbon.identity.oauth.dcr.bean.ApplicationRegistrationRequest;
 import org.wso2.carbon.identity.oauth.dcr.bean.ApplicationUpdateRequest;
-import org.wso2.carbon.identity.oauth.dcr.exception.DCRMClientException;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMException;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMServerException;
 import org.wso2.carbon.identity.oauth.dcr.internal.DCRDataHolder;
@@ -201,6 +200,10 @@ public class DCRMService {
             if (updateRequest.getTokenType() != null) {
                 appDTO.setTokenType(updateRequest.getTokenType());
             }
+            if(StringUtils.isNotEmpty(updateRequest.getBackchannelLogoutUri())) {
+                String backChannelLogoutUri = validateBackchannelLogoutURI(updateRequest.getBackchannelLogoutUri());
+                appDTO.setBackChannelLogoutUrl(backChannelLogoutUri);
+            }
             oAuthAdminService.updateConsumerApplication(appDTO);
         } catch (IdentityOAuthAdminException e) {
             throw DCRMUtils.generateServerException(
@@ -333,11 +336,12 @@ public class DCRMService {
         oAuthConsumerApp.setApplicationName(spName);
         oAuthConsumerApp.setCallbackUrl(
                 validateAndSetCallbackURIs(registrationRequest.getRedirectUris(), registrationRequest.getGrantTypes()));
-
         String grantType = StringUtils.join(registrationRequest.getGrantTypes(), GRANT_TYPE_SEPARATOR);
         oAuthConsumerApp.setGrantTypes(grantType);
         oAuthConsumerApp.setOAuthVersion(OAUTH_VERSION);
         oAuthConsumerApp.setTokenType(registrationRequest.getTokenType());
+        oAuthConsumerApp.setBackChannelLogoutUrl(
+                validateBackchannelLogoutURI(registrationRequest.getBackchannelLogoutUri()));
 
         if (StringUtils.isNotEmpty(registrationRequest.getConsumerKey())) {
             String clientIdRegex = OAuthServerConfiguration.getInstance().getClientIdValidationRegex();
@@ -566,6 +570,16 @@ public class DCRMService {
 
         } else {
             return OAuthConstants.CALLBACK_URL_REGEXP_PREFIX + createRegexPattern(redirectUris);
+        }
+    }
+
+    private String validateBackchannelLogoutURI(String backchannelLogoutUri) throws DCRMException {
+
+        if (DCRMUtils.isBackchannelLogoutUriValid(backchannelLogoutUri)) {
+            return backchannelLogoutUri;
+        } else {
+            throw DCRMUtils.generateClientException(
+                    DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_BACKCHANNEL_LOGOUT_URI, backchannelLogoutUri);
         }
     }
 

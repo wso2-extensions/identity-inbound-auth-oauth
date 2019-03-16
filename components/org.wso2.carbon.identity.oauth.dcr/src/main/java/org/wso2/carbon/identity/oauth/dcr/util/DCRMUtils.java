@@ -59,6 +59,48 @@ public class DCRMUtils {
         return true;
     }
 
+    public static boolean isBackchannelLogoutUriValid(String backchannelLogoutUri) {
+
+        if(StringUtils.isBlank(backchannelLogoutUri)) {
+            return true;
+        }
+
+        if (log.isDebugEnabled()) {
+            log.debug("Validating back-channel logout uri: " + backchannelLogoutUri);
+        }
+
+        if(backchannelLogoutUri.contains("#")) {
+            if (log.isDebugEnabled()) {
+                String errorMessage = "The back-channel logout URI: " + backchannelLogoutUri
+                        + ", contains a fragment component.";
+                log.debug(errorMessage);
+            }
+            return false;
+        }
+
+        URI uri;
+        try {
+            uri = new URI(backchannelLogoutUri);
+        } catch (URISyntaxException e) {
+            if (log.isDebugEnabled()) {
+                String errorMessage = "The back-channel logout URI: " + backchannelLogoutUri + ", is not a valid URI.";
+                log.debug(errorMessage, e);
+            }
+            return false;
+        }
+
+        if(!uri.isAbsolute()) {
+            if (log.isDebugEnabled()) {
+                String errorMessage = "The back-channel logout URI: " + backchannelLogoutUri
+                        + ", is not an absolute URI.";
+                log.debug(errorMessage);
+            }
+            return false;
+        }
+
+        return true;
+    }
+
     public static DCRMServerException generateServerException(DCRMConstants.ErrorMessages
                                                                                      error, String data, Throwable e)
             throws DCRMServerException {

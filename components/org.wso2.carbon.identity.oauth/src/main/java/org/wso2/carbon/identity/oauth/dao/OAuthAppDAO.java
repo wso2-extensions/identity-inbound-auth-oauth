@@ -1118,7 +1118,7 @@ public class OAuthAppDAO {
         Map<String, List<String>> spOIDCProperties =
                 getSpOIDCProperties(connection, preprocessedClientId, spTenantDomain);
 
-        // Set OIDC properties to IDP_OIDC_PROPERTY table.
+        // Set OIDC properties to IDN_OIDC_PROPERTY table.
         setSpOIDCProperties(spOIDCProperties, oauthApp);
     }
 
