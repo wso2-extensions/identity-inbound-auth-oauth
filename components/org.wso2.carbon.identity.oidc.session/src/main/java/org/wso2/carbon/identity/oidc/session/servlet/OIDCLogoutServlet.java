@@ -556,7 +556,7 @@ public class OIDCLogoutServlet extends HttpServlet {
     }
 
     private void triggerLogoutHandlersForPreLogout(HttpServletRequest request,
-                                                    HttpServletResponse response) throws OIDCSessionManagementException {
+                                                   HttpServletResponse response) throws OIDCSessionManagementException {
 
         List<OIDCLogoutHandler> oidcLogoutHandlers =
                 OIDCSessionManagementComponentServiceHolder.getOIDCLogoutHandlers();
