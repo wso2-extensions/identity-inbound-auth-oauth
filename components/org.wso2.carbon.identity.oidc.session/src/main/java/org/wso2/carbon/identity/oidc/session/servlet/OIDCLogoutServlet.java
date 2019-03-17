@@ -119,7 +119,19 @@ public class OIDCLogoutServlet extends HttpServlet {
             if (log.isDebugEnabled()) {
                 log.debug(msg);
             }
-            handleAlreadyLoggedOutSessions(request, response, msg);
+            if (OIDCSessionManagementUtil.handleAlreadyLoggedOutSessionsGracefully()) {
+                handleMissingSessionStateGracefully(request, response);
+                return;
+            } else {
+                if (log.isDebugEnabled()) {
+                    msg = "HandleAlreadyLoggedOutSessionsGracefully configuration disabled. Missing session state is " +
+                            "handled by redirecting to error page instead of default logout page.";
+                    log.debug(msg);
+                }
+                redirectURL = OIDCSessionManagementUtil.getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, msg);
+                response.sendRedirect(getRedirectURL(redirectURL, request));
+                return;
+            }
         }
 
         if (!OIDCSessionManagementUtil.getSessionManager().sessionExists(opBrowserStateCookie.getValue())) {
@@ -127,8 +139,19 @@ public class OIDCLogoutServlet extends HttpServlet {
             if (log.isDebugEnabled()) {
                 log.debug(msg);
             }
-            handleAlreadyLoggedOutSessions(request, response, msg);
-            return;
+            if (OIDCSessionManagementUtil.handleAlreadyLoggedOutSessionsGracefully()) {
+                handleMissingSessionStateGracefully(request, response);
+                return;
+            } else {
+                if (log.isDebugEnabled()) {
+                    msg = "HandleAlreadyLoggedOutSessionsGracefully configuration enabled. No valid session found is " +
+                            "handled by redirecting to error page instead of default logout page.";
+                    log.debug(msg);
+                }
+                redirectURL = OIDCSessionManagementUtil.getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, msg);
+                response.sendRedirect(getRedirectURL(redirectURL, request));
+                return;
+            }
         }
 
         String consent = request.getParameter(OIDCSessionConstants.OIDC_LOGOUT_CONSENT_PARAM);
@@ -175,28 +198,6 @@ public class OIDCLogoutServlet extends HttpServlet {
         }
 
         response.sendRedirect(getRedirectURL(redirectURL, request));
-    }
-
-    private void handleAlreadyLoggedOutSessions(HttpServletRequest request, HttpServletResponse response, String msg)
-            throws IOException {
-
-        String redirectURL;
-        if (OIDCSessionManagementUtil.handleAlreadyLoggedOutSessionsGracefully()) {
-            if (log.isDebugEnabled()) {
-                log.debug("HandleAlreadyLoggedOutSessionsGracefully configuration is enabled. Handling the logout " +
-                        "request gracefully.");
-            }
-            handleMissingSessionStateGracefully(request, response);
-            return;
-        } else {
-            if (log.isDebugEnabled()) {
-                msg = msg + " Redirecting to error page instead of default logout page.";
-                log.debug(msg);
-            }
-            redirectURL = OIDCSessionManagementUtil.getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, msg);
-            response.sendRedirect(getRedirectURL(redirectURL, request));
-            return;
-        }
     }
 
     /**
@@ -555,7 +556,7 @@ public class OIDCLogoutServlet extends HttpServlet {
     }
 
     private void triggerLogoutHandlersForPreLogout(HttpServletRequest request,
-                                                    HttpServletResponse response) throws OIDCSessionManagementException {
+                                                   HttpServletResponse response) throws OIDCSessionManagementException {
 
         List<OIDCLogoutHandler> oidcLogoutHandlers =
                 OIDCSessionManagementComponentServiceHolder.getOIDCLogoutHandlers();
