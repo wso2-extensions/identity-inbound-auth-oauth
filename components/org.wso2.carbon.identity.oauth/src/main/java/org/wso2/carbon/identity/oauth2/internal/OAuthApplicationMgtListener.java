@@ -538,13 +538,13 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                     try {
                         if (!isUpdate) {
                             if (dao.isDuplicateConsumer(inboundAuthKey)) {
-                                validationMsg.add(String.format("There is already an oauth application " +
-                                        "exists in the system with %s as consumer key", inboundAuthKey));
+                                validationMsg.add(String.format("An OAuth application already exists with %s as " +
+                                        "consumer key", inboundAuthKey));
                                 break;
                             } else if (dao.isDuplicateApplication(userName,
                                     IdentityTenantUtil.getTenantId(tenantDomain), tenantDomain, oAuthAppDO)) {
-                                validationMsg.add(String.format("There is already an oauth application available with" +
-                                        " %s as application name", oAuthAppDO.getApplicationName()));
+                                validationMsg.add(String.format("An OAuth application already exists with %s as " +
+                                        "consumer key", oAuthAppDO.getApplicationName()));
                                 break;
                             }
                         }
