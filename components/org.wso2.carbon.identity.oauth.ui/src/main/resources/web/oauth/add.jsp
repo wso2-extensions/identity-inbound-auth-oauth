@@ -295,12 +295,8 @@
                     document.addAppform.addAudience.disabled = !chkbx.checked;
                 }
 
-                function toggleOidcLogout(radiobtn) {
-                    if (radiobtn.value == "none") {
-                        document.addAppform.logoutUrl.disabled = true;
-                    } else {
-                        document.addAppform.logoutUrl.disabled = false;
-                    }
+                function toggleOidcLogout(chkbx) {
+                    document.addAppform.logoutUrl.disabled = !chkbx.checked;
                 }
 
                 function addAudienceFunc() {
@@ -642,39 +638,15 @@
                                     </td>
                                 </tr>
 
-                                    <%-- Logout Mechanisms --%>
-                                <tr id="logout_mechanism_row" name="logout_mechanism_row">
-                                    <td class="leftCol-med"><fmt:message key="logout.mechasnism"/></td>
-                                    <td>
-                                        <table>
-                                            <tr>
-                                                <td><label><input type="radio" name="logoutMechanism"
-                                                                  id="logout_none"
-                                                                  value="<%= Encode.forHtmlAttribute(OAuthConstants.OIDCConfigProperties.NO_LOGOUT_SELECTED)%>"
-                                                                  checked="checked" onclick="toggleOidcLogout(this)"/>
-                                                    <fmt:message key="no.logout.mechanism"/>
-                                                </label>
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td><label><input type="radio" name="logoutMechanism"
-                                                                  id="frontchannel_logout"
-                                                                  value="<%= Encode.forHtmlAttribute(OAuthConstants.OIDCConfigProperties.FRONT_CHANNEL_LOGOUT)%>"
-                                                                  onclick="toggleOidcLogout(this)"/>
-                                                    <fmt:message key="oidc.frontchannel.logout"/>
-                                                </label>
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td><label><input type="radio" name="logoutMechanism"
-                                                                  id="backchannel_logout"
-                                                                  value="<%= Encode.forHtmlAttribute(OAuthConstants.OIDCConfigProperties.BACK_CHANNEL_LOGOUT)%>"
-                                                                  onclick="toggleOidcLogout(this)"/>
-                                                    <fmt:message key="oidc.backchannel.logout"/>
-                                                </label>
-                                                </td>
-                                            </tr>
-                                        </table>
+                                <tr id="logout_mechanism_row">
+                                    <td colspan="2">
+                                        <label title="Enable OIDC Backchannel Logout. Add the Backchannel Logout Endpoint URL in the textbox below">
+                                            <input type="checkbox" name="logoutMechanism"
+                                                   id="backchannel_logout"
+                                                   value="<%= Encode.forHtmlAttribute(OAuthConstants.OIDCConfigProperties.BACK_CHANNEL_LOGOUT)%>"
+                                                   onclick="toggleOidcLogout(this)"/>
+                                            <fmt:message key="oidc.backchannel.logout"/>
+                                        </label>
                                     </td>
                                 </tr>
 
