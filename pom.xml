@@ -744,7 +744,7 @@
         <carbon.kernel.registry.imp.pkg.version.range>[1.0.1, 2.0.0)</carbon.kernel.registry.imp.pkg.version.range>
 
         <!-- Carbon Identity Framework version -->
-        <carbon.identity.framework.version>5.12.212</carbon.identity.framework.version>
+        <carbon.identity.framework.version>5.12.305</carbon.identity.framework.version>
         <carbon.identity.framework.imp.pkg.version.range>[5.0.0, 6.0.0)
         </carbon.identity.framework.imp.pkg.version.range>
         <claim.metadata.version.range>[5.0.0,7.0.0)</claim.metadata.version.range>
@@ -814,7 +814,7 @@
 
         <google.guava.wso2.version>12.0.0.wso2v1</google.guava.wso2.version>
         <cxf-bundle.wso2.version>2.7.16.wso2v1</cxf-bundle.wso2.version>
-        <org.apache.cxf.version>3.2.6</org.apache.cxf.version>
+        <org.apache.cxf.version>3.2.8</org.apache.cxf.version>
         <encoder.wso2.version>1.2.0.wso2v1</encoder.wso2.version>
         <json-simple.version>1.1.wso2v1</json-simple.version>
 
