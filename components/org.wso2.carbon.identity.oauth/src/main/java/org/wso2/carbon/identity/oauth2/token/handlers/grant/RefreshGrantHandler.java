@@ -575,9 +575,9 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         }
     }
 
-    private boolean getRenewRefreshTokenProperty(String renewRefreshToken){
+    private boolean getRenewRefreshTokenProperty(String renewRefreshToken) {
 
-        if (renewRefreshToken != null){
+        if (renewRefreshToken != null) {
             if (log.isDebugEnabled()) {
                 log.debug("Reading the Oauth application specific renew " +
                         "refresh token value as " + renewRefreshToken + " from the IDN_OIDC_PROPERTY table");
@@ -585,7 +585,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             return Boolean.parseBoolean(renewRefreshToken);
         } else {
             if (log.isDebugEnabled()) {
-                log.debug("Rading the global renew refresh token value from the identity.xml");
+                log.debug("Reading the global renew refresh token value from the identity.xml");
             }
             return OAuthServerConfiguration.getInstance().isRefreshTokenRenewalEnabled();
         }

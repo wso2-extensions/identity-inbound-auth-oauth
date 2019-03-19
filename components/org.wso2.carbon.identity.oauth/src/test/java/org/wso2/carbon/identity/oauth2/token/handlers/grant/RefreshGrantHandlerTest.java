@@ -234,7 +234,7 @@ public class RefreshGrantHandlerTest {
         OAuth2AccessTokenRespDTO actual = refreshGrantHandler.issue(tokenReqMessageContext);
         assertTrue(!actual.isError());
         assertNotNull(actual.getRefreshToken());
-        if (Objects.equals(renewRefreshToken, "true") || (renewRefreshToken == null)){
+        if (Objects.equals(renewRefreshToken, "true") || (renewRefreshToken == null)) {
             assertNotEquals("refreshToken1", actual.getRefreshToken());
         } else {
             assertEquals("refreshToken1", actual.getRefreshToken());

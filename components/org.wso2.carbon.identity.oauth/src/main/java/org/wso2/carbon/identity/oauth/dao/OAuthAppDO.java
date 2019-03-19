@@ -285,10 +285,13 @@ public class OAuthAppDO implements Serializable {
         this.bypassClientCredentials = isPublicClient;
     }
 
-    public void setRenewRefreshTokenEnabled(String renewRefreshTokenEnabled){
+    public void setRenewRefreshTokenEnabled(String renewRefreshTokenEnabled) {
 
         this.renewRefreshTokenEnabled = renewRefreshTokenEnabled;
     }
 
-    public String getRenewRefreshTokenEnabled() { return renewRefreshTokenEnabled; }
+    public String getRenewRefreshTokenEnabled() {
+
+        return renewRefreshTokenEnabled;
+    }
 }

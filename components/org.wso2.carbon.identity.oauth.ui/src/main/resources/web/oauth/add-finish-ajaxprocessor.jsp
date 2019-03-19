@@ -163,7 +163,7 @@
                 app.setIdTokenEncryptionAlgorithm(idTokenEncryptionAlgorithm);
                 app.setIdTokenEncryptionMethod(idTokenEncryptionMethod);
             }
-            if (!Objects.equals(isRenewRefreshTokenEnabled, "notAssigned")){
+            if (!Objects.equals(isRenewRefreshTokenEnabled, "notAssigned")) {
                 app.setRenewRefreshTokenEnabled(String.valueOf(Boolean.parseBoolean(isRenewRefreshTokenEnabled)));
             }
 
