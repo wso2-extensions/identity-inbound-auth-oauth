@@ -66,6 +66,8 @@ public class OIDProviderConfigResponse {
     private String opTosUri;
     private String checkSessionIframe;
     private String endSessionEndpoint;
+    private String backchannelLogoutSupported;
+    private String backchannelLogoutSessionSupported;
 
 
     public String getIssuer() {
@@ -367,6 +369,14 @@ public class OIDProviderConfigResponse {
         this.endSessionEndpoint = endSessionEndpoint;
     }
 
+    public void setBackchannelLogoutSupported(String backchannelLogoutSupported) {
+        this.backchannelLogoutSupported = backchannelLogoutSupported;
+    }
+
+    public void setBackchannelLogoutSessionSupported(String backchannelLogoutSessionSupported) {
+        this.backchannelLogoutSessionSupported = backchannelLogoutSessionSupported;
+    }
+
     public Map<String, Object> getConfigMap() {
         Map<String, Object> configMap = new HashMap<String, Object>();
         configMap.put(DiscoveryConstants.ISSUER.toLowerCase(), this.issuer);
@@ -419,8 +429,8 @@ public class OIDProviderConfigResponse {
         configMap.put(DiscoveryConstants.END_SESSION_ENDPOINT.toLowerCase(), this.endSessionEndpoint);
         configMap.put(DiscoveryConstants.USERINFO_SIGNING_ALG_VALUES_SUPPORTED.toLowerCase(), this
                 .userinfoSigningAlgValuesSupported);
+        configMap.put(DiscoveryConstants.BACKCHANNEL_LOGOUT_SUPPORTED, this.backchannelLogoutSupported);
+        configMap.put(DiscoveryConstants.BACKCHANNEL_LOGOUT_SESSION_SUPPORTED, this.backchannelLogoutSessionSupported);
         return configMap;
     }
-
-
 }
