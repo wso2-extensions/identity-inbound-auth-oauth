@@ -173,7 +173,7 @@ public class DCRMService {
             // Regex validation of the application name.
             if (!DCRMUtils.isRegexValidated(clientName)) {
                 throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_SP_NAME,
-                        DCRConstants.APP_NAME_VALIDATING_REGEX, null);
+                        DCRMUtils.getSPValidatorRegex(), null);
             }
             sp.setApplicationName(clientName);
             updateServiceProvider(sp, tenantDomain, applicationOwner);
@@ -185,7 +185,7 @@ public class DCRMService {
                 // Regex validation of the application name.
                 if (!DCRMUtils.isRegexValidated(clientName)) {
                     throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_SP_NAME,
-                            DCRConstants.APP_NAME_VALIDATING_REGEX, null);
+                            DCRMUtils.getSPValidatorRegex(), null);
                 }
                 appDTO.setApplicationName(clientName);
             }
@@ -250,7 +250,7 @@ public class DCRMService {
         // Regex validation of the application name.
         if (!DCRMUtils.isRegexValidated(spName)) {
             throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_SP_NAME,
-                    DCRConstants.APP_NAME_VALIDATING_REGEX, null);
+                    DCRMUtils.getSPValidatorRegex(), null);
         }
 
         // Check whether a service provider already exists for the name we are trying to register the OAuth app with.

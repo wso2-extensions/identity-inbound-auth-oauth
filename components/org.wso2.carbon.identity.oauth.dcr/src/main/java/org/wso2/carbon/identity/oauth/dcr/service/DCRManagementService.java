@@ -90,7 +90,7 @@ public class DCRManagementService {
         // Regex validation of the application name.
         if (!DCRMUtils.isRegexValidated(applicationName)) {
             throw new DCRException("The Application name: " + applicationName + " is not valid! It is not adhering to" +
-                    " the regex: " + DCRConstants.APP_NAME_VALIDATING_REGEX);
+                    " the regex: " + DCRMUtils.getSPValidatorRegex());
         }
 
         RegistrationResponseProfile info = this.createOAuthApplication(profile);
@@ -116,7 +116,7 @@ public class DCRManagementService {
         // Regex validation of the application name.
         if (!DCRMUtils.isRegexValidated(applicationName)) {
             throw new DCRException("The Application name: " + applicationName + " is not valid! It is not adhering to" +
-                    " the regex: " + DCRConstants.APP_NAME_VALIDATING_REGEX);
+                    " the regex: " + DCRMUtils.getSPValidatorRegex());
         }
 
         String grantType = StringUtils.join(profile.getGrantTypes(), " ");
