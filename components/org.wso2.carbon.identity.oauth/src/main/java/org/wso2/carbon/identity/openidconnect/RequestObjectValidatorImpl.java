@@ -135,7 +135,7 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
                 if (Constants.JWKS_URI.equals(spProperty.getName())) {
                     jwksUri = spProperty.getValue();
                     if (log.isDebugEnabled()) {
-                        log.debug("Found jwks endpoint " + jwksUri + "for service provider with client id " +
+                        log.debug("Found jwks endpoint " + jwksUri + " for service provider with client id " +
                                 oAuth2Parameters.getClientId());
                     }
                     break;
@@ -151,7 +151,7 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
      * Validating signature based on jwks endpoint.
      *
      * @param signedJWT signed JWT
-     * @param jwksUri Uri of the JWKS endpoint
+     * @param jwksUri   Uri of the JWKS endpoint
      * @throws RequestObjectException
      */
     protected boolean isSignatureVerified(SignedJWT signedJWT, String jwksUri) throws RequestObjectException {
@@ -161,7 +161,7 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
             String jwtString = signedJWT.getParsedString();
             String alg = signedJWT.getHeader().getAlgorithm().getName();
             try {
-                return  new JWKSBasedJWTValidator().validateSignature(jwtString, jwksUri, alg, MapUtils.EMPTY_MAP);
+                return new JWKSBasedJWTValidator().validateSignature(jwtString, jwksUri, alg, MapUtils.EMPTY_MAP);
             } catch (IdentityOAuth2Exception e) {
                 String errorMessage = "Error occurred while validating request object signature using jwks endpoint";
                 throw new RequestObjectException(errorMessage, OAuth2ErrorCodes.SERVER_ERROR, e);
