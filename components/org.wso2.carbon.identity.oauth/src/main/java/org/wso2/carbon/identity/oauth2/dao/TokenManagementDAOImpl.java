@@ -162,14 +162,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                     validationDataDO.setGrantType(resultSet.getString(10));
                     String subjectIdentifier = resultSet.getString(11);
                     AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(userName, userDomain, tenantDomain);
-                    ServiceProvider serviceProvider;
-                    try {
-                        serviceProvider = OAuth2ServiceComponentHolder.getApplicationMgtService().
-                                getServiceProviderByClientId(consumerKey, OAuthConstants.Scope.OAUTH2, tenantDomain);
-                    } catch (IdentityApplicationManagementException e) {
-                        throw new IdentityOAuth2Exception("Error occurred while retrieving OAuth2 " +
-                                "application data for " + "client id " + consumerKey, e);
-                    }
+                    user.setAuthenticatedSubjectIdentifier(subjectIdentifier);
 
                     if (!OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && userDomain.startsWith
                             (OAuthConstants.UserType.FEDERATED_USER_DOMAIN_PREFIX)) {
@@ -180,8 +173,6 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                         }
                         user.setFederatedUser(true);
                     }
-
-                    user.setAuthenticatedSubjectIdentifier(subjectIdentifier, serviceProvider);
                     validationDataDO.setAuthorizedUser(user);
 
                 } else {
