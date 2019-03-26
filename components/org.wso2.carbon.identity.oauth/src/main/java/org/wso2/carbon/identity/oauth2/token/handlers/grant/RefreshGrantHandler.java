@@ -577,7 +577,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
 
     private boolean getRenewRefreshTokenProperty(String renewRefreshToken) {
 
-        if (renewRefreshToken != null) {
+        if (StringUtils.isNotBlank(renewRefreshToken)) {
             if (log.isDebugEnabled()) {
                 log.debug("Reading the Oauth application specific renew " +
                         "refresh token value as " + renewRefreshToken + " from the IDN_OIDC_PROPERTY table");
