@@ -39,6 +39,8 @@ public class Constants {
     public static final String ID_TOKEN_HINT = "id_token_hint";
     public static final String PROMPT = "prompt";
     public static String CLAIMS = "claims";
+    public static final String JWKS_URI = "jwksURI";
+
 
     //JWS is consists of three parts seperated by 2 '.'s as JOSE header, JWS payload, JWS signature
     public static final int NUMBER_OF_PARTS_IN_JWS = 3;
