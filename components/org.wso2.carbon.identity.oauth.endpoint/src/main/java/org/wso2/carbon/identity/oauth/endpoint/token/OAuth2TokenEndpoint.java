@@ -96,11 +96,22 @@ public class OAuth2TokenEndpoint {
                 return buildTokenResponse(oauth2AccessTokenResp);
             }
         } catch (TokenEndpointBadRequestException | OAuthSystemException | InvalidApplicationClientException e) {
+            OAuth2AccessTokenRespDTO oAuth2AccessTokenRespDTO = setOAuth2AccessTokenRespDTO(e);
             triggerOnTokenExceptionListeners(e, request, paramMap);
-            throw e;
+            return handleErrorResponse(oAuth2AccessTokenRespDTO);
+
         } finally {
             PrivilegedCarbonContext.endTenantFlow();
         }
+    }
+
+    private OAuth2AccessTokenRespDTO setOAuth2AccessTokenRespDTO(Exception e) {
+
+        OAuth2AccessTokenRespDTO oAuth2AccessTokenRespDTO = new OAuth2AccessTokenRespDTO();
+        oAuth2AccessTokenRespDTO.setError(true);
+        oAuth2AccessTokenRespDTO.setErrorCode(OAuth2ErrorCodes.INVALID_REQUEST);
+        oAuth2AccessTokenRespDTO.setErrorMsg(e.getMessage());
+        return oAuth2AccessTokenRespDTO;
     }
 
     private CarbonOAuthTokenRequest buildCarbonOAuthTokenRequest(HttpServletRequestWrapper httpRequest)
@@ -122,7 +133,7 @@ public class OAuth2TokenEndpoint {
         } else {
             log.error("Error while creating the Carbon OAuth token request", e);
         }
-        throw new TokenEndpointBadRequestException(e);
+        throw new TokenEndpointBadRequestException(e.getDescription(), e.getError(), e);
     }
 
     private boolean isUnsupportedGrantType(OAuthProblemException e) {
