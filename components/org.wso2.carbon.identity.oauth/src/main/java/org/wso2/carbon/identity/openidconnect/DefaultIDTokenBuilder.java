@@ -76,6 +76,7 @@ import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
@@ -251,6 +252,11 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
             throw new IdentityOAuth2Exception(error, e);
         }
 
+        String[] amrValueArray = (String[])(authzReqMessageContext.getAuthorizationReqDTO().getProperty(OAuthConstants
+                .AMR));
+        if (ArrayUtils.isNotEmpty(amrValueArray)) {
+            amrValues = Arrays.asList(amrValueArray);
+        }
         long idTokenLifeTimeInMillis = getIDTokenExpiryInMillis(oAuthAppDO);
         long currentTimeInMillis = Calendar.getInstance().getTimeInMillis();
 

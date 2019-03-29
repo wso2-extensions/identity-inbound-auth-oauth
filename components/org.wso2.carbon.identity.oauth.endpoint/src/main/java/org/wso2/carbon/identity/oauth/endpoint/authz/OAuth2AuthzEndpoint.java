@@ -2108,6 +2108,10 @@ public class OAuth2AuthzEndpoint {
         authzReqDTO.setMaxAge(oauth2Params.getMaxAge());
         authzReqDTO.setEssentialClaims(oauth2Params.getEssentialClaims());
         authzReqDTO.setSessionDataKey(oauth2Params.getSessionDataKey());
+        if (sessionDataCacheEntry.getParamMap() != null && sessionDataCacheEntry.getParamMap().get(OAuthConstants
+                .AMR) != null) {
+            authzReqDTO.addProperty(OAuthConstants.AMR, sessionDataCacheEntry.getParamMap().get(OAuthConstants.AMR));
+        }
         // Set Selected acr value.
         String[] sessionIds = sessionDataCacheEntry.getParamMap().get(FrameworkConstants.SESSION_DATA_KEY);
         if (ArrayUtils.isNotEmpty(sessionIds)) {
