@@ -109,7 +109,7 @@ public class OAuth2TokenEndpoint {
 
         OAuth2AccessTokenRespDTO oAuth2AccessTokenRespDTO = new OAuth2AccessTokenRespDTO();
         oAuth2AccessTokenRespDTO.setError(true);
-        oAuth2AccessTokenRespDTO.setErrorCode(OAuth2ErrorCodes.INVALID_CLIENT);
+        oAuth2AccessTokenRespDTO.setErrorCode(OAuth2ErrorCodes.INVALID_REQUEST);
         oAuth2AccessTokenRespDTO.setErrorMsg(e.getMessage());
         return oAuth2AccessTokenRespDTO;
     }
