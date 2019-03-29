@@ -172,12 +172,11 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
         return new Object[][] {
                 // Request with multivalued client_id parameter. Will return bad request error
                 {CLIENT_ID_VALUE + ",clientId2", null, new MultivaluedHashMap<String, String>(), GrantType.PASSWORD
-                        .toString(), null, null, null, null, HttpServletResponse.SC_BAD_REQUEST, OAuth2ErrorCodes
-                        .INVALID_REQUEST},
+                        .toString(), null, null, null, null, HttpServletResponse.SC_UNAUTHORIZED, null},
 
                 // Request with invalid authorization header. Will return bad request error
                 {CLIENT_ID_VALUE, inCorrectAuthzHeader, mapWithClientId, GrantType.PASSWORD.toString(), null, null,
-                        null, null, HttpServletResponse.SC_BAD_REQUEST, OAuth2ErrorCodes.INVALID_REQUEST},
+                        null, null, HttpServletResponse.SC_UNAUTHORIZED, null},
 
                 // Request from inactive client. Will give correct response, inactive client state should be handled
                 // in access token issuer
@@ -190,15 +189,15 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
 
                 // Request without client id and authz header. Will give bad request error
                 {null, null, new MultivaluedHashMap<String, String>(), GrantType.PASSWORD.toString(), null, null,
-                        null, null, HttpServletResponse.SC_BAD_REQUEST, OAuth2ErrorCodes.INVALID_REQUEST},
+                        null, null, HttpServletResponse.SC_UNAUTHORIZED, null},
 
                 // Request with client id but no authz header. Will give bad request error
                 {CLIENT_ID_VALUE, null, new MultivaluedHashMap<String, String>(), GrantType.PASSWORD.toString(),
-                        null, null, null, null, HttpServletResponse.SC_BAD_REQUEST, null},
+                        null, null, null, null, HttpServletResponse.SC_UNAUTHORIZED, null},
 
                 // Request with unsupported grant type. Will give bad request error
                 {CLIENT_ID_VALUE, AUTHORIZATION_HEADER, new MultivaluedHashMap<String, String>(), "dummyGrant", null,
-                        null, null, null, HttpServletResponse.SC_BAD_REQUEST, null},
+                        null, null, null, HttpServletResponse.SC_UNAUTHORIZED, null},
 
                 // Successful request without id token request. No headers
                 {CLIENT_ID_VALUE, AUTHORIZATION_HEADER, new MultivaluedHashMap<String, String>(), GrantType.PASSWORD
