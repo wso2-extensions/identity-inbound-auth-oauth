@@ -812,7 +812,7 @@
         <tomcat-util.version>3.3.2</tomcat-util.version>
         <tomcat.wso2.imp.pkg.version.range>[1.7.0,2.0)</tomcat.wso2.imp.pkg.version.range>
 
-        <google.guava.version>23.0</google.guava.version>
+        <google.guava.version>27.0-jre</google.guava.version>
         <cxf-bundle.wso2.version>2.7.16.wso2v1</cxf-bundle.wso2.version>
         <org.apache.cxf.version>3.2.8</org.apache.cxf.version>
         <encoder.wso2.version>1.2.0.wso2v1</encoder.wso2.version>
