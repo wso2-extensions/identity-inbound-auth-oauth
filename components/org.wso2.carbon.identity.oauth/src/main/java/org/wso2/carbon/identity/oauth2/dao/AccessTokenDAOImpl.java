@@ -153,8 +153,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         PreparedStatement insertTokenPrepStmt = null;
         PreparedStatement addScopePrepStmt = null;
 
-        if (!OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && accessTokenDO.getAuthzUser()
-                .isFederatedUser()) {
+        if (isFederatedUser(accessTokenDO)) {
             if (log.isDebugEnabled()) {
                 log.debug("Adding federated domain to user store domain to user " + accessTokenDO.getAuthzUser()
                         .getAuthenticatedSubjectIdentifier());
@@ -163,8 +162,13 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         }
 
         if (log.isDebugEnabled()) {
-            log.debug("Userstore domain for user " + accessTokenDO.getAuthzUser().getAuthenticatedSubjectIdentifier()
-                    + " is :" + userDomain);
+            String username;
+            if (isFederatedUser(accessTokenDO)) {
+                username = accessTokenDO.getAuthzUser().getAuthenticatedSubjectIdentifier();
+            } else {
+                username = accessTokenDO.getAuthzUser().toFullQualifiedUsername();
+            }
+            log.debug("Userstore domain for user: " + username + " is " + userDomain);
         }
 
         String sql = OAuth2Util.getTokenPartitionedSqlByUserStore(SQLQueries.INSERT_OAUTH2_ACCESS_TOKEN, userDomain);
@@ -436,15 +440,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(tenantAwareUsernameWithNoUserDomain,
                             userDomain, tenantDomain);
 
-                    ServiceProvider serviceProvider;
-                    try {
-                        serviceProvider = OAuth2ServiceComponentHolder.getApplicationMgtService().
-                                getServiceProviderByClientId(consumerKey, OAuthConstants.Scope.OAUTH2, tenantDomain);
-                    } catch (IdentityApplicationManagementException e) {
-                        throw new IdentityOAuth2Exception("Error occurred while retrieving OAuth2 application data for " +
-                                "client id " + consumerKey, e);
-                    }
-                    user.setAuthenticatedSubjectIdentifier(subjectIdentifier, serviceProvider);
+                    user.setAuthenticatedSubjectIdentifier(subjectIdentifier);
                     AccessTokenDO accessTokenDO = new AccessTokenDO(consumerKey, user, OAuth2Util.buildScopeArray
                             (scope), new Timestamp(issuedTime), new Timestamp(refreshTokenIssuedTime)
                             , validityPeriodInMillis, refreshTokenValidityPeriodInMillis, userType);
@@ -1745,40 +1741,11 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         return tokenPersistRetryCount;
     }
 
+    @Deprecated
     public AccessTokenDO getAccessTokenDOfromTokenIdentifier(String accessTokenIdentifier) throws
             IdentityOAuth2Exception {
 
-        boolean cacheHit = false;
-        AccessTokenDO accessTokenDO = null;
-
-        // check the cache, if caching is enabled.
-        OAuthCacheKey cacheKey = new OAuthCacheKey(accessTokenIdentifier);
-        CacheEntry result = OAuthCache.getInstance().getValueFromCache(cacheKey);
-        // cache hit, do the type check.
-        if (result != null && result instanceof AccessTokenDO) {
-            accessTokenDO = (AccessTokenDO) result;
-            cacheHit = true;
-        }
-
-        // cache miss, load the access token info from the database.
-        if (accessTokenDO == null) {
-            accessTokenDO = getAccessToken(accessTokenIdentifier, false);
-        }
-
-        if (accessTokenDO == null) {
-            throw new IllegalArgumentException("Invalid access token");
-        }
-
-        // add the token back to the cache in the case of a cache miss
-        if (!cacheHit) {
-            cacheKey = new OAuthCacheKey(accessTokenIdentifier);
-            OAuthCache.getInstance().addToCache(cacheKey, accessTokenDO);
-            if (log.isDebugEnabled()) {
-                log.debug("Access Token Info object was added back to the cache.");
-            }
-        }
-
-        return accessTokenDO;
+        return OAuth2Util.getAccessTokenDOfromTokenIdentifier(accessTokenIdentifier);
     }
 
     /**
@@ -1944,4 +1911,9 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         }
     }
 
+    private boolean isFederatedUser(AccessTokenDO accessTokenDO) {
+
+        return !OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() &&
+                accessTokenDO.getAuthzUser().isFederatedUser();
+    }
 }
