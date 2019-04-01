@@ -49,6 +49,7 @@ import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.authz.handlers.ResponseTypeHandler;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
@@ -447,19 +448,7 @@ public class OAuthAdminService extends AbstractAdmin {
      */
     public String getOauthApplicationState(String consumerKey) throws IdentityOAuthAdminException {
 
-        OAuthAppDO oAuthAppDO = AppInfoCache.getInstance().getValueFromCache(consumerKey);
-        if (oAuthAppDO != null && StringUtils.isNotBlank(oAuthAppDO.getState())) {
-            return oAuthAppDO.getState();
-        } else if (oAuthAppDO != null) {
-            OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
-            String consumerAppState = oAuthAppDAO.getConsumerAppState(consumerKey);
-            oAuthAppDO.setState(consumerAppState);
-            AppInfoCache.getInstance().addToCache(consumerKey, oAuthAppDO);
-            return consumerAppState;
-        }
-
-        OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
-        return oAuthAppDAO.getConsumerAppState(consumerKey);
+        return getOAuth2Service().getOauthApplicationState(consumerKey);
     }
 
     /**
@@ -1231,4 +1220,11 @@ public class OAuthAdminService extends AbstractAdmin {
         }
         return appOwner;
     }
+
+    private OAuth2Service getOAuth2Service() {
+
+        return (OAuth2Service) PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                .getOSGiService(OAuth2Service.class, null);
+    }
+
 }
