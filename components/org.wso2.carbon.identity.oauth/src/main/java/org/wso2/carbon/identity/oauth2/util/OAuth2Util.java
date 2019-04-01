@@ -79,6 +79,8 @@ import org.wso2.carbon.identity.oauth.dao.OAuthConsumerDAO;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor;
+import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
@@ -410,20 +412,13 @@ public class OAuth2Util {
     public static boolean authenticateClient(String clientId, String clientSecretProvided)
             throws IdentityOAuthAdminException, IdentityOAuth2Exception, InvalidOAuthClientException {
 
-        boolean cacheHit = false;
-        String clientSecret = null;
-
-        // Check the cache first.
-        CacheEntry cacheResult = OAuthCache.getInstance().getValueFromCache(new OAuthCacheKey(clientId));
-        if (cacheResult != null && cacheResult instanceof ClientCredentialDO) {
-            ClientCredentialDO clientCredentialDO = (ClientCredentialDO) cacheResult;
-            clientSecret = clientCredentialDO.getClientSecret();
-            cacheHit = true;
-            if (log.isDebugEnabled()) {
-                log.debug("Client credentials were available in the cache for client id : " +
-                        clientId);
-            }
+        OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(clientId);
+        if (appDO == null) {
+            throw new IdentityOAuth2Exception("Cannot authenticate with client_id:" + clientId + ". Cannot find a " +
+                    "valid application for the provided client_id.");
         }
+
+        String clientSecret = appDO.getOauthConsumerSecret();
 
         // Cache miss
         boolean isHashDisabled = isHashDisabled();
@@ -454,7 +449,11 @@ public class OAuth2Util {
             }
         } else {
             // Check whether the provided consumerKey, consumerSecret combination is exist or not in the database.
-            if (!oAuthConsumerDAO.isConsumerSecretExist(clientId, clientSecretProvided)) {
+            TokenPersistenceProcessor persistenceProcessor = getPersistenceProcessor();
+            String hashedClientSecret = persistenceProcessor.getProcessedClientSecret(clientSecretProvided);
+
+            if (!clientSecret.equals(hashedClientSecret)) {
+
                 if (log.isDebugEnabled()) {
                     log.debug("Provided the Client ID : " + clientId +
                             " and Client Secret do not match with the issued credentials.");
@@ -468,15 +467,19 @@ public class OAuth2Util {
             log.debug("Successfully authenticated the client with client id : " + clientId);
         }
 
-        if (!cacheHit) {
-
-            OAuthCache.getInstance().addToCache(new OAuthCacheKey(clientId), new ClientCredentialDO(clientSecret));
-            if (log.isDebugEnabled()) {
-                log.debug("Client credentials were added to the cache for client id : " + clientId);
-            }
-        }
-
         return true;
+    }
+
+    private static TokenPersistenceProcessor getPersistenceProcessor() throws IdentityOAuth2Exception {
+
+        TokenPersistenceProcessor persistenceProcessor;
+        try {
+            persistenceProcessor = OAuthServerConfiguration.getInstance().getPersistenceProcessor();
+        } catch (IdentityOAuth2Exception e) {
+            log.error("Error retrieving TokenPersistenceProcessor. Defaulting to PlainTextProcessor", e);
+            persistenceProcessor = new PlainTextPersistenceProcessor();
+        }
+        return persistenceProcessor;
     }
 
     /**
@@ -1636,7 +1639,9 @@ public class OAuth2Util {
             return oAuthAppDO;
         } else {
             oAuthAppDO = new OAuthAppDAO().getAppInformation(clientId);
-            AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO);
+            if (oAuthAppDO != null) {
+                AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO);
+            }
             return oAuthAppDO;
         }
     }
