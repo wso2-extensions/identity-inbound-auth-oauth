@@ -414,53 +414,24 @@ public class OAuth2Util {
 
         OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(clientId);
         if (appDO == null) {
-            throw new IdentityOAuth2Exception("Cannot authenticate with client_id:" + clientId + ". Cannot find a " +
-                    "valid application for the provided client_id.");
+            if (log.isDebugEnabled()) {
+                log.debug("Cannot find a valid application with the provided client_id: " + clientId);
+            }
+            return false;
         }
 
-        String clientSecret = appDO.getOauthConsumerSecret();
+        String appClientSecret = appDO.getOauthConsumerSecret();
 
-        // Cache miss
-        boolean isHashDisabled = isHashDisabled();
-        OAuthConsumerDAO oAuthConsumerDAO = new OAuthConsumerDAO();
-        if (isHashDisabled) {
-            if (clientSecret == null) {
-                clientSecret = oAuthConsumerDAO.getOAuthConsumerSecret(clientId);
-                if (log.isDebugEnabled()) {
-                    log.debug("Client credentials were fetched from the database.");
-                }
+        TokenPersistenceProcessor persistenceProcessor = getPersistenceProcessor();
+        // We convert the provided client_secret to the processed form stored in the DB.
+        String processedProvidedClientSecret = persistenceProcessor.getProcessedClientSecret(clientSecretProvided);
+
+        if (!StringUtils.equals(appClientSecret, processedProvidedClientSecret)) {
+            if (log.isDebugEnabled()) {
+                log.debug("Provided the Client ID : " + clientId +
+                        " and Client Secret do not match with the issued credentials.");
             }
-
-            if (clientSecret == null) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Provided Client ID : " + clientId + " is not valid.");
-                }
-                return false;
-            }
-
-            if (!clientSecret.equals(clientSecretProvided)) {
-
-                if (log.isDebugEnabled()) {
-                    log.debug("Provided the Client ID : " + clientId +
-                            " and Client Secret do not match with the issued credentials.");
-                }
-
-                return false;
-            }
-        } else {
-            // Check whether the provided consumerKey, consumerSecret combination is exist or not in the database.
-            TokenPersistenceProcessor persistenceProcessor = getPersistenceProcessor();
-            String hashedClientSecret = persistenceProcessor.getProcessedClientSecret(clientSecretProvided);
-
-            if (!clientSecret.equals(hashedClientSecret)) {
-
-                if (log.isDebugEnabled()) {
-                    log.debug("Provided the Client ID : " + clientId +
-                            " and Client Secret do not match with the issued credentials.");
-                }
-
-                return false;
-            }
+            return false;
         }
 
         if (log.isDebugEnabled()) {
@@ -476,7 +447,12 @@ public class OAuth2Util {
         try {
             persistenceProcessor = OAuthServerConfiguration.getInstance().getPersistenceProcessor();
         } catch (IdentityOAuth2Exception e) {
-            log.error("Error retrieving TokenPersistenceProcessor. Defaulting to PlainTextProcessor", e);
+            String msg = "Error retrieving TokenPersistenceProcessor configured in OAuth.TokenPersistenceProcessor " +
+                    "in identity.xml. Defaulting to PlainTextPersistenceProcessor.";
+            log.warn(msg);
+            if (log.isDebugEnabled()) {
+                log.debug(msg, e);
+            }
             persistenceProcessor = new PlainTextPersistenceProcessor();
         }
         return persistenceProcessor;
@@ -2436,7 +2412,7 @@ public class OAuth2Util {
      * Return true if the JWT id token is encrypted.
      *
      * @param idToken String JWT ID token.
-     * @return Boolean state of encryption.
+     * @return Boolean state1 of encryption.
      */
     public static boolean isIDTokenEncrypted(String idToken) {
         // Encrypted ID token contains 5 base64 encoded components separated by periods.
