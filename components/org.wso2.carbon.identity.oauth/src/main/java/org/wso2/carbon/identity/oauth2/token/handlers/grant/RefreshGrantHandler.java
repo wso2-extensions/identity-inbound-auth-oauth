@@ -515,8 +515,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
                                      String refreshToken, Timestamp timestamp) {
         Timestamp refreshTokenIssuedTime = null;
         long refreshTokenValidityPeriod = 0;
-        boolean renew = getRenewRefreshTokenProperty(oAuthAppDO.getRenewRefreshTokenEnabled());
-        if (!renew) {
+        if (!isRenewRefreshToken(oAuthAppDO.getRenewRefreshTokenEnabled())) {
             // if refresh token renewal not enabled, we use existing one else we issue a new refresh token
             refreshToken = tokenReq.getRefreshToken();
             refreshTokenIssuedTime = validationBean.getIssuedTime();
@@ -575,7 +574,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         }
     }
 
-    private boolean getRenewRefreshTokenProperty(String renewRefreshToken) {
+    private boolean isRenewRefreshToken(String renewRefreshToken) {
 
         if (StringUtils.isNotBlank(renewRefreshToken)) {
             if (log.isDebugEnabled()) {

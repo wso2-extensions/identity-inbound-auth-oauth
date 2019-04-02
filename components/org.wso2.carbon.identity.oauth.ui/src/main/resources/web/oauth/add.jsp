@@ -494,19 +494,6 @@
                                     <td><input class="text-box-big" id="callback" name="callback" type="text"
                                                white-list-patterns="https-url"/></td>
                                 </tr>
-                                <tr id="renew_refresh_token_per_app">
-                                    <td colspan="2">
-                                        <label>
-                                            <input type="checkbox" name="renewRefreshTokenPerApp"
-                                                   id="renewRefreshTokenPerApp" value="true"
-                                                    <%=(client.isRefreshTokenRenewalEnabled() ? "checked" : "")%> />
-                                            <fmt:message key='renew.refresh.token.per.app'/>
-                                        </label>
-                                        <div class="sectionHelp">
-                                            <fmt:message key='renew.refresh.token.per.app.hint'/>
-                                        </div>
-                                    </td>
-                                </tr>
                                 <%if(client.isPKCESupportedEnabled()) {%>
                                 <tr id="pkce_enable">
                                     <td class="leftCol-med" colspan="2">
@@ -531,6 +518,19 @@
                                     </td>
                                 </tr>
                                 <% } %>
+                                <tr id="renew_refresh_token_per_app">
+                                    <td colspan="2">
+                                        <label>
+                                            <input type="checkbox" name="renewRefreshTokenPerApp"
+                                                   id="renewRefreshTokenPerApp" value="true"
+                                                    <%=(client.isRefreshTokenRenewalEnabled() ? "checked" : "")%> />
+                                            <fmt:message key='renew.refresh.token.per.app'/>
+                                        </label>
+                                        <div class="sectionHelp">
+                                            <fmt:message key='renew.refresh.token.per.app.hint'/>
+                                        </div>
+                                    </td>
+                                </tr>
                                 <tr id="bypass_client_credentials">
                                     <td colspan="2">
                                         <label>
