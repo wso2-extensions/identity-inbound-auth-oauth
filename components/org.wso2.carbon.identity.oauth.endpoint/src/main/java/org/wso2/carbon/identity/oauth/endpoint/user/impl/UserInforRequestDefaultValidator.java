@@ -75,7 +75,7 @@ public class UserInforRequestDefaultValidator implements UserInfoRequestValidato
                 if (requestBody.contains("access_token=")) {
                     arrAccessToken = requestBody.trim().split("access_token=");
                     if (arrAccessToken[1].contains("&")) {
-                        arrAccessTokenNew = arrAccessToken[1].split("&");
+                        arrAccessTokenNew = arrAccessToken[1].split("&", 2);
                         return arrAccessTokenNew[0];
                     }
                 }
