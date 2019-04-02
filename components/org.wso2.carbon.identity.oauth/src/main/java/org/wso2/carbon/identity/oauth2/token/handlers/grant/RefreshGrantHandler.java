@@ -515,8 +515,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
                                      String refreshToken, Timestamp timestamp) {
         Timestamp refreshTokenIssuedTime = null;
         long refreshTokenValidityPeriod = 0;
-        boolean renew = OAuthServerConfiguration.getInstance().isRefreshTokenRenewalEnabled();
-        if (!renew) {
+        if (!isRenewRefreshToken(oAuthAppDO.getRenewRefreshTokenEnabled())) {
             // if refresh token renewal not enabled, we use existing one else we issue a new refresh token
             refreshToken = tokenReq.getRefreshToken();
             refreshTokenIssuedTime = validationBean.getIssuedTime();
@@ -572,6 +571,22 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             AuthorizationGrantCache.getInstance().clearCacheEntryByTokenId(oldAuthorizationGrantCacheKey,
                     oldAccessToken.getTokenId());
             AuthorizationGrantCache.getInstance().addToCacheByToken(authorizationGrantCacheKey, grantCacheEntry);
+        }
+    }
+
+    private boolean isRenewRefreshToken(String renewRefreshToken) {
+
+        if (StringUtils.isNotBlank(renewRefreshToken)) {
+            if (log.isDebugEnabled()) {
+                log.debug("Reading the Oauth application specific renew " +
+                        "refresh token value as " + renewRefreshToken + " from the IDN_OIDC_PROPERTY table");
+            }
+            return Boolean.parseBoolean(renewRefreshToken);
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug("Reading the global renew refresh token value from the identity.xml");
+            }
+            return OAuthServerConfiguration.getInstance().isRefreshTokenRenewalEnabled();
         }
     }
 }

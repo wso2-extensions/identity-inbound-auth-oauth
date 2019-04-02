@@ -565,6 +565,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
             defaultOAuthAppDO.setIdTokenEncryptionEnabled(true);
             defaultOAuthAppDO.setRequestObjectSignatureValidationEnabled(true);
             defaultOAuthAppDO.setBackChannelLogoutUrl(BACK_CHANNEL_LOGOUT_URL);
+            defaultOAuthAppDO.setRenewRefreshTokenEnabled(String.valueOf(isPkceEnabled));
 
             addOAuthApplication(defaultOAuthAppDO);
 
@@ -574,6 +575,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
             assertEquals(oAuthAppDO.isIdTokenEncryptionEnabled(), true);
             assertEquals(oAuthAppDO.isRequestObjectSignatureValidationEnabled(), true);
             assertEquals(oAuthAppDO.getBackChannelLogoutUrl(), BACK_CHANNEL_LOGOUT_URL);
+            assertEquals(oAuthAppDO.getRenewRefreshTokenEnabled(), String.valueOf(isPkceEnabled));
         }
     }
 

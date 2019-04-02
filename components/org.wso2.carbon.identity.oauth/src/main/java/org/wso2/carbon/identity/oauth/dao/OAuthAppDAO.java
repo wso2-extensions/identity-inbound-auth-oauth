@@ -69,6 +69,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigPro
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.REQUEST_OBJECT_SIGNED;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_TYPE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.BYPASS_CLIENT_CREDENTIALS;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.RENEW_REFRESH_TOKEN;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.OPENID_CONNECT_AUDIENCE;
 
 /**
@@ -684,6 +685,10 @@ public class OAuthAppDAO {
                 String.valueOf(oauthAppDO.isBypassClientCredentials()), prepStatementForPropertyAdd,
                 preparedStatementForPropertyUpdate);
 
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties, RENEW_REFRESH_TOKEN,
+                oauthAppDO.getRenewRefreshTokenEnabled(), prepStatementForPropertyAdd,
+                preparedStatementForPropertyUpdate);
+
         // Execute batched add/update/delete.
         prepStatementForPropertyAdd.executeBatch();
         preparedStatementForPropertyUpdate.executeBatch();
@@ -1106,6 +1111,9 @@ public class OAuthAppDAO {
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                     BYPASS_CLIENT_CREDENTIALS, String.valueOf(consumerAppDO.isBypassClientCredentials()));
 
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    RENEW_REFRESH_TOKEN, consumerAppDO.getRenewRefreshTokenEnabled());
+
             prepStmtAddOIDCProperty.executeBatch();
         }
     }
@@ -1186,6 +1194,9 @@ public class OAuthAppDAO {
         boolean bypassClientCreds = Boolean.parseBoolean(
                 getFirstPropertyValue(spOIDCProperties, BYPASS_CLIENT_CREDENTIALS));
         oauthApp.setBypassClientCredentials(bypassClientCreds);
+
+        String renewRefreshToken = getFirstPropertyValue(spOIDCProperties, RENEW_REFRESH_TOKEN);
+        oauthApp.setRenewRefreshTokenEnabled(renewRefreshToken);
 
     }
 

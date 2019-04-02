@@ -48,6 +48,7 @@ import org.wso2.carbon.identity.testutil.Whitebox;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 import static org.testng.Assert.*;
@@ -60,7 +61,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.UNASSIGNED_VA
 @WithCarbonHome
 @WithRealmService(injectToSingletons = { OAuthComponentServiceHolder.class,
         ApplicationManagementServiceComponentHolder.class })
-@WithH2Database(files = { "dbScripts/identity.sql", "dbScripts/token.sql" })
+@WithH2Database(files = { "dbScripts/identity.sql" })
 public class RefreshGrantHandlerTest {
 
     private static final String TEST_CLIENT_ID = "SDSDSDS23131231";
@@ -184,21 +185,22 @@ public class RefreshGrantHandlerTest {
     @Test(dataProvider = "GetTokenIssuerData")
     public void testIssue(Long userAccessTokenExpiryTime, Long validityPeriod, boolean isValidToken, boolean isRenew,
                           boolean checkUserNameAssertionEnabled, boolean checkAccessTokenPartitioningEnabled,
-                          boolean isUsernameCaseSensitive) throws Exception {
+                          boolean isUsernameCaseSensitive, String renewRefreshToken, String clientId) throws Exception {
 
         OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
-        oAuthAppDAO.removeConsumerApplication(TEST_CLIENT_ID);
+        oAuthAppDAO.removeConsumerApplication(clientId);
         OAuthAppDO oAuthAppDO = new OAuthAppDO();
         oAuthAppDO.setUserAccessTokenExpiryTime(userAccessTokenExpiryTime);
         oAuthAppDO.setRefreshTokenExpiryTime(userAccessTokenExpiryTime);
         oAuthAppDO.setUser(authenticatedUser);
-        oAuthAppDO.setOauthConsumerKey(TEST_CLIENT_ID);
+        oAuthAppDO.setOauthConsumerKey(clientId);
         oAuthAppDO.setOauthVersion(OAuthConstants.OAuthVersions.VERSION_2);
+        oAuthAppDO.setRenewRefreshTokenEnabled(renewRefreshToken);
         oAuthAppDAO.addOAuthApplication(oAuthAppDO);
 
         TokenMgtDAO tokenMgtDAO = new TokenMgtDAO();
         AccessTokenDO accessTokenDO1 = new AccessTokenDO();
-        accessTokenDO1.setTokenId(TEST_CLIENT_ID);
+        accessTokenDO1.setTokenId(clientId);
         accessTokenDO1.setTokenState(TOKEN_STATE_ACTIVE);
         accessTokenDO1.setRefreshToken("refreshToken1");
         accessTokenDO1.setAuthzUser(authenticatedUser);
@@ -206,7 +208,7 @@ public class RefreshGrantHandlerTest {
         accessTokenDO1.setIssuedTime(new Timestamp(System.currentTimeMillis()));
         accessTokenDO1.setRefreshTokenIssuedTime(new Timestamp(System.currentTimeMillis()));
 
-        tokenMgtDAO.storeAccessToken("accessToken", TEST_CLIENT_ID, accessTokenDO1, (AccessTokenDO) null, "PRIMARY");
+        tokenMgtDAO.storeAccessToken("accessToken", clientId, accessTokenDO1, (AccessTokenDO) null, "PRIMARY");
 
         RefreshTokenValidationDataDO validationDataDO = constructValidationDataDO("accessToken1", TOKEN_STATE_EXPIRED,
                 isUsernameCaseSensitive);
@@ -215,7 +217,7 @@ public class RefreshGrantHandlerTest {
         refreshGrantHandler.init();
 
         OAuth2AccessTokenReqDTO tokenReqDTO = new OAuth2AccessTokenReqDTO();
-        tokenReqDTO.setClientId(TEST_CLIENT_ID);
+        tokenReqDTO.setClientId(clientId);
         tokenReqDTO.setRefreshToken("refreshToken1");
         tokenReqDTO.setScope(scopes);
 
@@ -232,6 +234,11 @@ public class RefreshGrantHandlerTest {
         OAuth2AccessTokenRespDTO actual = refreshGrantHandler.issue(tokenReqMessageContext);
         assertTrue(!actual.isError());
         assertNotNull(actual.getRefreshToken());
+        if (Objects.equals(renewRefreshToken, "true") || (renewRefreshToken == null)) {
+            assertNotEquals("refreshToken1", actual.getRefreshToken());
+        } else {
+            assertEquals("refreshToken1", actual.getRefreshToken());
+        }
     }
 
     @Test(dataProvider = "GetValidateScopeData")
@@ -255,10 +262,13 @@ public class RefreshGrantHandlerTest {
     @DataProvider(name = "GetTokenIssuerData")
     public Object[][] tokenIssuerData() {
 
-        return new Object[][] { { 0L, UNASSIGNED_VALIDITY_PERIOD, true, true, true, false, false },
-                { 20L, UNASSIGNED_VALIDITY_PERIOD, true, true, false, true, false },
-                { 20L, 20L, true, false, true, true, true },
-                { 0L, UNASSIGNED_VALIDITY_PERIOD, false, false, true, false, false } };
+        return new Object[][] { { 0L, UNASSIGNED_VALIDITY_PERIOD, true, true, true, false, false, "true", "clientId1" },
+                { 20L, UNASSIGNED_VALIDITY_PERIOD, true, true, false, true, false, "true", "clientId2" },
+                { 20L, 20L, true, false, true, true, true, "true", "clientId3" },
+                { 0L, UNASSIGNED_VALIDITY_PERIOD, false, false, true, false, false, "true", "clientId4" },
+                { 20L, 20L, true, false, true, true, true, "false", "clientId5" },
+                { 20L, 20L, true, false, true, true, true, null, "clientId6" },
+                { 20L, 20L, true, false, true, true, true, "true", "clientId7" } };
     }
 
     @DataProvider(name = "GetValidateScopeData")

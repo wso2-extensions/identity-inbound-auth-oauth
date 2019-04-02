@@ -193,6 +193,7 @@ public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
         oAuthConsumerAppDTO.setOauthConsumerKey(consumerKey);
         oAuthConsumerAppDTO.setOauthConsumerSecret(consumerSecret);
         oAuthConsumerAppDTO.setOAuthVersion(oauthVersion);
+        oAuthConsumerAppDTO.setRenewRefreshTokenEnabled("true");
 
         whenNew(OAuthAppDAO.class).withNoArguments().thenReturn(oAuthAppDAO);
         doNothing().when(oAuthAppDAO).addOAuthApplication(Matchers.any(OAuthAppDO.class));
@@ -285,6 +286,7 @@ public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
         Assert.assertEquals(consumerAppDTO.getIdTokenExpiryTime(), appDO.getIdTokenExpiryTime());
         Assert.assertEquals(consumerAppDTO.getFrontchannelLogoutUrl(), appDO.getFrontchannelLogoutUrl());
         Assert.assertEquals(consumerAppDTO.isBypassClientCredentials(), appDO.isBypassClientCredentials());
+        Assert.assertEquals(consumerAppDTO.getRenewRefreshTokenEnabled(), appDO.getRenewRefreshTokenEnabled());
     }
 
     private void assertArrayEquals(String[] audiences, String[] audiencesToCompare) {
@@ -385,6 +387,7 @@ public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
         app.setIdTokenExpiryTime(8000);
         app.setFrontchannelLogoutUrl("https://localhost/app/frontchannellogout");
         app.setBypassClientCredentials(true);
+        app.setRenewRefreshTokenEnabled("false");
 
         return app;
     }
