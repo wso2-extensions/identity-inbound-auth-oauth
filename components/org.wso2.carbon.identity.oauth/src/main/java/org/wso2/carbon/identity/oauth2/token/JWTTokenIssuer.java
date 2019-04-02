@@ -55,8 +55,8 @@ import java.security.interfaces.RSAPrivateKey;
 import java.text.ParseException;
 import java.util.Arrays;
 import java.util.Calendar;
-import java.util.Collections;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -422,7 +422,8 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
 
         // This is a spec (openid-connect-core-1_0:2.0) requirement for ID tokens. But we are keeping this in JWT
         // as well.
-        jwtClaimsSetBuilder.audience(Collections.singletonList(consumerKey));
+        List<String> audience = OAuth2Util.getOIDCAudience(consumerKey, oAuthAppDO);
+        jwtClaimsSetBuilder.audience(audience);
         JWTClaimsSet jwtClaimsSet;
 
         // Handle custom claims

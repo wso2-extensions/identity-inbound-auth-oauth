@@ -17,9 +17,14 @@
 package org.wso2.carbon.identity.oauth.cache;
 
 import org.wso2.carbon.identity.application.common.cache.BaseCache;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.listener.OAuthCacheRemoveListener;
 import org.wso2.carbon.utils.CarbonUtils;
 
+/**
+ * @deprecated use {@link OAuthAppDO} to retrieve the audience. Then no need to consider caching for audience.
+ */
+@Deprecated
 public class OIDCAudienceCache extends BaseCache<OIDCAudienceCacheKey, CacheEntry> {
 
     private static final String OAUTH_CACHE_NAME = "OAuthCache";
