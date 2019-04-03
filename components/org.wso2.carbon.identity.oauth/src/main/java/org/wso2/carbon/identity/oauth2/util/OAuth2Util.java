@@ -2412,7 +2412,7 @@ public class OAuth2Util {
      * Return true if the JWT id token is encrypted.
      *
      * @param idToken String JWT ID token.
-     * @return Boolean state1 of encryption.
+     * @return Boolean state of encryption.
      */
     public static boolean isIDTokenEncrypted(String idToken) {
         // Encrypted ID token contains 5 base64 encoded components separated by periods.
