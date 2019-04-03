@@ -48,22 +48,25 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionManagementException;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionState;
-import org.wso2.carbon.identity.oidc.session.backChannelLogout.LogoutRequestSender;
 import org.wso2.carbon.identity.oidc.session.cache.OIDCSessionDataCache;
 import org.wso2.carbon.identity.oidc.session.cache.OIDCSessionDataCacheEntry;
 import org.wso2.carbon.identity.oidc.session.cache.OIDCSessionDataCacheKey;
+import org.wso2.carbon.identity.oidc.session.logout.backchannel.LogoutRequestSender;
+import org.wso2.carbon.identity.oidc.session.logout.frontchannel.DynamicLogoutPageBuilderUtil;
 import org.wso2.carbon.identity.oidc.session.handler.OIDCLogoutHandler;
 import org.wso2.carbon.identity.oidc.session.internal.OIDCSessionManagementComponentServiceHolder;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.servlet.ServletException;
@@ -499,7 +502,6 @@ public class OIDCLogoutServlet extends HttpServlet {
         String sessionDataKey = request.getParameter(FrameworkConstants.SESSION_DATA_KEY);
         OIDCSessionDataCacheEntry cacheEntry = getSessionDataFromCache(sessionDataKey);
 
-
         if (cacheEntry != null) {
             if (log.isDebugEnabled()) {
                 String clientId = cacheEntry.getParamMap().get(OIDCSessionConstants.OIDC_CACHE_CLIENT_ID_PARAM);
@@ -515,8 +517,19 @@ public class OIDCLogoutServlet extends HttpServlet {
                     log.debug("Logout request received for sid: " + sidClaim);
                 }
             }
+
             // BackChannel logout request.
-            doBackChannelLogout(request);
+            if (isBackchannelLogoutEnabled(request)) {
+                doBackChannelLogout(request);
+            }
+
+            boolean isFrontchannelLogoutEnabled = isFrontchannelLogoutEnabled(request);
+            String frontchannelLogoutPage = null;
+            if (isFrontchannelLogoutEnabled) {
+                // Building Frontchannel Logout HTML page
+                frontchannelLogoutPage = DynamicLogoutPageBuilderUtil.buildPage(request);
+            }
+
             String redirectURL = cacheEntry.getPostLogoutRedirectUri();
             if (redirectURL == null) {
                 redirectURL = OIDCSessionManagementUtil.getOIDCLogoutURL();
@@ -537,7 +550,15 @@ public class OIDCLogoutServlet extends HttpServlet {
             removeSessionDataFromCache(sessionDataKey);
             Cookie opBrowserStateCookie = OIDCSessionManagementUtil.removeOPBrowserStateCookie(request, response);
             OIDCSessionManagementUtil.getSessionManager().removeOIDCSessionState(opBrowserStateCookie.getValue());
-            response.sendRedirect(getRedirectURL(redirectURL, request));
+
+            if (isFrontchannelLogoutEnabled && frontchannelLogoutPage != null) {
+                frontchannelLogoutPage = DynamicLogoutPageBuilderUtil.setRedirectURL(frontchannelLogoutPage,
+                        getRedirectURL(redirectURL, request));
+                //Frontchannel logout request.
+                doFrontchannelLogout(response, frontchannelLogoutPage);
+            } else {
+                response.sendRedirect(getRedirectURL(redirectURL, request));
+            }
         } else {
             response.sendRedirect(getRedirectURL(OIDCSessionManagementUtil.getErrorPageURL(OAuth2ErrorCodes
                     .SERVER_ERROR, "User logout failed"), request));
@@ -640,6 +661,58 @@ public class OIDCLogoutServlet extends HttpServlet {
         if (log.isDebugEnabled()) {
             log.debug("Sending backchannel logout request.");
         }
+    }
+
+    private void doFrontchannelLogout(HttpServletResponse response, String frontchannelLogoutPage)
+            throws IOException {
+
+        response.setContentType("text/html; charset=UTF-8");
+        PrintWriter out = response.getWriter();
+        out.println(frontchannelLogoutPage);
+        if (log.isDebugEnabled()) {
+            log.debug("Starting frontchannel logout.");
+        }
+        out.close();
+    }
+
+    private Boolean isFrontchannelLogoutEnabled(HttpServletRequest request) {
+
+        return isLogoutEnabled(request, OAuthConstants.OIDCConfigProperties.FRONT_CHANNEL_LOGOUT);
+    }
+
+    private Boolean isBackchannelLogoutEnabled(HttpServletRequest request) {
+
+        return isLogoutEnabled(request, OAuthConstants.OIDCConfigProperties.BACK_CHANNEL_LOGOUT);
+    }
+
+    private Boolean isLogoutEnabled(HttpServletRequest request, String logoutType) {
+
+        OIDCSessionState sessionState = OIDCSessionManagementUtil.getSessionState(request);
+        if (sessionState != null) {
+            Set<String> sessionParticipants = OIDCSessionManagementUtil.getSessionParticipants(sessionState);
+            if (!sessionParticipants.isEmpty()) {
+                OAuthAppDO oAuthAppDO;
+                String logoutUrl = null;
+                for (String clientID : sessionParticipants) {
+                    try {
+                        oAuthAppDO = OIDCSessionManagementUtil.getOAuthAppDO(clientID);
+                        if (OAuthConstants.OIDCConfigProperties.FRONT_CHANNEL_LOGOUT.equals(logoutType)) {
+                            logoutUrl = oAuthAppDO.getFrontchannelLogoutUrl();
+                        } else if (OAuthConstants.OIDCConfigProperties.BACK_CHANNEL_LOGOUT.equals(logoutType)) {
+                            logoutUrl = oAuthAppDO.getBackChannelLogoutUrl();
+                        }
+                        if (logoutUrl != null) {
+                            return true;
+                        }
+                    } catch (IdentityOAuth2Exception e) {
+                        log.error("Error while getting Logout URL for client id: " + clientID, e);
+                    } catch (InvalidOAuthClientException e) {
+                        log.error("Client id " + clientID + " is invalid.", e);
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     private void setSPAttributeToRequest(HttpServletRequest req, String spName, String tenantDomain) {
