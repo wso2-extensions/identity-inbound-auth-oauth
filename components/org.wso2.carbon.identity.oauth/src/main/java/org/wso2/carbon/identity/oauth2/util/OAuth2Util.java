@@ -79,6 +79,8 @@ import org.wso2.carbon.identity.oauth.dao.OAuthConsumerDAO;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor;
+import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
@@ -410,73 +412,50 @@ public class OAuth2Util {
     public static boolean authenticateClient(String clientId, String clientSecretProvided)
             throws IdentityOAuthAdminException, IdentityOAuth2Exception, InvalidOAuthClientException {
 
-        boolean cacheHit = false;
-        String clientSecret = null;
-
-        // Check the cache first.
-        CacheEntry cacheResult = OAuthCache.getInstance().getValueFromCache(new OAuthCacheKey(clientId));
-        if (cacheResult != null && cacheResult instanceof ClientCredentialDO) {
-            ClientCredentialDO clientCredentialDO = (ClientCredentialDO) cacheResult;
-            clientSecret = clientCredentialDO.getClientSecret();
-            cacheHit = true;
+        OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(clientId);
+        if (appDO == null) {
             if (log.isDebugEnabled()) {
-                log.debug("Client credentials were available in the cache for client id : " +
-                        clientId);
+                log.debug("Cannot find a valid application with the provided client_id: " + clientId);
             }
+            return false;
         }
 
-        // Cache miss
-        boolean isHashDisabled = isHashDisabled();
-        OAuthConsumerDAO oAuthConsumerDAO = new OAuthConsumerDAO();
-        if (isHashDisabled) {
-            if (clientSecret == null) {
-                clientSecret = oAuthConsumerDAO.getOAuthConsumerSecret(clientId);
-                if (log.isDebugEnabled()) {
-                    log.debug("Client credentials were fetched from the database.");
-                }
+        String appClientSecret = appDO.getOauthConsumerSecret();
+
+        TokenPersistenceProcessor persistenceProcessor = getPersistenceProcessor();
+        // We convert the provided client_secret to the processed form stored in the DB.
+        String processedProvidedClientSecret = persistenceProcessor.getProcessedClientSecret(clientSecretProvided);
+
+        if (!StringUtils.equals(appClientSecret, processedProvidedClientSecret)) {
+            if (log.isDebugEnabled()) {
+                log.debug("Provided the Client ID : " + clientId +
+                        " and Client Secret do not match with the issued credentials.");
             }
-
-            if (clientSecret == null) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Provided Client ID : " + clientId + " is not valid.");
-                }
-                return false;
-            }
-
-            if (!clientSecret.equals(clientSecretProvided)) {
-
-                if (log.isDebugEnabled()) {
-                    log.debug("Provided the Client ID : " + clientId +
-                            " and Client Secret do not match with the issued credentials.");
-                }
-
-                return false;
-            }
-        } else {
-            // Check whether the provided consumerKey, consumerSecret combination is exist or not in the database.
-            if (!oAuthConsumerDAO.isConsumerSecretExist(clientId, clientSecretProvided)) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Provided the Client ID : " + clientId +
-                            " and Client Secret do not match with the issued credentials.");
-                }
-
-                return false;
-            }
+            return false;
         }
 
         if (log.isDebugEnabled()) {
             log.debug("Successfully authenticated the client with client id : " + clientId);
         }
 
-        if (!cacheHit) {
-
-            OAuthCache.getInstance().addToCache(new OAuthCacheKey(clientId), new ClientCredentialDO(clientSecret));
-            if (log.isDebugEnabled()) {
-                log.debug("Client credentials were added to the cache for client id : " + clientId);
-            }
-        }
-
         return true;
+    }
+
+    private static TokenPersistenceProcessor getPersistenceProcessor() throws IdentityOAuth2Exception {
+
+        TokenPersistenceProcessor persistenceProcessor;
+        try {
+            persistenceProcessor = OAuthServerConfiguration.getInstance().getPersistenceProcessor();
+        } catch (IdentityOAuth2Exception e) {
+            String msg = "Error retrieving TokenPersistenceProcessor configured in OAuth.TokenPersistenceProcessor " +
+                    "in identity.xml. Defaulting to PlainTextPersistenceProcessor.";
+            log.warn(msg);
+            if (log.isDebugEnabled()) {
+                log.debug(msg, e);
+            }
+            persistenceProcessor = new PlainTextPersistenceProcessor();
+        }
+        return persistenceProcessor;
     }
 
     /**
@@ -1636,7 +1615,9 @@ public class OAuth2Util {
             return oAuthAppDO;
         } else {
             oAuthAppDO = new OAuthAppDAO().getAppInformation(clientId);
-            AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO);
+            if (oAuthAppDO != null) {
+                AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO);
+            }
             return oAuthAppDO;
         }
     }
