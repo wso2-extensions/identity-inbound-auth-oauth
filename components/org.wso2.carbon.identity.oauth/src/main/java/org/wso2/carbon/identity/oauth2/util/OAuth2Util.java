@@ -131,6 +131,7 @@ import java.sql.Timestamp;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -161,6 +162,7 @@ public class OAuth2Util {
     public static final String OPENID_CONNECT = "OpenIDConnect";
     public static final String ENABLE_OPENID_CONNECT_AUDIENCES = "EnableAudiences";
     public static final String OPENID_CONNECT_AUDIENCE = "audience";
+    private static final String OPENID_CONNECT_AUDIENCES = "Audiences";
     private static final String DOT_SEPARATER = ".";
     private static final String IDP_ENTITY_ID = "IdPEntityId";
 
@@ -1493,6 +1495,76 @@ public class OAuth2Util {
             log.error("Error while getting the tenant domain from tenant id : " + tenantId, e);
         }
         return spTokenTimeObject;
+    }
+
+    /**
+     * Retrieve audience configured for the particular service provider.
+     *
+     * @param clientId
+     * @param oAuthAppDO
+     * @return
+     */
+    public static List<String> getOIDCAudience(String clientId, OAuthAppDO oAuthAppDO) {
+
+        List<String> oidcAudiences = getDefinedCustomOIDCAudiences(oAuthAppDO);
+        // Need to add client_id as an audience value according to the spec.
+        if (!oidcAudiences.contains(clientId)) {
+            oidcAudiences.add(0, clientId);
+        } else {
+            Collections.swap(oidcAudiences, oidcAudiences.indexOf(clientId), 0);
+        }
+        return oidcAudiences;
+    }
+
+    private static List<String> getDefinedCustomOIDCAudiences(OAuthAppDO oAuthAppDO) {
+
+        List<String> audiences = new ArrayList<>();
+
+        // Priority should be given to service provider specific audiences over globally configured ones.
+        if (OAuth2ServiceComponentHolder.isAudienceEnabled()) {
+            List<String> audienceList = Arrays.asList(oAuthAppDO.getAudiences());
+            audiences = new ArrayList<>(audienceList);
+            if (CollectionUtils.isNotEmpty(audiences)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("OIDC Audiences " + audiences + " had been retrieved for the client id " +
+                            oAuthAppDO.getOauthConsumerKey());
+                }
+                return audiences;
+            }
+        }
+        IdentityConfigParser configParser = IdentityConfigParser.getInstance();
+        OMElement oauthElem = configParser.getConfigElement(CONFIG_ELEM_OAUTH);
+        if (oauthElem == null) {
+            log.warn("Error in OAuth Configuration: <OAuth> configuration element is not available in identity.xml.");
+            return audiences;
+        }
+
+        OMElement oidcConfig = oauthElem.getFirstChildWithName(new QName(IdentityCoreConstants.
+                IDENTITY_DEFAULT_NAMESPACE, OPENID_CONNECT));
+        if (oidcConfig == null) {
+            log.warn("Error in OAuth Configuration: <OpenIDConnect> element is not available in identity.xml.");
+            return audiences;
+        }
+
+        OMElement audienceConfig = oidcConfig.getFirstChildWithName(new QName(IdentityCoreConstants.
+                IDENTITY_DEFAULT_NAMESPACE, OPENID_CONNECT_AUDIENCES));
+        if (audienceConfig == null) {
+            return audiences;
+        }
+
+        Iterator iterator = audienceConfig.getChildrenWithName(new QName(IdentityCoreConstants.
+                IDENTITY_DEFAULT_NAMESPACE, OPENID_CONNECT_AUDIENCE));
+        while (iterator.hasNext()) {
+            OMElement supportedAudience = (OMElement) iterator.next();
+            String supportedAudienceName;
+            if (supportedAudience != null) {
+                supportedAudienceName = IdentityUtil.fillURLPlaceholders(supportedAudience.getText());
+                if (StringUtils.isNotBlank(supportedAudienceName)) {
+                    audiences.add(supportedAudienceName);
+                }
+            }
+        }
+        return audiences;
     }
 
     /**
