@@ -66,11 +66,11 @@
 	boolean pkceSupportPlain = false;
 	boolean bypassClientCredentials = false;
 
-	if(request.getParameter("pkce") != null) {
+	if (request.getParameter("pkce") != null) {
 		pkceMandatory = true;
 	}
 
-	if(request.getParameter("pkce_plain") != null) {
+	if (request.getParameter("pkce_plain") != null) {
 		pkceSupportPlain = true;
 	}
 

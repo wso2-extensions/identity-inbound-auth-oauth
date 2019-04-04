@@ -227,7 +227,7 @@
                     var idTokenEncryptionEnabled = $('input[name=encryptIdToken]:checked').val() != null;
                     var grantRefreshToken = $('input[name=grant_refresh_token]:checked').val() != null;
 
-                    if(oauthVersion == "<%=OAuthConstants.OAuthVersions.VERSION_1A%>") {
+                    if (oauthVersion == "<%=OAuthConstants.OAuthVersions.VERSION_1A%>") {
                         $(jQuery('#grant_row')).hide();
                         $(jQuery('#scope_validator_row')).hide();
                         $(jQuery('#access_token_type_row')).hide();
@@ -250,7 +250,7 @@
                         $(jQuery('#bypass_client_credentials').hide());
                         $(jQuery('#renew_refresh_token_per_app').hide());
 
-                    } else if(oauthVersion == "<%=OAuthConstants.OAuthVersions.VERSION_2%>") {
+                    } else if (oauthVersion == "<%=OAuthConstants.OAuthVersions.VERSION_2%>") {
                         $(jQuery('#grant_row')).show();
                         $(jQuery('#scope_validator_row')).show();
                         $(jQuery('#access_token_type_row')).show();
@@ -505,7 +505,7 @@
                                 <tr id="pkce_support_plain">
                                     <td colspan="2">
                                         <label>
-                                            <input type="checkbox" name="pkce_plain" value="yes" checked>
+                                            <input type="checkbox" name="pkce_plain" value="yes" checked/>
                                             <fmt:message key='pkce.support.plain'/>
                                         </label>
                                         <div class="sectionHelp">
