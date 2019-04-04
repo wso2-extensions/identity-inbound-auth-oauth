@@ -219,10 +219,11 @@ public class OIDCLogoutServlet extends HttpServlet {
                 .getParameter(OIDCSessionConstants.OIDC_POST_LOGOUT_REDIRECT_URI_PARAM);
         String state = request
                 .getParameter(OIDCSessionConstants.OIDC_STATE_PARAM);
+        String tenantDomain = request.getParameter(OIDCSessionConstants.TENANT_DOMAIN);
 
         String clientId;
         try {
-            if (!validateIdToken(idTokenHint)) {
+            if (!validateIdToken(idTokenHint, tenantDomain)) {
                 String msg = "ID token signature validation failed.";
                 log.error(msg);
                 redirectURL = OIDCSessionManagementUtil
@@ -274,24 +275,25 @@ public class OIDCLogoutServlet extends HttpServlet {
     /**
      * Validate Id token signature
      * @param idToken Id token
+     * @param tenantDomain tenant Domain
      * @return validation state
      */
-    private boolean validateIdToken(String idToken) {
+    private boolean validateIdToken(String idToken, String tenantDomain) {
 
-        String tenantDomain = getTenantDomainForSignatureValidation(idToken);
-        if (StringUtils.isEmpty(tenantDomain)) {
+        String tenantDomainForSignatureValidation = getTenantDomainForSignatureValidation(idToken, tenantDomain);
+        if (StringUtils.isEmpty(tenantDomainForSignatureValidation)) {
             return false;
         }
-        int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
+        int tenantId = IdentityTenantUtil.getTenantId(tenantDomainForSignatureValidation);
         RSAPublicKey publicKey;
 
         try {
             KeyStoreManager keyStoreManager = KeyStoreManager.getInstance(tenantId);
 
-            if (!tenantDomain.equals(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)) {
-                String ksName = tenantDomain.trim().replace(".", "-");
+            if (!MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantDomainForSignatureValidation)) {
+                String ksName = tenantDomainForSignatureValidation.trim().replace(".", "-");
                 String jksName = ksName + ".jks";
-                publicKey = (RSAPublicKey) keyStoreManager.getKeyStore(jksName).getCertificate(tenantDomain)
+                publicKey = (RSAPublicKey) keyStoreManager.getKeyStore(jksName).getCertificate(tenantDomainForSignatureValidation)
                         .getPublicKey();
             } else {
                 publicKey = (RSAPublicKey) keyStoreManager.getDefaultPublicKey();
@@ -314,21 +316,28 @@ public class OIDCLogoutServlet extends HttpServlet {
      * There is a problem If Id token signed using SP's tenant and there is no direct way to get the tenant domain
      * using client id. So have iterate all the Tenants until get the right client id.
      * @param idToken id token
-     * @return Tenant domain
+     * @param tenantDomain tenant domain sent in request params.
+     * @return Tenant domain for signature validation.
      */
-    private String getTenantDomainForSignatureValidation(String idToken) {
+    private String getTenantDomainForSignatureValidation(String idToken, String tenantDomain) {
         boolean isJWTSignedWithSPKey = OAuthServerConfiguration.getInstance().isJWTSignedWithSPKey();
-        String tenantDomain;
+        String tenantDomainForSignatureValidation;
 
         try {
             String clientId = extractClientFromIdToken(idToken);
             if (isJWTSignedWithSPKey) {
                 OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
-                tenantDomain = OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
+                tenantDomainForSignatureValidation = OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
             } else {
-                //It is not sending tenant domain with the subject in id_token by default, So to work this as
-                //expected, need to enable the option "Use tenant domain in local subject identifier" in SP config
-                tenantDomain = MultitenantUtils.getTenantDomain(extractSubjectFromIdToken(idToken));
+                if (StringUtils.isNotBlank(tenantDomain)) {
+                    // Tenant domain is available in request parameters.
+                    tenantDomainForSignatureValidation = tenantDomain;
+                } else {
+                    //It is not sending tenant domain with the subject in id_token by default, So to work this as
+                    //expected, need to enable the option "Use tenant domain in local subject identifier" in SP config
+                    tenantDomainForSignatureValidation = MultitenantUtils.getTenantDomain(extractSubjectFromIdToken
+                            (idToken));
+                }
             }
         } catch (ParseException e) {
             log.error("Error occurred while extracting client id from id token", e);
@@ -337,7 +346,7 @@ public class OIDCLogoutServlet extends HttpServlet {
             log.error("Error occurred while getting oauth application information.", e);
             return null;
         }
-        return tenantDomain;
+        return tenantDomainForSignatureValidation;
     }
 
     /**
@@ -666,11 +675,12 @@ public class OIDCLogoutServlet extends HttpServlet {
         String redirectURL = OIDCSessionManagementUtil.getOIDCLogoutURL();
         String idTokenHint = request.getParameter(OIDCSessionConstants.OIDC_ID_TOKEN_HINT_PARAM);
         String postLogoutRedirectUri = request.getParameter(OIDCSessionConstants.OIDC_POST_LOGOUT_REDIRECT_URI_PARAM);
+        String tenantDomain = request.getParameter(OIDCSessionConstants.TENANT_DOMAIN);
         if (StringUtils.isEmpty(idTokenHint) || StringUtils.isEmpty(postLogoutRedirectUri)) {
             response.sendRedirect(getRedirectURL(redirectURL, request));
             return;
         }
-        if (!validateIdToken(idTokenHint)) {
+        if (!validateIdToken(idTokenHint, tenantDomain)) {
             String msg = "ID token signature validation failed.";
             log.error(msg);
             redirectURL = OIDCSessionManagementUtil.getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, msg);
