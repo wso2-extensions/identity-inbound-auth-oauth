@@ -80,6 +80,7 @@ import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -205,7 +206,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         if (amrValues != null) {
             jwtClaimsSetBuilder.claim(OAuthConstants.AMR, translateAmrToResponse(amrValues));
         }
-
+        setUserRealm(authorizedUser, jwtClaimsSetBuilder);
         setAdditionalClaims(tokenReqMsgCtxt, tokenRespDTO, jwtClaimsSetBuilder);
 
         tokenReqMsgCtxt.addProperty(OAuthConstants.ACCESS_TOKEN, accessToken);
@@ -288,7 +289,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         if (amrValues != null) {
             jwtClaimsSetBuilder.claim("amr", translateAmrToResponse(amrValues));
         }
-
+        setUserRealm(authorizedUser, jwtClaimsSetBuilder);
         setAdditionalClaims(authzReqMessageContext, tokenRespDTO, jwtClaimsSetBuilder);
 
         authzReqMessageContext.addProperty(OAuthConstants.ACCESS_TOKEN, accessToken);
@@ -969,5 +970,35 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
             }
         }
         return result;
+    }
+
+    /**
+     * Set user's tenant domain and userstore domain to the id_token's realm claim.
+     *
+     * @param authorizedUser authenticated user.
+     * @param jwtClaimsSetBuilder JWT claim set builder.
+     */
+    private void setUserRealm(AuthenticatedUser authorizedUser, JWTClaimsSet.Builder
+            jwtClaimsSetBuilder) {
+
+        String tenantDomain = authorizedUser.getTenantDomain();
+        String userstoreDomain = authorizedUser.getUserStoreDomain();
+        Map<String, String> realm = new HashMap<>();
+        if (OAuthServerConfiguration.getInstance().isAddTenantDomainToIdTokenEnabled() && StringUtils.isNotBlank
+                (tenantDomain)) {
+            realm.put(OAuthConstants.OIDCClaims.TENANT, tenantDomain);
+        }
+        if (OAuthServerConfiguration.getInstance().isAddUserstoreDomainToIdTokenEnabled() && StringUtils.isNotBlank
+                (userstoreDomain)) {
+            realm.put(OAuthConstants.OIDCClaims.USERSTORE, userstoreDomain);
+        }
+        if (realm.size() > 0) {
+            if (log.isDebugEnabled()) {
+                log.debug("Setting authorized user tenant domain : " + tenantDomain + " and userstore domain : " +
+                        userstoreDomain + " to the 'realm' claim of id_token for the user : " + authorizedUser
+                        .getUserName());
+            }
+            jwtClaimsSetBuilder.claim(OAuthConstants.OIDCClaims.REALM, realm);
+        }
     }
 }

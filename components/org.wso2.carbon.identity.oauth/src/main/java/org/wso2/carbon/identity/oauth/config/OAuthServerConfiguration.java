@@ -179,6 +179,8 @@ public class OAuthServerConfiguration {
     private String authContextTTL = "15L";
     // property added to fix IDENTITY-4551 in backward compatible manner
     private boolean useMultiValueSeparatorForAuthContextToken = true;
+    private boolean addTenantDomainToIdTokenEnabled = false;
+    private boolean addUserstoreDomainToIdTokenEnabled = false;
 
     //default token types
     private static final String DEFAULT_TOKEN_TYPE = "Default";
@@ -1257,6 +1259,14 @@ public class OAuthServerConfiguration {
 
     public boolean isMapFederatedUsersToLocal() {
         return mapFederatedUsersToLocal;
+    }
+
+    public boolean isAddTenantDomainToIdTokenEnabled() {
+        return addTenantDomainToIdTokenEnabled;
+    }
+
+    public boolean isAddUserstoreDomainToIdTokenEnabled() {
+        return addUserstoreDomainToIdTokenEnabled;
     }
 
     private void parseOAuthCallbackHandlers(OMElement callbackHandlersElem) {
@@ -2489,6 +2499,18 @@ public class OAuthServerConfiguration {
                 returnOnlyMappedLocalRoles = Boolean
                         .parseBoolean(IdentityUtil.getProperty(ConfigElements.SEND_ONLY_LOCALLY_MAPPED_ROLES_OF_IDP));
             }
+            if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements
+                    .OPENID_CONNECT_ADD_TENANT_DOMAIN_TO_ID_TOKEN)) != null) {
+                addTenantDomainToIdTokenEnabled =
+                        Boolean.parseBoolean(openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS
+                                (ConfigElements.OPENID_CONNECT_ADD_TENANT_DOMAIN_TO_ID_TOKEN)).getText().trim());
+            }
+            if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements
+                    .OPENID_CONNECT_ADD_USERSTORE_DOMAIN_TO_ID_TOKEN)) != null) {
+                addUserstoreDomainToIdTokenEnabled =
+                        Boolean.parseBoolean(openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS
+                                (ConfigElements.OPENID_CONNECT_ADD_USERSTORE_DOMAIN_TO_ID_TOKEN)).getText().trim());
+            }
         }
     }
 
@@ -2680,6 +2702,10 @@ public class OAuthServerConfiguration {
         public static final String OPENID_CONNECT_IDTOKEN_CUSTOM_CLAIM_CALLBACK_HANDLER = "IDTokenCustomClaimsCallBackHandler";
         public static final String OPENID_CONNECT_CONVERT_ORIGINAL_CLAIMS_FROM_ASSERTIONS_TO_OIDCDIALECT =
                 "ConvertOriginalClaimsFromAssertionsToOIDCDialect";
+        // Property to decide whether to add tenant domain to id_token.
+        private static final String OPENID_CONNECT_ADD_TENANT_DOMAIN_TO_ID_TOKEN = "AddTenantDomainToIdToken";
+        // Property to decide whether to add userstore domain to id_token.
+        private static final String OPENID_CONNECT_ADD_USERSTORE_DOMAIN_TO_ID_TOKEN = "AddUserstoreDomainToIdToken";
         public static final String SEND_ONLY_LOCALLY_MAPPED_ROLES_OF_IDP = "FederatedRoleManagement"
                 + ".ReturnOnlyMappedLocalRoles";
         public static final String OPENID_CONNECT_ADD_UN_MAPPED_USER_ATTRIBUTES = "AddUnmappedUserAttributes";

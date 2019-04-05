@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oidc.session.servlet;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSVerifier;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
+import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -318,6 +319,9 @@ public class OIDCLogoutServlet extends HttpServlet {
      */
     private String getTenantDomainForSignatureValidation(String idToken) {
         boolean isJWTSignedWithSPKey = OAuthServerConfiguration.getInstance().isJWTSignedWithSPKey();
+        if (log.isDebugEnabled()) {
+            log.debug("'SignJWTWithSPKey' property is set to : " + isJWTSignedWithSPKey);
+        }
         String tenantDomain;
 
         try {
@@ -325,10 +329,15 @@ public class OIDCLogoutServlet extends HttpServlet {
             if (isJWTSignedWithSPKey) {
                 OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
                 tenantDomain = OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
+                if (log.isDebugEnabled()) {
+                    log.debug("JWT signature will be validated with the service provider's tenant domain : " +
+                            tenantDomain);
+                }
             } else {
-                //It is not sending tenant domain with the subject in id_token by default, So to work this as
-                //expected, need to enable the option "Use tenant domain in local subject identifier" in SP config
-                tenantDomain = MultitenantUtils.getTenantDomain(extractSubjectFromIdToken(idToken));
+                if (log.isDebugEnabled()) {
+                    log.debug("JWT signature will be validated with user tenant domain.");
+                }
+                tenantDomain = extractTenantDomainFromIdToken(idToken);
             }
         } catch (ParseException e) {
             log.error("Error occurred while extracting client id from id token", e);
@@ -431,14 +440,39 @@ public class OIDCLogoutServlet extends HttpServlet {
     }
 
     /**
-     * Extract Subject from id token
+     * Extract tenant domain from id token
      * @param idToken id token
-     * @return Authenticated Subject
+     * @return tenant domain
      * @throws ParseException
      */
-    private String extractSubjectFromIdToken(String idToken) throws ParseException {
+    private String extractTenantDomainFromIdToken(String idToken) throws ParseException {
 
-        return SignedJWT.parse(idToken).getJWTClaimsSet().getSubject();
+        String tenantDomain = null;
+        Map realm = null;
+
+        JWTClaimsSet claimsSet = SignedJWT.parse(idToken).getJWTClaimsSet();
+        if (claimsSet.getClaims().get(OAuthConstants.OIDCClaims.REALM) instanceof Map) {
+            realm = (Map) claimsSet.getClaims().get(OAuthConstants.OIDCClaims.REALM);
+        }
+        if (realm != null) {
+            tenantDomain = (String) realm.get(OAuthConstants.OIDCClaims.TENANT);
+        }
+        if (StringUtils.isBlank(tenantDomain)) {
+            if (log.isDebugEnabled()) {
+                log.debug("Failed to retrieve tenant domain from 'realm' claim. Hence falling back to 'sub' claim.");
+            }
+            //It is not sending tenant domain with the subject in id_token by default, So to work this as
+            //expected, need to enable the option "Use tenant domain in local subject identifier" in SP config
+            tenantDomain = MultitenantUtils.getTenantDomain(claimsSet.getSubject());
+            if (log.isDebugEnabled()) {
+                log.debug("User tenant domain derived from 'sub' claim of JWT. Tenant domain : " + tenantDomain);
+            }
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug("User tenant domain found in 'realm' claim of JWT. Tenant domain : " + tenantDomain);
+            }
+        }
+        return tenantDomain;
     }
 
     @Override

@@ -107,6 +107,7 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
 
     private static final String CLIENT_ID_VALUE = "3T9l2uUf8AzNOfmGS9lPEIsdrR8a";
     private static final String CLIENT_ID_WITH_REGEX_CALLBACK = "cG1H52zfnkFEh3ULT0yTi14bZRUa";
+    private static final String CLIENT_ID_FOR_REALM_TEST = "5GxhmSL89OVpWef4wzioRs1aDYIa";
     private static final String APP_NAME = "myApp";
     private static final String SECRET = "87n9a540f544777860e44e75f605d435";
     private static final String USERNAME = "user1";
@@ -126,6 +127,7 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
         initiateInMemoryH2();
         createOAuthApp(CLIENT_ID_VALUE, SECRET, USERNAME, APP_NAME, "ACTIVE", CALLBACK_URL);
         createOAuthApp(CLIENT_ID_WITH_REGEX_CALLBACK, SECRET, USERNAME, APP_NAME, "ACTIVE", REGEX_CALLBACK_URL);
+        createOAuthApp(CLIENT_ID_FOR_REALM_TEST, SECRET, USERNAME, APP_NAME, "ACTIVE", CALLBACK_URL);
 
     }
 
@@ -190,6 +192,19 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
                         "H5Qrxxbd9l2iPo56HuSzmT_ul0nzYYHcaQGbuO1LLe6kcSk7wwbbCG7vacjyBnJ4nT8SHGOtTOOjt1srQuNiZlgibi2LbQU0RUFaNq" +
                         "1_3e0PtAQyWOvqugYFbdZc-SgrJSGHet7RxMHTcQxp785hnz8J-lUv5jCrMAuCOJprLzL9EEvX8tHYpmZfyj3UWR8YskLnDmVDnNhqDGt" +
                         "buZ0Ebn3ppKSsJwsm0ITitQ4uXfYdgEx_EH4gniRThFD2X9rzfP-SXW0eaYHcrRO0zgZr6CIZQNmLQdgc7p5K_AAbPiycod82tg";
+
+        String idTokenHintWithRealm =
+                "eyJ4NXQiOiJOVEF4Wm1NeE5ETXlaRGczTVRVMVpHTTBNekV6T0RKaFpXSTRORE5sWkRVMU9HRmtOakZpTVEiLCJraWQiOiJOVEF4Wm1" +
+                        "NeE5ETXlaRGczTVRVMVpHTTBNekV6T0RKaFpXSTRORE5sWkRVMU9HRmtOakZpTVEiLCJhbGciOiJSUzI1NiJ9.eyJhdF9oY" +
+                        "XNoIjoiazBvdFlvRV84b21WTnd3ZEJCYWJsdyIsImF1ZCI6IjVHeGhtU0w4OU9WcFdlZjR3emlvUnMxYURZSWEiLCJjX2hh" +
+                        "c2giOiI2Y25ZZ25ZNFBVemNRTHNOSldsX1lBIiwic3ViIjoiYWRtaW4iLCJuYmYiOjE1NTQ0Nzc0MTMsImF6cCI6IjVHeGh" +
+                        "tU0w4OU9WcFdlZjR3emlvUnMxYURZSWEiLCJhbXIiOlsiQmFzaWNBdXRoZW50aWNhdG9yIl0sImlzcyI6Imh0dHBzOlwvXC" +
+                        "9sb2NhbGhvc3Q6OTQ0M1wvb2F1dGgyXC90b2tlbiIsInJlYWxtIjp7InVzZXJzdG9yZSI6IlBSSU1BUlkiLCJ0ZW5hbnQiO" +
+                        "iJjYXJib24uc3VwZXIifSwiZXhwIjoxNTU0NDgxMDEzLCJpYXQiOjE1NTQ0Nzc0MTMsInNpZCI6ImJjM2IzOTRjLTRjOWQt" +
+                        "NGRlOS1iN2MzLTI0YWIwOGNiMmQzZiJ9.KTrYVZ8QrcQFKCL7TIvSZsvLl3VEKxGRXiREg04ej5AEAteSNZZaC6druoymc9" +
+                        "z9-9PQMRFknNIh5EUpdT6Z2MuiRJC5_jy2ufFQflUe6ppi5fpvxAGHDK794Rta2jktK1FOdj10Seg0wysMiJ0MqXv52g847" +
+                        "wHXnOCHX-LpfFO-paT3R-M8hrcEUiIo4NqW_0tEuY5A2TwBNKnKsKRINgwwgYcMyX--XZEZVzq-Op41izLehua7Yh88skbR" +
+                        "ns-v2ViNiVhocgWWc8KjzIip5zeLFuea4Uo2ncMdGw9pUybFa7tRquP67RTvimdKmFv9YzhkdA2RpJFw0k5Ly7BZCA";
 
         return new Object[][]{
                 // opbs cookie is null.
@@ -257,7 +272,11 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
                         idTokenHint, false, CALLBACK_URL, AuthenticatorFlowStatus.INCOMPLETE},
                 // CallBackUrl is a regex one.
                 {opbsCookie, true, CALLBACK_URL, "oauth2client", "", null, true, idTokenWithRegexCallBack, false,
-                        REGEX_CALLBACK_URL, null}
+                        REGEX_CALLBACK_URL, null},
+                // opbs cookie and previous sessions are existing, userConsent is empty, sessionDataKey = null,
+                // skipUserConsent=true, a valid idTokenHint with tenant domain in realm, and valid postLogoutUri.
+                {opbsCookie, true, redirectUrl[5], CALLBACK_URL, " ", null, true,
+                        idTokenHintWithRealm, false, CALLBACK_URL, null},
 
 
         };
@@ -359,6 +378,19 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
                         "w9FY1rlUVvNbtF1u2Fruc1kj9jkjSbvFgSONRhizRH6P_25v0LpgNZrOpiLZF92CtkCBbAGQChWACN6RWDpy5Fj2JuQMNcCvkxlv" +
                         "OVcx-7biH16qVnY9UFs4DxZo2cGzyWbXuH8sDTkzQBg";
 
+        String idTokenHintWithRealm =
+                "eyJ4NXQiOiJOVEF4Wm1NeE5ETXlaRGczTVRVMVpHTTBNekV6T0RKaFpXSTRORE5sWkRVMU9HRmtOakZpTVEiLCJraWQiOiJOVEF4Wm1" +
+                        "NeE5ETXlaRGczTVRVMVpHTTBNekV6T0RKaFpXSTRORE5sWkRVMU9HRmtOakZpTVEiLCJhbGciOiJSUzI1NiJ9.eyJhdF9oY" +
+                        "XNoIjoiazBvdFlvRV84b21WTnd3ZEJCYWJsdyIsImF1ZCI6IjVHeGhtU0w4OU9WcFdlZjR3emlvUnMxYURZSWEiLCJjX2hh" +
+                        "c2giOiI2Y25ZZ25ZNFBVemNRTHNOSldsX1lBIiwic3ViIjoiYWRtaW4iLCJuYmYiOjE1NTQ0Nzc0MTMsImF6cCI6IjVHeGh" +
+                        "tU0w4OU9WcFdlZjR3emlvUnMxYURZSWEiLCJhbXIiOlsiQmFzaWNBdXRoZW50aWNhdG9yIl0sImlzcyI6Imh0dHBzOlwvXC" +
+                        "9sb2NhbGhvc3Q6OTQ0M1wvb2F1dGgyXC90b2tlbiIsInJlYWxtIjp7InVzZXJzdG9yZSI6IlBSSU1BUlkiLCJ0ZW5hbnQiO" +
+                        "iJjYXJib24uc3VwZXIifSwiZXhwIjoxNTU0NDgxMDEzLCJpYXQiOjE1NTQ0Nzc0MTMsInNpZCI6ImJjM2IzOTRjLTRjOWQt" +
+                        "NGRlOS1iN2MzLTI0YWIwOGNiMmQzZiJ9.KTrYVZ8QrcQFKCL7TIvSZsvLl3VEKxGRXiREg04ej5AEAteSNZZaC6druoymc9" +
+                        "z9-9PQMRFknNIh5EUpdT6Z2MuiRJC5_jy2ufFQflUe6ppi5fpvxAGHDK794Rta2jktK1FOdj10Seg0wysMiJ0MqXv52g847" +
+                        "wHXnOCHX-LpfFO-paT3R-M8hrcEUiIo4NqW_0tEuY5A2TwBNKnKsKRINgwwgYcMyX--XZEZVzq-Op41izLehua7Yh88skbR" +
+                        "ns-v2ViNiVhocgWWc8KjzIip5zeLFuea4Uo2ncMdGw9pUybFa7tRquP67RTvimdKmFv9YzhkdA2RpJFw0k5Ly7BZCA";
+
         String[] postLogoutUrl = {
                 "http://localhost:8080/playground2/oauth2client",
                 "http://localhost:8080/playground/oauth2client"
@@ -377,6 +409,8 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
                 {null, idTokenHint, postLogoutUrl[1], false, false, "?oauthErrorCode=access_denied"},
                 // Invalid session state.
                 {opbsCookie, null, null, false, false, "oauth2_logout.do"},
+                // Valid id_token_hint with tenant domain in realm and a valid post_logout_redirect_uri.
+                {null, idTokenHintWithRealm, postLogoutUrl[0], false, false, "playground2/oauth2client"},
         };
     }
 

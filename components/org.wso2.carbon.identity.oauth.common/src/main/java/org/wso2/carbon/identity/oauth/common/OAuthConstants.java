@@ -318,6 +318,9 @@ public final class OAuthConstants {
         // OIDC Specification : http://openid.net/specs/openid-connect-core-1_0.html
         public static final String C_HASH = "c_hash";
         public static final String SESSION_ID_CLAIM = "sid";
+        public static final String REALM = "realm";
+        public static final String TENANT = "tenant";
+        public static final String USERSTORE = "userstore";
 
         private OIDCClaims() {}
     }
