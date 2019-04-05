@@ -22,11 +22,10 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
+import org.owasp.encoder.Encode;
 import org.wso2.carbon.core.AbstractAdmin;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
-import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
-import org.wso2.carbon.identity.oauth.OAuthAdminService;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
@@ -74,6 +73,7 @@ import java.util.Map;
 public class OAuth2Service extends AbstractAdmin {
 
     private static Log log = LogFactory.getLog(OAuth2Service.class);
+    private static final String APP_STATE_ACTIVE = "ACTIVE";
 
     /**
      * Process the authorization request and issue an authorization code or access token depending
@@ -130,8 +130,27 @@ public class OAuth2Service extends AbstractAdmin {
         }
 
         try {
-            OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
-            OAuthAppDO appDO = oAuthAppDAO.getAppInformation(clientId);
+            if (StringUtils.isBlank(clientId)) {
+                throw new InvalidOAuthClientException("Invalid client_id. No OAuth application has been registered " +
+                        "with the given client_id");
+            }
+            OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(clientId);
+            String appState = appDO.getState();
+
+            if (StringUtils.isEmpty(appState)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("A valid OAuth client could not be found for client_id: " + clientId);
+                }
+                throw new InvalidOAuthClientException("A valid OAuth client could not be found for client_id: " +
+                        Encode.forHtml(clientId));
+            }
+
+            if (!appState.equalsIgnoreCase(APP_STATE_ACTIVE)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("App is not in active state in client ID: " + clientId + ". App state is: " + appState);
+                }
+                throw new InvalidOAuthClientException("Oauth application is not in active state");
+            }
 
             if (StringUtils.isEmpty(appDO.getGrantTypes()) || StringUtils.isEmpty(appDO.getCallbackUrl())) {
                 if (log.isDebugEnabled()) {

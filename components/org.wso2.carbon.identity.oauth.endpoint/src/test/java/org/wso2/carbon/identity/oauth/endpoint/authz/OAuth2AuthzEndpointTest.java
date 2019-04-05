@@ -22,6 +22,7 @@ import com.nimbusds.jwt.SignedJWT;
 import org.apache.axis2.transport.http.HTTPConstants;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.oltu.oauth2.as.request.OAuthAuthzRequest;
 import org.apache.oltu.oauth2.as.validator.CodeValidator;
 import org.apache.oltu.oauth2.as.validator.TokenValidator;
@@ -313,12 +314,16 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                 { AuthenticatorFlowStatus.SUCCESS_COMPLETED, new String[]{CLIENT_ID_VALUE}, "invalidConsentCacheKey",
                         "true", "scope1", null, null, HttpServletResponse.SC_FOUND, OAuth2ErrorCodes.ACCESS_DENIED },
 
-                { AuthenticatorFlowStatus.SUCCESS_COMPLETED, new String[]{"invalidId"}, "invalidConsentCacheKey",
-                        "true", "scope1", SESSION_DATA_KEY_VALUE, null, HttpServletResponse.SC_UNAUTHORIZED,
+                { null, new String[]{""}, SESSION_DATA_KEY_CONSENT_VALUE,
+                        "true", "scope1", SESSION_DATA_KEY_VALUE, null, HttpServletResponse.SC_FOUND,
                         OAuth2ErrorCodes.INVALID_CLIENT },
 
-                { AuthenticatorFlowStatus.SUCCESS_COMPLETED, new String[]{INACTIVE_CLIENT_ID_VALUE}, "invalidConsentCacheKey",
-                        "true", "scope1", SESSION_DATA_KEY_VALUE, null, HttpServletResponse.SC_UNAUTHORIZED,
+                { null, new String[]{"invalidId"}, SESSION_DATA_KEY_CONSENT_VALUE,
+                        "true", "scope1", SESSION_DATA_KEY_VALUE, null, HttpServletResponse.SC_FOUND,
+                        OAuth2ErrorCodes.INVALID_CLIENT },
+
+                { null, new String[]{INACTIVE_CLIENT_ID_VALUE}, SESSION_DATA_KEY_CONSENT_VALUE,
+                        "true", "scope1", SESSION_DATA_KEY_VALUE, null, HttpServletResponse.SC_FOUND,
                         OAuth2ErrorCodes.INVALID_CLIENT },
 
                 { AuthenticatorFlowStatus.SUCCESS_COMPLETED, new String[]{CLIENT_ID_VALUE}, "invalidConsentCacheKey",
@@ -401,21 +406,24 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
 
         mockEndpointUtil();
-        when(oAuth2Service.validateClientInfo(anyString(), anyString())).thenReturn(oAuth2ClientValidationResponseDTO);
         when(oAuth2Service.getOauthApplicationState(CLIENT_ID_VALUE)).thenReturn("ACTIVE");
-        when(oAuth2ClientValidationResponseDTO.isValidClient()).thenReturn(true);
+        if (ArrayUtils.isNotEmpty(clientId) && (clientId[0].equalsIgnoreCase("invalidId") || clientId[0]
+                .equalsIgnoreCase(INACTIVE_CLIENT_ID_VALUE) || StringUtils.isEmpty(clientId[0]))) {
+            when(oAuth2Service.validateClientInfo(clientId[0], APP_REDIRECT_URL)).thenCallRealMethod();
+
+        } else {
+            when(oAuth2Service.validateClientInfo(anyString(), anyString())).thenReturn(oAuth2ClientValidationResponseDTO);
+            when(oAuth2ClientValidationResponseDTO.isValidClient()).thenReturn(true);
+        }
 
         final String[] redirectUrl = new String[1];
         if (e instanceof IOException) {
             doThrow(e).when(httpServletResponse).sendRedirect(anyString());
         } else {
-            doAnswer(new Answer<Object>() {
-                @Override
-                public Object answer(InvocationOnMock invocation) {
-                    String key = (String) invocation.getArguments()[0];
-                    redirectUrl[0] = key;
-                    return null;
-                }
+            doAnswer(invocation -> {
+                String key = (String) invocation.getArguments()[0];
+                redirectUrl[0] = key;
+                return null;
             }).when(httpServletResponse).sendRedirect(anyString());
         }
 
