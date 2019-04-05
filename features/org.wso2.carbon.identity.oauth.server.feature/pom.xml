@@ -89,6 +89,14 @@
             <artifactId>json-smart</artifactId>
         </dependency>
         <dependency>
+            <groupId>net.minidev</groupId>
+            <artifactId>accessors-smart</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.ow2.asm</groupId>
+            <artifactId>asm</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.wso2.orbit.com.github.dblock.waffle</groupId>
             <artifactId>waffle-jna</artifactId>
         </dependency>
@@ -208,6 +216,8 @@
                                 <bundleDef>org.wso2.carbon.identity.inbound.auth.oauth2:org.wso2.carbon.identity.oidc.session</bundleDef>
                                 <bundleDef>org.wso2.orbit.com.nimbusds:nimbus-jose-jwt</bundleDef>
                                 <bundleDef>net.minidev:json-smart</bundleDef>
+                                <bundleDef>net.minidev:accessors-smart:${net.minidev.accessors-smart.version}</bundleDef>
+                                <bundleDef>org.ow2.asm:asm:${org.ow2.asm.asm.version}</bundleDef>
                                 <bundleDef>org.wso2.orbit.com.github.dblock.waffle:waffle-jna</bundleDef>
                                 <bundleDef>org.wso2.orbit.org.opensaml:opensaml</bundleDef>
                                 <bundleDef>org.wso2.orbit.joda-time:joda-time</bundleDef>
