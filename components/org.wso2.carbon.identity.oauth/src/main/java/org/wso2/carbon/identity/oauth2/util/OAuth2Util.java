@@ -1522,16 +1522,16 @@ public class OAuth2Util {
 
         // Priority should be given to service provider specific audiences over globally configured ones.
         if (OAuth2ServiceComponentHolder.isAudienceEnabled()) {
-            List<String> audienceList = Arrays.asList(oAuthAppDO.getAudiences());
-            audiences = new ArrayList<>(audienceList);
+            audiences = getAudienceListFromOAuthAppDO(oAuthAppDO);
             if (CollectionUtils.isNotEmpty(audiences)) {
                 if (log.isDebugEnabled()) {
-                    log.debug("OIDC Audiences " + audiences + " had been retrieved for the client id " +
+                    log.debug("OIDC Audiences " + audiences + " had been retrieved for the client_id: " +
                             oAuthAppDO.getOauthConsumerKey());
                 }
                 return audiences;
             }
         }
+
         IdentityConfigParser configParser = IdentityConfigParser.getInstance();
         OMElement oauthElem = configParser.getConfigElement(CONFIG_ELEM_OAUTH);
         if (oauthElem == null) {
@@ -1565,6 +1565,15 @@ public class OAuth2Util {
             }
         }
         return audiences;
+    }
+
+    private static List<String> getAudienceListFromOAuthAppDO(OAuthAppDO oAuthAppDO) {
+
+        if (oAuthAppDO.getAudiences() == null) {
+            return new ArrayList<>();
+        } else {
+            return new ArrayList<>(Arrays.asList(oAuthAppDO.getAudiences()));
+        }
     }
 
     /**
