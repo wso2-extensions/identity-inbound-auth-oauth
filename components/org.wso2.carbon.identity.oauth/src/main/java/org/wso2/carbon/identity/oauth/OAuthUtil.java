@@ -28,6 +28,8 @@ import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.registry.core.utils.UUIDGenerator;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
@@ -144,4 +146,40 @@ public final class OAuthUtil {
         }
     }
 
+    /**
+     * Get created oauth application details.
+     *
+     * @param appDO <code>OAuthAppDO</code> with created application information.
+     * @return OAuthConsumerAppDTO Created OAuth application details.
+     */
+    public static OAuthConsumerAppDTO buildConsumerAppDTO(OAuthAppDO appDO) {
+
+        OAuthConsumerAppDTO dto = new OAuthConsumerAppDTO();
+        dto.setApplicationName(appDO.getApplicationName());
+        dto.setCallbackUrl(appDO.getCallbackUrl());
+        dto.setOauthConsumerKey(appDO.getOauthConsumerKey());
+        dto.setOauthConsumerSecret(appDO.getOauthConsumerSecret());
+        dto.setOAuthVersion(appDO.getOauthVersion());
+        dto.setGrantTypes(appDO.getGrantTypes());
+        dto.setScopeValidators(appDO.getScopeValidators());
+        dto.setUsername(appDO.getUser().toFullQualifiedUsername());
+        dto.setState(appDO.getState());
+        dto.setPkceMandatory(appDO.isPkceMandatory());
+        dto.setPkceSupportPlain(appDO.isPkceSupportPlain());
+        dto.setUserAccessTokenExpiryTime(appDO.getUserAccessTokenExpiryTime());
+        dto.setApplicationAccessTokenExpiryTime(appDO.getApplicationAccessTokenExpiryTime());
+        dto.setRefreshTokenExpiryTime(appDO.getRefreshTokenExpiryTime());
+        dto.setIdTokenExpiryTime(appDO.getIdTokenExpiryTime());
+        dto.setAudiences(appDO.getAudiences());
+        dto.setRequestObjectSignatureValidationEnabled(appDO.isRequestObjectSignatureValidationEnabled());
+        dto.setIdTokenEncryptionEnabled(appDO.isIdTokenEncryptionEnabled());
+        dto.setIdTokenEncryptionAlgorithm(appDO.getIdTokenEncryptionAlgorithm());
+        dto.setIdTokenEncryptionMethod(appDO.getIdTokenEncryptionMethod());
+        dto.setBackChannelLogoutUrl(appDO.getBackChannelLogoutUrl());
+        dto.setFrontchannelLogoutUrl(appDO.getFrontchannelLogoutUrl());
+        dto.setTokenType(appDO.getTokenType());
+        dto.setBypassClientCredentials(appDO.isBypassClientCredentials());
+        dto.setRenewRefreshTokenEnabled(appDO.getRenewRefreshTokenEnabled());
+        return dto;
+    }
 }
