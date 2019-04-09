@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2019, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -39,12 +39,12 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
-import org.wso2.carbon.identity.oauth2.token.JWTTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -544,7 +544,6 @@ public class TokenValidationHandler {
      * @return
      * @throws IdentityOAuth2Exception
      */
-    @Deprecated
     private OAuth2TokenValidator findAccessTokenValidator(OAuth2TokenValidationRequestDTO.OAuth2AccessToken accessToken)
             throws IdentityOAuth2Exception {
         // incomplete token validation request
@@ -630,85 +629,120 @@ public class TokenValidationHandler {
     }
 
     /**
-     * Find access token for token validation
+     * Find access token for token validation.
      *
-     * @param tokenIdentifier access token data object from the validation request
-     * @return
+     * @param tokenIdentifier access token data object from the validation request.
+     * @return AccessTokenDO
      * @throws IdentityOAuth2Exception
      */
     private AccessTokenDO findAccessToken(String tokenIdentifier) throws IdentityOAuth2Exception {
 
-        String consumerKey = null;
-        OauthTokenIssuer oauthTokenIssuer = null;
-        if (isJWT(tokenIdentifier) || isIDTokenEncrypted(tokenIdentifier)) {
-            oauthTokenIssuer = new JWTTokenIssuer();
-        } else {
+        AccessTokenDO accessTokenDO;
+
+        // Get list of available token issuers.
+        Map<String, OauthTokenIssuer> allOAuthTokenIssuerMap = getCopyOfOauthTokenIssuerMap();
+
+        // Differentiate default token issuers and other issuers for better performance.
+        Map<String, OauthTokenIssuer> defaultOAuthTokenIssuerMap =
+                getDefaultOauthTokenIssuerMap(allOAuthTokenIssuerMap);
+
+        // First try default token issuers.
+        accessTokenDO = getAccessTokenDO(tokenIdentifier, defaultOAuthTokenIssuerMap);
+        if (accessTokenDO != null) return accessTokenDO;
+
+        // Loop through other issuer and try to get the hash.
+        return getAccessTokenDO(tokenIdentifier, allOAuthTokenIssuerMap);
+    }
+
+    /**
+     * Return a copy of all available token issuers map.
+     *
+     * @return Copy of the oauthTokenIssuerMap.
+     * @throws IdentityOAuth2Exception
+     */
+    private Map<String, OauthTokenIssuer> getCopyOfOauthTokenIssuerMap() throws IdentityOAuth2Exception {
+
+        Map<String, OauthTokenIssuer> copy = new HashMap<>();
+        Map<String, OauthTokenIssuer> oauthTokenIssuerMap =
+                OAuthServerConfiguration.getInstance().getOauthTokenIssuerMap();
+        if (oauthTokenIssuerMap.isEmpty()) {
+            // Populate token issuer map with default.
+            OAuthServerConfiguration.getInstance().addAndReturnTokenIssuerInstance(
+                    OAuthServerConfiguration.DEFAULT_TOKEN_TYPE);
+            OAuthServerConfiguration.getInstance().addAndReturnTokenIssuerInstance(
+                    OAuthServerConfiguration.JWT_TOKEN_TYPE);
+        }
+        for (Map.Entry<String, OauthTokenIssuer> entry : oauthTokenIssuerMap.entrySet()) {
+            copy.put(entry.getKey(), entry.getValue());
+        }
+        return copy;
+    }
+
+    /**
+     * Loop through provided token issuer list and tries to get the access token DO.
+     *
+     * @param tokenIdentifier Provided token identifier.
+     * @param tokenIssuerMap  List of token issuers.
+     * @return Obtained matching access token DO if possible.
+     * @throws IdentityOAuth2Exception
+     */
+    private AccessTokenDO getAccessTokenDO(String tokenIdentifier,
+                                           Map<String, OauthTokenIssuer> tokenIssuerMap)
+            throws IdentityOAuth2Exception {
+
+        AccessTokenDO accessTokenDO;
+        for (Map.Entry<String, OauthTokenIssuer> oauthTokenIssuerEntry: tokenIssuerMap.entrySet()) {
             try {
-                consumerKey = OAuth2Util.getClientIdForAccessToken(tokenIdentifier);
-            } catch (IllegalArgumentException e) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Consumer key is not found for token identifier: " + tokenIdentifier, e);
-                }
-            }
-        }
-
-        try {
-            if (consumerKey != null) {
-                oauthTokenIssuer = OAuth2Util.getOAuthTokenIssuerForOAuthApp(consumerKey);
-            }
-
-            if (oauthTokenIssuer == null) {
-                //server level token issuer
-                oauthTokenIssuer = OAuthServerConfiguration.getInstance().getIdentityOauthTokenIssuer();
-                log.info("No token issuer is found for access token identifier. Hence default token issuer is used.");
-            }
-
-            if (oauthTokenIssuer.usePersistedAccessTokenAlias()) {
-                return OAuth2Util.getAccessTokenDOfromTokenIdentifier(oauthTokenIssuer
-                        .getAccessTokenHash(tokenIdentifier));
-            } else {
-                return OAuth2Util.getAccessTokenDOfromTokenIdentifier(tokenIdentifier);
-            }
-        } catch (OAuthSystemException e) {
-            if (log.isDebugEnabled()) {
-                if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
-                    log.debug("Error while getting access token hash from token: " + tokenIdentifier, e);
+                OauthTokenIssuer oauthTokenIssuer = oauthTokenIssuerEntry.getValue();
+                String tokenAlias = oauthTokenIssuer.getAccessTokenHash(tokenIdentifier);
+                if (oauthTokenIssuer.usePersistedAccessTokenAlias()) {
+                    accessTokenDO =  OAuth2Util.getAccessTokenDOfromTokenIdentifier(tokenAlias);
                 } else {
-                    log.debug("Error while getting access token hash.", e);
+                    accessTokenDO =  OAuth2Util.getAccessTokenDOfromTokenIdentifier(tokenIdentifier);
+                }
+                if (accessTokenDO != null) {
+                    return accessTokenDO;
+                }
+            } catch (OAuthSystemException e) {
+                if (log.isDebugEnabled()) {
+                    if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                        log.debug("Token issuer: " + oauthTokenIssuerEntry.getKey() + " was tried and" +
+                                " failed to parse the received token: " + tokenIdentifier);
+                    } else {
+                        log.debug("Token issuer: " + oauthTokenIssuerEntry.getKey() + " was tried and" +
+                                " failed to parse the received token.");
+                    }
                 }
             }
-            throw new IdentityOAuth2Exception("Error while getting access token hash.", e);
-        } catch (InvalidOAuthClientException e) {
-            throw new IdentityOAuth2Exception(
-                    "Error while retrieving oauth issuer for the app with clientId: " + consumerKey, e);
         }
+        return null;
+    }
+
+    /**
+     * Differentiate default token issuers from all available token issuers map.
+     *
+     * @param tokenIssuerMap Map of all available token issuers.
+     * @return Filtered map of default issuers.
+     */
+    private Map<String, OauthTokenIssuer> getDefaultOauthTokenIssuerMap(
+            Map<String, OauthTokenIssuer> tokenIssuerMap) {
+
+        // TODO: 4/9/19 Implement logic to read default issuer from config.
+        // TODO: 4/9/19 add sorting mechanism to use JWT issuer first.
+        Map<String, OauthTokenIssuer> defaultOAuthTokenIssuerMap = new HashMap<>();
+        defaultOAuthTokenIssuerMap.put(OAuthServerConfiguration.JWT_TOKEN_TYPE,
+                tokenIssuerMap.get(OAuthServerConfiguration.JWT_TOKEN_TYPE));
+        tokenIssuerMap.remove(OAuthServerConfiguration.JWT_TOKEN_TYPE);
+
+        defaultOAuthTokenIssuerMap.put(OAuthServerConfiguration.DEFAULT_TOKEN_TYPE,
+                tokenIssuerMap.get(OAuthServerConfiguration.DEFAULT_TOKEN_TYPE));
+        tokenIssuerMap.remove(OAuthServerConfiguration.DEFAULT_TOKEN_TYPE);
+        return defaultOAuthTokenIssuerMap;
+
     }
 
     private AccessTokenDO findRefreshToken(String refreshToken) throws IdentityOAuth2Exception {
 
         return OAuthTokenPersistenceFactory.getInstance().getTokenManagementDAO().getRefreshToken(refreshToken);
     }
-
-    /**
-     * Return true if the token identifier is JWT.
-     *
-     * @param tokenIdentifier String JWT token identifier.
-     * @return  true for a JWT token.
-     */
-    private boolean isJWT(String tokenIdentifier) {
-        // JWT token contains 3 base64 encoded components separated by periods.
-        return StringUtils.countMatches(tokenIdentifier, ".") == 2;
-    }
-
-    /**
-     * Return true if the JWT id token is encrypted.
-     *
-     * @param idToken String JWT ID token.
-     * @return  Boolean state of encryption.
-     */
-    private boolean isIDTokenEncrypted(String idToken) {
-        // Encrypted ID token contains 5 base64 encoded components separated by periods.
-        return StringUtils.countMatches(idToken, ".") == 4;
-    }
-
 }
