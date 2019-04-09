@@ -263,7 +263,7 @@
             </dependency>
             <dependency>
                 <groupId>org.ow2.asm</groupId>
-                <artifactId>asm</artifactId>
+                <artifactId>asm-all</artifactId>
                 <version>${org.ow2.asm.asm.version}</version>
             </dependency>
             <dependency>
@@ -796,7 +796,7 @@
         <waffle-jna.wso2.version>1.6.wso2v5</waffle-jna.wso2.version>
         <waffle-jna.imp.pkg.version.range>[1.6.wso2v1, 2.0)</waffle-jna.imp.pkg.version.range>
 
-        <nimbusds.version>5.8.0.wso2v1</nimbusds.version>
+        <nimbusds.version>5.8.0.wso2v2</nimbusds.version>
         <nimbusds.osgi.version.range>[5.8.0,6.0.0)</nimbusds.osgi.version.range>
 
         <thetransactioncompany.cors-filter.wso2.version>1.7.0.wso2v1</thetransactioncompany.cors-filter.wso2.version>
