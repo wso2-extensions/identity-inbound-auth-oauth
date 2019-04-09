@@ -422,29 +422,18 @@ public class OAuth2Util {
             return false;
         }
 
-        // Cache miss
-        boolean isHashDisabled = isHashDisabled();
         String appClientSecret = appDO.getOauthConsumerSecret();
-        if (isHashDisabled) {
-            if (!StringUtils.equals(appClientSecret, clientSecretProvided)) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Provided the Client ID : " + clientId +
-                            " and Client Secret do not match with the issued credentials.");
-                }
-                return false;
-            }
-        } else {
-            TokenPersistenceProcessor persistenceProcessor = getPersistenceProcessor();
-            // We convert the provided client_secret to the processed form stored in the DB.
-            String processedProvidedClientSecret = persistenceProcessor.getProcessedClientSecret(clientSecretProvided);
 
-            if (!StringUtils.equals(appClientSecret, processedProvidedClientSecret)) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Provided the Client ID : " + clientId +
-                            " and Client Secret do not match with the issued credentials.");
-                }
-                return false;
+        TokenPersistenceProcessor persistenceProcessor = getPersistenceProcessor();
+        // We convert the provided client_secret to the processed form stored in the DB.
+        String processedProvidedClientSecret = persistenceProcessor.getProcessedClientSecret(clientSecretProvided);
+
+        if (!StringUtils.equals(appClientSecret, processedProvidedClientSecret)) {
+            if (log.isDebugEnabled()) {
+                log.debug("Provided the Client ID : " + clientId +
+                        " and Client Secret do not match with the issued credentials.");
             }
+            return false;
         }
 
         if (log.isDebugEnabled()) {
@@ -454,7 +443,7 @@ public class OAuth2Util {
         return true;
     }
 
-    private static TokenPersistenceProcessor getPersistenceProcessor() {
+    private static TokenPersistenceProcessor getPersistenceProcessor() throws IdentityOAuth2Exception {
 
         TokenPersistenceProcessor persistenceProcessor;
         try {
