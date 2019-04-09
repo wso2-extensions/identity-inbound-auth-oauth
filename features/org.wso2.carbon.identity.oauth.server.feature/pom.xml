@@ -94,7 +94,7 @@
         </dependency>
         <dependency>
             <groupId>org.ow2.asm</groupId>
-            <artifactId>asm</artifactId>
+            <artifactId>asm-all</artifactId>
         </dependency>
         <dependency>
             <groupId>org.wso2.orbit.com.github.dblock.waffle</groupId>
@@ -217,7 +217,7 @@
                                 <bundleDef>org.wso2.orbit.com.nimbusds:nimbus-jose-jwt</bundleDef>
                                 <bundleDef>net.minidev:json-smart</bundleDef>
                                 <bundleDef>net.minidev:accessors-smart:${net.minidev.accessors-smart.version}</bundleDef>
-                                <bundleDef>org.ow2.asm:asm:${org.ow2.asm.asm.version}</bundleDef>
+                                <bundleDef>org.ow2.asm:asm-all:${org.ow2.asm.asm.version}</bundleDef>
                                 <bundleDef>org.wso2.orbit.com.github.dblock.waffle:waffle-jna</bundleDef>
                                 <bundleDef>org.wso2.orbit.org.opensaml:opensaml</bundleDef>
                                 <bundleDef>org.wso2.orbit.joda-time:joda-time</bundleDef>
