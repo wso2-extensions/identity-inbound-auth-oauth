@@ -110,9 +110,15 @@ public class UserInfoJWTResponse extends AbstractUserInfoResponseBuilder {
         }
         return signingTenantDomain;
     }
+            signingTenantDomain = getAuthzUserTenantDomain(tokenResponse);
+        }
+        return signingTenantDomain;
+    }
 
-    private AccessTokenDO getAccessTokenDO(String accessToken) throws UserInfoEndpointException {
-        AccessTokenDO accessTokenDO;
+    private String getAuthzUserTenantDomain(OAuth2TokenValidationResponseDTO tokenResponse)
+            throws UserInfoEndpointException {
+
+        AccessTokenDO accessTokenDO = null;
         try {
             OauthTokenIssuer tokenIssuer = OAuth2Util.getTokenIssuer(accessToken);
             String tokenIdentifier = null;
@@ -122,14 +128,11 @@ public class UserInfoJWTResponse extends AbstractUserInfoResponseBuilder {
                 log.error("Error while getting token identifier", e);
             }
             accessTokenDO = OAuth2Util.getAccessTokenDOfromTokenIdentifier(tokenIdentifier);
+            accessTokenDO = OAuth2Util.findAccessToken(tokenResponse.getAuthorizationContextToken().getTokenString());
         } catch (IdentityOAuth2Exception e) {
             throw new UserInfoEndpointException("Error occurred while signing JWT", e);
+            throw new UserInfoEndpointException("Error occured while obtaining access token details.", e);
         }
-
-        if (accessTokenDO == null) {
-            // this means the token is not active so we can't proceed further
-            throw new UserInfoEndpointException(OAuthError.ResourceResponse.INVALID_TOKEN, "Invalid Access Token.");
-        }
-        return accessTokenDO;
+        return accessTokenDO.getAuthzUser().getTenantDomain();
     }
 }

@@ -339,7 +339,8 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
         return serviceProvider;
     }
 
-    private List<String> getEssentialClaimUris(OAuth2TokenValidationResponseDTO tokenResponse) {
+    private List<String> getEssentialClaimUris(OAuth2TokenValidationResponseDTO tokenResponse)
+            throws UserInfoEndpointException {
 
         AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(getAccessToken(tokenResponse));
         AuthorizationGrantCacheEntry cacheEntry = AuthorizationGrantCache.getInstance()
@@ -358,9 +359,16 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
         return !authenticatedUser.isFederatedUser();
     }
 
-    private String getAccessToken(OAuth2TokenValidationResponseDTO tokenResponse) {
+    private String getAccessToken(OAuth2TokenValidationResponseDTO tokenResponse) throws UserInfoEndpointException {
 
-        return tokenResponse.getAuthorizationContextToken().getTokenString();
+        AccessTokenDO accessTokenDO = null;
+        try {
+            accessTokenDO = OAuth2Util.findAccessToken(
+                    tokenResponse.getAuthorizationContextToken().getTokenString());
+        } catch (IdentityOAuth2Exception e) {
+            throw new UserInfoEndpointException("Error occurred while obtaining access token.", e);
+        }
+        return accessTokenDO.getAccessToken();
     }
 
     private String getAccessTokenIdentifier(OAuth2TokenValidationResponseDTO tokenResponse)

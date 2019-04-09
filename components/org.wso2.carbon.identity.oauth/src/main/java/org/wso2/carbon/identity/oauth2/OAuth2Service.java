@@ -344,7 +344,7 @@ public class OAuth2Service extends AbstractAdmin {
 
                     if (accessTokenDO == null) {
                         accessTokenDO = OAuthTokenPersistenceFactory.getInstance()
-                                .getAccessTokenDAO().getAccessToken(revokeRequestDTO.getToken(), true);
+                                .getAccessTokenDAO().getAccessToken(token, true);
                         if (accessTokenDO == null) {
 
                             refreshTokenDO = OAuthTokenPersistenceFactory.getInstance()

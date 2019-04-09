@@ -335,7 +335,9 @@ public class ClaimUtil {
         return UserCoreUtil.removeDomainFromName(tenantAwareUsername);
     }
 
-    private static Map<ClaimMapping, String> getUserAttributesFromCache(OAuth2TokenValidationResponseDTO tokenResponse) {
+    private static Map<ClaimMapping, String> getUserAttributesFromCache(OAuth2TokenValidationResponseDTO tokenResponse)
+            throws UserInfoEndpointException {
+
         AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(getAccessTokenIdentifier(tokenResponse));
         AuthorizationGrantCacheEntry cacheEntry = AuthorizationGrantCache.getInstance().getValueFromCacheByToken(cacheKey);
         if (cacheEntry == null) {
@@ -344,6 +346,17 @@ public class ClaimUtil {
         return cacheEntry.getUserAttributes();
     }
 
+    private static String getAccessTokenIdentifier(OAuth2TokenValidationResponseDTO tokenResponse)
+            throws UserInfoEndpointException {
+
+        AccessTokenDO accessTokenDO = null;
+        try {
+            accessTokenDO = OAuth2Util.findAccessToken(
+                    tokenResponse.getAuthorizationContextToken().getTokenString());
+        } catch (IdentityOAuth2Exception e) {
+            throw new UserInfoEndpointException("Error occurred while obtaining access token.", e);
+        }
+        return accessTokenDO.getAccessToken();
     private static String getAccessToken(OAuth2TokenValidationResponseDTO tokenResponse) {
         return tokenResponse.getAuthorizationContextToken().getTokenString();
     }
