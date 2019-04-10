@@ -211,7 +211,9 @@ public class OAuth2Service extends AbstractAdmin {
             }
         } catch (InvalidOAuthClientException e) {
             // There is no such Client ID being registered. So it is a request from an invalid client.
-            log.error("Error while retrieving the Application Information", e);
+            if (log.isDebugEnabled()) {
+                log.debug("Error while retrieving the Application Information", e);
+            }
             validationResponseDTO.setValidClient(false);
             validationResponseDTO.setErrorCode(OAuth2ErrorCodes.INVALID_CLIENT);
             validationResponseDTO.setErrorMsg(e.getMessage());
