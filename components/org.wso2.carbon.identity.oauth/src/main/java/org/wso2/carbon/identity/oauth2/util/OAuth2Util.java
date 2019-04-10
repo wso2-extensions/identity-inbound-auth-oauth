@@ -2519,6 +2519,10 @@ public class OAuth2Util {
         return StringUtils.countMatches(idToken, DOT_SEPARATER) == 4;
     }
 
+    /**
+     * @deprecated We cannot determine the token issuer this way. Have a look at the findAccessToken method.
+     */
+    @Deprecated
     public static OauthTokenIssuer getTokenIssuer(String accessToken) throws IdentityOAuth2Exception {
 
         OauthTokenIssuer oauthTokenIssuer = null;
@@ -2760,7 +2764,7 @@ public class OAuth2Util {
     }
 
     /**
-     * Find access tokenDO from token identifier.
+     * Find access tokenDO from token identifier by chaining through all available token issuers.
      *
      * @param tokenIdentifier access token data object from the validation request.
      * @return AccessTokenDO
