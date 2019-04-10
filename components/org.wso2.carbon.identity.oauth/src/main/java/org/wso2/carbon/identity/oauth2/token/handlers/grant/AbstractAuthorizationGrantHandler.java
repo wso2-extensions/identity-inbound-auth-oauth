@@ -572,10 +572,27 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         OAuth2AccessTokenRespDTO tokenRespDTO = new OAuth2AccessTokenRespDTO();
         tokenRespDTO.setAccessToken(existingAccessTokenDO.getAccessToken());
         tokenRespDTO.setTokenId(existingAccessTokenDO.getTokenId());
+        OAuthAppDO oAuthAppDO;
+        String consumerKey = existingAccessTokenDO.getConsumerKey();
+        try {
+            oAuthAppDO = OAuth2Util.getAppInformationByClientId(consumerKey);
+        } catch (InvalidOAuthClientException e) {
+            throw new IdentityOAuth2Exception("Error while retrieving app information for client_id : " + consumerKey,
+                    e);
+        }
+
         if (issueRefreshToken() &&
                 OAuthServerConfiguration.getInstance().getSupportedGrantTypes().containsKey(
                         GrantType.REFRESH_TOKEN.toString())) {
-            tokenRespDTO.setRefreshToken(existingAccessTokenDO.getRefreshToken());
+            String grantTypes = oAuthAppDO.getGrantTypes();
+            if (StringUtils.isNotEmpty(grantTypes) && grantTypes.contains(OAuthConstants.GrantTypes.REFRESH_TOKEN)) {
+                tokenRespDTO.setRefreshToken(existingAccessTokenDO.getRefreshToken());
+            } else {
+                if (log.isDebugEnabled()) {
+                    log.debug("Refresh grant is not allowed for client_id : " + consumerKey + ", therefore not " +
+                            "issuing a refresh token.");
+                }
+            }
         }
         if (expireTimeMillis > 0) {
             tokenRespDTO.setExpiresIn(expireTimeMillis / SECONDS_TO_MILISECONDS_FACTOR);
