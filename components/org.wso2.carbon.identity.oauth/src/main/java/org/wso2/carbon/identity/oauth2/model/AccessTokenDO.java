@@ -86,6 +86,25 @@ public class AccessTokenDO extends CacheEntry {
         this.authorizationCode = authorizationCode;
     }
 
+    /**
+     * Create a copy of the passed token DO object.
+     *
+     * @param tokenDO Original Token DO
+     */
+    public AccessTokenDO(AccessTokenDO tokenDO) {
+
+        this.consumerKey = tokenDO.getConsumerKey();
+        this.authzUser = tokenDO.getAuthzUser();
+        this.scope = tokenDO.getScope();
+        this.issuedTime = tokenDO.getIssuedTime();
+        this.refreshTokenIssuedTime = tokenDO.getRefreshTokenIssuedTime();
+        this.validityPeriodInMillis = tokenDO.getValidityPeriodInMillis();
+        this.validityPeriod = tokenDO.getValidityPeriod();
+        this.refreshTokenValidityPeriodInMillis = tokenDO.getRefreshTokenValidityPeriodInMillis();
+        this.refreshTokenValidityPeriod = tokenDO.getValidityPeriod();
+        this.tokenType = tokenDO.getTokenType();
+    }
+
     public AccessTokenDO() {
 
     }

@@ -370,6 +370,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     private OAuth2AccessTokenRespDTO generateNewAccessTokenResponse(OAuthTokenReqMessageContext tokReqMsgCtx, String scope,
             String consumerKey, AccessTokenDO existingTokenBean, OauthTokenIssuer oauthTokenIssuer)
             throws IdentityOAuth2Exception {
+
         OAuthAppDO oAuthAppBean = getoAuthApp(consumerKey);
         Timestamp timestamp = new Timestamp(new Date().getTime());
         long validityPeriodInMillis = getConfiguredExpiryTimeForApplication(tokReqMsgCtx, consumerKey, oAuthAppBean);
@@ -460,18 +461,47 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         }
     }
 
-    private void updateCacheIfEnabled(AccessTokenDO newTokenBean, String scope) {
+    private void updateCacheIfEnabled(AccessTokenDO newTokenBean, String scope)
+            throws IdentityOAuth2Exception {
+
         if (isHashDisabled && cacheEnabled) {
-            OAuthCacheKey cacheKey = getOAuthCacheKey(scope, newTokenBean.getConsumerKey(), newTokenBean.getAuthzUser().toString());
-            oauthCache.addToCache(cacheKey, newTokenBean);
-            // Adding AccessTokenDO to improve validation performance
-            OAuthCacheKey accessTokenCacheKey = new OAuthCacheKey(newTokenBean.getAccessToken());
-            oauthCache.addToCache(accessTokenCacheKey, newTokenBean);
-            if (log.isDebugEnabled()) {
-                log.debug("Access token was added to OAuthCache for cache key : " + cacheKey.getCacheKeyString());
-                if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
-                    log.debug("Access token was added to OAuthCache for cache key(hashed) : "
-                            + DigestUtils.sha256Hex(accessTokenCacheKey.getCacheKeyString()));
+            OauthTokenIssuer tokenIssuer = null;
+            try {
+                OAuthCacheKey cacheKey =
+                        getOAuthCacheKey(scope, newTokenBean.getConsumerKey(), newTokenBean.getAuthzUser().toString());
+                oauthCache.addToCache(cacheKey, newTokenBean);
+                // Adding AccessTokenDO to improve validation performance
+                tokenIssuer = OAuth2Util.getOAuthTokenIssuerForOAuthApp(newTokenBean.getConsumerKey());
+                String tokenAlias = tokenIssuer.getAccessTokenHash(newTokenBean.getAccessToken());
+                OAuthCacheKey accessTokenCacheKey = new OAuthCacheKey(tokenAlias);
+
+                // We have to set the token alias as the access token of the cache entry explicitly, since the
+                // incoming token DO has the token sent to the client. (Ex: When JWTTokenIssuer is used, issued JWT
+                // comes as the access token.
+                AccessTokenDO tokenDO = new AccessTokenDO(newTokenBean);
+                tokenDO.setAccessToken(tokenAlias);
+                oauthCache.addToCache(accessTokenCacheKey, tokenDO);
+                if (log.isDebugEnabled()) {
+                    log.debug("Access token was added to OAuthCache for cache key : " + cacheKey.getCacheKeyString());
+                    if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                        log.debug("Access token was added to OAuthCache for cache key(hashed) : "
+                                + DigestUtils.sha256Hex(accessTokenCacheKey.getCacheKeyString()));
+                    }
+                }
+            } catch (OAuthSystemException e) {
+                if (IdentityUtil.isTokenLoggable(newTokenBean.getAccessToken())) {
+                    throw new IdentityOAuth2Exception("Error while getting the token alias from token issuer: " +
+                            tokenIssuer.toString() + " for the token: " + newTokenBean.getAccessToken(), e);
+                } else {
+                    throw new IdentityOAuth2Exception("Error while getting the token alias from token issuer: " +
+                            tokenIssuer.toString(), e);
+                }
+            } catch (InvalidOAuthClientException e) {
+                if (IdentityUtil.isTokenLoggable(newTokenBean.getAccessToken())) {
+                    throw new IdentityOAuth2Exception("Error while getting the token issuer for the token: " +
+                            newTokenBean.getAccessToken(), e);
+                } else {
+                    throw new IdentityOAuth2Exception("Error while getting the token issuer", e);
                 }
             }
         }
