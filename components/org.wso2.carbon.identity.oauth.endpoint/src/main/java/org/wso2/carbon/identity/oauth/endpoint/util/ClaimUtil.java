@@ -352,30 +352,10 @@ public class ClaimUtil {
         AccessTokenDO accessTokenDO = null;
         try {
             accessTokenDO = OAuth2Util.findAccessToken(
-                    tokenResponse.getAuthorizationContextToken().getTokenString());
+                    tokenResponse.getAuthorizationContextToken().getTokenString(), false);
         } catch (IdentityOAuth2Exception e) {
             throw new UserInfoEndpointException("Error occurred while obtaining access token.", e);
         }
         return accessTokenDO.getAccessToken();
-    private static String getAccessToken(OAuth2TokenValidationResponseDTO tokenResponse) {
-        return tokenResponse.getAuthorizationContextToken().getTokenString();
     }
-
-    private static String getAccessTokenIdentifier(OAuth2TokenValidationResponseDTO tokenResponse) {
-
-        String accessToken = tokenResponse.getAuthorizationContextToken().getTokenString();
-        String tokenIdentifier = null;
-        try {
-            OauthTokenIssuer tokenIssuer = OAuth2Util.getTokenIssuer(accessToken);
-            if (tokenIssuer != null) {
-                tokenIdentifier = tokenIssuer.getAccessTokenHash(accessToken);
-            }
-        } catch (OAuthSystemException e) {
-            log.error("Error while getting token identifier", e);
-        } catch (IdentityOAuth2Exception e) {
-            log.error("Error while retrieving token issuer", e);
-        }
-        return tokenIdentifier;
-    }
-
 }

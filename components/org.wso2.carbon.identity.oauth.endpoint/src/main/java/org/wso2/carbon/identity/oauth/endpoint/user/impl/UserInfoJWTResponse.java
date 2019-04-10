@@ -105,11 +105,6 @@ public class UserInfoJWTResponse extends AbstractUserInfoResponseBuilder {
         if (isJWTSignedWithSPKey) {
             signingTenantDomain = spTenantDomain;
         } else {
-            AccessTokenDO accessTokenDO = getAccessTokenDO(tokenResponse.getAuthorizationContextToken().getTokenString());
-            signingTenantDomain = accessTokenDO.getAuthzUser().getTenantDomain();
-        }
-        return signingTenantDomain;
-    }
             signingTenantDomain = getAuthzUserTenantDomain(tokenResponse);
         }
         return signingTenantDomain;
@@ -120,18 +115,10 @@ public class UserInfoJWTResponse extends AbstractUserInfoResponseBuilder {
 
         AccessTokenDO accessTokenDO = null;
         try {
-            OauthTokenIssuer tokenIssuer = OAuth2Util.getTokenIssuer(accessToken);
-            String tokenIdentifier = null;
-            try {
-                tokenIdentifier = tokenIssuer.getAccessTokenHash(accessToken);
-            } catch (OAuthSystemException e) {
-                log.error("Error while getting token identifier", e);
-            }
-            accessTokenDO = OAuth2Util.getAccessTokenDOfromTokenIdentifier(tokenIdentifier);
-            accessTokenDO = OAuth2Util.findAccessToken(tokenResponse.getAuthorizationContextToken().getTokenString());
+            accessTokenDO = OAuth2Util.findAccessToken(tokenResponse.getAuthorizationContextToken().getTokenString(),
+                    false);
         } catch (IdentityOAuth2Exception e) {
-            throw new UserInfoEndpointException("Error occurred while signing JWT", e);
-            throw new UserInfoEndpointException("Error occured while obtaining access token details.", e);
+            throw new UserInfoEndpointException("Error occurred while obtaining access token details.", e);
         }
         return accessTokenDO.getAuthzUser().getTenantDomain();
     }
