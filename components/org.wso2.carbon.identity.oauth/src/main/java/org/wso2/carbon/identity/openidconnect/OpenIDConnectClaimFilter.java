@@ -21,7 +21,6 @@ import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * This extension can be used to control how claims are filtered based on requested claims in id_token and user info
@@ -46,20 +45,6 @@ public interface OpenIDConnectClaimFilter {
                                                       String[] requestedScopes,
                                                       String clientId,
                                                       String spTenantDomain);
-
-    /**
-     * Filter list of claims based on OIDC Scopes requested.
-     * <p>
-     * Each OIDC Scope defined has a set of permitted claims. We consider the requested scopes and aggregate
-     * the allowed claims for each requested scope if they are defined as OIDC Scopes.
-     * </p>
-     *
-     * @param requestedScopes Request scopes in the OIDC request.
-     * @param spTenantDomain  Tenant domain of the service provider to which the OAuth app belongs to.
-     * @return List of claims based on the defined scopes.
-     */
-    List<String> getClaimsFilteredByOIDCScopes(Set<String> requestedScopes, String spTenantDomain);
-
 
     /**
      * Filter user claims based on user consent.

@@ -56,9 +56,6 @@ import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
 import org.wso2.carbon.identity.base.IdentityConstants;
-import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataHandler;
-import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
-import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
@@ -92,8 +89,6 @@ import org.wso2.carbon.identity.oidc.session.cache.OIDCBackChannelAuthCodeCacheK
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
 import org.wso2.carbon.identity.openidconnect.OIDCConstants;
 import org.wso2.carbon.identity.openidconnect.OIDCRequestObjectUtil;
-import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilter;
-import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImpl;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.registry.core.utils.UUIDGenerator;
@@ -191,8 +186,6 @@ public class OAuth2AuthzEndpoint {
     private static final String DISPLAY_NAME = "DisplayName";
     private static final String ID_TOKEN = "id_token";
     private static final String ACCESS_CODE = "code";
-
-    private static final String OIDC_DIALECT = "http://wso2.org/oidc/claim";
 
     private String sessionId;
 
@@ -1872,44 +1865,13 @@ public class OAuth2AuthzEndpoint {
         try {
             ConsentClaimsData claimsForApproval = getConsentRequiredClaims(user, serviceProvider, useExistingConsents);
             if (claimsForApproval != null) {
-                String requestClaimsQueryParam = null;
-                List<ClaimMetaData> requestedOidcClaimsList = new ArrayList<>();
-                List<String> localClaimsOfOidcClaims = new ArrayList<>();
-
-                OpenIDConnectClaimFilterImpl openIDConnectClaimFilter = (OpenIDConnectClaimFilterImpl)
-                        PrivilegedCarbonContext.getThreadLocalCarbonContext().
-                                getOSGiService(OpenIDConnectClaimFilter.class, null);
-
-                // Get the claims uri list of all the requested scopes. Eg:- country, email
-                List<String> claimListOfScopes = openIDConnectClaimFilter.getClaimsFilteredByOIDCScopes(oauth2Params.
-                        getScopes(), spTenantDomain);
-
-                // Get the external claims relevant to all oidc scope claims.
-                Set<ExternalClaim> externalClaimSetOfOidcClaims = ClaimMetadataHandler.getInstance()
-                        .getMappingsFromOtherDialectToCarbon
-                                (OIDC_DIALECT, new HashSet<String>(claimListOfScopes), spTenantDomain);
-
-                /* Get the locally mapped claims for all the external claims of requested scope claims. Eg:-
-                http://wso2.org/claims/country, http://wso2.org/claims/emailaddress
-                 */
-                for (ExternalClaim externalClaim : externalClaimSetOfOidcClaims) {
-                    localClaimsOfOidcClaims.add(externalClaim.getMappedLocalClaim());
-                }
-
-                /* Check whether the local claim of oidc claims contains the requested claims. If it contains add
-                it as requested claim.
-                 */
-                for (ClaimMetaData claimMetaData : claimsForApproval.getRequestedClaims()) {
-                    if (localClaimsOfOidcClaims.contains(claimMetaData.getClaimUri())) {
-                        requestedOidcClaimsList.add(claimMetaData);
-                    }
-                }
-                if (CollectionUtils.isNotEmpty(requestedOidcClaimsList)) {
-                    requestClaimsQueryParam = REQUESTED_CLAIMS + "=" +
-                            buildConsentClaimString(requestedOidcClaimsList);
-                }
-
                 // Get the mandatory claims and append as query param.
+                String requestClaimsQueryParam = null;
+                if (CollectionUtils.isNotEmpty(claimsForApproval.getRequestedClaims())) {
+                    requestClaimsQueryParam = REQUESTED_CLAIMS + "=" +
+                            buildConsentClaimString(claimsForApproval.getRequestedClaims());
+                }
+
                 String mandatoryClaimsQueryParam = null;
                 if (CollectionUtils.isNotEmpty(claimsForApproval.getMandatoryClaims())) {
                     mandatoryClaimsQueryParam = MANDATORY_CLAIMS + "=" +
@@ -1922,8 +1884,6 @@ public class OAuth2AuthzEndpoint {
             String msg = "Error while handling user consent for claim for user: " + user.toFullQualifiedUsername() +
                     " for client_id: " + clientId + " of tenantDomain: " + spTenantDomain;
             throw new ConsentHandlingFailedException(msg, e);
-        } catch (ClaimMetadataException e) {
-            throw new ConsentHandlingFailedException("Error while getting claim mappings for " + OIDC_DIALECT, e);
         }
 
         if (log.isDebugEnabled()) {

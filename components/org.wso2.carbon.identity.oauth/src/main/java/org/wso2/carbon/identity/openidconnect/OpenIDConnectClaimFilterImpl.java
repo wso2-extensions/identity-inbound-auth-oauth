@@ -51,7 +51,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.apache.commons.collections.MapUtils.isEmpty;
@@ -99,8 +98,8 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
         Map<String, List<String>> scopeClaimsMap = new HashMap<>();
         int tenantId = IdentityTenantUtil.getTenantId(spTenantDomain);
         //load oidc scopes and mapped claims from the cache or db.
-        List<ScopeDTO> oidcScopesList = getOIDCScopes(tenantId);
-        for (ScopeDTO scope : oidcScopesList) {
+        List<ScopeDTO> oidcScopeClaimList = getOIDCScopeCalimsList(tenantId);
+        for (ScopeDTO scope : oidcScopeClaimList) {
             scopeClaimsMap.put(scope.getName(), Arrays.asList(scope.getClaim()));
         }
         if (MapUtils.isNotEmpty(scopeClaimsMap)) {
@@ -143,45 +142,6 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
         handleEmailVerifiedClaim(claimsToBeReturned);
 
         return claimsToBeReturned;
-    }
-
-    @Override
-    public List<String> getClaimsFilteredByOIDCScopes(Set<String> requestedScopes, String spTenantDomain) {
-
-        // Map<"openid", "first_name,last_name,username">
-        Map<String, List<String>> scopeClaimsMap = new HashMap<>();
-        int tenantId = IdentityTenantUtil.getTenantId(spTenantDomain);
-        List<String> filteredClaims = new ArrayList<>();
-        //load oidc scopes and mapped claims from the cache or db.
-        List<ScopeDTO> oidcScopesList = getOIDCScopes(tenantId);
-        if (CollectionUtils.isNotEmpty(oidcScopesList)) {
-            for (ScopeDTO scope : oidcScopesList) {
-                scopeClaimsMap.put(scope.getName(), Arrays.asList(scope.getClaim()));
-            }
-            // Iterate through scopes requested in the OAuth2/OIDC request to filter claims
-            for (String requestedScope : requestedScopes) {
-                // Check if requested scope is a supported OIDC scope value
-                if (scopeClaimsMap.containsKey(requestedScope)) {
-                    if (log.isDebugEnabled()) {
-                        log.debug("Requested scope: " + requestedScope + " is a defined OIDC Scope in tenantDomain: " +
-                                spTenantDomain + ". Filtering claims based on the permitted claims in the scope.");
-                    }
-                    // Requested scope is an registered OIDC scope. Filter and return the claims belonging to the scope.
-                    filteredClaims.addAll(getClaimUrisInSupportedOIDCScope(scopeClaimsMap, requestedScope));
-                } else {
-                    if (log.isDebugEnabled()) {
-                        log.debug("Requested scope: " + requestedScope + " is not a defined OIDC Scope in " +
-                                "tenantDomain: " + spTenantDomain + ".");
-                    }
-                }
-            }
-        } else {
-            if (log.isDebugEnabled()) {
-                log.debug("No OIDC scopes defined for tenantDomain: " + spTenantDomain + ". Cannot proceed with " +
-                        "getting claims for the requested scopes. Therefore returning an empty claim list.");
-            }
-        }
-        return filteredClaims;
     }
 
     @Override
@@ -312,15 +272,15 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
         return propertiesToReturn;
     }
 
-    private List<ScopeDTO> getOIDCScopes(int tenantId) {
+    private List<ScopeDTO> getOIDCScopeCalimsList(int tenantId) {
 
-        List<ScopeDTO> oidcScopesList = new ArrayList<>();
+        List<ScopeDTO> oidcScopesClaimsList = new ArrayList<>();
         try {
-           oidcScopesList = OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().getScopes(tenantId);
+           oidcScopesClaimsList = OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().getScopes(tenantId);
         } catch (IdentityOAuth2Exception e) {
             log.error("Error while loading oidc scopes and claims for the tenant: " + tenantId);
         }
-        return oidcScopesList;
+        return oidcScopesClaimsList;
     }
 
     private Map<String, Object> handleRequestedOIDCScope(Map<String, Object> userClaimsInOIDCDialect,
