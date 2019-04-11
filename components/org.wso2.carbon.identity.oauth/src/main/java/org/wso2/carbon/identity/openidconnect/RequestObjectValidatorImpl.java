@@ -205,7 +205,7 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
         return validateAudience(tokenEPUrl, audience);
     }
 
-    private boolean checkExpirationTime(RequestObject requestObject) {
+    private boolean checkExpirationTime(RequestObject requestObject) throws RequestObjectException {
 
         Date expirationTime = requestObject.getClaimsSet().getExpirationTime();
         if (expirationTime != null) {
@@ -217,7 +217,9 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
                         ", Expiration Time(ms) : " + expirationTimeInMillis +
                         ", TimeStamp Skew : " + timeStampSkewMillis +
                         ", Current Time : " + currentTimeInMillis + ". Token Rejected.";
-                return logAndReturnFalse(msg);
+                logAndReturnFalse(msg);
+                throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST, "Request Object " +
+                        "is Expired.");
             }
         }
         return true;
