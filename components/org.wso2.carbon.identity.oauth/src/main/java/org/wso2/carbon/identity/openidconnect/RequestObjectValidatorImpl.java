@@ -36,7 +36,6 @@ import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
-import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnException;
@@ -50,7 +49,6 @@ import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 import java.security.PublicKey;
 import java.security.cert.Certificate;
 import java.security.interfaces.RSAPublicKey;
-import java.util.Date;
 import java.util.List;
 import static org.apache.commons.lang.StringUtils.isEmpty;
 import static org.apache.commons.lang.StringUtils.isNotEmpty;
@@ -184,15 +182,13 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
     public boolean validateRequestObject(RequestObject requestObject, OAuth2Parameters oAuth2Parameters)
             throws RequestObjectException {
 
-        boolean isValid = validateClientIdAndResponseType(requestObject, oAuth2Parameters) && checkExpirationTime
-                (requestObject);
+        boolean isValid = validateClientIdAndResponseType(requestObject, oAuth2Parameters);
         if (isParamPresent(requestObject, Constants.REQUEST_URI)) {
             isValid = false;
         } else if (isParamPresent(requestObject, Constants.REQUEST)) {
             isValid = false;
         } else if (requestObject.isSigned()) {
-            isValid = isValidIssuer(requestObject, oAuth2Parameters) && isValidAudience(requestObject,
-                    oAuth2Parameters);
+            isValid = isValidIssuer(requestObject, oAuth2Parameters) && isValidAudience(requestObject, oAuth2Parameters);
         }
         return isValid;
     }
@@ -203,24 +199,6 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
         String tokenEPUrl = getTokenEpURL(oAuth2Parameters.getTenantDomain());
         List<String> audience = requestObject.getClaimsSet().getAudience();
         return validateAudience(tokenEPUrl, audience);
-    }
-
-    private boolean checkExpirationTime(RequestObject requestObject) {
-
-        Date expirationTime = requestObject.getClaimsSet().getExpirationTime();
-        if (expirationTime != null) {
-            long timeStampSkewMillis = OAuthServerConfiguration.getInstance().getTimeStampSkewInSeconds() * 1000;
-            long expirationTimeInMillis = expirationTime.getTime();
-            long currentTimeInMillis = System.currentTimeMillis();
-            if ((currentTimeInMillis + timeStampSkewMillis) > expirationTimeInMillis) {
-                String msg = "Request Object is expired." +
-                        ", Expiration Time(ms) : " + expirationTimeInMillis +
-                        ", TimeStamp Skew : " + timeStampSkewMillis +
-                        ", Current Time : " + currentTimeInMillis + ". Token Rejected.";
-                return logAndReturnFalse(msg);
-            }
-        }
-        return true;
     }
 
     protected boolean validateClientIdAndResponseType(RequestObject requestObject, OAuth2Parameters oauthRequest)

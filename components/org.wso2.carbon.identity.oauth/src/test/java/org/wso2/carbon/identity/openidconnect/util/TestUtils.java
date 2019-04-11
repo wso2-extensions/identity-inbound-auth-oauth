@@ -113,30 +113,8 @@ public class TestUtils {
     public static String buildJWT(String issuer, String subject, String jti, String audience, String algorythm,
                                   Key privateKey, long notBeforeMillis, Map<String,Object> claims)
             throws RequestObjectException {
-        long lifetimeInMillis = 3600 * 1000;
-        return buildJWTWithExpiry(issuer, subject, jti, audience, algorythm, privateKey,notBeforeMillis, claims,
-                lifetimeInMillis);
-    }
 
-    /**
-     * Return a JWT string with provided info, and default time
-     *
-     * @param issuer
-     * @param subject
-     * @param jti
-     * @param audience
-     * @param algorythm
-     * @param privateKey
-     * @param notBeforeMillis
-     * @return
-     * @throws org.wso2.carbon.identity.oauth2.RequestObjectException
-     */
-    public static String buildJWTWithExpiry(String issuer, String subject, String jti, String audience, String
-            algorythm, Key privateKey, long notBeforeMillis, Map<String,Object> claims, long lifetimeInMillis)
-            throws RequestObjectException {
-
-        JWTClaimsSet jwtClaimsSet = getJwtClaimsSet(issuer, subject, jti, audience, notBeforeMillis, claims,
-                lifetimeInMillis);
+        JWTClaimsSet jwtClaimsSet = getJwtClaimsSet(issuer, subject, jti, audience, notBeforeMillis, claims);
         if (JWSAlgorithm.NONE.getName().equals(algorythm)) {
             return new PlainJWT(jwtClaimsSet).serialize();
         }
@@ -144,17 +122,17 @@ public class TestUtils {
         return signJWTWithRSA(jwtClaimsSet, privateKey);
     }
 
-    private static JWTClaimsSet getJwtClaimsSet(String issuer, String subject, String jti, String audience, long
-            notBeforeMillis, Map<String, Object> claims, long lifetimeInMillis) {
-
+    private static JWTClaimsSet getJwtClaimsSet(String issuer, String subject, String jti, String audience, long notBeforeMillis, Map<String, Object> claims) {
+        long lifetimeInMillis = 3600 * 1000;
         long curTimeInMillis = Calendar.getInstance().getTimeInMillis();
+
         // Set claims to jwt token.
         JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
         jwtClaimsSetBuilder.issuer(issuer);
         jwtClaimsSetBuilder.subject(subject);
         jwtClaimsSetBuilder.audience(Arrays.asList(audience));
         jwtClaimsSetBuilder.jwtID(jti);
-        jwtClaimsSetBuilder.expirationTime(new Date((curTimeInMillis + lifetimeInMillis)));
+        jwtClaimsSetBuilder.expirationTime(new Date(curTimeInMillis + lifetimeInMillis));
         jwtClaimsSetBuilder.issueTime(new Date(curTimeInMillis));
 
         if (notBeforeMillis > 0) {
@@ -274,9 +252,7 @@ public class TestUtils {
     public static String buildJWE(String issuer, String subject, String jti, String audience, String algorythm,
                                   Key privateKey,Key publicKey, long notBeforeMillis, Map<String,
             Object> claims) throws RequestObjectException {
-        long lifetimeInMillis = 3600 * 1000;
-        JWTClaimsSet jwtClaimsSet = getJwtClaimsSet(issuer, subject, jti, audience, notBeforeMillis, claims,
-                lifetimeInMillis);
+        JWTClaimsSet jwtClaimsSet = getJwtClaimsSet(issuer, subject, jti, audience, notBeforeMillis, claims);
 
         if (JWSAlgorithm.NONE.getName().equals(algorythm)) {
             return getEncryptedJWT((RSAPublicKey) publicKey, jwtClaimsSet);
