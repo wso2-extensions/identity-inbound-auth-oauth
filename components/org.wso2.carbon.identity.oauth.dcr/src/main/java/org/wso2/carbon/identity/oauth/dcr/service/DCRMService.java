@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oauth.dcr.service;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.InboundAuthenticationConfig;
@@ -45,6 +46,7 @@ import org.wso2.carbon.identity.oauth.dcr.util.DCRConstants;
 import org.wso2.carbon.identity.oauth.dcr.util.DCRMUtils;
 import org.wso2.carbon.identity.oauth.dcr.util.ErrorCodes;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
+import org.wso2.carbon.user.core.UserCoreConstants;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -610,14 +612,14 @@ public class DCRMService {
 
     private boolean isUserAuthorized(String clientId) throws DCRMServerException {
 
-        OAuthConsumerAppDTO[] oAuthConsumerAppDTOS;
+        OAuthConsumerAppDTO oAuthConsumerAppDTO;
         try {
             // Get applications owned by the user
-            oAuthConsumerAppDTOS = oAuthAdminService.getAllOAuthApplicationData();
-            for (OAuthConsumerAppDTO appDTO : oAuthConsumerAppDTOS) {
-                if (clientId.equals(appDTO.getOauthConsumerKey())) {
-                    return true;
-                }
+            oAuthConsumerAppDTO = oAuthAdminService.getOAuthApplicationData(clientId);
+            String appUserName = oAuthConsumerAppDTO.getUsername();
+            String threadLocalUserName = CarbonContext.getThreadLocalCarbonContext().getUsername().concat(UserCoreConstants.TENANT_DOMAIN_COMBINER).concat(CarbonContext.getThreadLocalCarbonContext().getTenantDomain());
+            if (threadLocalUserName.equals(appUserName)) {
+                return true;
             }
         } catch (IdentityOAuthAdminException e) {
             throw DCRMUtils.generateServerException(
