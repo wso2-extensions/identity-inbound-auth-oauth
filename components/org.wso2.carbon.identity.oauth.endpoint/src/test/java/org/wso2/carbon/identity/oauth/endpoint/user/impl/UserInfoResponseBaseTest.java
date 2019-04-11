@@ -1,5 +1,6 @@
 package org.wso2.carbon.identity.oauth.endpoint.user.impl;
 
+import org.apache.oltu.oauth2.as.issuer.OAuthIssuer;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
@@ -28,6 +29,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.token.JWTTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuerImpl;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -48,6 +50,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyMap;
 import static org.mockito.Matchers.anyString;
@@ -99,6 +102,12 @@ public class UserInfoResponseBaseTest extends PowerMockTestCase {
 
     public static final String CUSTOM_CLAIM_VALUE = "custom_claim_value";
     public static final String[] OIDC_SCOPE_ARRAY = new String[]{OIDC_SCOPE};
+    private static final String DEFAULT_TOKEN_TYPE = "Default";
+    private static final String JWT_TOKEN_TYPE = "JWT";
+    private boolean isFirst = true;
+
+    @Mock
+    private OAuthIssuer oAuthIssuer;
     @Mock
     protected RegistryService registryService;
     @Mock
@@ -406,5 +415,29 @@ public class UserInfoResponseBaseTest extends PowerMockTestCase {
         assertFalse(claimsInResponse.isEmpty());
         assertNotNull(claimsInResponse.get(SUB));
     }
-}
 
+    protected void mockObjectsRelatedToTokenValidation() throws Exception {
+
+        mockStatic(OAuthServerConfiguration.class);
+        when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
+        when(OAuthServerConfiguration.getInstance().getOAuthTokenGenerator()).thenReturn(oAuthIssuer);
+        when(OAuthServerConfiguration.getInstance().getSignatureAlgorithm()).thenReturn("SHA256withRSA");
+
+        // We cannot call below instructions more than once in the test class as they throw some errors. Therefore
+        // using the isFirst boolean.
+        if (isFirst) {
+            when(OAuth2Util.findAccessToken(anyString(), anyBoolean())).thenCallRealMethod();
+            when(OAuth2Util.class, "getAccessTokenDOFromMatchingTokenIssuer", anyString(), anyMap(), anyBoolean()).
+                    thenCallRealMethod();
+            AccessTokenDO accessTokenDO = new AccessTokenDO();
+            accessTokenDO.setAccessToken(ACCESS_TOKEN);
+            when(OAuth2Util.getAccessTokenDOFromTokenIdentifier(anyString(), anyBoolean())).thenReturn(accessTokenDO);
+            isFirst = false;
+        }
+
+        Map<String, OauthTokenIssuer> oauthTokenIssuerMap = new HashMap<>();
+        oauthTokenIssuerMap.put(DEFAULT_TOKEN_TYPE, new OauthTokenIssuerImpl());
+        oauthTokenIssuerMap.put(JWT_TOKEN_TYPE, new JWTTokenIssuer());
+        when(OAuthServerConfiguration.getInstance().getOauthTokenIssuerMap()).thenReturn(oauthTokenIssuerMap);
+    }
+}
