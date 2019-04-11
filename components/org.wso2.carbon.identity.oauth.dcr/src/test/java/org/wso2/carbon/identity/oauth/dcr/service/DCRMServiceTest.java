@@ -165,6 +165,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
     @Test
     public void getApplicationDTOTest() throws Exception {
 
+        startTenantFlow();
         OAuthConsumerAppDTO dto = new OAuthConsumerAppDTO();
         dto.setApplicationName(dummyClientName);
         String dummyConsumerSecret = "dummyConsumerSecret";
@@ -172,6 +173,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
         dto.setOauthConsumerKey(dummyConsumerKey);
         String dummyCallbackUrl = "dummyCallbackUrl";
         dto.setCallbackUrl(dummyCallbackUrl);
+        dto.setUsername(dummyUserName.concat("@").concat(dummyTenantDomain));
 
         OAuthConsumerAppDTO[] oAuthConsumerAppDTOS = new OAuthConsumerAppDTO[]{dto};
 
@@ -508,6 +510,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
         oAuthConsumerApp.setGrantTypes(grantType);
         oAuthConsumerApp.setOAuthVersion(OAUTH_VERSION);
         oAuthConsumerApp.setOauthConsumerKey("dummyConsumerKey");
+        oAuthConsumerApp.setUsername(dummyUserName.concat("@").concat(dummyTenantDomain));
 
         when(mockOAuthAdminService
                 .getOAuthApplicationDataByAppName(dummyClientName)).thenReturn(oAuthConsumerApp);
