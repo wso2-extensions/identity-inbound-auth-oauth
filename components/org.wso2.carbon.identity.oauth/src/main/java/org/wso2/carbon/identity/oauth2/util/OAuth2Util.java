@@ -2170,6 +2170,21 @@ public class OAuth2Util {
         }
     }
 
+    public static String getThumbPrint(Certificate certificate, String alias) throws IdentityOAuth2Exception {
+
+        try {
+
+            return getThumbPrint(certificate);
+
+        } catch (CertificateEncodingException e) {
+            String error = "Encoding error while obtaining thumbPrint for alias: " + alias;
+            throw new IdentityOAuth2Exception(error, e);
+        } catch (NoSuchAlgorithmException e) {
+            String error = "Error in obtaining SHA-1 thumbprint for alias: " + alias;
+            throw new IdentityOAuth2Exception(error, e);
+        }
+    }
+
     private static String getThumbPrint(Certificate certificate) throws NoSuchAlgorithmException, CertificateEncodingException {
         // Generate the SHA-1 thumbprint of the certificate.
         MessageDigest digestValue = MessageDigest.getInstance("SHA-1");

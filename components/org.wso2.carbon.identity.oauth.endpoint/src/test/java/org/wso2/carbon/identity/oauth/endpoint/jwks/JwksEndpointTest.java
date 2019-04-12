@@ -17,6 +17,7 @@
  */
 package org.wso2.carbon.identity.oauth.endpoint.jwks;
 
+import com.nimbusds.jose.JWSAlgorithm;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -38,6 +39,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 import org.wso2.carbon.utils.CarbonUtils;
+
 import java.io.FileInputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -47,6 +49,7 @@ import java.security.KeyStore;
 import java.util.HashMap;
 import java.util.Map;
 
+import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
@@ -110,6 +113,7 @@ public class JwksEndpointTest extends PowerMockIdentityBaseTest {
         when(serverConfiguration.getFirstProperty("Security.KeyStore.Password")).thenReturn("wso2carbon");
         when(serverConfiguration.getFirstProperty("Security.KeyStore.KeyAlias")).thenReturn("wso2carbon");
 
+
         ThreadLocal<Map<String, Object>> threadLocalProperties = new ThreadLocal() {
             protected Map<String, Object> initialValue() {
                 return new HashMap();
@@ -129,12 +133,13 @@ public class JwksEndpointTest extends PowerMockIdentityBaseTest {
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(tenantId);
 
         mockStatic(OAuth2Util.class);
-        if (tenantDomain == null) {
-            when(OAuth2Util.getThumbPrint(anyString(), anyInt())).thenThrow(new IdentityOAuth2Exception("error"));
-        } else {
-            when(OAuth2Util.getThumbPrint(anyString(), anyInt())).thenReturn(CERT_THUMB_PRINT);
-        }
 
+        if (tenantDomain == null) {
+            when(OAuth2Util.getThumbPrint(any(), anyString())).thenThrow(new IdentityOAuth2Exception("error"));
+        } else {
+            when(OAuth2Util.getThumbPrint(any(), anyString())).thenReturn(CERT_THUMB_PRINT);
+        }
+        when(OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(anyString())).thenReturn(JWSAlgorithm.RS256);
         mockStatic(KeyStoreManager.class);
         when(KeyStoreManager.getInstance(anyInt())).thenReturn(keyStoreManager);
         when(keyStoreManager.getKeyStore("foo-com.jks")).thenReturn(getKeyStoreFromFile("foo-com.jks", "foo.com"));
@@ -154,7 +159,7 @@ public class JwksEndpointTest extends PowerMockIdentityBaseTest {
                 assertTrue(result.contains("Invalid Tenant"),
                         "Error message for non existing tenant is not found");
             } else if (tenantDomain == null) {
-                assertTrue(result.contains("Error while generating the keyset"),
+                assertTrue(result.contains("Error while generating the keyset for"),
                         "Error message for thrown exception is not found");
             } else {
                 fail("Unexpected exception: " + e.getMessage());
@@ -168,6 +173,7 @@ public class JwksEndpointTest extends PowerMockIdentityBaseTest {
         mockStatic(OAuthServerConfiguration.class);
         when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
         when(oAuthServerConfiguration.getPersistenceProcessor()).thenReturn(tokenPersistenceProcessor);
+        when(oAuthServerConfiguration.getIdTokenSignatureAlgorithm()).thenReturn("SHA256withRSA");
     }
 
     private KeyStore getKeyStoreFromFile(String keystoreName, String password) throws Exception {
