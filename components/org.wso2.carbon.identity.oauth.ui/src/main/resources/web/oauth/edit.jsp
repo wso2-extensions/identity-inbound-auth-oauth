@@ -611,7 +611,6 @@
                                     <td><input class="text-box-big" id="callback" name="callback"
                                                type="text" value="<%=Encode.forHtmlAttribute(app.getCallbackUrl())%>"/></td>
                                 </tr>
-                                <% if(client.isPKCESupportedEnabled()) {%>
                                 <tr id="pkce_enable">
                                     <td class="leftCol-med" colspan="2">
                                         <label>
@@ -634,7 +633,6 @@
                                         </div>
                                     </td>
                                 </tr>
-                                <% } %>
                                 <tr id="renew_refresh_token_per_app">
                                     <td colspan="2">
                                         <label>
