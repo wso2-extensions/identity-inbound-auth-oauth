@@ -23,7 +23,6 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.error.OAuthError;
-import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.identity.application.authentication.framework.exception.FrameworkException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
@@ -49,7 +48,6 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
-import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.OIDCClaimUtil;
 import org.wso2.carbon.user.api.RealmConfiguration;
@@ -111,7 +109,7 @@ public class ClaimUtil {
 
             try {
                 AccessTokenDO accessTokenDO = OAuth2Util.getAccessTokenDOfromTokenIdentifier(
-                        getAccessTokenIdentifier(tokenResponse));
+                        OAuth2Util.getAccessTokenIdentifier(tokenResponse));
                 // If the authenticated user is a federated user and had not mapped to local users, no requirement to
                 // retrieve claims from local userstore.
                 if (!OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && accessTokenDO != null) {
@@ -338,24 +336,13 @@ public class ClaimUtil {
     private static Map<ClaimMapping, String> getUserAttributesFromCache(OAuth2TokenValidationResponseDTO tokenResponse)
             throws UserInfoEndpointException {
 
-        AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(getAccessTokenIdentifier(tokenResponse));
-        AuthorizationGrantCacheEntry cacheEntry = AuthorizationGrantCache.getInstance().getValueFromCacheByToken(cacheKey);
+        AuthorizationGrantCacheKey cacheKey =
+                new AuthorizationGrantCacheKey(OAuth2Util.getAccessTokenIdentifier(tokenResponse));
+        AuthorizationGrantCacheEntry cacheEntry =
+                AuthorizationGrantCache.getInstance().getValueFromCacheByToken(cacheKey);
         if (cacheEntry == null) {
             return new HashMap<>();
         }
         return cacheEntry.getUserAttributes();
-    }
-
-    private static String getAccessTokenIdentifier(OAuth2TokenValidationResponseDTO tokenResponse)
-            throws UserInfoEndpointException {
-
-        AccessTokenDO accessTokenDO = null;
-        try {
-            accessTokenDO = OAuth2Util.findAccessToken(
-                    tokenResponse.getAuthorizationContextToken().getTokenString(), false);
-        } catch (IdentityOAuth2Exception e) {
-            throw new UserInfoEndpointException("Error occurred while obtaining access token.", e);
-        }
-        return accessTokenDO.getAccessToken();
     }
 }

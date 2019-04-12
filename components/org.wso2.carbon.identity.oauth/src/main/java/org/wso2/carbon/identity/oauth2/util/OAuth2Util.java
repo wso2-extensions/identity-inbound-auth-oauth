@@ -82,6 +82,7 @@ import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
+import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
@@ -89,6 +90,7 @@ import org.wso2.carbon.identity.oauth2.config.SpOAuth2ExpiryTimeConfiguration;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2IntrospectionResponseDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
+import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
@@ -132,7 +134,6 @@ import java.sql.Timestamp;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -158,12 +159,10 @@ public class OAuth2Util {
     public static final String ACCESS_TOKEN_DO = "AccessTokenDo";
     public static final String OAUTH2_VALIDATION_MESSAGE_CONTEXT = "OAuth2TokenValidationMessageContext";
     private static final String ESSENTAIL = "essential";
-    private static final String REG_HIDDEN_PROPERTY_PREFIX = "registry.";
     public static final String CONFIG_ELEM_OAUTH = "OAuth";
     public static final String OPENID_CONNECT = "OpenIDConnect";
     public static final String ENABLE_OPENID_CONNECT_AUDIENCES = "EnableAudiences";
     public static final String OPENID_CONNECT_AUDIENCE = "audience";
-    private static final String OPENID_CONNECT_AUDIENCES = "Audiences";
     private static final String DOT_SEPARATER = ".";
     private static final String IDP_ENTITY_ID = "IdPEntityId";
 
@@ -2857,5 +2856,29 @@ public class OAuth2Util {
                 allOAuthTokenIssuerMap.get(OAuthServerConfiguration.DEFAULT_TOKEN_TYPE));
         allOAuthTokenIssuerMap.remove(OAuthServerConfiguration.DEFAULT_TOKEN_TYPE);
     }
-}
 
+    /**
+     * Return access token identifier from OAuth2TokenValidationResponseDTO. This method validated the token against
+     * the cache and the DB.
+     *
+     * @param tokenResponse OAuth2TokenValidationResponseDTO object.
+     * @return extracted access token identifier.
+     * @throws UserInfoEndpointException
+     */
+    public static String getAccessTokenIdentifier(OAuth2TokenValidationResponseDTO tokenResponse)
+            throws UserInfoEndpointException {
+
+        AccessTokenDO accessTokenDO = null;
+        try {
+            accessTokenDO = OAuth2Util.findAccessToken(
+                    tokenResponse.getAuthorizationContextToken().getTokenString(), false);
+        } catch (IdentityOAuth2Exception e) {
+            throw new UserInfoEndpointException("Error occurred while obtaining access token.", e);
+        }
+
+        if (accessTokenDO != null) {
+            return accessTokenDO.getAccessToken();
+        }
+        return null;
+    }
+}
