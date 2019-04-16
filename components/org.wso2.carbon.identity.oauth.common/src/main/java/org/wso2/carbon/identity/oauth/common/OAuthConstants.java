@@ -143,6 +143,7 @@ public final class OAuthConstants {
         public static final String IWA_NTLM = "iwa:ntlm";
         public static final String PASSWORD = "password";
         public static final String AUTHORIZATION_CODE = "authorization_code";
+        public static final String REFRESH_TOKEN = "refresh_token";
 
         private GrantTypes() {
         }
