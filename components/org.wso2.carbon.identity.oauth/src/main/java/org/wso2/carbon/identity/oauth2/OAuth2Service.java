@@ -334,32 +334,22 @@ public class OAuth2Service extends AbstractAdmin {
 
                 } else {
 
-                    OAuthCacheKey cacheKey = new OAuthCacheKey(revokeRequestDTO.getToken());
-                    CacheEntry result = OAuthCache.getInstance().getValueFromCache(cacheKey);
-
-                    // check cache hit, do the type check.
-                    if (result != null && result instanceof AccessTokenDO) {
-                        accessTokenDO = (AccessTokenDO) result;
-                    }
-
+                    accessTokenDO = OAuth2Util.findAccessToken(revokeRequestDTO.getToken(), true);
                     if (accessTokenDO == null) {
-                        accessTokenDO = OAuth2Util.findAccessToken(revokeRequestDTO.getToken(), true);
-                        if (accessTokenDO == null) {
 
-                            refreshTokenDO = OAuthTokenPersistenceFactory.getInstance()
-                                    .getTokenManagementDAO().validateRefreshToken(revokeRequestDTO.getConsumerKey(),
-                                            revokeRequestDTO.getToken());
+                        refreshTokenDO = OAuthTokenPersistenceFactory.getInstance()
+                                .getTokenManagementDAO().validateRefreshToken(revokeRequestDTO.getConsumerKey(),
+                                        revokeRequestDTO.getToken());
 
-                            if (refreshTokenDO == null ||
-                                    StringUtils.isEmpty(refreshTokenDO.getRefreshTokenState()) ||
-                                    !(OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE
-                                            .equals(refreshTokenDO.getRefreshTokenState()) ||
-                                            OAuthConstants.TokenStates.TOKEN_STATE_EXPIRED
-                                                    .equals(refreshTokenDO.getRefreshTokenState()))) {
-                                invokePostRevocationListeners(revokeRequestDTO, revokeResponseDTO, accessTokenDO,
-                                        refreshTokenDO);
-                                return revokeResponseDTO;
-                            }
+                        if (refreshTokenDO == null ||
+                                StringUtils.isEmpty(refreshTokenDO.getRefreshTokenState()) ||
+                                !(OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE
+                                        .equals(refreshTokenDO.getRefreshTokenState()) ||
+                                        OAuthConstants.TokenStates.TOKEN_STATE_EXPIRED
+                                                .equals(refreshTokenDO.getRefreshTokenState()))) {
+                            invokePostRevocationListeners(revokeRequestDTO, revokeResponseDTO, accessTokenDO,
+                                    refreshTokenDO);
+                            return revokeResponseDTO;
                         }
                     }
                 }
