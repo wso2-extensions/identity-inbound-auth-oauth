@@ -61,6 +61,32 @@ public class RequestObjectService {
     /**
      * To invoke the RequestObjectPersistenceFactory to retrieve request object.
      *
+     * @param sessionDataKey sessionDataKey
+     * @param isUserInfo isUserInfo
+     * @return list of claims which have marked as essential in the request object.
+     * @throws RequestObjectException
+     */
+    private List<RequestedClaim> getRequestedClaimsbySessionDataKey(String sessionDataKey, boolean isUserInfo)
+            throws RequestObjectException {
+
+        List<RequestedClaim> essentialClaims;
+        if (log.isDebugEnabled()) {
+            log.debug("Invoking the RequestObjectPersistenceFactory to retrieve essential claims list " +
+                    "by using session data key:" + sessionDataKey + ", isUserInfo: " + isUserInfo);
+        }
+
+        try {
+            essentialClaims = OAuthTokenPersistenceFactory.getInstance().getRequestObjectDAO()
+                    .getRequestedClaimsbySessionDataKey(sessionDataKey, isUserInfo);
+        } catch (IdentityOAuth2Exception e) {
+            throw new RequestObjectException(e.getMessage());
+        }
+        return essentialClaims;
+    }
+
+    /**
+     * To invoke the RequestObjectPersistenceFactory to retrieve request object.
+     *
      * @param token access token Id
      * @return list of claims which have marked as essential in the request object.
      * @throws RequestObjectException
@@ -80,6 +106,20 @@ public class RequestObjectService {
             throw new RequestObjectException(e.getMessage());
         }
         return essentialClaims;
+    }
+
+    /**
+     * To invoke the RequestObjectPersistenceFactory to retrieve request object for sessionDataKey.
+     *
+     * @param sessionDataKey  sessionDataKey
+     * @param isUserInfo  isUserInfo
+     * @return list of claims which have marked as essential in the request object.
+     * @throws RequestObjectException
+     */
+    public List<RequestedClaim> getRequestedClaimsForSessionDataKey(String sessionDataKey, boolean isUserInfo)
+            throws RequestObjectException {
+
+        return getRequestedClaimsbySessionDataKey(sessionDataKey, isUserInfo);
     }
 
     /**
