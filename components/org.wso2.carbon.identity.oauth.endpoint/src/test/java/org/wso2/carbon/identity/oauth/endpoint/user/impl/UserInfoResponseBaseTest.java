@@ -104,7 +104,6 @@ public class UserInfoResponseBaseTest extends PowerMockTestCase {
     public static final String[] OIDC_SCOPE_ARRAY = new String[]{OIDC_SCOPE};
     private static final String DEFAULT_TOKEN_TYPE = "Default";
     private static final String JWT_TOKEN_TYPE = "JWT";
-    private boolean isFirst = true;
 
     @Mock
     private OAuthIssuer oAuthIssuer;
@@ -422,19 +421,12 @@ public class UserInfoResponseBaseTest extends PowerMockTestCase {
         when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
         when(OAuthServerConfiguration.getInstance().getOAuthTokenGenerator()).thenReturn(oAuthIssuer);
         when(OAuthServerConfiguration.getInstance().getSignatureAlgorithm()).thenReturn("SHA256withRSA");
-
-        // We cannot call below instructions more than once in the test class as they throw some errors. Therefore
-        // using the isFirst boolean.
-        if (isFirst) {
-            when(OAuth2Util.findAccessToken(anyString(), anyBoolean())).thenCallRealMethod();
-            when(OAuth2Util.class, "getAccessTokenDOFromMatchingTokenIssuer", anyString(), anyMap(), anyBoolean()).
-                    thenCallRealMethod();
-            AccessTokenDO accessTokenDO = new AccessTokenDO();
-            accessTokenDO.setAccessToken(ACCESS_TOKEN);
-            when(OAuth2Util.getAccessTokenDOFromTokenIdentifier(anyString(), anyBoolean())).thenReturn(accessTokenDO);
-            isFirst = false;
-        }
-
+        when(OAuth2Util.findAccessToken(anyString(), anyBoolean())).thenCallRealMethod();
+        when(OAuth2Util.class, "getAccessTokenDOFromMatchingTokenIssuer", anyString(), anyMap(), anyBoolean()).
+                thenCallRealMethod();
+        AccessTokenDO accessTokenDO = new AccessTokenDO();
+        accessTokenDO.setAccessToken(ACCESS_TOKEN);
+        when(OAuth2Util.getAccessTokenDOFromTokenIdentifier(anyString(), anyBoolean())).thenReturn(accessTokenDO);
         Map<String, OauthTokenIssuer> oauthTokenIssuerMap = new HashMap<>();
         oauthTokenIssuerMap.put(DEFAULT_TOKEN_TYPE, new OauthTokenIssuerImpl());
         oauthTokenIssuerMap.put(JWT_TOKEN_TYPE, new JWTTokenIssuer());
