@@ -1071,6 +1071,7 @@ public class OAuthAdminService extends AbstractAdmin {
     /**
      * @return true if PKCE is supported by the database, false if not
      */
+    @Deprecated
     public boolean isPKCESupportEnabled() {
 
         return OAuth2Util.isPKCESupportEnabled();
