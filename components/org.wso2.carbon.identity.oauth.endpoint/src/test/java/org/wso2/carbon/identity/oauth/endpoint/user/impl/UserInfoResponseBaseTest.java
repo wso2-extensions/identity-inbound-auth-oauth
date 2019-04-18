@@ -421,6 +421,7 @@ public class UserInfoResponseBaseTest extends PowerMockTestCase {
         when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
         when(OAuthServerConfiguration.getInstance().getOAuthTokenGenerator()).thenReturn(oAuthIssuer);
         when(OAuthServerConfiguration.getInstance().getSignatureAlgorithm()).thenReturn("SHA256withRSA");
+        when(OAuth2Util.getAccessTokenIdentifier(any())).thenCallRealMethod();
         when(OAuth2Util.findAccessToken(anyString(), anyBoolean())).thenCallRealMethod();
         when(OAuth2Util.class, "getAccessTokenDOFromMatchingTokenIssuer", anyString(), anyMap(), anyBoolean()).
                 thenCallRealMethod();
