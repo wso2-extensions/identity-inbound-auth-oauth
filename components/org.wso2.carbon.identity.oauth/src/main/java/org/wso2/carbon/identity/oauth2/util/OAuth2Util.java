@@ -2870,16 +2870,18 @@ public class OAuth2Util {
     public static String getAccessTokenIdentifier(OAuth2TokenValidationResponseDTO tokenResponse)
             throws UserInfoEndpointException {
 
-        AccessTokenDO accessTokenDO = null;
-        try {
-            accessTokenDO = OAuth2Util.findAccessToken(
-                    tokenResponse.getAuthorizationContextToken().getTokenString(), false);
-        } catch (IdentityOAuth2Exception e) {
-            throw new UserInfoEndpointException("Error occurred while obtaining access token.", e);
-        }
+        if (tokenResponse.getAuthorizationContextToken().getTokenString() != null) {
+            AccessTokenDO accessTokenDO = null;
+            try {
+                accessTokenDO = OAuth2Util.findAccessToken(
+                        tokenResponse.getAuthorizationContextToken().getTokenString(), false);
+            } catch (IdentityOAuth2Exception e) {
+                throw new UserInfoEndpointException("Error occurred while obtaining access token.", e);
+            }
 
-        if (accessTokenDO != null) {
-            return accessTokenDO.getAccessToken();
+            if (accessTokenDO != null) {
+                return accessTokenDO.getAccessToken();
+            }
         }
         return null;
     }
