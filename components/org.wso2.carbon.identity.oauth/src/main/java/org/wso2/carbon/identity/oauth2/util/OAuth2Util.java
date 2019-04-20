@@ -1212,7 +1212,10 @@ public class OAuth2Util {
 
     public static boolean validatePKCE(String referenceCodeChallenge, String verificationCode, String challenge_method,
                                        OAuthAppDO oAuthApp) throws IdentityOAuth2Exception {
-
+        //ByPass PKCE validation if PKCE Support is disabled
+        if (!isPKCESupportEnabled()) {
+            return true;
+        }
         if (oAuthApp != null && oAuthApp.isPkceMandatory() || referenceCodeChallenge != null) {
 
             //As per RFC 7636 Fallback to 'plain' if no code_challenge_method parameter is sent
@@ -1277,7 +1280,6 @@ public class OAuth2Util {
         return true;
     }
 
-    @Deprecated
     public static boolean isPKCESupportEnabled() {
 
         return OAuth2ServiceComponentHolder.isPkceEnabled();
