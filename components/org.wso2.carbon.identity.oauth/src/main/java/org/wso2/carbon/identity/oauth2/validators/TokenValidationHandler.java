@@ -638,11 +638,77 @@ public class TokenValidationHandler {
      */
     private AccessTokenDO findAccessToken(String tokenIdentifier) throws IdentityOAuth2Exception {
 
-        return OAuth2Util.getAccessTokenDOfromTokenIdentifier(tokenIdentifier);
+        String consumerKey = null;
+        OauthTokenIssuer oauthTokenIssuer = null;
+        if (isJWT(tokenIdentifier) || isIDTokenEncrypted(tokenIdentifier)) {
+            oauthTokenIssuer = new JWTTokenIssuer();
+        } else {
+            try {
+                consumerKey = OAuth2Util.getClientIdForAccessToken(tokenIdentifier);
+            } catch (IllegalArgumentException e) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Consumer key is not found for token identifier: " + tokenIdentifier, e);
+                }
+            }
+        }
+
+        try {
+            if (consumerKey != null) {
+                oauthTokenIssuer = OAuth2Util.getOAuthTokenIssuerForOAuthApp(consumerKey);
+            }
+
+            if (oauthTokenIssuer == null) {
+                //server level token issuer
+                oauthTokenIssuer = OAuthServerConfiguration.getInstance().getIdentityOauthTokenIssuer();
+                log.info("No token issuer is found for access token identifier. Hence default token issuer is used.");
+            }
+
+            if (oauthTokenIssuer.usePersistedAccessTokenAlias()) {
+                return OAuth2Util.getAccessTokenDOfromTokenIdentifier(oauthTokenIssuer
+                        .getAccessTokenHash(tokenIdentifier));
+            } else {
+                return OAuth2Util.getAccessTokenDOfromTokenIdentifier(tokenIdentifier);
+            }
+        } catch (OAuthSystemException e) {
+            if (log.isDebugEnabled()) {
+                if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                    log.debug("Error while getting access token hash from token: " + tokenIdentifier, e);
+                } else {
+                    log.debug("Error while getting access token hash.", e);
+                }
+            }
+            throw new IdentityOAuth2Exception("Error while getting access token hash.", e);
+        } catch (InvalidOAuthClientException e) {
+            throw new IdentityOAuth2Exception(
+                    "Error while retrieving oauth issuer for the app with clientId: " + consumerKey, e);
+        }
     }
 
     private AccessTokenDO findRefreshToken(String refreshToken) throws IdentityOAuth2Exception {
 
         return OAuthTokenPersistenceFactory.getInstance().getTokenManagementDAO().getRefreshToken(refreshToken);
     }
+
+    /**
+     * Return true if the token identifier is JWT.
+     *
+     * @param tokenIdentifier String JWT token identifier.
+     * @return  true for a JWT token.
+     */
+    private boolean isJWT(String tokenIdentifier) {
+        // JWT token contains 3 base64 encoded components separated by periods.
+        return StringUtils.countMatches(tokenIdentifier, ".") == 2;
+    }
+
+    /**
+     * Return true if the JWT id token is encrypted.
+     *
+     * @param idToken String JWT ID token.
+     * @return  Boolean state of encryption.
+     */
+    private boolean isIDTokenEncrypted(String idToken) {
+        // Encrypted ID token contains 5 base64 encoded components separated by periods.
+        return StringUtils.countMatches(idToken, ".") == 4;
+    }
+
 }
