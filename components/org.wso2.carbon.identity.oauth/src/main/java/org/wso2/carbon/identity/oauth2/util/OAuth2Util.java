@@ -2520,7 +2520,8 @@ public class OAuth2Util {
     }
 
     /**
-     * @deprecated We cannot determine the token issuer this way. Have a look at the findAccessToken method.
+     * @deprecated We cannot determine the token issuer this way. Have a look at the
+     * {@link #findAccessToken(String, boolean)} method.
      */
     @Deprecated
     public static OauthTokenIssuer getTokenIssuer(String accessToken) throws IdentityOAuth2Exception {
@@ -2775,43 +2776,23 @@ public class OAuth2Util {
 
         AccessTokenDO accessTokenDO;
 
-        // Get list of available token issuers.
-        Map<String, OauthTokenIssuer> allOAuthTokenIssuerMap = getCopyOfOauthTokenIssuerMap();
+        // Get a copy of the list of token issuers .
+        Map<String, OauthTokenIssuer> allOAuthTokenIssuerMap = new HashMap<>(
+                OAuthServerConfiguration.getInstance().getOauthTokenIssuerMap());
 
         // Differentiate default token issuers and other issuers for better performance.
-        Map<String, OauthTokenIssuer> defaultOAuthTokenIssuerMap =
-                getDefaultOauthTokenIssuerMap(allOAuthTokenIssuerMap);
+        Map<String, OauthTokenIssuer> defaultOAuthTokenIssuerMap = new HashMap<>();
+        extractDefaultOauthTokenIssuers(allOAuthTokenIssuerMap, defaultOAuthTokenIssuerMap);
 
         // First try default token issuers.
-        accessTokenDO = getAccessTokenDO(tokenIdentifier, defaultOAuthTokenIssuerMap, includeExpired);
-        if (accessTokenDO != null) return accessTokenDO;
+        accessTokenDO = getAccessTokenDOFromMatchingTokenIssuer(tokenIdentifier, defaultOAuthTokenIssuerMap,
+                includeExpired);
+        if (accessTokenDO != null) {
+            return accessTokenDO;
+        }
 
         // Loop through other issuer and try to get the hash.
-        return getAccessTokenDO(tokenIdentifier, allOAuthTokenIssuerMap, includeExpired);
-    }
-
-    /**
-     * Return a copy of all available token issuers map.
-     *
-     * @return Copy of the oauthTokenIssuerMap.
-     * @throws IdentityOAuth2Exception
-     */
-    private static Map<String, OauthTokenIssuer> getCopyOfOauthTokenIssuerMap() throws IdentityOAuth2Exception {
-
-        Map<String, OauthTokenIssuer> copy = new HashMap<>();
-        Map<String, OauthTokenIssuer> oauthTokenIssuerMap =
-                OAuthServerConfiguration.getInstance().getOauthTokenIssuerMap();
-        if (oauthTokenIssuerMap.isEmpty()) {
-            // Populate token issuer map with default.
-            OAuthServerConfiguration.getInstance().addAndReturnTokenIssuerInstance(
-                    OAuthServerConfiguration.DEFAULT_TOKEN_TYPE);
-            OAuthServerConfiguration.getInstance().addAndReturnTokenIssuerInstance(
-                    OAuthServerConfiguration.JWT_TOKEN_TYPE);
-        }
-        for (Map.Entry<String, OauthTokenIssuer> entry : oauthTokenIssuerMap.entrySet()) {
-            copy.put(entry.getKey(), entry.getValue());
-        }
-        return copy;
+        return getAccessTokenDOFromMatchingTokenIssuer(tokenIdentifier, allOAuthTokenIssuerMap, includeExpired);
     }
 
     /**
@@ -2822,31 +2803,34 @@ public class OAuth2Util {
      * @return Obtained matching access token DO if possible.
      * @throws IdentityOAuth2Exception
      */
-    private static AccessTokenDO getAccessTokenDO(String tokenIdentifier,
-                                           Map<String, OauthTokenIssuer> tokenIssuerMap, boolean includeExpired)
+    private static AccessTokenDO getAccessTokenDOFromMatchingTokenIssuer(String tokenIdentifier,
+                                                                         Map<String, OauthTokenIssuer> tokenIssuerMap,
+                                                                         boolean includeExpired)
             throws IdentityOAuth2Exception {
 
         AccessTokenDO accessTokenDO;
-        for (Map.Entry<String, OauthTokenIssuer> oauthTokenIssuerEntry: tokenIssuerMap.entrySet()) {
-            try {
-                OauthTokenIssuer oauthTokenIssuer = oauthTokenIssuerEntry.getValue();
-                String tokenAlias = oauthTokenIssuer.getAccessTokenHash(tokenIdentifier);
-                if (oauthTokenIssuer.usePersistedAccessTokenAlias()) {
-                    accessTokenDO =  OAuth2Util.getAccessTokenDOFromTokenIdentifier(tokenAlias, includeExpired);
-                } else {
-                    accessTokenDO =  OAuth2Util.getAccessTokenDOFromTokenIdentifier(tokenIdentifier, includeExpired);
-                }
-                if (accessTokenDO != null) {
-                    return accessTokenDO;
-                }
-            } catch (OAuthSystemException e) {
-                if (log.isDebugEnabled()) {
-                    if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
-                        log.debug("Token issuer: " + oauthTokenIssuerEntry.getKey() + " was tried and" +
-                                " failed to parse the received token: " + tokenIdentifier);
+        if (tokenIssuerMap != null) {
+            for (Map.Entry<String, OauthTokenIssuer> oauthTokenIssuerEntry: tokenIssuerMap.entrySet()) {
+                try {
+                    OauthTokenIssuer oauthTokenIssuer = oauthTokenIssuerEntry.getValue();
+                    String tokenAlias = oauthTokenIssuer.getAccessTokenHash(tokenIdentifier);
+                    if (oauthTokenIssuer.usePersistedAccessTokenAlias()) {
+                        accessTokenDO =  OAuth2Util.getAccessTokenDOFromTokenIdentifier(tokenAlias, includeExpired);
                     } else {
-                        log.debug("Token issuer: " + oauthTokenIssuerEntry.getKey() + " was tried and" +
-                                " failed to parse the received token.");
+                        accessTokenDO =  OAuth2Util.getAccessTokenDOFromTokenIdentifier(tokenIdentifier, includeExpired);
+                    }
+                    if (accessTokenDO != null) {
+                        return accessTokenDO;
+                    }
+                } catch (OAuthSystemException e) {
+                    if (log.isDebugEnabled()) {
+                        if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                            log.debug("Token issuer: " + oauthTokenIssuerEntry.getKey() + " was tried and" +
+                                    " failed to parse the received token: " + tokenIdentifier);
+                        } else {
+                            log.debug("Token issuer: " + oauthTokenIssuerEntry.getKey() + " was tried and" +
+                                    " failed to parse the received token.");
+                        }
                     }
                 }
             }
@@ -2857,23 +2841,21 @@ public class OAuth2Util {
     /**
      * Differentiate default token issuers from all available token issuers map.
      *
-     * @param tokenIssuerMap Map of all available token issuers.
-     * @return Filtered map of default issuers.
+     * @param allOAuthTokenIssuerMap Map of all available token issuers.
+     * @param
      */
-    private static Map<String, OauthTokenIssuer> getDefaultOauthTokenIssuerMap(
-            Map<String, OauthTokenIssuer> tokenIssuerMap) {
+    private static void extractDefaultOauthTokenIssuers( Map<String, OauthTokenIssuer> allOAuthTokenIssuerMap,
+            Map<String, OauthTokenIssuer> defaultOAuthTokenIssuerMap) {
 
         // TODO: 4/9/19 Implement logic to read default issuer from config.
         // TODO: 4/9/19 add sorting mechanism to use JWT issuer first.
-        Map<String, OauthTokenIssuer> defaultOAuthTokenIssuerMap = new HashMap<>();
         defaultOAuthTokenIssuerMap.put(OAuthServerConfiguration.JWT_TOKEN_TYPE,
-                tokenIssuerMap.get(OAuthServerConfiguration.JWT_TOKEN_TYPE));
-        tokenIssuerMap.remove(OAuthServerConfiguration.JWT_TOKEN_TYPE);
+                allOAuthTokenIssuerMap.get(OAuthServerConfiguration.JWT_TOKEN_TYPE));
+        allOAuthTokenIssuerMap.remove(OAuthServerConfiguration.JWT_TOKEN_TYPE);
 
         defaultOAuthTokenIssuerMap.put(OAuthServerConfiguration.DEFAULT_TOKEN_TYPE,
-                tokenIssuerMap.get(OAuthServerConfiguration.DEFAULT_TOKEN_TYPE));
-        tokenIssuerMap.remove(OAuthServerConfiguration.DEFAULT_TOKEN_TYPE);
-        return defaultOAuthTokenIssuerMap;
+                allOAuthTokenIssuerMap.get(OAuthServerConfiguration.DEFAULT_TOKEN_TYPE));
+        allOAuthTokenIssuerMap.remove(OAuthServerConfiguration.DEFAULT_TOKEN_TYPE);
     }
 }
 

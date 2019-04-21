@@ -57,6 +57,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params
 public abstract class AbstractUserInfoResponseBuilder implements UserInfoResponseBuilder {
 
     private static final Log log = LogFactory.getLog(AbstractUserInfoResponseBuilder.class);
+    private String accessToken = null;
 
     @Override
     public String getResponseString(OAuth2TokenValidationResponseDTO tokenResponse)
@@ -360,14 +361,17 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
 
     private String getAccessToken(OAuth2TokenValidationResponseDTO tokenResponse) throws UserInfoEndpointException {
 
-        AccessTokenDO accessTokenDO = null;
-        try {
-            accessTokenDO = OAuth2Util.findAccessToken(
-                    tokenResponse.getAuthorizationContextToken().getTokenString(), false);
-        } catch (IdentityOAuth2Exception e) {
-            throw new UserInfoEndpointException("Error occurred while obtaining access token.", e);
+        if (accessToken == null) {
+            AccessTokenDO accessTokenDO = null;
+            try {
+                accessTokenDO = OAuth2Util.findAccessToken(
+                        tokenResponse.getAuthorizationContextToken().getTokenString(), false);
+            } catch (IdentityOAuth2Exception e) {
+                throw new UserInfoEndpointException("Error occurred while obtaining access token.", e);
+            }
+            accessToken = accessTokenDO.getAccessToken();
         }
-        return accessTokenDO.getAccessToken();
+        return accessToken;
     }
 
     private String getAccessTokenIdentifier(OAuth2TokenValidationResponseDTO tokenResponse)

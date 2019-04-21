@@ -470,26 +470,15 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                 OAuthCacheKey cacheKey =
                         getOAuthCacheKey(scope, newTokenBean.getConsumerKey(), newTokenBean.getAuthzUser().toString());
                 oauthCache.addToCache(cacheKey, newTokenBean);
-                // Adding AccessTokenDO to improve validation performance
-                tokenIssuer = OAuth2Util.getOAuthTokenIssuerForOAuthApp(newTokenBean.getConsumerKey());
-                String tokenAlias = tokenIssuer.getAccessTokenHash(newTokenBean.getAccessToken());
-                OAuthCacheKey accessTokenCacheKey = new OAuthCacheKey(tokenAlias);
-
-                // We have to set the token alias as the access token of the cache entry explicitly, since the
-                // incoming token DO has the token sent to the client. (Ex: When JWTTokenIssuer is used, issued JWT
-                // comes as the access token.
-                AccessTokenDO tokenDO = new AccessTokenDO(newTokenBean);
-                tokenDO.setAccessToken(tokenAlias);
-                oauthCache.addToCache(accessTokenCacheKey, tokenDO);
                 if (log.isDebugEnabled()) {
-                    log.debug("Access token was added to OAuthCache for cache key : " + cacheKey.getCacheKeyString());
-                    if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
-                        log.debug("Access token was added to OAuthCache for cache key(hashed) : "
-                                + DigestUtils.sha256Hex(accessTokenCacheKey.getCacheKeyString()));
-                    }
+                    log.debug("Access token was added to OAuthCache with cache key : " + cacheKey.getCacheKeyString());
                 }
+
+                // Adding AccessTokenDO to improve validation performance
+                addTokenDOtoCache(newTokenBean);
+
             } catch (OAuthSystemException e) {
-                if (IdentityUtil.isTokenLoggable(newTokenBean.getAccessToken())) {
+                if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
                     throw new IdentityOAuth2Exception("Error while getting the token alias from token issuer: " +
                             tokenIssuer.toString() + " for the token: " + newTokenBean.getAccessToken(), e);
                 } else {
@@ -497,12 +486,38 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                             tokenIssuer.toString(), e);
                 }
             } catch (InvalidOAuthClientException e) {
-                if (IdentityUtil.isTokenLoggable(newTokenBean.getAccessToken())) {
+                if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
                     throw new IdentityOAuth2Exception("Error while getting the token issuer for the token: " +
                             newTokenBean.getAccessToken(), e);
                 } else {
                     throw new IdentityOAuth2Exception("Error while getting the token issuer", e);
                 }
+            }
+        }
+    }
+
+    /**
+     * There are cases where we store an 'alias' of the token returned to the client as the token inside IS.
+     * For example, in the case of JWT access tokens we store the 'jti' claim in the database instead of the
+     * actual JWT. Therefore we need to cache an AccessTokenDO with the stored token identifier.
+     *
+     * @param newTokenBean token DO to be added to the cache.
+     */
+    private void addTokenDOtoCache(AccessTokenDO newTokenBean)
+            throws OAuthSystemException, IdentityOAuth2Exception, InvalidOAuthClientException {
+
+        OauthTokenIssuer tokenIssuer = OAuth2Util.getOAuthTokenIssuerForOAuthApp(newTokenBean.getConsumerKey());
+        String tokenAlias = tokenIssuer.getAccessTokenHash(newTokenBean.getAccessToken());
+        OAuthCacheKey accessTokenCacheKey = new OAuthCacheKey(tokenAlias);
+        AccessTokenDO tokenDO = AccessTokenDO.clone(newTokenBean);
+        tokenDO.setAccessToken(tokenAlias);
+        oauthCache.addToCache(accessTokenCacheKey, tokenDO);
+        if (log.isDebugEnabled()) {
+            if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                log.debug("Access token DO was added to OAuthCache with cache key: "
+                        + accessTokenCacheKey.getCacheKeyString());
+            } else {
+                log.debug("Access token DO was added to OAuthCache");
             }
         }
     }

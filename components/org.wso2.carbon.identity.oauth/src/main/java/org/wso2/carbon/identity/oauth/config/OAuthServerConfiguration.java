@@ -2646,22 +2646,30 @@ public class OAuthServerConfiguration {
     }
 
     /**
-     * We need to populate all supported token issuers map, which is used in token validation calls.
+     * This method populates oauthTokenIssuerMap by reading the supportedTokenIssuers map. Earlier we only
+     * populated the oauthTokenIssuerMap when a token is issued but now we use this map for token validation
+     * calls as well.
      */
     public void populateOAuthTokenIssuerMap() throws IdentityOAuth2Exception {
 
-        try {
+        if (supportedTokenIssuers != null) {
             for (Map.Entry<String, TokenIssuerDO> tokenIssuerDO : supportedTokenIssuers.entrySet()) {
 
-                Class clazz = Thread.currentThread().getContextClassLoader().loadClass(
-                        tokenIssuerDO.getValue().getTokenImplClass());
-                OauthTokenIssuer oauthTokenIssuer = (OauthTokenIssuer) clazz.newInstance();
-                oauthTokenIssuer.setPersistAccessTokenAlias(tokenIssuerDO.getValue().isPersistAccessTokenAlias());
+                try {
+                    Class clazz = Thread.currentThread().getContextClassLoader().loadClass(
+                            tokenIssuerDO.getValue().getTokenImplClass());
+                    OauthTokenIssuer oauthTokenIssuer = (OauthTokenIssuer) clazz.newInstance();
+                    oauthTokenIssuer.setPersistAccessTokenAlias(tokenIssuerDO.getValue().isPersistAccessTokenAlias());
+                    oauthTokenIssuerMap.put(tokenIssuerDO.getKey(), oauthTokenIssuer);
 
-                oauthTokenIssuerMap.put(tokenIssuerDO.getKey(), oauthTokenIssuer);
+                } catch (ClassNotFoundException | IllegalAccessException | InstantiationException e) {
+                    throw new IdentityOAuth2Exception("Error while populating OAuth Token Issuer Map. Issuer key: " +
+                            tokenIssuerDO.getKey() + ", Issuer value: " + tokenIssuerDO.getValue(), e);
+                }
             }
-        } catch (ClassNotFoundException | IllegalAccessException | InstantiationException e) {
-            throw new IdentityOAuth2Exception("Error while populating OAuth Token Issuer Map.", e);
+        } else {
+            throw new IdentityOAuth2Exception("supportedTokenIssuers map returned null when populating the " +
+                    "oauthTokenIssuerMap object.");
         }
     }
 

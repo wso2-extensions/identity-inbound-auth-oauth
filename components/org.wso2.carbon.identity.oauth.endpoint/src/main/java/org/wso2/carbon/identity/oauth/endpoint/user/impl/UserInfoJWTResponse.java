@@ -25,6 +25,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
+import org.wso2.carbon.identity.base.IdentityConstants;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.endpoint.util.ClaimUtil;
 import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
@@ -118,8 +120,18 @@ public class UserInfoJWTResponse extends AbstractUserInfoResponseBuilder {
             accessTokenDO = OAuth2Util.findAccessToken(tokenResponse.getAuthorizationContextToken().getTokenString(),
                     false);
         } catch (IdentityOAuth2Exception e) {
-            throw new UserInfoEndpointException("Error occurred while obtaining access token details.", e);
+            if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                throw new UserInfoEndpointException("Error occurred while obtaining access token DO for the token " +
+                        "identifier: " + tokenResponse.getAuthorizationContextToken().getTokenString(), e);
+            } else {
+                throw new UserInfoEndpointException("Error occurred while obtaining access token DO.", e);
+            }
         }
-        return accessTokenDO.getAuthzUser().getTenantDomain();
+        if (accessTokenDO.getAuthzUser() != null) {
+            return accessTokenDO.getAuthzUser().getTenantDomain();
+        } else {
+            throw new UserInfoEndpointException("Authorized user was not found in the access token DO when " +
+                    "retrieving the tenant domain.");
+        }
     }
 }

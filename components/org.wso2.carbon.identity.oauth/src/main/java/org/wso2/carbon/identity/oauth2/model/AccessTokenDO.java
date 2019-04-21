@@ -91,18 +91,27 @@ public class AccessTokenDO extends CacheEntry {
      *
      * @param tokenDO Original Token DO
      */
-    public AccessTokenDO(AccessTokenDO tokenDO) {
+    public static AccessTokenDO clone(AccessTokenDO tokenDO) {
 
-        this.consumerKey = tokenDO.getConsumerKey();
-        this.authzUser = tokenDO.getAuthzUser();
-        this.scope = tokenDO.getScope();
-        this.issuedTime = tokenDO.getIssuedTime();
-        this.refreshTokenIssuedTime = tokenDO.getRefreshTokenIssuedTime();
-        this.validityPeriodInMillis = tokenDO.getValidityPeriodInMillis();
-        this.validityPeriod = tokenDO.getValidityPeriod();
-        this.refreshTokenValidityPeriodInMillis = tokenDO.getRefreshTokenValidityPeriodInMillis();
-        this.refreshTokenValidityPeriod = tokenDO.getValidityPeriod();
-        this.tokenType = tokenDO.getTokenType();
+        AccessTokenDO newTokenDO =  new AccessTokenDO(
+                tokenDO.getConsumerKey(),
+                tokenDO.getAuthzUser(),
+                tokenDO.getScope(),
+                tokenDO.getIssuedTime(),
+                tokenDO.getRefreshTokenIssuedTime(),
+                tokenDO.getValidityPeriodInMillis(),
+                tokenDO.getRefreshTokenValidityPeriodInMillis(),
+                tokenDO.getTokenType()
+        );
+        newTokenDO.setTenantID(tokenDO.getTenantID());
+        newTokenDO.setTokenState(tokenDO.getTokenState());
+        newTokenDO.setRefreshToken(tokenDO.getRefreshToken());
+        newTokenDO.setAccessToken(tokenDO.getAccessToken());
+        newTokenDO.setTokenId(tokenDO.getTokenId());
+        newTokenDO.setAuthorizationCode(tokenDO.getAuthorizationCode());
+        newTokenDO.setGrantType(tokenDO.getGrantType());
+
+        return newTokenDO;
     }
 
     public AccessTokenDO() {

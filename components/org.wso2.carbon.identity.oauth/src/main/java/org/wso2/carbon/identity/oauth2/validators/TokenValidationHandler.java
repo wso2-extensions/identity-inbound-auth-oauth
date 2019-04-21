@@ -21,11 +21,9 @@ package org.wso2.carbon.identity.oauth2.validators;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
-import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
@@ -39,7 +37,6 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
-import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.util.ArrayList;
@@ -626,119 +623,6 @@ public class TokenValidationHandler {
         }
 
         return false;
-    }
-
-    /**
-     * Find access token for token validation.
-     *
-     * @param tokenIdentifier access token data object from the validation request.
-     * @return AccessTokenDO
-     * @throws IdentityOAuth2Exception
-     */
-    private AccessTokenDO findAccessToken(String tokenIdentifier) throws IdentityOAuth2Exception {
-
-        AccessTokenDO accessTokenDO;
-
-        // Get list of available token issuers.
-        Map<String, OauthTokenIssuer> allOAuthTokenIssuerMap = getCopyOfOauthTokenIssuerMap();
-
-        // Differentiate default token issuers and other issuers for better performance.
-        Map<String, OauthTokenIssuer> defaultOAuthTokenIssuerMap =
-                getDefaultOauthTokenIssuerMap(allOAuthTokenIssuerMap);
-
-        // First try default token issuers.
-        accessTokenDO = getAccessTokenDO(tokenIdentifier, defaultOAuthTokenIssuerMap);
-        if (accessTokenDO != null) return accessTokenDO;
-
-        // Loop through other issuer and try to get the hash.
-        return getAccessTokenDO(tokenIdentifier, allOAuthTokenIssuerMap);
-    }
-
-    /**
-     * Return a copy of all available token issuers map.
-     *
-     * @return Copy of the oauthTokenIssuerMap.
-     * @throws IdentityOAuth2Exception
-     */
-    private Map<String, OauthTokenIssuer> getCopyOfOauthTokenIssuerMap() throws IdentityOAuth2Exception {
-
-        Map<String, OauthTokenIssuer> copy = new HashMap<>();
-        Map<String, OauthTokenIssuer> oauthTokenIssuerMap =
-                OAuthServerConfiguration.getInstance().getOauthTokenIssuerMap();
-        if (oauthTokenIssuerMap.isEmpty()) {
-            // Populate token issuer map with default.
-            OAuthServerConfiguration.getInstance().addAndReturnTokenIssuerInstance(
-                    OAuthServerConfiguration.DEFAULT_TOKEN_TYPE);
-            OAuthServerConfiguration.getInstance().addAndReturnTokenIssuerInstance(
-                    OAuthServerConfiguration.JWT_TOKEN_TYPE);
-        }
-        for (Map.Entry<String, OauthTokenIssuer> entry : oauthTokenIssuerMap.entrySet()) {
-            copy.put(entry.getKey(), entry.getValue());
-        }
-        return copy;
-    }
-
-    /**
-     * Loop through provided token issuer list and tries to get the access token DO.
-     *
-     * @param tokenIdentifier Provided token identifier.
-     * @param tokenIssuerMap  List of token issuers.
-     * @return Obtained matching access token DO if possible.
-     * @throws IdentityOAuth2Exception
-     */
-    private AccessTokenDO getAccessTokenDO(String tokenIdentifier,
-                                           Map<String, OauthTokenIssuer> tokenIssuerMap)
-            throws IdentityOAuth2Exception {
-
-        AccessTokenDO accessTokenDO;
-        for (Map.Entry<String, OauthTokenIssuer> oauthTokenIssuerEntry: tokenIssuerMap.entrySet()) {
-            try {
-                OauthTokenIssuer oauthTokenIssuer = oauthTokenIssuerEntry.getValue();
-                String tokenAlias = oauthTokenIssuer.getAccessTokenHash(tokenIdentifier);
-                if (oauthTokenIssuer.usePersistedAccessTokenAlias()) {
-                    accessTokenDO =  OAuth2Util.getAccessTokenDOfromTokenIdentifier(tokenAlias);
-                } else {
-                    accessTokenDO =  OAuth2Util.getAccessTokenDOfromTokenIdentifier(tokenIdentifier);
-                }
-                if (accessTokenDO != null) {
-                    return accessTokenDO;
-                }
-            } catch (OAuthSystemException e) {
-                if (log.isDebugEnabled()) {
-                    if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
-                        log.debug("Token issuer: " + oauthTokenIssuerEntry.getKey() + " was tried and" +
-                                " failed to parse the received token: " + tokenIdentifier);
-                    } else {
-                        log.debug("Token issuer: " + oauthTokenIssuerEntry.getKey() + " was tried and" +
-                                " failed to parse the received token.");
-                    }
-                }
-            }
-        }
-        return null;
-    }
-
-    /**
-     * Differentiate default token issuers from all available token issuers map.
-     *
-     * @param tokenIssuerMap Map of all available token issuers.
-     * @return Filtered map of default issuers.
-     */
-    private Map<String, OauthTokenIssuer> getDefaultOauthTokenIssuerMap(
-            Map<String, OauthTokenIssuer> tokenIssuerMap) {
-
-        // TODO: 4/9/19 Implement logic to read default issuer from config.
-        // TODO: 4/9/19 add sorting mechanism to use JWT issuer first.
-        Map<String, OauthTokenIssuer> defaultOAuthTokenIssuerMap = new HashMap<>();
-        defaultOAuthTokenIssuerMap.put(OAuthServerConfiguration.JWT_TOKEN_TYPE,
-                tokenIssuerMap.get(OAuthServerConfiguration.JWT_TOKEN_TYPE));
-        tokenIssuerMap.remove(OAuthServerConfiguration.JWT_TOKEN_TYPE);
-
-        defaultOAuthTokenIssuerMap.put(OAuthServerConfiguration.DEFAULT_TOKEN_TYPE,
-                tokenIssuerMap.get(OAuthServerConfiguration.DEFAULT_TOKEN_TYPE));
-        tokenIssuerMap.remove(OAuthServerConfiguration.DEFAULT_TOKEN_TYPE);
-        return defaultOAuthTokenIssuerMap;
-
     }
 
     private AccessTokenDO findRefreshToken(String refreshToken) throws IdentityOAuth2Exception {
