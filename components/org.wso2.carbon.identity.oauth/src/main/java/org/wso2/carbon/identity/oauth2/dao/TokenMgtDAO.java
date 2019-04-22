@@ -202,7 +202,7 @@ public class TokenMgtDAO {
 
         if (!OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && authzCodeDO.getAuthorizedUser()
                 .isFederatedUser()) {
-            userDomain = OAuth2Util.getFederatedUserDomain(authenticatedIDP);
+//            userDomain = OAuth2Util.getFederatedUserDomain(authenticatedIDP);
         }
 
         try {
@@ -319,7 +319,7 @@ public class TokenMgtDAO {
                 log.debug("Adding federated domain to user store domain to user " + accessTokenDO.getAuthzUser()
                         .getAuthenticatedSubjectIdentifier());
             }
-            userDomain = OAuth2Util.getFederatedUserDomain(authenticatedIDP);
+//            userDomain = OAuth2Util.getFederatedUserDomain(authenticatedIDP);
         }
 
         if (log.isDebugEnabled()) {
@@ -491,12 +491,12 @@ public class TokenMgtDAO {
         int tenantId = OAuth2Util.getTenantId(tenantDomain);
         String tenantAwareUsernameWithNoUserDomain = authzUser.getUserName();
 
-        String userDomain;
+        String userDomain = null;
         if (!OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && authzUser.isFederatedUser()) {
             if (log.isDebugEnabled()) {
                 log.debug("User is federated and not mapped to local users. Hence adding federated domain as domain");
             }
-            userDomain = OAuth2Util.getFederatedUserDomain(authzUser.getFederatedIdPName());
+//            userDomain = OAuth2Util.getFederatedUserDomain(authzUser.getFederatedIdPName());
         } else {
             userDomain = OAuth2Util.getSanitizedUserStoreDomain(authzUser.getUserStoreDomain());
         }
@@ -3004,9 +3004,9 @@ public class TokenMgtDAO {
         int tenantId = OAuth2Util.getTenantId(tenantDomain);
         String tenantAwareUsernameWithNoUserDomain = authzUser.getUserName();
 
-        String userDomain;
+        String userDomain = null;
         if (!OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && authzUser.isFederatedUser()) {
-            userDomain = OAuth2Util.getFederatedUserDomain(authzUser.getFederatedIdPName());
+//            userDomain = OAuth2Util.getFederatedUserDomain(authzUser.getFederatedIdPName());
         } else {
             userDomain = OAuth2Util.getSanitizedUserStoreDomain(authzUser.getUserStoreDomain());
         }

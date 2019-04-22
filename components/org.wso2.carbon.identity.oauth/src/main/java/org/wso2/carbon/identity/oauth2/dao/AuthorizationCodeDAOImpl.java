@@ -24,6 +24,7 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.base.IdentityConstants;
@@ -83,11 +84,10 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
         Connection connection = IdentityDatabaseUtil.getDBConnection();
         PreparedStatement prepStmt = null;
         String userDomain = authzCodeDO.getAuthorizedUser().getUserStoreDomain();
-        String authenticatedIDP = authzCodeDO.getAuthorizedUser().getFederatedIdPName();
-
+        String authenticatedIDP = FrameworkConstants.LOCAL_IDP_NAME;
         if (!OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && authzCodeDO.getAuthorizedUser()
                 .isFederatedUser()) {
-            userDomain = OAuth2Util.getFederatedUserDomain(authenticatedIDP);
+            authenticatedIDP = authzCodeDO.getAuthorizedUser().getFederatedIdPName();
         }
 
         try {
@@ -110,6 +110,9 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             //insert the hash value of the authorization code
             prepStmt.setString(13, getHashingPersistenceProcessor().getProcessedAuthzCode(authzCode));
             prepStmt.setString(14, getPersistenceProcessor().getProcessedClientId(consumerKey));
+            if (OAuth2ServiceComponentHolder.isIDPNameColumnEnabled()) {
+                prepStmt.setString(15, authenticatedIDP);
+            }
 
             prepStmt.execute();
             connection.commit();
@@ -204,7 +207,11 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             long validityPeriod = 0;
             int tenantId;
 
-            prepStmt = connection.prepareStatement(SQLQueries.VALIDATE_AUTHZ_CODE_WITH_PKCE);
+            String sql = SQLQueries.VALIDATE_AUTHZ_CODE_WITH_PKCE;
+            if (OAuth2ServiceComponentHolder.isIDPNameColumnEnabled()) {
+                sql = SQLQueries.VALIDATE_AUTHZ_CODE_WITH_PKCE_IDP_NAME;
+            }
+            prepStmt = connection.prepareStatement(sql);
             prepStmt.setString(1, getPersistenceProcessor().getProcessedClientId(consumerKey));
             //use hash value for search
             prepStmt.setString(2, getHashingPersistenceProcessor().getProcessedAuthzCode(authorizationKey));
@@ -224,7 +231,9 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                 subjectIdentifier = resultSet.getString(12);
                 pkceCodeChallenge = resultSet.getString(13);
                 pkceCodeChallengeMethod = resultSet.getString(14);
-                user = OAuth2Util.createAuthenticatedUser(authorizedUser, userstoreDomain, tenantDomain);
+                String authenticatedIDP = resultSet.getString(15);
+                user = OAuth2Util.createAuthenticatedUser(authorizedUser, userstoreDomain, tenantDomain,
+                        authenticatedIDP);
                 ServiceProvider serviceProvider;
                 try {
                     serviceProvider = OAuth2ServiceComponentHolder.getApplicationMgtService().
@@ -456,6 +465,9 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
         List<AuthzCodeDO> latestAuthzCodes = new ArrayList<>();
         try {
             String sqlQuery = SQLQueries.LIST_LATEST_AUTHZ_CODES_IN_TENANT;
+            if (OAuth2ServiceComponentHolder.isIDPNameColumnEnabled()) {
+                sqlQuery = SQLQueries.LIST_LATEST_AUTHZ_CODES_IN_TENANT_IDP_NAME;
+            }
             ps = connection.prepareStatement(sqlQuery);
             ps.setInt(1, tenantId);
             rs = ps.executeQuery();
@@ -469,9 +481,10 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                 long validityPeriodInMillis = rs.getLong(7);
                 String callbackUrl = rs.getString(8);
                 String userStoreDomain = rs.getString(9);
+                String authenticatedIDP = rs.getString(10);
 
                 AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(authzUser, userStoreDomain, OAuth2Util
-                        .getTenantDomain(tenantId));
+                        .getTenantDomain(tenantId), authenticatedIDP);
                 user.setUserName(authzUser);
                 user.setUserStoreDomain(userStoreDomain);
                 user.setTenantDomain(OAuth2Util.getTenantDomain(tenantId));
@@ -506,6 +519,9 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
         List<AuthzCodeDO> latestAuthzCodes = new ArrayList<>();
         try {
             String sqlQuery = SQLQueries.LIST_LATEST_AUTHZ_CODES_IN_USER_DOMAIN;
+            if (OAuth2ServiceComponentHolder.isIDPNameColumnEnabled()) {
+                sqlQuery = SQLQueries.LIST_LATEST_AUTHZ_CODES_IN_USER_DOMAIN_IDP_NAME;
+            }
             ps = connection.prepareStatement(sqlQuery);
             ps.setInt(1, tenantId);
             ps.setString(2, userStoreDomain);
@@ -519,9 +535,10 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                 Timestamp issuedTime = rs.getTimestamp(6, Calendar.getInstance(TimeZone.getTimeZone(UTC)));
                 long validityPeriodInMillis = rs.getLong(7);
                 String callbackUrl = rs.getString(8);
+                String authenticatedIDP = rs.getString(10);
 
                 AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(authzUser, userStoreDomain, OAuth2Util
-                        .getTenantDomain(tenantId));
+                        .getTenantDomain(tenantId), authenticatedIDP);
                 latestAuthzCodes.add(new AuthzCodeDO(user, scope, issuedTime, validityPeriodInMillis, callbackUrl,
                         consumerKey, authzCode, authzCodeId));
             }
