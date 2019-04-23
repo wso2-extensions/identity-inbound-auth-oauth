@@ -65,6 +65,7 @@ public class OAuth2ServiceComponentHolder {
         OAuth2ServiceComponentHolder.applicationMgtService = applicationMgtService;
     }
 
+    @Deprecated
     public static boolean isPkceEnabled() {
 
         return pkceEnabled;
