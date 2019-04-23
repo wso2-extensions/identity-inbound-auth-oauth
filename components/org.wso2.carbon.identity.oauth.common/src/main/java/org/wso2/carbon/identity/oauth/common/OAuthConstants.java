@@ -136,6 +136,9 @@ public final class OAuthConstants {
     //Oauth2 sp expire time configuration.
     public static final String TOKEN_EXPIRE_TIME_RESOURCE_PATH = "/identity/config/spTokenExpireTime";
 
+    //request originated from authentication API
+    public static final String IS_ORIGINATED_FROM_AUTHENTICATION_API = "OAuth.isAuthenticationFlow";
+
     public static class GrantTypes {
         public static final String IMPLICIT = "implicit";
         public static final String TOKEN = "token";

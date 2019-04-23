@@ -59,7 +59,6 @@ public class TokenValidationHandler {
     private Log log = LogFactory.getLog(TokenValidationHandler.class);
     private Map<String, OAuth2TokenValidator> tokenValidators = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
     private static final String BUILD_FQU_FROM_SP_CONFIG = "OAuth.BuildSubjectIdentifierFromSPConfig";
-    private static final String AUTH_FLOW = "OAuth.AuthFlow";
 
     private TokenValidationHandler() {
 
@@ -720,12 +719,14 @@ public class TokenValidationHandler {
         return StringUtils.countMatches(idToken, ".") == 4;
     }
 
-    private boolean isOriginatedFromAuthenticationAPI(OAuth2TokenValidationRequestDTO.TokenValidationContextParam[] context) {
+    private boolean isOriginatedFromAuthenticationAPI(OAuth2TokenValidationRequestDTO
+                                                              .TokenValidationContextParam[] context) {
 
-        // If the origin of the request is from the authentication API "OAuth.AuthFlow" should be set as true  in the context
+        // If the origin of the request is from the authentication API "OAuth.isAuthenticationFlow" should be set as
+        // true  in the context
         return context != null && context.length == 1 && StringUtils.isNotBlank(context[0].getKey()) && context[0]
-                .getKey().equalsIgnoreCase(AUTH_FLOW) && StringUtils.isNotBlank(context[0].getValue()) && context[0]
-                .getValue().equalsIgnoreCase(String.valueOf(true));
+                .getKey().equalsIgnoreCase(OAuthConstants.IS_ORIGINATED_FROM_AUTHENTICATION_API) && StringUtils
+                .isNotBlank(context[0].getValue()) && context[0].getValue().equalsIgnoreCase(String.valueOf(true));
     }
 
 }
