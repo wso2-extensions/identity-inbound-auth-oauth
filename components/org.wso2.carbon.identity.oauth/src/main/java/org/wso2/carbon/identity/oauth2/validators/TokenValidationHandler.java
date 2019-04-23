@@ -59,6 +59,7 @@ public class TokenValidationHandler {
     private Log log = LogFactory.getLog(TokenValidationHandler.class);
     private Map<String, OAuth2TokenValidator> tokenValidators = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
     private static final String BUILD_FQU_FROM_SP_CONFIG = "OAuth.BuildSubjectIdentifierFromSPConfig";
+    private static final String AUTH_FLOW = "OAuth.AuthFlow";
 
     private TokenValidationHandler() {
 
@@ -158,8 +159,10 @@ public class TokenValidationHandler {
                 new OAuth2TokenValidationMessageContext(requestDTO, responseDTO);
 
         OAuth2TokenValidationRequestDTO.OAuth2AccessToken accessToken = requestDTO.getAccessToken();
-        OAuth2TokenValidator tokenValidator = null;
-        AccessTokenDO accessTokenDO = null;
+        OAuth2TokenValidator tokenValidator;
+        AccessTokenDO accessTokenDO;
+
+        boolean isAuthFlow = isOriginatedFromAuthenticationAPI(requestDTO.getContext());
 
         try {
             tokenValidator = findAccessTokenValidator(accessToken);
@@ -196,7 +199,7 @@ public class TokenValidationHandler {
             return buildClientAppErrorResponse("OAuth2 access token validation failed");
         }
 
-        responseDTO.setAuthorizedUser(getAuthzUser(accessTokenDO));
+        responseDTO.setAuthorizedUser(getAuthzUser(accessTokenDO, isAuthFlow));
         responseDTO.setScope(accessTokenDO.getScope());
         responseDTO.setValid(true);
 
@@ -336,7 +339,7 @@ public class TokenValidationHandler {
         // Token scopes.
         introResp.setScope(OAuth2Util.buildScopeString((refreshTokenDataDO.getScope())));
         // Set user-name.
-        introResp.setUsername(getAuthzUser(refreshTokenDataDO));
+        introResp.setUsername(getAuthzUser(refreshTokenDataDO, false));
         // Add client id.
         introResp.setClientId(refreshTokenDataDO.getConsumerKey());
         // Adding the AccessTokenDO as a context property for further use.
@@ -420,7 +423,7 @@ public class TokenValidationHandler {
             // token scopes
             introResp.setScope(OAuth2Util.buildScopeString((accessTokenDO.getScope())));
             // set user-name
-            introResp.setUsername(getAuthzUser(accessTokenDO));
+            introResp.setUsername(getAuthzUser(accessTokenDO, false));
             // add client id
             introResp.setClientId(accessTokenDO.getConsumerKey());
             // adding the AccessTokenDO as a context property for further use
@@ -468,12 +471,18 @@ public class TokenValidationHandler {
         return introResp;
     }
 
-    private String getAuthzUser(AccessTokenDO accessTokenDO) throws IdentityOAuth2Exception {
+    private String getAuthzUser(AccessTokenDO accessTokenDO, boolean isAuthFlow) throws IdentityOAuth2Exception {
 
         AuthenticatedUser user = accessTokenDO.getAuthzUser();
 
         if (user.isFederatedUser()) {
             return user.getAuthenticatedSubjectIdentifier();
+        }
+
+        // This checks if the request originated from authentication API. If so username is returned with the
+        // user-store domain
+        if (isAuthFlow) {
+            return user.getUsernameAsSubjectIdentifier(true, false);
         }
 
         String consumerKey = accessTokenDO.getConsumerKey();
@@ -709,6 +718,14 @@ public class TokenValidationHandler {
     private boolean isIDTokenEncrypted(String idToken) {
         // Encrypted ID token contains 5 base64 encoded components separated by periods.
         return StringUtils.countMatches(idToken, ".") == 4;
+    }
+
+    private boolean isOriginatedFromAuthenticationAPI(OAuth2TokenValidationRequestDTO.TokenValidationContextParam[] context) {
+
+        // If the origin of the request is from the authentication API "OAuth.AuthFlow" should be set as true  in the context
+        return context != null && context.length == 1 && StringUtils.isNotBlank(context[0].getKey()) && context[0]
+                .getKey().equalsIgnoreCase(AUTH_FLOW) && StringUtils.isNotBlank(context[0].getValue()) && context[0]
+                .getValue().equalsIgnoreCase(String.valueOf(true));
     }
 
 }
