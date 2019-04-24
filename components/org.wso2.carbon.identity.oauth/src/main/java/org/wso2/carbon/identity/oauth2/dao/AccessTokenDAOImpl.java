@@ -1054,6 +1054,18 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
     }
 
     /**
+     * Returns the set of access tokens issued for the user.
+     *
+     * The returned set of access tokens is consumed by
+     * {@link org.wso2.carbon.identity.oauth.listener.IdentityOathEventListener} to clear user claims cached against the
+     * tokens during a user attribute update.
+     *
+     * Unless id_token are issued for client_credentials grants there is no point in returning tokens issued with type
+     * APPLICATION since no claims are usually cached against tokens issued for client_credentials.
+     *
+     * Tokens with type APPLICATION can be associated with a particular user, if he/she is the owner of the
+     * app.
+     *
      * @param authenticatedUser
      * @return
      * @throws IdentityOAuth2Exception
@@ -1067,6 +1079,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
 
         String accessTokenStoreTable = OAuthConstants.ACCESS_TOKEN_STORE_TABLE;
         boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authenticatedUser.toString());
+        boolean isIdTokenIssuedForClientCredentialsGrant = isIdTokenIssuedForApplicationTokens();
         Connection connection = IdentityDatabaseUtil.getDBConnection();
         PreparedStatement ps = null;
         ResultSet rs;
@@ -1089,7 +1102,21 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             rs = ps.executeQuery();
             if (isHashDisabled) {
                 while (rs.next()) {
-                    accessTokens.add(getPersistenceProcessor().getPreprocessedAccessTokenIdentifier(rs.getString(1)));
+                    String accessToken = getPersistenceProcessor().getPreprocessedAccessTokenIdentifier(rs.getString(1));
+                    String tokenUserType = rs.getString(2);
+
+                    // Tokens returned by this method will be used to clear claims cached against the tokens,
+                    // we will only return tokens that would contain such cached clams in order to improve performance.
+                    if (isApplicationUserToken(tokenUserType)) {
+                        // Tokens issued for a user can contain cached claims against them.
+                        accessTokens.add(accessToken);
+                    } else {
+                        if (isIdTokenIssuedForClientCredentialsGrant) {
+                            // If id_token is issued for client_credentials grant type, such application tokens could
+                            // also contain claims cached against them.
+                            accessTokens.add(accessToken);
+                        }
+                    }
                 }
             }
             connection.commit();
@@ -1102,6 +1129,28 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             IdentityDatabaseUtil.closeAllConnections(connection, null, ps);
         }
         return accessTokens;
+    }
+
+    /**
+     * Checks whether id_tokens are issued for application tokens (ie. tokens issued for client_credentials grant type)
+     *
+     * @return
+     */
+    private boolean isIdTokenIssuedForApplicationTokens() {
+
+        return !OAuthServerConfiguration.getInstance().getIdTokenNotAllowedGrantTypesSet()
+                .contains(OAuthConstants.GrantTypes.CLIENT_CREDENTIALS);
+    }
+
+    /**
+     * Checks whether the issued token is for a user (ie. of type APPLICATION_USER)
+     *
+     * @param tokenUserType
+     * @return
+     */
+    private boolean isApplicationUserToken(String tokenUserType) {
+
+        return OAuthConstants.UserType.APPLICATION_USER.equals(tokenUserType);
     }
 
     /**
