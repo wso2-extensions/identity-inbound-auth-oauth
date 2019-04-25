@@ -2393,6 +2393,9 @@ public class OAuth2Util {
         if (accessTokenDO != null) {
             authenticatedUser = accessTokenDO.getAuthzUser();
         }
+        if (!OAuth2ServiceComponentHolder.isIDPIdColumnEnabled() && authenticatedUser != null) {
+            authenticatedUser.setFederatedUser(isFederatedUser(authenticatedUser));
+        }
         return authenticatedUser;
     }
 

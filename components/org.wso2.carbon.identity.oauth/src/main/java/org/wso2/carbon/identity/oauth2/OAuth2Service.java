@@ -595,7 +595,6 @@ public class OAuth2Service extends AbstractAdmin {
         }
     }
 
-    @Deprecated
     public boolean isPKCESupportEnabled() {
         return OAuth2Util.isPKCESupportEnabled();
     }
