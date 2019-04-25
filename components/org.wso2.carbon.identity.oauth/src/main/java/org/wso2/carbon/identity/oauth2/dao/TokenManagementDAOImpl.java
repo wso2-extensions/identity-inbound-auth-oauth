@@ -26,7 +26,6 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
-import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.base.IdentityConstants;
@@ -123,24 +122,6 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                 sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_ORACLE;
             }
 
-            if (OAuth2ServiceComponentHolder.isIDPNameColumnEnabled()) {
-                if (connection.getMetaData().getDriverName().contains("MySQL")
-                        || connection.getMetaData().getDriverName().contains("H2")) {
-                    sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_MYSQL;
-                } else if (connection.getMetaData().getDatabaseProductName().contains("DB2")) {
-                    sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_DB2SQL;
-                } else if (connection.getMetaData().getDriverName().contains("MS SQL")
-                        || connection.getMetaData().getDriverName().contains("Microsoft")) {
-                    sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_MSSQL;
-                } else if (connection.getMetaData().getDriverName().contains("PostgreSQL")) {
-                    sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_POSTGRESQL;
-                } else if (connection.getMetaData().getDriverName().contains("INFORMIX")) {
-                    sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_INFORMIX;
-                } else {
-                    sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_ORACLE;
-                }
-            }
-
             sql = OAuth2Util.getTokenPartitionedSqlByToken(sql, refreshToken);
 
             if (refreshToken == null) {
@@ -180,12 +161,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                     validationDataDO.setTokenId(resultSet.getString(9));
                     validationDataDO.setGrantType(resultSet.getString(10));
                     String subjectIdentifier = resultSet.getString(11);
-                    String authenticatedIDP = FrameworkConstants.LOCAL_IDP_NAME;
-                    if (OAuth2ServiceComponentHolder.isIDPNameColumnEnabled()) {
-                        authenticatedIDP = resultSet.getString(12);
-                    }
-                    AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(userName, userDomain, tenantDomain,
-                            authenticatedIDP);
+                    AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(userName, userDomain, tenantDomain);
                     user.setAuthenticatedSubjectIdentifier(subjectIdentifier);
 
                     if (!OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && userDomain.startsWith
