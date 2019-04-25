@@ -370,6 +370,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     private OAuth2AccessTokenRespDTO generateNewAccessTokenResponse(OAuthTokenReqMessageContext tokReqMsgCtx, String scope,
             String consumerKey, AccessTokenDO existingTokenBean, OauthTokenIssuer oauthTokenIssuer)
             throws IdentityOAuth2Exception {
+
         OAuthAppDO oAuthAppBean = getoAuthApp(consumerKey);
         Timestamp timestamp = new Timestamp(new Date().getTime());
         long validityPeriodInMillis = getConfiguredExpiryTimeForApplication(tokReqMsgCtx, consumerKey, oAuthAppBean);
@@ -460,20 +461,20 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         }
     }
 
-    private void updateCacheIfEnabled(AccessTokenDO newTokenBean, String scope) {
+    private void updateCacheIfEnabled(AccessTokenDO newTokenBean, String scope)
+            throws IdentityOAuth2Exception {
+
         if (isHashDisabled && cacheEnabled) {
-            OAuthCacheKey cacheKey = getOAuthCacheKey(scope, newTokenBean.getConsumerKey(), newTokenBean.getAuthzUser().toString());
+            OauthTokenIssuer tokenIssuer = null;
+            OAuthCacheKey cacheKey =
+                    getOAuthCacheKey(scope, newTokenBean.getConsumerKey(), newTokenBean.getAuthzUser().toString());
             oauthCache.addToCache(cacheKey, newTokenBean);
-            // Adding AccessTokenDO to improve validation performance
-            OAuthCacheKey accessTokenCacheKey = new OAuthCacheKey(newTokenBean.getAccessToken());
-            oauthCache.addToCache(accessTokenCacheKey, newTokenBean);
             if (log.isDebugEnabled()) {
-                log.debug("Access token was added to OAuthCache for cache key : " + cacheKey.getCacheKeyString());
-                if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
-                    log.debug("Access token was added to OAuthCache for cache key(hashed) : "
-                            + DigestUtils.sha256Hex(accessTokenCacheKey.getCacheKeyString()));
-                }
+                log.debug("Access token was added to OAuthCache with cache key : " + cacheKey.getCacheKeyString());
             }
+
+            // Adding AccessTokenDO to improve validation performance
+            OAuth2Util.addTokenDOtoCache(newTokenBean);
         }
     }
 

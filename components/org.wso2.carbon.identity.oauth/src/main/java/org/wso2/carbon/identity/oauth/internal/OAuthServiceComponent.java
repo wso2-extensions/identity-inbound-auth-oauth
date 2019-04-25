@@ -66,6 +66,9 @@ public class OAuthServiceComponent {
             context.getBundleContext().registerService(OAuth2Service.class.getName(), oauth2Service, null);
             OAuthComponentServiceHolder.getInstance().setOauth2Service(oauth2Service);
 
+            // We need to explicitly populate the OAuthTokenIssuerMap since it's used for token validation.
+            oauthServerConfig.populateOAuthTokenIssuerMap();
+
             if (log.isDebugEnabled()) {
                 log.debug("Identity OAuth bundle is activated");
             }

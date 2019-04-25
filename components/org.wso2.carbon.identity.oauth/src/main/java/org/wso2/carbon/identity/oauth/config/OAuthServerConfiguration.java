@@ -183,8 +183,8 @@ public class OAuthServerConfiguration {
     private boolean addUserstoreDomainToIdTokenEnabled = false;
 
     //default token types
-    private static final String DEFAULT_TOKEN_TYPE = "Default";
-    private static final String JWT_TOKEN_TYPE = "JWT";
+    public static final String DEFAULT_TOKEN_TYPE = "Default";
+    public static final String JWT_TOKEN_TYPE = "JWT";
 
     // OpenID Connect configurations
     private String openIDConnectIDTokenBuilderClassName = "org.wso2.carbon.identity.openidconnect.DefaultIDTokenBuilder";
@@ -2642,6 +2642,34 @@ public class OAuthServerConfiguration {
         }
         if (log.isDebugEnabled()) {
             log.debug("RenewTokenPerRequest was set to : " + isTokenRenewalPerRequestEnabled);
+        }
+    }
+
+    /**
+     * This method populates oauthTokenIssuerMap by reading the supportedTokenIssuers map. Earlier we only
+     * populated the oauthTokenIssuerMap when a token is issued but now we use this map for token validation
+     * calls as well.
+     */
+    public void populateOAuthTokenIssuerMap() throws IdentityOAuth2Exception {
+
+        if (supportedTokenIssuers != null) {
+            for (Map.Entry<String, TokenIssuerDO> tokenIssuerDO : supportedTokenIssuers.entrySet()) {
+
+                try {
+                    Class clazz = Thread.currentThread().getContextClassLoader().loadClass(
+                            tokenIssuerDO.getValue().getTokenImplClass());
+                    OauthTokenIssuer oauthTokenIssuer = (OauthTokenIssuer) clazz.newInstance();
+                    oauthTokenIssuer.setPersistAccessTokenAlias(tokenIssuerDO.getValue().isPersistAccessTokenAlias());
+                    oauthTokenIssuerMap.put(tokenIssuerDO.getKey(), oauthTokenIssuer);
+
+                } catch (ClassNotFoundException | IllegalAccessException | InstantiationException e) {
+                    throw new IdentityOAuth2Exception("Error while populating OAuth Token Issuer Map. Issuer key: " +
+                            tokenIssuerDO.getKey() + ", Issuer value: " + tokenIssuerDO.getValue(), e);
+                }
+            }
+        } else {
+            throw new IdentityOAuth2Exception("supportedTokenIssuers map returned null when populating the " +
+                    "oauthTokenIssuerMap object.");
         }
     }
 
