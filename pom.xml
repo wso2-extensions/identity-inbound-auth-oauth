@@ -792,9 +792,9 @@
         <org.apache.oltu.oauth2.client.version>1.0.0</org.apache.oltu.oauth2.client.version>
         <oltu.package.import.version.range>[1.0.0, 2.0.0)</oltu.package.import.version.range>
 
-        <waffle.imp.pkg.version.range>[1.6.wso2v5, 2.0)</waffle.imp.pkg.version.range>
-        <waffle-jna.wso2.version>1.6.wso2v5</waffle-jna.wso2.version>
-        <waffle-jna.imp.pkg.version.range>[1.6.wso2v1, 2.0)</waffle-jna.imp.pkg.version.range>
+        <waffle.imp.pkg.version.range>[1.6.0, 2.0)</waffle.imp.pkg.version.range>
+        <waffle-jna.wso2.version>1.6.wso2v6</waffle-jna.wso2.version>
+        <waffle-jna.imp.pkg.version.range>[1.6.0, 2.0)</waffle-jna.imp.pkg.version.range>
 
         <nimbusds.version>5.8.0.wso2v2</nimbusds.version>
         <nimbusds.osgi.version.range>[5.8.0,6.0.0)</nimbusds.osgi.version.range>
