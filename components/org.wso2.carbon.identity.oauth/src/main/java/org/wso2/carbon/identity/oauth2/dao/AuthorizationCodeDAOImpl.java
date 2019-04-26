@@ -89,7 +89,6 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             if (!OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && authzCodeDO.getAuthorizedUser()
                     .isFederatedUser()) {
                 authenticatedIDP = authzCodeDO.getAuthorizedUser().getFederatedIdPName();
-                userDomain = OAuth2Util.getFederatedUserDomain(authenticatedIDP);
             } else {
                 authenticatedIDP = FrameworkConstants.LOCAL_IDP_NAME;
             }
@@ -115,7 +114,16 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             prepStmt.setString(3, callbackUrl);
             prepStmt.setString(4, OAuth2Util.buildScopeString(authzCodeDO.getScope()));
             prepStmt.setString(5, authzCodeDO.getAuthorizedUser().getUserName());
-            prepStmt.setString(6, OAuth2Util.getSanitizedUserStoreDomain(userDomain));
+
+            if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled() &&
+                    !OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() &&
+                    authzCodeDO.getAuthorizedUser().isFederatedUser()) {
+                // Setting null as a federated user does not have a user store domain.
+                prepStmt.setString(6, null);
+            } else {
+                prepStmt.setString(6, OAuth2Util.getSanitizedUserStoreDomain(userDomain));
+            }
+
             int tenantId = OAuth2Util.getTenantId(authzCodeDO.getAuthorizedUser().getTenantDomain());
             prepStmt.setInt(7, tenantId);
             prepStmt.setTimestamp(8, authzCodeDO.getIssuedTime(),
