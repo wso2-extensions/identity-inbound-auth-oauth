@@ -83,22 +83,8 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
         }
         Connection connection = IdentityDatabaseUtil.getDBConnection();
         PreparedStatement prepStmt = null;
-        String userDomain = authzCodeDO.getAuthorizedUser().getUserStoreDomain();
-        String authenticatedIDP;
-        if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-            if (!OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && authzCodeDO.getAuthorizedUser()
-                    .isFederatedUser()) {
-                authenticatedIDP = authzCodeDO.getAuthorizedUser().getFederatedIdPName();
-            } else {
-                authenticatedIDP = FrameworkConstants.LOCAL_IDP_NAME;
-            }
-        } else {
-            authenticatedIDP = authzCodeDO.getAuthorizedUser().getFederatedIdPName();
-            if (!OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && authzCodeDO.getAuthorizedUser()
-                    .isFederatedUser()) {
-                userDomain = OAuth2Util.getFederatedUserDomain(authenticatedIDP);
-            }
-        }
+        String userDomain = getUserStoreDomain(authzCodeDO.getAuthorizedUser());
+        String authenticatedIDP = getAuthenticatedIDP(authzCodeDO.getAuthorizedUser());
 
         try {
             String sql;
@@ -114,16 +100,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             prepStmt.setString(3, callbackUrl);
             prepStmt.setString(4, OAuth2Util.buildScopeString(authzCodeDO.getScope()));
             prepStmt.setString(5, authzCodeDO.getAuthorizedUser().getUserName());
-
-            if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled() &&
-                    !OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() &&
-                    authzCodeDO.getAuthorizedUser().isFederatedUser()) {
-                // Setting null as a federated user does not have a user store domain.
-                prepStmt.setString(6, null);
-            } else {
-                prepStmt.setString(6, OAuth2Util.getSanitizedUserStoreDomain(userDomain));
-            }
-
+            prepStmt.setString(6, userDomain);
             int tenantId = OAuth2Util.getTenantId(authzCodeDO.getAuthorizedUser().getTenantDomain());
             prepStmt.setInt(7, tenantId);
             prepStmt.setTimestamp(8, authzCodeDO.getIssuedTime(),
@@ -702,4 +679,34 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                 pkceCodeChallengeMethod);
     }
 
+    private String getAuthenticatedIDP(AuthenticatedUser user) {
+
+        String authenticatedIDP;
+        if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
+            if (!OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && user.isFederatedUser()) {
+                authenticatedIDP = user.getFederatedIdPName();
+            } else {
+                authenticatedIDP = FrameworkConstants.LOCAL_IDP_NAME;
+            }
+        } else {
+            authenticatedIDP = user.getFederatedIdPName();
+        }
+
+        return authenticatedIDP;
+    }
+
+    private String getUserStoreDomain(AuthenticatedUser user) {
+
+        String userDomain;
+        if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled() &&
+                !OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && user.isFederatedUser()) {
+            userDomain = FrameworkConstants.FEDERATED_IDP_NAME;
+        } else if (!OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && user.isFederatedUser()) {
+            userDomain = OAuth2Util.getFederatedUserDomain(user.getFederatedIdPName());
+        } else {
+            userDomain = user.getUserStoreDomain();
+        }
+
+        return OAuth2Util.getSanitizedUserStoreDomain(userDomain);
+    }
 }
