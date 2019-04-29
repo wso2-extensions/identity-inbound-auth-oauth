@@ -134,7 +134,7 @@ public class OAuthAdminService extends AbstractAdmin {
             OAuthAppDO app;
             for (int i = 0; i < apps.length; i++) {
                 app = apps[i];
-                dtos[i] = buildConsumerAppDTO(app);
+                dtos[i] = OAuthUtil.buildConsumerAppDTO(app);
             }
         }
         return dtos;
@@ -154,7 +154,7 @@ public class OAuthAdminService extends AbstractAdmin {
         try {
             OAuthAppDO app = dao.getAppInformation(consumerKey);
             if (app != null) {
-                dto = buildConsumerAppDTO(app);
+                dto = OAuthUtil.buildConsumerAppDTO(app);
                 if (log.isDebugEnabled()) {
                     log.debug("Found App :" + dto.getApplicationName() + " for consumerKey: " + consumerKey);
                 }
@@ -182,7 +182,7 @@ public class OAuthAdminService extends AbstractAdmin {
         try {
             OAuthAppDO app = dao.getAppInformationByAppName(appName);
             if (app != null) {
-                dto = buildConsumerAppDTO(app);
+                dto = OAuthUtil.buildConsumerAppDTO(app);
             } else {
                 dto = new OAuthConsumerAppDTO();
             }
@@ -306,46 +306,9 @@ public class OAuthAdminService extends AbstractAdmin {
             }
             throw new IdentityOAuthAdminException("No authenticated user found. Failed to register OAuth App");
         }
-        return buildConsumerAppDTO(app);
+        return OAuthUtil.buildConsumerAppDTO(app);
     }
-
-    /**
-     * Get created oauth application details.
-     *
-     * @param appDO <code>OAuthAppDO</code> with created application information.
-     * @return OAuthConsumerAppDTO Created OAuth application details.
-     */
-    private OAuthConsumerAppDTO buildConsumerAppDTO(OAuthAppDO appDO) {
-
-        OAuthConsumerAppDTO dto = new OAuthConsumerAppDTO();
-        dto.setApplicationName(appDO.getApplicationName());
-        dto.setCallbackUrl(appDO.getCallbackUrl());
-        dto.setOauthConsumerKey(appDO.getOauthConsumerKey());
-        dto.setOauthConsumerSecret(appDO.getOauthConsumerSecret());
-        dto.setOAuthVersion(appDO.getOauthVersion());
-        dto.setGrantTypes(appDO.getGrantTypes());
-        dto.setScopeValidators(appDO.getScopeValidators());
-        dto.setUsername(appDO.getUser().toFullQualifiedUsername());
-        dto.setState(appDO.getState());
-        dto.setPkceMandatory(appDO.isPkceMandatory());
-        dto.setPkceSupportPlain(appDO.isPkceSupportPlain());
-        dto.setUserAccessTokenExpiryTime(appDO.getUserAccessTokenExpiryTime());
-        dto.setApplicationAccessTokenExpiryTime(appDO.getApplicationAccessTokenExpiryTime());
-        dto.setRefreshTokenExpiryTime(appDO.getRefreshTokenExpiryTime());
-        dto.setIdTokenExpiryTime(appDO.getIdTokenExpiryTime());
-        dto.setAudiences(appDO.getAudiences());
-        dto.setRequestObjectSignatureValidationEnabled(appDO.isRequestObjectSignatureValidationEnabled());
-        dto.setIdTokenEncryptionEnabled(appDO.isIdTokenEncryptionEnabled());
-        dto.setIdTokenEncryptionAlgorithm(appDO.getIdTokenEncryptionAlgorithm());
-        dto.setIdTokenEncryptionMethod(appDO.getIdTokenEncryptionMethod());
-        dto.setBackChannelLogoutUrl(appDO.getBackChannelLogoutUrl());
-        dto.setFrontchannelLogoutUrl(appDO.getFrontchannelLogoutUrl());
-        dto.setTokenType(appDO.getTokenType());
-        dto.setBypassClientCredentials(appDO.isBypassClientCredentials());
-        dto.setRenewRefreshTokenEnabled(appDO.getRenewRefreshTokenEnabled());
-        return dto;
-    }
-
+    
     /**
      * Update existing consumer application.
      *
@@ -800,7 +763,7 @@ public class OAuthAdminService extends AbstractAdmin {
                             OAuthAppDO appDO;
                             try {
                                 appDO = appDAO.getAppInformation(scopedToken.getConsumerKey());
-                                appDTOs.add(buildConsumerAppDTO(appDO));
+                                appDTOs.add(OAuthUtil.buildConsumerAppDTO(appDO));
                                 if (log.isDebugEnabled()) {
                                     log.debug("Found App: " + appDO.getApplicationName() + " for user: " + username);
                                 }
