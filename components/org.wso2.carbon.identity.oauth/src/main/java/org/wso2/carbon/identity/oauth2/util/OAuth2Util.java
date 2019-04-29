@@ -52,6 +52,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.wso2.carbon.core.util.KeyStoreManager;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
@@ -2392,7 +2393,7 @@ public class OAuth2Util {
         if (accessTokenDO != null) {
             authenticatedUser = accessTokenDO.getAuthzUser();
         }
-        if (authenticatedUser != null) {
+        if (!OAuth2ServiceComponentHolder.isIDPIdColumnEnabled() && authenticatedUser != null) {
             authenticatedUser.setFederatedUser(isFederatedUser(authenticatedUser));
         }
         return authenticatedUser;
@@ -2702,6 +2703,7 @@ public class OAuth2Util {
      * @param tenantDomain    tenent domain
      * @return an instance of AuthenticatedUser{@link AuthenticatedUser}
      */
+    @Deprecated
     public static AuthenticatedUser createAuthenticatedUser(String username, String userStoreDomain, String tenantDomain) {
 
         AuthenticatedUser authenticatedUser = new AuthenticatedUser();
@@ -2717,6 +2719,52 @@ public class OAuth2Util {
             authenticatedUser.setFederatedIdPName(OAuth2Util.getFederatedIdPFromDomain(userStoreDomain));
         } else {
             authenticatedUser.setUserStoreDomain(userStoreDomain);
+        }
+
+        return authenticatedUser;
+    }
+
+    /**
+     * Creates an instance on AuthenticatedUser{@link AuthenticatedUser} for the given parameters.
+     *
+     * @param username        username of the user
+     * @param userStoreDomain user store domain
+     * @param tenantDomain    tenent domain
+     * @param idpName    idp name
+     * @return an instance of AuthenticatedUser{@link AuthenticatedUser}
+     */
+    public static AuthenticatedUser createAuthenticatedUser(String username, String userStoreDomain, String
+            tenantDomain, String idpName) {
+
+        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+        authenticatedUser.setUserName(username);
+        authenticatedUser.setTenantDomain(tenantDomain);
+
+        if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
+            if (!StringUtils.equals(FrameworkConstants.LOCAL_IDP_NAME, idpName) && !OAuthServerConfiguration.getInstance()
+                    .isMapFederatedUsersToLocal()) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Found federated idp: " + idpName + " for user: " + username + " in " +
+                            "tenant domain:" + tenantDomain + ". Flag user as a federated user.");
+                }
+                authenticatedUser.setFederatedUser(true);
+                authenticatedUser.setFederatedIdPName(idpName);
+            } else {
+                authenticatedUser.setUserStoreDomain(userStoreDomain);
+            }
+        } else {
+            // Preserving old behaviour.
+            if (StringUtils.startsWith(userStoreDomain, OAuthConstants.UserType.FEDERATED_USER_DOMAIN_PREFIX) &&
+                    !OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal()) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Federated prefix found in domain: " + userStoreDomain + " for user: " + username + " in " +
+                            "tenant domain:" + tenantDomain + ". Flag user as a federated user.");
+                }
+                authenticatedUser.setFederatedUser(true);
+                authenticatedUser.setFederatedIdPName(OAuth2Util.getFederatedIdPFromDomain(userStoreDomain));
+            } else {
+                authenticatedUser.setUserStoreDomain(userStoreDomain);
+            }
         }
 
         return authenticatedUser;
