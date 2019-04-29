@@ -688,8 +688,14 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             } else {
                 authenticatedIDP = FrameworkConstants.LOCAL_IDP_NAME;
             }
+            if (log.isDebugEnabled()) {
+                log.debug("IDP_ID column is available. Authenticated IDP is set to:" + authenticatedIDP);
+            }
         } else {
             authenticatedIDP = user.getFederatedIdPName();
+            if (log.isDebugEnabled()) {
+                log.debug("IDP_ID column is not available. Authenticated IDP is set to:" + authenticatedIDP);
+            }
         }
 
         return authenticatedIDP;
@@ -705,6 +711,13 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             userDomain = OAuth2Util.getFederatedUserDomain(user.getFederatedIdPName());
         } else {
             userDomain = user.getUserStoreDomain();
+        }
+        if (log.isDebugEnabled()) {
+            if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
+                log.debug("IDP_ID column is available. User domain name is set to:" + userDomain);
+            } else {
+                log.debug("IDP_ID column is not available. User domain name is set to:" + userDomain);
+            }
         }
 
         return OAuth2Util.getSanitizedUserStoreDomain(userDomain);
