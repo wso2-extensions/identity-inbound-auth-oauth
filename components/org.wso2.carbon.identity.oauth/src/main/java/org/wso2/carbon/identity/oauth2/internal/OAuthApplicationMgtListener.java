@@ -52,6 +52,7 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dao.OAuthConsumerDAO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.io.ByteArrayInputStream;
 import java.io.StringWriter;
@@ -282,7 +283,7 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
             } else {
                 //nothing to do
             }
-        } catch (IdentityOAuthAdminException e) {
+        } catch (IdentityApplicationManagementException e) {
             throw new IdentityApplicationManagementException("Injecting client secret failed.", e);
         }
 
@@ -290,9 +291,22 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
         return;
     }
 
-    private String getClientSecret(String inboundAuthKey) throws IdentityOAuthAdminException {
-        OAuthConsumerDAO dao = new OAuthConsumerDAO();
-        return dao.getOAuthConsumerSecret(inboundAuthKey);
+    private String getClientSecret(String inboundAuthKey) throws IdentityApplicationManagementException {
+
+        OAuthAppDO oAuthAppDO;
+        try {
+            oAuthAppDO = OAuth2Util.getAppInformationByClientId(inboundAuthKey);
+        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+            throw new IdentityApplicationManagementException("Error while retrieving the OAuth application for " +
+                    "consumer key: " + inboundAuthKey, e);
+        }
+
+        if (oAuthAppDO == null) {
+            throw new IdentityApplicationManagementException("Unable to retrieve app information for consumer key: " +
+                    inboundAuthKey);
+        }
+
+        return oAuthAppDO.getOauthConsumerSecret();
     }
 
     /**
