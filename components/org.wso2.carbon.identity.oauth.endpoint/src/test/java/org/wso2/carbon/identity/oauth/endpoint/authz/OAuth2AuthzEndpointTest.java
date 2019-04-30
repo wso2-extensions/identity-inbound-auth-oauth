@@ -653,6 +653,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         mockHttpRequest(requestParams, requestAttributes, HttpMethod.POST);
 
         OAuth2Parameters oAuth2Params = setOAuth2Parameters(scopes, APP_NAME, RESPONSE_MODE_FORM_POST, redirectUrl);
+        oAuth2Params.setClientId(CLIENT_ID_VALUE);
 
         when(consentCacheEntry.getoAuth2Parameters()).thenReturn(oAuth2Params);
         when(consentCacheEntry.getLoggedInUser()).thenReturn(new AuthenticatedUser());
@@ -983,6 +984,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         OAuth2Parameters oAuth2Params = setOAuth2Parameters(new HashSet<String>(), APP_NAME, responseMode, APP_REDIRECT_URL);
         oAuth2Params.setResponseType(responseType);
         oAuth2Params.setState(state);
+        oAuth2Params.setClientId(CLIENT_ID_VALUE);
 
         when(consentCacheEntry.getoAuth2Parameters()).thenReturn(oAuth2Params);
         when(consentCacheEntry.getLoggedInUser()).thenReturn(new AuthenticatedUser());
