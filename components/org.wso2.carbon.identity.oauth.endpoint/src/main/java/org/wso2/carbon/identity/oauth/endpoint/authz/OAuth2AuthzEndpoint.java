@@ -1817,7 +1817,12 @@ public class OAuth2AuthzEndpoint {
         }
     }
 
-    // Consent page can be skipped by setting OpenIDConnect configuration or by setting SP property
+    /**
+     * Consent page can be skipped by setting OpenIDConnect configuration or by setting SP property.
+     *
+     * @param serviceProvider Service provider related to this request.
+     * @return A boolean stating whether consent page is skipped or not.
+     */
     private boolean isConsentSkipped(ServiceProvider serviceProvider) {
 
         return getOAuthServerConfiguration().getOpenIDConnectSkipeUserConsentConfig()
