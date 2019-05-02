@@ -970,7 +970,7 @@ public class OAuth2AuthzEndpoint {
 
         ServiceProvider serviceProvider = getServiceProvider(oauth2Params.getClientId());
 
-        if (!(isOpenIDConnectConsentSkipped() || FrameworkUtils.isConsentPageSkippedForSP(serviceProvider))) {
+        if (!isConsentSkipped(serviceProvider)) {
             boolean approvedAlways = OAuthConstants.Consent.APPROVE_ALWAYS.equals(consent);
             if (approvedAlways) {
                 OpenIDConnectUserRPStore.getInstance().putUserRPToStore(loggedInUser, applicationName,
@@ -1747,7 +1747,7 @@ public class OAuth2AuthzEndpoint {
 
         ServiceProvider serviceProvider = getServiceProvider(oauth2Params.getClientId());
 
-        if (isOpenIDConnectConsentSkipped() || FrameworkUtils.isConsentPageSkippedForSP(serviceProvider)) {
+        if (isConsentSkipped(serviceProvider)) {
             sessionState.setAddSessionState(true);
             return handleUserConsent(oAuthMessage, APPROVE, sessionState);
         } else if (hasUserApproved) {
@@ -1817,9 +1817,11 @@ public class OAuth2AuthzEndpoint {
         }
     }
 
-    private boolean isOpenIDConnectConsentSkipped() {
+    // Consent page can be skipped by setting OpenIDConnect configuration or by setting SP property
+    private boolean isConsentSkipped(ServiceProvider serviceProvider) {
 
-        return getOAuthServerConfiguration().getOpenIDConnectSkipeUserConsentConfig();
+        return getOAuthServerConfiguration().getOpenIDConnectSkipeUserConsentConfig()
+                || FrameworkUtils.isConsentPageSkippedForSP(serviceProvider);
     }
 
     private boolean isConsentFromUserRequired(String preConsentQueryParams) {
@@ -2053,7 +2055,7 @@ public class OAuth2AuthzEndpoint {
 
         ServiceProvider serviceProvider = getServiceProvider(oauth2Params.getClientId());
         sessionState.setAddSessionState(true);
-        if (isOpenIDConnectConsentSkipped() || FrameworkUtils.isConsentPageSkippedForSP(serviceProvider)) {
+        if (isConsentSkipped(serviceProvider)) {
             return handleUserConsent(oAuthMessage, APPROVE, sessionState);
         } else if (hasUserApproved) {
             return handleApprovedAlwaysWithoutPromptingForNewConsent(oAuthMessage, sessionState, oauth2Params);
