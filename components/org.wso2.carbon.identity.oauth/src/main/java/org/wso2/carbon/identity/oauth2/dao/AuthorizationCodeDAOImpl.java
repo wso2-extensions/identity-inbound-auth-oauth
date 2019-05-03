@@ -24,14 +24,12 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
-import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
-import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
@@ -83,8 +81,8 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
         }
         Connection connection = IdentityDatabaseUtil.getDBConnection();
         PreparedStatement prepStmt = null;
-        String userDomain = getUserStoreDomain(authzCodeDO.getAuthorizedUser());
-        String authenticatedIDP = getAuthenticatedIDP(authzCodeDO.getAuthorizedUser());
+        String userDomain = OAuth2Util.getUserStoreDomain(authzCodeDO.getAuthorizedUser());
+        String authenticatedIDP = OAuth2Util.getAuthenticatedIDP(authzCodeDO.getAuthorizedUser());
 
         try {
             String sql;
@@ -677,49 +675,5 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
         return new AuthzCodeDO(user, OAuth2Util.buildScopeArray(scopeString), issuedTime, validityPeriod,
                 callbackUrl, consumerKey, authorizationKey, codeId, codeState, pkceCodeChallenge,
                 pkceCodeChallengeMethod);
-    }
-
-    private String getAuthenticatedIDP(AuthenticatedUser user) {
-
-        String authenticatedIDP;
-        if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-            if (!OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && user.isFederatedUser()) {
-                authenticatedIDP = user.getFederatedIdPName();
-            } else {
-                authenticatedIDP = FrameworkConstants.LOCAL_IDP_NAME;
-            }
-            if (log.isDebugEnabled()) {
-                log.debug("IDP_ID column is available. Authenticated IDP is set to:" + authenticatedIDP);
-            }
-        } else {
-            authenticatedIDP = user.getFederatedIdPName();
-            if (log.isDebugEnabled()) {
-                log.debug("IDP_ID column is not available. Authenticated IDP is set to:" + authenticatedIDP);
-            }
-        }
-
-        return authenticatedIDP;
-    }
-
-    private String getUserStoreDomain(AuthenticatedUser user) {
-
-        String userDomain;
-        if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled() &&
-                !OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && user.isFederatedUser()) {
-            userDomain = FrameworkConstants.FEDERATED_IDP_NAME;
-        } else if (!OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && user.isFederatedUser()) {
-            userDomain = OAuth2Util.getFederatedUserDomain(user.getFederatedIdPName());
-        } else {
-            userDomain = user.getUserStoreDomain();
-        }
-        if (log.isDebugEnabled()) {
-            if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                log.debug("IDP_ID column is available. User domain name is set to:" + userDomain);
-            } else {
-                log.debug("IDP_ID column is not available. User domain name is set to:" + userDomain);
-            }
-        }
-
-        return OAuth2Util.getSanitizedUserStoreDomain(userDomain);
     }
 }
