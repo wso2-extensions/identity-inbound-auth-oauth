@@ -2308,7 +2308,14 @@ public class OAuth2Util {
         String userStoreDomain = OAuth2Util.getUserStoreDomainFromUserId(authenticatedUser.toString());
         if (!OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && authenticatedUser.
                 isFederatedUser()) {
-            userStoreDomain = OAuth2Util.getFederatedUserDomain(authenticatedUser.getFederatedIdPName());
+            if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
+                // When the IDP_ID column is available it was decided to set the
+                // domain name for federated users to 'FEDERATED'.
+                // This is a system reserved word and users stores cannot be created with this name.
+                userStoreDomain = FrameworkConstants.FEDERATED_IDP_NAME;
+            } else {
+                userStoreDomain = OAuth2Util.getFederatedUserDomain(authenticatedUser.getFederatedIdPName());
+            }
         }
         return userStoreDomain;
     }
@@ -2393,7 +2400,7 @@ public class OAuth2Util {
         if (accessTokenDO != null) {
             authenticatedUser = accessTokenDO.getAuthzUser();
         }
-        if (!OAuth2ServiceComponentHolder.isIDPIdColumnEnabled() && authenticatedUser != null) {
+        if (authenticatedUser != null) {
             authenticatedUser.setFederatedUser(isFederatedUser(authenticatedUser));
         }
         return authenticatedUser;
@@ -2973,5 +2980,78 @@ public class OAuth2Util {
                 throw new IdentityOAuth2Exception("Error while getting the token issuer", e);
             }
         }
+    }
+
+    /**
+     * Used to get the authenticated IDP name from a user.
+     *
+     * @param user Authenticated User.
+     * @return Returns the authenticated IDP name.
+     */
+    public static String getAuthenticatedIDP(AuthenticatedUser user) {
+
+        String authenticatedIDP;
+        if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
+            if (!OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && user.isFederatedUser()) {
+                authenticatedIDP = user.getFederatedIdPName();
+                if (log.isDebugEnabled()) {
+                    log.debug("IDP_ID column is available. User is federated and not mapped to local users. " +
+                            "Authenticated IDP is set to:" + authenticatedIDP);
+                }
+            } else {
+                authenticatedIDP = FrameworkConstants.LOCAL_IDP_NAME;
+                if (log.isDebugEnabled()) {
+                    log.debug("IDP_ID column is available. Authenticated IDP is set to:" + authenticatedIDP);
+                }
+            }
+        } else {
+            authenticatedIDP = user.getFederatedIdPName();
+            if (log.isDebugEnabled()) {
+                log.debug("IDP_ID column is not available. Authenticated IDP is set to:" + authenticatedIDP);
+            }
+        }
+
+        return authenticatedIDP;
+    }
+
+    /**
+     * Used to get the user store domain name from a user.
+     *
+     * @param user Authenticated User.
+     * @return Returns the sanitized user store domain.
+     */
+    public static String getUserStoreDomain(AuthenticatedUser user) {
+
+        String userDomain;
+        if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled() &&
+                !OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && user.isFederatedUser()) {
+            if (log.isDebugEnabled()) {
+                log.debug("IDP_ID column is available. User is federated and not mapped to local users.");
+            }
+            // When the IDP_ID column is available it was decided to set the
+            // domain name for federated users to 'FEDERATED'.
+            // This is a system reserved word and users stores cannot be created with this name.
+            userDomain = FrameworkConstants.FEDERATED_IDP_NAME;
+        } else if (!OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && user.isFederatedUser()) {
+            if (log.isDebugEnabled()) {
+                log.debug("IDP_ID column is not available. User is federated and not mapped to local users.");
+            }
+            userDomain = OAuth2Util.getFederatedUserDomain(user.getFederatedIdPName());
+        } else {
+            userDomain = user.getUserStoreDomain();
+            if (log.isDebugEnabled()) {
+                if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
+                    log.debug("IDP_ID column is available.");
+                } else {
+                    log.debug("IDP_ID column is not available.");
+                }
+            }
+        }
+        String sanitizedUserDomain = OAuth2Util.getSanitizedUserStoreDomain(userDomain);
+        if (log.isDebugEnabled()) {
+            log.debug("User domain is set to :" + sanitizedUserDomain);
+        }
+
+        return sanitizedUserDomain;
     }
 }
