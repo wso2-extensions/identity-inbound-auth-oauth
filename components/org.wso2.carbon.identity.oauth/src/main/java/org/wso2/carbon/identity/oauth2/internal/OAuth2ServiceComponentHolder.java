@@ -86,6 +86,11 @@ public class OAuth2ServiceComponentHolder {
         OAuth2ServiceComponentHolder.audienceEnabled = audienceEnabled;
     }
 
+    public static boolean isIDPIdColumnEnabled() {
+        // TODO:#FIDP-FIX: Add proper config
+        return true;
+    }
+
     public static RegistryService getRegistryService() {
 
         return registryService;
