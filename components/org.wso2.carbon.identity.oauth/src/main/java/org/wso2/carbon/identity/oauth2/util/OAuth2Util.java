@@ -2996,18 +2996,20 @@ public class OAuth2Util {
                 authenticatedIDP = user.getFederatedIdPName();
                 if (log.isDebugEnabled()) {
                     log.debug("IDP_ID column is available. User is federated and not mapped to local users. " +
-                            "Authenticated IDP is set to:" + authenticatedIDP);
+                            "Authenticated IDP is set to:" + authenticatedIDP + " for user:" + user.toString());
                 }
             } else {
                 authenticatedIDP = FrameworkConstants.LOCAL_IDP_NAME;
                 if (log.isDebugEnabled()) {
-                    log.debug("IDP_ID column is available. Authenticated IDP is set to:" + authenticatedIDP);
+                    log.debug("IDP_ID column is available. Authenticated IDP is set to:" + authenticatedIDP +
+                            " for user:" + user.toString());
                 }
             }
         } else {
             authenticatedIDP = user.getFederatedIdPName();
             if (log.isDebugEnabled()) {
-                log.debug("IDP_ID column is not available. Authenticated IDP is set to:" + authenticatedIDP);
+                log.debug("IDP_ID column is not available. Authenticated IDP is set to:" + authenticatedIDP +
+                        " for user:" + user.toString());
             }
         }
 
@@ -3049,7 +3051,7 @@ public class OAuth2Util {
         }
         String sanitizedUserDomain = OAuth2Util.getSanitizedUserStoreDomain(userDomain);
         if (log.isDebugEnabled()) {
-            log.debug("User domain is set to :" + sanitizedUserDomain);
+            log.debug("User domain is set to:" + sanitizedUserDomain  + " for user:" + user.toString());
         }
 
         return sanitizedUserDomain;
