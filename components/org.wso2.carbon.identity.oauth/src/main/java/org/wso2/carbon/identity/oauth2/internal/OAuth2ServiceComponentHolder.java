@@ -87,7 +87,7 @@ public class OAuth2ServiceComponentHolder {
     }
 
     public static boolean isIDPIdColumnEnabled() {
-        // TODO:#FIDP-FIX: Add proper config
+
         return true;
     }
 
