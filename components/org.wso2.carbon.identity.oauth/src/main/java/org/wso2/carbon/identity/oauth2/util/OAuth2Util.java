@@ -568,6 +568,7 @@ public class OAuth2Util {
      * @param authorizedUser
      * @return
      */
+    @Deprecated
     public static String buildCacheKeyStringForToken(String clientId, String scope, String authorizedUser) {
 
         boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authorizedUser);
@@ -575,6 +576,28 @@ public class OAuth2Util {
             return clientId + ":" + authorizedUser + ":" + scope;
         } else {
             return clientId + ":" + authorizedUser.toLowerCase() + ":" + scope;
+        }
+    }
+
+    /**
+     * Build the cache key string when storing token info in cache.
+     *
+     * @param clientId         ClientId of the App.
+     * @param scope            Scopes used.
+     * @param authorizedUser   Authorised user.
+     * @param authenticatedIDP Authenticated IdP.
+     * @param tenantDomain     Tenant domain.
+     * @return Cache key string combining the input parameters.
+     */
+    public static String buildCacheKeyStringForToken(String clientId, String scope, String authorizedUser,
+                                                     String authenticatedIDP, String tenantDomain) {
+
+        boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authorizedUser);
+        if (isUsernameCaseSensitive) {
+            return clientId + ":" + authorizedUser + ":" + scope + ":" + authenticatedIDP + ":" + tenantDomain;
+        } else {
+            return clientId + ":" + authorizedUser.toLowerCase() + ":" + scope + ":" + authenticatedIDP +
+                    ":" + tenantDomain;
         }
     }
 
