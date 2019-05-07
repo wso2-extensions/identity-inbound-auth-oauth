@@ -162,6 +162,7 @@ public class OAuthServerConfiguration {
     private Map<String, Properties> supportedClientAuthHandlerData = new HashMap<>();
     private String saml2TokenCallbackHandlerName = null;
     private String saml2BearerTokenUserType;
+    private boolean saml2UserIdFromClaims = false;
     private boolean mapFederatedUsersToLocal = false;
     private SAML2TokenCallbackHandler saml2TokenCallbackHandler = null;
     private Map<String, String> tokenValidatorClassNames = new HashMap();
@@ -1240,6 +1241,11 @@ public class OAuthServerConfiguration {
         return saml2BearerTokenUserType;
     }
 
+    public boolean getSaml2UserIdFromClaims() {
+
+        return saml2UserIdFromClaims;
+    }
+
     public boolean isConvertOriginalClaimsFromAssertionsToOIDCDialect() {
         return convertOriginalClaimsFromAssertionsToOIDCDialect;
     }
@@ -2224,16 +2230,22 @@ public class OAuthServerConfiguration {
                 oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.SAML2_GRANT));
         OMElement saml2BearerUserTypeElement = null;
         OMElement saml2TokenHandlerElement = null;
+        OMElement saml2UserIdFromClaimElement = null;
         if (saml2GrantElement != null) {
             saml2BearerUserTypeElement = saml2GrantElement.getFirstChildWithName(getQNameWithIdentityNS
                     (ConfigElements.SAML2_BEARER_USER_TYPE));
             saml2TokenHandlerElement = saml2GrantElement.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.SAML2_TOKEN_HANDLER));
+            saml2UserIdFromClaimElement = saml2GrantElement.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.
+                    SAML2_USER_ID_FROM_CLAIMS));
         }
         if (saml2TokenHandlerElement != null && StringUtils.isNotBlank(saml2TokenHandlerElement.getText())) {
             saml2TokenCallbackHandlerName = saml2TokenHandlerElement.getText().trim();
         }
         if (saml2BearerUserTypeElement != null && StringUtils.isNotBlank(saml2BearerUserTypeElement.getText())) {
             saml2BearerTokenUserType = saml2BearerUserTypeElement.getText().trim();
+        }
+        if (saml2UserIdFromClaimElement != null && StringUtils.isNotBlank(saml2UserIdFromClaimElement.getText())) {
+            saml2UserIdFromClaims = Boolean.parseBoolean(saml2UserIdFromClaimElement.getText().trim());
         }
     }
 
@@ -2831,6 +2843,7 @@ public class OAuthServerConfiguration {
         private static final String SAML2_GRANT = "SAML2Grant";
         private static final String SAML2_TOKEN_HANDLER = "SAML2TokenHandler";
         private static final String SAML2_BEARER_USER_TYPE = "UserType";
+        private static final String SAML2_USER_ID_FROM_CLAIMS = "UseUserIdFromClaims";
 
         // To enable revoke response headers
         private static final String ENABLE_REVOKE_RESPONSE_HEADERS = "EnableRevokeResponseHeaders";

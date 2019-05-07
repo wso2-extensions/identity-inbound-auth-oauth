@@ -887,6 +887,92 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
         }
     }
 
+    /**
+     * Get the user id of the identity provider.
+     *
+     * @param tokReqMsgCtx
+     * @param identityProvider
+     * @param assertion
+     * @return
+     * @throws IdentityOAuth2Exception
+     */
+    protected String getUserId(OAuthTokenReqMessageContext tokReqMsgCtx, IdentityProvider identityProvider,
+                             Assertion assertion) throws IdentityOAuth2Exception {
+
+        // Check whether the user id from claims is enabled for the SAML bearer grant.
+        if (OAuthServerConfiguration.getInstance().getSaml2UserIdFromClaims()) {
+
+            // If the "user id found among claims" option enabled for the SAML federated identity provider then get the
+            // user id, from the claims sent through the assertion.
+            if (isUserIdFromClaimsEnabled(identityProvider)) {
+                Map<String, String> attributes = ClaimsUtil.extractClaimsFromAssertion(tokReqMsgCtx, null, assertion,
+                        FrameworkUtils.getMultiAttributeSeparator());
+                String userClaimURI = identityProvider.getClaimConfig().getUserClaimURI();
+                if (StringUtils.isNotBlank(userClaimURI)) {
+                    if (attributes != null) {
+                        String userClaimValue = attributes.get(userClaimURI);
+                        if (StringUtils.isNotBlank(userClaimValue)) {
+                            if (log.isDebugEnabled()) {
+                                log.debug("Using the user claim URI value : " + userClaimValue + " as the user id.");
+                            }
+                            return userClaimValue;
+                        }
+                    }
+                    throw new IdentityOAuth2Exception("User id found among claims option and user claim URI : "
+                            + userClaimURI + " are configured for the " +
+                            "SAML federated identity provider : " + identityProvider.getIdentityProviderName() +
+                            ", but user claim value is not present in the SAML assertion.");
+                } else {
+                    throw new IdentityOAuth2Exception("SAML federated authenticator configuration " +
+                            IdentityApplicationConstants.Authenticator.SAML2SSO.IS_USER_ID_IN_CLAIMS + " is enabled to " +
+                            "the identity provider : " + identityProvider.getIdentityProviderName() + " but User ID " +
+                            "Claim URI is not selected in basic claim configuration.");
+                }
+            } else {
+                throw new IdentityOAuth2Exception("UserIdFromClaims configuration is enabled for saml bearer grant but " +
+                        "SAML federated authenticator configuration " + IdentityApplicationConstants.Authenticator
+                        .SAML2SSO.IS_USER_ID_IN_CLAIMS + " is not enabled to the identity provider : " +
+                        identityProvider.getIdentityProviderName());
+            }
+        } else {
+            String nameIdValue = getNameIdValue(assertion);
+            if (log.isDebugEnabled()) {
+                log.debug("Using the name identifier : " + nameIdValue + " as the user id.");
+            }
+            return nameIdValue;
+        }
+    }
+
+    /**
+     * Check whether the "user id found among claims" option enabled for the federated identity provider.
+     *
+     * @param identityProvider
+     * @return
+     */
+    private boolean isUserIdFromClaimsEnabled(IdentityProvider identityProvider) {
+
+        Property isUserIdInClaims = null;
+        FederatedAuthenticatorConfig[] fedAuthnConfigs = identityProvider.getFederatedAuthenticatorConfigs();
+        if (fedAuthnConfigs != null) {
+            FederatedAuthenticatorConfig fedSAMLAuthnConfig = IdentityApplicationManagementUtil.getFederatedAuthenticator
+                    (fedAuthnConfigs, IdentityApplicationConstants.Authenticator.SAML2SSO.FED_AUTH_NAME);
+            if (fedSAMLAuthnConfig != null) {
+                isUserIdInClaims = IdentityApplicationManagementUtil.getProperty(
+                        fedSAMLAuthnConfig.getProperties(), IdentityApplicationConstants.Authenticator.SAML2SSO.
+                                IS_USER_ID_IN_CLAIMS);
+                if (isUserIdInClaims != null && "TRUE".equalsIgnoreCase(isUserIdInClaims.getValue())) {
+                    if (log.isDebugEnabled()) {
+                        log.debug(IdentityApplicationConstants.Authenticator.SAML2SSO.
+                                IS_USER_ID_IN_CLAIMS + " is enabled to the SAML federated identity provider : " +
+                                identityProvider.getIdentityProviderName());
+                    }
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     private String getNameIdValue(Assertion assertion) throws IdentityOAuth2Exception {
         if (assertion.getSubject().getNameID() != null) {
             return assertion.getSubject().getNameID().getValue();
@@ -979,7 +1065,8 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
     protected void setFederatedUser(OAuthTokenReqMessageContext tokReqMsgCtx, Assertion assertion, String
             tenantDomain) throws IdentityOAuth2Exception {
 
-        String subjectIdentifier = getNameIdValue(assertion);
+        IdentityProvider identityProvider = getIdentityProvider(assertion, tenantDomain);
+        String subjectIdentifier = getUserId(tokReqMsgCtx, identityProvider, assertion);
         if (log.isDebugEnabled()) {
             log.debug("Setting federated user : " + subjectIdentifier + ". with SP tenant domain : " + tenantDomain);
         }
@@ -1065,7 +1152,8 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
             throws IdentityOAuth2Exception {
 
         AuthenticatedUser authenticatedUser = new AuthenticatedUser();
-        String subjectIdentifier = getNameIdValue(assertion);
+        IdentityProvider identityProvider = getIdentityProvider(assertion, spTenantDomain);
+        String subjectIdentifier = getUserId(tokReqMsgCtx, identityProvider, assertion);
         String userTenantDomain = null;
         if (log.isDebugEnabled()) {
             log.debug("Building local user with assertion subject : " + subjectIdentifier);
@@ -1096,8 +1184,11 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
      */
     protected void createLegacyUser(OAuthTokenReqMessageContext tokReqMsgCtx, Assertion assertion)
             throws IdentityOAuth2Exception {
+
+        String tenantDomain = getTenantDomain(tokReqMsgCtx);
+        IdentityProvider identityProvider = getIdentityProvider(assertion, tenantDomain);
         //Check whether NameID value is null before call this method.
-        String resourceOwnerUserName = getNameIdValue(assertion);
+        String resourceOwnerUserName = getUserId(tokReqMsgCtx, identityProvider, assertion);
         AuthenticatedUser user = OAuth2Util.getUserFromUserName(resourceOwnerUserName);
 
         user.setAuthenticatedSubjectIdentifier(resourceOwnerUserName);
