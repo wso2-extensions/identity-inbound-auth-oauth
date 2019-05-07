@@ -53,6 +53,7 @@ import org.json.JSONObject;
 import org.wso2.carbon.core.util.KeyStoreManager;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
@@ -3078,5 +3079,35 @@ public class OAuth2Util {
         }
 
         return sanitizedUserDomain;
+    }
+
+    /**
+     * Check if the IDP_ID column is available in the relevant tables.
+     *
+     * @return True if IDP_ID column is available in all the relevant table.
+     */
+    public static boolean checkIDPIdColumnAvailable() {
+
+        boolean isIdpIdAvailableInAuthzCodeTable;
+        boolean isIdpIdAvailableInTokenTable;
+        boolean isIdpIdAvailableInTokenAuditTable;
+        String columnIdpId = "IDP_ID";
+
+        isIdpIdAvailableInAuthzCodeTable = FrameworkUtils
+                .isTableColumnExists("IDN_OAUTH2_AUTHORIZATION_CODE", columnIdpId);
+        isIdpIdAvailableInTokenTable = FrameworkUtils
+                .isTableColumnExists("IDN_OAUTH2_ACCESS_TOKEN", columnIdpId);
+        if (OAuthServerConfiguration.getInstance().useRetainOldAccessTokens()) {
+            isIdpIdAvailableInTokenAuditTable = FrameworkUtils
+                    .isTableColumnExists("IDN_OAUTH2_ACCESS_TOKEN_AUDIT", columnIdpId);
+        } else {
+            isIdpIdAvailableInTokenAuditTable = true;
+            if (log.isDebugEnabled()) {
+                log.debug("Retaining old access tokens in IDN_OAUTH2_ACCESS_TOKEN_AUDIT is disabled, therefore " +
+                        "ignoring the availability of IDP_ID column in IDN_OAUTH2_ACCESS_TOKEN_AUDIT table.");
+            }
+        }
+
+        return isIdpIdAvailableInAuthzCodeTable && isIdpIdAvailableInTokenTable && isIdpIdAvailableInTokenAuditTable;
     }
 }

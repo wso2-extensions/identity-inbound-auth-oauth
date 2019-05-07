@@ -58,6 +58,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkAudienceEnabled;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkIDPIdColumnAvailable;
 
 @Component(
         name = "identity.oauth2.component",
@@ -188,6 +189,19 @@ public class OAuth2ServiceComponent {
                 log.debug("OAuth - OIDC audiences disabled.");
             }
             OAuth2ServiceComponentHolder.setAudienceEnabled(false);
+        }
+        if (checkIDPIdColumnAvailable()) {
+            if (log.isDebugEnabled()) {
+                log.debug("IDP_ID column is available in all relevant tables. " +
+                        "Setting isIDPIdColumnEnabled to true.");
+            }
+            OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(true);
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug("IDP_ID column is not available in all relevant tables. " +
+                        "Setting isIDPIdColumnEnabled to false.");
+            }
+            OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(false);
         }
     }
 
