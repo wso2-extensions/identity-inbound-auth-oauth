@@ -2784,7 +2784,7 @@ public class OAuth2Util {
                 authenticatedUser.setUserStoreDomain(userStoreDomain);
             }
         } else {
-            // Preserving old behaviour.
+            // Preserving behaviour in deprecated createAuthenticatedUser method which did not have the idpName.
             if (StringUtils.startsWith(userStoreDomain, OAuthConstants.UserType.FEDERATED_USER_DOMAIN_PREFIX) &&
                     !OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal()) {
                 if (log.isDebugEnabled()) {
@@ -3067,9 +3067,9 @@ public class OAuth2Util {
             userDomain = user.getUserStoreDomain();
             if (log.isDebugEnabled()) {
                 if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                    log.debug("IDP_ID column is available.");
+                    log.debug("IDP_ID column is available. User is not federated or mapped to local users.");
                 } else {
-                    log.debug("IDP_ID column is not available.");
+                    log.debug("IDP_ID column is not available. User is not federated or mapped to local users.");
                 }
             }
         }
