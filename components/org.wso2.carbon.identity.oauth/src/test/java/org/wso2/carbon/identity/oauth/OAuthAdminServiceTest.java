@@ -397,9 +397,9 @@ public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
 
         return new Object[][]{
                 // Logged In user , App Owner in Request , App Owner in request exists, Excepted App Owner after update
-                {"admin@carbon.super", "H2/new-app-owner@carbon.super", false, "admin@carbon.super"},
+                {"admin@carbon.super", "H2/new-app-owner@carbon.super", false, "original-app-owner@wso2.com"},
                 {"admin@carbon.super", "H2/new-app-owner@carbon.super", true, "H2/new-app-owner@carbon.super"},
-                {"admin@wso2.com", "H2/new-app-owner@wso2.com", false, "admin@wso2.com"},
+                {"admin@wso2.com", "H2/new-app-owner@wso2.com", false, "original-app-owner@wso2.com"},
                 {"admin@wso2.com", "H2/new-app-owner@wso2.com", true, "H2/new-app-owner@wso2.com"}
         };
     }
@@ -441,7 +441,7 @@ public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
         when(userStoreManager.isExistingUser(tenantAwareUsernameOfAppOwner)).thenReturn(appOwnerInRequestExists);
 
         String consumerKey = "some-consumer-key";
-        OAuthAppDO app = buildDummyOAuthAppDO("some-user-name");
+        OAuthAppDO app = buildDummyOAuthAppDO("original-app-owner");
         AuthenticatedUser originalOwner = app.getAppOwner();
 
         OAuthAppDAO oAuthAppDAOMock = PowerMockito.spy(new OAuthAppDAO());
@@ -467,8 +467,10 @@ public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
         Assert.assertEquals(updatedOAuthConsumerApp.getCallbackUrl(), consumerAppDTO.getCallbackUrl(),
                 "Updated Application callbackUrl should be same as the callbackUrl in consumerAppDTO data object.");
 
-        // Application update should change the app owner.
-        Assert.assertNotEquals(updatedOAuthConsumerApp.getUsername(), originalOwner.toFullQualifiedUsername());
+        if (appOwnerInRequestExists) {
+            // Application update should change the app owner if the app owner sent in the request is a valid user.
+            Assert.assertNotEquals(updatedOAuthConsumerApp.getUsername(), originalOwner.toFullQualifiedUsername());
+        }
         Assert.assertEquals(updatedOAuthConsumerApp.getUsername(), expectedAppOwnerAfterUpdate);
     }
 
