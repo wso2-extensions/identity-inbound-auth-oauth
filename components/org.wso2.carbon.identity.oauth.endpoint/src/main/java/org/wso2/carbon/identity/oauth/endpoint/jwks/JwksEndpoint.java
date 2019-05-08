@@ -40,6 +40,7 @@ import java.security.KeyStore;
 import java.security.cert.Certificate;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
+import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
@@ -102,7 +103,7 @@ public class JwksEndpoint {
         JSONArray jwksArray = new JSONArray();
         JSONObject jwksJson = new JSONObject();
         OAuthServerConfiguration config = OAuthServerConfiguration.getInstance();
-        JWSAlgorithm signatureAlgorithm =
+        JWSAlgorithm accessTokenSignAlgorithm =
                 OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(config.getIdTokenSignatureAlgorithm());
         for (Map.Entry certKeyPair : certificates.entrySet()) {
             Certificate cert = (Certificate) certKeyPair.getValue();
@@ -110,9 +111,36 @@ public class JwksEndpoint {
             RSAPublicKey publicKey = (RSAPublicKey) cert.getPublicKey();
             RSAKey.Builder jwk = new RSAKey.Builder(publicKey);
             jwk.keyID(OAuth2Util.getThumbPrint(cert, alias));
-            jwk.algorithm(signatureAlgorithm);
+            jwk.algorithm(accessTokenSignAlgorithm);
             jwk.keyUse(KeyUse.parse(KEY_USE));
             jwksArray.put(jwk.build().toJSONObject());
+        }
+        //read all the signature algorithms from identity.xml and put them in a list if there are different
+        ArrayList<JWSAlgorithm> algorithms = new ArrayList<>();
+        algorithms.add(accessTokenSignAlgorithm);
+        JWSAlgorithm idTokenSignAlgorithm =
+                OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(config.getIdTokenSignatureAlgorithm());
+        if (!accessTokenSignAlgorithm.equals(idTokenSignAlgorithm)) {
+            algorithms.add(idTokenSignAlgorithm);
+        }
+        JWSAlgorithm userInfoSignAlgorithm =
+                OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(config.getUserInfoJWTSignatureAlgorithm());
+        if (!accessTokenSignAlgorithm.equals(userInfoSignAlgorithm)
+                && !idTokenSignAlgorithm.equals(userInfoSignAlgorithm)) {
+            algorithms.add(userInfoSignAlgorithm);
+        }
+        //create the JWKS for different algorithms
+        for (Map.Entry certKeyPair : certificates.entrySet()) {
+            for (JWSAlgorithm algo : algorithms) {
+                Certificate cert = (Certificate) certKeyPair.getValue();
+                String alias = (String) certKeyPair.getKey();
+                RSAPublicKey publicKey = (RSAPublicKey) cert.getPublicKey();
+                RSAKey.Builder jwk = new RSAKey.Builder(publicKey);
+                jwk.keyID(OAuth2Util.getKID(OAuth2Util.getThumbPrint(cert, alias), algo));
+                jwk.algorithm(algo);
+                jwk.keyUse(KeyUse.parse(KEY_USE));
+                jwksArray.put(jwk.build().toJSONObject());
+            }
         }
         jwksJson.put(KEYS, jwksArray);
         return jwksJson.toString();
