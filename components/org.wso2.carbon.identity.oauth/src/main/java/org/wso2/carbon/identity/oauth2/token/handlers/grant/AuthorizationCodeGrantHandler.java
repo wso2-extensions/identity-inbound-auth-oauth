@@ -284,7 +284,9 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
     private String buildCacheKeyForToken(String clientId, AuthzCodeDO authzCodeDO) {
         String scope = OAuth2Util.buildScopeString(authzCodeDO.getScope());
         String authorizedUser = authzCodeDO.getAuthorizedUser().toString();
-        return buildCacheKeyStringForToken(clientId, scope, authorizedUser);
+        String authenticatedIDP = authzCodeDO.getAuthorizedUser().getFederatedIdPName();
+        String tenantDomain = authzCodeDO.getAuthorizedUser().getTenantDomain();
+        return buildCacheKeyStringForToken(clientId, scope, authorizedUser, authenticatedIDP, tenantDomain);
     }
 
     /**

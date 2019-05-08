@@ -53,6 +53,7 @@ import org.json.JSONObject;
 import org.wso2.carbon.core.util.KeyStoreManager;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
@@ -568,6 +569,7 @@ public class OAuth2Util {
      * @param authorizedUser
      * @return
      */
+    @Deprecated
     public static String buildCacheKeyStringForToken(String clientId, String scope, String authorizedUser) {
 
         boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authorizedUser);
@@ -575,6 +577,28 @@ public class OAuth2Util {
             return clientId + ":" + authorizedUser + ":" + scope;
         } else {
             return clientId + ":" + authorizedUser.toLowerCase() + ":" + scope;
+        }
+    }
+
+    /**
+     * Build the cache key string when storing token info in cache.
+     *
+     * @param clientId         ClientId of the App.
+     * @param scope            Scopes used.
+     * @param authorizedUser   Authorised user.
+     * @param authenticatedIDP Authenticated IdP.
+     * @param tenantDomain     Tenant domain.
+     * @return Cache key string combining the input parameters.
+     */
+    public static String buildCacheKeyStringForToken(String clientId, String scope, String authorizedUser,
+                                                     String authenticatedIDP, String tenantDomain) {
+
+        boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authorizedUser);
+        if (isUsernameCaseSensitive) {
+            return clientId + ":" + authorizedUser + ":" + scope + ":" + authenticatedIDP + ":" + tenantDomain;
+        } else {
+            return clientId + ":" + authorizedUser.toLowerCase() + ":" + scope + ":" + authenticatedIDP +
+                    ":" + tenantDomain;
         }
     }
 
@@ -2308,7 +2332,14 @@ public class OAuth2Util {
         String userStoreDomain = OAuth2Util.getUserStoreDomainFromUserId(authenticatedUser.toString());
         if (!OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && authenticatedUser.
                 isFederatedUser()) {
-            userStoreDomain = OAuth2Util.getFederatedUserDomain(authenticatedUser.getFederatedIdPName());
+            if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
+                // When the IDP_ID column is available it was decided to set the
+                // domain name for federated users to 'FEDERATED'.
+                // This is a system reserved word and users stores cannot be created with this name.
+                userStoreDomain = FrameworkConstants.FEDERATED_IDP_NAME;
+            } else {
+                userStoreDomain = OAuth2Util.getFederatedUserDomain(authenticatedUser.getFederatedIdPName());
+            }
         }
         return userStoreDomain;
     }
@@ -2393,7 +2424,7 @@ public class OAuth2Util {
         if (accessTokenDO != null) {
             authenticatedUser = accessTokenDO.getAuthzUser();
         }
-        if (!OAuth2ServiceComponentHolder.isIDPIdColumnEnabled() && authenticatedUser != null) {
+        if (authenticatedUser != null) {
             authenticatedUser.setFederatedUser(isFederatedUser(authenticatedUser));
         }
         return authenticatedUser;
@@ -2753,7 +2784,7 @@ public class OAuth2Util {
                 authenticatedUser.setUserStoreDomain(userStoreDomain);
             }
         } else {
-            // Preserving old behaviour.
+            // Preserving behaviour in deprecated createAuthenticatedUser method which did not have the idpName.
             if (StringUtils.startsWith(userStoreDomain, OAuthConstants.UserType.FEDERATED_USER_DOMAIN_PREFIX) &&
                     !OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal()) {
                 if (log.isDebugEnabled()) {
@@ -2973,5 +3004,110 @@ public class OAuth2Util {
                 throw new IdentityOAuth2Exception("Error while getting the token issuer", e);
             }
         }
+    }
+
+    /**
+     * Used to get the authenticated IDP name from a user.
+     *
+     * @param user Authenticated User.
+     * @return Returns the authenticated IDP name.
+     */
+    public static String getAuthenticatedIDP(AuthenticatedUser user) {
+
+        String authenticatedIDP;
+        if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
+            if (!OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && user.isFederatedUser()) {
+                authenticatedIDP = user.getFederatedIdPName();
+                if (log.isDebugEnabled()) {
+                    log.debug("IDP_ID column is available. User is federated and not mapped to local users. " +
+                            "Authenticated IDP is set to:" + authenticatedIDP + " for user:" + user.toString());
+                }
+            } else {
+                authenticatedIDP = FrameworkConstants.LOCAL_IDP_NAME;
+                if (log.isDebugEnabled()) {
+                    log.debug("IDP_ID column is available. Authenticated IDP is set to:" + authenticatedIDP +
+                            " for user:" + user.toString());
+                }
+            }
+        } else {
+            authenticatedIDP = user.getFederatedIdPName();
+            if (log.isDebugEnabled()) {
+                log.debug("IDP_ID column is not available. Authenticated IDP is set to:" + authenticatedIDP +
+                        " for user:" + user.toString());
+            }
+        }
+
+        return authenticatedIDP;
+    }
+
+    /**
+     * Used to get the user store domain name from a user.
+     *
+     * @param user Authenticated User.
+     * @return Returns the sanitized user store domain.
+     */
+    public static String getUserStoreDomain(AuthenticatedUser user) {
+
+        String userDomain;
+        if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled() &&
+                !OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && user.isFederatedUser()) {
+            if (log.isDebugEnabled()) {
+                log.debug("IDP_ID column is available. User is federated and not mapped to local users.");
+            }
+            // When the IDP_ID column is available it was decided to set the
+            // domain name for federated users to 'FEDERATED'.
+            // This is a system reserved word and users stores cannot be created with this name.
+            userDomain = FrameworkConstants.FEDERATED_IDP_NAME;
+        } else if (!OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && user.isFederatedUser()) {
+            if (log.isDebugEnabled()) {
+                log.debug("IDP_ID column is not available. User is federated and not mapped to local users.");
+            }
+            userDomain = OAuth2Util.getFederatedUserDomain(user.getFederatedIdPName());
+        } else {
+            userDomain = user.getUserStoreDomain();
+            if (log.isDebugEnabled()) {
+                if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
+                    log.debug("IDP_ID column is available. User is not federated or mapped to local users.");
+                } else {
+                    log.debug("IDP_ID column is not available. User is not federated or mapped to local users.");
+                }
+            }
+        }
+        String sanitizedUserDomain = OAuth2Util.getSanitizedUserStoreDomain(userDomain);
+        if (log.isDebugEnabled()) {
+            log.debug("User domain is set to:" + sanitizedUserDomain  + " for user:" + user.toString());
+        }
+
+        return sanitizedUserDomain;
+    }
+
+    /**
+     * Check if the IDP_ID column is available in the relevant tables.
+     *
+     * @return True if IDP_ID column is available in all the relevant table.
+     */
+    public static boolean checkIDPIdColumnAvailable() {
+
+        boolean isIdpIdAvailableInAuthzCodeTable;
+        boolean isIdpIdAvailableInTokenTable;
+        boolean isIdpIdAvailableInTokenAuditTable;
+        String columnIdpId = "IDP_ID";
+
+        isIdpIdAvailableInAuthzCodeTable = FrameworkUtils
+                .isTableColumnExists("IDN_OAUTH2_AUTHORIZATION_CODE", columnIdpId);
+        isIdpIdAvailableInTokenTable = FrameworkUtils
+                .isTableColumnExists("IDN_OAUTH2_ACCESS_TOKEN", columnIdpId);
+        if (OAuthServerConfiguration.getInstance().useRetainOldAccessTokens()) {
+            isIdpIdAvailableInTokenAuditTable = FrameworkUtils
+                    .isTableColumnExists("IDN_OAUTH2_ACCESS_TOKEN_AUDIT", columnIdpId);
+        } else {
+            isIdpIdAvailableInTokenAuditTable = true;
+            if (log.isDebugEnabled()) {
+                log.debug("Retaining old access tokens in IDN_OAUTH2_ACCESS_TOKEN_AUDIT is disabled, therefore " +
+                        "ignoring the availability of IDP_ID column in IDN_OAUTH2_ACCESS_TOKEN_AUDIT table.");
+            }
+        }
+
+        return isIdpIdAvailableInAuthzCodeTable && isIdpIdAvailableInTokenTable && isIdpIdAvailableInTokenAuditTable;
     }
 }

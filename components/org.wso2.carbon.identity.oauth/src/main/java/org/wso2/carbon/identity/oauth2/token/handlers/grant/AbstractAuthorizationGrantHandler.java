@@ -116,6 +116,9 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         String scope = OAuth2Util.buildScopeString(tokReqMsgCtx.getScope());
         String consumerKey = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId();
         String authorizedUser = tokReqMsgCtx.getAuthorizedUser().toString();
+        String authenticatedIDP = tokReqMsgCtx.getAuthorizedUser().getFederatedIdPName();
+        String tenantDomain = tokReqMsgCtx.getAuthorizedUser().getTenantDomain();
+
         OauthTokenIssuer oauthTokenIssuer;
         try {
             oauthTokenIssuer = OAuth2Util.getOAuthTokenIssuerForOAuthApp(consumerKey);
@@ -128,7 +131,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             AccessTokenDO existingTokenBean = null;
             if (isHashDisabled) {
                 existingTokenBean = getExistingToken(tokReqMsgCtx,
-                        getOAuthCacheKey(scope, consumerKey, authorizedUser));
+                        getOAuthCacheKey(scope, consumerKey, authorizedUser, authenticatedIDP, tenantDomain));
             }
             // Return a new access token in each request when JWTTokenIssuer is used.
             if (accessTokenNotRenewedPerRequest(oauthTokenIssuer, tokReqMsgCtx)) {
@@ -467,7 +470,9 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         if (isHashDisabled && cacheEnabled) {
             OauthTokenIssuer tokenIssuer = null;
             OAuthCacheKey cacheKey =
-                    getOAuthCacheKey(scope, newTokenBean.getConsumerKey(), newTokenBean.getAuthzUser().toString());
+                    getOAuthCacheKey(scope, newTokenBean.getConsumerKey(), newTokenBean.getAuthzUser().toString(),
+                            newTokenBean.getAuthzUser().getFederatedIdPName(),
+                            newTokenBean.getAuthzUser().getTenantDomain());
             oauthCache.addToCache(cacheKey, newTokenBean);
             if (log.isDebugEnabled()) {
                 log.debug("Access token was added to OAuthCache with cache key : " + cacheKey.getCacheKeyString());
@@ -606,8 +611,10 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         return tokenRespDTO;
     }
 
-    private OAuthCacheKey getOAuthCacheKey(String scope, String consumerKey, String authorizedUser) {
-        String cacheKeyString = OAuth2Util.buildCacheKeyStringForToken(consumerKey, scope, authorizedUser);
+    private OAuthCacheKey getOAuthCacheKey(String scope, String consumerKey, String authorizedUser,
+                                           String authenticatedIDP, String tenantDomain) {
+        String cacheKeyString = OAuth2Util.buildCacheKeyStringForToken(consumerKey, scope, authorizedUser,
+                authenticatedIDP, tenantDomain);
         return new OAuthCacheKey(cacheKeyString);
     }
 
