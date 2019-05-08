@@ -971,7 +971,7 @@ public class SQLQueries {
                     "ACCESS_TOKEN_TABLE.TOKEN_ID, " +
                     "GRANT_TYPE, " +
                     "SUBJECT_IDENTIFIER, " +
-                    "IDP.NAME" +
+                    "IDP.NAME " +
             "FROM (SELECT TOKEN_ID, " +
                     "CONSUMER_KEY, " +
                     "AUTHZ_USER, " +
@@ -986,7 +986,7 @@ public class SQLQueries {
                     "ACCESS_TOKEN, " +
                     "IDN_OAUTH2_ACCESS_TOKEN.GRANT_TYPE AS GRANT_TYPE, " +
                     "SUBJECT_IDENTIFIER, " +
-                    "IDP_ID" +
+                    "IDP_ID " +
                     "FROM (SELECT * " +
                         "FROM IDN_OAUTH2_ACCESS_TOKEN " +
                         "WHERE REFRESH_TOKEN_HASH = ? AND TOKEN_STATE='ACTIVE') IDN_OAUTH2_ACCESS_TOKEN " +
