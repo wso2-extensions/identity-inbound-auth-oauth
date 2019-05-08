@@ -42,6 +42,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.TestConstants;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
@@ -126,39 +127,42 @@ public class AbstractAuthorizationGrantHandlerTest {
 
     @DataProvider(name = "IssueDataProvider")
     public Object[][] issueDataProvider() {
-        return new Object[][] { { true, true, 3600L, 3600L, 0L, 0L, false, TOKEN_STATE_ACTIVE, false },
-                { true, true, 0L, 3600L, 0L, 0L, false, TOKEN_STATE_ACTIVE, false },
-                { true, true, 0L, 0L, 0L, 0L, false, TOKEN_STATE_ACTIVE, false },
-                { true, false, 0L, 0L, 0L, 0L, false, TOKEN_STATE_ACTIVE, false },
-                { false, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_ACTIVE, false },
-                { false, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_REVOKED, false },
-                { false, false, 0L, 0L, 0L, 0L, true, TOKEN_STATE_ACTIVE, false },
-                { false, false, 0L, 0L, 0L, 3600L, true, TOKEN_STATE_ACTIVE, false },
-                { true, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_ACTIVE, false },
-                { true, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_REVOKED, false },
-                { true, false, 0L, 0L, 0L, 0L, true, TOKEN_STATE_ACTIVE, false },
-                { true, false, 0L, 0L, 0L, 3600L, true, TOKEN_STATE_ACTIVE, false },
+        return new Object[][] { { true, true, 3600L, 3600L, 0L, 0L, false, TOKEN_STATE_ACTIVE, false, true },
+                { true, true, 0L, 3600L, 0L, 0L, false, TOKEN_STATE_ACTIVE, false, false },
+                { true, true, 0L, 0L, 0L, 0L, false, TOKEN_STATE_ACTIVE, false, true },
+                { true, false, 0L, 0L, 0L, 0L, false, TOKEN_STATE_ACTIVE, false, false },
+                { false, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_ACTIVE, false, true },
+                { false, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_REVOKED, false, false },
+                { false, false, 0L, 0L, 0L, 0L, true, TOKEN_STATE_ACTIVE, false, true },
+                { false, false, 0L, 0L, 0L, 3600L, true, TOKEN_STATE_ACTIVE, false, false },
+                { true, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_ACTIVE, false, true },
+                { true, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_REVOKED, false, false },
+                { true, false, 0L, 0L, 0L, 0L, true, TOKEN_STATE_ACTIVE, false, true },
+                { true, false, 0L, 0L, 0L, 3600L, true, TOKEN_STATE_ACTIVE, false, false },
 
-                { true, true, 3600L, 3600L, 0L, 0L, false, TOKEN_STATE_ACTIVE, true },
-                { true, true, 0L, 3600L, 0L, 0L, false, TOKEN_STATE_ACTIVE, true },
-                { true, true, 0L, 0L, 0L, 0L, false, TOKEN_STATE_ACTIVE, true },
-                { true, false, 0L, 0L, 0L, 0L, false, TOKEN_STATE_ACTIVE, true },
-                { false, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_ACTIVE, true },
-                { false, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_REVOKED, true },
-                { false, false, 0L, 0L, 0L, 0L, true, TOKEN_STATE_ACTIVE, true },
-                { false, false, 0L, 0L, 0L, 3600L, true, TOKEN_STATE_ACTIVE, true },
-                { true, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_ACTIVE, true },
-                { true, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_REVOKED, true },
-                { true, false, 0L, 0L, 0L, 0L, true, TOKEN_STATE_ACTIVE, true },
-                { true, false, 0L, 0L, 0L, 3600L, true, TOKEN_STATE_ACTIVE, true },
-                { true, true, 0L, 0L, -1L, 3600L, true, TOKEN_STATE_ACTIVE, true },
-                { false, true, 0L, 0L, -1L, 3600L, true, TOKEN_STATE_ACTIVE, true } };
+                { true, true, 3600L, 3600L, 0L, 0L, false, TOKEN_STATE_ACTIVE, true, true },
+                { true, true, 0L, 3600L, 0L, 0L, false, TOKEN_STATE_ACTIVE, true, false },
+                { true, true, 0L, 0L, 0L, 0L, false, TOKEN_STATE_ACTIVE, true, true },
+                { true, false, 0L, 0L, 0L, 0L, false, TOKEN_STATE_ACTIVE, true, false },
+                { false, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_ACTIVE, true, true },
+                { false, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_REVOKED, true, false },
+                { false, false, 0L, 0L, 0L, 0L, true, TOKEN_STATE_ACTIVE, true, true },
+                { false, false, 0L, 0L, 0L, 3600L, true, TOKEN_STATE_ACTIVE, true, false },
+                { true, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_ACTIVE, true, true },
+                { true, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_REVOKED, true, false },
+                { true, false, 0L, 0L, 0L, 0L, true, TOKEN_STATE_ACTIVE, true, true },
+                { true, false, 0L, 0L, 0L, 3600L, true, TOKEN_STATE_ACTIVE, true, false },
+                { true, true, 0L, 0L, -1L, 3600L, true, TOKEN_STATE_ACTIVE, true, true },
+                { false, true, 0L, 0L, -1L, 3600L, true, TOKEN_STATE_ACTIVE, true, false } };
     }
 
     @Test(dataProvider = "IssueDataProvider")
     public void testIssue(boolean cacheEnabled, boolean cacheEntryAvailable, long cachedTokenValidity,
             long cachedRefreshTokenValidity, long dbTokenValidity, long dbRefreshTokenValidity,
-            boolean dbEntryAvailable, String dbTokenState, boolean tokenLoggable) throws Exception {
+            boolean dbEntryAvailable, String dbTokenState, boolean tokenLoggable, boolean isIDPIdColumnEnabled)
+            throws Exception {
+
+        OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(isIDPIdColumnEnabled);
 
         Map<String, AuthorizationGrantHandler> supportedGrantTypes = new HashMap<>();
         supportedGrantTypes.put("refresh_token", refreshGrantHandler);
