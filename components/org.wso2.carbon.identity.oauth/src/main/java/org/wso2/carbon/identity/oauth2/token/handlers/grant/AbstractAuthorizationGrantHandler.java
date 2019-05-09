@@ -117,7 +117,6 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         String consumerKey = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId();
         String authorizedUser = tokReqMsgCtx.getAuthorizedUser().toString();
         String authenticatedIDP = tokReqMsgCtx.getAuthorizedUser().getFederatedIdPName();
-        String tenantDomain = tokReqMsgCtx.getAuthorizedUser().getTenantDomain();
 
         OauthTokenIssuer oauthTokenIssuer;
         try {
@@ -131,7 +130,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             AccessTokenDO existingTokenBean = null;
             if (isHashDisabled) {
                 existingTokenBean = getExistingToken(tokReqMsgCtx,
-                        getOAuthCacheKey(scope, consumerKey, authorizedUser, authenticatedIDP, tenantDomain));
+                        getOAuthCacheKey(scope, consumerKey, authorizedUser, authenticatedIDP));
             }
             // Return a new access token in each request when JWTTokenIssuer is used.
             if (accessTokenNotRenewedPerRequest(oauthTokenIssuer, tokReqMsgCtx)) {
@@ -471,8 +470,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             OauthTokenIssuer tokenIssuer = null;
             OAuthCacheKey cacheKey =
                     getOAuthCacheKey(scope, newTokenBean.getConsumerKey(), newTokenBean.getAuthzUser().toString(),
-                            newTokenBean.getAuthzUser().getFederatedIdPName(),
-                            newTokenBean.getAuthzUser().getTenantDomain());
+                            newTokenBean.getAuthzUser().getFederatedIdPName());
             oauthCache.addToCache(cacheKey, newTokenBean);
             if (log.isDebugEnabled()) {
                 log.debug("Access token was added to OAuthCache with cache key : " + cacheKey.getCacheKeyString());
@@ -612,9 +610,9 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     }
 
     private OAuthCacheKey getOAuthCacheKey(String scope, String consumerKey, String authorizedUser,
-                                           String authenticatedIDP, String tenantDomain) {
+                                           String authenticatedIDP) {
         String cacheKeyString = OAuth2Util.buildCacheKeyStringForToken(consumerKey, scope, authorizedUser,
-                authenticatedIDP, tenantDomain);
+                authenticatedIDP);
         return new OAuthCacheKey(cacheKeyString);
     }
 

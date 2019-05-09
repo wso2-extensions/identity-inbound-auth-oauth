@@ -587,18 +587,16 @@ public class OAuth2Util {
      * @param scope            Scopes used.
      * @param authorizedUser   Authorised user.
      * @param authenticatedIDP Authenticated IdP.
-     * @param tenantDomain     Tenant domain.
      * @return Cache key string combining the input parameters.
      */
     public static String buildCacheKeyStringForToken(String clientId, String scope, String authorizedUser,
-                                                     String authenticatedIDP, String tenantDomain) {
+                                                     String authenticatedIDP) {
 
         boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authorizedUser);
         if (isUsernameCaseSensitive) {
-            return clientId + ":" + authorizedUser + ":" + scope + ":" + authenticatedIDP + ":" + tenantDomain;
+            return clientId + ":" + authorizedUser + ":" + scope + ":" + authenticatedIDP;
         } else {
-            return clientId + ":" + authorizedUser.toLowerCase() + ":" + scope + ":" + authenticatedIDP +
-                    ":" + tenantDomain;
+            return clientId + ":" + authorizedUser.toLowerCase() + ":" + scope + ":" + authenticatedIDP;
         }
     }
 

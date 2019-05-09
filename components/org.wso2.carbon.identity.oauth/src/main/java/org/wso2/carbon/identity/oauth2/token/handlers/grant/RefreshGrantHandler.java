@@ -204,7 +204,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         if (cacheEnabled) {
             clearCache(tokenReq.getClientId(), validationBean.getAuthorizedUser().toString(),
                     validationBean.getScope(), validationBean.getAuthorizedUser().getFederatedIdPName(),
-                    validationBean.getAuthorizedUser().getTenantDomain(), validationBean.getAccessToken());
+                    validationBean.getAccessToken());
         }
     }
 
@@ -296,9 +296,8 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             String scope = OAuth2Util.buildScopeString(tokReqMsgCtx.getScope());
             String authorizedUser = tokReqMsgCtx.getAuthorizedUser().toString();
             String authenticatedIDP = tokReqMsgCtx.getAuthorizedUser().getFederatedIdPName();
-            String tenantDomain = tokReqMsgCtx.getAuthorizedUser().getTenantDomain();
             String cacheKeyString = OAuth2Util.buildCacheKeyStringForToken(clientId, scope, authorizedUser,
-                    authenticatedIDP, tenantDomain);
+                    authenticatedIDP);
             OAuthCacheKey oauthCacheKey = new OAuthCacheKey(cacheKeyString);
             OAuthCache.getInstance().clearCacheEntry(oauthCacheKey);
 
@@ -381,16 +380,16 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
     }
 
     private void clearCache(String clientId, String authorizedUser, String[] scopes, String accessToken,
-                            String authenticatedIDP, String tenantDomain) {
+                            String authenticatedIDP) {
 
         boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authorizedUser);
         String cacheKeyString;
         if (isUsernameCaseSensitive) {
             cacheKeyString = clientId + ":" + authorizedUser + ":" + OAuth2Util.buildScopeString(scopes) +
-                    ":" + authenticatedIDP + ":" + tenantDomain;
+                    ":" + authenticatedIDP;
         } else {
             cacheKeyString = clientId + ":" + authorizedUser.toLowerCase() + ":" + OAuth2Util.buildScopeString(scopes) +
-                    ":" + authenticatedIDP + ":" + tenantDomain;
+                    ":" + authenticatedIDP;
         }
 
         // Remove the old access token from the OAuthCache

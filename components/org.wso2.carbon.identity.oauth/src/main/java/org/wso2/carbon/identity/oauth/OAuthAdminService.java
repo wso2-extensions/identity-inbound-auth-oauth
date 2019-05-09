@@ -653,15 +653,13 @@ public class OAuthAdminService extends AbstractAdmin {
                 String scope = OAuth2Util.buildScopeString(detailToken.getScope());
                 String authorizedUser = detailToken.getAuthzUser().toString();
                 String authenticatedIDP = detailToken.getAuthzUser().getFederatedIdPName();
-                String tenantDomain = detailToken.getAuthzUser().getTenantDomain();
                 boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authorizedUser);
                 String cacheKeyString;
                 if (isUsernameCaseSensitive) {
-                    cacheKeyString = consumerKey + ":" + authorizedUser + ":" + scope + ":" + authenticatedIDP + ":"
-                            + tenantDomain;
+                    cacheKeyString = consumerKey + ":" + authorizedUser + ":" + scope + ":" + authenticatedIDP;
                 } else {
                     cacheKeyString = consumerKey + ":" + authorizedUser.toLowerCase() + ":" + scope + ":"
-                            + authenticatedIDP + ":" + tenantDomain;
+                            + authenticatedIDP;
                 }
                 OAuthCacheKey cacheKeyUser = new OAuthCacheKey(cacheKeyString);
                 OAuthCache.getInstance().clearCacheEntry(cacheKeyUser);
