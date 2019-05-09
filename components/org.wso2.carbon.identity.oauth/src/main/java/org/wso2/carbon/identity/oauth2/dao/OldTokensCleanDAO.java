@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth2.dao;
 
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.OldAccessTokenDO;
 
 import java.sql.Connection;
@@ -42,7 +43,13 @@ public class OldTokensCleanDAO {
 
     public void cleanupTokenByTokenId(String tokenId, Connection connection) throws SQLException {
         if (OAuthServerConfiguration.getInstance().useRetainOldAccessTokens()) {
-            PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.RETRIEVE_AND_STORE_IN_AUDIT);
+            String sql;
+            if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
+                sql = SQLQueries.RETRIEVE_AND_STORE_IN_AUDIT_WITH_IDP_NAME;
+            } else {
+                sql = SQLQueries.RETRIEVE_AND_STORE_IN_AUDIT;
+            }
+            PreparedStatement prepStmt = connection.prepareStatement(sql);
             prepStmt.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
             prepStmt.setString(2, tokenId);
             prepStmt.executeUpdate();
@@ -52,7 +59,15 @@ public class OldTokensCleanDAO {
 
     public void cleanupTokenByTokenValue(String token, Connection connection) throws SQLException {
         OldAccessTokenDO oldAccessTokenObject = new OldAccessTokenDO();
-        PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.RETRIEVE_OLD_TOKEN_BY_TOKEN_HASH);
+
+        String sql;
+        if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
+            sql = SQLQueries.RETRIEVE_OLD_TOKEN_BY_TOKEN_HASH_WITH_IDP_NAME;
+        } else {
+            sql = SQLQueries.RETRIEVE_OLD_TOKEN_BY_TOKEN_HASH;
+        }
+
+        PreparedStatement prepStmt = connection.prepareStatement(sql);
         prepStmt.setString(1, token);
         ResultSet resultSet = prepStmt.executeQuery();
         //iterate result set and insert to AccessTokenDO object.
@@ -76,6 +91,9 @@ public class OldTokensCleanDAO {
             oldAccessTokenObject.setSubjectIdentifier(resultSet.getString(17));
             oldAccessTokenObject.setAccessTokenHash(resultSet.getString(18));
             oldAccessTokenObject.setRefreshTokenHash(resultSet.getString(19));
+            if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
+                oldAccessTokenObject.setIdpId(resultSet.getInt(20));
+            }
         }
         if (OAuthServerConfiguration.getInstance().useRetainOldAccessTokens()) {
             saveTokenInAuditTable(oldAccessTokenObject, connection);
@@ -84,7 +102,15 @@ public class OldTokensCleanDAO {
     }
 
     private void saveTokenInAuditTable(OldAccessTokenDO oldAccessTokenDAO, Connection connection) throws SQLException {
-        PreparedStatement insertintoaudittable = connection.prepareStatement(SQLQueries.STORE_OLD_TOKEN_IN_AUDIT);
+
+        String sql;
+        if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
+            sql = SQLQueries.STORE_OLD_TOKEN_IN_AUDIT_WITH_IDP_NAME;
+        } else {
+            sql = SQLQueries.STORE_OLD_TOKEN_IN_AUDIT;
+        }
+
+        PreparedStatement insertintoaudittable = connection.prepareStatement(sql);
         insertintoaudittable.setString(1, oldAccessTokenDAO.getTokenId());
         insertintoaudittable.setString(2, oldAccessTokenDAO.getAccessToken());
         insertintoaudittable.setString(3, oldAccessTokenDAO.getRefreshToken());
@@ -105,6 +131,9 @@ public class OldTokensCleanDAO {
         insertintoaudittable.setString(18, oldAccessTokenDAO.getAccessTokenHash());
         insertintoaudittable.setString(19, oldAccessTokenDAO.getRefreshTokenHash());
         insertintoaudittable.setTimestamp(20, new Timestamp(System.currentTimeMillis()));
+        if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
+            insertintoaudittable.setInt(21, oldAccessTokenDAO.getIdpId());
+        }
         insertintoaudittable.execute();
         if (log.isDebugEnabled()) {
             log.debug("Successfully saved old access token in audit table. Token ID: " + oldAccessTokenDAO.getTokenId());

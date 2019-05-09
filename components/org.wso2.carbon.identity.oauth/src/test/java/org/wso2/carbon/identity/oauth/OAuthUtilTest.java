@@ -35,6 +35,8 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
+import static org.wso2.carbon.identity.oauth2.TestConstants.LOCAL_IDP;
+import static org.wso2.carbon.identity.oauth2.TestConstants.TENANT_DOMAIN;
 
 /**
  * Unit tests for OAuthUtil class.
@@ -79,11 +81,12 @@ public class OAuthUtilTest {
 
         String consumerKey = "consumer-key";
         String authorizedUser = "authorized-user";
-        OAuthCacheKey oAuthCacheKey = new OAuthCacheKey(consumerKey + ":" + authorizedUser);
+        String cacheKey = consumerKey + ":" + authorizedUser + ":" + LOCAL_IDP + ":" + TENANT_DOMAIN;
+        OAuthCacheKey oAuthCacheKey = new OAuthCacheKey(cacheKey);
         OAuthCache oAuthCache = getOAuthCache(oAuthCacheKey);
 
         assertNotNull(oAuthCache.getValueFromCache(oAuthCacheKey), "Should give the cached value before cleaning it.");
-        OAuthUtil.clearOAuthCache(consumerKey, authorizedUser);
+        OAuthUtil.clearOAuthCache(cacheKey);
         assertNull(oAuthCache.getValueFromCache(oAuthCacheKey), "Should clear the cached value against the cache key.");
 
         // Clear all the cached values to make sure no side effect on other tests.
@@ -98,12 +101,13 @@ public class OAuthUtilTest {
         authorizedUser.setUserName("siripala");
         authorizedUser.setTenantDomain("is.com");
         authorizedUser.setUserStoreDomain("JDBC");
+        String cacheKey = consumerKey + ":" + authorizedUser.toString() + ":" + LOCAL_IDP + ":" + TENANT_DOMAIN;
 
-        OAuthCacheKey oAuthCacheKey = new OAuthCacheKey(consumerKey + ":" + authorizedUser.toString());
+        OAuthCacheKey oAuthCacheKey = new OAuthCacheKey(cacheKey);
         OAuthCache oAuthCache = getOAuthCache(oAuthCacheKey);
 
         assertNotNull(oAuthCache.getValueFromCache(oAuthCacheKey), "Should give the cached value before cleaning it.");
-        OAuthUtil.clearOAuthCache(consumerKey, authorizedUser);
+        OAuthUtil.clearOAuthCache(cacheKey);
         assertNull(oAuthCache.getValueFromCache(oAuthCacheKey), "Should clear the cached value against the cache key.");
 
         // Clear all the cached values to make sure no side effect on other tests.
@@ -116,11 +120,12 @@ public class OAuthUtilTest {
         String consumerKey = "consumer-key";
         String authorizedUser = "authorized-user";
         String scope = "scope";
-        OAuthCacheKey oAuthCacheKey = new OAuthCacheKey(consumerKey + ":" + authorizedUser + ":" + scope);
+        String cacheKey = consumerKey + ":" + authorizedUser + ":" + scope + ":" + LOCAL_IDP + ":" + TENANT_DOMAIN;
+        OAuthCacheKey oAuthCacheKey = new OAuthCacheKey(cacheKey);
         OAuthCache oAuthCache = getOAuthCache(oAuthCacheKey);
 
         assertNotNull(oAuthCache.getValueFromCache(oAuthCacheKey), "Should give the cached value before cleaning it.");
-        OAuthUtil.clearOAuthCache(consumerKey, authorizedUser, scope);
+        OAuthUtil.clearOAuthCache(cacheKey);
         assertNull(oAuthCache.getValueFromCache(oAuthCacheKey), "Should clear the cached value against the cache key.");
 
         // Clear all the cached values to make sure no side effect on other tests.
@@ -136,11 +141,13 @@ public class OAuthUtilTest {
         authorizedUser.setTenantDomain("is.com");
         authorizedUser.setUserStoreDomain("JDBC");
         String scope = "scope";
-        OAuthCacheKey oAuthCacheKey = new OAuthCacheKey(consumerKey + ":" + authorizedUser.toString() + ":" + scope);
+        String cacheKey = consumerKey + ":" + authorizedUser.toString() + ":" + scope + ":" + LOCAL_IDP + ":"
+                + TENANT_DOMAIN;
+        OAuthCacheKey oAuthCacheKey = new OAuthCacheKey(cacheKey);
         OAuthCache oAuthCache = getOAuthCache(oAuthCacheKey);
 
         assertNotNull(oAuthCache.getValueFromCache(oAuthCacheKey), "Should give the cached value before cleaning it.");
-        OAuthUtil.clearOAuthCache(consumerKey, authorizedUser, scope);
+        OAuthUtil.clearOAuthCache(cacheKey);
         assertNull(oAuthCache.getValueFromCache(oAuthCacheKey), "Should clear the cached value against the cache key.");
 
         // Clear all the cached values to make sure no side effect on other tests.

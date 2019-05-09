@@ -26,6 +26,7 @@ import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -43,6 +44,7 @@ import org.wso2.carbon.identity.oauth2.dao.TokenMgtDAO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientApplicationDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.token.JWTTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
@@ -124,9 +126,22 @@ public class TokenValidationHandlerTest extends PowerMockTestCase {
         assertNotNull(responseDTO);
     }
 
-    @Test
-    public void testFindOAuthConsumerIfTokenIsValid() throws Exception {
+    /**
+     * This data provider is added to enable affected test cases to be tested in both
+     * where the IDP_ID column is available and not available in the relevant tables.
+     */
+    @DataProvider(name = "IdpIDColumnAvailabilityDataProvider")
+    public Object[][] idpIDColumnAvailabilityDataProvider() {
+        return new Object[][]{
+                {true},
+                {false}
+        };
+    }
 
+    @Test(dataProvider = "IdpIDColumnAvailabilityDataProvider")
+    public void testFindOAuthConsumerIfTokenIsValid(boolean isIDPIdColumnEnabled) throws Exception {
+
+        OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(isIDPIdColumnEnabled);
         mockRequiredObjects();
         OAuth2TokenValidationRequestDTO oAuth2TokenValidationRequestDTO = new OAuth2TokenValidationRequestDTO();
         OAuth2TokenValidationRequestDTO.OAuth2AccessToken oAuth2AccessToken =
@@ -140,9 +155,22 @@ public class TokenValidationHandlerTest extends PowerMockTestCase {
         assertNotNull(response);
     }
 
-    @Test
-    public void testBuildIntrospectionResponse() throws Exception {
+    /**
+     * This data provider is added to enable affected test cases to be tested in both
+     * where the IDP_ID column is available and not available in the relevant tables.
+     */
+    @DataProvider(name = "CommonDataProvider")
+    public Object[][] commonDataProvider() {
+        return new Object[][]{
+                {true, "1234"},
+                {false, "12345"}
+        };
+    }
 
+    @Test(dataProvider = "CommonDataProvider")
+    public void testBuildIntrospectionResponse(boolean isIDPIdColumnEnabled, String accessTokenId) throws Exception {
+
+        OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(isIDPIdColumnEnabled);
         mockRequiredObjects();
         when(realmService.getTenantManager()).thenReturn(tenantManager);
         doReturn(MultitenantConstants.SUPER_TENANT_ID).when(tenantManager).getTenantId(Mockito.anyString());
@@ -161,7 +189,7 @@ public class TokenValidationHandlerTest extends PowerMockTestCase {
         AccessTokenDO accessTokenDO = new AccessTokenDO(clientId, authzUser, scopeArraySorted, issuedTime,
                 refreshTokenIssuedTime, validityPeriodInMillis, refreshTokenValidityPeriodInMillis, tokenType,
                 authorizationCode);
-        accessTokenDO.setTokenId("1234");
+        accessTokenDO.setTokenId(accessTokenId);
 
         OAuthAppDO oAuthAppDO = new OAuthAppDO();
         oAuthAppDO.setTokenType("Default");
