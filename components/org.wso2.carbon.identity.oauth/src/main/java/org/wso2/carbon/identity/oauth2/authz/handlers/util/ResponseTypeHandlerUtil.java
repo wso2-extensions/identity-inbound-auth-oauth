@@ -424,11 +424,9 @@ public class ResponseTypeHandlerUtil {
         String consumerKey = authorizationReqDTO.getConsumerKey();
         String authorizedUser = authorizationReqDTO.getUser().toString();
         String authenticatedIDP = authorizationReqDTO.getUser().getFederatedIdPName();
-        String tenantDomain = authorizationReqDTO.getUser().getTenantDomain();
 
         if (cacheEnabled) {
-            existingTokenBean = getExistingTokenFromCache(consumerKey, scope, authorizedUser, authenticatedIDP,
-                    tenantDomain);
+            existingTokenBean = getExistingTokenFromCache(consumerKey, scope, authorizedUser, authenticatedIDP);
         }
 
         if (existingTokenBean == null) {
@@ -438,11 +436,11 @@ public class ResponseTypeHandlerUtil {
     }
 
     private static AccessTokenDO getExistingTokenFromCache(String consumerKey, String scope, String authorizedUser,
-                                                           String authenticatedIDP, String tenantDomain)
+                                                           String authenticatedIDP)
             throws IdentityOAuth2Exception {
 
         AccessTokenDO existingTokenBean = null;
-        OAuthCacheKey cacheKey = getOAuthCacheKey(consumerKey, scope, authorizedUser, authenticatedIDP, tenantDomain);
+        OAuthCacheKey cacheKey = getOAuthCacheKey(consumerKey, scope, authorizedUser, authenticatedIDP);
         CacheEntry cacheEntry = OAuthCache.getInstance().getValueFromCache(cacheKey);
         if (cacheEntry != null && cacheEntry instanceof AccessTokenDO) {
             existingTokenBean = (AccessTokenDO) cacheEntry;
@@ -493,7 +491,7 @@ public class ResponseTypeHandlerUtil {
             if (TOKEN_STATE_ACTIVE.equals(existingToken.getTokenState()) && expireTime != 0 && cacheEnabled) {
                 // Active token retrieved from db, adding to cache if cacheEnabled
                 addTokenToCache(getOAuthCacheKey(consumerKey, scope, authorizedUser.toString(),
-                        authorizedUser.getFederatedIdPName(), authorizedUser.getTenantDomain()), existingToken);
+                        authorizedUser.getFederatedIdPName()), existingToken);
             }
         }
         return existingToken;
@@ -507,7 +505,6 @@ public class ResponseTypeHandlerUtil {
         String consumerKey = authorizationReqDTO.getConsumerKey();
         String authorizedUser = authorizationReqDTO.getUser().toString();
         String authenticatedIDP = authorizationReqDTO.getUser().getFederatedIdPName();
-        String tenantDomain = authorizationReqDTO.getUser().getTenantDomain();
 
         OAuthAppDO oAuthAppBean = getOAuthApp(consumerKey);
         Timestamp timestamp = new Timestamp(new Date().getTime());
@@ -520,7 +517,7 @@ public class ResponseTypeHandlerUtil {
         deactivateCurrentAuthorizationCode(newTokenBean.getAuthorizationCode(), newTokenBean.getTokenId());
         //update cache with newly added token
         if (isHashDisabled && cacheEnabled) {
-            addTokenToCache(getOAuthCacheKey(consumerKey, scope, authorizedUser, authenticatedIDP, tenantDomain),
+            addTokenToCache(getOAuthCacheKey(consumerKey, scope, authorizedUser, authenticatedIDP),
                     newTokenBean);
         }
         return newTokenBean;
@@ -869,10 +866,10 @@ public class ResponseTypeHandlerUtil {
     }
 
     private static OAuthCacheKey getOAuthCacheKey(String consumerKey, String scope, String authorizedUser,
-                                                  String authenticatedIDP, String tenantDomain) {
+                                                  String authenticatedIDP) {
 
         String cacheKeyString = OAuth2Util.buildCacheKeyStringForToken(consumerKey, scope, authorizedUser,
-                authenticatedIDP, tenantDomain);
+                authenticatedIDP);
         return new OAuthCacheKey(cacheKeyString);
     }
 
