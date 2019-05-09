@@ -43,7 +43,8 @@ public class OAuthTenantMgtListenerImpl extends AbstractIdentityTenantMgtListene
             Map<String, AccessTokenDO> latestAccessTokens = new HashMap<>();
             for (AccessTokenDO accessTokenDO : accessTokenDOs) {
                 String keyString = accessTokenDO.getConsumerKey() + ":" + accessTokenDO.getAuthzUser() + ":" +
-                        OAuth2Util.buildScopeString(accessTokenDO.getScope());
+                        OAuth2Util.buildScopeString(accessTokenDO.getScope()) + ":"
+                        + accessTokenDO.getAuthzUser().getFederatedIdPName();
                 AccessTokenDO accessTokenDOFromMap = latestAccessTokens.get(keyString);
                 if (accessTokenDOFromMap != null) {
                     if (accessTokenDOFromMap.getIssuedTime().before(accessTokenDO.getIssuedTime())) {
