@@ -2769,31 +2769,30 @@ public class OAuth2Util {
         authenticatedUser.setUserName(username);
         authenticatedUser.setTenantDomain(tenantDomain);
 
-        if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-            if (!StringUtils.equals(FrameworkConstants.LOCAL_IDP_NAME, idpName) && !OAuthServerConfiguration.getInstance()
-                    .isMapFederatedUsersToLocal()) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Found federated idp: " + idpName + " for user: " + username + " in " +
-                            "tenant domain:" + tenantDomain + ". Flag user as a federated user.");
-                }
-                authenticatedUser.setFederatedUser(true);
+        /* When the IDP_ID column is available it was decided to set the
+         domain name for federated users to 'FEDERATED'.
+         This is a system reserved word and user stores cannot be created with this name.
+
+         For jwt bearer grant and saml bearer grant types, assertion issuing idp is set as
+         the authenticated idp, but this may not always be the idp user is in;
+         i.e, for an assertion issued by IS, idp name will be 'LOCAL', yet the user could have been
+         authenticated with some external idp.
+         Therefore, we cannot stop setting 'FEDERATED' as the user store domain for federated users.*/
+        if (StringUtils.startsWith(userStoreDomain, OAuthConstants.UserType.FEDERATED_USER_DOMAIN_PREFIX) &&
+                !OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal()) {
+            authenticatedUser.setFederatedUser(true);
+            if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
                 authenticatedUser.setFederatedIdPName(idpName);
             } else {
-                authenticatedUser.setUserStoreDomain(userStoreDomain);
+                authenticatedUser.setFederatedIdPName(OAuth2Util.getFederatedIdPFromDomain(userStoreDomain));
+            }
+            if (log.isDebugEnabled()) {
+                log.debug("Federated prefix found in domain: " + userStoreDomain + " for user: " + username + " in " +
+                        "tenant domain:" + tenantDomain + ". Flag user as a federated user. " +
+                        authenticatedUser.getFederatedIdPName() + " is set as the authenticated idp.");
             }
         } else {
-            // Preserving behaviour in deprecated createAuthenticatedUser method which did not have the idpName.
-            if (StringUtils.startsWith(userStoreDomain, OAuthConstants.UserType.FEDERATED_USER_DOMAIN_PREFIX) &&
-                    !OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal()) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Federated prefix found in domain: " + userStoreDomain + " for user: " + username + " in " +
-                            "tenant domain:" + tenantDomain + ". Flag user as a federated user.");
-                }
-                authenticatedUser.setFederatedUser(true);
-                authenticatedUser.setFederatedIdPName(OAuth2Util.getFederatedIdPFromDomain(userStoreDomain));
-            } else {
-                authenticatedUser.setUserStoreDomain(userStoreDomain);
-            }
+            authenticatedUser.setUserStoreDomain(userStoreDomain);
         }
 
         return authenticatedUser;
