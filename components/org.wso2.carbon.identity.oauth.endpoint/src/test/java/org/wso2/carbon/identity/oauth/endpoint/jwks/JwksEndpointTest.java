@@ -136,7 +136,6 @@ public class JwksEndpointTest extends PowerMockIdentityBaseTest {
 
         if (tenantDomain == null) {
             when(OAuth2Util.getThumbPrint(any(), anyString())).thenThrow(new IdentityOAuth2Exception("error"));
-            when(OAuth2Util.getKID(anyString(), any())).thenThrow(new IdentityOAuth2Exception("error"));
 
         } else {
             when(OAuth2Util.getThumbPrint(any(), anyString())).thenReturn(CERT_THUMB_PRINT);

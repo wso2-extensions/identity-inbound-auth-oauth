@@ -147,6 +147,9 @@ public class JwksEndpoint {
      * new KeyID generating mechanism is created in the OAuth2Util. However for backward compatibility, a keyset
      * which uses thumbPrint as KeyID is added. In future it okay to remove this keyset completely.
      *
+     * This method is marked as @deprecated because this method should not be used in any other places. In future
+     * this method should be removed.
+     *
      */
     @Deprecated
     private JSONArray createKeysetUsingOldKeyID(JSONArray jwksArray, HashMap<String, Certificate> certificates,

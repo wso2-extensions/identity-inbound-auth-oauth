@@ -2154,21 +2154,11 @@ public class OAuth2Util {
      * @param certThumbprint
      * @param signatureAlgorithm
      * @return
-     * @throws IdentityOAuth2Exception
+     *
      */
-    public static String getKID(String certThumbprint, JWSAlgorithm signatureAlgorithm) throws IdentityOAuth2Exception {
+    public static String getKID(String certThumbprint, JWSAlgorithm signatureAlgorithm) {
 
-        try {
-            MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
-            String algorithm = signatureAlgorithm.toString();
-            byte[] hash = messageDigest.digest(algorithm.getBytes(StandardCharsets.US_ASCII));
-            String appender = new String(Base64.encodeBase64URLSafe(hash),
-                    StandardCharsets.UTF_8).trim();
-            return certThumbprint + appender;
-        } catch (Exception e) {
-            String error = "Error in obtaining KID for algorithm " + signatureAlgorithm.toString();
-            throw new IdentityOAuth2Exception(error, e);
-        }
+        return certThumbprint + "_" + signatureAlgorithm.toString();
     }
 
     /**
