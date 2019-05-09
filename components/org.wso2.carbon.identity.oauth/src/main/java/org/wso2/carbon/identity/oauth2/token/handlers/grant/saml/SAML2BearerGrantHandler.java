@@ -986,6 +986,8 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
         AuthenticatedUser user =
                 AuthenticatedUser.createFederateAuthenticatedUserFromSubjectIdentifier(subjectIdentifier);
         user.setUserName(subjectIdentifier);
+        user.setFederatedIdPName(getIdentityProvider(assertion, getTenantDomain(tokReqMsgCtx))
+                .getIdentityProviderName());
         tokReqMsgCtx.setAuthorizedUser(user);
     }
 
@@ -1084,6 +1086,8 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
 
         authenticatedUser.setTenantDomain(userTenantDomain);
         authenticatedUser.setAuthenticatedSubjectIdentifier(authenticatedUser.getUserName(), serviceProvider);
+        authenticatedUser.setFederatedIdPName(getIdentityProvider(assertion, getTenantDomain(tokReqMsgCtx))
+                .getIdentityProviderName());
         return authenticatedUser;
     }
 
@@ -1102,6 +1106,8 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
 
         user.setAuthenticatedSubjectIdentifier(resourceOwnerUserName);
         user.setFederatedUser(true);
+        user.setFederatedIdPName(getIdentityProvider(assertion, getTenantDomain(tokReqMsgCtx))
+                .getIdentityProviderName());
         tokReqMsgCtx.setAuthorizedUser(user);
     }
 
