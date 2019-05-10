@@ -43,6 +43,7 @@ import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import javax.jws.WebService;
 import javax.ws.rs.GET;
@@ -68,8 +69,8 @@ public class JwksEndpoint {
 
         try (FileInputStream file = new FileInputStream(keystorePath)) {
             int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
-            KeyStore keystore;
-            HashMap<String, Certificate> certificatesWithAliases = new HashMap<>();
+            final KeyStore keystore;
+            Map<String, Certificate> certificatesWithAliases = new HashMap<>();
             if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equalsIgnoreCase(tenantDomain)) {
                 keystore = KeyStore.getInstance(KeyStore.getDefaultType());
                 String password = CarbonUtils.getServerConfiguration().getFirstProperty(SECURITY_KEY_STORE_PW);
@@ -97,7 +98,7 @@ public class JwksEndpoint {
         }
     }
 
-    private String buildResponse(HashMap<String, Certificate> certificates)
+    private String buildResponse(Map<String, Certificate> certificates)
             throws IdentityOAuth2Exception, ParseException {
 
         JSONArray jwksArray = new JSONArray();
@@ -108,7 +109,7 @@ public class JwksEndpoint {
         // This method add keysets which have thumbprint of certificate as KeyIDs.
         jwksArray = createKeysetUsingOldKeyID(jwksArray, certificates, accessTokenSignAlgorithm);
         // If we read different algorithms from identity.xml then put them in a list.
-        ArrayList<JWSAlgorithm> diffAlgorithms = findDifferentAlgorithms(accessTokenSignAlgorithm, config);
+        List<JWSAlgorithm> diffAlgorithms = findDifferentAlgorithms(accessTokenSignAlgorithm, config);
         // Create JWKS for different algorithms using new KeyID creation method.
         for (Map.Entry certificateWithAlias : certificates.entrySet()) {
             for (JWSAlgorithm algorithm : diffAlgorithms) {
@@ -140,7 +141,7 @@ public class JwksEndpoint {
      *
      */
     @Deprecated
-    private JSONArray createKeysetUsingOldKeyID(JSONArray jwksArray, HashMap<String, Certificate> certificates,
+    private JSONArray createKeysetUsingOldKeyID(JSONArray jwksArray, Map<String, Certificate> certificates,
                                                 JWSAlgorithm algorithm) throws IdentityOAuth2Exception, ParseException {
 
         JSONArray OldJwksArray = jwksArray;
@@ -164,10 +165,10 @@ public class JwksEndpoint {
      * @return
      * @throws IdentityOAuth2Exception
      */
-    private ArrayList<JWSAlgorithm> findDifferentAlgorithms(
+    private List<JWSAlgorithm> findDifferentAlgorithms(
             JWSAlgorithm accessTokenSignAlgorithm, OAuthServerConfiguration config) throws IdentityOAuth2Exception {
 
-        ArrayList<JWSAlgorithm> diffAlgorithms = new ArrayList<>();
+        List<JWSAlgorithm> diffAlgorithms = new ArrayList<>();
         diffAlgorithms.add(accessTokenSignAlgorithm);
         JWSAlgorithm idTokenSignAlgorithm =
                 OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(config.getIdTokenSignatureAlgorithm());

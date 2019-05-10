@@ -2183,12 +2183,21 @@ public class OAuth2Util {
         }
     }
 
+    /**
+     * Helper method to add public certificate to JWT_HEADER to signature verification.
+     * This creates thumbPrints directly from given certificates
+     *
+     * @param certificate
+     * @param alias
+     * @return
+     * @throws IdentityOAuth2Exception
+     */
     public static String getThumbPrint(Certificate certificate, String alias) throws IdentityOAuth2Exception {
 
         try {
             return getThumbPrint(certificate);
         } catch (CertificateEncodingException e) {
-            String error = "Encoding error while obtaining thumbPrint for alias: " + alias;
+            String error = "Error occurred while encoding thumbPrint for alias: " + alias;
             throw new IdentityOAuth2Exception(error, e);
         } catch (NoSuchAlgorithmException e) {
             String error = "Error in obtaining SHA-1 thumbprint for alias: " + alias;
