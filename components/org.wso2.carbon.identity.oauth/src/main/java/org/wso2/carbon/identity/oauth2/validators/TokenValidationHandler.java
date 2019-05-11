@@ -475,13 +475,8 @@ public class TokenValidationHandler {
 
         String consumerKey = accessTokenDO.getConsumerKey();
         try {
-            boolean buildSubjectIdentifierFromSPConfig = true;
-            String subjectIdentifierFromSPConfig = IdentityUtil.getProperty(BUILD_FQU_FROM_SP_CONFIG);
-            if (StringUtils.isNotEmpty(subjectIdentifierFromSPConfig)) {
-                buildSubjectIdentifierFromSPConfig =
-                        Boolean.parseBoolean(subjectIdentifierFromSPConfig);
-            }
-
+            boolean buildSubjectIdentifierFromSPConfig = Boolean.parseBoolean(IdentityUtil.getProperty
+                    (BUILD_FQU_FROM_SP_CONFIG));
             if (buildSubjectIdentifierFromSPConfig) {
                 ServiceProvider serviceProvider = getServiceProvider(consumerKey);
                 boolean useTenantDomainInLocalSubjectIdentifier = serviceProvider
