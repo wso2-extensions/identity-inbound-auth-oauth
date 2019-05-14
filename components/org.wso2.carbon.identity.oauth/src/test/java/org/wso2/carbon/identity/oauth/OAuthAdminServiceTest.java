@@ -43,6 +43,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 
+import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.powermock.api.mockito.PowerMockito.doNothing;
 import static org.powermock.api.mockito.PowerMockito.doThrow;
@@ -487,9 +488,25 @@ public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
 
         mockStatic(OAuthUtil.class);
         when(OAuthUtil.getRandomNumber()).thenReturn(UPDATED_CONSUMER_SECRET);
+        when(OAuthUtil.buildConsumerAppDTO(any())).thenCallRealMethod();
+
         OAuthAdminService oAuthAdminService = spy(new OAuthAdminService());
         doNothing().when(oAuthAdminService, "updateAppAndRevokeTokensAndAuthzCodes", anyString(),
                 Matchers.any(Properties.class));
+
+
+        whenNew(OAuthAppDAO.class).withNoArguments().thenReturn(oAuthAppDAO);
+
+        OAuthAppDO oAuthAppDO = new OAuthAppDO();
+        oAuthAppDO.setOauthConsumerKey(CONSUMER_KEY);
+        oAuthAppDO.setOauthConsumerSecret(UPDATED_CONSUMER_SECRET);
+
+        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+        authenticatedUser.setUserName("test_user");
+        oAuthAppDO.setAppOwner(authenticatedUser);
+
+        when(oAuthAppDAO.getAppInformation(CONSUMER_KEY)).thenReturn(oAuthAppDO);
+
         OAuthConsumerAppDTO oAuthConsumerAppDTO;
         oAuthConsumerAppDTO = oAuthAdminService.updateAndRetrieveOauthSecretKey(CONSUMER_KEY);
 
