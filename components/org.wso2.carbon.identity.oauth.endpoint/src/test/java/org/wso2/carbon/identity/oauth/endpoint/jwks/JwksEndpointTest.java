@@ -141,7 +141,12 @@ public class JwksEndpointTest extends PowerMockIdentityBaseTest {
             when(OAuth2Util.getThumbPrint(any(), anyString())).thenReturn(CERT_THUMB_PRINT);
             when(OAuth2Util.getKID(anyString(), any())).thenReturn(CERT_THUMB_PRINT);
         }
-        when(OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(anyString())).thenReturn(JWSAlgorithm.RS256);
+        when(OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm("SHA256withRSA")).thenReturn(JWSAlgorithm.RS256);
+        when(OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm("SHA512withRSA")).thenReturn(JWSAlgorithm.RS512);
+        when(OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm("SHA384withRSA")).thenReturn(JWSAlgorithm.RS384);
+        if ("foo.com".equals(tenantDomain)) {
+            when(OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm("SHA512withRSA")).thenReturn(JWSAlgorithm.RS256);
+        }
         mockStatic(KeyStoreManager.class);
         when(KeyStoreManager.getInstance(anyInt())).thenReturn(keyStoreManager);
         when(keyStoreManager.getKeyStore("foo-com.jks")).thenReturn(getKeyStoreFromFile("foo-com.jks", "foo.com"));
@@ -156,6 +161,11 @@ public class JwksEndpointTest extends PowerMockIdentityBaseTest {
             assertEquals(keyObject.get("alg"), ALG, "Incorrect alg value");
             assertEquals(keyObject.get("use"), USE, "Incorrect use value");
             assertEquals(keyObject.get("kty"), "RSA", "Incorrect kty value");
+            if ("foo.com".equals(tenantDomain)) {
+                assertEquals(objectArray.length(), 3, "Incorrect no of keysets");
+            } else {
+                assertEquals(objectArray.length(), 4, "Incorrect no of keysets");
+            }
         } catch (JSONException e) {
             if ("invalid.com".equals(tenantDomain)) {
                 assertTrue(result.contains("Invalid Tenant"),
@@ -175,9 +185,9 @@ public class JwksEndpointTest extends PowerMockIdentityBaseTest {
         mockStatic(OAuthServerConfiguration.class);
         when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
         when(oAuthServerConfiguration.getPersistenceProcessor()).thenReturn(tokenPersistenceProcessor);
-        when(oAuthServerConfiguration.getIdTokenSignatureAlgorithm()).thenReturn("SHA256withRSA");
+        when(oAuthServerConfiguration.getIdTokenSignatureAlgorithm()).thenReturn("SHA512withRSA");
         when(oAuthServerConfiguration.getSignatureAlgorithm()).thenReturn("SHA256withRSA");
-        when(oAuthServerConfiguration.getUserInfoJWTSignatureAlgorithm()).thenReturn("SHA256withRSA");
+        when(oAuthServerConfiguration.getUserInfoJWTSignatureAlgorithm()).thenReturn("SHA384withRSA");
     }
 
     private KeyStore getKeyStoreFromFile(String keystoreName, String password) throws Exception {
