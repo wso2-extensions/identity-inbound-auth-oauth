@@ -148,7 +148,6 @@ public class OAuthAdminService extends AbstractAdmin {
     public OAuthConsumerAppDTO getOAuthApplicationData(String consumerKey) throws IdentityOAuthAdminException {
 
         OAuthConsumerAppDTO dto;
-        OAuthAppDAO dao = new OAuthAppDAO();
         try {
             OAuthAppDO app = getOAuthApp(consumerKey);
             if (app != null) {
@@ -570,10 +569,7 @@ public class OAuthAdminService extends AbstractAdmin {
     public void updateConsumerAppState(String consumerKey, String newState) throws IdentityOAuthAdminException {
 
         try {
-            OAuthAppDO oAuthAppDO = AppInfoCache.getInstance().getValueFromCache(consumerKey);
-            if (oAuthAppDO == null) {
-                oAuthAppDO = getOAuthApp(consumerKey);
-            }
+            OAuthAppDO oAuthAppDO = getOAuthApp(consumerKey);
             // change the state
             oAuthAppDO.setState(newState);
 
