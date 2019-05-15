@@ -41,6 +41,7 @@ import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerAppPersistenceFactory;
 import org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoEndpointConfig;
 import org.wso2.carbon.identity.oauth.user.UserInfoClaimRetriever;
 import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
@@ -124,7 +125,8 @@ public class ClaimUtil {
 
                 Map<String, String> spToLocalClaimMappings;
                 String clientId = getClientID(accessTokenDO);
-                OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
+                OAuthAppDO oAuthAppDO = OAuthConsumerAppPersistenceFactory.getInstance().getOAuthConsumerAppDAO()
+                        .getAppInformationByConsumerKey(clientId);
                 String spTenantDomain = OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
 
                 ServiceProvider serviceProvider = getServiceProvider(clientId, spTenantDomain);

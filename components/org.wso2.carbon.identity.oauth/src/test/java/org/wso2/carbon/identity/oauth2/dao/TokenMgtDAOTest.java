@@ -42,7 +42,11 @@ import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerAppDAO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerAppPersistenceFactory;
 import org.wso2.carbon.identity.oauth.dao.SQLQueries;
+import org.wso2.carbon.identity.oauth.dao.impl.OAuthConsumerAppDAOImpl;
+import org.wso2.carbon.identity.oauth.exception.OAuthConsumerAppException;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.dao.util.DAOConstants;
@@ -96,7 +100,8 @@ import static org.wso2.carbon.identity.oauth2.dao.util.DAOConstants.VALID_SCOPE_
  * Unit tests for TokenMgtDAO.
  */
 @WithCarbonHome
-@PrepareForTest({IdentityDatabaseUtil.class, IdentityUtil.class, OAuthServerConfiguration.class, AppInfoCache.class})
+@PrepareForTest({IdentityDatabaseUtil.class, IdentityUtil.class, OAuthServerConfiguration.class, AppInfoCache.class,
+        OAuthConsumerAppPersistenceFactory.class})
 public class TokenMgtDAOTest extends IdentityBaseTest {
 
     private static final String DB_NAME = "TOKEN_DB";
@@ -1474,7 +1479,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
         return new org.powermock.modules.testng.PowerMockObjectFactory();
     }
 
-    private void setMockOauthAppDO(String consumerKey) {
+    private void setMockOauthAppDO(String consumerKey) throws OAuthConsumerAppException {
         OAuthAppDO oAuthAppDO = new OAuthAppDO();
         if (consumerKey.isEmpty()) {
             consumerKey = "testConsumerKey";
@@ -1486,5 +1491,12 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
         when(AppInfoCache.getInstance()).thenReturn(appInfoCache);
         when(appInfoCache.getValueFromCache(any(String.class))).
                 thenReturn(oAuthAppDO);
+        mockStatic(OAuthConsumerAppPersistenceFactory.class);
+        OAuthConsumerAppPersistenceFactory oAuthConsumerAppPersistenceFactory = Mockito
+                .mock(OAuthConsumerAppPersistenceFactory.class);
+        when(OAuthConsumerAppPersistenceFactory.getInstance()).thenReturn(oAuthConsumerAppPersistenceFactory);
+        OAuthConsumerAppDAO oAuthConsumerAppDAO = Mockito.mock(OAuthConsumerAppDAO.class);
+        when(oAuthConsumerAppPersistenceFactory.getOAuthConsumerAppDAO()).thenReturn(oAuthConsumerAppDAO);
+        when(oAuthConsumerAppDAO.getAppInformationByConsumerKey(anyString())).thenReturn(oAuthAppDO);
     }
 }

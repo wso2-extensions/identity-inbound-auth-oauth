@@ -23,8 +23,8 @@ import org.wso2.carbon.identity.core.dao.OpenIDUserRPDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.core.model.OpenIDUserRPDO;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
-import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
-import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerAppPersistenceFactory;
+import org.wso2.carbon.identity.oauth.exception.OAuthConsumerAppException;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 /**
@@ -119,13 +119,14 @@ public class OpenIDConnectUserRPStore {
 
         String errorMsg = "Unable to retrieve app information for clientId: " + clientId;
         try {
-            OAuthAppDO oAuthApp = OAuth2Util.getAppInformationByClientId(clientId);
+            OAuthAppDO oAuthApp = OAuthConsumerAppPersistenceFactory.getInstance().getOAuthConsumerAppDAO()
+                    .getAppInformationByConsumerKey(clientId);
             if (oAuthApp == null) {
                 throw new OAuthSystemException(errorMsg);
             } else {
                 return oAuthApp;
             }
-        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+        } catch (OAuthConsumerAppException e) {
             throw new OAuthSystemException(errorMsg, e);
         }
     }

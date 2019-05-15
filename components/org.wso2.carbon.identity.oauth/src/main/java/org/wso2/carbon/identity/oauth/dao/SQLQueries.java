@@ -214,6 +214,9 @@ public class SQLQueries {
         // Get the username corresponding to the given consumer key and secret
         public static final String GET_USERNAME_FOR_KEY_AND_SECRET = "SELECT USERNAME FROM IDN_OAUTH_CONSUMER_APPS WHERE CONSUMER_KEY=? AND CONSUMER_SECRET=?";
 
+        public static final String GET_USERNAME_FOR_CONSUMER_KEY = "SELECT USERNAME FROM IDN_OAUTH_CONSUMER_APPS " +
+                "WHERE CONSUMER_KEY=?";
+
         private OAuthConsumerDAOSQLQueries(){
 
         }

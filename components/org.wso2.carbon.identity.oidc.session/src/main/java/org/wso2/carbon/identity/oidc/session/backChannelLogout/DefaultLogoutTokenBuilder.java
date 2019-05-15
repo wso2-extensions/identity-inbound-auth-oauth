@@ -37,6 +37,10 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerAppDAO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerAppPersistenceFactory;
+import org.wso2.carbon.identity.oauth.dao.impl.CacheBackedOAuthConsumerAppDAO;
+import org.wso2.carbon.identity.oauth.exception.OAuthConsumerAppException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
@@ -281,9 +285,16 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
      * @throws IdentityOAuth2Exception
      * @throws InvalidOAuthClientException
      */
-    private OAuthAppDO getOAuthAppDO(String clientID) throws IdentityOAuth2Exception, InvalidOAuthClientException {
+    private OAuthAppDO getOAuthAppDO(String clientID) throws IdentityOAuth2Exception {
 
-        OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientID);
+        OAuthAppDO oAuthAppDO;
+        try {
+            oAuthAppDO = OAuthConsumerAppPersistenceFactory.getInstance().getOAuthConsumerAppDAO()
+                    .getAppInformationByConsumerKey(clientID);
+        } catch (OAuthConsumerAppException e) {
+            throw new IdentityOAuth2Exception("Error occurred while retrieving app information for Client ID : "
+                    + clientID, e);
+        }
         return oAuthAppDO;
     }
 

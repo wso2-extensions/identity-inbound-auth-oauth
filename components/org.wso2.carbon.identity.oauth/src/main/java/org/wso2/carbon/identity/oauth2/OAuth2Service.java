@@ -27,16 +27,14 @@ import org.wso2.carbon.core.AbstractAdmin;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
-import org.wso2.carbon.identity.oauth.cache.CacheEntry;
-import org.wso2.carbon.identity.oauth.cache.OAuthCache;
-import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
-import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerAppPersistenceFactory;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
+import org.wso2.carbon.identity.oauth.exception.OAuthConsumerAppException;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.authz.AuthorizationHandlerManager;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
@@ -134,7 +132,8 @@ public class OAuth2Service extends AbstractAdmin {
                 throw new InvalidOAuthClientException("Invalid client_id. No OAuth application has been registered " +
                         "with the given client_id");
             }
-            OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(clientId);
+            OAuthAppDO appDO = OAuthConsumerAppPersistenceFactory.getInstance().getOAuthConsumerAppDAO()
+                    .getAppInformationByConsumerKey(clientId);
             String appState = appDO.getState();
 
             if (StringUtils.isEmpty(appState)) {
@@ -218,7 +217,7 @@ public class OAuth2Service extends AbstractAdmin {
             validationResponseDTO.setErrorCode(OAuth2ErrorCodes.INVALID_CLIENT);
             validationResponseDTO.setErrorMsg(e.getMessage());
             return validationResponseDTO;
-        } catch (IdentityOAuth2Exception e) {
+        }  catch (OAuthConsumerAppException e) {
             log.error("Error when reading the Application Information.", e);
             validationResponseDTO.setValidClient(false);
             validationResponseDTO.setErrorCode(OAuth2ErrorCodes.SERVER_ERROR);
@@ -583,9 +582,10 @@ public class OAuth2Service extends AbstractAdmin {
     public String getOauthApplicationState(String consumerKey) {
 
         try {
-            OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(consumerKey);
+            OAuthAppDO appDO = OAuthConsumerAppPersistenceFactory.getInstance().getOAuthConsumerAppDAO()
+                    .getAppInformationByConsumerKey(consumerKey);
             return appDO.getState();
-        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+        } catch (OAuthConsumerAppException e) {
             String msg = "Error while finding application state for application with client_id: " + consumerKey;
             log.error(msg);
             if (log.isDebugEnabled()) {

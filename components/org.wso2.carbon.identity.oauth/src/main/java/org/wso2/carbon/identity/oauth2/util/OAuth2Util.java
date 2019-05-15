@@ -78,9 +78,11 @@ import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientExcepti
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerAppPersistenceFactory;
 import org.wso2.carbon.identity.oauth.dao.OAuthConsumerDAO;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
+import org.wso2.carbon.identity.oauth.exception.OAuthConsumerAppException;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
@@ -418,7 +420,7 @@ public class OAuth2Util {
     public static boolean authenticateClient(String clientId, String clientSecretProvided)
             throws IdentityOAuthAdminException, IdentityOAuth2Exception, InvalidOAuthClientException {
 
-        OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(clientId);
+        OAuthAppDO appDO = getOAuthAppInformationByClientId(clientId);
         if (appDO == null) {
             if (log.isDebugEnabled()) {
                 log.debug("Cannot find a valid application with the provided client_id: " + clientId);
@@ -1617,12 +1619,7 @@ public class OAuth2Util {
     public static OauthTokenIssuer getOAuthTokenIssuerForOAuthApp(String clientId)
             throws IdentityOAuth2Exception, InvalidOAuthClientException {
 
-        OAuthAppDO appDO = null;
-        try {
-            appDO = getAppInformationByClientId(clientId);
-        } catch (IdentityOAuth2Exception e) {
-            throw new IdentityOAuth2Exception("Error while retrieving app information for clientId: " + clientId, e);
-        }
+        OAuthAppDO appDO = getOAuthAppInformationByClientId(clientId);
         return getOAuthTokenIssuerForOAuthApp(appDO);
     }
 
@@ -1727,8 +1724,11 @@ public class OAuth2Util {
      * @param clientId
      * @return Oauth app information
      * @throws IdentityOAuth2Exception
-     * @throws InvalidOAuthClientException
+     * @deprecated use
+     * {@link org.wso2.carbon.identity.oauth.dao.impl.CacheBackedOAuthConsumerAppDAO#getAppInformationByConsumerKey(String)}
+     * instead.
      */
+    @Deprecated
     public static OAuthAppDO getAppInformationByClientId(String clientId)
             throws IdentityOAuth2Exception, InvalidOAuthClientException {
 
@@ -1771,7 +1771,7 @@ public class OAuth2Util {
     public static String getTenantDomainOfOauthApp(String clientId)
             throws IdentityOAuth2Exception, InvalidOAuthClientException {
 
-        OAuthAppDO oAuthAppDO = getAppInformationByClientId(clientId);
+        OAuthAppDO oAuthAppDO = getOAuthAppInformationByClientId(clientId);
         return getTenantDomainOfOauthApp(oAuthAppDO);
     }
 
@@ -1935,7 +1935,7 @@ public class OAuth2Util {
         try {
             String clientId = SignedJWT.parse(idToken).getJWTClaimsSet().getAudience().get(0);
             if (isJWTSignedWithSPKey) {
-                OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
+                OAuthAppDO oAuthAppDO = getOAuthAppInformationByClientId(clientId);
                 tenantDomain = OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
             } else {
                 //It is not sending tenant domain with the subject in id_token by default, So to work this as
@@ -3106,5 +3106,18 @@ public class OAuth2Util {
         }
 
         return isIdpIdAvailableInAuthzCodeTable && isIdpIdAvailableInTokenTable && isIdpIdAvailableInTokenAuditTable;
+    }
+
+    private static OAuthAppDO getOAuthAppInformationByClientId(String clientId) throws IdentityOAuth2Exception {
+
+        OAuthAppDO oAuthAppDO;
+        try {
+            oAuthAppDO = OAuthConsumerAppPersistenceFactory.getInstance().getOAuthConsumerAppDAO()
+                    .getAppInformationByConsumerKey(clientId);
+        } catch (OAuthConsumerAppException e) {
+            throw new IdentityOAuth2Exception("Error occurred while retrieving app information for Client ID : "
+                    + clientId, e);
+        }
+        return oAuthAppDO;
     }
 }

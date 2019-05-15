@@ -44,6 +44,8 @@ import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientExcepti
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerAppPersistenceFactory;
+import org.wso2.carbon.identity.oauth.exception.OAuthConsumerAppException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
@@ -327,7 +329,8 @@ public class OIDCLogoutServlet extends HttpServlet {
         try {
             String clientId = extractClientFromIdToken(idToken);
             if (isJWTSignedWithSPKey) {
-                OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
+                OAuthAppDO oAuthAppDO = OAuthConsumerAppPersistenceFactory.getInstance().getOAuthConsumerAppDAO()
+                        .getAppInformationByConsumerKey(clientId);
                 tenantDomain = OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
                 if (log.isDebugEnabled()) {
                     log.debug("JWT signature will be validated with the service provider's tenant domain : " +
@@ -342,7 +345,7 @@ public class OIDCLogoutServlet extends HttpServlet {
         } catch (ParseException e) {
             log.error("Error occurred while extracting client id from id token", e);
             return null;
-        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+        } catch (OAuthConsumerAppException e) {
             log.error("Error occurred while getting oauth application information.", e);
             return null;
         }

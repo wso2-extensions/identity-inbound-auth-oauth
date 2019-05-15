@@ -41,6 +41,8 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerAppDAO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerAppPersistenceFactory;
 import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
@@ -64,11 +66,13 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.isNull;
+import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
 
 @PrepareForTest ( {IdentityTenantUtil.class, OAuth2Util.class, OAuthServerConfiguration.class,
-        OAuth2ServiceComponentHolder.class, ClaimMetadataHandler.class, IdentityUtil.class})
+        OAuth2ServiceComponentHolder.class, ClaimMetadataHandler.class, IdentityUtil.class,
+        OAuthConsumerAppPersistenceFactory.class})
 public class ClaimUtilTest extends PowerMockIdentityBaseTest {
 
     @Mock
@@ -252,6 +256,13 @@ public class ClaimUtilTest extends PowerMockIdentityBaseTest {
         when(mockedOAuthServerConfiguration.isMapFederatedUsersToLocal()).thenReturn(mapFedUsersToLocal);
 
         mockOAuth2Util();
+
+        mockStatic(OAuthConsumerAppPersistenceFactory.class);
+        OAuthConsumerAppPersistenceFactory oAuthConsumerAppPersistenceFactory = mock(OAuthConsumerAppPersistenceFactory.class);
+        when(OAuthConsumerAppPersistenceFactory.getInstance()).thenReturn(oAuthConsumerAppPersistenceFactory);
+        OAuthConsumerAppDAO oAuthConsumerAppDAO = mock(OAuthConsumerAppDAO.class);
+        when(oAuthConsumerAppPersistenceFactory.getOAuthConsumerAppDAO()).thenReturn(oAuthConsumerAppDAO);
+        when(oAuthConsumerAppDAO.getAppInformationByConsumerKey(anyString())).thenReturn(mockedOAuthAppDO);
 
         AccessTokenDO accessTokenDO = getAccessTokenDO(clientId, userStoreDomain, isFederated);
         if (mockAccessTokenDO) {

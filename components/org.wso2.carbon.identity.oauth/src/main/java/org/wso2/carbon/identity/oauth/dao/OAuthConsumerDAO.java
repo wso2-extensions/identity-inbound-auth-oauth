@@ -59,7 +59,9 @@ public class OAuthConsumerDAO {
      * @param consumerKey Consumer key
      * @return consumer secret
      * @throws IdentityOAuthAdminException Error when reading consumer secret from the persistence store
+     * @deprecated use {@link OAuthConsumerAppDAO#getOAuthConsumerSecret(String)} instead.
      */
+    @Deprecated
     public String getOAuthConsumerSecret(String consumerKey) throws IdentityOAuthAdminException {
         String consumerSecret = null;
         if (isHashDisabled) {
@@ -167,7 +169,9 @@ public class OAuthConsumerDAO {
      * @param clientSecret Consumer secret
      * @return Username if successful, empty string otherwise
      * @throws IdentityOAuthAdminException Error when reading consumer secret from the persistence store
+     * @deprecated use {@link OAuthConsumerAppDAO#getConsumerApplicationOwnerName(String)} instead.
      */
+    @Deprecated
     public String getAuthenticatedUsername(String clientId, String clientSecret) throws IdentityOAuthAdminException {
         String username = "";
         Connection connection = IdentityDatabaseUtil.getDBConnection();

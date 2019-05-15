@@ -39,6 +39,9 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerAppDAO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerAppPersistenceFactory;
+import org.wso2.carbon.identity.oauth.exception.OAuthConsumerAppException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
@@ -261,12 +264,11 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
 
         String[] scopeValidators;
         OAuthAppDO oAuthAppDO = (OAuthAppDO) tokenReqMsgContext.getProperty("OAuthAppDO");
-
         if (oAuthAppDO == null) {
             try {
-                oAuthAppDO = OAuth2Util.getAppInformationByClientId(
-                        tokenReqMsgContext.getOauth2AccessTokenReqDTO().getClientId());
-            } catch (InvalidOAuthClientException e) {
+                oAuthAppDO = OAuthConsumerAppPersistenceFactory.getInstance().getOAuthConsumerAppDAO()
+                        .getAppInformationByConsumerKey(tokenReqMsgContext.getOauth2AccessTokenReqDTO().getClientId());
+            } catch (OAuthConsumerAppException e) {
                 throw new IdentityOAuth2Exception("Error while retrieving OAuth application from DB for client id: " +
                         tokenReqMsgContext.getOauth2AccessTokenReqDTO().getClientId(), e);
             }
@@ -579,8 +581,9 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         OAuthAppDO oAuthAppDO;
         String consumerKey = existingAccessTokenDO.getConsumerKey();
         try {
-            oAuthAppDO = OAuth2Util.getAppInformationByClientId(consumerKey);
-        } catch (InvalidOAuthClientException e) {
+            oAuthAppDO = OAuthConsumerAppPersistenceFactory.getInstance().getOAuthConsumerAppDAO()
+                    .getAppInformationByConsumerKey(consumerKey);
+        } catch (OAuthConsumerAppException e) {
             throw new IdentityOAuth2Exception("Error while retrieving app information for client_id : " + consumerKey,
                     e);
         }
@@ -619,15 +622,17 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     private OAuthAppDO getoAuthApp(String consumerKey) throws IdentityOAuth2Exception {
         OAuthAppDO oAuthAppBean;
         try {
-            oAuthAppBean = OAuth2Util.getAppInformationByClientId(consumerKey);
+            oAuthAppBean = OAuthConsumerAppPersistenceFactory.getInstance().getOAuthConsumerAppDAO()
+                    .getAppInformationByConsumerKey(consumerKey);
             if (log.isDebugEnabled()) {
                 log.debug("Service Provider specific expiry time enabled for application : " + consumerKey +
                         ". Application access token expiry time : " + oAuthAppBean.getApplicationAccessTokenExpiryTime()
                         + ", User access token expiry time : " + oAuthAppBean.getUserAccessTokenExpiryTime() +
                         ", Refresh token expiry time : " + oAuthAppBean.getRefreshTokenExpiryTime());
             }
-        } catch (InvalidOAuthClientException e) {
-            throw new IdentityOAuth2Exception("Error while retrieving app information for clientId : " + consumerKey, e);
+        } catch (OAuthConsumerAppException e) {
+            throw new IdentityOAuth2Exception("Error while retrieving app information for clientId : " + consumerKey,
+                    e);
         }
         return oAuthAppBean;
     }

@@ -233,8 +233,10 @@ public class DCRMService {
             }
             return dto;
         } catch (IdentityOAuthAdminException e) {
-            if (e.getCause() instanceof InvalidOAuthClientException) {
-                throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.NOT_FOUND_APPLICATION_WITH_ID, clientId);
+            if (e.getCause() instanceof InvalidOAuthClientException ||
+                    (e.getCause() != null && e.getCause().getCause() instanceof InvalidOAuthClientException)) {
+                throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.NOT_FOUND_APPLICATION_WITH_ID,
+                        clientId);
             }
             throw DCRMUtils.generateServerException(
                     DCRMConstants.ErrorMessages.FAILED_TO_GET_APPLICATION_BY_ID, clientId, e);

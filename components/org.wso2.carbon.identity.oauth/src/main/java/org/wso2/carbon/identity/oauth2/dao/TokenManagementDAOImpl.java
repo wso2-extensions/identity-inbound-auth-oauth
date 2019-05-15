@@ -35,6 +35,8 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerAppPersistenceFactory;
+import org.wso2.carbon.identity.oauth.exception.OAuthConsumerAppException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
@@ -521,11 +523,9 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                 }
 
                 // update application state of the oauth app
-                updateStateStatement = connection.prepareStatement
-                        (org.wso2.carbon.identity.oauth.dao.SQLQueries.OAuthAppDAOSQLQueries.UPDATE_APPLICATION_STATE);
-                updateStateStatement.setString(1, newAppState);
-                updateStateStatement.setString(2, consumerKey);
-                updateStateStatement.execute();
+
+                OAuthConsumerAppPersistenceFactory.getInstance().getOAuthConsumerAppDAO()
+                        .updateOAuthConsumerAppState(consumerKey, newAppState);
 
             } else if (OAuthConstants.ACTION_REGENERATE.equals(action)) {
                 String newSecretKey;
@@ -540,11 +540,8 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                 }
 
                 // update consumer secret of the oauth app
-                updateStateStatement = connection.prepareStatement
-                        (org.wso2.carbon.identity.oauth.dao.SQLQueries.OAuthAppDAOSQLQueries.UPDATE_OAUTH_SECRET_KEY);
-                updateStateStatement.setString(1, getPersistenceProcessor().getProcessedClientSecret(newSecretKey));
-                updateStateStatement.setString(2, consumerKey);
-                updateStateStatement.execute();
+                OAuthConsumerAppPersistenceFactory.getInstance().getOAuthConsumerAppDAO()
+                        .updateOAuthConsumerSecret(consumerKey, newSecretKey);
             }
 
             //Revoke all active access tokens
@@ -587,6 +584,8 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
 
         } catch (SQLException e) {
             throw new IdentityApplicationManagementException("Error while executing the SQL statement.", e);
+        } catch (OAuthConsumerAppException e) {
+            throw new IdentityApplicationManagementException("Error while updating the consumer secret.", e);
         } finally {
             IdentityDatabaseUtil.closeStatement(updateStateStatement);
             IdentityDatabaseUtil.closeStatement(revokeActiveTokensStatement);

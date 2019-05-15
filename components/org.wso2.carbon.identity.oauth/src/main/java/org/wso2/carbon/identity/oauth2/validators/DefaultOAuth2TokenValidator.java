@@ -22,9 +22,10 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerAppPersistenceFactory;
+import org.wso2.carbon.identity.oauth.exception.OAuthConsumerAppException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
@@ -72,9 +73,10 @@ public class DefaultOAuth2TokenValidator implements OAuth2TokenValidator {
 
         OAuthAppDO app;
         try {
-            app = OAuth2Util.getAppInformationByClientId(accessTokenDO.getConsumerKey());
+            app = OAuthConsumerAppPersistenceFactory.getInstance().getOAuthConsumerAppDAO()
+                    .getAppInformationByConsumerKey(accessTokenDO.getConsumerKey());
             scopeValidators = app.getScopeValidators();
-        } catch (InvalidOAuthClientException e) {
+        } catch (OAuthConsumerAppException e) {
             throw new IdentityOAuth2Exception(String.format("Exception occurred when getting app information for " +
                     "client id %s ", accessTokenDO.getConsumerKey()), e);
         }

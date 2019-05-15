@@ -21,6 +21,7 @@ import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.PlainJWT;
 import org.joda.time.Duration;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.powermock.core.classloader.annotations.PrepareForTest;
@@ -33,6 +34,9 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerAppDAO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerAppPersistenceFactory;
+import org.wso2.carbon.identity.oauth.exception.OAuthConsumerAppException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
@@ -68,7 +72,8 @@ import static org.testng.Assert.fail;
 @PrepareForTest(
         {
                 OAuthServerConfiguration.class,
-                OAuth2Util.class
+                OAuth2Util.class,
+                OAuthConsumerAppPersistenceFactory.class
         }
 )
 public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
@@ -97,11 +102,21 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
     @Mock
     private OAuthServerConfiguration oAuthServerConfiguration;
 
+    @Mock
+    private OAuthConsumerAppDAO oAuthConsumerAppDAO;
+
     @BeforeMethod
     public void setUp() throws Exception {
         initMocks(this);
         mockStatic(OAuthServerConfiguration.class);
         when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
+
+        mockStatic(OAuthConsumerAppPersistenceFactory.class);
+        OAuthConsumerAppPersistenceFactory oAuthConsumerAppPersistenceFactory = Mockito
+                .mock(OAuthConsumerAppPersistenceFactory.class);
+        when(OAuthConsumerAppPersistenceFactory.getInstance()).thenReturn(oAuthConsumerAppPersistenceFactory);
+        oAuthConsumerAppDAO = Mockito.mock(OAuthConsumerAppDAO.class);
+        when(oAuthConsumerAppPersistenceFactory.getOAuthConsumerAppDAO()).thenReturn(oAuthConsumerAppDAO);
     }
 
     @AfterMethod
@@ -179,8 +194,8 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
     @Test(expectedExceptions = IdentityOAuth2Exception.class)
     public void testCreateJWTClaimSetForInvalidClient() throws Exception {
         mockStatic(OAuth2Util.class);
-        when(OAuth2Util.getAppInformationByClientId(anyString()))
-                .thenThrow(new InvalidOAuthClientException("INVALID_CLIENT"));
+        when(oAuthConsumerAppDAO.getAppInformationByConsumerKey(anyString()))
+                .thenThrow(new OAuthConsumerAppException("INVALID_CLIENT"));
         when(oAuthServerConfiguration.getSignatureAlgorithm()).thenReturn(SHA256_WITH_HMAC);
 
         JWTTokenIssuer jwtTokenIssuer = new JWTTokenIssuer();
@@ -236,7 +251,7 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         mockGrantHandlers();
         mockCustomClaimsCallbackHandler();
         mockStatic(OAuth2Util.class);
-        when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(appDO);
+        when(oAuthConsumerAppDAO.getAppInformationByConsumerKey(anyString())).thenReturn(appDO);
         when(OAuth2Util.getIDTokenIssuer()).thenReturn(ID_TOKEN_ISSUER);
         when(OAuth2Util.getIdTokenIssuer(anyString())).thenReturn(ID_TOKEN_ISSUER);
         when(OAuth2Util.getOIDCAudience(anyString(), anyObject())).thenReturn(Collections.singletonList

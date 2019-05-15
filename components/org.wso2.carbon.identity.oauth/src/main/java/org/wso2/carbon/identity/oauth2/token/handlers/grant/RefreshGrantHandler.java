@@ -36,6 +36,9 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerAppDAO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerAppPersistenceFactory;
+import org.wso2.carbon.identity.oauth.exception.OAuthConsumerAppException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.ResponseHeader;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
@@ -347,12 +350,13 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
     }
 
     private OAuthAppDO getOAuthApp(String clientId) throws IdentityOAuth2Exception {
+
         OAuthAppDO oAuthAppDO;
         try {
-            oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
-        } catch (InvalidOAuthClientException e) {
-            throw new IdentityOAuth2Exception("Error while retrieving app information for clientId: "
-                    + clientId, e);
+            oAuthAppDO = OAuthConsumerAppPersistenceFactory.getInstance().getOAuthConsumerAppDAO()
+                    .getAppInformationByConsumerKey(clientId);
+        } catch (OAuthConsumerAppException e) {
+            throw new IdentityOAuth2Exception("Error while retrieving app information for clientId: " + clientId, e);
         }
         if (log.isDebugEnabled()) {
             log.debug("Service Provider specific expiry time enabled for application : " +

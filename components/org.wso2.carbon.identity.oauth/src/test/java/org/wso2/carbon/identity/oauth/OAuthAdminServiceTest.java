@@ -5,6 +5,7 @@ import org.apache.axis2.engine.AxisConfiguration;
 import org.apache.commons.lang.StringUtils;
 import org.mockito.Matchers;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.internal.util.reflection.Whitebox;
 import org.powermock.api.mockito.PowerMockito;
@@ -23,7 +24,10 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerAppDAO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerAppPersistenceFactory;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
+import org.wso2.carbon.identity.oauth.exception.OAuthConsumerAppException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 import org.wso2.carbon.user.api.RealmConfiguration;
@@ -53,7 +57,7 @@ import static org.powermock.api.mockito.PowerMockito.whenNew;
 
 @PowerMockIgnore({"javax.net.*", "javax.security.*", "javax.crypto.*"})
 @PrepareForTest({OAuthAdminService.class, IdentityCoreServiceComponent.class, ConfigurationContextService.class, OAuthUtil.class,
-        OAuthAppDAO.class})
+        OAuthAppDAO.class, OAuthConsumerAppPersistenceFactory.class})
 public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
 
     private static final String CONSUMER_KEY = "consumer:key";
@@ -77,6 +81,9 @@ public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
     @Mock
     private TenantManager tenantManager;
 
+    @Mock
+    private OAuthConsumerAppDAO oAuthConsumerAppDAO;
+
     @BeforeMethod
     public void setUp() throws Exception {
 
@@ -89,6 +96,13 @@ public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
         IdentityTenantUtil.setRealmService(realmService);
         when(realmService.getTenantManager()).thenReturn(tenantManager);
         when(realmService.getBootstrapRealmConfiguration()).thenReturn(realmConfiguration);
+
+        mockStatic(OAuthConsumerAppPersistenceFactory.class);
+        OAuthConsumerAppPersistenceFactory oAuthConsumerAppPersistenceFactory = Mockito
+                .mock(OAuthConsumerAppPersistenceFactory.class);
+        when(OAuthConsumerAppPersistenceFactory.getInstance()).thenReturn(oAuthConsumerAppPersistenceFactory);
+        oAuthConsumerAppDAO = Mockito.mock(OAuthConsumerAppDAO.class);
+        when(oAuthConsumerAppPersistenceFactory.getOAuthConsumerAppDAO()).thenReturn(oAuthConsumerAppDAO);
     }
 
     private void initConfigsAndRealm() throws Exception {
@@ -149,7 +163,8 @@ public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
         oAuthAppDO.setApplicationName("testapp1");
         oAuthAppDO.setUser(authenticatedUser);
         authenticatedUser.setUserName(userName);
-        when(oAuthAppDAO.getOAuthConsumerAppsOfUser(userName, -1234)).thenReturn(new OAuthAppDO[]{oAuthAppDO});
+        when(oAuthConsumerAppDAO.getOAuthConsumerAppsOfUser(userName, -1234))
+                .thenReturn(new OAuthAppDO[]{oAuthAppDO});
         OAuthAdminService oAuthAdminService = new OAuthAdminService();
         try {
             OAuthConsumerAppDTO[] allOAuthApplicationData =
@@ -195,8 +210,7 @@ public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
         oAuthConsumerAppDTO.setOAuthVersion(oauthVersion);
         oAuthConsumerAppDTO.setRenewRefreshTokenEnabled("true");
 
-        whenNew(OAuthAppDAO.class).withNoArguments().thenReturn(oAuthAppDAO);
-        doNothing().when(oAuthAppDAO).addOAuthApplication(Matchers.any(OAuthAppDO.class));
+        doNothing().when(oAuthConsumerAppDAO).addOAuthConsumerApplication(Matchers.any(OAuthAppDO.class));
 
         try {
             oAuthAdminService.registerOAuthApplicationData(oAuthConsumerAppDTO);
@@ -221,8 +235,7 @@ public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
         PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(username);
 
         OAuthAppDO app = buildDummyOAuthAppDO(username);
-        when(oAuthAppDAO.getOAuthConsumerAppsOfUser(username, tenantId)).thenReturn(new OAuthAppDO[]{app});
-        whenNew(OAuthAppDAO.class).withAnyArguments().thenReturn(oAuthAppDAO);
+        when(oAuthConsumerAppDAO.getOAuthConsumerAppsOfUser(username, tenantId)).thenReturn(new OAuthAppDO[]{app});
 
         OAuthAdminService oAuthAdminService = new OAuthAdminService();
         OAuthConsumerAppDTO[] oAuthConsumerApps = oAuthAdminService.getAllOAuthApplicationData();
@@ -249,8 +262,7 @@ public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
         String consumerKey = "some-consumer-key";
 
         OAuthAppDO app = buildDummyOAuthAppDO("some-user-name");
-        when(oAuthAppDAO.getAppInformation(consumerKey)).thenReturn(app);
-        whenNew(OAuthAppDAO.class).withAnyArguments().thenReturn(oAuthAppDAO);
+        when(oAuthConsumerAppDAO.getAppInformationByConsumerKey(consumerKey)).thenReturn(app);
 
         OAuthAdminService oAuthAdminService = new OAuthAdminService();
         OAuthConsumerAppDTO oAuthConsumerApp = oAuthAdminService.getOAuthApplicationData(consumerKey);
@@ -301,19 +313,13 @@ public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
         return new Object[][]{{"InvalidOAuthClientException"}, {"IdentityOAuth2Exception"}};
     }
 
-    @Test(dataProvider = "getAppInformationExceptions", expectedExceptions = IdentityOAuthAdminException.class)
-    public void testGetOAuthApplicationDataException(String exception) throws Exception {
+    @Test(expectedExceptions = IdentityOAuthAdminException.class)
+    public void testGetOAuthApplicationDataException() throws Exception {
 
         String consumerKey = "some-consumer-key";
 
-        switch (exception) {
-            case "InvalidOAuthClientException":
-                when(oAuthAppDAO.getAppInformation(consumerKey)).thenThrow(InvalidOAuthClientException.class);
-                break;
-            case "IdentityOAuth2Exception":
-                when(oAuthAppDAO.getAppInformation(consumerKey)).thenThrow(IdentityOAuth2Exception.class);
-        }
-        whenNew(OAuthAppDAO.class).withAnyArguments().thenReturn(oAuthAppDAO);
+        when(oAuthConsumerAppDAO.getAppInformationByConsumerKey(consumerKey))
+                .thenThrow(OAuthConsumerAppException.class);
 
         OAuthAdminService oAuthAdminService = new OAuthAdminService();
         oAuthAdminService.getOAuthApplicationData(consumerKey);
@@ -326,8 +332,7 @@ public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
 
         // Create oauth application data.
         OAuthAppDO app = buildDummyOAuthAppDO("some-user-name");
-        when(oAuthAppDAO.getAppInformationByAppName(appName)).thenReturn(app);
-        whenNew(OAuthAppDAO.class).withAnyArguments().thenReturn(oAuthAppDAO);
+        when(oAuthConsumerAppDAO.getAppInformationByAppName(appName)).thenReturn(app);
 
         OAuthAdminService oAuthAdminService = new OAuthAdminService();
         OAuthConsumerAppDTO oAuthConsumerApp = oAuthAdminService.getOAuthApplicationDataByAppName(appName);
@@ -335,19 +340,12 @@ public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
                 "same as the application name in app data object.");
     }
 
-    @Test(dataProvider = "getAppInformationExceptions", expectedExceptions = IdentityOAuthAdminException.class)
-    public void testGetOAuthApplicationDataByAppNameException(String exception) throws Exception {
+    @Test(expectedExceptions = IdentityOAuthAdminException.class)
+    public void testGetOAuthApplicationDataByAppNameException() throws Exception {
 
         String appName = "some-app-name";
 
-        switch (exception) {
-            case "InvalidOAuthClientException":
-                when(oAuthAppDAO.getAppInformationByAppName(appName)).thenThrow(InvalidOAuthClientException.class);
-                break;
-            case "IdentityOAuth2Exception":
-                when(oAuthAppDAO.getAppInformationByAppName(appName)).thenThrow(IdentityOAuth2Exception.class);
-        }
-        whenNew(OAuthAppDAO.class).withAnyArguments().thenReturn(oAuthAppDAO);
+        when(oAuthConsumerAppDAO.getAppInformationByAppName(appName)).thenThrow(OAuthConsumerAppException.class);
 
         OAuthAdminService oAuthAdminService = new OAuthAdminService();
         oAuthAdminService.getOAuthApplicationDataByAppName(appName);
@@ -444,11 +442,7 @@ public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
         OAuthAppDO app = buildDummyOAuthAppDO("some-user-name");
         AuthenticatedUser originalOwner = app.getAppOwner();
 
-        OAuthAppDAO oAuthAppDAOMock = PowerMockito.spy(new OAuthAppDAO());
-        OAuthAppDO oAuthAppDO = new OAuthAppDO();
-        PowerMockito.doReturn(true).when(oAuthAppDAOMock, "validateUserForOwnerUpdate", oAuthAppDO);
-        when(oAuthAppDAO.getAppInformation(consumerKey)).thenReturn(app);
-        whenNew(OAuthAppDAO.class).withAnyArguments().thenReturn(oAuthAppDAO);
+        when(oAuthConsumerAppDAO.getAppInformationByConsumerKey(consumerKey)).thenReturn(app);
 
         OAuthAdminService oAuthAdminService = new OAuthAdminService();
         OAuthConsumerAppDTO consumerAppDTO = new OAuthConsumerAppDTO();

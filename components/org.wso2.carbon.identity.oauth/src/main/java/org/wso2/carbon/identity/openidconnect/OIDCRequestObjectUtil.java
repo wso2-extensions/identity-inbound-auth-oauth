@@ -22,13 +22,12 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.as.request.OAuthAuthzRequest;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
-import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
-import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerAppPersistenceFactory;
+import org.wso2.carbon.identity.oauth.exception.OAuthConsumerAppException;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
-import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 
 /**
@@ -103,8 +102,9 @@ public class OIDCRequestObjectUtil {
         String clientId = oAuth2Parameters.getClientId();
         OAuthAppDO oAuthAppDO;
         try {
-            oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
-        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+            oAuthAppDO = OAuthConsumerAppPersistenceFactory.getInstance().getOAuthConsumerAppDAO()
+                    .getAppInformationByConsumerKey(clientId);
+        } catch (OAuthConsumerAppException e) {
             throw new RequestObjectException("Error while retrieving app information for client_id: " + clientId +
                     ". Cannot proceed with signature validation", e);
         }
