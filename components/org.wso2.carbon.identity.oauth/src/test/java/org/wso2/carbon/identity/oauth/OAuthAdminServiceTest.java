@@ -305,8 +305,9 @@ public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
     @Test(dataProvider = "getAppInformationExceptions", expectedExceptions = IdentityOAuthAdminException.class)
     public void testGetOAuthApplicationDataException(String exception) throws Exception {
 
-        String consumerKey = "some-consumer-key";
+        String consumerKey = "invalid_consumer_key";
 
+        whenNew(OAuthAppDAO.class).withAnyArguments().thenReturn(oAuthAppDAO);
         switch (exception) {
             case "InvalidOAuthClientException":
                 when(oAuthAppDAO.getAppInformation(consumerKey)).thenThrow(InvalidOAuthClientException.class);
@@ -314,7 +315,6 @@ public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
             case "IdentityOAuth2Exception":
                 when(oAuthAppDAO.getAppInformation(consumerKey)).thenThrow(IdentityOAuth2Exception.class);
         }
-        whenNew(OAuthAppDAO.class).withAnyArguments().thenReturn(oAuthAppDAO);
 
         OAuthAdminService oAuthAdminService = new OAuthAdminService();
         oAuthAdminService.getOAuthApplicationData(consumerKey);

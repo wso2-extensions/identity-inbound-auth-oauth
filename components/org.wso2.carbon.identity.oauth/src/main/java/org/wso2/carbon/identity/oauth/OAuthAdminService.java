@@ -31,7 +31,6 @@ import org.wso2.carbon.identity.application.common.IdentityApplicationManagement
 import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
-import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
@@ -151,9 +150,8 @@ public class OAuthAdminService extends AbstractAdmin {
         OAuthConsumerAppDTO dto;
         OAuthAppDAO dao = new OAuthAppDAO();
         try {
-            OAuthAppDO app = dao.getAppInformation(consumerKey);
+            OAuthAppDO app = getOAuthApp(consumerKey);
             if (app != null) {
-                AppInfoCache.getInstance().addToCache(consumerKey, app);
                 dto = OAuthUtil.buildConsumerAppDTO(app);
                 if (log.isDebugEnabled()) {
                     log.debug("Found App :" + dto.getApplicationName() + " for consumerKey: " + consumerKey);
@@ -308,7 +306,7 @@ public class OAuthAdminService extends AbstractAdmin {
         }
         return OAuthUtil.buildConsumerAppDTO(app);
     }
-    
+
     /**
      * Update existing consumer application.
      *
@@ -335,7 +333,7 @@ public class OAuthAdminService extends AbstractAdmin {
         OAuthAppDAO dao = new OAuthAppDAO();
         OAuthAppDO oauthappdo;
         try {
-            oauthappdo = dao.getAppInformation(consumerAppDTO.getOauthConsumerKey());
+            oauthappdo = getOAuthApp(consumerAppDTO.getOauthConsumerKey());
             if (oauthappdo == null) {
                 if (log.isDebugEnabled()) {
                     log.debug("Error while retrieving the app information using " +
@@ -571,11 +569,10 @@ public class OAuthAdminService extends AbstractAdmin {
      */
     public void updateConsumerAppState(String consumerKey, String newState) throws IdentityOAuthAdminException {
 
-        OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
         try {
             OAuthAppDO oAuthAppDO = AppInfoCache.getInstance().getValueFromCache(consumerKey);
             if (oAuthAppDO == null) {
-                oAuthAppDO = oAuthAppDAO.getAppInformation(consumerKey);
+                oAuthAppDO = getOAuthApp(consumerKey);
             }
             // change the state
             oAuthAppDO.setState(newState);
@@ -583,8 +580,9 @@ public class OAuthAdminService extends AbstractAdmin {
             Properties properties = new Properties();
             properties.setProperty(OAuthConstants.OAUTH_APP_NEW_STATE, newState);
             properties.setProperty(OAuthConstants.ACTION_PROPERTY_KEY, OAuthConstants.ACTION_REVOKE);
+
+            AppInfoCache.getInstance().clearCacheEntry(consumerKey);
             updateAppAndRevokeTokensAndAuthzCodes(consumerKey, properties);
-            AppInfoCache.getInstance().addToCache(consumerKey, oAuthAppDO);
 
             if (log.isDebugEnabled()) {
                 log.debug("App state is updated to:" + newState + " in the AppInfoCache for OAuth App with " +
@@ -761,7 +759,7 @@ public class OAuthAdminService extends AbstractAdmin {
                         if (scopedToken != null && !distinctClientUserScopeCombo.contains(clientId + ":" + username)) {
                             OAuthAppDO appDO;
                             try {
-                                appDO = appDAO.getAppInformation(scopedToken.getConsumerKey());
+                                appDO = getOAuthApp(scopedToken.getConsumerKey());
                                 appDTOs.add(OAuthUtil.buildConsumerAppDTO(appDO));
                                 if (log.isDebugEnabled()) {
                                     log.debug("Found App: " + appDO.getApplicationName() + " for user: " + username);
@@ -1188,4 +1186,25 @@ public class OAuthAdminService extends AbstractAdmin {
         return OAuthComponentServiceHolder.getInstance().getOauth2Service();
     }
 
+    private OAuthAppDO getOAuthApp(String consumerKey) throws InvalidOAuthClientException, IdentityOAuth2Exception {
+
+        OAuthAppDO oauthApp = AppInfoCache.getInstance().getValueFromCache(consumerKey);
+        if (oauthApp != null) {
+            if (log.isDebugEnabled()) {
+                log.debug("OAuth app with consumerKey: " + consumerKey + " retrieved from AppInfoCache.");
+            }
+            return oauthApp;
+        }
+
+        OAuthAppDAO dao = new OAuthAppDAO();
+        oauthApp = dao.getAppInformation(consumerKey);
+        if (oauthApp != null) {
+            if (log.isDebugEnabled()) {
+                log.debug("OAuth app with consumerKey: " + consumerKey + " retrieved from database.");
+            }
+            AppInfoCache.getInstance().addToCache(consumerKey, oauthApp);
+        }
+
+        return oauthApp;
+    }
 }
