@@ -411,8 +411,21 @@ public class TokenMgtDAO {
                     throw new IdentityOAuth2Exception(errorMsg, e);
                 }
 
-                recoverFromConAppKeyConstraintViolation(accessToken, consumerKey, accessTokenDO,
-                        connection, userStoreDomain, retryAttempt + 1);
+                boolean isPostgreSQL = false;
+                Connection pgConnection = IdentityDatabaseUtil.getDBConnection();
+                try {
+                    if (StringUtils.containsIgnoreCase(pgConnection.getMetaData().getDriverName(), "PostgreSQL")) {
+                        isPostgreSQL = true;
+                        recoverFromConAppKeyConstraintViolation(accessToken, consumerKey, accessTokenDO,
+                                pgConnection, userStoreDomain, retryAttempt + 1);
+                    }
+                } catch (SQLException ex) {
+                    log.error("Error while retrieving the connection metadata", ex);
+                }
+                if (!isPostgreSQL) {
+                    recoverFromConAppKeyConstraintViolation(accessToken, consumerKey, accessTokenDO,
+                            connection, userStoreDomain, retryAttempt + 1);
+                }
             } else {
                 throw new IdentityOAuth2Exception(
                         "Error when storing the access token for consumer key : " + consumerKey, e);
