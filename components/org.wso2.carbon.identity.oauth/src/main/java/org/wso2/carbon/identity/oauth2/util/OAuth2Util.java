@@ -2867,7 +2867,13 @@ public class OAuth2Util {
         }
 
         // Loop through other issuer and try to get the hash.
-        return getAccessTokenDOFromMatchingTokenIssuer(tokenIdentifier, allOAuthTokenIssuerMap, includeExpired);
+        accessTokenDO = getAccessTokenDOFromMatchingTokenIssuer(tokenIdentifier, allOAuthTokenIssuerMap,
+                includeExpired);
+
+        if (accessTokenDO == null) {
+            throw new IllegalArgumentException("Invalid Access Token. ACTIVE access token is not found.");
+        }
+        return accessTokenDO;
     }
 
     /**
@@ -2905,6 +2911,16 @@ public class OAuth2Util {
                         } else {
                             log.debug("Token issuer: " + oauthTokenIssuerEntry.getKey() + " was tried and" +
                                     " failed to parse the received token.");
+                        }
+                    }
+                } catch (IllegalArgumentException e) {
+                    if (log.isDebugEnabled()) {
+                        if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                            log.debug("Token issuer: " + oauthTokenIssuerEntry.getKey() + " was tried and"
+                                    + " failed to get the token from database: " + tokenIdentifier);
+                        } else {
+                            log.debug("Token issuer: " + oauthTokenIssuerEntry.getKey() + " was tried and"
+                                    + " failed  to get the token from database.");
                         }
                     }
                 }

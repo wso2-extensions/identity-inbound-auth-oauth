@@ -138,8 +138,12 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     @Override
     public String getAccessTokenHash(String accessToken) throws OAuthSystemException {
         try {
-            JWT parse = JWTParser.parse(accessToken);
-            return parse.getJWTClaimsSet().getJWTID();
+            JWT parsedJwtToken = JWTParser.parse(accessToken);
+            String JTI = parsedJwtToken.getJWTClaimsSet().getJWTID();
+            if (JTI == null) {
+                throw new OAuthSystemException("JTI could not be retrieved from the JWT token.");
+            }
+            return JTI;
         } catch (ParseException e) {
             if (log.isDebugEnabled() && IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
                 log.debug("Error while getting JWTID from token: " + accessToken);
