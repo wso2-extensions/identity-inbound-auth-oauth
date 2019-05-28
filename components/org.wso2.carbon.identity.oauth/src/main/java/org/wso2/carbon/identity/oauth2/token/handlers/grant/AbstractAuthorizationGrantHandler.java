@@ -57,6 +57,7 @@ import org.wso2.carbon.user.api.UserStoreException;
 
 import java.sql.Timestamp;
 import java.util.Date;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.ArrayList;
@@ -585,11 +586,14 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                     e);
         }
 
-        if (issueRefreshToken() &&
-                OAuthServerConfiguration.getInstance().getSupportedGrantTypes().containsKey(
-                        GrantType.REFRESH_TOKEN.toString())) {
+        if (issueRefreshToken() && OAuthServerConfiguration.getInstance().getSupportedGrantTypes().containsKey(
+                GrantType.REFRESH_TOKEN.toString())) {
             String grantTypes = oAuthAppDO.getGrantTypes();
-            if (StringUtils.isNotEmpty(grantTypes) && grantTypes.contains(OAuthConstants.GrantTypes.REFRESH_TOKEN)) {
+            List<String> supportedGrantTypes = new ArrayList<>();
+            if (StringUtils.isNotEmpty(grantTypes)) {
+                supportedGrantTypes = Arrays.asList(grantTypes.split(" "));
+            }
+            if (supportedGrantTypes.contains(OAuthConstants.GrantTypes.REFRESH_TOKEN)) {
                 tokenRespDTO.setRefreshToken(existingAccessTokenDO.getRefreshToken());
             } else {
                 if (log.isDebugEnabled()) {
