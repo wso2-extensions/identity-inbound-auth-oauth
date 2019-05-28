@@ -76,8 +76,11 @@ import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 
+import java.io.File;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -249,7 +252,16 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
     public static String getFilePath(String fileName) {
 
         if (StringUtils.isNotBlank(fileName)) {
-            return DefaultOIDCClaimsCallbackHandlerTest.class.getClassLoader().getResource(fileName).getPath();
+            URL url = DefaultOIDCClaimsCallbackHandlerTest.class.getClassLoader().getResource(fileName);
+            if (url != null) {
+                try {
+                    File file = new File(url.toURI());
+                    return file.getAbsolutePath();
+                } catch (URISyntaxException e) {
+                    throw new IllegalArgumentException("Could not resolve a file with given path: " +
+                            url.toExternalForm());
+                }
+            }
         }
         throw new IllegalArgumentException("DB Script file name cannot be empty.");
     }

@@ -203,7 +203,8 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
     private void removeIfCached(OAuth2AccessTokenReqDTO tokenReq, RefreshTokenValidationDataDO validationBean) {
         if (cacheEnabled) {
             clearCache(tokenReq.getClientId(), validationBean.getAuthorizedUser().toString(),
-                    validationBean.getScope(), validationBean.getAccessToken());
+                    validationBean.getScope(), validationBean.getAuthorizedUser().getFederatedIdPName(),
+                    validationBean.getAccessToken());
         }
     }
 
@@ -294,7 +295,9 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             // Remove old access token from the OAuthCache
             String scope = OAuth2Util.buildScopeString(tokReqMsgCtx.getScope());
             String authorizedUser = tokReqMsgCtx.getAuthorizedUser().toString();
-            String cacheKeyString  = OAuth2Util.buildCacheKeyStringForToken(clientId, scope, authorizedUser);
+            String authenticatedIDP = tokReqMsgCtx.getAuthorizedUser().getFederatedIdPName();
+            String cacheKeyString = OAuth2Util.buildCacheKeyStringForToken(clientId, scope, authorizedUser,
+                    authenticatedIDP);
             OAuthCacheKey oauthCacheKey = new OAuthCacheKey(cacheKeyString);
             OAuthCache.getInstance().clearCacheEntry(oauthCacheKey);
 
@@ -376,14 +379,17 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         return tokenRespDTO;
     }
 
-    private void clearCache(String clientId, String authorizedUser, String[] scopes, String accessToken) {
+    private void clearCache(String clientId, String authorizedUser, String[] scopes, String accessToken,
+                            String authenticatedIDP) {
 
         boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authorizedUser);
         String cacheKeyString;
         if (isUsernameCaseSensitive) {
-            cacheKeyString = clientId + ":" + authorizedUser + ":" + OAuth2Util.buildScopeString(scopes);
+            cacheKeyString = clientId + ":" + authorizedUser + ":" + OAuth2Util.buildScopeString(scopes) +
+                    ":" + authenticatedIDP;
         } else {
-            cacheKeyString = clientId + ":" + authorizedUser.toLowerCase() + ":" + OAuth2Util.buildScopeString(scopes);
+            cacheKeyString = clientId + ":" + authorizedUser.toLowerCase() + ":" + OAuth2Util.buildScopeString(scopes) +
+                    ":" + authenticatedIDP;
         }
 
         // Remove the old access token from the OAuthCache

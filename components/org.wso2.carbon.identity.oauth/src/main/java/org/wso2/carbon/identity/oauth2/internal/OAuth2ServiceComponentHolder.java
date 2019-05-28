@@ -40,6 +40,7 @@ public class OAuth2ServiceComponentHolder {
     private static AuthenticationMethodNameTranslator authenticationMethodNameTranslator;
     private static List<OAuthClientAuthenticator> authenticationHandlers = new ArrayList<>();
     private static List<ClaimProvider> claimProviders = new ArrayList<>();
+    private static boolean idpIdColumnEnabled = false;
 
     private OAuth2ServiceComponentHolder() {
 
@@ -84,6 +85,16 @@ public class OAuth2ServiceComponentHolder {
     public static void setAudienceEnabled(boolean audienceEnabled) {
 
         OAuth2ServiceComponentHolder.audienceEnabled = audienceEnabled;
+    }
+
+    public static boolean isIDPIdColumnEnabled() {
+
+        return idpIdColumnEnabled;
+    }
+
+    public static void setIDPIdColumnEnabled(boolean idpIdColumnEnabled) {
+
+        OAuth2ServiceComponentHolder.idpIdColumnEnabled = idpIdColumnEnabled;
     }
 
     public static RegistryService getRegistryService() {

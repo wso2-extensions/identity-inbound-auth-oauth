@@ -50,6 +50,8 @@ public class OldAccessTokenDO extends AccessTokenDO {
 
     private String refreshTokenHash;
 
+    private int idpId;
+
     public void setConsumerKeyId(int consumerKeyId) {
         this.consumerKeyId = consumerKeyId;
     }
@@ -106,6 +108,11 @@ public class OldAccessTokenDO extends AccessTokenDO {
         this.refreshTokenHash = refreshTokenHash;
     }
 
+    public void setIdpId(int idpId) {
+
+        this.idpId = idpId;
+    }
+
     public int getConsumerKeyId() {
         return this.consumerKeyId;
     }
@@ -160,6 +167,11 @@ public class OldAccessTokenDO extends AccessTokenDO {
 
     public String getRefreshTokenHash() {
         return refreshTokenHash;
+    }
+
+    public int getIdpId() {
+
+        return idpId;
     }
 }
 

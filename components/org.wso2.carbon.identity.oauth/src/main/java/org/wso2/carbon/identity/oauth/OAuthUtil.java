@@ -76,16 +76,41 @@ public final class OAuthUtil {
 
         String user = UserCoreUtil.addDomainToName(authorizedUser.getUserName(), authorizedUser.getUserStoreDomain());
         user = UserCoreUtil.addTenantDomainToEntry(user, authorizedUser.getTenantDomain());
-        clearOAuthCache(consumerKey, user);
+        String authenticatedIDP;
+        if (authorizedUser instanceof AuthenticatedUser) {
+            authenticatedIDP = ((AuthenticatedUser) authorizedUser).getFederatedIdPName();
+        } else {
+            authenticatedIDP = null;
+            if (log.isDebugEnabled()) {
+                log.debug("User is not an instance of AuthenticatedUser therefore cannot resolve authenticatedIDP " +
+                        "name");
+            }
+            clearOAuthCache(consumerKey, user);
+        }
+
+        clearOAuthCacheWithAuthenticatedIDP(consumerKey, user, authenticatedIDP);
     }
 
     public static void clearOAuthCache(String consumerKey, User authorizedUser, String scope) {
 
         String user = UserCoreUtil.addDomainToName(authorizedUser.getUserName(), authorizedUser.getUserStoreDomain());
         user = UserCoreUtil.addTenantDomainToEntry(user, authorizedUser.getTenantDomain());
-        clearOAuthCache(consumerKey, user, scope);
+        String authenticatedIDP;
+        if (authorizedUser instanceof AuthenticatedUser) {
+            authenticatedIDP = ((AuthenticatedUser) authorizedUser).getFederatedIdPName();
+        } else {
+            authenticatedIDP = null;
+            if (log.isDebugEnabled()) {
+                log.debug("User is not an instance of AuthenticatedUser therefore cannot resolve authenticatedIDP " +
+                        "name");
+            }
+            clearOAuthCache(consumerKey, user, scope);
+        }
+
+        clearOAuthCacheWithAuthenticatedIDP(consumerKey, user, scope, authenticatedIDP);
     }
 
+    @Deprecated
     public static void clearOAuthCache(String consumerKey, String authorizedUser) {
         boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authorizedUser);
         if (!isUsernameCaseSensitive) {
@@ -94,12 +119,48 @@ public final class OAuthUtil {
         clearOAuthCache(consumerKey + ":" + authorizedUser);
     }
 
+    /**
+     * Clear OAuth cache.
+     *
+     * @param consumerKey      Consumer key.
+     * @param authorizedUser   Authorized user.
+     * @param authenticatedIDP Authenticated IdP.
+     */
+    private static void clearOAuthCacheWithAuthenticatedIDP(String consumerKey, String authorizedUser,
+                                                            String authenticatedIDP) {
+
+        boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authorizedUser);
+        if (!isUsernameCaseSensitive) {
+            authorizedUser = authorizedUser.toLowerCase();
+        }
+        clearOAuthCache(consumerKey + ":" + authorizedUser + ":" + authenticatedIDP);
+    }
+
+    @Deprecated
     public static void clearOAuthCache(String consumerKey, String authorizedUser, String scope) {
         boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authorizedUser);
         if (!isUsernameCaseSensitive) {
             authorizedUser = authorizedUser.toLowerCase();
         }
         clearOAuthCache(consumerKey + ":" + authorizedUser + ":" + scope);
+    }
+
+    /**
+     * Clear OAuth cache.
+     *
+     * @param consumerKey      Consumer key.
+     * @param authorizedUser   Authorized user.
+     * @param scope            Scopes.
+     * @param authenticatedIDP Authenticated IdP.
+     */
+    private static void clearOAuthCacheWithAuthenticatedIDP(String consumerKey, String authorizedUser, String scope,
+                                                           String authenticatedIDP) {
+
+        boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authorizedUser);
+        if (!isUsernameCaseSensitive) {
+            authorizedUser = authorizedUser.toLowerCase();
+        }
+        clearOAuthCache(consumerKey + ":" + authorizedUser + ":" + scope + ":" + authenticatedIDP);
     }
 
     public static void clearOAuthCache(String oauthCacheKey) {
