@@ -2122,7 +2122,7 @@ public class OAuth2Util {
             Key privateKey = getPrivateKey(tenantDomain, tenantId);
             JWSSigner signer = new RSASSASigner((RSAPrivateKey) privateKey);
             JWSHeader.Builder headerBuilder = new JWSHeader.Builder((JWSAlgorithm) signatureAlgorithm);
-            headerBuilder.keyID(getThumbPrint(tenantDomain, tenantId));
+            headerBuilder.keyID(getKID(getThumbPrint(tenantDomain, tenantId), signatureAlgorithm));
             headerBuilder.x509CertThumbprint(new Base64URL(getThumbPrint(tenantDomain, tenantId)));
             SignedJWT signedJWT = new SignedJWT(headerBuilder.build(), jwtClaimsSet);
             signedJWT.sign(signer);
@@ -2172,6 +2172,19 @@ public class OAuth2Util {
     }
 
     /**
+     * Helper method to add algo into to JWT_HEADER to signature verification.
+     *
+     * @param certThumbprint
+     * @param signatureAlgorithm
+     * @return
+     *
+     */
+    public static String getKID(String certThumbprint, JWSAlgorithm signatureAlgorithm) {
+
+        return certThumbprint + "_" + signatureAlgorithm.toString();
+    }
+
+    /**
      * Helper method to add public certificate to JWT_HEADER to signature verification.
      *
      * @param tenantDomain
@@ -2189,6 +2202,28 @@ public class OAuth2Util {
 
         } catch (Exception e) {
             String error = "Error in obtaining certificate for tenant " + tenantDomain;
+            throw new IdentityOAuth2Exception(error, e);
+        }
+    }
+
+    /**
+     * Helper method to add public certificate to JWT_HEADER to signature verification.
+     * This creates thumbPrints directly from given certificates
+     *
+     * @param certificate
+     * @param alias
+     * @return
+     * @throws IdentityOAuth2Exception
+     */
+    public static String getThumbPrint(Certificate certificate, String alias) throws IdentityOAuth2Exception {
+
+        try {
+            return getThumbPrint(certificate);
+        } catch (CertificateEncodingException e) {
+            String error = "Error occurred while encoding thumbPrint for alias: " + alias;
+            throw new IdentityOAuth2Exception(error, e);
+        } catch (NoSuchAlgorithmException e) {
+            String error = "Error in obtaining SHA-1 thumbprint for alias: " + alias;
             throw new IdentityOAuth2Exception(error, e);
         }
     }
