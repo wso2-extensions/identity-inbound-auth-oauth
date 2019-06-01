@@ -421,6 +421,10 @@ public class TokenMgtDAO {
                     }
                 } catch (SQLException ex) {
                     log.error("Error while retrieving the connection metadata", ex);
+                } finally {
+                    if (isPostgreSQL) {
+                        IdentityDatabaseUtil.closeAllConnections(pgConnection, null, null);
+                    }
                 }
                 if (!isPostgreSQL) {
                     recoverFromConAppKeyConstraintViolation(accessToken, consumerKey, accessTokenDO,
