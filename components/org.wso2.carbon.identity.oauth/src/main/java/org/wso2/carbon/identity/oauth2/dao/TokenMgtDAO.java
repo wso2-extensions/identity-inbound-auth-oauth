@@ -412,20 +412,7 @@ public class TokenMgtDAO {
                 }
 
                 boolean isPostgreSQL = false;
-                Connection pgConnection = IdentityDatabaseUtil.getDBConnection();
-                try {
-                    if (StringUtils.containsIgnoreCase(pgConnection.getMetaData().getDriverName(), "PostgreSQL")) {
-                        isPostgreSQL = true;
-                        recoverFromConAppKeyConstraintViolation(accessToken, consumerKey, accessTokenDO,
-                                pgConnection, userStoreDomain, retryAttempt + 1);
-                    }
-                } catch (SQLException ex) {
-                    log.error("Error while retrieving the connection metadata", ex);
-                } finally {
-                    if (isPostgreSQL) {
-                        IdentityDatabaseUtil.closeAllConnections(pgConnection, null, null);
-                    }
-                }
+                isPostgreSQL = isPostgreSQLDB(accessToken, consumerKey, accessTokenDO, userStoreDomain, retryAttempt);
                 if (!isPostgreSQL) {
                     recoverFromConAppKeyConstraintViolation(accessToken, consumerKey, accessTokenDO,
                             connection, userStoreDomain, retryAttempt + 1);
@@ -439,6 +426,27 @@ public class TokenMgtDAO {
             IdentityDatabaseUtil.closeStatement(insertTokenPrepStmt);
         }
 
+    }
+
+    private boolean isPostgreSQLDB(String accessToken, String consumerKey, AccessTokenDO
+            accessTokenDO, String userStoreDomain, int retryAttempt) throws IdentityOAuth2Exception {
+
+        boolean isPostgreSQL = false;
+        Connection pgConnection = IdentityDatabaseUtil.getDBConnection();
+        try {
+            if (StringUtils.containsIgnoreCase(pgConnection.getMetaData().getDriverName(), "PostgreSQL")) {
+                recoverFromConAppKeyConstraintViolation(accessToken, consumerKey, accessTokenDO,
+                        pgConnection, userStoreDomain, retryAttempt + 1);
+                isPostgreSQL = true;
+            }
+        } catch (SQLException ex) {
+            return isPostgreSQL;
+        } finally {
+            if (isPostgreSQL) {
+                IdentityDatabaseUtil.closeAllConnections(pgConnection, null, null);
+            }
+        }
+        return isPostgreSQL;
     }
 
     public void storeAccessToken(String accessToken, String consumerKey, AccessTokenDO newAccessTokenDO,
