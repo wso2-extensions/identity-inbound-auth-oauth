@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oauth.dcr.service;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.InboundAuthenticationConfig;
@@ -38,7 +39,6 @@ import org.wso2.carbon.identity.oauth.dcr.DCRMConstants;
 import org.wso2.carbon.identity.oauth.dcr.bean.Application;
 import org.wso2.carbon.identity.oauth.dcr.bean.ApplicationRegistrationRequest;
 import org.wso2.carbon.identity.oauth.dcr.bean.ApplicationUpdateRequest;
-import org.wso2.carbon.identity.oauth.dcr.exception.DCRMClientException;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMException;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMServerException;
 import org.wso2.carbon.identity.oauth.dcr.internal.DCRDataHolder;
@@ -46,6 +46,7 @@ import org.wso2.carbon.identity.oauth.dcr.util.DCRConstants;
 import org.wso2.carbon.identity.oauth.dcr.util.DCRMUtils;
 import org.wso2.carbon.identity.oauth.dcr.util.ErrorCodes;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
+import org.wso2.carbon.user.core.UserCoreConstants;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -174,7 +175,7 @@ public class DCRMService {
             // Regex validation of the application name.
             if (!DCRMUtils.isRegexValidated(clientName)) {
                 throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_SP_NAME,
-                        DCRConstants.APP_NAME_VALIDATING_REGEX, null);
+                        DCRMUtils.getSPValidatorRegex(), null);
             }
             sp.setApplicationName(clientName);
             updateServiceProvider(sp, tenantDomain, applicationOwner);
@@ -186,7 +187,7 @@ public class DCRMService {
                 // Regex validation of the application name.
                 if (!DCRMUtils.isRegexValidated(clientName)) {
                     throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_SP_NAME,
-                            DCRConstants.APP_NAME_VALIDATING_REGEX, null);
+                            DCRMUtils.getSPValidatorRegex(), null);
                 }
                 appDTO.setApplicationName(clientName);
             }
@@ -200,6 +201,10 @@ public class DCRMService {
             }
             if (updateRequest.getTokenType() != null) {
                 appDTO.setTokenType(updateRequest.getTokenType());
+            }
+            if(StringUtils.isNotEmpty(updateRequest.getBackchannelLogoutUri())) {
+                String backChannelLogoutUri = validateBackchannelLogoutURI(updateRequest.getBackchannelLogoutUri());
+                appDTO.setBackChannelLogoutUrl(backChannelLogoutUri);
             }
             oAuthAdminService.updateConsumerApplication(appDTO);
         } catch (IdentityOAuthAdminException e) {
@@ -247,7 +252,7 @@ public class DCRMService {
         // Regex validation of the application name.
         if (!DCRMUtils.isRegexValidated(spName)) {
             throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_SP_NAME,
-                    DCRConstants.APP_NAME_VALIDATING_REGEX, null);
+                    DCRMUtils.getSPValidatorRegex(), null);
         }
 
         // Check whether a service provider already exists for the name we are trying to register the OAuth app with.
@@ -333,11 +338,12 @@ public class DCRMService {
         oAuthConsumerApp.setApplicationName(spName);
         oAuthConsumerApp.setCallbackUrl(
                 validateAndSetCallbackURIs(registrationRequest.getRedirectUris(), registrationRequest.getGrantTypes()));
-
         String grantType = StringUtils.join(registrationRequest.getGrantTypes(), GRANT_TYPE_SEPARATOR);
         oAuthConsumerApp.setGrantTypes(grantType);
         oAuthConsumerApp.setOAuthVersion(OAUTH_VERSION);
         oAuthConsumerApp.setTokenType(registrationRequest.getTokenType());
+        oAuthConsumerApp.setBackChannelLogoutUrl(
+                validateBackchannelLogoutURI(registrationRequest.getBackchannelLogoutUri()));
 
         if (StringUtils.isNotEmpty(registrationRequest.getConsumerKey())) {
             String clientIdRegex = OAuthServerConfiguration.getInstance().getClientIdValidationRegex();
@@ -569,6 +575,16 @@ public class DCRMService {
         }
     }
 
+    private String validateBackchannelLogoutURI(String backchannelLogoutUri) throws DCRMException {
+
+        if (DCRMUtils.isBackchannelLogoutUriValid(backchannelLogoutUri)) {
+            return backchannelLogoutUri;
+        } else {
+            throw DCRMUtils.generateClientException(
+                    DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_BACKCHANNEL_LOGOUT_URI, backchannelLogoutUri);
+        }
+    }
+
     private boolean isRedirectURIMandatory(List<String> grantTypes) {
         return grantTypes.contains(DCRConstants.GrantTypes.AUTHORIZATION_CODE) ||
                 grantTypes.contains(DCRConstants.GrantTypes.IMPLICIT);
@@ -596,14 +612,14 @@ public class DCRMService {
 
     private boolean isUserAuthorized(String clientId) throws DCRMServerException {
 
-        OAuthConsumerAppDTO[] oAuthConsumerAppDTOS;
+        OAuthConsumerAppDTO oAuthConsumerAppDTO;
         try {
             // Get applications owned by the user
-            oAuthConsumerAppDTOS = oAuthAdminService.getAllOAuthApplicationData();
-            for (OAuthConsumerAppDTO appDTO : oAuthConsumerAppDTOS) {
-                if (clientId.equals(appDTO.getOauthConsumerKey())) {
-                    return true;
-                }
+            oAuthConsumerAppDTO = oAuthAdminService.getOAuthApplicationData(clientId);
+            String appUserName = oAuthConsumerAppDTO.getUsername();
+            String threadLocalUserName = CarbonContext.getThreadLocalCarbonContext().getUsername().concat(UserCoreConstants.TENANT_DOMAIN_COMBINER).concat(CarbonContext.getThreadLocalCarbonContext().getTenantDomain());
+            if (threadLocalUserName.equals(appUserName)) {
+                return true;
             }
         } catch (IdentityOAuthAdminException e) {
             throw DCRMUtils.generateServerException(

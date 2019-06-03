@@ -122,6 +122,9 @@ public class ProviderConfigBuilder {
         providerConfig.setRequestObjectSigningAlgValuesSupported(
                 OAuth2Util.getRequestObjectSigningAlgValuesSupported().stream().toArray(String[]::new));
 
+        providerConfig.setBackchannelLogoutSupported("true");
+        providerConfig.setBackchannelLogoutSessionSupported("true");
+
         return providerConfig;
     }
 }

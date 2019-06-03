@@ -50,6 +50,7 @@ import org.wso2.carbon.identity.application.common.model.LocalRole;
 import org.wso2.carbon.identity.application.common.model.PermissionsAndRoleConfig;
 import org.wso2.carbon.identity.application.common.model.RoleMapping;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataHandler;
@@ -75,8 +76,11 @@ import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 
+import java.io.File;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -85,7 +89,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-
 import javax.sql.DataSource;
 
 import static org.mockito.Matchers.any;
@@ -107,8 +110,6 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.EM
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.PHONE_NUMBER_VERIFIED;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.UPDATED_AT;
 import static org.wso2.carbon.identity.oauth2.token.handlers.grant.RefreshGrantHandler.PREV_ACCESS_TOKEN;
-import static org.wso2.carbon.identity.openidconnect.util.TestUtils.getConnection;
-import static org.wso2.carbon.identity.openidconnect.util.TestUtils.initiateH2Base;
 import static org.wso2.carbon.user.core.UserCoreConstants.DOMAIN_SEPARATOR;
 
 /**
@@ -251,7 +252,16 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
     public static String getFilePath(String fileName) {
 
         if (StringUtils.isNotBlank(fileName)) {
-            return DefaultOIDCClaimsCallbackHandlerTest.class.getClassLoader().getResource(fileName).getPath();
+            URL url = DefaultOIDCClaimsCallbackHandlerTest.class.getClassLoader().getResource(fileName);
+            if (url != null) {
+                try {
+                    File file = new File(url.toURI());
+                    return file.getAbsolutePath();
+                } catch (URISyntaxException e) {
+                    throw new IllegalArgumentException("Could not resolve a file with given path: " +
+                            url.toExternalForm());
+                }
+            }
         }
         throw new IllegalArgumentException("DB Script file name cannot be empty.");
     }
@@ -817,6 +827,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
         AuthenticatedUser authenticatedUser = getDefaultAuthenticatedUserFederatedUser();
         OAuth2AuthorizeReqDTO authorizeReqDTO = new OAuth2AuthorizeReqDTO();
         authorizeReqDTO.setUser(authenticatedUser);
+        authorizeReqDTO.setTenantDomain(TENANT_DOMAIN);
 
         OAuthAuthzReqMessageContext authzReqMessageContext = new OAuthAuthzReqMessageContext(authorizeReqDTO);
         authzReqMessageContext.setApprovedScope(APPROVED_SCOPES);
@@ -833,6 +844,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
         ClaimConfig claimConfig = new ClaimConfig();
         claimConfig.setClaimMappings(requestedLocalClaimMap);
         serviceProvider.setClaimConfig(claimConfig);
+        serviceProvider.setSpProperties(new ServiceProviderProperty[]{});
 
         mockApplicationManagementService(serviceProvider);
 

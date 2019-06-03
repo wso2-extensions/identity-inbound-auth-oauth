@@ -57,6 +57,7 @@ public class DCRMUtils {
         appRegistrationRequest.setConsumerKey(registrationRequestDTO.getClientId());
         appRegistrationRequest.setConsumerSecret(registrationRequestDTO.getClientSecret());
         appRegistrationRequest.setSpTemplateName(registrationRequestDTO.getSpTemplateName());
+        appRegistrationRequest.setBackchannelLogoutUri(registrationRequestDTO.getBackchannelLogoutUri());
         return appRegistrationRequest;
 
     }
@@ -68,6 +69,7 @@ public class DCRMUtils {
         applicationUpdateRequest.setRedirectUris(updateRequestDTO.getRedirectUris());
         applicationUpdateRequest.setGrantTypes(updateRequestDTO.getGrantTypes());
         applicationUpdateRequest.setTokenType(updateRequestDTO.getTokenType());
+        applicationUpdateRequest.setBackchannelLogoutUri(updateRequestDTO.getBackchannelLogoutUri());
         return applicationUpdateRequest;
 
     }

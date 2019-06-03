@@ -47,7 +47,7 @@ public class LogoutRequestSender {
     private static Log log = LogFactory.getLog(LogoutRequestSender.class);
     private static ExecutorService threadPool = Executors.newFixedThreadPool(2);
     private static LogoutRequestSender instance = new LogoutRequestSender();
-    private static final String LOGOUT_TOKEN = "logoutToken";
+    private static final String LOGOUT_TOKEN = "logout_token";
 
     private LogoutRequestSender() {
 

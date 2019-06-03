@@ -321,4 +321,15 @@ public class OAuthAdminClient {
 
         return stub.getSupportedIDTokenAlgorithms();
     }
+
+    /**
+     * Return renew refresh token property value read from identity.xml configuration file.
+     *
+     * @return boolean renew refresh token property value
+     * @throws RemoteException
+     */
+    public boolean isRefreshTokenRenewalEnabled() throws RemoteException {
+
+        return stub.isRefreshTokenRenewalEnabled();
+    }
 }

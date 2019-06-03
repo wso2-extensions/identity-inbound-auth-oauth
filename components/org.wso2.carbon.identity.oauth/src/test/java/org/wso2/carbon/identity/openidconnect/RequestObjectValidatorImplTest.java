@@ -57,6 +57,7 @@ import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.wso2.carbon.identity.openidconnect.util.TestUtils.buildJWE;
 import static org.wso2.carbon.identity.openidconnect.util.TestUtils.buildJWT;
+import static org.wso2.carbon.identity.openidconnect.util.TestUtils.buildJWTWithExpiry;
 import static org.wso2.carbon.identity.openidconnect.util.TestUtils.getKeyStoreFromFile;
 import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
 import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_ID;
@@ -100,15 +101,22 @@ public class RequestObjectValidatorImplTest extends PowerMockTestCase {
                 claims1);
         String jsonWebToken2 = buildJWT(TEST_CLIENT_ID_1, TEST_CLIENT_ID_1, "1001", audience, "none", privateKey, 0,
                 claims1);
+        String jsonWebToken3 = buildJWTWithExpiry(TEST_CLIENT_ID_1, TEST_CLIENT_ID_1, "1003", audience, "none",
+                privateKey, 0, claims1, (- 3600 * 1000));
+        String jsonWebToken4 = buildJWTWithExpiry(TEST_CLIENT_ID_1, TEST_CLIENT_ID_1, "1004", audience, "RSA265",
+                privateKey, 0,claims1, (- 3600 * 1000));
         String jsonWebEncryption1 = buildJWE(TEST_CLIENT_ID_1, TEST_CLIENT_ID_1, "2000", audience,
                 JWSAlgorithm.NONE.getName(), privateKey, publicKey, 0, claims1);
         String jsonWebEncryption2 = buildJWE(TEST_CLIENT_ID_1, TEST_CLIENT_ID_1, "2001", audience,
                 JWSAlgorithm.RS256.getName(), privateKey, publicKey, 0, claims1);
         return new Object[][]{
-                {jsonWebToken1, true, false, true, "Valid Request Object, signed not encrypted."},
-                {jsonWebToken2, false, false, true, "Valid Request Object, signed not encrypted."},
-                {jsonWebEncryption1, false, true, true, "Valid Request Object, signed and encrypted."},
-                {jsonWebEncryption2, true, true, true, "Valid Request Object, signed and encrypted."}
+                {jsonWebToken1, true, false, true, true, "Valid Request Object, signed not encrypted."},
+                {jsonWebToken2, false, false, true, true, "Valid Request Object, not xsigned not encrypted."},
+                {jsonWebToken3, false, false, true, false, "InValid Request Object, expired, not signed not " +
+                        "encrypted."},
+                {jsonWebToken4, true, false, true, false, "InValid Request Object, expired, signed not encrypted."},
+                {jsonWebEncryption1, false, true, true, true, "Valid Request Object, signed and encrypted."},
+                {jsonWebEncryption2, true, true, true, true, "Valid Request Object, signed and encrypted."}
         };
     }
 
@@ -116,7 +124,8 @@ public class RequestObjectValidatorImplTest extends PowerMockTestCase {
     public void testValidateRequestObj(String jwt,
                                        boolean isSigned,
                                        boolean isEncrypted,
-                                       boolean exceptionNotExpected,
+                                       boolean validSignature,
+                                       boolean validRequestObj,
                                        String errorMsg) throws Exception {
         OAuth2Parameters oAuth2Parameters = new OAuth2Parameters();
         oAuth2Parameters.setTenantDomain(SUPER_TENANT_DOMAIN_NAME);
@@ -157,9 +166,15 @@ public class RequestObjectValidatorImplTest extends PowerMockTestCase {
 
         if (isSigned) {
             Assert.assertEquals(requestObjectValidator.validateSignature(requestObject, oAuth2Parameters),
-                    exceptionNotExpected, errorMsg + "Request Object Signature Validation failed.");
+                    validSignature, errorMsg + "Request Object Signature Validation failed.");
         }
-        Assert.assertEquals(requestObjectValidator.validateRequestObject(requestObject, oAuth2Parameters), exceptionNotExpected,
-                errorMsg);
+
+        boolean validObject;
+        try {
+            validObject = requestObjectValidator.validateRequestObject(requestObject, oAuth2Parameters);
+        } catch (Exception e) {
+            validObject = false;
+        }
+        Assert.assertEquals(validObject, validRequestObj, errorMsg);
     }
 }

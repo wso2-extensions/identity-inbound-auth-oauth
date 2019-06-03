@@ -26,6 +26,7 @@ import org.apache.oltu.oauth2.as.response.OAuthASResponse;
 import org.apache.oltu.oauth2.common.OAuth;
 import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
+import org.owasp.encoder.Encode;
 import org.wso2.carbon.base.ServerConfiguration;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationRequestCacheEntry;
@@ -639,7 +640,8 @@ public class EndpointUtil {
                 log.debug("A valid OAuth client could not be found for client_id: " + consumerKey);
             }
 
-            throw new InvalidApplicationClientException("A valid OAuth client could not be found for client_id: " + consumerKey);
+            throw new InvalidApplicationClientException("A valid OAuth client could not be found for client_id: " +
+                    Encode.forHtml(consumerKey));
         }
 
         if (isNotActiveState(appState)) {

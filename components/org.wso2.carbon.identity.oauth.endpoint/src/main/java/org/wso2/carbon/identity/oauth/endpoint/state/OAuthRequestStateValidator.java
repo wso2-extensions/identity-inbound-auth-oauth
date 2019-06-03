@@ -114,15 +114,6 @@ public class OAuthRequestStateValidator {
                 oAuthMessage.setSessionDataKeyFromConsent(null);
             }
         }
-
-        validateOauthApplication(oAuthMessage);
-    }
-
-    private void validateOauthApplication(OAuthMessage oAuthMessage) throws InvalidRequestParentException {
-
-        if (StringUtils.isNotBlank(oAuthMessage.getClientId())) {
-            EndpointUtil.validateOauthApplication(oAuthMessage.getClientId());
-        }
     }
 
     private void validateInputParameters(OAuthMessage oAuthMessage) throws InvalidRequestException {

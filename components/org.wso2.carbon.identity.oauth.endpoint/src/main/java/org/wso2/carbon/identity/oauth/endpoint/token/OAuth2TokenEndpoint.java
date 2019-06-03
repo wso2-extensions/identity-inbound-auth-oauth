@@ -98,6 +98,7 @@ public class OAuth2TokenEndpoint {
         } catch (TokenEndpointBadRequestException | OAuthSystemException | InvalidApplicationClientException e) {
             triggerOnTokenExceptionListeners(e, request, paramMap);
             throw e;
+
         } finally {
             PrivilegedCarbonContext.endTenantFlow();
         }

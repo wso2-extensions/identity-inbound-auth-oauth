@@ -143,6 +143,7 @@ public final class OAuthConstants {
         public static final String IWA_NTLM = "iwa:ntlm";
         public static final String PASSWORD = "password";
         public static final String AUTHORIZATION_CODE = "authorization_code";
+        public static final String REFRESH_TOKEN = "refresh_token";
 
         private GrantTypes() {
         }
@@ -318,6 +319,9 @@ public final class OAuthConstants {
         // OIDC Specification : http://openid.net/specs/openid-connect-core-1_0.html
         public static final String C_HASH = "c_hash";
         public static final String SESSION_ID_CLAIM = "sid";
+        public static final String REALM = "realm";
+        public static final String TENANT = "tenant";
+        public static final String USERSTORE = "userstore";
 
         private OIDCClaims() {}
     }
@@ -334,6 +338,7 @@ public final class OAuthConstants {
         public static final String FRONT_CHANNEL_LOGOUT_URL = "frontchannelLogoutURL";
         public static final String TOKEN_TYPE = "tokenType";
         public static final String BYPASS_CLIENT_CREDENTIALS = "bypassClientCredentials";
+        public static final String RENEW_REFRESH_TOKEN = "renewRefreshToken";
 
         private OIDCConfigProperties() { }
     }

@@ -50,6 +50,7 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dao.OAuthConsumerDAO;
+import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 
@@ -141,7 +142,8 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
 
         validateOAuthInbound(serviceProvider, isUpdate);
     }
-        @Override
+
+    @Override
     public void doImportServiceProvider(ServiceProvider serviceProvider) throws IdentityApplicationManagementException {
 
         try {
@@ -163,14 +165,16 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                                 serviceProvider.getApplicationName(), owner.getTenantDomain());
                         oAuthAppDO.setUser(buildAuthenticatedUser(owner));
 
-                        if (oAuthAppDO.getOauthConsumerSecret() == null) {
-                            oAuthAppDO.setOauthConsumerSecret(OAuthUtil.getRandomNumber());
+                        OAuthConsumerAppDTO oAuthConsumerAppDTO = OAuthUtil.buildConsumerAppDTO(oAuthAppDO);
+                        if (oAuthConsumerAppDTO.getOauthConsumerSecret() == null) {
+                            oAuthConsumerAppDTO.setOauthConsumerSecret(OAuthUtil.getRandomNumber());
                         }
+                        OAuthAdminService oAuthAdminService = new OAuthAdminService();
                         OAuthAppDAO dao = new OAuthAppDAO();
-                        if (dao.isDuplicateConsumer(oAuthAppDO.getOauthConsumerKey())) {
-                            dao.updateConsumerApplication(oAuthAppDO);
+                        if (dao.isDuplicateConsumer(oAuthConsumerAppDTO.getOauthConsumerKey())) {
+                            oAuthAdminService.updateConsumerApplication(oAuthConsumerAppDTO);
                         } else {
-                            dao.addOAuthApplication(oAuthAppDO);
+                            oAuthAdminService.registerOAuthApplicationData(oAuthConsumerAppDTO);
                         }
                         return;
                     }
@@ -537,23 +541,13 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                     try {
                         if (!isUpdate) {
                             if (dao.isDuplicateConsumer(inboundAuthKey)) {
-                                try {
-                                    OAuthAppDO appInformation = dao.getAppInformation(inboundAuthKey);
-                                    if (!appInformation.getApplicationName().equals(
-                                            serviceProvider.getApplicationName())) {
-
-                                        validationMsg.add(String.format("There is already an oauth application %s " +
-                                                        "available with %s as consumer key",
-                                                appInformation.getApplicationName(), inboundAuthKey));
-                                        break;
-                                    }
-                                } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
-                                    // Do nothing, the application does exists.
-                                }
+                                validationMsg.add(String.format("An OAuth application already exists with %s as " +
+                                        "consumer key", inboundAuthKey));
+                                break;
                             } else if (dao.isDuplicateApplication(userName,
                                     IdentityTenantUtil.getTenantId(tenantDomain), tenantDomain, oAuthAppDO)) {
-                                validationMsg.add(String.format("There is already an oauth application available with" +
-                                        " %s as application name", oAuthAppDO.getApplicationName()));
+                                validationMsg.add(String.format("An OAuth application already exists with %s as " +
+                                        "consumer key", oAuthAppDO.getApplicationName()));
                                 break;
                             }
                         }

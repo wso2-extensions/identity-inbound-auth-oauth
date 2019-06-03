@@ -76,26 +76,6 @@ public class UserInfoISAccessTokenValidatorTest extends PowerMockTestCase {
     }
 
     @DataProvider
-    public Object[][] requestBody() {
-        return new Object[][]{
-                {CONTENT_TYPE_HEADER_VALUE, "", null},
-                {CONTENT_TYPE_HEADER_VALUE, null, null},
-                {CONTENT_TYPE_HEADER_VALUE, "access_token=" + TOKEN, TOKEN},
-                {CONTENT_TYPE_HEADER_VALUE, "access_token=" + TOKEN +
-                        "&someOtherParam=value", TOKEN},
-                {CONTENT_TYPE_HEADER_VALUE, "otherParam=value2&access_token=" + TOKEN +
-                        "&someOtherParam=value", TOKEN},
-        };
-    }
-
-    @Test(dataProvider = "requestBody")
-    public void testValidateTokenWithRequestBodySuccess(String contentType, String requestBody, String expected) throws
-            Exception {
-        String token = testValidateTokenWithRequestBody(contentType, requestBody, true);
-        assertEquals(token, expected, "Expected token did not receive");
-    }
-
-    @DataProvider
     public Object[][] requestBodyWithNonASCII() {
         return new Object[][]{
                 {CONTENT_TYPE_HEADER_VALUE, "access_token=" + "¥" + TOKEN, TOKEN},

@@ -300,6 +300,10 @@ definitions:
           type: string
       ext_param_sp_template:
         type: string
+      backchannel_logout_uri:
+        type: string
+      backchannel_logout_session_required:
+        type: boolean
 #-----------------------------------------------------
 # The Application Update Request Object
 #-----------------------------------------------------
@@ -320,6 +324,10 @@ definitions:
         type: array
         items:
           type: string
+      backchannel_logout_uri:
+        type: string
+      backchannel_logout_session_required:
+        type: boolean
 #-----------------------------------------------------
 # The OAuth2 Application Object
 #-----------------------------------------------------
