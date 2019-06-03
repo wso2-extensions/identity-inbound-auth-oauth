@@ -42,6 +42,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
+import java.util.UUID;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
@@ -441,7 +442,7 @@ public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
 
         when(userStoreManager.isExistingUser(tenantAwareUsernameOfAppOwner)).thenReturn(appOwnerInRequestExists);
 
-        String consumerKey = "some-consumer-key";
+        String consumerKey = UUID.randomUUID().toString() ;
         OAuthAppDO app = buildDummyOAuthAppDO("original-app-owner");
         AuthenticatedUser originalOwner = app.getAppOwner();
 
@@ -455,7 +456,7 @@ public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
         OAuthConsumerAppDTO consumerAppDTO = new OAuthConsumerAppDTO();
         consumerAppDTO.setApplicationName("new-application-name");
         consumerAppDTO.setCallbackUrl("http://new-call-back-url.com");
-        consumerAppDTO.setOauthConsumerKey("some-consumer-key");
+        consumerAppDTO.setOauthConsumerKey(consumerKey);
         consumerAppDTO.setOauthConsumerSecret("some-consumer-secret");
         consumerAppDTO.setOAuthVersion("new-oauth-version");
 
