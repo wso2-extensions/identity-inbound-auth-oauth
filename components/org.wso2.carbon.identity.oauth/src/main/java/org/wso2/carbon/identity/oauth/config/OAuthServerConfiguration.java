@@ -140,6 +140,7 @@ public class OAuthServerConfiguration {
     private boolean isRefreshTokenRenewalEnabled = true;
     private boolean assertionsUserNameEnabled = false;
     private boolean accessTokenPartitioningEnabled = false;
+    private boolean redirectToRequestedRedirectUriEnabled = true;
     private String accessTokenPartitioningDomains = null;
     private TokenPersistenceProcessor persistenceProcessor = null;
     private Set<OAuthCallbackHandlerMetaData> callbackHandlerMetaData = new HashSet<>();
@@ -389,6 +390,9 @@ public class OAuthServerConfiguration {
 
         // Read token introspection related configurations.
         parseTokenIntrospectionConfig(oauthElem);
+
+        // Read the property for error redirection URI
+        parseRedirectToOAuthErrorPageConfig(oauthElem);
     }
 
     private void parseTokenIntrospectionConfig(OMElement oauthElem) {
@@ -972,6 +976,10 @@ public class OAuthServerConfiguration {
 
     public Set<String> getIdTokenNotAllowedGrantTypesSet() {
         return idTokenNotAllowedGrantTypesSet;
+    }
+
+    public boolean isRedirectToRequestedRedirectUriEnabled(){
+        return redirectToRequestedRedirectUriEnabled;
     }
 
     public boolean isUserNameAssertionEnabled() {
@@ -2602,6 +2610,19 @@ public class OAuthServerConfiguration {
             }
         }
     }
+    private void parseRedirectToOAuthErrorPageConfig(OMElement oauthConfigElem){
+        OMElement redirectToOAuthErrorPageElem =
+                oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements
+                        .REDIRECT_TO_REQUESTED_REDIRECT_URI));
+        if (redirectToOAuthErrorPageElem != null) {
+            redirectToRequestedRedirectUriEnabled =
+                    Boolean.parseBoolean(redirectToOAuthErrorPageElem.getText());
+        }
+
+        if (log.isDebugEnabled()) {
+            log.debug("Redirecting to OAuth2 Error page is set to : " + redirectToOAuthErrorPageElem);
+        }
+    }
 
     public OAuth2ScopeValidator getoAuth2ScopeValidator() {
         return oAuth2ScopeValidator;
@@ -2724,6 +2745,7 @@ public class OAuthServerConfiguration {
         public static final String ENABLE_ASSERTIONS = "EnableAssertions";
         public static final String ENABLE_ASSERTIONS_USERNAME = "UserName";
         public static final String ENABLE_ACCESS_TOKEN_PARTITIONING = "EnableAccessTokenPartitioning";
+        public static final String REDIRECT_TO_REQUESTED_REDIRECT_URI = "RedirectToRequestedRedirectUri";
         public static final String ACCESS_TOKEN_PARTITIONING_DOMAINS = "AccessTokenPartitioningDomains";
         // OpenIDConnect configurations
         public static final String OPENID_CONNECT = "OpenIDConnect";

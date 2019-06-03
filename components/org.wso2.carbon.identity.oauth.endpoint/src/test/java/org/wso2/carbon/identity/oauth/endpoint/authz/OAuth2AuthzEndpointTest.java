@@ -278,6 +278,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
         mockStatic(OAuth2Util.OAuthURL.class);
         when(OAuth2Util.OAuthURL.getOAuth2ErrorPageUrl()).thenReturn(ERROR_PAGE_URL);
+        mockOAuthServerConfiguration();
 
         Response response;
 
@@ -1698,6 +1699,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         mockStatic(OAuthServerConfiguration.class);
         when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
         when(oAuthServerConfiguration.getPersistenceProcessor()).thenReturn(tokenPersistenceProcessor);
+        when(oAuthServerConfiguration.isRedirectToRequestedRedirectUriEnabled()).thenReturn(false);
         when(tokenPersistenceProcessor.getProcessedClientId(anyString())).thenAnswer(new Answer<Object>(){
             @Override
             public Object answer(InvocationOnMock invocation) {
