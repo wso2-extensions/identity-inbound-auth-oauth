@@ -35,4 +35,20 @@ public class OAuth2ErrorCodes {
     private OAuth2ErrorCodes(){
 
     }
+
+    public class OAuth2SubErrorCodes {
+
+        public static final String INVALID_PKCE_CHALLENGE_CODE = "invalid_pkce_challenge_code";
+        public static final String INVALID_CLIENT = "invalid_client";
+        public static final String INVALID_REDIRECT_URI = "invalid_redirect_uri";
+        public static final String SESSION_TIME_OUT = "session_time_out";
+        public static final String CERTIFICATE_ERROR = "certificate_error";
+        public static final String INVALID_AUTHORIZATION_REQUEST = "invalid_authorization_request";
+        public static final String INVALID_REQUEST_OBJECT = "invalid_request_object";
+        public static final String UNEXPECTED_SERVER_ERROR = "unexpected_server_error";
+        public static final String INVALID_REQUEST = "invalid_request";
+        public static final String CONSENT_DENIED = "consent_denied";
+        public static final String ACCESS_DENIED = "access_denied";
+
+    }
 }
