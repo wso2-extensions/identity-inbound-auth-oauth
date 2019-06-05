@@ -16,6 +16,11 @@
 
 package org.wso2.carbon.identity.oauth.cache;
 
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+
+/**
+ * @deprecated use {@link OAuthAppDO} to retrieve the audience. Then no need to consider caching for audience.
+ */
 public class OIDCAudienceCacheKey extends CacheKey {
 
     private static final long serialVersionUID = -4295443086275710946L;

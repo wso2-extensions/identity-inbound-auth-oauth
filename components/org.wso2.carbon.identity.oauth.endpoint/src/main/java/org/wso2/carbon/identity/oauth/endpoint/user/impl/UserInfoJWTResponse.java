@@ -25,6 +25,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
+import org.wso2.carbon.identity.base.IdentityConstants;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.endpoint.util.ClaimUtil;
 import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
@@ -112,22 +114,24 @@ public class UserInfoJWTResponse extends AbstractUserInfoResponseBuilder {
 
     private String getAuthzUserTenantDomain(OAuth2TokenValidationResponseDTO tokenResponse)
             throws UserInfoEndpointException {
-        AccessTokenDO accessTokenDO = getAccessTokenDO(tokenResponse.getAuthorizationContextToken().getTokenString());
-        return accessTokenDO.getAuthzUser().getTenantDomain();
-    }
 
-    private AccessTokenDO getAccessTokenDO(String accessToken) throws UserInfoEndpointException {
-        AccessTokenDO accessTokenDO;
+        AccessTokenDO accessTokenDO = null;
         try {
-            accessTokenDO = OAuth2Util.getAccessTokenDOfromTokenIdentifier(accessToken);
+            accessTokenDO = OAuth2Util.findAccessToken(tokenResponse.getAuthorizationContextToken().getTokenString(),
+                    false);
         } catch (IdentityOAuth2Exception e) {
-            throw new UserInfoEndpointException("Error while retrieving access token information.", e);
+            if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                throw new UserInfoEndpointException("Error occurred while obtaining access token DO for the token " +
+                        "identifier: " + tokenResponse.getAuthorizationContextToken().getTokenString(), e);
+            } else {
+                throw new UserInfoEndpointException("Error occurred while obtaining access token DO.", e);
+            }
         }
-
-        if (accessTokenDO == null) {
-            // this means the token is not active so we can't proceed further
-            throw new UserInfoEndpointException(OAuthError.ResourceResponse.INVALID_TOKEN, "Invalid Access Token.");
+        if (accessTokenDO.getAuthzUser() != null) {
+            return accessTokenDO.getAuthzUser().getTenantDomain();
+        } else {
+            throw new UserInfoEndpointException("Authorized user was not found in the access token DO when " +
+                    "retrieving the tenant domain.");
         }
-        return accessTokenDO;
     }
 }

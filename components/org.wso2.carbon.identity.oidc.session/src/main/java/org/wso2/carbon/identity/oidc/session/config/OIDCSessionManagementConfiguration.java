@@ -41,7 +41,7 @@ public class OIDCSessionManagementConfiguration {
 
     private String oidcLogoutConsentPageUrl = null;
     private String oidcLogoutPageUrl = null;
-    private boolean handleAlreadyLoggedOutSessionsGracefully = true;
+    private boolean handleAlreadyLoggedOutSessionsGracefully = false;
 
     private static final String CONFIG_ELEM_OAUTH = "OAuth";
 

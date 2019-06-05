@@ -18,14 +18,12 @@
 
 package org.wso2.carbon.identity.oauth2.token.handlers.grant;
 
-
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
-import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
@@ -93,11 +91,11 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             throws IdentityOAuth2Exception {
 
         OAuth2AccessTokenReqDTO tokenReq = tokReqMsgCtx.getOauth2AccessTokenReqDTO();
-        // an active or expired token will be returned. since we do the validation for active or expired token in
-        // validateGrant() no need to do it here again
-        RefreshTokenValidationDataDO validationBean = OAuthTokenPersistenceFactory.getInstance()
-                                .getTokenManagementDAO().validateRefreshToken(tokenReq.getClientId(),
-                        tokenReq.getRefreshToken());
+        // An active or expired token will be returned. Since we do the validation for active or expired token in
+        // validateGrant() no need to do it here again also no need to read it from DB again. Simply get it from
+        // context property.
+        RefreshTokenValidationDataDO validationBean = (RefreshTokenValidationDataDO) tokReqMsgCtx
+                .getProperty(PREV_ACCESS_TOKEN);
 
         if (isRefreshTokenExpired(validationBean)) {
             return handleError(OAuth2ErrorCodes.INVALID_GRANT, "Refresh token is expired.", tokenReq);
@@ -205,7 +203,8 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
     private void removeIfCached(OAuth2AccessTokenReqDTO tokenReq, RefreshTokenValidationDataDO validationBean) {
         if (cacheEnabled) {
             clearCache(tokenReq.getClientId(), validationBean.getAuthorizedUser().toString(),
-                    validationBean.getScope(), validationBean.getAccessToken());
+                    validationBean.getScope(), validationBean.getAuthorizedUser().getFederatedIdPName(),
+                    validationBean.getAccessToken());
         }
     }
 
@@ -289,12 +288,16 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
     }
 
     private void updateCacheIfEnabled(OAuthTokenReqMessageContext tokReqMsgCtx, AccessTokenDO accessTokenBean,
-                                      String clientId, RefreshTokenValidationDataDO oldAccessToken) {
+                                      String clientId, RefreshTokenValidationDataDO oldAccessToken)
+            throws IdentityOAuth2Exception {
+
         if (isHashDisabled && cacheEnabled) {
             // Remove old access token from the OAuthCache
             String scope = OAuth2Util.buildScopeString(tokReqMsgCtx.getScope());
             String authorizedUser = tokReqMsgCtx.getAuthorizedUser().toString();
-            String cacheKeyString  = OAuth2Util.buildCacheKeyStringForToken(clientId, scope, authorizedUser);
+            String authenticatedIDP = tokReqMsgCtx.getAuthorizedUser().getFederatedIdPName();
+            String cacheKeyString = OAuth2Util.buildCacheKeyStringForToken(clientId, scope, authorizedUser,
+                    authenticatedIDP);
             OAuthCacheKey oauthCacheKey = new OAuthCacheKey(cacheKeyString);
             OAuthCache.getInstance().clearCacheEntry(oauthCacheKey);
 
@@ -306,8 +309,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             OAuthCache.getInstance().addToCache(oauthCacheKey, accessTokenBean);
 
             // Add new access token to the AccessTokenCache
-            accessTokenCacheKey = new OAuthCacheKey(accessTokenBean.getAccessToken());
-            OAuthCache.getInstance().addToCache(accessTokenCacheKey, accessTokenBean);
+            OAuth2Util.addTokenDOtoCache(accessTokenBean);
 
             if (log.isDebugEnabled()) {
                 log.debug("Access Token info for the refresh token was added to the cache for " +
@@ -377,14 +379,17 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         return tokenRespDTO;
     }
 
-    private void clearCache(String clientId, String authorizedUser, String[] scopes, String accessToken) {
+    private void clearCache(String clientId, String authorizedUser, String[] scopes, String accessToken,
+                            String authenticatedIDP) {
 
         boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authorizedUser);
         String cacheKeyString;
         if (isUsernameCaseSensitive) {
-            cacheKeyString = clientId + ":" + authorizedUser + ":" + OAuth2Util.buildScopeString(scopes);
+            cacheKeyString = clientId + ":" + authorizedUser + ":" + OAuth2Util.buildScopeString(scopes) +
+                    ":" + authenticatedIDP;
         } else {
-            cacheKeyString = clientId + ":" + authorizedUser.toLowerCase() + ":" + OAuth2Util.buildScopeString(scopes);
+            cacheKeyString = clientId + ":" + authorizedUser.toLowerCase() + ":" + OAuth2Util.buildScopeString(scopes) +
+                    ":" + authenticatedIDP;
         }
 
         // Remove the old access token from the OAuthCache
@@ -515,8 +520,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
                                      String refreshToken, Timestamp timestamp) {
         Timestamp refreshTokenIssuedTime = null;
         long refreshTokenValidityPeriod = 0;
-        boolean renew = OAuthServerConfiguration.getInstance().isRefreshTokenRenewalEnabled();
-        if (!renew) {
+        if (!isRenewRefreshToken(oAuthAppDO.getRenewRefreshTokenEnabled())) {
             // if refresh token renewal not enabled, we use existing one else we issue a new refresh token
             refreshToken = tokenReq.getRefreshToken();
             refreshTokenIssuedTime = validationBean.getIssuedTime();
@@ -572,6 +576,22 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             AuthorizationGrantCache.getInstance().clearCacheEntryByTokenId(oldAuthorizationGrantCacheKey,
                     oldAccessToken.getTokenId());
             AuthorizationGrantCache.getInstance().addToCacheByToken(authorizationGrantCacheKey, grantCacheEntry);
+        }
+    }
+
+    private boolean isRenewRefreshToken(String renewRefreshToken) {
+
+        if (StringUtils.isNotBlank(renewRefreshToken)) {
+            if (log.isDebugEnabled()) {
+                log.debug("Reading the Oauth application specific renew " +
+                        "refresh token value as " + renewRefreshToken + " from the IDN_OIDC_PROPERTY table");
+            }
+            return Boolean.parseBoolean(renewRefreshToken);
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug("Reading the global renew refresh token value from the identity.xml");
+            }
+            return OAuthServerConfiguration.getInstance().isRefreshTokenRenewalEnabled();
         }
     }
 }

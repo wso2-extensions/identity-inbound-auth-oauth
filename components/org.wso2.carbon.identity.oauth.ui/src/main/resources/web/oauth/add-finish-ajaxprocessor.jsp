@@ -31,6 +31,7 @@
 <%@ page import="java.util.ArrayList" %>
 <%@ page import="java.util.List" %>
 <%@ page import="java.util.ResourceBundle" %>
+<%@ page import="java.util.Objects" %>
 
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt"%>
 <%@ taglib uri="http://wso2.org/projects/carbon/taglibs/carbontags.jar" prefix="carbon"%>
@@ -59,6 +60,7 @@
     String tokenType = request.getParameter("tokenType");
     String logoutMechanism = request.getParameter("logoutMechanism");
     String logoutUrl = request.getParameter("logoutUrl");
+    String isRenewRefreshTokenEnabled = request.getParameter("renewRefreshTokenPerApp");
 
 	boolean pkceMandatory = false;
 	boolean pkceSupportPlain = false;
@@ -160,6 +162,9 @@
             if (isIdTokenEncrypted) {
                 app.setIdTokenEncryptionAlgorithm(idTokenEncryptionAlgorithm);
                 app.setIdTokenEncryptionMethod(idTokenEncryptionMethod);
+            }
+            if (!Objects.equals(isRenewRefreshTokenEnabled, "notAssigned")) {
+                app.setRenewRefreshTokenEnabled(String.valueOf(Boolean.parseBoolean(isRenewRefreshTokenEnabled)));
             }
 
             if (isHashDisabled) {

@@ -86,6 +86,34 @@ public class AccessTokenDO extends CacheEntry {
         this.authorizationCode = authorizationCode;
     }
 
+    /**
+     * Create a copy of the passed token DO object.
+     *
+     * @param tokenDO Original Token DO
+     */
+    public static AccessTokenDO clone(AccessTokenDO tokenDO) {
+
+        AccessTokenDO newTokenDO =  new AccessTokenDO(
+                tokenDO.getConsumerKey(),
+                tokenDO.getAuthzUser(),
+                tokenDO.getScope(),
+                tokenDO.getIssuedTime(),
+                tokenDO.getRefreshTokenIssuedTime(),
+                tokenDO.getValidityPeriodInMillis(),
+                tokenDO.getRefreshTokenValidityPeriodInMillis(),
+                tokenDO.getTokenType()
+        );
+        newTokenDO.setTenantID(tokenDO.getTenantID());
+        newTokenDO.setTokenState(tokenDO.getTokenState());
+        newTokenDO.setRefreshToken(tokenDO.getRefreshToken());
+        newTokenDO.setAccessToken(tokenDO.getAccessToken());
+        newTokenDO.setTokenId(tokenDO.getTokenId());
+        newTokenDO.setAuthorizationCode(tokenDO.getAuthorizationCode());
+        newTokenDO.setGrantType(tokenDO.getGrantType());
+
+        return newTokenDO;
+    }
+
     public AccessTokenDO() {
 
     }

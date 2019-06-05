@@ -37,13 +37,26 @@ public class OAuthTenantMgtListenerImpl extends AbstractIdentityTenantMgtListene
 
     @Override
     public void onPreDelete(int tenantId) throws StratosException {
+
+        clearTokenData(tenantId);
+    }
+
+    @Override
+    public void onTenantDeactivation(int tenantId) throws StratosException {
+
+        clearTokenData(tenantId);
+    }
+
+    private void clearTokenData(int tenantId) throws StratosException {
+
         try {
             Set<AccessTokenDO> accessTokenDOs = OAuthTokenPersistenceFactory.getInstance()
                     .getAccessTokenDAO().getAccessTokensByTenant(tenantId);
             Map<String, AccessTokenDO> latestAccessTokens = new HashMap<>();
             for (AccessTokenDO accessTokenDO : accessTokenDOs) {
                 String keyString = accessTokenDO.getConsumerKey() + ":" + accessTokenDO.getAuthzUser() + ":" +
-                        OAuth2Util.buildScopeString(accessTokenDO.getScope());
+                        OAuth2Util.buildScopeString(accessTokenDO.getScope()) + ":"
+                        + accessTokenDO.getAuthzUser().getFederatedIdPName();
                 AccessTokenDO accessTokenDOFromMap = latestAccessTokens.get(keyString);
                 if (accessTokenDOFromMap != null) {
                     if (accessTokenDOFromMap.getIssuedTime().before(accessTokenDO.getIssuedTime())) {

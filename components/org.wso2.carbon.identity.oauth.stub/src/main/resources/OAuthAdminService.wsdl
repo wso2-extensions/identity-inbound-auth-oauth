@@ -298,6 +298,18 @@
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
+            <xs:element name="isRefreshTokenRenewalEnabled">
+                <xs:complexType>
+                    <xs:sequence/>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="isRefreshTokenRenewalEnabledResponse">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element minOccurs="0" name="return" type="xs:boolean"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
             <xs:element name="isPKCESupportEnabled">
                 <xs:complexType>
                     <xs:sequence/>
@@ -401,6 +413,7 @@
                     <xs:element minOccurs="0" name="pkceMandatory" type="xs:boolean"/>
                     <xs:element minOccurs="0" name="pkceSupportPlain" type="xs:boolean"/>
                     <xs:element minOccurs="0" name="refreshTokenExpiryTime" type="xs:long"/>
+                    <xs:element minOccurs="0" name="renewRefreshTokenEnabled" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="requestObjectSignatureValidationEnabled" type="xs:boolean"/>
                     <xs:element maxOccurs="unbounded" minOccurs="0" name="scopeValidators" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="state" nillable="true" type="xs:string"/>
@@ -510,6 +523,12 @@
     </wsdl:message>
     <wsdl:message name="isPKCESupportEnabledResponse">
         <wsdl:part name="parameters" element="ns1:isPKCESupportEnabledResponse"/>
+    </wsdl:message>
+    <wsdl:message name="isRefreshTokenRenewalEnabledRequest">
+        <wsdl:part name="parameters" element="ns1:isRefreshTokenRenewalEnabled"/>
+    </wsdl:message>
+    <wsdl:message name="isRefreshTokenRenewalEnabledResponse">
+        <wsdl:part name="parameters" element="ns1:isRefreshTokenRenewalEnabledResponse"/>
     </wsdl:message>
     <wsdl:message name="getOAuthApplicationDataByAppNameRequest">
         <wsdl:part name="parameters" element="ns1:getOAuthApplicationDataByAppName"/>
@@ -660,6 +679,10 @@
         <wsdl:operation name="isPKCESupportEnabled">
             <wsdl:input message="tns:isPKCESupportEnabledRequest" wsaw:Action="urn:isPKCESupportEnabled"/>
             <wsdl:output message="tns:isPKCESupportEnabledResponse" wsaw:Action="urn:isPKCESupportEnabledResponse"/>
+        </wsdl:operation>
+        <wsdl:operation name="isRefreshTokenRenewalEnabled">
+            <wsdl:input message="tns:isRefreshTokenRenewalEnabledRequest" wsaw:Action="urn:isRefreshTokenRenewalEnabled"/>
+            <wsdl:output message="tns:isRefreshTokenRenewalEnabledResponse" wsaw:Action="urn:isRefreshTokenRenewalEnabledResponse"/>
         </wsdl:operation>
         <wsdl:operation name="getOAuthApplicationDataByAppName">
             <wsdl:input message="tns:getOAuthApplicationDataByAppNameRequest" wsaw:Action="urn:getOAuthApplicationDataByAppName"/>
@@ -869,6 +892,15 @@
         </wsdl:operation>
         <wsdl:operation name="isPKCESupportEnabled">
             <soap:operation soapAction="urn:isPKCESupportEnabled" style="document"/>
+            <wsdl:input>
+                <soap:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap:body use="literal"/>
+            </wsdl:output>
+        </wsdl:operation>
+        <wsdl:operation name="isRefreshTokenRenewalEnabled">
+            <soap:operation soapAction="urn:isRefreshTokenRenewalEnabled" style="document"/>
             <wsdl:input>
                 <soap:body use="literal"/>
             </wsdl:input>
@@ -1206,6 +1238,15 @@
                 <soap12:body use="literal"/>
             </wsdl:output>
         </wsdl:operation>
+        <wsdl:operation name="isRefreshTokenRenewalEnabled">
+            <soap12:operation soapAction="urn:isRefreshTokenRenewalEnabled" style="document"/>
+            <wsdl:input>
+                <soap12:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap12:body use="literal"/>
+            </wsdl:output>
+        </wsdl:operation>
         <wsdl:operation name="getOAuthApplicationDataByAppName">
             <soap12:operation soapAction="urn:getOAuthApplicationDataByAppName" style="document"/>
             <wsdl:input>
@@ -1505,6 +1546,15 @@
         </wsdl:operation>
         <wsdl:operation name="isPKCESupportEnabled">
             <http:operation location="isPKCESupportEnabled"/>
+            <wsdl:input>
+                <mime:content type="text/xml" part="parameters"/>
+            </wsdl:input>
+            <wsdl:output>
+                <mime:content type="text/xml" part="parameters"/>
+            </wsdl:output>
+        </wsdl:operation>
+        <wsdl:operation name="isRefreshTokenRenewalEnabled">
+            <http:operation location="isRefreshTokenRenewalEnabled"/>
             <wsdl:input>
                 <mime:content type="text/xml" part="parameters"/>
             </wsdl:input>
