@@ -264,6 +264,8 @@ public class AccessTokenIssuer {
                 log.debug("Invalid scope provided by client Id: " + tokenReqDTO.getClientId());
             }
             tokenRespDTO = handleError(OAuthError.TokenResponse.INVALID_SCOPE, "Invalid Scope!", tokenReqDTO);
+            // Set custom error message if it is availabe in tokReqMsgCtx
+            setResponseErrorMessage(tokReqMsgCtx, tokenRespDTO);
             setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
             triggerPostListeners(tokenReqDTO, tokenRespDTO, tokReqMsgCtx, isRefreshRequest);
             return tokenRespDTO;
@@ -468,6 +470,20 @@ public class AccessTokenIssuer {
 
         if (tokReqMsgCtx.getProperty(OAuthConstants.RESPONSE_HEADERS_PROPERTY) != null) {
             tokenRespDTO.setResponseHeaders((ResponseHeader[]) tokReqMsgCtx.getProperty(OAuthConstants.RESPONSE_HEADERS_PROPERTY));
+        }
+    }
+
+    /**
+     * Set custom error message in OAuth2AccessTokenRespDTO
+     *
+     * @param tokReqMsgCtx
+     * @param tokenRespDTO
+     */
+
+    private void setResponseErrorMessage(OAuthTokenReqMessageContext tokReqMsgCtx,
+                                         OAuth2AccessTokenRespDTO tokenRespDTO) {
+        if (tokReqMsgCtx.getProperty("ERROR_MESSAGE") != null) {
+            tokenRespDTO.setErrorMsg((String)tokReqMsgCtx.getProperty("ERROR_MESSAGE"));
         }
     }
 
