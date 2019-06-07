@@ -479,7 +479,6 @@ public class AccessTokenIssuer {
      * @param tokReqMsgCtx
      * @param tokenRespDTO
      */
-
     private void setResponseErrorMessage(OAuthTokenReqMessageContext tokReqMsgCtx,
                                          OAuth2AccessTokenRespDTO tokenRespDTO) {
         if (tokReqMsgCtx.getProperty("ERROR_MESSAGE") != null) {
