@@ -19,7 +19,6 @@
 package org.wso2.carbon.identity.oauth2.token.handlers.grant;
 
 import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -51,9 +50,8 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oauth2.util.Oauth2ScopeUtils;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeHandler;
-import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeValidator;
-import org.wso2.carbon.user.api.UserStoreException;
 
 import java.sql.Timestamp;
 import java.util.Date;
@@ -216,7 +214,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     @Override
     public boolean validateScope(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
 
-        if (!validateByApplicationScopeValidator(tokReqMsgCtx)) {
+        if (hasValidateByApplicationScopeValidatorsFailed(tokReqMsgCtx)) {
             return false;
         }
         OAuthCallback scopeValidationCallback = new OAuthCallback(tokReqMsgCtx.getAuthorizedUser(),
@@ -255,62 +253,6 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             }
         }
         return isValid && scopeValidationCallback.isValidScope();
-    }
-
-    private boolean validateByApplicationScopeValidator(OAuthTokenReqMessageContext tokenReqMsgContext)
-            throws IdentityOAuth2Exception {
-
-        String[] scopeValidators;
-        OAuthAppDO oAuthAppDO = (OAuthAppDO) tokenReqMsgContext.getProperty("OAuthAppDO");
-
-        if (oAuthAppDO == null) {
-            try {
-                oAuthAppDO = OAuth2Util.getAppInformationByClientId(
-                        tokenReqMsgContext.getOauth2AccessTokenReqDTO().getClientId());
-            } catch (InvalidOAuthClientException e) {
-                throw new IdentityOAuth2Exception("Error while retrieving OAuth application from DB for client id: " +
-                        tokenReqMsgContext.getOauth2AccessTokenReqDTO().getClientId(), e);
-            }
-        }
-
-        scopeValidators = oAuthAppDO.getScopeValidators();
-
-        if (ArrayUtils.isEmpty(scopeValidators)) {
-            if (log.isDebugEnabled()) {
-                log.debug(String.format("There is no scope validator registered for %s@%s", oAuthAppDO.getApplicationName(),
-                        OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO)));
-            }
-            return true;
-        }
-
-        Set<OAuth2ScopeValidator> oAuth2ScopeValidators = OAuthServerConfiguration.getInstance()
-                .getOAuth2ScopeValidators();
-        ArrayList<String> appScopeValidators = new ArrayList<>(Arrays.asList(scopeValidators));
-        for (OAuth2ScopeValidator validator : oAuth2ScopeValidators) {
-            if (validator != null && appScopeValidators.contains(validator.getValidatorName())) {
-                if (log.isDebugEnabled()) {
-                    log.debug(String.format("Validating scope of token request using %s",
-                            validator.getValidatorName()));
-                }
-                boolean isValid;
-                try {
-                    isValid = validator.validateScope(tokenReqMsgContext);
-                } catch (UserStoreException e) {
-                    throw new IdentityOAuth2Exception("Error while validating scopes from application scope validator", e);
-                }
-                appScopeValidators.remove(validator.getValidatorName());
-                if (!isValid) {
-                    return false;
-                }
-            }
-        }
-
-        if (!appScopeValidators.isEmpty()) {
-            throw new IdentityOAuth2Exception(String.format("The scope validators %s registered for application %s@%s" +
-                            " are not found in the server configuration ", StringUtils.join(appScopeValidators, ", "),
-                    oAuthAppDO.getApplicationName(), OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO)));
-        }
-        return true;
     }
 
     @Override
@@ -897,5 +839,14 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
 
         return (OAuth2Service) PrivilegedCarbonContext
                 .getThreadLocalCarbonContext().getOSGiService(OAuth2Service.class, null);
+    }
+
+    /**
+     * Inverting validateByApplicationScopeValidator method for better readability.
+     */
+    private boolean hasValidateByApplicationScopeValidatorsFailed(OAuthTokenReqMessageContext tokenReqMsgContext)
+            throws IdentityOAuth2Exception {
+
+        return !Oauth2ScopeUtils.validateByApplicationScopeValidator(tokenReqMsgContext, null);
     }
 }
