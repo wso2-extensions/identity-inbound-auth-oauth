@@ -117,8 +117,8 @@ public class ProviderConfigBuilder {
         providerConfig.setTokenEndpointAuthMethodsSupported(
                 OAuth2Util.getSupportedClientAuthenticationMethods().stream().toArray(String[]::new));
         providerConfig.setGrantTypesSupported(OAuth2Util.getSupportedGrantTypes().stream().toArray(String[]::new));
-        providerConfig.setRequestParameterSupported(String.valueOf(OAuth2Util.isRequestParameterSupported()));
-        providerConfig.setClaimsParameterSupported(String.valueOf(OAuth2Util.isClaimsParameterSupported()));
+        providerConfig.setRequestParameterSupported(Boolean.valueOf(OAuth2Util.isRequestParameterSupported()));
+        providerConfig.setClaimsParameterSupported(Boolean.valueOf(OAuth2Util.isClaimsParameterSupported()));
         providerConfig.setRequestObjectSigningAlgValuesSupported(
                 OAuth2Util.getRequestObjectSigningAlgValuesSupported().stream().toArray(String[]::new));
 

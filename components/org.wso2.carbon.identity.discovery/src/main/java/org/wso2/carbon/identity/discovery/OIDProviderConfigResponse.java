@@ -60,6 +60,8 @@ public class OIDProviderConfigResponse {
     private String[] uiLocalesSupported;
     private String claimsParameterSupported;
     private String requestParameterSupported;
+    private Boolean isClaimsParameterSupported;
+    private Boolean isRequestParameterSupported;
     private String requestUriParameterSupported;
     private String requireRequestUriRegistration;
     private String opPolicyUri;
@@ -305,20 +307,40 @@ public class OIDProviderConfigResponse {
         this.uiLocalesSupported = uiLocalesSupported;
     }
 
+    @Deprecated
     public String getClaimsParameterSupported() {
         return claimsParameterSupported;
     }
 
+    @Deprecated
     public void setClaimsParameterSupported(String claimsParameterSupported) {
         this.claimsParameterSupported = claimsParameterSupported;
     }
 
+    @Deprecated
     public String getRequestParameterSupported() {
         return requestParameterSupported;
     }
 
+    @Deprecated
     public void setRequestParameterSupported(String requestParameterSupported) {
         this.requestParameterSupported = requestParameterSupported;
+    }
+
+    public Boolean isClaimsParameterSupported() {
+        return isClaimsParameterSupported;
+    }
+
+    public void setClaimsParameterSupported(Boolean isClaimsParameterSupported) {
+        this.isClaimsParameterSupported = isClaimsParameterSupported;
+    }
+
+    public Boolean isRequestParameterSupported() {
+        return isRequestParameterSupported;
+    }
+
+    public void setRequestParameterSupported(Boolean isRequestParameterSupported) {
+        this.isRequestParameterSupported = isRequestParameterSupported;
     }
 
     public String getRequestUriParameterSupported() {
@@ -384,7 +406,7 @@ public class OIDProviderConfigResponse {
         configMap.put(DiscoveryConstants.AUTHORIZATION_ENDPOINT.toLowerCase(), this.authorizationEndpoint);
         configMap.put(DiscoveryConstants.CLAIM_TYPES_SUPPORTED.toLowerCase(), this.claimTypesSupported);
         configMap.put(DiscoveryConstants.CLAIMS_LOCALES_SUPPORTED.toLowerCase(), this.claimsLocalesSupported);
-        configMap.put(DiscoveryConstants.CLAIMS_PARAMETER_SUPPORTED.toLowerCase(), this.claimsParameterSupported);
+        configMap.put(DiscoveryConstants.CLAIMS_PARAMETER_SUPPORTED.toLowerCase(), this.isClaimsParameterSupported);
         configMap.put(DiscoveryConstants.CLAIMS_SUPPORTED.toLowerCase(), this.claimsSupported);
         configMap.put(DiscoveryConstants.DISPLAY_VALUES_SUPPORTED.toLowerCase(), this.displayValuesSupported);
         configMap.put(DiscoveryConstants.GRANT_TYPES_SUPPORTED.toLowerCase(), this.grantTypesSupported);
@@ -404,7 +426,7 @@ public class OIDProviderConfigResponse {
                 .requestObjectEncryptionEncValuesSupported);
         configMap.put(DiscoveryConstants.REQUEST_OBJECT_SIGNING_ALG_VALUES_SUPPORTED.toLowerCase(), this
                 .requestObjectSigningAlgValuesSupported);
-        configMap.put(DiscoveryConstants.REQUEST_PARAMETER_SUPPORTED.toLowerCase(), this.requestParameterSupported);
+        configMap.put(DiscoveryConstants.REQUEST_PARAMETER_SUPPORTED.toLowerCase(), this.isRequestParameterSupported);
         configMap.put(DiscoveryConstants.REQUEST_URI_PARAMETER_SUPPORTED.toLowerCase(), this
                 .requestUriParameterSupported);
         configMap.put(DiscoveryConstants.REQUIRE_REQUEST_URI_REGISTRATION.toLowerCase(), this
