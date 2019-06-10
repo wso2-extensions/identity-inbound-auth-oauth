@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oauth.endpoint.state;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.endpoint.OAuthRequestWrapper;
 import org.wso2.carbon.identity.oauth.endpoint.exception.AccessDeniedException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.BadRequestException;
@@ -64,7 +65,8 @@ public class OAuthRequestStateValidator {
             log.debug("Invalid authorization request");
         }
 
-        throw new InvalidRequestException("Invalid authorization request");
+        throw new InvalidRequestException("Invalid authorization request", OAuth2ErrorCodes.INVALID_REQUEST,
+                OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_AUTHORIZATION_REQUEST);
     }
 
     private boolean handleToCommonauthState(OAuthMessage oAuthMessage) {
@@ -82,7 +84,8 @@ public class OAuthRequestStateValidator {
                 log.debug("Invalid authorization request.\'SessionDataKey\' found in request as parameter and " +
                         "attribute, and both have non NULL objects in cache");
             }
-            throw new InvalidRequestException("Invalid authorization request");
+            throw new InvalidRequestException("Invalid authorization request", OAuth2ErrorCodes.INVALID_REQUEST,
+                    OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_AUTHORIZATION_REQUEST);
 
         } else if (oAuthMessage.getClientId() == null && oAuthMessage.getResultFromLogin() == null && oAuthMessage
                 .getResultFromConsent() == null) {
@@ -91,7 +94,8 @@ public class OAuthRequestStateValidator {
                 log.debug("Invalid authorization request.\'SessionDataKey\' not found in request as parameter or " +
                         "attribute, and client_id parameter cannot be found in request");
             }
-            throw new InvalidRequestException("Invalid authorization request");
+            throw new InvalidRequestException("Invalid authorization request", OAuth2ErrorCodes.INVALID_REQUEST,
+                    OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_AUTHORIZATION_REQUEST);
 
         } else if (oAuthMessage.getSessionDataKeyFromLogin() != null && oAuthMessage.getResultFromLogin() == null) {
 
@@ -122,16 +126,16 @@ public class OAuthRequestStateValidator {
             if (log.isDebugEnabled()) {
                 log.debug("Client Id is not present in the authorization request");
             }
-            throw new InvalidRequestException("Client Id is not present in the " +
-                    "authorization request");
+            throw new InvalidRequestException("Client Id is not present in the authorization request",
+                    OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_CLIENT);
         }
 
         if (StringUtils.isBlank(oAuthMessage.getRequest().getParameter(REDIRECT_URI))) {
             if (log.isDebugEnabled()) {
                 log.debug("Redirect URI is not present in the authorization request");
             }
-            throw new InvalidRequestException("Redirect URI is not present in the" +
-                    " authorization request");
+            throw new InvalidRequestException("Redirect URI is not present in the authorization request",
+                    OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_REDIRECT_URI);
         }
     }
 

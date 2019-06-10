@@ -64,7 +64,7 @@ public class InvalidRequestExceptionMapper implements ExceptionMapper<InvalidReq
         if (exception instanceof InvalidRequestException) {
             try {
                 return buildErrorResponse(exception, HttpServletResponse.SC_FOUND, OAuth2ErrorCodes.INVALID_REQUEST,
-                        OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_REQUEST);
+                        ((InvalidRequestException) exception).getSubErrorCode());
             } catch (URISyntaxException e) {
                 if (log.isDebugEnabled()) {
                     log.debug("Error while getting endpoint error page URL", e);
@@ -151,8 +151,7 @@ public class InvalidRequestExceptionMapper implements ExceptionMapper<InvalidReq
     }
 
     private Response buildErrorResponse(InvalidRequestParentException exception, int status, String errorCode, String
-            subErrorCode)
-            throws URISyntaxException {
+            subErrorCode) throws URISyntaxException {
 
         if (log.isDebugEnabled()) {
             log.debug("Response status :" + status);
