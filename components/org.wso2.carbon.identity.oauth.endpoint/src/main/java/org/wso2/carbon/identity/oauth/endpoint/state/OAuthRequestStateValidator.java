@@ -102,7 +102,8 @@ public class OAuthRequestStateValidator {
             if (log.isDebugEnabled()) {
                 log.debug("Session data not found in SessionDataCache for " + oAuthMessage.getSessionDataKeyFromLogin());
             }
-            throw new AccessDeniedException("Session Timed Out");
+            throw new AccessDeniedException("Session Timed Out", OAuth2ErrorCodes.ACCESS_DENIED, OAuth2ErrorCodes
+                    .OAuth2SubErrorCodes.SESSION_TIME_OUT);
 
         } else if (oAuthMessage.getSessionDataKeyFromConsent() != null && oAuthMessage.getResultFromConsent() == null) {
 
@@ -111,7 +112,8 @@ public class OAuthRequestStateValidator {
                     log.debug("Session data not found in SessionDataCache for " + oAuthMessage
                             .getSessionDataKeyFromConsent());
                 }
-                throw new AccessDeniedException("Session Timed Out");
+                throw new AccessDeniedException("Session Timed Out", OAuth2ErrorCodes.ACCESS_DENIED, OAuth2ErrorCodes
+                        .OAuth2SubErrorCodes.SESSION_TIME_OUT);
             } else {
                 // if the sessionDataKeyFromConsent parameter present in the login request, skip it and allow login since
                 // result from login is there
@@ -143,7 +145,8 @@ public class OAuthRequestStateValidator {
             BadRequestException {
         if (!(oAuthMessage.getRequest() instanceof OAuthRequestWrapper)) {
             if (!EndpointUtil.validateParams(oAuthMessage, null)) {
-                throw new BadRequestException("Invalid authorization request with repeated parameters");
+                throw new BadRequestException("Invalid authorization request with repeated parameters",
+                        OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_PARAMETERS);
             }
         }
     }

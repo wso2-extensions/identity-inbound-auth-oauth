@@ -19,8 +19,6 @@ package org.wso2.carbon.identity.oauth.endpoint.exception;
 
 public class InvalidRequestException extends InvalidRequestParentException {
 
-    private String subErrorCode = null;
-
     public InvalidRequestException(String message) {
         super(message);
     }
@@ -36,12 +34,7 @@ public class InvalidRequestException extends InvalidRequestParentException {
     }
 
     public InvalidRequestException(String message, String errorCode, String subErrorCode) {
-        super(message);
-        this.errorCode = errorCode;
-        this.subErrorCode = subErrorCode;
+        super(message, errorCode, subErrorCode);
     }
 
-    public String getSubErrorCode() {
-        return subErrorCode;
-    }
 }
