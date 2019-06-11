@@ -1753,9 +1753,8 @@ public class OAuth2Util {
     public static String getTenantDomainOfOauthApp(OAuthAppDO oAuthAppDO) {
 
         String tenantDomain = MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
-        if (oAuthAppDO != null) {
-            AuthenticatedUser appDeveloper = oAuthAppDO.getUser();
-            tenantDomain = appDeveloper.getTenantDomain();
+        if (oAuthAppDO != null && oAuthAppDO.getUser() != null) {
+            tenantDomain = oAuthAppDO.getUser().getTenantDomain();
         }
         return tenantDomain;
     }

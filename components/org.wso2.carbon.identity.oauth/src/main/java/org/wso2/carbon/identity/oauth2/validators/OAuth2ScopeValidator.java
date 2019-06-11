@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth2.validators;
 
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.user.api.UserStoreException;
@@ -55,6 +56,20 @@ public abstract class OAuth2ScopeValidator {
      */
     public boolean validateScope(OAuthTokenReqMessageContext tokReqMsgCtx) throws
             IdentityOAuth2Exception, UserStoreException {
+        return true;
+    }
+
+    /**
+     * Method to validate scopes in the authorization request against the roles of the user.
+     *
+     * @param authzReqMessageContext Authorization request
+     * @return - true if the user has enough permission to generate tokens with requested scopes or
+     * no scopes are requested, otherwise false
+     * @throws IdentityOAuth2Exception
+     */
+    public boolean validateScope(OAuthAuthzReqMessageContext authzReqMessageContext) throws
+            UserStoreException, IdentityOAuth2Exception {
+
         return true;
     }
 
