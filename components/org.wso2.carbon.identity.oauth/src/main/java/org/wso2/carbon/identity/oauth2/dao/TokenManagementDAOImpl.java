@@ -381,6 +381,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
             connection.commit();
 
         } catch (SQLException e) {
+            IdentityDatabaseUtil.rollBack(connection);
             String errorMsg = "Error deleting OAuth consent of Application " + applicationName + " and User " + username;
             throw new IdentityOAuth2Exception(errorMsg, e);
         } finally {
@@ -426,6 +427,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
             connection.commit();
 
         } catch (SQLException e) {
+            IdentityDatabaseUtil.rollBack(connection);
             String errorMsg = "Error deleting OAuth consent of Application " +
                     applicationName + " and User " + username;
             throw new IdentityOAuth2Exception(errorMsg, e);
@@ -475,6 +477,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
             connection.commit();
 
         } catch (SQLException e) {
+            IdentityDatabaseUtil.rollBack(connection);
             String errorMsg = "Error updating trusted always in a consent of Application " +
                     applicationName + " and User " + tenantAwareUserName;
             throw new IdentityOAuth2Exception(errorMsg, e);
@@ -586,6 +589,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
             connection.commit();
 
         } catch (SQLException e) {
+            IdentityDatabaseUtil.rollBack(connection);
             throw new IdentityApplicationManagementException("Error while executing the SQL statement.", e);
         } finally {
             IdentityDatabaseUtil.closeStatement(updateStateStatement);
