@@ -49,6 +49,7 @@ public class OAuth2ErrorCodes {
         public static final String INVALID_REQUEST = "invalid_request";
         public static final String CONSENT_DENIED = "consent_denied";
         public static final String ACCESS_DENIED = "access_denied";
+        public static final String INVALID_PARAMETERS = "invalid_parameters";
 
     }
 }

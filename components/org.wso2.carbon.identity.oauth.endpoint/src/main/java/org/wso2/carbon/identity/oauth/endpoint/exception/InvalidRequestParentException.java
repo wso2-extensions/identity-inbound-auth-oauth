@@ -21,7 +21,7 @@ public class InvalidRequestParentException extends Exception {
 
     protected String errorCode = null;
     protected String errorMessage = null;
-
+    private String subErrorCode = null;
 
     public InvalidRequestParentException(String message) {
         super(message);
@@ -45,11 +45,21 @@ public class InvalidRequestParentException extends Exception {
         this.errorCode = errorCode;
     }
 
+    public InvalidRequestParentException(String message, String errorCode, String subErrorCode) {
+        super(message);
+        this.errorCode = errorCode;
+        this.subErrorCode = subErrorCode;
+    }
+
     public String getErrorCode() {
         return errorCode;
     }
 
     public String getErrorMessage() {
         return errorMessage;
+    }
+
+    public String getSubErrorCode() {
+        return subErrorCode;
     }
 }
