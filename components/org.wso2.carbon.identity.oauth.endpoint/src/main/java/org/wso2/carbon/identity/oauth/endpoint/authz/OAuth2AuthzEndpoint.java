@@ -1520,7 +1520,8 @@ public class OAuth2AuthzEndpoint {
             return OAuth2Util.getTenantDomainOfOauthApp(clientId);
         } catch (InvalidOAuthClientException | IdentityOAuth2Exception e) {
             throw new InvalidRequestException("Error retrieving Service Provider tenantDomain for client_id: "
-                    + clientId);
+                    + clientId, OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes
+                    .UNEXPECTED_SERVER_ERROR);
         }
     }
 
@@ -1533,7 +1534,8 @@ public class OAuth2AuthzEndpoint {
                 params.setMaxAge(Long.parseLong(maxAgeParam));
             } catch (NumberFormatException ex) {
                 log.error("Invalid max_age parameter: '" + maxAgeParam + "' sent in the authorization request.");
-                throw new InvalidRequestException("Invalid max_age parameter value sent in the authorization request.");
+                throw new InvalidRequestException("Invalid max_age parameter value sent in the authorization request" +
+                        ".", OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_PARAMETERS);
             }
         }
     }

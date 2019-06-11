@@ -32,4 +32,8 @@ public class BadRequestException extends InvalidRequestParentException {
         super(message, errorCode, cause);
         this.errorCode = errorCode;
     }
+
+    public BadRequestException(String message, String errorCode, String subErrorCode) {
+        super(message, errorCode, subErrorCode);
+    }
 }
