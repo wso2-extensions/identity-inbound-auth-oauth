@@ -135,6 +135,7 @@ public class OAuthServerConfiguration {
     private String retainOldAccessTokens;
     private String tokenCleanupFeatureEnable;
     private OauthTokenIssuer oauthIdentityTokenGenerator;
+    private boolean scopeValidationConfigValue = true;
     private boolean cacheEnabled = false;
     private boolean isTokenRenewalPerRequestEnabled = false;
     private boolean isRefreshTokenRenewalEnabled = true;
@@ -289,6 +290,14 @@ public class OAuthServerConfiguration {
         //Get the configured scope validators
         OMElement scopeValidatorsElem = oauthElem.getFirstChildWithName(
                 getQNameWithIdentityNS(ConfigElements.SCOPE_VALIDATORS));
+
+        //Get scopeValidationEnabledConfigValue
+        OMElement scopeValidationElem = oauthElem.getFirstChildWithName(
+                getQNameWithIdentityNS(ConfigElements.SCOPE_VALIDATION_FOR_AUTH_CODE_AND_IMPLICIT));
+
+        if (scopeValidationElem != null) {
+            scopeValidationConfigValue = Boolean.parseBoolean(scopeValidationElem.getText());
+        }
 
         if (scopeValidatorElem != null) {
             parseScopeValidator(scopeValidatorElem);
@@ -2706,6 +2715,10 @@ public class OAuthServerConfiguration {
         }
     }
 
+    public boolean isScopeValidationEnabledForImplicitAndCodeGrant() {
+        return scopeValidationConfigValue;
+    }
+
     /**
      * Localpart names for the OAuth configuration in identity.xml.
      */
@@ -2800,6 +2813,9 @@ public class OAuthServerConfiguration {
         private static final String SCOPE_CLASS_ATTR = "class";
         private static final String SKIP_SCOPE_ATTR = "scopesToSkip";
         private static final String IMPLICIT_ERROR_FRAGMENT = "ImplicitErrorFragment";
+
+        // Enable/Disable scope validation for implicit grant and authorization code grant
+        private static final String SCOPE_VALIDATION_FOR_AUTH_CODE_AND_IMPLICIT = "ScopeValidationEnabledForAuthCodeAndImplicitGrant";
 
         // Default timestamp skew
         private static final String TIMESTAMP_SKEW = "TimestampSkew";
