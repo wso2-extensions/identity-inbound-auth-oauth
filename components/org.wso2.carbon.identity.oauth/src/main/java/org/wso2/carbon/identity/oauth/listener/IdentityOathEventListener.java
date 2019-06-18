@@ -235,7 +235,7 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
                 userStoreDomain = OAuth2Util.getUserStoreForFederatedUser(authenticatedUser);
             } catch (IdentityOAuth2Exception e) {
                 log.error("Error occurred while getting user store domain for User ID : " + authenticatedUser, e);
-                return true;
+                throw new UserStoreException(e);
             }
         }
 
@@ -246,7 +246,7 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
                     .getTokenManagementDAO().getAllTimeAuthorizedClientIds(authenticatedUser);
         } catch (IdentityOAuth2Exception e) {
             log.error("Error occurred while retrieving apps authorized by User ID : " + authenticatedUser, e);
-            return true;
+            throw new UserStoreException(e);
         }
         for (String clientId : clientIds) {
             Set<AccessTokenDO> accessTokenDOs;
@@ -258,10 +258,11 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
                 String errorMsg = "Error occurred while retrieving access tokens issued for " +
                         "Client ID : " + clientId + ", User ID : " + authenticatedUser;
                 log.error(errorMsg, e);
-                return true;
+                throw new UserStoreException(e);
             }
 
             Set<String> scopes = new HashSet<>();
+            List<String> accessTokens =  new ArrayList<>();
             for (AccessTokenDO accessTokenDO : accessTokenDOs) {
                 // Clear cache
                 OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser(),
@@ -270,32 +271,63 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
                 OAuthUtil.clearOAuthCache(accessTokenDO.getAccessToken());
                 // Get unique scopes list
                 scopes.add(OAuth2Util.buildScopeString(accessTokenDO.getScope()));
+                accessTokens.add(accessTokenDO.getAccessToken());
             }
 
-            for (String scope : scopes) {
-                AccessTokenDO scopedToken = null;
+            if (OAuth2Util.isHashDisabled()) {
+                return revokeLatestTokensWithScopes(scopes, clientId, authenticatedUser);
+            } else {
+                // If the hashed token is enabled, there can be multiple active tokens with a user with same scope.
+                // So need to revoke all the tokens.
+                return revokeTokens(accessTokens);
+            }
+        }
+        return true;
+    }
+
+    private boolean revokeTokens(List<String> accessTokens) throws UserStoreException {
+
+        if (!accessTokens.isEmpty()) {
+            try {
+                // Revoking token from database.
+                OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                        .revokeAccessTokens(accessTokens.toArray(new String[0]));
+            } catch (IdentityOAuth2Exception e) {
+                String errorMsg = "Error occurred while revoking Access Token";
+                log.error(errorMsg, e);
+                throw new UserStoreException(e);
+            }
+        }
+        return true;
+    }
+
+    private boolean revokeLatestTokensWithScopes(Set<String> scopes, String clientId,
+                                                 AuthenticatedUser authenticatedUser) throws UserStoreException {
+
+        for (String scope : scopes) {
+            AccessTokenDO scopedToken = null;
+            try {
+                // Retrieve latest access token for particular client, user and scope combination
+                // if its ACTIVE or EXPIRED.
+                scopedToken = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                        .getLatestAccessToken(clientId, authenticatedUser, authenticatedUser.getUserStoreDomain(),
+                                scope, true);
+            } catch (IdentityOAuth2Exception e) {
+                String errorMsg = "Error occurred while retrieving latest access token issued for Client ID : " +
+                        clientId + ", User ID : " + authenticatedUser + " and Scope : " + scope;
+                log.error(errorMsg, e);
+                throw new UserStoreException(e);
+            }
+            if (scopedToken != null) {
                 try {
-                    // retrieve latest access token for particular client, user and scope combination if its ACTIVE or EXPIRED
-                    scopedToken = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
-                            .getLatestAccessToken(clientId, authenticatedUser, userStoreDomain, scope, true);
+                    // Revoking token from database
+                    OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                            .revokeAccessTokens(new String[]{scopedToken.getAccessToken()});
                 } catch (IdentityOAuth2Exception e) {
-                    String errorMsg = "Error occurred while retrieving latest " +
-                            "access token issued for Client ID : " +
-                            clientId + ", User ID : " + authenticatedUser + " and Scope : " + scope;
+                    String errorMsg = "Error occurred while revoking " + "Access Token : "
+                            + scopedToken.getAccessToken() + " for user " + authenticatedUser;
                     log.error(errorMsg, e);
-                    return true;
-                }
-                if (scopedToken != null) {
-                    try {
-                        //Revoking token from database
-                        OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
-                                .revokeAccessTokens(new String[]{scopedToken.getAccessToken()});
-                    } catch (IdentityOAuth2Exception e) {
-                        String errorMsg = "Error occurred while revoking " +
-                                "Access Token : " + scopedToken.getAccessToken();
-                        log.error(errorMsg, e);
-                        return true;
-                    }
+                    throw new UserStoreException(e);
                 }
             }
         }
