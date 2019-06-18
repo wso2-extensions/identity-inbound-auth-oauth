@@ -139,8 +139,12 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     @Override
     public String getAccessTokenHash(String accessToken) throws OAuthSystemException {
         try {
-            JWT parse = JWTParser.parse(accessToken);
-            return parse.getJWTClaimsSet().getJWTID();
+            JWT parsedJwtToken = JWTParser.parse(accessToken);
+            String jwtId = parsedJwtToken.getJWTClaimsSet().getJWTID();
+            if (jwtId == null) {
+                throw new OAuthSystemException("JTI could not be retrieved from the JWT token.");
+            }
+            return jwtId;
         } catch (ParseException e) {
             if (log.isDebugEnabled() && IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
                 log.debug("Error while getting JWTID from token: " + accessToken);
@@ -297,7 +301,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             JWSSigner signer = new RSASSASigner((RSAPrivateKey) privateKey);
             JWSHeader.Builder headerBuilder = new JWSHeader.Builder((JWSAlgorithm) signatureAlgorithm);
             String certThumbPrint = OAuth2Util.getThumbPrint(tenantDomain, tenantId);
-            headerBuilder.keyID(certThumbPrint);
+            headerBuilder.keyID(OAuth2Util.getKID(certThumbPrint, (JWSAlgorithm) signatureAlgorithm));
             headerBuilder.x509CertThumbprint(new Base64URL(certThumbPrint));
             SignedJWT signedJWT = new SignedJWT(headerBuilder.build(), jwtClaimsSet);
             signedJWT.sign(signer);

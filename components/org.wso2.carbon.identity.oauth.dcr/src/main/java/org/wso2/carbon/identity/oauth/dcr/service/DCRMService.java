@@ -363,8 +363,10 @@ public class DCRMService {
         if (log.isDebugEnabled()) {
             log.debug("Creating OAuth Application: " + spName + " in tenant: " + tenantDomain);
         }
+
+        OAuthConsumerAppDTO createdApp;
         try {
-            oAuthAdminService.registerOAuthApplicationData(oAuthConsumerApp);
+            createdApp = oAuthAdminService.registerAndRetrieveOAuthApplicationData(oAuthConsumerApp);
         } catch (IdentityOAuthAdminException e) {
             throw DCRMUtils.generateServerException(
                     DCRMConstants.ErrorMessages.FAILED_TO_REGISTER_APPLICATION, spName, e);
@@ -374,21 +376,8 @@ public class DCRMService {
             log.debug("Created OAuth Application: " + spName + " in tenant: " + tenantDomain);
         }
 
-        OAuthConsumerAppDTO createdApp;
-        try {
-            createdApp = oAuthAdminService.getOAuthApplicationDataByAppName(oAuthConsumerApp.getApplicationName());
-        } catch (IdentityOAuthAdminException e) {
-            throw DCRMUtils.generateServerException(
-                    DCRMConstants.ErrorMessages.FAILED_TO_GET_APPLICATION, oAuthConsumerApp.getApplicationName(), e);
-        }
-
         if (createdApp == null) {
             throw DCRMUtils.generateServerException(DCRMConstants.ErrorMessages.FAILED_TO_REGISTER_APPLICATION, spName);
-        }
-
-        if (log.isDebugEnabled()) {
-            log.debug("Retrieved Details of OAuth App: " + createdApp.getApplicationName() + " in tenant: " +
-                    tenantDomain);
         }
         return createdApp;
     }

@@ -219,7 +219,8 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
                                                                  String tenantDomain) throws UserInfoEndpointException {
 
         String grantType = getGrantType(validationResponseDTO);
-        return OIDCClaimUtil.filterUserClaimsBasedOnConsent(userClaims, user, clientId, tenantDomain, grantType);
+        return OIDCClaimUtil.filterUserClaimsBasedOnConsent(userClaims, user, clientId, tenantDomain, grantType,
+                getServiceProvider(tenantDomain, clientId));
     }
 
 
