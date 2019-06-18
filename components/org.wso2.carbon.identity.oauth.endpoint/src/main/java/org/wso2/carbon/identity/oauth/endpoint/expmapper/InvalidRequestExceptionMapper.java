@@ -63,7 +63,7 @@ public class InvalidRequestExceptionMapper implements ExceptionMapper<InvalidReq
 
         if (exception instanceof InvalidRequestException) {
             try {
-                return buildErrorResponse(exception, HttpServletResponse.SC_FOUND, OAuth2ErrorCodes.INVALID_REQUEST);
+                return buildErrorResponse(exception, HttpServletResponse.SC_FOUND);
             } catch (URISyntaxException e) {
                 if (log.isDebugEnabled()) {
                     log.debug("Error while getting endpoint error page URL", e);
@@ -72,7 +72,7 @@ public class InvalidRequestExceptionMapper implements ExceptionMapper<InvalidReq
             }
         } else if (exception instanceof AccessDeniedException) {
             try {
-                return buildErrorResponse(exception, HttpServletResponse.SC_FOUND, OAuth2ErrorCodes.ACCESS_DENIED);
+                return buildErrorResponse(exception, HttpServletResponse.SC_FOUND);
             } catch (URISyntaxException e) {
                 if (log.isDebugEnabled()) {
                     log.debug("Error while getting endpoint error page URL", e);
@@ -90,7 +90,7 @@ public class InvalidRequestExceptionMapper implements ExceptionMapper<InvalidReq
             }
         }  else if (exception instanceof BadRequestException) {
             try {
-                return buildErrorResponse(exception, HttpServletResponse.SC_BAD_REQUEST, OAuth2ErrorCodes.INVALID_REQUEST);
+                return buildErrorResponse(exception, HttpServletResponse.SC_BAD_REQUEST);
             } catch (URISyntaxException e) {
                 if (log.isDebugEnabled()) {
                     log.debug("Error while getting endpoint error page URL", e);
@@ -147,14 +147,13 @@ public class InvalidRequestExceptionMapper implements ExceptionMapper<InvalidReq
         return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
     }
 
-    private Response buildErrorResponse(InvalidRequestParentException exception, int status, String errorCode)
-            throws URISyntaxException {
+    private Response buildErrorResponse(InvalidRequestParentException exception, int status) throws URISyntaxException {
 
         if (log.isDebugEnabled()) {
             log.debug("Response status :" + status);
         }
-        return Response.status(status).location(new URI(EndpointUtil.getErrorPageURL(request, errorCode,
-                exception.getMessage(), null))).build();
+        return Response.status(status).location(new URI(EndpointUtil.getErrorPageURL(request, exception.getErrorCode(),
+                exception.getSubErrorCode(), exception.getMessage(), null))).build();
     }
 
     private Response buildErrorResponseConsentHandlingFailure(InvalidRequestParentException exception)
@@ -164,8 +163,8 @@ public class InvalidRequestExceptionMapper implements ExceptionMapper<InvalidReq
             log.debug("System Error while handling consent: ", exception);
         }
         return Response.status(HttpServletResponse.SC_FOUND).location(new URI(
-                EndpointUtil.getErrorPageURL(request, OAuth2ErrorCodes.SERVER_ERROR, "Error while handling consent.",
-                        null))).build();
+                EndpointUtil.getErrorPageURL(request, OAuth2ErrorCodes.SERVER_ERROR, OAuth2ErrorCodes
+                        .OAuth2SubErrorCodes.CONSENT_DENIED, "Error while handling consent.", null))).build();
     }
 
     private Response buildErrorResponse(int status, InvalidRequestParentException exception, String errorCode)

@@ -306,6 +306,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             connection.commit();
             return true;
         } catch (SQLException e) {
+            IdentityDatabaseUtil.rollBack(connection);
             throw new IdentityOAuth2Exception("Error occurred while persisting access token", e);
         } finally {
             IdentityDatabaseUtil.closeConnection(connection);
@@ -1425,6 +1426,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             }
             connection.commit();
         } catch (SQLException e) {
+            IdentityDatabaseUtil.rollBack(connection);
             String errorMsg = "Error while regenerating access token";
             throw new IdentityOAuth2Exception(errorMsg, e);
         } finally {

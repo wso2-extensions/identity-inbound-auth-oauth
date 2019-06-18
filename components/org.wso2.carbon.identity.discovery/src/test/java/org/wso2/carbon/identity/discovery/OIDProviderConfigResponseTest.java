@@ -298,6 +298,22 @@ public class OIDProviderConfigResponseTest {
     }
 
     @Test
+    public void testIsandSetClaimsParameterSupported() throws Exception {
+        Boolean isClaimsParameterSupported = true;
+        oidProviderConfigResponse.setClaimsParameterSupported(true);
+        Boolean isClaimsParameterSupported1 = oidProviderConfigResponse.isClaimsParameterSupported();
+        assertEquals(isClaimsParameterSupported1, isClaimsParameterSupported);
+    }
+
+    @Test
+    public void testIsandSetRequestParameterSupported() throws Exception {
+        Boolean isRequestParameterSupported = true;
+        oidProviderConfigResponse.setRequestParameterSupported(true);
+        Boolean isRequestParameterSupported1 = oidProviderConfigResponse.isRequestParameterSupported();
+        assertEquals(isRequestParameterSupported1, isRequestParameterSupported);
+    }
+
+    @Test
     public void testGetandSetRequestUriParameterSupported() throws Exception {
         String requestUriParameterSupported = "parameter";
         oidProviderConfigResponse.setRequestUriParameterSupported("parameter");

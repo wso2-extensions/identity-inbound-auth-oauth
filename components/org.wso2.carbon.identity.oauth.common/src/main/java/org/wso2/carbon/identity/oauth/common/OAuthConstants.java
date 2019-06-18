@@ -187,6 +187,7 @@ public final class OAuthConstants {
         public static final String ESSENTIAL = "essential";
         public static final String USERINFO = "userinfo";
         public static final String CLIENT_ID = "client_id";
+        public static final String REDIRECT_URI = "redirect_uri";
 
         private OAuth20Params() {
 
