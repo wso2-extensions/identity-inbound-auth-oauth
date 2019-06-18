@@ -140,6 +140,7 @@ public class OAuthServerConfiguration {
     private boolean isRefreshTokenRenewalEnabled = true;
     private boolean assertionsUserNameEnabled = false;
     private boolean accessTokenPartitioningEnabled = false;
+    private boolean redirectToRequestedRedirectUriEnabled = true;
     private String accessTokenPartitioningDomains = null;
     private TokenPersistenceProcessor persistenceProcessor = null;
     private Set<OAuthCallbackHandlerMetaData> callbackHandlerMetaData = new HashSet<>();
@@ -162,6 +163,7 @@ public class OAuthServerConfiguration {
     private Map<String, Properties> supportedClientAuthHandlerData = new HashMap<>();
     private String saml2TokenCallbackHandlerName = null;
     private String saml2BearerTokenUserType;
+    private boolean saml2UserIdFromClaims = false;
     private boolean mapFederatedUsersToLocal = false;
     private SAML2TokenCallbackHandler saml2TokenCallbackHandler = null;
     private Map<String, String> tokenValidatorClassNames = new HashMap();
@@ -388,6 +390,9 @@ public class OAuthServerConfiguration {
 
         // Read token introspection related configurations.
         parseTokenIntrospectionConfig(oauthElem);
+
+        // Read the property for error redirection URI
+        parseRedirectToOAuthErrorPageConfig(oauthElem);
     }
 
     private void parseTokenIntrospectionConfig(OMElement oauthElem) {
@@ -973,6 +978,10 @@ public class OAuthServerConfiguration {
         return idTokenNotAllowedGrantTypesSet;
     }
 
+    public boolean isRedirectToRequestedRedirectUriEnabled(){
+        return redirectToRequestedRedirectUriEnabled;
+    }
+
     public boolean isUserNameAssertionEnabled() {
         return assertionsUserNameEnabled;
     }
@@ -1238,6 +1247,11 @@ public class OAuthServerConfiguration {
 
     public String getSaml2BearerTokenUserType() {
         return saml2BearerTokenUserType;
+    }
+
+    public boolean getSaml2UserIdFromClaims() {
+
+        return saml2UserIdFromClaims;
     }
 
     public boolean isConvertOriginalClaimsFromAssertionsToOIDCDialect() {
@@ -2224,16 +2238,22 @@ public class OAuthServerConfiguration {
                 oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.SAML2_GRANT));
         OMElement saml2BearerUserTypeElement = null;
         OMElement saml2TokenHandlerElement = null;
+        OMElement saml2UserIdFromClaimElement = null;
         if (saml2GrantElement != null) {
             saml2BearerUserTypeElement = saml2GrantElement.getFirstChildWithName(getQNameWithIdentityNS
                     (ConfigElements.SAML2_BEARER_USER_TYPE));
             saml2TokenHandlerElement = saml2GrantElement.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.SAML2_TOKEN_HANDLER));
+            saml2UserIdFromClaimElement = saml2GrantElement.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.
+                    SAML2_USER_ID_FROM_CLAIMS));
         }
         if (saml2TokenHandlerElement != null && StringUtils.isNotBlank(saml2TokenHandlerElement.getText())) {
             saml2TokenCallbackHandlerName = saml2TokenHandlerElement.getText().trim();
         }
         if (saml2BearerUserTypeElement != null && StringUtils.isNotBlank(saml2BearerUserTypeElement.getText())) {
             saml2BearerTokenUserType = saml2BearerUserTypeElement.getText().trim();
+        }
+        if (saml2UserIdFromClaimElement != null && StringUtils.isNotBlank(saml2UserIdFromClaimElement.getText())) {
+            saml2UserIdFromClaims = Boolean.parseBoolean(saml2UserIdFromClaimElement.getText().trim());
         }
     }
 
@@ -2590,6 +2610,19 @@ public class OAuthServerConfiguration {
             }
         }
     }
+    private void parseRedirectToOAuthErrorPageConfig(OMElement oauthConfigElem){
+        OMElement redirectToOAuthErrorPageElem =
+                oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements
+                        .REDIRECT_TO_REQUESTED_REDIRECT_URI));
+        if (redirectToOAuthErrorPageElem != null) {
+            redirectToRequestedRedirectUriEnabled =
+                    Boolean.parseBoolean(redirectToOAuthErrorPageElem.getText());
+        }
+
+        if (log.isDebugEnabled()) {
+            log.debug("Redirecting to OAuth2 Error page is set to : " + redirectToOAuthErrorPageElem);
+        }
+    }
 
     public OAuth2ScopeValidator getoAuth2ScopeValidator() {
         return oAuth2ScopeValidator;
@@ -2712,6 +2745,7 @@ public class OAuthServerConfiguration {
         public static final String ENABLE_ASSERTIONS = "EnableAssertions";
         public static final String ENABLE_ASSERTIONS_USERNAME = "UserName";
         public static final String ENABLE_ACCESS_TOKEN_PARTITIONING = "EnableAccessTokenPartitioning";
+        public static final String REDIRECT_TO_REQUESTED_REDIRECT_URI = "RedirectToRequestedRedirectUri";
         public static final String ACCESS_TOKEN_PARTITIONING_DOMAINS = "AccessTokenPartitioningDomains";
         // OpenIDConnect configurations
         public static final String OPENID_CONNECT = "OpenIDConnect";
@@ -2831,6 +2865,7 @@ public class OAuthServerConfiguration {
         private static final String SAML2_GRANT = "SAML2Grant";
         private static final String SAML2_TOKEN_HANDLER = "SAML2TokenHandler";
         private static final String SAML2_BEARER_USER_TYPE = "UserType";
+        private static final String SAML2_USER_ID_FROM_CLAIMS = "UseUserIdFromClaims";
 
         // To enable revoke response headers
         private static final String ENABLE_REVOKE_RESPONSE_HEADERS = "EnableRevokeResponseHeaders";

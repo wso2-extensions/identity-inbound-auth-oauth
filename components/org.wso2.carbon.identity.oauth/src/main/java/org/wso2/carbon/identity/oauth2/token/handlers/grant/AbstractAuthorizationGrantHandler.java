@@ -19,7 +19,6 @@
 package org.wso2.carbon.identity.oauth2.token.handlers.grant;
 
 import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -54,12 +53,12 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oauth2.util.Oauth2ScopeUtils;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeHandler;
-import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeValidator;
-import org.wso2.carbon.user.api.UserStoreException;
 
 import java.sql.Timestamp;
 import java.util.Date;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.ArrayList;
@@ -218,7 +217,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     @Override
     public boolean validateScope(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
 
-        if (!validateByApplicationScopeValidator(tokReqMsgCtx)) {
+        if (hasValidateByApplicationScopeValidatorsFailed(tokReqMsgCtx)) {
             return false;
         }
         OAuthCallback scopeValidationCallback = new OAuthCallback(tokReqMsgCtx.getAuthorizedUser(),
@@ -588,11 +587,14 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                     e);
         }
 
-        if (issueRefreshToken() &&
-                OAuthServerConfiguration.getInstance().getSupportedGrantTypes().containsKey(
-                        GrantType.REFRESH_TOKEN.toString())) {
+        if (issueRefreshToken() && OAuthServerConfiguration.getInstance().getSupportedGrantTypes().containsKey(
+                GrantType.REFRESH_TOKEN.toString())) {
             String grantTypes = oAuthAppDO.getGrantTypes();
-            if (StringUtils.isNotEmpty(grantTypes) && grantTypes.contains(OAuthConstants.GrantTypes.REFRESH_TOKEN)) {
+            List<String> supportedGrantTypes = new ArrayList<>();
+            if (StringUtils.isNotEmpty(grantTypes)) {
+                supportedGrantTypes = Arrays.asList(grantTypes.split(" "));
+            }
+            if (supportedGrantTypes.contains(OAuthConstants.GrantTypes.REFRESH_TOKEN)) {
                 tokenRespDTO.setRefreshToken(existingAccessTokenDO.getRefreshToken());
             } else {
                 if (log.isDebugEnabled()) {
@@ -898,5 +900,14 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
 
         return (OAuth2Service) PrivilegedCarbonContext
                 .getThreadLocalCarbonContext().getOSGiService(OAuth2Service.class, null);
+    }
+
+    /**
+     * Inverting validateByApplicationScopeValidator method for better readability.
+     */
+    private boolean hasValidateByApplicationScopeValidatorsFailed(OAuthTokenReqMessageContext tokenReqMsgContext)
+            throws IdentityOAuth2Exception {
+
+        return !Oauth2ScopeUtils.validateByApplicationScopeValidator(tokenReqMsgContext, null);
     }
 }

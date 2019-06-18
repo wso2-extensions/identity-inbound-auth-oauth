@@ -473,6 +473,7 @@ public class TokenMgtDAO {
             connection.commit();
             return true;
         } catch (SQLException e) {
+            IdentityDatabaseUtil.rollBack(connection);
             throw new IdentityOAuth2Exception("Error occurred while persisting access token", e);
         } finally {
             IdentityDatabaseUtil.closeConnection(connection);
@@ -1856,6 +1857,7 @@ public class TokenMgtDAO {
             // commit both transactions
             connection.commit();
         } catch (SQLException e) {
+            IdentityDatabaseUtil.rollBack(connection);
             String errorMsg = "Error while regenerating access token";
             throw new IdentityOAuth2Exception(errorMsg, e);
         } finally {
@@ -1898,6 +1900,7 @@ public class TokenMgtDAO {
             connection.commit();
 
         } catch (SQLException e) {
+            IdentityDatabaseUtil.rollBack(connection);
             String errorMsg = "Error deleting OAuth consent of Application " + applicationName + " and User " + username;
             throw new IdentityOAuth2Exception(errorMsg, e);
         } finally {
@@ -1942,6 +1945,7 @@ public class TokenMgtDAO {
             connection.commit();
 
         } catch (SQLException e) {
+            IdentityDatabaseUtil.rollBack(connection);
             String errorMsg = "Error deleting OAuth consent of Application " + applicationName + " and User " + username;
             throw new IdentityOAuth2Exception(errorMsg, e);
         } finally {
@@ -1987,6 +1991,7 @@ public class TokenMgtDAO {
             connection.commit();
 
         } catch (SQLException e) {
+            IdentityDatabaseUtil.rollBack(connection);
             String errorMsg = "Error updating trusted always in a consent of Application " + applicationName + " and User " + tenantAwareUserName;
             throw new IdentityOAuth2Exception(errorMsg, e);
         } finally {
@@ -2760,6 +2765,7 @@ public class TokenMgtDAO {
             connection.commit();
 
         } catch (SQLException e) {
+            IdentityDatabaseUtil.rollBack(connection);
             throw new IdentityApplicationManagementException("Error while executing the SQL statement.", e);
         } finally {
             IdentityDatabaseUtil.closeStatement(updateStateStatement);

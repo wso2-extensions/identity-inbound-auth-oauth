@@ -35,10 +35,10 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oauth2.util.Oauth2ScopeUtils;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 /**
  * AbstractResponseTypeHandler contains all the common methods of all three basic handlers.
@@ -82,6 +82,11 @@ public abstract class AbstractResponseTypeHandler implements ResponseTypeHandler
 
     @Override
     public boolean validateScope(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) throws IdentityOAuth2Exception {
+
+        if (hasValidateByApplicationScopeValidatorsFailed(oauthAuthzMsgCtx)) {
+            return false;
+        }
+
         OAuth2AuthorizeReqDTO authorizationReqDTO = oauthAuthzMsgCtx.getAuthorizationReqDTO();
         OAuthCallback scopeValidationCallback = new OAuthCallback(authorizationReqDTO.getUser(),
                 authorizationReqDTO.getConsumerKey(), OAuthCallback.OAuthCallbackType.SCOPE_VALIDATION_AUTHZ);
@@ -154,4 +159,12 @@ public abstract class AbstractResponseTypeHandler implements ResponseTypeHandler
         return respDTO;
     }
 
+    /**
+     * Inverting validateByApplicationScopeValidator method for better readability.
+     */
+    private boolean hasValidateByApplicationScopeValidatorsFailed(OAuthAuthzReqMessageContext authzReqMessageContext)
+            throws IdentityOAuth2Exception {
+
+        return !Oauth2ScopeUtils.validateByApplicationScopeValidator(null, authzReqMessageContext);
+    }
 }

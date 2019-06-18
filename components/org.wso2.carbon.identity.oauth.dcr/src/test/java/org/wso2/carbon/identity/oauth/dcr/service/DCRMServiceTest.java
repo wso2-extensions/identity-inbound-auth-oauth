@@ -361,6 +361,8 @@ public class DCRMServiceTest extends PowerMockTestCase {
 
         when(mockOAuthAdminService
                 .getOAuthApplicationDataByAppName(dummyClientName)).thenReturn(oAuthConsumerApp);
+        when(mockOAuthAdminService.registerAndRetrieveOAuthApplicationData(any(OAuthConsumerAppDTO.class)))
+                .thenReturn(oAuthConsumerApp);
 
         Application application = dcrmService.registerApplication(applicationRegistrationRequest);
         assertEquals(application.getClient_name(), dummyClientName);
@@ -517,6 +519,8 @@ public class DCRMServiceTest extends PowerMockTestCase {
         when(mockOAuthAdminService
                 .getOAuthApplicationData("dummyConsumerKey")).thenReturn(oAuthConsumerApp);
         when(mockOAuthAdminService.getAllOAuthApplicationData()).thenReturn(new OAuthConsumerAppDTO[]{oAuthConsumerApp});
+        when(mockOAuthAdminService.registerAndRetrieveOAuthApplicationData(any(OAuthConsumerAppDTO.class))).
+                thenReturn(oAuthConsumerApp);
 
         doThrow(new IdentityApplicationManagementException("ehweh")).when(mockApplicationManagementService)
                 .updateApplication(serviceProvider, dummyTenantDomain, dummyUserName);
