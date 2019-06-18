@@ -458,7 +458,7 @@ public class OAuth2Util {
         return true;
     }
 
-    private static TokenPersistenceProcessor getPersistenceProcessor() {
+    public static TokenPersistenceProcessor getPersistenceProcessor() {
 
         TokenPersistenceProcessor persistenceProcessor;
         try {
