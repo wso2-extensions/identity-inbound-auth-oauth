@@ -2861,12 +2861,12 @@ public class OAuth2Util {
     /**
      * Used to build an OAuth revocation request DTO.
      *
-     * @param oAuthClientAuthnContext  OAuth client authentication context.
-     * @param accessToken Access token to be revoked.
+     * @param oAuthClientAuthnContext OAuth client authentication context.
+     * @param accessToken             Access token to be revoked.
      * @return Returns a OAuth revocation request DTO.
      */
     public static OAuthRevocationRequestDTO buildOAuthRevocationRequest(OAuthClientAuthnContext oAuthClientAuthnContext,
-                                                                        String accessToken){
+                                                                        String accessToken) {
 
         OAuthRevocationRequestDTO revocationRequestDTO = new OAuthRevocationRequestDTO();
 
