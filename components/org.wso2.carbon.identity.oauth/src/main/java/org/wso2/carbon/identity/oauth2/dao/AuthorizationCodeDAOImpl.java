@@ -298,7 +298,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             // should be updated/removed.
             OAuth2TokenUtil.postRevokeCode(authzCode, newState, null);
         } catch (SQLException e) {
-            IdentityDatabaseUtil.rollBack(connection);
+            IdentityDatabaseUtil.rollbackTransaction(connection);
             throw new IdentityOAuth2Exception("Error occurred while updating the state of Authorization Code : " +
                     authzCode.toString(), e);
         } finally {
@@ -382,7 +382,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             }
             connection.commit();
         } catch (SQLException e) {
-            IdentityDatabaseUtil.rollBack(connection);
+            IdentityDatabaseUtil.rollbackTransaction(connection);
             throw new IdentityOAuth2Exception("Error occurred while revoking Access Token with user Name : " +
                     authenticatedUser.getUserName() + " tenant ID : " + OAuth2Util.getTenantId(authenticatedUser
                     .getTenantDomain()), e);
@@ -415,7 +415,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             }
             connection.commit();
         } catch (SQLException e) {
-            IdentityDatabaseUtil.rollBack(connection);
+            IdentityDatabaseUtil.rollbackTransaction(connection);
             throw new IdentityOAuth2Exception("Error occurred while getting authorization codes from authorization code " +
                     "table for the application with consumer key : " + consumerKey, e);
         } finally {
@@ -448,7 +448,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             }
             connection.commit();
         } catch (SQLException e) {
-            IdentityDatabaseUtil.rollBack(connection);
+            IdentityDatabaseUtil.rollbackTransaction(connection);
             throw new IdentityOAuth2Exception("Error occurred while getting authorization codes from authorization code " +
                     "table for the application with consumer key : " + consumerKey, e);
         } finally {
@@ -504,7 +504,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             }
             connection.commit();
         } catch (SQLException e) {
-            IdentityDatabaseUtil.rollBack(connection);
+            IdentityDatabaseUtil.rollbackTransaction(connection);
             throw new IdentityOAuth2Exception("Error occurred while retrieving latest authorization codes of tenant " +
                     ":" + tenantId, e);
         } finally {
@@ -560,7 +560,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             }
             connection.commit();
         } catch (SQLException e) {
-            IdentityDatabaseUtil.rollBack(connection);
+            IdentityDatabaseUtil.rollbackTransaction(connection);
             throw new IdentityOAuth2Exception("Error occurred while retrieving latest authorization codes of user " +
                     "store : " + userStoreDomain + " in tenant :" + tenantId, e);
         } finally {
@@ -594,7 +594,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             }
             connection.commit();
         } catch (SQLException e) {
-            IdentityDatabaseUtil.rollBack(connection);
+            IdentityDatabaseUtil.rollbackTransaction(connection);
             throw new IdentityOAuth2Exception("Error occurred while renaming user store : " + currentUserStoreDomain +
                     "in tenant :" + tenantId, e);
         } finally {
