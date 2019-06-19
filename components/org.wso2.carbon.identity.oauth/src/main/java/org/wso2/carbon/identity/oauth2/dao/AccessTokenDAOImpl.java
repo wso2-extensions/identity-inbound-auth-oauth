@@ -226,7 +226,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                         retryAttemptCounter);
             }
         } catch (SQLIntegrityConstraintViolationException e) {
-            IdentityDatabaseUtil.rollBack(connection);
+            IdentityDatabaseUtil.rollbackTransaction(connection);
             if (retryAttemptCounter >= getTokenPersistRetryCount()) {
                 log.error("'CON_APP_KEY' constrain violation retry count exceeds above the maximum count - " +
                         getTokenPersistRetryCount());
@@ -239,10 +239,10 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             recoverFromConAppKeyConstraintViolation(accessToken, consumerKey, accessTokenDO, connection,
                     userStoreDomain, retryAttemptCounter + 1);
         } catch (DataTruncation e) {
-            IdentityDatabaseUtil.rollBack(connection);
+            IdentityDatabaseUtil.rollbackTransaction(connection);
             throw new IdentityOAuth2Exception("Invalid request", e);
         } catch (SQLException e) {
-            IdentityDatabaseUtil.rollBack(connection);
+            IdentityDatabaseUtil.rollbackTransaction(connection);
             // Handle constrain violation issue in JDBC drivers which does not throw
             // SQLIntegrityConstraintViolationException
             if (StringUtils.containsIgnoreCase(e.getMessage(), "CON_APP_KEY")) {
@@ -306,7 +306,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             connection.commit();
             return true;
         } catch (SQLException e) {
-            IdentityDatabaseUtil.rollBack(connection);
+            IdentityDatabaseUtil.rollbackTransaction(connection);
             throw new IdentityOAuth2Exception("Error occurred while persisting access token", e);
         } finally {
             IdentityDatabaseUtil.closeConnection(connection);
@@ -663,7 +663,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             connection.commit();
             return accessTokenDO;
         } catch (SQLException e) {
-            IdentityDatabaseUtil.rollBack(connection);
+            IdentityDatabaseUtil.rollbackTransaction(connection);
             String errorMsg = "Error occurred while trying to retrieve latest 'ACTIVE' " +
                     "access token for Client ID : " + consumerKey + ", User ID : " + authzUser +
                     " and  Scope : " + scope;
@@ -921,7 +921,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             prepStmt.executeUpdate();
             OAuth2TokenUtil.postUpdateAccessToken(tokenId, tokenState);
         } catch (SQLException e) {
-            IdentityDatabaseUtil.rollBack(connection);
+            IdentityDatabaseUtil.rollbackTransaction(connection);
             throw new IdentityOAuth2Exception("Error while updating Access Token with ID : " +
                     tokenId + " to Token State : " + tokenState, e);
         } finally {
@@ -986,7 +986,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 }
                 connection.commit();
             } catch (SQLException e) {
-                IdentityDatabaseUtil.rollBack(connection);
+                IdentityDatabaseUtil.rollbackTransaction(connection);
                 throw new IdentityOAuth2Exception("Error occurred while revoking Access Tokens : " +
                         Arrays.toString(tokens), e);
             } finally {
@@ -1013,7 +1013,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 }
 
             } catch (SQLException e) {
-                // IdentityDatabaseUtil.rollBack(connection);
+                // IdentityDatabaseUtil.rollbackTransaction(connection);
                 throw new IdentityOAuth2Exception("Error occurred while revoking Access Token : " +
                         Arrays.toString(tokens), e);
             } finally {
@@ -1072,7 +1072,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             connection.commit();
 
         } catch (SQLException e) {
-            IdentityDatabaseUtil.rollBack(connection);
+            IdentityDatabaseUtil.rollbackTransaction(connection);
             throw new IdentityOAuth2Exception("Error occurred while revoking Access Token : " +
                     Arrays.toString(tokens), e);
         } finally {
@@ -1117,7 +1117,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             connection.commit();
 
         } catch (SQLException e) {
-            IdentityDatabaseUtil.rollBack(connection);
+            IdentityDatabaseUtil.rollbackTransaction(connection);
             throw new IdentityOAuth2Exception("Error occurred while revoking Access Token with ID : " + tokenId, e);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, null, ps);
@@ -1192,7 +1192,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             }
             connection.commit();
         } catch (SQLException e) {
-            IdentityDatabaseUtil.rollBack(connection);
+            IdentityDatabaseUtil.rollbackTransaction(connection);
             throw new IdentityOAuth2Exception("Error occurred while revoking Access Token with user Name : " +
                     authenticatedUser.getUserName() + " tenant ID : " + OAuth2Util.getTenantId(authenticatedUser
                     .getTenantDomain()), e);
@@ -1280,7 +1280,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             }
             connection.commit();
         } catch (SQLException e) {
-            IdentityDatabaseUtil.rollBack(connection);
+            IdentityDatabaseUtil.rollbackTransaction(connection);
             throw new IdentityOAuth2Exception("Error occurred while getting access tokens from acces token table for " +
                     "the application with consumer key : " + consumerKey, e);
         } finally {
@@ -1378,7 +1378,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             activeDetailedTokens = new HashSet<>(tokenMap.values());
             connection.commit();
         } catch (SQLException e) {
-            IdentityDatabaseUtil.rollBack(connection);
+            IdentityDatabaseUtil.rollbackTransaction(connection);
             throw new IdentityOAuth2Exception("Error occurred while getting access tokens from acces token table for " +
                     "the application with consumer key : " + consumerKey, e);
         } finally {
@@ -1443,7 +1443,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             }
             connection.commit();
         } catch (SQLException e) {
-            IdentityDatabaseUtil.rollBack(connection);
+            IdentityDatabaseUtil.rollbackTransaction(connection);
             String errorMsg = "Error while regenerating access token";
             throw new IdentityOAuth2Exception(errorMsg, e);
         } finally {
@@ -1667,7 +1667,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             }
             connection.commit();
         } catch (SQLException e) {
-            IdentityDatabaseUtil.rollBack(connection);
+            IdentityDatabaseUtil.rollbackTransaction(connection);
             throw new IdentityOAuth2Exception("Error occurred while renaming user store : " + currentUserStoreDomain +
                     " in tenant :" + tenantId, e);
         } finally {

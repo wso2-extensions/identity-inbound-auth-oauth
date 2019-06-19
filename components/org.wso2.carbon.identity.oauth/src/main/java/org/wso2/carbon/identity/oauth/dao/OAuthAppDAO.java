@@ -846,7 +846,7 @@ public class OAuthAppDAO {
         } catch (SQLException e) {
             String errorMsg = "Error occurred while retrieving OIDC audiences for client ID: " + consumerKey +
                     " and tenant domain: " + tenantDomain;
-            IdentityDatabaseUtil.rollBack(connection);
+            IdentityDatabaseUtil.rollbackTransaction(connection);
             throw new IdentityOAuth2Exception(errorMsg, e);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, rSetAudiences, prepStmt);
@@ -870,7 +870,7 @@ public class OAuthAppDAO {
         } catch (SQLException e) {
             String errorMsg = "Error removing OIDC properties for client ID: " + consumerKey + " and tenant domain: "
                     + tenantDomain;
-            IdentityDatabaseUtil.rollBack(connection);
+            IdentityDatabaseUtil.rollbackTransaction(connection);
             throw new IdentityOAuthAdminException(errorMsg, e);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, null, null);
