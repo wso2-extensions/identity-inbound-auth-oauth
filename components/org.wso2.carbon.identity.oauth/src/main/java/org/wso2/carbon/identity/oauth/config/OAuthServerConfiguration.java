@@ -2715,7 +2715,12 @@ public class OAuthServerConfiguration {
         }
     }
 
-    public boolean isScopeValidationEnabledForCodeAndImplicitGran() {
+    /**
+     * This method returns the value of the property ScopeValidationEnabledForAuthzCodeAndImplicitGrant  for the OAuth
+     * configuration
+     * in identity.xml.
+     */
+    public boolean isScopeValidationEnabledForCodeAndImplicitGrant() {
         return scopeValidationConfigValue;
     }
 
