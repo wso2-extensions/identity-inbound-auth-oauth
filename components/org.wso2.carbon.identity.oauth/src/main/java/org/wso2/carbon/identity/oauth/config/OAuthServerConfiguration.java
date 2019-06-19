@@ -293,7 +293,7 @@ public class OAuthServerConfiguration {
 
         //Get scopeValidationEnabledConfigValue
         OMElement scopeValidationElem = oauthElem.getFirstChildWithName(
-                getQNameWithIdentityNS(ConfigElements.SCOPE_VALIDATION_FOR_AUTH_CODE_AND_IMPLICIT));
+                getQNameWithIdentityNS(ConfigElements.SCOPE_VALIDATION_FOR_AUTHZ_CODE_AND_IMPLICIT));
 
         if (scopeValidationElem != null) {
             scopeValidationConfigValue = Boolean.parseBoolean(scopeValidationElem.getText());
@@ -2715,7 +2715,7 @@ public class OAuthServerConfiguration {
         }
     }
 
-    public boolean isScopeValidationEnabledForImplicitAndCodeGrant() {
+    public boolean isScopeValidationEnabledForCodeAndImplicitGran() {
         return scopeValidationConfigValue;
     }
 
@@ -2815,7 +2815,7 @@ public class OAuthServerConfiguration {
         private static final String IMPLICIT_ERROR_FRAGMENT = "ImplicitErrorFragment";
 
         // Enable/Disable scope validation for implicit grant and authorization code grant
-        private static final String SCOPE_VALIDATION_FOR_AUTH_CODE_AND_IMPLICIT = "ScopeValidationEnabledForAuthCodeAndImplicitGrant";
+        private static final String SCOPE_VALIDATION_FOR_AUTHZ_CODE_AND_IMPLICIT = "ScopeValidationEnabledForAuthzCodeAndImplicitGrant";
 
         // Default timestamp skew
         private static final String TIMESTAMP_SKEW = "TimestampSkew";
