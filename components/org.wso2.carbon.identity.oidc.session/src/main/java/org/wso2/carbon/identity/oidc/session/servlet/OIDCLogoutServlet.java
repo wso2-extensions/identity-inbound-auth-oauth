@@ -763,15 +763,28 @@ public class OIDCLogoutServlet extends HttpServlet {
             response.sendRedirect(getRedirectURL(redirectURL, request));
             return;
         }
+        String clientId;
+        try {
+            clientId = extractClientFromIdToken(idTokenHint);
+        } catch (ParseException e) {
+            String msg = "Error occurred while extracting data from id token.";
+            if (log.isDebugEnabled()) {
+                log.debug("Error occurred while retrieving client id from id token.", e);
+            }
+            redirectURL = OIDCSessionManagementUtil.getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, msg);
+            response.sendRedirect(getRedirectURL(redirectURL, request));
+            return;
+        }
         if (!validateIdToken(idTokenHint)) {
             String msg = "ID token signature validation failed.";
-            log.error(msg);
+            if (log.isDebugEnabled()) {
+                log.debug(msg + " Client id from id token: " + clientId);
+            }
             redirectURL = OIDCSessionManagementUtil.getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, msg);
             response.sendRedirect(getRedirectURL(redirectURL, request));
             return;
         }
         try {
-            String clientId = extractClientFromIdToken(idTokenHint);
             String callbackUrl = new OAuthAppDAO().getAppInformation(clientId).getCallbackUrl();
             if (validatePostLogoutUri(postLogoutRedirectUri, callbackUrl)) {
                 redirectURL = postLogoutRedirectUri;
@@ -779,13 +792,15 @@ public class OIDCLogoutServlet extends HttpServlet {
                 redirectURL = OIDCSessionManagementUtil.getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED,
                         "Post logout URI does not match with registered callback URI.");
             }
-        } catch (ParseException e) {
-            String msg = "Error occurred while getting application information.";
-            log.error(msg, e);
-            redirectURL = OIDCSessionManagementUtil.getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, msg);
-        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+        } catch (InvalidOAuthClientException e) {
             String msg = "Error occurred while getting application information. Client id not found.";
-            log.error(msg, e);
+            if (log.isDebugEnabled()) {
+                log.debug(msg + " Client id from id token: " + clientId, e);
+            }
+            redirectURL = OIDCSessionManagementUtil.getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, msg);
+        } catch (IdentityOAuth2Exception e) {
+            String msg = "Error occurred while getting application information. Client id not found.";
+            log.error(msg + " Client id from id token: " + clientId, e);
             redirectURL = OIDCSessionManagementUtil.getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, msg);
         }
         response.sendRedirect(getRedirectURL(redirectURL, request));
