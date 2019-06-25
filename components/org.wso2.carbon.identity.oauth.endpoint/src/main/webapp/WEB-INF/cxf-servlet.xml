@@ -33,13 +33,17 @@
             <ref bean="jwksEndpointBean"/>
             <ref bean="oidcdiscoveryEndpointBean"/>
         </jaxrs:serviceBeans>
-
+        <jaxrs:inInterceptors>
+            <ref bean="oauthClientAuthnBean"/>
+        </jaxrs:inInterceptors>
         <jaxrs:providers>
             <bean class="org.wso2.carbon.identity.oauth.endpoint.expmapper.InvalidRequestExceptionMapper"/>
         </jaxrs:providers>
     </jaxrs:server>
 
-    <bean id="oauthClientAuthnBean" class="org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthenticatorProxy"/>
+    <bean id="oauthClientAuthnBean" class="org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthenticatorProxy">
+        <property name="oAuthClientAuthnService" ref="oAuthClientAuthnFactoryBean"/>
+    </bean>
     <bean id="authzEndpointBean" class="org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpoint"/>
     <bean id="tokenEndpointBean" class="org.wso2.carbon.identity.oauth.endpoint.token.OAuth2TokenEndpoint"/>
     <bean id="introspectionEndpointBean" class="org.wso2.carbon.identity.oauth.endpoint.introspection.OAuth2IntrospectionEndpoint"/>
@@ -47,4 +51,6 @@
     <bean id="userinfoEndpointBean" class="org.wso2.carbon.identity.oauth.endpoint.user.OpenIDConnectUserEndpoint"/>
     <bean id="jwksEndpointBean" class="org.wso2.carbon.identity.oauth.endpoint.jwks.JwksEndpoint"/>
     <bean id = "oidcdiscoveryEndpointBean" class="org.wso2.carbon.identity.oauth.endpoint.oidcdiscovery.OIDCDiscoveryEndpoint"/>
+    <bean id="oAuthClientAuthnServiceBean" class="org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnService"/>
+    <bean id="oAuthClientAuthnFactoryBean" class="org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthnServiceFactory"/>
 </beans>
