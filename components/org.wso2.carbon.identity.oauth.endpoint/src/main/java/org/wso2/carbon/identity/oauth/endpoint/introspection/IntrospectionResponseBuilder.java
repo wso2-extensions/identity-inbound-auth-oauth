@@ -214,9 +214,7 @@ public class IntrospectionResponseBuilder {
      */
     public IntrospectionResponseBuilder setAdditionalData(Map<String, Object> additionalData) {
 
-        if (additionalData != null) {
-            additionalData.entrySet().forEach(dataEntry -> parameters.put(dataEntry.getKey(), dataEntry.getValue()));
-        }
+        additionalData.entrySet().forEach(dataEntry -> parameters.put(dataEntry.getKey(), dataEntry.getValue()));
         return this;
     }
 }

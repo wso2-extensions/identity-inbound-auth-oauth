@@ -38,6 +38,7 @@ import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IDTokenValidationFailureException;
@@ -618,6 +619,35 @@ public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
         assertNotNull(tokenRespDTO);
         assertEquals(tokenRespDTO.isError(), !authnResult);
         assertEquals(tokenRespDTO.getErrorCode(), expectedErrorCode);
+    }
+
+    /**
+     * Test whether the client ID sent in error response for a invalid client token request, is properly encoded.
+     *
+     * @throws Exception
+     */
+    @Test
+    public void testIssueWithInvalidClient() throws Exception {
+
+        OAuthClientAuthnContext oAuthClientAuthnContext = new OAuthClientAuthnContext();
+        oAuthClientAuthnContext.setClientId("sampleID");
+        oAuthClientAuthnContext.setErrorCode(OAuth2ErrorCodes.INVALID_CLIENT);
+        oAuthClientAuthnContext.setAuthenticated(false);
+
+        String malicousClientID = "<img src=a onerror=alert(1)>";
+        String encodedClientID = "&lt;img src=a onerror=alert(1)&gt;";
+
+        OAuth2AccessTokenReqDTO reqDTO = new OAuth2AccessTokenReqDTO();
+        reqDTO.setGrantType(DUMMY_GRANT_TYPE);
+        reqDTO.setoAuthClientAuthnContext(oAuthClientAuthnContext);
+        reqDTO.setClientId(malicousClientID);
+        when(mockOAuthAppDO.getState()).thenReturn(null);
+
+        try {
+            AccessTokenIssuer.getInstance().issue(reqDTO);
+        } catch (InvalidOAuthClientException ex) {
+            assertTrue(ex.getMessage().contains(encodedClientID));
+        }
     }
 
     private AuthorizationGrantHandler getMockGrantHandlerForSuccess(boolean isOfTypeApplicationUser)

@@ -27,15 +27,20 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
  */
 public interface OAuth2TokenValidator {
 
-    public boolean validateAccessDelegation(OAuth2TokenValidationMessageContext messageContext)
+    boolean validateAccessDelegation(OAuth2TokenValidationMessageContext messageContext)
             throws IdentityOAuth2Exception;
 
-    public boolean validateScope(OAuth2TokenValidationMessageContext messageContext)
+    boolean validateScope(OAuth2TokenValidationMessageContext messageContext)
             throws IdentityOAuth2Exception;
 
     // For validation of token profile specific items.
     // E.g. validation of HMAC signature in HMAC token profile
-    public boolean validateAccessToken(OAuth2TokenValidationMessageContext validationReqDTO)
+    boolean validateAccessToken(OAuth2TokenValidationMessageContext validationReqDTO)
             throws IdentityOAuth2Exception;
+
+    default String getTokenType() {
+
+        return "Bearer";
+    }
 
 }

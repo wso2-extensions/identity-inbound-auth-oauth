@@ -312,7 +312,8 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
         authenticatedUser.setTenantDomain(tenantDomain);
         authenticatedUser.setUserName(userName);
         try {
-            accessTokens = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO().getAccessTokensByUser(authenticatedUser);
+            accessTokens = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                    .getAccessTokensByUser(authenticatedUser);
             authorizationCodes = OAuthTokenPersistenceFactory.getInstance()
                     .getAuthorizationCodeDAO().getAuthorizationCodesByUser(authenticatedUser);
             removeAccessTokensFromCache(accessTokens);

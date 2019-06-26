@@ -22,32 +22,36 @@ import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSVerifier;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jwt.SignedJWT;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.Property;
+import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
+import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnException;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oauth2.validators.jwt.JWKSBasedJWTValidator;
 import org.wso2.carbon.identity.openidconnect.model.Constants;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
-
 import java.security.PublicKey;
 import java.security.cert.Certificate;
 import java.security.interfaces.RSAPublicKey;
+import java.util.Date;
 import java.util.List;
-
 import static org.apache.commons.lang.StringUtils.isEmpty;
 import static org.apache.commons.lang.StringUtils.isNotEmpty;
 import static org.wso2.carbon.identity.openidconnect.model.Constants.RS;
@@ -74,12 +78,99 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
     public boolean validateSignature(RequestObject requestObject, OAuth2Parameters oAuth2Parameters) throws
             RequestObjectException {
 
+        boolean isVerified;
+        Certificate certificate = null;
         SignedJWT jwt = requestObject.getSignedJWT();
-        Certificate certificate =
-                getCertificateForAlias(oAuth2Parameters.getTenantDomain(), oAuth2Parameters.getClientId());
-        boolean isVerified = isSignatureVerified(jwt, certificate);
+        try {
+             certificate =
+                    getCertificateForAlias(oAuth2Parameters.getTenantDomain(), oAuth2Parameters.getClientId());
+        } catch (RequestObjectException e) {
+            String message = "Error retrieving public certificate for service provider checking whether a jwks " +
+                    "endpoint is configured for the service provider with client_id: " + oAuth2Parameters.getClientId();
+            log.warn(message);
+            if (log.isDebugEnabled()) {
+
+                log.debug(message, e);
+            }
+        }
+        if (certificate == null) {
+            if (log.isDebugEnabled()) {
+
+                log.debug("Public certificate not configured for Service Provider with " +
+                        "client_id: " + oAuth2Parameters.getClientId() + " of tenantDomain: " + oAuth2Parameters
+                        .getTenantDomain() + ". Fetching the jwks endpoint for validating request object");
+            }
+            String jwksUri = getJWKSEndpoint(oAuth2Parameters);
+            isVerified = isSignatureVerified(jwt, jwksUri);
+        } else {
+            if (log.isDebugEnabled()) {
+
+                log.debug("Public certificate configured for Service Provider with " +
+                        "client_id: " + oAuth2Parameters.getClientId() + " of tenantDomain: " + oAuth2Parameters
+                        .getTenantDomain() + ". Using public certificate  for validating request object");
+            }
+            isVerified = isSignatureVerified(jwt, certificate);
+        }
         requestObject.setIsSignatureValid(isVerified);
         return isVerified;
+    }
+
+    /**
+     * Fetch JWKS endpoint using OAuth2 Parameters.
+     *
+     * @param oAuth2Parameters  oAuth2Parameters
+     */
+    private String getJWKSEndpoint(OAuth2Parameters oAuth2Parameters) throws RequestObjectException {
+
+        String jwksUri = StringUtils.EMPTY;
+        ServiceProviderProperty[] spProperties;
+        try {
+            spProperties = OAuth2Util.getServiceProvider(oAuth2Parameters.getClientId())
+                    .getSpProperties();
+        } catch (IdentityOAuth2Exception e) {
+            throw new RequestObjectException("Error while getting the service provider for client ID " +
+                    oAuth2Parameters.getClientId(), OAuth2ErrorCodes.SERVER_ERROR, e);
+        }
+
+        if (spProperties != null) {
+            for (ServiceProviderProperty spProperty : spProperties) {
+                if (Constants.JWKS_URI.equals(spProperty.getName())) {
+                    jwksUri = spProperty.getValue();
+                    if (log.isDebugEnabled()) {
+                        log.debug("Found jwks endpoint " + jwksUri + " for service provider with client id " +
+                                oAuth2Parameters.getClientId());
+                    }
+                    break;
+                }
+            }
+        } else {
+            return StringUtils.EMPTY;
+        }
+        return jwksUri;
+    }
+
+    /**
+     * Validating signature based on jwks endpoint.
+     *
+     * @param signedJWT signed JWT
+     * @param jwksUri   Uri of the JWKS endpoint
+     * @throws RequestObjectException
+     */
+    protected boolean isSignatureVerified(SignedJWT signedJWT, String jwksUri) throws RequestObjectException {
+
+        // Validate the signature of the assertion using the jwks endpoint.
+        if (StringUtils.isNotBlank(jwksUri)) {
+            String jwtString = signedJWT.getParsedString();
+            String alg = signedJWT.getHeader().getAlgorithm().getName();
+            try {
+                return new JWKSBasedJWTValidator().validateSignature(jwtString, jwksUri, alg, MapUtils.EMPTY_MAP);
+            } catch (IdentityOAuth2Exception e) {
+                String errorMessage = "Error occurred while validating request object signature using jwks endpoint";
+                throw new RequestObjectException(errorMessage, OAuth2ErrorCodes.SERVER_ERROR, e);
+            }
+        }
+        return false;
+
     }
 
     /**
@@ -93,13 +184,15 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
     public boolean validateRequestObject(RequestObject requestObject, OAuth2Parameters oAuth2Parameters)
             throws RequestObjectException {
 
-        boolean isValid = validateClientIdAndResponseType(requestObject, oAuth2Parameters);
+        boolean isValid = validateClientIdAndResponseType(requestObject, oAuth2Parameters) && checkExpirationTime
+                (requestObject);
         if (isParamPresent(requestObject, Constants.REQUEST_URI)) {
             isValid = false;
         } else if (isParamPresent(requestObject, Constants.REQUEST)) {
             isValid = false;
         } else if (requestObject.isSigned()) {
-            isValid = isValidIssuer(requestObject, oAuth2Parameters) && isValidAudience(requestObject, oAuth2Parameters);
+            isValid = isValidIssuer(requestObject, oAuth2Parameters) && isValidAudience(requestObject,
+                    oAuth2Parameters);
         }
         return isValid;
     }
@@ -110,6 +203,26 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
         String tokenEPUrl = getTokenEpURL(oAuth2Parameters.getTenantDomain());
         List<String> audience = requestObject.getClaimsSet().getAudience();
         return validateAudience(tokenEPUrl, audience);
+    }
+
+    private boolean checkExpirationTime(RequestObject requestObject) throws RequestObjectException {
+
+        Date expirationTime = requestObject.getClaimsSet().getExpirationTime();
+        if (expirationTime != null) {
+            long timeStampSkewMillis = OAuthServerConfiguration.getInstance().getTimeStampSkewInSeconds() * 1000;
+            long expirationTimeInMillis = expirationTime.getTime();
+            long currentTimeInMillis = System.currentTimeMillis();
+            if ((currentTimeInMillis + timeStampSkewMillis) > expirationTimeInMillis) {
+                String msg = "Request Object is expired." +
+                        ", Expiration Time(ms) : " + expirationTimeInMillis +
+                        ", TimeStamp Skew : " + timeStampSkewMillis +
+                        ", Current Time : " + currentTimeInMillis + ". Token Rejected.";
+                logAndReturnFalse(msg);
+                throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST, "Request Object " +
+                        "is Expired.");
+            }
+        }
+        return true;
     }
 
     protected boolean validateClientIdAndResponseType(RequestObject requestObject, OAuth2Parameters oauthRequest)

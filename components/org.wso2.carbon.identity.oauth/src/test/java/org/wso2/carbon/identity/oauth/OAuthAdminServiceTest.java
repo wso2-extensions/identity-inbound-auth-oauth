@@ -42,7 +42,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
+import java.util.UUID;
 
+import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.powermock.api.mockito.PowerMockito.doNothing;
 import static org.powermock.api.mockito.PowerMockito.doThrow;
@@ -193,6 +195,7 @@ public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
         oAuthConsumerAppDTO.setOauthConsumerKey(consumerKey);
         oAuthConsumerAppDTO.setOauthConsumerSecret(consumerSecret);
         oAuthConsumerAppDTO.setOAuthVersion(oauthVersion);
+        oAuthConsumerAppDTO.setRenewRefreshTokenEnabled("true");
 
         whenNew(OAuthAppDAO.class).withNoArguments().thenReturn(oAuthAppDAO);
         doNothing().when(oAuthAppDAO).addOAuthApplication(Matchers.any(OAuthAppDO.class));
@@ -285,6 +288,7 @@ public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
         Assert.assertEquals(consumerAppDTO.getIdTokenExpiryTime(), appDO.getIdTokenExpiryTime());
         Assert.assertEquals(consumerAppDTO.getFrontchannelLogoutUrl(), appDO.getFrontchannelLogoutUrl());
         Assert.assertEquals(consumerAppDTO.isBypassClientCredentials(), appDO.isBypassClientCredentials());
+        Assert.assertEquals(consumerAppDTO.getRenewRefreshTokenEnabled(), appDO.getRenewRefreshTokenEnabled());
     }
 
     private void assertArrayEquals(String[] audiences, String[] audiencesToCompare) {
@@ -302,8 +306,9 @@ public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
     @Test(dataProvider = "getAppInformationExceptions", expectedExceptions = IdentityOAuthAdminException.class)
     public void testGetOAuthApplicationDataException(String exception) throws Exception {
 
-        String consumerKey = "some-consumer-key";
+        String consumerKey = "invalid_consumer_key";
 
+        whenNew(OAuthAppDAO.class).withAnyArguments().thenReturn(oAuthAppDAO);
         switch (exception) {
             case "InvalidOAuthClientException":
                 when(oAuthAppDAO.getAppInformation(consumerKey)).thenThrow(InvalidOAuthClientException.class);
@@ -311,7 +316,6 @@ public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
             case "IdentityOAuth2Exception":
                 when(oAuthAppDAO.getAppInformation(consumerKey)).thenThrow(IdentityOAuth2Exception.class);
         }
-        whenNew(OAuthAppDAO.class).withAnyArguments().thenReturn(oAuthAppDAO);
 
         OAuthAdminService oAuthAdminService = new OAuthAdminService();
         oAuthAdminService.getOAuthApplicationData(consumerKey);
@@ -385,6 +389,7 @@ public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
         app.setIdTokenExpiryTime(8000);
         app.setFrontchannelLogoutUrl("https://localhost/app/frontchannellogout");
         app.setBypassClientCredentials(true);
+        app.setRenewRefreshTokenEnabled("false");
 
         return app;
     }
@@ -394,9 +399,9 @@ public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
 
         return new Object[][]{
                 // Logged In user , App Owner in Request , App Owner in request exists, Excepted App Owner after update
-                {"admin@carbon.super", "H2/new-app-owner@carbon.super", false, "admin@carbon.super"},
+                {"admin@carbon.super", "H2/new-app-owner@carbon.super", false, "original-app-owner@wso2.com"},
                 {"admin@carbon.super", "H2/new-app-owner@carbon.super", true, "H2/new-app-owner@carbon.super"},
-                {"admin@wso2.com", "H2/new-app-owner@wso2.com", false, "admin@wso2.com"},
+                {"admin@wso2.com", "H2/new-app-owner@wso2.com", false, "original-app-owner@wso2.com"},
                 {"admin@wso2.com", "H2/new-app-owner@wso2.com", true, "H2/new-app-owner@wso2.com"}
         };
     }
@@ -437,8 +442,8 @@ public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
 
         when(userStoreManager.isExistingUser(tenantAwareUsernameOfAppOwner)).thenReturn(appOwnerInRequestExists);
 
-        String consumerKey = "some-consumer-key";
-        OAuthAppDO app = buildDummyOAuthAppDO("some-user-name");
+        String consumerKey = UUID.randomUUID().toString() ;
+        OAuthAppDO app = buildDummyOAuthAppDO("original-app-owner");
         AuthenticatedUser originalOwner = app.getAppOwner();
 
         OAuthAppDAO oAuthAppDAOMock = PowerMockito.spy(new OAuthAppDAO());
@@ -451,7 +456,7 @@ public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
         OAuthConsumerAppDTO consumerAppDTO = new OAuthConsumerAppDTO();
         consumerAppDTO.setApplicationName("new-application-name");
         consumerAppDTO.setCallbackUrl("http://new-call-back-url.com");
-        consumerAppDTO.setOauthConsumerKey("some-consumer-key");
+        consumerAppDTO.setOauthConsumerKey(consumerKey);
         consumerAppDTO.setOauthConsumerSecret("some-consumer-secret");
         consumerAppDTO.setOAuthVersion("new-oauth-version");
 
@@ -464,8 +469,10 @@ public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
         Assert.assertEquals(updatedOAuthConsumerApp.getCallbackUrl(), consumerAppDTO.getCallbackUrl(),
                 "Updated Application callbackUrl should be same as the callbackUrl in consumerAppDTO data object.");
 
-        // Application update should change the app owner.
-        Assert.assertNotEquals(updatedOAuthConsumerApp.getUsername(), originalOwner.toFullQualifiedUsername());
+        if (appOwnerInRequestExists) {
+            // Application update should change the app owner if the app owner sent in the request is a valid user.
+            Assert.assertNotEquals(updatedOAuthConsumerApp.getUsername(), originalOwner.toFullQualifiedUsername());
+        }
         Assert.assertEquals(updatedOAuthConsumerApp.getUsername(), expectedAppOwnerAfterUpdate);
     }
 
@@ -484,9 +491,25 @@ public class OAuthAdminServiceTest extends PowerMockIdentityBaseTest {
 
         mockStatic(OAuthUtil.class);
         when(OAuthUtil.getRandomNumber()).thenReturn(UPDATED_CONSUMER_SECRET);
+        when(OAuthUtil.buildConsumerAppDTO(any())).thenCallRealMethod();
+
         OAuthAdminService oAuthAdminService = spy(new OAuthAdminService());
         doNothing().when(oAuthAdminService, "updateAppAndRevokeTokensAndAuthzCodes", anyString(),
                 Matchers.any(Properties.class));
+
+
+        whenNew(OAuthAppDAO.class).withNoArguments().thenReturn(oAuthAppDAO);
+
+        OAuthAppDO oAuthAppDO = new OAuthAppDO();
+        oAuthAppDO.setOauthConsumerKey(CONSUMER_KEY);
+        oAuthAppDO.setOauthConsumerSecret(UPDATED_CONSUMER_SECRET);
+
+        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+        authenticatedUser.setUserName("test_user");
+        oAuthAppDO.setAppOwner(authenticatedUser);
+
+        when(oAuthAppDAO.getAppInformation(CONSUMER_KEY)).thenReturn(oAuthAppDO);
+
         OAuthConsumerAppDTO oAuthConsumerAppDTO;
         oAuthConsumerAppDTO = oAuthAdminService.updateAndRetrieveOauthSecretKey(CONSUMER_KEY);
 

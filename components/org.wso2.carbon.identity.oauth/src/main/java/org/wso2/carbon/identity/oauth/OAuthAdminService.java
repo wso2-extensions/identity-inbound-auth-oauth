@@ -31,7 +31,6 @@ import org.wso2.carbon.identity.application.common.IdentityApplicationManagement
 import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
-import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
@@ -49,9 +48,10 @@ import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.OAuth2Service;
+import org.wso2.carbon.identity.oauth2.authz.handlers.ResponseTypeHandler;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
-import org.wso2.carbon.identity.oauth2.model.ClientCredentialDO;
 import org.wso2.carbon.identity.oauth2.model.TokenIssuerDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeValidator;
@@ -75,6 +75,8 @@ public class OAuthAdminService extends AbstractAdmin {
 
     public static final String IMPLICIT = "implicit";
     public static final String AUTHORIZATION_CODE = "authorization_code";
+    private static final String RESPONSE_TYPE_TOKEN = "token";
+    private static final String RESPONSE_TYPE_ID_TOKEN = "id_token";
     private static List<String> allowedGrants = null;
     private static String[] allowedScopeValidators = null;
     private static List<String> supportedTokenTypes = null;
@@ -130,7 +132,7 @@ public class OAuthAdminService extends AbstractAdmin {
             OAuthAppDO app;
             for (int i = 0; i < apps.length; i++) {
                 app = apps[i];
-                dtos[i] = buildConsumerAppDTO(app);
+                dtos[i] = OAuthUtil.buildConsumerAppDTO(app);
             }
         }
         return dtos;
@@ -146,11 +148,10 @@ public class OAuthAdminService extends AbstractAdmin {
     public OAuthConsumerAppDTO getOAuthApplicationData(String consumerKey) throws IdentityOAuthAdminException {
 
         OAuthConsumerAppDTO dto;
-        OAuthAppDAO dao = new OAuthAppDAO();
         try {
-            OAuthAppDO app = dao.getAppInformation(consumerKey);
+            OAuthAppDO app = getOAuthApp(consumerKey);
             if (app != null) {
-                dto = buildConsumerAppDTO(app);
+                dto = OAuthUtil.buildConsumerAppDTO(app);
                 if (log.isDebugEnabled()) {
                     log.debug("Found App :" + dto.getApplicationName() + " for consumerKey: " + consumerKey);
                 }
@@ -178,7 +179,7 @@ public class OAuthAdminService extends AbstractAdmin {
         try {
             OAuthAppDO app = dao.getAppInformationByAppName(appName);
             if (app != null) {
-                dto = buildConsumerAppDTO(app);
+                dto = OAuthUtil.buildConsumerAppDTO(app);
             } else {
                 dto = new OAuthConsumerAppDTO();
             }
@@ -235,7 +236,8 @@ public class OAuthAdminService extends AbstractAdmin {
                     }
                 }
 
-                AuthenticatedUser appOwner = getAppOwner(application, tenantAwareLoggedInUser, tenantDomain);
+                AuthenticatedUser defaultAppOwner = buildAuthenticatedUser(tenantAwareLoggedInUser, tenantDomain);
+                AuthenticatedUser appOwner = getAppOwner(application, defaultAppOwner);
                 app.setAppOwner(appOwner);
 
                 if (application.getOAuthVersion() != null) {
@@ -276,6 +278,7 @@ public class OAuthAdminService extends AbstractAdmin {
                     app.setFrontchannelLogoutUrl(application.getFrontchannelLogoutUrl());
                     app.setTokenType(application.getTokenType());
                     app.setBypassClientCredentials(application.isBypassClientCredentials());
+                    app.setRenewRefreshTokenEnabled(application.getRenewRefreshTokenEnabled());
                 }
                 dao.addOAuthApplication(app);
                 AppInfoCache.getInstance().addToCache(app.getOauthConsumerKey(), app);
@@ -301,43 +304,7 @@ public class OAuthAdminService extends AbstractAdmin {
             }
             throw new IdentityOAuthAdminException("No authenticated user found. Failed to register OAuth App");
         }
-        return buildConsumerAppDTO(app);
-    }
-
-    /**
-     * Get created oauth application details.
-     *
-     * @param appDO <code>OAuthAppDO</code> with created application information.
-     * @return OAuthConsumerAppDTO Created OAuth application details.
-     */
-    private OAuthConsumerAppDTO buildConsumerAppDTO(OAuthAppDO appDO) {
-
-        OAuthConsumerAppDTO dto = new OAuthConsumerAppDTO();
-        dto.setApplicationName(appDO.getApplicationName());
-        dto.setCallbackUrl(appDO.getCallbackUrl());
-        dto.setOauthConsumerKey(appDO.getOauthConsumerKey());
-        dto.setOauthConsumerSecret(appDO.getOauthConsumerSecret());
-        dto.setOAuthVersion(appDO.getOauthVersion());
-        dto.setGrantTypes(appDO.getGrantTypes());
-        dto.setScopeValidators(appDO.getScopeValidators());
-        dto.setUsername(appDO.getUser().toFullQualifiedUsername());
-        dto.setState(appDO.getState());
-        dto.setPkceMandatory(appDO.isPkceMandatory());
-        dto.setPkceSupportPlain(appDO.isPkceSupportPlain());
-        dto.setUserAccessTokenExpiryTime(appDO.getUserAccessTokenExpiryTime());
-        dto.setApplicationAccessTokenExpiryTime(appDO.getApplicationAccessTokenExpiryTime());
-        dto.setRefreshTokenExpiryTime(appDO.getRefreshTokenExpiryTime());
-        dto.setIdTokenExpiryTime(appDO.getIdTokenExpiryTime());
-        dto.setAudiences(appDO.getAudiences());
-        dto.setRequestObjectSignatureValidationEnabled(appDO.isRequestObjectSignatureValidationEnabled());
-        dto.setIdTokenEncryptionEnabled(appDO.isIdTokenEncryptionEnabled());
-        dto.setIdTokenEncryptionAlgorithm(appDO.getIdTokenEncryptionAlgorithm());
-        dto.setIdTokenEncryptionMethod(appDO.getIdTokenEncryptionMethod());
-        dto.setBackChannelLogoutUrl(appDO.getBackChannelLogoutUrl());
-        dto.setFrontchannelLogoutUrl(appDO.getFrontchannelLogoutUrl());
-        dto.setTokenType(appDO.getTokenType());
-        dto.setBypassClientCredentials(appDO.isBypassClientCredentials());
-        return dto;
+        return OAuthUtil.buildConsumerAppDTO(app);
     }
 
     /**
@@ -366,7 +333,7 @@ public class OAuthAdminService extends AbstractAdmin {
         OAuthAppDAO dao = new OAuthAppDAO();
         OAuthAppDO oauthappdo;
         try {
-            oauthappdo = dao.getAppInformation(consumerAppDTO.getOauthConsumerKey());
+            oauthappdo = getOAuthApp(consumerAppDTO.getOauthConsumerKey());
             if (oauthappdo == null) {
                 if (log.isDebugEnabled()) {
                     log.debug("Error while retrieving the app information using " +
@@ -387,7 +354,8 @@ public class OAuthAdminService extends AbstractAdmin {
 
         String consumerKey = consumerAppDTO.getOauthConsumerKey();
 
-        AuthenticatedUser appOwner = getAppOwner(consumerAppDTO, tenantAwareLoggedInUserName, tenantDomain);
+        AuthenticatedUser defaultAppOwner = oauthappdo.getAppOwner();
+        AuthenticatedUser appOwner = getAppOwner(consumerAppDTO, defaultAppOwner);
         oauthappdo.setAppOwner(appOwner);
 
         oauthappdo.setOauthConsumerKey(consumerKey);
@@ -426,6 +394,7 @@ public class OAuthAdminService extends AbstractAdmin {
             oauthappdo.setIdTokenEncryptionMethod(consumerAppDTO.getIdTokenEncryptionMethod());
             oauthappdo.setBackChannelLogoutUrl(consumerAppDTO.getBackChannelLogoutUrl());
             oauthappdo.setFrontchannelLogoutUrl(consumerAppDTO.getFrontchannelLogoutUrl());
+            oauthappdo.setRenewRefreshTokenEnabled(consumerAppDTO.getRenewRefreshTokenEnabled());
         }
         dao.updateConsumerApplication(oauthappdo);
         AppInfoCache.getInstance().addToCache(oauthappdo.getOauthConsumerKey(), oauthappdo);
@@ -441,8 +410,7 @@ public class OAuthAdminService extends AbstractAdmin {
      */
     public String getOauthApplicationState(String consumerKey) throws IdentityOAuthAdminException {
 
-        OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
-        return oAuthAppDAO.getConsumerAppState(consumerKey);
+        return getOAuth2Service().getOauthApplicationState(consumerKey);
     }
 
     /**
@@ -602,20 +570,17 @@ public class OAuthAdminService extends AbstractAdmin {
      */
     public void updateConsumerAppState(String consumerKey, String newState) throws IdentityOAuthAdminException {
 
-        OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
         try {
-            OAuthAppDO oAuthAppDO = AppInfoCache.getInstance().getValueFromCache(consumerKey);
-            if (oAuthAppDO == null) {
-                oAuthAppDO = oAuthAppDAO.getAppInformation(consumerKey);
-            }
+            OAuthAppDO oAuthAppDO = getOAuthApp(consumerKey);
             // change the state
             oAuthAppDO.setState(newState);
 
             Properties properties = new Properties();
             properties.setProperty(OAuthConstants.OAUTH_APP_NEW_STATE, newState);
             properties.setProperty(OAuthConstants.ACTION_PROPERTY_KEY, OAuthConstants.ACTION_REVOKE);
+
+            AppInfoCache.getInstance().clearCacheEntry(consumerKey);
             updateAppAndRevokeTokensAndAuthzCodes(consumerKey, properties);
-            AppInfoCache.getInstance().addToCache(consumerKey, oAuthAppDO);
 
             if (log.isDebugEnabled()) {
                 log.debug("App state is updated to:" + newState + " in the AppInfoCache for OAuth App with " +
@@ -647,20 +612,17 @@ public class OAuthAdminService extends AbstractAdmin {
      */
     public OAuthConsumerAppDTO updateAndRetrieveOauthSecretKey(String consumerKey) throws IdentityOAuthAdminException {
 
-        OAuthConsumerAppDTO oAuthConsumerAppDTO = new OAuthConsumerAppDTO();
-        String newSecretKey = OAuthUtil.getRandomNumber();
-        CacheEntry clientCredentialDO = new ClientCredentialDO(newSecretKey);
-        oAuthConsumerAppDTO.setOauthConsumerKey(consumerKey);
-        oAuthConsumerAppDTO.setOauthConsumerSecret(newSecretKey);
         Properties properties = new Properties();
-        properties.setProperty(OAuthConstants.OAUTH_APP_NEW_SECRET_KEY, newSecretKey);
+        properties.setProperty(OAuthConstants.OAUTH_APP_NEW_SECRET_KEY, OAuthUtil.getRandomNumber());
         properties.setProperty(OAuthConstants.ACTION_PROPERTY_KEY, OAuthConstants.ACTION_REGENERATE);
+
+        AppInfoCache.getInstance().clearCacheEntry(consumerKey);
         updateAppAndRevokeTokensAndAuthzCodes(consumerKey, properties);
-        OAuthCache.getInstance().addToCache(new OAuthCacheKey(consumerKey), clientCredentialDO);
         if (log.isDebugEnabled()) {
             log.debug("Client Secret for OAuth app with consumerKey: " + consumerKey + " updated in OAuthCache.");
         }
-        return oAuthConsumerAppDTO;
+
+        return getOAuthApplicationData(consumerKey);
 
     }
 
@@ -683,12 +645,14 @@ public class OAuthAdminService extends AbstractAdmin {
 
                 String scope = OAuth2Util.buildScopeString(detailToken.getScope());
                 String authorizedUser = detailToken.getAuthzUser().toString();
+                String authenticatedIDP = detailToken.getAuthzUser().getFederatedIdPName();
                 boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authorizedUser);
                 String cacheKeyString;
                 if (isUsernameCaseSensitive) {
-                    cacheKeyString = consumerKey + ":" + authorizedUser + ":" + scope;
+                    cacheKeyString = consumerKey + ":" + authorizedUser + ":" + scope + ":" + authenticatedIDP;
                 } else {
-                    cacheKeyString = consumerKey + ":" + authorizedUser.toLowerCase() + ":" + scope;
+                    cacheKeyString = consumerKey + ":" + authorizedUser.toLowerCase() + ":" + scope + ":"
+                            + authenticatedIDP;
                 }
                 OAuthCacheKey cacheKeyUser = new OAuthCacheKey(cacheKeyString);
                 OAuthCache.getInstance().clearCacheEntry(cacheKeyUser);
@@ -793,8 +757,8 @@ public class OAuthAdminService extends AbstractAdmin {
                         if (scopedToken != null && !distinctClientUserScopeCombo.contains(clientId + ":" + username)) {
                             OAuthAppDO appDO;
                             try {
-                                appDO = appDAO.getAppInformation(scopedToken.getConsumerKey());
-                                appDTOs.add(buildConsumerAppDTO(appDO));
+                                appDO = getOAuthApp(scopedToken.getConsumerKey());
+                                appDTOs.add(OAuthUtil.buildConsumerAppDTO(appDO));
                                 if (log.isDebugEnabled()) {
                                     log.debug("Found App: " + appDO.getApplicationName() + " for user: " + username);
                                 }
@@ -993,7 +957,8 @@ public class OAuthAdminService extends AbstractAdmin {
                     Set<String> allowedGrantSet =
                             OAuthServerConfiguration.getInstance().getSupportedGrantTypes().keySet();
                     Set<String> modifiableGrantSet = new HashSet(allowedGrantSet);
-                    if (OAuthServerConfiguration.getInstance().getSupportedResponseTypes().containsKey("token")) {
+
+                    if (isImplicitGrantEnabled()) {
                         modifiableGrantSet.add(IMPLICIT);
                     }
                     allowedGrants = new ArrayList<>(modifiableGrantSet);
@@ -1001,6 +966,17 @@ public class OAuthAdminService extends AbstractAdmin {
             }
         }
         return allowedGrants.toArray(new String[allowedGrants.size()]);
+    }
+
+    private boolean isImplicitGrantEnabled() {
+        Map<String, ResponseTypeHandler> responseTypeHandlers =
+                OAuthServerConfiguration.getInstance().getSupportedResponseTypes();
+        for (String responseType : responseTypeHandlers.keySet()) {
+            if (responseType.contains(RESPONSE_TYPE_TOKEN) || responseType.contains(RESPONSE_TYPE_ID_TOKEN)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -1038,6 +1014,16 @@ public class OAuthAdminService extends AbstractAdmin {
             }
         }
         return supportedTokenTypes;
+    }
+
+    /**
+     * Get the renew refresh token property value from identity.xml file.
+     *
+     * @return renew refresh token property value
+     */
+    public boolean isRefreshTokenRenewalEnabled() {
+
+        return OAuthServerConfiguration.getInstance().isRefreshTokenRenewalEnabled();
     }
 
     /**
@@ -1164,12 +1150,10 @@ public class OAuthAdminService extends AbstractAdmin {
 
 
     private AuthenticatedUser getAppOwner(OAuthConsumerAppDTO application,
-                                          String tenantAwareLoggedInUser,
-                                          String tenantDomain) throws IdentityOAuthAdminException {
+                                          AuthenticatedUser defaultAppOwner) throws IdentityOAuthAdminException {
 
         // We first set the logged in user as the owner.
-        AuthenticatedUser appOwner = buildAuthenticatedUser(tenantAwareLoggedInUser, tenantDomain);
-
+        AuthenticatedUser appOwner = defaultAppOwner;
         String applicationOwnerInRequest = application.getUsername();
         if (StringUtils.isNotBlank(applicationOwnerInRequest)) {
             String tenantAwareAppOwnerInRequest = MultitenantUtils.getTenantAwareUsername(applicationOwnerInRequest);
@@ -1178,11 +1162,12 @@ public class OAuthAdminService extends AbstractAdmin {
                         getUserStoreManager().isExistingUser(tenantAwareAppOwnerInRequest)) {
                     // Since the app owner sent in OAuthConsumerAppDTO is a valid one we set the appOwner to be
                     // the one sent in the OAuthConsumerAppDTO.
+                    String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
                     appOwner = buildAuthenticatedUser(tenantAwareAppOwnerInRequest, tenantDomain);
                 } else {
                     log.warn("OAuth application owner user name " + applicationOwnerInRequest +
-                            " does not exist in the user store. Using logged-in user name " +
-                            tenantAwareLoggedInUser + " as app owner name");
+                            " does not exist in the user store. Using user: " +
+                            defaultAppOwner.toFullQualifiedUsername() + " as app owner.");
                 }
             } catch (UserStoreException e) {
                 throw handleError("Error while retrieving the user store manager for user: " +
@@ -1191,5 +1176,32 @@ public class OAuthAdminService extends AbstractAdmin {
 
         }
         return appOwner;
+    }
+
+    private OAuth2Service getOAuth2Service() {
+
+        return OAuthComponentServiceHolder.getInstance().getOauth2Service();
+    }
+
+    private OAuthAppDO getOAuthApp(String consumerKey) throws InvalidOAuthClientException, IdentityOAuth2Exception {
+
+        OAuthAppDO oauthApp = AppInfoCache.getInstance().getValueFromCache(consumerKey);
+        if (oauthApp != null) {
+            if (log.isDebugEnabled()) {
+                log.debug("OAuth app with consumerKey: " + consumerKey + " retrieved from AppInfoCache.");
+            }
+            return oauthApp;
+        }
+
+        OAuthAppDAO dao = new OAuthAppDAO();
+        oauthApp = dao.getAppInformation(consumerKey);
+        if (oauthApp != null) {
+            if (log.isDebugEnabled()) {
+                log.debug("OAuth app with consumerKey: " + consumerKey + " retrieved from database.");
+            }
+            AppInfoCache.getInstance().addToCache(consumerKey, oauthApp);
+        }
+
+        return oauthApp;
     }
 }

@@ -27,6 +27,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.StringReader;
+import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.KeyFactory;
 import java.security.KeyPair;
@@ -90,7 +91,7 @@ public class ReadCertStoreSampleUtil {
 
         // Base64 decode the result
 
-        byte[] pkcs8EncodedBytes = Base64.decodeBase64(pkcs8Pem);
+        byte[] pkcs8EncodedBytes = Base64.decodeBase64(pkcs8Pem.getBytes(StandardCharsets.UTF_8));
 
         // extract the private key
 

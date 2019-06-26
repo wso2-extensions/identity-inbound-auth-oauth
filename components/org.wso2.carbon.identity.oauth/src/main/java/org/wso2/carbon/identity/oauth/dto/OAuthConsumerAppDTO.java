@@ -36,6 +36,7 @@ public class OAuthConsumerAppDTO {
     private long refreshTokenExpiryTime;
     private String[] audiences;
     private boolean bypassClientCredentials;
+    private String renewRefreshTokenEnabled;
     // OIDC related properties
     private boolean isRequestObjectSignatureValidationEnabled;
     private boolean isIdTokenEncryptionEnabled;
@@ -246,6 +247,16 @@ public class OAuthConsumerAppDTO {
 
     public void setBypassClientCredentials(boolean isPublicClient) {
         this.bypassClientCredentials = isPublicClient;
+    }
+
+    public void setRenewRefreshTokenEnabled(String renewRefreshTokenEnabled) {
+
+        this.renewRefreshTokenEnabled = renewRefreshTokenEnabled;
+    }
+
+    public String getRenewRefreshTokenEnabled() {
+
+        return renewRefreshTokenEnabled;
     }
 }
 

@@ -76,12 +76,20 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
             if (!validateSignature(signedJWT, identityProvider)) {
                 return false;
             }
-            checkExpirationTime(claimsSet.getExpirationTime());
+            if (!checkExpirationTime(claimsSet.getExpirationTime())) {
+                return false;
+            }
             checkNotBeforeTime(claimsSet.getNotBeforeTime());
         } catch (JOSEException | ParseException e) {
             throw new IdentityOAuth2Exception("Error while validating Token.", e);
         }
         return true;
+    }
+
+    @Override
+    public String getTokenType() {
+
+        return "JWT";
     }
 
     /**
@@ -186,7 +194,7 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
         return isValid;
     }
 
-    private boolean checkExpirationTime(Date expirationTime) throws IdentityOAuth2Exception {
+    private boolean checkExpirationTime(Date expirationTime) {
         long timeStampSkewMillis = OAuthServerConfiguration.getInstance().getTimeStampSkewInSeconds() * 1000;
         long expirationTimeInMillis = expirationTime.getTime();
         long currentTimeInMillis = System.currentTimeMillis();
@@ -197,7 +205,7 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
                         ", TimeStamp Skew : " + timeStampSkewMillis +
                         ", Current Time : " + currentTimeInMillis + ". Token Rejected and validation terminated.");
             }
-            throw new IdentityOAuth2Exception("Token is expired.");
+            return false;
         }
 
         if (log.isDebugEnabled()) {

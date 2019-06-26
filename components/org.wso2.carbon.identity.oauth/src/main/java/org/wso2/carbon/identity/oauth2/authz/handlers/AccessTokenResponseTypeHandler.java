@@ -67,11 +67,12 @@ public class AccessTokenResponseTypeHandler extends AbstractResponseTypeHandler 
     /**
      * This method is used to set relevant values in to respDTO object when an access token is issued.
      * When an access token is issued we have to set access token, validity period and token type.
-     * @param respDTO
+     * @param oauthAuthzMsgCtx
      * @param accessTokenDO
      * @return OAuth2AuthorizeRespDTO object with access token details.
      */
-    private OAuth2AuthorizeRespDTO buildResponseDTO(OAuthAuthzReqMessageContext oauthAuthzMsgCtx, AccessTokenDO accessTokenDO) throws IdentityOAuth2Exception {
+    private OAuth2AuthorizeRespDTO buildResponseDTO(OAuthAuthzReqMessageContext oauthAuthzMsgCtx,
+                                                    AccessTokenDO accessTokenDO) throws IdentityOAuth2Exception {
         // Initializing the response.
         OAuth2AuthorizeRespDTO respDTO = initResponse(oauthAuthzMsgCtx);
         // Add access token details to the response.

@@ -30,6 +30,7 @@ public class ApplicationUpdateRequest implements Serializable {
     private String clientName = null;
     private List<String> grantTypes = new ArrayList<String>();
     private String tokenType = null;
+    private String backchannelLogoutUri = null;
 
     public List<String> getRedirectUris() {
         return redirectUris;
@@ -61,5 +62,13 @@ public class ApplicationUpdateRequest implements Serializable {
 
     public void setTokenType(String tokenType) {
         this.tokenType = tokenType;
+    }
+
+    public String getBackchannelLogoutUri() {
+        return backchannelLogoutUri;
+    }
+
+    public void setBackchannelLogoutUri(String backchannelLogoutUri) {
+        this.backchannelLogoutUri = backchannelLogoutUri;
     }
 }

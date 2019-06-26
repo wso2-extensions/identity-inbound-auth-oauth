@@ -46,11 +46,14 @@ import org.apache.commons.io.Charsets;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.message.types.ResponseType;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.wso2.carbon.core.util.KeyStoreManager;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
@@ -79,12 +82,18 @@ import org.wso2.carbon.identity.oauth.dao.OAuthConsumerDAO;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor;
+import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
+import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
+import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.config.SpOAuth2ExpiryTimeConfiguration;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2IntrospectionResponseDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
+import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
+import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.ClientCredentialDO;
@@ -127,6 +136,7 @@ import java.sql.Timestamp;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -152,11 +162,11 @@ public class OAuth2Util {
     public static final String ACCESS_TOKEN_DO = "AccessTokenDo";
     public static final String OAUTH2_VALIDATION_MESSAGE_CONTEXT = "OAuth2TokenValidationMessageContext";
     private static final String ESSENTAIL = "essential";
-    private static final String REG_HIDDEN_PROPERTY_PREFIX = "registry.";
     public static final String CONFIG_ELEM_OAUTH = "OAuth";
     public static final String OPENID_CONNECT = "OpenIDConnect";
     public static final String ENABLE_OPENID_CONNECT_AUDIENCES = "EnableAudiences";
     public static final String OPENID_CONNECT_AUDIENCE = "audience";
+    private static final String OPENID_CONNECT_AUDIENCES = "Audiences";
     private static final String DOT_SEPARATER = ".";
     private static final String IDP_ENTITY_ID = "IdPEntityId";
 
@@ -408,56 +418,35 @@ public class OAuth2Util {
     public static boolean authenticateClient(String clientId, String clientSecretProvided)
             throws IdentityOAuthAdminException, IdentityOAuth2Exception, InvalidOAuthClientException {
 
-        boolean cacheHit = false;
-        String clientSecret = null;
-
-        // Check the cache first.
-        CacheEntry cacheResult = OAuthCache.getInstance().getValueFromCache(new OAuthCacheKey(clientId));
-        if (cacheResult != null && cacheResult instanceof ClientCredentialDO) {
-            ClientCredentialDO clientCredentialDO = (ClientCredentialDO) cacheResult;
-            clientSecret = clientCredentialDO.getClientSecret();
-            cacheHit = true;
+        OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(clientId);
+        if (appDO == null) {
             if (log.isDebugEnabled()) {
-                log.debug("Client credentials were available in the cache for client id : " +
-                        clientId);
+                log.debug("Cannot find a valid application with the provided client_id: " + clientId);
             }
+            return false;
         }
 
         // Cache miss
         boolean isHashDisabled = isHashDisabled();
-        OAuthConsumerDAO oAuthConsumerDAO = new OAuthConsumerDAO();
+        String appClientSecret = appDO.getOauthConsumerSecret();
         if (isHashDisabled) {
-            if (clientSecret == null) {
-                clientSecret = oAuthConsumerDAO.getOAuthConsumerSecret(clientId);
-                if (log.isDebugEnabled()) {
-                    log.debug("Client credentials were fetched from the database.");
-                }
-            }
-
-            if (clientSecret == null) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Provided Client ID : " + clientId + " is not valid.");
-                }
-                return false;
-            }
-
-            if (!clientSecret.equals(clientSecretProvided)) {
-
+            if (!StringUtils.equals(appClientSecret, clientSecretProvided)) {
                 if (log.isDebugEnabled()) {
                     log.debug("Provided the Client ID : " + clientId +
                             " and Client Secret do not match with the issued credentials.");
                 }
-
                 return false;
             }
         } else {
-            // Check whether the provided consumerKey, consumerSecret combination is exist or not in the database.
-            if (!oAuthConsumerDAO.isConsumerSecretExist(clientId, clientSecretProvided)) {
+            TokenPersistenceProcessor persistenceProcessor = getPersistenceProcessor();
+            // We convert the provided client_secret to the processed form stored in the DB.
+            String processedProvidedClientSecret = persistenceProcessor.getProcessedClientSecret(clientSecretProvided);
+
+            if (!StringUtils.equals(appClientSecret, processedProvidedClientSecret)) {
                 if (log.isDebugEnabled()) {
                     log.debug("Provided the Client ID : " + clientId +
                             " and Client Secret do not match with the issued credentials.");
                 }
-
                 return false;
             }
         }
@@ -466,15 +455,24 @@ public class OAuth2Util {
             log.debug("Successfully authenticated the client with client id : " + clientId);
         }
 
-        if (!cacheHit) {
-
-            OAuthCache.getInstance().addToCache(new OAuthCacheKey(clientId), new ClientCredentialDO(clientSecret));
-            if (log.isDebugEnabled()) {
-                log.debug("Client credentials were added to the cache for client id : " + clientId);
-            }
-        }
-
         return true;
+    }
+
+    private static TokenPersistenceProcessor getPersistenceProcessor() {
+
+        TokenPersistenceProcessor persistenceProcessor;
+        try {
+            persistenceProcessor = OAuthServerConfiguration.getInstance().getPersistenceProcessor();
+        } catch (IdentityOAuth2Exception e) {
+            String msg = "Error retrieving TokenPersistenceProcessor configured in OAuth.TokenPersistenceProcessor " +
+                    "in identity.xml. Defaulting to PlainTextPersistenceProcessor.";
+            log.warn(msg);
+            if (log.isDebugEnabled()) {
+                log.debug(msg, e);
+            }
+            persistenceProcessor = new PlainTextPersistenceProcessor();
+        }
+        return persistenceProcessor;
     }
 
     /**
@@ -571,6 +569,7 @@ public class OAuth2Util {
      * @param authorizedUser
      * @return
      */
+    @Deprecated
     public static String buildCacheKeyStringForToken(String clientId, String scope, String authorizedUser) {
 
         boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authorizedUser);
@@ -578,6 +577,26 @@ public class OAuth2Util {
             return clientId + ":" + authorizedUser + ":" + scope;
         } else {
             return clientId + ":" + authorizedUser.toLowerCase() + ":" + scope;
+        }
+    }
+
+    /**
+     * Build the cache key string when storing token info in cache.
+     *
+     * @param clientId         ClientId of the App.
+     * @param scope            Scopes used.
+     * @param authorizedUser   Authorised user.
+     * @param authenticatedIDP Authenticated IdP.
+     * @return Cache key string combining the input parameters.
+     */
+    public static String buildCacheKeyStringForToken(String clientId, String scope, String authorizedUser,
+                                                     String authenticatedIDP) {
+
+        boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authorizedUser);
+        if (isUsernameCaseSensitive) {
+            return clientId + ":" + authorizedUser + ":" + scope + ":" + authenticatedIDP;
+        } else {
+            return clientId + ":" + authorizedUser.toLowerCase() + ":" + scope + ":" + authenticatedIDP;
         }
     }
 
@@ -1218,10 +1237,7 @@ public class OAuth2Util {
 
     public static boolean validatePKCE(String referenceCodeChallenge, String verificationCode, String challenge_method,
                                        OAuthAppDO oAuthApp) throws IdentityOAuth2Exception {
-        //ByPass PKCE validation if PKCE Support is disabled
-        if (!isPKCESupportEnabled()) {
-            return true;
-        }
+
         if (oAuthApp != null && oAuthApp.isPkceMandatory() || referenceCodeChallenge != null) {
 
             //As per RFC 7636 Fallback to 'plain' if no code_challenge_method parameter is sent
@@ -1286,6 +1302,7 @@ public class OAuth2Util {
         return true;
     }
 
+    @Deprecated
     public static boolean isPKCESupportEnabled() {
 
         return OAuth2ServiceComponentHolder.isPkceEnabled();
@@ -1341,6 +1358,13 @@ public class OAuth2Util {
     public static AccessTokenDO getAccessTokenDOfromTokenIdentifier(String accessTokenIdentifier) throws
             IdentityOAuth2Exception {
 
+        return getAccessTokenDOFromTokenIdentifier(accessTokenIdentifier, false);
+    }
+
+    public static AccessTokenDO getAccessTokenDOFromTokenIdentifier(String accessTokenIdentifier,
+                                                                    boolean includeExpired)
+            throws IdentityOAuth2Exception {
+
         boolean cacheHit = false;
         AccessTokenDO accessTokenDO = null;
 
@@ -1356,7 +1380,7 @@ public class OAuth2Util {
         // cache miss, load the access token info from the database.
         if (accessTokenDO == null) {
             accessTokenDO = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
-                    .getAccessToken(accessTokenIdentifier, false);
+                    .getAccessToken(accessTokenIdentifier, includeExpired);
         }
 
         if (accessTokenDO == null) {
@@ -1504,6 +1528,85 @@ public class OAuth2Util {
     }
 
     /**
+     * Retrieve audience configured for the particular service provider.
+     *
+     * @param clientId
+     * @param oAuthAppDO
+     * @return
+     */
+    public static List<String> getOIDCAudience(String clientId, OAuthAppDO oAuthAppDO) {
+
+        List<String> oidcAudiences = getDefinedCustomOIDCAudiences(oAuthAppDO);
+        // Need to add client_id as an audience value according to the spec.
+        if (!oidcAudiences.contains(clientId)) {
+            oidcAudiences.add(0, clientId);
+        } else {
+            Collections.swap(oidcAudiences, oidcAudiences.indexOf(clientId), 0);
+        }
+        return oidcAudiences;
+    }
+
+    private static List<String> getDefinedCustomOIDCAudiences(OAuthAppDO oAuthAppDO) {
+
+        List<String> audiences = new ArrayList<>();
+
+        // Priority should be given to service provider specific audiences over globally configured ones.
+        if (OAuth2ServiceComponentHolder.isAudienceEnabled()) {
+            audiences = getAudienceListFromOAuthAppDO(oAuthAppDO);
+            if (CollectionUtils.isNotEmpty(audiences)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("OIDC Audiences " + audiences + " had been retrieved for the client_id: " +
+                            oAuthAppDO.getOauthConsumerKey());
+                }
+                return audiences;
+            }
+        }
+
+        IdentityConfigParser configParser = IdentityConfigParser.getInstance();
+        OMElement oauthElem = configParser.getConfigElement(CONFIG_ELEM_OAUTH);
+        if (oauthElem == null) {
+            log.warn("Error in OAuth Configuration: <OAuth> configuration element is not available in identity.xml.");
+            return audiences;
+        }
+
+        OMElement oidcConfig = oauthElem.getFirstChildWithName(new QName(IdentityCoreConstants.
+                IDENTITY_DEFAULT_NAMESPACE, OPENID_CONNECT));
+        if (oidcConfig == null) {
+            log.warn("Error in OAuth Configuration: <OpenIDConnect> element is not available in identity.xml.");
+            return audiences;
+        }
+
+        OMElement audienceConfig = oidcConfig.getFirstChildWithName(new QName(IdentityCoreConstants.
+                IDENTITY_DEFAULT_NAMESPACE, OPENID_CONNECT_AUDIENCES));
+        if (audienceConfig == null) {
+            return audiences;
+        }
+
+        Iterator iterator = audienceConfig.getChildrenWithName(new QName(IdentityCoreConstants.
+                IDENTITY_DEFAULT_NAMESPACE, OPENID_CONNECT_AUDIENCE));
+        while (iterator.hasNext()) {
+            OMElement supportedAudience = (OMElement) iterator.next();
+            String supportedAudienceName;
+            if (supportedAudience != null) {
+                supportedAudienceName = IdentityUtil.fillURLPlaceholders(supportedAudience.getText());
+                if (StringUtils.isNotBlank(supportedAudienceName)) {
+                    audiences.add(supportedAudienceName);
+                }
+            }
+        }
+        return audiences;
+    }
+
+    private static List<String> getAudienceListFromOAuthAppDO(OAuthAppDO oAuthAppDO) {
+
+        if (oAuthAppDO.getAudiences() == null) {
+            return new ArrayList<>();
+        } else {
+            return new ArrayList<>(Arrays.asList(oAuthAppDO.getAudiences()));
+        }
+    }
+
+    /**
      * Returns oauth token issuer registered in the service provider app
      *
      * @param clientId client id of the oauth app
@@ -1634,7 +1737,9 @@ public class OAuth2Util {
             return oAuthAppDO;
         } else {
             oAuthAppDO = new OAuthAppDAO().getAppInformation(clientId);
-            AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO);
+            if (oAuthAppDO != null) {
+                AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO);
+            }
             return oAuthAppDO;
         }
     }
@@ -1648,9 +1753,8 @@ public class OAuth2Util {
     public static String getTenantDomainOfOauthApp(OAuthAppDO oAuthAppDO) {
 
         String tenantDomain = MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
-        if (oAuthAppDO != null) {
-            AuthenticatedUser appDeveloper = oAuthAppDO.getUser();
-            tenantDomain = appDeveloper.getTenantDomain();
+        if (oAuthAppDO != null && oAuthAppDO.getUser() != null) {
+            tenantDomain = oAuthAppDO.getUser().getTenantDomain();
         }
         return tenantDomain;
     }
@@ -2017,7 +2121,7 @@ public class OAuth2Util {
             Key privateKey = getPrivateKey(tenantDomain, tenantId);
             JWSSigner signer = new RSASSASigner((RSAPrivateKey) privateKey);
             JWSHeader.Builder headerBuilder = new JWSHeader.Builder((JWSAlgorithm) signatureAlgorithm);
-            headerBuilder.keyID(getThumbPrint(tenantDomain, tenantId));
+            headerBuilder.keyID(getKID(getThumbPrint(tenantDomain, tenantId), signatureAlgorithm));
             headerBuilder.x509CertThumbprint(new Base64URL(getThumbPrint(tenantDomain, tenantId)));
             SignedJWT signedJWT = new SignedJWT(headerBuilder.build(), jwtClaimsSet);
             signedJWT.sign(signer);
@@ -2067,6 +2171,19 @@ public class OAuth2Util {
     }
 
     /**
+     * Helper method to add algo into to JWT_HEADER to signature verification.
+     *
+     * @param certThumbprint
+     * @param signatureAlgorithm
+     * @return
+     *
+     */
+    public static String getKID(String certThumbprint, JWSAlgorithm signatureAlgorithm) {
+
+        return certThumbprint + "_" + signatureAlgorithm.toString();
+    }
+
+    /**
      * Helper method to add public certificate to JWT_HEADER to signature verification.
      *
      * @param tenantDomain
@@ -2084,6 +2201,28 @@ public class OAuth2Util {
 
         } catch (Exception e) {
             String error = "Error in obtaining certificate for tenant " + tenantDomain;
+            throw new IdentityOAuth2Exception(error, e);
+        }
+    }
+
+    /**
+     * Helper method to add public certificate to JWT_HEADER to signature verification.
+     * This creates thumbPrints directly from given certificates
+     *
+     * @param certificate
+     * @param alias
+     * @return
+     * @throws IdentityOAuth2Exception
+     */
+    public static String getThumbPrint(Certificate certificate, String alias) throws IdentityOAuth2Exception {
+
+        try {
+            return getThumbPrint(certificate);
+        } catch (CertificateEncodingException e) {
+            String error = "Error occurred while encoding thumbPrint for alias: " + alias;
+            throw new IdentityOAuth2Exception(error, e);
+        } catch (NoSuchAlgorithmException e) {
+            String error = "Error in obtaining SHA-1 thumbprint for alias: " + alias;
             throw new IdentityOAuth2Exception(error, e);
         }
     }
@@ -2225,7 +2364,14 @@ public class OAuth2Util {
         String userStoreDomain = OAuth2Util.getUserStoreDomainFromUserId(authenticatedUser.toString());
         if (!OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && authenticatedUser.
                 isFederatedUser()) {
-            userStoreDomain = OAuth2Util.getFederatedUserDomain(authenticatedUser.getFederatedIdPName());
+            if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
+                // When the IDP_ID column is available it was decided to set the
+                // domain name for federated users to 'FEDERATED'.
+                // This is a system reserved word and users stores cannot be created with this name.
+                userStoreDomain = FrameworkConstants.FEDERATED_IDP_NAME;
+            } else {
+                userStoreDomain = OAuth2Util.getFederatedUserDomain(authenticatedUser.getFederatedIdPName());
+            }
         }
         return userStoreDomain;
     }
@@ -2436,6 +2582,11 @@ public class OAuth2Util {
         return StringUtils.countMatches(idToken, DOT_SEPARATER) == 4;
     }
 
+    /**
+     * @deprecated We cannot determine the token issuer this way. Have a look at the
+     * {@link #findAccessToken(String, boolean)} method.
+     */
+    @Deprecated
     public static OauthTokenIssuer getTokenIssuer(String accessToken) throws IdentityOAuth2Exception {
 
         OauthTokenIssuer oauthTokenIssuer = null;
@@ -2615,6 +2766,7 @@ public class OAuth2Util {
      * @param tenantDomain    tenent domain
      * @return an instance of AuthenticatedUser{@link AuthenticatedUser}
      */
+    @Deprecated
     public static AuthenticatedUser createAuthenticatedUser(String username, String userStoreDomain, String tenantDomain) {
 
         AuthenticatedUser authenticatedUser = new AuthenticatedUser();
@@ -2628,6 +2780,51 @@ public class OAuth2Util {
             }
             authenticatedUser.setFederatedUser(true);
             authenticatedUser.setFederatedIdPName(OAuth2Util.getFederatedIdPFromDomain(userStoreDomain));
+        } else {
+            authenticatedUser.setUserStoreDomain(userStoreDomain);
+        }
+
+        return authenticatedUser;
+    }
+
+    /**
+     * Creates an instance on AuthenticatedUser{@link AuthenticatedUser} for the given parameters.
+     *
+     * @param username        username of the user
+     * @param userStoreDomain user store domain
+     * @param tenantDomain    tenent domain
+     * @param idpName    idp name
+     * @return an instance of AuthenticatedUser{@link AuthenticatedUser}
+     */
+    public static AuthenticatedUser createAuthenticatedUser(String username, String userStoreDomain, String
+            tenantDomain, String idpName) {
+
+        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+        authenticatedUser.setUserName(username);
+        authenticatedUser.setTenantDomain(tenantDomain);
+
+        /* When the IDP_ID column is available it was decided to set the
+         domain name for federated users to 'FEDERATED'.
+         This is a system reserved word and user stores cannot be created with this name.
+
+         For jwt bearer grant and saml bearer grant types, assertion issuing idp is set as
+         the authenticated idp, but this may not always be the idp user is in;
+         i.e, for an assertion issued by IS, idp name will be 'LOCAL', yet the user could have been
+         authenticated with some external idp.
+         Therefore, we cannot stop setting 'FEDERATED' as the user store domain for federated users.*/
+        if (StringUtils.startsWith(userStoreDomain, OAuthConstants.UserType.FEDERATED_USER_DOMAIN_PREFIX) &&
+                !OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal()) {
+            authenticatedUser.setFederatedUser(true);
+            if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
+                authenticatedUser.setFederatedIdPName(idpName);
+            } else {
+                authenticatedUser.setFederatedIdPName(OAuth2Util.getFederatedIdPFromDomain(userStoreDomain));
+            }
+            if (log.isDebugEnabled()) {
+                log.debug("Federated prefix found in domain: " + userStoreDomain + " for user: " + username + " in " +
+                        "tenant domain:" + tenantDomain + ". Flag user as a federated user. " +
+                        authenticatedUser.getFederatedIdPName() + " is set as the authenticated idp.");
+            }
         } else {
             authenticatedUser.setUserStoreDomain(userStoreDomain);
         }
@@ -2657,5 +2854,307 @@ public class OAuth2Util {
         }
     }
 
-}
+    /**
+     * Used to build an OAuth revocation request DTO.
+     *
+     * @param oAuthClientAuthnContext  OAuth client authentication context.
+     * @param accessToken Access token to be revoked.
+     * @return Returns a OAuth revocation request DTO.
+     */
+    public static OAuthRevocationRequestDTO buildOAuthRevocationRequest(OAuthClientAuthnContext oAuthClientAuthnContext,
+                                                                        String accessToken){
 
+        OAuthRevocationRequestDTO revocationRequestDTO = new OAuthRevocationRequestDTO();
+
+        revocationRequestDTO.setToken(accessToken);
+        revocationRequestDTO.setOauthClientAuthnContext(oAuthClientAuthnContext);
+        revocationRequestDTO.setConsumerKey(oAuthClientAuthnContext.getClientId());
+
+        return revocationRequestDTO;
+    }
+
+    /**
+     * Find access tokenDO from token identifier by chaining through all available token issuers.
+     *
+     * @param tokenIdentifier access token data object from the validation request.
+     * @return AccessTokenDO
+     * @throws IdentityOAuth2Exception
+     */
+    public static AccessTokenDO findAccessToken(String tokenIdentifier, boolean includeExpired)
+            throws IdentityOAuth2Exception {
+
+        AccessTokenDO accessTokenDO;
+
+        // Get a copy of the list of token issuers .
+        Map<String, OauthTokenIssuer> allOAuthTokenIssuerMap = new HashMap<>(
+                OAuthServerConfiguration.getInstance().getOauthTokenIssuerMap());
+
+        // Differentiate default token issuers and other issuers for better performance.
+        Map<String, OauthTokenIssuer> defaultOAuthTokenIssuerMap = new HashMap<>();
+        extractDefaultOauthTokenIssuers(allOAuthTokenIssuerMap, defaultOAuthTokenIssuerMap);
+
+        // First try default token issuers.
+        accessTokenDO = getAccessTokenDOFromMatchingTokenIssuer(tokenIdentifier, defaultOAuthTokenIssuerMap,
+                includeExpired);
+        if (accessTokenDO != null) {
+            return accessTokenDO;
+        }
+
+        // Loop through other issuer and try to get the hash.
+        accessTokenDO = getAccessTokenDOFromMatchingTokenIssuer(tokenIdentifier, allOAuthTokenIssuerMap,
+                includeExpired);
+
+        if (accessTokenDO == null) {
+            throw new IllegalArgumentException("Invalid Access Token. ACTIVE access token is not found.");
+        }
+        return accessTokenDO;
+    }
+
+    /**
+     * Loop through provided token issuer list and tries to get the access token DO.
+     *
+     * @param tokenIdentifier Provided token identifier.
+     * @param tokenIssuerMap  List of token issuers.
+     * @return Obtained matching access token DO if possible.
+     * @throws IdentityOAuth2Exception
+     */
+    private static AccessTokenDO getAccessTokenDOFromMatchingTokenIssuer(String tokenIdentifier,
+                                                                         Map<String, OauthTokenIssuer> tokenIssuerMap,
+                                                                         boolean includeExpired)
+            throws IdentityOAuth2Exception {
+
+        AccessTokenDO accessTokenDO;
+        if (tokenIssuerMap != null) {
+            for (Map.Entry<String, OauthTokenIssuer> oauthTokenIssuerEntry: tokenIssuerMap.entrySet()) {
+                try {
+                    OauthTokenIssuer oauthTokenIssuer = oauthTokenIssuerEntry.getValue();
+                    String tokenAlias = oauthTokenIssuer.getAccessTokenHash(tokenIdentifier);
+                    if (oauthTokenIssuer.usePersistedAccessTokenAlias()) {
+                        accessTokenDO =  OAuth2Util.getAccessTokenDOFromTokenIdentifier(tokenAlias, includeExpired);
+                    } else {
+                        accessTokenDO =  OAuth2Util.getAccessTokenDOFromTokenIdentifier(tokenIdentifier, includeExpired);
+                    }
+                    if (accessTokenDO != null) {
+                        return accessTokenDO;
+                    }
+                } catch (OAuthSystemException e) {
+                    if (log.isDebugEnabled()) {
+                        if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                            log.debug("Token issuer: " + oauthTokenIssuerEntry.getKey() + " was tried and" +
+                                    " failed to parse the received token: " + tokenIdentifier);
+                        } else {
+                            log.debug("Token issuer: " + oauthTokenIssuerEntry.getKey() + " was tried and" +
+                                    " failed to parse the received token.");
+                        }
+                    }
+                } catch (IllegalArgumentException e) {
+                    if (log.isDebugEnabled()) {
+                        if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                            log.debug("Token issuer: " + oauthTokenIssuerEntry.getKey() + " was tried and"
+                                    + " failed to get the token from database: " + tokenIdentifier);
+                        } else {
+                            log.debug("Token issuer: " + oauthTokenIssuerEntry.getKey() + " was tried and"
+                                    + " failed  to get the token from database.");
+                        }
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Differentiate default token issuers from all available token issuers map.
+     *
+     * @param allOAuthTokenIssuerMap Map of all available token issuers.
+     * @param
+     */
+    private static void extractDefaultOauthTokenIssuers( Map<String, OauthTokenIssuer> allOAuthTokenIssuerMap,
+            Map<String, OauthTokenIssuer> defaultOAuthTokenIssuerMap) {
+
+        // TODO: 4/9/19 Implement logic to read default issuer from config.
+        // TODO: 4/9/19 add sorting mechanism to use JWT issuer first.
+        defaultOAuthTokenIssuerMap.put(OAuthServerConfiguration.JWT_TOKEN_TYPE,
+                allOAuthTokenIssuerMap.get(OAuthServerConfiguration.JWT_TOKEN_TYPE));
+        allOAuthTokenIssuerMap.remove(OAuthServerConfiguration.JWT_TOKEN_TYPE);
+
+        defaultOAuthTokenIssuerMap.put(OAuthServerConfiguration.DEFAULT_TOKEN_TYPE,
+                allOAuthTokenIssuerMap.get(OAuthServerConfiguration.DEFAULT_TOKEN_TYPE));
+        allOAuthTokenIssuerMap.remove(OAuthServerConfiguration.DEFAULT_TOKEN_TYPE);
+    }
+
+    /**
+     * Return access token identifier from OAuth2TokenValidationResponseDTO. This method validated the token against
+     * the cache and the DB.
+     *
+     * @param tokenResponse OAuth2TokenValidationResponseDTO object.
+     * @return extracted access token identifier.
+     * @throws UserInfoEndpointException
+     */
+    public static String getAccessTokenIdentifier(OAuth2TokenValidationResponseDTO tokenResponse)
+            throws UserInfoEndpointException {
+
+        if (tokenResponse.getAuthorizationContextToken().getTokenString() != null) {
+            AccessTokenDO accessTokenDO = null;
+            try {
+                accessTokenDO = OAuth2Util.findAccessToken(
+                        tokenResponse.getAuthorizationContextToken().getTokenString(), false);
+            } catch (IdentityOAuth2Exception e) {
+                throw new UserInfoEndpointException("Error occurred while obtaining access token.", e);
+            }
+
+            if (accessTokenDO != null) {
+                return accessTokenDO.getAccessToken();
+            }
+        }
+        return null;
+    }
+
+    /**
+     * There are cases where we store an 'alias' of the token returned to the client as the token inside IS.
+     * For example, in the case of JWT access tokens we store the 'jti' claim in the database instead of the
+     * actual JWT. Therefore we need to cache an AccessTokenDO with the stored token identifier.
+     *
+     * @param newTokenBean token DO to be added to the cache.
+     */
+    public static void addTokenDOtoCache(AccessTokenDO newTokenBean) throws IdentityOAuth2Exception  {
+
+        OauthTokenIssuer tokenIssuer = null;
+        try {
+            tokenIssuer = OAuth2Util.getOAuthTokenIssuerForOAuthApp(newTokenBean.getConsumerKey());
+            String tokenAlias = tokenIssuer.getAccessTokenHash(newTokenBean.getAccessToken());
+            OAuthCacheKey accessTokenCacheKey = new OAuthCacheKey(tokenAlias);
+            AccessTokenDO tokenDO = AccessTokenDO.clone(newTokenBean);
+            tokenDO.setAccessToken(tokenAlias);
+            OAuthCache.getInstance().addToCache(accessTokenCacheKey, tokenDO);
+            if (log.isDebugEnabled()) {
+                if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                    log.debug("Access token DO was added to OAuthCache with cache key: "
+                            + accessTokenCacheKey.getCacheKeyString());
+                } else {
+                    log.debug("Access token DO was added to OAuthCache");
+                }
+            }
+        } catch (OAuthSystemException e) {
+            if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                throw new IdentityOAuth2Exception("Error while getting the token alias from token issuer: " +
+                        tokenIssuer.toString() + " for the token: " + newTokenBean.getAccessToken(), e);
+            } else {
+                throw new IdentityOAuth2Exception("Error while getting the token alias from token issuer: " +
+                        tokenIssuer.toString(), e);
+            }
+        } catch (InvalidOAuthClientException e) {
+            if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                throw new IdentityOAuth2Exception("Error while getting the token issuer for the token: " +
+                        newTokenBean.getAccessToken(), e);
+            } else {
+                throw new IdentityOAuth2Exception("Error while getting the token issuer", e);
+            }
+        }
+    }
+
+    /**
+     * Used to get the authenticated IDP name from a user.
+     *
+     * @param user Authenticated User.
+     * @return Returns the authenticated IDP name.
+     */
+    public static String getAuthenticatedIDP(AuthenticatedUser user) {
+
+        String authenticatedIDP;
+        if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
+            if (!OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && user.isFederatedUser()) {
+                authenticatedIDP = user.getFederatedIdPName();
+                if (log.isDebugEnabled()) {
+                    log.debug("IDP_ID column is available. User is federated and not mapped to local users. " +
+                            "Authenticated IDP is set to:" + authenticatedIDP + " for user:" + user.toString());
+                }
+            } else {
+                authenticatedIDP = FrameworkConstants.LOCAL_IDP_NAME;
+                if (log.isDebugEnabled()) {
+                    log.debug("IDP_ID column is available. Authenticated IDP is set to:" + authenticatedIDP +
+                            " for user:" + user.toString());
+                }
+            }
+        } else {
+            authenticatedIDP = user.getFederatedIdPName();
+            if (log.isDebugEnabled()) {
+                log.debug("IDP_ID column is not available. Authenticated IDP is set to:" + authenticatedIDP +
+                        " for user:" + user.toString());
+            }
+        }
+
+        return authenticatedIDP;
+    }
+
+    /**
+     * Used to get the user store domain name from a user.
+     *
+     * @param user Authenticated User.
+     * @return Returns the sanitized user store domain.
+     */
+    public static String getUserStoreDomain(AuthenticatedUser user) {
+
+        String userDomain;
+        if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled() &&
+                !OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && user.isFederatedUser()) {
+            if (log.isDebugEnabled()) {
+                log.debug("IDP_ID column is available. User is federated and not mapped to local users.");
+            }
+            // When the IDP_ID column is available it was decided to set the
+            // domain name for federated users to 'FEDERATED'.
+            // This is a system reserved word and users stores cannot be created with this name.
+            userDomain = FrameworkConstants.FEDERATED_IDP_NAME;
+        } else if (!OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && user.isFederatedUser()) {
+            if (log.isDebugEnabled()) {
+                log.debug("IDP_ID column is not available. User is federated and not mapped to local users.");
+            }
+            userDomain = OAuth2Util.getFederatedUserDomain(user.getFederatedIdPName());
+        } else {
+            userDomain = user.getUserStoreDomain();
+            if (log.isDebugEnabled()) {
+                if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
+                    log.debug("IDP_ID column is available. User is not federated or mapped to local users.");
+                } else {
+                    log.debug("IDP_ID column is not available. User is not federated or mapped to local users.");
+                }
+            }
+        }
+        String sanitizedUserDomain = OAuth2Util.getSanitizedUserStoreDomain(userDomain);
+        if (log.isDebugEnabled()) {
+            log.debug("User domain is set to:" + sanitizedUserDomain  + " for user:" + user.toString());
+        }
+
+        return sanitizedUserDomain;
+    }
+
+    /**
+     * Check if the IDP_ID column is available in the relevant tables.
+     *
+     * @return True if IDP_ID column is available in all the relevant table.
+     */
+    public static boolean checkIDPIdColumnAvailable() {
+
+        boolean isIdpIdAvailableInAuthzCodeTable;
+        boolean isIdpIdAvailableInTokenTable;
+        boolean isIdpIdAvailableInTokenAuditTable;
+        String columnIdpId = "IDP_ID";
+
+        isIdpIdAvailableInAuthzCodeTable = FrameworkUtils
+                .isTableColumnExists("IDN_OAUTH2_AUTHORIZATION_CODE", columnIdpId);
+        isIdpIdAvailableInTokenTable = FrameworkUtils
+                .isTableColumnExists("IDN_OAUTH2_ACCESS_TOKEN", columnIdpId);
+        if (OAuthServerConfiguration.getInstance().useRetainOldAccessTokens()) {
+            isIdpIdAvailableInTokenAuditTable = FrameworkUtils
+                    .isTableColumnExists("IDN_OAUTH2_ACCESS_TOKEN_AUDIT", columnIdpId);
+        } else {
+            isIdpIdAvailableInTokenAuditTable = true;
+            if (log.isDebugEnabled()) {
+                log.debug("Retaining old access tokens in IDN_OAUTH2_ACCESS_TOKEN_AUDIT is disabled, therefore " +
+                        "ignoring the availability of IDP_ID column in IDN_OAUTH2_ACCESS_TOKEN_AUDIT table.");
+            }
+        }
+
+        return isIdpIdAvailableInAuthzCodeTable && isIdpIdAvailableInTokenTable && isIdpIdAvailableInTokenAuditTable;
+    }
+}

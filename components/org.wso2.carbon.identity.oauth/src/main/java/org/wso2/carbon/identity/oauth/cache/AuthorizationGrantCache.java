@@ -105,6 +105,16 @@ public class AuthorizationGrantCache extends BaseCache<AuthorizationGrantCacheKe
     }
 
     /**
+     * Clears a cache entry by tokenId
+     *
+     * @param key Key to clear cache.
+     */
+    public void clearCacheEntryByTokenId(AuthorizationGrantCacheKey key, String tokenId) {
+        super.clearCacheEntry(key);
+        clearFromSessionStore(tokenId);
+    }
+
+    /**
      * Add a cache entry by authorization code.
      *
      * @param key   Key which cache entry is indexed.

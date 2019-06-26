@@ -72,6 +72,7 @@
     String logoutUrl = null;
     boolean isBackchannelLogoutEnabled = false;
     boolean isFrontchannelLogoutEnabled = false;
+    boolean isRenewRefreshTokenEnabled = true;
 
     try {
 
@@ -150,6 +151,11 @@
             // Sorting the list to display the scope validators in alphabetical order
             Collections.sort(allowedScopeValidators);
             tokenTypes = new ArrayList<String>(Arrays.asList(client.getSupportedTokenTypes()));
+            if (app.getRenewRefreshTokenEnabled() == null) {
+                isRenewRefreshTokenEnabled = client.isRefreshTokenRenewalEnabled();
+            } else {
+                isRenewRefreshTokenEnabled = Boolean.parseBoolean(app.getRenewRefreshTokenEnabled());
+            }
             if (OAuthConstants.OAuthVersions.VERSION_2.equals(app.getOAuthVersion())) {
                 id = resourceBundle.getString("consumerkey.oauth20");
                 secret = resourceBundle.getString("consumersecret.oauth20");
@@ -264,6 +270,10 @@
                         CARBON.showWarningDialog('<fmt:message key="application.is.required"/>');
                         return false;
                     }
+                    if (!$(jQuery("#grant_refresh_token"))[0].checked) {
+                        document.getElementById("renewRefreshTokenPerApp").checked = true;
+                        document.getElementById("renewRefreshTokenPerApp").value = 'notAssigned';
+                    }
 
                     var versionValue = document.getElementsByName("oauthVersion")[0].value;
 
@@ -324,6 +334,7 @@
                     var supportImplicit = $('input[name=grant_implicit]:checked').val() != null;
                     var idTokenEncryptionEnabled = $('input[name=encryptIdToken]:checked').val() != null;
                     var oidcLogoutEnabled = $('input[name=logoutMechanism]:checked').val() !== "<%= OAuthConstants.OIDCConfigProperties.NO_LOGOUT_SELECTED%>";
+                    var grantRefreshToken = $('input[name=grant_refresh_token]:checked').val() != null;
 
                     if (oauthVersion === "<%=OAuthConstants.OAuthVersions.VERSION_1A%>") {
                         $(jQuery('#grant_row')).hide();
@@ -383,6 +394,12 @@
                             $(jQuery("#pkce_support_plain").hide());
                         }
 
+                        if (grantRefreshToken) {
+                            $(jQuery("#renew_refresh_token_per_app").show());
+                        } else {
+                            $(jQuery("#renew_refresh_token_per_app").hide());
+                        }
+
                         if (!oidcLogoutEnabled) {
                             $('select[name=logoutUrl]').prop('disabled', true);
                         } else {
@@ -404,12 +421,8 @@
                     document.editAppform.addAudience.disabled = (!chkbx.checked);
                 }
 
-                function toggleOidcLogout(radiobtn) {
-                    if (radiobtn.value == "none") {
-                        document.editAppform.logoutUrl.disabled = true;
-                    } else {
-                        document.editAppform.logoutUrl.disabled = false;
-                    }
+                function toggleOidcLogout(chkbx) {
+                    document.editAppform.logoutUrl.disabled = !chkbx.checked;
                 }
 
 
@@ -598,7 +611,6 @@
                                     <td><input class="text-box-big" id="callback" name="callback"
                                                type="text" value="<%=Encode.forHtmlAttribute(app.getCallbackUrl())%>"/></td>
                                 </tr>
-                                <% if(client.isPKCESupportedEnabled()) {%>
                                 <tr id="pkce_enable">
                                     <td class="leftCol-med" colspan="2">
                                         <label>
@@ -621,8 +633,19 @@
                                         </div>
                                     </td>
                                 </tr>
-                                <% } %>
-
+                                <tr id="renew_refresh_token_per_app">
+                                    <td colspan="2">
+                                        <label>
+                                            <input type="checkbox" name="renewRefreshTokenPerApp"
+                                                   id="renewRefreshTokenPerApp" value="true"
+                                                    <%=(isRenewRefreshTokenEnabled ? "checked" : "")%> />
+                                            <fmt:message key='renew.refresh.token.per.app'/>
+                                        </label>
+                                        <div class="sectionHelp">
+                                            <fmt:message key='renew.refresh.token.per.app.hint'/>
+                                        </div>
+                                    </td>
+                                </tr>
                                 <tr id="bypass_client_credentials">
                                     <td colspan="2">
                                         <label>
@@ -824,45 +847,16 @@
                                     </td>
                                 </tr>
 
-                                    <%-- Logout Mechanisms --%>
-                                <tr id="logout_mechanism_row" name="logout_mechanism_row">
-                                    <td class="leftCol-med"><fmt:message key="logout.mechasnism"/></td>
-                                    <td>
-                                        <table>
-                                            <tr>
-                                                <td><label><input type="radio" name="logoutMechanism"
-                                                                  id="logout_none"
-                                                                  value="<%= Encode.forHtmlAttribute(OAuthConstants.OIDCConfigProperties.NO_LOGOUT_SELECTED)%>"
-                                                                  onclick="toggleOidcLogout(this)"
-                                                        <%= (((!isFrontchannelLogoutEnabled && !isBackchannelLogoutEnabled)) ? "checked" : "")%>
-                                                />
-                                                    <fmt:message key="no.logout.mechanism"/>
-                                                </label>
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td><label><input type="radio" name="logoutMechanism"
-                                                                  id="frontchannel_logout"
-                                                                  value="<%= Encode.forHtmlAttribute(OAuthConstants.OIDCConfigProperties.FRONT_CHANNEL_LOGOUT)%>"
-                                                                  onclick="toggleOidcLogout(this)"
-                                                        <%= ((isFrontchannelLogoutEnabled && !isBackchannelLogoutEnabled) ? "checked" : "")%>
-                                                />
-                                                    <fmt:message key="oidc.frontchannel.logout"/>
-                                                </label>
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td><label><input type="radio" name="logoutMechanism"
-                                                                  id="backchannel_logout"
-                                                                  value="<%= Encode.forHtmlAttribute(OAuthConstants.OIDCConfigProperties.BACK_CHANNEL_LOGOUT)%>"
-                                                                  onclick="toggleOidcLogout(this)"
-                                                        <%= (isBackchannelLogoutEnabled ? "checked" : "")%>
-                                                />
-                                                    <fmt:message key="oidc.backchannel.logout"/>
-                                                </label>
-                                                </td>
-                                            </tr>
-                                        </table>
+                                <tr id="logout_mechanism_row">
+                                    <td colspan="2">
+                                        <label title="Enable OIDC Backchannel Logout. Add the Backchannel Logout Endpoint URL in the textbox below">
+                                            <input type="checkbox" name="logoutMechanism"
+                                                   id="backchannel_logout" value="true"
+                                                   onclick="toggleOidcLogout(this);"
+                                                    <%= (isBackchannelLogoutEnabled ? "checked" : "")%>
+                                            />
+                                            <fmt:message key="oidc.backchannel.logout"/>
+                                        </label>
                                     </td>
                                 </tr>
 

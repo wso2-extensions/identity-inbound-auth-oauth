@@ -55,8 +55,8 @@ import java.security.interfaces.RSAPrivateKey;
 import java.text.ParseException;
 import java.util.Arrays;
 import java.util.Calendar;
-import java.util.Collections;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -138,8 +138,12 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     @Override
     public String getAccessTokenHash(String accessToken) throws OAuthSystemException {
         try {
-            JWT parse = JWTParser.parse(accessToken);
-            return parse.getJWTClaimsSet().getJWTID();
+            JWT parsedJwtToken = JWTParser.parse(accessToken);
+            String jwtId = parsedJwtToken.getJWTClaimsSet().getJWTID();
+            if (jwtId == null) {
+                throw new OAuthSystemException("JTI could not be retrieved from the JWT token.");
+            }
+            return jwtId;
         } catch (ParseException e) {
             if (log.isDebugEnabled() && IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
                 log.debug("Error while getting JWTID from token: " + accessToken);
@@ -295,7 +299,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             JWSSigner signer = new RSASSASigner((RSAPrivateKey) privateKey);
             JWSHeader.Builder headerBuilder = new JWSHeader.Builder((JWSAlgorithm) signatureAlgorithm);
             String certThumbPrint = OAuth2Util.getThumbPrint(tenantDomain, tenantId);
-            headerBuilder.keyID(certThumbPrint);
+            headerBuilder.keyID(OAuth2Util.getKID(certThumbPrint, (JWSAlgorithm) signatureAlgorithm));
             headerBuilder.x509CertThumbprint(new Base64URL(certThumbPrint));
             SignedJWT signedJWT = new SignedJWT(headerBuilder.build(), jwtClaimsSet);
             signedJWT.sign(signer);
@@ -383,16 +387,19 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         }
 
         AuthenticatedUser user;
+        String spTenantDomain;
         long accessTokenLifeTimeInMillis;
         if (authAuthzReqMessageContext != null) {
             accessTokenLifeTimeInMillis =
                     getAccessTokenLifeTimeInMillis(authAuthzReqMessageContext, oAuthAppDO, consumerKey);
+            spTenantDomain = authAuthzReqMessageContext.getAuthorizationReqDTO().getTenantDomain();
         } else {
             accessTokenLifeTimeInMillis =
                     getAccessTokenLifeTimeInMillis(tokenReqMessageContext, oAuthAppDO, consumerKey);
+            spTenantDomain = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getTenantDomain();
         }
 
-        String issuer = OAuth2Util.getIDTokenIssuer();
+        String issuer = OAuth2Util.getIdTokenIssuer(spTenantDomain);
         long curTimeInMillis = Calendar.getInstance().getTimeInMillis();
 
         String sub = getAuthenticatedSubjectIdentifier(authAuthzReqMessageContext, tokenReqMessageContext);
@@ -419,7 +426,8 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
 
         // This is a spec (openid-connect-core-1_0:2.0) requirement for ID tokens. But we are keeping this in JWT
         // as well.
-        jwtClaimsSetBuilder.audience(Collections.singletonList(consumerKey));
+        List<String> audience = OAuth2Util.getOIDCAudience(consumerKey, oAuthAppDO);
+        jwtClaimsSetBuilder.audience(audience);
         JWTClaimsSet jwtClaimsSet;
 
         // Handle custom claims

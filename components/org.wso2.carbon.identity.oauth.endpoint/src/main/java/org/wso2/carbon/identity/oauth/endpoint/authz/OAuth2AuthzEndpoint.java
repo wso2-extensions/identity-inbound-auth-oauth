@@ -44,7 +44,8 @@ import org.wso2.carbon.identity.application.authentication.framework.context.Aut
 import org.wso2.carbon.identity.application.authentication.framework.context.SessionContext;
 import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.ClaimMetaData;
 import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.ConsentClaimsData;
-import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.exception.SSOConsentServiceException;
+import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.exception
+        .SSOConsentServiceException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticationResult;
 import org.wso2.carbon.identity.application.authentication.framework.model.CommonAuthRequestWrapper;
@@ -56,6 +57,9 @@ import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
 import org.wso2.carbon.identity.base.IdentityConstants;
+import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataHandler;
+import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
+import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
@@ -66,6 +70,7 @@ import org.wso2.carbon.identity.oauth.cache.SessionDataCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.endpoint.OAuthRequestWrapper;
 import org.wso2.carbon.identity.oauth.endpoint.exception.ConsentHandlingFailedException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestException;
@@ -89,6 +94,8 @@ import org.wso2.carbon.identity.oidc.session.cache.OIDCBackChannelAuthCodeCacheK
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
 import org.wso2.carbon.identity.openidconnect.OIDCConstants;
 import org.wso2.carbon.identity.openidconnect.OIDCRequestObjectUtil;
+import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilter;
+import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImpl;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.registry.core.utils.UUIDGenerator;
@@ -139,7 +146,9 @@ import static org.wso2.carbon.identity.application.authentication.endpoint.util.
 import static org.wso2.carbon.identity.application.authentication.endpoint.util.Constants.REQUESTED_CLAIMS;
 import static org.wso2.carbon.identity.application.authentication.endpoint.util.Constants.USER_CLAIMS_CONSENT_ONLY;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.REQUEST_PARAM_SP;
-import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.RequestParams.TENANT_DOMAIN;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.RequestParams
+        .TENANT_DOMAIN;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.REDIRECT_URI;
 import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.AUTHENTICATION_RESPONSE;
 import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.INITIAL_REQUEST;
 import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.PASSTHROUGH_TO_COMMONAUTH;
@@ -175,7 +184,6 @@ public class OAuth2AuthzEndpoint {
     public static final String SPACE_SEPARATOR = " ";
     private boolean isCacheAvailable = false;
 
-    private static final String REDIRECT_URI = "redirect_uri";
     private static final String RESPONSE_MODE_FORM_POST = "form_post";
     private static final String RESPONSE_MODE = "response_mode";
     private static final String RETAIN_CACHE = "retainCache";
@@ -186,6 +194,8 @@ public class OAuth2AuthzEndpoint {
     private static final String DISPLAY_NAME = "DisplayName";
     private static final String ID_TOKEN = "id_token";
     private static final String ACCESS_CODE = "code";
+
+    private static final String OIDC_DIALECT = "http://wso2.org/oidc/claim";
 
     private String sessionId;
 
@@ -241,7 +251,9 @@ public class OAuth2AuthzEndpoint {
         // Validate repeated parameters
         if (!validateParams(request, paramMap)) {
             return Response.status(HttpServletResponse.SC_BAD_REQUEST).location(new URI(getErrorPageURL(request,
-                    OAuth2ErrorCodes.INVALID_REQUEST, "Invalid authorization request with repeated parameters", null))).build();
+                    OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes
+                            .INVALID_AUTHORIZATION_REQUEST, "Invalid authorization request with repeated parameters", null)))
+                    .build();
         }
         HttpServletRequestWrapper httpRequest = new OAuthRequestWrapper(request, paramMap);
         return authorize(httpRequest, response);
@@ -254,7 +266,8 @@ public class OAuth2AuthzEndpoint {
         }
 
         return Response.status(HttpServletResponse.SC_FOUND).location(new URI(getErrorPageURL
-                (oAuthMessage.getRequest(), OAuth2ErrorCodes.INVALID_REQUEST, "Invalid authorization request", null))).build();
+                (oAuthMessage.getRequest(), OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes
+                        .INVALID_AUTHORIZATION_REQUEST, "Invalid authorization request", null))).build();
     }
 
     private void handleRetainCache(OAuthMessage oAuthMessage) {
@@ -318,27 +331,33 @@ public class OAuth2AuthzEndpoint {
                 EndpointUtil.getErrorRedirectURL(oAuthMessage.getRequest(), ex, params))).build();
     }
 
-    private Response handleOAuthProblemException(OAuthMessage oAuthMessage, OAuthProblemException e) throws URISyntaxException {
+    private Response handleOAuthProblemException(OAuthMessage oAuthMessage, OAuthProblemException e) throws
+            URISyntaxException {
 
         if (log.isDebugEnabled()) {
             log.debug(e.getError(), e);
         }
+        String errorPageURL = getErrorPageURL(oAuthMessage.getRequest(), OAuth2ErrorCodes.INVALID_REQUEST,
+                OAuth2ErrorCodes.OAuth2SubErrorCodes.UNEXPECTED_SERVER_ERROR, e.getMessage(), null);
+        if (OAuthServerConfiguration.getInstance().isRedirectToRequestedRedirectUriEnabled()) {
+            return Response.status(HttpServletResponse.SC_FOUND).location(new URI(errorPageURL)).build();
 
-        String errorPageURL = getErrorPageURL(oAuthMessage.getRequest(), OAuth2ErrorCodes.INVALID_REQUEST, e.getMessage(), null);
-        String redirectURI = oAuthMessage.getRequest().getParameter(REDIRECT_URI);
+        } else {
+            String redirectURI = oAuthMessage.getRequest().getParameter(REDIRECT_URI);
 
-        if (redirectURI != null) {
-            try {
-                errorPageURL = errorPageURL + "&" + REDIRECT_URI + "=" + URLEncoder
-                        .encode(redirectURI, StandardCharsets.UTF_8.name());
-            } catch (UnsupportedEncodingException e1) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Error while encoding the error page url", e);
+            if (redirectURI != null) {
+                try {
+                    errorPageURL = errorPageURL + "&" + REDIRECT_URI + "=" + URLEncoder
+                            .encode(redirectURI, StandardCharsets.UTF_8.name());
+                } catch (UnsupportedEncodingException e1) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Error while encoding the error page url", e);
+                    }
                 }
             }
+            return Response.status(HttpServletResponse.SC_FOUND).location(new URI(errorPageURL))
+                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED_TYPE).build();
         }
-        return Response.status(HttpServletResponse.SC_FOUND).location(new URI(errorPageURL))
-                .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED_TYPE).build();
     }
 
     private static String getFormPostRedirectPage() {
@@ -531,8 +550,9 @@ public class OAuth2AuthzEndpoint {
                     "parameter could not be found in request");
         }
         return Response.status(HttpServletResponse.SC_FOUND).location(new URI(
-                getErrorPageURL(oAuthMessage.getRequest(), OAuth2ErrorCodes.INVALID_REQUEST, "Invalid authorization " +
-                        "request", appName))).build();
+                getErrorPageURL(oAuthMessage.getRequest(), OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes
+                        .OAuth2SubErrorCodes.INVALID_AUTHORIZATION_REQUEST, "Invalid authorization request", appName))
+        ).build();
     }
 
     private String manageOIDCSessionState(OAuthMessage oAuthMessage, OIDCSessionState sessionState, String redirectURL) {
@@ -713,8 +733,9 @@ public class OAuth2AuthzEndpoint {
                     "corresponding AuthenticationResult does not exist in the cache.");
         }
         return Response.status(HttpServletResponse.SC_FOUND).location(new URI(
-                getErrorPageURL(oAuthMessage.getRequest(), OAuth2ErrorCodes.INVALID_REQUEST, "Invalid authorization " +
-                        "request", appName))).build();
+                getErrorPageURL(oAuthMessage.getRequest(), OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes
+                        .OAuth2SubErrorCodes.INVALID_AUTHORIZATION_REQUEST, "Invalid authorization request", appName)
+        )).build();
     }
 
     private Response handleFormPostMode(OAuthMessage oAuthMessage, OAuth2Parameters oauth2Params, String redirectURL,
@@ -961,8 +982,9 @@ public class OAuth2AuthzEndpoint {
         AuthenticatedUser loggedInUser = getLoggedInUser(oAuthMessage);
         String clientId = oauth2Params.getClientId();
 
-        boolean skipConsent = isOpenIDConnectConsentSkipped();
-        if (!skipConsent) {
+        ServiceProvider serviceProvider = getServiceProvider(oauth2Params.getClientId());
+
+        if (!isConsentSkipped(serviceProvider)) {
             boolean approvedAlways = OAuthConstants.Consent.APPROVE_ALWAYS.equals(consent);
             if (approvedAlways) {
                 OpenIDConnectUserRPStore.getInstance().putUserRPToStore(loggedInUser, applicationName,
@@ -1180,8 +1202,8 @@ public class OAuth2AuthzEndpoint {
 
         if (!validationResponse.isValidClient()) {
             EndpointUtil.triggerOnRequestValidationFailure(oAuthMessage, validationResponse);
-            return getErrorPageURL(oAuthMessage.getRequest(), validationResponse.getErrorCode(), validationResponse
-                    .getErrorMsg(), null);
+            return getErrorPageURL(oAuthMessage.getRequest(), validationResponse.getErrorCode(), OAuth2ErrorCodes
+                    .OAuth2SubErrorCodes.INVALID_CLIENT, validationResponse.getErrorMsg(), null);
         } else {
             String tenantDomain = EndpointUtil.getSPTenantDomainFromClientId(oAuthMessage.getClientId());
             setSPAttributeToRequest(oAuthMessage.getRequest(), validationResponse.getApplicationName(), tenantDomain);
@@ -1356,9 +1378,11 @@ public class OAuth2AuthzEndpoint {
 
         // Check if PKCE is mandatory for the application
         if (validationResponse.isPkceMandatory()) {
-            if (pkceChallengeCode == null || !OAuth2Util.validatePKCECodeChallenge(pkceChallengeCode, pkceChallengeMethod)) {
-                return getErrorPageURL(oAuthMessage.getRequest(), OAuth2ErrorCodes.INVALID_REQUEST, "PKCE is " +
-                        "mandatory for this application. PKCE Challenge is not provided or is not upto RFC 7636 " +
+            if (pkceChallengeCode == null || !OAuth2Util.validatePKCECodeChallenge(pkceChallengeCode,
+                    pkceChallengeMethod)) {
+                return getErrorPageURL(oAuthMessage.getRequest(), OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes
+                        .OAuth2SubErrorCodes.INVALID_PKCE_CHALLENGE_CODE, "PKCE is mandatory for this application. " +
+                        "PKCE Challenge is not provided or is not upto RFC 7636 " +
                         "specification.", null);
             }
         }
@@ -1366,23 +1390,26 @@ public class OAuth2AuthzEndpoint {
         if (pkceChallengeCode != null && pkceChallengeMethod != null) {
             if (!OAuthConstants.OAUTH_PKCE_PLAIN_CHALLENGE.equals(pkceChallengeMethod) &&
                     !OAuthConstants.OAUTH_PKCE_S256_CHALLENGE.equals(pkceChallengeMethod)) {
-                return getErrorPageURL(oAuthMessage.getRequest(), OAuth2ErrorCodes.INVALID_REQUEST, "Unsupported " +
-                        "PKCE Challenge Method", null);
+                return getErrorPageURL(oAuthMessage.getRequest(), OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes
+                        .OAuth2SubErrorCodes.INVALID_PKCE_CHALLENGE_CODE, "Unsupported PKCE Challenge Method", null);
             }
         }
 
         // Check if "plain" transformation algorithm is disabled for the application
         if (pkceChallengeCode != null && !validationResponse.isPkceSupportPlain()) {
             if (pkceChallengeMethod == null || OAuthConstants.OAUTH_PKCE_PLAIN_CHALLENGE.equals(pkceChallengeMethod)) {
-                return getErrorPageURL(oAuthMessage.getRequest(), OAuth2ErrorCodes.INVALID_REQUEST, "This " +
-                        "application does not support \"plain\" transformation algorithm.", null);
+                return getErrorPageURL(oAuthMessage.getRequest(), OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes
+                        .OAuth2SubErrorCodes.INVALID_PKCE_CHALLENGE_CODE, "This application does not support " +
+                        "\"plain\" transformation algorithm.", null);
             }
         }
 
         // If PKCE challenge code was sent, check if the code challenge is upto specifications
-        if (pkceChallengeCode != null && !OAuth2Util.validatePKCECodeChallenge(pkceChallengeCode, pkceChallengeMethod)) {
-            return getErrorPageURL(oAuthMessage.getRequest(), OAuth2ErrorCodes.INVALID_REQUEST, "Code challenge used" +
-                    " is not up to RFC 7636 specifications.", null);
+        if (pkceChallengeCode != null && !OAuth2Util.validatePKCECodeChallenge(pkceChallengeCode,
+                pkceChallengeMethod)) {
+            return getErrorPageURL(oAuthMessage.getRequest(), OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes
+                    .OAuth2SubErrorCodes.INVALID_PKCE_CHALLENGE_CODE, "Code challenge used is not up to RFC 7636 " +
+                    "specifications.", null);
         }
         return null;
     }
@@ -1476,7 +1503,8 @@ public class OAuth2AuthzEndpoint {
                     log.debug("Request Object Handling failed due to : " + e.getErrorCode() + " for client_id: "
                             + clientId + " of tenantDomain: " + params.getTenantDomain(), e);
                 }
-                return EndpointUtil.getErrorPageURL(oAuthMessage.getRequest(), e.getErrorCode(), e.getErrorMessage(),
+                return EndpointUtil.getErrorPageURL(oAuthMessage.getRequest(), e.getErrorCode(), OAuth2ErrorCodes
+                                .OAuth2SubErrorCodes.INVALID_REQUEST_OBJECT, e.getErrorMessage(),
                         null);
             }
         }
@@ -1492,7 +1520,8 @@ public class OAuth2AuthzEndpoint {
             return OAuth2Util.getTenantDomainOfOauthApp(clientId);
         } catch (InvalidOAuthClientException | IdentityOAuth2Exception e) {
             throw new InvalidRequestException("Error retrieving Service Provider tenantDomain for client_id: "
-                    + clientId);
+                    + clientId, OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes
+                    .UNEXPECTED_SERVER_ERROR);
         }
     }
 
@@ -1505,7 +1534,8 @@ public class OAuth2AuthzEndpoint {
                 params.setMaxAge(Long.parseLong(maxAgeParam));
             } catch (NumberFormatException ex) {
                 log.error("Invalid max_age parameter: '" + maxAgeParam + "' sent in the authorization request.");
-                throw new InvalidRequestException("Invalid max_age parameter value sent in the authorization request.");
+                throw new InvalidRequestException("Invalid max_age parameter value sent in the authorization request" +
+                        ".", OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_PARAMETERS);
             }
         }
     }
@@ -1737,7 +1767,9 @@ public class OAuth2AuthzEndpoint {
                                  AuthenticatedUser authenticatedUser, boolean hasUserApproved)
             throws OAuthSystemException, ConsentHandlingFailedException {
 
-        if (isOpenIDConnectConsentSkipped()) {
+        ServiceProvider serviceProvider = getServiceProvider(oauth2Params.getClientId());
+
+        if (isConsentSkipped(serviceProvider)) {
             sessionState.setAddSessionState(true);
             return handleUserConsent(oAuthMessage, APPROVE, sessionState);
         } else if (hasUserApproved) {
@@ -1807,9 +1839,16 @@ public class OAuth2AuthzEndpoint {
         }
     }
 
-    private boolean isOpenIDConnectConsentSkipped() {
+    /**
+     * Consent page can be skipped by setting OpenIDConnect configuration or by setting SP property.
+     *
+     * @param serviceProvider Service provider related to this request.
+     * @return A boolean stating whether consent page is skipped or not.
+     */
+    private boolean isConsentSkipped(ServiceProvider serviceProvider) {
 
-        return getOAuthServerConfiguration().getOpenIDConnectSkipeUserConsentConfig();
+        return getOAuthServerConfiguration().getOpenIDConnectSkipeUserConsentConfig()
+                || FrameworkUtils.isConsentPageSkippedForSP(serviceProvider);
     }
 
     private boolean isConsentFromUserRequired(String preConsentQueryParams) {
@@ -1865,13 +1904,86 @@ public class OAuth2AuthzEndpoint {
         try {
             ConsentClaimsData claimsForApproval = getConsentRequiredClaims(user, serviceProvider, useExistingConsents);
             if (claimsForApproval != null) {
-                // Get the mandatory claims and append as query param.
                 String requestClaimsQueryParam = null;
-                if (CollectionUtils.isNotEmpty(claimsForApproval.getRequestedClaims())) {
-                    requestClaimsQueryParam = REQUESTED_CLAIMS + "=" +
-                            buildConsentClaimString(claimsForApproval.getRequestedClaims());
+                List<ClaimMetaData> requestedOidcClaimsList = new ArrayList<>();
+                List<String> localClaimsOfOidcClaims = new ArrayList<>();
+                List<String> localClaimsOfEssentialClaims = new ArrayList<>();
+
+                OpenIDConnectClaimFilterImpl openIDConnectClaimFilter = (OpenIDConnectClaimFilterImpl)
+                        PrivilegedCarbonContext.getThreadLocalCarbonContext().
+                                getOSGiService(OpenIDConnectClaimFilter.class, null);
+
+                // Get the claims uri list of all the requested scopes. Eg:- country, email
+                List<String> claimListOfScopes = openIDConnectClaimFilter.getClaimsFilteredByOIDCScopes(oauth2Params.
+                        getScopes(), spTenantDomain);
+
+                // Get the requested claims came through request object
+                List<RequestedClaim> requestedClaimsOfIdToken = EndpointUtil.getRequestObjectService()
+                        .getRequestedClaimsForSessionDataKey(oauth2Params.getSessionDataKey(), false);
+
+                List<RequestedClaim> requestedClaimsOfUserInfo = EndpointUtil.getRequestObjectService()
+                        .getRequestedClaimsForSessionDataKey(oauth2Params.getSessionDataKey(), true);
+
+                List<String> essentialRequestedClaims = new ArrayList<>();
+
+                // Get the list of id token's essential claims.
+                for (RequestedClaim requestedClaim : requestedClaimsOfIdToken) {
+                    if (requestedClaim.isEssential()) {
+                        essentialRequestedClaims.add(requestedClaim.getName());
+                    }
                 }
 
+                // Get the list of user info's essential claims.
+                for (RequestedClaim requestedClaim : requestedClaimsOfUserInfo) {
+                    if (requestedClaim.isEssential()) {
+                        essentialRequestedClaims.add(requestedClaim.getName());
+                    }
+                }
+
+                if (CollectionUtils.isNotEmpty(claimListOfScopes)) {
+                    // Get the external claims relevant to all oidc scope claims and essential claims
+                    Set<ExternalClaim> externalClaimSetOfOidcClaims = ClaimMetadataHandler.getInstance()
+                            .getMappingsFromOtherDialectToCarbon
+                                    (OIDC_DIALECT, new HashSet<String>(claimListOfScopes), spTenantDomain);
+
+                /* Get the locally mapped claims for all the external claims of requested scope and essential claims.
+                Eg:- http://wso2.org/claims/country, http://wso2.org/claims/emailaddress
+                 */
+                    for (ExternalClaim externalClaim : externalClaimSetOfOidcClaims) {
+                        localClaimsOfOidcClaims.add(externalClaim.getMappedLocalClaim());
+                    }
+                }
+
+                if (CollectionUtils.isNotEmpty(essentialRequestedClaims)) {
+                    // Get the external claims relevant to all essential requested claims.
+                    Set<ExternalClaim> externalClaimSetOfEssentialClaims = ClaimMetadataHandler.getInstance()
+                            .getMappingsFromOtherDialectToCarbon
+                                    (OIDC_DIALECT, new HashSet<String>(essentialRequestedClaims), spTenantDomain);
+
+                    /* Get the locally mapped claims for all the external claims of essential claims.
+                    Eg:- http://wso2.org/claims/country, http://wso2.org/claims/emailaddress
+                     */
+                    for (ExternalClaim externalClaim : externalClaimSetOfEssentialClaims) {
+                        localClaimsOfEssentialClaims.add(externalClaim.getMappedLocalClaim());
+                    }
+                }
+
+                /* Check whether the local claim of oidc claims contains the requested claims or essential claims of
+                 request object contains the requested claims, If it contains add it as requested claim.
+                 */
+                for (ClaimMetaData claimMetaData : claimsForApproval.getRequestedClaims()) {
+                    if (localClaimsOfOidcClaims.contains(claimMetaData.getClaimUri()) || localClaimsOfEssentialClaims
+                            .contains(claimMetaData.getClaimUri())) {
+                        requestedOidcClaimsList.add(claimMetaData);
+                    }
+                }
+
+                if (CollectionUtils.isNotEmpty(requestedOidcClaimsList)) {
+                    requestClaimsQueryParam = REQUESTED_CLAIMS + "=" +
+                            buildConsentClaimString(requestedOidcClaimsList);
+                }
+
+                // Get the mandatory claims and append as query param.
                 String mandatoryClaimsQueryParam = null;
                 if (CollectionUtils.isNotEmpty(claimsForApproval.getMandatoryClaims())) {
                     mandatoryClaimsQueryParam = MANDATORY_CLAIMS + "=" +
@@ -1884,6 +1996,11 @@ public class OAuth2AuthzEndpoint {
             String msg = "Error while handling user consent for claim for user: " + user.toFullQualifiedUsername() +
                     " for client_id: " + clientId + " of tenantDomain: " + spTenantDomain;
             throw new ConsentHandlingFailedException(msg, e);
+        } catch (ClaimMetadataException e) {
+            throw new ConsentHandlingFailedException("Error while getting claim mappings for " + OIDC_DIALECT, e);
+        } catch (RequestObjectException e) {
+            throw new ConsentHandlingFailedException("Error while getting essential claims for the session data key " +
+                    ": " + oauth2Params.getSessionDataKey(), e);
         }
 
         if (log.isDebugEnabled()) {
@@ -1963,8 +2080,9 @@ public class OAuth2AuthzEndpoint {
                                                    OAuth2Parameters oauth2Params, boolean hasUserApproved)
             throws OAuthSystemException, ConsentHandlingFailedException, OAuthProblemException {
 
+        ServiceProvider serviceProvider = getServiceProvider(oauth2Params.getClientId());
         sessionState.setAddSessionState(true);
-        if (isOpenIDConnectConsentSkipped()) {
+        if (isConsentSkipped(serviceProvider)) {
             return handleUserConsent(oAuthMessage, APPROVE, sessionState);
         } else if (hasUserApproved) {
             return handleApprovedAlwaysWithoutPromptingForNewConsent(oAuthMessage, sessionState, oauth2Params);
@@ -2108,6 +2226,10 @@ public class OAuth2AuthzEndpoint {
         authzReqDTO.setMaxAge(oauth2Params.getMaxAge());
         authzReqDTO.setEssentialClaims(oauth2Params.getEssentialClaims());
         authzReqDTO.setSessionDataKey(oauth2Params.getSessionDataKey());
+        if (sessionDataCacheEntry.getParamMap() != null && sessionDataCacheEntry.getParamMap().get(OAuthConstants
+                .AMR) != null) {
+            authzReqDTO.addProperty(OAuthConstants.AMR, sessionDataCacheEntry.getParamMap().get(OAuthConstants.AMR));
+        }
         // Set Selected acr value.
         String[] sessionIds = sessionDataCacheEntry.getParamMap().get(FrameworkConstants.SESSION_DATA_KEY);
         if (ArrayUtils.isNotEmpty(sessionIds)) {
