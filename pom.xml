@@ -813,8 +813,8 @@
         <json.wso2.version>3.0.0.wso2v1</json.wso2.version>
         <json.wso2.version.range>[3.0.0.wso2v1, 4.0.0)</json.wso2.version.range>
 
-        <opensaml.version>2.6.4</opensaml.version>
-        <opensaml2.wso2.version>2.6.4.wso2v5</opensaml2.wso2.version>
+        <opensaml.version>2.6.6</opensaml.version>
+        <opensaml2.wso2.version>2.6.6.wso2v3</opensaml2.wso2.version>
         <opensaml2.wso2.osgi.version.range>[2.6.0,3.0.0)</opensaml2.wso2.osgi.version.range>
 
         <joda.version>2.9.4</joda.version>
