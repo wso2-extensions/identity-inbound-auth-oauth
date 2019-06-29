@@ -262,8 +262,7 @@ public class TestUtils {
      */
     public static KeyStore getKeyStoreFromFile(String keystoreName, String password,
                                                String home) throws Exception {
-        Path tenantKeystorePath = Paths.get(home, "repository",
-                "resources", "security", keystoreName);
+        Path tenantKeystorePath = Paths.get(home, "repository", "resources", "security", keystoreName);
         FileInputStream file = new FileInputStream(tenantKeystorePath.toString());
         KeyStore keystore = KeyStore.getInstance(KeyStore.getDefaultType());
         keystore.load(file, password.toCharArray());

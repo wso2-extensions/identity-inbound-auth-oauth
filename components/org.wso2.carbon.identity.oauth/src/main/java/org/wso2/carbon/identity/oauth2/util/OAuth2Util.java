@@ -2901,7 +2901,9 @@ public class OAuth2Util {
         accessTokenDO = getAccessTokenDOFromMatchingTokenIssuer(tokenIdentifier, allOAuthTokenIssuerMap,
                 includeExpired);
 
-        if (accessTokenDO == null) {
+        // If the lookup is only for tokens in 'ACTIVE' state, APIs calling this method expect an
+        // IllegalArgumentException to be thrown to identify inactive/invalid tokens.
+        if (accessTokenDO == null && !includeExpired) {
             throw new IllegalArgumentException("Invalid Access Token. ACTIVE access token is not found.");
         }
         return accessTokenDO;
