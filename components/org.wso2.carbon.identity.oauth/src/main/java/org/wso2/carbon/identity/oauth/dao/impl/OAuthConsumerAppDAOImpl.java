@@ -67,10 +67,13 @@ import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.OPENID_CONNECT_AUD
 
 /**
  * Default implementation of {@link OAuthConsumerAppDAO}. This handles OAuth consumer application related DB operations.
+ * <p>
+ * This is an improved version of {@link org.wso2.carbon.identity.oauth.dao.OAuthAppDAO} and
+ * {@link org.wso2.carbon.identity.oauth.dao.OAuthConsumerDAO}
  */
 public class OAuthConsumerAppDAOImpl implements OAuthConsumerAppDAO {
 
-    private static final Log LOG = LogFactory.getLog(OAuthConsumerAppDAOImpl.class);
+    private static final Log log = LogFactory.getLog(OAuthConsumerAppDAOImpl.class);
     private static final String USERNAME = "USERNAME";
     private static final String LOWER_USERNAME = "LOWER(USERNAME)";
     private TokenPersistenceProcessor persistenceProcessor;
@@ -81,7 +84,7 @@ public class OAuthConsumerAppDAOImpl implements OAuthConsumerAppDAO {
         try {
             persistenceProcessor = OAuthServerConfiguration.getInstance().getPersistenceProcessor();
         } catch (IdentityOAuth2Exception e) {
-            LOG.error("Error retrieving TokenPersistenceProcessor. Defaulting to PlainTextPersistenceProcessor");
+            log.error("Error retrieving TokenPersistenceProcessor. Defaulting to PlainTextPersistenceProcessor");
             persistenceProcessor = new PlainTextPersistenceProcessor();
         }
 
@@ -129,8 +132,8 @@ public class OAuthConsumerAppDAOImpl implements OAuthConsumerAppDAO {
 
                 // Some JDBC Drivers returns this in the result, some don't so need to check before continuing.
                 if (appId == 0) {
-                    if (LOG.isDebugEnabled()) {
-                        LOG.debug("JDBC Driver did not returning the app id of the newly created app " +
+                    if (log.isDebugEnabled()) {
+                        log.debug("JDBC Driver did not returning the app id of the newly created app " +
                                 consumerAppDO.getApplicationName() + ". So executing select operation to get the id");
                     }
                     appId = getAppIdByClientId(connection, consumerAppDO.getOauthConsumerKey());
@@ -290,8 +293,8 @@ public class OAuthConsumerAppDAOImpl implements OAuthConsumerAppDAO {
 
                     if (!appExists) {
                         String message = "Cannot find an application associated with the given appName : " + appName;
-                        if (LOG.isDebugEnabled()) {
-                            LOG.debug(message);
+                        if (log.isDebugEnabled()) {
+                            log.debug(message);
                         }
                         throw new OAuthConsumerAppException(message);
                     }
@@ -394,8 +397,8 @@ public class OAuthConsumerAppDAOImpl implements OAuthConsumerAppDAO {
                 if (resultSet.next()) {
                     consumerSecret = persistenceProcessor.getPreprocessedClientSecret(resultSet.getString(1));
                 } else {
-                    if (LOG.isDebugEnabled()) {
-                        LOG.debug("Invalid Consumer Key : " + consumerKey);
+                    if (log.isDebugEnabled()) {
+                        log.debug("Invalid Consumer Key : " + consumerKey);
                     }
                 }
                 connection.commit();
@@ -409,8 +412,8 @@ public class OAuthConsumerAppDAOImpl implements OAuthConsumerAppDAO {
                 IdentityDatabaseUtil.closeAllConnections(connection, resultSet, prepStmt);
             }
         } else {
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("Consumer secret hashing enabled. Returning client secret as null.");
+            if (log.isDebugEnabled()) {
+                log.debug("Consumer secret hashing enabled. Returning client secret as null.");
             }
         }
         return consumerSecret;
@@ -431,13 +434,13 @@ public class OAuthConsumerAppDAOImpl implements OAuthConsumerAppDAO {
             if (resultSet.next()) {
                 username = resultSet.getString(1);
             } else {
-                LOG.debug("Invalid consumer key: " + consumerKey);
+                log.debug("Invalid consumer key: " + consumerKey);
             }
             connection.commit();
         } catch (SQLException e) {
-            LOG.error("Error when executing the SQL : " +
+            log.error("Error when executing the SQL : " +
                     SQLQueries.OAuthConsumerDAOSQLQueries.GET_USERNAME_FOR_CONSUMER_KEY);
-            LOG.error(e.getMessage(), e);
+            log.error(e.getMessage(), e);
             throw new OAuthConsumerAppException("Error while reading username for consumer key: " + consumerKey);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, resultSet, prepStmt);
@@ -463,8 +466,8 @@ public class OAuthConsumerAppDAOImpl implements OAuthConsumerAppDAO {
                 }
                 int count = prepStmt.executeUpdate();
                 updateScopeValidators(connection, oauthAppDO.getId(), oauthAppDO.getScopeValidators());
-                if (LOG.isDebugEnabled()) {
-                    LOG.debug("No. of records updated for updating consumer application. : " + count);
+                if (log.isDebugEnabled()) {
+                    log.debug("No. of records updated for updating consumer application. : " + count);
                 }
 
                 addOrUpdateOIDCSpProperty(oauthAppDO, connection);
@@ -562,7 +565,7 @@ public class OAuthConsumerAppDAOImpl implements OAuthConsumerAppDAO {
         } catch (SQLException e) {
             String errorMsg = "Error while removing OIDC properties for client ID: " + consumerKey + " and tenant " +
                     "domain: " + tenantDomain;
-            IdentityDatabaseUtil.rollBack(connection);
+            IdentityDatabaseUtil.rollbackTransaction(connection);
             throw new OAuthConsumerAppException(errorMsg, e);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, null, null);
@@ -622,8 +625,8 @@ public class OAuthConsumerAppDAOImpl implements OAuthConsumerAppDAO {
                 }
                 if (!rSetHasRows) {
                     String message = "Cannot find an application associated with the given consumer key : " + clientId;
-                    if (LOG.isDebugEnabled()) {
-                        LOG.debug(message);
+                    if (log.isDebugEnabled()) {
+                        log.debug(message);
                     }
                     throw new OAuthConsumerAppException(message);
                 }
@@ -650,7 +653,7 @@ public class OAuthConsumerAppDAOImpl implements OAuthConsumerAppDAO {
             throws SQLException {
 
         if (scopeValidators != null && scopeValidators.length > 0) {
-            LOG.debug(String.format("Adding %d Scope validators registered for OAuth appId %d",
+            log.debug(String.format("Adding %d Scope validators registered for OAuth appId %d",
                     scopeValidators.length, appId));
             try (PreparedStatement stmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries
                     .ADD_APP_SCOPE_VALIDATOR)) {
@@ -667,8 +670,8 @@ public class OAuthConsumerAppDAOImpl implements OAuthConsumerAppDAO {
     private void handleRequestForANonExistingConsumerKey(String consumerKey) throws InvalidOAuthClientException {
 
         String message = "Cannot find an application associated with the given consumer key : " + consumerKey;
-        if (LOG.isDebugEnabled()) {
-            LOG.debug(message);
+        if (log.isDebugEnabled()) {
+            log.debug(message);
         }
         throw new InvalidOAuthClientException(message);
     }
@@ -686,8 +689,8 @@ public class OAuthConsumerAppDAOImpl implements OAuthConsumerAppDAO {
                 }
             }
         }
-        if (LOG.isDebugEnabled()) {
-            LOG.debug(String.format("Retrieving %d Scope validators registered for OAuth appId %d",
+        if (log.isDebugEnabled()) {
+            log.debug(String.format("Retrieving %d Scope validators registered for OAuth appId %d",
                     scopeValidators.size(), id));
         }
         return scopeValidators.toArray(new String[0]);
@@ -697,7 +700,7 @@ public class OAuthConsumerAppDAOImpl implements OAuthConsumerAppDAO {
                                        int appId,
                                        String[] scopeValidators) throws SQLException {
 
-        LOG.debug(String.format("Removing  Scope validators registered for OAuth appId %d", appId));
+        log.debug(String.format("Removing  Scope validators registered for OAuth appId %d", appId));
         try (PreparedStatement stmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries
                 .REMOVE_APP_SCOPE_VALIDATORS)) {
             stmt.setInt(1, appId);
@@ -1002,7 +1005,7 @@ public class OAuthConsumerAppDAOImpl implements OAuthConsumerAppDAO {
     private boolean validateUserForOwnerUpdate(OAuthAppDO oAuthAppDO) throws OAuthConsumerAppException {
 
         try {
-            String userName = null;
+            String userName;
             String usernameWithDomain = null;
             if (oAuthAppDO.getAppOwner() != null) {
                 userName = oAuthAppDO.getAppOwner().getUserName();
@@ -1097,7 +1100,7 @@ public class OAuthConsumerAppDAOImpl implements OAuthConsumerAppDAO {
         } catch (SQLException e) {
             String errorMsg = "Error occurred while retrieving OIDC audiences for client ID: " + consumerKey +
                     " and tenant domain: " + tenantDomain;
-            IdentityDatabaseUtil.rollBack(connection);
+            IdentityDatabaseUtil.rollbackTransaction(connection);
             throw new IdentityOAuth2Exception(errorMsg, e);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, rSetAudiences, prepStmt);

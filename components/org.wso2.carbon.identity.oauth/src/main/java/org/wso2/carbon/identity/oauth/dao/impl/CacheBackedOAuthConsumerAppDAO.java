@@ -15,6 +15,8 @@
  */
 package org.wso2.carbon.identity.oauth.dao.impl;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dao.OAuthConsumerAppDAO;
 import org.wso2.carbon.identity.oauth.exception.OAuthConsumerAppException;
@@ -25,6 +27,7 @@ import org.wso2.carbon.identity.oauth.exception.OAuthConsumerAppException;
  */
 public class CacheBackedOAuthConsumerAppDAO implements OAuthConsumerAppDAO {
 
+    private static final Log log = LogFactory.getLog(CacheBackedOAuthConsumerAppDAO.class);
     private OAuthConsumerAppDAO oAuthConsumerAppDAO;
 
     public CacheBackedOAuthConsumerAppDAO(OAuthConsumerAppDAO oAuthConsumerAppDAO) {
@@ -37,6 +40,10 @@ public class CacheBackedOAuthConsumerAppDAO implements OAuthConsumerAppDAO {
 
         oAuthConsumerAppDAO.addOAuthConsumerApplication(consumerAppDO);
         OAuthConsumerAppCache.getInstance().addToCache(consumerAppDO.getOauthConsumerKey(), consumerAppDO);
+        if (log.isDebugEnabled()) {
+            log.debug("OAuth application with consumer key: " + consumerAppDO.getOauthConsumerKey() + " has been " +
+                    "added to the OAuthConsumerAppCache.");
+        }
     }
 
     @Override
@@ -45,9 +52,17 @@ public class CacheBackedOAuthConsumerAppDAO implements OAuthConsumerAppDAO {
         OAuthAppDO oAuthAppDO = OAuthConsumerAppCache.getInstance().getValueFromCache(consumerKey);
 
         if (oAuthAppDO == null) {
+            if (log.isDebugEnabled()) {
+                log.debug("OAuthConsumerAppCache does not exist for consumer key: " + consumerKey);
+            }
+
             oAuthAppDO = oAuthConsumerAppDAO.getAppInformationByConsumerKey(consumerKey);
             if (oAuthAppDO != null) {
                 OAuthConsumerAppCache.getInstance().addToCache(consumerKey, oAuthAppDO);
+                if (log.isDebugEnabled()) {
+                    log.debug("OAuth application for consumer key: " + consumerKey + " has been added to the " +
+                            "OAuthConsumerAppCache.");
+                }
             }
         }
 
@@ -63,14 +78,16 @@ public class CacheBackedOAuthConsumerAppDAO implements OAuthConsumerAppDAO {
         if (OAuthConsumerAppCache.getInstance()
                 .getValueFromCache(oAuthAppDO.getOauthConsumerKey()) == null) {
             OAuthConsumerAppCache.getInstance().addToCache(oAuthAppDO.getOauthConsumerKey(), oAuthAppDO);
+            if (log.isDebugEnabled()) {
+                log.debug("OAuth application for application: " + appName + " has been added to the " +
+                        "OAuthConsumerAppCache wiht the consumer key: " + oAuthAppDO.getOauthConsumerKey());
+            }
         }
         return oAuthAppDO;
     }
 
     @Override
-    public OAuthAppDO[] getOAuthConsumerAppsOfUser(String username,
-                                                   int tenantId)
-            throws OAuthConsumerAppException {
+    public OAuthAppDO[] getOAuthConsumerAppsOfUser(String username, int tenantId) throws OAuthConsumerAppException {
 
         return oAuthConsumerAppDAO.getOAuthConsumerAppsOfUser(username, tenantId);
     }
@@ -80,6 +97,10 @@ public class CacheBackedOAuthConsumerAppDAO implements OAuthConsumerAppDAO {
 
         OAuthAppDO oAuthAppDO = OAuthConsumerAppCache.getInstance().getValueFromCache(consumerKey);
         if (oAuthAppDO != null) {
+            if (log.isDebugEnabled()) {
+                log.debug("OAuthConsumerAppCache exists for the OAuth application with consumer key: " +
+                        consumerKey);
+            }
             return oAuthAppDO.getOauthConsumerSecret();
         }
         return oAuthConsumerAppDAO.getOAuthConsumerSecret(consumerKey);
@@ -90,6 +111,10 @@ public class CacheBackedOAuthConsumerAppDAO implements OAuthConsumerAppDAO {
 
         OAuthAppDO oAuthAppDO = OAuthConsumerAppCache.getInstance().getValueFromCache(consumerKey);
         if (oAuthAppDO != null) {
+            if (log.isDebugEnabled()) {
+                log.debug("OAuthConsumerAppCache exists for the OAuth application with consumer key: " +
+                        consumerKey);
+            }
             return oAuthAppDO.getAppOwner().getUserName();
         }
         return oAuthConsumerAppDAO.getConsumerApplicationOwnerName(consumerKey);
@@ -100,18 +125,24 @@ public class CacheBackedOAuthConsumerAppDAO implements OAuthConsumerAppDAO {
 
         oAuthConsumerAppDAO.updateOAuthConsumerApplication(oauthAppDO);
         OAuthConsumerAppCache.getInstance().addToCache(oauthAppDO.getOauthConsumerKey(), oauthAppDO);
+        if (log.isDebugEnabled()) {
+            log.debug("OAuth application with consumer key: " + oauthAppDO.getOauthConsumerKey() + " has been " +
+                    "updated in the OAuthConsumerAppCache.");
+        }
     }
 
     @Override
-    public void updateOAuthConsumerAppName(String consumerKey,
-                                           String appName)
-            throws OAuthConsumerAppException {
+    public void updateOAuthConsumerAppName(String consumerKey, String appName) throws OAuthConsumerAppException {
 
         oAuthConsumerAppDAO.updateOAuthConsumerAppName(consumerKey, appName);
         OAuthAppDO oAuthAppDO = OAuthConsumerAppCache.getInstance().getValueFromCache(consumerKey);
         if (oAuthAppDO != null) {
             oAuthAppDO.setApplicationName(appName);
             OAuthConsumerAppCache.getInstance().addToCache(consumerKey, oAuthAppDO);
+            if (log.isDebugEnabled()) {
+                log.debug("OAuthConsumerAppCache  with consumer key: " + consumerKey + " has been updated with the " +
+                        "application name: " + appName);
+            }
         }
     }
 
@@ -123,6 +154,10 @@ public class CacheBackedOAuthConsumerAppDAO implements OAuthConsumerAppDAO {
         if (oAuthAppDO != null) {
             oAuthAppDO.setOauthConsumerSecret(consumerSecret);
             OAuthConsumerAppCache.getInstance().addToCache(consumerKey, oAuthAppDO);
+            if (log.isDebugEnabled()) {
+                log.debug("Consumer secret of OAuthConsumerAppCache  with consumer key: " + consumerKey +
+                        " has been updated.");
+            }
         }
     }
 
@@ -134,6 +169,10 @@ public class CacheBackedOAuthConsumerAppDAO implements OAuthConsumerAppDAO {
         if (oAuthAppDO != null) {
             oAuthAppDO.setState(state);
             OAuthConsumerAppCache.getInstance().addToCache(consumerKey, oAuthAppDO);
+            if (log.isDebugEnabled()) {
+                log.debug("State of the OAuthConsumerAppCache  with consumer key: " + consumerKey + " has been " +
+                        "updated with the state: " + state);
+            }
         }
     }
 
@@ -142,17 +181,21 @@ public class CacheBackedOAuthConsumerAppDAO implements OAuthConsumerAppDAO {
 
         if (OAuthConsumerAppCache.getInstance().getValueFromCache(consumerKey) != null) {
             OAuthConsumerAppCache.getInstance().clearCacheEntry(consumerKey);
+            if (log.isDebugEnabled()) {
+                log.debug("OAuthConsumerAppCache  with consumer key: " + consumerKey + " has been removed.");
+            }
         }
         oAuthConsumerAppDAO.removeOAuthConsumerApplication(consumerKey);
     }
 
     @Override
-    public void removeOIDCProperties(String consumerKey,
-                                     String tenantDomain)
-            throws OAuthConsumerAppException {
+    public void removeOIDCProperties(String consumerKey, String tenantDomain) throws OAuthConsumerAppException {
 
         if (OAuthConsumerAppCache.getInstance().getValueFromCache(consumerKey) != null) {
             OAuthConsumerAppCache.getInstance().clearCacheEntry(consumerKey);
+            if (log.isDebugEnabled()) {
+                log.debug("OAuthConsumerAppCache  with consumer key: " + consumerKey + " has been removed.");
+            }
         }
         oAuthConsumerAppDAO.removeOIDCProperties(consumerKey, tenantDomain);
     }
