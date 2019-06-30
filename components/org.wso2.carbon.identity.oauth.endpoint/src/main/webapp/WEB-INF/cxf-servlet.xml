@@ -44,13 +44,26 @@
     <bean id="oauthClientAuthnBean" class="org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthenticatorProxy">
         <property name="oAuthClientAuthnService" ref="oAuthClientAuthnFactoryBean"/>
     </bean>
-    <bean id="authzEndpointBean" class="org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpoint"/>
+    <bean id="authzEndpointBean" class="org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpoint">
+        <property name="openIDConnectClaimFilter" ref="openIDConnectClaimFilterFactoryBean"/>
+    </bean>
     <bean id="tokenEndpointBean" class="org.wso2.carbon.identity.oauth.endpoint.token.OAuth2TokenEndpoint"/>
     <bean id="introspectionEndpointBean" class="org.wso2.carbon.identity.oauth.endpoint.introspection.OAuth2IntrospectionEndpoint"/>
     <bean id="revokeEndpointBean" class="org.wso2.carbon.identity.oauth.endpoint.revoke.OAuthRevocationEndpoint"/>
     <bean id="userinfoEndpointBean" class="org.wso2.carbon.identity.oauth.endpoint.user.OpenIDConnectUserEndpoint"/>
     <bean id="jwksEndpointBean" class="org.wso2.carbon.identity.oauth.endpoint.jwks.JwksEndpoint"/>
     <bean id = "oidcdiscoveryEndpointBean" class="org.wso2.carbon.identity.oauth.endpoint.oidcdiscovery.OIDCDiscoveryEndpoint"/>
-    <bean id="oAuthClientAuthnServiceBean" class="org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnService"/>
     <bean id="oAuthClientAuthnFactoryBean" class="org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthnServiceFactory"/>
+    <bean id="endpointUtilBean" class="org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil">
+        <property name="oAuth2Service" ref="oAuth2ServiceFactoryBean"/>
+        <property name="SSOConsentService"  ref="ssoConsentServiceFactoryBean"/>
+        <property name="oauthServerConfiguration"  ref="oauthServerConfigurationFactoryBean"/>
+        <property name="requestObjectService"  ref="requestObjectServiceFactoryBean"/>
+    </bean>
+    <bean id="oAuth2ServiceFactoryBean" class="org.wso2.carbon.identity.oauth.endpoint.factory.OAuth2ServiceFactory"/>
+    <bean id="ssoConsentServiceFactoryBean" class="org.wso2.carbon.identity.oauth.endpoint.factory.SSOConsentServiceFactory"/>
+    <bean id="oauthServerConfigurationFactoryBean" class="org.wso2.carbon.identity.oauth.endpoint.factory.OAuthServerConfigurationFactory"/>
+    <bean id="requestObjectServiceFactoryBean" class="org.wso2.carbon.identity.oauth.endpoint.factory.RequestObjectServiceFactory"/>
+    <bean id="openIDConnectClaimFilterFactoryBean" class="org.wso2.carbon.identity.oauth.endpoint.factory.OpenIDConnectClaimFilterFactory"/>
+
 </beans>

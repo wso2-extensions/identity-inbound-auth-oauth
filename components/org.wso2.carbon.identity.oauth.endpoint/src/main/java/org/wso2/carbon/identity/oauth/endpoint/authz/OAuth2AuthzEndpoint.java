@@ -199,6 +199,16 @@ public class OAuth2AuthzEndpoint {
 
     private String sessionId;
 
+    private OpenIDConnectClaimFilterImpl openIDConnectClaimFilter;
+
+    public OpenIDConnectClaimFilterImpl getOpenIDConnectClaimFilter(){
+        return openIDConnectClaimFilter;
+    }
+
+    public void setOpenIDConnectClaimFilter(OpenIDConnectClaimFilterImpl openIDConnectClaimFilter) {
+        this.openIDConnectClaimFilter = openIDConnectClaimFilter;
+    }
+
     @GET
     @Path("/")
     @Consumes("application/x-www-form-urlencoded")
@@ -1908,10 +1918,6 @@ public class OAuth2AuthzEndpoint {
                 List<ClaimMetaData> requestedOidcClaimsList = new ArrayList<>();
                 List<String> localClaimsOfOidcClaims = new ArrayList<>();
                 List<String> localClaimsOfEssentialClaims = new ArrayList<>();
-
-                OpenIDConnectClaimFilterImpl openIDConnectClaimFilter = (OpenIDConnectClaimFilterImpl)
-                        PrivilegedCarbonContext.getThreadLocalCarbonContext().
-                                getOSGiService(OpenIDConnectClaimFilter.class, null);
 
                 // Get the claims uri list of all the requested scopes. Eg:- country, email
                 List<String> claimListOfScopes = openIDConnectClaimFilter.getClaimsFilteredByOIDCScopes(oauth2Params.
