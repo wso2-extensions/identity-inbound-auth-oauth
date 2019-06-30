@@ -219,6 +219,12 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         mockStatic(OAuth2Util.OAuthURL.class);
         when(OAuth2Util.OAuthURL.getOIDCConsentPageUrl()).thenReturn(OIDC_CONSENT_PAGE_URL);
         when(OAuth2Util.OAuthURL.getOAuth2ConsentPageUrl()).thenReturn(OAUTH2_CONSENT_PAGE_URL);
+        mockStatic(OAuthConsumerAppPersistenceFactory.class);
+        OAuthConsumerAppPersistenceFactory oAuthConsumerAppPersistenceFactory = mock(OAuthConsumerAppPersistenceFactory.class);
+        when(OAuthConsumerAppPersistenceFactory.getInstance()).thenReturn(oAuthConsumerAppPersistenceFactory);
+        OAuthConsumerAppDAO oAuthConsumerAppDAO = mock(OAuthConsumerAppDAO.class);
+        when(oAuthConsumerAppPersistenceFactory.getOAuthConsumerAppDAO()).thenReturn(oAuthConsumerAppDAO);
+        when(oAuthConsumerAppDAO.getAppInformationByConsumerKey(anyString())).thenReturn(null);
 
         mockStatic(SessionDataCache.class);
         when(SessionDataCache.getInstance()).thenReturn(mockedSessionDataCache);

@@ -711,9 +711,10 @@ public class EndpointUtil {
     public static String getSPTenantDomainFromClientId(String clientId) {
 
         try {
-            OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
+            OAuthAppDO oAuthAppDO = OAuthConsumerAppPersistenceFactory.getInstance().getOAuthConsumerAppDAO()
+                            .getAppInformationByConsumerKey(clientId);
             return OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
-        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+        } catch (OAuthConsumerAppException e) {
             log.error("Error while getting oauth app for client Id: " + clientId, e);
             return MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
         }

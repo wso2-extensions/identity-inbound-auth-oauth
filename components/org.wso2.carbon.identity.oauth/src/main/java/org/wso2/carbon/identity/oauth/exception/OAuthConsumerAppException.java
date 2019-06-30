@@ -18,9 +18,10 @@ package org.wso2.carbon.identity.oauth.exception;
 import org.wso2.carbon.identity.base.IdentityException;
 
 /**
- *
+ * Used to handle exceptions on OAuth Consumer Application management.
  */
 public class OAuthConsumerAppException extends IdentityException {
+
     public OAuthConsumerAppException(String message, Throwable cause) {
         super(message, cause);
     }
