@@ -51,12 +51,12 @@ public class OAuthClientAuthenticatorProxy extends AbstractPhaseInterceptor<Mess
         super(Phase.PRE_INVOKE);
     }
 
-    public OAuthClientAuthnService getoAuthClientAuthnService() {
+    public OAuthClientAuthnService getOAuthClientAuthnService() {
 
         return oAuthClientAuthnService;
     }
 
-    public void setoAuthClientAuthnService(OAuthClientAuthnService oAuthClientAuthnService) {
+    public void setOAuthClientAuthnService(OAuthClientAuthnService oAuthClientAuthnService) {
 
         this.oAuthClientAuthnService = oAuthClientAuthnService;
     }
