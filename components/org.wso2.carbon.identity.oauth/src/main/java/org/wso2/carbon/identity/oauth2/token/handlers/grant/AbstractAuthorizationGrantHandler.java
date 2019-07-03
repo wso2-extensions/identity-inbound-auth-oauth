@@ -557,6 +557,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
 
     private OAuthCacheKey getOAuthCacheKey(String scope, String consumerKey, String authorizedUser,
                                            String authenticatedIDP) {
+
         String cacheKeyString = OAuth2Util.buildCacheKeyStringForToken(consumerKey, scope, authorizedUser,
                 authenticatedIDP);
         return new OAuthCacheKey(cacheKeyString);

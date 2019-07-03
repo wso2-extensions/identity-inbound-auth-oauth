@@ -2780,7 +2780,7 @@ public class OAuth2Util {
                 !OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal()) {
             if (log.isDebugEnabled()) {
                 log.debug("Federated prefix found in domain: " + userStoreDomain + " for user: " + username + " in " +
-                        "tenant domain:" + tenantDomain + ". Flag user as a federated user.");
+                        "tenant domain: " + tenantDomain + ". Flag user as a federated user.");
             }
             authenticatedUser.setFederatedUser(true);
             authenticatedUser.setFederatedIdPName(OAuth2Util.getFederatedIdPFromDomain(userStoreDomain));
