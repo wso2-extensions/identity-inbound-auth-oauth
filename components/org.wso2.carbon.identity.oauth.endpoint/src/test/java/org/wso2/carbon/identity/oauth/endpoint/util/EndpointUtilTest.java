@@ -35,6 +35,7 @@ import org.testng.annotations.Test;
 import org.wso2.carbon.base.ServerConfiguration;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationRequestCacheEntry;
+import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.SSOConsentService;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.discovery.DefaultOIDCProcessor;
@@ -50,6 +51,7 @@ import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.openidconnect.RequestObjectService;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 import org.wso2.carbon.identity.webfinger.DefaultWebFingerProcessor;
 import org.wso2.carbon.identity.webfinger.WebFingerProcessor;
@@ -120,6 +122,15 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
 
     @Mock
     ServerConfiguration mockedServerConfiguration;
+
+    @Mock
+    OAuth2Service mockedOAuth2Service;
+
+    @Mock
+    SSOConsentService mockedSSOConsentService;
+
+    @Mock
+    RequestObjectService mockedRequestObjectService;
 
     private static final String COMMONAUTH_URL = "https://localhost:9443/commonauth";
     private static final String OIDC_CONSENT_PAGE_URL =
@@ -478,6 +489,9 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
     @Test
     public void testGetServices() {
         mockPrivilegedCarbonContext();
+        EndpointUtil.setOAuth2Service(mockedOAuth2Service);
+        EndpointUtil.setSSOConsentService(mockedSSOConsentService);
+        EndpointUtil.setRequestObjectService(mockedRequestObjectService);
         assertTrue(EndpointUtil.getWebFingerService() instanceof DefaultWebFingerProcessor,
                 "Retrieved incorrect WebFingerService");
         assertTrue(EndpointUtil.getOIDProviderRequestValidator() instanceof DefaultOIDCProviderRequestBuilder,
@@ -490,6 +504,10 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
                 "Retrieved incorrect OAuthServerConfiguration");
         assertTrue(EndpointUtil.getOAuth2TokenValidationService() instanceof OAuth2TokenValidationService,
                 "Retrieved incorrect OAuth2TokenValidationService");
+        assertTrue(EndpointUtil.getSSOConsentService() instanceof SSOConsentService,
+                "Retrieved incorrect SSOConsentService");
+        assertTrue(EndpointUtil.getRequestObjectService() instanceof RequestObjectService,
+                "Retrieved incorrect RequestObjectService");
     }
 
     @Test
@@ -505,7 +523,7 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
     public void testGetOAuthServerConfigProperties() throws Exception {
         mockPrivilegedCarbonContext();
         setMockedOAuthServerConfiguration();
-
+        EndpointUtil.setOauthServerConfiguration(mockedOAuthServerConfiguration);
         assertEquals(EndpointUtil.getUserInfoRequestValidator(), USER_INFO_REQUEST_VALIDATOR);
         assertEquals(EndpointUtil.getAccessTokenValidator(), USER_INFO_TOKEN_VALIDATOR);
         assertEquals(EndpointUtil.getUserInfoResponseBuilder(), USER_INFO_RESPONSE_BUILDER);

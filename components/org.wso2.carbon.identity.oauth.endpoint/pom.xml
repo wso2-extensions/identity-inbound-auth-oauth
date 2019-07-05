@@ -215,6 +215,13 @@
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>${jacoco.version}</version>
+                <configuration>
+                    <excludes>
+                        <!--This component is depend on factory classes to create the bean classes. But the beans
+                        classes will be created via the xml configurations. Hence they excluding them in coverage reports-->
+                        <exclude>**/*Factory.class</exclude>
+                    </excludes>
+                </configuration>
                 <executions>
                     <execution>
                         <id>default-instrument</id>
