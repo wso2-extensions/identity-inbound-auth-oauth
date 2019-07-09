@@ -556,10 +556,19 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
                 (RefreshTokenValidationDataDO) msgCtx.getProperty(PREV_ACCESS_TOKEN);
         AuthorizationGrantCacheKey oldAuthorizationGrantCacheKey = new AuthorizationGrantCacheKey(oldAccessToken
                 .getAccessToken());
-        AuthorizationGrantCacheEntry grantCacheEntry = AuthorizationGrantCache.getInstance()
-                .getValueFromCacheByToken(oldAuthorizationGrantCacheKey);
+        if (log.isDebugEnabled()) {
+            log.debug("Getting AuthorizationGrantCacheEntry using access token id: " + accessTokenBean.getTokenId());
+        }
+        AuthorizationGrantCacheEntry grantCacheEntry =
+                AuthorizationGrantCache.getInstance().getValueFromCacheByTokenId(oldAuthorizationGrantCacheKey,
+                        oldAccessToken.getTokenId());
+
 
         if (grantCacheEntry != null) {
+            if (log.isDebugEnabled()) {
+                log.debug("Getting user attributes cached against the previous access token with access token id: " +
+                        oldAccessToken.getTokenId());
+            }
             AuthorizationGrantCacheKey authorizationGrantCacheKey = new AuthorizationGrantCacheKey(accessTokenBean
                     .getAccessToken());
 
