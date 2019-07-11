@@ -902,6 +902,12 @@ public class ResponseTypeHandlerUtil {
         }
     }
 
+    /**
+     * Builds the revocation request and calls the revoke oauth service.
+     *
+     * @param clientId client id.
+     * @param accessToken access token.
+     */
     private static void revokeExistingToken(String clientId, String accessToken) throws IdentityOAuth2Exception {
 
         // This is used to avoid client validation failure in revokeTokenByOAuthClient.
