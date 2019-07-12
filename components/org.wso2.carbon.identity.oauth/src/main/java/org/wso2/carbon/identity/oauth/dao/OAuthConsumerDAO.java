@@ -273,9 +273,8 @@ public class OAuthConsumerDAO {
 
         } catch (SQLException e) {
             IdentityDatabaseUtil.rollbackTransaction(connection);
-            log.error("Error when executing the SQL : " + SQLQueries.OAuthConsumerDAOSQLQueries.ADD_OAUTH_REQ_TOKEN);
-            log.error(e.getMessage(), e);
-            throw new IdentityOAuthAdminException("Error when creating the request token for consumer : " + consumerKey);
+            throw new IdentityOAuthAdminException("Error when creating the request token for consumer : " +
+                    consumerKey, e);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, null, prepStmt);
         }
@@ -376,8 +375,8 @@ public class OAuthConsumerDAO {
 
         } catch (SQLException e) {
             IdentityDatabaseUtil.rollbackTransaction(connection);
-            log.error(e.getMessage(), e);
-            throw new IdentityOAuthAdminException("Error when creating the request token for consumer : " + consumerKey);
+            throw new IdentityOAuthAdminException("Error when creating the request token for consumer : " +
+                    consumerKey, e);
         } finally {
             IdentityDatabaseUtil.closeStatement(issueAccessTokStmt);
             IdentityDatabaseUtil.closeAllConnections(connection, null, removeReqTokStmt);

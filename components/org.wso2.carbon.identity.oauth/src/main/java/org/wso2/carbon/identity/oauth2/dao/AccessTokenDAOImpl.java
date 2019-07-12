@@ -1844,7 +1844,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     connection.rollback();
                 }
             } catch (SQLException e1) {
-                log.error("An rolling back transactions error occurred while trying to recover 'CON_APP_KEY' "
+                throw new IdentityOAuth2Exception("An rolling back transactions error occurred while trying to "
+                        + "recover 'CON_APP_KEY' "
                         + "constraint violation . ", e1);
             }
             String errorMsg = "SQL error occurred while trying to recover 'CON_APP_KEY' constraint violation";

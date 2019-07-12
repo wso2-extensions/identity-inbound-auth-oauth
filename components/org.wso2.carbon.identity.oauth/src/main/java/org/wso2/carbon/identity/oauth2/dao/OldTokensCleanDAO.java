@@ -42,6 +42,7 @@ public class OldTokensCleanDAO {
     private static Log log = LogFactory.getLog(OldTokensCleanDAO.class);
 
     public void cleanupTokenByTokenId(String tokenId, Connection connection) throws SQLException {
+
         try {
             connection.setAutoCommit(false);
             if (OAuthServerConfiguration.getInstance().useRetainOldAccessTokens()) {
@@ -60,7 +61,7 @@ public class OldTokensCleanDAO {
             connection.commit();
         } catch (SQLException e) {
             connection.rollback();
-            log.error("SQL error occurred while cleanup token by tokenId");
+            log.error("SQL error occurred while cleanup token by tokenId", e);
         }
     }
 
@@ -160,7 +161,7 @@ public class OldTokensCleanDAO {
             connection.commit();
         } catch (SQLException e) {
             connection.rollback();
-            log.error("SQL error occurred while remove token from main table");
+            log.error("SQL error occurred while remove token from main table", e);
         }
     }
 

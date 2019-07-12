@@ -225,7 +225,6 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
                 connection.rollback();
             } catch (SQLException e1) {
                 String errorMessage = "Rollback error when storing the request object claims.";
-                log.error(errorMessage, e);
                 throw new IdentityOAuth2Exception(errorMessage, e);
             }
             String errorMessage = "Error when storing the request object claims.";
