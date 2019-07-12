@@ -257,7 +257,7 @@ public class OAuth2ServiceComponent {
 
     private boolean checkPKCESupport() {
 
-        try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
 
             String sql;
             if (connection.getMetaData().getDriverName().contains("MySQL")

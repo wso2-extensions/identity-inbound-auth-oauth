@@ -235,6 +235,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
             mockStatic(IdentityDatabaseUtil.class);
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
             tokenMgtDAO.deactivateAuthorizationCode(authzCode, UUID.randomUUID().toString());
         }
         assertTrue("INACTIVE".equals(getAuthzCodeStatusByCode(authzCode)), "Failed to deactivate authz code.");
@@ -270,6 +271,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
             mockStatic(IdentityDatabaseUtil.class);
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
             Set<String> accessTokens = tokenMgtDAO.getAccessTokensForUser(authenticatedUser);
             assertTrue(accessTokens != null && accessTokens.contains(accessTokenDO.getAccessToken()), "Failed to " +
                     "persist access token");
@@ -312,6 +314,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
             mockStatic(IdentityDatabaseUtil.class);
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
             tokenMgtDAO.storeAccessToken(newAccessTokenDO.getAccessToken(), consumerKey, newAccessTokenDO,
                     existingAccessTokenDO, userStoreDomain);
         }
@@ -319,6 +322,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
             mockStatic(IdentityDatabaseUtil.class);
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
             Set<String> accessTokens = tokenMgtDAO.getAccessTokensForUser(authenticatedUser);
             assertTrue(accessTokens != null && accessTokens.contains(newAccessTokenDO.getAccessToken()), "Failed to " +
                     "persist access token.");
@@ -358,6 +362,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
             mockStatic(IdentityDatabaseUtil.class);
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
             assertTrue(tokenMgtDAO.persistAccessToken(newAccessTokenDO.getAccessToken(), consumerKey, newAccessTokenDO,
                     existingAccessTokenDO, userStoreDomain), "Failed to persist access token.");
         }
@@ -401,6 +406,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
                 try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
                     mockStatic(IdentityDatabaseUtil.class);
                     when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+                    when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
                     AccessTokenDO accessTokenDO = tokenMgtDAO.retrieveLatestAccessToken(consumerKey, authenticatedUser,
                             userStoreDomain, scope, true);
                     assertTrue(accessTokenDO != null && expiredAccessToken.getAccessToken().equals(accessTokenDO
@@ -410,6 +416,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
                 try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
                     mockStatic(IdentityDatabaseUtil.class);
                     when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+                    when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
                     assertNull(tokenMgtDAO.retrieveLatestAccessToken(consumerKey, authenticatedUser, userStoreDomain,
                             scope, true), "Invalid access token.");
                 }
@@ -420,6 +427,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
             try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
                 mockStatic(IdentityDatabaseUtil.class);
                 when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+                when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
                 tokenMgtDAO.persistAccessToken(newAccessTokenDO.getAccessToken(), consumerKey, newAccessTokenDO,
                         expiredAccessToken, userStoreDomain);
             }
@@ -427,6 +435,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
                 try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
                     mockStatic(IdentityDatabaseUtil.class);
                     when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+                    when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
                     AccessTokenDO accessTokenDO = tokenMgtDAO.retrieveLatestAccessToken(consumerKey, authenticatedUser,
                             userStoreDomain, scope, false);
                     assertTrue(newAccessTokenDO.getAccessToken().equals(accessTokenDO.getAccessToken()), "Failed to " +
@@ -436,6 +445,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
                 try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
                     mockStatic(IdentityDatabaseUtil.class);
                     when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+                    when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
                     assertNull(tokenMgtDAO.retrieveLatestAccessToken(consumerKey, authenticatedUser, userStoreDomain,
                             scope, false), "Invalid access token.");
                 }
@@ -496,6 +506,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
             try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
                 mockStatic(IdentityDatabaseUtil.class);
                 when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+                when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
                 Set<AccessTokenDO> accessTokenDOs = tokenMgtDAO.retrieveAccessTokens(consumerKey, authenticatedUser,
                         userStoreDomain, true);
                 assertTrue(accessTokenDOs != null && accessTokenDOs.size() == 3, "Failed to retrieve access tokens.");
@@ -504,6 +515,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
             try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
                 mockStatic(IdentityDatabaseUtil.class);
                 when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+                when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
                 Set<AccessTokenDO> accessTokenDOs = tokenMgtDAO.retrieveAccessTokens(consumerKey, authenticatedUser,
                         userStoreDomain, false);
                 assertTrue(accessTokenDOs != null && accessTokenDOs.size() == 2, "Failed to retrieve access tokens.");
@@ -534,6 +546,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
             mockStatic(IdentityDatabaseUtil.class);
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
             AuthzCodeDO authzCodeDO = tokenMgtDAO.validateAuthorizationCode(consumerKey, authzCode);
             assertTrue(authzCodeDO != null && authzCode.equals(authzCodeDO.getAuthorizationCode()), "Failed to " +
                     "validate authorization code");
@@ -563,6 +576,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
             mockStatic(IdentityDatabaseUtil.class);
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
             tokenMgtDAO.changeAuthzCodeState(authzCode, tokenState);
 
             assertTrue(tokenState.equals(getAuthzCodeStatusByCode(authzCode)), "Failed to update token state");
@@ -596,6 +610,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
             mockStatic(IdentityDatabaseUtil.class);
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
             tokenMgtDAO.deactivateAuthorizationCode(authzCodeDOs);
         }
 
@@ -616,6 +631,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
             mockStatic(IdentityDatabaseUtil.class);
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
             tokenMgtDAO.doChangeAuthzCodeState(authzCode, tokenState);
             assertTrue(tokenState.equals(getAuthzCodeStatusByCode(authzCode)), "Failed to update token state");
         }
@@ -643,6 +659,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
             mockStatic(IdentityDatabaseUtil.class);
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
             tokenMgtDAO.deactivateAuthorizationCode(authzCodeDO);
             assertTrue("INACTIVE".equals(getAuthzCodeStatusByCode(authzCodeDO.getAuthorizationCode())), "Failed to " +
                     "update token state");
@@ -672,6 +689,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
             mockStatic(IdentityDatabaseUtil.class);
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
             RefreshTokenValidationDataDO refreshTokenValidationDataDO = tokenMgtDAO.validateRefreshToken(accessTokenDO
                     .getConsumerKey(), accessTokenDO.getRefreshToken());
             assertTrue(refreshTokenValidationDataDO != null && "ACTIVE".equals(refreshTokenValidationDataDO
@@ -709,6 +727,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
             mockStatic(IdentityDatabaseUtil.class);
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
             AccessTokenDO retrievedAccessToken = tokenMgtDAO.retrieveAccessToken(accessTokenDO.getAccessToken(),
                     includeExpired);
             assertTrue(retrievedAccessToken != null && accessTokenDO.getAccessToken().equals(retrievedAccessToken
@@ -740,6 +759,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
             mockStatic(IdentityDatabaseUtil.class);
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
             tokenMgtDAO.setAccessTokenState(connection, accessTokenDO.getTokenId(), tokenState, UUID.randomUUID()
                     .toString(), userStoreDomain);
             assertTrue(tokenState.equals(getAccessTokenStatusByTokenId(accessTokenDO.getTokenId())), "Failed to set " +
@@ -774,6 +794,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
             mockStatic(IdentityDatabaseUtil.class);
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
             tokenMgtDAO.revokeTokens(new String[]{accessTokenDO1.getAccessToken(), accessTokenDO2.getAccessToken()});
             assertTrue(OAuthConstants.TokenStates.TOKEN_STATE_REVOKED.equals(getAccessTokenStatusByTokenId
                     (accessTokenDO1.getTokenId())), "Failed to revoke access token.");
@@ -797,6 +818,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
             mockStatic(IdentityDatabaseUtil.class);
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
             tokenMgtDAO.revokeTokensBatch(new String[]{accessTokenDO1.getAccessToken(), accessTokenDO2.getAccessToken()});
             assertTrue(OAuthConstants.TokenStates.TOKEN_STATE_REVOKED.equals(getAccessTokenStatusByTokenId
                     (accessTokenDO1.getTokenId())), "Failed to revoke access token.");
@@ -820,6 +842,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
             mockStatic(IdentityDatabaseUtil.class);
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
             tokenMgtDAO.revokeTokensIndividual(new String[]{accessTokenDO1.getAccessToken(), accessTokenDO2.getAccessToken()});
             assertTrue(OAuthConstants.TokenStates.TOKEN_STATE_REVOKED.equals(getAccessTokenStatusByTokenId
                     (accessTokenDO1.getTokenId())), "Failed to revoke access token.");
@@ -839,6 +862,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
             mockStatic(IdentityDatabaseUtil.class);
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
             tokenMgtDAO.revokeToken(accessTokenDO.getTokenId(), accessTokenDO.getAuthzUser().toString());
             assertTrue(OAuthConstants.TokenStates.TOKEN_STATE_REVOKED.equals(getAccessTokenStatusByTokenId
                     (accessTokenDO.getTokenId())), "Failed to revoke access token.");
@@ -871,6 +895,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
             mockStatic(IdentityDatabaseUtil.class);
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
             Set<String> accessTokens = tokenMgtDAO.getAccessTokensForUser(accessTokenDO1.getAuthzUser());
             assertTrue(accessTokens != null && accessTokens.contains(accessTokenDO1.getAccessToken()) && accessTokens
                     .contains(accessTokenDO2.getAccessToken()), "Failed to retrieve access tokens.");
@@ -902,6 +927,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
             mockStatic(IdentityDatabaseUtil.class);
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
             Set<String> authzCodes = tokenMgtDAO.getAuthorizationCodesForUser(authzCodeDO1.getAuthorizedUser());
             assertTrue(authzCodes != null && authzCodes.contains(authzCodeDO1.getAuthorizationCode()) && authzCodes
                     .contains(authzCodeDO2.getAuthorizationCode()), "Failed to retrieve authorization codes.");
@@ -948,6 +974,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
             mockStatic(IdentityDatabaseUtil.class);
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
             Set<String> accessTokens = tokenMgtDAO.getActiveTokensForConsumerKey(consumerKey);
             assertNotNull(accessTokens != null && accessTokens.contains(accessTokenDO1.getAccessToken()) &&
                     accessTokens.contains(accessTokenDO2.getAccessToken()) && !accessTokens.contains(accessTokenDO3
@@ -983,6 +1010,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
             mockStatic(IdentityDatabaseUtil.class);
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
             Set<AccessTokenDO> accessTokens = tokenMgtDAO.getActiveDetailedTokensForConsumerKey(consumerKey);
             assertNotNull(accessTokens != null && accessTokens.size() == 2, "Failed to get active access tokens.");
         }
@@ -1006,6 +1034,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
             mockStatic(IdentityDatabaseUtil.class);
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
             Set<String> authzCodes = tokenMgtDAO.getAuthorizationCodesForConsumerKey(consumerKey);
             assertNotNull(authzCodes != null && authzCodes.contains(authzCodeDO1.getAuthorizationCode()) && authzCodes
                     .contains(authzCodeDO2.getAuthorizationCode()) && authzCodes.contains(authzCodeDO3
@@ -1031,6 +1060,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
             mockStatic(IdentityDatabaseUtil.class);
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
             Set<String> authzCodes = tokenMgtDAO.getActiveAuthorizationCodesForConsumerKey(consumerKey);
             assertNotNull(authzCodes != null && authzCodes.contains(authzCodeDO1.getAuthorizationCode()) && authzCodes
                     .contains(authzCodeDO2.getAuthorizationCode()) && !authzCodes.contains(authzCodeDO3
@@ -1055,6 +1085,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
             mockStatic(IdentityDatabaseUtil.class);
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
             Set<String> authzCodes = tokenMgtDAO.getAllTimeAuthorizedClientIds(authzCodeDO1.getAuthorizedUser());
             assertNotNull(authzCodes != null && authzCodes.contains(authzCodeDO1.getAuthorizationCode()) && authzCodes
                     .contains(authzCodeDO2.getAuthorizationCode()) && authzCodes.contains(authzCodeDO3
@@ -1096,6 +1127,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
             mockStatic(IdentityDatabaseUtil.class);
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
             tokenMgtDAO.invalidateAndCreateNewToken(existingAccessTokenDO.getTokenId(), tokenState, consumerKey, UUID
                     .randomUUID().toString(), newAccessTokenDO, userStoreDomain);
             assertTrue(OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE.equals(getAccessTokenStatusByTokenId(newAccessTokenDO
@@ -1133,6 +1165,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
             mockStatic(IdentityDatabaseUtil.class);
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
             Set<AccessTokenDO> accessTokenDOs = tokenMgtDAO.getAccessTokensOfTenant(tenantId);
             assertNotNull(accessTokenDOs, "Failed to retrieve access token for a tenant");
             boolean success = true;
@@ -1174,6 +1207,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
             mockStatic(IdentityDatabaseUtil.class);
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
             Set<AccessTokenDO> accessTokenDOs = tokenMgtDAO.getAccessTokensOfUserStore(tenantId, userStoreDomain);
             assertNotNull(accessTokenDOs, "Failed to retrieve access token for a tenant");
             boolean success = true;
@@ -1223,7 +1257,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
             mockStatic(IdentityDatabaseUtil.class);
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
-
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
             List<AccessTokenDO> accessTokenDOs = tokenMgtDAO.retrieveLatestAccessTokens(consumerKey,
                     authenticatedUser, userStoreDomain, scope1, includeExpiredTokens, 3);
 
@@ -1322,6 +1356,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
             mockStatic(IdentityDatabaseUtil.class);
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
             Properties properties = new Properties();
             if (isRevoke) {
                 properties.put(OAuthConstants.ACTION_PROPERTY_KEY, OAuthConstants.ACTION_REVOKE);
@@ -1365,6 +1400,7 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
             mockStatic(IdentityDatabaseUtil.class);
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
             tokenMgtDAO.storeAuthorizationCode(authzCode, consumerKey, callbackUrl, authzCodeDO);
             assertNotNull(tokenMgtDAO.getAuthzCodeByCodeId(authzCodeId), "Failed to persist authorize code.");
         }

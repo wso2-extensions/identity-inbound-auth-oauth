@@ -20,6 +20,7 @@
 
 package org.wso2.carbon.identity.oauth2.dao;
 
+import org.apache.axis2.databinding.types.Id;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -116,8 +117,9 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             }
 
             prepStmt.execute();
-            connection.commit();
+            IdentityDatabaseUtil.commitTransaction(connection);
         } catch (SQLException e) {
+            IdentityDatabaseUtil.rollbackTransaction(connection);
             throw new IdentityOAuth2Exception("Error when storing the authorization code for consumer key : " +
                     consumerKey, e);
         } finally {
@@ -163,11 +165,12 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                 prepStmt.addBatch();
             }
             prepStmt.executeBatch();
-            connection.commit();
+            IdentityDatabaseUtil.commitTransaction(connection);
 
             // To revoke request objects which are persisted against the code.
             OAuth2TokenUtil.postRevokeCodes(authzCodeDOs, OAuthConstants.AuthorizationCodeState.INACTIVE);
         } catch (SQLException e) {
+            IdentityDatabaseUtil.rollbackTransaction(connection);
             throw new IdentityOAuth2Exception("Error when deactivating authorization code", e);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, null, prepStmt);
@@ -186,7 +189,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                 log.debug("Validating authorization code for client: " + consumerKey);
             }
         }
-        Connection connection = IdentityDatabaseUtil.getDBConnection();
+        Connection connection = IdentityDatabaseUtil.getDBConnection(false);
         PreparedStatement prepStmt = null;
         ResultSet resultSet = null;
         AuthorizationCodeValidationResult result = null;
@@ -258,8 +261,6 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
 
             }
 
-            connection.commit();
-
             return result;
 
         } catch (SQLException e) {
@@ -292,7 +293,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             prepStmt.setString(1, newState);
             prepStmt.setString(2, getHashingPersistenceProcessor().getProcessedAuthzCode(authzCode));
             prepStmt.execute();
-            connection.commit();
+            IdentityDatabaseUtil.commitTransaction(connection);
 
             //If the code state is updated to inactive or expired request object which is persisted against the code
             // should be updated/removed.
@@ -327,12 +328,13 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             prepStmt.setString(1, authzCodeDO.getOauthTokenId());
             prepStmt.setString(2, getHashingPersistenceProcessor().getProcessedAuthzCode(authzCodeDO.getAuthorizationCode()));
             prepStmt.executeUpdate();
-            connection.commit();
+            IdentityDatabaseUtil.commitTransaction(connection);
 
             // To revoke the request object which is persisted against the code.
             OAuth2TokenUtil.postRevokeCode(authzCodeDO.getAuthzCodeId(), OAuthConstants.
                     AuthorizationCodeState.INACTIVE, authzCodeDO.getOauthTokenId());
         } catch (SQLException e) {
+            IdentityDatabaseUtil.rollbackTransaction(connection);
             throw new IdentityOAuth2Exception("Error when deactivating authorization code", e);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, null, prepStmt);
@@ -347,7 +349,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             log.debug("Retrieving authorization codes of user: " + authenticatedUser.toString());
         }
 
-        Connection connection = IdentityDatabaseUtil.getDBConnection();
+        Connection connection = IdentityDatabaseUtil.getDBConnection(false);
         PreparedStatement ps = null;
         ResultSet rs = null;
         Set<String> authorizationCodes = new HashSet<>();
@@ -380,7 +382,6 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                     }
                 }
             }
-            connection.commit();
         } catch (SQLException e) {
             IdentityDatabaseUtil.rollbackTransaction(connection);
             throw new IdentityOAuth2Exception("Error occurred while revoking Access Token with user Name : " +
@@ -399,7 +400,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             log.debug("Retrieving authorization codes for client: " + consumerKey);
         }
 
-        Connection connection = IdentityDatabaseUtil.getDBConnection();
+        Connection connection = IdentityDatabaseUtil.getDBConnection(false);
         PreparedStatement ps = null;
         ResultSet rs = null;
         Set<String> authorizationCodes = new HashSet<>();
@@ -413,7 +414,6 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                     authorizationCodes.add(getPersistenceProcessor().getPreprocessedAuthzCode(rs.getString(1)));
                 }
             }
-            connection.commit();
         } catch (SQLException e) {
             IdentityDatabaseUtil.rollbackTransaction(connection);
             throw new IdentityOAuth2Exception("Error occurred while getting authorization codes from authorization code " +
@@ -431,7 +431,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             log.debug("Retrieving active authorization codes for client: " + consumerKey);
         }
 
-        Connection connection = IdentityDatabaseUtil.getDBConnection();
+        Connection connection = IdentityDatabaseUtil.getDBConnection(false);
         PreparedStatement ps = null;
         ResultSet rs = null;
         Set<String> authorizationCodes = new HashSet<>();
@@ -446,7 +446,6 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                     authorizationCodes.add(getPersistenceProcessor().getPreprocessedAuthzCode(rs.getString(1)));
                 }
             }
-            connection.commit();
         } catch (SQLException e) {
             IdentityDatabaseUtil.rollbackTransaction(connection);
             throw new IdentityOAuth2Exception("Error occurred while getting authorization codes from authorization code " +
@@ -464,7 +463,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             log.debug("Retrieving latest authorization codes of tenant id: " + tenantId);
         }
         //we do not support access token partitioning here
-        Connection connection = IdentityDatabaseUtil.getDBConnection();
+        Connection connection = IdentityDatabaseUtil.getDBConnection(false);
         PreparedStatement ps = null;
         ResultSet rs = null;
 
@@ -502,7 +501,6 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                 latestAuthzCodes.add(new AuthzCodeDO(user, scope, issuedTime, validityPeriodInMillis, callbackUrl,
                         consumerKey, authzCode, authzCodeId));
             }
-            connection.commit();
         } catch (SQLException e) {
             IdentityDatabaseUtil.rollbackTransaction(connection);
             throw new IdentityOAuth2Exception("Error occurred while retrieving latest authorization codes of tenant " +
@@ -522,7 +520,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                     tenantId);
         }
         //we do not support access token partitioning here
-        Connection connection = IdentityDatabaseUtil.getDBConnection();
+        Connection connection = IdentityDatabaseUtil.getDBConnection(false);
         PreparedStatement ps = null;
         ResultSet rs = null;
         String userStoreDomain = OAuth2Util.getSanitizedUserStoreDomain(userStorDomain);
@@ -558,7 +556,6 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                 latestAuthzCodes.add(new AuthzCodeDO(user, scope, issuedTime, validityPeriodInMillis, callbackUrl,
                         consumerKey, authzCode, authzCodeId));
             }
-            connection.commit();
         } catch (SQLException e) {
             IdentityDatabaseUtil.rollbackTransaction(connection);
             throw new IdentityOAuth2Exception("Error occurred while retrieving latest authorization codes of user " +
@@ -592,7 +589,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             if (log.isDebugEnabled()) {
                 log.debug("Number of rows being updated : " + count);
             }
-            connection.commit();
+            IdentityDatabaseUtil.commitTransaction(connection);
         } catch (SQLException e) {
             IdentityDatabaseUtil.rollbackTransaction(connection);
             throw new IdentityOAuth2Exception("Error occurred while renaming user store : " + currentUserStoreDomain +
@@ -607,7 +604,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
         if (log.isDebugEnabled()) {
             log.debug("Retrieving authorization code by code id: " + codeId);
         }
-        Connection connection = IdentityDatabaseUtil.getDBConnection();
+        Connection connection = IdentityDatabaseUtil.getDBConnection(false);
 
         PreparedStatement prepStmt = null;
         ResultSet resultSet = null;
@@ -621,7 +618,6 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             if (resultSet.next()) {
                 return resultSet.getString("AUTHORIZATION_CODE");
             }
-            connection.commit();
             return null;
 
         } catch (SQLException e) {
@@ -640,7 +636,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
         if (log.isDebugEnabled() && IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
             log.debug("Retrieving id of authorization code(hashed): " + DigestUtils.sha256Hex(authzCode));
         }
-        Connection connection = IdentityDatabaseUtil.getDBConnection();
+        Connection connection = IdentityDatabaseUtil.getDBConnection(false);
 
         PreparedStatement prepStmt = null;
         ResultSet resultSet = null;
@@ -654,7 +650,6 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             if (resultSet.next()) {
                 return resultSet.getString("CODE_ID");
             }
-            connection.commit();
             return null;
 
         } catch (SQLException e) {
