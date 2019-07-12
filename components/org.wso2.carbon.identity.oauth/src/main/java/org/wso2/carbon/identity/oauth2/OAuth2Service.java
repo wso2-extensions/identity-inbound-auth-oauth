@@ -379,8 +379,12 @@ public class OAuth2Service extends AbstractAdmin {
                             OAuth2Util.buildScopeString(refreshTokenDO.getScope()));
                     OAuthUtil.clearOAuthCache(revokeRequestDTO.getConsumerKey(), refreshTokenDO.getAuthorizedUser());
                     OAuthUtil.clearOAuthCache(refreshTokenDO.getAccessToken());
+                    // As the server implementation knows about the PersistenceProcessor Processed Access Token,
+                    // we are converting in the service layer.
                     OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
-                            .revokeAccessTokens(new String[]{refreshTokenDO.getAccessToken()});
+                            .revokeAccessTokens(
+                                    new String[]{OAuth2Util.getPersistenceProcessor()
+                                            .getProcessedAccessTokenIdentifier(refreshTokenDO.getAccessToken())});
                     addRevokeResponseHeaders(revokeResponseDTO,
                             refreshTokenDO.getAccessToken(),
                             revokeRequestDTO.getToken(),
@@ -395,8 +399,11 @@ public class OAuth2Service extends AbstractAdmin {
                         String scope = OAuth2Util.buildScopeString(accessTokenDO.getScope());
                         String authorizedUser = accessTokenDO.getAuthzUser().toString();
                         synchronized ((revokeRequestDTO.getConsumerKey() + ":" + authorizedUser + ":" + scope).intern()) {
+                            // As the server implementation knows about the PersistenceProcessor Processed Access Token,
+                            // we are converting in the service layer.
                             OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
-                                    .revokeAccessTokens(new String[]{accessTokenDO.getAccessToken()});
+                                    .revokeAccessTokens(new String[]{OAuth2Util.getPersistenceProcessor()
+                                            .getProcessedAccessTokenIdentifier(accessTokenDO.getAccessToken())});
                         }
                         addRevokeResponseHeaders(revokeResponseDTO,
                                 revokeRequestDTO.getToken(),

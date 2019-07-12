@@ -377,7 +377,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
             IdentityDatabaseUtil.commitTransaction(connection);
 
         } catch (SQLException e) {
-            IdentityDatabaseUtil.rollBack(connection);
+            IdentityDatabaseUtil.rollbackTransaction(connection);
             String errorMsg = "Error deleting OAuth consent of Application " + applicationName + " and User " + username;
             throw new IdentityOAuth2Exception(errorMsg, e);
         } finally {
@@ -421,7 +421,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
             IdentityDatabaseUtil.commitTransaction(connection);
 
         } catch (SQLException e) {
-            IdentityDatabaseUtil.rollBack(connection);
+            IdentityDatabaseUtil.rollbackTransaction(connection);
             String errorMsg = "Error deleting OAuth consent of Application " +
                     applicationName + " and User " + username;
             throw new IdentityOAuth2Exception(errorMsg, e);
@@ -469,7 +469,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
             IdentityDatabaseUtil.commitTransaction(connection);
 
         } catch (SQLException e) {
-            IdentityDatabaseUtil.rollBack(connection);
+            IdentityDatabaseUtil.rollbackTransaction(connection);
             String errorMsg = "Error updating trusted always in a consent of Application " +
                     applicationName + " and User " + tenantAwareUserName;
             throw new IdentityOAuth2Exception(errorMsg, e);
@@ -580,7 +580,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
             IdentityDatabaseUtil.commitTransaction(connection);
 
         } catch (SQLException e) {
-            IdentityDatabaseUtil.rollBack(connection);
+            IdentityDatabaseUtil.rollbackTransaction(connection);
             throw new IdentityApplicationManagementException("Error while executing the SQL statement.", e);
         } finally {
             IdentityDatabaseUtil.closeStatement(updateStateStatement);
@@ -648,7 +648,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
         } catch (SQLException e) {
             String errorMsg = "Error revoking access tokens for client ID: "
                     + consumerKey + "and tenant ID:" + tenantId;
-            IdentityDatabaseUtil.rollBack(connection);
+            IdentityDatabaseUtil.rollbackTransaction(connection);
             throw new IdentityOAuth2Exception(errorMsg, e);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, null, ps);

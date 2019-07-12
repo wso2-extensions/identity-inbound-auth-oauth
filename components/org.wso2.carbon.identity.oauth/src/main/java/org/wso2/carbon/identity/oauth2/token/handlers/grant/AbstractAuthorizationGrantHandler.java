@@ -214,7 +214,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     @Override
     public boolean validateScope(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
 
-        if (hasValidateByApplicationScopeValidatorsFailed(tokReqMsgCtx)) {
+        if (hasValidationByApplicationScopeValidatorsFailed(tokReqMsgCtx)) {
             return false;
         }
         OAuthCallback scopeValidationCallback = new OAuthCallback(tokReqMsgCtx.getAuthorizedUser(),
@@ -844,7 +844,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     /**
      * Inverting validateByApplicationScopeValidator method for better readability.
      */
-    private boolean hasValidateByApplicationScopeValidatorsFailed(OAuthTokenReqMessageContext tokenReqMsgContext)
+    private boolean hasValidationByApplicationScopeValidatorsFailed(OAuthTokenReqMessageContext tokenReqMsgContext)
             throws IdentityOAuth2Exception {
 
         return !Oauth2ScopeUtils.validateByApplicationScopeValidator(tokenReqMsgContext, null);

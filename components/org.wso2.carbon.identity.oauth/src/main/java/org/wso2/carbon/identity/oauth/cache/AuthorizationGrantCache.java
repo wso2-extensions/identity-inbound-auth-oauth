@@ -81,6 +81,25 @@ public class AuthorizationGrantCache extends BaseCache<AuthorizationGrantCacheKe
     }
 
     /**
+     * Retrieves cache entry by token id.
+     *
+     * @param key     AuthorizationGrantCacheKey
+     * @param tokenId TokenId
+     * @return AuthorizationGrantCacheEntry
+     */
+    public AuthorizationGrantCacheEntry getValueFromCacheByTokenId(AuthorizationGrantCacheKey key, String tokenId) {
+
+        AuthorizationGrantCacheEntry cacheEntry = super.getValueFromCache(key);
+        if (cacheEntry == null) {
+            if (log.isDebugEnabled()) {
+                log.debug("Getting cache entry from session store using tokenId: " + tokenId);
+            }
+            cacheEntry = getFromSessionStore(tokenId);
+        }
+        return cacheEntry;
+    }
+
+    /**
      * Retrieves a cache entry by access token.
      *
      * @param key CacheKey

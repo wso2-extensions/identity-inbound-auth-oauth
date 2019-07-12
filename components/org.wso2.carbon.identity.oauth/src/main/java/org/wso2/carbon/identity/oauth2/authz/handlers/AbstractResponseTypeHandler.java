@@ -83,7 +83,8 @@ public abstract class AbstractResponseTypeHandler implements ResponseTypeHandler
     @Override
     public boolean validateScope(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) throws IdentityOAuth2Exception {
 
-        if (hasValidateByApplicationScopeValidatorsFailed(oauthAuthzMsgCtx)) {
+        if (OAuthServerConfiguration.getInstance().isScopeValidationEnabledForCodeAndImplicitGrant()
+                && hasValidationByApplicationScopeValidatorsFailed(oauthAuthzMsgCtx)) {
             return false;
         }
 
@@ -162,7 +163,7 @@ public abstract class AbstractResponseTypeHandler implements ResponseTypeHandler
     /**
      * Inverting validateByApplicationScopeValidator method for better readability.
      */
-    private boolean hasValidateByApplicationScopeValidatorsFailed(OAuthAuthzReqMessageContext authzReqMessageContext)
+    private boolean hasValidationByApplicationScopeValidatorsFailed(OAuthAuthzReqMessageContext authzReqMessageContext)
             throws IdentityOAuth2Exception {
 
         return !Oauth2ScopeUtils.validateByApplicationScopeValidator(null, authzReqMessageContext);
