@@ -101,7 +101,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
         }
 
         RefreshTokenValidationDataDO validationDataDO = new RefreshTokenValidationDataDO();
-        Connection connection = IdentityDatabaseUtil.getDBConnection();
+        Connection connection = IdentityDatabaseUtil.getDBConnection(false);
         PreparedStatement prepStmt = null;
         ResultSet resultSet = null;
         String sql;
@@ -201,8 +201,6 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                         scopes.toArray(new String[scopes.size()])));
             }
 
-            connection.commit();
-
         } catch (SQLException e) {
             throw new IdentityOAuth2Exception("Error when validating a refresh token", e);
         } finally {
@@ -222,7 +220,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
         }
 
         AccessTokenDO validationDataDO = null;
-        Connection connection = IdentityDatabaseUtil.getDBConnection();
+        Connection connection = IdentityDatabaseUtil.getDBConnection(false);
         PreparedStatement prepStmt = null;
         ResultSet resultSet = null;
 
@@ -317,7 +315,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
             log.debug("Retrieving tenant and scope for resource: " + resourceUri);
         }
         String sql;
-        try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
 
             if (connection.getMetaData().getDriverName().contains(Oauth2ScopeConstants.DataBaseType.ORACLE)) {
                 sql = SQLQueries.RETRIEVE_SCOPE_WITH_TENANT_FOR_RESOURCE_ORACLE;
@@ -370,15 +368,13 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
         PreparedStatement ps = null;
 
         try {
-            connection.setAutoCommit(false);
-
             String sql = SQLQueries.DELETE_USER_RPS;
 
             ps = connection.prepareStatement(sql);
             ps.setString(1, username);
             ps.setString(2, applicationName);
             ps.execute();
-            connection.commit();
+            IdentityDatabaseUtil.commitTransaction(connection);
 
         } catch (SQLException e) {
             IdentityDatabaseUtil.rollBack(connection);
@@ -415,8 +411,6 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
         PreparedStatement ps = null;
 
         try {
-            connection.setAutoCommit(false);
-
             String sql = SQLQueries.DELETE_USER_RPS_IN_TENANT;
 
             ps = connection.prepareStatement(sql);
@@ -424,7 +418,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
             ps.setInt(2, IdentityTenantUtil.getTenantId(tenantDomain));
             ps.setString(3, applicationName);
             ps.execute();
-            connection.commit();
+            IdentityDatabaseUtil.commitTransaction(connection);
 
         } catch (SQLException e) {
             IdentityDatabaseUtil.rollBack(connection);
@@ -464,8 +458,6 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
         PreparedStatement ps = null;
 
         try {
-            connection.setAutoCommit(false);
-
             String sql = SQLQueries.UPDATE_TRUSTED_ALWAYS_IDN_OPENID_USER_RPS;
 
             ps = connection.prepareStatement(sql);
@@ -474,7 +466,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
             ps.setInt(3, IdentityTenantUtil.getTenantId(tenantDomain));
             ps.setString(4, applicationName);
             ps.execute();
-            connection.commit();
+            IdentityDatabaseUtil.commitTransaction(connection);
 
         } catch (SQLException e) {
             IdentityDatabaseUtil.rollBack(connection);
@@ -510,7 +502,6 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
         PreparedStatement deactivateActiveCodesStatement = null;
         try {
             connection = IdentityDatabaseUtil.getDBConnection();
-            connection.setAutoCommit(false);
             if (OAuthConstants.ACTION_REVOKE.equals(action)) {
                 String newAppState;
                 if (properties.containsKey(OAuthConstants.OAUTH_APP_NEW_STATE)) {
@@ -586,7 +577,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
             deactivateActiveCodesStatement.setString(2, consumerKey);
             deactivateActiveCodesStatement.executeUpdate();
 
-            connection.commit();
+            IdentityDatabaseUtil.commitTransaction(connection);
 
         } catch (SQLException e) {
             IdentityDatabaseUtil.rollBack(connection);
@@ -653,7 +644,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
             ps.setString(4, consumerKey);
             ps.setInt(5, tenantId);
             ps.executeUpdate();
-            connection.commit();
+            IdentityDatabaseUtil.commitTransaction(connection);
         } catch (SQLException e) {
             String errorMsg = "Error revoking access tokens for client ID: "
                     + consumerKey + "and tenant ID:" + tenantId;

@@ -36,6 +36,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
+import static org.mockito.Matchers.anyString;
 import static org.powermock.api.mockito.PowerMockito.doThrow;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.spy;
@@ -102,7 +103,7 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
 
         try (Connection connection1 = getConnection(DB_NAME)) {
             mockStatic(IdentityDatabaseUtil.class);
-            when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection1);
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection1);
 
             OAuthConsumerDAO consumerDAO = new OAuthConsumerDAO();
             assertEquals(consumerDAO.getOAuthConsumerSecret(CLIENT_ID), SECRET);
@@ -119,10 +120,9 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
 
         try (Connection connection1 = getConnection(DB_NAME)) {
             Connection connection2 = spy(connection1);
-            doThrow(new SQLException()).when(connection2).commit();
+            doThrow(new SQLException()).when(connection2).prepareStatement(anyString());
             mockStatic(IdentityDatabaseUtil.class);
-            when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection2);
-
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection2);
             OAuthConsumerDAO consumerDAO = new OAuthConsumerDAO();
             consumerDAO.getOAuthConsumerSecret(CLIENT_ID);
         }
@@ -143,6 +143,7 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
             PreparedStatement statement = connection.prepareStatement(GET_SECRET_SQL);
             mockStatic(IdentityDatabaseUtil.class);
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
 
             OAuthConsumerDAO consumerDAO = new OAuthConsumerDAO();
             consumerDAO.updateSecretKey(CLIENT_ID, NEW_SECRET);
@@ -163,8 +164,7 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
         mockStatic(IdentityDatabaseUtil.class);
 
         try (Connection connection2 = getConnection(DB_NAME)) {
-            when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection2);
-
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection2);
             mockStatic(OAuthServerConfiguration.class);
             when(OAuthServerConfiguration.getInstance()).thenReturn(mockedServerConfig);
             PlainTextPersistenceProcessor processor = new PlainTextPersistenceProcessor();
@@ -182,9 +182,9 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
 
         try (Connection connection = getConnection(DB_NAME)) {
             Connection connection1 = spy(connection);
-            doThrow(new SQLException()).when(connection1).commit();
+            doThrow(new SQLException()).when(connection1).prepareStatement(anyString());
             mockStatic(IdentityDatabaseUtil.class);
-            when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection1);
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection1);
 
             mockStatic(OAuthServerConfiguration.class);
             when(OAuthServerConfiguration.getInstance()).thenReturn(mockedServerConfig);
@@ -214,7 +214,7 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
 
         try (Connection connection3 = getConnection(DB_NAME)) {
             mockStatic(IdentityDatabaseUtil.class);
-            when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection3);
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection3);
 
             OAuthConsumerDAO consumerDAO = new OAuthConsumerDAO();
             assertEquals(consumerDAO.getOAuthTokenSecret(token, isAccessToken), expected);
@@ -231,9 +231,9 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
 
         try (Connection connection = getConnection(DB_NAME)) {
             Connection connection1 = spy(connection);
-            doThrow(new SQLException()).when(connection1).commit();
+            doThrow(new SQLException()).when(connection1).prepareStatement(anyString());
             mockStatic(IdentityDatabaseUtil.class);
-            when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection1);
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection1);
 
             OAuthConsumerDAO consumerDAO = new OAuthConsumerDAO();
             assertEquals(consumerDAO.getOAuthTokenSecret(token, isAccessToken), expected);
@@ -252,7 +252,7 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
 
         try (Connection connection3 = getConnection(DB_NAME)) {
             mockStatic(IdentityDatabaseUtil.class);
-            when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection3);
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection3);
 
             OAuthConsumerDAO consumerDAO = new OAuthConsumerDAO();
             assertEquals(consumerDAO.getRequestToken(REQ_TOKEN), mockedParameters);
@@ -271,9 +271,9 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
 
         try (Connection connection = getConnection(DB_NAME)) {
             Connection connection1 = spy(connection);
-            doThrow(new SQLException()).when(connection1).commit();
+            doThrow(new SQLException()).when(connection1).prepareStatement(anyString());
             mockStatic(IdentityDatabaseUtil.class);
-            when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection1);
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection1);
 
             OAuthConsumerDAO consumerDAO = new OAuthConsumerDAO();
             assertEquals(consumerDAO.getRequestToken(REQ_TOKEN), mockedParameters);
@@ -343,6 +343,7 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
         try (Connection connection3 = getConnection(DB_NAME)) {
             mockStatic(IdentityDatabaseUtil.class);
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection3);
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection3);
 
             OAuthConsumerDAO consumerDAO = new OAuthConsumerDAO();
             consumerDAO.createOAuthRequestToken(c_Id, ac_Token, secretFake, callback_URL, fakeScope);
@@ -365,9 +366,10 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
 
         try (Connection connection = getConnection(DB_NAME)) {
             Connection connection1 = spy(connection);
-            doThrow(new SQLException()).when(connection1).commit();
+            doThrow(new SQLException()).when(connection1).prepareStatement(anyString());
             mockStatic(IdentityDatabaseUtil.class);
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection1);
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection1);
 
             OAuthConsumerDAO consumerDAO = new OAuthConsumerDAO();
             consumerDAO.createOAuthRequestToken(c_Id, ac_Token, secretFake, callback_URL, fakeScope);
@@ -387,6 +389,7 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
         try (Connection connection3 = getConnection(DB_NAME)) {
             mockStatic(IdentityDatabaseUtil.class);
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection3);
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection3);
 
             OAuthConsumerDAO consumerDAO = new OAuthConsumerDAO();
             assertEquals(consumerDAO.authorizeOAuthToken(REQ_TOKEN, USER_NAME, OAUTH_VERIFIER), mockedParameters);
@@ -405,7 +408,7 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
 
         try (Connection connection = getConnection(DB_NAME)) {
             Connection connection1 = spy(connection);
-            doThrow(new SQLException()).when(connection1).commit();
+            doThrow(new SQLException()).when(connection1).prepareStatement(anyString());
             mockStatic(IdentityDatabaseUtil.class);
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection1);
 
@@ -424,7 +427,7 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
 
         try (Connection connection = getConnection(DB_NAME)) {
             mockStatic(IdentityDatabaseUtil.class);
-            when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
 
             OAuthConsumerDAO consumerDAO = new OAuthConsumerDAO();
             assertEquals(consumerDAO.validateAccessToken(CLIENT_ID, ACC_TOKEN, SCOPE), AUTHZ_USER);
@@ -441,9 +444,9 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
 
         try (Connection connection = getConnection(DB_NAME)) {
             Connection connection1 = spy(connection);
-            doThrow(new SQLException()).when(connection1).commit();
+            doThrow(new SQLException()).when(connection1).prepareStatement(anyString());
             mockStatic(IdentityDatabaseUtil.class);
-            when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection1);
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection1);
 
             OAuthConsumerDAO consumerDAO = new OAuthConsumerDAO();
             assertEquals(consumerDAO.validateAccessToken(CLIENT_ID, ACC_TOKEN, SCOPE), AUTHZ_USER);
@@ -459,7 +462,7 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
 
         try (Connection connection1 = getConnection(DB_NAME)) {
             mockStatic(IdentityDatabaseUtil.class);
-            when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection1);
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection1);
 
             OAuthConsumerDAO consumerDAO = new OAuthConsumerDAO();
             assertEquals(consumerDAO.isConsumerSecretExist(CLIENT_ID, SECRET), true);
@@ -475,7 +478,7 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
 
         try (Connection connection1 = getConnection(DB_NAME)) {
             mockStatic(IdentityDatabaseUtil.class);
-            when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection1);
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection1);
 
             OAuthConsumerDAO consumerDAO = new OAuthConsumerDAO();
             assertEquals(consumerDAO.isConsumerSecretExist(CLIENT_ID, NOT_EXISTING_SECRET), false);
@@ -492,7 +495,7 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
         try (Connection connection1 = getConnection(DB_NAME)) {
             Connection connection2 = spy(connection1);
             mockStatic(IdentityDatabaseUtil.class);
-            when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection2);
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection2);
 
             OAuthConsumerDAO consumerDAO = new OAuthConsumerDAO();
             consumerDAO.isConsumerSecretExist(CLIENT_ID, SECRET);
@@ -507,9 +510,9 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
 
         try (Connection connection1 = getConnection(DB_NAME)) {
             Connection connection2 = spy(connection1);
-            doThrow(new SQLException()).when(connection2).commit();
+            doThrow(new SQLException()).when(connection2).prepareStatement(anyString());
             mockStatic(IdentityDatabaseUtil.class);
-            when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection2);
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection2);
 
             OAuthConsumerDAO consumerDAO = new OAuthConsumerDAO();
             consumerDAO.isConsumerSecretExist(CLIENT_ID, SECRET);

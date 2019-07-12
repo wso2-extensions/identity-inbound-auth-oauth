@@ -217,6 +217,7 @@ public class TokenValidationHandlerTest extends PowerMockTestCase {
         when(OAuthServerConfiguration.getInstance().getOauthTokenIssuerMap()).thenReturn(oauthTokenIssuerMap);
 
         mockStatic(IdentityDatabaseUtil.class);
+        when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(getDBConnection());
         when(IdentityDatabaseUtil.getDBConnection()).thenReturn(getDBConnection());
     }
 

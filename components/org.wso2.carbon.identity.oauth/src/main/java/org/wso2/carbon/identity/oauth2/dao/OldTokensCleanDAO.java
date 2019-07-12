@@ -42,19 +42,26 @@ public class OldTokensCleanDAO {
     private static Log log = LogFactory.getLog(OldTokensCleanDAO.class);
 
     public void cleanupTokenByTokenId(String tokenId, Connection connection) throws SQLException {
-        if (OAuthServerConfiguration.getInstance().useRetainOldAccessTokens()) {
-            String sql;
-            if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                sql = SQLQueries.RETRIEVE_AND_STORE_IN_AUDIT_WITH_IDP_NAME;
-            } else {
-                sql = SQLQueries.RETRIEVE_AND_STORE_IN_AUDIT;
+        try {
+            connection.setAutoCommit(false);
+            if (OAuthServerConfiguration.getInstance().useRetainOldAccessTokens()) {
+                String sql;
+                if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
+                    sql = SQLQueries.RETRIEVE_AND_STORE_IN_AUDIT_WITH_IDP_NAME;
+                } else {
+                    sql = SQLQueries.RETRIEVE_AND_STORE_IN_AUDIT;
+                }
+                PreparedStatement prepStmt = connection.prepareStatement(sql);
+                prepStmt.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
+                prepStmt.setString(2, tokenId);
+                prepStmt.executeUpdate();
             }
-            PreparedStatement prepStmt = connection.prepareStatement(sql);
-            prepStmt.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
-            prepStmt.setString(2, tokenId);
-            prepStmt.executeUpdate();
+            removeTokenFromMainTable(tokenId, connection);
+            connection.commit();
+        } catch (SQLException e) {
+            connection.rollback();
+            log.error("SQL error occurred while cleanup token by tokenId");
         }
-        removeTokenFromMainTable(tokenId, connection);
     }
 
     public void cleanupTokenByTokenValue(String token, Connection connection) throws SQLException {
@@ -142,11 +149,18 @@ public class OldTokensCleanDAO {
 
     private void removeTokenFromMainTable(String oldAccessTokenID, Connection connection)
             throws SQLException {
-        PreparedStatement deletefromaccesstokentable = connection.prepareStatement(SQLQueries.DELETE_OLD_TOKEN_BY_ID);
-        deletefromaccesstokentable.setString(1, oldAccessTokenID);
-        deletefromaccesstokentable.executeUpdate();
-        if (log.isDebugEnabled()) {
-            log.debug("Successfully old access token deleted from access token table. Token ID: " + oldAccessTokenID);
+        connection.setAutoCommit(false);
+        try {
+            PreparedStatement deletefromaccesstokentable = connection.prepareStatement(SQLQueries.DELETE_OLD_TOKEN_BY_ID);
+            deletefromaccesstokentable.setString(1, oldAccessTokenID);
+            deletefromaccesstokentable.executeUpdate();
+            if (log.isDebugEnabled()) {
+                log.debug("Successfully old access token deleted from access token table. Token ID: " + oldAccessTokenID);
+            }
+            connection.commit();
+        } catch (SQLException e) {
+            connection.rollback();
+            log.error("SQL error occurred while remove token from main table");
         }
     }
 
