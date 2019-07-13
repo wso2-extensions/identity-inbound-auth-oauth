@@ -32,6 +32,7 @@ import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.util.JdbcUtils;
 
+import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -57,30 +58,37 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
         scopeClaimsList.forEach(rethrowConsumer(scopeDTO -> {
             String scope = scopeDTO.getName();
             String[] claims = scopeDTO.getClaim();
-            try {
-                if (!isScopeExist(scope, tenantId)) {
-                    int scopeClaimMappingId = jdbcTemplate.withTransaction(tempate ->
-                            tempate.executeInsert(SQLQueries.STORE_IDN_OIDC_SCOPES,
-                                    (preparedStatement -> {
-                                        preparedStatement.setString(1, scope);
-                                        preparedStatement.setInt(2, tenantId);
-                                    }), null, true));
+            if (!isScopeExist(scope, tenantId)) {
+                try {
+                    int scopeClaimMappingId = jdbcTemplate.executeInsert(SQLQueries.STORE_IDN_OIDC_SCOPES,
+                            (preparedStatement -> {
+                                preparedStatement.setString(1, scope);
+                                preparedStatement.setInt(2, tenantId);
+                            }), null, true);
                     if (scopeClaimMappingId > 0 && ArrayUtils.isNotEmpty(claims)) {
                         Set<String> claimsSet = new HashSet<>(Arrays.asList(claims));
                         insertClaims(tenantId, scopeClaimMappingId, claimsSet);
                     }
                     if (log.isDebugEnabled() && ArrayUtils.isNotEmpty(claims)) {
-                        log.debug("The scope: " + scope + " and the claims: " + Arrays.asList(claims) + "are successfully" +
-                                " inserted for the tenant: " + tenantId);
+                        log.debug("The scope: " + scope + " and the claims: " + Arrays.asList(claims) + "are " +
+                                "successfully inserted for the tenant: " + tenantId);
                     }
-                } else {
-                    String errorMessage = "Error while adding scopes. Duplicate scopes can not be added for the tenant: "
-                            + tenantId;
-                    throw new IdentityOAuth2Exception(errorMessage);
+                } catch (DataAccessException e) {
+                    if (e.getCause() instanceof SQLIntegrityConstraintViolationException) {
+                        int scopeClaimMappingId = getScopeId(scope, tenantId);
+                        if (scopeClaimMappingId > 0) {
+                            log.warn("Scope " + scope + " already exist in tenant " + tenantId + " , hence ignoring");
+                            return;
+                        }
+                    } else {
+                        String errorMessage =
+                                "Error while persisting scope:" + scope + "for the tenant :" + tenantId;
+                        throw new IdentityOAuth2Exception(errorMessage, e);
+                    }
                 }
-            } catch (TransactionException e) {
-                String errorMessage = "Error while persisting new claims for the scope for the tenant: " + tenantId;
-                throw new IdentityOAuth2Exception(errorMessage, e);
+
+            } else {
+                log.warn("Scope " + scope + " already exist in tenant " + tenantId + " , hence ignoring");
             }
 
         }));
