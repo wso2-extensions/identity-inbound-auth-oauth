@@ -336,20 +336,21 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
     }
 
     private void removeTokensFromCache(String userName, UserStoreManager userStoreManager) throws UserStoreException {
+
         String userStoreDomain = UserCoreUtil.getDomainName(userStoreManager.getRealmConfiguration());
         String tenantDomain = IdentityTenantUtil.getTenantDomain(userStoreManager.getTenantId());
-        Set<String> accessTokens;
+        Set<AccessTokenDO> accessTokenDOSet;
         Set<String> authorizationCodes;
         AuthenticatedUser authenticatedUser = new AuthenticatedUser();
         authenticatedUser.setUserStoreDomain(userStoreDomain);
         authenticatedUser.setTenantDomain(tenantDomain);
         authenticatedUser.setUserName(userName);
         try {
-            accessTokens = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
-                    .getAccessTokensByUser(authenticatedUser);
+            accessTokenDOSet = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                    .getAccessTokensByUserForOpenidScope(authenticatedUser);
             authorizationCodes = OAuthTokenPersistenceFactory.getInstance()
                     .getAuthorizationCodeDAO().getAuthorizationCodesByUser(authenticatedUser);
-            removeAccessTokensFromCache(accessTokens);
+            removeAccessTokensFromCache(accessTokenDOSet);
             removeAuthzCodesFromCache(authorizationCodes);
         } catch (IdentityOAuth2Exception e) {
             String errorMsg = "Error occurred while retrieving access tokens issued for user : " + userName;
@@ -370,15 +371,14 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
         }
     }
 
-    private void removeAccessTokensFromCache(Set<String> accessTokens) {
-        if (CollectionUtils.isNotEmpty(accessTokens)) {
-            for (String accessToken : accessTokens) {
+    private void removeAccessTokensFromCache(Set<AccessTokenDO> accessTokenDOSet) {
+
+        if (CollectionUtils.isNotEmpty(accessTokenDOSet)) {
+            for (AccessTokenDO accessTokenDO : accessTokenDOSet) {
+                String accessToken = accessTokenDO.getAccessToken();
+                String tokenId = accessTokenDO.getTokenId();
                 AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(accessToken);
-                AuthorizationGrantCacheEntry cacheEntry = (AuthorizationGrantCacheEntry) AuthorizationGrantCache
-                        .getInstance().getValueFromCacheByToken(cacheKey);
-                if (cacheEntry != null) {
-                    AuthorizationGrantCache.getInstance().clearCacheEntryByToken(cacheKey);
-                }
+                AuthorizationGrantCache.getInstance().clearCacheEntryByTokenId(cacheKey, tokenId);
             }
         }
     }
