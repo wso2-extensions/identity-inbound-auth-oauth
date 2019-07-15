@@ -240,7 +240,7 @@ public class BasicAuthClientAuthenticator extends AbstractOAuthClientAuthenticat
         }
         String errMsg = "Error decoding authorization header. Space delimited \"<authMethod> <base64Hash>\" format " +
                 "violated.";
-        throw new OAuthClientAuthnException(errMsg, OAuth2ErrorCodes.INVALID_REQUEST);
+        throw new OAuthClientAuthnException(errMsg, OAuth2ErrorCodes.INVALID_CLIENT);
     }
 
     /**
