@@ -48,6 +48,7 @@ import static org.wso2.carbon.identity.core.util.LambdaExceptionUtils.rethrowCon
 public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
 
     private final Log log = LogFactory.getLog(ScopeClaimMappingDAOImpl.class);
+    private static final String OIDC_DIALECT_URI = "http://wso2.org/oidc/claim";
 
     @Override
     public void addScopes(int tenantId, List<ScopeDTO> scopeClaimsList) throws IdentityOAuth2Exception {
@@ -141,6 +142,7 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
             {
                 preparedStatement.setInt(1, tenantId);
                 preparedStatement.setInt(2, tenantId);
+                preparedStatement.setString(3, OIDC_DIALECT_URI);
             });
             oidcScopeClaimList = buildScopeDTO(scopeClaimMap, tenantId);
         } catch (DataAccessException e) {
@@ -252,7 +254,7 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
                     }
                 } catch (IdentityOAuth2Exception e) {
                     String errorMessage = "Error while fetching claims id. ";
-                    log.error(errorMessage);
+                    log.error(errorMessage, e);
                 }
 
             }), scopeClaimMappingId);
@@ -361,6 +363,7 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
                             resultSet.getInt(1), preparedStatement -> {
                         preparedStatement.setString(1, claim);
                         preparedStatement.setInt(2, tenantId);
+                        preparedStatement.setString(3, OIDC_DIALECT_URI);
                     }));
             if (oidcClaimId == null) {
                 oidcClaimId = -1;
