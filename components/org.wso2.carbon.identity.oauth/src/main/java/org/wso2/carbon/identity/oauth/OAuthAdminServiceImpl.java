@@ -159,7 +159,7 @@ public class OAuthAdminServiceImpl {
             }
             return dto;
         } catch (InvalidOAuthClientException | IdentityOAuth2Exception e) {
-            throw handleError("Error while retrieving the app information using consumerKey: " + consumerKey, e);
+            throw handleError("Error while retrieving the app information using consumerKey: " + consumerKey, e, true);
         }
 
     }
@@ -184,7 +184,7 @@ public class OAuthAdminServiceImpl {
             }
             return dto;
         } catch (InvalidOAuthClientException | IdentityOAuth2Exception e) {
-            throw handleError("Error while retrieving the app information by app name: " + appName, e);
+            throw handleError("Error while retrieving the app information by app name: " + appName, e, true);
         }
     }
 
@@ -429,7 +429,7 @@ public class OAuthAdminServiceImpl {
                 throw new IdentityOAuthAdminException("The scope can not be empty.");
             }
         } catch (IdentityOAuth2Exception e) {
-            throw handleError("Error while inserting OIDC scopes and claims.", e);
+            throw handleError("Error while inserting OIDC scopes and claims.", e, true);
         }
     }
 
@@ -454,7 +454,7 @@ public class OAuthAdminServiceImpl {
                 return new ScopeDTO[0];
             }
         } catch (IdentityOAuth2Exception e) {
-            throw handleError("Error while loading OIDC scopes and claims for tenant: " + tenantId, e);
+            throw handleError("Error while loading OIDC scopes and claims for tenant: " + tenantId, e, true);
         }
     }
 
@@ -470,7 +470,7 @@ public class OAuthAdminServiceImpl {
         try {
             OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().deleteScope(scope, tenantId);
         } catch (IdentityOAuth2Exception e) {
-            throw handleError("Error while deleting OIDC scope: " + scope, e);
+            throw handleError("Error while deleting OIDC scope: " + scope, e, true);
         }
     }
 
@@ -495,7 +495,7 @@ public class OAuthAdminServiceImpl {
                 return new String[0];
             }
         } catch (IdentityOAuth2Exception e) {
-            throw handleError("Error while loading OIDC scopes and claims for tenant: " + tenantId, e);
+            throw handleError("Error while loading OIDC scopes and claims for tenant: " + tenantId, e, true);
         }
     }
 
@@ -521,7 +521,7 @@ public class OAuthAdminServiceImpl {
                 return new String[0];
             }
         } catch (IdentityOAuth2Exception e) {
-            throw handleError("Error while loading OIDC claims for the scope: " + scope + " in tenant: " + tenantId, e);
+            throw handleError("Error while loading OIDC claims for the scope: " + scope + " in tenant: " + tenantId, e, true);
         }
     }
 
@@ -542,7 +542,7 @@ public class OAuthAdminServiceImpl {
                     updateScope(scope, tenantId, Arrays.asList(addClaims), Arrays.asList(deleteClaims));
         } catch (IdentityOAuth2Exception e) {
             throw handleError("Error while updating OIDC claims for the scope: " + scope + " in tenant: " + tenantId,
-                              e);
+                              e, true);
         }
     }
 
@@ -559,7 +559,7 @@ public class OAuthAdminServiceImpl {
         try {
             return OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().isScopeExist(scope, tenantId);
         } catch (IdentityOAuth2Exception e) {
-            throw handleError("Error while inserting the scopes.", e);
+            throw handleError("Error while inserting the scopes.", e, true);
         }
     }
 
@@ -588,7 +588,7 @@ public class OAuthAdminServiceImpl {
             }
 
         } catch (InvalidOAuthClientException | IdentityOAuth2Exception e) {
-            throw handleError("Error while updating state of OAuth app with consumerKey: " + consumerKey, e);
+            throw handleError("Error while updating state of OAuth app with consumerKey: " + consumerKey, e, true);
         }
     }
 
@@ -681,7 +681,7 @@ public class OAuthAdminServiceImpl {
 
         } catch (IdentityOAuth2Exception | IdentityApplicationManagementException e) {
             throw handleError("Error in updating oauth app & revoking access tokens and authz " +
-                                        "codes for OAuth App with consumerKey: " + consumerKey, e);
+                                        "codes for OAuth App with consumerKey: " + consumerKey, e, true);
         }
     }
 
@@ -724,7 +724,7 @@ public class OAuthAdminServiceImpl {
                 userStoreDomain = OAuth2Util.getUserStoreForFederatedUser(loggedInUser);
             } catch (IdentityOAuth2Exception e) {
                 String errorMsg = "Error occurred while getting user store domain for User ID : " + loggedInUser;
-                throw handleError(errorMsg, e);
+                throw handleError(errorMsg, e, true);
             }
         }
 
@@ -734,7 +734,7 @@ public class OAuthAdminServiceImpl {
                                                     .getAllTimeAuthorizedClientIds(loggedInUser);
         } catch (IdentityOAuth2Exception e) {
             String errorMsg = "Error occurred while retrieving apps authorized by User ID : " + username;
-            throw handleError(errorMsg, e);
+            throw handleError(errorMsg, e, true);
         }
         Set<OAuthConsumerAppDTO> appDTOs = new HashSet<OAuthConsumerAppDTO>();
         for (String clientId : clientIds) {
@@ -746,7 +746,7 @@ public class OAuthAdminServiceImpl {
             } catch (IdentityOAuth2Exception e) {
                 String errorMsg = "Error occurred while retrieving access tokens issued for " +
                                   "Client ID : " + clientId + ", User ID : " + username;
-                throw handleError(errorMsg, e);
+                throw handleError(errorMsg, e, true);
             }
             if (!accessTokenDOs.isEmpty()) {
                 Set<String> distinctClientUserScopeCombo = new HashSet<String>();
@@ -780,7 +780,7 @@ public class OAuthAdminServiceImpl {
                     } catch (IdentityOAuth2Exception e) {
                         String errorMsg = "Error occurred while retrieving latest access token issued for Client ID :" +
                                           " " + clientId + ", User ID : " + username + " and Scope : " + scopeString;
-                        throw handleError(errorMsg, e);
+                        throw handleError(errorMsg, e, true);
                     }
                 }
             }
@@ -809,7 +809,7 @@ public class OAuthAdminServiceImpl {
                 try {
                     userStoreDomain = OAuth2Util.getUserStoreForFederatedUser(user);
                 } catch (IdentityOAuth2Exception e) {
-                    throw handleError("Error occurred while getting user store domain from User ID : " + user, e);
+                    throw handleError("Error occurred while getting user store domain from User ID : " + user, e, true);
                 }
             }
             OAuthConsumerAppDTO[] appDTOs = getAppsAuthorizedByUser();
@@ -825,7 +825,7 @@ public class OAuthAdminServiceImpl {
                         } catch (IdentityOAuth2Exception e) {
                             String errorMsg = "Error occurred while retrieving access tokens issued for " +
                                               "Client ID : " + appDTO.getOauthConsumerKey() + ", User ID : " + userName;
-                            throw handleError(errorMsg, e);
+                            throw handleError(errorMsg, e, true);
                         }
                         User authzUser;
                         for (AccessTokenDO accessTokenDO : accessTokenDOs) {
@@ -852,7 +852,7 @@ public class OAuthAdminServiceImpl {
                                                   "access token issued for Client ID : " +
                                                   appDTO.getOauthConsumerKey() + ", User ID : " + userName +
                                                   " and Scope : " + buildScopeString(accessTokenDO.getScope());
-                                throw handleError(errorMsg, e);
+                                throw handleError(errorMsg, e, true);
                             }
                             if (scopedToken != null) {
                                 //Revoking token from database
@@ -863,7 +863,7 @@ public class OAuthAdminServiceImpl {
                                 } catch (IdentityOAuth2Exception e) {
                                     String errorMsg = "Error occurred while revoking " + "Access Token : " +
                                                       scopedToken.getAccessToken();
-                                    throw handleError(errorMsg, e);
+                                    throw handleError(errorMsg, e, true);
                                 }
                                 //Revoking the oauth consent from database.
                                 try {
@@ -874,7 +874,7 @@ public class OAuthAdminServiceImpl {
                                 } catch (IdentityOAuth2Exception e) {
                                     String errorMsg = "Error occurred while removing OAuth Consent of Application " +
                                                       appName + " of user " + userName;
-                                    throw handleError(errorMsg, e);
+                                    throw handleError(errorMsg, e, true);
                                 }
                             }
                             triggerPostRevokeListeners(revokeRequestDTO, new OAuthRevocationResponseDTO
@@ -935,7 +935,7 @@ public class OAuthAdminServiceImpl {
                 Map<String, Object> paramMap = new HashMap<String, Object>();
                 oAuthEventInterceptorProxy.onPreTokenRevocationByResourceOwner(revokeRequestDTO, paramMap);
             } catch (IdentityOAuth2Exception e) {
-                throw handleError("Error occurred with Oauth pre-revoke listener ", e);
+                throw handleError("Error occurred with Oauth pre-revoke listener ", e, true);
             }
         }
     }
@@ -1180,7 +1180,7 @@ public class OAuthAdminServiceImpl {
                 }
             } catch (UserStoreException e) {
                 throw handleError("Error while retrieving the user store manager for user: " +
-                                            applicationOwnerInRequest, e);
+                                            applicationOwnerInRequest, e, true);
             }
 
         }

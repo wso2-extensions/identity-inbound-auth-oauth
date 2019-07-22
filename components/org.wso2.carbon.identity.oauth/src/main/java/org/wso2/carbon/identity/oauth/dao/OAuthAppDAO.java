@@ -151,20 +151,20 @@ public class OAuthAppDAO {
                 } catch (SQLException e1) {
                     IdentityDatabaseUtil.rollbackTransaction(connection);
                     throw handleError(String.format("Error when executing SQL to create OAuth app %s@%s ",
-                            consumerAppDO.getApplicationName(), consumerAppDO.getUser().getTenantDomain()), e1);
+                            consumerAppDO.getApplicationName(), consumerAppDO.getUser().getTenantDomain()), e1, false);
                 }
             } catch (SQLException e) {
                 throw handleError(String.format("Error when executing SQL to create OAuth app %s@%s ",
-                        consumerAppDO.getApplicationName(), consumerAppDO.getUser().getTenantDomain()), e);
+                        consumerAppDO.getApplicationName(), consumerAppDO.getUser().getTenantDomain()), e, false);
             } catch (IdentityOAuth2Exception e) {
                 throw handleError("Error occurred while processing the client id and client secret by " +
-                        "TokenPersistenceProcessor", null);
+                        "TokenPersistenceProcessor", null, false);
             } catch (InvalidOAuthClientException e) {
-                throw handleError("Error occurred while processing client id", e);
+                throw handleError("Error occurred while processing client id", e, false);
             }
         } else {
             String message = "Error when adding the application. An application with the same name already exists.";
-            throw handleError(message, null);
+            throw handleError(message, null, false);
         }
     }
 
@@ -206,11 +206,11 @@ public class OAuthAppDAO {
             } catch (SQLException e1) {
                 IdentityDatabaseUtil.rollbackTransaction(connection);
                 String sqlStmt = SQLQueries.OAuthAppDAOSQLQueries.ADD_OAUTH_CONSUMER;
-                throw handleError("Error when executing the SQL : " + sqlStmt, e1);
+                throw handleError("Error when executing the SQL : " + sqlStmt, e1, false);
             }
         } catch (SQLException e) {
             String sqlStmt = SQLQueries.OAuthAppDAOSQLQueries.ADD_OAUTH_CONSUMER;
-            throw handleError("Error when executing the SQL : " + sqlStmt, e);
+            throw handleError("Error when executing the SQL : " + sqlStmt, e, false);
         }
         return new String[]{consumerKey, consumerSecret};
     }
@@ -276,12 +276,12 @@ public class OAuthAppDAO {
                 }
             }
         } catch (SQLException e) {
-            throw handleError("Error occurred while retrieving OAuth consumer apps of user", e);
+            throw handleError("Error occurred while retrieving OAuth consumer apps of user", e, false);
         } catch (UserStoreException e) {
-            throw handleError("Error while retrieving Tenant Domain for tenant ID : " + tenantId, e);
+            throw handleError("Error while retrieving Tenant Domain for tenant ID : " + tenantId, e, false);
         } catch (IdentityOAuth2Exception e) {
             throw handleError("Error occurred while processing client id and client secret by " +
-                    "TokenPersistenceProcessor", e);
+                    "TokenPersistenceProcessor", e, false);
         }
         return oauthAppsOfUser;
     }
@@ -447,13 +447,13 @@ public class OAuthAppDAO {
                 IdentityDatabaseUtil.commitTransaction(connection);
             } catch (SQLException e1) {
                 IdentityDatabaseUtil.rollbackTransaction(connection);
-                throw handleError("Error when updating OAuth application", e1);
+                throw handleError("Error when updating OAuth application", e1, false);
             }
         } catch (SQLException e) {
-            throw handleError("Error when updating OAuth application", e);
+            throw handleError("Error when updating OAuth application", e, false);
         } catch (IdentityOAuth2Exception e) {
             throw handleError("Error occurred while processing client id and client secret by " +
-                    "TokenPersistenceProcessor", e);
+                    "TokenPersistenceProcessor", e, false);
         }
     }
 
@@ -483,7 +483,7 @@ public class OAuthAppDAO {
             }
         } catch (UserStoreException e) {
             throw handleError("User validation failed for owner update in the application: " +
-                    oAuthAppDO.getApplicationName(), e);
+                    oAuthAppDO.getApplicationName(), e, false);
         }
         return true;
     }
@@ -702,7 +702,7 @@ public class OAuthAppDAO {
             }
         } catch (SQLException e) {
             throw handleError("Error when executing the SQL : " + SQLQueries.OAuthAppDAOSQLQueries
-                    .REMOVE_APPLICATION, e);
+                    .REMOVE_APPLICATION, e, false);
         }
     }
 
@@ -749,7 +749,7 @@ public class OAuthAppDAO {
                 }
             }
         } catch (SQLException e) {
-            throw handleError("Error while executing the SQL prepStmt.", e);
+            throw handleError("Error while executing the SQL prepStmt.", e, false);
         }
         return consumerAppState;
     }
@@ -803,7 +803,7 @@ public class OAuthAppDAO {
             }
         } catch (SQLException e) {
             throw handleError("Error when executing the SQL : " + SQLQueries.OAuthAppDAOSQLQueries
-                    .CHECK_EXISTING_APPLICATION, e);
+                    .CHECK_EXISTING_APPLICATION, e, false);
         }
         return isDuplicateApp;
     }
@@ -822,10 +822,10 @@ public class OAuthAppDAO {
                 }
             }
         } catch (IdentityOAuth2Exception e) {
-            throw handleError("Error occurred while processing the client id by TokenPersistenceProcessor", null);
+            throw handleError("Error occurred while processing the client id by TokenPersistenceProcessor", null, false);
         } catch (SQLException e) {
             throw handleError("Error when executing the SQL: " + SQLQueries.OAuthAppDAOSQLQueries
-                    .CHECK_EXISTING_CONSUMER, e);
+                    .CHECK_EXISTING_CONSUMER, e, false);
         }
         return isDuplicateConsumer;
     }

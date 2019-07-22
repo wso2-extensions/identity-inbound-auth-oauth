@@ -430,10 +430,10 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
                 IdentityDatabaseUtil.commitTransaction(connection);
             } catch (SQLException e1) {
                 IdentityDatabaseUtil.rollbackTransaction(connection);
-                throw handleError("Can not delete existing entry for the same token id" + tokenId, e1);
+                throw handleError("Can not delete existing entry for the same token id" + tokenId, e1, false);
             }
         } catch (SQLException e) {
-            throw handleError("Can not delete existing entry for the same token id" + tokenId, e);
+            throw handleError("Can not delete existing entry for the same token id" + tokenId, e, false);
         }
     }
 
@@ -446,10 +446,10 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
                 IdentityDatabaseUtil.commitTransaction(connection);
             } catch (SQLException e1) {
                 IdentityDatabaseUtil.rollbackTransaction(connection);
-                throw handleError("Error when executing the SQL : " + SQLQueries.DELETE_REQ_OBJECT_BY_TOKEN_ID, e1);
+                throw handleError("Error when executing the SQL : " + SQLQueries.DELETE_REQ_OBJECT_BY_TOKEN_ID, e1, false);
             }
         } catch (SQLException e) {
-            throw handleError("Error when executing the SQL : " + SQLQueries.DELETE_REQ_OBJECT_BY_TOKEN_ID, e);
+            throw handleError("Error when executing the SQL : " + SQLQueries.DELETE_REQ_OBJECT_BY_TOKEN_ID, e, false);
         }
     }
 
@@ -463,10 +463,10 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
                 IdentityDatabaseUtil.commitTransaction(connection);
             } catch (SQLException e1) {
                 IdentityDatabaseUtil.rollbackTransaction(connection);
-                throw handleError("Error when executing the SQL : " + SQLQueries.DELETE_REQ_OBJECT_BY_CODE_ID, e1);
+                throw handleError("Error when executing the SQL : " + SQLQueries.DELETE_REQ_OBJECT_BY_CODE_ID, e1, false);
             }
         } catch (SQLException e) {
-            throw handleError("Error when executing the SQL : " + SQLQueries.DELETE_REQ_OBJECT_BY_CODE_ID, e);
+            throw handleError("Error when executing the SQL : " + SQLQueries.DELETE_REQ_OBJECT_BY_CODE_ID, e, false);
         }
     }
 }

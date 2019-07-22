@@ -193,10 +193,13 @@ public final class OAuthUtil {
      * IdentityOAuthAdminException exception
      * @param message error message
      * @param exception Exception.
+     * @param isErrorLogged decide whether the message should be optionally logged as an error
      * @return
      */
-    public static IdentityOAuthAdminException handleError(String message, Exception exception) {
-        log.error(message);
+    public static IdentityOAuthAdminException handleError(String message, Exception exception, Boolean isErrorLogged) {
+        if (isErrorLogged) {
+            log.error(message);
+        }
         if (exception == null) {
             return new IdentityOAuthAdminException(message);
         } else {
