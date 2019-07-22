@@ -426,7 +426,9 @@ public class DCRMService {
         try {
             app = getApplicationById(clientId);
         } catch (DCRMException e) {
-            log.error("Error while retrieving oauth application with client id: " + clientId);
+            if (log.isDebugEnabled()) {
+                log.debug("Could not find an OAuth application: " + e);
+            }
         }
 
         return app != null;
