@@ -82,8 +82,8 @@ public final class OAuthUtil {
         } else {
             authenticatedIDP = null;
             if (log.isDebugEnabled()) {
-                log.debug("User is not an instance of AuthenticatedUser therefore cannot resolve authenticatedIDP " +
-                        "name");
+                log.debug("User object is not an instance of AuthenticatedUser therefore cannot resolve " +
+                        "authenticatedIDP name.");
             }
             clearOAuthCache(consumerKey, user);
         }
@@ -101,8 +101,8 @@ public final class OAuthUtil {
         } else {
             authenticatedIDP = null;
             if (log.isDebugEnabled()) {
-                log.debug("User is not an instance of AuthenticatedUser therefore cannot resolve authenticatedIDP " +
-                        "name");
+                log.debug("User object is not an instance of AuthenticatedUser therefore cannot resolve " +
+                        "authenticatedIDP name.");
             }
             clearOAuthCache(consumerKey, user, scope);
         }

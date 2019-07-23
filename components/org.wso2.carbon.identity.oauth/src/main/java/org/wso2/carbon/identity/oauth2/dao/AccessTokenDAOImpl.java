@@ -543,10 +543,12 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                             || connection.getMetaData().getDriverName().contains("Microsoft")) {
                         sql = SQLQueries.RETRIEVE_LATEST_NON_ACTIVE_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_MSSQL;
                     } else if (connection.getMetaData().getDriverName().contains("PostgreSQL")) {
-                        sql = SQLQueries.RETRIEVE_LATEST_NON_ACTIVE_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_POSTGRESQL;
+                        sql = SQLQueries.
+                                RETRIEVE_LATEST_NON_ACTIVE_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_POSTGRESQL;
                     } else if (connection.getMetaData().getDriverName().contains("Informix")) {
                         // Driver name = "IBM Informix JDBC Driver for IBM Informix Dynamic Server"
-                        sql = SQLQueries.RETRIEVE_LATEST_NON_ACTIVE_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_INFORMIX;
+                        sql = SQLQueries.
+                                RETRIEVE_LATEST_NON_ACTIVE_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_INFORMIX;
 
                     } else {
                         sql = SQLQueries.RETRIEVE_LATEST_NON_ACTIVE_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_ORACLE;

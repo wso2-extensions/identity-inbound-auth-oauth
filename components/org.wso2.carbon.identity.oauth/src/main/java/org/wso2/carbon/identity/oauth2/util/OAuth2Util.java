@@ -568,6 +568,8 @@ public class OAuth2Util {
      * @param scope
      * @param authorizedUser
      * @return
+     * @deprecated To make the cache key completely unique the authenticated IDP should also be introduced.
+     * Use {@link #buildCacheKeyStringForToken(String, String, String, String)} instead.
      */
     @Deprecated
     public static String buildCacheKeyStringForToken(String clientId, String scope, String authorizedUser) {
@@ -2769,6 +2771,7 @@ public class OAuth2Util {
      * @param userStoreDomain user store domain
      * @param tenantDomain    tenent domain
      * @return an instance of AuthenticatedUser{@link AuthenticatedUser}
+     * @deprecated use {@link #createAuthenticatedUser(String, String, String, String)} instead.
      */
     @Deprecated
     public static AuthenticatedUser createAuthenticatedUser(String username, String userStoreDomain, String tenantDomain) {
@@ -2779,8 +2782,8 @@ public class OAuth2Util {
         if (StringUtils.startsWith(userStoreDomain, OAuthConstants.UserType.FEDERATED_USER_DOMAIN_PREFIX) &&
                 !OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal()) {
             if (log.isDebugEnabled()) {
-                log.debug("Federated prefix found in domain: " + userStoreDomain + " for user: " + username + " in " +
-                        "tenant domain: " + tenantDomain + ". Flag user as a federated user.");
+                log.debug("Federated prefix found in domain: " + userStoreDomain + " for user: " + username
+                        + " in tenant domain: " + tenantDomain + ". Flag user as a federated user.");
             }
             authenticatedUser.setFederatedUser(true);
             authenticatedUser.setFederatedIdPName(OAuth2Util.getFederatedIdPFromDomain(userStoreDomain));
@@ -2825,8 +2828,8 @@ public class OAuth2Util {
                 authenticatedUser.setFederatedIdPName(OAuth2Util.getFederatedIdPFromDomain(userStoreDomain));
             }
             if (log.isDebugEnabled()) {
-                log.debug("Federated prefix found in domain: " + userStoreDomain + " for user: " + username + " in " +
-                        "tenant domain:" + tenantDomain + ". Flag user as a federated user. " +
+                log.debug("Federated prefix found in domain: " + userStoreDomain + " for user: " + username +
+                        " in tenant domain: " + tenantDomain + ". Flag user as a federated user. " +
                         authenticatedUser.getFederatedIdPName() + " is set as the authenticated idp.");
             }
         } else {
