@@ -113,11 +113,6 @@
             </dependency>
             <dependency>
                 <groupId>org.wso2.carbon</groupId>
-                <artifactId>org.wso2.carbon.logging</artifactId>
-                <version>${carbon.kernel.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.wso2.carbon</groupId>
                 <artifactId>javax.cache.wso2</artifactId>
                 <version>${carbon.kernel.version}</version>
             </dependency>
@@ -589,6 +584,13 @@
                 <version>${version.org.wso2.orbit.javax.xml.bind}</version>
             </dependency>
 
+            <!-- Pax Logging -->
+            <dependency>
+                <groupId>org.ops4j.pax.logging</groupId>
+                <artifactId>pax-logging-api</artifactId>
+                <version>${pax.logging.api.version}</version>
+            </dependency>
+
         </dependencies>
     </dependencyManagement>
 
@@ -873,6 +875,9 @@
         <!--SAML component version for test-->
         <carbon.identity.sso.saml.version>5.3.0</carbon.identity.sso.saml.version>
         <spring-context.version>5.1.1.RELEASE</spring-context.version>
+
+        <!-- Pax Logging Version -->
+        <pax.logging.api.version>1.10.1</pax.logging.api.version>
     </properties>
 
 </project>
