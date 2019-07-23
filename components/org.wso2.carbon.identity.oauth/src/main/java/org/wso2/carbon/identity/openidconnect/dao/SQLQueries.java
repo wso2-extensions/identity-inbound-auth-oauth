@@ -113,7 +113,7 @@ public class SQLQueries {
             "FROM IDN_CLAIM " +
             "WHERE CLAIM_URI = ? " +
                 "AND TENANT_ID = ?" +
-                "AND DIALECT_ID = (SELECT ID FROM IDN_CLAIM_DIALECT WHERE DIALECT_URI = ?)";
+                "AND DIALECT_ID = (SELECT ID FROM IDN_CLAIM_DIALECT WHERE DIALECT_URI = ? AND TENANT_ID = ?)";
 
     public static final String DELETE_SCOPE_CLAIM_MAPPING = "DELETE FROM IDN_OIDC_SCOPE WHERE NAME=? AND TENANT_ID=?";
 

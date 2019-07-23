@@ -364,6 +364,7 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
                         preparedStatement.setString(1, claim);
                         preparedStatement.setInt(2, tenantId);
                         preparedStatement.setString(3, OIDC_DIALECT_URI);
+                        preparedStatement.setInt(4, tenantId);
                     }));
             if (oidcClaimId == null) {
                 oidcClaimId = -1;
