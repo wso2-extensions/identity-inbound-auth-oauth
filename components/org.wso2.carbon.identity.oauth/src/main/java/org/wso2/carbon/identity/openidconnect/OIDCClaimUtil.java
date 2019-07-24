@@ -98,6 +98,40 @@ public class OIDCClaimUtil {
         return roleMapping.getLocalRole().getLocalRoleName();
     }
 
+    /**
+     * Filter user claims based on consent with the highest priority {@link OpenIDConnectClaimFilter}. Consent based
+     * user claims filtering can be configured at the global level.
+     *
+     * @deprecated This method only supports global level consent based user claims filtering configurations. Please
+     * use {@link #filterUserClaimsBasedOnConsent(Map, AuthenticatedUser, String, String, String, ServiceProvider)}
+     * which supports SP level configurations as well.
+     */
+    @Deprecated
+    public static Map<String, Object> filterUserClaimsBasedOnConsent(Map<String, Object> userClaims,
+                                                                     AuthenticatedUser authenticatedUser,
+                                                                     String clientId,
+                                                                     String spTenantDomain,
+                                                                     String grantType) {
+
+        if (isConsentBasedClaimFilteringApplicable(grantType)) {
+            return OpenIDConnectServiceComponentHolder.getInstance()
+                    .getHighestPriorityOpenIDConnectClaimFilter()
+                    .getClaimsFilteredByUserConsent(userClaims, authenticatedUser, clientId, spTenantDomain);
+        } else {
+            if (log.isDebugEnabled()) {
+                String msg = "Filtering user claims based on consent skipped for grant type:%s. Returning original " +
+                        "user claims for user: %s, for clientId: %s of tenantDomain: %s";
+                log.debug(String.format(msg, grantType, authenticatedUser.toFullQualifiedUsername(),
+                        clientId, spTenantDomain));
+            }
+            return userClaims;
+        }
+    }
+
+    /**
+     * Filter user claims based on consent with the highest priority {@link OpenIDConnectClaimFilter}. Consent based
+     * user claims filtering can be configured at the global level, as well as the service provider level.
+     */
     public static Map<String, Object> filterUserClaimsBasedOnConsent(Map<String, Object> userClaims,
                                                                      AuthenticatedUser authenticatedUser,
                                                                      String clientId,
