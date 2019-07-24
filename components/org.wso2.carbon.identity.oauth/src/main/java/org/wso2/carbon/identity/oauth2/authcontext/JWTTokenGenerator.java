@@ -38,10 +38,10 @@ import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
-import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
-import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerAppPersistenceFactory;
+import org.wso2.carbon.identity.oauth.exception.OAuthConsumerAppException;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.util.ClaimCache;
 import org.wso2.carbon.identity.oauth.util.ClaimCacheKey;
@@ -76,7 +76,6 @@ import java.util.Map;
 import java.util.SortedMap;
 import java.util.StringTokenizer;
 import java.util.TreeSet;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.text.ParseException;
 
@@ -197,18 +196,15 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
             }
         }
 
-        OAuthAppDAO appDAO =  new OAuthAppDAO();
         OAuthAppDO appDO;
         try {
-            appDO = appDAO.getAppInformation(clientId);
+            appDO = OAuthConsumerAppPersistenceFactory.getInstance().getOAuthConsumerAppDAO()
+                    .getAppInformationByConsumerKey(clientId);
             // Adding the OAuthAppDO as a context property for further use
             messageContext.addProperty("OAuthAppDO", appDO);
-        } catch (IdentityOAuth2Exception e) {
-            log.debug(e.getMessage(), e);
-            throw new IdentityOAuth2Exception(e.getMessage());
-        } catch (InvalidOAuthClientException e) {
-            log.debug(e.getMessage(), e);
-            throw new IdentityOAuth2Exception(e.getMessage());
+        } catch (OAuthConsumerAppException e) {
+            throw new IdentityOAuth2Exception("Error occurred while retrieving app information for Client ID : "
+                    + clientId, e);
         }
         String subscriber = appDO.getUser().toString();
         String applicationName = appDO.getApplicationName();

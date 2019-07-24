@@ -19,12 +19,15 @@
 package org.wso2.carbon.identity.oauth2.client.authentication;
 
 import org.apache.axis2.transport.http.HTTPConstants;
+import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerAppDAO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerAppPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
@@ -34,11 +37,15 @@ import javax.servlet.http.HttpServletRequest;
 import java.util.HashMap;
 import java.util.List;
 
+import static org.mockito.Matchers.anyString;
+import static org.powermock.api.mockito.PowerMockito.mockStatic;
+import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertEquals;
 
 @PrepareForTest({
         HttpServletRequest.class,
-        OAuth2Util.class
+        OAuth2Util.class,
+        OAuthConsumerAppPersistenceFactory.class
 })
 @WithCarbonHome
 public class PublicClientAuthenticatorTest extends PowerMockIdentityBaseTest {
@@ -64,7 +71,13 @@ public class PublicClientAuthenticatorTest extends PowerMockIdentityBaseTest {
         OAuthAppDO appDO = new OAuthAppDO();
         appDO.setBypassClientCredentials(publicClient);
 
-        PowerMockito.when(OAuth2Util.getAppInformationByClientId(CLIENT_ID)).thenReturn(appDO);
+        mockStatic(OAuthConsumerAppPersistenceFactory.class);
+        OAuthConsumerAppPersistenceFactory oAuthConsumerAppPersistenceFactory = Mockito
+                .mock(OAuthConsumerAppPersistenceFactory.class);
+        when(OAuthConsumerAppPersistenceFactory.getInstance()).thenReturn(oAuthConsumerAppPersistenceFactory);
+        OAuthConsumerAppDAO oAuthConsumerAppDAO = Mockito.mock(OAuthConsumerAppDAO.class);
+        when(oAuthConsumerAppPersistenceFactory.getOAuthConsumerAppDAO()).thenReturn(oAuthConsumerAppDAO);
+        when(oAuthConsumerAppDAO.getAppInformationByConsumerKey(CLIENT_ID)).thenReturn(appDO);
 
         HttpServletRequest httpServletRequest = PowerMockito.mock(HttpServletRequest.class);
         PowerMockito.when(httpServletRequest.getHeader(headerName)).thenReturn(headerValue);

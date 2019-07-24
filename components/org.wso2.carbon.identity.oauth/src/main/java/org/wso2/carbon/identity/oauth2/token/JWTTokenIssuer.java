@@ -41,9 +41,10 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
-import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerAppPersistenceFactory;
+import org.wso2.carbon.identity.oauth.exception.OAuthConsumerAppException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
@@ -252,8 +253,9 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
 
             // Read the property whether we have to get the tenant domain of the SP instead of user.
             if (OAuthServerConfiguration.getInstance().getUseSPTenantDomainValue()) {
-                tenantDomain = OAuth2Util.getAppInformationByClientId(authorizationContext.getAuthorizationReqDTO()
-                        .getConsumerKey()).getUser().getTenantDomain();
+                tenantDomain = OAuthConsumerAppPersistenceFactory.getInstance().getOAuthConsumerAppDAO()
+                        .getAppInformationByConsumerKey(authorizationContext.getAuthorizationReqDTO().getConsumerKey())
+                        .getAppOwner().getTenantDomain();
             } else if (tokenContext != null) {
                 tenantDomain = tokenContext.getAuthorizedUser().getTenantDomain();
             } else if (authorizationContext != null) {
@@ -304,8 +306,11 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             SignedJWT signedJWT = new SignedJWT(headerBuilder.build(), jwtClaimsSet);
             signedJWT.sign(signer);
             return signedJWT.serialize();
-        } catch (JOSEException | InvalidOAuthClientException e) {
+        } catch (JOSEException e) {
             throw new IdentityOAuth2Exception("Error occurred while signing JWT", e);
+        } catch (OAuthConsumerAppException e) {
+            throw new IdentityOAuth2Exception("Error occurred while retrieving app information for Client ID : " +
+                    authorizationContext.getAuthorizationReqDTO().getConsumerKey(), e);
         }
     }
 
@@ -381,8 +386,9 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         // loading the stored application data
         OAuthAppDO oAuthAppDO;
         try {
-            oAuthAppDO = OAuth2Util.getAppInformationByClientId(consumerKey);
-        } catch (InvalidOAuthClientException e) {
+            oAuthAppDO = OAuthConsumerAppPersistenceFactory.getInstance().getOAuthConsumerAppDAO()
+                    .getAppInformationByConsumerKey(consumerKey);
+        } catch (OAuthConsumerAppException e) {
             throw new IdentityOAuth2Exception("Error while retrieving app information for clientId: " + consumerKey, e);
         }
 

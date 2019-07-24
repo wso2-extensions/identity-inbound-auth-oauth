@@ -23,9 +23,10 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.OAuth;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerAppPersistenceFactory;
+import org.wso2.carbon.identity.oauth.exception.OAuthConsumerAppException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
-import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.util.List;
 import java.util.Map;
@@ -99,9 +100,7 @@ public class PublicClientAuthenticator extends AbstractOAuthClientAuthenticator 
                     log.debug("Application with the given client ID " + clientId + " is not found");
                 }
             }
-        } catch (InvalidOAuthClientException e) {
-            log.error("Error in retrieving an Application (Service Provider) with client ID : " + clientId, e);
-        } catch (IdentityOAuth2Exception e) {
+        }  catch (IdentityOAuth2Exception e) {
             log.error("Error in Application (Service Provider) with client ID : " + clientId, e);
         }
 
@@ -150,10 +149,14 @@ public class PublicClientAuthenticator extends AbstractOAuthClientAuthenticator 
      * @throws IdentityOAuth2Exception OAuth2 exception.
      * @throws InvalidOAuthClientException Invalid OAuth2 client exception.
      */
-    private boolean canBypassClientCredentials(String clientId) throws IdentityOAuth2Exception,
-            InvalidOAuthClientException {
+    private boolean canBypassClientCredentials(String clientId) throws IdentityOAuth2Exception {
 
-        return OAuth2Util.getAppInformationByClientId(clientId).isBypassClientCredentials();
+        try {
+            return OAuthConsumerAppPersistenceFactory.getInstance().getOAuthConsumerAppDAO()
+                    .getAppInformationByConsumerKey(clientId).isBypassClientCredentials();
+        } catch (OAuthConsumerAppException e) {
+            throw new IdentityOAuth2Exception("Error while retrieving OAuth application for client id: " + clientId, e);
+        }
     }
 
     /**

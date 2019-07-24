@@ -21,14 +21,14 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
-import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerAppPersistenceFactory;
+import org.wso2.carbon.identity.oauth.exception.OAuthConsumerAppException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
-import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionState;
 import org.wso2.carbon.identity.oidc.session.cache.OIDCBackChannelAuthCodeCache;
@@ -87,8 +87,9 @@ public class ClaimProviderImpl implements ClaimProvider {
     private void addSidToCacheWhenIDTokenIsEncrypted(OAuthAuthzReqMessageContext oAuthAuthzReqMessageContext,
                                                      String claimValue) throws IdentityOAuth2Exception {
         try {
-            OAuthAppDO app = OAuth2Util.getAppInformationByClientId(
-                    oAuthAuthzReqMessageContext.getAuthorizationReqDTO().getConsumerKey());
+            OAuthAppDO app = OAuthConsumerAppPersistenceFactory.getInstance().getOAuthConsumerAppDAO()
+                    .getAppInformationByConsumerKey(oAuthAuthzReqMessageContext.getAuthorizationReqDTO()
+                            .getConsumerKey());
             if (app.isIdTokenEncryptionEnabled()) {
                 // Add sid to cache for the instances where id token is encrypted.
                 OIDCBackChannelAuthCodeCacheKey authCacheKey = new OIDCBackChannelAuthCodeCacheKey(
@@ -100,7 +101,7 @@ public class ClaimProviderImpl implements ClaimProvider {
                     log.debug("Adding sid to OIDCBackChannelAuthCodeCache since id token encryption is enabled.");
                 }
             }
-        } catch (InvalidOAuthClientException e) {
+        } catch (OAuthConsumerAppException e) {
             throw new IdentityOAuth2Exception("Retrieving OAuthAppDO failed for the client id: " +
                     oAuthAuthzReqMessageContext.getAuthorizationReqDTO().getConsumerKey(), e);
         }

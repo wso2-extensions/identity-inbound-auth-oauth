@@ -95,6 +95,10 @@ public class OAuthAppDAO {
 
     }
 
+    /**
+     * @deprecated use {@link OAuthConsumerAppDAO#addOAuthConsumerApplication(OAuthAppDO)} instead.
+     */
+    @Deprecated
     public void addOAuthApplication(OAuthAppDO consumerAppDO) throws IdentityOAuthAdminException {
 
         int spTenantId = IdentityTenantUtil.getTenantId(consumerAppDO.getUser().getTenantDomain());
@@ -215,6 +219,10 @@ public class OAuthAppDAO {
         return new String[]{consumerKey, consumerSecret};
     }
 
+    /**
+     * @deprecated use {@link OAuthConsumerAppDAO#getOAuthConsumerAppsOfUser(String, int)} instead.
+     */
+    @Deprecated
     public OAuthAppDO[] getOAuthConsumerAppsOfUser(String username, int tenantId) throws IdentityOAuthAdminException {
         OAuthAppDO[] oauthAppsOfUser;
 
@@ -286,6 +294,10 @@ public class OAuthAppDAO {
         return oauthAppsOfUser;
     }
 
+    /**
+     * @deprecated use {@link OAuthConsumerAppDAO#getAppInformationByConsumerKey(String)} instead.
+     */
+    @Deprecated
     public OAuthAppDO getAppInformation(String consumerKey) throws
             InvalidOAuthClientException, IdentityOAuth2Exception {
 
@@ -354,6 +366,10 @@ public class OAuthAppDAO {
         return oauthApp;
     }
 
+    /**
+     * @deprecated use {@link OAuthConsumerAppDAO#getAppInformationByAppName(String)} instead.
+     */
+    @Deprecated
     public OAuthAppDO getAppInformationByAppName(String appName) throws
             InvalidOAuthClientException, IdentityOAuth2Exception {
         OAuthAppDO oauthApp;
@@ -423,6 +439,10 @@ public class OAuthAppDAO {
         return oauthApp;
     }
 
+    /**
+     * @deprecated use {@link OAuthConsumerAppDAO#updateOAuthConsumerApplication(OAuthAppDO)} instead.
+     */
+    @Deprecated
     public void updateConsumerApplication(OAuthAppDO oauthAppDO) throws IdentityOAuthAdminException {
         boolean isUserValidForOwnerUpdate = validateUserForOwnerUpdate(oauthAppDO);
         try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
@@ -687,6 +707,10 @@ public class OAuthAppDAO {
         return spOIDCProperties.containsKey(propertyKey);
     }
 
+    /**
+     * @deprecated use {@link OAuthConsumerAppDAO#removeOAuthConsumerApplication(String)} instead.
+     */
+    @Deprecated
     public void removeConsumerApplication(String consumerKey) throws IdentityOAuthAdminException {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
@@ -712,7 +736,9 @@ public class OAuthAppDAO {
      * @param appName     Service provider name.
      * @param consumerKey Consumer key.
      * @throws IdentityApplicationManagementException Identity Application Management Exception
+     * @deprecated use {@link OAuthConsumerAppDAO#updateOAuthConsumerAppName(String, String)} instead.
      */
+    @Deprecated
     public void updateOAuthConsumerApp(String appName, String consumerKey)
             throws IdentityApplicationManagementException {
 
@@ -877,7 +903,9 @@ public class OAuthAppDAO {
      * @param tenantDomain application tenant domain
      * @param consumerKey  client ID
      * @throws IdentityOAuthAdminException
-     */
+     * @deprecated use {@link OAuthConsumerAppDAO#removeOIDCProperties(String, String)} instead.
+      */
+    @Deprecated
     public void removeOIDCProperties(String tenantDomain, String consumerKey) throws IdentityOAuthAdminException {
 
         Connection connection = IdentityDatabaseUtil.getDBConnection();

@@ -34,9 +34,11 @@ import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
-import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerAppDAO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerAppPersistenceFactory;
+import org.wso2.carbon.identity.oauth.exception.OAuthConsumerAppException;
 import org.wso2.carbon.identity.oauth.tokenprocessor.HashingPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
@@ -277,7 +279,8 @@ public class TokenMgtDAO {
             throws IdentityOAuth2Exception, SQLException {
 
         try {
-            OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(consumerKey);
+            OAuthAppDO oAuthAppDO = OAuthConsumerAppPersistenceFactory.getInstance().getOAuthConsumerAppDAO()
+                    .getAppInformationByConsumerKey(consumerKey);
             boolean persistAccessTokenAlias = false;
             TokenIssuerDO tokenIssuerDO = OAuthServerConfiguration.getInstance().getSupportedTokenIssuers()
                     .get(oAuthAppDO.getTokenType());
@@ -288,7 +291,7 @@ public class TokenMgtDAO {
                 OauthTokenIssuer oauthIssuerImpl = OAuth2Util.getOAuthTokenIssuerForOAuthApp(oAuthAppDO);
                 accessToken = oauthIssuerImpl.getAccessTokenHash(accessToken);
             }
-        } catch (InvalidOAuthClientException e) {
+        } catch (OAuthConsumerAppException e) {
             throw new IdentityOAuth2Exception("Error while retrieving app information for clientId: " + consumerKey, e);
         } catch (OAuthSystemException e) {
             if (log.isDebugEnabled() && IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {

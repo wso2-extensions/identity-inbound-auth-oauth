@@ -30,6 +30,7 @@ import org.wso2.carbon.identity.common.testng.WithRealmService;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerAppPersistenceFactory;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.TestConstants;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
@@ -108,6 +109,9 @@ public class CodeResponseTypeHandlerTest {
         AppInfoCache appInfoCache = AppInfoCache.getInstance();
         appInfoCache.addToCache(TEST_CONSUMER_KEY, oAuthAppDO);
 
+        OAuthConsumerAppPersistenceFactory.getInstance().getOAuthConsumerAppDAO()
+                .addOAuthConsumerApplication(oAuthAppDO);
+
         CodeResponseTypeHandler codeResponseTypeHandler = new CodeResponseTypeHandler();
         codeResponseTypeHandler.init();
         OAuth2AuthorizeRespDTO oAuth2AuthorizeRespDTO =
@@ -116,5 +120,8 @@ public class CodeResponseTypeHandlerTest {
                 "Access token not Authorization code");
         Assert.assertEquals(oAuth2AuthorizeRespDTO.getCallbackURI()
                 , TEST_CALLBACK_URL, "Callback url not set");
+
+        OAuthConsumerAppPersistenceFactory.getInstance().getOAuthConsumerAppDAO()
+                .removeOAuthConsumerApplication(TEST_CONSUMER_KEY);
     }
 }

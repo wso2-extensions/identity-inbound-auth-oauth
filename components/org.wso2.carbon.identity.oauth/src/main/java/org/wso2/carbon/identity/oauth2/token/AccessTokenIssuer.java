@@ -37,7 +37,9 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerAppPersistenceFactory;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
+import org.wso2.carbon.identity.oauth.exception.OAuthConsumerAppException;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IDTokenValidationFailureException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -474,7 +476,14 @@ public class AccessTokenIssuer {
     private OAuthAppDO getOAuthApplication(String consumerKey) throws InvalidOAuthClientException,
             IdentityOAuth2Exception {
 
-        OAuthAppDO authAppDO = OAuth2Util.getAppInformationByClientId(consumerKey);
+        OAuthAppDO authAppDO = null;
+        try {
+            authAppDO = OAuthConsumerAppPersistenceFactory.getInstance().getOAuthConsumerAppDAO()
+                    .getAppInformationByConsumerKey(consumerKey);
+        } catch (OAuthConsumerAppException e) {
+            throw new IdentityOAuth2Exception("Error occurred while retrieving app information for Client ID : "
+                    + consumerKey, e);
+        }
         String appState = authAppDO.getState();
         if (StringUtils.isEmpty(appState)) {
             if (log.isDebugEnabled()) {

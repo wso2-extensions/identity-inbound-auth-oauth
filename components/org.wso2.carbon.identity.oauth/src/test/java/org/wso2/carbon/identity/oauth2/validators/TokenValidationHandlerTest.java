@@ -39,6 +39,8 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerAppDAO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerAppPersistenceFactory;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.dao.TokenMgtDAO;
@@ -61,6 +63,7 @@ import java.sql.Timestamp;
 import java.util.HashMap;
 import java.util.Map;
 
+import static org.mockito.Matchers.anyString;
 import static org.powermock.api.mockito.PowerMockito.doReturn;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
@@ -70,7 +73,7 @@ import static org.testng.Assert.assertNotNull;
 @WithAxisConfiguration
 @PowerMockIgnore({"javax.xml.*", "org.xml.sax.*", "org.w3c.dom.*"})
 @PrepareForTest({OAuthServerConfiguration.class, JDBCPersistenceManager.class, IdentityDatabaseUtil.class,
-        RealmService.class})
+        RealmService.class, OAuthConsumerAppPersistenceFactory.class})
 public class TokenValidationHandlerTest extends PowerMockTestCase {
 
     private String scopeArraySorted[] = new String[]{"scope1", "scope2", "scope3"};
@@ -197,8 +200,15 @@ public class TokenValidationHandlerTest extends PowerMockTestCase {
         OAuthAppDO oAuthAppDO = new OAuthAppDO();
         oAuthAppDO.setTokenType("Default");
         oAuthAppDO.setApplicationName("testApp");
-        AppInfoCache appInfoCache = AppInfoCache.getInstance();
-        appInfoCache.addToCache("testConsumerKey", oAuthAppDO);
+
+        mockStatic(OAuthConsumerAppPersistenceFactory.class);
+        OAuthConsumerAppPersistenceFactory oAuthConsumerAppPersistenceFactory = Mockito
+                .mock(OAuthConsumerAppPersistenceFactory.class);
+        when(OAuthConsumerAppPersistenceFactory.getInstance()).thenReturn(oAuthConsumerAppPersistenceFactory);
+        OAuthConsumerAppDAO oAuthConsumerAppDAO = Mockito.mock(OAuthConsumerAppDAO.class);
+        when(oAuthConsumerAppPersistenceFactory.getOAuthConsumerAppDAO()).thenReturn(oAuthConsumerAppDAO);
+        when(oAuthConsumerAppDAO.getAppInformationByConsumerKey(anyString())).thenReturn(oAuthAppDO);
+
         tokenMgtDAO.persistAccessToken(ACCESS_TOKEN, "testConsumerKey", accessTokenDO, accessTokenDO,
                 "TESTDOMAIN");
         oAuth2TokenValidationRequestDTO.setAccessToken(accessToken);

@@ -30,8 +30,9 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
-import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerAppPersistenceFactory;
+import org.wso2.carbon.identity.oauth.exception.OAuthConsumerAppException;
 import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
 import org.wso2.carbon.identity.oauth.user.UserInfoResponseBuilder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -39,7 +40,6 @@ import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
-import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
@@ -280,9 +280,11 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
         OAuthAppDO oAuthAppDO;
         try {
             clientId = getClientId(OAuth2Util.getAccessTokenIdentifier(tokenResponse));
-            oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
-        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
-            throw new UserInfoEndpointException("Error while retrieving OAuth app information for clientId: " + clientId);
+            oAuthAppDO = OAuthConsumerAppPersistenceFactory.getInstance().getOAuthConsumerAppDAO()
+                    .getAppInformationByConsumerKey(clientId);
+        } catch (OAuthConsumerAppException e) {
+            throw new UserInfoEndpointException("Error while retrieving OAuth app information for clientId: "
+                    + clientId, e);
         }
         return OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
     }

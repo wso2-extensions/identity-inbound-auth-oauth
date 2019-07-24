@@ -44,9 +44,10 @@ import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
-import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerAppPersistenceFactory;
+import org.wso2.carbon.identity.oauth.exception.OAuthConsumerAppException;
 import org.wso2.carbon.identity.oauth2.IDTokenValidationFailureException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
@@ -123,13 +124,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         String accessToken = tokenRespDTO.getAccessToken();
 
         // Initialize OAuthAppDO using the client ID.
-        OAuthAppDO oAuthAppDO;
-        try {
-            oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
-        } catch (InvalidOAuthClientException e) {
-            String error = "Error occurred while getting app information for client_id: " + clientId;
-            throw new IdentityOAuth2Exception(error, e);
-        }
+        OAuthAppDO oAuthAppDO = getOAuthAppInfoForConsumerKey(clientId);
 
         long idTokenValidityInMillis = getIDTokenExpiryInMillis(oAuthAppDO);
         long currentTimeInMillis = Calendar.getInstance().getTimeInMillis();
@@ -223,13 +218,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         List<String> amrValues = Collections.emptyList(); //TODO:
 
         // Initialize OAuthAppDO using the client ID.
-        OAuthAppDO oAuthAppDO;
-        try {
-            oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
-        } catch (InvalidOAuthClientException e) {
-            String error = "Error occurred while getting app information for client_id: " + clientId;
-            throw new IdentityOAuth2Exception(error, e);
-        }
+        OAuthAppDO oAuthAppDO = getOAuthAppInfoForConsumerKey(clientId);
 
         String[] amrValueArray = (String[])(authzReqMessageContext.getAuthorizationReqDTO().getProperty(OAuthConstants
                 .AMR));
@@ -895,5 +884,18 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
             }
             jwtClaimsSetBuilder.claim(OAuthConstants.OIDCClaims.REALM, realm);
         }
+    }
+
+    private OAuthAppDO getOAuthAppInfoForConsumerKey(String consumerKey) throws IdentityOAuth2Exception {
+
+        OAuthAppDO oAuthAppDO;
+        try {
+            oAuthAppDO = OAuthConsumerAppPersistenceFactory.getInstance().getOAuthConsumerAppDAO()
+                    .getAppInformationByConsumerKey(consumerKey);
+        } catch (OAuthConsumerAppException e) {
+            String error = "Error occurred while getting app information for client_id: " + consumerKey;
+            throw new IdentityOAuth2Exception(error, e);
+        }
+        return oAuthAppDO;
     }
 }

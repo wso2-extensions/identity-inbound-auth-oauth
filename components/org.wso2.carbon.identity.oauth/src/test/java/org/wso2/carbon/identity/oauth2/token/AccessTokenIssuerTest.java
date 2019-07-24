@@ -24,6 +24,7 @@ import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.mockito.Matchers;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.powermock.core.classloader.annotations.PrepareForTest;
@@ -41,6 +42,8 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerAppDAO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerAppPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.IDTokenValidationFailureException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.ResponseHeader;
@@ -82,7 +85,8 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppState
                 OAuthServerConfiguration.class,
                 OAuth2Util.class,
                 AppInfoCache.class,
-                CarbonUtils.class
+                CarbonUtils.class,
+                OAuthConsumerAppPersistenceFactory.class
         }
 )
 public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
@@ -103,6 +107,9 @@ public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
     @Mock
     private OAuth2AccessTokenReqDTO tokenReqDTO;
 
+    @Mock
+    private OAuthConsumerAppDAO oAuthConsumerAppDAO;
+
     private static final String DUMMY_GRANT_TYPE = "dummy_grant_type";
     private static final String ID_TOKEN = "dummyIDToken";
     private static final String[] SCOPES_WITHOUT_OPENID = new String[]{"scope1", "scope2"};
@@ -121,6 +128,14 @@ public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
         when(mockOAuthAppDO.getState()).thenReturn(APP_STATE_ACTIVE);
         when(OAuth2Util.getTenantDomainOfOauthApp(any(OAuthAppDO.class)))
                 .thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+
+        mockStatic(OAuthConsumerAppPersistenceFactory.class);
+        OAuthConsumerAppPersistenceFactory oAuthConsumerAppPersistenceFactory = Mockito
+                .mock(OAuthConsumerAppPersistenceFactory.class);
+        when(OAuthConsumerAppPersistenceFactory.getInstance()).thenReturn(oAuthConsumerAppPersistenceFactory);
+        oAuthConsumerAppDAO = Mockito.mock(OAuthConsumerAppDAO.class);
+        when(oAuthConsumerAppPersistenceFactory.getOAuthConsumerAppDAO()).thenReturn(oAuthConsumerAppDAO);
+        when(oAuthConsumerAppDAO.getAppInformationByConsumerKey(anyString())).thenReturn(mockOAuthAppDO);
     }
 
     @AfterMethod

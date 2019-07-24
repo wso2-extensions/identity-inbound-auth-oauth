@@ -22,6 +22,7 @@ import com.nimbusds.jose.JWSAlgorithm;
 import org.apache.axiom.om.OMElement;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.Assert;
@@ -43,6 +44,8 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerAppDAO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerAppPersistenceFactory;
 import org.wso2.carbon.identity.oauth.dao.OAuthConsumerDAO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.tokenprocessor.HashingPersistenceProcessor;
@@ -86,7 +89,8 @@ import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 
 @PrepareForTest({OAuthServerConfiguration.class, OAuthCache.class, IdentityUtil.class, OAuthConsumerDAO.class,
-        OAuth2Util.class, OAuthComponentServiceHolder.class, AppInfoCache.class, IdentityConfigParser.class})
+        OAuth2Util.class, OAuthComponentServiceHolder.class, AppInfoCache.class, IdentityConfigParser.class,
+        OAuthConsumerAppPersistenceFactory.class})
 public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
 
     private String[] scopeArraySorted = new String[]{"scope1", "scope2", "scope3"};
@@ -140,6 +144,9 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
     @Mock
     private AuthorizationGrantHandler authorizationGrantHandlerMock;
 
+    @Mock
+    private OAuthConsumerAppDAO oAuthConsumerAppDAO;
+
     @BeforeMethod
     public void setUp() throws Exception {
         authzUser = new AuthenticatedUser();
@@ -153,6 +160,13 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         when(oauthServerConfigurationMock.getTimeStampSkewInSeconds()).thenReturn(timestampSkew);
         mockStatic(OAuthComponentServiceHolder.class);
         when(OAuthComponentServiceHolder.getInstance()).thenReturn(oAuthComponentServiceHolderMock);
+
+        mockStatic(OAuthConsumerAppPersistenceFactory.class);
+        OAuthConsumerAppPersistenceFactory oAuthConsumerAppPersistenceFactory = Mockito
+                .mock(OAuthConsumerAppPersistenceFactory.class);
+        when(OAuthConsumerAppPersistenceFactory.getInstance()).thenReturn(oAuthConsumerAppPersistenceFactory);
+        oAuthConsumerAppDAO = Mockito.mock(OAuthConsumerAppDAO.class);
+        when(oAuthConsumerAppPersistenceFactory.getOAuthConsumerAppDAO()).thenReturn(oAuthConsumerAppDAO);
     }
 
     @AfterMethod
@@ -167,12 +181,7 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         appDO.setOauthConsumerKey(clientId);
         appDO.setOauthConsumerSecret(clientSecret);
 
-        AppInfoCache appInfoCache = mock(AppInfoCache.class);
-        when(appInfoCache.getValueFromCache(clientId)).thenReturn(appDO);
-
-        mockStatic(AppInfoCache.class);
-        when(AppInfoCache.getInstance()).thenReturn(appInfoCache);
-
+        when(oAuthConsumerAppDAO.getAppInformationByConsumerKey(clientId)).thenReturn(appDO);
         when(oauthServerConfigurationMock.getPersistenceProcessor()).thenReturn(new PlainTextPersistenceProcessor());
         assertTrue(OAuth2Util.authenticateClient(clientId, clientSecret));
     }
@@ -301,17 +310,8 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         appDO.setOauthConsumerKey(clientId);
         appDO.setOauthConsumerSecret(clientSecretInDB);
 
-        // Mock the cache result
-        AppInfoCache appInfoCache = mock(AppInfoCache.class);
-        when(appInfoCache.getValueFromCache(clientId)).thenReturn((OAuthAppDO) cacheResult);
-
-        mockStatic(AppInfoCache.class);
-        when(AppInfoCache.getInstance()).thenReturn(appInfoCache);
-
         // Mock the DB result
-        OAuthAppDAO oAuthAppDAO = mock(OAuthAppDAO.class);
-        when(oAuthAppDAO.getAppInformation(clientId)).thenReturn(appDO);
-        PowerMockito.whenNew(OAuthAppDAO.class).withNoArguments().thenReturn(oAuthAppDAO);
+        when(oAuthConsumerAppDAO.getAppInformationByConsumerKey(clientId)).thenReturn(appDO);
 
         when(oauthServerConfigurationMock.getPersistenceProcessor()).thenReturn(new PlainTextPersistenceProcessor());
         assertEquals(OAuth2Util.authenticateClient(clientId, clientSecret), expectedResult);
@@ -333,9 +333,7 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         when(AppInfoCache.getInstance()).thenReturn(appInfoCache);
 
         // Mock the DB result
-        OAuthAppDAO oAuthAppDAO = mock(OAuthAppDAO.class);
-        when(oAuthAppDAO.getAppInformation(clientId)).thenReturn(appDO);
-        PowerMockito.whenNew(OAuthAppDAO.class).withNoArguments().thenReturn(oAuthAppDAO);
+        when(oAuthConsumerAppDAO.getAppInformationByConsumerKey(clientId)).thenReturn(appDO);
 
         TokenPersistenceProcessor hashingProcessor = mock(HashingPersistenceProcessor.class);
         when(hashingProcessor.getProcessedClientSecret(clientSecret)).thenReturn(clientSecret);
@@ -401,10 +399,7 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         mockStatic(AppInfoCache.class);
         when(AppInfoCache.getInstance()).thenReturn(appInfoCache);
 
-        // Mock the DB result
-        OAuthAppDAO oAuthAppDAO = mock(OAuthAppDAO.class);
-        when(oAuthAppDAO.getAppInformation(clientId)).thenReturn(appDO);
-        PowerMockito.whenNew(OAuthAppDAO.class).withNoArguments().thenReturn(oAuthAppDAO);
+        when(oAuthConsumerAppDAO.getAppInformationByConsumerKey(clientId)).thenReturn(appDO);
 
         when(oauthServerConfigurationMock.getPersistenceProcessor()).thenReturn(new PlainTextPersistenceProcessor());
 

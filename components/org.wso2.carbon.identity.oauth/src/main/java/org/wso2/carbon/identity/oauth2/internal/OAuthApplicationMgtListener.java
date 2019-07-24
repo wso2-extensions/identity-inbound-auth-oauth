@@ -45,12 +45,13 @@ import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
-import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
-import org.wso2.carbon.identity.oauth.dao.OAuthConsumerDAO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerAppDAO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerAppPersistenceFactory;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
+import org.wso2.carbon.identity.oauth.exception.OAuthConsumerAppException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 
@@ -199,9 +200,9 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                     if (OAUTH.equals(authConfig.getInboundAuthType()) ||
                             OAUTH2.equals(authConfig.getInboundAuthType())) {
 
-                        OAuthAppDAO dao = new OAuthAppDAO();
-                        OAuthAppDO authApplication = dao.getAppInformationByAppName(serviceProvider
-                                .getApplicationName());
+                        OAuthAppDO authApplication = OAuthConsumerAppPersistenceFactory.getInstance()
+                                .getOAuthConsumerAppDAO().getAppInformationByAppName(serviceProvider
+                                        .getApplicationName());
                         String tokenProcessorName = OAuthServerConfiguration.getInstance().getPersistenceProcessor()
                                 .getClass().getName();
                         if (!"org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor"
@@ -218,7 +219,7 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                     }
                 }
             }
-        } catch (InvalidOAuthClientException | IdentityOAuth2Exception e) {
+        } catch (IdentityOAuth2Exception | OAuthConsumerAppException e) {
             throw new IdentityApplicationManagementException("Error occurred when retrieving OAuth application ", e);
         }
     }
@@ -294,8 +295,14 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
     }
 
     private String getClientSecret(String inboundAuthKey) throws IdentityOAuthAdminException {
-        OAuthConsumerDAO dao = new OAuthConsumerDAO();
-        return dao.getOAuthConsumerSecret(inboundAuthKey);
+
+        try {
+            return OAuthConsumerAppPersistenceFactory.getInstance().getOAuthConsumerAppDAO()
+                    .getOAuthConsumerSecret(inboundAuthKey);
+        } catch (OAuthConsumerAppException e) {
+            throw new IdentityOAuthAdminException("Error occurred while getting the consumer secret of consumer key: "
+                    + inboundAuthKey, e);
+        }
     }
 
     /**
@@ -326,9 +333,13 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
             return;
         }
 
-        OAuthAppDAO dao = new OAuthAppDAO();
-        dao.updateOAuthConsumerApp(serviceProvider.getApplicationName(),
-                authenticationRequestConfigConfig.getInboundAuthKey());
+        try {
+            OAuthConsumerAppPersistenceFactory.getInstance().getOAuthConsumerAppDAO()
+                    .updateOAuthConsumerAppName(authenticationRequestConfigConfig.getInboundAuthKey(),
+                    serviceProvider.getApplicationName());
+        } catch (OAuthConsumerAppException e) {
+            throw new IdentityApplicationManagementException("Error while updating the OAuth consumer application.", e);
+        }
     }
 
     private void removeEntriesFromCache(ServiceProvider serviceProvider, String tenantDomain, String userName)
@@ -485,13 +496,13 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                         if (StringUtils.equals(OAUTH2, inboundRequestConfig.getInboundAuthType()) || StringUtils
                                 .equals(inboundRequestConfig.getInboundAuthType(), OAUTH)) {
                             String oauthKey = inboundRequestConfig.getInboundAuthKey();
-                            OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
-                            oAuthAppDAO.removeOIDCProperties(tenantDomain, oauthKey);
+                            OAuthConsumerAppPersistenceFactory.getInstance().getOAuthConsumerAppDAO()
+                                    .removeOIDCProperties(oauthKey, tenantDomain);
                         }
                     }
                 }
             }
-        } catch (IdentityOAuthAdminException ex) {
+        } catch (OAuthConsumerAppException ex) {
             throw new IdentityApplicationManagementException("Error occurred while removing OIDC properties " +
                     "for application:" + serviceProvider.getApplicationName() + " in tenant domain: " + tenantDomain);
         }

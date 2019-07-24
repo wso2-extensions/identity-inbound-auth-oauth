@@ -39,7 +39,9 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerAppPersistenceFactory;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
+import org.wso2.carbon.identity.oauth.exception.OAuthConsumerAppException;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
@@ -814,14 +816,15 @@ public class ResponseTypeHandlerUtil {
 
         OAuthAppDO oAuthAppBean;
         try {
-            oAuthAppBean = OAuth2Util.getAppInformationByClientId(consumerKey);
+            oAuthAppBean = OAuthConsumerAppPersistenceFactory.getInstance().getOAuthConsumerAppDAO()
+                    .getAppInformationByConsumerKey(consumerKey);
             if (log.isDebugEnabled()) {
                 log.debug("Service Provider specific expiry time enabled for application : " + consumerKey + ". " +
                         "Application access token expiry time : " + oAuthAppBean.getApplicationAccessTokenExpiryTime
                         () + ", User access token expiry time : " + oAuthAppBean.getUserAccessTokenExpiryTime() + ", " +
                         "" + "Refresh token expiry time : " + oAuthAppBean.getRefreshTokenExpiryTime());
             }
-        } catch (InvalidOAuthClientException e) {
+        } catch (OAuthConsumerAppException e) {
             throw new IdentityOAuth2Exception("Error while retrieving app information for clientId : " + consumerKey,
                     e);
         }
