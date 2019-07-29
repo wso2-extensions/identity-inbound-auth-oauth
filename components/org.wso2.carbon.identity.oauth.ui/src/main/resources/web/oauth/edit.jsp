@@ -851,7 +851,8 @@
                                     <td colspan="2">
                                         <label title="Enable OIDC Backchannel Logout. Add the Backchannel Logout Endpoint URL in the textbox below">
                                             <input type="checkbox" name="logoutMechanism"
-                                                   id="backchannel_logout" value="true"
+                                                   id="backchannel_logout"
+                                                   value="<%= Encode.forHtmlAttribute(OAuthConstants.OIDCConfigProperties.BACK_CHANNEL_LOGOUT)%>"
                                                    onclick="toggleOidcLogout(this);"
                                                     <%= (isBackchannelLogoutEnabled ? "checked" : "")%>
                                             />
