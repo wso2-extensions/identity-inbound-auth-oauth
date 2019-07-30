@@ -374,6 +374,9 @@
                         <jacoco-agent.destfile>target/jacoco.exec</jacoco-agent.destfile>
                     </systemPropertyVariables>
                     <reuseForks>true</reuseForks>
+                    <classpathDependencyExcludes>
+                        <classpathDependencyExclude>org.ops4j.pax.logging</classpathDependencyExclude>
+                    </classpathDependencyExcludes>
                 </configuration>
             </plugin>
             <plugin>
