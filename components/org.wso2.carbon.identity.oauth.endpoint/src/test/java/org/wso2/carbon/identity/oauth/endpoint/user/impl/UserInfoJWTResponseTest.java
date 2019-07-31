@@ -22,6 +22,7 @@ import com.nimbusds.jwt.JWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.JWTParser;
 import org.mockito.Mockito;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.IObjectFactory;
 import org.testng.annotations.BeforeClass;
@@ -61,6 +62,7 @@ import static org.testng.Assert.assertTrue;
  */
 @PrepareForTest({AuthorizationGrantCache.class, JDBCPersistenceManager.class,
         OAuthServerConfiguration.class})
+@PowerMockIgnore({"javax.management.*"})
 public class UserInfoJWTResponseTest extends UserInfoResponseBaseTest {
 
     private UserInfoJWTResponse userInfoJWTResponse;
