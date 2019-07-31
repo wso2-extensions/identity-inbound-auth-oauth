@@ -16,4 +16,8 @@
             <bean class="com.fasterxml.jackson.jaxrs.base.JsonParseExceptionMapper"/>
         </jaxrs:providers>
     </jaxrs:server>
+    <bean id="DCRMUtilBean" class="org.wso2.carbon.identity.oauth2.dcr.endpoint.util.DCRMUtils">
+        <property name="oAuth2DCRMService" ref="oAuth2DCRMServiceFactoryBean"/>
+    </bean>
+    <bean id="oAuth2DCRMServiceFactoryBean" class="org.wso2.carbon.identity.oauth2.dcr.endpoint.factory.OAuth2DCRMServiceFactory"/>
 </beans>
