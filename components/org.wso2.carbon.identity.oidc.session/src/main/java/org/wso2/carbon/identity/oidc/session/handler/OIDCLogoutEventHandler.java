@@ -46,7 +46,11 @@ public class OIDCLogoutEventHandler extends AbstractEventHandler {
 
         if (StringUtils.equals(event.getEventName(), EventName.SESSION_TERMINATE.name())) {
             HttpServletRequest request = getHttpRequestFromEvent(event);
-            Cookie opbsCookie = request != null ? OIDCSessionManagementUtil.getOPBrowserStateCookie(request) : null;
+            Cookie opbsCookie = null;
+
+            if (request != null) {
+                opbsCookie = OIDCSessionManagementUtil.getOPBrowserStateCookie(request);
+            }
 
             if (hasOPBSCookieValue(opbsCookie)) {
                 if (log.isDebugEnabled()) {
