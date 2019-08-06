@@ -42,9 +42,16 @@ public class DCRMUtils {
     private static final String NOT_FOUND_STATUS = "NOT_FOUND_";
     private static final String FORBIDDEN_STATUS = "FORBIDDEN_";
 
+    private static DCRMService oAuth2DCRMService;
+
+    public static void setOAuth2DCRMService(DCRMService oAuth2DCRMService) {
+
+        DCRMUtils.oAuth2DCRMService = oAuth2DCRMService;
+    }
+
     public static DCRMService getOAuth2DCRMService() {
-        return (DCRMService) PrivilegedCarbonContext.getThreadLocalCarbonContext()
-                .getOSGiService(DCRMService.class, null);
+
+        return oAuth2DCRMService;
     }
 
     public static ApplicationRegistrationRequest getApplicationRegistrationRequest(RegistrationRequestDTO registrationRequestDTO) {
