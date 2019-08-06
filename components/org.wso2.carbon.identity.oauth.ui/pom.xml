@@ -22,7 +22,7 @@
         <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
         <artifactId>identity-inbound-auth-oauth</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <version>6.1.18-SNAPSHOT</version>
+        <version>6.2.2-SNAPSHOT</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -49,9 +49,9 @@
             <groupId>org.wso2.carbon</groupId>
             <artifactId>org.wso2.carbon.registry.core</artifactId>
         </dependency>
-        <dependency>
-            <groupId>org.wso2.carbon</groupId>
-            <artifactId>org.wso2.carbon.logging</artifactId>
+         <dependency>
+            <groupId>org.ops4j.pax.logging</groupId>
+            <artifactId>pax-logging-api</artifactId>
         </dependency>
         <dependency>
             <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
@@ -93,10 +93,6 @@
         <plugins>
             <plugin>
                 <groupId>org.apache.felix</groupId>
-                <artifactId>maven-scr-plugin</artifactId>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.felix</groupId>
                 <artifactId>maven-bundle-plugin</artifactId>
                 <extensions>true</extensions>
                 <configuration>
@@ -128,7 +124,7 @@
                             org.wso2.carbon.ui; version="${carbon.kernel.imp.pkg.version.range}",
                             org.wso2.carbon.ui.util; version="${carbon.kernel.imp.pkg.version.range}",
                             org.wso2.carbon.utils; version="${carbon.kernel.imp.pkg.version.range}",
-                            org.wso2.carbon.identity.claim.metadata.mgt.*; version="${claim.metadata.version.range}",
+                            org.wso2.carbon.identity.claim.metadata.mgt.*; version="${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.identity.core.util.*;version="${carbon.identity.framework.imp.pkg.version.range}",
 
                         </Import-Package>
