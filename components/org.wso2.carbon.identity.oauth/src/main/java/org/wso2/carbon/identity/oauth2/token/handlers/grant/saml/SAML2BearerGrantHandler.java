@@ -41,6 +41,8 @@ import org.opensaml.xml.signature.SignatureValidator;
 import org.opensaml.xml.validation.ValidationException;
 import org.w3c.dom.NodeList;
 import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.context.RegistryType;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
@@ -56,6 +58,8 @@ import org.wso2.carbon.identity.application.common.util.IdentityApplicationConst
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.core.model.SAMLSSOServiceProviderDO;
+import org.wso2.carbon.identity.core.persistence.IdentityPersistenceManager;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -71,6 +75,7 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.util.X509CredentialImpl;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
+import org.wso2.carbon.registry.core.Registry;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.api.UserStoreManager;
 import org.wso2.carbon.user.core.service.RealmService;
@@ -737,7 +742,7 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
                                                   String tenantDomain) throws IdentityOAuth2Exception {
         String tokenEndpointAlias = null;
         FederatedAuthenticatorConfig[] fedAuthnConfigs = identityProvider.getFederatedAuthenticatorConfigs();
-        validateIdpEntityId(assertion, tenantDomain,  getIdpEntityId(fedAuthnConfigs));
+        //validateIdpEntityId(assertion, tenantDomain,  getIdpEntityId(fedAuthnConfigs));
         // Get OpenIDConnect authenticator == OAuth
         // authenticator
         FederatedAuthenticatorConfig oauthAuthenticatorConfig =
@@ -803,7 +808,7 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
     }
 
     private IdentityProvider getIdentityProviderFromManager(Assertion assertion, String tenantDomain)
-            throws IdentityProviderManagementException {
+            throws IdentityProviderManagementException, IdentityOAuth2Exception {
         if (log.isDebugEnabled()) {
             log.debug("Retrieving identity provider : " + assertion.getIssuer().getValue() + " for " +
                     "authenticator name " + SAMLSSO_AUTHENTICATOR);
@@ -818,6 +823,16 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
                         "authenticator name " + SAML2SSO_AUTHENTICATOR_NAME);
             }
             identityProvider = getIdPByAuthenticatorPropertyValue(assertion, tenantDomain, SAML2SSO_AUTHENTICATOR_NAME);
+        }
+        if (identityProvider == null) {
+            if (log.isDebugEnabled()) {
+                log.debug("SAML Token Issuer : " + assertion.getIssuer().getValue() +
+                        " is not registered as a local Identity Provider in tenant : " + tenantDomain +
+                        ". Hence checking if the assertion is from resident IdP with IdP Entity ID Alias enabled");
+            }
+            if (validateIdpEntityIdAliasFromSAMLSP(assertion, tenantDomain)) {
+                identityProvider = IdentityProviderManager.getInstance().getResidentIdP(tenantDomain);
+            }
         }
         return identityProvider;
     }
@@ -837,6 +852,88 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
                         " not registered as a local Identity Provider in tenant : " + tenantDomain);
             }
             throw new IdentityOAuth2Exception("Identity provider is null");
+        }
+    }
+
+    /**
+     * If the token issuer validation fails against the resident identity provider's IdP Entity ID, checks whether the
+     * token issuer has been overriden by an "Idp Entity ID Alias" specified in a SAML SSO configuration. The check
+     * is done against IdP Entity ID Alias values of SAML SSO configurations in the registry. The SAML SSO configurations
+     * that needs to be checked are identified from the audience restrictions in the SAML assertion as it contains the
+     * "issuer" of the SAML SSO configuration with respective to the SAML SP.
+     *
+     * @param assertion
+     * @param tenantDomain
+     * @return
+     * @throws IdentityOAuth2Exception
+     */
+    private Boolean validateIdpEntityIdAliasFromSAMLSP(Assertion assertion, String tenantDomain)
+            throws IdentityOAuth2Exception {
+
+        Conditions conditions = assertion.getConditions();
+        List<AudienceRestriction> audienceRestrictions = conditions.getAudienceRestrictions();
+        validateAudienceRestriction(audienceRestrictions);
+        for (AudienceRestriction audienceRestriction : audienceRestrictions) {
+            if (CollectionUtils.isNotEmpty(audienceRestriction.getAudiences())) {
+                for (Audience audience : audienceRestriction.getAudiences()) {
+                    SAMLSSOServiceProviderDO samlssoServiceProviderDO = getSAMLSSOServiceProvider
+                            (audience.getAudienceURI(), tenantDomain);
+                    if (samlssoServiceProviderDO != null) {
+                        if (samlssoServiceProviderDO.getIdpEntityIDAlias() != null &&
+                                samlssoServiceProviderDO.getIdpEntityIDAlias().equals(assertion.getIssuer().
+                                        getValue())) {
+                            if (log.isDebugEnabled()) {
+                                log.debug("Token Issuer verified against IdP Entity ID Alias : " +
+                                        samlssoServiceProviderDO.getIdpEntityIDAlias() + " of SAML Service Provider " +
+                                        samlssoServiceProviderDO.getIssuer() + " in tenant : " + tenantDomain + ".");
+                            }
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("No SAML Service Provider configuration with IdP Entity ID Alias " +
+                    "similar to token issuer found.");
+        }
+        return false;
+    }
+
+    private SAMLSSOServiceProviderDO getSAMLSSOServiceProvider(String issuerName, String tenantDomain)
+            throws IdentityOAuth2Exception {
+
+        int tenantId;
+        RealmService realmService = OAuthComponentServiceHolder.getInstance().getRealmService();
+
+        if (StringUtils.isBlank(tenantDomain)) {
+            tenantDomain = org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
+            tenantId = org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_ID;
+        } else {
+            try {
+                tenantId = realmService.getTenantManager().getTenantId(tenantDomain);
+            } catch (UserStoreException e) {
+                throw new IdentityOAuth2Exception("Error occurred while retrieving tenant id for the domain : " +
+                        tenantDomain, e);
+            }
+        }
+
+        try {
+            PrivilegedCarbonContext.startTenantFlow();
+            PrivilegedCarbonContext privilegedCarbonContext = PrivilegedCarbonContext.getThreadLocalCarbonContext();
+            privilegedCarbonContext.setTenantId(tenantId);
+            privilegedCarbonContext.setTenantDomain(tenantDomain);
+
+            IdentityTenantUtil.initializeRegistry(tenantId, tenantDomain);
+            IdentityPersistenceManager persistenceManager = IdentityPersistenceManager.getPersistanceManager();
+            Registry registry = (Registry) PrivilegedCarbonContext.getThreadLocalCarbonContext().getRegistry
+                    (RegistryType.SYSTEM_CONFIGURATION);
+            return persistenceManager.getServiceProvider(registry, issuerName);
+        } catch (IdentityException e) {
+            throw new IdentityOAuth2Exception("Error occurred while validating existence of SAML service provider " +
+                    "'" + issuerName + "' that issued the assertion in the tenant domain '" + tenantDomain + "'");
+        } finally {
+            PrivilegedCarbonContext.endTenantFlow();
         }
     }
 
