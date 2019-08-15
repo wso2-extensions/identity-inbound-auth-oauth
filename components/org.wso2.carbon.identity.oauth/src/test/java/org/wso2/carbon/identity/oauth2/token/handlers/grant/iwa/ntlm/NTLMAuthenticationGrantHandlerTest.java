@@ -1,6 +1,7 @@
 package org.wso2.carbon.identity.oauth2.token.handlers.grant.iwa.ntlm;
 
 import com.sun.jna.platform.win32.Sspi;
+import org.apache.catalina.connector.Connector;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
@@ -118,7 +119,7 @@ public class NTLMAuthenticationGrantHandlerTest extends PowerMockIdentityBaseTes
         OAuthTokenReqMessageContext oAuthTokenReqMessageContext = new OAuthTokenReqMessageContext(
                 oAuth2AccessTokenReqDTO);
 
-        SimpleHttpRequest simpleHttpRequest = new SimpleHttpRequest();
+        SimpleHttpRequest simpleHttpRequest = new SimpleHttpRequest(new Connector());
         whenNew(SimpleHttpRequest.class).withNoArguments().thenReturn(simpleHttpRequest);
         Subject subject = new Subject();
         subject.getPrincipals().add(new Principal() {
