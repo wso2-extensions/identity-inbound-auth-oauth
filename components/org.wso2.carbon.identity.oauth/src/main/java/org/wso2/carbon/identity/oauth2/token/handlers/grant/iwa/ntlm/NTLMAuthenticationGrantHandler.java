@@ -46,7 +46,7 @@ import java.io.IOException;
 
 
 public class NTLMAuthenticationGrantHandler extends AbstractAuthorizationGrantHandler {
-    private static Log log = LogFactory.getLog(NTLMAuthenticationGrantHandler.class);
+    private static final Log log = LogFactory.getLog(NTLMAuthenticationGrantHandler.class);
     String securityPackage = "Negotiate";
 
     @Override

@@ -249,7 +249,7 @@ public class OAuth2Util {
      */
     public static final String APPLICATION_ACCESS_TOKEN_EXP_TIME_IN_MILLISECONDS = "applicationAccessTokenExpireTime";
 
-    private static Log log = LogFactory.getLog(OAuth2Util.class);
+    private static final Log log = LogFactory.getLog(OAuth2Util.class);
     private static long timestampSkew = OAuthServerConfiguration.getInstance().getTimeStampSkewInSeconds() * 1000;
     private static ThreadLocal<Integer> clientTenantId = new ThreadLocal<>();
     private static ThreadLocal<OAuthTokenReqMessageContext> tokenRequestContext = new ThreadLocal<>();

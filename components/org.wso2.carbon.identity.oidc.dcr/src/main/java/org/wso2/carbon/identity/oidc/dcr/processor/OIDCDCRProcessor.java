@@ -34,7 +34,7 @@ import java.util.regex.Matcher;
 
 public class OIDCDCRProcessor extends DCRProcessor {
 
-    private static Log log = LogFactory.getLog(OIDCDCRProcessor.class);
+    private static final Log log = LogFactory.getLog(OIDCDCRProcessor.class);
 
     @Override
     public IdentityResponse.IdentityResponseBuilder process(IdentityRequest identityRequest) throws DCRException {

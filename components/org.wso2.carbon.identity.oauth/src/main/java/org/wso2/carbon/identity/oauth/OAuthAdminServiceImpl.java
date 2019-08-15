@@ -79,7 +79,7 @@ public class OAuthAdminServiceImpl {
     static List<String> allowedGrants = null;
     static String[] allowedScopeValidators = null;
     static List<String> supportedTokenTypes = null;
-    protected Log log = LogFactory.getLog(OAuthAdminServiceImpl.class);
+    protected static final Log log = LogFactory.getLog(OAuthAdminServiceImpl.class);
 
     /**
      * Registers an consumer secret against the logged in user. A given user can only have a single

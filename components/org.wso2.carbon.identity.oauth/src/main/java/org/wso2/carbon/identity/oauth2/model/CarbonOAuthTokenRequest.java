@@ -40,7 +40,7 @@ import javax.servlet.http.HttpServletRequest;
  */
 public class CarbonOAuthTokenRequest extends OAuthTokenRequest {
 
-    private static Log log = LogFactory.getLog(CarbonOAuthTokenRequest.class);
+    private static final Log log = LogFactory.getLog(CarbonOAuthTokenRequest.class);
 
     private String assertion;
     private String windows_token;

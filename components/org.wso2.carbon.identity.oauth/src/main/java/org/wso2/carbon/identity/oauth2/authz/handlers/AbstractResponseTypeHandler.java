@@ -45,7 +45,7 @@ import java.util.List;
  */
 public abstract class AbstractResponseTypeHandler implements ResponseTypeHandler {
 
-    private static Log log = LogFactory.getLog(AbstractResponseTypeHandler.class);
+    private static final Log log = LogFactory.getLog(AbstractResponseTypeHandler.class);
 
     public static final String IMPLICIT = "implicit";
     protected OauthTokenIssuer oauthIssuerImpl;

@@ -52,7 +52,7 @@ import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
 public class RequestObjectDAOImpl implements RequestObjectDAO {
 
     private static final String ID = "ID";
-    private final Log log = LogFactory.getLog(AuthorizationCodeDAOImpl.class);
+    private static final Log log = LogFactory.getLog(AuthorizationCodeDAOImpl.class);
 
     /**
      * Store request object related data into related db tables.

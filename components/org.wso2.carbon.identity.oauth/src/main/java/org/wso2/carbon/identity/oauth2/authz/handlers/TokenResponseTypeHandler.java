@@ -64,7 +64,7 @@ import java.util.concurrent.TimeUnit;
 @Deprecated
 public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
 
-    private static Log log = LogFactory.getLog(TokenResponseTypeHandler.class);
+    private static final Log log = LogFactory.getLog(TokenResponseTypeHandler.class);
     private Boolean isHashDisabled = OAuth2Util.isHashDisabled();
 
     @Override

@@ -36,7 +36,7 @@ import java.util.Set;
 
 public class CarbonKeyStoreCredentialResolver extends KeyStoreCredentialResolver {
 
-    private static Log log = LogFactory.getLog(CarbonKeyStoreCredentialResolver.class);
+    private static final Log log = LogFactory.getLog(CarbonKeyStoreCredentialResolver.class);
 
     private KeyStore keyStore = null;
     private Set<Credential> credentialSet = null;

@@ -209,7 +209,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
         put(LOCAL_ROLE_CLAIM_URI, ROLE_CLAIM_DEFAULT_VALUE);
     }};
 
-    private final Log log = LogFactory.getLog(DefaultOIDCClaimsCallbackHandlerTest.class);
+    private static final Log log = LogFactory.getLog(DefaultOIDCClaimsCallbackHandlerTest.class);
     public static final String DB_NAME = "jdbc/WSO2CarbonDB";
     public static final String H2_SCRIPT_NAME = "dbScripts/scope_claim.sql";
     Connection connection = null;

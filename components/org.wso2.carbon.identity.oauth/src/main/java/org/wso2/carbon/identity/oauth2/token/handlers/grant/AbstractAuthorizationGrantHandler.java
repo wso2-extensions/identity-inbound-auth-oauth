@@ -65,7 +65,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenStates.T
 
 public abstract class AbstractAuthorizationGrantHandler implements AuthorizationGrantHandler {
 
-    private static Log log = LogFactory.getLog(AbstractAuthorizationGrantHandler.class);
+    private static final Log log = LogFactory.getLog(AbstractAuthorizationGrantHandler.class);
     protected OauthTokenIssuer oauthIssuerImpl = OAuthServerConfiguration.getInstance().getIdentityOauthTokenIssuer();
     protected OAuthCallbackManager callbackManager;
     protected boolean cacheEnabled;

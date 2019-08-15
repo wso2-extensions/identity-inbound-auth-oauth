@@ -38,7 +38,7 @@ import javax.servlet.http.HttpServletResponse;
  */
 public class DefaultOIDCProcessor implements OIDCProcessor {
 
-    private static Log log = LogFactory.getLog(DefaultOIDCProcessor.class);
+    private static final Log log = LogFactory.getLog(DefaultOIDCProcessor.class);
     private static DefaultOIDCProcessor defaultOidcProcessor = new DefaultOIDCProcessor();
 
     private DefaultOIDCProcessor() {

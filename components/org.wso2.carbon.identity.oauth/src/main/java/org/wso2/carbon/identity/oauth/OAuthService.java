@@ -45,7 +45,7 @@ public class OAuthService {
 
     private static final String OAUTH_LATEST_TIMESTAMP = "OAUTH_LATEST_TIMESTAMP";
     private static final String OAUTH_NONCE_STORE = "OAUTH_NONCE_STORE";
-    private static Log log = LogFactory.getLog(OAuthService.class);
+    private static final Log log = LogFactory.getLog(OAuthService.class);
 
     /**
      * Checks whether the given consumer is valid or not. This is done by validating the signature,

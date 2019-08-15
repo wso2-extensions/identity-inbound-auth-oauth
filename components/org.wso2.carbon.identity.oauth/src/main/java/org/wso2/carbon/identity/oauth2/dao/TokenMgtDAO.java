@@ -82,6 +82,7 @@ import java.util.concurrent.LinkedBlockingDeque;
 @Deprecated
 public class TokenMgtDAO {
 
+    private static final Log log = LogFactory.getLog(TokenMgtDAO.class);
     public static final String AUTHZ_USER = "AUTHZ_USER";
     public static final String LOWER_AUTHZ_USER = "LOWER(AUTHZ_USER)";
     private static final String UTC = "UTC";
@@ -101,8 +102,6 @@ public class TokenMgtDAO {
 
     private static BlockingDeque<AuthContextTokenDO> authContextTokenQueue = new LinkedBlockingDeque<>();
 
-    private static final Log log = LogFactory.getLog(TokenMgtDAO.class);
-
     private static final String IDN_OAUTH2_ACCESS_TOKEN = "IDN_OAUTH2_ACCESS_TOKEN";
     private static final String IDN_OAUTH2_AUTHORIZATION_CODE = "IDN_OAUTH2_AUTHORIZATION_CODE";
 
@@ -117,8 +116,6 @@ public class TokenMgtDAO {
 
 
     static {
-
-        final Log log = LogFactory.getLog(TokenMgtDAO.class);
 
         maxPoolSize = getTokenPersistPoolSize();
         if (maxPoolSize > 0) {

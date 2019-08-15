@@ -73,7 +73,7 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
     public static final String OAUTH2_CONSUMER_SECRET = "oauthConsumerSecret";
     private static final String OAUTH = "oauth";
     private static final String SAAS_PROPERTY = "saasProperty";
-    private static Log log = LogFactory.getLog(OAuthApplicationMgtListener.class);
+    private static final Log log = LogFactory.getLog(OAuthApplicationMgtListener.class);
 
     @Override
     public int getDefaultOrderId() {

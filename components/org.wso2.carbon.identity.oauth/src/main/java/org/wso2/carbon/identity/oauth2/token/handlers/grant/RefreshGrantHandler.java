@@ -63,7 +63,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
     public static final int LAST_ACCESS_TOKEN_RETRIEVAL_LIMIT = 10;
     public static final int ALLOWED_MINIMUM_VALIDITY_PERIOD = 1000;
     public static final String DEACTIVATED_ACCESS_TOKEN = "DeactivatedAccessToken";
-    private static Log log = LogFactory.getLog(RefreshGrantHandler.class);
+    private static final Log log = LogFactory.getLog(RefreshGrantHandler.class);
     private boolean isHashDisabled = OAuth2Util.isHashDisabled();
     
     @Override

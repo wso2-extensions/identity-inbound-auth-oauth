@@ -72,7 +72,7 @@ import java.util.Map;
 @SuppressWarnings("unused")
 public class OAuth2Service extends AbstractAdmin {
 
-    private static Log log = LogFactory.getLog(OAuth2Service.class);
+    private static final Log log = LogFactory.getLog(OAuth2Service.class);
     private static final String APP_STATE_ACTIVE = "ACTIVE";
 
     /**

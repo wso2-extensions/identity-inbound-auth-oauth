@@ -52,7 +52,7 @@ each purpose  and factory class to get instance of each DAO classes were introdu
  */
 public class OAuthScopeDAOImpl implements OAuthScopeDAO {
 
-    private final Log log = LogFactory.getLog(OAuthScopeDAOImpl.class);
+    private static final Log log = LogFactory.getLog(OAuthScopeDAOImpl.class);
 
     /**
      * Add a scope

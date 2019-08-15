@@ -35,7 +35,7 @@ import javax.servlet.http.HttpServletRequest;
  */
 public class OIDCLogoutEventHandler extends AbstractEventHandler {
 
-    private static Log log = LogFactory.getLog(OIDCLogoutEventHandler.class);
+    private static final Log log = LogFactory.getLog(OIDCLogoutEventHandler.class);
 
     @Override
     public void handleEvent(Event event) throws IdentityEventException {

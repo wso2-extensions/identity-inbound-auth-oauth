@@ -39,7 +39,7 @@ import java.util.regex.Matcher;
  */
 public class UnregistrationRequestFactory extends HttpIdentityRequestFactory {
 
-    private static Log log = LogFactory.getLog(UnregistrationRequestFactory.class);
+    private static final Log log = LogFactory.getLog(UnregistrationRequestFactory.class);
 
     @Override
     public boolean canHandle(HttpServletRequest request, HttpServletResponse response) throws
