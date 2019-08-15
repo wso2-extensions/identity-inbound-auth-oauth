@@ -44,7 +44,7 @@ import static org.apache.oltu.oauth2.common.error.OAuthError.CodeResponse.UNSUPP
 public class AuthorizationHandlerManager {
 
     public static final String OAUTH_APP_PROPERTY = "OAuthAppDO";
-    private static Log log = LogFactory.getLog(AuthorizationHandlerManager.class);
+    private static final Log log = LogFactory.getLog(AuthorizationHandlerManager.class);
 
     private static AuthorizationHandlerManager instance;
 

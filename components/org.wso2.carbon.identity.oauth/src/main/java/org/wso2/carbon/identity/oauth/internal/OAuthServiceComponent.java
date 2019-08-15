@@ -45,7 +45,7 @@ import org.wso2.carbon.user.core.service.RealmService;
 )
 public class OAuthServiceComponent {
 
-    private static Log log = LogFactory.getLog(OAuthServiceComponent.class);
+    private static final Log log = LogFactory.getLog(OAuthServiceComponent.class);
     private static IdentityOathEventListener listener = null;
     private ServiceRegistration serviceRegistration = null;
 

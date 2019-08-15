@@ -70,7 +70,7 @@ each purpose  and factory class to get instance of each DAO classes were introdu
  */
 public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenManagementDAO {
 
-    private final Log log = LogFactory.getLog(TokenManagementDAOImpl.class);
+    private static final Log log = LogFactory.getLog(TokenManagementDAOImpl.class);
     public static final String AUTHZ_USER = "AUTHZ_USER";
     public static final String LOWER_AUTHZ_USER = "LOWER(AUTHZ_USER)";
     private static final String UTC = "UTC";

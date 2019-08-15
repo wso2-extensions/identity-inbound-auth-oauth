@@ -35,7 +35,7 @@ import java.security.NoSuchAlgorithmException;
  */
 public class HashingPersistenceProcessor implements TokenPersistenceProcessor {
 
-    protected Log log = LogFactory.getLog(HashingPersistenceProcessor.class);
+    protected static final Log log = LogFactory.getLog(HashingPersistenceProcessor.class);
     public static final String ALGORITHM = "algorithm";
     public static final String HASH = "hash";
 

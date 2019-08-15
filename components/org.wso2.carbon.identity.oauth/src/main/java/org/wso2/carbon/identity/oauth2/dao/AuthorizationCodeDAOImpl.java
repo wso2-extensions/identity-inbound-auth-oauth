@@ -58,7 +58,7 @@ each purpose  and factory class to get instance of each DAO classes were introdu
  */
 public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements AuthorizationCodeDAO {
 
-    private final Log log = LogFactory.getLog(AuthorizationCodeDAOImpl.class);
+    private static final Log log = LogFactory.getLog(AuthorizationCodeDAOImpl.class);
 
     private static final String IDN_OAUTH2_AUTHORIZATION_CODE = "IDN_OAUTH2_AUTHORIZATION_CODE";
     private boolean isHashDisabled = OAuth2Util.isHashDisabled();

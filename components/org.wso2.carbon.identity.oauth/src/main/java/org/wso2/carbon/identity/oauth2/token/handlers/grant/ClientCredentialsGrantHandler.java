@@ -30,7 +30,7 @@ import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
  */
 public class ClientCredentialsGrantHandler extends AbstractAuthorizationGrantHandler {
 
-    private static Log log = LogFactory.getLog(ClientCredentialsGrantHandler.class);
+    private static final Log log = LogFactory.getLog(ClientCredentialsGrantHandler.class);
 
     @Override
     public boolean validateGrant(OAuthTokenReqMessageContext tokReqMsgCtx)

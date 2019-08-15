@@ -40,7 +40,7 @@ import java.util.Set;
  */
 public class OAuthCallbackHandlerRegistry {
 
-    private static Log log = LogFactory.getLog(OAuthCallbackHandlerRegistry.class);
+    private static final Log log = LogFactory.getLog(OAuthCallbackHandlerRegistry.class);
 
     private static OAuthCallbackHandlerRegistry instance;
 

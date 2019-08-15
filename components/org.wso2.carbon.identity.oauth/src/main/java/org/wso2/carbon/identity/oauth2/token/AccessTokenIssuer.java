@@ -63,7 +63,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppState
 public class AccessTokenIssuer {
 
     private static AccessTokenIssuer instance;
-    private static Log log = LogFactory.getLog(AccessTokenIssuer.class);
+    private static final Log log = LogFactory.getLog(AccessTokenIssuer.class);
     private Map<String, AuthorizationGrantHandler> authzGrantHandlers =
             new Hashtable<String, AuthorizationGrantHandler>();
     private AppInfoCache appInfoCache;

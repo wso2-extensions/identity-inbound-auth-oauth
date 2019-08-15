@@ -78,7 +78,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
     private boolean isHashDisabled = OAuth2Util.isHashDisabled();
     private boolean isTokenCleanupFeatureEnabled=OAuthServerConfiguration.getInstance().isTokenCleanupEnabled();
 
-    private Log log = LogFactory.getLog(AccessTokenDAOImpl.class);
+    private static final Log log = LogFactory.getLog(AccessTokenDAOImpl.class);
     OldTokensCleanDAO oldTokenCleanupObject = new OldTokensCleanDAO();
 
     @Override

@@ -32,7 +32,7 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2TokenUtil;
  */
 public class CodeResponseTypeHandler extends AbstractResponseTypeHandler {
 
-    private static Log log = LogFactory.getLog(CodeResponseTypeHandler.class);
+    private static final Log log = LogFactory.getLog(CodeResponseTypeHandler.class);
 
     /**
      * Issue an authorization code and return the OAuth2AuthorizeRespDTO.

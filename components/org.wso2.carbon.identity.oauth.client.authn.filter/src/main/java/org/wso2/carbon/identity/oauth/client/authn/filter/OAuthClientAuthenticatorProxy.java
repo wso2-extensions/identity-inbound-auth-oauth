@@ -41,7 +41,7 @@ import java.util.Map;
  */
 public class OAuthClientAuthenticatorProxy extends AbstractPhaseInterceptor<Message> {
 
-    private Log log = LogFactory.getLog(OAuthClientAuthenticatorProxy.class);
+    private static final Log log = LogFactory.getLog(OAuthClientAuthenticatorProxy.class);
     private static String HTTP_REQUEST = "HTTP.REQUEST";
     private OAuthClientAuthnService oAuthClientAuthnService;
 

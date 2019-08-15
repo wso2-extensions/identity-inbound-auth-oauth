@@ -43,7 +43,7 @@ import java.util.Map;
  */
 public class BasicAuthClientAuthenticator extends AbstractOAuthClientAuthenticator {
 
-    private static Log log = LogFactory.getLog(BasicAuthClientAuthenticator.class);
+    private static final Log log = LogFactory.getLog(BasicAuthClientAuthenticator.class);
     private static String CREDENTIAL_SEPARATOR = ":";
     private static String SIMPLE_CASE_AUTHORIZATION_HEADER = "authorization";
     private static String BASIC_PREFIX = "Basic";

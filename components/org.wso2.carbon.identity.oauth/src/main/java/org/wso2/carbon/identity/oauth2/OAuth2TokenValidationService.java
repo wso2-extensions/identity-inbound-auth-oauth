@@ -40,7 +40,7 @@ import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.triggerOnIntrospec
  */
 public class OAuth2TokenValidationService extends AbstractAdmin {
 
-    private static Log log = LogFactory.getLog(OAuth2TokenValidationService.class);
+    private static final Log log = LogFactory.getLog(OAuth2TokenValidationService.class);
 
     /**
      * @param validationReqDTO

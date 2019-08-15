@@ -33,7 +33,7 @@ import java.util.Set;
  */
 public class OIDCScopeHandler extends OAuth2ScopeHandler {
 
-    private static Log log = LogFactory.getLog(OIDCScopeHandler.class);
+    private static final Log log = LogFactory.getLog(OIDCScopeHandler.class);
 
     @Override
     public boolean validateScope(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {

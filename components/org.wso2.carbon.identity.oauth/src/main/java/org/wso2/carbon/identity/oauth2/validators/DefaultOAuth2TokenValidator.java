@@ -43,7 +43,7 @@ public class DefaultOAuth2TokenValidator implements OAuth2TokenValidator {
     public static final String TOKEN_TYPE = "bearer";
     private static final String ACCESS_TOKEN_DO = "AccessTokenDO";
     private static final String RESOURCE = "resource";
-    private Log log = LogFactory.getLog(DefaultOAuth2TokenValidator.class);
+    private static final Log log = LogFactory.getLog(DefaultOAuth2TokenValidator.class);
 
     @Override
     public boolean validateAccessDelegation(OAuth2TokenValidationMessageContext messageContext)

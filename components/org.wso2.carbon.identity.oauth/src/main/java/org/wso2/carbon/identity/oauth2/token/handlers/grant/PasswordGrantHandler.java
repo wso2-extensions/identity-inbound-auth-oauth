@@ -51,7 +51,7 @@ import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
  */
 public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
 
-    private static Log log = LogFactory.getLog(PasswordGrantHandler.class);
+    private static final Log log = LogFactory.getLog(PasswordGrantHandler.class);
 
     @Override
     public boolean issueRefreshToken() throws IdentityOAuth2Exception {

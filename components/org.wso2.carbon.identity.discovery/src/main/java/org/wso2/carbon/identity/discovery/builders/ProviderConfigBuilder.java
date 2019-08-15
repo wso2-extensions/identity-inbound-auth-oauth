@@ -47,7 +47,7 @@ import static org.wso2.carbon.identity.discovery.DiscoveryUtil.isUseEntityIdAsIs
  */
 public class ProviderConfigBuilder {
 
-    private static Log log = LogFactory.getLog(ProviderConfigBuilder.class);
+    private static final Log log = LogFactory.getLog(ProviderConfigBuilder.class);
     private static final String OIDC_CLAIM_DIALECT = "http://wso2.org/oidc/claim";
 
     public OIDProviderConfigResponse buildOIDProviderConfig(OIDProviderRequest request) throws

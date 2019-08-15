@@ -100,7 +100,7 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
 
     public static final String ASSERTION_ELEMENT = "Assertion";
     public static final String IDP_ENTITY_ID = "IdPEntityId";
-    private static Log log = LogFactory.getLog(SAML2BearerGrantHandler.class);
+    private static final Log log = LogFactory.getLog(SAML2BearerGrantHandler.class);
     private static final String SAMLSSO_AUTHENTICATOR = "samlsso";
     private static final String SAML2SSO_AUTHENTICATOR_NAME = "SAMLSSOAuthenticator";
 

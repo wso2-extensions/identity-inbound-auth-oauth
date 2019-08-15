@@ -44,7 +44,7 @@ import static org.apache.commons.lang.StringUtils.isNotBlank;
  */
 public class OIDCClaimUtil {
 
-    private static Log log = LogFactory.getLog(OIDCClaimUtil.class);
+    private static final Log log = LogFactory.getLog(OIDCClaimUtil.class);
     private static final String OPENID_IDP_ENTITY_ID = "IdPEntityId";
 
     private OIDCClaimUtil() {

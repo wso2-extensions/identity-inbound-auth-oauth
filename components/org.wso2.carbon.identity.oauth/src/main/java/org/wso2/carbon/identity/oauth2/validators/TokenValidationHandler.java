@@ -53,7 +53,7 @@ public class TokenValidationHandler {
 
     private static TokenValidationHandler instance = null;
     AuthorizationContextTokenGenerator tokenGenerator = null;
-    private Log log = LogFactory.getLog(TokenValidationHandler.class);
+    private static final Log log = LogFactory.getLog(TokenValidationHandler.class);
     private Map<String, OAuth2TokenValidator> tokenValidators = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
     private static final String BUILD_FQU_FROM_SP_CONFIG = "OAuth.BuildSubjectIdentifierFromSPConfig";
 
