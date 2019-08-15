@@ -122,6 +122,11 @@
                 <version>${carbon.kernel.version}</version>
             </dependency>
             <dependency>
+                <groupId>org.wso2.carbon</groupId>
+                <artifactId>org.wso2.carbon.tomcat</artifactId>
+                <version>${carbon.kernel.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>org.wso2.carbon.identity.framework</groupId>
                 <artifactId>org.wso2.carbon.identity.event</artifactId>
                 <version>${carbon.identity.framework.version}</version>
@@ -327,11 +332,6 @@
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-api</artifactId>
                 <version>${org.slf4j.verison}</version>
-            </dependency>
-            <dependency>
-                <groupId>tomcat</groupId>
-                <artifactId>tomcat-util</artifactId>
-                <version>${tomcat-util.version}</version>
             </dependency>
             <dependency>
                 <groupId>javax.servlet</groupId>
@@ -763,7 +763,7 @@
         <apache.felix.scr.ds.annotations.version>1.2.4</apache.felix.scr.ds.annotations.version>
 
         <!-- Carbon kernel version -->
-        <carbon.kernel.version>4.5.0-m3</carbon.kernel.version>
+        <carbon.kernel.version>4.5.0-alpha</carbon.kernel.version>
         <carbon.kernel.imp.pkg.version.range>[4.5.0, 5.0.0)</carbon.kernel.imp.pkg.version.range>
         <carbon.kernel.registry.imp.pkg.version.range>[1.0.1, 2.0.0)</carbon.kernel.registry.imp.pkg.version.range>
 
@@ -828,9 +828,8 @@
         <joda.wso2.version>2.9.4.wso2v1</joda.wso2.version>
         <joda.wso2.osgi.version.range>[2.8.2,3.0.0)</joda.wso2.osgi.version.range>
 
-        <tomcat.version>7.0.69</tomcat.version>
-        <tomcat-util.version>3.3.2</tomcat-util.version>
-        <tomcat.wso2.imp.pkg.version.range>[1.7.0,2.0)</tomcat.wso2.imp.pkg.version.range>
+        <tomcat.version>9.0.21</tomcat.version>
+        <tomcat.wso2.imp.pkg.version.range>[9.0.0, 9.5.0)</tomcat.wso2.imp.pkg.version.range>
 
         <google.guava.version>27.0-jre</google.guava.version>
         <org.apache.cxf.version>3.2.8</org.apache.cxf.version>
