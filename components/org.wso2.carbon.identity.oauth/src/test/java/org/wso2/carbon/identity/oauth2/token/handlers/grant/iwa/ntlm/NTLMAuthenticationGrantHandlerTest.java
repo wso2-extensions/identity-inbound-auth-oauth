@@ -120,7 +120,7 @@ public class NTLMAuthenticationGrantHandlerTest extends PowerMockIdentityBaseTes
                 oAuth2AccessTokenReqDTO);
 
         SimpleHttpRequest simpleHttpRequest = new SimpleHttpRequest(new Connector());
-        whenNew(SimpleHttpRequest.class).withNoArguments().thenReturn(simpleHttpRequest);
+        whenNew(SimpleHttpRequest.class).withAnyArguments().thenReturn(simpleHttpRequest);
         Subject subject = new Subject();
         subject.getPrincipals().add(new Principal() {
             @Override
