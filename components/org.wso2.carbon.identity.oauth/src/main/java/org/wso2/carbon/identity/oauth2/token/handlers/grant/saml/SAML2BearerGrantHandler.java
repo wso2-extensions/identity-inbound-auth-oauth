@@ -171,7 +171,13 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
 
         String tenantDomain = getTenantDomain(tokReqMsgCtx);
         IdentityProvider identityProvider = getIdentityProvider(assertion, tenantDomain);
-        validateSignature(assertion, tenantDomain, identityProvider);
+        // If SAMLSignKeyStore property defined in the carbon.xml then validate the signature against provided
+        // SAML Sign KeyStore certificate else validate against the IDP certificate.
+        if (isSAMLSignKeyStoreConfigured()) {
+            validateSignatureAgainstSAMLSignKeyStoreCertificate(assertion);
+        } else {
+            validateSignatureAgainstIdpCertificate(assertion, tenantDomain, identityProvider);
+        }
         validateConditions(tokReqMsgCtx, assertion, identityProvider, tenantDomain);
 
         long timestampSkewInMillis = OAuthServerConfiguration.getInstance().getTimeStampSkewInSeconds() * 1000;
@@ -190,24 +196,6 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
         setValuesInMessageContext(tokReqMsgCtx, assertion, identityProvider, tenantDomain);
         invokeExtension(tokReqMsgCtx);
         return true;
-    }
-
-    /**
-     * Validate the signature for SAML bearer grant. If SAMLSignKeyStore property defined in the carbon.xml then
-     * validate the signature against provided SAML Sign KeyStore certificate else validate against the IDP certificate.
-     *
-     * @param assertion
-     * @param tenantDomain
-     * @throws IdentityOAuth2Exception
-     */
-    private void validateSignature(Assertion assertion, String tenantDomain, IdentityProvider identityProvider)
-            throws IdentityOAuth2Exception {
-
-        if (isSAMLSignKeyStoreConfigured()) {
-            validateSignatureAgainstSAMLSignKeyStoreCertificate(assertion);
-        } else {
-            validateSignatureAgainstIdpCertificate(assertion, tenantDomain, identityProvider);
-        }
     }
 
     @Override
@@ -1376,12 +1364,12 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
                     .getFirstProperty(SECURITY_SAML_SIGN_KEY_STORE_PASSWORD).toCharArray();
             keyStore.load(is, keyStorePassword);
 
-            KeyStore SAMLSignKeyStore = keyStore;
+            KeyStore samlSignKeyStore = keyStore;
 
             String keyAlias = ServerConfiguration.getInstance()
                     .getFirstProperty(SECURITY_SAML_SIGN_KEY_STORE_KEY_ALIAS);
 
-            return (X509Certificate) SAMLSignKeyStore.getCertificate(keyAlias);
+            return (X509Certificate) samlSignKeyStore.getCertificate(keyAlias);
 
         } catch (FileNotFoundException e) {
             throw new IdentityOAuth2Exception("Unable to locate SAML sign keystore", e);
