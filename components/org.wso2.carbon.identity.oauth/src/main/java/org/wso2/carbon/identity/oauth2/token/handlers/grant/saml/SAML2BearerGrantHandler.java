@@ -1339,7 +1339,15 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
             SignatureValidator signatureValidator = new SignatureValidator(x509Credential);
             signatureValidator.validate(assertion.getSignature());
         } catch (ValidationException e) {
-            throw new IdentityOAuth2Exception("Error while validating the signature from SAML sign keystore.", e);
+            if (StringUtils.isNotEmpty(assertion.getIssuer().getValue())) {
+                throw new IdentityOAuth2Exception(
+                        "Error while validating the signature from SAML sign keystore for SAML Token Issuer :  "
+                                + assertion.getIssuer().getValue(), e);
+            } else {
+                throw new IdentityOAuth2Exception(
+                        "Error while validating the signature from SAML sign keystore. The SAML Token Issuer is null",
+                        e);
+            }
         }
     }
 
