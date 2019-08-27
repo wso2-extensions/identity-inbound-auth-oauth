@@ -165,7 +165,7 @@ public class OAuth2Util {
     public static final String CONFIG_ELEM_OAUTH = "OAuth";
     public static final String OPENID_CONNECT = "OpenIDConnect";
     public static final String ENABLE_OPENID_CONNECT_AUDIENCES = "EnableAudiences";
-    public static final String OPENID_CONNECT_AUDIENCE = "audience";
+    public static final String OPENID_CONNECT_AUDIENCE = "Audience";
     private static final String OPENID_CONNECT_AUDIENCES = "Audiences";
     private static final String DOT_SEPARATER = ".";
     private static final String IDP_ENTITY_ID = "IdPEntityId";
