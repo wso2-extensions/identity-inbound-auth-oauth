@@ -196,6 +196,8 @@ public class BasicAuthClientAuthenticator extends AbstractOAuthClientAuthenticat
     protected boolean isBasicAuthorizationHeaderExists(HttpServletRequest request) {
 
         String authorizationHeader = getAuthorizationHeader(request);
+        //authorizationHeader should case-insensitive according to the The 'Basic' HTTP Authentication Scheme spec (https://tools.ietf.org/html/rfc7617#page-3),
+        // "Note that both scheme and parameter names are matched case-insensitively."
         if (StringUtils.isNotEmpty(authorizationHeader) && authorizationHeader.toUpperCase().startsWith(BASIC_PREFIX.toUpperCase())) {
             return true;
         }
