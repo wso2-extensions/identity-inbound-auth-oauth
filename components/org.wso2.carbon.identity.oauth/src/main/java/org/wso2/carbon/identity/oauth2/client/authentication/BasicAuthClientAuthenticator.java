@@ -47,7 +47,6 @@ public class BasicAuthClientAuthenticator extends AbstractOAuthClientAuthenticat
     private static String CREDENTIAL_SEPARATOR = ":";
     private static String SIMPLE_CASE_AUTHORIZATION_HEADER = "authorization";
     private static String BASIC_PREFIX = "Basic";
-    private static String SIMPLE_CASE_BASIC_PREFIX = "basic";
     private static int CREDENTIAL_LENGTH = 2;
 
     /**
@@ -197,7 +196,7 @@ public class BasicAuthClientAuthenticator extends AbstractOAuthClientAuthenticat
     protected boolean isBasicAuthorizationHeaderExists(HttpServletRequest request) {
 
         String authorizationHeader = getAuthorizationHeader(request);
-        if (StringUtils.isNotEmpty(authorizationHeader) && authorizationHeader.toLowerCase().startsWith(SIMPLE_CASE_BASIC_PREFIX)) {
+        if (StringUtils.isNotEmpty(authorizationHeader) && authorizationHeader.toUpperCase().startsWith(BASIC_PREFIX.toUpperCase())) {
             return true;
         }
         return false;
