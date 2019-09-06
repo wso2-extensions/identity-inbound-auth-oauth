@@ -41,6 +41,7 @@ import org.opensaml.xml.signature.SignatureValidator;
 import org.opensaml.xml.validation.ValidationException;
 import org.w3c.dom.NodeList;
 import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.base.ServerConfiguration;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.context.RegistryType;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -82,7 +83,13 @@ import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
@@ -103,6 +110,12 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
     private static final Log log = LogFactory.getLog(SAML2BearerGrantHandler.class);
     private static final String SAMLSSO_AUTHENTICATOR = "samlsso";
     private static final String SAML2SSO_AUTHENTICATOR_NAME = "SAMLSSOAuthenticator";
+
+    public static final String SECURITY_SAML_SIGN_KEY_STORE_LOCATION = "Security.SAMLSignKeyStore.Location";
+    public static final String SECURITY_SAML_SIGN_KEY_STORE_TYPE = "Security.SAMLSignKeyStore.Type";
+    public static final String SECURITY_SAML_SIGN_KEY_STORE_PASSWORD = "Security.SAMLSignKeyStore.Password";
+    public static final String SECURITY_SAML_SIGN_KEY_STORE_KEY_ALIAS = "Security.SAMLSignKeyStore.KeyAlias";
+    public static final String SECURITY_SAML_SIGN_KEY_STORE_KEY_PASSWORD = "Security.SAMLSignKeyStore.KeyPassword";
 
     SAMLSignatureProfileValidator profileValidator = null;
 
@@ -158,7 +171,13 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
 
         String tenantDomain = getTenantDomain(tokReqMsgCtx);
         IdentityProvider identityProvider = getIdentityProvider(assertion, tenantDomain);
-        validateSignatureAgainstIdpCertificate(assertion, tenantDomain, identityProvider);
+        // If SAMLSignKeyStore property defined in the carbon.xml then validate the signature against provided
+        // SAML Sign KeyStore certificate else validate against the IDP certificate.
+        if (isSAMLSignKeyStoreConfigured()) {
+            validateSignatureAgainstSAMLSignKeyStoreCertificate(assertion);
+        } else {
+            validateSignatureAgainstIdpCertificate(assertion, tenantDomain, identityProvider);
+        }
         validateConditions(tokReqMsgCtx, assertion, identityProvider, tenantDomain);
 
         long timestampSkewInMillis = OAuthServerConfiguration.getInstance().getTimeStampSkewInSeconds() * 1000;
@@ -1302,6 +1321,96 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
         user.setFederatedIdPName(getIdentityProvider(assertion, getTenantDomain(tokReqMsgCtx))
                 .getIdentityProviderName());
         tokReqMsgCtx.setAuthorizedUser(user);
+    }
+
+    /**
+     * Validate the signature against the certificate obtained from SAML Sign KeyStore which is defined under
+     * Security.SAMLSignKeyStore in carbon.xml.
+     *
+     * @param assertion
+     * @throws IdentityOAuth2Exception
+     */
+    protected void validateSignatureAgainstSAMLSignKeyStoreCertificate(Assertion assertion)
+            throws IdentityOAuth2Exception {
+
+        try {
+            X509Certificate x509Certificate = getCertificateFromSAMLSignKeyStore();
+            X509Credential x509Credential = new X509CredentialImpl(x509Certificate);
+            SignatureValidator signatureValidator = new SignatureValidator(x509Credential);
+            signatureValidator.validate(assertion.getSignature());
+        } catch (ValidationException e) {
+            if (StringUtils.isNotEmpty(assertion.getIssuer().getValue())) {
+                throw new IdentityOAuth2Exception(
+                        "Error while validating the signature from SAML sign keystore for SAML Token Issuer :  "
+                                + assertion.getIssuer().getValue(), e);
+            } else {
+                throw new IdentityOAuth2Exception(
+                        "Error while validating the signature from SAML sign keystore. The SAML Token Issuer is null",
+                        e);
+            }
+        }
+    }
+
+    /**
+     * Get the certificate from the SAML Sign KeyStore which is defined under Security.SAMLSignKeyStore in carbon.xml
+     *
+     * @throws IdentityException
+     */
+    private X509Certificate getCertificateFromSAMLSignKeyStore() throws IdentityOAuth2Exception {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Getting the certificate from separate SAMLSignKeyStore");
+        }
+
+        String keyStoreLocation = ServerConfiguration.getInstance()
+                .getFirstProperty(SECURITY_SAML_SIGN_KEY_STORE_LOCATION);
+        try (FileInputStream is = new FileInputStream(keyStoreLocation)) {
+            String keyStoreType = ServerConfiguration.getInstance().getFirstProperty(SECURITY_SAML_SIGN_KEY_STORE_TYPE);
+            KeyStore keyStore = KeyStore.getInstance(keyStoreType);
+
+            char[] keyStorePassword = ServerConfiguration.getInstance()
+                    .getFirstProperty(SECURITY_SAML_SIGN_KEY_STORE_PASSWORD).toCharArray();
+            keyStore.load(is, keyStorePassword);
+
+            KeyStore samlSignKeyStore = keyStore;
+
+            String keyAlias = ServerConfiguration.getInstance()
+                    .getFirstProperty(SECURITY_SAML_SIGN_KEY_STORE_KEY_ALIAS);
+
+            return (X509Certificate) samlSignKeyStore.getCertificate(keyAlias);
+
+        } catch (FileNotFoundException e) {
+            throw new IdentityOAuth2Exception("Unable to locate SAML sign keystore", e);
+        } catch (IOException e) {
+            throw new IdentityOAuth2Exception("Unable to read SAML sign keystore", e);
+        } catch (CertificateException e) {
+            throw new IdentityOAuth2Exception("Unable to read certificate from SAML sign keystore", e);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IdentityOAuth2Exception("Unable to load algorithm", e);
+        } catch (KeyStoreException e) {
+            throw new IdentityOAuth2Exception("Unable to load SAML sign keystore", e);
+        }
+    }
+
+    /**
+     * Check whether separate configurations for SAML sign KeyStore available.
+     *
+     * @return true if necessary configurations are defined for sign KeyStore; false otherwise.
+     */
+    private boolean isSAMLSignKeyStoreConfigured() {
+
+        String keyStoreLocation = ServerConfiguration.getInstance()
+                .getFirstProperty(SECURITY_SAML_SIGN_KEY_STORE_LOCATION);
+        String keyStoreType = ServerConfiguration.getInstance().getFirstProperty(SECURITY_SAML_SIGN_KEY_STORE_TYPE);
+        String keyStorePassword = ServerConfiguration.getInstance()
+                .getFirstProperty(SECURITY_SAML_SIGN_KEY_STORE_PASSWORD);
+        String keyAlias = ServerConfiguration.getInstance().getFirstProperty(SECURITY_SAML_SIGN_KEY_STORE_KEY_ALIAS);
+        String keyPassword = ServerConfiguration.getInstance()
+                .getFirstProperty(SECURITY_SAML_SIGN_KEY_STORE_KEY_PASSWORD);
+
+        return StringUtils.isNotBlank(keyStoreLocation) && StringUtils.isNotBlank(keyStoreType) && StringUtils
+                .isNotBlank(keyStorePassword) && StringUtils.isNotBlank(keyAlias) && StringUtils
+                .isNotBlank(keyPassword);
     }
 
 }
