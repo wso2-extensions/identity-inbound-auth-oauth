@@ -223,7 +223,7 @@ public class OAuthServerConfiguration {
     private Set<OAuth2ScopeValidator> oAuth2ScopeValidators = new HashSet<>();
     private Set<OAuth2ScopeHandler> oAuth2ScopeHandlers = new HashSet<>();
     // property added to fix IDENTITY-4492 in backward compatible manner
-    private boolean isJWTSignedWithSPKey = false;
+    private boolean isJWTSignedWithSPKey = true;
     // property added to fix IDENTITY-4534 in backward compatible manner
     private boolean isImplicitErrorFragment = true;
     // property added to fix IDENTITY-4112 in backward compatible manner
