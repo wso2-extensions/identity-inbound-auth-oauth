@@ -27,9 +27,6 @@ import org.wso2.carbon.core.AbstractAdmin;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
-import org.wso2.carbon.identity.oauth.cache.CacheEntry;
-import org.wso2.carbon.identity.oauth.cache.OAuthCache;
-import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
@@ -379,12 +376,8 @@ public class OAuth2Service extends AbstractAdmin {
                             OAuth2Util.buildScopeString(refreshTokenDO.getScope()));
                     OAuthUtil.clearOAuthCache(revokeRequestDTO.getConsumerKey(), refreshTokenDO.getAuthorizedUser());
                     OAuthUtil.clearOAuthCache(refreshTokenDO.getAccessToken());
-                    // As the server implementation knows about the PersistenceProcessor Processed Access Token,
-                    // we are converting in the service layer.
                     OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
-                            .revokeAccessTokens(
-                                    new String[]{OAuth2Util.getPersistenceProcessor()
-                                            .getProcessedAccessTokenIdentifier(refreshTokenDO.getAccessToken())});
+                            .revokeAccessTokens(new String[] { refreshTokenDO.getAccessToken() });
                     addRevokeResponseHeaders(revokeResponseDTO,
                             refreshTokenDO.getAccessToken(),
                             revokeRequestDTO.getToken(),
@@ -399,11 +392,8 @@ public class OAuth2Service extends AbstractAdmin {
                         String scope = OAuth2Util.buildScopeString(accessTokenDO.getScope());
                         String authorizedUser = accessTokenDO.getAuthzUser().toString();
                         synchronized ((revokeRequestDTO.getConsumerKey() + ":" + authorizedUser + ":" + scope).intern()) {
-                            // As the server implementation knows about the PersistenceProcessor Processed Access Token,
-                            // we are converting in the service layer.
                             OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
-                                    .revokeAccessTokens(new String[]{OAuth2Util.getPersistenceProcessor()
-                                            .getProcessedAccessTokenIdentifier(accessTokenDO.getAccessToken())});
+                                    .revokeAccessTokens(new String[] { accessTokenDO.getAccessToken() });
                         }
                         addRevokeResponseHeaders(revokeResponseDTO,
                                 revokeRequestDTO.getToken(),

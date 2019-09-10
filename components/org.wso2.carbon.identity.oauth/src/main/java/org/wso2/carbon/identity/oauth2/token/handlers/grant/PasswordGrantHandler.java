@@ -24,6 +24,7 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.base.IdentityException;
@@ -40,9 +41,13 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.api.UserStoreManager;
 import org.wso2.carbon.user.core.UserCoreConstants;
+import org.wso2.carbon.user.core.config.UserStorePreferenceOrderSupplier;
+import org.wso2.carbon.user.core.model.UserMgtContext;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
+
+import java.util.List;
 
 /**
  * Handles the Password Grant Type of the OAuth 2.0 specification. Resource owner sends his
@@ -68,7 +73,7 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
         ServiceProvider serviceProvider = getServiceProvider(tokenReq);
 
         validateUserTenant(tokenReq, serviceProvider);
-        validateUserCredentials(tokenReq);
+        validateUserCredentials(tokenReq, serviceProvider);
         setPropertiesForTokenGeneration(tokReqMsgCtx, tokenReq, serviceProvider);
         return true;
     }
@@ -120,9 +125,22 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
         return serviceProvider;
     }
 
-    private boolean validateUserCredentials(OAuth2AccessTokenReqDTO tokenReq) throws IdentityOAuth2Exception {
+    private boolean validateUserCredentials(OAuth2AccessTokenReqDTO tokenReq, ServiceProvider serviceProvider) throws
+            IdentityOAuth2Exception {
+
         boolean authenticated;
         try {
+            // Get the user store preference order supplier.
+            UserStorePreferenceOrderSupplier<List<String>> userStorePreferenceOrderSupplier =
+                    FrameworkUtils.getUserStorePreferenceOrderSupplier(null, serviceProvider);
+            UserMgtContext userMgtContext = new UserMgtContext();
+            userMgtContext.setUserStorePreferenceOrderSupplier(userStorePreferenceOrderSupplier);
+            if (userStorePreferenceOrderSupplier != null) {
+                UserCoreUtil.setUserMgtContextInThreadLocal(userMgtContext);
+                if (log.isDebugEnabled()) {
+                    log.debug("UserMgtContext had been set as the thread local.");
+                }
+            }
             UserStoreManager userStoreManager = getUserStoreManager(tokenReq);
             String tenantAwareUserName = MultitenantUtils.getTenantAwareUsername(tokenReq.getResourceOwnerUsername());
             authenticated = userStoreManager.authenticate(tenantAwareUserName, tokenReq.getResourceOwnerPassword());
@@ -147,6 +165,11 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
                 message = identityException.getErrorCode() + " " + e.getMessage();
             }
             throw new IdentityOAuth2Exception(message, e);
+        }  finally {
+            UserCoreUtil.removeUserMgtContextInThreadLocal();
+            if (log.isDebugEnabled()) {
+                log.debug("UserMgtContext had been remove from the thread local.");
+            }
         }
         return true;
     }
