@@ -79,7 +79,8 @@ public class OIDCClaimUtil {
             // List which will hold list of service provider roles which are mapped to local roles internally
             List<String> spMappedRoles = new ArrayList<>();
             // Configuration in identity.xml which forces to return only sp mapped roles.
-            boolean returnOnlyMappedLocalRoles = Boolean.parseBoolean(IdentityUtil.getProperty(SEND_ONLY_SP_MAPPED_ROLES));
+            boolean returnOnlyMappedLocalRoles = Boolean
+                    .parseBoolean(IdentityUtil.getProperty(SEND_ONLY_SP_MAPPED_ROLES));
             // Boolean value defining whether user store domain name in the role name should be removed or not.
             boolean isRemoveUserDomainInRole = isRemoveUserDomainInRole(serviceProvider);
 
