@@ -24,6 +24,7 @@ import org.wso2.carbon.identity.event.IdentityEventConstants.EventProperty;
 import org.wso2.carbon.identity.event.IdentityEventException;
 import org.wso2.carbon.identity.event.event.Event;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
+import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
 import org.wso2.carbon.identity.oidc.session.backChannelLogout.LogoutRequestSender;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
 
@@ -36,6 +37,7 @@ import javax.servlet.http.HttpServletRequest;
 public class OIDCLogoutEventHandler extends AbstractEventHandler {
 
     private static final Log log = LogFactory.getLog(OIDCLogoutEventHandler.class);
+    private static final String COMMON_AUTH_CALLER_PATH = "commonAuthCallerPath";
 
     @Override
     public void handleEvent(Event event) throws IdentityEventException {
@@ -49,6 +51,14 @@ public class OIDCLogoutEventHandler extends AbstractEventHandler {
             Cookie opbsCookie = null;
 
             if (request != null) {
+                if (StringUtils.equals(request.getParameter(COMMON_AUTH_CALLER_PATH),
+                        OIDCSessionConstants.OIDCEndpoints.OIDC_LOGOUT_ENDPOINT)) {
+                    // If a logout request is triggered from an OIDC app then the OIDCLogoutServlet
+                    // and OIDCLogoutEventHandler both are triggered and the logout request is handled in both
+                    // places.
+                    // https://github.com/wso2/product-is/issues/6418
+                    return;
+                }
                 opbsCookie = OIDCSessionManagementUtil.getOPBrowserStateCookie(request);
             }
 
