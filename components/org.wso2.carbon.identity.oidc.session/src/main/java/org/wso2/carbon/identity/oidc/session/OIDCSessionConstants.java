@@ -31,6 +31,8 @@ public class OIDCSessionConstants {
     public static final String OIDC_POST_LOGOUT_REDIRECT_URI_PARAM = "post_logout_redirect_uri";
     public static final String OIDC_STATE_PARAM = "state";
     public static final String OIDC_SESSION_DATA_KEY_PARAM = "sessionDataKey";
+    public static final String OIDC_LOGOUT_CONSENT_DENIAL_REDIRECT_URL =  "OAuth.OpenIDConnect" +
+            ".RedirectToPostLogoutUriOnConsentDenial";
 
     public static final String OIDC_CACHE_CLIENT_ID_PARAM = "client_id";
 

@@ -35,9 +35,11 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.application.authentication.framework.model.CommonAuthRequestWrapper;
 import org.wso2.carbon.identity.application.authentication.framework.model.CommonAuthResponseWrapper;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
@@ -75,6 +77,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.RequestParams.TENANT_DOMAIN;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils.getRedirectURL;
+import static org.wso2.carbon.identity.oidc.session.OIDCSessionConstants.OIDC_LOGOUT_CONSENT_DENIAL_REDIRECT_URL;
 
 public class OIDCLogoutServlet extends HttpServlet {
 
@@ -166,6 +169,20 @@ public class OIDCLogoutServlet extends HttpServlet {
                 // User denied logout.
                 redirectURL = OIDCSessionManagementUtil
                         .getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, "End User denied the logout request");
+
+                // Set postLogoutRedirectUri as redirectURL.
+                boolean postLogoutRedirectUriRedirectIsEnabled =
+                        Boolean.parseBoolean(IdentityUtil.getProperty(OIDC_LOGOUT_CONSENT_DENIAL_REDIRECT_URL));
+                if (postLogoutRedirectUriRedirectIsEnabled) {
+                    OIDCSessionDataCacheEntry cacheEntry = getSessionDataFromCache(opBrowserStateCookie.getValue());
+                    if (cacheEntry != null && cacheEntry.getPostLogoutRedirectUri() != null) {
+                        Map<String, String> params = new HashMap<>();
+                        params.put(OAuthConstants.OAUTH_ERROR, OAuth2ErrorCodes.ACCESS_DENIED);
+                        params.put(OAuthConstants.OAUTH_ERROR_DESCRIPTION, "End User denied the logout request");
+                        redirectURL = FrameworkUtils.buildURLWithQueryParams(
+                                cacheEntry.getPostLogoutRedirectUri(), params);
+                    }
+                }
             }
         } else {
             // OIDC Logout response
