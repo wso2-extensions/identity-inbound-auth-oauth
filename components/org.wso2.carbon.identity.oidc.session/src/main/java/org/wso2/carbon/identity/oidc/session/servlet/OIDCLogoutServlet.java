@@ -545,8 +545,10 @@ public class OIDCLogoutServlet extends HttpServlet {
                     String obpsCookieValue = opbsCookie.getValue();
                     OIDCSessionState sessionState = OIDCSessionManagementUtil.getSessionManager()
                             .getOIDCSessionState(obpsCookieValue);
-                    sidClaim = sessionState.getSidClaim();
-                    log.debug("Logout request received for sid: " + sidClaim);
+                    if (sessionState != null) {
+                        sidClaim = sessionState.getSidClaim();
+                        log.debug("Logout request received for sessionId: " + sidClaim);
+                    }
                 }
             }
             // BackChannel logout request.
