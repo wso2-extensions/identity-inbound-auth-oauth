@@ -61,6 +61,7 @@ import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
 import java.util.Enumeration;
@@ -169,20 +170,9 @@ public class OIDCLogoutServlet extends HttpServlet {
                 // User denied logout.
                 redirectURL = OIDCSessionManagementUtil
                         .getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, "End User denied the logout request");
+                // If postlogoutUri is available then set it as redirectUrl
+                redirectURL = redirectToPostLogoutRedirectUri(redirectURL, opBrowserStateCookie);
 
-                // Set postLogoutRedirectUri as redirectURL.
-                boolean postLogoutRedirectUriRedirectIsEnabled =
-                        Boolean.parseBoolean(IdentityUtil.getProperty(OIDC_LOGOUT_CONSENT_DENIAL_REDIRECT_URL));
-                if (postLogoutRedirectUriRedirectIsEnabled) {
-                    OIDCSessionDataCacheEntry cacheEntry = getSessionDataFromCache(opBrowserStateCookie.getValue());
-                    if (cacheEntry != null && cacheEntry.getPostLogoutRedirectUri() != null) {
-                        Map<String, String> params = new HashMap<>();
-                        params.put(OAuthConstants.OAUTH_ERROR, OAuth2ErrorCodes.ACCESS_DENIED);
-                        params.put(OAuthConstants.OAUTH_ERROR_DESCRIPTION, "End User denied the logout request");
-                        redirectURL = FrameworkUtils.buildURLWithQueryParams(
-                                cacheEntry.getPostLogoutRedirectUri(), params);
-                    }
-                }
             }
         } else {
             // OIDC Logout response
@@ -216,6 +206,32 @@ public class OIDCLogoutServlet extends HttpServlet {
         }
 
         response.sendRedirect(getRedirectURL(redirectURL, request));
+    }
+
+    /**
+     * If postLogoutRedirectUri is send in Logout request parameter then set it as redirect URL
+     * @param redirectURL
+     * @param opBrowserStateCookie
+     * @return
+     * @throws UnsupportedEncodingException
+     */
+    private String redirectToPostLogoutRedirectUri(String redirectURL, Cookie opBrowserStateCookie)
+            throws UnsupportedEncodingException {
+
+        // Set postLogoutRedirectUri as redirectURL.
+        boolean postLogoutRedirectUriRedirectIsEnabled =
+                Boolean.parseBoolean(IdentityUtil.getProperty(OIDC_LOGOUT_CONSENT_DENIAL_REDIRECT_URL));
+        if (postLogoutRedirectUriRedirectIsEnabled) {
+            OIDCSessionDataCacheEntry cacheEntry = getSessionDataFromCache(opBrowserStateCookie.getValue());
+            if (cacheEntry != null && cacheEntry.getPostLogoutRedirectUri() != null) {
+                Map<String, String> params = new HashMap<>();
+                params.put(OAuthConstants.OAUTH_ERROR, OAuth2ErrorCodes.ACCESS_DENIED);
+                params.put(OAuthConstants.OAUTH_ERROR_DESCRIPTION, "End User denied the logout request");
+                redirectURL = FrameworkUtils.buildURLWithQueryParams(
+                        cacheEntry.getPostLogoutRedirectUri(), params);
+            }
+        }
+        return redirectURL;
     }
 
     /**
