@@ -171,7 +171,7 @@ public class OIDCLogoutServlet extends HttpServlet {
                 redirectURL = OIDCSessionManagementUtil
                         .getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, "End User denied the logout request");
                 // If postlogoutUri is available then set it as redirectUrl
-                redirectURL = redirectToPostLogoutRedirectUri(redirectURL, opBrowserStateCookie);
+                redirectURL = generatePostLogoutRedirectUrl(redirectURL, opBrowserStateCookie);
 
             }
         } else {
@@ -215,7 +215,7 @@ public class OIDCLogoutServlet extends HttpServlet {
      * @return
      * @throws UnsupportedEncodingException
      */
-    private String redirectToPostLogoutRedirectUri(String redirectURL, Cookie opBrowserStateCookie)
+    private String generatePostLogoutRedirectUrl(String redirectURL, Cookie opBrowserStateCookie)
             throws UnsupportedEncodingException {
 
         // Set postLogoutRedirectUri as redirectURL.
