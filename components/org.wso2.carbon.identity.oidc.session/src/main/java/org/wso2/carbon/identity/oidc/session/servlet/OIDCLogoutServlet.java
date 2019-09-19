@@ -703,6 +703,11 @@ public class OIDCLogoutServlet extends HttpServlet {
         String idTokenHint = request.getParameter(OIDCSessionConstants.OIDC_ID_TOKEN_HINT_PARAM);
         String postLogoutRedirectUri = request.getParameter(OIDCSessionConstants.OIDC_POST_LOGOUT_REDIRECT_URI_PARAM);
         if (StringUtils.isEmpty(idTokenHint) || StringUtils.isEmpty(postLogoutRedirectUri)) {
+            if (StringUtils.isNotEmpty(request.getParameter("sessionDataKey"))) {
+                postLogoutRedirectUri =
+                        getSessionDataFromCache(request.getParameter("sessionDataKey")).getPostLogoutRedirectUri();
+                redirectURL = postLogoutRedirectUri;
+            }
             response.sendRedirect(getRedirectURL(redirectURL, request));
             return;
         }
