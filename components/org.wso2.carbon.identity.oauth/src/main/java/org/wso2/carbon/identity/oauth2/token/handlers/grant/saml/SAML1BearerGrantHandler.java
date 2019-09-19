@@ -22,22 +22,22 @@ import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.joda.time.DateTime;
-import org.opensaml.DefaultBootstrap;
-import org.opensaml.common.xml.SAMLConstants;
-import org.opensaml.saml1.core.Assertion;
-import org.opensaml.saml1.core.Audience;
-import org.opensaml.saml1.core.AudienceRestrictionCondition;
-import org.opensaml.saml1.core.AuthenticationStatement;
-import org.opensaml.saml1.core.Conditions;
-import org.opensaml.saml1.core.ConfirmationMethod;
-import org.opensaml.saml1.core.Subject;
-import org.opensaml.saml1.core.SubjectConfirmation;
-import org.opensaml.security.SAMLSignatureProfileValidator;
-import org.opensaml.xml.ConfigurationException;
-import org.opensaml.xml.XMLObject;
-import org.opensaml.xml.security.x509.X509Credential;
-import org.opensaml.xml.signature.SignatureValidator;
-import org.opensaml.xml.validation.ValidationException;
+import org.opensaml.core.config.InitializationService;
+import org.opensaml.saml.common.xml.SAMLConstants;
+import org.opensaml.saml.saml1.core.Assertion;
+import org.opensaml.saml.saml1.core.Audience;
+import org.opensaml.saml.saml1.core.AudienceRestrictionCondition;
+import org.opensaml.saml.saml1.core.AuthenticationStatement;
+import org.opensaml.saml.saml1.core.Conditions;
+import org.opensaml.saml.saml1.core.ConfirmationMethod;
+import org.opensaml.saml.saml1.core.Subject;
+import org.opensaml.saml.saml1.core.SubjectConfirmation;
+import org.opensaml.saml.security.impl.SAMLSignatureProfileValidator;
+import org.opensaml.core.config.InitializationException;
+import org.opensaml.core.xml.XMLObject;
+import org.opensaml.security.x509.X509Credential;
+import org.opensaml.xmlsec.signature.support.SignatureValidator;
+import org.opensaml.xmlsec.signature.support.SignatureException;
 import org.w3c.dom.NodeList;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -87,11 +87,42 @@ public class SAML1BearerGrantHandler extends AbstractAuthorizationGrantHandler {
 
         Thread thread = Thread.currentThread();
         ClassLoader loader = thread.getContextClassLoader();
-        thread.setContextClassLoader(this.getClass().getClassLoader());
+        thread.setContextClassLoader(InitializationService.class.getClassLoader());
 
         try {
-            DefaultBootstrap.bootstrap();
-        } catch (ConfigurationException e) {
+            InitializationService.initialize();
+
+            org.opensaml.saml.config.SAMLConfigurationInitializer initializer_1 = new org.opensaml.saml.config.SAMLConfigurationInitializer();
+            initializer_1.init();
+
+            org.opensaml.saml.config.XMLObjectProviderInitializer initializer_2 = new org.opensaml.saml.config.XMLObjectProviderInitializer();
+            initializer_2.init();
+
+            org.opensaml.core.xml.config.XMLObjectProviderInitializer initializer_3 = new org.opensaml.core.xml.config.XMLObjectProviderInitializer();
+            initializer_3.init();
+
+            org.opensaml.core.xml.config.GlobalParserPoolInitializer initializer_4 = new org.opensaml.core.xml.config.GlobalParserPoolInitializer();
+            initializer_4.init();
+
+//                org.opensaml.xmlsec.config.XMLObjectProviderInitializer initializer_5 = new org.opensaml.xmlsec.config.XMLObjectProviderInitializer();
+//                initializer_5.init();
+//
+//                org.opensaml.xmlsec.config.GlobalAlgorithmRegistryInitializer initializer_6 = new org.opensaml.xmlsec.config.GlobalAlgorithmRegistryInitializer();
+//                initializer_6.init();
+//
+//                org.opensaml.xmlsec.config.JavaCryptoValidationInitializer initializer_7 = new org.opensaml.xmlsec.config.JavaCryptoValidationInitializer();
+//                initializer_7.init();
+
+            org.opensaml.xmlsec.config.JavaCryptoValidationInitializer initializer_5 = new org.opensaml.xmlsec.config.JavaCryptoValidationInitializer();
+            initializer_5.init();
+            org.opensaml.xmlsec.config.XMLObjectProviderInitializer initializer_6 = new org.opensaml.xmlsec.config.XMLObjectProviderInitializer();
+            initializer_6.init();
+            org.opensaml.xmlsec.config.ApacheXMLSecurityInitializer initializer_7 = new org.opensaml.xmlsec.config.ApacheXMLSecurityInitializer();
+            initializer_7.init();
+            org.opensaml.xmlsec.config.GlobalSecurityConfigurationInitializer initializer_8 = new org.opensaml.xmlsec.config.GlobalSecurityConfigurationInitializer();
+            initializer_8.init();
+
+        } catch (InitializationException e) {
             String errorMessage = "Error in bootstrapping the OpenSAML library";
             log.error(errorMessage, e);
             throw new IdentityOAuth2Exception(errorMessage, e);
@@ -462,7 +493,7 @@ public class SAML1BearerGrantHandler extends AbstractAuthorizationGrantHandler {
 
         try {
             profileValidator.validate(assertion.getSignature());
-        } catch (ValidationException e) {
+        } catch (SignatureException e) {
             // Indicates signature did not conform to SAML1.0 Signature profile
             if(log.isDebugEnabled()) {
                 log.debug("Signature did not conform to SAML1.0 Signature profile", e);
@@ -482,12 +513,11 @@ public class SAML1BearerGrantHandler extends AbstractAuthorizationGrantHandler {
 
         try {
             X509Credential x509Credential = new X509CredentialImpl(x509Certificate);
-            SignatureValidator signatureValidator = new SignatureValidator(x509Credential);
-            signatureValidator.validate(assertion.getSignature());
+            SignatureValidator.validate(assertion.getSignature(), x509Credential);
             if(log.isDebugEnabled()) {
                 log.debug("Signature validation successful");
             }
-        } catch (ValidationException e) {
+        } catch (SignatureException e) {
             if (log.isDebugEnabled()) {
                 log.debug("Signature validation failure:" + e.getMessage(), e);
             }

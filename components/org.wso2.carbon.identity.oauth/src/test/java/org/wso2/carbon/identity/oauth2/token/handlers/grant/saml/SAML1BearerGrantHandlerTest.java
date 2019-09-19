@@ -21,8 +21,9 @@ package org.wso2.carbon.identity.oauth2.token.handlers.grant.saml;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang.StringUtils;
 import org.joda.time.DateTime;
-import org.opensaml.DefaultBootstrap;
-import org.opensaml.security.SAMLSignatureProfileValidator;
+import org.opensaml.core.config.InitializationException;
+import org.opensaml.core.config.InitializationService;
+import org.opensaml.saml.security.impl.SAMLSignatureProfileValidator;
 import org.powermock.reflect.internal.WhiteboxImpl;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
@@ -74,72 +75,72 @@ public class SAML1BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
 
     private static final String CERTIFICATE =
             "MIICNTCCAZ6gAwIBAgIES343gjANBgkqhkiG9w0BAQUFADBVMQswCQYDVQQGEwJVUzELMAkGA1UE\n" +
-            "CAwCQ0ExFjAUBgNVBAcMDU1vdW50YWluIFZpZXcxDTALBgNVBAoMBFdTTzIxEjAQBgNVBAMMCWxv\n" +
-            "Y2FsaG9zdDAeFw0xMDAyMTkwNzAyMjZaFw0zNTAyMTMwNzAyMjZaMFUxCzAJBgNVBAYTAlVTMQsw\n" +
-            "CQYDVQQIDAJDQTEWMBQGA1UEBwwNTW91bnRhaW4gVmlldzENMAsGA1UECgwEV1NPMjESMBAGA1UE\n" +
-            "AwwJbG9jYWxob3N0MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCUp/oV1vWc8/TkQSiAvTou\n" +
-            "sMzOM4asB2iltr2QKozni5aVFu818MpOLZIr8LMnTzWllJvvaA5RAAdpbECb+48FjbBe0hseUdN5\n" +
-            "HpwvnH/DW8ZccGvk53I6Orq7hLCv1ZHtuOCokghz/ATrhyPq+QktMfXnRS4HrKGJTzxaCcU7OQID\n" +
-            "AQABoxIwEDAOBgNVHQ8BAf8EBAMCBPAwDQYJKoZIhvcNAQEFBQADgYEAW5wPR7cr1LAdq+IrR44i\n" +
-            "QlRG5ITCZXY9hI0PygLP2rHANh+PYfTmxbuOnykNGyhM6FjFLbW2uZHQTY1jMrPprjOrmyK5sjJR\n" +
-            "O4d1DeGHT/YnIjs9JogRKv4XHECwLtIVdAbIdWHEtVZJyMSktcyysFcvuhPQK8Qc/E/Wq8uHSCo=";
+                    "CAwCQ0ExFjAUBgNVBAcMDU1vdW50YWluIFZpZXcxDTALBgNVBAoMBFdTTzIxEjAQBgNVBAMMCWxv\n" +
+                    "Y2FsaG9zdDAeFw0xMDAyMTkwNzAyMjZaFw0zNTAyMTMwNzAyMjZaMFUxCzAJBgNVBAYTAlVTMQsw\n" +
+                    "CQYDVQQIDAJDQTEWMBQGA1UEBwwNTW91bnRhaW4gVmlldzENMAsGA1UECgwEV1NPMjESMBAGA1UE\n" +
+                    "AwwJbG9jYWxob3N0MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCUp/oV1vWc8/TkQSiAvTou\n" +
+                    "sMzOM4asB2iltr2QKozni5aVFu818MpOLZIr8LMnTzWllJvvaA5RAAdpbECb+48FjbBe0hseUdN5\n" +
+                    "HpwvnH/DW8ZccGvk53I6Orq7hLCv1ZHtuOCokghz/ATrhyPq+QktMfXnRS4HrKGJTzxaCcU7OQID\n" +
+                    "AQABoxIwEDAOBgNVHQ8BAf8EBAMCBPAwDQYJKoZIhvcNAQEFBQADgYEAW5wPR7cr1LAdq+IrR44i\n" +
+                    "QlRG5ITCZXY9hI0PygLP2rHANh+PYfTmxbuOnykNGyhM6FjFLbW2uZHQTY1jMrPprjOrmyK5sjJR\n" +
+                    "O4d1DeGHT/YnIjs9JogRKv4XHECwLtIVdAbIdWHEtVZJyMSktcyysFcvuhPQK8Qc/E/Wq8uHSCo=";
 
     private static String assertion =
             "  <saml:Assertion\n" +
-            "    xmlns:saml=\"urn:oasis:names:tc:SAML:1.0:assertion\"\n" +
-            "    MajorVersion=\"1\" MinorVersion=\"1\"\n" +
-            "    AssertionID=\"buGxcG4gILg5NlocyLccDz6iXrUa\"\n" +
-            "    Issuer=\"" + ISSUER1 + "\"\n" +
-            "    IssueInstant=\"2002-06-19T17:05:37.795Z\">\n" +
-            "    <saml:Conditions\n" +
-            "      NotBefore=\"2002-06-19T17:00:37.795Z\"\n" +
-            "      NotOnOrAfter=\"" + NOT_ON_OR_AFTER1 + "\">\n" +
-            "      <saml:AudienceRestrictionCondition>\n" +
-            "           <saml:Audience>https://sp.example.com/samlsso</saml:Audience>\n" +
-            "      </saml:AudienceRestrictionCondition>\n" +
-            "    </saml:Conditions>\n" +
-            "    <saml:AuthenticationStatement\n" +
-            "      AuthenticationMethod=\"urn:oasis:names:tc:SAML:1.0:am:password\"\n" +
-            "      AuthenticationInstant=\"2002-06-19T17:05:17.706Z\">\n" +
-            "      <saml:Subject>\n" +
-            "        <saml:NameIdentifier\n" +
-            "          Format=\"urn:oasis:names:tc:SAML:1.0:assertion#emailAddress\">\n" +
-            "          user@" + ISSUER1 + "\n" +
-            "        </saml:NameIdentifier>\n" +
-            "        <saml:SubjectConfirmation>\n" +
-            "          <saml:ConfirmationMethod>\n" +
-            "            urn:oasis:names:tc:SAML:1.0:cm:bearer\n" +
-            "          </saml:ConfirmationMethod>\n" +
-            "        </saml:SubjectConfirmation>\n" +
-            "      </saml:Subject>\n" +
-            "    </saml:AuthenticationStatement>\n" +
-            "    <ds:Signature xmlns:ds=\"http://www.w3.org/2000/09/xmldsig#\">\n" +
-            "            <ds:SignedInfo>\n" +
-            "                <ds:CanonicalizationMethod Algorithm=\"http://www.w3.org/2001/10/xml-exc-c14n#\" />\n" +
-            "                <ds:SignatureMethod Algorithm=\"http://www.w3.org/2000/09/xmldsig#rsa-sha1\" />\n" +
-            "                <ds:Reference URI=\"#buGxcG4gILg5NlocyLccDz6iXrUa\">\n" +
-            "                    <ds:Transforms>\n" +
-            "                        <ds:Transform Algorithm=\"http://www.w3.org/2000/09/xmldsig#enveloped-signature\" />\n" +
-            "                        <ds:Transform Algorithm=\"http://www.w3.org/2001/10/xml-exc-c14n#\" />\n" +
-            "                    </ds:Transforms>\n" +
-            "                    <ds:DigestMethod Algorithm=\"http://www.w3.org/2000/09/xmldsig#sha1\" />\n" +
-            "                    <ds:DigestValue>FNB5TA/klWcRpdAIx4sBaANSnsg=</ds:DigestValue>\n" +
-            "                </ds:Reference>\n" +
-            "            </ds:SignedInfo>\n" +
-            "            <ds:SignatureValue>\n" +
-            "               kRL6SR/6zWqmndMzgsSaOwPNqXpgIZ193PcHBto5tYtOwKMpDs0dgpS/79h+jwuhZxVfuZ9U64gB\n" +
-            "               uwBfE3xjALYutF7f20aWQ9E3s7tWyI81RxLU6LtyyFveUCcRAzqvEfPu8w4qqOITJvl3zlTIBJ9x\n" +
-            "               d+Y4cWt54SmI66XT54g=\n" +
-            "            </ds:SignatureValue>\n" +
-            "           <ds:KeyInfo>\n" +
-            "            <ds:X509Data>\n" +
-            "                <ds:X509Certificate>" +
-                                CERTIFICATE +
-            "                </ds:X509Certificate>\n" +
-            "            </ds:X509Data>\n" +
-            "        </ds:KeyInfo>\n" +
-            "    </ds:Signature>" +
-            "  </saml:Assertion>";
+                    "    xmlns:saml=\"urn:oasis:names:tc:SAML:1.0:assertion\"\n" +
+                    "    MajorVersion=\"1\" MinorVersion=\"1\"\n" +
+                    "    AssertionID=\"buGxcG4gILg5NlocyLccDz6iXrUa\"\n" +
+                    "    Issuer=\"" + ISSUER1 + "\"\n" +
+                    "    IssueInstant=\"2002-06-19T17:05:37.795Z\">\n" +
+                    "    <saml:Conditions\n" +
+                    "      NotBefore=\"2002-06-19T17:00:37.795Z\"\n" +
+                    "      NotOnOrAfter=\"" + NOT_ON_OR_AFTER1 + "\">\n" +
+                    "      <saml:AudienceRestrictionCondition>\n" +
+                    "           <saml:Audience>https://sp.example.com/samlsso</saml:Audience>\n" +
+                    "      </saml:AudienceRestrictionCondition>\n" +
+                    "    </saml:Conditions>\n" +
+                    "    <saml:AuthenticationStatement\n" +
+                    "      AuthenticationMethod=\"urn:oasis:names:tc:SAML:1.0:am:password\"\n" +
+                    "      AuthenticationInstant=\"2002-06-19T17:05:17.706Z\">\n" +
+                    "      <saml:Subject>\n" +
+                    "        <saml:NameIdentifier\n" +
+                    "          Format=\"urn:oasis:names:tc:SAML:1.0:assertion#emailAddress\">\n" +
+                    "          user@" + ISSUER1 + "\n" +
+                    "        </saml:NameIdentifier>\n" +
+                    "        <saml:SubjectConfirmation>\n" +
+                    "          <saml:ConfirmationMethod>\n" +
+                    "            urn:oasis:names:tc:SAML:1.0:cm:bearer\n" +
+                    "          </saml:ConfirmationMethod>\n" +
+                    "        </saml:SubjectConfirmation>\n" +
+                    "      </saml:Subject>\n" +
+                    "    </saml:AuthenticationStatement>\n" +
+                    "    <ds:Signature xmlns:ds=\"http://www.w3.org/2000/09/xmldsig#\">\n" +
+                    "            <ds:SignedInfo>\n" +
+                    "                <ds:CanonicalizationMethod Algorithm=\"http://www.w3.org/2001/10/xml-exc-c14n#\" />\n" +
+                    "                <ds:SignatureMethod Algorithm=\"http://www.w3.org/2000/09/xmldsig#rsa-sha1\" />\n" +
+                    "                <ds:Reference URI=\"#buGxcG4gILg5NlocyLccDz6iXrUa\">\n" +
+                    "                    <ds:Transforms>\n" +
+                    "                        <ds:Transform Algorithm=\"http://www.w3.org/2000/09/xmldsig#enveloped-signature\" />\n" +
+                    "                        <ds:Transform Algorithm=\"http://www.w3.org/2001/10/xml-exc-c14n#\" />\n" +
+                    "                    </ds:Transforms>\n" +
+                    "                    <ds:DigestMethod Algorithm=\"http://www.w3.org/2000/09/xmldsig#sha1\" />\n" +
+                    "                    <ds:DigestValue>FNB5TA/klWcRpdAIx4sBaANSnsg=</ds:DigestValue>\n" +
+                    "                </ds:Reference>\n" +
+                    "            </ds:SignedInfo>\n" +
+                    "            <ds:SignatureValue>\n" +
+                    "               kRL6SR/6zWqmndMzgsSaOwPNqXpgIZ193PcHBto5tYtOwKMpDs0dgpS/79h+jwuhZxVfuZ9U64gB\n" +
+                    "               uwBfE3xjALYutF7f20aWQ9E3s7tWyI81RxLU6LtyyFveUCcRAzqvEfPu8w4qqOITJvl3zlTIBJ9x\n" +
+                    "               d+Y4cWt54SmI66XT54g=\n" +
+                    "            </ds:SignatureValue>\n" +
+                    "           <ds:KeyInfo>\n" +
+                    "            <ds:X509Data>\n" +
+                    "                <ds:X509Certificate>" +
+                    CERTIFICATE +
+                    "                </ds:X509Certificate>\n" +
+                    "            </ds:X509Data>\n" +
+                    "        </ds:KeyInfo>\n" +
+                    "    </ds:Signature>" +
+                    "  </saml:Assertion>";
 
     @BeforeMethod
     public void setUp() throws Exception {
@@ -155,7 +156,7 @@ public class SAML1BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
 
     @DataProvider(name = "BuildAssertion")
     public static Object[][] buildAssertion() {
-        return new Object[][] {
+        return new Object[][]{
                 {StringUtils.EMPTY, false, false},
                 {assertion, false, false},
                 {assertion.replace(ISSUER1, ISSUER2), false, false},
@@ -176,9 +177,9 @@ public class SAML1BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
     public void testValidateGrant(String assertion, boolean enableAudienceRestriction, boolean expectedResult)
             throws Exception {
         OAuthTokenReqMessageContext oAuthTokenReqMessageContext = buildOAuth2AccessTokenReqDTO();
-        RequestParameter[] requestParameters = new RequestParameter[] {new RequestParameter("assertion",
+        RequestParameter[] requestParameters = new RequestParameter[]{new RequestParameter("assertion",
                 Base64.encodeBase64String(assertion.getBytes()))};
-        DefaultBootstrap.bootstrap();
+        doBootstrap();
         oAuthTokenReqMessageContext.getOauth2AccessTokenReqDTO().setRequestParameters(requestParameters);
         WhiteboxImpl.setInternalState(saml1BearerGrantHandler, "audienceRestrictionValidationEnabled",
                 enableAudienceRestriction);
@@ -229,4 +230,52 @@ public class SAML1BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
         return oAuthTokenReqMessageContext;
     }
 
+    private static void doBootstrap() {
+
+        Thread thread = Thread.currentThread();
+        ClassLoader loader = thread.getContextClassLoader();
+        thread.setContextClassLoader(SAML1BearerGrantHandlerTest.class.getClassLoader());
+
+        try {
+            InitializationService.initialize();
+            System.setProperty("javax.xml.parsers.DocumentBuilderFactory",
+                    "org.apache.xerces.jaxp.DocumentBuilderFactoryImpl");
+
+            org.opensaml.saml.config.SAMLConfigurationInitializer initializer_1 = new org.opensaml.saml.config.SAMLConfigurationInitializer();
+            initializer_1.init();
+
+            org.opensaml.saml.config.XMLObjectProviderInitializer initializer_2 = new org.opensaml.saml.config.XMLObjectProviderInitializer();
+            initializer_2.init();
+
+            org.opensaml.core.xml.config.XMLObjectProviderInitializer initializer_3 = new org.opensaml.core.xml.config.XMLObjectProviderInitializer();
+            initializer_3.init();
+
+            org.opensaml.core.xml.config.GlobalParserPoolInitializer initializer_4 = new org.opensaml.core.xml.config.GlobalParserPoolInitializer();
+            initializer_4.init();
+
+//                org.opensaml.xmlsec.config.XMLObjectProviderInitializer initializer_5 = new org.opensaml.xmlsec.config.XMLObjectProviderInitializer();
+//                initializer_5.init();
+//
+//                org.opensaml.xmlsec.config.GlobalAlgorithmRegistryInitializer initializer_6 = new org.opensaml.xmlsec.config.GlobalAlgorithmRegistryInitializer();
+//                initializer_6.init();
+//
+//                org.opensaml.xmlsec.config.JavaCryptoValidationInitializer initializer_7 = new org.opensaml.xmlsec.config.JavaCryptoValidationInitializer();
+//                initializer_7.init();
+
+            org.opensaml.xmlsec.config.JavaCryptoValidationInitializer initializer_5 = new org.opensaml.xmlsec.config.JavaCryptoValidationInitializer();
+            initializer_5.init();
+            org.opensaml.xmlsec.config.XMLObjectProviderInitializer initializer_6 = new org.opensaml.xmlsec.config.XMLObjectProviderInitializer();
+            initializer_6.init();
+            org.opensaml.xmlsec.config.ApacheXMLSecurityInitializer initializer_7 = new org.opensaml.xmlsec.config.ApacheXMLSecurityInitializer();
+            initializer_7.init();
+            org.opensaml.xmlsec.config.GlobalSecurityConfigurationInitializer initializer_8 = new org.opensaml.xmlsec.config.GlobalSecurityConfigurationInitializer();
+            initializer_8.init();
+
+        } catch (InitializationException e) {
+            System.out.println("Error in bootstrapping the OpenSAML3 library");
+        } finally {
+            thread.setContextClassLoader(loader);
+        }
+    }
 }
+

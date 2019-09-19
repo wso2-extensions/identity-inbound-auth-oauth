@@ -25,20 +25,20 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.joda.time.DateTime;
-import org.opensaml.DefaultBootstrap;
-import org.opensaml.common.xml.SAMLConstants;
-import org.opensaml.saml2.core.Assertion;
-import org.opensaml.saml2.core.Audience;
-import org.opensaml.saml2.core.AudienceRestriction;
-import org.opensaml.saml2.core.Conditions;
-import org.opensaml.saml2.core.SubjectConfirmation;
-import org.opensaml.saml2.core.SubjectConfirmationData;
-import org.opensaml.security.SAMLSignatureProfileValidator;
-import org.opensaml.xml.ConfigurationException;
-import org.opensaml.xml.XMLObject;
-import org.opensaml.xml.security.x509.X509Credential;
-import org.opensaml.xml.signature.SignatureValidator;
-import org.opensaml.xml.validation.ValidationException;
+import org.opensaml.core.config.InitializationService;
+import org.opensaml.saml.common.xml.SAMLConstants;
+import org.opensaml.saml.saml2.core.Assertion;
+import org.opensaml.saml.saml2.core.Audience;
+import org.opensaml.saml.saml2.core.AudienceRestriction;
+import org.opensaml.saml.saml2.core.Conditions;
+import org.opensaml.saml.saml2.core.SubjectConfirmation;
+import org.opensaml.saml.saml2.core.SubjectConfirmationData;
+import org.opensaml.saml.security.impl.SAMLSignatureProfileValidator;
+import org.opensaml.core.config.InitializationException;
+import org.opensaml.core.xml.XMLObject;
+import org.opensaml.security.x509.X509Credential;
+import org.opensaml.xmlsec.signature.support.SignatureValidator;
+import org.opensaml.xmlsec.signature.support.SignatureException;
 import org.w3c.dom.NodeList;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.base.ServerConfiguration;
@@ -126,11 +126,41 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
 
         Thread thread = Thread.currentThread();
         ClassLoader loader = thread.getContextClassLoader();
-        thread.setContextClassLoader(this.getClass().getClassLoader());
+        thread.setContextClassLoader(InitializationService.class.getClassLoader());
 
         try {
-            DefaultBootstrap.bootstrap();
-        } catch (ConfigurationException e) {
+            InitializationService.initialize();
+
+            org.opensaml.saml.config.SAMLConfigurationInitializer initializer_1 = new org.opensaml.saml.config.SAMLConfigurationInitializer();
+            initializer_1.init();
+
+            org.opensaml.saml.config.XMLObjectProviderInitializer initializer_2 = new org.opensaml.saml.config.XMLObjectProviderInitializer();
+            initializer_2.init();
+
+            org.opensaml.core.xml.config.XMLObjectProviderInitializer initializer_3 = new org.opensaml.core.xml.config.XMLObjectProviderInitializer();
+            initializer_3.init();
+
+            org.opensaml.core.xml.config.GlobalParserPoolInitializer initializer_4 = new org.opensaml.core.xml.config.GlobalParserPoolInitializer();
+            initializer_4.init();
+
+//                org.opensaml.xmlsec.config.XMLObjectProviderInitializer initializer_5 = new org.opensaml.xmlsec.config.XMLObjectProviderInitializer();
+//                initializer_5.init();
+//
+//                org.opensaml.xmlsec.config.GlobalAlgorithmRegistryInitializer initializer_6 = new org.opensaml.xmlsec.config.GlobalAlgorithmRegistryInitializer();
+//                initializer_6.init();
+//
+//                org.opensaml.xmlsec.config.JavaCryptoValidationInitializer initializer_7 = new org.opensaml.xmlsec.config.JavaCryptoValidationInitializer();
+//                initializer_7.init();
+
+            org.opensaml.xmlsec.config.JavaCryptoValidationInitializer initializer_5 = new org.opensaml.xmlsec.config.JavaCryptoValidationInitializer();
+            initializer_5.init();
+            org.opensaml.xmlsec.config.XMLObjectProviderInitializer initializer_6 = new org.opensaml.xmlsec.config.XMLObjectProviderInitializer();
+            initializer_6.init();
+            org.opensaml.xmlsec.config.ApacheXMLSecurityInitializer initializer_7 = new org.opensaml.xmlsec.config.ApacheXMLSecurityInitializer();
+            initializer_7.init();
+            org.opensaml.xmlsec.config.GlobalSecurityConfigurationInitializer initializer_8 = new org.opensaml.xmlsec.config.GlobalSecurityConfigurationInitializer();
+            initializer_8.init();
+        } catch (InitializationException e) {
             log.error("Error in bootstrapping the OpenSAML2 library", e);
             throw new IdentityOAuth2Exception("Error in bootstrapping the OpenSAML2 library");
         } finally {
@@ -546,9 +576,8 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
         X509Certificate x509Certificate = getIdpCertificate(tenantDomain, identityProvider);
         try {
             X509Credential x509Credential = new X509CredentialImpl(x509Certificate);
-            SignatureValidator signatureValidator = new SignatureValidator(x509Credential);
-            signatureValidator.validate(assertion.getSignature());
-        } catch (ValidationException e) {
+            SignatureValidator.validate(assertion.getSignature(), x509Credential);
+        } catch (SignatureException e) {
             throw new IdentityOAuth2Exception("Error while validating the signature.", e);
         }
     }
@@ -574,7 +603,7 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
     private void validateSignature(Assertion assertion) throws IdentityOAuth2Exception {
         try {
             profileValidator.validate(assertion.getSignature());
-        } catch (ValidationException e) {
+        } catch (SignatureException e) {
             throw new IdentityOAuth2Exception("Signature do not adhere to the SAML signature profile.", e);
         }
     }
@@ -1336,9 +1365,8 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
         try {
             X509Certificate x509Certificate = getCertificateFromSAMLSignKeyStore();
             X509Credential x509Credential = new X509CredentialImpl(x509Certificate);
-            SignatureValidator signatureValidator = new SignatureValidator(x509Credential);
-            signatureValidator.validate(assertion.getSignature());
-        } catch (ValidationException e) {
+            SignatureValidator.validate(assertion.getSignature(), x509Credential);
+        } catch (SignatureException e) {
             if (StringUtils.isNotEmpty(assertion.getIssuer().getValue())) {
                 throw new IdentityOAuth2Exception(
                         "Error while validating the signature from SAML sign keystore for SAML Token Issuer :  "

@@ -130,6 +130,16 @@
         <dependency>
             <groupId>org.wso2.carbon.identity.framework</groupId>
             <artifactId>org.wso2.carbon.identity.application.mgt</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.opensaml</groupId>
+                    <artifactId>opensaml</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.opensaml</groupId>
+                    <artifactId>opensaml1</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.wso2.carbon.identity.framework</groupId>
@@ -246,11 +256,16 @@
             <groupId>org.wso2.carbon.identity.inbound.auth.saml2</groupId>
             <artifactId>org.wso2.carbon.identity.sso.saml</artifactId>
             <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.opensaml</groupId>
+                    <artifactId>opensaml-storage-impl</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.wso2.orbit.org.opensaml</groupId>
             <artifactId>opensaml</artifactId>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.wso2.carbon</groupId>

@@ -22,16 +22,17 @@ import com.google.gdata.util.common.base.Charsets;
 import org.apache.commons.codec.binary.Base64;
 import org.joda.time.DateTime;
 import org.mockito.Mock;
-import org.opensaml.saml2.core.Assertion;
-import org.opensaml.saml2.core.NameID;
-import org.opensaml.saml2.core.Subject;
-import org.opensaml.saml2.core.impl.NameIDBuilder;
-import org.opensaml.saml2.core.impl.SubjectBuilder;
-import org.opensaml.security.SAMLSignatureProfileValidator;
-import org.opensaml.xml.security.x509.X509Credential;
-import org.opensaml.xml.signature.Signature;
-import org.opensaml.xml.signature.SignatureValidator;
-import org.opensaml.xml.validation.ValidationException;
+import org.opensaml.saml.saml2.core.Assertion;
+import org.opensaml.saml.saml2.core.NameID;
+import org.opensaml.saml.saml2.core.Subject;
+import org.opensaml.saml.saml2.core.impl.NameIDBuilder;
+import org.opensaml.saml.saml2.core.impl.SubjectBuilder;
+import org.opensaml.saml.security.impl.SAMLSignatureProfileValidator;
+import org.opensaml.security.x509.X509Credential;
+import org.opensaml.xmlsec.signature.Signature;
+import org.opensaml.xmlsec.signature.support.SignatureValidator;
+// import org.opensaml.xml.validation.ValidationException; Previously used exception (newly suggested exception below)
+import org.opensaml.xmlsec.signature.support.SignatureException;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.annotations.BeforeMethod;
@@ -223,7 +224,7 @@ public class SAML2BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
         return new Object[][] {
                 { validOnOrAfter, "LOCAL", true, true, TestConstants.OAUTH2_TOKEN_EP, TestConstants.LOACALHOST_DOMAIN, new IdentityException("Error"), "Error while unmashalling"},
                 { validOnOrAfter, "FED", true, true, TestConstants.OAUTH2_TOKEN_EP, TestConstants.LOACALHOST_DOMAIN, new IdentityProviderManagementException("Error"), "Error while retrieving identity provider"},
-                { validOnOrAfter, "FED", true, true, TestConstants.OAUTH2_TOKEN_EP, TestConstants.LOACALHOST_DOMAIN, new ValidationException(), "Error while validating the signature"},
+                { validOnOrAfter, "FED", true, true, TestConstants.OAUTH2_TOKEN_EP, TestConstants.LOACALHOST_DOMAIN, new SignatureException(), "Error while validating the signature"},
                 { validOnOrAfter, "LOCAL", true, true, TestConstants.OAUTH2_TOKEN_EP, TestConstants.LOACALHOST_DOMAIN, new IdentityApplicationManagementException("Error"), "Error while retrieving service provider"},
                 { validOnOrAfter, "LOCAL", true, true, TestConstants.OAUTH2_TOKEN_EP, TestConstants.LOACALHOST_DOMAIN, new UserStoreException(), "Error while building local user"},
                 { validOnOrAfter, "FED", true, true, TestConstants.OAUTH2_TOKEN_EP, TestConstants.LOACALHOST_DOMAIN, new CertificateException(), "Error occurred while decoding public certificate"},
@@ -271,8 +272,8 @@ public class SAML2BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
                     anyString(), anyBoolean())).thenThrow(e);
         } else if (e instanceof IdentityException) {
             when(IdentityUtil.unmarshall(anyString())).thenThrow(e);
-        } else if (e instanceof ValidationException) {
-            doThrow(e).when(signatureValidator).validate(any(Signature.class));
+        } else if (e instanceof SignatureException) {
+            doThrow(e).when(signatureValidator).validate(any(Signature.class), any(X509Credential.class));
         } else if (e instanceof IdentityApplicationManagementException) {
             when(applicationManagementService.getServiceProviderByClientId(anyString(), anyString(), anyString()))
                     .thenThrow(e);
@@ -473,7 +474,7 @@ public class SAML2BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
         when(IdentityApplicationManagementUtil.decodeCertificate(anyString()))
                 .thenReturn(x509Certificate);
         whenNew(SignatureValidator.class).withArguments(any(X509Credential.class)).thenReturn(signatureValidator);
-        doNothing().when(signatureValidator).validate(any(Signature.class));
+        doNothing().when(signatureValidator).validate(any(Signature.class), any(X509Credential.class));
     }
 
     private void initSAMLGrant(String userType, String idpName) throws Exception {
