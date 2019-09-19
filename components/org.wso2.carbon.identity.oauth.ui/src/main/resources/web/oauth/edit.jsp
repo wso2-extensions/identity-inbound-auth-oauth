@@ -270,14 +270,15 @@
                         CARBON.showWarningDialog('<fmt:message key="application.is.required"/>');
                         return false;
                     }
-                    if (!$(jQuery("#grant_refresh_token"))[0].checked) {
-                        document.getElementById("renewRefreshTokenPerApp").checked = true;
-                        document.getElementById("renewRefreshTokenPerApp").value = 'notAssigned';
-                    }
 
                     var versionValue = document.getElementsByName("oauthVersion")[0].value;
 
                     if (versionValue === '<%= OAuthConstants.OAuthVersions.VERSION_2%>') {
+                        if (!$(jQuery("#grant_refresh_token"))[0].checked) {
+                            document.getElementById("renewRefreshTokenPerApp").checked = true;
+                            document.getElementById("renewRefreshTokenPerApp").value = 'notAssigned';
+                        }
+
                         if (!$(jQuery("#grant_authorization_code"))[0].checked && !$(jQuery("#grant_implicit"))[0].checked) {
                             document.getElementsByName("callback")[0].value = '';
                         } else {
