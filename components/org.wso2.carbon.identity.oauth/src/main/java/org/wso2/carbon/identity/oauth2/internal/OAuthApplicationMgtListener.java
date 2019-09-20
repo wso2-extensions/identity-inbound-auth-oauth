@@ -555,7 +555,8 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                         // Do nothing, the key does exists.
                     }
 
-                    if ((oAuthAppDO.getGrantTypes().contains(OAuthConstants.GrantTypes.AUTHORIZATION_CODE)
+                    if (oAuthAppDO.getGrantTypes() != null
+                            && (oAuthAppDO.getGrantTypes().contains(OAuthConstants.GrantTypes.AUTHORIZATION_CODE)
                             || oAuthAppDO.getGrantTypes().contains(OAuthConstants.GrantTypes.IMPLICIT))
                             && StringUtils.isEmpty(oAuthAppDO.getCallbackUrl())) {
                         validationMsg.add("Callback Url is required for Code or Implicit grant types");
