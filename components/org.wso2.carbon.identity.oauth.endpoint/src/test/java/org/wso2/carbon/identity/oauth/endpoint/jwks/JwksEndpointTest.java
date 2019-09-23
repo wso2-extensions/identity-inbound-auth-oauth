@@ -30,6 +30,7 @@ import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.base.ServerConfiguration;
 import org.wso2.carbon.core.util.KeyStoreManager;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -52,14 +53,13 @@ import java.util.Map;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
+import static org.powermock.api.mockito.PowerMockito.*;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 
 @PrepareForTest({CarbonUtils.class, IdentityTenantUtil.class, IdentityUtil.class, OAuthServerConfiguration.class,
-        KeyStoreManager.class, OAuth2Util.class})
+        KeyStoreManager.class, OAuth2Util.class, FrameworkUtils.class})
 public class JwksEndpointTest extends PowerMockIdentityBaseTest {
 
     @Mock
@@ -131,6 +131,10 @@ public class JwksEndpointTest extends PowerMockIdentityBaseTest {
 
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(tenantId);
+
+        mockStatic(FrameworkUtils.class);
+        doNothing().when(FrameworkUtils.class, "startTenantFlow", "foo.com");
+        doNothing().when(FrameworkUtils.class, "endTenantFlow");
 
         mockStatic(OAuth2Util.class);
 
