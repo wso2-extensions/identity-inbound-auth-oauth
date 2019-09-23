@@ -222,6 +222,7 @@ public class OIDCLogoutServlet extends HttpServlet {
                 .getParameter(OIDCSessionConstants.OIDC_STATE_PARAM);
 
         String clientId;
+        String appTenantDomain;
         try {
             if (!validateIdToken(idTokenHint)) {
                 String msg = "ID token signature validation failed.";
@@ -235,8 +236,8 @@ public class OIDCLogoutServlet extends HttpServlet {
             OAuthAppDAO appDAO = new OAuthAppDAO();
             OAuthAppDO oAuthAppDO = appDAO.getAppInformation(clientId);
 
-            String appTenantDomain = MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
-            if (oAuthAppDO.getUser() != null) {
+            appTenantDomain = MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
+            if (oAuthAppDO.getUser() != null && oAuthAppDO.getUser().getTenantDomain() != null) {
                 appTenantDomain = oAuthAppDO.getUser().getTenantDomain();
             }
 
@@ -262,6 +263,7 @@ public class OIDCLogoutServlet extends HttpServlet {
 
         Map<String, String> paramMap = new HashMap<>();
         paramMap.put(OIDCSessionConstants.OIDC_CACHE_CLIENT_ID_PARAM, clientId);
+        paramMap.put(OIDCSessionConstants.OIDC_CACHE_TENANT_DOMAIN_PARAM, appTenantDomain);
         OIDCSessionDataCacheEntry cacheEntry = new OIDCSessionDataCacheEntry();
         cacheEntry.setIdToken(idTokenHint);
         cacheEntry.setPostLogoutRedirectUri(postLogoutRedirectUri);
@@ -511,7 +513,9 @@ public class OIDCLogoutServlet extends HttpServlet {
         OIDCSessionDataCacheEntry cacheEntry = getSessionDataFromCache(opBrowserStateCookie.getValue());
         if (cacheEntry != null) {
             authenticationRequest
-                    .setRelyingParty(cacheEntry.getParamMap().get(OIDCSessionConstants.OIDC_CLIENT_ID_PARAM));
+                    .setRelyingParty(cacheEntry.getParamMap().get(OIDCSessionConstants.OIDC_CACHE_CLIENT_ID_PARAM));
+            authenticationRequest
+                    .setTenantDomain(cacheEntry.getParamMap().get(OIDCSessionConstants.OIDC_CACHE_TENANT_DOMAIN_PARAM));
             addSessionDataToCache(sessionDataKey, cacheEntry);
         }
 
