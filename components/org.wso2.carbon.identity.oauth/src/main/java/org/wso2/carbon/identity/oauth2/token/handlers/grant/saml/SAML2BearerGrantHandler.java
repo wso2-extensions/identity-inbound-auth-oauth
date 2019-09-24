@@ -25,6 +25,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.joda.time.DateTime;
+import org.opensaml.core.config.ConfigurationService;
 import org.opensaml.core.config.InitializationService;
 import org.opensaml.saml.common.xml.SAMLConstants;
 import org.opensaml.saml.saml2.core.Assertion;
@@ -37,6 +38,9 @@ import org.opensaml.saml.security.impl.SAMLSignatureProfileValidator;
 import org.opensaml.core.config.InitializationException;
 import org.opensaml.core.xml.XMLObject;
 import org.opensaml.security.x509.X509Credential;
+import org.opensaml.xmlsec.algorithm.AlgorithmDescriptor;
+import org.opensaml.xmlsec.algorithm.AlgorithmRegistry;
+import org.opensaml.xmlsec.signature.support.SignatureValidationProvider;
 import org.opensaml.xmlsec.signature.support.SignatureValidator;
 import org.opensaml.xmlsec.signature.support.SignatureException;
 import org.w3c.dom.NodeList;
@@ -92,12 +96,7 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * This implements SAML 2.0 Bearer Assertion Profile for OAuth 2.0 -
@@ -117,6 +116,8 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
     public static final String SECURITY_SAML_SIGN_KEY_STORE_KEY_ALIAS = "Security.SAMLSignKeyStore.KeyAlias";
     public static final String SECURITY_SAML_SIGN_KEY_STORE_KEY_PASSWORD = "Security.SAMLSignKeyStore.KeyPassword";
 
+    private static boolean isBootStrapped = false;
+
     SAMLSignatureProfileValidator profileValidator = null;
 
     @Override
@@ -124,48 +125,7 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
 
         super.init();
 
-        Thread thread = Thread.currentThread();
-        ClassLoader loader = thread.getContextClassLoader();
-        thread.setContextClassLoader(InitializationService.class.getClassLoader());
-
-        try {
-            InitializationService.initialize();
-
-            org.opensaml.saml.config.SAMLConfigurationInitializer initializer_1 = new org.opensaml.saml.config.SAMLConfigurationInitializer();
-            initializer_1.init();
-
-            org.opensaml.saml.config.XMLObjectProviderInitializer initializer_2 = new org.opensaml.saml.config.XMLObjectProviderInitializer();
-            initializer_2.init();
-
-            org.opensaml.core.xml.config.XMLObjectProviderInitializer initializer_3 = new org.opensaml.core.xml.config.XMLObjectProviderInitializer();
-            initializer_3.init();
-
-            org.opensaml.core.xml.config.GlobalParserPoolInitializer initializer_4 = new org.opensaml.core.xml.config.GlobalParserPoolInitializer();
-            initializer_4.init();
-
-//                org.opensaml.xmlsec.config.XMLObjectProviderInitializer initializer_5 = new org.opensaml.xmlsec.config.XMLObjectProviderInitializer();
-//                initializer_5.init();
-//
-//                org.opensaml.xmlsec.config.GlobalAlgorithmRegistryInitializer initializer_6 = new org.opensaml.xmlsec.config.GlobalAlgorithmRegistryInitializer();
-//                initializer_6.init();
-//
-//                org.opensaml.xmlsec.config.JavaCryptoValidationInitializer initializer_7 = new org.opensaml.xmlsec.config.JavaCryptoValidationInitializer();
-//                initializer_7.init();
-
-            org.opensaml.xmlsec.config.JavaCryptoValidationInitializer initializer_5 = new org.opensaml.xmlsec.config.JavaCryptoValidationInitializer();
-            initializer_5.init();
-            org.opensaml.xmlsec.config.XMLObjectProviderInitializer initializer_6 = new org.opensaml.xmlsec.config.XMLObjectProviderInitializer();
-            initializer_6.init();
-            org.opensaml.xmlsec.config.ApacheXMLSecurityInitializer initializer_7 = new org.opensaml.xmlsec.config.ApacheXMLSecurityInitializer();
-            initializer_7.init();
-            org.opensaml.xmlsec.config.GlobalSecurityConfigurationInitializer initializer_8 = new org.opensaml.xmlsec.config.GlobalSecurityConfigurationInitializer();
-            initializer_8.init();
-        } catch (InitializationException e) {
-            log.error("Error in bootstrapping the OpenSAML2 library", e);
-            throw new IdentityOAuth2Exception("Error in bootstrapping the OpenSAML2 library");
-        } finally {
-            thread.setContextClassLoader(loader);
-        }
+        doBootstrap();
 
         profileValidator = new SAMLSignatureProfileValidator();
     }
@@ -573,10 +533,21 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
 
     protected void validateSignatureAgainstIdpCertificate(Assertion assertion, String tenantDomain,
                                                         IdentityProvider identityProvider) throws IdentityOAuth2Exception {
+        doBootstrap();
         X509Certificate x509Certificate = getIdpCertificate(tenantDomain, identityProvider);
         try {
             X509Credential x509Credential = new X509CredentialImpl(x509Certificate);
-            SignatureValidator.validate(assertion.getSignature(), x509Credential);
+
+            // TODO - Add comment explaining the process mentioned below.
+            Thread thread = Thread.currentThread();
+            ClassLoader loader = thread.getContextClassLoader();
+            thread.setContextClassLoader(SignatureValidationProvider.class.getClassLoader());
+
+            try {
+                SignatureValidator.validate(assertion.getSignature(), x509Credential);
+            } finally {
+                thread.setContextClassLoader(loader);
+            }
         } catch (SignatureException e) {
             throw new IdentityOAuth2Exception("Error while validating the signature.", e);
         }
@@ -1439,6 +1410,75 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
         return StringUtils.isNotBlank(keyStoreLocation) && StringUtils.isNotBlank(keyStoreType) && StringUtils
                 .isNotBlank(keyStorePassword) && StringUtils.isNotBlank(keyAlias) && StringUtils
                 .isNotBlank(keyPassword);
+    }
+
+    public static void doBootstrap() {
+        if (!isBootStrapped) {
+
+            Thread thread = Thread.currentThread();
+            ClassLoader loader = thread.getContextClassLoader();
+            thread.setContextClassLoader(InitializationService.class.getClassLoader());
+
+            try {
+                InitializationService.initialize();
+
+                org.opensaml.saml.config.SAMLConfigurationInitializer initializer_1 = new org.opensaml.saml.config.SAMLConfigurationInitializer();
+                initializer_1.init();
+
+                org.opensaml.saml.config.XMLObjectProviderInitializer initializer_2 = new org.opensaml.saml.config.XMLObjectProviderInitializer();
+                initializer_2.init();
+
+                org.opensaml.core.xml.config.XMLObjectProviderInitializer initializer_3 = new org.opensaml.core.xml.config.XMLObjectProviderInitializer();
+                initializer_3.init();
+
+                org.opensaml.core.xml.config.GlobalParserPoolInitializer initializer_4 = new org.opensaml.core.xml.config.GlobalParserPoolInitializer();
+                initializer_4.init();
+
+//                org.opensaml.xmlsec.config.XMLObjectProviderInitializer initializer_5 = new org.opensaml.xmlsec.config.XMLObjectProviderInitializer();
+//                initializer_5.init();
+//
+//                org.opensaml.xmlsec.config.GlobalAlgorithmRegistryInitializer initializer_6 = new org.opensaml.xmlsec.config.GlobalAlgorithmRegistryInitializer();
+//                initializer_6.init();
+//
+//                org.opensaml.xmlsec.config.JavaCryptoValidationInitializer initializer_7 = new org.opensaml.xmlsec.config.JavaCryptoValidationInitializer();
+//                initializer_7.init();
+
+                org.opensaml.xmlsec.config.JavaCryptoValidationInitializer initializer_5 = new org.opensaml.xmlsec.config.JavaCryptoValidationInitializer();
+                initializer_5.init();
+
+                org.opensaml.xmlsec.config.XMLObjectProviderInitializer initializer_6 = new org.opensaml.xmlsec.config.XMLObjectProviderInitializer();
+                initializer_6.init();
+
+                org.opensaml.xmlsec.config.ApacheXMLSecurityInitializer initializer_7 = new org.opensaml.xmlsec.config.ApacheXMLSecurityInitializer();
+                initializer_7.init();
+
+                org.opensaml.xmlsec.config.GlobalSecurityConfigurationInitializer initializer_8 = new org.opensaml.xmlsec.config.GlobalSecurityConfigurationInitializer();
+                initializer_8.init();
+
+                org.opensaml.xmlsec.config.GlobalAlgorithmRegistryInitializer initializer_9 = new org.opensaml.xmlsec.config.GlobalAlgorithmRegistryInitializer();
+                initializer_9.init();
+
+                AlgorithmRegistry algorithmRegistry = new AlgorithmRegistry();
+                ServiceLoader<AlgorithmDescriptor> descriptorsLoader = ServiceLoader.load(AlgorithmDescriptor.class, AlgorithmRegistry.class.getClassLoader());
+                Iterator iter = descriptorsLoader.iterator();
+
+                while(iter.hasNext()) {
+                    AlgorithmDescriptor descriptor = (AlgorithmDescriptor)iter.next();
+                    algorithmRegistry.register(descriptor);
+                }
+
+                ConfigurationService.register(AlgorithmRegistry.class, algorithmRegistry);
+
+                ServiceLoader<SignatureValidationProvider> loader2 = ServiceLoader.load(SignatureValidationProvider.class, SignatureValidationProvider.class.getClassLoader());
+                Iterator<SignatureValidationProvider> iterator = loader2.iterator();
+
+                isBootStrapped = true;
+            } catch (InitializationException e) {
+                log.error("Error in bootstrapping the OpenSAML3 library", e);
+            } finally {
+                thread.setContextClassLoader(loader);
+            }
+        }
     }
 
 }

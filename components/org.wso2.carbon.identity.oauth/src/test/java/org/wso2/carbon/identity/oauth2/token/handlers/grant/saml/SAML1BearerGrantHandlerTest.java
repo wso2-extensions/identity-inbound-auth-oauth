@@ -234,7 +234,7 @@ public class SAML1BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
 
         Thread thread = Thread.currentThread();
         ClassLoader loader = thread.getContextClassLoader();
-        thread.setContextClassLoader(SAML1BearerGrantHandlerTest.class.getClassLoader());
+        thread.setContextClassLoader(InitializationService.class.getClassLoader());
 
         try {
             InitializationService.initialize();
