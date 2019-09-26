@@ -78,7 +78,7 @@ public class OAuthTenantMgtListenerImpl extends AbstractIdentityTenantMgtListene
             }
             OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                     .revokeAccessTokens(tokensToRevoke.toArray(new String[tokensToRevoke.size()]),
-                            !OAuth2Util.isHashDisabled());
+                            OAuth2Util.isHashEnabled());
             List<AuthzCodeDO> latestAuthzCodes = OAuthTokenPersistenceFactory.getInstance()
                     .getAuthorizationCodeDAO().getLatestAuthorizationCodesByTenant(tenantId);
             for (AuthzCodeDO authzCodeDO : latestAuthzCodes) {

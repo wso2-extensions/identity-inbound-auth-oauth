@@ -1327,7 +1327,7 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
      * Validate the signature against the certificate obtained from SAML Sign KeyStore which is defined under
      * Security.SAMLSignKeyStore in carbon.xml.
      *
-     * @param assertion
+     * @param assertion assertion.
      * @throws IdentityOAuth2Exception
      */
     protected void validateSignatureAgainstSAMLSignKeyStoreCertificate(Assertion assertion)
@@ -1341,36 +1341,36 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
         } catch (ValidationException e) {
             if (StringUtils.isNotEmpty(assertion.getIssuer().getValue())) {
                 throw new IdentityOAuth2Exception(
-                        "Error while validating the signature from SAML sign keystore for SAML Token Issuer :  "
+                        "Error while validating the signature from SAML sign keystore for SAML Token Issuer: "
                                 + assertion.getIssuer().getValue(), e);
             } else {
                 throw new IdentityOAuth2Exception(
-                        "Error while validating the signature from SAML sign keystore. The SAML Token Issuer is null",
-                        e);
+                        "Error while validating the signature from SAML sign keystore, SAML Token Issuer is null.", e);
             }
         }
     }
 
     /**
-     * Get the certificate from the SAML Sign KeyStore which is defined under Security.SAMLSignKeyStore in carbon.xml
+     * Get the certificate from the SAML Sign KeyStore which is defined under Security.SAMLSignKeyStore in carbon.xml.
      *
-     * @throws IdentityException
+     * @return certificate which obtained from SAML Sign Key Store.
+     * @throws IdentityOAuth2Exception
      */
     private X509Certificate getCertificateFromSAMLSignKeyStore() throws IdentityOAuth2Exception {
 
         if (log.isDebugEnabled()) {
-            log.debug("Getting the certificate from separate SAMLSignKeyStore");
+            log.debug("Getting the certificate from separate SAMLSignKeyStore.");
         }
 
         String keyStoreLocation = ServerConfiguration.getInstance()
                 .getFirstProperty(SECURITY_SAML_SIGN_KEY_STORE_LOCATION);
-        try (FileInputStream is = new FileInputStream(keyStoreLocation)) {
+        try (FileInputStream smalKeystoreFile = new FileInputStream(keyStoreLocation)) {
             String keyStoreType = ServerConfiguration.getInstance().getFirstProperty(SECURITY_SAML_SIGN_KEY_STORE_TYPE);
             KeyStore keyStore = KeyStore.getInstance(keyStoreType);
 
             char[] keyStorePassword = ServerConfiguration.getInstance()
                     .getFirstProperty(SECURITY_SAML_SIGN_KEY_STORE_PASSWORD).toCharArray();
-            keyStore.load(is, keyStorePassword);
+            keyStore.load(smalKeystoreFile, keyStorePassword);
 
             KeyStore samlSignKeyStore = keyStore;
 
@@ -1380,15 +1380,15 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
             return (X509Certificate) samlSignKeyStore.getCertificate(keyAlias);
 
         } catch (FileNotFoundException e) {
-            throw new IdentityOAuth2Exception("Unable to locate SAML sign keystore", e);
+            throw new IdentityOAuth2Exception("Unable to locate SAML sign keystore.", e);
         } catch (IOException e) {
-            throw new IdentityOAuth2Exception("Unable to read SAML sign keystore", e);
+            throw new IdentityOAuth2Exception("Unable to read SAML sign keystore.", e);
         } catch (CertificateException e) {
-            throw new IdentityOAuth2Exception("Unable to read certificate from SAML sign keystore", e);
+            throw new IdentityOAuth2Exception("Unable to read certificate from SAML sign keystore.", e);
         } catch (NoSuchAlgorithmException e) {
-            throw new IdentityOAuth2Exception("Unable to load algorithm", e);
+            throw new IdentityOAuth2Exception("Unable to load algorithm.", e);
         } catch (KeyStoreException e) {
-            throw new IdentityOAuth2Exception("Unable to load SAML sign keystore", e);
+            throw new IdentityOAuth2Exception("Unable to load SAML sign keystore.", e);
         }
     }
 

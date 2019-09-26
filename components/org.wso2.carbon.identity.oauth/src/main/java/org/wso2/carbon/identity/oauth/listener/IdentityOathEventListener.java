@@ -291,7 +291,7 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
             try {
                 // Revoking token from database.
                 OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
-                        .revokeAccessTokens(accessTokens.toArray(new String[0]), !OAuth2Util.isHashDisabled());
+                        .revokeAccessTokens(accessTokens.toArray(new String[0]), OAuth2Util.isHashEnabled());
             } catch (IdentityOAuth2Exception e) {
                 String errorMsg = "Error occurred while revoking Access Token";
                 log.error(errorMsg, e);
@@ -323,7 +323,7 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
                     // Revoking token from database
                     OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                             .revokeAccessTokens(new String[] { scopedToken.getAccessToken() },
-                                    !OAuth2Util.isHashDisabled());
+                                    OAuth2Util.isHashEnabled());
                 } catch (IdentityOAuth2Exception e) {
                     String errorMsg = "Error occurred while revoking " + "Access Token : "
                             + scopedToken.getAccessToken() + " for user " + authenticatedUser;
