@@ -95,7 +95,7 @@ public class OAuthRequestStateValidator {
                         "attribute, and client_id parameter cannot be found in request");
             }
             throw new InvalidRequestException("Invalid authorization request", OAuth2ErrorCodes.INVALID_REQUEST,
-                    OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_AUTHORIZATION_REQUEST);
+                    OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_CLIENT);
 
         } else if (oAuthMessage.getSessionDataKeyFromLogin() != null && oAuthMessage.getResultFromLogin() == null) {
 
