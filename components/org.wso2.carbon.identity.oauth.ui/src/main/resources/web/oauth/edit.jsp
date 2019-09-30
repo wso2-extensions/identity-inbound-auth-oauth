@@ -177,6 +177,8 @@
                 if (val != null) {
                     scopeValidators = Arrays.asList(val);
                 }
+            } else {
+                grants = "";
             }
         }
 
