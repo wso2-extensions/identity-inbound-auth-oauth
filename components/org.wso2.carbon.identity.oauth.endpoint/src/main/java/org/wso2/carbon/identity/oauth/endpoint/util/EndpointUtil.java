@@ -386,13 +386,16 @@ public class EndpointUtil {
         } else {
             String redirectUri = request.getParameter(OAuthConstants.OAuth20Params.REDIRECT_URI);
             String state = request.getParameter(OAuthConstants.OAuth20Params.STATE);
-            try {
-                redirectUri += "?" + PROP_ERROR + "=" + URLEncoder.encode(errorCode, "UTF-8") +
-                        "&" + PROP_ERROR_DESCRIPTION + "=" + URLEncoder.encode(errorMessage, "UTF-8");
 
-                if (state != null) {
-                    redirectUri += "&" + OAuthConstants.OAuth20Params.STATE + "=" + state;
-                }
+            Map<String, String> params = new HashMap<>();
+            params.put(PROP_ERROR, errorCode);
+            params.put(PROP_ERROR_DESCRIPTION, errorMessage);
+            if (state != null) {
+                params.put(OAuthConstants.OAuth20Params.STATE, state);
+            }
+
+            try {
+                redirectUri = FrameworkUtils.buildURLWithQueryParams(redirectUri, params);
             } catch (UnsupportedEncodingException e) {
                 //ignore
                 if (log.isDebugEnabled()) {
