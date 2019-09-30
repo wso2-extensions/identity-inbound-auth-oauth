@@ -192,6 +192,7 @@ public final class OAuthConstants {
         public static final String USERINFO = "userinfo";
         public static final String CLIENT_ID = "client_id";
         public static final String REDIRECT_URI = "redirect_uri";
+        public static final String STATE = "state";
 
         private OAuth20Params() {
 
