@@ -114,6 +114,7 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
     private static final String CALLBACK_URL = "http://localhost:8080/playground2/oauth2client";
     private static final String OPBROWSER_STATE = "090907ce-eab0-40d2-a46d-acd4bb33f0d0";
     private static final int TENANT_ID = -1234;
+    private static final String SUPER_TENANT_DOMAIN_NAME = "carbon.super";
     private static final String INVALID_CALLBACK_URL = "http://localhost:8080/playground2/auth";
     private static final String REGEX_CALLBACK_URL = "regexp=http://localhost:8080/playground2/oauth2client";
 
@@ -327,6 +328,7 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
 
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(TENANT_ID);
+        when(IdentityTenantUtil.getTenantDomain(TENANT_ID)).thenReturn(SUPER_TENANT_DOMAIN_NAME);
 
         mockStatic(OAuthServerConfiguration.class);
         when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);

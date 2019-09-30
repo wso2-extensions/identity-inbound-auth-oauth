@@ -57,6 +57,10 @@ public final class OAuthConstants {
     public static final String OAUTH_ERROR_CODE = "oauthErrorCode";
     public static final String OAUTH_ERROR_MESSAGE = "oauthErrorMsg";
 
+    // Authentication Error Response according to specifications
+    public static final String OAUTH_ERROR = "error";
+    public static final String OAUTH_ERROR_DESCRIPTION = "error_description";
+
     // Constants for paging in OAuth UI
     public static final int DEFAULT_ITEMS_PER_PAGE = 10;
     public static final String OAUTH_ADMIN_CLIENT = "OAuthAdminClient";

@@ -494,6 +494,18 @@ public class OAuth2Util {
     }
 
     /**
+     * Check whether hashing oauth keys (consumer secret, access token, refresh token and authorization code)
+     * configuration is enabled or not in identity.xml file.
+     *
+     * @return Whether hash feature is enable or not.
+     */
+    public static boolean isHashEnabled() {
+
+        boolean isHashEnabled = OAuthServerConfiguration.getInstance().isClientSecretHashEnabled();
+        return isHashEnabled;
+    }
+
+    /**
      * @param clientId             Consumer Key/Id
      * @param clientSecretProvided Consumer Secret issued during the time of registration
      * @return Username of the user which own client id and client secret if authentication is
