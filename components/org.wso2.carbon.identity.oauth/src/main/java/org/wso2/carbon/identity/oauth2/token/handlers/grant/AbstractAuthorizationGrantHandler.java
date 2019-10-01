@@ -112,6 +112,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
 
     @Override
     public OAuth2AccessTokenRespDTO issue(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
+
         String scope = OAuth2Util.buildScopeString(tokReqMsgCtx.getScope());
         String consumerKey = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId();
         String authorizedUser = tokReqMsgCtx.getAuthorizedUser().toString();
@@ -135,7 +136,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             if (existingTokenBean != null) {
                 if (accessTokenRenewedPerRequest(oauthTokenIssuer, tokReqMsgCtx)) {
                     if (log.isDebugEnabled()) {
-                        log.debug("RenewTokenPerRequest is enabled. " +
+                        log.debug("TokenRenewalPerRequest is enabled. " +
                                 "Proceeding to revoke any existing active tokens and issue new token for client Id: " +
                                 consumerKey + ", user: " + authorizedUser + " and scope: " + scope + ".");
                     }
@@ -304,9 +305,11 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         return userStoreDomain;
     }
 
-    private OAuth2AccessTokenRespDTO renewAccessToken(OAuthTokenReqMessageContext tokReqMsgCtx,
-                                                      String scope, String consumerKey, AccessTokenDO existingTokenBean, OauthTokenIssuer oauthTokenIssuer)
+    private OAuth2AccessTokenRespDTO renewAccessToken(OAuthTokenReqMessageContext tokReqMsgCtx, String scope,
+                                                      String consumerKey, AccessTokenDO existingTokenBean,
+                                                      OauthTokenIssuer oauthTokenIssuer)
             throws IdentityOAuth2Exception {
+
         revokeExistingToken(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getoAuthClientAuthnContext(),
                 existingTokenBean.getAccessToken());
         // Passing existingTokenBean as null since it is already revoked
@@ -314,16 +317,18 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                 oauthTokenIssuer);
     }
 
-    private OAuth2AccessTokenRespDTO issueExistingAccessToken(OAuthTokenReqMessageContext tokReqMsgCtx,
-                                                              String scope, long expireTime, AccessTokenDO existingTokenBean)
+    private OAuth2AccessTokenRespDTO issueExistingAccessToken(OAuthTokenReqMessageContext tokReqMsgCtx, String scope,
+                                                              long expireTime, AccessTokenDO existingTokenBean)
             throws IdentityOAuth2Exception {
+
         tokReqMsgCtx.addProperty(EXISTING_TOKEN_ISSUED, true);
         setDetailsToMessageContext(tokReqMsgCtx, existingTokenBean);
         return createResponseWithTokenBean(existingTokenBean, expireTime, scope);
     }
 
     private OAuth2AccessTokenRespDTO generateNewAccessToken(OAuthTokenReqMessageContext tokReqMsgCtx, String scope,
-            String consumerKey, AccessTokenDO existingTokenBean, OauthTokenIssuer oauthTokenIssuer)
+                                                            String consumerKey, AccessTokenDO existingTokenBean,
+                                                            OauthTokenIssuer oauthTokenIssuer)
             throws IdentityOAuth2Exception {
 
         OAuthAppDO oAuthAppBean = getoAuthApp(consumerKey);
@@ -816,15 +821,18 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
 
     private boolean accessTokenRenewedPerRequest(OauthTokenIssuer oauthTokenIssuer,
                                                  OAuthTokenReqMessageContext tokReqMsgCtx) {
-        boolean isRenew1 = oauthTokenIssuer.renewAccessTokenPerRequest();
-        boolean isRenew2 = oauthIssuerImpl.renewAccessTokenPerRequest(tokReqMsgCtx);
-        boolean isRenew3 = OAuthServerConfiguration.getInstance().isTokenRenewalPerRequestEnabled();
+
+        boolean isRenewTokenPerRequestEnabledInIssuer = oauthTokenIssuer.renewAccessTokenPerRequest();
+        boolean isRenewTokenPerRequestEnabledInTokReqMsgCtx = oauthIssuerImpl.renewAccessTokenPerRequest(tokReqMsgCtx);
+        boolean isRenewTokenPerRequestEnabledInConfig =
+                OAuthServerConfiguration.getInstance().isTokenRenewalPerRequestEnabled();
         if (log.isDebugEnabled()) {
-            log.debug("Enable Access Token renew per request considering the issuer: " + isRenew1);
-            log.debug("Enable Access Token renew per request considering OAuthTokenReqMessageContext: " + isRenew2);
-            log.debug("Enable Access Token renew per request considering the configuration: " + isRenew3);
+            log.debug("Access token renew per request: OauthTokenIssuer: " + isRenewTokenPerRequestEnabledInIssuer +
+                    ", OAuthTokenReqMessageContext: " + isRenewTokenPerRequestEnabledInTokReqMsgCtx +
+                    ", Configuration: " + isRenewTokenPerRequestEnabledInConfig);
         }
-        return isRenew1 || isRenew2 || isRenew3;
+        return isRenewTokenPerRequestEnabledInIssuer || isRenewTokenPerRequestEnabledInTokReqMsgCtx ||
+                isRenewTokenPerRequestEnabledInConfig;
     }
 
     private void revokeExistingToken(OAuthClientAuthnContext oAuthClientAuthnContext, String accessToken) throws
