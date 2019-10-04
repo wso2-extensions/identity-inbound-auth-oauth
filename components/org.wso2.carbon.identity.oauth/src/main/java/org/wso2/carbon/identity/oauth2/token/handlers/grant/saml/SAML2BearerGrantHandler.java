@@ -538,17 +538,17 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
         try {
             X509Credential x509Credential = new X509CredentialImpl(x509Certificate);
 
-            // TODO - Add comment explaining the process mentioned below.
+            // The process mentioned below is done because OpenSAML3 does not support OSGi refer
+            // https://shibboleth.1660669.n2.nabble.com/Null-Pointer-Exception-from-UnmarshallerFactory-while-migrating-from-OpenSAML2-x-to-OpenSAML3-x-td7643903.html
+
             Thread thread = Thread.currentThread();
             ClassLoader loader = thread.getContextClassLoader();
             thread.setContextClassLoader(SignatureValidationProvider.class.getClassLoader());
 
-            if (assertion.getSignature() != null) {
-                try {
-                    SignatureValidator.validate(assertion.getSignature(), x509Credential);
-                } finally {
-                    thread.setContextClassLoader(loader);
-                }
+            try {
+                SignatureValidator.validate(assertion.getSignature(), x509Credential);
+            } finally {
+                thread.setContextClassLoader(loader);
             }
         } catch (SignatureException e) {
             throw new IdentityOAuth2Exception("Error while validating the signature.", e);

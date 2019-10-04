@@ -86,27 +86,29 @@ public class OAuthCallbackHandlerRegistry {
                     for (OAuthCallbackHandlerMetaData metaData : callbackHandlerMetaData) {
 
                         String className = metaData.getClassName();
-                        Class clazz;
-                        OAuthCallbackHandler callbackHandler;
+                        if (className.length() > 0) { //TODO - Check this
+                            Class clazz;
+                            OAuthCallbackHandler callbackHandler;
 
-                        try {
-                            clazz = this.getClass().getClassLoader().loadClass(metaData.getClassName());
-                            callbackHandler = (OAuthCallbackHandler) clazz.newInstance();
-                            callbackHandler.setPriority(metaData.getPriority());
-                            callbackHandler.setProperties(metaData.getProperties());
-                            oauthAuthzHandlers.add(callbackHandler);
+                            try {
+                                clazz = this.getClass().getClassLoader().loadClass(metaData.getClassName());
+                                callbackHandler = (OAuthCallbackHandler) clazz.newInstance();
+                                callbackHandler.setPriority(metaData.getPriority());
+                                callbackHandler.setProperties(metaData.getProperties());
+                                oauthAuthzHandlers.add(callbackHandler);
 
-                            if (log.isDebugEnabled()) {
-                                log.debug("Instantiated an OAuth Authorization Callback Handler. Class : " + clazz
-                                        .getName());
+                                if (log.isDebugEnabled()) {
+                                    log.debug("Instantiated an OAuth Authorization Callback Handler. Class : " + clazz
+                                            .getName());
+                                }
+
+                            } catch (ClassNotFoundException e) {
+                                throw new IdentityOAuth2Exception("Error when loading the OAuthCallbackHandler : " +
+                                        className, e);
+                            } catch (InstantiationException | IllegalAccessException e) {
+                                throw new IdentityOAuth2Exception("Error when instantiating the OAuthCallbackHandler : "
+                                        + className, e);
                             }
-
-                        } catch (ClassNotFoundException e) {
-                            throw new IdentityOAuth2Exception("Error when loading the OAuthCallbackHandler : " +
-                                    className, e);
-                        } catch (InstantiationException | IllegalAccessException e) {
-                            throw new IdentityOAuth2Exception("Error when instantiating the OAuthCallbackHandler : "
-                                    + className, e);
                         }
                     }
 
