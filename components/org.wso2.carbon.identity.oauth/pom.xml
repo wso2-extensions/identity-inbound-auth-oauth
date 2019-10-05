@@ -261,12 +261,6 @@
             <groupId>org.wso2.carbon.identity.inbound.auth.saml2</groupId>
             <artifactId>org.wso2.carbon.identity.sso.saml</artifactId>
             <scope>test</scope>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.opensaml</groupId>
-                    <artifactId>opensaml-storage-impl</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.wso2.orbit.org.opensaml</groupId>

@@ -19,7 +19,6 @@
 package org.wso2.carbon.identity.oauth2.token.handlers.grant.saml;
 
 import com.google.gdata.util.common.base.Charsets;
-import net.shibboleth.utilities.java.support.logic.ConstraintViolationException;
 import org.apache.commons.codec.binary.Base64;
 import org.joda.time.DateTime;
 import org.junit.runner.RunWith;
@@ -213,7 +212,7 @@ public class SAML2BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
         return new Object[][] {
                 { validOnOrAfter, "LOCAL", true, true, TestConstants.OAUTH2_TOKEN_EP, TestConstants.LOACALHOST_DOMAIN, new IdentityException("Error"), "Error while unmashalling"},
                 { validOnOrAfter, "FED", true, true, TestConstants.OAUTH2_TOKEN_EP, TestConstants.LOACALHOST_DOMAIN, new IdentityProviderManagementException("Error"), "Error while retrieving identity provider"},
-                { validOnOrAfter, "FED", true, true, TestConstants.OAUTH2_TOKEN_EP, TestConstants.LOACALHOST_DOMAIN, new ConstraintViolationException("Error"), "Error while validating the signature"},
+                { validOnOrAfter, "FED", true, true, TestConstants.OAUTH2_TOKEN_EP, TestConstants.LOACALHOST_DOMAIN, new SignatureException(), "Error while validating the signature"},
                 { validOnOrAfter, "LOCAL", true, true, TestConstants.OAUTH2_TOKEN_EP, TestConstants.LOACALHOST_DOMAIN, new IdentityApplicationManagementException("Error"), "Error while retrieving service provider"},
                 { validOnOrAfter, "LOCAL", true, true, TestConstants.OAUTH2_TOKEN_EP, TestConstants.LOACALHOST_DOMAIN, new UserStoreException(), "Error while building local user"},
                 { validOnOrAfter, "FED", true, true, TestConstants.OAUTH2_TOKEN_EP, TestConstants.LOACALHOST_DOMAIN, new CertificateException(), "Error occurred while decoding public certificate"},
@@ -261,9 +260,9 @@ public class SAML2BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
                     anyString(), anyBoolean())).thenThrow(e);
         } else if (e instanceof IdentityException) {
             when(IdentityUtil.unmarshall(anyString())).thenThrow(e);
-        } else if (e instanceof ConstraintViolationException) {
+        } else if (e instanceof SignatureException) {
             PowerMockito.mockStatic(SignatureValidator.class);
-            PowerMockito.doThrow(new SignatureException("Error while validating the signature"))
+            PowerMockito.doThrow(e)
                     .when(SignatureValidator.class,  "validate", Matchers.any(Signature.class),
                             Matchers.any(X509Credential.class));
         } else if (e instanceof IdentityApplicationManagementException) {
