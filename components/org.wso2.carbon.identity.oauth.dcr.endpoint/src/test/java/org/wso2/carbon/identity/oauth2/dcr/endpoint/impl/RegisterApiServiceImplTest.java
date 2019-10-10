@@ -90,6 +90,7 @@ public class RegisterApiServiceImplTest extends PowerMockTestCase {
 
     @Test
     public  void testDeleteApplication() throws Exception {
+        DCRMUtils.setOAuth2DCRMService(dcrmService);
         doNothing().when(dcrmService).deleteApplication(validclientId);
         Assert.assertEquals(registerApiService.deleteApplication(validclientId).getStatus(),Response.Status.NO_CONTENT.getStatusCode());
 
@@ -108,6 +109,7 @@ public class RegisterApiServiceImplTest extends PowerMockTestCase {
 
     @Test
     public  void testGetApplication() throws Exception {
+        DCRMUtils.setOAuth2DCRMService(dcrmService);
         when(dcrmService.getApplication(validclientId)).thenReturn(application);
         Assert.assertEquals(registerApiService.getApplication(validclientId).getStatus(),Response.Status.OK.getStatusCode());
 
@@ -130,6 +132,7 @@ public class RegisterApiServiceImplTest extends PowerMockTestCase {
     public  void testRegisterApplication() throws Exception {
         RegistrationRequestDTO registrationRequestDTO = new RegistrationRequestDTO();
         registrationRequestDTO.setClientName("app1");
+        DCRMUtils.setOAuth2DCRMService(dcrmService);
         when(dcrmService.registerApplication
                 (DCRMUtils.getApplicationRegistrationRequest(registrationRequestDTO)))
                 .thenReturn(application);
@@ -155,6 +158,7 @@ public class RegisterApiServiceImplTest extends PowerMockTestCase {
         UpdateRequestDTO updateRequestDTO1 = new UpdateRequestDTO();
         updateRequestDTO1.setClientName("Client1");
         String clientID = "clientID1";
+        DCRMUtils.setOAuth2DCRMService(dcrmService);
         when(dcrmService.updateApplication
                 (DCRMUtils.getApplicationUpdateRequest(updateRequestDTO1),clientID))
                 .thenReturn(application);

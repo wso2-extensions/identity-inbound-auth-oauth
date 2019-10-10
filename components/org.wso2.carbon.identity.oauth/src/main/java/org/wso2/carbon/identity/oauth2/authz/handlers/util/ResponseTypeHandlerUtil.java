@@ -70,7 +70,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenStates.T
  */
 public class ResponseTypeHandlerUtil {
     public static final int SECOND_TO_MILLISECONDS_FACTOR = 1000;
-    private static Log log = LogFactory.getLog(ResponseTypeHandlerUtil.class);
+    private static final Log log = LogFactory.getLog(ResponseTypeHandlerUtil.class);
     private static boolean isHashDisabled = OAuth2Util.isHashDisabled();
 
     public static void triggerPreListeners(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) {

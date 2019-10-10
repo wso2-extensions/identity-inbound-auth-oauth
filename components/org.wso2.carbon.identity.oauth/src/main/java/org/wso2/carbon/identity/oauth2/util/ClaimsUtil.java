@@ -61,7 +61,7 @@ import java.util.concurrent.TimeUnit;
 
 public class ClaimsUtil {
 
-    private static Log log = LogFactory.getLog(ClaimsUtil.class);
+    private static final Log log = LogFactory.getLog(ClaimsUtil.class);
 
     private final static String INBOUND_AUTH2_TYPE = "oauth2";
     private final static String SP_DIALECT = "http://wso2.org/oidc/claim";

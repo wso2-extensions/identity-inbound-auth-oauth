@@ -100,6 +100,30 @@ public class EndpointUtil {
     private static final String PROP_REDIRECT_URI = "redirect_uri";
     private static final String NOT_AVAILABLE = "N/A";
     private static final String UNKNOWN_ERROR = "unknown_error";
+    private static OAuth2Service oAuth2Service;
+    private static SSOConsentService ssoConsentService;
+    private static OAuthServerConfiguration oauthServerConfiguration;
+    private static RequestObjectService requestObjectService;
+
+    public static void setOAuth2Service(OAuth2Service oAuth2Service) {
+
+        EndpointUtil.oAuth2Service = oAuth2Service;
+    }
+
+    public static void setSSOConsentService(SSOConsentService ssoConsentService) {
+
+        EndpointUtil.ssoConsentService = ssoConsentService;
+    }
+
+    public static void setOauthServerConfiguration(OAuthServerConfiguration oauthServerConfiguration) {
+
+        EndpointUtil.oauthServerConfiguration = oauthServerConfiguration;
+    }
+
+    public static void setRequestObjectService(RequestObjectService requestObjectService) {
+
+        EndpointUtil.requestObjectService = requestObjectService;
+    }
 
     private EndpointUtil() {
 
@@ -111,8 +135,8 @@ public class EndpointUtil {
      * @return
      */
     public static SSOConsentService getSSOConsentService() {
-        return (SSOConsentService) PrivilegedCarbonContext.getThreadLocalCarbonContext()
-                .getOSGiService(SSOConsentService.class, null);
+
+        return ssoConsentService;
     }
 
     /**
@@ -152,8 +176,7 @@ public class EndpointUtil {
      */
     public static RequestObjectService getRequestObjectService() {
 
-        return (RequestObjectService) PrivilegedCarbonContext.getThreadLocalCarbonContext().getOSGiService
-                (RequestObjectService.class, null);
+        return requestObjectService;
     }
 
     /**
@@ -162,8 +185,8 @@ public class EndpointUtil {
      * @return OAuth2Service
      */
     public static OAuth2Service getOAuth2Service() {
-        return (OAuth2Service) PrivilegedCarbonContext.getThreadLocalCarbonContext()
-                .getOSGiService(OAuth2Service.class, null);
+
+        return oAuth2Service;
     }
 
     /**
@@ -172,8 +195,8 @@ public class EndpointUtil {
      * @return OAuthServerConfiguration
      */
     public static OAuthServerConfiguration getOAuthServerConfiguration() {
-        return (OAuthServerConfiguration) PrivilegedCarbonContext.getThreadLocalCarbonContext()
-                .getOSGiService(OAuthServerConfiguration.class, null);
+
+        return oauthServerConfiguration;
     }
 
     /**
@@ -362,9 +385,17 @@ public class EndpointUtil {
             return getErrorPageURL(request, errorCode, errorMessage, appName);
         } else {
             String redirectUri = request.getParameter(OAuthConstants.OAuth20Params.REDIRECT_URI);
+            String state = request.getParameter(OAuthConstants.OAuth20Params.STATE);
+
+            Map<String, String> params = new HashMap<>();
+            params.put(PROP_ERROR, errorCode);
+            params.put(PROP_ERROR_DESCRIPTION, errorMessage);
+            if (state != null) {
+                params.put(OAuthConstants.OAuth20Params.STATE, state);
+            }
+
             try {
-                redirectUri += "?" + OAuthConstants.OAUTH_ERROR_CODE + "=" + URLEncoder.encode(errorCode, "UTF-8") +
-                        "&" + OAuthConstants.OAUTH_ERROR_MESSAGE + "=" + URLEncoder.encode(errorMessage, "UTF-8");
+                redirectUri = FrameworkUtils.buildURLWithQueryParams(redirectUri, params);
             } catch (UnsupportedEncodingException e) {
                 //ignore
                 if (log.isDebugEnabled()) {

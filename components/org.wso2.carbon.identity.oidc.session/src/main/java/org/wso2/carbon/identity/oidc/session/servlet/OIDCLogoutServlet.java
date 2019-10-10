@@ -35,9 +35,11 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.application.authentication.framework.model.CommonAuthRequestWrapper;
 import org.wso2.carbon.identity.application.authentication.framework.model.CommonAuthResponseWrapper;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
@@ -59,6 +61,7 @@ import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
 import java.util.Enumeration;
@@ -75,6 +78,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.RequestParams.TENANT_DOMAIN;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils.getRedirectURL;
+import static org.wso2.carbon.identity.oidc.session.OIDCSessionConstants.OIDC_LOGOUT_CONSENT_DENIAL_REDIRECT_URL;
 
 public class OIDCLogoutServlet extends HttpServlet {
 
@@ -166,6 +170,9 @@ public class OIDCLogoutServlet extends HttpServlet {
                 // User denied logout.
                 redirectURL = OIDCSessionManagementUtil
                         .getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, "End User denied the logout request");
+                // If postlogoutUri is available then set it as redirectUrl
+                redirectURL = generatePostLogoutRedirectUrl(redirectURL, opBrowserStateCookie);
+
             }
         } else {
             // OIDC Logout response
@@ -202,6 +209,32 @@ public class OIDCLogoutServlet extends HttpServlet {
     }
 
     /**
+     * If postLogoutRedirectUri is send in Logout request parameter then set it as redirect URL
+     * @param redirectURL
+     * @param opBrowserStateCookie
+     * @return
+     * @throws UnsupportedEncodingException
+     */
+    private String generatePostLogoutRedirectUrl(String redirectURL, Cookie opBrowserStateCookie)
+            throws UnsupportedEncodingException {
+
+        // Set postLogoutRedirectUri as redirectURL.
+        boolean postLogoutRedirectUriRedirectIsEnabled =
+                Boolean.parseBoolean(IdentityUtil.getProperty(OIDC_LOGOUT_CONSENT_DENIAL_REDIRECT_URL));
+        if (postLogoutRedirectUriRedirectIsEnabled) {
+            OIDCSessionDataCacheEntry cacheEntry = getSessionDataFromCache(opBrowserStateCookie.getValue());
+            if (cacheEntry != null && cacheEntry.getPostLogoutRedirectUri() != null) {
+                Map<String, String> params = new HashMap<>();
+                params.put(OAuthConstants.OAUTH_ERROR, OAuth2ErrorCodes.ACCESS_DENIED);
+                params.put(OAuthConstants.OAUTH_ERROR_DESCRIPTION, "End User denied the logout request");
+                redirectURL = FrameworkUtils.buildURLWithQueryParams(
+                        cacheEntry.getPostLogoutRedirectUri(), params);
+            }
+        }
+        return redirectURL;
+    }
+
+    /**
      * Process OIDC Logout request
      * Validate Id token
      * Add OIDC parameters to cache
@@ -222,6 +255,7 @@ public class OIDCLogoutServlet extends HttpServlet {
                 .getParameter(OIDCSessionConstants.OIDC_STATE_PARAM);
 
         String clientId;
+        String appTenantDomain;
         try {
             if (!validateIdToken(idTokenHint)) {
                 String msg = "ID token signature validation failed.";
@@ -235,8 +269,8 @@ public class OIDCLogoutServlet extends HttpServlet {
             OAuthAppDAO appDAO = new OAuthAppDAO();
             OAuthAppDO oAuthAppDO = appDAO.getAppInformation(clientId);
 
-            String appTenantDomain = MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
-            if (oAuthAppDO.getUser() != null) {
+            appTenantDomain = MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
+            if (oAuthAppDO.getUser() != null && oAuthAppDO.getUser().getTenantDomain() != null) {
                 appTenantDomain = oAuthAppDO.getUser().getTenantDomain();
             }
 
@@ -262,6 +296,7 @@ public class OIDCLogoutServlet extends HttpServlet {
 
         Map<String, String> paramMap = new HashMap<>();
         paramMap.put(OIDCSessionConstants.OIDC_CACHE_CLIENT_ID_PARAM, clientId);
+        paramMap.put(OIDCSessionConstants.OIDC_CACHE_TENANT_DOMAIN_PARAM, appTenantDomain);
         OIDCSessionDataCacheEntry cacheEntry = new OIDCSessionDataCacheEntry();
         cacheEntry.setIdToken(idTokenHint);
         cacheEntry.setPostLogoutRedirectUri(postLogoutRedirectUri);
@@ -511,7 +546,9 @@ public class OIDCLogoutServlet extends HttpServlet {
         OIDCSessionDataCacheEntry cacheEntry = getSessionDataFromCache(opBrowserStateCookie.getValue());
         if (cacheEntry != null) {
             authenticationRequest
-                    .setRelyingParty(cacheEntry.getParamMap().get(OIDCSessionConstants.OIDC_CLIENT_ID_PARAM));
+                    .setRelyingParty(cacheEntry.getParamMap().get(OIDCSessionConstants.OIDC_CACHE_CLIENT_ID_PARAM));
+            authenticationRequest
+                    .setTenantDomain(cacheEntry.getParamMap().get(OIDCSessionConstants.OIDC_CACHE_TENANT_DOMAIN_PARAM));
             addSessionDataToCache(sessionDataKey, cacheEntry);
         }
 
@@ -545,8 +582,10 @@ public class OIDCLogoutServlet extends HttpServlet {
                     String obpsCookieValue = opbsCookie.getValue();
                     OIDCSessionState sessionState = OIDCSessionManagementUtil.getSessionManager()
                             .getOIDCSessionState(obpsCookieValue);
-                    sidClaim = sessionState.getSidClaim();
-                    log.debug("Logout request received for sid: " + sidClaim);
+                    if (sessionState != null) {
+                        sidClaim = sessionState.getSidClaim();
+                        log.debug("Logout request received for sessionId: " + sidClaim);
+                    }
                 }
             }
             // BackChannel logout request.

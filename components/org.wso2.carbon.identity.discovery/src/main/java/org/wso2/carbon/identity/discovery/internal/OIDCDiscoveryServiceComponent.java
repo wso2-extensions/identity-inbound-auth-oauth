@@ -38,7 +38,7 @@ import org.wso2.carbon.identity.discovery.OIDCProcessor;
         immediate = true
 )
 public class OIDCDiscoveryServiceComponent {
-    private static Log log = LogFactory.getLog(OIDCDiscoveryServiceComponent.class);
+    private static final Log log = LogFactory.getLog(OIDCDiscoveryServiceComponent.class);
     private static BundleContext bundleContext = null;
 
     public static BundleContext getBundleContext() {

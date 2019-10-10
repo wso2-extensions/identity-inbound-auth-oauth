@@ -48,7 +48,7 @@ import java.util.UUID;
  */
 public class AccessTokenResponseTypeHandler extends AbstractResponseTypeHandler {
 
-    private static Log log = LogFactory.getLog(AccessTokenResponseTypeHandler.class);
+    private static final Log log = LogFactory.getLog(AccessTokenResponseTypeHandler.class);
 
     @Override
     public OAuth2AuthorizeRespDTO issue(OAuthAuthzReqMessageContext oauthAuthzMsgCtx)

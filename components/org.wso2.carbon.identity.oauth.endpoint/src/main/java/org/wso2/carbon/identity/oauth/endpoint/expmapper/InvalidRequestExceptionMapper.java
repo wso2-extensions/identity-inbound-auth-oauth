@@ -53,7 +53,7 @@ public class InvalidRequestExceptionMapper implements ExceptionMapper<InvalidReq
 
     private static final String TEXT_HTML = "text/html";
     private static final String APPLICATION_JAVASCRIPT = "application/javascript";
-    private final Log log = LogFactory.getLog(InvalidRequestExceptionMapper.class);
+    private static final Log log = LogFactory.getLog(InvalidRequestExceptionMapper.class);
 
     @Context
     private HttpServletRequest request;

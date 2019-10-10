@@ -18,6 +18,9 @@
 
 package org.wso2.carbon.identity.oauth.common;
 
+/**
+ * This class contains the default error codes for OAuth2 request.
+ */
 public class OAuth2ErrorCodes {
 
     public static final String UNAUTHORIZED_CLIENT = "unauthorized_client";
@@ -36,6 +39,9 @@ public class OAuth2ErrorCodes {
 
     }
 
+    /**
+     * This class contains sub error codes for OAuth2 requests apart from the default error codes.
+     */
     public class OAuth2SubErrorCodes {
 
         public static final String INVALID_PKCE_CHALLENGE_CODE = "invalid_pkce_challenge_code";

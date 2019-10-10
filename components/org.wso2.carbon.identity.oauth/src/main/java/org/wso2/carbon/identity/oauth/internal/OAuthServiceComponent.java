@@ -27,6 +27,7 @@ import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
+import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.OAuthService;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -44,7 +45,7 @@ import org.wso2.carbon.user.core.service.RealmService;
 )
 public class OAuthServiceComponent {
 
-    private static Log log = LogFactory.getLog(OAuthServiceComponent.class);
+    private static final Log log = LogFactory.getLog(OAuthServiceComponent.class);
     private static IdentityOathEventListener listener = null;
     private ServiceRegistration serviceRegistration = null;
 
@@ -68,6 +69,9 @@ public class OAuthServiceComponent {
 
             // We need to explicitly populate the OAuthTokenIssuerMap since it's used for token validation.
             oauthServerConfig.populateOAuthTokenIssuerMap();
+
+            context.getBundleContext().registerService(OAuthAdminServiceImpl.class.getName(), new
+                    OAuthAdminServiceImpl(), null);
 
             if (log.isDebugEnabled()) {
                 log.debug("Identity OAuth bundle is activated");

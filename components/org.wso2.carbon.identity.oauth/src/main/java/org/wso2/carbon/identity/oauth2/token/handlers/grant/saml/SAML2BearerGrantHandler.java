@@ -41,6 +41,9 @@ import org.opensaml.xml.signature.SignatureValidator;
 import org.opensaml.xml.validation.ValidationException;
 import org.w3c.dom.NodeList;
 import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.base.ServerConfiguration;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.context.RegistryType;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
@@ -56,6 +59,8 @@ import org.wso2.carbon.identity.application.common.util.IdentityApplicationConst
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.core.model.SAMLSSOServiceProviderDO;
+import org.wso2.carbon.identity.core.persistence.IdentityPersistenceManager;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -71,13 +76,20 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.util.X509CredentialImpl;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
+import org.wso2.carbon.registry.core.Registry;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.api.UserStoreManager;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
@@ -95,9 +107,15 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
 
     public static final String ASSERTION_ELEMENT = "Assertion";
     public static final String IDP_ENTITY_ID = "IdPEntityId";
-    private static Log log = LogFactory.getLog(SAML2BearerGrantHandler.class);
+    private static final Log log = LogFactory.getLog(SAML2BearerGrantHandler.class);
     private static final String SAMLSSO_AUTHENTICATOR = "samlsso";
     private static final String SAML2SSO_AUTHENTICATOR_NAME = "SAMLSSOAuthenticator";
+
+    public static final String SECURITY_SAML_SIGN_KEY_STORE_LOCATION = "Security.SAMLSignKeyStore.Location";
+    public static final String SECURITY_SAML_SIGN_KEY_STORE_TYPE = "Security.SAMLSignKeyStore.Type";
+    public static final String SECURITY_SAML_SIGN_KEY_STORE_PASSWORD = "Security.SAMLSignKeyStore.Password";
+    public static final String SECURITY_SAML_SIGN_KEY_STORE_KEY_ALIAS = "Security.SAMLSignKeyStore.KeyAlias";
+    public static final String SECURITY_SAML_SIGN_KEY_STORE_KEY_PASSWORD = "Security.SAMLSignKeyStore.KeyPassword";
 
     SAMLSignatureProfileValidator profileValidator = null;
 
@@ -153,7 +171,13 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
 
         String tenantDomain = getTenantDomain(tokReqMsgCtx);
         IdentityProvider identityProvider = getIdentityProvider(assertion, tenantDomain);
-        validateSignatureAgainstIdpCertificate(assertion, tenantDomain, identityProvider);
+        // If SAMLSignKeyStore property defined in the carbon.xml then validate the signature against provided
+        // SAML Sign KeyStore certificate else validate against the IDP certificate.
+        if (isSAMLSignKeyStoreConfigured()) {
+            validateSignatureAgainstSAMLSignKeyStoreCertificate(assertion);
+        } else {
+            validateSignatureAgainstIdpCertificate(assertion, tenantDomain, identityProvider);
+        }
         validateConditions(tokReqMsgCtx, assertion, identityProvider, tenantDomain);
 
         long timestampSkewInMillis = OAuthServerConfiguration.getInstance().getTimeStampSkewInSeconds() * 1000;
@@ -297,6 +321,11 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
      * @return updated role claim string
      */
     private String getUpdatedRoleClaimValue(IdentityProvider identityProvider, String currentRoleClaimValue) {
+
+        if (StringUtils.equalsIgnoreCase(IdentityApplicationConstants.RESIDENT_IDP_RESERVED_NAME, identityProvider
+                .getIdentityProviderName())) {
+            return currentRoleClaimValue;
+        }
 
         PermissionsAndRoleConfig permissionAndRoleConfig = identityProvider.getPermissionAndRoleConfig();
         if (permissionAndRoleConfig != null && ArrayUtils.isNotEmpty(permissionAndRoleConfig.getRoleMappings())) {
@@ -732,7 +761,7 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
                                                   String tenantDomain) throws IdentityOAuth2Exception {
         String tokenEndpointAlias = null;
         FederatedAuthenticatorConfig[] fedAuthnConfigs = identityProvider.getFederatedAuthenticatorConfigs();
-        validateIdpEntityId(assertion, tenantDomain,  getIdpEntityId(fedAuthnConfigs));
+        //validateIdpEntityId(assertion, tenantDomain,  getIdpEntityId(fedAuthnConfigs));
         // Get OpenIDConnect authenticator == OAuth
         // authenticator
         FederatedAuthenticatorConfig oauthAuthenticatorConfig =
@@ -798,7 +827,7 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
     }
 
     private IdentityProvider getIdentityProviderFromManager(Assertion assertion, String tenantDomain)
-            throws IdentityProviderManagementException {
+            throws IdentityProviderManagementException, IdentityOAuth2Exception {
         if (log.isDebugEnabled()) {
             log.debug("Retrieving identity provider : " + assertion.getIssuer().getValue() + " for " +
                     "authenticator name " + SAMLSSO_AUTHENTICATOR);
@@ -813,6 +842,16 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
                         "authenticator name " + SAML2SSO_AUTHENTICATOR_NAME);
             }
             identityProvider = getIdPByAuthenticatorPropertyValue(assertion, tenantDomain, SAML2SSO_AUTHENTICATOR_NAME);
+        }
+        if (identityProvider == null) {
+            if (log.isDebugEnabled()) {
+                log.debug("SAML Token Issuer : " + assertion.getIssuer().getValue() +
+                        " is not registered as a local Identity Provider in tenant : " + tenantDomain +
+                        ". Hence checking if the assertion is from resident IdP with IdP Entity ID Alias enabled");
+            }
+            if (validateIdpEntityIdAliasFromSAMLSP(assertion, tenantDomain)) {
+                identityProvider = IdentityProviderManager.getInstance().getResidentIdP(tenantDomain);
+            }
         }
         return identityProvider;
     }
@@ -832,6 +871,88 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
                         " not registered as a local Identity Provider in tenant : " + tenantDomain);
             }
             throw new IdentityOAuth2Exception("Identity provider is null");
+        }
+    }
+
+    /**
+     * If the token issuer validation fails against the resident identity provider's IdP Entity ID, checks whether the
+     * token issuer has been overriden by an "Idp Entity ID Alias" specified in a SAML SSO configuration. The check
+     * is done against IdP Entity ID Alias values of SAML SSO configurations in the registry. The SAML SSO configurations
+     * that needs to be checked are identified from the audience restrictions in the SAML assertion as it contains the
+     * "issuer" of the SAML SSO configuration with respective to the SAML SP.
+     *
+     * @param assertion
+     * @param tenantDomain
+     * @return
+     * @throws IdentityOAuth2Exception
+     */
+    private Boolean validateIdpEntityIdAliasFromSAMLSP(Assertion assertion, String tenantDomain)
+            throws IdentityOAuth2Exception {
+
+        Conditions conditions = assertion.getConditions();
+        List<AudienceRestriction> audienceRestrictions = conditions.getAudienceRestrictions();
+        validateAudienceRestriction(audienceRestrictions);
+        for (AudienceRestriction audienceRestriction : audienceRestrictions) {
+            if (CollectionUtils.isNotEmpty(audienceRestriction.getAudiences())) {
+                for (Audience audience : audienceRestriction.getAudiences()) {
+                    SAMLSSOServiceProviderDO samlssoServiceProviderDO = getSAMLSSOServiceProvider
+                            (audience.getAudienceURI(), tenantDomain);
+                    if (samlssoServiceProviderDO != null) {
+                        if (samlssoServiceProviderDO.getIdpEntityIDAlias() != null &&
+                                samlssoServiceProviderDO.getIdpEntityIDAlias().equals(assertion.getIssuer().
+                                        getValue())) {
+                            if (log.isDebugEnabled()) {
+                                log.debug("Token Issuer verified against IdP Entity ID Alias : " +
+                                        samlssoServiceProviderDO.getIdpEntityIDAlias() + " of SAML Service Provider " +
+                                        samlssoServiceProviderDO.getIssuer() + " in tenant : " + tenantDomain + ".");
+                            }
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("No SAML Service Provider configuration with IdP Entity ID Alias " +
+                    "similar to token issuer found.");
+        }
+        return false;
+    }
+
+    private SAMLSSOServiceProviderDO getSAMLSSOServiceProvider(String issuerName, String tenantDomain)
+            throws IdentityOAuth2Exception {
+
+        int tenantId;
+        RealmService realmService = OAuthComponentServiceHolder.getInstance().getRealmService();
+
+        if (StringUtils.isBlank(tenantDomain)) {
+            tenantDomain = org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
+            tenantId = org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_ID;
+        } else {
+            try {
+                tenantId = realmService.getTenantManager().getTenantId(tenantDomain);
+            } catch (UserStoreException e) {
+                throw new IdentityOAuth2Exception("Error occurred while retrieving tenant id for the domain : " +
+                        tenantDomain, e);
+            }
+        }
+
+        try {
+            PrivilegedCarbonContext.startTenantFlow();
+            PrivilegedCarbonContext privilegedCarbonContext = PrivilegedCarbonContext.getThreadLocalCarbonContext();
+            privilegedCarbonContext.setTenantId(tenantId);
+            privilegedCarbonContext.setTenantDomain(tenantDomain);
+
+            IdentityTenantUtil.initializeRegistry(tenantId, tenantDomain);
+            IdentityPersistenceManager persistenceManager = IdentityPersistenceManager.getPersistanceManager();
+            Registry registry = (Registry) PrivilegedCarbonContext.getThreadLocalCarbonContext().getRegistry
+                    (RegistryType.SYSTEM_CONFIGURATION);
+            return persistenceManager.getServiceProvider(registry, issuerName);
+        } catch (IdentityException e) {
+            throw new IdentityOAuth2Exception("Error occurred while validating existence of SAML service provider " +
+                    "'" + issuerName + "' that issued the assertion in the tenant domain '" + tenantDomain + "'");
+        } finally {
+            PrivilegedCarbonContext.endTenantFlow();
         }
     }
 
@@ -1200,6 +1321,96 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
         user.setFederatedIdPName(getIdentityProvider(assertion, getTenantDomain(tokReqMsgCtx))
                 .getIdentityProviderName());
         tokReqMsgCtx.setAuthorizedUser(user);
+    }
+
+    /**
+     * Validate the signature against the certificate obtained from SAML Sign KeyStore which is defined under
+     * Security.SAMLSignKeyStore in carbon.xml.
+     *
+     * @param assertion assertion.
+     * @throws IdentityOAuth2Exception
+     */
+    protected void validateSignatureAgainstSAMLSignKeyStoreCertificate(Assertion assertion)
+            throws IdentityOAuth2Exception {
+
+        try {
+            X509Certificate x509Certificate = getCertificateFromSAMLSignKeyStore();
+            X509Credential x509Credential = new X509CredentialImpl(x509Certificate);
+            SignatureValidator signatureValidator = new SignatureValidator(x509Credential);
+            signatureValidator.validate(assertion.getSignature());
+        } catch (ValidationException e) {
+            if (StringUtils.isNotEmpty(assertion.getIssuer().getValue())) {
+                throw new IdentityOAuth2Exception(
+                        "Error while validating the signature from SAML sign keystore for SAML Token Issuer: "
+                                + assertion.getIssuer().getValue(), e);
+            } else {
+                throw new IdentityOAuth2Exception(
+                        "Error while validating the signature from SAML sign keystore, SAML Token Issuer is null.", e);
+            }
+        }
+    }
+
+    /**
+     * Get the certificate from the SAML Sign KeyStore which is defined under Security.SAMLSignKeyStore in carbon.xml.
+     *
+     * @return certificate which obtained from SAML Sign Key Store.
+     * @throws IdentityOAuth2Exception
+     */
+    private X509Certificate getCertificateFromSAMLSignKeyStore() throws IdentityOAuth2Exception {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Getting the certificate from separate SAMLSignKeyStore.");
+        }
+
+        String keyStoreLocation = ServerConfiguration.getInstance()
+                .getFirstProperty(SECURITY_SAML_SIGN_KEY_STORE_LOCATION);
+        try (FileInputStream smalKeystoreFile = new FileInputStream(keyStoreLocation)) {
+            String keyStoreType = ServerConfiguration.getInstance().getFirstProperty(SECURITY_SAML_SIGN_KEY_STORE_TYPE);
+            KeyStore keyStore = KeyStore.getInstance(keyStoreType);
+
+            char[] keyStorePassword = ServerConfiguration.getInstance()
+                    .getFirstProperty(SECURITY_SAML_SIGN_KEY_STORE_PASSWORD).toCharArray();
+            keyStore.load(smalKeystoreFile, keyStorePassword);
+
+            KeyStore samlSignKeyStore = keyStore;
+
+            String keyAlias = ServerConfiguration.getInstance()
+                    .getFirstProperty(SECURITY_SAML_SIGN_KEY_STORE_KEY_ALIAS);
+
+            return (X509Certificate) samlSignKeyStore.getCertificate(keyAlias);
+
+        } catch (FileNotFoundException e) {
+            throw new IdentityOAuth2Exception("Unable to locate SAML sign keystore.", e);
+        } catch (IOException e) {
+            throw new IdentityOAuth2Exception("Unable to read SAML sign keystore.", e);
+        } catch (CertificateException e) {
+            throw new IdentityOAuth2Exception("Unable to read certificate from SAML sign keystore.", e);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IdentityOAuth2Exception("Unable to load algorithm.", e);
+        } catch (KeyStoreException e) {
+            throw new IdentityOAuth2Exception("Unable to load SAML sign keystore.", e);
+        }
+    }
+
+    /**
+     * Check whether separate configurations for SAML sign KeyStore available.
+     *
+     * @return true if necessary configurations are defined for sign KeyStore; false otherwise.
+     */
+    private boolean isSAMLSignKeyStoreConfigured() {
+
+        String keyStoreLocation = ServerConfiguration.getInstance()
+                .getFirstProperty(SECURITY_SAML_SIGN_KEY_STORE_LOCATION);
+        String keyStoreType = ServerConfiguration.getInstance().getFirstProperty(SECURITY_SAML_SIGN_KEY_STORE_TYPE);
+        String keyStorePassword = ServerConfiguration.getInstance()
+                .getFirstProperty(SECURITY_SAML_SIGN_KEY_STORE_PASSWORD);
+        String keyAlias = ServerConfiguration.getInstance().getFirstProperty(SECURITY_SAML_SIGN_KEY_STORE_KEY_ALIAS);
+        String keyPassword = ServerConfiguration.getInstance()
+                .getFirstProperty(SECURITY_SAML_SIGN_KEY_STORE_KEY_PASSWORD);
+
+        return StringUtils.isNotBlank(keyStoreLocation) && StringUtils.isNotBlank(keyStoreType) && StringUtils
+                .isNotBlank(keyStorePassword) && StringUtils.isNotBlank(keyAlias) && StringUtils
+                .isNotBlank(keyPassword);
     }
 
 }

@@ -69,10 +69,14 @@ public class ScopeMgtDAO {
         }
 
         try (Connection conn = IdentityDatabaseUtil.getDBConnection()) {
-
-            addScope(scope, conn, tenantID);
-            conn.commit();
-
+            try {
+                addScope(scope, conn, tenantID);
+                IdentityDatabaseUtil.commitTransaction(conn);
+            } catch (SQLException e) {
+                IdentityDatabaseUtil.rollbackTransaction(conn);
+                String msg = "Error occurred while creating scope :" + scope.getName();
+                throw new IdentityOAuth2ScopeServerException(msg, e);
+            }
         } catch (SQLException e) {
             String msg = "Error occurred while creating scope :" + scope.getName();
             throw new IdentityOAuth2ScopeServerException(msg, e);
@@ -97,7 +101,7 @@ public class ScopeMgtDAO {
         Map<Integer, Scope> scopeMap = new HashMap<>();
         String sql;
 
-        try (Connection conn = IdentityDatabaseUtil.getDBConnection()) {
+        try (Connection conn = IdentityDatabaseUtil.getDBConnection(false)) {
             if (conn.getMetaData().getDriverName().contains(Oauth2ScopeConstants.DataBaseType.ORACLE)) {
                 sql = SQLQueries.RETRIEVE_ALL_SCOPES_ORACLE;
             } else {
@@ -163,7 +167,7 @@ public class ScopeMgtDAO {
         Set<Scope> scopes = new HashSet<>();
         Map<Integer, Scope> scopeMap = new HashMap<>();
 
-        try (Connection conn = IdentityDatabaseUtil.getDBConnection()) {
+        try (Connection conn = IdentityDatabaseUtil.getDBConnection(false)) {
 
             String query;
             if (conn.getMetaData().getDriverName().contains("MySQL")
@@ -247,8 +251,7 @@ public class ScopeMgtDAO {
 
         Scope scope = null;
         String sql;
-        try (Connection conn = IdentityDatabaseUtil.getDBConnection()) {
-
+        try (Connection conn = IdentityDatabaseUtil.getDBConnection(false)) {
             if (conn.getMetaData().getDriverName().contains(Oauth2ScopeConstants.DataBaseType.ORACLE)) {
                 sql = SQLQueries.RETRIEVE_SCOPE_BY_NAME_ORACLE;
             } else {
@@ -324,8 +327,7 @@ public class ScopeMgtDAO {
         }
 
         int scopeID = Oauth2ScopeConstants.INVALID_SCOPE_ID;
-        try (Connection conn = IdentityDatabaseUtil.getDBConnection()) {
-
+        try (Connection conn = IdentityDatabaseUtil.getDBConnection(false)) {
             try (PreparedStatement ps = conn.prepareStatement(SQLQueries.RETRIEVE_SCOPE_ID_BY_NAME)) {
                 ps.setString(1, scopeName);
                 ps.setInt(2, tenantID);
@@ -356,9 +358,14 @@ public class ScopeMgtDAO {
         }
 
         try (Connection conn = IdentityDatabaseUtil.getDBConnection()) {
-
-            deleteScope(name, tenantID, conn);
-            conn.commit();
+            try {
+                deleteScope(name, tenantID, conn);
+                IdentityDatabaseUtil.commitTransaction(conn);
+            } catch (SQLException e1) {
+                IdentityDatabaseUtil.rollbackTransaction(conn);
+                String msg = "SQL error occurred while deleting scopes ";
+                throw new IdentityOAuth2ScopeServerException(msg, e1);
+            }
         } catch (SQLException e) {
             String msg = "Error occurred while deleting scopes ";
             throw new IdentityOAuth2ScopeServerException(msg, e);
@@ -379,9 +386,15 @@ public class ScopeMgtDAO {
         }
 
         try (Connection conn = IdentityDatabaseUtil.getDBConnection()) {
-            deleteScope(updatedScope.getName(), tenantID, conn);
-            addScope(updatedScope, conn, tenantID);
-            conn.commit();
+            try {
+                deleteScope(updatedScope.getName(), tenantID, conn);
+                addScope(updatedScope, conn, tenantID);
+                IdentityDatabaseUtil.commitTransaction(conn);
+            } catch (SQLException e1) {
+                IdentityDatabaseUtil.rollbackTransaction(conn);
+                String msg = "Error occurred while updating scope by ID ";
+                throw new IdentityOAuth2ScopeServerException(msg, e1);
+            }
         } catch (SQLException e) {
             String msg = "Error occurred while updating scope by ID ";
             throw new IdentityOAuth2ScopeServerException(msg, e);

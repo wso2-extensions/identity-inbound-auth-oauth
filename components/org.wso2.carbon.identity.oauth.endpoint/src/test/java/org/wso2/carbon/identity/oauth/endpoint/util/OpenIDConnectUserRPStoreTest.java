@@ -116,6 +116,7 @@ public class OpenIDConnectUserRPStoreTest extends TestOAuthEndpointBase {
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(MultitenantConstants.SUPER_TENANT_ID);
         mockStatic(IdentityDatabaseUtil.class);
         when(IdentityDatabaseUtil.getDBConnection()).thenAnswer(invocationOnMock -> dataSource.getConnection());
+        when(IdentityDatabaseUtil.getDBConnection(false)).thenAnswer(invocationOnMock -> dataSource.getConnection());
         mockStatic(OAuthServerConfiguration.class);
         when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
         when(oAuthServerConfiguration.getPersistenceProcessor()).thenReturn(tokenPersistenceProcessor);
@@ -166,6 +167,7 @@ public class OpenIDConnectUserRPStoreTest extends TestOAuthEndpointBase {
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
         mockStatic(IdentityDatabaseUtil.class);
         when(IdentityDatabaseUtil.getDBConnection()).thenAnswer(invocationOnMock -> dataSource.getConnection());
+        when(IdentityDatabaseUtil.getDBConnection(false)).thenAnswer(invocationOnMock -> dataSource.getConnection());
         mockStatic(OAuthServerConfiguration.class);
         when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
         when(oAuthServerConfiguration.getPersistenceProcessor()).thenReturn(tokenPersistenceProcessor);

@@ -63,7 +63,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
     public static final int LAST_ACCESS_TOKEN_RETRIEVAL_LIMIT = 10;
     public static final int ALLOWED_MINIMUM_VALIDITY_PERIOD = 1000;
     public static final String DEACTIVATED_ACCESS_TOKEN = "DeactivatedAccessToken";
-    private static Log log = LogFactory.getLog(RefreshGrantHandler.class);
+    private static final Log log = LogFactory.getLog(RefreshGrantHandler.class);
     private boolean isHashDisabled = OAuth2Util.isHashDisabled();
     
     @Override
@@ -556,10 +556,19 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
                 (RefreshTokenValidationDataDO) msgCtx.getProperty(PREV_ACCESS_TOKEN);
         AuthorizationGrantCacheKey oldAuthorizationGrantCacheKey = new AuthorizationGrantCacheKey(oldAccessToken
                 .getAccessToken());
-        AuthorizationGrantCacheEntry grantCacheEntry = AuthorizationGrantCache.getInstance()
-                .getValueFromCacheByToken(oldAuthorizationGrantCacheKey);
+        if (log.isDebugEnabled()) {
+            log.debug("Getting AuthorizationGrantCacheEntry using access token id: " + accessTokenBean.getTokenId());
+        }
+        AuthorizationGrantCacheEntry grantCacheEntry =
+                AuthorizationGrantCache.getInstance().getValueFromCacheByTokenId(oldAuthorizationGrantCacheKey,
+                        oldAccessToken.getTokenId());
+
 
         if (grantCacheEntry != null) {
+            if (log.isDebugEnabled()) {
+                log.debug("Getting user attributes cached against the previous access token with access token id: " +
+                        oldAccessToken.getTokenId());
+            }
             AuthorizationGrantCacheKey authorizationGrantCacheKey = new AuthorizationGrantCacheKey(accessTokenBean
                     .getAccessToken());
 

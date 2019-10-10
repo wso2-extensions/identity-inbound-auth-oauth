@@ -26,7 +26,7 @@ import javax.security.auth.callback.Callback;
 
 public class OAuthCallbackManager {
 
-    private static Log log = LogFactory.getLog(OAuthCallbackManager.class);
+    private static final Log log = LogFactory.getLog(OAuthCallbackManager.class);
     private OAuthCallbackHandlerRegistry callbackHandlerRegistry;
 
     public OAuthCallbackManager() throws IdentityOAuth2Exception {

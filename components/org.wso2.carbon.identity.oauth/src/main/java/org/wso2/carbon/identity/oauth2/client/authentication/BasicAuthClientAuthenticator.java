@@ -43,7 +43,7 @@ import java.util.Map;
  */
 public class BasicAuthClientAuthenticator extends AbstractOAuthClientAuthenticator {
 
-    private static Log log = LogFactory.getLog(BasicAuthClientAuthenticator.class);
+    private static final Log log = LogFactory.getLog(BasicAuthClientAuthenticator.class);
     private static String CREDENTIAL_SEPARATOR = ":";
     private static String SIMPLE_CASE_AUTHORIZATION_HEADER = "authorization";
     private static String BASIC_PREFIX = "Basic";
@@ -196,7 +196,10 @@ public class BasicAuthClientAuthenticator extends AbstractOAuthClientAuthenticat
     protected boolean isBasicAuthorizationHeaderExists(HttpServletRequest request) {
 
         String authorizationHeader = getAuthorizationHeader(request);
-        if (StringUtils.isNotEmpty(authorizationHeader) && authorizationHeader.startsWith(BASIC_PREFIX)) {
+        // authorizationHeader should be case-insensitive according to the
+        // "The 'Basic' HTTP Authentication Scheme" spec (https://tools.ietf.org/html/rfc7617#page-3),
+        // "Note that both scheme and parameter names are matched case-insensitively."
+        if (StringUtils.isNotEmpty(authorizationHeader) && authorizationHeader.toUpperCase().startsWith(BASIC_PREFIX.toUpperCase())) {
             return true;
         }
         return false;
@@ -240,7 +243,7 @@ public class BasicAuthClientAuthenticator extends AbstractOAuthClientAuthenticat
         }
         String errMsg = "Error decoding authorization header. Space delimited \"<authMethod> <base64Hash>\" format " +
                 "violated.";
-        throw new OAuthClientAuthnException(errMsg, OAuth2ErrorCodes.INVALID_REQUEST);
+        throw new OAuthClientAuthnException(errMsg, OAuth2ErrorCodes.INVALID_CLIENT);
     }
 
     /**

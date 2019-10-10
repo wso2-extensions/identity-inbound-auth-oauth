@@ -46,6 +46,7 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.model.ClaimConfig;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
+import org.wso2.carbon.identity.application.common.model.LocalAndOutboundAuthenticationConfig;
 import org.wso2.carbon.identity.application.common.model.LocalRole;
 import org.wso2.carbon.identity.application.common.model.PermissionsAndRoleConfig;
 import org.wso2.carbon.identity.application.common.model.RoleMapping;
@@ -194,6 +195,8 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
     private static final String ROLE3 = "role3";
     private static final String ROLE_CLAIM_DEFAULT_VALUE =
             ROLE1 + MULTI_ATTRIBUTE_SEPARATOR_DEFAULT + ROLE2 + MULTI_ATTRIBUTE_SEPARATOR_DEFAULT + ROLE3;
+    private static final String ROLE_CLAIM_DEFAULT_VALUE_WITH_DOMAIN =
+            "Secondary/role1" + MULTI_ATTRIBUTE_SEPARATOR_DEFAULT + "Secondary/role2";
 
     private static final String SP_ROLE_2 = "SP_ROLE2";
 
@@ -209,7 +212,13 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
         put(LOCAL_ROLE_CLAIM_URI, ROLE_CLAIM_DEFAULT_VALUE);
     }};
 
-    private final Log log = LogFactory.getLog(DefaultOIDCClaimsCallbackHandlerTest.class);
+    private static final Log log = LogFactory.getLog(DefaultOIDCClaimsCallbackHandlerTest.class);
+    private static final Map<String, String> USER_CLAIMS_MAP_WITH_SECONDARY_ROLES = new HashMap<String, String>() {{
+        put(LOCAL_EMAIL_CLAIM_URI, "john@example.com");
+        put(LOCAL_USERNAME_CLAIM_URI, "john");
+        put(LOCAL_ROLE_CLAIM_URI, ROLE_CLAIM_DEFAULT_VALUE_WITH_DOMAIN);
+    }};
+
     public static final String DB_NAME = "jdbc/WSO2CarbonDB";
     public static final String H2_SCRIPT_NAME = "dbScripts/scope_claim.sql";
     Connection connection = null;
@@ -508,6 +517,34 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
         JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx);
         assertNotNull(jwtClaimsSet);
         assertNotNull(jwtClaimsSet.getClaim("username"));
+
+    }
+
+    @Test
+    public void testHandleCustomClaimsWithOAuthTokenReqMsgCtxtWithRoleDomainRemoved() throws Exception {
+
+
+        JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
+        OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForLocalUser();
+
+        ServiceProvider serviceProvider = getSpWithDefaultRequestedClaimsMappings();
+        mockApplicationManagementService(serviceProvider);
+        LocalAndOutboundAuthenticationConfig localAndOutboundAuthenticationConfig =
+                new LocalAndOutboundAuthenticationConfig();
+        // Enable user store domain removal for roles
+        localAndOutboundAuthenticationConfig.setUseUserstoreDomainInRoles(false);
+        serviceProvider.setLocalAndOutBoundAuthenticationConfig(localAndOutboundAuthenticationConfig);
+
+        UserRealm userRealm = getUserRealmWithUserClaims(USER_CLAIMS_MAP_WITH_SECONDARY_ROLES);
+        mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm);
+
+        mockClaimHandler();
+
+        JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx);
+        assertNotNull(jwtClaimsSet);
+        assertNotNull(jwtClaimsSet.getClaim("username"));
+        assertEquals(jwtClaimsSet.getStringArrayClaim("role")[0],"role1");
+        assertEquals(jwtClaimsSet.getStringArrayClaim("role")[1],"role2");
 
     }
 

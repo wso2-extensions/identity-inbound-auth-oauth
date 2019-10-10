@@ -176,7 +176,7 @@ public class OAuthApplicationMgtListenerTest extends TestOAuthDAOBase {
 
         try (Connection connection = getConnection(DB_NAME)) {
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
-
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
             ServiceProvider serviceProvider =
                     createServiceProvider(1, hasAuthConfig, hasRequestConfig, authType, propName);
             boolean result =
@@ -190,7 +190,7 @@ public class OAuthApplicationMgtListenerTest extends TestOAuthDAOBase {
 
         try (Connection connection = getConnection(DB_NAME)) {
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
-
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
             boolean result = oAuthApplicationMgtListener.doPostGetServiceProvider(null, spName, tenantDomain);
             assertTrue(result, "Post-get service provider failed.");
         }
@@ -201,7 +201,7 @@ public class OAuthApplicationMgtListenerTest extends TestOAuthDAOBase {
 
         try (Connection connection = getConnection(DB_NAME)) {
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
-
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
             ServiceProvider serviceProvider = createServiceProvider(1, true, true, OAUTH2, OAUTH_CONSUMER_SECRET);
             boolean result = oAuthApplicationMgtListener.doPostGetServiceProviderByClientId(serviceProvider,
                     "clientId", "clientType", tenantDomain);
@@ -214,7 +214,7 @@ public class OAuthApplicationMgtListenerTest extends TestOAuthDAOBase {
 
         try (Connection connection = getConnection(DB_NAME)) {
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
-
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
             ServiceProvider serviceProvider = createServiceProvider(1, true, true, OAUTH2, OAUTH_CONSUMER_SECRET);
             boolean result = oAuthApplicationMgtListener.doPostCreateApplication(serviceProvider, tenantDomain, userName);
             assertTrue(result, "Post-create application failed.");
@@ -248,6 +248,7 @@ public class OAuthApplicationMgtListenerTest extends TestOAuthDAOBase {
 
         try (Connection connection = getConnection(DB_NAME)) {
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
             if (StringUtils.equals(authType, OAUTH2) || StringUtils.equals(authType, OAUTH)) {
                 Set<String> accessTokens = new HashSet<>();
                 accessTokens.add("accessToken1");
@@ -289,7 +290,7 @@ public class OAuthApplicationMgtListenerTest extends TestOAuthDAOBase {
 
         try (Connection connection = getConnection(DB_NAME)) {
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
-
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
             ServiceProvider serviceProvider = createServiceProvider(1, true, true, OAUTH2, OAUTH_CONSUMER_SECRET);
             boolean result = oAuthApplicationMgtListener.doPostGetApplicationExcludingFileBasedSPs(serviceProvider, spName, tenantDomain);
             assertTrue(result, "Post-get application excluding file based service providers failed.");
@@ -301,7 +302,7 @@ public class OAuthApplicationMgtListenerTest extends TestOAuthDAOBase {
 
         try (Connection connection = getConnection(DB_NAME)) {
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
-
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
             ServiceProvider serviceProvider = createServiceProvider(1, false, false, "otherAuthType",
                     OAUTH_CONSUMER_SECRET);
             when(mockAppMgtService.getApplicationExcludingFileBasedSPs(anyString(), anyString())).thenReturn(serviceProvider);

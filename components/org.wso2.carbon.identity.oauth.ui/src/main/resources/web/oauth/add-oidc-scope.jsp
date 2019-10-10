@@ -68,22 +68,7 @@
     <script type="text/javascript">
         function doFinish() {
             document.dataForm.action = "add-oidc-scope-finish-ajaxprocessor.jsp";
-            if (doValidation() === true) {
-                document.dataForm.submit();
-            }
-        }
-
-        function doValidation() {
-            var reason = validateEmpty("scopeName");
-            if (reason != "") {
-                CARBON.showWarningDialog('<fmt:message key="scope.name.cannot.be.empty"/>');
-                return false;
-            }
-            if(claimRowId<=-1){
-                CARBON.showWarningDialog('<fmt:message key="scope.without.claims"/>');
-                return false;
-            }
-            return true
+            document.dataForm.submit();
         }
 
         var deleteClaimRows = [];
@@ -132,7 +117,7 @@
         <h2><fmt:message key="add.scope"/></h2>
         
         <div id="workArea">
-            <form method="post" action="add-oidc-scope-finish-ajaxprocessor.jsp" name="dataForm" onsubmit="return doValidation();">
+            <form method="post" action="add-oidc-scope-finish-ajaxprocessor.jsp" name="dataForm">
                 
                 <table class="styledLeft" id="scopeAdd" width="60%">
                     <thead>

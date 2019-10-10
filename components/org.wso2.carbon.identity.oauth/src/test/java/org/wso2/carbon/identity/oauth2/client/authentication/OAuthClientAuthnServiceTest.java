@@ -98,10 +98,10 @@ public class OAuthClientAuthnServiceTest extends PowerMockIdentityBaseTest {
                 {headersWithClientIDandSecret, new HashMap<String, List>(), true, true, null, 1, CLIENT_ID, false},
 
                 // Only client id is present with correct encoding for basic auth.
-                {headerWithClientId, new HashMap<String, List>(), false, true, "invalid_request", 1, null, false},
+                {headerWithClientId, new HashMap<String, List>(), false, true, "invalid_client", 1, null, false},
 
                 // Only client secret is present with correct encoding for basic auth.
-                {headersClientSecret, new HashMap<String, List>(), false, true, "invalid_request", 1, null, false},
+                {headersClientSecret, new HashMap<String, List>(), false, true, "invalid_client", 1, null, false},
 
                 // Multiple authenticators are engaged since multiple evaluation criteria are met.
                 {headersWithMultipleCreds, new HashMap<String, List>(), false, true, "invalid_request", 2, CLIENT_ID,

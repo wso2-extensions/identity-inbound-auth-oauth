@@ -54,7 +54,7 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
     // This is used to keep the pre processed authorization code in the OAuthTokenReqMessageContext.
     private static final String AUTHZ_CODE = "AuthorizationCode";
     private static final int ALLOWED_MINIMUM_VALIDITY_PERIOD = 1000;
-    private static Log log = LogFactory.getLog(AuthorizationCodeGrantHandler.class);
+    private static final Log log = LogFactory.getLog(AuthorizationCodeGrantHandler.class);
 
     @Override
     public boolean validateGrant(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {

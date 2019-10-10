@@ -41,13 +41,24 @@ import java.util.Map;
  */
 public class OAuthClientAuthenticatorProxy extends AbstractPhaseInterceptor<Message> {
 
-    private Log log = LogFactory.getLog(OAuthClientAuthenticatorProxy.class);
+    private static final Log log = LogFactory.getLog(OAuthClientAuthenticatorProxy.class);
     private static String HTTP_REQUEST = "HTTP.REQUEST";
+    private OAuthClientAuthnService oAuthClientAuthnService;
 
     public OAuthClientAuthenticatorProxy() {
 
         // Since the body is consumed and body parameters are available at this phase we use "PRE_INVOKE"
         super(Phase.PRE_INVOKE);
+    }
+
+    public OAuthClientAuthnService getOAuthClientAuthnService() {
+
+        return oAuthClientAuthnService;
+    }
+
+    public void setOAuthClientAuthnService(OAuthClientAuthnService oAuthClientAuthnService) {
+
+        this.oAuthClientAuthnService = oAuthClientAuthnService;
     }
 
     /**
@@ -58,8 +69,6 @@ public class OAuthClientAuthenticatorProxy extends AbstractPhaseInterceptor<Mess
     @Override
     public void handleMessage(Message message) {
 
-        OAuthClientAuthnService oAuthClientAuthnService = (OAuthClientAuthnService) PrivilegedCarbonContext
-                .getThreadLocalCarbonContext().getOSGiService(OAuthClientAuthnService.class, null);
         Map<String, List> bodyContentParams = getContentParams(message);
         HttpServletRequest request = ((HttpServletRequest) message.get(HTTP_REQUEST));
         OAuthClientAuthnContext oAuthClientAuthnContext = oAuthClientAuthnService.authenticateClient(request,

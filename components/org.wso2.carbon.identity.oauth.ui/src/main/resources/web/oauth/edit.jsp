@@ -177,6 +177,8 @@
                 if (val != null) {
                     scopeValidators = Arrays.asList(val);
                 }
+            } else {
+                grants = "";
             }
         }
 
@@ -270,14 +272,15 @@
                         CARBON.showWarningDialog('<fmt:message key="application.is.required"/>');
                         return false;
                     }
-                    if (!$(jQuery("#grant_refresh_token"))[0].checked) {
-                        document.getElementById("renewRefreshTokenPerApp").checked = true;
-                        document.getElementById("renewRefreshTokenPerApp").value = 'notAssigned';
-                    }
 
                     var versionValue = document.getElementsByName("oauthVersion")[0].value;
 
                     if (versionValue === '<%= OAuthConstants.OAuthVersions.VERSION_2%>') {
+                        if (!$(jQuery("#grant_refresh_token"))[0].checked) {
+                            document.getElementById("renewRefreshTokenPerApp").checked = true;
+                            document.getElementById("renewRefreshTokenPerApp").value = 'notAssigned';
+                        }
+
                         if (!$(jQuery("#grant_authorization_code"))[0].checked && !$(jQuery("#grant_implicit"))[0].checked) {
                             document.getElementsByName("callback")[0].value = '';
                         } else {
@@ -851,7 +854,8 @@
                                     <td colspan="2">
                                         <label title="Enable OIDC Backchannel Logout. Add the Backchannel Logout Endpoint URL in the textbox below">
                                             <input type="checkbox" name="logoutMechanism"
-                                                   id="backchannel_logout" value="true"
+                                                   id="backchannel_logout"
+                                                   value="<%= Encode.forHtmlAttribute(OAuthConstants.OIDCConfigProperties.BACK_CHANNEL_LOGOUT)%>"
                                                    onclick="toggleOidcLogout(this);"
                                                     <%= (isBackchannelLogoutEnabled ? "checked" : "")%>
                                             />

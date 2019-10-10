@@ -34,7 +34,7 @@ import java.util.Map;
  */
 public class OAuthClientAuthnService {
 
-    private Log log = LogFactory.getLog(OAuthClientAuthnService.class);
+    private static final Log log = LogFactory.getLog(OAuthClientAuthnService.class);
 
     /**
      * Retrieve OAuth2 client authenticators which are reigstered dynamically.

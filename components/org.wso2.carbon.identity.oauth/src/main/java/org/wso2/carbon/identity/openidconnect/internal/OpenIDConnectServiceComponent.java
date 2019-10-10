@@ -44,7 +44,7 @@ import java.util.Comparator;
 )
 public class OpenIDConnectServiceComponent {
 
-    private Log log = LogFactory.getLog(OpenIDConnectServiceComponent.class);
+    private static final Log log = LogFactory.getLog(OpenIDConnectServiceComponent.class);
     private BundleContext bundleContext;
 
     protected void activate(ComponentContext context) {

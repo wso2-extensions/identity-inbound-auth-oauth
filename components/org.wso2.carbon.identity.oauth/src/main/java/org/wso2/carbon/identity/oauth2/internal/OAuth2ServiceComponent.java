@@ -66,7 +66,7 @@ import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkIDPIdColumnAv
 )
 public class OAuth2ServiceComponent {
 
-    private static Log log = LogFactory.getLog(OAuth2ServiceComponent.class);
+    private static final Log log = LogFactory.getLog(OAuth2ServiceComponent.class);
     private BundleContext bundleContext;
 
     @Reference(
@@ -257,7 +257,7 @@ public class OAuth2ServiceComponent {
 
     private boolean checkPKCESupport() {
 
-        try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
 
             String sql;
             if (connection.getMetaData().getDriverName().contains("MySQL")

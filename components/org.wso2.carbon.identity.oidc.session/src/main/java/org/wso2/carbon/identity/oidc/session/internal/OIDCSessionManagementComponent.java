@@ -28,9 +28,11 @@ import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
 import org.osgi.service.http.HttpService;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
 import org.wso2.carbon.identity.oidc.session.backChannelLogout.ClaimProviderImpl;
+import org.wso2.carbon.identity.oidc.session.handler.OIDCLogoutEventHandler;
 import org.wso2.carbon.identity.oidc.session.handler.OIDCLogoutHandler;
 import org.wso2.carbon.identity.oidc.session.servlet.OIDCLogoutServlet;
 import org.wso2.carbon.identity.oidc.session.servlet.OIDCSessionIFrameServlet;
@@ -87,6 +89,15 @@ public class OIDCSessionManagementComponent {
 
         if (log.isDebugEnabled()) {
             log.debug("ClaimProvider bundle is activated");
+        }
+
+        try {
+            context.getBundleContext().registerService(AbstractEventHandler.class.getName(),
+                    new OIDCLogoutEventHandler(), null);
+        } catch (Exception e) {
+            String msg = "Error when registering OIDCLogoutEventHandler.";
+            log.error(msg, e);
+            throw new RuntimeException(msg, e);
         }
     }
 

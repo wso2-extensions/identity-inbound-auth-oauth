@@ -106,7 +106,7 @@ public class OAuthServerConfiguration {
     private static final String JWT_TOKEN_ISSUER_CLASS =
             "org.wso2.carbon.identity.oauth2.token.JWTTokenIssuer";
     private static final String REQUEST_PARAM_VALUE_BUILDER = "request_param_value_builder";
-    private static Log log = LogFactory.getLog(OAuthServerConfiguration.class);
+    private static final Log log = LogFactory.getLog(OAuthServerConfiguration.class);
     private static OAuthServerConfiguration instance;
     private static String oauth1RequestTokenUrl = null;
     private static String oauth1AuthorizeUrl = null;
@@ -135,6 +135,7 @@ public class OAuthServerConfiguration {
     private String retainOldAccessTokens;
     private String tokenCleanupFeatureEnable;
     private OauthTokenIssuer oauthIdentityTokenGenerator;
+    private boolean scopeValidationConfigValue = true;
     private boolean cacheEnabled = false;
     private boolean isTokenRenewalPerRequestEnabled = false;
     private boolean isRefreshTokenRenewalEnabled = true;
@@ -222,7 +223,7 @@ public class OAuthServerConfiguration {
     private Set<OAuth2ScopeValidator> oAuth2ScopeValidators = new HashSet<>();
     private Set<OAuth2ScopeHandler> oAuth2ScopeHandlers = new HashSet<>();
     // property added to fix IDENTITY-4492 in backward compatible manner
-    private boolean isJWTSignedWithSPKey = false;
+    private boolean isJWTSignedWithSPKey = true;
     // property added to fix IDENTITY-4534 in backward compatible manner
     private boolean isImplicitErrorFragment = true;
     // property added to fix IDENTITY-4112 in backward compatible manner
@@ -289,6 +290,14 @@ public class OAuthServerConfiguration {
         //Get the configured scope validators
         OMElement scopeValidatorsElem = oauthElem.getFirstChildWithName(
                 getQNameWithIdentityNS(ConfigElements.SCOPE_VALIDATORS));
+
+        //Get scopeValidationEnabledConfigValue
+        OMElement scopeValidationElem = oauthElem.getFirstChildWithName(
+                getQNameWithIdentityNS(ConfigElements.SCOPE_VALIDATION_FOR_AUTHZ_CODE_AND_IMPLICIT));
+
+        if (scopeValidationElem != null) {
+            scopeValidationConfigValue = Boolean.parseBoolean(scopeValidationElem.getText());
+        }
 
         if (scopeValidatorElem != null) {
             parseScopeValidator(scopeValidatorElem);
@@ -2707,6 +2716,15 @@ public class OAuthServerConfiguration {
     }
 
     /**
+     * This method returns the value of the property ScopeValidationEnabledForAuthzCodeAndImplicitGrant  for the OAuth
+     * configuration
+     * in identity.xml.
+     */
+    public boolean isScopeValidationEnabledForCodeAndImplicitGrant() {
+        return scopeValidationConfigValue;
+    }
+
+    /**
      * Localpart names for the OAuth configuration in identity.xml.
      */
     private class ConfigElements {
@@ -2800,6 +2818,9 @@ public class OAuthServerConfiguration {
         private static final String SCOPE_CLASS_ATTR = "class";
         private static final String SKIP_SCOPE_ATTR = "scopesToSkip";
         private static final String IMPLICIT_ERROR_FRAGMENT = "ImplicitErrorFragment";
+
+        // Enable/Disable scope validation for implicit grant and authorization code grant
+        private static final String SCOPE_VALIDATION_FOR_AUTHZ_CODE_AND_IMPLICIT = "ScopeValidationEnabledForAuthzCodeAndImplicitGrant";
 
         // Default timestamp skew
         private static final String TIMESTAMP_SKEW = "TimestampSkew";

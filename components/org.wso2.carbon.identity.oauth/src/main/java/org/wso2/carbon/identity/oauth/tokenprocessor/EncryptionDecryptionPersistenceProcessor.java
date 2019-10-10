@@ -31,7 +31,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
  */
 public class EncryptionDecryptionPersistenceProcessor implements TokenPersistenceProcessor {
 
-    protected Log log = LogFactory.getLog(EncryptionDecryptionPersistenceProcessor.class);
+    protected static final Log log = LogFactory.getLog(EncryptionDecryptionPersistenceProcessor.class);
 
     /**
      * Client ID is not to be decrypt as it's not encrypted

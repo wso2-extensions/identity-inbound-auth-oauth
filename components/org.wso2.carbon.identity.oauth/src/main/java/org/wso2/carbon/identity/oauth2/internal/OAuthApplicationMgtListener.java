@@ -73,7 +73,7 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
     public static final String OAUTH2_CONSUMER_SECRET = "oauthConsumerSecret";
     private static final String OAUTH = "oauth";
     private static final String SAAS_PROPERTY = "saasProperty";
-    private static Log log = LogFactory.getLog(OAuthApplicationMgtListener.class);
+    private static final Log log = LogFactory.getLog(OAuthApplicationMgtListener.class);
 
     @Override
     public int getDefaultOrderId() {
@@ -555,7 +555,8 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                         // Do nothing, the key does exists.
                     }
 
-                    if ((oAuthAppDO.getGrantTypes().contains(OAuthConstants.GrantTypes.AUTHORIZATION_CODE)
+                    if (oAuthAppDO.getGrantTypes() != null
+                            && (oAuthAppDO.getGrantTypes().contains(OAuthConstants.GrantTypes.AUTHORIZATION_CODE)
                             || oAuthAppDO.getGrantTypes().contains(OAuthConstants.GrantTypes.IMPLICIT))
                             && StringUtils.isEmpty(oAuthAppDO.getCallbackUrl())) {
                         validationMsg.add("Callback Url is required for Code or Implicit grant types");

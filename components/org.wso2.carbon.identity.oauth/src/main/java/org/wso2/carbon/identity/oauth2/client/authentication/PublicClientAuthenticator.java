@@ -37,7 +37,7 @@ import javax.servlet.http.HttpServletRequest;
  */
 public class PublicClientAuthenticator extends AbstractOAuthClientAuthenticator {
 
-    private static Log log = LogFactory.getLog(PublicClientAuthenticator.class);
+    private static final Log log = LogFactory.getLog(PublicClientAuthenticator.class);
 
     /**
      * Returns the execution order of this authenticator.

@@ -33,7 +33,7 @@ public class OAuthComponentServiceHolder {
     private RealmService realmService;
     private OAuthEventInterceptor oAuthEventInterceptorHandlerProxy;
     private OAuth2Service oauth2Service;
-    private static Log log = LogFactory.getLog(OAuthComponentServiceHolder.class);
+    private static final Log log = LogFactory.getLog(OAuthComponentServiceHolder.class);
 
     private OAuthComponentServiceHolder() {
 

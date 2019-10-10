@@ -43,7 +43,7 @@ import javax.servlet.Servlet;
         immediate = true
 )
 public class WebFingerServiceComponent {
-    private static Log log = LogFactory.getLog(WebFingerServiceComponent.class);
+    private static final Log log = LogFactory.getLog(WebFingerServiceComponent.class);
 
     protected void activate(ComponentContext context) {
         try {
