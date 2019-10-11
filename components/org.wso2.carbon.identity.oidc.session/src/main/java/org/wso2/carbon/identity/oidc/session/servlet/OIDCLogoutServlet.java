@@ -194,6 +194,11 @@ public class OIDCLogoutServlet extends HttpServlet {
                 } else {
                     // Add OIDC Cache entry without properties since OIDC Logout should work without id_token_hint
                     OIDCSessionDataCacheEntry cacheEntry = new OIDCSessionDataCacheEntry();
+
+                    // Logout request without id_token_hint will redirected to an IDP's page once logged out, rather a RP's
+                    // callback endpoint. The state parameter is set here in the cache, so that it will be available in the
+                    // redirected IDP's page to support any custom requirement.
+                    setStateParameterInCache(request, cacheEntry);
                     addSessionDataToCache(opBrowserStateCookie.getValue(), cacheEntry);
                 }
 
@@ -407,10 +412,21 @@ public class OIDCLogoutServlet extends HttpServlet {
         } else {
             // Add OIDC Cache entry without properties since OIDC Logout should work without id_token_hint
             OIDCSessionDataCacheEntry cacheEntry = new OIDCSessionDataCacheEntry();
+
+            // Logout request without id_token_hint will redirected to an IDP's page once logged out, rather a RP's
+            // callback endpoint. The state parameter is set here in the cache, so that it will be available in the
+            // redirected IDP's page to support any custom requirement.
+            setStateParameterInCache(request, cacheEntry);
             Cookie opBrowserStateCookie = OIDCSessionManagementUtil.getOPBrowserStateCookie(request);
             addSessionDataToCache(opBrowserStateCookie.getValue(), cacheEntry);
         }
         response.sendRedirect(getRedirectURL(redirectURL, request));
+    }
+
+    private void setStateParameterInCache(HttpServletRequest request, OIDCSessionDataCacheEntry cacheEntry) {
+
+        String state = request.getParameter(OIDCSessionConstants.OIDC_STATE_PARAM);
+        cacheEntry.setState(state);
     }
 
     /**
