@@ -21,8 +21,6 @@ package org.wso2.carbon.identity.oauth2.token.handlers.grant.saml;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang.StringUtils;
 import org.joda.time.DateTime;
-import org.opensaml.core.config.InitializationException;
-import org.opensaml.core.config.InitializationService;
 import org.opensaml.saml.security.impl.SAMLSignatureProfileValidator;
 import org.powermock.reflect.internal.WhiteboxImpl;
 import org.testng.annotations.BeforeMethod;
@@ -37,6 +35,7 @@ import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithH2Database;
 import org.wso2.carbon.identity.common.testng.WithRealmService;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.core.util.SAMLInitializer;
 import org.wso2.carbon.identity.oauth2.TestConstants;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.model.RequestParameter;
@@ -179,7 +178,7 @@ public class SAML1BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
         OAuthTokenReqMessageContext oAuthTokenReqMessageContext = buildOAuth2AccessTokenReqDTO();
         RequestParameter[] requestParameters = new RequestParameter[] {new RequestParameter("assertion",
                 Base64.encodeBase64String(assertion.getBytes()))};
-        doBootstrap();
+        SAMLInitializer.doBootstrap();
         oAuthTokenReqMessageContext.getOauth2AccessTokenReqDTO().setRequestParameters(requestParameters);
         WhiteboxImpl.setInternalState(saml1BearerGrantHandler, "audienceRestrictionValidationEnabled",
                 enableAudienceRestriction);
@@ -228,49 +227,6 @@ public class SAML1BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
         OAuthTokenReqMessageContext oAuthTokenReqMessageContext = new OAuthTokenReqMessageContext(
                 oAuth2AccessTokenReqDTO);
         return oAuthTokenReqMessageContext;
-    }
-
-    private static void doBootstrap() {
-
-        Thread thread = Thread.currentThread();
-        ClassLoader loader = thread.getContextClassLoader();
-        thread.setContextClassLoader(InitializationService.class.getClassLoader());
-
-        try {
-            InitializationService.initialize();
-
-            org.opensaml.saml.config.SAMLConfigurationInitializer initializer_1 = new org.opensaml.saml.config.SAMLConfigurationInitializer();
-            initializer_1.init();
-
-            org.opensaml.saml.config.XMLObjectProviderInitializer initializer_2 = new org.opensaml.saml.config.XMLObjectProviderInitializer();
-            initializer_2.init();
-
-            org.opensaml.core.xml.config.XMLObjectProviderInitializer initializer_3 = new org.opensaml.core.xml.config.XMLObjectProviderInitializer();
-            initializer_3.init();
-
-            org.opensaml.core.xml.config.GlobalParserPoolInitializer initializer_4 = new org.opensaml.core.xml.config.GlobalParserPoolInitializer();
-            initializer_4.init();
-
-            org.opensaml.xmlsec.config.JavaCryptoValidationInitializer initializer_5 = new org.opensaml.xmlsec.config.JavaCryptoValidationInitializer();
-            initializer_5.init();
-
-            org.opensaml.xmlsec.config.XMLObjectProviderInitializer initializer_6 = new org.opensaml.xmlsec.config.XMLObjectProviderInitializer();
-            initializer_6.init();
-
-            org.opensaml.xmlsec.config.ApacheXMLSecurityInitializer initializer_7 = new org.opensaml.xmlsec.config.ApacheXMLSecurityInitializer();
-            initializer_7.init();
-
-            org.opensaml.xmlsec.config.GlobalSecurityConfigurationInitializer initializer_8 = new org.opensaml.xmlsec.config.GlobalSecurityConfigurationInitializer();
-            initializer_8.init();
-
-            org.opensaml.xmlsec.config.GlobalAlgorithmRegistryInitializer initializer_9 = new org.opensaml.xmlsec.config.GlobalAlgorithmRegistryInitializer();
-            initializer_9.init();
-
-        } catch (InitializationException e) {
-            System.out.println("Error in bootstrapping the OpenSAML3 library");
-        } finally {
-            thread.setContextClassLoader(loader);
-        }
     }
 }
 
