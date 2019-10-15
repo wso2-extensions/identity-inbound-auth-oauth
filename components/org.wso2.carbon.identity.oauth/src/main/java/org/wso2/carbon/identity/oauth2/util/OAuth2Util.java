@@ -1325,13 +1325,16 @@ public class OAuth2Util {
         return OAuth2ServiceComponentHolder.isPkceEnabled();
     }
 
+    /**
+     * To check whether the given response type is for Implicit flow.
+     *
+     * @param responseType response type
+     * @return true if the response type is for Implicit flow
+     */
     public static boolean isImplicitResponseType(String responseType) {
 
-        if (StringUtils.isNotBlank(responseType) && (responseType.contains(ResponseType.TOKEN.toString()) ||
-                responseType.contains(OAuthConstants.ID_TOKEN))) {
-            return true;
-        }
-        return false;
+        return (StringUtils.isNotBlank(responseType) && (OAuthConstants.ID_TOKEN).equals(responseType) ||
+                (OAuthConstants.TOKEN).equals(responseType) || (OAuthConstants.IDTOKEN_TOKEN).equals(responseType));
     }
 
     /**
