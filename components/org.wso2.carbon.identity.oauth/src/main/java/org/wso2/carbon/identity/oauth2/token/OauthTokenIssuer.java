@@ -61,7 +61,6 @@ public interface OauthTokenIssuer {
         return renewAccessTokenPerRequest();
     }
 
-
     /**
      * Renew access token per request by token message context.
      *
