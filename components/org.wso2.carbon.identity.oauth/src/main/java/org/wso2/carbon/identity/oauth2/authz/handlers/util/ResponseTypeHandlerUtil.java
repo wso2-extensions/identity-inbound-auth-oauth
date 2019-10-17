@@ -157,7 +157,7 @@ public class ResponseTypeHandlerUtil {
             AccessTokenDO existingTokenBean = getExistingToken(oauthAuthzMsgCtx, cacheEnabled);
 
             // Return a new access token in each request when JWTTokenIssuer is used.
-            if (isNotRenewAccessTokenPerRequest(oauthIssuerImpl)) {
+            if (isNotRenewAccessTokenPerRequest(oauthIssuerImpl, oauthAuthzMsgCtx)) {
                 if (existingTokenBean != null) {
 
                     // Revoke token if RenewTokenPerRequest configuration is enabled.
@@ -828,9 +828,10 @@ public class ResponseTypeHandlerUtil {
         return oAuthAppBean;
     }
 
-    private static boolean isNotRenewAccessTokenPerRequest(OauthTokenIssuer oauthIssuerImpl) {
+    private static boolean isNotRenewAccessTokenPerRequest(OauthTokenIssuer oauthIssuerImpl,
+                                                           OAuthAuthzReqMessageContext oauthAuthzMsgCtx) {
 
-        boolean isRenew = oauthIssuerImpl.renewAccessTokenPerRequest();
+        boolean isRenew = oauthIssuerImpl.renewAccessTokenPerRequest(oauthAuthzMsgCtx);
         if (log.isDebugEnabled()) {
             log.debug("Enable Access Token renew per request: " + isRenew);
         }
