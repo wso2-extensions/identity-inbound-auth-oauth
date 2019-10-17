@@ -613,7 +613,8 @@ public class OAuthAdminServiceImpl {
     public OAuthConsumerAppDTO updateAndRetrieveOauthSecretKey(String consumerKey) throws IdentityOAuthAdminException {
 
         Properties properties = new Properties();
-        properties.setProperty(OAuthConstants.OAUTH_APP_NEW_SECRET_KEY, OAuthUtil.getRandomNumber());
+        String newSecret = OAuthUtil.getRandomNumber();
+        properties.setProperty(OAuthConstants.OAUTH_APP_NEW_SECRET_KEY, newSecret);
         properties.setProperty(OAuthConstants.ACTION_PROPERTY_KEY, OAuthConstants.ACTION_REGENERATE);
 
         AppInfoCache.getInstance().clearCacheEntry(consumerKey);
@@ -622,7 +623,10 @@ public class OAuthAdminServiceImpl {
             log.debug("Client Secret for OAuth app with consumerKey: " + consumerKey + " updated in OAuthCache.");
         }
 
-        return getOAuthApplicationData(consumerKey);
+        OAuthConsumerAppDTO updatedApplication = getOAuthApplicationData(consumerKey);
+        updatedApplication.setOauthConsumerSecret(newSecret);
+
+        return updatedApplication;
 
     }
 
