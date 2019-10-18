@@ -148,18 +148,23 @@ public class RequestObject implements Serializable {
                 //To iterate the claims json object to fetch the claim requestor and all requested claims.
                 for (Map.Entry<String, Object> requesterClaimsMap : jsonObjectClaim.entrySet()) {
                     List<RequestedClaim> requestedClaimsList = new ArrayList();
-                    JSONObject jsonObjectAllRequestedClaims;
                     if (jsonObjectClaim.get(requesterClaimsMap.getKey()) != null) {
-                        jsonObjectAllRequestedClaims = (JSONObject) jsonObjectClaim.get(requesterClaimsMap.getKey());
 
-                        if (jsonObjectAllRequestedClaims != null) {
-                            for (Map.Entry<String, Object> requestedClaims : jsonObjectAllRequestedClaims.entrySet()) {
-                                JSONObject jsonObjectClaimAttributes = null;
-                                if (jsonObjectAllRequestedClaims.get(requestedClaims.getKey()) != null) {
-                                    jsonObjectClaimAttributes = (JSONObject) jsonObjectAllRequestedClaims.get(requestedClaims.getKey());
+                        // Get requested claim object
+                        Object requestedClaimObject = jsonObjectClaim.get(requesterClaimsMap.getKey());
+                        // Extract all requested claims if attribute is an JSONObject
+                        if (requestedClaimObject instanceof JSONObject) {
+                            JSONObject jsonObjectAllRequestedClaims  = (JSONObject)
+                                    jsonObjectClaim.get(requesterClaimsMap.getKey());
+                            if (jsonObjectAllRequestedClaims != null) {
+                                for (Map.Entry<String, Object> requestedClaims : jsonObjectAllRequestedClaims.entrySet()) {
+                                    JSONObject jsonObjectClaimAttributes = null;
+                                    if (jsonObjectAllRequestedClaims.get(requestedClaims.getKey()) != null) {
+                                        jsonObjectClaimAttributes = (JSONObject) jsonObjectAllRequestedClaims.get(requestedClaims.getKey());
+                                    }
+                                    populateRequestedClaimValues(requestedClaimsList, jsonObjectClaimAttributes,
+                                            requestedClaims.getKey(), requesterClaimsMap.getKey());
                                 }
-                                populateRequestedClaimValues(requestedClaimsList, jsonObjectClaimAttributes,
-                                        requestedClaims.getKey(), requesterClaimsMap.getKey());
                             }
                         }
                     }
