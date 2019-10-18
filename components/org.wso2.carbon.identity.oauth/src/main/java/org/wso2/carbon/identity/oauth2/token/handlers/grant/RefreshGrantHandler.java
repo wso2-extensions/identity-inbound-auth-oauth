@@ -106,12 +106,12 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         if (log.isDebugEnabled()) {
             log.debug("Persisted an access token for the refresh token, " +
                     "Client ID : " + tokenReq.getClientId() +
-                    "authorized user : " + tokReqMsgCtx.getAuthorizedUser() +
-                    "timestamp : " + accessTokenBean.getIssuedTime() +
-                    "validity period (s) : " + accessTokenBean.getValidityPeriod() +
-                    "scope : " + OAuth2Util.buildScopeString(tokReqMsgCtx.getScope()) +
-                    "Token State : " + OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE +
-                    "User Type : " + getTokenType());
+                    ", Authorized user : " + tokReqMsgCtx.getAuthorizedUser() +
+                    ", Timestamp : " + accessTokenBean.getIssuedTime() +
+                    ", Validity period (s) : " + accessTokenBean.getValidityPeriod() +
+                    ", Scope : " + OAuth2Util.buildScopeString(tokReqMsgCtx.getScope()) +
+                    ", Token State : " + OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE +
+                    "and User Type : " + getTokenType());
         }
 
         setTokenDataToMessageContext(tokReqMsgCtx, accessTokenBean);
