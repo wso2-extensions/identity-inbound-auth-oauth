@@ -167,6 +167,13 @@
             <scope>test</scope>
         </dependency>
 
+        <dependency>
+            <groupId>org.wso2.carbon.identity.ouath2.device</groupId>
+            <artifactId>device-flow</artifactId>
+            <version>1.0</version>
+            <scope>provided</scope>
+        </dependency>
+
         <!--Adding the below 2 dependencies to the webapp itself because the jars provided by the runtime
         are of older versions and have API changes-->
         <dependency>
