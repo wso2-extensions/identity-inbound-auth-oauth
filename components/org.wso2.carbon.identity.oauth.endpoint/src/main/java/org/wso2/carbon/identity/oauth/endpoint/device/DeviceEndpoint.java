@@ -45,15 +45,14 @@ public class DeviceEndpoint {
         String scope = request.getParameter("scope");
         String[] scopeSet = scope.split(" ");
         deviceFlowDO.setScope(scopeSet);
-        String redirectionUri = IdentityUtil.getServerURL("/authenticationendpoint/device.do", false,
-                false);
+        String redirectionUri = IdentityUtil.getServerURL("/authenticationendpoint/device.do",
+                false, false);
         String redirectionUriComplete = redirectionUri + "?user_code=" + userCode;
         Long expiresIn = 3600000L;
         Integer interval = 5000;
         OAuthResponse errorResponse;
 
-
-        if (clientId != null){
+        if (clientId != null) {
             if (validateClientId(clientId)) {
 
                 DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().insertDeviceFlow(deviceCode, userCode,
@@ -61,14 +60,14 @@ public class DeviceEndpoint {
 
                 OAuthResponse deviceResponse =
                         OAuthResponse.status(HttpServletResponse.SC_ACCEPTED).setParam(Constants.DEVICE_CODE,
-                                deviceCode).setParam(Constants.USER_CODE,userCode).setParam(Constants.VERIFICATION_URI,
-                                redirectionUri).setParam(Constants.VERIFICATION_URI_COMPLETE,redirectionUriComplete).
-                                setParam(Constants.EXPIRES_IN, String.valueOf(expiresIn/1000)).setParam(Constants.INTERVAL,
-                                String.valueOf(interval/1000)).buildJSONMessage();
+                                deviceCode).setParam(Constants.USER_CODE, userCode).setParam(Constants.VERIFICATION_URI,
+                                redirectionUri).setParam(Constants.VERIFICATION_URI_COMPLETE, redirectionUriComplete).
+                                setParam(Constants.EXPIRES_IN, String.valueOf(expiresIn / 1000))
+                                .setParam(Constants.INTERVAL, String.valueOf(interval / 1000)).buildJSONMessage();
                 Response.ResponseBuilder respBuilder = Response.status(response.getStatus());
                 return respBuilder.entity(deviceResponse.getBody()).build();
 
-            }else {
+            } else {
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
 
                 try {
@@ -110,6 +109,7 @@ public class DeviceEndpoint {
     }
 
     private boolean validateClientId(String clientId) throws IdentityOAuth2Exception {
+
         return DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().checkClientIdExist(clientId);
     }
 }

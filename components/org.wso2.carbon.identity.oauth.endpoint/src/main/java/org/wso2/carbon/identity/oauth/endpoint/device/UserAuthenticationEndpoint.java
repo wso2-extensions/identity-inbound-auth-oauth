@@ -46,7 +46,6 @@ public class UserAuthenticationEndpoint {
 
     private static final Log log = LogFactory.getLog(UserAuthenticationEndpoint.class);
 
-    private DeviceEndpoint deviceEndpoint = new DeviceEndpoint();
     OAuth2AuthzEndpoint oAuth2AuthzEndpoint = new OAuth2AuthzEndpoint();
 
     public UserAuthenticationEndpoint() {
@@ -58,18 +57,12 @@ public class UserAuthenticationEndpoint {
     @Consumes("application/x-www-form-urlencoded")
     @Produces("text/html")
     public Response device_authorize(@Context HttpServletRequest request, @Context HttpServletResponse response)
-            throws URISyntaxException, InvalidRequestParentException, IdentityOAuth2Exception, InvalidOAuthClientException, IOException, KeyManagementException, NoSuchAlgorithmException {
+            throws URISyntaxException, InvalidRequestParentException, IdentityOAuth2Exception, IOException {
 
         String userCode = request.getParameter(Constants.USER_CODE);
-//        log.info(userCode);
-
         String clientId = DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().getClientIdByUSerCode(userCode);
-//        log.info(clientId);
-        if (clientId !=null && !getUserCodeStatus(userCode).equals(Constants.USED)) {
-            DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().setUserAuthenticated(userCode, "USED");
-
-            log.info("through page");
-
+        if (clientId != null && !getUserCodeStatus(userCode).equals(Constants.USED)) {
+            DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().setUserAuthenticated(userCode, Constants.USED);
             CommonAuthRequestWrapper commonAuthRequestWrapper = new CommonAuthRequestWrapper(request);
             commonAuthRequestWrapper.setParameter(Constants.CLIENT_ID, clientId);
             commonAuthRequestWrapper.setParameter(Constants.RESPONSE_TYPE, Constants.DEVICE);
@@ -77,19 +70,20 @@ public class UserAuthenticationEndpoint {
                 commonAuthRequestWrapper.setParameter(Constants.SCOPE, getScope(userCode));
             }
             commonAuthRequestWrapper.setParameter("nonce", userCode);
-
             return oAuth2AuthzEndpoint.authorize(commonAuthRequestWrapper, response);
 
-        }else response.sendRedirect(IdentityUtil.getServerURL("/authenticationendpoint/device.do", false,
-                false));
+        } else response.sendRedirect(IdentityUtil.getServerURL("/authenticationendpoint/device.do",
+                false, false));
         return null;
     }
 
     private String getScope(String userCode) throws IdentityOAuth2Exception {
+
         return DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().getScopeForDevice(userCode);
     }
 
     private String getUserCodeStatus(String userCode) throws IdentityOAuth2Exception {
+
         return DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().getStatusForUserCode(userCode);
     }
 
