@@ -8,11 +8,11 @@ import org.apache.oltu.oauth2.common.message.OAuthResponse;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
-import org.wso2.identity.oauth2.device.CodeGenerator.GenerateKeys;
-import org.wso2.identity.oauth2.device.constants.Constants;
-import org.wso2.identity.oauth2.device.dao.DeviceFlowPersistenceFactory;
-import org.wso2.identity.oauth2.device.errorcodes.ErrorCodes;
-import org.wso2.identity.oauth2.device.model.DeviceFlowDO;
+import org.wso2.carbon.identity.oauth2.device.CodeGenerator.GenerateKeys;
+import org.wso2.carbon.identity.oauth2.device.constants.Constants;
+import org.wso2.carbon.identity.oauth2.device.dao.DeviceFlowPersistenceFactory;
+import org.wso2.carbon.identity.oauth2.device.errorcodes.DeviceErrorCodes;
+import org.wso2.carbon.identity.oauth2.device.model.DeviceFlowDO;
 
 import java.io.IOException;
 import java.util.UUID;
@@ -29,7 +29,6 @@ import javax.ws.rs.core.Response;
 public class DeviceEndpoint {
 
     private static final Log log = LogFactory.getLog(DeviceEndpoint.class);
-//    private
 
     @POST
     @Path("/")
@@ -73,7 +72,7 @@ public class DeviceEndpoint {
                 try {
                     errorResponse = OAuthASResponse
                             .errorResponse(response.getStatus())
-                            .setError(ErrorCodes.UNAUTHORIZED_CLIENT)
+                            .setError(DeviceErrorCodes.UNAUTHORIZED_CLIENT)
                             .setErrorDescription("No registered client with the client id.")
                             .buildJSONMessage();
 
@@ -91,11 +90,10 @@ public class DeviceEndpoint {
             try {
                 errorResponse = OAuthASResponse
                         .errorResponse(response.getStatus())
-                        .setError(ErrorCodes.INVALID_REQUEST)
+                        .setError(DeviceErrorCodes.INVALID_REQUEST)
                         .setErrorDescription("Request missing required parameters")
                         .buildJSONMessage();
 
-                // ResponseHeader[] headers = oauth2AccessTokenResp.getResponseHeaders();
                 Response.ResponseBuilder respBuilder = Response.status(response.getStatus());
                 return respBuilder.entity(errorResponse.getBody()).build();
             } catch (OAuthSystemException e) {
