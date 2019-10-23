@@ -1,3 +1,21 @@
+/*
+ * Copyright (c) 2019, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ *
+ * WSO2 Inc. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 package org.wso2.carbon.identity.oauth2.device.grant;
 
 import org.apache.commons.logging.Log;
@@ -23,7 +41,7 @@ import java.util.Date;
 import java.util.HashMap;
 
 /**
- * New grant type for Identity Server
+ * device flow grant type for Identity Server
  */
 public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
 
@@ -107,6 +125,12 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
         return authStatus;
     }
 
+    /**
+     *
+     * @param tokReqMsgCtx
+     * @return true
+     * @throws IdentityOAuth2Exception
+     */
     public boolean authorizeAccessDelegation(OAuthTokenReqMessageContext tokReqMsgCtx)
             throws IdentityOAuth2Exception {
 
@@ -114,6 +138,12 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
 
     }
 
+    /**
+     *
+     * @param tokReqMsgCtx
+     * @return
+     * @throws IdentityOAuth2Exception
+     */
     public boolean validateScope(OAuthTokenReqMessageContext tokReqMsgCtx)
             throws IdentityOAuth2Exception {
 
@@ -122,6 +152,13 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
         return true;
     }
 
+    /**
+     *
+     * @param tokReqMsgCtx
+     * @param tokenReq
+     * @param scopes
+     * @param authzUser authorized user
+     */
     private void setPropertiesForTokenGeneration(OAuthTokenReqMessageContext tokReqMsgCtx,
                                                  OAuth2AccessTokenReqDTO tokenReq, String[] scopes, String authzUser) {
 

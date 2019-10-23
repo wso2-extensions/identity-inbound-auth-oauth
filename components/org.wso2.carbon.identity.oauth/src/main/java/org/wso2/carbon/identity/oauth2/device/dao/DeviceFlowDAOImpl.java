@@ -1,3 +1,21 @@
+/*
+ * Copyright (c) 2019, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ *
+ * WSO2 Inc. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 package org.wso2.carbon.identity.oauth2.device.dao;
 
 import org.apache.commons.logging.Log;
@@ -16,6 +34,9 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.TimeZone;
 
+/**
+ * This class contains override methods of DeviceFlowDAO
+ */
 public class DeviceFlowDAOImpl extends AbstractOAuthDAO implements DeviceFlowDAO {
 
     private static final Log log = LogFactory.getLog(DeviceFlowDAOImpl.class);
@@ -51,7 +72,7 @@ public class DeviceFlowDAOImpl extends AbstractOAuthDAO implements DeviceFlowDAO
             prepStmt.setTimestamp(6, timeCreated, Calendar.getInstance(TimeZone.getTimeZone(UTC)));
             prepStmt.setLong(7, timeExpired);
             prepStmt.setLong(8, 5000);
-            prepStmt.setString(9, "PENDING");
+            prepStmt.setString(9, Constants.PENDING);
             prepStmt.setString(10, null);
             prepStmt.setString(11, getPersistenceProcessor().getProcessedClientId(consumerKey));
 
@@ -59,7 +80,6 @@ public class DeviceFlowDAOImpl extends AbstractOAuthDAO implements DeviceFlowDAO
             IdentityDatabaseUtil.commitTransaction(connection);
 
         } catch (SQLException e) {
-//            IdentityDatabaseUtil.rollbackTransaction(connection);
             throw new IdentityOAuth2Exception("Error when storing the device flow parameters for consumer key : " +
                     consumerKey, e);
         } finally {
@@ -69,10 +89,6 @@ public class DeviceFlowDAOImpl extends AbstractOAuthDAO implements DeviceFlowDAO
 
     @Override
     public String getClientIdByUSerCode(String userCode) throws IdentityOAuth2Exception {
-
-//        if (log.isDebugEnabled()) {
-//            log.debug("Retrieving authorization codes of user: " + authenticatedUser.toString());
-//        }
 
         Connection connection = IdentityDatabaseUtil.getDBConnection(false);
         PreparedStatement ps = null;
@@ -90,7 +106,8 @@ public class DeviceFlowDAOImpl extends AbstractOAuthDAO implements DeviceFlowDAO
             }
 
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new IdentityOAuth2Exception("Error when getting client id for user code : " +
+                    userCode, e);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, null, ps);
         }
@@ -116,7 +133,8 @@ public class DeviceFlowDAOImpl extends AbstractOAuthDAO implements DeviceFlowDAO
             prepStmt.execute();
             IdentityDatabaseUtil.commitTransaction(connection);
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new IdentityOAuth2Exception("Error when setting user has authenticated for user code : " +
+                    userCode, e);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, null, prepStmt);
         }
@@ -142,7 +160,8 @@ public class DeviceFlowDAOImpl extends AbstractOAuthDAO implements DeviceFlowDAO
             }
 
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new IdentityOAuth2Exception("Error when getting client id for device code : " +
+                    deviceCode, e);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, null, ps);
         }
@@ -182,7 +201,8 @@ public class DeviceFlowDAOImpl extends AbstractOAuthDAO implements DeviceFlowDAO
             }
 
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new IdentityOAuth2Exception("Error when getting authentication status for device code : " +
+                    deviceCode, e);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, null, ps);
         }
@@ -216,7 +236,8 @@ public class DeviceFlowDAOImpl extends AbstractOAuthDAO implements DeviceFlowDAO
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new IdentityOAuth2Exception("Error when getting client id : " +
+                    clientId, e);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, null, ps);
         }
@@ -242,7 +263,8 @@ public class DeviceFlowDAOImpl extends AbstractOAuthDAO implements DeviceFlowDAO
             }
 
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new IdentityOAuth2Exception("Error when getting scopes for user code : " +
+                    userCode, e);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, null, ps);
         }
@@ -265,7 +287,8 @@ public class DeviceFlowDAOImpl extends AbstractOAuthDAO implements DeviceFlowDAO
                 status = rs.getString(1);
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new IdentityOAuth2Exception("Error when getting status for user code : " +
+                    userCode, e);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, null, ps);
         }
@@ -292,7 +315,7 @@ public class DeviceFlowDAOImpl extends AbstractOAuthDAO implements DeviceFlowDAO
             IdentityDatabaseUtil.commitTransaction(connection);
 
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new IdentityOAuth2Exception("Error when setting last poll time", e);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, null, ps);
         }
@@ -318,7 +341,8 @@ public class DeviceFlowDAOImpl extends AbstractOAuthDAO implements DeviceFlowDAO
             IdentityDatabaseUtil.commitTransaction(connection);
 
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new IdentityOAuth2Exception("Error when setting authenticated user for user code : " +
+                    userCode, e);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, null, ps);
         }
@@ -343,7 +367,8 @@ public class DeviceFlowDAOImpl extends AbstractOAuthDAO implements DeviceFlowDAO
             prepStmt.execute();
             IdentityDatabaseUtil.commitTransaction(connection);
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new IdentityOAuth2Exception("Error when setting expired status for device code : " +
+                    deviceCode, e);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, null, prepStmt);
         }
