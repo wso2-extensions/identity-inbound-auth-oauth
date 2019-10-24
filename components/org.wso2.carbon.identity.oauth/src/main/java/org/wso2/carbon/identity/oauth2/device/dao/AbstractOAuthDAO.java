@@ -30,7 +30,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 
 import java.sql.Connection;
 
-abstract class AbstractOAuthDAO {
+public abstract class AbstractOAuthDAO {
 
     private static final Log log = LogFactory.getLog(AbstractOAuthDAO.class);
 
@@ -50,7 +50,6 @@ abstract class AbstractOAuthDAO {
 
         persistenceProcessor = createPersistenceProcessor();
         hashingPersistenceProcessor = new HashingPersistenceProcessor();
-
     }
 
     protected TokenPersistenceProcessor getPersistenceProcessor() {
@@ -92,5 +91,4 @@ abstract class AbstractOAuthDAO {
 
         return IdentityDatabaseUtil.getDBConnection();
     }
-
 }

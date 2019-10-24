@@ -41,7 +41,6 @@ public class DeviceFlowDAOImpl extends AbstractOAuthDAO implements DeviceFlowDAO
 
     private static final Log log = LogFactory.getLog(DeviceFlowDAOImpl.class);
 
-    private static final String IDN_OAUTH2_DEVICE_FLOW = "IDN_OAUTH2_DEVICE_FLOW";
     private String clientId;
     private String status;
     private String scope;

@@ -116,11 +116,8 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
                                 .setLastPollTime(DeviceCode, newPollTime);
                         throw new IdentityOAuth2Exception(DeviceErrorCodes.SubDeviceErrorCodes.SLOW_DOWN);
                     }
-
                 }
-
             }
-
         }
         return authStatus;
     }
@@ -135,7 +132,6 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
             throws IdentityOAuth2Exception {
 
         return true;
-
     }
 
     /**
@@ -148,7 +144,6 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
             throws IdentityOAuth2Exception {
 
         // if we need to just ignore the scope verification
-
         return true;
     }
 
@@ -199,7 +194,6 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
 
         return tokenRespDTO;
     }
-
 }
 
 
