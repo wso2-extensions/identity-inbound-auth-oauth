@@ -102,6 +102,10 @@ public class X509CredentialImpl implements X509Credential {
         return null;
     }
 
+    /***
+     * Get the credential context set.
+     * @return This method is not supported so the return is null.
+     */
     @Override
     public Class<? extends Credential> getCredentialType() {
         // This method is not implemented
@@ -132,9 +136,12 @@ public class X509CredentialImpl implements X509Credential {
         return null;
     }
 
+    /**
+     * Get the usage type.
+     * @return This method is not supported so, it returns the default value.
+     */
     @Override
     public UsageType getUsageType() {
-        // This method is not implemented
         return UsageType.UNSPECIFIED;
     }
 }
