@@ -96,16 +96,16 @@ public class X509CredentialImpl implements X509Credential {
         return Collections.emptyList();
     }
 
+    /***
+     * Get the credential context set.
+     * @return This method is not supported so the return is null.
+     */
     @Override
     public CredentialContextSet getCredentialContextSet() {
         // This method is not implemented
         return null;
     }
 
-    /***
-     * Get the credential context set.
-     * @return This method is not supported so the return is null.
-     */
     @Override
     public Class<? extends Credential> getCredentialType() {
         // This method is not implemented
