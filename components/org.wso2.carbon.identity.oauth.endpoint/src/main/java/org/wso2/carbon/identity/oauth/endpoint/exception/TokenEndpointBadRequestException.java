@@ -36,4 +36,9 @@ public class TokenEndpointBadRequestException extends InvalidRequestParentExcept
         super(message, errorCode, cause);
         this.errorCode = errorCode;
     }
+
+    public TokenEndpointBadRequestException(String message, Throwable cause) {
+
+        super(message, cause);
+    }
 }
