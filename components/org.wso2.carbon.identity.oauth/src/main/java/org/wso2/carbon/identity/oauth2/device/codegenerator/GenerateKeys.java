@@ -16,7 +16,7 @@
  * under the License.
  */
 
-package org.wso2.carbon.identity.oauth2.device.CodeGenerator;
+package org.wso2.carbon.identity.oauth2.device.codegenerator;
 
 /**
  * This class will be used to generate user code.

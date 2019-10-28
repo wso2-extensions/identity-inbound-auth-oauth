@@ -33,6 +33,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.TimeZone;
+import java.util.UUID;
 
 /**
  * This class contains override methods of DeviceFlowDAO
@@ -63,7 +64,7 @@ public class DeviceFlowDAOImpl extends AbstractOAuthDAO implements DeviceFlowDAO
             Timestamp timeCreated = new Timestamp(date.getTime());
             long timeExpired = timeCreated.getTime() + expiresIn;
             prepStmt = connection.prepareStatement(sql);
-            prepStmt.setString(1, "1");
+            prepStmt.setString(1, UUID.randomUUID().toString());
             prepStmt.setString(2, deviceCode);
             prepStmt.setString(3, userCode);
             prepStmt.setString(4, scope);

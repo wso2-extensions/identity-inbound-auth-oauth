@@ -43,7 +43,7 @@ public class UserAuthenticationEndpoint {
 
     private static final Log log = LogFactory.getLog(UserAuthenticationEndpoint.class);
 
-    OAuth2AuthzEndpoint oAuth2AuthzEndpoint = new OAuth2AuthzEndpoint();
+    private OAuth2AuthzEndpoint oAuth2AuthzEndpoint = new OAuth2AuthzEndpoint();
 
     public UserAuthenticationEndpoint() {
 
@@ -76,7 +76,7 @@ public class UserAuthenticationEndpoint {
 
     /**
      *
-     * @param userCode
+     * @param userCode user code that has delivered to the device
      * @return scopes
      * @throws IdentityOAuth2Exception
      */
@@ -87,7 +87,7 @@ public class UserAuthenticationEndpoint {
 
     /**
      *
-     * @param userCode
+     * @param userCode user code that has delivered to the device
      * @return status
      * @throws IdentityOAuth2Exception
      */

@@ -25,6 +25,7 @@ public class DeviceErrorCodes {
 
     public static final String UNAUTHORIZED_CLIENT = "unauthorized client";
     public static final String INVALID_REQUEST = "invalid request";
+    public static final String UNSUPPORTED_GRANT_TYPE = "invalid grant";
 
     public DeviceErrorCodes() {
 
@@ -33,7 +34,7 @@ public class DeviceErrorCodes {
     /**
      * Error codes that will be used in polling
      */
-    public class SubDeviceErrorCodes {
+    public static class SubDeviceErrorCodes {
 
         public static final String SLOW_DOWN = "slow_down";
         public static final String AUTHORIZATION_PENDING = "authorization_pending";

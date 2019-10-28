@@ -27,7 +27,7 @@ import org.wso2.carbon.identity.oauth2.device.constants.Constants;
 import javax.servlet.http.HttpServletRequest;
 
 /**
- * validator class for device response type
+ * Validator class for device response type
  */
 public class DeviceFlowResponseTypeValidator extends AbstractValidator<HttpServletRequest> {
 

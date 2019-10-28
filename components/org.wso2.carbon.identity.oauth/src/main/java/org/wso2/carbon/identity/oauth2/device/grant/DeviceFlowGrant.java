@@ -20,17 +20,12 @@ package org.wso2.carbon.identity.oauth2.device.grant;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
-import org.wso2.carbon.identity.application.common.model.ServiceProvider;
-import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
-import org.wso2.carbon.identity.oauth2.ResponseHeader;
 import org.wso2.carbon.identity.oauth2.device.constants.Constants;
 import org.wso2.carbon.identity.oauth2.device.dao.DeviceFlowPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.device.errorcodes.DeviceErrorCodes;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
-import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.RequestParameter;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AbstractAuthorizationGrantHandler;
@@ -54,8 +49,6 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
         super.validateGrant(oAuthTokenReqMessageContext);
         OAuth2AccessTokenReqDTO tokenReq = oAuthTokenReqMessageContext.getOauth2AccessTokenReqDTO();
 
-        log.info("Device flow grant handler is hit");
-
         boolean authStatus = false;
 
         // extract request parameters
@@ -78,7 +71,7 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
 
             if (!tokenReq.getGrantType().equals(Constants.DEVICE_FLOW_GRANT_TYPE)) {
 
-                throw new IdentityOAuth2Exception("Invalid GrantType.");
+                throw new IdentityOAuth2Exception("Invalid GrantType");
 
             } else {
 
@@ -88,10 +81,10 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
                 deviceStatus = results.get(Constants.STATUS).toString();
                 //validate device code
                 if (deviceStatus.equals(Constants.NOT_EXIST)) {
-                    throw new IdentityOAuth2Exception("Invalid Request");
+                    throw new IdentityOAuth2Exception(DeviceErrorCodes.INVALID_REQUEST);
                 } else if (deviceStatus.equals(Constants.EXPIRED)) {
                     throw new IdentityOAuth2Exception(DeviceErrorCodes.SubDeviceErrorCodes.EXPIRED_TOKEN);
-                } else if (Long.parseLong((String) results.get(Constants.EXPIRY_TIME)) < date.getTime()) {
+                } else if (isValidaDeviceCode(results, date)) {
                     throw new IdentityOAuth2Exception(DeviceErrorCodes.SubDeviceErrorCodes.EXPIRED_TOKEN);
                 } else if (deviceStatus.equals(Constants.AUTHORIZED)) {
                     authStatus = true;
@@ -102,12 +95,10 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
                         String[] scopeSet = OAuth2Util.buildScopeArray(results.get(Constants.SCOPE).toString());
                         this.setPropertiesForTokenGeneration(oAuthTokenReqMessageContext, tokenReq, scopeSet,
                                 authzUser);
-
                     }
                 } else if (deviceStatus.equals(Constants.USED) || deviceStatus.equals(Constants.PENDING)) {
                     Timestamp newPollTime = new Timestamp(date.getTime());
-                    if (newPollTime.getTime() - Timestamp.valueOf((String) results.get(Constants.LAST_POLL_TIME))
-                            .getTime() > Long.parseLong(results.get(Constants.POLL_TIME).toString())) {
+                    if (isValidPollTime(newPollTime, results)) {
                         DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO()
                                 .setLastPollTime(DeviceCode, newPollTime);
                         throw new IdentityOAuth2Exception(DeviceErrorCodes.SubDeviceErrorCodes.AUTHORIZATION_PENDING);
@@ -123,7 +114,6 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
     }
 
     /**
-     *
      * @param tokReqMsgCtx
      * @return true
      * @throws IdentityOAuth2Exception
@@ -135,9 +125,8 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
     }
 
     /**
-     *
      * @param tokReqMsgCtx
-     * @return
+     * @return true
      * @throws IdentityOAuth2Exception
      */
     public boolean validateScope(OAuthTokenReqMessageContext tokReqMsgCtx)
@@ -148,10 +137,9 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
     }
 
     /**
-     *
      * @param tokReqMsgCtx
      * @param tokenReq
-     * @param scopes
+     * @param scopes  scopes that will be stored against token
      * @param authzUser authorized user
      */
     private void setPropertiesForTokenGeneration(OAuthTokenReqMessageContext tokReqMsgCtx,
@@ -161,39 +149,37 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
         tokReqMsgCtx.setScope(scopes);
     }
 
-    private ServiceProvider getServiceProvider(OAuth2AccessTokenReqDTO tokenReq) throws IdentityOAuth2Exception {
-
-        ServiceProvider serviceProvider;
-        try {
-            serviceProvider = OAuth2ServiceComponentHolder.getApplicationMgtService().getServiceProviderByClientId(
-                    tokenReq.getClientId(), OAuthConstants.Scope.OAUTH2, tokenReq.getTenantDomain());
-        } catch (IdentityApplicationManagementException e) {
-            throw new IdentityOAuth2Exception("Error occurred while retrieving OAuth2 application data for client id " +
-                    tokenReq.getClientId(), e);
-        }
-        if (serviceProvider == null) {
-            if (log.isDebugEnabled()) {
-                log.debug("Could not find an application for client id: " + tokenReq.getClientId()
-                        + ", scope: " + OAuthConstants.Scope.OAUTH2 + ", tenant: " + tokenReq.getTenantDomain());
-            }
-            throw new IdentityOAuth2Exception("Service Provider not found");
-        }
-        if (log.isDebugEnabled()) {
-            log.debug("Retrieved service provider: " + serviceProvider.getApplicationName() + " for client: " +
-                    tokenReq.getClientId() + ", scope: " + OAuthConstants.Scope.OAUTH2 + ", tenant: " +
-                    tokenReq.getTenantDomain());
-        }
-
-        return serviceProvider;
-    }
-
     @Override
     public OAuth2AccessTokenRespDTO issue(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
 
         OAuth2AccessTokenRespDTO tokenRespDTO = super.issue(tokReqMsgCtx);
-
         return tokenRespDTO;
     }
+
+    /**
+     * This method use to check whether device code is expired or not
+     * @param results result map that contains values from database
+     * @param date time that request has came
+     * @return true or false
+     */
+    private boolean isValidaDeviceCode(HashMap results, Date date) {
+
+        return Long.parseLong((String) results.get(Constants.EXPIRY_TIME)) < date.getTime();
+    }
+
+    /**
+     * This checks whether polling frequency is correct or not
+     * @param newPollTime time of the new poll request
+     * @param results result map that contains values from database
+     * @return true or false
+     */
+    private boolean isValidPollTime(Timestamp newPollTime, HashMap results) {
+
+        return newPollTime.getTime() - Timestamp.valueOf((String) results.get(Constants.LAST_POLL_TIME))
+                .getTime() > Long.parseLong(results.get(Constants.POLL_TIME).toString());
+    }
+
+    //todo fix comments
 }
 
 

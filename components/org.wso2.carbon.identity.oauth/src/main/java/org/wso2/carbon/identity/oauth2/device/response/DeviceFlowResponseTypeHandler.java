@@ -33,7 +33,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 /**
- * device response type handler
+ * Device response type handler
  */
 public class DeviceFlowResponseTypeHandler extends AbstractResponseTypeHandler {
 
@@ -73,6 +73,7 @@ public class DeviceFlowResponseTypeHandler extends AbstractResponseTypeHandler {
     }
 
     /**
+     * Get application name
      *
      * @return application name
      */
@@ -82,6 +83,7 @@ public class DeviceFlowResponseTypeHandler extends AbstractResponseTypeHandler {
     }
 
     /**
+     * Set application name
      *
      * @param appName
      */

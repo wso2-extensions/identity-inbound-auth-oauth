@@ -25,7 +25,7 @@ import org.apache.oltu.oauth2.common.message.OAuthResponse;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
-import org.wso2.carbon.identity.oauth2.device.CodeGenerator.GenerateKeys;
+import org.wso2.carbon.identity.oauth2.device.codegenerator.GenerateKeys;
 import org.wso2.carbon.identity.oauth2.device.constants.Constants;
 import org.wso2.carbon.identity.oauth2.device.dao.DeviceFlowPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.device.errorcodes.DeviceErrorCodes;
@@ -57,15 +57,15 @@ public class DeviceEndpoint {
         String userCode = new GenerateKeys().getKey(6);
         DeviceFlowDO deviceFlowDO = new DeviceFlowDO();
         String deviceCode = UUID.randomUUID().toString();
-        String clientId = request.getParameter("client_id");
-        String scope = request.getParameter("scope");
+        String clientId = request.getParameter(Constants.CLIENT_ID);
+        String scope = request.getParameter(Constants.SCOPE);
         String[] scopeSet = scope.split(" ");
         deviceFlowDO.setScope(scopeSet);
         String redirectionUri = IdentityUtil.getServerURL("/authenticationendpoint/device.do",
                 false, false);
         String redirectionUriComplete = redirectionUri + "?user_code=" + userCode;
         Long expiresIn = 3600000L;
-        Integer interval = 5000;
+        int interval = 5000;
         OAuthResponse errorResponse;
 
         if (clientId != null) {
@@ -126,7 +126,7 @@ public class DeviceEndpoint {
     /**
      * validate the client id
      * @param clientId
-     * @return
+     * @return exist or not
      * @throws IdentityOAuth2Exception
      */
     private boolean validateClientId(String clientId) throws IdentityOAuth2Exception {
