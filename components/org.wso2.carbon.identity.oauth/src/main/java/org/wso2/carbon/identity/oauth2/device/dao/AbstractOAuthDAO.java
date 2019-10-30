@@ -30,6 +30,10 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 
 import java.sql.Connection;
 
+/**
+ * New set of DAO classes  for
+ * each purpose  and factory class to get instance of each DAO classes were introduced  during  this step.
+ */
 public abstract class AbstractOAuthDAO {
 
     private static final Log log = LogFactory.getLog(AbstractOAuthDAO.class);
@@ -52,13 +56,18 @@ public abstract class AbstractOAuthDAO {
         hashingPersistenceProcessor = new HashingPersistenceProcessor();
     }
 
+    /**
+     * Method to get persistenceProcessor instance.
+     *
+     * @return an instance of persistenceProcessor
+     */
     protected TokenPersistenceProcessor getPersistenceProcessor() {
 
         return persistenceProcessor;
     }
 
     /**
-     * Method to get HashingPersistenceProcessor instance
+     * Method to get HashingPersistenceProcessor instance.
      *
      * @return an instance of HashingPersistenceProcessor
      */
@@ -67,6 +76,10 @@ public abstract class AbstractOAuthDAO {
         return hashingPersistenceProcessor;
     }
 
+    /**
+     *
+     * @return persistence processor
+     */
     protected TokenPersistenceProcessor createPersistenceProcessor() {
 
         try {
@@ -77,6 +90,11 @@ public abstract class AbstractOAuthDAO {
         }
     }
 
+    /**
+     * Check whether persistence is enabled.
+     *
+     * @return Enable is true or false
+     */
     protected boolean isPersistenceEnabled() {
 
         if (IdentityUtil.getProperty(OAUTH_TOKEN_PERSISTENCE_ENABLE) != null) {

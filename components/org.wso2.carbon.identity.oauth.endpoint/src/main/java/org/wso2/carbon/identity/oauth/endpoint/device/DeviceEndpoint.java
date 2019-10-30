@@ -86,39 +86,30 @@ public class DeviceEndpoint {
 
                 try {
                     errorResponse = OAuthASResponse
-                            .errorResponse(response.getStatus())
-                            .setError(DeviceErrorCodes.UNAUTHORIZED_CLIENT)
-                            .setErrorDescription("No registered client with the client id.")
-                            .buildJSONMessage();
+                            .errorResponse(response.getStatus()).setError(DeviceErrorCodes.UNAUTHORIZED_CLIENT)
+                            .setErrorDescription("No registered client with the client id.").buildJSONMessage();
 
                     Response.ResponseBuilder respBuilder = Response.status(response.getStatus());
                     return respBuilder.entity(errorResponse.getBody()).build();
                 } catch (OAuthSystemException e) {
 
-                    if (log.isDebugEnabled()) {
-                        log.debug("Error building errorResponse due to:", e);
-                    }
+                    throw new OAuthSystemException("DeviceEndpoint Failed", e);
                 }
             }
         } else {
             response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             try {
                 errorResponse = OAuthASResponse
-                        .errorResponse(response.getStatus())
-                        .setError(DeviceErrorCodes.INVALID_REQUEST)
-                        .setErrorDescription("Request missing required parameters")
-                        .buildJSONMessage();
+                        .errorResponse(response.getStatus()).setError(DeviceErrorCodes.INVALID_REQUEST)
+                        .setErrorDescription("Request missing required parameters").buildJSONMessage();
 
                 Response.ResponseBuilder respBuilder = Response.status(response.getStatus());
                 return respBuilder.entity(errorResponse.getBody()).build();
             } catch (OAuthSystemException e) {
 
-                if (log.isDebugEnabled()) {
-                    log.debug("Error building errorResponse due to:", e);
-                }
+                throw new OAuthSystemException("DeviceEndpoint Failed");
             }
         }
-        return null;
     }
 
     /**
@@ -128,7 +119,7 @@ public class DeviceEndpoint {
      * @return Client is exist or not
      * @throws IdentityOAuth2Exception
      */
-    private boolean validateClientId(String clientId) throws IdentityOAuth2Exception {
+    private static boolean validateClientId(String clientId) throws IdentityOAuth2Exception {
 
         return DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().checkClientIdExist(clientId);
     }
@@ -139,9 +130,8 @@ public class DeviceEndpoint {
      * @param value Time in milliseconds
      * @return String value of time in seconds
      */
-    private String stringValueInSeconds(long value) {
+    private static String stringValueInSeconds(long value) {
 
         return String.valueOf(value/1000);
     }
 }
-
