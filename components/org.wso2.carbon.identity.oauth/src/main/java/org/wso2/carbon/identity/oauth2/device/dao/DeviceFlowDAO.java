@@ -30,102 +30,103 @@ import java.util.HashMap;
 public interface DeviceFlowDAO {
 
     /**
-     * This will use to enter the value to the database tables
+     * This will be used to enter the value to the database tables.
      *
-     * @param deviceCode
-     * @param userCode
-     * @param consumerKey
-     * @param scope
-     * @param expiresIn
+     * @param deviceCode Code that is used to identify the device
+     * @param userCode Code that is used to correlate user and device
+     * @param consumerKey Consumer key of the client application
+     * @param scope Requesting scopes
+     * @param expiresIn Device code valid period
      * @throws IdentityOAuth2Exception
      */
     void insertDeviceFlow(String deviceCode, String userCode, String consumerKey, String scope, Long expiresIn) throws
             IdentityOAuth2Exception;
 
     /**
-     * Get the client id that has involved with user code
+     * Get the client id that has involved with user code.
      *
-     * @param userCode
-     * @return client id
+     * @param userCode Code that is used to correlate user and device
+     * @return client_id
      * @throws IdentityOAuth2Exception
      */
     String getClientIdByUSerCode(String userCode) throws IdentityOAuth2Exception;
 
     /**
-     * Set the status of the user code and device code
+     * Set the status of the user code and device code.
      *
-     * @param userCode
-     * @param status
+     * @param userCode Code that is used to correlate user and device
+     * @param status Status of the device and user codes
      * @throws IdentityOAuth2Exception
      */
     void setUserAuthenticated(String userCode, String status) throws IdentityOAuth2Exception;
 
     /**
-     * Get the client id that has involved with user code
+     * Get the client id that has involved with user code.
      *
-     * @param deviceCode
-     * @return
+     * @param deviceCode Code that is used to identify the device
      * @throws IdentityOAuth2Exception
      */
     String getClientIdByDeviceCode(String deviceCode) throws IdentityOAuth2Exception;
 
     /**
-     * Get the authentication status for device code
+     * Get the authentication status for device code.
      *
-     * @param deviceCode
-     * @return map of values
+     * @param deviceCode Code that is used to identify the device
+     * @return Map of values
      * @throws IdentityOAuth2Exception
      */
     HashMap getAuthenticationStatus(String deviceCode) throws IdentityOAuth2Exception;
 
     /**
-     * Check client id is exist or not
+     * Check client id is exist or not.
      *
-     * @param clientId
-     * @return exist or not
+     * @param clientId Consumer key of the application
+     * @return Exist or not
      * @throws IdentityOAuth2Exception
      */
     boolean checkClientIdExist(String clientId) throws IdentityOAuth2Exception;
 
     /**
-     * Get the scopes that are stored against user code
+     * Get the scopes that are stored against user code.
      *
-     * @param userCode
+     * @param userCode Code that is used to correlate user and device
      * @return scope
      * @throws IdentityOAuth2Exception
      */
     String getScopeForDevice(String userCode) throws IdentityOAuth2Exception;
 
     /**
-     * Get the status of the user code
+     * Get the status of the user code.
      *
-     * @param userCode
+     * @param userCode Code that is used to correlate user and device
      * @return status
      * @throws IdentityOAuth2Exception
      */
     String getStatusForUserCode(String userCode) throws IdentityOAuth2Exception;
 
     /**
-     * Set last poll time of the token request
+     * Set last poll time of the token request.
      *
-     * @param deviceCode
-     * @param newPollTime
+     * @param deviceCode Code that is used to identify the device
+     * @param newPollTime Last poll time
      * @throws IdentityOAuth2Exception
      */
     void setLastPollTime(String deviceCode, Timestamp newPollTime) throws IdentityOAuth2Exception;
 
     /**
-     * Set authenticated user
-     * @param userCode
-     * @param userName
+     * Set authenticated user.
+     *
+     * @param userCode Code that is used to correlate user and device
+     * @param userName Name of the authenticated user
      * @throws IdentityOAuth2Exception
      */
     void setAuthzUser(String userCode, String userName) throws IdentityOAuth2Exception;
 
     /**
-     * Set device code as expired
-     * @param deviceCode
-     * @param status
+     * Set device code as expired.
+     *
+     * @param deviceCode Code that is used to identify the device
+     * @param status Status of the device code
      * @throws IdentityOAuth2Exception
      */
     void setDeviceCodeExpired(String deviceCode, String status) throws IdentityOAuth2Exception;

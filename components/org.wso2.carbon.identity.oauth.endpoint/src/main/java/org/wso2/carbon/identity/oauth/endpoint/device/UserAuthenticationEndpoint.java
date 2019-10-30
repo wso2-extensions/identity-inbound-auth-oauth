@@ -53,12 +53,12 @@ public class UserAuthenticationEndpoint {
     @Path("/")
     @Consumes("application/x-www-form-urlencoded")
     @Produces("text/html")
-    public Response device_authorize(@Context HttpServletRequest request, @Context HttpServletResponse response)
+    public Response deviceAuthorize(@Context HttpServletRequest request, @Context HttpServletResponse response)
             throws URISyntaxException, InvalidRequestParentException, IdentityOAuth2Exception, IOException {
 
         String userCode = request.getParameter(Constants.USER_CODE);
         String clientId = DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().getClientIdByUSerCode(userCode);
-        if (clientId != null && !getUserCodeStatus(userCode).equals(Constants.USED)) {
+        if (clientId != null && getUserCodeStatus(userCode).equals(Constants.PENDING)) {
             DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().setUserAuthenticated(userCode, Constants.USED);
             CommonAuthRequestWrapper commonAuthRequestWrapper = new CommonAuthRequestWrapper(request);
             commonAuthRequestWrapper.setParameter(Constants.CLIENT_ID, clientId);

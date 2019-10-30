@@ -23,23 +23,20 @@ package org.wso2.carbon.identity.oauth2.device.codegenerator;
  */
 public class GenerateKeys {
 
-    public GenerateKeys() {
-
-    }
-
-    public String getKey(int n) {
+    /**
+     * This method is used to generate random string with fixed length.
+     *
+     * @param num Length of the random string
+     * @return Random string
+     */
+    public String getKey(int num) {
 
         String AlphaNumericString = "BCDFGHJKLMNPQRSTVWXYZ";
-        StringBuilder sb = new StringBuilder(n);
-
-        for (int i = 0; i < n; i++) {
-            int index
-                    = (int) (AlphaNumericString.length()
-                    * Math.random());
-            sb.append(AlphaNumericString
-                    .charAt(index));
+        StringBuilder sb = new StringBuilder(num);
+        for (int i = 0; i < num; i++) {
+            int index = (int) (AlphaNumericString.length() * Math.random());
+            sb.append(AlphaNumericString.charAt(index));
         }
-
         return sb.toString();
     }
 }

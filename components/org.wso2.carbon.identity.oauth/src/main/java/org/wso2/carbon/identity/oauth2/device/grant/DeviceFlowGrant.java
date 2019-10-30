@@ -84,7 +84,7 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
                     throw new IdentityOAuth2Exception(DeviceErrorCodes.INVALID_REQUEST);
                 } else if (deviceStatus.equals(Constants.EXPIRED)) {
                     throw new IdentityOAuth2Exception(DeviceErrorCodes.SubDeviceErrorCodes.EXPIRED_TOKEN);
-                } else if (isValidaDeviceCode(results, date)) {
+                } else if (isValidDeviceCode(results, date)) {
                     throw new IdentityOAuth2Exception(DeviceErrorCodes.SubDeviceErrorCodes.EXPIRED_TOKEN);
                 } else if (deviceStatus.equals(Constants.AUTHORIZED)) {
                     authStatus = true;
@@ -114,6 +114,8 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
     }
 
     /**
+     * Validate whether the claimed user is the rightful resource owner.
+     *
      * @param tokReqMsgCtx
      * @return true
      * @throws IdentityOAuth2Exception
@@ -125,6 +127,8 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
     }
 
     /**
+     * Validate whether scope requested by the access token is valid.
+     *
      * @param tokReqMsgCtx
      * @return true
      * @throws IdentityOAuth2Exception
@@ -137,6 +141,8 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
     }
 
     /**
+     * To set the properties of the token generation.
+     *
      * @param tokReqMsgCtx
      * @param tokenReq
      * @param scopes  scopes that will be stored against token
@@ -158,28 +164,28 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
 
     /**
      * This method use to check whether device code is expired or not
+     *
      * @param results result map that contains values from database
      * @param date time that request has came
      * @return true or false
      */
-    private boolean isValidaDeviceCode(HashMap results, Date date) {
+    public static boolean isValidDeviceCode(HashMap results, Date date) {
 
         return Long.parseLong((String) results.get(Constants.EXPIRY_TIME)) < date.getTime();
     }
 
     /**
      * This checks whether polling frequency is correct or not
+     *
      * @param newPollTime time of the new poll request
      * @param results result map that contains values from database
      * @return true or false
      */
-    private boolean isValidPollTime(Timestamp newPollTime, HashMap results) {
+    private static boolean isValidPollTime(Timestamp newPollTime, HashMap results) {
 
         return newPollTime.getTime() - Timestamp.valueOf((String) results.get(Constants.LAST_POLL_TIME))
                 .getTime() > Long.parseLong(results.get(Constants.POLL_TIME).toString());
     }
-
-    //todo fix comments
 }
 
 

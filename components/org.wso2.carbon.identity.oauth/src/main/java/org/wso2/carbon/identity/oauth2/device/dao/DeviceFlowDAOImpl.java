@@ -56,9 +56,9 @@ public class DeviceFlowDAOImpl extends AbstractOAuthDAO implements DeviceFlowDAO
 
         Connection connection = IdentityDatabaseUtil.getDBConnection();
         PreparedStatement prepStmt = null;
-        Date date = new Date();
 
         try {
+            Date date = new Date();
             String sql;
             sql = SQLQueries.DeviceFlowDAOSQLQueries.STORE_DEVICE_CODE;
             Timestamp timeCreated = new Timestamp(date.getTime());
@@ -174,7 +174,6 @@ public class DeviceFlowDAOImpl extends AbstractOAuthDAO implements DeviceFlowDAO
         Connection connection = IdentityDatabaseUtil.getDBConnection(false);
         PreparedStatement ps = null;
         ResultSet rs = null;
-        log.info("getting authentication status");
         boolean checked = false;
         String status = null;
         HashMap<String, String> result = new HashMap<>();

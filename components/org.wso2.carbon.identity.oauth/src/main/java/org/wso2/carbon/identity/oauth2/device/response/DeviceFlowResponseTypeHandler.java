@@ -46,6 +46,7 @@ public class DeviceFlowResponseTypeHandler extends AbstractResponseTypeHandler {
 
     }
 
+    @Override
     public OAuth2AuthorizeRespDTO issue(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) throws IdentityOAuth2Exception {
 
         OAuth2AuthorizeRespDTO respDTO = new OAuth2AuthorizeRespDTO();
@@ -53,6 +54,7 @@ public class DeviceFlowResponseTypeHandler extends AbstractResponseTypeHandler {
         String clientId = authzReqDTO.getConsumerKey();
         String authenticatedUser = authzReqDTO.getUser().getUserName();
         OAuthAppDO oAuthAppDO = null;
+
         try {
             oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
             appName = oAuthAppDO.getApplicationName();
@@ -73,9 +75,9 @@ public class DeviceFlowResponseTypeHandler extends AbstractResponseTypeHandler {
     }
 
     /**
-     * Get application name
+     * Get app name
      *
-     * @return application name
+     * @return app name
      */
     public String getAppName() {
 
@@ -85,7 +87,7 @@ public class DeviceFlowResponseTypeHandler extends AbstractResponseTypeHandler {
     /**
      * Set application name
      *
-     * @param appName
+     * @param appName Name of the app
      */
     private void setAppName(String appName) {
 

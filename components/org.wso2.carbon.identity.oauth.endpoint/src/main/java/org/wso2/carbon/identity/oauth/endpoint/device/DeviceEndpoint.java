@@ -64,22 +64,20 @@ public class DeviceEndpoint {
         String redirectionUri = IdentityUtil.getServerURL("/authenticationendpoint/device.do",
                 false, false);
         String redirectionUriComplete = redirectionUri + "?user_code=" + userCode;
-        Long expiresIn = 3600000L;
+        long expiresIn = 3600000L;
         int interval = 5000;
         OAuthResponse errorResponse;
 
         if (clientId != null) {
             if (validateClientId(clientId)) {
-
                 DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().insertDeviceFlow(deviceCode, userCode,
                         clientId, scope, expiresIn);
-
                 OAuthResponse deviceResponse =
                         OAuthResponse.status(HttpServletResponse.SC_ACCEPTED).setParam(Constants.DEVICE_CODE,
                                 deviceCode).setParam(Constants.USER_CODE, userCode).setParam(Constants.VERIFICATION_URI,
                                 redirectionUri).setParam(Constants.VERIFICATION_URI_COMPLETE, redirectionUriComplete).
-                                setParam(Constants.EXPIRES_IN, String.valueOf(expiresIn / 1000))
-                                .setParam(Constants.INTERVAL, String.valueOf(interval / 1000)).buildJSONMessage();
+                                setParam(Constants.EXPIRES_IN, stringValueInSeconds(expiresIn))
+                                .setParam(Constants.INTERVAL, stringValueInSeconds(interval)).buildJSONMessage();
                 Response.ResponseBuilder respBuilder = Response.status(response.getStatus());
                 return respBuilder.entity(deviceResponse.getBody()).build();
 
@@ -124,14 +122,19 @@ public class DeviceEndpoint {
     }
 
     /**
-     * validate the client id
-     * @param clientId
-     * @return exist or not
+     * This method uses to validate the client is exist or not.
+     * @param clientId consumer key of the client
+     * @return client is exist or not
      * @throws IdentityOAuth2Exception
      */
     private boolean validateClientId(String clientId) throws IdentityOAuth2Exception {
 
         return DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().checkClientIdExist(clientId);
+    }
+
+    private String stringValueInSeconds(long value) {
+
+        return String.valueOf(value/1000);
     }
 }
 
