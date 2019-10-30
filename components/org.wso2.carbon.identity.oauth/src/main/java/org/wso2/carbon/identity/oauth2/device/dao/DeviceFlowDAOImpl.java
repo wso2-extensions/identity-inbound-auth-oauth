@@ -36,7 +36,7 @@ import java.util.TimeZone;
 import java.util.UUID;
 
 /**
- * This class contains override methods of DeviceFlowDAO
+ * This class contains override methods of DeviceFlowDAO.
  */
 public class DeviceFlowDAOImpl extends AbstractOAuthDAO implements DeviceFlowDAO {
 

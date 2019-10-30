@@ -19,7 +19,7 @@
 package org.wso2.carbon.identity.oauth2.device.constants;
 
 /**
- * Constants that will be used in device flow
+ * Constants that will be used in device flow.
  */
 public class Constants {
 

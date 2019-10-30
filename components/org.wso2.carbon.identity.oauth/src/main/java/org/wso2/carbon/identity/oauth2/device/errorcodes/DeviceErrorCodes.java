@@ -19,7 +19,7 @@
 package org.wso2.carbon.identity.oauth2.device.errorcodes;
 
 /**
- * Error Codes for device flow
+ * Error Codes for device flow.
  */
 public class DeviceErrorCodes {
 
@@ -32,7 +32,7 @@ public class DeviceErrorCodes {
     }
 
     /**
-     * Error codes that will be used in polling
+     * Error codes that will be used in polling.
      */
     public static class SubDeviceErrorCodes {
 

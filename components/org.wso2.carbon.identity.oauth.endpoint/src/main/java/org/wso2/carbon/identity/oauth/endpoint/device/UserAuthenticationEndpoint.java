@@ -75,9 +75,10 @@ public class UserAuthenticationEndpoint {
     }
 
     /**
+     * Get the scopes from the database.
      *
-     * @param userCode user code that has delivered to the device
-     * @return scopes
+     * @param userCode User code that has delivered to the device
+     * @return Scopes
      * @throws IdentityOAuth2Exception
      */
     private String getScope(String userCode) throws IdentityOAuth2Exception {
@@ -86,9 +87,10 @@ public class UserAuthenticationEndpoint {
     }
 
     /**
+     * Get the user code status.
      *
-     * @param userCode user code that has delivered to the device
-     * @return status
+     * @param userCode User code that has delivered to the device
+     * @return Status
      * @throws IdentityOAuth2Exception
      */
     private String getUserCodeStatus(String userCode) throws IdentityOAuth2Exception {

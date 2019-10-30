@@ -123,8 +123,9 @@ public class DeviceEndpoint {
 
     /**
      * This method uses to validate the client is exist or not.
-     * @param clientId consumer key of the client
-     * @return client is exist or not
+     *
+     * @param clientId Consumer key of the client
+     * @return Client is exist or not
      * @throws IdentityOAuth2Exception
      */
     private boolean validateClientId(String clientId) throws IdentityOAuth2Exception {
@@ -132,6 +133,12 @@ public class DeviceEndpoint {
         return DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().checkClientIdExist(clientId);
     }
 
+    /**
+     * This method converts time in milliseconds to seconds.
+     *
+     * @param value Time in milliseconds
+     * @return String value of time in seconds
+     */
     private String stringValueInSeconds(long value) {
 
         return String.valueOf(value/1000);

@@ -18,6 +18,9 @@
 
 package org.wso2.carbon.identity.oauth2.device.dao;
 
+/**
+ * This class is device flow DAO factory.
+ */
 public class DeviceFlowPersistenceFactory {
 
     private static DeviceFlowPersistenceFactory factory;
