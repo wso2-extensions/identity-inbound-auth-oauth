@@ -17,22 +17,25 @@
 package org.wso2.carbon.identity.oauth.scope.endpoint.util;
 
 import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.oauth.scope.endpoint.Exceptions.ScopeEndpointException;
 import org.wso2.carbon.identity.oauth.scope.endpoint.dto.ErrorDTO;
+import org.wso2.carbon.identity.oauth.scope.endpoint.dto.ScopeBindingDTO;
 import org.wso2.carbon.identity.oauth.scope.endpoint.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth.scope.endpoint.dto.ScopeToUpdateDTO;
-import org.wso2.carbon.identity.oauth.scope.endpoint.impl.ScopesApiServiceImpl;
-import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
+import org.wso2.carbon.identity.oauth2.bean.ScopeBinding;
 
-import javax.ws.rs.core.Response;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+import javax.ws.rs.core.Response;
+
+import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.DEFAULT_SCOPE_BINDING;
 
 /**
  * This class holds the util methods used by ScopesApiServiceImpl.
@@ -100,11 +103,35 @@ public class ScopeUtils {
     }
 
     public static Scope getScope(ScopeDTO scopeDTO) {
-        return new Scope(
+
+        Scope scope = new Scope(
                 scopeDTO.getName(),
                 scopeDTO.getDisplayName(),
-                scopeDTO.getDescription(),
-                scopeDTO.getBindings());
+                getScopeBindings(scopeDTO.getScopeBindings()),
+                scopeDTO.getDescription());
+        scope.addScopeBindings(DEFAULT_SCOPE_BINDING, scopeDTO.getBindings());
+        return scope;
+    }
+
+    public static List<ScopeBinding> getScopeBindings(List<ScopeBindingDTO> scopeBindingDTOs) {
+
+        List<ScopeBinding> scopeBindings = new ArrayList<>();
+        for (ScopeBindingDTO scopeBindingDTO : scopeBindingDTOs) {
+            scopeBindings.add(new ScopeBinding(scopeBindingDTO.getBindingType(), scopeBindingDTO.getBinding()));
+        }
+        return scopeBindings;
+    }
+
+    public static List<ScopeBindingDTO> getScopeBindingDTOs(List<ScopeBinding> scopeBindings) {
+
+        List<ScopeBindingDTO> scopeBindingDTOs = new ArrayList<>();
+        for (ScopeBinding scopeBinding : scopeBindings) {
+            ScopeBindingDTO scopeBindingDTO = new ScopeBindingDTO();
+            scopeBindingDTO.setBindingType(scopeBinding.getBindingType());
+            scopeBindingDTO.setBinding(scopeBinding.getBindings());
+            scopeBindingDTOs.add(scopeBindingDTO);
+        }
+        return scopeBindingDTOs;
     }
 
     public static Scope getUpdatedScope(ScopeToUpdateDTO scopeDTO, String name) {
@@ -117,6 +144,7 @@ public class ScopeUtils {
         scopeDTO.setDisplayName(scope.getDisplayName());
         scopeDTO.setDescription(scope.getDescription());
         scopeDTO.setBindings(scope.getBindings());
+        scopeDTO.setScopeBindings(getScopeBindingDTOs(scope.getScopeBindings()));
         return scopeDTO;
     }
 
@@ -127,6 +155,7 @@ public class ScopeUtils {
             scopeDTO.setName(scope.getName());
             scopeDTO.setDisplayName(scope.getDisplayName());
             scopeDTO.setDescription(scope.getDescription());
+            scopeDTO.setScopeBindings(getScopeBindingDTOs(scope.getScopeBindings()));
             scopeDTO.setBindings(scope.getBindings());
             scopeDTOs.add(scopeDTO);
         }

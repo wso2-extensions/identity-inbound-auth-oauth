@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth2.authz;
 
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
@@ -32,14 +33,18 @@ import org.wso2.carbon.identity.oauth2.authz.handlers.ResponseTypeHandler;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oauth2.validators.JDBCPermissionBasedInternalScopeValidator;
 import org.wso2.carbon.utils.CarbonUtils;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.apache.oltu.oauth2.common.error.OAuthError.CodeResponse.INVALID_SCOPE;
 import static org.apache.oltu.oauth2.common.error.OAuthError.CodeResponse.UNAUTHORIZED_CLIENT;
 import static org.apache.oltu.oauth2.common.error.OAuthError.CodeResponse.UNSUPPORTED_RESPONSE_TYPE;
+import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
 
 public class AuthorizationHandlerManager {
 
@@ -120,8 +125,41 @@ public class AuthorizationHandlerManager {
         if (isInvalidAccessDelegation(authzReqDTO, authorizeRespDTO, authzReqMsgCtx, authzHandler)) {
             return authorizeRespDTO;
         }
-        validateScope(authzReqDTO, authorizeRespDTO, authzReqMsgCtx, authzHandler);
+
+        //Execute Internal SCOPE Validation.
+        JDBCPermissionBasedInternalScopeValidator scopeValidator = new JDBCPermissionBasedInternalScopeValidator();
+        String[] authorizedInternalScopes = scopeValidator.validateScope(authzReqMsgCtx);
+        //Clear the internal scopes. Those scopes not required for scope validations.
+        removeInternalScopes(authzReqMsgCtx);
+
+        boolean valid = validateScope(authzReqDTO, authorizeRespDTO, authzReqMsgCtx, authzHandler);
+        if (valid) {
+            //Add authorized internal scopes to the request for sending in the response.
+            addAuthorizedInternalScopes(authzReqMsgCtx, authorizedInternalScopes);
+        }
         return authorizeRespDTO;
+    }
+
+    private void addAuthorizedInternalScopes(OAuthAuthzReqMessageContext authzReqMsgCtx,
+                                             String[] authorizedInternalScopes) {
+
+        String[] scopes = authzReqMsgCtx.getApprovedScope();
+        String[] scopesToReturn = (String[]) ArrayUtils.addAll(scopes, authorizedInternalScopes);
+        authzReqMsgCtx.setApprovedScope(scopesToReturn);
+    }
+
+    private void removeInternalScopes(OAuthAuthzReqMessageContext authzReqMsgCtx) {
+
+        if (authzReqMsgCtx.getAuthorizationReqDTO().getScopes() == null) {
+            return;
+        }
+        List<String> scopes = new ArrayList<>();
+        for (String scope : authzReqMsgCtx.getAuthorizationReqDTO().getScopes()) {
+            if (!scope.startsWith("internal_") && !scope.equalsIgnoreCase(SYSTEM_SCOPE)) {
+                scopes.add(scope);
+            }
+        }
+        authzReqMsgCtx.getAuthorizationReqDTO().setScopes(scopes.toArray(new String[0]));
     }
 
     private boolean validateScope(OAuth2AuthorizeReqDTO authzReqDTO, OAuth2AuthorizeRespDTO authorizeRespDTO,

@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth2.token;
 
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -47,15 +48,19 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oauth2.validators.JDBCPermissionBasedInternalScopeValidator;
 import org.wso2.carbon.identity.openidconnect.IDTokenBuilder;
 import org.wso2.carbon.utils.CarbonUtils;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Hashtable;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
+import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
 
 /**
  * This class is used to issue access tokens and refresh tokens.
@@ -258,8 +263,16 @@ public class AccessTokenIssuer {
             return tokenRespDTO;
         }
 
+        //Execute Internal SCOPE Validation.
+        JDBCPermissionBasedInternalScopeValidator scopeValidator = new JDBCPermissionBasedInternalScopeValidator();
+        String[] authorizedInternalScopes = scopeValidator.validateScope(tokReqMsgCtx);
+        //Clear the internal scopes. Those scopes not required for scope validations.
+        removeInternalScopes(tokReqMsgCtx);
         boolean isValidScope = authzGrantHandler.validateScope(tokReqMsgCtx);
-        if (!isValidScope) {
+        if (isValidScope) {
+            //Add authorized internal scopes to the request for sending in the response.
+            addAuthorizedInternalScopes(tokReqMsgCtx, authorizedInternalScopes);
+        } else {
             if (log.isDebugEnabled()) {
                 log.debug("Invalid scope provided by client Id: " + tokenReqDTO.getClientId());
             }
@@ -326,6 +339,28 @@ public class AccessTokenIssuer {
         }
 
         return tokenRespDTO;
+    }
+
+    private void addAuthorizedInternalScopes(OAuthTokenReqMessageContext tokReqMsgCtx,
+                                             String[] authorizedInternalScopes) {
+
+        String[] scopes = tokReqMsgCtx.getScope();
+        String[] scopesToReturn = (String[]) ArrayUtils.addAll(scopes, authorizedInternalScopes);
+        tokReqMsgCtx.setScope(scopesToReturn);
+    }
+
+    private void removeInternalScopes(OAuthTokenReqMessageContext tokReqMsgCtx) {
+
+        if (tokReqMsgCtx.getScope() == null) {
+            return;
+        }
+        List<String> scopes = new ArrayList<>();
+        for (String scope : tokReqMsgCtx.getScope()) {
+            if (!scope.startsWith("internal_") && !scope.equalsIgnoreCase(SYSTEM_SCOPE)) {
+                scopes.add(scope);
+            }
+        }
+        tokReqMsgCtx.setScope(scopes.toArray(new String[0]));
     }
 
     private void triggerPreListeners(OAuth2AccessTokenReqDTO tokenReqDTO,

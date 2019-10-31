@@ -92,20 +92,21 @@ public class ScopeMgtDAOTest extends IdentityBaseTest {
              Connection connection3 = DAOUtils.getConnection(DB_NAME)) {
 
             mockStatic(IdentityDatabaseUtil.class);
-            ScopeMgtDAO scopeMgtDAO = new ScopeMgtDAO();
 
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection1);
             when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection1);
-            scopeMgtDAO.addScope((Scope) scope, tenantId);
+            OAuthTokenPersistenceFactory.getInstance().getOAuthScopeDAO().addScope((Scope) scope, tenantId);
 
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection2);
             when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection2);
-            assertNotNull(scopeMgtDAO.getScopeByName(((Scope) scope).getName(), tenantId), "Failed to persist scope.");
+            assertNotNull(OAuthTokenPersistenceFactory.getInstance().getOAuthScopeDAO()
+                    .getScopeByName(((Scope) scope).getName(), tenantId), "Failed to persist scope.");
 
             // Clean after test
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection3);
             when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection3);
-            scopeMgtDAO.deleteScopeByName(((Scope) scope).getName(), tenantId);
+            OAuthTokenPersistenceFactory.getInstance().getOAuthScopeDAO()
+                    .deleteScopeByName(((Scope) scope).getName(), tenantId);
         }
     }
 
@@ -137,16 +138,14 @@ public class ScopeMgtDAOTest extends IdentityBaseTest {
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
 
             mockStatic(IdentityDatabaseUtil.class);
-            ScopeMgtDAO scopeMgtDAO = new ScopeMgtDAO();
-
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
             when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
             assertTrue(scopes != null && !scopes.isEmpty(), "Failed to retrieve scopes.");
 
-            addScopes(scopeMgtDAO, scopes, tenantId);
+            addScopes(scopes, tenantId);
 
             // Clean after test
-            deleteScopes(scopeMgtDAO, scopes, tenantId);
+            deleteScopes(scopes, tenantId);
         }
     }
 
@@ -179,17 +178,15 @@ public class ScopeMgtDAOTest extends IdentityBaseTest {
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
 
             mockStatic(IdentityDatabaseUtil.class);
-            ScopeMgtDAO scopeMgtDAO = new ScopeMgtDAO();
-
-            addScopes(scopeMgtDAO, scopes, tenantId);
+            addScopes(scopes, tenantId);
 
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
             when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
-            Set<Scope> scopesList = scopeMgtDAO.getScopesWithPagination(1, 2, tenantId);
+            Set<Scope> scopesList = OAuthTokenPersistenceFactory.getInstance().getOAuthScopeDAO().getScopesWithPagination(1, 2, tenantId);
             assertTrue(scopesList != null && scopesList.size() == 2, "Failed to retrieve scopes with pagination.");
 
             // Clean after test
-            deleteScopes(scopeMgtDAO, scopes, tenantId);
+            deleteScopes(scopes, tenantId);
         }
     }
 
@@ -213,17 +210,15 @@ public class ScopeMgtDAOTest extends IdentityBaseTest {
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
 
             mockStatic(IdentityDatabaseUtil.class);
-            ScopeMgtDAO scopeMgtDAO = new ScopeMgtDAO();
-
-            addScopes(scopeMgtDAO, Collections.singletonList(scope), tenantId);
+            addScopes(Collections.singletonList(scope), tenantId);
 
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
             when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
-            assertNotNull(scopeMgtDAO.getScopeByName(((Scope) scope).getName(), tenantId), "Failed to retrieve by " +
-                    "scope name.");
+            assertNotNull(OAuthTokenPersistenceFactory.getInstance().getOAuthScopeDAO().getScopeByName(((Scope) scope)
+                    .getName(), tenantId), "Failed to retrieve by scope name.");
 
             // Clean after test
-            deleteScopes(scopeMgtDAO, Collections.singletonList(scope), tenantId);
+            deleteScopes(Collections.singletonList(scope), tenantId);
         }
     }
 
@@ -248,21 +243,21 @@ public class ScopeMgtDAOTest extends IdentityBaseTest {
              Connection connection2 = DAOUtils.getConnection(DB_NAME)) {
 
             mockStatic(IdentityDatabaseUtil.class);
-            ScopeMgtDAO scopeMgtDAO = new ScopeMgtDAO();
-
-            addScopes(scopeMgtDAO, Collections.singletonList(scope), tenantId);
+            addScopes(Collections.singletonList(scope), tenantId);
 
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection1);
             when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection1);
-            assertTrue(scopeMgtDAO.isScopeExists(((Scope) scope).getName(), tenantId), "Failed to check existence " +
+            assertTrue(OAuthTokenPersistenceFactory.getInstance().getOAuthScopeDAO()
+                    .isScopeExists(((Scope) scope).getName(), tenantId), "Failed to check existence " +
                     "by scope name.");
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection2);
             when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection2);
-            assertFalse(scopeMgtDAO.isScopeExists("invalidScopeName", tenantId), "Failed to check existence " +
+            assertFalse(OAuthTokenPersistenceFactory.getInstance().getOAuthScopeDAO()
+                    .isScopeExists("invalidScopeName", tenantId), "Failed to check existence " +
                     "by scope name.");
 
             // Clean after test
-            deleteScopes(scopeMgtDAO, Collections.singletonList(scope), tenantId);
+            deleteScopes(Collections.singletonList(scope), tenantId);
         }
     }
 
@@ -287,20 +282,21 @@ public class ScopeMgtDAOTest extends IdentityBaseTest {
              Connection connection2 = DAOUtils.getConnection(DB_NAME)) {
 
             mockStatic(IdentityDatabaseUtil.class);
-            ScopeMgtDAO scopeMgtDAO = new ScopeMgtDAO();
 
-            addScopes(scopeMgtDAO, Collections.singletonList(scope), tenantId);
+            addScopes(Collections.singletonList(scope), tenantId);
 
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection1);
             when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection1);
-            assertTrue(scopeMgtDAO.getScopeIDByName(((Scope) scope).getName(), tenantId) != Oauth2ScopeConstants
+            assertTrue(OAuthTokenPersistenceFactory.getInstance().getOAuthScopeDAO()
+                    .getScopeIDByName(((Scope) scope).getName(), tenantId) != Oauth2ScopeConstants
                     .INVALID_SCOPE_ID, "Failed to retrieve the scope id.");
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection2);
             when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection2);
-            assertTrue(scopeMgtDAO.getScopeIDByName("invalidScopeName", tenantId) == Oauth2ScopeConstants
+            assertTrue(OAuthTokenPersistenceFactory.getInstance().getOAuthScopeDAO()
+                    .getScopeIDByName("invalidScopeName", tenantId) == Oauth2ScopeConstants
                     .INVALID_SCOPE_ID, "Failed to retrieve the scope id.");
             // Clean after test
-            deleteScopes(scopeMgtDAO, Collections.singletonList(scope), tenantId);
+            deleteScopes(Collections.singletonList(scope), tenantId);
         }
     }
 
@@ -325,17 +321,18 @@ public class ScopeMgtDAOTest extends IdentityBaseTest {
              Connection connection2 = DAOUtils.getConnection(DB_NAME)) {
 
             mockStatic(IdentityDatabaseUtil.class);
-            ScopeMgtDAO scopeMgtDAO = new ScopeMgtDAO();
 
-            addScopes(scopeMgtDAO, Collections.singletonList(scope), tenantId);
+            addScopes(Collections.singletonList(scope), tenantId);
 
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection1);
             when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection1);
-            scopeMgtDAO.deleteScopeByName(((Scope) scope).getName(), tenantId);
+            OAuthTokenPersistenceFactory.getInstance().getOAuthScopeDAO()
+                    .deleteScopeByName(((Scope) scope).getName(), tenantId);
 
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection2);
             when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection2);
-            assertNull(scopeMgtDAO.getScopeByName(((Scope) scope).getName(), tenantId), "Failed to delete the scope" +
+            assertNull(OAuthTokenPersistenceFactory.getInstance().getOAuthScopeDAO()
+                    .getScopeByName(((Scope) scope).getName(), tenantId), "Failed to delete the scope" +
                     " by name.");
         }
     }
@@ -361,43 +358,45 @@ public class ScopeMgtDAOTest extends IdentityBaseTest {
              Connection connection2 = DAOUtils.getConnection(DB_NAME)) {
 
             mockStatic(IdentityDatabaseUtil.class);
-            ScopeMgtDAO scopeMgtDAO = new ScopeMgtDAO();
 
-            addScopes(scopeMgtDAO, Collections.singletonList(scope), tenantId);
+            addScopes(Collections.singletonList(scope), tenantId);
 
             Scope updatedScope = (Scope) scope;
             updatedScope.setName("updateScopeName");
 
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection1);
             when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection1);
-            scopeMgtDAO.updateScopeByName(updatedScope, tenantId);
+            OAuthTokenPersistenceFactory.getInstance().getOAuthScopeDAO()
+                    .updateScopeByName(updatedScope, tenantId);
 
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection2);
             when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection2);
-            assertNotNull(scopeMgtDAO.getScopeByName(updatedScope.getName(), tenantId), "Failed to u[date scope.");
+            assertNotNull(OAuthTokenPersistenceFactory.getInstance().getOAuthScopeDAO()
+                    .getScopeByName(updatedScope.getName(), tenantId), "Failed to u[date scope.");
             // Clean after test
-            deleteScopes(scopeMgtDAO, Collections.singletonList(scope), tenantId);
+            deleteScopes(Collections.singletonList(scope), tenantId);
         }
     }
 
-    private void addScopes(ScopeMgtDAO scopeMgtDAO, List<Object> scopes, int tenantId) throws SQLException,
+    private void addScopes(List<Object> scopes, int tenantId) throws SQLException,
             IdentityOAuth2ScopeException {
         for (Object scope : scopes) {
             try (Connection connection1 = DAOUtils.getConnection(DB_NAME)) {
                 when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection1);
                 when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection1);
-                scopeMgtDAO.addScope((Scope) scope, tenantId);
+                OAuthTokenPersistenceFactory.getInstance().getOAuthScopeDAO().addScope((Scope) scope, tenantId);
             }
         }
     }
 
-    private void deleteScopes(ScopeMgtDAO scopeMgtDAO, List<Object> scopes, int tenantId) throws SQLException,
+    private void deleteScopes(List<Object> scopes, int tenantId) throws SQLException,
             IdentityOAuth2ScopeException {
         for (Object scope : scopes) {
             try (Connection connection1 = DAOUtils.getConnection(DB_NAME)) {
                 when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection1);
                 when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection1);
-                scopeMgtDAO.deleteScopeByName(((Scope) scope).getName(), tenantId);
+                OAuthTokenPersistenceFactory.getInstance().getOAuthScopeDAO()
+                        .deleteScopeByName(((Scope) scope).getName(), tenantId);
             }
         }
     }
