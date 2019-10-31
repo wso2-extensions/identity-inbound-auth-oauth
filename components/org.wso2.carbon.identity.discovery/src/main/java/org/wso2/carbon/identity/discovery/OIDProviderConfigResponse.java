@@ -68,8 +68,8 @@ public class OIDProviderConfigResponse {
     private String opTosUri;
     private String checkSessionIframe;
     private String endSessionEndpoint;
-    private String backchannelLogoutSupported;
-    private String backchannelLogoutSessionSupported;
+    private Boolean backchannelLogoutSupported;
+    private Boolean backchannelLogoutSessionSupported;
 
 
     public String getIssuer() {
@@ -391,11 +391,11 @@ public class OIDProviderConfigResponse {
         this.endSessionEndpoint = endSessionEndpoint;
     }
 
-    public void setBackchannelLogoutSupported(String backchannelLogoutSupported) {
+    public void setBackchannelLogoutSupported(Boolean backchannelLogoutSupported) {
         this.backchannelLogoutSupported = backchannelLogoutSupported;
     }
 
-    public void setBackchannelLogoutSessionSupported(String backchannelLogoutSessionSupported) {
+    public void setBackchannelLogoutSessionSupported(Boolean backchannelLogoutSessionSupported) {
         this.backchannelLogoutSessionSupported = backchannelLogoutSessionSupported;
     }
 
