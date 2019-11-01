@@ -118,11 +118,11 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
     private static final String INVALID_CALLBACK_URL = "http://localhost:8080/playground2/auth";
     private static final String REGEX_CALLBACK_URL = "regexp=http://localhost:8080/playground2/oauth2client";
 
-
     private OIDCLogoutServlet logoutServlet;
 
     @BeforeTest
     public void setUp() throws Exception {
+
         logoutServlet = new OIDCLogoutServlet();
 
         initiateInMemoryH2();
@@ -134,6 +134,7 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
 
     @DataProvider(name = "provideDataForTestDoGet")
     public Object[][] provideDataForTestDoGet() {
+
         Cookie opbsCookie = new Cookie("opbs", OPBROWSER_STATE);
 
         String idTokenHint =
@@ -279,7 +280,6 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
                 {opbsCookie, true, redirectUrl[5], CALLBACK_URL, " ", null, true,
                         idTokenHintWithRealm, false, CALLBACK_URL, null},
 
-
         };
     }
 
@@ -287,6 +287,7 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
     public void testDoGet(Object cookie, boolean sessionExists, String redirectUrl, String expected, String consent,
                           String sessionDataKey, boolean skipUserConsent, String idTokenHint,
                           boolean isJWTSignedWithSPKey, String postLogoutUrl, Object flowStatus) throws Exception {
+
         TestUtil.startTenantFlow(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
 
         mockStatic(OIDCSessionManagementUtil.class);
@@ -473,7 +474,7 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
 
     @AfterTest
     public void cleanData() throws Exception {
+
         super.cleanData();
     }
-
 }

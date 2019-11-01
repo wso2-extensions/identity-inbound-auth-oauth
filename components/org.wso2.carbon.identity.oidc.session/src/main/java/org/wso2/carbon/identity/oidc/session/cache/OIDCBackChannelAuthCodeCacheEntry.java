@@ -21,7 +21,7 @@ import org.wso2.carbon.identity.application.common.cache.CacheEntry;
 
 /**
  * This class holds sessionID required for Authorization code flow in OIDCBackChannel logout and gets cahched againts
- * Authorizarion code
+ * Authorizarion code.
  */
 public class OIDCBackChannelAuthCodeCacheEntry extends CacheEntry {
 
@@ -29,18 +29,22 @@ public class OIDCBackChannelAuthCodeCacheEntry extends CacheEntry {
     private String sessionId;
 
     /**
-     * Sets sessionId
+     * Sets sessionId.
      *
      * @param sessionId
      */
     public void setSessionId(String sessionId) {
+
         this.sessionId = sessionId;
     }
 
     /**
+     * Returns sessionId.
+     *
      * @return sessionId for OIDCBackChannel Logout
      */
     public String getSessionId() {
+
         return sessionId;
     }
 }

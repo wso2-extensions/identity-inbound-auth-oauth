@@ -39,17 +39,20 @@ public class OIDCSessionStateTest extends PowerMockIdentityBaseTest {
 
     @BeforeTest
     public void setUp() {
+
         oidcSessionState = new OIDCSessionState();
     }
 
     @Test
     public void testSetAuthenticatedUser() {
+
         oidcSessionState.setAuthenticatedUser(USERNAME);
         assertNotNull(oidcSessionState.getAuthenticatedUser(), "User is not authenticated");
     }
 
     @Test
     public void testSetSessionParticipants() {
+
         Set<String> authenticatedUesrs = new HashSet<>();
         authenticatedUesrs.add(CLIENT_ID_VALUE);
         oidcSessionState.setSessionParticipants(authenticatedUesrs);
@@ -58,6 +61,7 @@ public class OIDCSessionStateTest extends PowerMockIdentityBaseTest {
 
     @Test
     public void testAddSessionParticipant() {
+
         String client_id = "ES9l2uUf8AzNOfmGS9lPEIsdrR8a";
         oidcSessionState.addSessionParticipant(client_id);
         Set sessionParticipants = oidcSessionState.getSessionParticipants();
@@ -66,12 +70,14 @@ public class OIDCSessionStateTest extends PowerMockIdentityBaseTest {
 
     @Test
     public void testSetAuthenticated() throws Exception {
+
         oidcSessionState.setAuthenticated(true);
         assertTrue(oidcSessionState.isAuthenticated(), "Authenticated flag is false");
     }
 
     @Test
     public void testSetAddSessionState() throws Exception {
+
         oidcSessionState.setAddSessionState(true);
         assertTrue(oidcSessionState.isAddSessionState(), "Add session state flag is false");
     }

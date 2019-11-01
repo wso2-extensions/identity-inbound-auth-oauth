@@ -2625,7 +2625,7 @@ public class OAuth2AuthzEndpoint {
             try {
                 setSidToSessionState(sessionState);
                 code = getAuthCodeFromRedirectURL(redirectURL);
-                if (code != null && !code.isEmpty()) {
+                if (StringUtils.isNotEmpty(code)) {
                     addToBCLogoutSessionCache(code);
                 } else {
                     log.debug("Authorization code is not found in the redirect URL");
@@ -2732,7 +2732,6 @@ public class OAuth2AuthzEndpoint {
     private String getAuthCodeFromRedirectURL(String redirectURL) throws URISyntaxException {
 
         String authCode = null;
-
         List<NameValuePair> queryParameters = new URIBuilder(redirectURL).getQueryParams();
         for (NameValuePair param : queryParameters) {
             if ((ACCESS_CODE).equals(param.getName()))

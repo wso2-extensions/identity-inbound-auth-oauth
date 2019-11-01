@@ -38,9 +38,9 @@ public class OIDCBackChannelAuthCodeCache extends BaseCache<OIDCBackChannelAuthC
     }
 
     /**
-     * Returns OIDCBackChannelAuthCodeCache singleton instance
+     * Returns OIDCBackChannelAuthCodeCache singleton instance.
      *
-     * @return OIDCBackChannelAuthCodeCache instance
+     * @return OIDCBackChannelAuthCodeCache instance.
      */
     public static OIDCBackChannelAuthCodeCache getInstance() {
         if (instance == null) {
@@ -54,9 +54,9 @@ public class OIDCBackChannelAuthCodeCache extends BaseCache<OIDCBackChannelAuthC
     }
 
     /**
-     * Adds session information to the cache
-     * Cache key includes authorization code
-     * Cache entry includes session id or sid claim which is unique for all RPs belong to same browser session
+     * Adds session information to the cache.
+     * Cache key includes authorization code.
+     * Cache entry includes session id or sid claim which is unique for all RPs belong to same browser session.
      *
      * @param key   Key which cache entry is indexed.
      * @param entry Actual object where cache entry is placed.
@@ -72,7 +72,7 @@ public class OIDCBackChannelAuthCodeCache extends BaseCache<OIDCBackChannelAuthC
 
     /**
      * Retrieve the sessionid information from the cache.
-     * At a cache miss data is loaded from the persistence store
+     * At a cache miss data is loaded from the persistence store.
      *
      * @param key CacheKey Key which cache entry is indexed.
      * @return Cache entry
@@ -91,7 +91,7 @@ public class OIDCBackChannelAuthCodeCache extends BaseCache<OIDCBackChannelAuthC
     }
 
     /**
-     * Clears the sessionid information from the cache and remove from persistence store
+     * Clears the sessionid information from the cache and remove from persistence store.
      *
      * @param key Key to clear cache.
      */

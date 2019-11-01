@@ -46,19 +46,22 @@ public class OIDCSessionManagerTest extends TestOIDCSessionBase {
 
     @BeforeMethod
     public void setUp() throws Exception {
-        oidcSessionManager=new OIDCSessionManager();
+
+        oidcSessionManager = new OIDCSessionManager();
         TestUtil.startTenantFlow(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
     }
 
     @Test
     public void testStoreOIDCSessionState() {
+
         oidcSessionManager.storeOIDCSessionState(SESSION_ID, oidcSessionState);
         assertNotNull(oidcSessionManager.getOIDCSessionState(SESSION_ID), "Session Id is not stored in OIDCSession " +
                 "state");
     }
 
     @Test
-    public void testRemoveOIDCSessionState(){
+    public void testRemoveOIDCSessionState() {
+
         oidcSessionManager.removeOIDCSessionState(SESSION_ID);
         assertNull(oidcSessionManager.getOIDCSessionState(SESSION_ID), "Session Id is removed from OIDCSession " +
                 "state");
@@ -66,6 +69,7 @@ public class OIDCSessionManagerTest extends TestOIDCSessionBase {
 
     @Test
     public void testRestoreOIDCSessionState() {
+
         OIDCSessionState oidcSessionState = new OIDCSessionState();
         oidcSessionManager.restoreOIDCSessionState(SESSION_ID, NEW_SESSION_ID, oidcSessionState);
         assertNotNull(oidcSessionManager.getOIDCSessionState(NEW_SESSION_ID), "Session Id is not stored in " +
@@ -73,8 +77,9 @@ public class OIDCSessionManagerTest extends TestOIDCSessionBase {
     }
 
     @Test
-    public void testSessionNotExists(){
-       assertFalse(oidcSessionManager.sessionExists(SESSION_ID));
+    public void testSessionNotExists() {
+
+        assertFalse(oidcSessionManager.sessionExists(SESSION_ID));
     }
 
 }
