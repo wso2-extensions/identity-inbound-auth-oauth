@@ -30,7 +30,7 @@ public class Scope implements Serializable {
     private String name;
     private String displayName;
     private String description;
-    private List<ScopeBinding> scopeBindings;
+    private List<ScopeBinding> scopeBindings = new ArrayList<>();
 
     public Scope(String name, String displayName, String description) {
         this.name = name;
