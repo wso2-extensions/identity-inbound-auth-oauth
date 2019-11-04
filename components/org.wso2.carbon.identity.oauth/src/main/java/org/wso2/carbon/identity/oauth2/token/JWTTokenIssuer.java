@@ -421,8 +421,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             jwtClaimsSetBuilder.claim(SCOPE, scope);
         }
 
-        jwtClaimsSetBuilder.expirationTime(
-                getExpiryTime(tokenReqMessageContext, new Date(curTimeInMillis + accessTokenLifeTimeInMillis)));
+        jwtClaimsSetBuilder.expirationTime(new Date(curTimeInMillis + accessTokenLifeTimeInMillis));
 
         // This is a spec (openid-connect-core-1_0:2.0) requirement for ID tokens. But we are keeping this in JWT
         // as well.
@@ -503,35 +502,6 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             }
         }
         return scopeString;
-    }
-
-    /**
-     * To get the expiry time claim of the JWT token, based on the previous assertion expiry time.
-     *
-     * @param tokenReqMessageContext Token request message context.
-     * @param originalExpiryTime     Original expiry time
-     * @return expiry time of the token.
-     */
-    private Date getExpiryTime(OAuthTokenReqMessageContext tokenReqMessageContext, Date originalExpiryTime) {
-
-        if (tokenReqMessageContext != null) {
-            Object assertionExpiryTime = tokenReqMessageContext.getProperty(EXPIRY_TIME_JWT);
-            if (assertionExpiryTime != null) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Expiry time from the previous token " + ((Date) assertionExpiryTime).getTime());
-                }
-
-                if (originalExpiryTime.after((Date) assertionExpiryTime)) {
-                    if (log.isDebugEnabled()) {
-                        log.debug("Expiry time of newly generated token as per the configurations " + originalExpiryTime
-                                + ", since this time is after assertion expiry time " + assertionExpiryTime
-                                + " setting, " + assertionExpiryTime + " as the expiry time");
-                    }
-                    originalExpiryTime = (Date) assertionExpiryTime;
-                }
-            }
-        }
-        return originalExpiryTime;
     }
 
     /**

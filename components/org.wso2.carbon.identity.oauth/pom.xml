@@ -23,7 +23,7 @@
         <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
         <artifactId>identity-inbound-auth-oauth</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <version>6.2.31-SNAPSHOT</version>
+        <version>6.2.37-SNAPSHOT</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -250,7 +250,6 @@
         <dependency>
             <groupId>org.wso2.orbit.org.opensaml</groupId>
             <artifactId>opensaml</artifactId>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.wso2.carbon</groupId>
