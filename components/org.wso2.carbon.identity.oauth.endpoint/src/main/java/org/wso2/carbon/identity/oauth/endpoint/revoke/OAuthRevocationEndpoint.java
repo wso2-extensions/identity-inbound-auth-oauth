@@ -181,6 +181,7 @@ public class OAuthRevocationEndpoint {
         if (isNotEmpty(tokenType)) {
             revokeRequest.setTokenType(tokenType);
         }
+        revokeRequest.setRequest(request);
         return revokeRequest;
     }
 

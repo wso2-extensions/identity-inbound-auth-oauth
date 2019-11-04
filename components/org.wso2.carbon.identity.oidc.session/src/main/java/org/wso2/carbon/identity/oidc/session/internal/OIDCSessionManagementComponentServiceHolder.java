@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oidc.session.internal;
 
 import org.osgi.service.http.HttpService;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oidc.session.handler.OIDCLogoutHandler;
 import org.wso2.carbon.user.core.service.RealmService;
 
@@ -28,13 +29,22 @@ import java.util.Collections;
 import java.util.List;
 
 public class OIDCSessionManagementComponentServiceHolder {
+
+    private static OIDCSessionManagementComponentServiceHolder instance =
+            new OIDCSessionManagementComponentServiceHolder();
     private static HttpService httpService;
     private static RealmService realmService;
     private static List<OIDCLogoutHandler> OIDCPostLogoutHandlers = new ArrayList<>();
     private static ApplicationManagementService applicationMgtService;
+    private List<TokenBinder> tokenBinders = new ArrayList<>();
 
     private OIDCSessionManagementComponentServiceHolder() {
 
+    }
+
+    public static OIDCSessionManagementComponentServiceHolder getInstance() {
+
+        return instance;
     }
 
     public static HttpService getHttpService() {
@@ -80,5 +90,20 @@ public class OIDCSessionManagementComponentServiceHolder {
      */
     public static void setApplicationMgtService(ApplicationManagementService applicationMgtService) {
         OIDCSessionManagementComponentServiceHolder.applicationMgtService = applicationMgtService;
+    }
+
+    public List<TokenBinder> getTokenBinders() {
+
+        return tokenBinders;
+    }
+
+    public void addTokenBinder(TokenBinder tokenBinder) {
+
+        this.tokenBinders.add(tokenBinder);
+    }
+
+    public void removeTokenBinder(TokenBinder tokenBinder) {
+
+        this.tokenBinders.remove(tokenBinder);
     }
 }

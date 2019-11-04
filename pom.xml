@@ -42,8 +42,8 @@
     <modules>
         <module>service-stubs/org.wso2.carbon.claim.metadata.mgt.stub</module>
         <module>test-utils/org.wso2.carbon.identity.oauth.common.testng</module>
-        <module>components/org.wso2.carbon.identity.oauth</module>
         <module>components/org.wso2.carbon.identity.oauth.common</module>
+        <module>components/org.wso2.carbon.identity.oauth</module>
         <module>components/org.wso2.carbon.identity.oauth.endpoint</module>
         <module>components/org.wso2.carbon.identity.oauth.ui</module>
         <module>components/org.wso2.carbon.identity.oauth.stub</module>

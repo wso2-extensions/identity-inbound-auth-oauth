@@ -75,6 +75,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingDeque;
 
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
+import static org.wso2.carbon.identity.oauth2.dao.SQLQueries.STORE_TOKEN_BINDING;
+
 /**
  * Data Access Layer functionality for Token management in OAuth 2.0 implementation. This includes
  * storing and retrieving access tokens, authorization codes and refresh tokens.
@@ -361,7 +364,12 @@ public class TokenMgtDAO {
             }else{
                 insertTokenPrepStmt.setString(17, accessTokenDO.getRefreshToken());
             }
-            insertTokenPrepStmt.setString(18, persistenceProcessor.getProcessedClientId(consumerKey));
+            String tokenBindingReference = NONE;
+            if(accessTokenDO.getTokenBinding() != null) {
+                tokenBindingReference =  accessTokenDO.getTokenBinding().getBindingReference();
+            }
+            insertTokenPrepStmt.setString(18, tokenBindingReference);
+            insertTokenPrepStmt.setString(19, persistenceProcessor.getProcessedClientId(consumerKey));
             insertTokenPrepStmt.execute();
 
             String accessTokenId = accessTokenDO.getTokenId();
@@ -375,6 +383,17 @@ public class TokenMgtDAO {
                     addScopePrepStmt.execute();
                 }
             }
+
+            if (accessTokenDO.getTokenBinding() != null) {
+                PreparedStatement preparedStatement = connection.prepareStatement(STORE_TOKEN_BINDING);
+                preparedStatement.setString(1, accessTokenId);
+                preparedStatement.setString(2, accessTokenDO.getTokenBinding().getBindingType());
+                preparedStatement.setString(3, accessTokenDO.getTokenBinding().getBindingReference());
+                preparedStatement.setString(4, accessTokenDO.getTokenBinding().getBindingValue());
+                preparedStatement.setInt(5, tenantId);
+                preparedStatement.execute();
+            }
+
             if (retryAttempt > 0) {
                 log.info("Successfully recovered 'CON_APP_KEY' constraint violation with the attempt : " +
                         retryAttempt);
@@ -553,6 +572,11 @@ public class TokenMgtDAO {
 
             if (hashedScope != null) {
                 prepStmt.setString(5, hashedScope);
+                // Since this class is deprecated, this is added to fix the test cases.
+                prepStmt.setString(6, NONE);
+            } else {
+                // Since this class is deprecated, this is added to fix the test cases.
+                prepStmt.setString(5, NONE);
             }
 
             resultSet = prepStmt.executeQuery();
@@ -2881,6 +2905,11 @@ public class TokenMgtDAO {
 
             if (hashedScope != null) {
                 prepStmt.setString(5, hashedScope);
+                // Since this class is deprecated, this is added to fix the test cases.
+                prepStmt.setString(6, NONE);
+            } else {
+                // Since this class is deprecated, this is added to fix the test cases.
+                prepStmt.setString(5, NONE);
             }
 
             resultSet = prepStmt.executeQuery();

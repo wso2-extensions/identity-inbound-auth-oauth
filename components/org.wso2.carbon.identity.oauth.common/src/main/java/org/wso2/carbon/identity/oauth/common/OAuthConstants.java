@@ -345,6 +345,7 @@ public final class OAuthConstants {
         public static final String TOKEN_TYPE = "tokenType";
         public static final String BYPASS_CLIENT_CREDENTIALS = "bypassClientCredentials";
         public static final String RENEW_REFRESH_TOKEN = "renewRefreshToken";
+        public static final String TOKEN_BINDING_TYPE = "tokenBindingType";
 
         private OIDCConfigProperties() { }
     }
@@ -365,6 +366,11 @@ public final class OAuthConstants {
         public static final String SHA512 = "SHA-512";
 
         private SignatureAlgorithms() {}
+    }
+
+    public static class TokenBindings {
+
+        public static final String NONE = "NONE";
     }
 
     private OAuthConstants() {

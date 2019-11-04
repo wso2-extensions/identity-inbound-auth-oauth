@@ -47,6 +47,7 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionManagementException;
@@ -626,6 +627,9 @@ public class OIDCLogoutServlet extends HttpServlet {
             removeSessionDataFromCache(sessionDataKey);
             Cookie opBrowserStateCookie = OIDCSessionManagementUtil.removeOPBrowserStateCookie(request, response);
             OIDCSessionManagementUtil.getSessionManager().removeOIDCSessionState(opBrowserStateCookie.getValue());
+            // Clear binding elements from the response.
+            clearTokenBindingElements(cacheEntry.getParamMap().get(OIDCSessionConstants.OIDC_CACHE_CLIENT_ID_PARAM),
+                    request, response);
             response.sendRedirect(getRedirectURL(redirectURL, request));
         } else {
             response.sendRedirect(getRedirectURL(OIDCSessionManagementUtil.getErrorPageURL(OAuth2ErrorCodes
@@ -785,5 +789,28 @@ public class OIDCLogoutServlet extends HttpServlet {
             redirectURL = OIDCSessionManagementUtil.getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, msg);
         }
         response.sendRedirect(getRedirectURL(redirectURL, request));
+    }
+
+    private void clearTokenBindingElements(String clientId, HttpServletRequest request, HttpServletResponse response) {
+
+        OAuthAppDO oAuthAppDO;
+        try {
+            oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
+        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+            log.error("Failed to load the app information for the client id: " + clientId, e);
+            return;
+        }
+
+        if (StringUtils.isBlank(oAuthAppDO.getTokenBindingType())) {
+            return;
+        }
+
+        List<TokenBinder> tokenBinders = OIDCSessionManagementComponentServiceHolder.getInstance().getTokenBinders();
+        if (tokenBinders.isEmpty()) {
+            return;
+        }
+
+        tokenBinders.stream().filter(t -> oAuthAppDO.getTokenBindingType().equals(t.getBindingType())).findAny()
+                .ifPresent(t -> t.clearTokenBindingElements(request, response));
     }
 }
