@@ -46,9 +46,7 @@ import org.wso2.carbon.identity.application.common.model.Property;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.base.IdentityConstants;
-import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
-import org.wso2.carbon.identity.core.util.SAMLInitializer;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -57,6 +55,9 @@ import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AbstractAuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.util.X509CredentialImpl;
+import org.wso2.carbon.identity.saml.common.util.SAMLInitializer;
+import org.wso2.carbon.identity.saml.common.util.UnmarshallUtils;
+import org.wso2.carbon.identity.saml.common.util.exception.IdentityUnmarshallingException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 
@@ -169,7 +170,7 @@ public class SAML1BearerGrantHandler extends AbstractAuthorizationGrantHandler {
         }
 
         try {
-            XMLObject samlObject = IdentityUtil.unmarshall(new String(Base64.decodeBase64(
+            XMLObject samlObject = UnmarshallUtils.unmarshall(new String(Base64.decodeBase64(
                     tokReqMsgCtx.getOauth2AccessTokenReqDTO().getAssertion())));
             // Validating for multiple assertions
             NodeList assertionList = samlObject.getDOM().getElementsByTagNameNS(SAMLConstants.SAML1_NS, "Assertion");
@@ -184,7 +185,7 @@ public class SAML1BearerGrantHandler extends AbstractAuthorizationGrantHandler {
                 log.error("Only Assertion objects are validated in SAML1Bearer Grant Type");
                 return false;
             }
-        } catch (IdentityException e) {
+        } catch (IdentityUnmarshallingException e) {
             if (log.isDebugEnabled()) {
                 log.debug("Error occurred while unmarshalling SAML1.0 assertion", e);
             }

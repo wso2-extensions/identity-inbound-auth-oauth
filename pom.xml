@@ -229,6 +229,12 @@
                 <version>${carbon.identity.framework.version}</version>
             </dependency>
 
+            <!--SAML Common Util dependency-->
+            <dependency>
+                <groupId>org.wso2.carbon.identity.saml.common</groupId>
+                <artifactId>org.wso2.carbon.identity.saml.common.util</artifactId>
+                <version>${saml.common.util.version}</version>
+            </dependency>
 
             <!-- Orbit dependencies -->
             <dependency>
@@ -795,6 +801,10 @@
         <!-- Axiom Version -->
         <axiom.wso2.version>1.2.11-wso2v16</axiom.wso2.version>
         <axiom.osgi.version.range>[1.2.11, 2.0.0)</axiom.osgi.version.range>
+
+        <!--SAML Common Util Version-->
+        <saml.common.util.version>1.0.0-SNAPSHOT</saml.common.util.version>
+        <saml.common.util.version.range>[1.0.0,2.0.0)</saml.common.util.version.range>
 
         <!-- Commons -->
         <commons-lang.wso2.version>2.6.0.wso2v1</commons-lang.wso2.version>

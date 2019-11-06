@@ -149,6 +149,12 @@
             <groupId>org.wso2.carbon.identity.framework</groupId>
             <artifactId>org.wso2.carbon.identity.entitlement</artifactId>
         </dependency>
+
+        <!--SAML Common Util dependency-->
+        <dependency>
+            <groupId>org.wso2.carbon.identity.saml.common</groupId>
+            <artifactId>org.wso2.carbon.identity.saml.common.util</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.wso2.orbit.com.github.dblock.waffle</groupId>
             <artifactId>waffle-jna</artifactId>
@@ -348,6 +354,7 @@
                             org.wso2.carbon.identity.application.common.*;version="${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.identity.application.authentication.framework.*;version="${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.identity.user.store.configuration.*;version="${carbon.identity.framework.imp.pkg.version.range}",
+                            org.wso2.carbon.identity.saml.common.util.*; version="${saml.common.util.version.range}",
 
                             org.wso2.carbon.base; version="${carbon.base.imp.pkg.version.range}",
                             org.wso2.carbon.registry.api;version="${carbon.kernel.registry.imp.pkg.version.range}",

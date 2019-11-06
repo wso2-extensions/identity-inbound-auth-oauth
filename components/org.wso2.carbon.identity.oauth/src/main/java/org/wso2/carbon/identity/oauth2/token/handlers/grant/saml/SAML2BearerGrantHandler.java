@@ -63,7 +63,6 @@ import org.wso2.carbon.identity.core.model.SAMLSSOServiceProviderDO;
 import org.wso2.carbon.identity.core.persistence.IdentityPersistenceManager;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
-import org.wso2.carbon.identity.core.util.SAMLInitializer;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
@@ -75,6 +74,9 @@ import org.wso2.carbon.identity.oauth2.token.handlers.grant.AbstractAuthorizatio
 import org.wso2.carbon.identity.oauth2.util.ClaimsUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.util.X509CredentialImpl;
+import org.wso2.carbon.identity.saml.common.util.SAMLInitializer;
+import org.wso2.carbon.identity.saml.common.util.UnmarshallUtils;
+import org.wso2.carbon.identity.saml.common.util.exception.IdentityUnmarshallingException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 import org.wso2.carbon.registry.core.Registry;
@@ -1119,15 +1121,15 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
 
     private Assertion getAssertionObject(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
         try {
-            XMLObject samlObject = IdentityUtil.unmarshall(new String(Base64.decodeBase64(
+            XMLObject samlObject = UnmarshallUtils.unmarshall(new String(Base64.decodeBase64(
                     tokReqMsgCtx.getOauth2AccessTokenReqDTO().getAssertion())));
             validateAssertionList(samlObject);
             return getAssertion(samlObject);
-        } catch (IdentityException e) {
+        } catch (IdentityUnmarshallingException e) {
             if(log.isDebugEnabled()){
                 log.debug("Error while unmashalling the assertion", e);
             }
-            throw new IdentityOAuth2Exception("Error while unmashalling the assertion");
+            throw new IdentityOAuth2Exception("Error while unmashalling the assertion", e);
         }
     }
 
