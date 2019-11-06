@@ -32,13 +32,12 @@ import java.sql.Timestamp;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.TimeZone;
 import java.util.UUID;
 
 /**
  * This class contains override methods of DeviceFlowDAO.
  */
-public class DeviceFlowDAOImpl extends AbstractOAuthDAO implements DeviceFlowDAO {
+public class DeviceFlowDAOImpl implements DeviceFlowDAO {
 
     private static final Log log = LogFactory.getLog(DeviceFlowDAOImpl.class);
 
@@ -50,13 +49,9 @@ public class DeviceFlowDAOImpl extends AbstractOAuthDAO implements DeviceFlowDAO
     public void insertDeviceFlow(String deviceCode, String userCode, String consumerKey, String scope,
                                  Long expiresIn) throws IdentityOAuth2Exception {
 
-        if (!isPersistenceEnabled()) {
-            return;
-        }
 
         Connection connection = IdentityDatabaseUtil.getDBConnection();
         PreparedStatement prepStmt = null;
-
         try {
             Date date = new Date();
             String sql;
@@ -68,14 +63,13 @@ public class DeviceFlowDAOImpl extends AbstractOAuthDAO implements DeviceFlowDAO
             prepStmt.setString(2, deviceCode);
             prepStmt.setString(3, userCode);
             prepStmt.setString(4, scope);
-            prepStmt.setTimestamp(5, timeCreated, Calendar.getInstance(TimeZone.getTimeZone(UTC)));
-            prepStmt.setTimestamp(6, timeCreated, Calendar.getInstance(TimeZone.getTimeZone(UTC)));
+            prepStmt.setTimestamp(5, timeCreated, Calendar.getInstance());
+            prepStmt.setTimestamp(6, timeCreated, Calendar.getInstance());
             prepStmt.setLong(7, timeExpired);
             prepStmt.setLong(8, 5000);
             prepStmt.setString(9, Constants.PENDING);
             prepStmt.setString(10, null);
-            prepStmt.setString(11, getPersistenceProcessor().getProcessedClientId(consumerKey));
-
+            prepStmt.setString(11, consumerKey);
             prepStmt.execute();
             IdentityDatabaseUtil.commitTransaction(connection);
 
@@ -93,7 +87,6 @@ public class DeviceFlowDAOImpl extends AbstractOAuthDAO implements DeviceFlowDAO
         Connection connection = IdentityDatabaseUtil.getDBConnection(false);
         PreparedStatement ps = null;
         ResultSet rs = null;
-
         try {
             String sqlQuery = SQLQueries.DeviceFlowDAOSQLQueries.GET_CONSUMER_KEY_FOR_USER_CODE;
             ps = connection.prepareStatement(sqlQuery);
@@ -101,8 +94,7 @@ public class DeviceFlowDAOImpl extends AbstractOAuthDAO implements DeviceFlowDAO
             rs = ps.executeQuery();
 
             while (rs.next()) {
-                clientId = getPersistenceProcessor().getPreprocessedClientId(rs.getString(1));
-                log.info("client id is " + clientId);
+                clientId = rs.getString(1);
             }
 
         } catch (SQLException e) {
@@ -117,13 +109,8 @@ public class DeviceFlowDAOImpl extends AbstractOAuthDAO implements DeviceFlowDAO
     @Override
     public void setUserAuthenticated(String userCode, String status) throws IdentityOAuth2Exception {
 
-        if (!isPersistenceEnabled()) {
-            return;
-        }
-
         Connection connection = IdentityDatabaseUtil.getDBConnection();
         PreparedStatement prepStmt = null;
-
         try {
             String sql;
             sql = SQLQueries.DeviceFlowDAOSQLQueries.SET_USER_HAS_AUTHENTICATED;
@@ -138,7 +125,6 @@ public class DeviceFlowDAOImpl extends AbstractOAuthDAO implements DeviceFlowDAO
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, null, prepStmt);
         }
-
     }
 
     @Override
@@ -147,7 +133,6 @@ public class DeviceFlowDAOImpl extends AbstractOAuthDAO implements DeviceFlowDAO
         Connection connection = IdentityDatabaseUtil.getDBConnection(false);
         PreparedStatement ps = null;
         ResultSet rs = null;
-
         try {
             String sqlQuery = SQLQueries.DeviceFlowDAOSQLQueries.GET_CONSUMER_KEY_FOR_DEVICE_CODE;
             ps = connection.prepareStatement(sqlQuery);
@@ -155,15 +140,14 @@ public class DeviceFlowDAOImpl extends AbstractOAuthDAO implements DeviceFlowDAO
             rs = ps.executeQuery();
 
             while (rs.next()) {
-                clientId = getPersistenceProcessor().getPreprocessedClientId(rs.getString(1));
-                log.info("client id is " + clientId);
+                clientId = rs.getString(1);
             }
 
         } catch (SQLException e) {
             throw new IdentityOAuth2Exception("Error when getting client id for device code : " +
                     deviceCode, e);
         } finally {
-            IdentityDatabaseUtil.closeAllConnections(connection, null, ps);
+            IdentityDatabaseUtil.closeAllConnections(connection, rs, ps);
         }
         return clientId;
     }
@@ -177,7 +161,6 @@ public class DeviceFlowDAOImpl extends AbstractOAuthDAO implements DeviceFlowDAO
         boolean checked = false;
         String status = null;
         HashMap<String, String> result = new HashMap<>();
-
         try {
             String sqlQuery = SQLQueries.DeviceFlowDAOSQLQueries.GET_AUTHENTICATION_STATUS;
             ps = connection.prepareStatement(sqlQuery);
@@ -186,7 +169,7 @@ public class DeviceFlowDAOImpl extends AbstractOAuthDAO implements DeviceFlowDAO
 
             while (rs.next()) {
                 try {
-                    result.put(Constants.STATUS, getPersistenceProcessor().getPreprocessedClientId(rs.getString(1)));
+                    result.put(Constants.STATUS,rs.getString(1));
                     result.put(Constants.LAST_POLL_TIME, rs.getTimestamp(2).toString());
                     result.put(Constants.POLL_TIME, Long.toString(rs.getLong(3)));
                     result.put(Constants.EXPIRY_TIME, Long.toString(rs.getLong(4)));
@@ -203,7 +186,7 @@ public class DeviceFlowDAOImpl extends AbstractOAuthDAO implements DeviceFlowDAO
             throw new IdentityOAuth2Exception("Error when getting authentication status for device code : " +
                     deviceCode, e);
         } finally {
-            IdentityDatabaseUtil.closeAllConnections(connection, null, ps);
+            IdentityDatabaseUtil.closeAllConnections(connection, rs, ps);
         }
         if (checked) {
             return result;
@@ -219,7 +202,6 @@ public class DeviceFlowDAOImpl extends AbstractOAuthDAO implements DeviceFlowDAO
         Connection connection = IdentityDatabaseUtil.getDBConnection(false);
         PreparedStatement ps = null;
         ResultSet rs = null;
-
         try {
             String sqlQuery = SQLQueries.DeviceFlowDAOSQLQueries.CHECK_CLIENT_ID_EXISTS;
             ps = connection.prepareStatement(sqlQuery);
@@ -228,7 +210,6 @@ public class DeviceFlowDAOImpl extends AbstractOAuthDAO implements DeviceFlowDAO
             while (rs.next()) {
                 status = rs.getString(1);
                 if (status != null) {
-                    log.info("id exist");
                     return true;
                 } else {
                     return false;
@@ -238,11 +219,9 @@ public class DeviceFlowDAOImpl extends AbstractOAuthDAO implements DeviceFlowDAO
             throw new IdentityOAuth2Exception("Error when getting client id : " +
                     clientId, e);
         } finally {
-            IdentityDatabaseUtil.closeAllConnections(connection, null, ps);
+            IdentityDatabaseUtil.closeAllConnections(connection, rs, ps);
         }
-        // TODO what will happen when user request again before device code expire
         return false;
-
     }
 
     @Override
@@ -251,7 +230,6 @@ public class DeviceFlowDAOImpl extends AbstractOAuthDAO implements DeviceFlowDAO
         Connection connection = IdentityDatabaseUtil.getDBConnection(false);
         PreparedStatement ps = null;
         ResultSet rs = null;
-
         try {
             String sqlQuery = SQLQueries.DeviceFlowDAOSQLQueries.GET_SCOPE_FOR_USER_CODE;
             ps = connection.prepareStatement(sqlQuery);
@@ -265,7 +243,7 @@ public class DeviceFlowDAOImpl extends AbstractOAuthDAO implements DeviceFlowDAO
             throw new IdentityOAuth2Exception("Error when getting scopes for user code : " +
                     userCode, e);
         } finally {
-            IdentityDatabaseUtil.closeAllConnections(connection, null, ps);
+            IdentityDatabaseUtil.closeAllConnections(connection, rs, ps);
         }
         return scope;
     }
@@ -276,7 +254,6 @@ public class DeviceFlowDAOImpl extends AbstractOAuthDAO implements DeviceFlowDAO
         Connection connection = IdentityDatabaseUtil.getDBConnection(false);
         PreparedStatement ps = null;
         ResultSet rs = null;
-
         try {
             String sqlQuery = SQLQueries.DeviceFlowDAOSQLQueries.GET_USER_CODE_STATUS;
             ps = connection.prepareStatement(sqlQuery);
@@ -289,7 +266,7 @@ public class DeviceFlowDAOImpl extends AbstractOAuthDAO implements DeviceFlowDAO
             throw new IdentityOAuth2Exception("Error when getting status for user code : " +
                     userCode, e);
         } finally {
-            IdentityDatabaseUtil.closeAllConnections(connection, null, ps);
+            IdentityDatabaseUtil.closeAllConnections(connection, rs, ps);
         }
         return status;
     }
@@ -297,13 +274,8 @@ public class DeviceFlowDAOImpl extends AbstractOAuthDAO implements DeviceFlowDAO
     @Override
     public void setLastPollTime(String deviceCode, Timestamp newPOllTime) throws IdentityOAuth2Exception {
 
-        if (!isPersistenceEnabled()) {
-            return;
-        }
-
         Connection connection = IdentityDatabaseUtil.getDBConnection();
         PreparedStatement ps = null;
-
         try {
             String sql;
             sql = SQLQueries.DeviceFlowDAOSQLQueries.SET_LAST_POLL_TIME;
@@ -323,13 +295,8 @@ public class DeviceFlowDAOImpl extends AbstractOAuthDAO implements DeviceFlowDAO
     @Override
     public void setAuthzUser(String userCode, String userName) throws IdentityOAuth2Exception {
 
-        if (!isPersistenceEnabled()) {
-            return;
-        }
-
         Connection connection = IdentityDatabaseUtil.getDBConnection();
         PreparedStatement ps = null;
-
         try {
             String sql;
             sql = SQLQueries.DeviceFlowDAOSQLQueries.SET_AUTHZ_USER;
@@ -350,13 +317,8 @@ public class DeviceFlowDAOImpl extends AbstractOAuthDAO implements DeviceFlowDAO
     @Override
     public void setDeviceCodeExpired(String deviceCode, String status) throws IdentityOAuth2Exception {
 
-        if (!isPersistenceEnabled()) {
-            return;
-        }
-
         Connection connection = IdentityDatabaseUtil.getDBConnection();
         PreparedStatement prepStmt = null;
-
         try {
             String sql;
             sql = SQLQueries.DeviceFlowDAOSQLQueries.SET_DEVICE_CODE_EXPIRED;
@@ -371,6 +333,5 @@ public class DeviceFlowDAOImpl extends AbstractOAuthDAO implements DeviceFlowDAO
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, null, prepStmt);
         }
-
     }
 }

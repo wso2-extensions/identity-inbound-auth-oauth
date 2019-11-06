@@ -144,9 +144,9 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
      * To set the properties of the token generation.
      *
      * @param tokReqMsgCtx Token request message context
-     * @param tokenReq Token request
-     * @param scopes  Scopes that will be stored against token
-     * @param authzUser Authorized user
+     * @param tokenReq     Token request
+     * @param scopes       Scopes that will be stored against token
+     * @param authzUser    Authorized user
      */
     private void setPropertiesForTokenGeneration(OAuthTokenReqMessageContext tokReqMsgCtx,
                                                  OAuth2AccessTokenReqDTO tokenReq, String[] scopes, String authzUser) {
@@ -166,10 +166,10 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
      * This method use to check whether device code is expired or not
      *
      * @param results Result map that contains values from database
-     * @param date Time that request has came
+     * @param date    Time that request has came
      * @return true or false
      */
-    public static boolean isValidDeviceCode(HashMap results, Date date) {
+    private static boolean isValidDeviceCode(HashMap results, Date date) {
 
         return Long.parseLong((String) results.get(Constants.EXPIRY_TIME)) < date.getTime();
     }
@@ -178,7 +178,7 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
      * This checks whether polling frequency is correct or not
      *
      * @param newPollTime Time of the new poll request
-     * @param results Result map that contains values from database
+     * @param results     Result map that contains values from database
      * @return true or false
      */
     private static boolean isValidPollTime(Timestamp newPollTime, HashMap results) {

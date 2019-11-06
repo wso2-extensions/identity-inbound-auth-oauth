@@ -66,12 +66,14 @@ public class UserAuthenticationEndpoint {
             if (getScope(userCode) != null) {
                 commonAuthRequestWrapper.setParameter(Constants.SCOPE, getScope(userCode));
             }
-            commonAuthRequestWrapper.setParameter("nonce", userCode);
+            commonAuthRequestWrapper.setParameter(Constants.NONCE, userCode);
             return oAuth2AuthzEndpoint.authorize(commonAuthRequestWrapper, response);
 
-        } else response.sendRedirect(IdentityUtil.getServerURL("/authenticationendpoint/device.do",
-                false, false));
-        return null;
+        } else {
+            response.sendRedirect(IdentityUtil.getServerURL("/authenticationendpoint/device.do",
+                    false, false));
+            return null;
+        }
     }
 
     /**

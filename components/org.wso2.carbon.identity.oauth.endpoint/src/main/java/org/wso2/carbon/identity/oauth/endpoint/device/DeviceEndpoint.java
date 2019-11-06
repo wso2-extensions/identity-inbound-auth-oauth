@@ -30,6 +30,7 @@ import org.wso2.carbon.identity.oauth2.device.constants.Constants;
 import org.wso2.carbon.identity.oauth2.device.dao.DeviceFlowPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.device.errorcodes.DeviceErrorCodes;
 import org.wso2.carbon.identity.oauth2.device.model.DeviceFlowDO;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.io.IOException;
 import java.util.UUID;
@@ -59,7 +60,7 @@ public class DeviceEndpoint {
         String deviceCode = UUID.randomUUID().toString();
         String clientId = request.getParameter(Constants.CLIENT_ID);
         String scope = request.getParameter(Constants.SCOPE);
-        String[] scopeSet = scope.split(" ");
+        String[] scopeSet = OAuth2Util.buildScopeArray(scope);
         deviceFlowDO.setScope(scopeSet);
         String redirectionUri = IdentityUtil.getServerURL("/authenticationendpoint/device.do",
                 false, false);
@@ -83,7 +84,6 @@ public class DeviceEndpoint {
 
             } else {
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-
                 try {
                     errorResponse = OAuthASResponse
                             .errorResponse(response.getStatus()).setError(DeviceErrorCodes.UNAUTHORIZED_CLIENT)
@@ -92,7 +92,6 @@ public class DeviceEndpoint {
                     Response.ResponseBuilder respBuilder = Response.status(response.getStatus());
                     return respBuilder.entity(errorResponse.getBody()).build();
                 } catch (OAuthSystemException e) {
-
                     throw new OAuthSystemException("DeviceEndpoint Failed", e);
                 }
             }
@@ -106,7 +105,6 @@ public class DeviceEndpoint {
                 Response.ResponseBuilder respBuilder = Response.status(response.getStatus());
                 return respBuilder.entity(errorResponse.getBody()).build();
             } catch (OAuthSystemException e) {
-
                 throw new OAuthSystemException("DeviceEndpoint Failed");
             }
         }
@@ -132,6 +130,6 @@ public class DeviceEndpoint {
      */
     private static String stringValueInSeconds(long value) {
 
-        return String.valueOf(value/1000);
+        return String.valueOf(value / 1000);
     }
 }

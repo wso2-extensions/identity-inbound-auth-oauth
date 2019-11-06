@@ -32,11 +32,11 @@ public interface DeviceFlowDAO {
     /**
      * This will be used to enter the value to the database tables.
      *
-     * @param deviceCode Code that is used to identify the device
-     * @param userCode Code that is used to correlate user and device
+     * @param deviceCode  Code that is used to identify the device
+     * @param userCode    Code that is used to correlate user and device
      * @param consumerKey Consumer key of the client application
-     * @param scope Requesting scopes
-     * @param expiresIn Device code valid period
+     * @param scope       Requesting scopes
+     * @param expiresIn   Device code valid period
      * @throws IdentityOAuth2Exception
      */
     void insertDeviceFlow(String deviceCode, String userCode, String consumerKey, String scope, Long expiresIn) throws
@@ -55,7 +55,7 @@ public interface DeviceFlowDAO {
      * Set the status of the user code and device code.
      *
      * @param userCode Code that is used to correlate user and device
-     * @param status Status of the device and user codes
+     * @param status   Status of the device and user codes
      * @throws IdentityOAuth2Exception
      */
     void setUserAuthenticated(String userCode, String status) throws IdentityOAuth2Exception;
@@ -107,7 +107,7 @@ public interface DeviceFlowDAO {
     /**
      * Set last poll time of the token request.
      *
-     * @param deviceCode Code that is used to identify the device
+     * @param deviceCode  Code that is used to identify the device
      * @param newPollTime Last poll time
      * @throws IdentityOAuth2Exception
      */
@@ -126,7 +126,7 @@ public interface DeviceFlowDAO {
      * Set device code as expired.
      *
      * @param deviceCode Code that is used to identify the device
-     * @param status Status of the device code
+     * @param status     Status of the device code
      * @throws IdentityOAuth2Exception
      */
     void setDeviceCodeExpired(String deviceCode, String status) throws IdentityOAuth2Exception;

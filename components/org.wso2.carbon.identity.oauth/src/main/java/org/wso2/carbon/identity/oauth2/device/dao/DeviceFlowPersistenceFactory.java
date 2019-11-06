@@ -26,7 +26,8 @@ public class DeviceFlowPersistenceFactory {
     private static DeviceFlowPersistenceFactory factory;
     private DeviceFlowDAO deviceFlowDAO;
 
-    public DeviceFlowPersistenceFactory(){
+    public DeviceFlowPersistenceFactory() {
+
         this.deviceFlowDAO = new DeviceFlowDAOImpl();
     }
 
@@ -39,6 +40,7 @@ public class DeviceFlowPersistenceFactory {
     }
 
     public DeviceFlowDAO getDeviceFlowDAO() {
+
         return deviceFlowDAO;
     }
 
