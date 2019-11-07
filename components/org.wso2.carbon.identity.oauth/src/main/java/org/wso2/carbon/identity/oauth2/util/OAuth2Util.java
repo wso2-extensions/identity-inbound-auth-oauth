@@ -3246,6 +3246,7 @@ public class OAuth2Util {
         File configFile = new File(confXml);
         if (!configFile.exists()) {
             log.warn("OAuth scope binding File is not present at: " + confXml);
+            return new ArrayList<>();
         }
 
         XMLStreamReader parser = null;
