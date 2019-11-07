@@ -28,7 +28,6 @@ public class Oauth2ScopeConstants {
     public static final String PERMISSIONS_BINDING_TYPE = "PERMISSION";
     public static final String SYSTEM_SCOPE = "SYSTEM";
 
-
     public enum ErrorMessages {
         ERROR_CODE_BAD_REQUEST_SCOPE_NAME_NOT_SPECIFIED("41001", "Scope Name is not specified."),
         ERROR_CODE_BAD_REQUEST_SCOPE_DISPLAY_NAME_NOT_SPECIFIED("41002", "Scope Display Name is not specified."),

@@ -266,7 +266,10 @@ public class AccessTokenIssuer {
         //Execute Internal SCOPE Validation.
         JDBCPermissionBasedInternalScopeValidator scopeValidator = new JDBCPermissionBasedInternalScopeValidator();
         String[] authorizedInternalScopes = scopeValidator.validateScope(tokReqMsgCtx);
-        //Clear the internal scopes. Those scopes not required for scope validations.
+        // Clear the internal scopes. Internal scopes should only handle in JDBCPermissionBasedInternalScopeValidator.
+        // Those scopes should not send to the other scopes validators.
+        // Thus remove the scopes from the tokReqMsgCtx. Will be added to the response after executing
+        // the other scope validators.
         removeInternalScopes(tokReqMsgCtx);
         boolean isValidScope = authzGrantHandler.validateScope(tokReqMsgCtx);
         if (isValidScope) {

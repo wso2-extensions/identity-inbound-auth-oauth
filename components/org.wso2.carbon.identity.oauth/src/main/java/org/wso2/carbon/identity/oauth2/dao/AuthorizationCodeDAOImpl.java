@@ -85,7 +85,6 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
         PreparedStatement prepStmt = null;
         String userDomain = OAuth2Util.getUserStoreDomain(authzCodeDO.getAuthorizedUser());
         String authenticatedIDP = OAuth2Util.getAuthenticatedIDP(authzCodeDO.getAuthorizedUser());
-        PreparedStatement addScopePrepStmt = null;
         try {
             String sql;
             if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
@@ -119,26 +118,13 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
 
             prepStmt.execute();
 
-            String sqlAddScopes = SQLQueries.INSERT_OAUTH2_CODE_SCOPE;
-            String authzCodeId = authzCodeDO.getAuthzCodeId();
-            addScopePrepStmt = connection.prepareStatement(sqlAddScopes);
-
-            if (authzCodeDO.getScope() != null && authzCodeDO.getScope().length > 0) {
-                for (String scope : authzCodeDO.getScope()) {
-                    addScopePrepStmt.setString(1, authzCodeId);
-                    addScopePrepStmt.setString(2, scope);
-                    addScopePrepStmt.setInt(3, tenantId);
-                    addScopePrepStmt.addBatch();
-                }
-            }
-            addScopePrepStmt.executeBatch();
+            AddAuthorizationCodeScopes(authzCodeDO, connection, tenantId);
             IdentityDatabaseUtil.commitTransaction(connection);
         } catch (SQLException e) {
             IdentityDatabaseUtil.rollbackTransaction(connection);
             throw new IdentityOAuth2Exception("Error when storing the authorization code for consumer key : " +
                     consumerKey, e);
         } finally {
-            IdentityDatabaseUtil.closeStatement(addScopePrepStmt);
             IdentityDatabaseUtil.closeAllConnections(connection, null, prepStmt);
         }
     }
@@ -209,8 +195,6 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
         PreparedStatement prepStmt = null;
         ResultSet resultSet = null;
         AuthorizationCodeValidationResult result = null;
-        ResultSet scopesResultSet = null;
-        PreparedStatement scopePrepStmt = null;
         try {
             AuthenticatedUser user = null;
             String codeState = null;
@@ -274,21 +258,13 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                 // If the scope value is empty. It could have stored in the IDN_OAUTH2_AUTHZ_CODE_SCOPE table
                 // for on demand scope migration.
                 if (StringUtils.isBlank(scopeString)) {
-                    List<String> scopes = new ArrayList<>();
-                    String getScopesQuery = SQLQueries.GET_OAUTH2_CODE_SCOPE;
-                    scopePrepStmt = connection.prepareStatement(getScopesQuery);
-                    scopesResultSet = scopePrepStmt.executeQuery();
-                    while (scopesResultSet.next()) {
-                        String scope = scopesResultSet.getString(1);
-                        scopes.add(scope);
-                    }
+                    List<String> scopes = getAuthorizationCodeScopes(connection, codeId, tenantId);
                     scopeString = OAuth2Util.buildScopeString(scopes.toArray(new String[0]));
                 }
                 AuthzCodeDO codeDo = createAuthzCodeDo(consumerKey, authorizationKey, user, codeState,
                         scopeString, callbackUrl, codeId, pkceCodeChallenge, pkceCodeChallengeMethod, issuedTime,
                         validityPeriod);
                 result = new AuthorizationCodeValidationResult(codeDo, tokenId);
-
             }
 
             return result;
@@ -296,8 +272,6 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
         } catch (SQLException e) {
             throw new IdentityOAuth2Exception("Error when validating an authorization code", e);
         } finally {
-            IdentityDatabaseUtil.closeResultSet(scopesResultSet);
-            IdentityDatabaseUtil.closeStatement(scopePrepStmt);
             IdentityDatabaseUtil.closeAllConnections(connection, resultSet, prepStmt);
         }
 
@@ -500,8 +474,6 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
         ResultSet rs = null;
 
         List<AuthzCodeDO> latestAuthzCodes = new ArrayList<>();
-        ResultSet scopesResultSet = null;
-        PreparedStatement scopePrepStmt = null;
         try {
             String sqlQuery;
             if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
@@ -536,15 +508,8 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                 // If the scope value is empty. It could have stored in the IDN_OAUTH2_AUTHZ_CODE_SCOPE table
                 // for on demand scope migration.
                 if (ArrayUtils.isEmpty(scope)) {
-                    List<String> scopes = new ArrayList<>();
-                    String getScopesQuery = SQLQueries.GET_OAUTH2_CODE_SCOPE;
-                    scopePrepStmt = connection.prepareStatement(getScopesQuery);
-                    scopesResultSet = scopePrepStmt.executeQuery();
-                    while (scopesResultSet.next()) {
-                        String scopeEntry = scopesResultSet.getString(1);
-                        scopes.add(scopeEntry);
-                    }
-                    scope = scopes.toArray(new String[0]);
+                    List<String> authorizationCodeScopes = getAuthorizationCodeScopes(connection, authzCodeId, tenantId);
+                    scope = authorizationCodeScopes.toArray(new String[0]);
                 }
 
                 latestAuthzCodes.add(new AuthzCodeDO(user, scope, issuedTime, validityPeriodInMillis, callbackUrl,
@@ -555,8 +520,6 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             throw new IdentityOAuth2Exception("Error occurred while retrieving latest authorization codes of tenant " +
                     ":" + tenantId, e);
         } finally {
-            IdentityDatabaseUtil.closeResultSet(scopesResultSet);
-            IdentityDatabaseUtil.closeStatement(scopePrepStmt);
             IdentityDatabaseUtil.closeAllConnections(connection, rs, ps);
         }
         return latestAuthzCodes;
@@ -574,8 +537,6 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
         Connection connection = IdentityDatabaseUtil.getDBConnection(false);
         PreparedStatement ps = null;
         ResultSet rs = null;
-        ResultSet scopesResultSet = null;
-        PreparedStatement scopePrepStmt = null;
 
         String userStoreDomain = OAuth2Util.getSanitizedUserStoreDomain(userStorDomain);
 
@@ -611,14 +572,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                 // If the scope value is empty. It could have stored in the IDN_OAUTH2_AUTHZ_CODE_SCOPE table
                 // for on demand scope migration.
                 if (ArrayUtils.isEmpty(scope)) {
-                    List<String> scopes = new ArrayList<>();
-                    String getScopesQuery = SQLQueries.GET_OAUTH2_CODE_SCOPE;
-                    scopePrepStmt = connection.prepareStatement(getScopesQuery);
-                    scopesResultSet = scopePrepStmt.executeQuery();
-                    while (scopesResultSet.next()) {
-                        String scopeEntry = scopesResultSet.getString(1);
-                        scopes.add(scopeEntry);
-                    }
+                    List<String> scopes = getAuthorizationCodeScopes(connection, authzCodeId, tenantId);
                     scope = scopes.toArray(new String[0]);
                 }
 
@@ -630,8 +584,6 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             throw new IdentityOAuth2Exception("Error occurred while retrieving latest authorization codes of user " +
                     "store : " + userStoreDomain + " in tenant :" + tenantId, e);
         } finally {
-            IdentityDatabaseUtil.closeResultSet(scopesResultSet);
-            IdentityDatabaseUtil.closeStatement(scopePrepStmt);
             IdentityDatabaseUtil.closeAllConnections(connection, rs, ps);
         }
         return latestAuthzCodes;
@@ -668,6 +620,39 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, null, ps);
         }
+    }
+
+    private void AddAuthorizationCodeScopes(AuthzCodeDO authzCodeDO, Connection connection, int tenantId) throws SQLException {
+
+        try (PreparedStatement addScopePrepStmt = connection.prepareStatement(SQLQueries.INSERT_OAUTH2_CODE_SCOPE)) {
+            String authzCodeId = authzCodeDO.getAuthzCodeId();
+
+            if (authzCodeDO.getScope() != null && authzCodeDO.getScope().length > 0) {
+                for (String scope : authzCodeDO.getScope()) {
+                    addScopePrepStmt.setString(1, authzCodeId);
+                    addScopePrepStmt.setString(2, scope);
+                    addScopePrepStmt.setInt(3, tenantId);
+                    addScopePrepStmt.addBatch();
+                }
+            }
+            addScopePrepStmt.executeBatch();
+        }
+    }
+
+    private List<String> getAuthorizationCodeScopes(Connection connection, String codeId, int tenantId) throws SQLException {
+
+        List<String> scopes = new ArrayList<>();
+        try (PreparedStatement scopePrepStmt = connection.prepareStatement(SQLQueries.GET_OAUTH2_CODE_SCOPE)) {
+            scopePrepStmt.setString(1, codeId);
+            scopePrepStmt.setInt(2, tenantId);
+            try (ResultSet scopesResultSet = scopePrepStmt.executeQuery()) {
+                while (scopesResultSet.next()) {
+                    String scope = scopesResultSet.getString(1);
+                    scopes.add(scope);
+                }
+            }
+        }
+        return scopes;
     }
 
     private String getAuthorizationCodeByCodeId(String codeId) throws IdentityOAuth2Exception {

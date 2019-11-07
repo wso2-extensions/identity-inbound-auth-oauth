@@ -129,7 +129,10 @@ public class AuthorizationHandlerManager {
         //Execute Internal SCOPE Validation.
         JDBCPermissionBasedInternalScopeValidator scopeValidator = new JDBCPermissionBasedInternalScopeValidator();
         String[] authorizedInternalScopes = scopeValidator.validateScope(authzReqMsgCtx);
-        //Clear the internal scopes. Those scopes not required for scope validations.
+        // Clear the internal scopes. Internal scopes should only handle in JDBCPermissionBasedInternalScopeValidator.
+        // Those scopes should not send to the other scopes validators.
+        // Thus remove the scopes from the authzReqMsgCtx. Will be added to the response after executing
+        // the other scope validators.
         removeInternalScopes(authzReqMsgCtx);
 
         boolean valid = validateScope(authzReqDTO, authorizeRespDTO, authzReqMsgCtx, authzHandler);

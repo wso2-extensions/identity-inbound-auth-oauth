@@ -153,7 +153,7 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
             }
             return scopes;
         } catch (SQLException e) {
-            String msg = "Error occurred while getting all scopes ";
+            String msg = "Error occurred while getting all scopes in tenant :" + tenantID;
             throw new IdentityOAuth2ScopeServerException(msg, e);
         }
     }
@@ -167,16 +167,9 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
 
         Set<Scope> scopes = new HashSet<>();
         Map<Integer, Scope> scopeMap = new HashMap<>();
-        String sql;
 
         try (Connection conn = IdentityDatabaseUtil.getDBConnection(false)) {
-            if (conn.getMetaData().getDriverName().contains(Oauth2ScopeConstants.DataBaseType.ORACLE)) {
-                sql = SQLQueries.RETRIEVE_SCOPES_ORACLE_BY_BINDING_TYPE;
-            } else {
-                sql = SQLQueries.RETRIEVE_SCOPES_BY_BINDING_TYPE;
-            }
-
-            try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            try (PreparedStatement ps = conn.prepareStatement(SQLQueries.RETRIEVE_SCOPES_BY_BINDING_TYPE)) {
                 ps.setInt(1, tenantID);
                 ps.setString(2, bindingType);
                 try (ResultSet rs = ps.executeQuery()) {
