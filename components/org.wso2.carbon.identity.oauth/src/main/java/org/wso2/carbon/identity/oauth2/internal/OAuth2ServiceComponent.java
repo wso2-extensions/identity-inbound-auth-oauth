@@ -119,6 +119,8 @@ public class OAuth2ServiceComponent {
             } else {
                 log.error("TenantMgtListener could not be registered");
             }
+            // iniating oauth scopes
+            OAuth2Util.initiateOAuthScopePermissionsBindings(tenantId);
             // exposing server configuration as a service
             OAuthServerConfiguration oauthServerConfig = OAuthServerConfiguration.getInstance();
             bundleContext.registerService(OAuthServerConfiguration.class.getName(), oauthServerConfig, null);

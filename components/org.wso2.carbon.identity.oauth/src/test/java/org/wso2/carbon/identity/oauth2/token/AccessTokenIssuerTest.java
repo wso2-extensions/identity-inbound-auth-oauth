@@ -26,6 +26,7 @@ import org.mockito.Matchers;
 import org.mockito.Mock;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.Assert;
 import org.testng.IObjectFactory;
@@ -51,6 +52,7 @@ import org.wso2.carbon.identity.oauth2.test.utils.CommonTestUtils;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.PasswordGrantHandler;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oauth2.validators.JDBCPermissionBasedInternalScopeValidator;
 import org.wso2.carbon.identity.openidconnect.IDTokenBuilder;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 import org.wso2.carbon.utils.CarbonUtils;
@@ -77,14 +79,13 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppState
 /**
  * Unit test cases for {@link AccessTokenIssuer}
  */
-@PrepareForTest(
-        {
-                OAuthServerConfiguration.class,
-                OAuth2Util.class,
-                AppInfoCache.class,
-                CarbonUtils.class
-        }
-)
+@PrepareForTest({
+        OAuthServerConfiguration.class,
+        OAuth2Util.class,
+        AppInfoCache.class,
+        JDBCPermissionBasedInternalScopeValidator.class,
+        CarbonUtils.class
+})
 public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
 
     public static final String SOME_CLIENT_ID = "some-client-id";
@@ -102,6 +103,9 @@ public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
 
     @Mock
     private OAuth2AccessTokenReqDTO tokenReqDTO;
+
+    @Mock
+    private JDBCPermissionBasedInternalScopeValidator scopeValidator;
 
     private static final String DUMMY_GRANT_TYPE = "dummy_grant_type";
     private static final String ID_TOKEN = "dummyIDToken";
@@ -457,6 +461,8 @@ public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
         authorizationGrantHandlers.put(DUMMY_GRANT_TYPE, dummyGrantHandler);
 
         mockOAuth2ServerConfiguration(authorizationGrantHandlers);
+        PowerMockito.whenNew(JDBCPermissionBasedInternalScopeValidator.class).withNoArguments().thenReturn(scopeValidator);
+        when(scopeValidator.validateScope(any(OAuthTokenReqMessageContext.class))).thenReturn(null);
         OAuth2AccessTokenRespDTO tokenRespDTO = AccessTokenIssuer.getInstance().issue(reqDTO);
 
         assertNotNull(tokenRespDTO);

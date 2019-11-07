@@ -118,7 +118,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
                     ", Validity period (s) : " + accessTokenBean.getValidityPeriod() +
                     ", Scope : " + OAuth2Util.buildScopeString(tokReqMsgCtx.getScope()) +
                     ", Token State : " + OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE +
-                    "and User Type : " + getTokenType());
+                    " and User Type : " + getTokenType());
         }
 
         setTokenDataToMessageContext(tokReqMsgCtx, accessTokenBean);

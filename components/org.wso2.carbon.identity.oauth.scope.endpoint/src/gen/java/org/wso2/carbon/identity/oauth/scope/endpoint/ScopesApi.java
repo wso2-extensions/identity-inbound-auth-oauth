@@ -37,7 +37,7 @@ public class ScopesApi  {
         
         @io.swagger.annotations.ApiResponse(code = 500, message = "Server Error") })
 
-    public Response deleteScope(@ApiParam(value = "Name of the scope that is to be deleted",required=true ) @PathParam("name") String name)
+    public Response deleteScope(@ApiParam(value = "Name of the scope that is to be deleted",required=true ) @PathParam("name")  String name)
     {
     return delegate.deleteScope(name);
     }
@@ -53,7 +53,7 @@ public class ScopesApi  {
         
         @io.swagger.annotations.ApiResponse(code = 500, message = "Server Error") })
 
-    public Response getScope(@ApiParam(value = "Name of the scope that is to be retrieved",required=true ) @PathParam("name") String name)
+    public Response getScope(@ApiParam(value = "Name of the scope that is to be retrieved",required=true ) @PathParam("name")  String name)
     {
     return delegate.getScope(name);
     }
@@ -69,8 +69,8 @@ public class ScopesApi  {
         
         @io.swagger.annotations.ApiResponse(code = 500, message = "Server Error") })
 
-    public Response getScopes(@ApiParam(value = "The start index of the list of scopes to be retrieved") @QueryParam("startIndex") Integer startIndex,
-    @ApiParam(value = "Number of scopes to retrieve from the point of the start index") @QueryParam("count") Integer count)
+    public Response getScopes(@ApiParam(value = "The start index of the list of scopes to be retrieved") @QueryParam("startIndex")  Integer startIndex,
+    @ApiParam(value = "Number of scopes to retrieve from the point of the start index") @QueryParam("count")  Integer count)
     {
     return delegate.getScopes(startIndex,count);
     }
@@ -86,7 +86,7 @@ public class ScopesApi  {
         
         @io.swagger.annotations.ApiResponse(code = 500, message = "Server Error") })
 
-    public Response isScopeExists(@ApiParam(value = "Name of the scope that is to be checked",required=true ) @PathParam("name") String name)
+    public Response isScopeExists(@ApiParam(value = "Name of the scope that is to be checked",required=true ) @PathParam("name")  String name)
     {
     return delegate.isScopeExists(name);
     }
@@ -121,7 +121,7 @@ public class ScopesApi  {
         @io.swagger.annotations.ApiResponse(code = 500, message = "Server Error") })
 
     public Response updateScope(@ApiParam(value = "updated scope" ,required=true ) ScopeToUpdateDTO scope,
-    @ApiParam(value = "Name of the scope that is to be updated",required=true ) @PathParam("name") String name)
+    @ApiParam(value = "Name of the scope that is to be updated",required=true ) @PathParam("name")  String name)
     {
     return delegate.updateScope(scope,name);
     }

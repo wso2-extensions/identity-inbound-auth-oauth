@@ -80,6 +80,7 @@ public class OAuthAdminServiceImpl {
     static List<String> allowedGrants = null;
     static String[] allowedScopeValidators = null;
     static List<String> supportedTokenTypes = null;
+
     protected static final Log log = LogFactory.getLog(OAuthAdminServiceImpl.class);
 
     /**
@@ -276,7 +277,11 @@ public class OAuthAdminServiceImpl {
                     app.setIdTokenEncryptionMethod(application.getIdTokenEncryptionMethod());
                     app.setBackChannelLogoutUrl(application.getBackChannelLogoutUrl());
                     app.setFrontchannelLogoutUrl(application.getFrontchannelLogoutUrl());
-                    app.setTokenType(application.getTokenType());
+                    if (application.getTokenType() != null) {
+                        app.setTokenType(application.getTokenType());
+                    } else {
+                        app.setTokenType(getDefaultTokenType());
+                    }
                     app.setBypassClientCredentials(application.isBypassClientCredentials());
                     app.setRenewRefreshTokenEnabled(application.getRenewRefreshTokenEnabled());
                     app.setTokenBindingType(application.getTokenBindingType());
@@ -1027,6 +1032,14 @@ public class OAuthAdminServiceImpl {
             }
         }
         return supportedTokenTypes;
+    }
+
+    /**
+     * Return the default token type.
+     */
+    public String getDefaultTokenType() {
+
+        return OAuthServerConfiguration.DEFAULT_TOKEN_TYPE;
     }
 
     /**
