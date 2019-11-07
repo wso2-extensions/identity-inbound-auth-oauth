@@ -41,6 +41,7 @@ import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
 import org.wso2.carbon.identity.oauth2.client.authentication.BasicAuthClientAuthenticator;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnService;
+import org.wso2.carbon.identity.oauth2.client.authentication.PublicClientAuthenticator;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dao.SQLQueries;
 import org.wso2.carbon.identity.oauth2.listener.TenantCreationEventListener;
@@ -50,7 +51,6 @@ import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImpl;
 import org.wso2.carbon.identity.user.store.configuration.listener.UserStoreConfigListener;
 import org.wso2.carbon.registry.core.service.RegistryService;
 import org.wso2.carbon.stratos.common.listeners.TenantMgtListener;
-import org.wso2.carbon.identity.oauth2.client.authentication.PublicClientAuthenticator;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -116,6 +116,8 @@ public class OAuth2ServiceComponent {
             } else {
                 log.error("TenantMgtListener could not be registered");
             }
+            // iniating oauth scopes
+            OAuth2Util.initiateOAuthScopePermissionsBindings(tenantId);
             // exposing server configuration as a service
             OAuthServerConfiguration oauthServerConfig = OAuthServerConfiguration.getInstance();
             bundleContext.registerService(OAuthServerConfiguration.class.getName(), oauthServerConfig, null);

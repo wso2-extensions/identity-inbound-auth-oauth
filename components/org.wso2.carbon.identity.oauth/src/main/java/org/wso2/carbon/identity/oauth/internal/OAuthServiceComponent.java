@@ -34,6 +34,7 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.listener.IdentityOathEventListener;
+import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.registry.core.service.RegistryService;
 import org.wso2.carbon.user.core.listener.UserOperationEventListener;
@@ -135,6 +136,29 @@ public class OAuthServiceComponent {
             log.debug("Unsetting the Realm Service");
         }
         OAuthComponentServiceHolder.getInstance().setRealmService(null);
+    }
+
+    @Reference(
+            name = "scope.service",
+            service = OAuth2ScopeService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetOauth2ScopeService"
+    )
+    protected void setOauth2ScopeService(OAuth2ScopeService oauth2ScopeService) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Setting the Scope Service");
+        }
+        OAuthComponentServiceHolder.getInstance().setOauth2ScopeService(oauth2ScopeService);
+    }
+
+    protected void unsetOauth2ScopeService(OAuth2ScopeService oauth2ScopeService) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Un-setting the Scope Service");
+        }
+        OAuthComponentServiceHolder.getInstance().setOauth2ScopeService(null);
     }
 
     @Reference(

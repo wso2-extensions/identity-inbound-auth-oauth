@@ -34,6 +34,7 @@ public class TenantCreationEventListener implements TenantMgtListener {
 
         int tenantId = tenantInfoBean.getTenantId();
         OAuth2Util.initiateOIDCScopes(tenantId);
+        OAuth2Util.initiateOAuthScopePermissionsBindings(tenantId);
     }
 
     @Override

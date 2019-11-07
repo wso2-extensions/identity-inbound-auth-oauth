@@ -47,7 +47,6 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
-import org.apache.oltu.oauth2.common.message.types.ResponseType;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.wso2.carbon.core.util.KeyStoreManager;
@@ -86,8 +85,12 @@ import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcess
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeServerException;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
+import org.wso2.carbon.identity.oauth2.bean.Scope;
+import org.wso2.carbon.identity.oauth2.bean.ScopeBinding;
 import org.wso2.carbon.identity.oauth2.config.SpOAuth2ExpiryTimeConfiguration;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2IntrospectionResponseDTO;
@@ -151,6 +154,8 @@ import javax.xml.namespace.QName;
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
+
+import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.PERMISSIONS_BINDING_TYPE;
 
 /**
  * Utility methods for OAuth 2.0 implementation
@@ -255,6 +260,12 @@ public class OAuth2Util {
     public static final String APPLICATION_ACCESS_TOKEN_EXP_TIME_IN_MILLISECONDS = "applicationAccessTokenExpireTime";
 
     private static final Log log = LogFactory.getLog(OAuth2Util.class);
+    private static final String INTERNAL_LOGIN_SCOPE = "internal_login";
+    private static final String IDENTITY_PATH = "identity";
+    public static final String NAME = "name";
+    private static final String DISPLAY_NAME = "displayName";
+    private static final String DESCRIPTION = "description";
+    private static final String PERMISSION = "Permission";
     private static long timestampSkew = OAuthServerConfiguration.getInstance().getTimeStampSkewInSeconds() * 1000;
     private static ThreadLocal<Integer> clientTenantId = new ThreadLocal<>();
     private static ThreadLocal<OAuthTokenReqMessageContext> tokenRequestContext = new ThreadLocal<>();
@@ -3182,5 +3193,120 @@ public class OAuth2Util {
         }
 
         return isIdpIdAvailableInAuthzCodeTable && isIdpIdAvailableInTokenTable && isIdpIdAvailableInTokenAuditTable;
+    }
+
+    /**
+     * This can be used to load the oauth scope permissions bindings in oauth-scope-bindings.xml file.
+     */
+    public static void initiateOAuthScopePermissionsBindings(int tenantId) {
+
+        try {
+            //Check login scope is available. If exists, assumes all scopes are loaded using the file.
+            if (!hasScopesAlreadyAdded(tenantId)) {
+                List<Scope> scopes = loadOauthScopeBinding();
+                for (Scope scope : scopes) {
+                    OAuthTokenPersistenceFactory.getInstance().getOAuthScopeDAO().addScope(scope, tenantId);
+                }
+                if (log.isDebugEnabled()) {
+                    log.debug("OAuth scopes are loaded for the tenant : " + tenantId);
+                }
+            } else {
+                if (log.isDebugEnabled()) {
+                    log.debug("OAuth scopes are already loaded");
+                }
+            }
+        } catch (IdentityOAuth2ScopeException e) {
+            log.error("Error while registering OAuth scopes with permissions bindings", e);
+        }
+    }
+
+    private static boolean hasScopesAlreadyAdded(int tenantId) throws IdentityOAuth2ScopeServerException {
+
+        Scope loginScope = OAuthTokenPersistenceFactory.getInstance().getOAuthScopeDAO().getScopeByName(
+                INTERNAL_LOGIN_SCOPE, tenantId);
+        if (loginScope == null) {
+            return false;
+        } else {
+            List<ScopeBinding> scopeBindings = loginScope.getScopeBindings();
+            for (ScopeBinding scopeBinding : scopeBindings) {
+                if (PERMISSIONS_BINDING_TYPE.equalsIgnoreCase(scopeBinding.getBindingType())) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private static List<Scope> loadOauthScopeBinding() {
+
+        List<Scope> scopes = new ArrayList<>();
+        String configDirPath = CarbonUtils.getCarbonConfigDirPath();
+        String confXml = Paths.get(configDirPath, IDENTITY_PATH, OAuthConstants.OAUTH_SCOPE_BINDING_PATH)
+                .toString();
+        File configFile = new File(confXml);
+        if (!configFile.exists()) {
+            log.warn("OAuth scope binding File is not present at: " + confXml);
+        }
+
+        XMLStreamReader parser = null;
+        InputStream stream = null;
+
+        try {
+            stream = new FileInputStream(configFile);
+            parser = XMLInputFactory.newInstance()
+                    .createXMLStreamReader(stream);
+            StAXOMBuilder builder = new StAXOMBuilder(parser);
+            OMElement documentElement = builder.getDocumentElement();
+            Iterator iterator = documentElement.getChildElements();
+            while (iterator.hasNext()) {
+                OMElement omElement = (OMElement) iterator.next();
+                String scopeName = omElement.getAttributeValue(new QName(
+                        NAME));
+                String displayName = omElement.getAttributeValue(new QName(
+                        DISPLAY_NAME));
+                String description = omElement.getAttributeValue(new QName(
+                        DESCRIPTION));
+                List<String> bindingPermissions = loadScopePermissions(omElement);
+                ScopeBinding scopeBinding = new ScopeBinding(PERMISSIONS_BINDING_TYPE, bindingPermissions);
+                ArrayList<ScopeBinding> scopeBindings = new ArrayList<>();
+                scopeBindings.add(scopeBinding);
+                Scope scope = new Scope(scopeName, displayName, scopeBindings, description);
+                scopes.add(scope);
+            }
+        } catch (XMLStreamException e) {
+            log.warn("Error while loading scope config.", e);
+        } catch (FileNotFoundException e) {
+            log.warn("Error while loading email config.", e);
+        } finally {
+            try {
+                if (parser != null) {
+                    parser.close();
+                }
+                if (stream != null) {
+                    IdentityIOStreamUtils.closeInputStream(stream);
+                }
+            } catch (XMLStreamException e) {
+                log.error("Error while closing XML stream", e);
+            }
+        }
+        return scopes;
+    }
+
+    private static List<String> loadScopePermissions(OMElement configElement) {
+
+        List<String> permissions = new ArrayList<>();
+        Iterator it = configElement.getChildElements();
+        while (it.hasNext()) {
+            OMElement element = (OMElement) it.next();
+            Iterator permissonsIterator = element.getChildElements();
+            while (permissonsIterator.hasNext()) {
+                OMElement PermissionElement = (OMElement) permissonsIterator.next();
+                if (PERMISSION.equals(PermissionElement.getLocalName())) {
+                    String permisson = PermissionElement.getText();
+                    permissions.add(permisson);
+                }
+            }
+        }
+        return permissions;
     }
 }
