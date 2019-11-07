@@ -22,10 +22,11 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 
 import java.sql.Timestamp;
 import java.util.HashMap;
+import java.util.Map;
 
 /**
- * New set of DAO classes  for
- * each purpose  and factory class to get instance of each DAO classes were introduced  during  this step.
+ * New set of DAO classes  for each purpose  and factory class to get instance of each DAO classes were introduced
+ * during  this step.
  */
 public interface DeviceFlowDAO {
 
@@ -49,7 +50,7 @@ public interface DeviceFlowDAO {
      * @return client_id
      * @throws IdentityOAuth2Exception
      */
-    String getClientIdByUSerCode(String userCode) throws IdentityOAuth2Exception;
+    String getClientIdByUserCode(String userCode) throws IdentityOAuth2Exception;
 
     /**
      * Set the status of the user code and device code.
@@ -75,7 +76,7 @@ public interface DeviceFlowDAO {
      * @return Map of values
      * @throws IdentityOAuth2Exception
      */
-    HashMap getAuthenticationStatus(String deviceCode) throws IdentityOAuth2Exception;
+    Map getAuthenticationStatus(String deviceCode) throws IdentityOAuth2Exception;
 
     /**
      * Check client id is exist or not.

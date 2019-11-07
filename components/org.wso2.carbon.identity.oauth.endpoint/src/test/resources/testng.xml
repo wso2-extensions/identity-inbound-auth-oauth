@@ -28,7 +28,7 @@
             <class name="org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpointTest" />
             <class name="org.wso2.carbon.identity.oauth.endpoint.introspection.IntrospectionResponseBuilderTest" />
             <class name="org.wso2.carbon.identity.oauth.endpoint.user.OpenIDConnectUserEndpointTest" />
-            <class name="org.wso2.carbon.identity.oauth.endpoint.device.DeviceEndpointTest"></class>
+            <class name="org.wso2.carbon.identity.oauth.endpoint.device.DeviceEndpointTest"/>
 
         </classes>
     </test>

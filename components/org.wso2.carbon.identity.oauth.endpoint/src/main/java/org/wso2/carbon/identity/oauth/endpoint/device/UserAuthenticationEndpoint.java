@@ -17,6 +17,7 @@
  */
 package org.wso2.carbon.identity.oauth.endpoint.device;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.model.CommonAuthRequestWrapper;
@@ -45,10 +46,6 @@ public class UserAuthenticationEndpoint {
 
     private OAuth2AuthzEndpoint oAuth2AuthzEndpoint = new OAuth2AuthzEndpoint();
 
-    public UserAuthenticationEndpoint() {
-
-    }
-
     @GET
     @Path("/")
     @Consumes("application/x-www-form-urlencoded")
@@ -57,12 +54,13 @@ public class UserAuthenticationEndpoint {
             throws URISyntaxException, InvalidRequestParentException, IdentityOAuth2Exception, IOException {
 
         String userCode = request.getParameter(Constants.USER_CODE);
-        String clientId = DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().getClientIdByUSerCode(userCode);
-        if (clientId != null && getUserCodeStatus(userCode).equals(Constants.PENDING)) {
-            DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().setUserAuthenticated(userCode, Constants.USED);
+        String clientId = DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().getClientIdByUserCode(userCode);
+        if (StringUtils.isNotBlank(clientId) && StringUtils.equals(getUserCodeStatus(userCode),Constants.PENDING)) {
+            DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().setUserAuthenticated(userCode,
+                    Constants.USED);
             CommonAuthRequestWrapper commonAuthRequestWrapper = new CommonAuthRequestWrapper(request);
             commonAuthRequestWrapper.setParameter(Constants.CLIENT_ID, clientId);
-            commonAuthRequestWrapper.setParameter(Constants.RESPONSE_TYPE, Constants.DEVICE);
+            commonAuthRequestWrapper.setParameter(Constants.RESPONSE_TYPE, Constants.RESPONSE_TYPE_DEVICE);
             if (getScope(userCode) != null) {
                 commonAuthRequestWrapper.setParameter(Constants.SCOPE, getScope(userCode));
             }

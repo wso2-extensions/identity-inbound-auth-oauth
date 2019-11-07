@@ -31,7 +31,7 @@ public class GenerateKeys {
      */
     public String getKey(int num) {
 
-        String AlphaNumericString = "BCDFGHJKLMNPQRSTVWXYZ";
+        String AlphaNumericString = "BCDFGHJKLMNPQRSTVWXYZbcdfghjklmnpqrstvwxyz23456789";
         StringBuilder sb = new StringBuilder(num);
         for (int i = 0; i < num; i++) {
             int index = (int) (AlphaNumericString.length() * Math.random());

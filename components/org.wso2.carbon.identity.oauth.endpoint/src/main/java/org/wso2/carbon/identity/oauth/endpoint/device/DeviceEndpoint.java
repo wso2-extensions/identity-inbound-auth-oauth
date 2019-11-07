@@ -17,6 +17,7 @@
  */
 package org.wso2.carbon.identity.oauth.endpoint.device;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.as.response.OAuthASResponse;
@@ -69,7 +70,7 @@ public class DeviceEndpoint {
         int interval = 5000;
         OAuthResponse errorResponse;
 
-        if (clientId != null) {
+        if (StringUtils.isNotBlank(clientId)) {
             if (validateClientId(clientId)) {
                 DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().insertDeviceFlow(deviceCode, userCode,
                         clientId, scope, expiresIn);
@@ -92,7 +93,7 @@ public class DeviceEndpoint {
                     Response.ResponseBuilder respBuilder = Response.status(response.getStatus());
                     return respBuilder.entity(errorResponse.getBody()).build();
                 } catch (OAuthSystemException e) {
-                    throw new OAuthSystemException("DeviceEndpoint Failed", e);
+                    throw new OAuthSystemException("DeviceEndpoint failed while building error response.", e);
                 }
             }
         } else {
@@ -105,7 +106,7 @@ public class DeviceEndpoint {
                 Response.ResponseBuilder respBuilder = Response.status(response.getStatus());
                 return respBuilder.entity(errorResponse.getBody()).build();
             } catch (OAuthSystemException e) {
-                throw new OAuthSystemException("DeviceEndpoint Failed");
+                throw new OAuthSystemException("DeviceEndpoint failed  while building error response.", e);
             }
         }
     }

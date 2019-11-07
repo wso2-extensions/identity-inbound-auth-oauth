@@ -32,7 +32,7 @@ public class Constants {
     public static final String RESPONSE_TYPE = "response_type";
     public static final String CLIENT_ID = "client_id";
     public static final String SCOPE = "scope";
-    public static final String DEVICE = "device";
+    public static final String RESPONSE_TYPE_DEVICE = "device";
     public static final String USED = "USED";
     public static final String DEVICE_FLOW_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:device_code";
     public static final String AUTHORIZED = "AUTHORIZED";

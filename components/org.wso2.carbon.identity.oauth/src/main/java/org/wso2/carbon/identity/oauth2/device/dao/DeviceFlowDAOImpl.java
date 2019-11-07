@@ -32,6 +32,7 @@ import java.sql.Timestamp;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -48,7 +49,6 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
     @Override
     public void insertDeviceFlow(String deviceCode, String userCode, String consumerKey, String scope,
                                  Long expiresIn) throws IdentityOAuth2Exception {
-
 
         Connection connection = IdentityDatabaseUtil.getDBConnection();
         PreparedStatement prepStmt = null;
@@ -82,7 +82,7 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
     }
 
     @Override
-    public String getClientIdByUSerCode(String userCode) throws IdentityOAuth2Exception {
+    public String getClientIdByUserCode(String userCode) throws IdentityOAuth2Exception {
 
         Connection connection = IdentityDatabaseUtil.getDBConnection(false);
         PreparedStatement ps = null;
@@ -153,7 +153,7 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
     }
 
     @Override
-    public HashMap getAuthenticationStatus(String deviceCode) throws IdentityOAuth2Exception {
+    public Map getAuthenticationStatus(String deviceCode) throws IdentityOAuth2Exception {
 
         Connection connection = IdentityDatabaseUtil.getDBConnection(false);
         PreparedStatement ps = null;

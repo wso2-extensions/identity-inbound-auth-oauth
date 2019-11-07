@@ -34,6 +34,7 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import java.sql.Timestamp;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Device flow grant type for Identity Server.
@@ -56,7 +57,7 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
 
         String DeviceCode = null;
         String deviceStatus = null;
-        HashMap results = new HashMap<>();
+        Map results;
 
         // find out device_code
         for (RequestParameter parameter : parameters) {
@@ -169,7 +170,7 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
      * @param date    Time that request has came
      * @return true or false
      */
-    private static boolean isValidDeviceCode(HashMap results, Date date) {
+    private static boolean isValidDeviceCode(Map results, Date date) {
 
         return Long.parseLong((String) results.get(Constants.EXPIRY_TIME)) < date.getTime();
     }
@@ -181,7 +182,7 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
      * @param results     Result map that contains values from database
      * @return true or false
      */
-    private static boolean isValidPollTime(Timestamp newPollTime, HashMap results) {
+    private static boolean isValidPollTime(Timestamp newPollTime, Map results) {
 
         return newPollTime.getTime() - Timestamp.valueOf((String) results.get(Constants.LAST_POLL_TIME))
                 .getTime() > Long.parseLong(results.get(Constants.POLL_TIME).toString());

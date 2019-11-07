@@ -13,14 +13,13 @@ import static org.testng.Assert.assertEquals;
 
 public class DeviceEndpointTest {
 
-    private DeviceEndpoint deviceEndpoint;
+    private DeviceEndpoint deviceEndpoint = new DeviceEndpoint();
 
     @BeforeTest
     public void setUp() {
 
-        System.setProperty(CarbonBaseConstants.CARBON_HOME,
-                Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString());
-        deviceEndpoint = new DeviceEndpoint();
+        System.setProperty(CarbonBaseConstants.CARBON_HOME, Paths.get(System.getProperty("user.dir"),
+                "src", "test", "resources").toString());
     }
 
     @AfterTest
@@ -41,6 +40,7 @@ public class DeviceEndpointTest {
     public void testStringValueInSeconds(long value) throws Exception {
 
         String realValue = "1";
-        assertEquals(WhiteboxImpl.invokeMethod(deviceEndpoint, "stringValueInSeconds", value), realValue);
+        assertEquals(WhiteboxImpl.invokeMethod(deviceEndpoint, "stringValueInSeconds", value),
+                realValue);
     }
 }
