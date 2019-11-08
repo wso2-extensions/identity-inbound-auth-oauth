@@ -19,7 +19,7 @@
 package org.wso2.carbon.identity.oauth.ciba.common;
 
 /**
- * This class is an ENUM which resembles the possible Authentication status.
+ * This class is an ENUM which represents possible Authentication statuses.
  */
 public enum AuthenticationStatus {
     REQUESTED,
