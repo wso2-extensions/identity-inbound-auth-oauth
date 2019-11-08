@@ -31,7 +31,6 @@ import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
-import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
@@ -47,9 +46,11 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationResponseDTO;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
 import org.wso2.carbon.identity.oauth2.token.AccessTokenIssuer;
+import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.user.api.Claim;
 import org.wso2.carbon.user.core.UserStoreManager;
@@ -61,6 +62,9 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.isValidTokenBinding;
 
 /**
  * OAuth2 Service which is used to issue authorization codes or access tokens upon authorizing by the
@@ -385,13 +389,25 @@ public class OAuth2Service extends AbstractAdmin {
 
                 } else if (accessTokenDO != null) {
                     if (revokeRequestDTO.getConsumerKey().equals(accessTokenDO.getConsumerKey())) {
+                        if (!isValidTokenBinding(accessTokenDO.getTokenBinding(), revokeRequestDTO.getRequest())) {
+                            revokeResponseDTO.setError(true);
+                            revokeResponseDTO.setErrorCode(OAuth2ErrorCodes.ACCESS_DENIED);
+                            revokeResponseDTO.setErrorMsg("Valid token binding value not present in the request.");
+                            return revokeResponseDTO;
+                        }
                         OAuthUtil.clearOAuthCache(revokeRequestDTO.getConsumerKey(), accessTokenDO.getAuthzUser(),
                                 OAuth2Util.buildScopeString(accessTokenDO.getScope()));
                         OAuthUtil.clearOAuthCache(revokeRequestDTO.getConsumerKey(), accessTokenDO.getAuthzUser());
                         OAuthUtil.clearOAuthCache(accessTokenDO.getAccessToken());
                         String scope = OAuth2Util.buildScopeString(accessTokenDO.getScope());
                         String authorizedUser = accessTokenDO.getAuthzUser().toString();
-                        synchronized ((revokeRequestDTO.getConsumerKey() + ":" + authorizedUser + ":" + scope).intern()) {
+                        String tokenBindingReference = NONE;
+                        if (accessTokenDO.getTokenBinding() != null && StringUtils
+                                .isNotBlank(accessTokenDO.getTokenBinding().getBindingReference())) {
+                            tokenBindingReference = accessTokenDO.getTokenBinding().getBindingReference();
+                        }
+                        synchronized ((revokeRequestDTO.getConsumerKey() + ":" + authorizedUser + ":" + scope + ":"
+                                + tokenBindingReference).intern()) {
                             OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                                     .revokeAccessTokens(new String[] { accessTokenDO.getAccessToken() });
                         }
@@ -594,6 +610,11 @@ public class OAuth2Service extends AbstractAdmin {
 
     public boolean isPKCESupportEnabled() {
         return OAuth2Util.isPKCESupportEnabled();
+    }
+
+    public List<TokenBinder> getSupportedTokenBinders() {
+
+        return OAuth2ServiceComponentHolder.getInstance().getTokenBinders();
     }
 
     private void addRevokeResponseHeaders(OAuthRevocationResponseDTO revokeResponseDTP, String accessToken,

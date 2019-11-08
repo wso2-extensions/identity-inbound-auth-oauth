@@ -41,7 +41,6 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -196,6 +195,7 @@ public class TokenValidationHandler {
         responseDTO.setAuthorizedUser(getAuthzUser(accessTokenDO));
         responseDTO.setScope(accessTokenDO.getScope());
         responseDTO.setValid(true);
+        responseDTO.setTokenBinding(accessTokenDO.getTokenBinding());
 
         if (tokenGenerator != null) {
             tokenGenerator.generateToken(messageContext);
@@ -420,6 +420,11 @@ public class TokenValidationHandler {
             introResp.setUsername(getAuthzUser(accessTokenDO));
             // add client id
             introResp.setClientId(accessTokenDO.getConsumerKey());
+            // Set token binding info.
+            if (accessTokenDO.getTokenBinding() != null) {
+                introResp.setBindingType(accessTokenDO.getTokenBinding().getBindingType());
+                introResp.setBindingReference(accessTokenDO.getTokenBinding().getBindingReference());
+            }
             // adding the AccessTokenDO as a context property for further use
             messageContext.addProperty("AccessTokenDO", accessTokenDO);
         }

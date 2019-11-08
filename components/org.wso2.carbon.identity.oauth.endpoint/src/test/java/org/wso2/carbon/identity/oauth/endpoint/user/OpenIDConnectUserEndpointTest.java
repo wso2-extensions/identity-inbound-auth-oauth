@@ -42,6 +42,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 
+import static org.mockito.Matchers.anyObject;
 import static org.mockito.Matchers.anyString;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
@@ -134,7 +135,7 @@ public class OpenIDConnectUserEndpointTest extends PowerMockIdentityBaseTest {
         when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(appDO);
         when(OAuth2Util.getClientIdForAccessToken(anyString())).thenReturn(clientID);
 
-        when(tokenValidator.validateToken(anyString())).thenReturn(tokenResponse);
+        when(tokenValidator.validateToken(anyString(), anyObject())).thenReturn(tokenResponse);
         when(userInfoEndpointConfig.getUserInfoAccessTokenValidator()).thenReturn(tokenValidator);
         when(userInfoEndpointConfig.getUserInfoRequestValidator()).thenReturn(requestValidator);
         mockStatic(UserInfoEndpointConfig.class);

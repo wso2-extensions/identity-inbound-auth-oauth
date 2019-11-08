@@ -27,13 +27,13 @@ import org.wso2.carbon.identity.oauth.stub.OAuthAdminServiceIdentityOAuthAdminEx
 import org.wso2.carbon.identity.oauth.stub.OAuthAdminServiceStub;
 import org.wso2.carbon.identity.oauth.stub.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.identity.oauth.stub.dto.OAuthIDTokenAlgorithmDTO;
-import org.wso2.carbon.identity.oauth.stub.dto.OAuthTokenExpiryTimeDTO;
 import org.wso2.carbon.identity.oauth.stub.dto.OAuthRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth.stub.dto.OAuthRevocationResponseDTO;
+import org.wso2.carbon.identity.oauth.stub.dto.OAuthTokenExpiryTimeDTO;
 import org.wso2.carbon.identity.oauth.stub.dto.ScopeDTO;
+import org.wso2.carbon.identity.oauth.stub.dto.TokenBindingMetaDataDTO;
 
 import java.rmi.RemoteException;
-import java.util.List;
 
 public class OAuthAdminClient {
 
@@ -331,5 +331,16 @@ public class OAuthAdminClient {
     public boolean isRefreshTokenRenewalEnabled() throws RemoteException {
 
         return stub.isRefreshTokenRenewalEnabled();
+    }
+
+    /**
+     * Get supported token bindings metadata.
+     *
+     * @return Array of TokenBindingMetaDataDTOs.
+     * @throws RemoteException remote exception.
+     */
+    public TokenBindingMetaDataDTO[] getSupportedTokenBindingsMetaData() throws RemoteException {
+
+        return stub.getSupportedTokenBindingsMetaData();
     }
 }

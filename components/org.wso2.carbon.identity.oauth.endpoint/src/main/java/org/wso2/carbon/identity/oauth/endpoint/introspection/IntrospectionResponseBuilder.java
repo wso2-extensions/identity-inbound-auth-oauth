@@ -189,6 +189,32 @@ public class IntrospectionResponseBuilder {
     }
 
     /**
+     * Set access token binding type.
+     *
+     * @param bindingType access token binding type.
+     * @return IntrospectionResponseBuilder.
+     */
+    public IntrospectionResponseBuilder setBindingType(String bindingType) {
+        if (StringUtils.isNotBlank(bindingType)) {
+            parameters.put(IntrospectionResponse.BINDING_TYPE, bindingType);
+        }
+        return this;
+    }
+
+    /**
+     * Set access token binding reference
+     *
+     * @param bindingReference access token binding reference.
+     * @return IntrospectionResponseBuilder.
+     */
+    public IntrospectionResponseBuilder setBindingReference(String bindingReference) {
+        if (StringUtils.isNotBlank(bindingReference)) {
+            parameters.put(IntrospectionResponse.BINDING_REFERENCE, bindingReference);
+        }
+        return this;
+    }
+
+    /**
      * @param errorCode Error Code
      * @return IntrospectionResponseBuilder
      */

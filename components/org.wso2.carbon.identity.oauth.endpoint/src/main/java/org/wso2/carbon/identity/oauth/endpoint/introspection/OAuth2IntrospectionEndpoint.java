@@ -136,6 +136,13 @@ public class OAuth2IntrospectionEndpoint {
             respBuilder.setTokenString(introspectionResponse.getUserContext());
         }
 
+        // Provide token binding related info which required to validate the token.
+        if (StringUtils.isNotBlank(introspectionResponse.getBindingType()) && StringUtils
+                .isNotBlank(introspectionResponse.getBindingReference())) {
+            respBuilder.setBindingType(introspectionResponse.getBindingType());
+            respBuilder.setBindingReference(introspectionResponse.getBindingReference());
+        }
+
         // Check data providers are enabled for token introspection.
         if (OAuthServerConfiguration.getInstance().isEnableIntrospectionDataProviders()) {
 

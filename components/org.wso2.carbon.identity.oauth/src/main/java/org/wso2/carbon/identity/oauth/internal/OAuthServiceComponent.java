@@ -28,9 +28,9 @@ import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
-import org.wso2.carbon.identity.oauth.OAuthService;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.common.token.bindings.TokenBinderInfo;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.listener.IdentityOathEventListener;
@@ -219,5 +219,26 @@ public class OAuthServiceComponent {
     protected void setIdentityCoreInitializedEventService(IdentityCoreInitializedEvent identityCoreInitializedEvent) {
         /* reference IdentityCoreInitializedEvent service to guarantee that this component will wait until identity core
          is started */
+    }
+
+    @Reference(name = "token.binding.service",
+               service = TokenBinderInfo.class,
+               cardinality = ReferenceCardinality.MULTIPLE,
+               policy = ReferencePolicy.DYNAMIC,
+               unbind = "unsetTokenBinderInfo")
+    protected void setTokenBinderInfo(TokenBinderInfo tokenBinderInfo) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Setting the token binder info for: " + tokenBinderInfo.getBindingType());
+        }
+        OAuthComponentServiceHolder.getInstance().addTokenBinderInfo(tokenBinderInfo);
+    }
+
+    protected void unsetTokenBinderInfo(TokenBinderInfo tokenBinderInfo) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Un-setting the token binder info for: " + tokenBinderInfo.getBindingType());
+        }
+        OAuthComponentServiceHolder.getInstance().removeTokenBinderInfo(tokenBinderInfo);
     }
 }
