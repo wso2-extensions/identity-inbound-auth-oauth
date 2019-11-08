@@ -32,6 +32,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.handlers.ResponseTypeHandler;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
+import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.JDBCPermissionBasedInternalScopeValidator;
 import org.wso2.carbon.utils.CarbonUtils;
@@ -275,4 +276,31 @@ public class AuthorizationHandlerManager {
         respDTO.setErrorCode(errorCode);
         respDTO.setErrorMsg(errorMsg);
     }
+
+    /**
+     * Handles the authorization request denied by user.
+     *
+     * @param oAuth2Parameters OAuth parameters.
+     * @return Authorize Response Data Transfer Object.
+     */
+    public OAuth2AuthorizeRespDTO handleUserConsentDenial(OAuth2Parameters oAuth2Parameters) {
+
+        ResponseTypeHandler responseTypeHandler = responseHandlers.get(oAuth2Parameters.getResponseType());
+        return responseTypeHandler.handleUserConsentDenial(oAuth2Parameters);
+
+    }
+
+    /**
+     * Handles the authentication failures.
+     *
+     * @param oAuth2Parameters OAuth parameters.
+     * @return OAuth2AuthorizeRespDTO Authorize Response Data Transfer Object.
+     */
+    public OAuth2AuthorizeRespDTO handleAuthenticationFailed(OAuth2Parameters oAuth2Parameters) {
+
+        ResponseTypeHandler responseTypeHandler = responseHandlers.get(oAuth2Parameters.getResponseType());
+        return responseTypeHandler.handleAuthenticationFailed(oAuth2Parameters);
+
+    }
 }
+

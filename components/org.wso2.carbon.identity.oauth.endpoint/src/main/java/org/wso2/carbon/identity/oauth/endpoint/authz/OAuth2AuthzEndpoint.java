@@ -619,6 +619,13 @@ public class OAuth2AuthzEndpoint {
                 "User denied the consent");
         String denyResponse = EndpointUtil.getErrorRedirectURL(oAuthMessage.getRequest(), ex, oauth2Params);
 
+        try {
+            // Do the needful when users deny the consent.
+            EndpointUtil.getOAuth2Service().handleUserConsentDenial(oauth2Params);
+        } catch (IdentityOAuth2Exception e) {
+            throw new OAuthSystemException(e);
+        }
+
         if (StringUtils.equals(oauth2Params.getResponseMode(), RESPONSE_MODE_FORM_POST)) {
             return handleFailedState(oAuthMessage, oauth2Params, ex);
         }
@@ -723,6 +730,16 @@ public class OAuth2AuthzEndpoint {
                                                 AuthenticationResult authnResult) throws URISyntaxException {
 
         OAuthProblemException oauthException = buildOAuthProblemException(authnResult);
+
+        try {
+            // Do the needful in correlation with authentication failures.
+            EndpointUtil.getOAuth2Service().handleAuthenticationFailed(oauth2Params);
+        } catch (IdentityOAuth2Exception e) {
+            if(log.isDebugEnabled()){
+                log.debug("Error occurred in handling authentication failure. ");
+            }
+        }
+
         return handleFailedState(oAuthMessage, oauth2Params, oauthException);
     }
 
