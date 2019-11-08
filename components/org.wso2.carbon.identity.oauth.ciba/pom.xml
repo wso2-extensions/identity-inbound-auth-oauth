@@ -5,7 +5,7 @@
     <parent>
         <artifactId>identity-inbound-auth-oauth</artifactId>
         <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
-        <version>6.1.10-SNAPSHOT</version>
+        <version>6.2.41-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
@@ -23,8 +23,9 @@
             <artifactId>json-smart</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.wso2.carbon</groupId>
-            <artifactId>org.wso2.carbon.logging</artifactId>
+            <groupId>org.ops4j.pax.logging</groupId>
+            <artifactId>pax-logging-api</artifactId>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.felix</groupId>
