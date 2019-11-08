@@ -706,7 +706,7 @@
                                                             <%=StringUtils.isBlank(app.getTokenBindingType()) ?
                                                                     "checked=\"checked\"" :
                                                                     ""%>/>
-                                                        NONE
+                                                        None
                                                     </label>
                                                 </td>
                                             </tr>

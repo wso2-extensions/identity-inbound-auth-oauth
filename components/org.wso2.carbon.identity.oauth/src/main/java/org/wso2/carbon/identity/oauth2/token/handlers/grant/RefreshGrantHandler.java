@@ -58,6 +58,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.buildCacheKeyStringForToken;
 
 /**
@@ -164,7 +165,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             throws IdentityOAuth2Exception {
         tokReqMsgCtx.setAuthorizedUser(validationBean.getAuthorizedUser());
         tokReqMsgCtx.setScope(validationBean.getScope());
-        if (StringUtils.isNotBlank(validationBean.getTokenBindingReference()) && !OAuthConstants.TokenBindings.NONE
+        if (StringUtils.isNotBlank(validationBean.getTokenBindingReference()) && !NONE
                 .equals(validationBean.getTokenBindingReference())) {
             Optional<TokenBinding> tokenBindingOptional = OAuthTokenPersistenceFactory.getInstance()
                     .getTokenBindingMgtDAO()
@@ -617,6 +618,11 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
     private void validateTokenBindingReference(OAuth2AccessTokenReqDTO tokenReqDTO,
             RefreshTokenValidationDataDO validationDataDO) throws IdentityOAuth2Exception {
 
+        if (StringUtils.isBlank(validationDataDO.getTokenBindingReference()) || NONE
+                .equals(validationDataDO.getTokenBindingReference())) {
+            return;
+        }
+
         OAuthAppDO oAuthAppDO;
         try {
             oAuthAppDO = OAuth2Util.getAppInformationByClientId(tokenReqDTO.getClientId());
@@ -637,9 +643,6 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         }
 
         TokenBinder tokenBinder = tokenBinderOptional.get();
-        if (!tokenBinder.getSupportedGrantTypes().contains(tokenReqDTO.getGrantType())) {
-            return;
-        }
 
         Optional<String> tokenBindingValueOptional = tokenBinder.getTokenBindingValue(tokenReqDTO);
         if (!tokenBindingValueOptional.isPresent()) {

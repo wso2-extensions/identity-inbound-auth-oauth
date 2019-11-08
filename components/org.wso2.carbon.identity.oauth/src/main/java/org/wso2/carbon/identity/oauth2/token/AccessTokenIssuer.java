@@ -63,6 +63,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.REFRESH_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
 
@@ -372,13 +373,20 @@ public class AccessTokenIssuer {
         tokReqMsgCtx.setScope(scopes.toArray(new String[0]));
     }
 
+    /**
+     * Handle token binding for the grant type.
+     *
+     * @param tokenReqDTO token request DTO.
+     * @param grantType grant type.
+     * @param tokReqMsgCtx token request message context.
+     * @param oAuthAppDO oauth application.
+     * @throws IdentityOAuth2Exception in case of failure.
+     */
     private void handleTokenBinding(OAuth2AccessTokenReqDTO tokenReqDTO, String grantType,
             OAuthTokenReqMessageContext tokReqMsgCtx, OAuthAppDO oAuthAppDO) throws IdentityOAuth2Exception {
 
-        TokenBinding tokenBinding = tokReqMsgCtx.getTokenBinding();
-        tokReqMsgCtx.setTokenBinding(null);
-
         if (StringUtils.isBlank(oAuthAppDO.getTokenBindingType())) {
+            tokReqMsgCtx.setTokenBinding(null);
             return;
         }
 
@@ -389,20 +397,23 @@ public class AccessTokenIssuer {
                     "Token binder for the binding type: " + oAuthAppDO.getTokenBindingType() + " is not registered.");
         }
 
+        if (REFRESH_TOKEN.equals(grantType)) {
+            // Token binding values are already set to the OAuthTokenReqMessageContext.
+            return;
+        }
+
+        tokReqMsgCtx.setTokenBinding(null);
+
         TokenBinder tokenBinder = tokenBinderOptional.get();
         if (!tokenBinder.getSupportedGrantTypes().contains(grantType)) {
             return;
         }
 
-        if (tokenBinding != null && tokenBinder.getBindingType().equals(tokenBinding.getBindingType())) {
-            tokReqMsgCtx.setTokenBinding(tokenBinding);
-            return;
-        }
-
         Optional<String> tokenBindingValueOptional = tokenBinder.getTokenBindingValue(tokenReqDTO);
         if (!tokenBindingValueOptional.isPresent()) {
-            throw new IdentityOAuth2Exception("Token binding reference cannot be retrieved form the token binder: "
-                    + tokenBinder.getBindingType());
+            throw new IdentityOAuth2Exception(
+                    "Token binding reference cannot be retrieved form the token binder: " + tokenBinder
+                            .getBindingType());
         }
 
         String tokenBindingValue = tokenBindingValueOptional.get();

@@ -52,9 +52,9 @@ public class CookieBasedTokenBinder implements TokenBinder {
 
     private static final String BINDING_TYPE = "cookie";
 
-    private static final String COOKIE_NAME = "tokenBindingValue";
+    private static final String COOKIE_NAME = "atbv";
 
-    private List<String> supportedGrantTypes = Arrays.asList(AUTHORIZATION_CODE, REFRESH_TOKEN);
+    private List<String> supportedGrantTypes = Collections.singletonList(AUTHORIZATION_CODE);
 
     @Override
     public String getBindingType() {
@@ -71,13 +71,13 @@ public class CookieBasedTokenBinder implements TokenBinder {
     @Override
     public String getDisplayName() {
 
-        return "Cookie";
+        return "Cookie Based";
     }
 
     @Override
     public String getDescription() {
 
-        return "Bind token to the browser cookie.";
+        return "Bind token to the browser cookie. Supported grant types: Code";
     }
 
     @Override
