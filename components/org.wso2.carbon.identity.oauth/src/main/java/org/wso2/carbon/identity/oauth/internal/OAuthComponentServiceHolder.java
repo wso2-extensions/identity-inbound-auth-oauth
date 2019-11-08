@@ -22,6 +22,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.oauth.OAuthService;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
+import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.registry.api.RegistryService;
 import org.wso2.carbon.user.core.service.RealmService;
@@ -34,6 +35,7 @@ public class OAuthComponentServiceHolder {
     private OAuthEventInterceptor oAuthEventInterceptorHandlerProxy;
     private OAuth2Service oauth2Service;
     private static final Log log = LogFactory.getLog(OAuthComponentServiceHolder.class);
+    private OAuth2ScopeService oauth2ScopeService;
 
     private OAuthComponentServiceHolder() {
 
@@ -79,4 +81,15 @@ public class OAuthComponentServiceHolder {
     public void setOauth2Service(OAuth2Service oauth2Service) {
         this.oauth2Service = oauth2Service;
     }
+
+    public OAuth2ScopeService getOauth2ScopeService() {
+
+        return oauth2ScopeService;
+    }
+
+    public void setOauth2ScopeService(OAuth2ScopeService oauth2ScopeService) {
+
+        this.oauth2ScopeService = oauth2ScopeService;
+    }
+
 }
