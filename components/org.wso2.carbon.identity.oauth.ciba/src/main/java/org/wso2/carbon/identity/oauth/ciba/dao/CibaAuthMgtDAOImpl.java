@@ -32,7 +32,7 @@ import java.sql.SQLException;
 import javax.servlet.http.HttpServletResponse;
 
 /**
- * This class is responsible for Ciba Authentication response and persisting CibaAuthCode.
+ * Implementation of abstract DAO layer.
  */
 public class CibaAuthMgtDAOImpl implements CibaAuthMgtDAO {
 
@@ -44,7 +44,7 @@ public class CibaAuthMgtDAOImpl implements CibaAuthMgtDAO {
 
     private static CibaAuthMgtDAOImpl cibaAuthMgtDAOImplImplInstance = new CibaAuthMgtDAOImpl();
 
-    public static CibaAuthMgtDAOImpl getInstance() {
+    static CibaAuthMgtDAOImpl getInstance() {
 
         if (cibaAuthMgtDAOImplImplInstance == null) {
 
@@ -62,7 +62,7 @@ public class CibaAuthMgtDAOImpl implements CibaAuthMgtDAO {
     }
 
     /**
-     * This method persists the status of the relevant CibAuthCode identified by the CibaAuthCodeDOKey.
+     * Persists the status of the relevant CibAuthCode identified by the CibaAuthCodeDOKey.
      *
      * @param cibaAuthCodeDOKey       Identifier for CibaAuthCodeDOKey.
      * @param cibaAuthentcationStatus Status of the relevant Ciba Authentication.
@@ -97,7 +97,7 @@ public class CibaAuthMgtDAOImpl implements CibaAuthMgtDAO {
     }
 
     /**
-     * This method persists the authenticated_user of the relevant CibAuthCode identified by the CibaAuthCodeDOKey.
+     * Persists the authenticated_user of the relevant CibAuthCode identified by the CibaAuthCodeDOKey.
      *
      * @param cibaAuthCodeDOKey     Identifier for CibaAuthCode.
      * @param cibaAuthenticatedUser Authenticated_user of the relevant CibaAuthCode.
@@ -131,7 +131,7 @@ public class CibaAuthMgtDAOImpl implements CibaAuthMgtDAO {
     }
 
     /**
-     * This method checks whether hash of CibaAuthCode exists.
+     * Checks whether hash of CibaAuthCode exists.
      *
      * @param hashedCibaAuthReqId hash of CibaAuthReqID.
      * @return boolean Returns whether given HashedAuthReqId present or not.
@@ -190,7 +190,7 @@ public class CibaAuthMgtDAOImpl implements CibaAuthMgtDAO {
     }
 
     /**
-     * This method returns CibaAuthCodeDOkey for the hash of CibaAuthReqId.
+     * Returns CibaAuthCodeDOkey for the hash of CibaAuthReqId.
      *
      * @param hashedCibaAuthReqId hash of CibaAuthReqId.
      * @return String Returns CibaAuthCodeDOKey.
@@ -232,7 +232,7 @@ public class CibaAuthMgtDAOImpl implements CibaAuthMgtDAO {
     }
 
     /**
-     * This method returns the lastPolledTime of tokenRequest with CibaAuthCodeDOKey.
+     * Returns the lastPolledTime of tokenRequest with CibaAuthCodeDOKey.
      *
      * @param cibaAuthCodeDOKey Identifier of CibaAuthCodeDO.
      * @return long Returns lastPolledTime.
@@ -273,7 +273,7 @@ public class CibaAuthMgtDAOImpl implements CibaAuthMgtDAO {
     }
 
     /**
-     * This method returns the pollingInterval of tokenRequest with CibaAuthCodeDOKey.
+     * Returns the pollingInterval of tokenRequest with CibaAuthCodeDOKey.
      *
      * @param cibaAuthCodeDOKey identifier of CibaAuthReqId.
      * @return long Returns pollingInterval of tokenRequest.
@@ -313,7 +313,7 @@ public class CibaAuthMgtDAOImpl implements CibaAuthMgtDAO {
     }
 
     /**
-     * This method updates the last polled time of tokenRequest with CibaAuthCodeDOKey.
+     * Updates the last polled time of tokenRequest with CibaAuthCodeDOKey.
      *
      * @param cibaAuthCodeDOKey Identifier of CibaAuthCodeDO.
      * @param currentTime       CurrentTime in milliseconds.
@@ -346,7 +346,7 @@ public class CibaAuthMgtDAOImpl implements CibaAuthMgtDAO {
     }
 
     /**
-     * This method updates the polling Interval of tokenRequest with cibaAuthCodeDOKey.
+     * Updates the polling Interval of tokenRequest with cibaAuthCodeDOKey.
      *
      * @param cibaAuthCodeDOKey identifier of CibaAuthCode.
      * @param newInterval       Updated polling frequency.
@@ -379,7 +379,7 @@ public class CibaAuthMgtDAOImpl implements CibaAuthMgtDAO {
     }
 
     /**
-     * This method returns authenticationStatus of authenticationRequest with specific cibaAuthCodeDOKey.
+     * Returns authenticationStatus of authenticationRequest with specific cibaAuthCodeDOKey.
      *
      * @param cibaAuthCodeDOKey identifier of CibaAuthCodeDO.
      * @return String Returns AuthenticationStatus.
@@ -420,7 +420,7 @@ public class CibaAuthMgtDAOImpl implements CibaAuthMgtDAO {
     }
 
     /**
-     * This method returns the authenticated user of authenticationRequest for cibaAuthCodeDOKey.
+     * Returns the authenticated user of authenticationRequest for cibaAuthCodeDOKey.
      *
      * @param cibaAuthCodeDOKey identifier of CibaAuthCode
      * @return Returns AuthenticatedUser.
@@ -460,7 +460,7 @@ public class CibaAuthMgtDAOImpl implements CibaAuthMgtDAO {
     }
 
     /**
-     * This method persist the CibaAuthCodeDO.
+     * Persists the CibaAuthCodeDO.
      *
      * @param cibaAuthCodeDO Data object that accumulates  CibaAuthCode.
      * @throws CibaCoreException Exception thrown from CibaCore Component.
@@ -500,7 +500,7 @@ public class CibaAuthMgtDAOImpl implements CibaAuthMgtDAO {
     }
 
     /**
-     * This method returns CibaAuthCodeDO identified by unique cibaAuthCodeDOKey.
+     * Returns CibaAuthCodeDO identified by unique cibaAuthCodeDOKey.
      *
      * @param cibaAuthCodeDOKey Identifier of CibaAuthCode.
      * @throws CibaCoreException Exception thrown from CibaCore Component.

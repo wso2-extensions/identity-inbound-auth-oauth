@@ -27,7 +27,7 @@ import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 
 /**
- * This class is used to wrap ciba authentication request.
+ * Wrap ciba authentication request.
  */
 public class CibaAuthRequestWrapper extends CommonAuthRequestWrapper {
 

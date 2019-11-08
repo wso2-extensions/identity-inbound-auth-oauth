@@ -29,7 +29,7 @@ import java.util.UUID;
 import javax.servlet.http.HttpServletResponse;
 
 /**
- * This class is supportive for the functioning of other classes.
+ * Provides utilities for the functioning of other classes.
  */
 
 public class CibaAuthUtil {
@@ -60,7 +60,7 @@ public class CibaAuthUtil {
     }
 
     /**
-     * This method create and returns ciba auth_req_id as a JWT.
+     * Create and returns ciba auth_req_id as a JWT.
      *
      * @param cibaAuthResponseDTO which is infiltrated with validated parameters from authRequestDTO.
      * @return JWT CibaAuthCode which will have necessary claims for auth_req_id.
@@ -94,7 +94,7 @@ public class CibaAuthUtil {
     }
 
     /**
-     * This method create and returns CIBA auth_req_id claims.
+     * Create and returns CIBA auth_req_id claims.
      *
      * @param cibaAuthResponseDTO Contains the validated parameters from the ciba authentication request.
      * @return JWTClaimsSet Returns JWT.
@@ -126,7 +126,7 @@ public class CibaAuthUtil {
     }
 
     /**
-     * This method transfers validated values of AuthenticationRequestDTO to AuthenticationResponseDTO.
+     * Transfers validated values of AuthenticationRequestDTO to AuthenticationResponseDTO.
      *
      * @param cibaAuthRequestDTO Ciba Authentication Request DTO.
      * @return CibaAuthResponseDTO Returns JWT.
@@ -162,7 +162,7 @@ public class CibaAuthUtil {
     }
 
     /**
-     * This method returns a unique AuthCodeDOKey.
+     * Returns a unique AuthCodeDOKey.
      *
      * @return String Returns random uuid.
      */
@@ -174,7 +174,7 @@ public class CibaAuthUtil {
     }
 
     /**
-     * This method returns a random id.
+     * Returns a random id.
      *
      * @return String Returns random uuid.
      */
@@ -186,7 +186,7 @@ public class CibaAuthUtil {
     }
 
     /**
-     * This method create hash of the provided auth_req_id.
+     * Create hash of the provided auth_req_id.
      *
      * @param JWTStringAsAuthReqID auth_req_id.
      * @return String Hashed auth_req_id.
@@ -217,7 +217,7 @@ public class CibaAuthUtil {
     }
 
     /**
-     * This method process and return the expires_in for auth_req_id.
+     * Process and return the expires_in for auth_req_id.
      *
      * @param cibaAuthRequestDTO DTO accumulating validated parameters from CibaAuthenticationRequest.
      * @return long Returns expiry_time of the auth-req_id.
@@ -232,7 +232,7 @@ public class CibaAuthUtil {
     }
 
     /**
-     * This method process and return the expires_in for auth_req_id.
+     * Process and return the expires_in for auth_req_id.
      *
      * @param cibaAuthResponseDTO DTO accumulating response parameters.
      * @return long Returns expiry_time of the auth-req_id.
@@ -247,7 +247,7 @@ public class CibaAuthUtil {
     }
 
     /**
-     * This method check whether user exists in store.
+     * Check whether user exists in store.
      *
      * @param tenantID   tenantID of the clientAPP
      * @param userIdHint that identifies a user
@@ -268,7 +268,7 @@ public class CibaAuthUtil {
     }
 
     /**
-     * This method builds and returns AuthorizationRequestDTO.
+     * Builds and returns AuthorizationRequestDTO.
      *
      * @param cibaAuthCode        JWT with claims necessary for AuthCodeDO .
      * @param cibaAuthResponseDTO Status of the relevant Ciba Authentication.
@@ -316,7 +316,7 @@ public class CibaAuthUtil {
     }
 
     /**
-     * This method builds and returns AuthorizationRequestDTO.
+     * Builds and returns AuthorizationRequestDTO.
      *
      * @param cibaAuthCodeDO      DO with information regarding authenticationRequest.
      * @param cibaAuthResponseDTO Status of the relevant Ciba Authentication.

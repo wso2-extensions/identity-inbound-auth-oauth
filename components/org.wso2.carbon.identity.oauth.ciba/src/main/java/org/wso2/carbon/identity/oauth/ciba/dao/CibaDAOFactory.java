@@ -22,7 +22,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 /**
- * This Factory class is responsible for creating and returning required CibaDAO.
+ * Creates required CibaDAO.
  */
 public class CibaDAOFactory {
 
@@ -57,7 +57,7 @@ public class CibaDAOFactory {
     }
 
     /**
-     * This method manufactures CibaAuthMgtDAO and returns .
+     * Manufactures CibaAuthMgtDAO and returns .
      */
     public CibaAuthMgtDAO getCibaAuthMgtDAO() {
         // This returns created instance of cibaDAOImplementation.

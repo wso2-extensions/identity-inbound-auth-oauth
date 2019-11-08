@@ -19,7 +19,7 @@
 package org.wso2.carbon.identity.oauth.ciba.exceptions;
 
 /**
- * This class possess the needful error codes to be set in responses.
+ * Possess the needful error codes to be set in responses.
  */
 public class ErrorCodes {
 

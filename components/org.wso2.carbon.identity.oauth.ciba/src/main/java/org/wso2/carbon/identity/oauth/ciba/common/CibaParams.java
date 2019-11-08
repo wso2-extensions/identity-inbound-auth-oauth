@@ -19,7 +19,7 @@
 package org.wso2.carbon.identity.oauth.ciba.common;
 
 /**
- * This class is meant to capture the required constants for Ciba Feature.
+ * Contains the required constants for Ciba Feature.
  */
 public class CibaParams {
 

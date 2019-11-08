@@ -22,12 +22,12 @@ import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeDO;
 
 /**
- * This interface abstracts DAO layer.
+ * Abstracts DAO layer.
  */
 public interface CibaAuthMgtDAO {
 
     /**
-     * This method persists the status of the relevant CibAuthCode identified by the CibaAuthCodeDOKey.
+     * Persists the status of the relevant CibAuthCode identified by the CibaAuthCodeDOKey.
      *
      * @param cibaAuthCodeDOKey       Identifier for CibaAuthCodeDOKey.
      * @param cibaAuthentcationStatus Status of the relevant Ciba Authentication.
@@ -36,7 +36,7 @@ public interface CibaAuthMgtDAO {
     void persistStatus(String cibaAuthCodeDOKey, String cibaAuthentcationStatus) throws CibaCoreException;
 
     /**
-     * This method persists the authenticated_user of the relevant CibAuthCode identified by the CibaAuthCodeDOKey.
+     * Persists the authenticated_user of the relevant CibAuthCode identified by the CibaAuthCodeDOKey.
      *
      * @param cibaAuthCodeDOKey     Identifier for CibaAuthCode.
      * @param cibaAuthenticatedUser Authenticated_user of the relevant CibaAuthCode.
@@ -45,7 +45,7 @@ public interface CibaAuthMgtDAO {
     void persistUser(String cibaAuthCodeDOKey, String cibaAuthenticatedUser) throws CibaCoreException;
 
     /**
-     * This method checks whether hash of CibaAuthReqId exists.
+     * checks whether hash of CibaAuthReqId exists.
      *
      * @param hashedCibaAuthReqId hash of CibaAuthReqId.
      * @return boolean Returns whether given HashedAuthReqId present or not.
@@ -54,7 +54,7 @@ public interface CibaAuthMgtDAO {
     boolean isHashedAuthReqIDExists(String hashedCibaAuthReqId) throws CibaCoreException;
 
     /**
-     * This method returns CibaAuthCodeDOKey for the hash of CibaAuthReqId.
+     * Returns CibaAuthCodeDOKey for the hash of CibaAuthReqId.
      *
      * @param hashedCibaAuthReqId hash of CibaAuthReqId.
      * @return String Returns CibaAuthCodeDOKey.
@@ -63,7 +63,7 @@ public interface CibaAuthMgtDAO {
     String getCibaAuthCodeDOKey(String hashedCibaAuthReqId) throws CibaCoreException;
 
     /**
-     * This method returns the lastPolledTime of tokenRequest.
+     * Returns the lastPolledTime of tokenRequest.
      *
      * @param cibaAuthCodeDOKey Identifier of CibaAuthCodeDO.
      * @return long Returns lastPolledTime.
@@ -72,7 +72,7 @@ public interface CibaAuthMgtDAO {
     long getCibaLastPolledTime(String cibaAuthCodeDOKey) throws CibaCoreException;
 
     /**
-     * This method returns the pollingInterval of tokenRequest.
+     * Returns the pollingInterval of tokenRequest.
      *
      * @param cibaAuthCodeDOKey identifier of CibaAuthReqId.
      * @return long Returns pollingInterval of tokenRequest.
@@ -81,7 +81,7 @@ public interface CibaAuthMgtDAO {
     long getCibaPollingInterval(String cibaAuthCodeDOKey) throws CibaCoreException;
 
     /**
-     * This method updates the last polled time of tokenRequest.
+     * Updates the last polled time of tokenRequest.
      *
      * @param cibaAuthCodeDOKey Identifier of CibaAuthCodeDO.
      * @param currentTime       CurrentTime in milliseconds.
@@ -91,7 +91,7 @@ public interface CibaAuthMgtDAO {
             throws CibaCoreException;
 
     /**
-     * This method updates the polling Interval of tokenRequest.
+     * Updates the polling Interval of tokenRequest.
      *
      * @param cibaAuthCodeDOKey identifier of CibaAuthCode.
      * @param newInterval       Updated polling frequency.
@@ -100,7 +100,7 @@ public interface CibaAuthMgtDAO {
     void updatePollingInterval(String cibaAuthCodeDOKey, long newInterval) throws CibaCoreException;
 
     /**
-     * This method returns authenticationStatus of authenticationRequest.
+     * Returns authenticationStatus of authenticationRequest.
      *
      * @param cibaAuthCodeDOKey identifier of CibaAuthCodeDO.
      * @return String Returns AuthenticationStatus.
@@ -109,7 +109,7 @@ public interface CibaAuthMgtDAO {
     String getAuthenticationStatus(String cibaAuthCodeDOKey) throws CibaCoreException;
 
     /**
-     * This method returns the authenticated user of authenticationRequest.
+     * Returns the authenticated user of authenticationRequest.
      *
      * @param cibaAuthCodeDOKey identifier of CibaAuthCode
      * @return Returns AuthenticatedUser.
@@ -118,7 +118,7 @@ public interface CibaAuthMgtDAO {
     String getAuthenticatedUser(String cibaAuthCodeDOKey) throws CibaCoreException;
 
     /**
-     * This method persists the CibaAuthCodeDO.
+     * Persists the CibaAuthCodeDO.
      *
      * @param cibaAuthCodeDO Data object that accumulates  CibaAuthCode.
      * @throws CibaCoreException Exception thrown from CibaCore Component.
@@ -126,7 +126,7 @@ public interface CibaAuthMgtDAO {
     void persistCibaAuthCode(CibaAuthCodeDO cibaAuthCodeDO) throws CibaCoreException;
 
     /**
-     * This method returns CibaAuthCodeDO identified by unique cibaAuthCodeDOKey.
+     * Returns CibaAuthCodeDO identified by unique cibaAuthCodeDOKey.
      *
      * @param cibaAuthCodeDOKey Identifier of CibaAuthCode.
      * @throws CibaCoreException Exception thrown from CibaCore Component.

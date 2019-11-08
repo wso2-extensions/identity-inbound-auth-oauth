@@ -20,7 +20,7 @@
 package org.wso2.carbon.identity.oauth.ciba.model;
 
 /**
- * This DO captures parameters to be stored in database tables.
+ * Contains parameters to be stored in database tables.
  */
 public class CibaAuthCodeDO {
 

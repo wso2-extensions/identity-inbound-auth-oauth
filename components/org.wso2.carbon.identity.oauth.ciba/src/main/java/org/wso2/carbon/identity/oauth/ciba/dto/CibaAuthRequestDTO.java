@@ -19,7 +19,7 @@
 package org.wso2.carbon.identity.oauth.ciba.dto;
 
 /**
- * DTO that captures the authentication request validated parameters.
+ * Captures the authentication request validated parameters.
  */
 public class CibaAuthRequestDTO {
 

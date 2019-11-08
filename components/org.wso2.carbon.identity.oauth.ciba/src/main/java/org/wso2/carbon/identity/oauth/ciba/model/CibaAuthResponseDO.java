@@ -22,7 +22,7 @@ import org.apache.oltu.oauth2.common.message.OAuthResponse;
 import org.wso2.carbon.identity.oauth.ciba.common.CibaParams;
 
 /**
- * This DO captures parameters that need to be sent in authentication response.
+ * Contains parameters that need to be sent in authentication response.
  */
 public class CibaAuthResponseDO extends OAuthResponse {
 

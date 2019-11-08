@@ -36,7 +36,7 @@ import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import static org.wso2.carbon.identity.oauth.ciba.exceptions.ErrorCodes.SubErrorCodes.CONSENT_DENIED;
 
 /**
- * This class is responsible for handling the authorize requests with ciba as response type.
+ * Handles authorize requests with ciba as response type.
  */
 public class CibaResponseTypeHandler extends AbstractResponseTypeHandler {
 
@@ -90,7 +90,7 @@ public class CibaResponseTypeHandler extends AbstractResponseTypeHandler {
     }
 
     /**
-     * This method handles user denial for authorization.
+     * Handles user denial for authorization.
      *
      * @param oAuth2Parameters OAuth2parameters are captured by this.
      * @return OAuth2AuthorizeRespDTO Authorize Response DTO.
@@ -119,7 +119,7 @@ public class CibaResponseTypeHandler extends AbstractResponseTypeHandler {
     }
 
     /**
-     * This method handles failure in authentication process.
+     * Handles failure in authentication process.
      *
      * @param oAuth2Parameters OAuth2parameters are captured by this.
      * @return OAuth2AuthorizeRespDTO Authorize Response DTO.

@@ -19,7 +19,7 @@
 package org.wso2.carbon.identity.oauth.ciba.exceptions;
 
 /**
- * This class is the exception from ciba core component.
+ * Exception from ciba core component.
  */
 public class CibaCoreException extends Exception {
 

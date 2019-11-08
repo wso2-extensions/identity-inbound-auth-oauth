@@ -23,7 +23,7 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Commo
 import javax.servlet.http.HttpServletResponse;
 
 /**
- * This class is used to wrap ciba authentication response.
+ * Wrap ciba authentication response.
  */
 public class CibaAuthResponseWrapper extends CommonAuthResponseWrapper {
 

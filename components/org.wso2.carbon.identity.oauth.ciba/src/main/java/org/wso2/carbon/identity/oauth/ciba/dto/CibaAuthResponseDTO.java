@@ -19,7 +19,7 @@
     package org.wso2.carbon.identity.oauth.ciba.dto;
 
     /**
-     * DTO that carries paaramters for building authentication responses.
+     * Contains parameters for building authentication responses.
      */
 
     public class CibaAuthResponseDTO {
