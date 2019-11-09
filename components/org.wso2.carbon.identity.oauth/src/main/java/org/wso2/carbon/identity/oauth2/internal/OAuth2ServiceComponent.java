@@ -34,6 +34,7 @@ import org.wso2.carbon.identity.application.mgt.listener.ApplicationMgtListener;
 import org.wso2.carbon.identity.base.IdentityRuntimeException;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
+import org.wso2.carbon.identity.oauth.common.token.bindings.TokenBinderInfo;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
@@ -45,6 +46,8 @@ import org.wso2.carbon.identity.oauth2.client.authentication.PublicClientAuthent
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dao.SQLQueries;
 import org.wso2.carbon.identity.oauth2.listener.TenantCreationEventListener;
+import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
+import org.wso2.carbon.identity.oauth2.token.bindings.impl.CookieBasedTokenBinder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilter;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImpl;
@@ -131,6 +134,10 @@ public class OAuth2ServiceComponent {
             PublicClientAuthenticator publicClientAuthenticator = new PublicClientAuthenticator();
             bundleContext.registerService(OAuthClientAuthenticator.class.getName(), publicClientAuthenticator,
                     null);
+
+            // Register cookie based access token binder.
+            CookieBasedTokenBinder cookieBasedTokenBinder = new CookieBasedTokenBinder();
+            bundleContext.registerService(TokenBinderInfo.class.getName(), cookieBasedTokenBinder, null);
 
             if (log.isDebugEnabled()) {
                 log.debug("Identity OAuth bundle is activated");
@@ -337,5 +344,30 @@ public class OAuth2ServiceComponent {
             log.debug("UnSetting the Registry Service");
         }
         OAuth2ServiceComponentHolder.getAuthenticationHandlers().remove(oAuthClientAuthenticator);
+    }
+
+    @Reference(name = "token.binding.service",
+               service = TokenBinderInfo.class,
+               cardinality = ReferenceCardinality.MULTIPLE,
+               policy = ReferencePolicy.DYNAMIC,
+               unbind = "unsetTokenBinderInfo")
+    protected void setTokenBinderInfo(TokenBinderInfo tokenBinderInfo) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Setting the token binder for: " + tokenBinderInfo.getBindingType());
+        }
+        if (tokenBinderInfo instanceof TokenBinder) {
+            OAuth2ServiceComponentHolder.getInstance().addTokenBinder((TokenBinder) tokenBinderInfo);
+        }
+    }
+
+    protected void unsetTokenBinderInfo(TokenBinderInfo tokenBinderInfo) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Un-setting the token binder for: " + tokenBinderInfo.getBindingType());
+        }
+        if (tokenBinderInfo instanceof TokenBinder) {
+            OAuth2ServiceComponentHolder.getInstance().removeTokenBinder((TokenBinder) tokenBinderInfo);
+        }
     }
 }

@@ -72,6 +72,14 @@ public final class IntrospectionResponse {
     // time-stamp to indicate when this token was originally issued
     public static final String IAT = "iat";
 
+    // OPTIONAL
+    // Type of the access token binding used.
+    public static final String BINDING_TYPE = "binding_type";
+
+    // OPTIONAL
+    // Access token binding reference.
+    public static final String BINDING_REFERENCE = "binding_ref";
+
     class Error {
 
         public static final String INVALID_REQUEST = "invalid_request";

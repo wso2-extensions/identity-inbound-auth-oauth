@@ -20,12 +20,16 @@ package org.wso2.carbon.identity.oauth.internal;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.identity.oauth.OAuthService;
+import org.wso2.carbon.identity.oauth.common.token.bindings.TokenBinderInfo;
+import org.wso2.carbon.identity.oauth.dto.TokenBindingMetaDataDTO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.registry.api.RegistryService;
 import org.wso2.carbon.user.core.service.RealmService;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class OAuthComponentServiceHolder {
 
@@ -36,6 +40,7 @@ public class OAuthComponentServiceHolder {
     private OAuth2Service oauth2Service;
     private static final Log log = LogFactory.getLog(OAuthComponentServiceHolder.class);
     private OAuth2ScopeService oauth2ScopeService;
+    private List<TokenBindingMetaDataDTO> tokenBindingMetaDataDTOs = new ArrayList<>();
 
     private OAuthComponentServiceHolder() {
 
@@ -92,4 +97,22 @@ public class OAuthComponentServiceHolder {
         this.oauth2ScopeService = oauth2ScopeService;
     }
 
+
+    public List<TokenBindingMetaDataDTO> getTokenBindingMetaDataDTOs() {
+
+        return tokenBindingMetaDataDTOs;
+    }
+
+    public void addTokenBinderInfo(TokenBinderInfo tokenBinderInfo) {
+
+        tokenBindingMetaDataDTOs
+                .add(new TokenBindingMetaDataDTO(tokenBinderInfo.getDisplayName(), tokenBinderInfo.getDescription(),
+                        tokenBinderInfo.getBindingType(), tokenBinderInfo.getSupportedGrantTypes()));
+    }
+
+    public void removeTokenBinderInfo(TokenBinderInfo tokenBinderInfo) {
+
+        tokenBindingMetaDataDTOs.removeIf(tokenBindingMetaDataDTO -> tokenBinderInfo.getBindingType()
+                .equals(tokenBindingMetaDataDTO.getTokenBindingType()));
+    }
 }

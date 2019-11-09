@@ -42,6 +42,7 @@ import org.wso2.carbon.identity.oauth.dto.OAuthRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth.dto.OAuthRevocationResponseDTO;
 import org.wso2.carbon.identity.oauth.dto.OAuthTokenExpiryTimeDTO;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
+import org.wso2.carbon.identity.oauth.dto.TokenBindingMetaDataDTO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -283,6 +284,7 @@ public class OAuthAdminServiceImpl {
                     }
                     app.setBypassClientCredentials(application.isBypassClientCredentials());
                     app.setRenewRefreshTokenEnabled(application.getRenewRefreshTokenEnabled());
+                    app.setTokenBindingType(application.getTokenBindingType());
                 }
                 dao.addOAuthApplication(app);
                 AppInfoCache.getInstance().addToCache(app.getOauthConsumerKey(), app);
@@ -399,6 +401,7 @@ public class OAuthAdminServiceImpl {
             oauthappdo.setBackChannelLogoutUrl(consumerAppDTO.getBackChannelLogoutUrl());
             oauthappdo.setFrontchannelLogoutUrl(consumerAppDTO.getFrontchannelLogoutUrl());
             oauthappdo.setRenewRefreshTokenEnabled(consumerAppDTO.getRenewRefreshTokenEnabled());
+            oauthappdo.setTokenBindingType(consumerAppDTO.getTokenBindingType());
         }
         dao.updateConsumerApplication(oauthappdo);
         AppInfoCache.getInstance().addToCache(oauthappdo.getOauthConsumerKey(), oauthappdo);
@@ -1055,6 +1058,16 @@ public class OAuthAdminServiceImpl {
     public boolean isPKCESupportEnabled() {
 
         return OAuth2Util.isPKCESupportEnabled();
+    }
+
+    /**
+     * Get supported token bindings meta data.
+     *
+     * @return list of TokenBindingMetaDataDTOs.
+     */
+    public List<TokenBindingMetaDataDTO> getSupportedTokenBindingsMetaData() {
+
+        return OAuthComponentServiceHolder.getInstance().getTokenBindingMetaDataDTOs();
     }
 
     public OAuthTokenExpiryTimeDTO getTokenExpiryTimes() {

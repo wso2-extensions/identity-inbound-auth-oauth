@@ -22,6 +22,7 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
+import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 
 import java.util.Properties;
 
@@ -44,6 +45,8 @@ public class OAuthTokenReqMessageContext {
     private long refreshTokenIssuedTime;
 
     private Properties properties = new Properties();
+
+    private TokenBinding tokenBinding;
 
     public OAuthTokenReqMessageContext(OAuth2AccessTokenReqDTO oauth2AccessTokenReqDTO) {
         this.oauth2AccessTokenReqDTO = oauth2AccessTokenReqDTO;
@@ -115,5 +118,15 @@ public class OAuthTokenReqMessageContext {
 
     public void setRefreshTokenIssuedTime(long refreshTokenIssuedTime) {
 	this.refreshTokenIssuedTime = refreshTokenIssuedTime;
+    }
+
+    public TokenBinding getTokenBinding() {
+
+        return tokenBinding;
+    }
+
+    public void setTokenBinding(TokenBinding tokenBinding) {
+
+        this.tokenBinding = tokenBinding;
     }
 }

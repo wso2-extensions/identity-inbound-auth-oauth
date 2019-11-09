@@ -28,6 +28,7 @@ import org.wso2.carbon.identity.oauth.dto.OAuthRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth.dto.OAuthRevocationResponseDTO;
 import org.wso2.carbon.identity.oauth.dto.OAuthTokenExpiryTimeDTO;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
+import org.wso2.carbon.identity.oauth.dto.TokenBindingMetaDataDTO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
@@ -366,6 +367,16 @@ public class OAuthAdminService extends AbstractAdmin {
     public OAuthTokenExpiryTimeDTO getTokenExpiryTimes() {
 
         return OAuthAdminServiceImpl.getTokenExpiryTimes();
+    }
+
+    /**
+     * Get supported token bindings meta data.
+     *
+     * @return list of TokenBindingMetaDataDTOs.
+     */
+    public List<TokenBindingMetaDataDTO> getSupportedTokenBindingsMetaData() {
+
+        return OAuthAdminServiceImpl.getSupportedTokenBindingsMetaData();
     }
 
     private AuthenticatedUser buildAuthenticatedUser(String tenantAwareUser, String tenantDomain) {
