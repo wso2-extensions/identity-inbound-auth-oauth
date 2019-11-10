@@ -53,6 +53,7 @@ public interface ResponseTypeHandler {
      */
     default OAuth2AuthorizeRespDTO handleUserConsentDenial(OAuth2Parameters oAuth2Parameters)
             throws IdentityOAuth2Exception {
+
         return new OAuth2AuthorizeRespDTO();
     }
 
@@ -64,6 +65,7 @@ public interface ResponseTypeHandler {
      */
     default OAuth2AuthorizeRespDTO handleAuthenticationFailed(OAuth2Parameters oAuth2Parameters)
             throws IdentityOAuth2Exception {
+
         return new OAuth2AuthorizeRespDTO();
     }
 

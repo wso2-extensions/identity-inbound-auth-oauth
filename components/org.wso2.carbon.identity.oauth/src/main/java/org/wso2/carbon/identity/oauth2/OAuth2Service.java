@@ -671,6 +671,7 @@ public class OAuth2Service extends AbstractAdmin {
      */
     public OAuth2AuthorizeRespDTO handleUserConsentDenial(OAuth2Parameters oAuth2Parameters)
             throws IdentityOAuth2Exception {
+
         return AuthorizationHandlerManager.getInstance().handleUserConsentDenial(oAuth2Parameters);
 
     }
@@ -684,6 +685,7 @@ public class OAuth2Service extends AbstractAdmin {
      */
     public OAuth2AuthorizeRespDTO handleAuthenticationFailed(OAuth2Parameters oauth2Params)
             throws IdentityOAuth2Exception {
+
         return AuthorizationHandlerManager.getInstance().handleAuthenticationFailed(oauth2Params);
 
     }
