@@ -282,8 +282,10 @@ public class AuthorizationHandlerManager {
      *
      * @param oAuth2Parameters OAuth parameters.
      * @return Authorize Response Data Transfer Object.
+     * @throws IdentityOAuth2Exception Identity OAuth2 exception.
      */
-    public OAuth2AuthorizeRespDTO handleUserConsentDenial(OAuth2Parameters oAuth2Parameters) {
+    public OAuth2AuthorizeRespDTO handleUserConsentDenial(OAuth2Parameters oAuth2Parameters)
+            throws IdentityOAuth2Exception {
 
         ResponseTypeHandler responseTypeHandler = responseHandlers.get(oAuth2Parameters.getResponseType());
         return responseTypeHandler.handleUserConsentDenial(oAuth2Parameters);
@@ -295,8 +297,10 @@ public class AuthorizationHandlerManager {
      *
      * @param oAuth2Parameters OAuth parameters.
      * @return OAuth2AuthorizeRespDTO Authorize Response Data Transfer Object.
+     * @throws IdentityOAuth2Exception Identity OAuth2 exception.
      */
-    public OAuth2AuthorizeRespDTO handleAuthenticationFailed(OAuth2Parameters oAuth2Parameters) {
+    public OAuth2AuthorizeRespDTO handleAuthenticationFailed(OAuth2Parameters oAuth2Parameters)
+            throws IdentityOAuth2Exception {
 
         ResponseTypeHandler responseTypeHandler = responseHandlers.get(oAuth2Parameters.getResponseType());
         return responseTypeHandler.handleAuthenticationFailed(oAuth2Parameters);
