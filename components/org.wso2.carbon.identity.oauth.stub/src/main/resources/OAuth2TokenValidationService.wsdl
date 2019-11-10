@@ -1,63 +1,74 @@
-
-<wsdl:definitions xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" xmlns:ns1="http://org.apache.axis2/xsd" xmlns:wsaw="http://www.w3.org/2006/05/addressing/wsdl" xmlns:http="http://schemas.xmlsoap.org/wsdl/http/" xmlns:tns="http://oauth2.identity.carbon.wso2.org" xmlns:ax2395="http://dto.oauth2.identity.carbon.wso2.org/xsd" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:mime="http://schemas.xmlsoap.org/wsdl/mime/" xmlns:soap12="http://schemas.xmlsoap.org/wsdl/soap12/" targetNamespace="http://oauth2.identity.carbon.wso2.org">
+<wsdl:definitions xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" xmlns:ax2410="http://dto.oauth2.identity.carbon.wso2.org/xsd" xmlns:ax2412="http://bindings.token.oauth2.identity.carbon.wso2.org/xsd" xmlns:wsaw="http://www.w3.org/2006/05/addressing/wsdl" xmlns:mime="http://schemas.xmlsoap.org/wsdl/mime/" xmlns:tns="http://oauth2.identity.carbon.wso2.org" xmlns:http="http://schemas.xmlsoap.org/wsdl/http/" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://schemas.xmlsoap.org/wsdl/soap12/" xmlns:ns1="http://org.apache.axis2/xsd" xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" targetNamespace="http://oauth2.identity.carbon.wso2.org">
     <wsdl:documentation>OAuth2TokenValidationService</wsdl:documentation>
     <wsdl:types>
-        <xs:schema xmlns:ns="http://org.apache.axis2/xsd" xmlns:ax2396="http://dto.oauth2.identity.carbon.wso2.org/xsd" attributeFormDefault="qualified" elementFormDefault="qualified" targetNamespace="http://org.apache.axis2/xsd">
+        <xs:schema attributeFormDefault="qualified" elementFormDefault="qualified" targetNamespace="http://bindings.token.oauth2.identity.carbon.wso2.org/xsd">
+            <xs:complexType name="TokenBinding">
+                <xs:sequence>
+                    <xs:element minOccurs="0" name="bindingReference" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="bindingType" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="bindingValue" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="tokenId" nillable="true" type="xs:string"/>
+                </xs:sequence>
+            </xs:complexType>
+        </xs:schema>
+        <xs:schema xmlns:ax2411="http://dto.oauth2.identity.carbon.wso2.org/xsd" xmlns:ns="http://org.apache.axis2/xsd" attributeFormDefault="qualified" elementFormDefault="qualified" targetNamespace="http://org.apache.axis2/xsd">
             <xs:import namespace="http://dto.oauth2.identity.carbon.wso2.org/xsd"/>
-            <xs:element name="buildIntrospectionResponse">
-                <xs:complexType>
-                    <xs:sequence>
-                        <xs:element minOccurs="0" name="validationReq" nillable="true" type="ax2395:OAuth2TokenValidationRequestDTO"/>
-                    </xs:sequence>
-                </xs:complexType>
-            </xs:element>
-            <xs:element name="buildIntrospectionResponseResponse">
-                <xs:complexType>
-                    <xs:sequence>
-                        <xs:element minOccurs="0" name="return" nillable="true" type="ax2395:OAuth2IntrospectionResponseDTO"/>
-                    </xs:sequence>
-                </xs:complexType>
-            </xs:element>
-            <xs:element name="findOAuthConsumerIfTokenIsValid">
-                <xs:complexType>
-                    <xs:sequence>
-                        <xs:element minOccurs="0" name="validationReqDTO" nillable="true" type="ax2395:OAuth2TokenValidationRequestDTO"/>
-                    </xs:sequence>
-                </xs:complexType>
-            </xs:element>
-            <xs:element name="findOAuthConsumerIfTokenIsValidResponse">
-                <xs:complexType>
-                    <xs:sequence>
-                        <xs:element minOccurs="0" name="return" nillable="true" type="ax2395:OAuth2ClientApplicationDTO"/>
-                    </xs:sequence>
-                </xs:complexType>
-            </xs:element>
             <xs:element name="validate">
                 <xs:complexType>
                     <xs:sequence>
-                        <xs:element minOccurs="0" name="validationReqDTO" nillable="true" type="ax2395:OAuth2TokenValidationRequestDTO"/>
+                        <xs:element minOccurs="0" name="validationReqDTO" nillable="true" type="ax2410:OAuth2TokenValidationRequestDTO"/>
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
             <xs:element name="validateResponse">
                 <xs:complexType>
                     <xs:sequence>
-                        <xs:element minOccurs="0" name="return" nillable="true" type="ax2395:OAuth2TokenValidationResponseDTO"/>
+                        <xs:element minOccurs="0" name="return" nillable="true" type="ax2410:OAuth2TokenValidationResponseDTO"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="findOAuthConsumerIfTokenIsValid">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element minOccurs="0" name="validationReqDTO" nillable="true" type="ax2410:OAuth2TokenValidationRequestDTO"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="findOAuthConsumerIfTokenIsValidResponse">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element minOccurs="0" name="return" nillable="true" type="ax2410:OAuth2ClientApplicationDTO"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="buildIntrospectionResponse">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element minOccurs="0" name="validationReq" nillable="true" type="ax2410:OAuth2TokenValidationRequestDTO"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="buildIntrospectionResponseResponse">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element minOccurs="0" name="return" nillable="true" type="ax2410:OAuth2IntrospectionResponseDTO"/>
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
         </xs:schema>
-        <xs:schema attributeFormDefault="qualified" elementFormDefault="qualified" targetNamespace="http://dto.oauth2.identity.carbon.wso2.org/xsd">
+        <xs:schema xmlns:ax2413="http://bindings.token.oauth2.identity.carbon.wso2.org/xsd" attributeFormDefault="qualified" elementFormDefault="qualified" targetNamespace="http://dto.oauth2.identity.carbon.wso2.org/xsd">
+            <xs:import namespace="http://bindings.token.oauth2.identity.carbon.wso2.org/xsd"/>
             <xs:complexType name="OAuth2TokenValidationRequestDTO">
                 <xs:sequence>
-                    <xs:element minOccurs="0" name="accessToken" nillable="true" type="ax2395:OAuth2TokenValidationRequestDTO_OAuth2AccessToken"/>
-                    <xs:element maxOccurs="unbounded" minOccurs="0" name="context" nillable="true" type="ax2395:OAuth2TokenValidationRequestDTO_TokenValidationContextParam"/>
+                    <xs:element minOccurs="0" name="accessToken" nillable="true" type="ax2410:OAuth2TokenValidationRequestDTO_OAuth2AccessToken"/>
+                    <xs:element maxOccurs="unbounded" minOccurs="0" name="context" nillable="true" type="ax2410:OAuth2TokenValidationRequestDTO_TokenValidationContextParam"/>
                     <xs:element maxOccurs="unbounded" minOccurs="0" name="requiredClaimURIs" nillable="true" type="xs:string"/>
                 </xs:sequence>
             </xs:complexType>
             <xs:complexType name="OAuth2TokenValidationRequestDTO_OAuth2AccessToken">
                 <xs:sequence>
                     <xs:element minOccurs="0" name="identifier" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="issuer" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="tokenType" nillable="true" type="xs:string"/>
                 </xs:sequence>
             </xs:complexType>
@@ -67,10 +78,35 @@
                     <xs:element minOccurs="0" name="value" nillable="true" type="xs:string"/>
                 </xs:sequence>
             </xs:complexType>
+            <xs:complexType name="OAuth2TokenValidationResponseDTO">
+                <xs:sequence>
+                    <xs:element minOccurs="0" name="authorizationContextToken" nillable="true" type="ax2410:OAuth2TokenValidationResponseDTO_AuthorizationContextToken"/>
+                    <xs:element minOccurs="0" name="authorizedUser" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="errorMsg" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="expiryTime" type="xs:long"/>
+                    <xs:element maxOccurs="unbounded" minOccurs="0" name="scope" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="tokenBinding" nillable="true" type="ax2412:TokenBinding"/>
+                    <xs:element minOccurs="0" name="valid" type="xs:boolean"/>
+                </xs:sequence>
+            </xs:complexType>
+            <xs:complexType name="OAuth2TokenValidationResponseDTO_AuthorizationContextToken">
+                <xs:sequence>
+                    <xs:element minOccurs="0" name="tokenString" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="tokenType" nillable="true" type="xs:string"/>
+                </xs:sequence>
+            </xs:complexType>
+            <xs:complexType name="OAuth2ClientApplicationDTO">
+                <xs:sequence>
+                    <xs:element minOccurs="0" name="accessTokenValidationResponse" nillable="true" type="ax2410:OAuth2TokenValidationResponseDTO"/>
+                    <xs:element minOccurs="0" name="consumerKey" nillable="true" type="xs:string"/>
+                </xs:sequence>
+            </xs:complexType>
             <xs:complexType name="OAuth2IntrospectionResponseDTO">
                 <xs:sequence>
                     <xs:element minOccurs="0" name="active" type="xs:boolean"/>
                     <xs:element minOccurs="0" name="aud" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="bindingReference" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="bindingType" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="clientId" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="error" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="exp" type="xs:long"/>
@@ -86,41 +122,19 @@
                     <xs:element minOccurs="0" name="username" nillable="true" type="xs:string"/>
                 </xs:sequence>
             </xs:complexType>
-            <xs:complexType name="OAuth2ClientApplicationDTO">
-                <xs:sequence>
-                    <xs:element minOccurs="0" name="accessTokenValidationResponse" nillable="true" type="ax2395:OAuth2TokenValidationResponseDTO"/>
-                    <xs:element minOccurs="0" name="consumerKey" nillable="true" type="xs:string"/>
-                </xs:sequence>
-            </xs:complexType>
-            <xs:complexType name="OAuth2TokenValidationResponseDTO">
-                <xs:sequence>
-                    <xs:element minOccurs="0" name="authorizationContextToken" nillable="true" type="ax2395:OAuth2TokenValidationResponseDTO_AuthorizationContextToken"/>
-                    <xs:element minOccurs="0" name="authorizedUser" nillable="true" type="xs:string"/>
-                    <xs:element minOccurs="0" name="errorMsg" nillable="true" type="xs:string"/>
-                    <xs:element minOccurs="0" name="expiryTime" type="xs:long"/>
-                    <xs:element maxOccurs="unbounded" minOccurs="0" name="scope" nillable="true" type="xs:string"/>
-                    <xs:element minOccurs="0" name="valid" type="xs:boolean"/>
-                </xs:sequence>
-            </xs:complexType>
-            <xs:complexType name="OAuth2TokenValidationResponseDTO_AuthorizationContextToken">
-                <xs:sequence>
-                    <xs:element minOccurs="0" name="tokenString" nillable="true" type="xs:string"/>
-                    <xs:element minOccurs="0" name="tokenType" nillable="true" type="xs:string"/>
-                </xs:sequence>
-            </xs:complexType>
         </xs:schema>
     </wsdl:types>
-    <wsdl:message name="findOAuthConsumerIfTokenIsValidRequest">
-        <wsdl:part name="parameters" element="ns1:findOAuthConsumerIfTokenIsValid"/>
-    </wsdl:message>
-    <wsdl:message name="findOAuthConsumerIfTokenIsValidResponse">
-        <wsdl:part name="parameters" element="ns1:findOAuthConsumerIfTokenIsValidResponse"/>
-    </wsdl:message>
     <wsdl:message name="buildIntrospectionResponseRequest">
         <wsdl:part name="parameters" element="ns1:buildIntrospectionResponse"/>
     </wsdl:message>
     <wsdl:message name="buildIntrospectionResponseResponse">
         <wsdl:part name="parameters" element="ns1:buildIntrospectionResponseResponse"/>
+    </wsdl:message>
+    <wsdl:message name="findOAuthConsumerIfTokenIsValidRequest">
+        <wsdl:part name="parameters" element="ns1:findOAuthConsumerIfTokenIsValid"/>
+    </wsdl:message>
+    <wsdl:message name="findOAuthConsumerIfTokenIsValidResponse">
+        <wsdl:part name="parameters" element="ns1:findOAuthConsumerIfTokenIsValidResponse"/>
     </wsdl:message>
     <wsdl:message name="validateRequest">
         <wsdl:part name="parameters" element="ns1:validate"/>
@@ -129,13 +143,13 @@
         <wsdl:part name="parameters" element="ns1:validateResponse"/>
     </wsdl:message>
     <wsdl:portType name="OAuth2TokenValidationServicePortType">
-        <wsdl:operation name="findOAuthConsumerIfTokenIsValid">
-            <wsdl:input message="tns:findOAuthConsumerIfTokenIsValidRequest" wsaw:Action="urn:findOAuthConsumerIfTokenIsValid"/>
-            <wsdl:output message="tns:findOAuthConsumerIfTokenIsValidResponse" wsaw:Action="urn:findOAuthConsumerIfTokenIsValidResponse"/>
-        </wsdl:operation>
         <wsdl:operation name="buildIntrospectionResponse">
             <wsdl:input message="tns:buildIntrospectionResponseRequest" wsaw:Action="urn:buildIntrospectionResponse"/>
             <wsdl:output message="tns:buildIntrospectionResponseResponse" wsaw:Action="urn:buildIntrospectionResponseResponse"/>
+        </wsdl:operation>
+        <wsdl:operation name="findOAuthConsumerIfTokenIsValid">
+            <wsdl:input message="tns:findOAuthConsumerIfTokenIsValidRequest" wsaw:Action="urn:findOAuthConsumerIfTokenIsValid"/>
+            <wsdl:output message="tns:findOAuthConsumerIfTokenIsValidResponse" wsaw:Action="urn:findOAuthConsumerIfTokenIsValidResponse"/>
         </wsdl:operation>
         <wsdl:operation name="validate">
             <wsdl:input message="tns:validateRequest" wsaw:Action="urn:validate"/>
@@ -144,8 +158,8 @@
     </wsdl:portType>
     <wsdl:binding name="OAuth2TokenValidationServiceSoap11Binding" type="tns:OAuth2TokenValidationServicePortType">
         <soap:binding transport="http://schemas.xmlsoap.org/soap/http" style="document"/>
-        <wsdl:operation name="findOAuthConsumerIfTokenIsValid">
-            <soap:operation soapAction="urn:findOAuthConsumerIfTokenIsValid" style="document"/>
+        <wsdl:operation name="buildIntrospectionResponse">
+            <soap:operation soapAction="urn:buildIntrospectionResponse" style="document"/>
             <wsdl:input>
                 <soap:body use="literal"/>
             </wsdl:input>
@@ -153,8 +167,8 @@
                 <soap:body use="literal"/>
             </wsdl:output>
         </wsdl:operation>
-        <wsdl:operation name="buildIntrospectionResponse">
-            <soap:operation soapAction="urn:buildIntrospectionResponse" style="document"/>
+        <wsdl:operation name="findOAuthConsumerIfTokenIsValid">
+            <soap:operation soapAction="urn:findOAuthConsumerIfTokenIsValid" style="document"/>
             <wsdl:input>
                 <soap:body use="literal"/>
             </wsdl:input>
@@ -174,8 +188,8 @@
     </wsdl:binding>
     <wsdl:binding name="OAuth2TokenValidationServiceSoap12Binding" type="tns:OAuth2TokenValidationServicePortType">
         <soap12:binding transport="http://schemas.xmlsoap.org/soap/http" style="document"/>
-        <wsdl:operation name="findOAuthConsumerIfTokenIsValid">
-            <soap12:operation soapAction="urn:findOAuthConsumerIfTokenIsValid" style="document"/>
+        <wsdl:operation name="buildIntrospectionResponse">
+            <soap12:operation soapAction="urn:buildIntrospectionResponse" style="document"/>
             <wsdl:input>
                 <soap12:body use="literal"/>
             </wsdl:input>
@@ -183,8 +197,8 @@
                 <soap12:body use="literal"/>
             </wsdl:output>
         </wsdl:operation>
-        <wsdl:operation name="buildIntrospectionResponse">
-            <soap12:operation soapAction="urn:buildIntrospectionResponse" style="document"/>
+        <wsdl:operation name="findOAuthConsumerIfTokenIsValid">
+            <soap12:operation soapAction="urn:findOAuthConsumerIfTokenIsValid" style="document"/>
             <wsdl:input>
                 <soap12:body use="literal"/>
             </wsdl:input>
@@ -204,8 +218,8 @@
     </wsdl:binding>
     <wsdl:binding name="OAuth2TokenValidationServiceHttpBinding" type="tns:OAuth2TokenValidationServicePortType">
         <http:binding verb="POST"/>
-        <wsdl:operation name="findOAuthConsumerIfTokenIsValid">
-            <http:operation location="findOAuthConsumerIfTokenIsValid"/>
+        <wsdl:operation name="buildIntrospectionResponse">
+            <http:operation location="buildIntrospectionResponse"/>
             <wsdl:input>
                 <mime:content type="text/xml" part="parameters"/>
             </wsdl:input>
@@ -213,8 +227,8 @@
                 <mime:content type="text/xml" part="parameters"/>
             </wsdl:output>
         </wsdl:operation>
-        <wsdl:operation name="buildIntrospectionResponse">
-            <http:operation location="buildIntrospectionResponse"/>
+        <wsdl:operation name="findOAuthConsumerIfTokenIsValid">
+            <http:operation location="findOAuthConsumerIfTokenIsValid"/>
             <wsdl:input>
                 <mime:content type="text/xml" part="parameters"/>
             </wsdl:input>
