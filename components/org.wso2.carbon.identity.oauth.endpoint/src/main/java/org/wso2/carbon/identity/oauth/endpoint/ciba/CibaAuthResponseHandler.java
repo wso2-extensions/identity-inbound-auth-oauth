@@ -102,7 +102,7 @@ public class CibaAuthResponseHandler {
                     .cibaAuthenticationResponse(HttpServletResponse.SC_OK)
                     .setAuthReqID(cibaAuthCode)
                     .setExpiresIn(Long.toString(expiresIn))
-                    .setInterval(Long.toString(CibaParams.interval));
+                    .setInterval(Long.toString(CibaParams.INTERVAL_DEFAULT_VALUE));
 
             if (log.isDebugEnabled()) {
                 log.info("Creating CIBA Authentication response to the request made by client with clientID : " +
