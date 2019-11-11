@@ -530,8 +530,8 @@ public class CibaAuthMgtDAOImpl implements CibaAuthMgtDAO {
                 }
 
                 if (log.isDebugEnabled()) {
-                    log.debug(
-                            "Successfully obtained cibaAuthCodeDO for unique cibaAuthCodeDOKey : " + cibaAuthCodeDOKey);
+                    log.debug("Successfully obtained cibaAuthCodeDO for unique cibaAuthCodeDOKey : " +
+                            cibaAuthCodeDOKey);
                 }
             }
         } catch (SQLException e) {

@@ -62,9 +62,6 @@ public class CibaDAOFactory {
     public CibaAuthMgtDAO getCibaAuthMgtDAO() {
         // This returns created instance of cibaDAOImplementation.
 
-        if (log.isDebugEnabled()) {
-            log.debug("Successfully returning created instance of CibaDAOImplementation. ");
-        }
         return cibaAuthMgtDAOImpl;
     }
 

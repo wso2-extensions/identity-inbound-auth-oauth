@@ -138,7 +138,7 @@ public class CibaAuthUtil {
         long issuedTime = ZonedDateTime.now().toInstant().toEpochMilli();
         long durability = this.getExpiresIn(cibaAuthRequestDTO) * 1000;
         long expiryTime = issuedTime + durability;
-        long notBeforeUsable = issuedTime + CibaParams.interval * 1000;
+        long notBeforeUsable = issuedTime + CibaParams.INTERVAL_DEFAULT_VALUE * 1000;
 
         cibaAuthResponseDTO.setIssuer(cibaAuthRequestDTO.getAudience());
         cibaAuthResponseDTO.setAudience(cibaAuthRequestDTO.getIssuer());
@@ -225,7 +225,7 @@ public class CibaAuthUtil {
     public long getExpiresIn(CibaAuthRequestDTO cibaAuthRequestDTO) {
 
         if (cibaAuthRequestDTO.getRequestedExpiry() == 0) {
-            return CibaParams.expiresIn;
+            return CibaParams.EXPIRES_IN_DEFAULT_VALUE;
         } else {
             return cibaAuthRequestDTO.getRequestedExpiry();
         }
@@ -240,7 +240,7 @@ public class CibaAuthUtil {
     public long getExpiresInForResponse(CibaAuthResponseDTO cibaAuthResponseDTO) {
 
         if (cibaAuthResponseDTO.getRequestedExpiry() == 0) {
-            return CibaParams.expiresIn;
+            return CibaParams.EXPIRES_IN_DEFAULT_VALUE;
         } else {
             return cibaAuthResponseDTO.getRequestedExpiry();
         }
@@ -293,7 +293,7 @@ public class CibaAuthUtil {
             cibaAuthCodeDO.setHashedCibaAuthReqId(hashValueOfCibaAuthReqId);
             cibaAuthCodeDO.setAuthenticationStatus(AuthenticationStatus.REQUESTED.toString());
             cibaAuthCodeDO.setLastPolledTime(lastPolledTime);
-            cibaAuthCodeDO.setInterval(CibaParams.interval);
+            cibaAuthCodeDO.setInterval(CibaParams.INTERVAL_DEFAULT_VALUE);
             cibaAuthCodeDO.setExpiryTime(expiryTime);
             cibaAuthCodeDO.setBindingMessage(bindingMessage);
             cibaAuthCodeDO.setTransactionContext(transactionContext);

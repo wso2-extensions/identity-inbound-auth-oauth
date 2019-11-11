@@ -48,10 +48,12 @@ public class CibaServiceComponent {
             CibaServiceComponent cibaServiceComponent = new CibaServiceComponent();
             ctxt.getBundleContext().registerService(CibaServiceComponent.class, cibaServiceComponent, null);
             if (log.isDebugEnabled()) {
-                log.info("CibaHandler bundle is activated");
+                log.debug("Ciba component bundle is activated");
             }
         } catch (Throwable e) {
-            log.error("CibaHandler Authenticator bundle activation Failed", e);
+            if(log.isDebugEnabled()){
+                log.error("Ciba component bundle  activation Failed", e);
+            }
         }
 
     }

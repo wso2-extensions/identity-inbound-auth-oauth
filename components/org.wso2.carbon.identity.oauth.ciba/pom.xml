@@ -128,8 +128,6 @@
                             org.wso2.carbon.identity.application.authentication.framework.model.* ; version
                             ="${carbon.identity.framework.version}",
                             org.wso2.carbon.identity.core.*; version = "${carbon.identity.framework.version}",
-
-
                         </Import-Package>
                         <Export-Package>
                             !org.wso2.carbon.identity.oauth.ciba.internal,
