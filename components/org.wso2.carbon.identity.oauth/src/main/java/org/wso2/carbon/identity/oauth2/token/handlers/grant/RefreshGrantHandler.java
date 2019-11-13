@@ -314,7 +314,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             String authorizedUser = tokReqMsgCtx.getAuthorizedUser().toString();
             String authenticatedIDP = tokReqMsgCtx.getAuthorizedUser().getFederatedIdPName();
             String cacheKeyString = buildCacheKeyStringForToken(clientId, scope, authorizedUser,
-                    authenticatedIDP);
+                    authenticatedIDP, oldAccessToken.getTokenBindingReference());
             OAuthCacheKey oauthCacheKey = new OAuthCacheKey(cacheKeyString);
             OAuthCache.getInstance().clearCacheEntry(oauthCacheKey);
 
