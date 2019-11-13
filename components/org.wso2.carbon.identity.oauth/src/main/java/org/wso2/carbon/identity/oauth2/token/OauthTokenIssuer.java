@@ -53,6 +53,15 @@ public interface OauthTokenIssuer {
     }
 
     /**
+     * Renew access token per request.
+     * @param oauthAuthzMsgCtx Message context of the token request.
+     * @return true if new access token per each request.
+     */
+    default boolean renewAccessTokenPerRequest(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) {
+        return renewAccessTokenPerRequest();
+    }
+
+    /**
      * Renew access token per request by token message context.
      *
      * @return true if new access token per each request
