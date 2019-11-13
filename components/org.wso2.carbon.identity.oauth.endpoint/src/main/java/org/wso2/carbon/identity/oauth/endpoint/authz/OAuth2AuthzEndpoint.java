@@ -727,17 +727,21 @@ public class OAuth2AuthzEndpoint {
     }
 
     private Response handleFailedAuthentication(OAuthMessage oAuthMessage, OAuth2Parameters oauth2Params,
-                                                AuthenticationResult authnResult) throws URISyntaxException {
+                                                AuthenticationResult authnResult)
+            throws URISyntaxException, OAuthSystemException {
 
         OAuthProblemException oauthException = buildOAuthProblemException(authnResult);
 
         try {
             // Do the needful in correlation with authentication failures.
-            EndpointUtil.getOAuth2Service().handleAuthenticationFailed(oauth2Params);
+            EndpointUtil.getOAuth2Service().handleAuthenticationFailure(oauth2Params);
         } catch (IdentityOAuth2Exception e) {
+
             if(log.isDebugEnabled()){
                 log.debug("Error occurred in handling authentication failure. ");
             }
+
+            throw new OAuthSystemException(e);
         }
 
         return handleFailedState(oAuthMessage, oauth2Params, oauthException);

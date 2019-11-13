@@ -683,10 +683,10 @@ public class OAuth2Service extends AbstractAdmin {
      * @return OAuth2AuthorizeRespDTO Authorize Response Data Transfer Object.
      * @throws IdentityOAuth2Exception Identity OAuth2 exception.
      */
-    public OAuth2AuthorizeRespDTO handleAuthenticationFailed(OAuth2Parameters oauth2Params)
+    public OAuth2AuthorizeRespDTO handleAuthenticationFailure(OAuth2Parameters oauth2Params)
             throws IdentityOAuth2Exception {
 
-        return AuthorizationHandlerManager.getInstance().handleAuthenticationFailed(oauth2Params);
+        return AuthorizationHandlerManager.getInstance().handleAuthenticationFailure(oauth2Params);
 
     }
 }

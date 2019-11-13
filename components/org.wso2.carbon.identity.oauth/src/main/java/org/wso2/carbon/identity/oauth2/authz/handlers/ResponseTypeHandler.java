@@ -63,7 +63,7 @@ public interface ResponseTypeHandler {
      * @param oAuth2Parameters OAuth parameters.
      * @return OAuth2AuthorizeRespDTO Authorize Response Data Transfer Object.
      */
-    default OAuth2AuthorizeRespDTO handleAuthenticationFailed(OAuth2Parameters oAuth2Parameters)
+    default OAuth2AuthorizeRespDTO handleAuthenticationFailure(OAuth2Parameters oAuth2Parameters)
             throws IdentityOAuth2Exception {
 
         return new OAuth2AuthorizeRespDTO();

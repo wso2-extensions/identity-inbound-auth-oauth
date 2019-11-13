@@ -299,11 +299,11 @@ public class AuthorizationHandlerManager {
      * @return OAuth2AuthorizeRespDTO Authorize Response Data Transfer Object.
      * @throws IdentityOAuth2Exception Identity OAuth2 exception.
      */
-    public OAuth2AuthorizeRespDTO handleAuthenticationFailed(OAuth2Parameters oAuth2Parameters)
+    public OAuth2AuthorizeRespDTO handleAuthenticationFailure(OAuth2Parameters oAuth2Parameters)
             throws IdentityOAuth2Exception {
 
         ResponseTypeHandler responseTypeHandler = responseHandlers.get(oAuth2Parameters.getResponseType());
-        return responseTypeHandler.handleAuthenticationFailed(oAuth2Parameters);
+        return responseTypeHandler.handleAuthenticationFailure(oAuth2Parameters);
 
     }
 }
