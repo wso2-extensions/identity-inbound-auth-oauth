@@ -22,11 +22,15 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.model.CommonAuthRequestWrapper;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
+import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpoint;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.device.constants.Constants;
 import org.wso2.carbon.identity.oauth2.device.dao.DeviceFlowPersistenceFactory;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -54,13 +58,40 @@ public class UserAuthenticationEndpoint {
             throws URISyntaxException, InvalidRequestParentException, IdentityOAuth2Exception, IOException {
 
         String userCode = request.getParameter(Constants.USER_CODE);
+        if (StringUtils.isBlank(userCode)) {
+            response.sendRedirect(IdentityUtil.getServerURL("/authenticationendpoint/device.do",
+                    false, false));
+            return null;
+        }
+
         String clientId = DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().getClientIdByUserCode(userCode);
+
         if (StringUtils.isNotBlank(clientId) && StringUtils.equals(getUserCodeStatus(userCode),Constants.PENDING)) {
+
+            OAuthAppDO oAuthAppDO;
+            String redirectURI;
+
+            try {
+                oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
+                redirectURI = oAuthAppDO.getCallbackUrl();
+                if (StringUtils.isBlank(redirectURI)) {
+                    String appName = oAuthAppDO.getApplicationName();
+                    redirectURI = IdentityUtil.getServerURL("/authenticationendpoint/device_success.do" +
+                            "?app_name=" + appName, false, false);
+                    DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().setCallBackURI(clientId,redirectURI);
+                    AppInfoCache.getInstance().clearCacheEntry(clientId);
+                }
+            } catch (InvalidOAuthClientException e) {
+                throw new IdentityOAuth2Exception("Error when getting app details for client id :" +
+                        clientId, e);
+            }
+
             DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().setUserAuthenticated(userCode,
                     Constants.USED);
             CommonAuthRequestWrapper commonAuthRequestWrapper = new CommonAuthRequestWrapper(request);
             commonAuthRequestWrapper.setParameter(Constants.CLIENT_ID, clientId);
             commonAuthRequestWrapper.setParameter(Constants.RESPONSE_TYPE, Constants.RESPONSE_TYPE_DEVICE);
+            commonAuthRequestWrapper.setParameter(Constants.REDIRECTION_URI, redirectURI);
             if (getScope(userCode) != null) {
                 commonAuthRequestWrapper.setParameter(Constants.SCOPE, getScope(userCode));
             }

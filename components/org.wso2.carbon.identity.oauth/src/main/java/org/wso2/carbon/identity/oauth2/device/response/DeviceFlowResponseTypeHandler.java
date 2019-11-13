@@ -61,23 +61,21 @@ public class DeviceFlowResponseTypeHandler extends AbstractResponseTypeHandler {
         OAuth2AuthorizeReqDTO authzReqDTO = oauthAuthzMsgCtx.getAuthorizationReqDTO();
         String clientId = authzReqDTO.getConsumerKey();
         String authenticatedUser = authzReqDTO.getUser().getUserName();
-        OAuthAppDO oAuthAppDO = null;
+        OAuthAppDO oAuthAppDO;
 
         try {
             oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
             appName = oAuthAppDO.getApplicationName();
             setAppName(appName);
         } catch (InvalidOAuthClientException e) {
-            throw new IdentityOAuth2Exception("Error when getting app details for client id : " +
-                    clientId, e);
+            throw new IdentityOAuth2Exception("Error when getting app details for client id : " + clientId, e);
         }
 
         String UserCode = authzReqDTO.getNonce();
         DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().setAuthzUser(UserCode, authenticatedUser);
         DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().setUserAuthenticated(UserCode,
                 Constants.AUTHORIZED);
-        respDTO.setCallbackURI(IdentityUtil.getServerURL("/authenticationendpoint/device_success.do?app_name=" +
-                appName, false, false));
+        respDTO.setCallbackURI(authzReqDTO.getCallbackUrl());
 
         return respDTO;
     }

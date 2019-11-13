@@ -31,7 +31,7 @@ public class SQLQueries {
 
         public static final String STORE_DEVICE_CODE = "INSERT INTO IDN_OAUTH2_DEVICE_FLOW " +
                 "(CODE_ID, DEVICE_CODE, USER_CODE, CONSUMER_KEY_ID, SCOPE, TIME_CREATED, LAST_POLL_TIME, EXPIRY_TIME," +
-                " POLL_TIME, STATUS, AUTHZ_USER) SELECT ?,?,?,ID,?,?,?,?,?,?,? FROM IDN_OAUTH_CONSUMER_APPS WHERE " +
+                " POLL_TIME, STATUS) SELECT ?,?,?,ID,?,?,?,?,?,? FROM IDN_OAUTH_CONSUMER_APPS WHERE " +
                 "CONSUMER_KEY=?";
 
         public static final String GET_CONSUMER_KEY_FOR_USER_CODE = "SELECT CONSUMER_KEY FROM IDN_OAUTH2_DEVICE_FLOW " +
@@ -66,6 +66,9 @@ public class SQLQueries {
 
         public static final String SET_DEVICE_CODE_EXPIRED = "UPDATE IDN_OAUTH2_DEVICE_FLOW SET " +
                 "STATUS = ? WHERE DEVICE_CODE = ?";
+
+        public static final String SET_CALLBACK_URI = "UPDATE IDN_OAUTH_CONSUMER_APPS SET CALLBACK_URL = ? WHERE " +
+                "CONSUMER_KEY = ?";
 
     }
 

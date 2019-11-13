@@ -50,7 +50,7 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
     public void insertDeviceFlow(String deviceCode, String userCode, String consumerKey, String scope,
                                  Long expiresIn) throws IdentityOAuth2Exception {
 
-        Connection connection = IdentityDatabaseUtil.getDBConnection();
+        Connection connection = IdentityDatabaseUtil.getDBConnection(true);
         PreparedStatement prepStmt = null;
         try {
             Date date = new Date();
@@ -68,12 +68,12 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
             prepStmt.setLong(7, timeExpired);
             prepStmt.setLong(8, 5000);
             prepStmt.setString(9, Constants.PENDING);
-            prepStmt.setString(10, null);
-            prepStmt.setString(11, consumerKey);
+            prepStmt.setString(10, consumerKey);
             prepStmt.execute();
             IdentityDatabaseUtil.commitTransaction(connection);
 
         } catch (SQLException e) {
+            IdentityDatabaseUtil.rollbackTransaction(connection);
             throw new IdentityOAuth2Exception("Error when storing the device flow parameters for consumer key : " +
                     consumerKey, e);
         } finally {
@@ -109,7 +109,7 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
     @Override
     public void setUserAuthenticated(String userCode, String status) throws IdentityOAuth2Exception {
 
-        Connection connection = IdentityDatabaseUtil.getDBConnection();
+        Connection connection = IdentityDatabaseUtil.getDBConnection(true);
         PreparedStatement prepStmt = null;
         try {
             String sql;
@@ -120,7 +120,8 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
             prepStmt.execute();
             IdentityDatabaseUtil.commitTransaction(connection);
         } catch (SQLException e) {
-            throw new IdentityOAuth2Exception("Error when setting user has authenticated for user code : " +
+            IdentityDatabaseUtil.rollbackTransaction(connection);
+            throw new IdentityOAuth2Exception("Error when setting user has authenticated for user code :" +
                     userCode, e);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, null, prepStmt);
@@ -159,7 +160,6 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
         PreparedStatement ps = null;
         ResultSet rs = null;
         boolean checked = false;
-        String status = null;
         HashMap<String, String> result = new HashMap<>();
         try {
             String sqlQuery = SQLQueries.DeviceFlowDAOSQLQueries.GET_AUTHENTICATION_STATUS;
@@ -238,7 +238,6 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
             while (rs.next()) {
                 scope = rs.getString(1);
             }
-
         } catch (SQLException e) {
             throw new IdentityOAuth2Exception("Error when getting scopes for user code : " +
                     userCode, e);
@@ -284,7 +283,6 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
             ps.setString(2, deviceCode);
             ps.execute();
             IdentityDatabaseUtil.commitTransaction(connection);
-
         } catch (SQLException e) {
             throw new IdentityOAuth2Exception("Error when setting last poll time", e);
         } finally {
@@ -295,7 +293,7 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
     @Override
     public void setAuthzUser(String userCode, String userName) throws IdentityOAuth2Exception {
 
-        Connection connection = IdentityDatabaseUtil.getDBConnection();
+        Connection connection = IdentityDatabaseUtil.getDBConnection(true);
         PreparedStatement ps = null;
         try {
             String sql;
@@ -305,8 +303,8 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
             ps.setString(2, userCode);
             ps.execute();
             IdentityDatabaseUtil.commitTransaction(connection);
-
         } catch (SQLException e) {
+            IdentityDatabaseUtil.rollbackTransaction(connection);
             throw new IdentityOAuth2Exception("Error when setting authenticated user for user code : " +
                     userCode, e);
         } finally {
@@ -317,7 +315,7 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
     @Override
     public void setDeviceCodeExpired(String deviceCode, String status) throws IdentityOAuth2Exception {
 
-        Connection connection = IdentityDatabaseUtil.getDBConnection();
+        Connection connection = IdentityDatabaseUtil.getDBConnection(true);
         PreparedStatement prepStmt = null;
         try {
             String sql;
@@ -328,10 +326,33 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
             prepStmt.execute();
             IdentityDatabaseUtil.commitTransaction(connection);
         } catch (SQLException e) {
+            IdentityDatabaseUtil.rollbackTransaction(connection);
             throw new IdentityOAuth2Exception("Error when setting expired status for device code : " +
                     deviceCode, e);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, null, prepStmt);
         }
     }
+
+    @Override
+    public void setCallBackURI(String clientId, String callBackUri) throws IdentityOAuth2Exception {
+
+        Connection connection = IdentityDatabaseUtil.getDBConnection();
+        PreparedStatement prepStmt = null;
+        try {
+            String sql;
+            sql = SQLQueries.DeviceFlowDAOSQLQueries.SET_CALLBACK_URI;
+            prepStmt = connection.prepareStatement(sql);
+            prepStmt.setString(1, callBackUri);
+            prepStmt.setString(2, clientId);
+            prepStmt.execute();
+            IdentityDatabaseUtil.commitTransaction(connection);
+        } catch (SQLException e) {
+            throw new IdentityOAuth2Exception("Error when setting expired callBackUri for consumer key: " +
+                    clientId, e);
+        } finally {
+            IdentityDatabaseUtil.closeAllConnections(connection, null, prepStmt);
+        }
+    }
+
 }

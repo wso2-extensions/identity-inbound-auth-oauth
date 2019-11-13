@@ -133,15 +133,12 @@ public class OAuthRequestStateValidator {
                     OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_CLIENT);
         }
 
-        if(!StringUtils.equals(oAuthMessage.getRequest().getParameter(Constants.RESPONSE_TYPE),
-                Constants.RESPONSE_TYPE_DEVICE)) {
-            if (StringUtils.isBlank(oAuthMessage.getRequest().getParameter(REDIRECT_URI))) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Redirect URI is not present in the authorization request");
-                }
-                throw new InvalidRequestException("Redirect URI is not present in the authorization request",
-                        OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_REDIRECT_URI);
+        if (StringUtils.isBlank(oAuthMessage.getRequest().getParameter(REDIRECT_URI))) {
+            if (log.isDebugEnabled()) {
+                log.debug("Redirect URI is not present in the authorization request");
             }
+            throw new InvalidRequestException("Redirect URI is not present in the authorization request",
+                    OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_REDIRECT_URI);
         }
     }
 

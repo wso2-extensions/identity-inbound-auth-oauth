@@ -132,4 +132,6 @@ public interface DeviceFlowDAO {
      */
     void setDeviceCodeExpired(String deviceCode, String status) throws IdentityOAuth2Exception;
 
+    void setCallBackURI(String clientId, String callBackUri) throws IdentityOAuth2Exception;
+
 }

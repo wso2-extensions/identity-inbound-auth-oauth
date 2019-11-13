@@ -56,57 +56,49 @@ public class DeviceEndpoint {
     public Response authorize(@Context HttpServletRequest request, @Context HttpServletResponse response)
             throws IOException, IdentityOAuth2Exception, InvalidOAuthClientException, OAuthSystemException {
 
-        String userCode = new GenerateKeys().getKey(6);
-        DeviceFlowDO deviceFlowDO = new DeviceFlowDO();
-        String deviceCode = UUID.randomUUID().toString();
         String clientId = request.getParameter(Constants.CLIENT_ID);
-        String scope = request.getParameter(Constants.SCOPE);
-        String[] scopeSet = OAuth2Util.buildScopeArray(scope);
-        deviceFlowDO.setScope(scopeSet);
-        String redirectionUri = IdentityUtil.getServerURL("/authenticationendpoint/device.do",
-                false, false);
-        String redirectionUriComplete = redirectionUri + "?user_code=" + userCode;
-        long expiresIn = 3600000L;
-        int interval = 5000;
         OAuthResponse errorResponse;
-
-        if (StringUtils.isNotBlank(clientId)) {
+        if (StringUtils.isBlank(clientId)) {
+            errorResponse = OAuthASResponse
+                    .errorResponse(response.getStatus())
+                    .setError(DeviceErrorCodes.INVALID_REQUEST)
+                    .setErrorDescription("Request missing required parameters").buildJSONMessage();
+            Response.ResponseBuilder respBuilder = Response.status(HttpServletResponse.SC_BAD_REQUEST);
+            return respBuilder.entity(errorResponse.getBody()).build();
+        } else {
             if (validateClientId(clientId)) {
+                int keyLength = 6;
+                long expiresIn = 3600000L;
+                int interval = 5000;
+                String userCode = GenerateKeys.getKey(keyLength);
+                DeviceFlowDO deviceFlowDO = new DeviceFlowDO();
+                String deviceCode = UUID.randomUUID().toString();
+                String scope = request.getParameter(Constants.SCOPE);
+                String[] scopeSet = OAuth2Util.buildScopeArray(scope);
+                deviceFlowDO.setScope(scopeSet);
+                String redirectionUri = IdentityUtil.getServerURL("/authenticationendpoint/device.do",
+                        false, false);
+                String redirectionUriComplete = redirectionUri + "?user_code=" + userCode;
                 DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().insertDeviceFlow(deviceCode, userCode,
                         clientId, scope, expiresIn);
-                OAuthResponse deviceResponse =
-                        OAuthResponse.status(HttpServletResponse.SC_ACCEPTED).setParam(Constants.DEVICE_CODE,
-                                deviceCode).setParam(Constants.USER_CODE, userCode).setParam(Constants.VERIFICATION_URI,
-                                redirectionUri).setParam(Constants.VERIFICATION_URI_COMPLETE, redirectionUriComplete).
-                                setParam(Constants.EXPIRES_IN, stringValueInSeconds(expiresIn))
-                                .setParam(Constants.INTERVAL, stringValueInSeconds(interval)).buildJSONMessage();
-                Response.ResponseBuilder respBuilder = Response.status(response.getStatus());
+                OAuthResponse deviceResponse = OAuthResponse
+                        .status(HttpServletResponse.SC_ACCEPTED)
+                        .setParam(Constants.DEVICE_CODE, deviceCode)
+                        .setParam(Constants.USER_CODE, userCode)
+                        .setParam(Constants.VERIFICATION_URI, redirectionUri)
+                        .setParam(Constants.VERIFICATION_URI_COMPLETE, redirectionUriComplete)
+                        .setParam(Constants.EXPIRES_IN, stringValueInSeconds(expiresIn))
+                        .setParam(Constants.INTERVAL, stringValueInSeconds(interval)).buildJSONMessage();
+                Response.ResponseBuilder respBuilder = Response.status(HttpServletResponse.SC_ACCEPTED);
                 return respBuilder.entity(deviceResponse.getBody()).build();
 
             } else {
-                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                try {
-                    errorResponse = OAuthASResponse
-                            .errorResponse(response.getStatus()).setError(DeviceErrorCodes.UNAUTHORIZED_CLIENT)
-                            .setErrorDescription("No registered client with the client id.").buildJSONMessage();
-
-                    Response.ResponseBuilder respBuilder = Response.status(response.getStatus());
-                    return respBuilder.entity(errorResponse.getBody()).build();
-                } catch (OAuthSystemException e) {
-                    throw new OAuthSystemException("DeviceEndpoint failed while building error response.", e);
-                }
-            }
-        } else {
-            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            try {
                 errorResponse = OAuthASResponse
-                        .errorResponse(response.getStatus()).setError(DeviceErrorCodes.INVALID_REQUEST)
-                        .setErrorDescription("Request missing required parameters").buildJSONMessage();
-
+                        .errorResponse(HttpServletResponse.SC_UNAUTHORIZED)
+                        .setError(DeviceErrorCodes.UNAUTHORIZED_CLIENT)
+                        .setErrorDescription("No registered client with the client id.").buildJSONMessage();
                 Response.ResponseBuilder respBuilder = Response.status(response.getStatus());
                 return respBuilder.entity(errorResponse.getBody()).build();
-            } catch (OAuthSystemException e) {
-                throw new OAuthSystemException("DeviceEndpoint failed  while building error response.", e);
             }
         }
     }
@@ -118,7 +110,7 @@ public class DeviceEndpoint {
      * @return Client is exist or not
      * @throws IdentityOAuth2Exception
      */
-    private static boolean validateClientId(String clientId) throws IdentityOAuth2Exception {
+    private boolean validateClientId(String clientId) throws IdentityOAuth2Exception {
 
         return DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().checkClientIdExist(clientId);
     }
@@ -129,8 +121,8 @@ public class DeviceEndpoint {
      * @param value Time in milliseconds
      * @return String value of time in seconds
      */
-    private static String stringValueInSeconds(long value) {
+    private String stringValueInSeconds(long value) {
 
-        return String.valueOf(value / 1000);
+        return String.valueOf((value / 1000));
     }
 }
