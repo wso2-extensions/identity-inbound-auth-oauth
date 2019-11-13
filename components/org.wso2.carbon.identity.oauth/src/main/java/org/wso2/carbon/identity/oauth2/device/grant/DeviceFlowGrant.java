@@ -24,6 +24,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.device.constants.Constants;
 import org.wso2.carbon.identity.oauth2.device.dao.DeviceFlowPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.device.errorcodes.DeviceErrorCodes;
+import org.wso2.carbon.identity.oauth2.device.model.DeviceFlowDO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.model.RequestParameter;
@@ -76,30 +77,31 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
 
             } else {
 
-                results = DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO()
-                        .getAuthenticationStatus(DeviceCode);
+                DeviceFlowDO deviceFlowDO =
+                        DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO()
+                                .getAuthenticationStatus(DeviceCode);
                 Date date = new Date();
-                deviceStatus = results.get(Constants.STATUS).toString();
+                deviceStatus = deviceFlowDO.getStatus();
                 //validate device code
                 if (deviceStatus.equals(Constants.NOT_EXIST)) {
                     throw new IdentityOAuth2Exception(DeviceErrorCodes.INVALID_REQUEST);
                 } else if (deviceStatus.equals(Constants.EXPIRED)) {
                     throw new IdentityOAuth2Exception(DeviceErrorCodes.SubDeviceErrorCodes.EXPIRED_TOKEN);
-                } else if (isValidDeviceCode(results, date)) {
+                } else if (isValidDeviceCode(deviceFlowDO, date)) {
                     throw new IdentityOAuth2Exception(DeviceErrorCodes.SubDeviceErrorCodes.EXPIRED_TOKEN);
                 } else if (deviceStatus.equals(Constants.AUTHORIZED)) {
                     authStatus = true;
                     DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().setDeviceCodeExpired(DeviceCode,
                             Constants.EXPIRED);
-                    if (results.get(Constants.SCOPE) != null) {
-                        String authzUser = results.get(Constants.AUTHZ_USER).toString();
-                        String[] scopeSet = OAuth2Util.buildScopeArray(results.get(Constants.SCOPE).toString());
+                    if (deviceFlowDO.getScope() != null) {
+                        String authzUser = deviceFlowDO.getAuthzUser();
+                        String[] scopeSet = OAuth2Util.buildScopeArray(deviceFlowDO.getScope());
                         this.setPropertiesForTokenGeneration(oAuthTokenReqMessageContext, tokenReq, scopeSet,
                                 authzUser);
                     }
                 } else if (deviceStatus.equals(Constants.USED) || deviceStatus.equals(Constants.PENDING)) {
                     Timestamp newPollTime = new Timestamp(date.getTime());
-                    if (isValidPollTime(newPollTime, results)) {
+                    if (isValidPollTime(newPollTime, deviceFlowDO)) {
                         DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO()
                                 .setLastPollTime(DeviceCode, newPollTime);
                         throw new IdentityOAuth2Exception(DeviceErrorCodes.SubDeviceErrorCodes.AUTHORIZATION_PENDING);
@@ -166,26 +168,25 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
     /**
      * This method use to check whether device code is expired or not
      *
-     * @param results Result map that contains values from database
+     * @param deviceFlowDO Result map that contains values from database
      * @param date    Time that request has came
      * @return true or false
      */
-    private static boolean isValidDeviceCode(Map results, Date date) {
+    private static boolean isValidDeviceCode(DeviceFlowDO deviceFlowDO, Date date) {
 
-        return Long.parseLong((String) results.get(Constants.EXPIRY_TIME)) < date.getTime();
+        return deviceFlowDO.getExpiryTime() < date.getTime();
     }
 
     /**
      * This checks whether polling frequency is correct or not
      *
      * @param newPollTime Time of the new poll request
-     * @param results     Result map that contains values from database
+     * @param deviceFlowDO     Result map that contains values from database
      * @return true or false
      */
-    private static boolean isValidPollTime(Timestamp newPollTime, Map results) {
+    private static boolean isValidPollTime(Timestamp newPollTime, DeviceFlowDO deviceFlowDO) {
 
-        return newPollTime.getTime() - Timestamp.valueOf((String) results.get(Constants.LAST_POLL_TIME))
-                .getTime() > Long.parseLong(results.get(Constants.POLL_TIME).toString());
+        return newPollTime.getTime() - deviceFlowDO.getLastPollTime().getTime() > deviceFlowDO.getPollTime();
     }
 }
 

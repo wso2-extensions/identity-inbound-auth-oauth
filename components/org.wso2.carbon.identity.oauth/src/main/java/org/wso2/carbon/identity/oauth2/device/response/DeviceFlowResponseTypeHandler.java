@@ -39,9 +39,6 @@ public class DeviceFlowResponseTypeHandler extends AbstractResponseTypeHandler {
 
     private static Log log = LogFactory.getLog(DeviceFlowResponseTypeHandler.class);
 
-    private String AppName;
-    private String appName;
-
     public DeviceFlowResponseTypeHandler() {
 
     }
@@ -59,18 +56,7 @@ public class DeviceFlowResponseTypeHandler extends AbstractResponseTypeHandler {
 
         OAuth2AuthorizeRespDTO respDTO = new OAuth2AuthorizeRespDTO();
         OAuth2AuthorizeReqDTO authzReqDTO = oauthAuthzMsgCtx.getAuthorizationReqDTO();
-        String clientId = authzReqDTO.getConsumerKey();
         String authenticatedUser = authzReqDTO.getUser().getUserName();
-        OAuthAppDO oAuthAppDO;
-
-        try {
-            oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
-            appName = oAuthAppDO.getApplicationName();
-            setAppName(appName);
-        } catch (InvalidOAuthClientException e) {
-            throw new IdentityOAuth2Exception("Error when getting app details for client id : " + clientId, e);
-        }
-
         String UserCode = authzReqDTO.getNonce();
         DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().setAuthzUser(UserCode, authenticatedUser);
         DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().setUserAuthenticated(UserCode,
@@ -78,26 +64,6 @@ public class DeviceFlowResponseTypeHandler extends AbstractResponseTypeHandler {
         respDTO.setCallbackURI(authzReqDTO.getCallbackUrl());
 
         return respDTO;
-    }
-
-    /**
-     * Get app name.
-     *
-     * @return app name
-     */
-    public String getAppName() {
-
-        return AppName;
-    }
-
-    /**
-     * Set application name.
-     *
-     * @param appName Name of the app
-     */
-    private void setAppName(String appName) {
-
-        AppName = appName;
     }
 }
 

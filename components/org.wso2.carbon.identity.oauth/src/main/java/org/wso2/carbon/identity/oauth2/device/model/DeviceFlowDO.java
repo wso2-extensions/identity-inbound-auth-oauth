@@ -18,11 +18,9 @@
 
 package org.wso2.carbon.identity.oauth2.device.model;
 
-import org.wso2.carbon.identity.oauth.cache.CacheEntry;
-
 import java.sql.Timestamp;
 
-public class DeviceFlowDO extends CacheEntry {
+public class DeviceFlowDO {
 
     private String deviceCode;
 
@@ -30,7 +28,7 @@ public class DeviceFlowDO extends CacheEntry {
 
     private String consumerKeyID;
 
-    private String[] scope;
+    private String scope;
 
     private Timestamp issuedTime;
 
@@ -39,6 +37,13 @@ public class DeviceFlowDO extends CacheEntry {
     private String Status;
 
     private Timestamp lastPollTime;
+
+    private long expiryTime;
+
+    private long pollTime;
+
+    private String authzUser;
+
 
     public DeviceFlowDO() {
 
@@ -74,12 +79,12 @@ public class DeviceFlowDO extends CacheEntry {
         this.consumerKeyID = consumerKeyID;
     }
 
-    public String[] getScope() {
+    public String getScope() {
 
         return scope;
     }
 
-    public void setScope(String[] scope) {
+    public void setScope(String scope) {
 
         this.scope = scope;
     }
@@ -122,6 +127,37 @@ public class DeviceFlowDO extends CacheEntry {
     public Timestamp getLastPollTime() {
 
         return lastPollTime;
+    }
+
+
+    public long getExpiryTime() {
+
+        return expiryTime;
+    }
+
+    public void setExpiryTime(long expiryTime) {
+
+        this.expiryTime = expiryTime;
+    }
+
+    public long getPollTime() {
+
+        return pollTime;
+    }
+
+    public void setPollTime(long pollTime) {
+
+        this.pollTime = pollTime;
+    }
+
+    public String getAuthzUser() {
+
+        return authzUser;
+    }
+
+    public void setAuthzUser(String authzUser) {
+
+        this.authzUser = authzUser;
     }
 
 }

@@ -23,6 +23,7 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.device.constants.Constants;
+import org.wso2.carbon.identity.oauth2.device.model.DeviceFlowDO;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -32,7 +33,7 @@ import java.sql.Timestamp;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.Map;
+import java.util.TimeZone;
 import java.util.UUID;
 
 /**
@@ -47,8 +48,8 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
     private String scope;
 
     @Override
-    public void insertDeviceFlow(String deviceCode, String userCode, String consumerKey, String scope,
-                                 Long expiresIn) throws IdentityOAuth2Exception {
+    public void insertDeviceFlow(String deviceCode, String userCode, String consumerKey, String scope, Long expiresIn,
+                                 int interval) throws IdentityOAuth2Exception {
 
         Connection connection = IdentityDatabaseUtil.getDBConnection(true);
         PreparedStatement prepStmt = null;
@@ -63,10 +64,12 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
             prepStmt.setString(2, deviceCode);
             prepStmt.setString(3, userCode);
             prepStmt.setString(4, scope);
-            prepStmt.setTimestamp(5, timeCreated, Calendar.getInstance());
-            prepStmt.setTimestamp(6, timeCreated, Calendar.getInstance());
+            prepStmt.setTimestamp(5, timeCreated, Calendar.getInstance(TimeZone
+                    .getTimeZone(Constants.UTC)));
+            prepStmt.setTimestamp(6, timeCreated, Calendar.getInstance(TimeZone
+                    .getTimeZone(Constants.UTC)));
             prepStmt.setLong(7, timeExpired);
-            prepStmt.setLong(8, 5000);
+            prepStmt.setLong(8, interval);
             prepStmt.setString(9, Constants.PENDING);
             prepStmt.setString(10, consumerKey);
             prepStmt.execute();
@@ -154,13 +157,14 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
     }
 
     @Override
-    public Map getAuthenticationStatus(String deviceCode) throws IdentityOAuth2Exception {
+    public DeviceFlowDO getAuthenticationStatus(String deviceCode) throws IdentityOAuth2Exception {
 
         Connection connection = IdentityDatabaseUtil.getDBConnection(false);
         PreparedStatement ps = null;
         ResultSet rs = null;
         boolean checked = false;
         HashMap<String, String> result = new HashMap<>();
+        DeviceFlowDO deviceFlowDO = new DeviceFlowDO();
         try {
             String sqlQuery = SQLQueries.DeviceFlowDAOSQLQueries.GET_AUTHENTICATION_STATUS;
             ps = connection.prepareStatement(sqlQuery);
@@ -169,16 +173,16 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
 
             while (rs.next()) {
                 try {
-                    result.put(Constants.STATUS,rs.getString(1));
-                    result.put(Constants.LAST_POLL_TIME, rs.getTimestamp(2).toString());
-                    result.put(Constants.POLL_TIME, Long.toString(rs.getLong(3)));
-                    result.put(Constants.EXPIRY_TIME, Long.toString(rs.getLong(4)));
-                    result.put(Constants.SCOPE, rs.getString(5));
-                    result.put(Constants.AUTHZ_USER, rs.getString(6));
+                    deviceFlowDO.setStatus(rs.getString(1));
+                    deviceFlowDO.setLastPollTime(rs.getTimestamp(2));
+                    deviceFlowDO.setPollTime(rs.getLong(3));
+                    deviceFlowDO.setExpiryTime(rs.getLong(4));
+                    deviceFlowDO.setScope(rs.getString(5));
+                    deviceFlowDO.setAuthzUser(rs.getString(6));
                     checked = true;
                 } catch (NullPointerException e) {
-                    result.put(Constants.STATUS, Constants.NOT_EXIST);
-                    return result;
+                    deviceFlowDO.setStatus(Constants.NOT_EXIST);
+                    return deviceFlowDO;
                 }
             }
 
@@ -189,10 +193,10 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
             IdentityDatabaseUtil.closeAllConnections(connection, rs, ps);
         }
         if (checked) {
-            return result;
+            return deviceFlowDO;
         } else {
-            result.put(Constants.STATUS, Constants.NOT_EXIST);
-            return result;
+            deviceFlowDO.setStatus(Constants.NOT_EXIST);
+            return deviceFlowDO;
         }
     }
 

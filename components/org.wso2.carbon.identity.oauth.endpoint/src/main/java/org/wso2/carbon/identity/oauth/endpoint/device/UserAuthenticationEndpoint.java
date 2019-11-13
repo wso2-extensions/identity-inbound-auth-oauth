@@ -76,8 +76,7 @@ public class UserAuthenticationEndpoint {
                 redirectURI = oAuthAppDO.getCallbackUrl();
                 if (StringUtils.isBlank(redirectURI)) {
                     String appName = oAuthAppDO.getApplicationName();
-                    redirectURI = IdentityUtil.getServerURL("/authenticationendpoint/device_success.do" +
-                            "?app_name=" + appName, false, false);
+                    redirectURI = getRedirectionURI(appName);
                     DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().setCallBackURI(clientId,redirectURI);
                     AppInfoCache.getInstance().clearCacheEntry(clientId);
                 }
@@ -127,6 +126,20 @@ public class UserAuthenticationEndpoint {
     private String getUserCodeStatus(String userCode) throws IdentityOAuth2Exception {
 
         return DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().getStatusForUserCode(userCode);
+    }
+
+    /**
+     * This method is used to generate the redirection URI.
+     *
+     * @param appName Service provider name
+     * @return Redirection URI
+     */
+    private String getRedirectionURI(String appName) {
+        String pageURI = IdentityUtil.getServerURL("/authenticationendpoint/device_success.do",
+                false, false);
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append(pageURI).append("?").append("app_name").append("=").append(appName);
+        return stringBuilder.toString();
     }
 
 }

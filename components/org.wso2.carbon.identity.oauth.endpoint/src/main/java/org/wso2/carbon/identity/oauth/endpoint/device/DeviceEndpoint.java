@@ -30,8 +30,6 @@ import org.wso2.carbon.identity.oauth2.device.codegenerator.GenerateKeys;
 import org.wso2.carbon.identity.oauth2.device.constants.Constants;
 import org.wso2.carbon.identity.oauth2.device.dao.DeviceFlowPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.device.errorcodes.DeviceErrorCodes;
-import org.wso2.carbon.identity.oauth2.device.model.DeviceFlowDO;
-import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.io.IOException;
 import java.util.UUID;
@@ -71,18 +69,16 @@ public class DeviceEndpoint {
                 long expiresIn = 3600000L;
                 int interval = 5000;
                 String userCode = GenerateKeys.getKey(keyLength);
-                DeviceFlowDO deviceFlowDO = new DeviceFlowDO();
                 String deviceCode = UUID.randomUUID().toString();
                 String scope = request.getParameter(Constants.SCOPE);
-                String[] scopeSet = OAuth2Util.buildScopeArray(scope);
-                deviceFlowDO.setScope(scopeSet);
                 String redirectionUri = IdentityUtil.getServerURL("/authenticationendpoint/device.do",
                         false, false);
                 String redirectionUriComplete = redirectionUri + "?user_code=" + userCode;
                 DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().insertDeviceFlow(deviceCode, userCode,
-                        clientId, scope, expiresIn);
+                        clientId, scope, expiresIn, interval);
+
                 OAuthResponse deviceResponse = OAuthResponse
-                        .status(HttpServletResponse.SC_ACCEPTED)
+                        .status(HttpServletResponse.SC_OK)
                         .setParam(Constants.DEVICE_CODE, deviceCode)
                         .setParam(Constants.USER_CODE, userCode)
                         .setParam(Constants.VERIFICATION_URI, redirectionUri)

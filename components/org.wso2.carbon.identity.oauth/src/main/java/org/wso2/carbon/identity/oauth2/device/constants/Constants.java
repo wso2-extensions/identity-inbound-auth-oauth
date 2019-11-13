@@ -46,5 +46,6 @@ public class Constants {
     public static final String EXPIRED = "EXPIRED";
     public static final String NONCE = "nonce";
     public static final String REDIRECTION_URI = "redirect_uri";
+    public static final String UTC = "UTC";
 
 }

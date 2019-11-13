@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth2.device.dao;
 
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.device.model.DeviceFlowDO;
 
 import java.sql.Timestamp;
 import java.util.HashMap;
@@ -40,7 +41,8 @@ public interface DeviceFlowDAO {
      * @param expiresIn   Device code valid period
      * @throws IdentityOAuth2Exception
      */
-    void insertDeviceFlow(String deviceCode, String userCode, String consumerKey, String scope, Long expiresIn) throws
+    void insertDeviceFlow(String deviceCode, String userCode, String consumerKey, String scope, Long expiresIn,
+                          int interval) throws
             IdentityOAuth2Exception;
 
     /**
@@ -76,7 +78,7 @@ public interface DeviceFlowDAO {
      * @return Map of values
      * @throws IdentityOAuth2Exception
      */
-    Map getAuthenticationStatus(String deviceCode) throws IdentityOAuth2Exception;
+    DeviceFlowDO getAuthenticationStatus(String deviceCode) throws IdentityOAuth2Exception;
 
     /**
      * Check client id is exist or not.
