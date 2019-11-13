@@ -81,7 +81,7 @@ public class CibaAuthResponseHandler {
         try {
 
             // Set the ExpiryTime.
-            long expiresIn = CibaAuthUtil.getInstance().getExpiresInForResponse(cibaAuthResponseDTO);
+            long expiresIn = CibaAuthUtil.getExpiresInForResponse(cibaAuthResponseDTO);
             if (log.isDebugEnabled()) {
                 log.info("Setting ExpiryTime for the response to the  request made by client with clientID : " +
                         cibaAuthResponseDTO.getAudience() + ".");

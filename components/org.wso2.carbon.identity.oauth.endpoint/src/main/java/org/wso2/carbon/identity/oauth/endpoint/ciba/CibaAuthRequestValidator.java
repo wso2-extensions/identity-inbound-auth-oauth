@@ -905,7 +905,7 @@ public class CibaAuthRequestValidator {
             int tenantID = OAuth2Util.getTenantIdFromUserName(userHint);
 
             // Checking with realm service whether user exists.
-            return CibaAuthUtil.getInstance().isUserExists(tenantID, userHint);
+            return CibaAuthUtil.isUserExists(tenantID, userHint);
 
         } catch (CibaCoreException | IdentityOAuth2Exception e) {
 
