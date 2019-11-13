@@ -201,7 +201,7 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
             throws CibaCoreException {
 
         try {
-            String hashedCibaAuthReqCode = CibaAuthUtil.getInstance().createHash(authReqID);
+            String hashedCibaAuthReqCode = CibaAuthUtil.createHash(authReqID);
 
             if (CibaDAOFactory.getInstance().getCibaAuthMgtDAO().isHashedAuthReqIDExists(hashedCibaAuthReqCode)) {
                 if (log.isDebugEnabled()) {
@@ -234,7 +234,7 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
         // Validate whether auth_req_id issued or not.
         try {
 
-            String hashedAuthReqID = CibaAuthUtil.getInstance().createHash(authReqID);
+            String hashedAuthReqID = CibaAuthUtil.createHash(authReqID);
 
             //check whether the incoming auth_req_id exists/ valid.
             if (!CibaDAOFactory.getInstance().getCibaAuthMgtDAO().isHashedAuthReqIDExists(hashedAuthReqID)) {

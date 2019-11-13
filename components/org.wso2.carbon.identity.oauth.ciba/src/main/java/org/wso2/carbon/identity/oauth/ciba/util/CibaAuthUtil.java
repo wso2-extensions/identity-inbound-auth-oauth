@@ -36,28 +36,6 @@ public class CibaAuthUtil {
 
     private static final Log log = LogFactory.getLog(CibaAuthUtil.class);
 
-    private CibaAuthUtil() {
-
-    }
-
-    private static CibaAuthUtil cibaAuthUtilInstance = new CibaAuthUtil();
-
-    public static CibaAuthUtil getInstance() {
-
-        if (cibaAuthUtilInstance == null) {
-
-            synchronized (CibaAuthUtil.class) {
-
-                if (cibaAuthUtilInstance == null) {
-
-                    /* instance will be created at request time */
-                    cibaAuthUtilInstance = new CibaAuthUtil();
-                }
-            }
-        }
-        return cibaAuthUtilInstance;
-
-    }
 
     /**
      * Create and returns ciba auth_req_id as a JWT.
@@ -66,11 +44,11 @@ public class CibaAuthUtil {
      * @return JWT CibaAuthCode which will have necessary claims for auth_req_id.
      * @throws CibaCoreException Exception thrown at CibaCoreComponent.
      */
-    public JWT getCibaAuthReqIDasSignedJWT(CibaAuthResponseDTO cibaAuthResponseDTO) throws CibaCoreException {
+    public static JWT getCibaAuthReqIDasSignedJWT(CibaAuthResponseDTO cibaAuthResponseDTO) throws CibaCoreException {
 
         String clientId = cibaAuthResponseDTO.getAudience();
         try {
-            JWTClaimsSet requestClaims = this.buildJWT(cibaAuthResponseDTO);
+            JWTClaimsSet requestClaims = buildJWT(cibaAuthResponseDTO);
 
             String tenantDomain = OAuth2Util.getTenantDomainOfOauthApp(clientId);
 
@@ -99,7 +77,7 @@ public class CibaAuthUtil {
      * @param cibaAuthResponseDTO Contains the validated parameters from the ciba authentication request.
      * @return JWTClaimsSet Returns JWT.
      */
-    private JWTClaimsSet buildJWT(CibaAuthResponseDTO cibaAuthResponseDTO) {
+    private static JWTClaimsSet buildJWT(CibaAuthResponseDTO cibaAuthResponseDTO) {
 
         JWTClaimsSet claims = new JWTClaimsSet.Builder()
                 .audience(cibaAuthResponseDTO.getAudience())
@@ -131,18 +109,18 @@ public class CibaAuthUtil {
      * @param cibaAuthRequestDTO Ciba Authentication Request DTO.
      * @return CibaAuthResponseDTO Returns JWT.
      */
-    public CibaAuthResponseDTO buildCibaAuthResponseDTO(CibaAuthRequestDTO cibaAuthRequestDTO) {
+    public static CibaAuthResponseDTO buildCibaAuthResponseDTO(CibaAuthRequestDTO cibaAuthRequestDTO) {
 
         CibaAuthResponseDTO cibaAuthResponseDTO = new CibaAuthResponseDTO();
 
         long issuedTime = ZonedDateTime.now().toInstant().toEpochMilli();
-        long durability = this.getExpiresIn(cibaAuthRequestDTO) * 1000;
+        long durability = getExpiresIn(cibaAuthRequestDTO) * 1000;
         long expiryTime = issuedTime + durability;
         long notBeforeUsable = issuedTime + CibaParams.INTERVAL_DEFAULT_VALUE * 1000;
 
         cibaAuthResponseDTO.setIssuer(cibaAuthRequestDTO.getAudience());
         cibaAuthResponseDTO.setAudience(cibaAuthRequestDTO.getIssuer());
-        cibaAuthResponseDTO.setJWTID(this.getUniqueAuthCodeDOKey());
+        cibaAuthResponseDTO.setJWTID(getUniqueAuthCodeDOKey());
         cibaAuthResponseDTO.setUserHint(cibaAuthRequestDTO.getUserHint());
         cibaAuthResponseDTO.setExpiredTime(expiryTime);
         cibaAuthResponseDTO.setIssuedTime(issuedTime);
@@ -166,7 +144,7 @@ public class CibaAuthUtil {
      *
      * @return String Returns random uuid.
      */
-    private String getUniqueAuthCodeDOKey() {
+    private static String getUniqueAuthCodeDOKey() {
 
         UUID id = UUID.randomUUID();
         return id.toString();
@@ -178,7 +156,7 @@ public class CibaAuthUtil {
      *
      * @return String Returns random uuid.
      */
-    public String getUniqueID() {
+    public static String getUniqueID() {
 
         UUID uuid = UUID.randomUUID();
         return uuid.toString();
@@ -191,7 +169,7 @@ public class CibaAuthUtil {
      * @param JWTStringAsAuthReqID auth_req_id.
      * @return String Hashed auth_req_id.
      */
-    public String createHash(String JWTStringAsAuthReqID) throws NoSuchAlgorithmException {
+    public static String createHash(String JWTStringAsAuthReqID) throws NoSuchAlgorithmException {
 
         MessageDigest md = MessageDigest.getInstance("SHA-512");
         // getInstance() method is called with algorithm SHA-512
@@ -222,7 +200,7 @@ public class CibaAuthUtil {
      * @param cibaAuthRequestDTO DTO accumulating validated parameters from CibaAuthenticationRequest.
      * @return long Returns expiry_time of the auth-req_id.
      */
-    public long getExpiresIn(CibaAuthRequestDTO cibaAuthRequestDTO) {
+    public static long getExpiresIn(CibaAuthRequestDTO cibaAuthRequestDTO) {
 
         if (cibaAuthRequestDTO.getRequestedExpiry() == 0) {
             return CibaParams.EXPIRES_IN_DEFAULT_VALUE;
@@ -237,7 +215,7 @@ public class CibaAuthUtil {
      * @param cibaAuthResponseDTO DTO accumulating response parameters.
      * @return long Returns expiry_time of the auth-req_id.
      */
-    public long getExpiresInForResponse(CibaAuthResponseDTO cibaAuthResponseDTO) {
+    public static long getExpiresInForResponse(CibaAuthResponseDTO cibaAuthResponseDTO) {
 
         if (cibaAuthResponseDTO.getRequestedExpiry() == 0) {
             return CibaParams.EXPIRES_IN_DEFAULT_VALUE;
@@ -253,7 +231,7 @@ public class CibaAuthUtil {
      * @param userIdHint that identifies a user
      * @return boolean Returns whether user exists in store.
      */
-    public boolean isUserExists(int tenantID, String userIdHint) throws CibaCoreException {
+    public static boolean isUserExists(int tenantID, String userIdHint) throws CibaCoreException {
 
         try {
             return CibaServiceDataHolder.getRealmService().
@@ -274,7 +252,7 @@ public class CibaAuthUtil {
      * @param cibaAuthResponseDTO Status of the relevant Ciba Authentication.
      * @throws CibaCoreException Exception thrown from CibaCore Component.
      */
-    public CibaAuthCodeDO generateCibaAuthCodeDO(String cibaAuthCode, CibaAuthResponseDTO cibaAuthResponseDTO)
+    public static CibaAuthCodeDO generateCibaAuthCodeDO(String cibaAuthCode, CibaAuthResponseDTO cibaAuthResponseDTO)
             throws CibaCoreException {
 
         try {
@@ -282,14 +260,14 @@ public class CibaAuthUtil {
             long lastPolledTime = cibaAuthResponseDTO.getIssuedTime();
             long expiryTime = cibaAuthResponseDTO.getExpiredTime();
 
-            String hashValueOfCibaAuthReqId = CibaAuthUtil.getInstance().createHash(cibaAuthCode);
+            String hashValueOfCibaAuthReqId = CibaAuthUtil.createHash(cibaAuthCode);
 
             String bindingMessage = cibaAuthResponseDTO.getBindingMessage();
             String transactionContext = cibaAuthResponseDTO.getTransactionContext();
             String scope = OAuth2Util.buildScopeString(cibaAuthResponseDTO.getScope());
 
             CibaAuthCodeDO cibaAuthCodeDO = new CibaAuthCodeDO();
-            cibaAuthCodeDO.setCibaAuthCodeDOKey(CibaAuthUtil.getInstance().getUniqueAuthCodeDOKey());
+            cibaAuthCodeDO.setCibaAuthCodeDOKey(CibaAuthUtil.getUniqueAuthCodeDOKey());
             cibaAuthCodeDO.setHashedCibaAuthReqId(hashValueOfCibaAuthReqId);
             cibaAuthCodeDO.setAuthenticationStatus(AuthenticationStatus.REQUESTED.toString());
             cibaAuthCodeDO.setLastPolledTime(lastPolledTime);
@@ -322,7 +300,7 @@ public class CibaAuthUtil {
      * @param cibaAuthResponseDTO Status of the relevant Ciba Authentication.
      * @throws CibaCoreException Exception thrown from CibaCore Component.
      */
-    public AuthzRequestDTO buildAuthzRequestDO(CibaAuthResponseDTO cibaAuthResponseDTO, CibaAuthCodeDO cibaAuthCodeDO)
+    public static AuthzRequestDTO buildAuthzRequestDO(CibaAuthResponseDTO cibaAuthResponseDTO, CibaAuthCodeDO cibaAuthCodeDO)
             throws CibaCoreException {
 
         String clientID = cibaAuthResponseDTO.getAudience();
