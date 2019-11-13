@@ -50,6 +50,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.TimeZone;
 
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
+import static org.wso2.carbon.identity.oauth2.dao.SQLQueries.RETRIEVE_TOKEN_BINDING_REFERENCE_TOKEN_ID;
+
 /*
 NOTE
 This is the very first step of moving to simplified architecture for token persistence. New set of DAO classes  for
@@ -255,6 +258,10 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                 user.setAuthenticatedSubjectIdentifier(subjectIdentifier, serviceProvider);
 
                 String tokenId = resultSet.getString(9);
+                String tokenBindingReference = NONE;
+                if (StringUtils.isNotBlank(tokenId)) {
+                    tokenBindingReference = getTokenBindingReference(connection, tokenId, tenantId);
+                }
                 // If the scope value is empty. It could have stored in the IDN_OAUTH2_AUTHZ_CODE_SCOPE table
                 // for on demand scope migration.
                 if (StringUtils.isBlank(scopeString)) {
@@ -263,7 +270,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                 }
                 AuthzCodeDO codeDo = createAuthzCodeDo(consumerKey, authorizationKey, user, codeState,
                         scopeString, callbackUrl, codeId, pkceCodeChallenge, pkceCodeChallengeMethod, issuedTime,
-                        validityPeriod);
+                        validityPeriod, tokenBindingReference);
                 result = new AuthorizationCodeValidationResult(codeDo, tokenId);
             }
 
@@ -275,6 +282,21 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             IdentityDatabaseUtil.closeAllConnections(connection, resultSet, prepStmt);
         }
 
+    }
+
+    private String getTokenBindingReference(Connection connection, String tokenId, int tenantId) throws SQLException {
+
+        try (PreparedStatement preparedStatement = connection
+                .prepareStatement(RETRIEVE_TOKEN_BINDING_REFERENCE_TOKEN_ID)) {
+            preparedStatement.setString(1, tokenId);
+            preparedStatement.setInt(2, tenantId);
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                if (resultSet.next()) {
+                    return resultSet.getString("TOKEN_BINDING_REF");
+                }
+            }
+        }
+        return NONE;
     }
 
     @Override
@@ -718,13 +740,12 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
 
     }
 
-    private AuthzCodeDO createAuthzCodeDo(String consumerKey, String authorizationKey,
-                                          AuthenticatedUser user, String codeState, String scopeString,
-                                          String callbackUrl, String codeId, String pkceCodeChallenge,
-                                          String pkceCodeChallengeMethod, Timestamp issuedTime, long validityPeriod) {
+    private AuthzCodeDO createAuthzCodeDo(String consumerKey, String authorizationKey, AuthenticatedUser user,
+            String codeState, String scopeString, String callbackUrl, String codeId, String pkceCodeChallenge,
+            String pkceCodeChallengeMethod, Timestamp issuedTime, long validityPeriod, String tokenBindingReference) {
 
-        return new AuthzCodeDO(user, OAuth2Util.buildScopeArray(scopeString), issuedTime, validityPeriod,
-                callbackUrl, consumerKey, authorizationKey, codeId, codeState, pkceCodeChallenge,
-                pkceCodeChallengeMethod);
+        return new AuthzCodeDO(user, OAuth2Util.buildScopeArray(scopeString), issuedTime, validityPeriod, callbackUrl,
+                consumerKey, authorizationKey, codeId, codeState, pkceCodeChallenge, pkceCodeChallengeMethod,
+                tokenBindingReference);
     }
 }
