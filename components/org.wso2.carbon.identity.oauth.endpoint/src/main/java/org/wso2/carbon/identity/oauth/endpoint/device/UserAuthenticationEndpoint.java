@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth.endpoint.device;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.http.client.utils.URIBuilder;
 import org.wso2.carbon.identity.application.authentication.framework.model.CommonAuthRequestWrapper;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
@@ -30,6 +31,7 @@ import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentExc
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.device.constants.Constants;
 import org.wso2.carbon.identity.oauth2.device.dao.DeviceFlowPersistenceFactory;
+import org.wso2.carbon.identity.oauth2.device.model.DeviceFlowDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.io.IOException;
@@ -49,6 +51,7 @@ public class UserAuthenticationEndpoint {
     private static final Log log = LogFactory.getLog(UserAuthenticationEndpoint.class);
 
     private OAuth2AuthzEndpoint oAuth2AuthzEndpoint = new OAuth2AuthzEndpoint();
+    private DeviceFlowDO deviceFlowDO = new DeviceFlowDO();
 
     @GET
     @Path("/")
@@ -68,29 +71,14 @@ public class UserAuthenticationEndpoint {
 
         if (StringUtils.isNotBlank(clientId) && StringUtils.equals(getUserCodeStatus(userCode),Constants.PENDING)) {
 
-            OAuthAppDO oAuthAppDO;
-            String redirectURI;
-
-            try {
-                oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
-                redirectURI = oAuthAppDO.getCallbackUrl();
-                if (StringUtils.isBlank(redirectURI)) {
-                    String appName = oAuthAppDO.getApplicationName();
-                    redirectURI = getRedirectionURI(appName);
-                    DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().setCallBackURI(clientId,redirectURI);
-                    AppInfoCache.getInstance().clearCacheEntry(clientId);
-                }
-            } catch (InvalidOAuthClientException e) {
-                throw new IdentityOAuth2Exception("Error when getting app details for client id :" +
-                        clientId, e);
-            }
-
+            setCallbackURI(clientId);
             DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().setUserAuthenticated(userCode,
                     Constants.USED);
+
             CommonAuthRequestWrapper commonAuthRequestWrapper = new CommonAuthRequestWrapper(request);
             commonAuthRequestWrapper.setParameter(Constants.CLIENT_ID, clientId);
             commonAuthRequestWrapper.setParameter(Constants.RESPONSE_TYPE, Constants.RESPONSE_TYPE_DEVICE);
-            commonAuthRequestWrapper.setParameter(Constants.REDIRECTION_URI, redirectURI);
+            commonAuthRequestWrapper.setParameter(Constants.REDIRECTION_URI, deviceFlowDO.getCallbackURI());
             if (getScope(userCode) != null) {
                 commonAuthRequestWrapper.setParameter(Constants.SCOPE, getScope(userCode));
             }
@@ -134,12 +122,36 @@ public class UserAuthenticationEndpoint {
      * @param appName Service provider name
      * @return Redirection URI
      */
-    private String getRedirectionURI(String appName) {
+    private String getRedirectionURI(String appName) throws URISyntaxException {
         String pageURI = IdentityUtil.getServerURL("/authenticationendpoint/device_success.do",
                 false, false);
-        StringBuilder stringBuilder = new StringBuilder();
-        stringBuilder.append(pageURI).append("?").append("app_name").append("=").append(appName);
-        return stringBuilder.toString();
+        URIBuilder uriBuilder = new URIBuilder(pageURI);
+        uriBuilder.addParameter(Constants.APP_NAME, appName);
+        return uriBuilder.build().toString();
+    }
+
+    /**
+     * This method is used to set the callback uri. If there is no value it will set a default value.
+     *
+     * @param clientId Consumer key
+     * @throws IdentityOAuth2Exception
+     */
+    private void setCallbackURI(String clientId) throws IdentityOAuth2Exception {
+        try {
+            OAuthAppDO oAuthAppDO;
+            oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
+            String redirectURI = oAuthAppDO.getCallbackUrl();
+            if (StringUtils.isBlank(redirectURI)) {
+                String appName = oAuthAppDO.getApplicationName();
+                redirectURI = getRedirectionURI(appName);
+                DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().setCallBackURI(clientId,redirectURI);
+                AppInfoCache.getInstance().clearCacheEntry(clientId);
+            }
+            deviceFlowDO.setCallbackURI(redirectURI);
+        } catch (InvalidOAuthClientException | URISyntaxException | IdentityOAuth2Exception e) {
+            throw new IdentityOAuth2Exception("Error when getting app details for client id :" +
+                    clientId, e);
+        }
     }
 
 }

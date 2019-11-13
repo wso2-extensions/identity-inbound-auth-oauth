@@ -47,5 +47,6 @@ public class Constants {
     public static final String NONCE = "nonce";
     public static final String REDIRECTION_URI = "redirect_uri";
     public static final String UTC = "UTC";
+    public static final String APP_NAME = "app_name";
 
 }

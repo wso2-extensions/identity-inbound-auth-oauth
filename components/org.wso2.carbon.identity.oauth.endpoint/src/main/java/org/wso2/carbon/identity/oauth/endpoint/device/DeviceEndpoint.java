@@ -85,7 +85,7 @@ public class DeviceEndpoint {
                         .setParam(Constants.VERIFICATION_URI_COMPLETE, redirectionUriComplete)
                         .setParam(Constants.EXPIRES_IN, stringValueInSeconds(expiresIn))
                         .setParam(Constants.INTERVAL, stringValueInSeconds(interval)).buildJSONMessage();
-                Response.ResponseBuilder respBuilder = Response.status(HttpServletResponse.SC_ACCEPTED);
+                Response.ResponseBuilder respBuilder = Response.status(HttpServletResponse.SC_OK);
                 return respBuilder.entity(deviceResponse.getBody()).build();
 
             } else {

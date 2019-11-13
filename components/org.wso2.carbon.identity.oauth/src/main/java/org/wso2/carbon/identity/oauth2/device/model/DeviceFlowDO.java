@@ -44,6 +44,7 @@ public class DeviceFlowDO {
 
     private String authzUser;
 
+    private String callbackURI;
 
     public DeviceFlowDO() {
 
@@ -160,4 +161,13 @@ public class DeviceFlowDO {
         this.authzUser = authzUser;
     }
 
+    public String getCallbackURI() {
+
+        return callbackURI;
+    }
+
+    public void setCallbackURI(String callbackUri) {
+
+        this.callbackURI = callbackUri;
+    }
 }
