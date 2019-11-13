@@ -963,7 +963,7 @@ public class CibaAuthRequestValidator {
             }
 
             if (log.isDebugEnabled()) {
-                log.debug("The encrypted JWT is signed. Obtained the claim set of the encrypted JWT.");
+                log.debug("The JWT is signed. Claim set of the signed JWT is obtainable.");
                 log.debug("JWT Header: " + signedJWT.getHeader().toJSONObject().toString());
                 log.debug("JWT Payload: " + signedJWT.getPayload().toJSONObject().toString());
                 log.debug("Signature: " + signedJWT.getSignature().toString());
