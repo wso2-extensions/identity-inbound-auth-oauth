@@ -113,6 +113,17 @@ public class ScopeUtils {
         return scope;
     }
 
+    public static Scope getScope(ScopeToUpdateDTO scopeDTO, String scopeName) {
+
+        Scope scope = new Scope(
+                scopeName,
+                scopeDTO.getDisplayName(),
+                getScopeBindings(scopeDTO.getScopeBindings()),
+                scopeDTO.getDescription());
+        scope.addScopeBindings(DEFAULT_SCOPE_BINDING, scopeDTO.getBindings());
+        return scope;
+    }
+
     public static List<ScopeBinding> getScopeBindings(List<ScopeBindingDTO> scopeBindingDTOs) {
 
         List<ScopeBinding> scopeBindings = new ArrayList<>();
@@ -135,7 +146,8 @@ public class ScopeUtils {
     }
 
     public static Scope getUpdatedScope(ScopeToUpdateDTO scopeDTO, String name) {
-        return new Scope(name, scopeDTO.getDisplayName(), scopeDTO.getDescription(), scopeDTO.getBindings());
+
+        return getScope(scopeDTO, name);
     }
 
     public static ScopeDTO getScopeDTO(Scope scope) {
