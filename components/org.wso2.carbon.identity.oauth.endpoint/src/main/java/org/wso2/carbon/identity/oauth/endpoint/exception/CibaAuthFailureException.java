@@ -21,13 +21,13 @@ package org.wso2.carbon.identity.oauth.endpoint.exception;
 /**
  * Authentication failure exception fom CIBA endpoint.
  */
-public class CibaAuthFailedException extends Exception {
+public class CibaAuthFailureException extends Exception {
 
     private int status;
     private String errorCode;
     private String errorDescription;
 
-    public CibaAuthFailedException(int status, String errorCode, String errorDescription) {
+    public CibaAuthFailureException(int status, String errorCode, String errorDescription) {
 
         this.status = status;
         this.errorCode = errorCode;

@@ -30,7 +30,7 @@ import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.ErrorCodes;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthResponseDO;
 import org.wso2.carbon.identity.oauth.ciba.util.CibaAuthUtil;
-import org.wso2.carbon.identity.oauth.endpoint.exception.CibaAuthFailedException;
+import org.wso2.carbon.identity.oauth.endpoint.exception.CibaAuthFailureException;
 
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.Context;
@@ -72,11 +72,11 @@ public class CibaAuthResponseHandler {
      *
      * @param cibaAuthResponseDTO CIBA Authentication Request Data Transfer Object.
      * @return Response for AuthenticationRequest.
-     * @throws CibaAuthFailedException Ciba Authentication Failed Exception.
+     * @throws CibaAuthFailureException Ciba Authentication Failed Exception.
      */
     public Response createAuthResponse(@Context HttpServletResponse response,
                                        CibaAuthResponseDTO cibaAuthResponseDTO, JWT cibaAuthCodeasJWT)
-            throws CibaAuthFailedException {
+            throws CibaAuthFailureException {
 
         try {
 
@@ -128,7 +128,7 @@ public class CibaAuthResponseHandler {
 
             }
 
-            throw new CibaAuthFailedException(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+            throw new CibaAuthFailureException(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
                     ErrorCodes.INTERNAL_SERVER_ERROR, e.getMessage());
 
         }
@@ -138,11 +138,11 @@ public class CibaAuthResponseHandler {
     /**
      * Creates CIBA Authentication Error Response.
      *
-     * @param cibaAuthFailedException Ciba Authentication Failed Exception.
+     * @param cibaAuthFailureException Ciba Authentication Failed Exception.
      * @return response Authentication Error Responses for AuthenticationRequest.
      * @throws OAuthSystemException SystemException.
      */
-    public Response createErrorResponse(CibaAuthFailedException cibaAuthFailedException)
+    public Response createErrorResponse(CibaAuthFailureException cibaAuthFailureException)
             throws OAuthSystemException {
         // Create CIBA Authentication Error Response.
 
@@ -151,12 +151,12 @@ public class CibaAuthResponseHandler {
         }
 
         OAuthResponse errorresponse = OAuthASResponse
-                .errorResponse(cibaAuthFailedException.getStatus())
-                .setError(cibaAuthFailedException.getErrorCode())
-                .setErrorDescription(cibaAuthFailedException.getErrorDescription())
+                .errorResponse(cibaAuthFailureException.getStatus())
+                .setError(cibaAuthFailureException.getErrorCode())
+                .setErrorDescription(cibaAuthFailureException.getErrorDescription())
                 .buildJSONMessage();
 
-        Response.ResponseBuilder respBuilder = Response.status(cibaAuthFailedException.getStatus());
+        Response.ResponseBuilder respBuilder = Response.status(cibaAuthFailureException.getStatus());
         return respBuilder.entity(errorresponse.getBody()).build();
     }
 

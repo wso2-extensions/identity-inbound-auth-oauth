@@ -27,7 +27,7 @@ import org.wso2.carbon.identity.oauth.ciba.exceptions.ErrorCodes;
 import org.wso2.carbon.identity.oauth.ciba.wrappers.CibaAuthRequestWrapper;
 import org.wso2.carbon.identity.oauth.ciba.wrappers.CibaAuthResponseWrapper;
 import org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpoint;
-import org.wso2.carbon.identity.oauth.endpoint.exception.CibaAuthFailedException;
+import org.wso2.carbon.identity.oauth.endpoint.exception.CibaAuthFailureException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 
 import java.net.URISyntaxException;
@@ -70,11 +70,11 @@ public class CibaAuthzHandler {
      * Trigger authorize request after building the url.
      *
      * @param authzRequestDto AuthorizeRequest Data Transfer Object..
-     * @throws CibaAuthFailedException CibaAuthentication related exception.
+     * @throws CibaAuthFailureException CibaAuthentication related exception.
      */
     public void initiateAuthzRequest(AuthzRequestDTO authzRequestDto, @Context HttpServletRequest request,
                                      @Context HttpServletResponse response)
-            throws CibaAuthFailedException {
+            throws CibaAuthFailureException {
 
         // Add custom parameters to the request by wrapping.
         try {
@@ -107,8 +107,8 @@ public class CibaAuthzHandler {
             // Fire authorize request and forget.
             fireAuthzReq(cibaAuthRequestWrapper, commonAuthResponseWrapper);
 
-        } catch (CibaAuthFailedException e) {
-            throw new CibaAuthFailedException(e.getStatus(), e.getErrorCode(), e.getErrorDescription());
+        } catch (CibaAuthFailureException e) {
+            throw new CibaAuthFailureException(e.getStatus(), e.getErrorCode(), e.getErrorDescription());
         }
     }
 
@@ -119,12 +119,12 @@ public class CibaAuthzHandler {
      * @param responseWrapper AuthenticationResponse wrapper.
      */
     private void fireAuthzReq(CibaAuthRequestWrapper requestWrapper, CibaAuthResponseWrapper responseWrapper)
-            throws CibaAuthFailedException {
+            throws CibaAuthFailureException {
 
         try {
             authzEndPoint.authorize(requestWrapper, responseWrapper);
         } catch (URISyntaxException | InvalidRequestParentException e) {
-            throw new CibaAuthFailedException(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+            throw new CibaAuthFailureException(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
                     ErrorCodes.INTERNAL_SERVER_ERROR, e.getMessage());
         }
     }

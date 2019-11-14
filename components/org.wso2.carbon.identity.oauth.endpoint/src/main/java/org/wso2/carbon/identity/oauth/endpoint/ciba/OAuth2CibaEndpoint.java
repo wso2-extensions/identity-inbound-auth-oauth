@@ -31,7 +31,7 @@ import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.ErrorCodes;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeDO;
 import org.wso2.carbon.identity.oauth.ciba.util.CibaAuthUtil;
-import org.wso2.carbon.identity.oauth.endpoint.exception.CibaAuthFailedException;
+import org.wso2.carbon.identity.oauth.endpoint.exception.CibaAuthFailureException;
 
 import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
@@ -73,7 +73,7 @@ public class OAuth2CibaEndpoint {
                     log.debug("CIBA Authentication Request that hits Client Initiated Authentication Endpoint has " +
                             "no 'request' parameter.");
                 }
-                throw new CibaAuthFailedException(HttpServletResponse.SC_BAD_REQUEST, ErrorCodes.INVALID_REQUEST,
+                throw new CibaAuthFailureException(HttpServletResponse.SC_BAD_REQUEST, ErrorCodes.INVALID_REQUEST,
                         ErrorCodes.SubErrorCodes.MISSING_PARAMETERS);
 
             }
@@ -159,7 +159,7 @@ public class OAuth2CibaEndpoint {
             return CibaAuthResponseHandler.getInstance().createAuthResponse(response, cibaAuthResponseDTO
                     , cibaAuthCodeasJWT);
 
-        } catch (CibaAuthFailedException e) {
+        } catch (CibaAuthFailureException e) {
             //Returning error response.
             return CibaAuthResponseHandler.getInstance().createErrorResponse(e);
         } catch (CibaCoreException e) {
