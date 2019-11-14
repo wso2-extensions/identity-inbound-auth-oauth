@@ -17,6 +17,7 @@
 package org.wso2.carbon.identity.oauth2.bean;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.List;
 
 public class ScopeBinding implements Serializable {
@@ -42,6 +43,9 @@ public class ScopeBinding implements Serializable {
 
     public List<String> getBindings() {
 
+        if (bindings == null) {
+            return new ArrayList<>();
+        }
         return bindings;
     }
 
