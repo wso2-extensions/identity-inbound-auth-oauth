@@ -75,7 +75,6 @@ public class OAuth2CibaEndpoint {
                 }
                 throw new CibaAuthFailureException(HttpServletResponse.SC_BAD_REQUEST, ErrorCodes.INVALID_REQUEST,
                         ErrorCodes.SubErrorCodes.MISSING_PARAMETERS);
-
             }
 
             // Capturing authentication request.
@@ -120,8 +119,7 @@ public class OAuth2CibaEndpoint {
             }
 
             // Building Authentication response DTO from RequestDTO.
-            CibaAuthResponseDTO cibaAuthResponseDTO =
-                    CibaAuthUtil.buildCibaAuthResponseDTO(cibaAuthRequestDTO);
+            CibaAuthResponseDTO cibaAuthResponseDTO = CibaAuthUtil.buildCibaAuthResponseDTO(cibaAuthRequestDTO);
 
             // Create JWT as CibaAuthCode.
             JWT cibaAuthCodeasJWT = CibaAuthUtil.getCibaAuthReqIDasSignedJWT(cibaAuthResponseDTO);
@@ -168,4 +166,3 @@ public class OAuth2CibaEndpoint {
         }
     }
 }
-

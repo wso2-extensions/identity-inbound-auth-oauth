@@ -36,7 +36,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.Context;
 
 /**
- * Handles making authorize request to the authorize request.
+ * Handles making authorize request to authorize endpoint as internal call.
  */
 public class CibaAuthzHandler {
 
@@ -93,8 +93,8 @@ public class CibaAuthzHandler {
             if (!StringUtils.isBlank(authzRequestDto.getTransactionContext())) {
                 cibaAuthRequestWrapper.setParameter(CibaParams.TRANSACTION_CONTEXT,
                         authzRequestDto.getTransactionContext());
-
             }
+
             // Create an instance of response.
             CibaAuthResponseWrapper commonAuthResponseWrapper = new CibaAuthResponseWrapper(response);
 
@@ -129,4 +129,3 @@ public class CibaAuthzHandler {
         }
     }
 }
-

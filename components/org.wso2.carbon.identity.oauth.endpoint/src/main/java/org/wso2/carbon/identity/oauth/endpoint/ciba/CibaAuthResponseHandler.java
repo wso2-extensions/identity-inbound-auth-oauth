@@ -38,7 +38,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 /**
- * This class handles authentication response.
+ * Handles creation of authentication and error response.
  */
 public class CibaAuthResponseHandler {
 
@@ -79,7 +79,6 @@ public class CibaAuthResponseHandler {
             throws CibaAuthFailureException {
 
         try {
-
             // Set the ExpiryTime.
             long expiresIn = CibaAuthUtil.getExpiresInForResponse(cibaAuthResponseDTO);
             if (log.isDebugEnabled()) {
@@ -110,29 +109,22 @@ public class CibaAuthResponseHandler {
             }
 
             Response.ResponseBuilder respBuilder = Response.status(response.getStatus());
-
             OAuthResponse cibaAuthenticationresponse = cibaAuthResponsebuilder.buildJSONMessage();
 
             if (log.isDebugEnabled()) {
                 log.info("Returning CIBA Authentication Response for the request made by client with clientID : " +
                         cibaAuthResponseDTO.getAudience() + ".");
             }
-
-            // Return respBuilder.entity(cibaAuthResponse.getBody()).build();
             return respBuilder.entity(cibaAuthenticationresponse.getBody()).build();
 
         } catch (OAuthSystemException e) {
             if (log.isDebugEnabled()) {
                 log.debug("Error in building authenticationResponse for Authentication Request made by client with " +
                         "clientID : " + cibaAuthResponseDTO.getAudience() + ".");
-
             }
-
             throw new CibaAuthFailureException(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
                     ErrorCodes.INTERNAL_SERVER_ERROR, e.getMessage());
-
         }
-
     }
 
     /**
@@ -184,5 +176,4 @@ public class CibaAuthResponseHandler {
         Response.ResponseBuilder respBuilder = Response.status(cibaCoreException.getStatus());
         return respBuilder.entity(errorresponse.getBody()).build();
     }
-
 }
