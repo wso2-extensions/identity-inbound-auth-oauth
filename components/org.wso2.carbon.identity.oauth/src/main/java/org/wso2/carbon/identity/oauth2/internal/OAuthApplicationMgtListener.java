@@ -22,6 +22,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.StandardInboundProtocols;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementValidationException;
 import org.wso2.carbon.identity.application.common.model.InboundAuthenticationConfig;
@@ -83,6 +84,7 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
     public boolean doPreUpdateApplication(ServiceProvider serviceProvider, String tenantDomain, String userName)
             throws IdentityApplicationManagementException {
 
+        handleOAuthAppAssociationRemoval(serviceProvider);
         storeSaaSPropertyValue(serviceProvider);
         removeClientSecret(serviceProvider);
         return true;
@@ -417,6 +419,50 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
         ServiceProvider sp = OAuth2ServiceComponentHolder.getApplicationMgtService()
                 .getServiceProvider(serviceProvider.getApplicationID());
         IdentityUtil.threadLocalProperties.get().put(SAAS_PROPERTY, sp.isSaasApp());
+    }
+
+    private void handleOAuthAppAssociationRemoval(ServiceProvider updatedSp) throws IdentityApplicationManagementException {
+
+        // Get the stored app.
+        int appId = updatedSp.getApplicationID();
+
+        ServiceProvider storedSp = OAuth2ServiceComponentHolder.getApplicationMgtService().getServiceProvider(appId);
+
+        InboundAuthenticationRequestConfig storedOAuthConfig = getOAuthInbound(storedSp);
+        InboundAuthenticationRequestConfig updatedOAuthInboundConfig = getOAuthInbound(updatedSp);
+
+        if (isOAuthInboundAssociationRemoved(storedOAuthConfig, updatedOAuthInboundConfig)) {
+            // Remove OAuth app data.
+            String deletedConsumerKey = storedOAuthConfig.getInboundAuthKey();
+            try {
+                OAuth2ServiceComponentHolder.getInstance()
+                        .getOAuthAdminService().removeOAuthApplicationData(deletedConsumerKey);
+            } catch (IdentityOAuthAdminException e) {
+                String msg = "Error removing OAuth2 inbound data for clientId: %s associated with service provider " +
+                        "with id: %s during application update.";
+                throw new IdentityApplicationManagementException(String.format(msg, deletedConsumerKey, appId), e);
+            }
+        }
+    }
+
+    private boolean isOAuthInboundAssociationRemoved(InboundAuthenticationRequestConfig storedOAuthConfig,
+                                                     InboundAuthenticationRequestConfig updatedOAuthInboundConfig) {
+
+        return storedOAuthConfig != null && updatedOAuthInboundConfig == null;
+    }
+
+    private InboundAuthenticationRequestConfig getOAuthInbound(ServiceProvider sp) {
+
+        if (sp != null && sp.getInboundAuthenticationConfig() != null) {
+            if (ArrayUtils.isNotEmpty(sp.getInboundAuthenticationConfig().getInboundAuthenticationRequestConfigs())) {
+                return Arrays.stream(sp.getInboundAuthenticationConfig().getInboundAuthenticationRequestConfigs())
+                        .filter(inbound -> StandardInboundProtocols.OAUTH2.equals(inbound.getInboundAuthType()))
+                        .findAny()
+                        .orElse(null);
+            }
+        }
+
+        return null;
     }
 
     /**
