@@ -36,6 +36,8 @@ import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.listener.IdentityOathEventListener;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponent;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.registry.core.service.RegistryService;
 import org.wso2.carbon.user.core.listener.UserOperationEventListener;
 import org.wso2.carbon.user.core.service.RealmService;
@@ -71,8 +73,9 @@ public class OAuthServiceComponent {
             // We need to explicitly populate the OAuthTokenIssuerMap since it's used for token validation.
             oauthServerConfig.populateOAuthTokenIssuerMap();
 
-            context.getBundleContext().registerService(OAuthAdminServiceImpl.class.getName(), new
-                    OAuthAdminServiceImpl(), null);
+            OAuthAdminServiceImpl oauthAdminService = new OAuthAdminServiceImpl();
+            context.getBundleContext().registerService(OAuthAdminServiceImpl.class.getName(), oauthAdminService, null);
+            OAuth2ServiceComponentHolder.getInstance().setOAuthAdminService(oauthAdminService);
 
             if (log.isDebugEnabled()) {
                 log.debug("Identity OAuth bundle is activated");
