@@ -232,13 +232,14 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             }
 
             if (tokenBindingAvailable) {
-                PreparedStatement preparedStatement = connection.prepareStatement(STORE_TOKEN_BINDING);
-                preparedStatement.setString(1, accessTokenId);
-                preparedStatement.setString(2, accessTokenDO.getTokenBinding().getBindingType());
-                preparedStatement.setString(3, accessTokenDO.getTokenBinding().getBindingReference());
-                preparedStatement.setString(4, accessTokenDO.getTokenBinding().getBindingValue());
-                preparedStatement.setInt(5, tenantId);
-                preparedStatement.execute();
+                try (PreparedStatement preparedStatement = connection.prepareStatement(STORE_TOKEN_BINDING)) {
+                    preparedStatement.setString(1, accessTokenId);
+                    preparedStatement.setString(2, accessTokenDO.getTokenBinding().getBindingType());
+                    preparedStatement.setString(3, accessTokenDO.getTokenBinding().getBindingReference());
+                    preparedStatement.setString(4, accessTokenDO.getTokenBinding().getBindingValue());
+                    preparedStatement.setInt(5, tenantId);
+                    preparedStatement.execute();
+                }
             }
 
             if (retryAttemptCounter > 0) {
