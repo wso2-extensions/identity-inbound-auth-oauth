@@ -435,6 +435,11 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
             // Remove OAuth app data.
             String deletedConsumerKey = storedOAuthConfig.getInboundAuthKey();
             try {
+                if (log.isDebugEnabled()) {
+                    log.debug("OAuth inbound with clientId: " + deletedConsumerKey + " has been removed from " +
+                            "service provider with id: " + appId + ". Removing the stale OAuth application for " +
+                            "clientId: " + deletedConsumerKey);
+                }
                 OAuth2ServiceComponentHolder.getInstance()
                         .getOAuthAdminService().removeOAuthApplicationData(deletedConsumerKey);
             } catch (IdentityOAuthAdminException e) {
