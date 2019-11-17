@@ -342,6 +342,7 @@
 
                             org.joda.time;version="${joda.wso2.osgi.version.range}",
                             org.opensaml.*; version="${opensaml2.wso2.osgi.version.range}",
+                            net.shibboleth.utilities.java.support.*; version="${opensaml2.wso2.osgi.version.range}",
 
                             org.osgi.framework; version="${osgi.framework.imp.pkg.version.range}",
                             org.osgi.service.component; version="${osgi.service.component.imp.pkg.version.range}",
