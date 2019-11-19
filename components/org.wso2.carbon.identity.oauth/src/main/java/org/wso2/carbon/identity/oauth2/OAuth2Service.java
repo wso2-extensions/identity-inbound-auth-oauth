@@ -32,6 +32,7 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.dto.OAuthErrorDTO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.authz.AuthorizationHandlerManager;
@@ -666,27 +667,26 @@ public class OAuth2Service extends AbstractAdmin {
      * Handles the authorization request denied by user.
      *
      * @param oAuth2Parameters OAuth parameters.
-     * @return OAuth2AuthorizeRespDTO Authorize Response Data Transfer Object.
+     * @return OAuthErrorDTO Authorization Failure Data Transfer Object.
      * @throws IdentityOAuth2Exception Identity OAuth2 exception.
      */
-    public OAuth2AuthorizeRespDTO handleUserConsentDenial(OAuth2Parameters oAuth2Parameters)
+    public OAuthErrorDTO handleUserConsentDenial(OAuth2Parameters oAuth2Parameters)
             throws IdentityOAuth2Exception {
 
         return AuthorizationHandlerManager.getInstance().handleUserConsentDenial(oAuth2Parameters);
-
     }
 
     /**
      * Handles the authentication failures.
      *
      * @param oauth2Params OAuth parameters.
-     * @return OAuth2AuthorizeRespDTO Authorize Response Data Transfer Object.
+     * @return OAuthErrorDTO Authorization Failure Data Transfer Object.
      * @throws IdentityOAuth2Exception Identity OAuth2 exception.
      */
-    public OAuth2AuthorizeRespDTO handleAuthenticationFailure(OAuth2Parameters oauth2Params)
+    public OAuthErrorDTO handleAuthenticationFailure(OAuth2Parameters oauth2Params)
             throws IdentityOAuth2Exception {
 
         return AuthorizationHandlerManager.getInstance().handleAuthenticationFailure(oauth2Params);
-
     }
+
 }

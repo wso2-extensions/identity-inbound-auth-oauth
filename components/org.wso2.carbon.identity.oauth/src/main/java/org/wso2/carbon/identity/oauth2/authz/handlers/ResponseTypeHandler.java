@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth2.authz.handlers;
 
+import org.wso2.carbon.identity.oauth.dto.OAuthErrorDTO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
@@ -48,26 +49,28 @@ public interface ResponseTypeHandler {
 
     /**
      * Handles user consent denial at responseType level.
+     *
      * @param oAuth2Parameters OAuth parameters.
-     * @return OAuth2AuthorizeRespDTO Authorize Response Data Transfer Object.
+     * @return OAuthErrorDTO Authorization Failure Data Transfer Object.
+     * @throws IdentityOAuth2Exception
      */
-    default OAuth2AuthorizeRespDTO handleUserConsentDenial(OAuth2Parameters oAuth2Parameters)
+    default OAuthErrorDTO handleUserConsentDenial(OAuth2Parameters oAuth2Parameters)
             throws IdentityOAuth2Exception {
 
-        return new OAuth2AuthorizeRespDTO();
+        return new OAuthErrorDTO();
     }
 
-
     /**
-     * Handles user consent denial at responseType level.
+     * Handles authentication failures at responseType level.
+     *
      * @param oAuth2Parameters OAuth parameters.
-     * @return OAuth2AuthorizeRespDTO Authorize Response Data Transfer Object.
+     * @return OAuthErrorDTO Authorization Failure Data Transfer Object.
+     * @throws IdentityOAuth2Exception
      */
-    default OAuth2AuthorizeRespDTO handleAuthenticationFailure(OAuth2Parameters oAuth2Parameters)
+    default OAuthErrorDTO handleAuthenticationFailure(OAuth2Parameters oAuth2Parameters)
             throws IdentityOAuth2Exception {
 
-        return new OAuth2AuthorizeRespDTO();
+        return new OAuthErrorDTO();
     }
 
 }
-
