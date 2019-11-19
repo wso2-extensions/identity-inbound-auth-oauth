@@ -168,12 +168,12 @@ public class CibaAuthResponseHandler {
         }
 
         OAuthResponse errorresponse = OAuthASResponse
-                .errorResponse(cibaCoreException.getStatus())
+                .errorResponse(HttpServletResponse.SC_INTERNAL_SERVER_ERROR)
                 .setError(cibaCoreException.getErrorCode())
                 .setErrorDescription(cibaCoreException.getErrorDescription())
                 .buildJSONMessage();
 
-        Response.ResponseBuilder respBuilder = Response.status(cibaCoreException.getStatus());
+        Response.ResponseBuilder respBuilder = Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
         return respBuilder.entity(errorresponse.getBody()).build();
     }
 }
