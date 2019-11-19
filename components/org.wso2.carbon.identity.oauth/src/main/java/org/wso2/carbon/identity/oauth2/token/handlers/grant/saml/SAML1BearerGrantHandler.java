@@ -22,22 +22,21 @@ import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.joda.time.DateTime;
-import org.opensaml.DefaultBootstrap;
-import org.opensaml.common.xml.SAMLConstants;
-import org.opensaml.saml1.core.Assertion;
-import org.opensaml.saml1.core.Audience;
-import org.opensaml.saml1.core.AudienceRestrictionCondition;
-import org.opensaml.saml1.core.AuthenticationStatement;
-import org.opensaml.saml1.core.Conditions;
-import org.opensaml.saml1.core.ConfirmationMethod;
-import org.opensaml.saml1.core.Subject;
-import org.opensaml.saml1.core.SubjectConfirmation;
-import org.opensaml.security.SAMLSignatureProfileValidator;
-import org.opensaml.xml.ConfigurationException;
-import org.opensaml.xml.XMLObject;
-import org.opensaml.xml.security.x509.X509Credential;
-import org.opensaml.xml.signature.SignatureValidator;
-import org.opensaml.xml.validation.ValidationException;
+import org.opensaml.saml.common.xml.SAMLConstants;
+import org.opensaml.saml.saml1.core.Assertion;
+import org.opensaml.saml.saml1.core.Audience;
+import org.opensaml.saml.saml1.core.AudienceRestrictionCondition;
+import org.opensaml.saml.saml1.core.AuthenticationStatement;
+import org.opensaml.saml.saml1.core.Conditions;
+import org.opensaml.saml.saml1.core.ConfirmationMethod;
+import org.opensaml.saml.saml1.core.Subject;
+import org.opensaml.saml.saml1.core.SubjectConfirmation;
+import org.opensaml.saml.security.impl.SAMLSignatureProfileValidator;
+import org.opensaml.core.config.InitializationException;
+import org.opensaml.core.xml.XMLObject;
+import org.opensaml.security.x509.X509Credential;
+import org.opensaml.xmlsec.signature.support.SignatureValidator;
+import org.opensaml.xmlsec.signature.support.SignatureException;
 import org.w3c.dom.NodeList;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -47,7 +46,6 @@ import org.wso2.carbon.identity.application.common.model.Property;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.base.IdentityConstants;
-import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -57,6 +55,9 @@ import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AbstractAuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.util.X509CredentialImpl;
+import org.wso2.carbon.identity.saml.common.util.SAMLInitializer;
+import org.wso2.carbon.identity.saml.common.util.UnmarshallUtils;
+import org.wso2.carbon.identity.saml.common.util.exception.IdentityUnmarshallingException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 
@@ -90,8 +91,8 @@ public class SAML1BearerGrantHandler extends AbstractAuthorizationGrantHandler {
         thread.setContextClassLoader(this.getClass().getClassLoader());
 
         try {
-            DefaultBootstrap.bootstrap();
-        } catch (ConfigurationException e) {
+            SAMLInitializer.doBootstrap();
+        } catch (InitializationException e) {
             String errorMessage = "Error in bootstrapping the OpenSAML library";
             log.error(errorMessage, e);
             throw new IdentityOAuth2Exception(errorMessage, e);
@@ -169,7 +170,7 @@ public class SAML1BearerGrantHandler extends AbstractAuthorizationGrantHandler {
         }
 
         try {
-            XMLObject samlObject = IdentityUtil.unmarshall(new String(Base64.decodeBase64(
+            XMLObject samlObject = UnmarshallUtils.unmarshall(new String(Base64.decodeBase64(
                     tokReqMsgCtx.getOauth2AccessTokenReqDTO().getAssertion())));
             // Validating for multiple assertions
             NodeList assertionList = samlObject.getDOM().getElementsByTagNameNS(SAMLConstants.SAML1_NS, "Assertion");
@@ -184,7 +185,7 @@ public class SAML1BearerGrantHandler extends AbstractAuthorizationGrantHandler {
                 log.error("Only Assertion objects are validated in SAML1Bearer Grant Type");
                 return false;
             }
-        } catch (IdentityException e) {
+        } catch (IdentityUnmarshallingException e) {
             if (log.isDebugEnabled()) {
                 log.debug("Error occurred while unmarshalling SAML1.0 assertion", e);
             }
@@ -462,7 +463,7 @@ public class SAML1BearerGrantHandler extends AbstractAuthorizationGrantHandler {
 
         try {
             profileValidator.validate(assertion.getSignature());
-        } catch (ValidationException e) {
+        } catch (SignatureException e) {
             // Indicates signature did not conform to SAML1.0 Signature profile
             if(log.isDebugEnabled()) {
                 log.debug("Signature did not conform to SAML1.0 Signature profile", e);
@@ -482,12 +483,11 @@ public class SAML1BearerGrantHandler extends AbstractAuthorizationGrantHandler {
 
         try {
             X509Credential x509Credential = new X509CredentialImpl(x509Certificate);
-            SignatureValidator signatureValidator = new SignatureValidator(x509Credential);
-            signatureValidator.validate(assertion.getSignature());
+            SignatureValidator.validate(assertion.getSignature(), x509Credential);
             if(log.isDebugEnabled()) {
                 log.debug("Signature validation successful");
             }
-        } catch (ValidationException e) {
+        } catch (SignatureException e) {
             if (log.isDebugEnabled()) {
                 log.debug("Signature validation failure:" + e.getMessage(), e);
             }

@@ -229,6 +229,12 @@
                 <version>${carbon.identity.framework.version}</version>
             </dependency>
 
+            <!--SAML Common Util dependency-->
+            <dependency>
+                <groupId>org.wso2.carbon.identity.saml.common</groupId>
+                <artifactId>org.wso2.carbon.identity.saml.common.util</artifactId>
+                <version>${saml.common.util.version}</version>
+            </dependency>
 
             <!-- Orbit dependencies -->
             <dependency>
@@ -507,6 +513,12 @@
             </dependency>
             <dependency>
                 <groupId>org.powermock</groupId>
+                <artifactId>powermock-module-junit4</artifactId>
+                <version>${powermock.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.powermock</groupId>
                 <artifactId>powermock-api-mockito</artifactId>
                 <version>${powermock.version}</version>
                 <scope>test</scope>
@@ -769,8 +781,8 @@
         <carbon.kernel.registry.imp.pkg.version.range>[1.0.1, 2.0.0)</carbon.kernel.registry.imp.pkg.version.range>
 
         <!-- Carbon Identity Framework version -->
-        <carbon.identity.framework.version>5.14.119</carbon.identity.framework.version>
-        <carbon.identity.framework.imp.pkg.version.range>[5.14.67, 6.0.0)
+        <carbon.identity.framework.version>5.15.0</carbon.identity.framework.version>
+        <carbon.identity.framework.imp.pkg.version.range>[5.15.0, 6.0.0)
         </carbon.identity.framework.imp.pkg.version.range>
 
         <!--Carbon component version-->
@@ -789,6 +801,10 @@
         <!-- Axiom Version -->
         <axiom.wso2.version>1.2.11-wso2v16</axiom.wso2.version>
         <axiom.osgi.version.range>[1.2.11, 2.0.0)</axiom.osgi.version.range>
+
+        <!--SAML Common Util Version-->
+        <saml.common.util.version>1.0.3</saml.common.util.version>
+        <saml.common.util.version.range>[1.0.0,2.0.0)</saml.common.util.version.range>
 
         <!-- Commons -->
         <commons-lang.wso2.version>2.6.0.wso2v1</commons-lang.wso2.version>
@@ -821,9 +837,9 @@
         <json.wso2.version>3.0.0.wso2v1</json.wso2.version>
         <json.wso2.version.range>[3.0.0.wso2v1, 4.0.0)</json.wso2.version.range>
 
-        <opensaml.version>2.6.6</opensaml.version>
-        <opensaml2.wso2.version>2.6.6.wso2v3</opensaml2.wso2.version>
-        <opensaml2.wso2.osgi.version.range>[2.6.0,3.0.0)</opensaml2.wso2.osgi.version.range>
+        <opensaml.version>3.3.1</opensaml.version>
+        <opensaml2.wso2.version>3.3.1.wso2v1</opensaml2.wso2.version>
+        <opensaml2.wso2.osgi.version.range>[3.3.1,3.4.0)</opensaml2.wso2.osgi.version.range>
 
         <joda.version>2.9.4</joda.version>
         <joda.wso2.version>2.9.4.wso2v1</joda.wso2.version>
@@ -872,7 +888,7 @@
         <commons-codec.test.version>1.4</commons-codec.test.version>
         <org.wso2.carbon.identity.testutil.version>5.12.49</org.wso2.carbon.identity.testutil.version>
         <!--SAML component version for test-->
-        <carbon.identity.sso.saml.version>5.6.1</carbon.identity.sso.saml.version>
+        <carbon.identity.sso.saml.version>5.7.0</carbon.identity.sso.saml.version>
         <spring-context.version>5.1.1.RELEASE</spring-context.version>
 
         <!-- Pax Logging Version -->
