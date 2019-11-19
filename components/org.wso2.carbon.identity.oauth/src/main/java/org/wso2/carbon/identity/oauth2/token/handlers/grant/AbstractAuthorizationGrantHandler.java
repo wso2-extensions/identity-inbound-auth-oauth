@@ -170,6 +170,8 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         if (existingToken.getRefreshTokenIssuedTime() != null) {
             tokReqMsgCtx.setRefreshTokenIssuedTime(existingToken.getRefreshTokenIssuedTime().getTime());
         }
+
+        tokReqMsgCtx.setRefreshTokenvalidityPeriod(existingToken.getRefreshTokenValidityPeriodInMillis());
     }
 
     @Override
