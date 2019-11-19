@@ -557,13 +557,13 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
             */
 
             Thread thread = Thread.currentThread();
-            ClassLoader loader = thread.getContextClassLoader();
+            ClassLoader originalClassLoader = thread.getContextClassLoader();
             thread.setContextClassLoader(SignatureValidationProvider.class.getClassLoader());
 
             try {
                 SignatureValidator.validate(assertion.getSignature(), x509Credential);
             } finally {
-                thread.setContextClassLoader(loader);
+                thread.setContextClassLoader(originalClassLoader);
             }
         } catch (SignatureException e) {
             throw new IdentityOAuth2Exception("Error while validating the signature.", e);
