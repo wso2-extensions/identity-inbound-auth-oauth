@@ -420,16 +420,25 @@ public class DCRMService {
         return serviceProvider != null;
     }
 
-    private boolean isClientIdExist(String clientId) {
+    /**
+     * Check whether the provided client id is exists.
+     *
+     * @param clientId client id.
+     * @return true if application exists with the client id.
+     * @throws DCRMException in case of failure.
+     */
+    private boolean isClientIdExist(String clientId) throws DCRMException {
 
-        OAuthConsumerAppDTO app = null;
         try {
-            app = getApplicationById(clientId);
-        } catch (DCRMException e) {
-            log.error("Error while retrieving oauth application with client id: " + clientId);
+            OAuthConsumerAppDTO dto = oAuthAdminService.getOAuthApplicationData(clientId);
+            return dto != null && StringUtils.isNotBlank(dto.getApplicationName());
+        } catch (IdentityOAuthAdminException e) {
+            if (e.getCause() instanceof InvalidOAuthClientException) {
+                return false;
+            }
+            throw DCRMUtils
+                    .generateServerException(DCRMConstants.ErrorMessages.FAILED_TO_GET_APPLICATION_BY_ID, clientId, e);
         }
-
-        return app != null;
     }
 
     private ServiceProvider getServiceProvider(String applicationName, String tenantDomain) throws DCRMException {
