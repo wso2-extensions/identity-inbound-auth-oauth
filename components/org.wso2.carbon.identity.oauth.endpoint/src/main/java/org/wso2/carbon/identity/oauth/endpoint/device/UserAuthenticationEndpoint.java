@@ -69,7 +69,7 @@ public class UserAuthenticationEndpoint {
 
         String clientId = DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().getClientIdByUserCode(userCode);
 
-        if (StringUtils.isNotBlank(clientId) && StringUtils.equals(getUserCodeStatus(userCode),Constants.PENDING)) {
+        if (StringUtils.isNotBlank(clientId) && StringUtils.equals(getUserCodeStatus(userCode), Constants.PENDING)) {
 
             setCallbackURI(clientId);
             DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().setUserAuthenticated(userCode,
@@ -123,6 +123,7 @@ public class UserAuthenticationEndpoint {
      * @return Redirection URI
      */
     private String getRedirectionURI(String appName) throws URISyntaxException {
+
         String pageURI = IdentityUtil.getServerURL("/authenticationendpoint/device_success.do",
                 false, false);
         URIBuilder uriBuilder = new URIBuilder(pageURI);
@@ -137,6 +138,7 @@ public class UserAuthenticationEndpoint {
      * @throws IdentityOAuth2Exception
      */
     private void setCallbackURI(String clientId) throws IdentityOAuth2Exception {
+
         try {
             OAuthAppDO oAuthAppDO;
             oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
@@ -144,7 +146,7 @@ public class UserAuthenticationEndpoint {
             if (StringUtils.isBlank(redirectURI)) {
                 String appName = oAuthAppDO.getApplicationName();
                 redirectURI = getRedirectionURI(appName);
-                DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().setCallBackURI(clientId,redirectURI);
+                DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().setCallBackURI(clientId, redirectURI);
                 AppInfoCache.getInstance().clearCacheEntry(clientId);
             }
             deviceFlowDO.setCallbackURI(redirectURI);

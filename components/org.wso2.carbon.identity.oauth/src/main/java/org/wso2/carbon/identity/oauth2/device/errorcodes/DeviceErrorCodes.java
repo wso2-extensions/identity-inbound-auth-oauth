@@ -23,9 +23,9 @@ package org.wso2.carbon.identity.oauth2.device.errorcodes;
  */
 public class DeviceErrorCodes {
 
-    public static final String UNAUTHORIZED_CLIENT = "unauthorized client";
-    public static final String INVALID_REQUEST = "invalid request";
-    public static final String UNSUPPORTED_GRANT_TYPE = "invalid grant";
+    public static final String UNAUTHORIZED_CLIENT = "unauthorized_client";
+    public static final String INVALID_REQUEST = "invalid_request";
+    public static final String UNSUPPORTED_GRANT_TYPE = "invalid_grant";
 
     public DeviceErrorCodes() {
 

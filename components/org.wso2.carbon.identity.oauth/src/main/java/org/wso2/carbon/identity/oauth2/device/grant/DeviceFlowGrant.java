@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth2.device.grant;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -34,8 +35,6 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.sql.Timestamp;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * Device flow grant type for Identity Server.
@@ -52,15 +51,10 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
         OAuth2AccessTokenReqDTO tokenReq = oAuthTokenReqMessageContext.getOauth2AccessTokenReqDTO();
 
         boolean authStatus = false;
-
-        // extract request parameters
         RequestParameter[] parameters = oAuthTokenReqMessageContext.getOauth2AccessTokenReqDTO().getRequestParameters();
-
         String DeviceCode = null;
         String deviceStatus = null;
-        Map results;
 
-        // find out device_code
         for (RequestParameter parameter : parameters) {
             if (Constants.DEVICE_CODE.equals(parameter.getKey())) {
                 if (parameter.getValue() != null && parameter.getValue().length > 0) {
@@ -73,16 +67,13 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
 
             if (!tokenReq.getGrantType().equals(Constants.DEVICE_FLOW_GRANT_TYPE)) {
 
-                throw new IdentityOAuth2Exception("Invalid GrantType");
-
+                throw new IdentityOAuth2Exception(DeviceErrorCodes.UNSUPPORTED_GRANT_TYPE);
             } else {
 
-                DeviceFlowDO deviceFlowDO =
-                        DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO()
-                                .getAuthenticationStatus(DeviceCode);
+                DeviceFlowDO deviceFlowDO = DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO()
+                        .getAuthenticationStatus(DeviceCode);
                 Date date = new Date();
                 deviceStatus = deviceFlowDO.getStatus();
-                //validate device code
                 if (deviceStatus.equals(Constants.NOT_EXIST)) {
                     throw new IdentityOAuth2Exception(DeviceErrorCodes.INVALID_REQUEST);
                 } else if (deviceStatus.equals(Constants.EXPIRED)) {
@@ -93,11 +84,8 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
                     authStatus = true;
                     DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().setDeviceCodeExpired(DeviceCode,
                             Constants.EXPIRED);
-                    if (deviceFlowDO.getScope() != null) {
-                        String authzUser = deviceFlowDO.getAuthzUser();
-                        String[] scopeSet = OAuth2Util.buildScopeArray(deviceFlowDO.getScope());
-                        this.setPropertiesForTokenGeneration(oAuthTokenReqMessageContext, tokenReq, scopeSet,
-                                authzUser);
+                    if (StringUtils.isNotBlank(deviceFlowDO.getScope())) {
+                        this.setPropertiesForTokenGeneration(oAuthTokenReqMessageContext, tokenReq, deviceFlowDO);
                     }
                 } else if (deviceStatus.equals(Constants.USED) || deviceStatus.equals(Constants.PENDING)) {
                     Timestamp newPollTime = new Timestamp(date.getTime());
@@ -117,45 +105,19 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
     }
 
     /**
-     * Validate whether the claimed user is the rightful resource owner.
-     *
-     * @param tokReqMsgCtx Token request message context
-     * @return true
-     * @throws IdentityOAuth2Exception
-     */
-    public boolean authorizeAccessDelegation(OAuthTokenReqMessageContext tokReqMsgCtx)
-            throws IdentityOAuth2Exception {
-
-        return true;
-    }
-
-    /**
-     * Validate whether scope requested by the access token is valid.
-     *
-     * @param tokReqMsgCtx Token request message context
-     * @return true
-     * @throws IdentityOAuth2Exception
-     */
-    public boolean validateScope(OAuthTokenReqMessageContext tokReqMsgCtx)
-            throws IdentityOAuth2Exception {
-
-        // if we need to just ignore the scope verification
-        return true;
-    }
-
-    /**
      * To set the properties of the token generation.
      *
      * @param tokReqMsgCtx Token request message context
      * @param tokenReq     Token request
-     * @param scopes       Scopes that will be stored against token
-     * @param authzUser    Authorized user
+     * @param deviceFlowDO Device flow DO set
      */
     private void setPropertiesForTokenGeneration(OAuthTokenReqMessageContext tokReqMsgCtx,
-                                                 OAuth2AccessTokenReqDTO tokenReq, String[] scopes, String authzUser) {
+                                                 OAuth2AccessTokenReqDTO tokenReq, DeviceFlowDO deviceFlowDO) {
 
+        String authzUser = deviceFlowDO.getAuthzUser();
+        String[] scopeSet = OAuth2Util.buildScopeArray(deviceFlowDO.getScope());
         tokReqMsgCtx.setAuthorizedUser(OAuth2Util.getUserFromUserName(authzUser));
-        tokReqMsgCtx.setScope(scopes);
+        tokReqMsgCtx.setScope(scopeSet);
     }
 
     @Override
@@ -169,7 +131,7 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
      * This method use to check whether device code is expired or not
      *
      * @param deviceFlowDO Result map that contains values from database
-     * @param date    Time that request has came
+     * @param date         Time that request has came
      * @return true or false
      */
     private static boolean isValidDeviceCode(DeviceFlowDO deviceFlowDO, Date date) {
@@ -180,8 +142,8 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
     /**
      * This checks whether polling frequency is correct or not
      *
-     * @param newPollTime Time of the new poll request
-     * @param deviceFlowDO     Result map that contains values from database
+     * @param newPollTime  Time of the new poll request
+     * @param deviceFlowDO DO class that contains values from database
      * @return true or false
      */
     private static boolean isValidPollTime(Timestamp newPollTime, DeviceFlowDO deviceFlowDO) {
