@@ -39,8 +39,6 @@ public class CibaParams {
     public static final String LOGIN_HINT = "login_hint";
     public static final String ID_TOKEN_HINT = "id_token_hint";
     public static final String LOGIN_HINT_TOKEN = "login_hint_token";
-
-    // Parameters for authorize request and to validate token request.
     public static final String OAUTH_CIBA_GRANT_TYPE = "urn:openid:params:grant-type:ciba";
     public static final String RESPONSE_TYPE_VALUE = "cibaAuthCode";
     public static final String CLIENT_ID = "client_id";

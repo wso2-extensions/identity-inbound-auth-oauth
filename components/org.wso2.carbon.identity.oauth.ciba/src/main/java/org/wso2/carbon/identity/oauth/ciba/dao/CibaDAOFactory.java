@@ -42,18 +42,14 @@ public class CibaDAOFactory {
     public static CibaDAOFactory getInstance() {
 
         if (cibaDAOFactoryInstance == null) {
-
             synchronized (CibaDAOFactory.class) {
-
                 if (cibaDAOFactoryInstance == null) {
-
                     /* instance will be created at request time */
                     cibaDAOFactoryInstance = new CibaDAOFactory();
                 }
             }
         }
         return cibaDAOFactoryInstance;
-
     }
 
     /**

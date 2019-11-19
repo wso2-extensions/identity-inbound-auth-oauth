@@ -37,9 +37,7 @@ public class CibaAuthRequestWrapper extends CommonAuthRequestWrapper {
     public CibaAuthRequestWrapper(HttpServletRequest request) {
 
         super(request);
-
         extraParameters = new HashMap();
-
     }
 
     @Override
@@ -59,7 +57,6 @@ public class CibaAuthRequestWrapper extends CommonAuthRequestWrapper {
     public void setParameter(String name, String value) {
 
         extraParameters.put(name, value);
-
     }
 
     @Override
@@ -69,7 +66,6 @@ public class CibaAuthRequestWrapper extends CommonAuthRequestWrapper {
         extraParameters.forEach((key, value) -> parameterMap.put(key, new String[]{value}));
         parameterMap.remove(CibaParams.REQUEST);
         return Collections.unmodifiableMap(parameterMap);
-
     }
 
 }

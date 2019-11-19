@@ -74,7 +74,6 @@ public class CibaResponseTypeHandler extends AbstractResponseTypeHandler {
                         .description("OAuth System exception in issuing response for the authorize request" +
                                 " for the authenticated_user : " + cibaAuthenticatedUser + "of the request with ID : " +
                                 cibaAuthCodeID);
-
             } catch (OAuthProblemException ex) {
                 if (log.isDebugEnabled()) {
                     log.debug("Error occurred in persisting user and authenticated user for the cibaAuthCodeDOKey : " +
@@ -82,7 +81,6 @@ public class CibaResponseTypeHandler extends AbstractResponseTypeHandler {
                 }
             }
         }
-
         // Building custom CallBack URL.
         String callbackURL = authorizationReqDTO.getCallbackUrl() + "?authenticationStatus=" + authenticationStatus;
         respDTO.setCallbackURI(callbackURL);
@@ -107,7 +105,6 @@ public class CibaResponseTypeHandler extends AbstractResponseTypeHandler {
             respDTO.setErrorCode(CONSENT_DENIED);
             respDTO.setErrorMsg("User Denied the consent.");
             return respDTO;
-
         } catch (CibaCoreException e) {
             if (log.isDebugEnabled()) {
                 log.debug("Error occurred in updating the authentication_status for the ID : " + cibaAuthCodeDOKey +
@@ -142,4 +139,5 @@ public class CibaResponseTypeHandler extends AbstractResponseTypeHandler {
         }
         return null;
     }
+
 }

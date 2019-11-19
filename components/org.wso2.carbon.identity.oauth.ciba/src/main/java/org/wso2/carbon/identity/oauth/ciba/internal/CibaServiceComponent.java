@@ -55,7 +55,6 @@ public class CibaServiceComponent {
                 log.error("Ciba component bundle  activation Failed", e);
             }
         }
-
     }
 
     /**
@@ -87,4 +86,5 @@ public class CibaServiceComponent {
         }
         CibaServiceDataHolder.setRealmService(null);
     }
+
 }

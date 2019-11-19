@@ -30,7 +30,6 @@ public class CibaCoreException extends Exception {
 
         this.errorCode = errorCode;
         this.errorDescription = errorDescription;
-
     }
 
     public String getErrorCode() {

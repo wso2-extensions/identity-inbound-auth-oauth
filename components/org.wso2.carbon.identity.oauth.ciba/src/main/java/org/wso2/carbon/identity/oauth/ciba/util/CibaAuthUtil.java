@@ -30,7 +30,6 @@ import java.util.UUID;
 /**
  * Provides utilities for the functioning of other classes.
  */
-
 public class CibaAuthUtil {
 
     private static final Log log = LogFactory.getLog(CibaAuthUtil.class);
@@ -47,25 +46,21 @@ public class CibaAuthUtil {
         String clientId = cibaAuthResponseDTO.getAudience();
         try {
             JWTClaimsSet requestClaims = buildJWT(cibaAuthResponseDTO);
-
             String tenantDomain = OAuth2Util.getTenantDomainOfOauthApp(clientId);
 
             // Sign the auth_req_id.
             JWT JWTStringAsAuthReqID = OAuth2Util.signJWT(requestClaims, JWSAlgorithm.RS256, tenantDomain);
             // Using recommended algorithm by FAPI [PS256,ES256 also  can be used]
-
             if (log.isDebugEnabled()) {
                 log.debug("Returning CibaAuthCode for the request made by client : " + clientId);
             }
             return JWTStringAsAuthReqID;
-
         } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
             if (log.isDebugEnabled()) {
                 log.debug("Error in building and returning CibaAuthCode for the request made by client : " + clientId);
             }
             throw new CibaCoreException(ErrorCodes.INTERNAL_SERVER_ERROR, e.getMessage());
         }
-
     }
 
     /**
@@ -95,9 +90,7 @@ public class CibaAuthUtil {
             log.debug("Successfully created JWT from CibaAuthResponseDTO and returning in regard to the   " +
                     "the request made by client " + cibaAuthResponseDTO.getAudience());
         }
-
         return claims;
-
     }
 
     /**
@@ -109,12 +102,10 @@ public class CibaAuthUtil {
     public static CibaAuthResponseDTO buildCibaAuthResponseDTO(CibaAuthRequestDTO cibaAuthRequestDTO) {
 
         CibaAuthResponseDTO cibaAuthResponseDTO = new CibaAuthResponseDTO();
-
         long issuedTime = ZonedDateTime.now().toInstant().toEpochMilli();
         long durability = getExpiresIn(cibaAuthRequestDTO) * 1000;
         long expiryTime = issuedTime + durability;
         long notBeforeUsable = issuedTime + CibaParams.INTERVAL_DEFAULT_VALUE * 1000;
-
         cibaAuthResponseDTO.setIssuer(cibaAuthRequestDTO.getAudience());
         cibaAuthResponseDTO.setAudience(cibaAuthRequestDTO.getIssuer());
         cibaAuthResponseDTO.setJWTID(getUniqueAuthCodeDOKey());
@@ -132,7 +123,6 @@ public class CibaAuthUtil {
             log.debug("Successfully transferred validated values from CIbaAuthRequestDTO to CibaAuthResponseDTO and " +
                     "for the  request made by client : " + cibaAuthResponseDTO.getAudience());
         }
-
         return cibaAuthResponseDTO;
     }
 
@@ -145,7 +135,6 @@ public class CibaAuthUtil {
 
         UUID id = UUID.randomUUID();
         return id.toString();
-
     }
 
     /**
@@ -157,7 +146,6 @@ public class CibaAuthUtil {
 
         UUID uuid = UUID.randomUUID();
         return uuid.toString();
-
     }
 
     /**
@@ -186,7 +174,6 @@ public class CibaAuthUtil {
         while (hashtext.length() < 32) {
             hashtext = "0" + hashtext;
         }
-
         // Return the HashText.
         return hashtext;
     }
@@ -234,11 +221,9 @@ public class CibaAuthUtil {
             return CibaServiceDataHolder.getRealmService().
                     getTenantUserRealm(tenantID).getUserStoreManager().
                     isExistingUser(userIdHint);
-
         } catch (UserStoreException e) {
             throw new CibaCoreException(ErrorCodes.INTERNAL_SERVER_ERROR, e.getMessage());
         }
-
     }
 
     /**
@@ -255,13 +240,10 @@ public class CibaAuthUtil {
 
             long lastPolledTime = cibaAuthResponseDTO.getIssuedTime();
             long expiryTime = cibaAuthResponseDTO.getExpiredTime();
-
             String hashValueOfCibaAuthReqId = CibaAuthUtil.createHash(cibaAuthCode);
-
             String bindingMessage = cibaAuthResponseDTO.getBindingMessage();
             String transactionContext = cibaAuthResponseDTO.getTransactionContext();
             String scope = OAuth2Util.buildScopeString(cibaAuthResponseDTO.getScope());
-
             CibaAuthCodeDO cibaAuthCodeDO = new CibaAuthCodeDO();
             cibaAuthCodeDO.setCibaAuthCodeDOKey(CibaAuthUtil.getUniqueAuthCodeDOKey());
             cibaAuthCodeDO.setHashedCibaAuthReqId(hashValueOfCibaAuthReqId);
@@ -276,16 +258,13 @@ public class CibaAuthUtil {
             if (log.isDebugEnabled()) {
                 log.debug("Successful in creating AuthCodeDO with cibaAuthCode = " + cibaAuthCode);
             }
-
             return cibaAuthCodeDO;
         } catch (NoSuchAlgorithmException e) {
             if (log.isDebugEnabled()) {
                 log.debug("Unable to create AuthCodeDO with cibaAuthCode = " + cibaAuthCode);
             }
-
             throw new CibaCoreException(ErrorCodes.INTERNAL_SERVER_ERROR, e.getMessage());
         }
-
     }
 
     /**
@@ -301,13 +280,9 @@ public class CibaAuthUtil {
         String clientID = cibaAuthResponseDTO.getAudience();
         try {
             AuthzRequestDTO authzRequestDTO = new AuthzRequestDTO();
-
             String user = cibaAuthResponseDTO.getUserHint();
-
             OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(clientID);
-
             String callbackUri = appDO.getCallbackUrl();
-
             authzRequestDTO.setAuthReqIDasState(cibaAuthCodeDO.getCibaAuthCodeDOKey());
             authzRequestDTO.setCallBackUrl(callbackUri);
             authzRequestDTO.setUser(user);
@@ -320,9 +295,7 @@ public class CibaAuthUtil {
                 log.debug("Successful in creating AuthorizeRequestDTO for the client : " + clientID);
             }
             return authzRequestDTO;
-
         } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
-
             if (log.isDebugEnabled()) {
                 log.debug("Error in creating AuthorizeRequestDTO for the client : " + clientID);
             }
@@ -331,4 +304,3 @@ public class CibaAuthUtil {
     }
 
 }
-

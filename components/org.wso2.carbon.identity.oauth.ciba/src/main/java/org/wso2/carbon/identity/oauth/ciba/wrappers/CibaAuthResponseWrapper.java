@@ -30,7 +30,6 @@ public class CibaAuthResponseWrapper extends CommonAuthResponseWrapper {
     public CibaAuthResponseWrapper(HttpServletResponse response) {
 
         super(response);
-
     }
 
 }

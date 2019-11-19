@@ -57,10 +57,6 @@ public class SQLQueries {
         public static final String RETRIEVE_BINDING_MESSAGE_AND_TRANSACTION_CONTEXT = "SELECT BINDING_MESSAGE," +
                 "TRANSACTION_CONTEXT FROM IDN_OAUTH2_CIBA_AUTH_REQ WHERE CIBA_AUTH_CODE_DO_KEY = ? ";
 
-        /**
-         * Following are SQL Queries related to polling.
-         */
-
         public static final String RETRIEVE_LAST_POLLED_TIME =
                 "SELECT LAST_POLLED_TIME FROM IDN_OAUTH2_CIBA_AUTH_REQ " +
                         " WHERE CIBA_AUTH_CODE_DO_KEY = ?";

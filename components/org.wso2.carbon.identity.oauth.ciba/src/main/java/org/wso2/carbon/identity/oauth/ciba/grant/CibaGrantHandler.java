@@ -86,25 +86,22 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
                 }
             }
         }
-
         if (auth_req_id == null) {
             // Authentication Request ID is missing.
+
             if (log.isDebugEnabled()) {
                 log.debug("token request  misses mandated parameter (auth_req_id).");
             }
             throw new IdentityOAuth2Exception(MISSING_AUTH_REQ_ID);
         }
-
         if (!tokenReq.getGrantType().equals(CibaParams.OAUTH_CIBA_GRANT_TYPE)) {
             // Grant Type is not expected to be for ciba.
+
             throw new IdentityOAuth2Exception(INVALID_GRANT);
         }
-
         try {
             SignedJWT signedJWT = SignedJWT.parse(auth_req_id);
-
             JSONObject jo = signedJWT.getJWTClaimsSet().toJSONObject();
-
             String authCodeDOKey = this.getCibaAuthCodeDOKeyFromAuthReqCodeHash(auth_req_id);
 
             // Retrieving information from database and assign to CibaAuthCodeDO.
@@ -116,14 +113,11 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
 
             this.setPropertiesForTokenGeneration(tokReqMsgCtx, cibaAuthCodeDO);
             return true;
-
         } catch (CibaCoreException e) {
             throw new IdentityOAuth2Exception(INVALID_PARAMETERS);
-
         } catch (ParseException e) {
             throw new IdentityOAuth2Exception(INVALID_AUTH_REQ_ID);
         }
-
     }
 
     /**
@@ -139,7 +133,6 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
             throws IdentityOAuth2Exception, CibaCoreException {
 
         try {
-
             // Validate whether provided authReqId is a valid.
             validateAuthReqID(authReqID);
 
@@ -158,22 +151,19 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
             // Validate whether authentication  is provided with affirmative consent.
             if (IsConsentGiven(cibaAuthCodeDO).equals(false)) {
                 throw new IdentityOAuth2Exception(CONSENT_DENIED);
-
             }
 
             // Validate whether user is authenticated.
             if (IsUserAuthenticated(cibaAuthCodeDO).equals(false)) {
                 // Authentication status has to be obtained from db.
+
                 throw new IdentityOAuth2Exception(AUTHORIZATION_PENDING);
-
             }
-
             if (log.isDebugEnabled()) {
                 log.debug(
                         "Properly validated Token request with grantType : " + CibaParams.OAUTH_CIBA_GRANT_TYPE + " " +
                                 "and auth_req_id : " + authReqID);
             }
-
         } catch (CibaCoreException ex) {
             throw new CibaCoreException(ErrorCodes.INTERNAL_SERVER_ERROR, ex.getErrorDescription());
         }
@@ -201,7 +191,6 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
 
         try {
             String hashedCibaAuthReqCode = CibaAuthUtil.createHash(authReqID);
-
             if (CibaDAOFactory.getInstance().getCibaAuthMgtDAO().isHashedAuthReqIDExists(hashedCibaAuthReqCode)) {
                 if (log.isDebugEnabled()) {
                     log.debug("Obtaining CibaAuthCodeDOKey for the hashedAuthReqId from the and auth_req_id : " +
@@ -218,7 +207,6 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
             }
             throw new CibaCoreException(ErrorCodes.INTERNAL_SERVER_ERROR, e.getMessage());
         }
-
     }
 
     /**
@@ -230,26 +218,23 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
     private void validateAuthReqID(String authReqID)
             throws IdentityOAuth2Exception {
         // Validate whether auth_req_id issued or not.
+
         try {
-
             String hashedAuthReqID = CibaAuthUtil.createHash(authReqID);
+            // Check whether the incoming auth_req_id exists/ valid.
 
-            //check whether the incoming auth_req_id exists/ valid.
             if (!CibaDAOFactory.getInstance().getCibaAuthMgtDAO().isHashedAuthReqIDExists(hashedAuthReqID)) {
-
                 if (log.isDebugEnabled()) {
                     log.debug("Provided auth_req_id : " +
                             authReqID + "with the token request is not valid.Or not issued by Identity server.");
                 }
                 throw new IdentityOAuth2Exception(INVALID_AUTH_REQ_ID);
-
             }
         } catch (NoSuchAlgorithmException e) {
             throw new IdentityOAuth2Exception(INTERNAL_ERROR);
         } catch (CibaCoreException e) {
             throw new IdentityOAuth2Exception(INVALID_AUTH_REQ_ID);
         }
-
     }
 
     /**
@@ -262,20 +247,19 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
 
         try {
             String audience = String.valueOf(auth_req_id.get("aud"));
-
             if (audience == null || StringUtils.isBlank(audience)) {
                 //Audience does not not exist.
+
                 throw new IdentityOAuth2Exception(INVALID_AUTH_REQ_ID);
             }
 
             // Create app and check whether client app exists.
             OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(audience);
-
         } catch (InvalidOAuthClientException e) {
+
             // No such Audience registered for Identity server.
             throw new IdentityOAuth2Exception(INVALID_AUTH_REQ_ID);
         }
-
     }
 
     /**
@@ -285,10 +269,9 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
      * @throws IdentityOAuth2Exception,CibaCoreException
      */
     private void activeAuthreqID(CibaAuthCodeDO cibaAuthCodeDO) throws IdentityOAuth2Exception, CibaCoreException {
-        //to check whether auth_req_id has expired or not
+        // Check whether auth_req_id has expired or not.
 
         long expiryTime = cibaAuthCodeDO.getExpiryTime();
-
         long currentTime = ZonedDateTime.now().toInstant().toEpochMilli();
         if (currentTime > expiryTime) {
             if (log.isDebugEnabled()) {
@@ -297,7 +280,6 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
             CibaDAOFactory.getInstance().getCibaAuthMgtDAO().persistStatus(cibaAuthCodeDO.getCibaAuthCodeDOKey(),
                     AuthenticationStatus.EXPIRED.toString());
             throw new IdentityOAuth2Exception(EXPIRED_TOKEN);
-
         }
     }
 
@@ -322,13 +304,10 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
         // Check the frequency of polling and do the needful.
 
         long currentTime = ZonedDateTime.now().toInstant().toEpochMilli();
-
         long lastpolltime = cibaAuthCodeDO.getLastPolledTime();
         long interval = cibaAuthCodeDO.getInterval();
         String cibaAuthCodeID = cibaAuthCodeDO.getCibaAuthCodeDOKey();
-
         if (!(currentTime - lastpolltime > interval * 1000)) {
-
             long newInterval = interval + CibaParams.INTERVAL_INCREMENT;
             if (log.isDebugEnabled()) {
                 log.debug(
@@ -336,11 +315,9 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
                                 "by cibaAuthCodeDOKey : " + cibaAuthCodeDO.getCibaAuthCodeDOKey() +
                                 ".Updated the Polling frequency on the table.");
             }
-
             CibaDAOFactory.getInstance().getCibaAuthMgtDAO().updatePollingInterval(cibaAuthCodeID, newInterval);
             throw new IdentityOAuth2Exception(SLOW_DOWN);
         }
-
         // Update last pollingTime.
         CibaDAOFactory.getInstance().getCibaAuthMgtDAO().updateLastPollingTime(cibaAuthCodeID, currentTime);
     }
@@ -363,17 +340,15 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
             CibaDAOFactory.getInstance().getCibaAuthMgtDAO().persistStatus(cibaAuthCodeDOKey, AuthenticationStatus.
                     TOKEN_DELIVERED.toString());
             return true;
-
         } else if (authenticationStatus.equals(AuthenticationStatus.TOKEN_DELIVERED.toString())) {
             // Token is already delivered.
-            return true;
 
+            return true;
         } else {
             if (log.isDebugEnabled()) {
                 log.info("User still not authenticated for the request made by client for request uniquely identified" +
                         " by cibaAuthCodeDOKey : " + cibaAuthCodeDOKey);
             }
-
             return false;
         }
     }
@@ -389,12 +364,9 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
 
         // Assigning the scopes.
         String[] scope = OAuth2Util.buildScopeArray(cibaAuthCodeDO.getScope());
-
         String authenticatedUserName = cibaAuthCodeDO.getAuthenticatedUser();
-
         tokReqMsgCtx.setAuthorizedUser(OAuth2Util.getUserFromUserName(authenticatedUserName));
         tokReqMsgCtx.setScope(scope);
-
     }
 
 }
