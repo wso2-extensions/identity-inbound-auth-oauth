@@ -69,7 +69,7 @@ public interface CibaAuthMgtDAO {
      * @return long Returns lastPolledTime.
      * @throws CibaCoreException Exception thrown from CibaCore Component.
      */
-    long getCibaLastPolledTime(String cibaAuthCodeDOKey) throws CibaCoreException;
+    long getLastPolledTime(String cibaAuthCodeDOKey) throws CibaCoreException;
 
     /**
      * Returns the pollingInterval of tokenRequest.
@@ -78,7 +78,7 @@ public interface CibaAuthMgtDAO {
      * @return long Returns pollingInterval of tokenRequest.
      * @throws CibaCoreException Exception thrown from CibaCore Component.
      */
-    long getCibaPollingInterval(String cibaAuthCodeDOKey) throws CibaCoreException;
+    long getPollingInterval(String cibaAuthCodeDOKey) throws CibaCoreException;
 
     /**
      * Updates the last polled time of tokenRequest.

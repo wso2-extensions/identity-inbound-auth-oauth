@@ -29,7 +29,6 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import javax.servlet.http.HttpServletResponse;
 
 /**
  * Implementation of abstract DAO layer.
@@ -90,8 +89,7 @@ public class CibaAuthMgtDAOImpl implements CibaAuthMgtDAO {
                 log.debug("Error occurred in persisting the authentication_status identified by AuthCodeDOKey : " +
                         cibaAuthCodeDOKey);
             }
-            throw new CibaCoreException(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-                    ErrorCodes.INTERNAL_SERVER_ERROR,
+            throw new CibaCoreException(ErrorCodes.INTERNAL_SERVER_ERROR,
                     "SQL exception in persisting authenticated_status. " + e.getMessage());
         }
     }
@@ -124,8 +122,7 @@ public class CibaAuthMgtDAOImpl implements CibaAuthMgtDAO {
                 log.debug("Error occurred in persisting the authenticated_user identified by AuthCodeDOKey : " +
                         cibaAuthCodeDOKey);
             }
-            throw new CibaCoreException(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-                    ErrorCodes.INTERNAL_SERVER_ERROR,
+            throw new CibaCoreException(ErrorCodes.INTERNAL_SERVER_ERROR,
                     "SQL exception in persisting authenticated_user." + e.getMessage());
         }
     }
@@ -183,8 +180,7 @@ public class CibaAuthMgtDAOImpl implements CibaAuthMgtDAO {
                 log.debug("Unsuccessful in checking whether provided hashedAuthReqId : " + hashedCibaAuthReqId +
                         "exists.");
             }
-            throw new CibaCoreException(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-                    ErrorCodes.INTERNAL_SERVER_ERROR, e.getMessage());
+            throw new CibaCoreException(ErrorCodes.INTERNAL_SERVER_ERROR, e.getMessage());
         }
     }
 
@@ -224,8 +220,7 @@ public class CibaAuthMgtDAOImpl implements CibaAuthMgtDAO {
                 log.debug("Error occured when finding CibaAuthCodeDOKey for the hashedCibaAuthReqId : " +
                         hashedCibaAuthReqId);
             }
-            throw new CibaCoreException(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-                    ErrorCodes.INTERNAL_SERVER_ERROR, e.getMessage());
+            throw new CibaCoreException(ErrorCodes.INTERNAL_SERVER_ERROR, e.getMessage());
         }
 
     }
@@ -237,7 +232,7 @@ public class CibaAuthMgtDAOImpl implements CibaAuthMgtDAO {
      * @return long Returns lastPolledTime.
      * @throws CibaCoreException Exception thrown from CibaCore Component.
      */
-    public long getCibaLastPolledTime(String cibaAuthCodeDOKey) throws CibaCoreException {
+    public long getLastPolledTime(String cibaAuthCodeDOKey) throws CibaCoreException {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
             try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.
@@ -266,8 +261,7 @@ public class CibaAuthMgtDAOImpl implements CibaAuthMgtDAO {
                 log.debug("Error occurred in retrieving lastPolledTime of TokenRequest for  the " +
                         "cibaAuthCodeDOKey : " + cibaAuthCodeDOKey);
             }
-            throw new CibaCoreException(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-                    ErrorCodes.INTERNAL_SERVER_ERROR, e.getMessage());
+            throw new CibaCoreException(ErrorCodes.INTERNAL_SERVER_ERROR, e.getMessage());
         }
     }
 
@@ -278,7 +272,7 @@ public class CibaAuthMgtDAOImpl implements CibaAuthMgtDAO {
      * @return long Returns pollingInterval of tokenRequest.
      * @throws CibaCoreException Exception thrown from CibaCore Component.
      */
-    public long getCibaPollingInterval(String cibaAuthCodeDOKey) throws CibaCoreException {
+    public long getPollingInterval(String cibaAuthCodeDOKey) throws CibaCoreException {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
             try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.
@@ -305,8 +299,7 @@ public class CibaAuthMgtDAOImpl implements CibaAuthMgtDAO {
                 log.debug("Error occurred in retrieving pollingInterval of TokenRequest for the " +
                         "cibaAuthCodeDOKey : " + cibaAuthCodeDOKey);
             }
-            throw new CibaCoreException(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-                    ErrorCodes.INTERNAL_SERVER_ERROR, e.getMessage());
+            throw new CibaCoreException(ErrorCodes.INTERNAL_SERVER_ERROR, e.getMessage());
         }
 
     }
@@ -339,8 +332,7 @@ public class CibaAuthMgtDAOImpl implements CibaAuthMgtDAO {
                 log.debug("Error occurred in updating lastPollingTime of TokenRequest  with cibaAuthCodeDOKey : " +
                         cibaAuthCodeDOKey);
             }
-            throw new CibaCoreException(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-                    ErrorCodes.INTERNAL_SERVER_ERROR, e.getMessage());
+            throw new CibaCoreException(ErrorCodes.INTERNAL_SERVER_ERROR, e.getMessage());
         }
     }
 
@@ -372,8 +364,7 @@ public class CibaAuthMgtDAOImpl implements CibaAuthMgtDAO {
                 log.debug("Error occurred in updating pollingInterval of TokenRequest  with cibaAuthCodeDOKey : " +
                         cibaAuthCodeDOKey);
             }
-            throw new CibaCoreException(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-                    ErrorCodes.INTERNAL_SERVER_ERROR, e.getMessage());
+            throw new CibaCoreException(ErrorCodes.INTERNAL_SERVER_ERROR, e.getMessage());
         }
     }
 
@@ -413,8 +404,7 @@ public class CibaAuthMgtDAOImpl implements CibaAuthMgtDAO {
                 log.debug("Error occurred in obtaining authenticationStatus of TokenRequest  with " +
                         "cibaAuthCodeDOKey : " + cibaAuthCodeDOKey);
             }
-            throw new CibaCoreException(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-                    ErrorCodes.INTERNAL_SERVER_ERROR, e.getMessage());
+            throw new CibaCoreException(ErrorCodes.INTERNAL_SERVER_ERROR, e.getMessage());
         }
     }
 
@@ -453,8 +443,7 @@ public class CibaAuthMgtDAOImpl implements CibaAuthMgtDAO {
                 log.debug("Error occurred in obtaining authenticatedUser of TokenRequest  with " +
                         "cibaAuthCodeDOKey : " + cibaAuthCodeDOKey);
             }
-            throw new CibaCoreException(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-                    ErrorCodes.INTERNAL_SERVER_ERROR, e.getMessage());
+            throw new CibaCoreException(ErrorCodes.INTERNAL_SERVER_ERROR, e.getMessage());
         }
     }
 
@@ -490,11 +479,10 @@ public class CibaAuthMgtDAOImpl implements CibaAuthMgtDAO {
         } catch (SQLException e) {
             if (log.isDebugEnabled()) {
                 log.debug(
-                        "Error occured while persisting cibaAuthCodeDO for unique cibaAuthCodeDOKey : " +
+                        "Error occurred while persisting cibaAuthCodeDO for unique cibaAuthCodeDOKey : " +
                                 cibaAuthCodeDO.getCibaAuthCodeDOKey());
             }
-            throw new CibaCoreException(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-                    ErrorCodes.INTERNAL_SERVER_ERROR, e.getMessage());
+            throw new CibaCoreException(ErrorCodes.INTERNAL_SERVER_ERROR, e.getMessage());
         }
     }
 
@@ -529,7 +517,7 @@ public class CibaAuthMgtDAOImpl implements CibaAuthMgtDAO {
                 }
 
                 if (log.isDebugEnabled()) {
-                    log.debug("Successfully obtained cibaAuthCodeDO for unique cibaAuthCodeDOKey : " +
+                    log.debug("Successfully obtained ciba AuthCodeDO for unique cibaAuthCodeDOKey : " +
                             cibaAuthCodeDOKey);
                 }
             }
@@ -538,8 +526,7 @@ public class CibaAuthMgtDAOImpl implements CibaAuthMgtDAO {
                 log.debug(
                         "Error in obtaining cibaAuthCodeDO for unique cibaAuthCodeDOKey : " + cibaAuthCodeDOKey);
             }
-            throw new CibaCoreException(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-                    ErrorCodes.INTERNAL_SERVER_ERROR, e.getMessage());
+            throw new CibaCoreException(ErrorCodes.INTERNAL_SERVER_ERROR, e.getMessage());
         }
         return cibaAuthCodeDO;
     }

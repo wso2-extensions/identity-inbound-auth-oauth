@@ -175,8 +175,7 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
             }
 
         } catch (CibaCoreException ex) {
-            throw new CibaCoreException(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, ErrorCodes.INTERNAL_SERVER_ERROR
-                    , ex.getErrorDescription());
+            throw new CibaCoreException(ErrorCodes.INTERNAL_SERVER_ERROR, ex.getErrorDescription());
         }
     }
 
@@ -217,8 +216,7 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
                 log.debug("Unable to obtain CibaAuthCodeDOKey for the hashedAuthReqId from the and auth_req_id : " +
                         authReqID);
             }
-            throw new CibaCoreException(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, ErrorCodes.INTERNAL_SERVER_ERROR
-                    , e.getMessage());
+            throw new CibaCoreException(ErrorCodes.INTERNAL_SERVER_ERROR, e.getMessage());
         }
 
     }

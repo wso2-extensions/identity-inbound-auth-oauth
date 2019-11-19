@@ -23,26 +23,14 @@ package org.wso2.carbon.identity.oauth.ciba.exceptions;
  */
 public class CibaCoreException extends Exception {
 
-    private int status;
     private String errorCode;
     private String errorDescription;
 
-    public CibaCoreException(int status, String errorCode, String errorDescription) {
+    public CibaCoreException(String errorCode, String errorDescription) {
 
-        this.status = status;
         this.errorCode = errorCode;
         this.errorDescription = errorDescription;
 
-    }
-
-    public int getStatus() {
-
-        return status;
-    }
-
-    public void setStatus(int status) {
-
-        this.status = status;
     }
 
     public String getErrorCode() {

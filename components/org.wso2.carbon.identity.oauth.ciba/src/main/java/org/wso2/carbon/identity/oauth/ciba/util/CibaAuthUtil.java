@@ -26,7 +26,6 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.ZonedDateTime;
 import java.util.UUID;
-import javax.servlet.http.HttpServletResponse;
 
 /**
  * Provides utilities for the functioning of other classes.
@@ -64,8 +63,7 @@ public class CibaAuthUtil {
             if (log.isDebugEnabled()) {
                 log.debug("Error in building and returning CibaAuthCode for the request made by client : " + clientId);
             }
-            throw new CibaCoreException(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-                    ErrorCodes.INTERNAL_SERVER_ERROR, e.getMessage());
+            throw new CibaCoreException(ErrorCodes.INTERNAL_SERVER_ERROR, e.getMessage());
         }
 
     }
@@ -238,8 +236,7 @@ public class CibaAuthUtil {
                     isExistingUser(userIdHint);
 
         } catch (UserStoreException e) {
-            throw new CibaCoreException(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, ErrorCodes.INTERNAL_SERVER_ERROR,
-                    e.getMessage());
+            throw new CibaCoreException(ErrorCodes.INTERNAL_SERVER_ERROR, e.getMessage());
         }
 
     }
@@ -286,8 +283,7 @@ public class CibaAuthUtil {
                 log.debug("Unable to create AuthCodeDO with cibaAuthCode = " + cibaAuthCode);
             }
 
-            throw new CibaCoreException(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-                    ErrorCodes.INTERNAL_SERVER_ERROR, e.getMessage());
+            throw new CibaCoreException(ErrorCodes.INTERNAL_SERVER_ERROR, e.getMessage());
         }
 
     }
@@ -330,8 +326,7 @@ public class CibaAuthUtil {
             if (log.isDebugEnabled()) {
                 log.debug("Error in creating AuthorizeRequestDTO for the client : " + clientID);
             }
-            throw new CibaCoreException(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-                    ErrorCodes.INTERNAL_SERVER_ERROR, e.getMessage());
+            throw new CibaCoreException(ErrorCodes.INTERNAL_SERVER_ERROR, e.getMessage());
         }
     }
 
