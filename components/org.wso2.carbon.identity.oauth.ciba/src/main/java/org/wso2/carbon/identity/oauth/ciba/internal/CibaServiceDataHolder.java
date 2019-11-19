@@ -32,7 +32,7 @@ public class CibaServiceDataHolder {
     /**
      * Get realm service.
      *
-     * @return
+     * @return RealmService
      */
     public static RealmService getRealmService() {
 

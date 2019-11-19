@@ -19,7 +19,7 @@
 package org.wso2.carbon.identity.oauth.ciba.dto;
 
 /**
- * Captures the the values for authorization request.
+ * Captures the values for authorization request.
  */
 public class AuthzRequestDTO {
 

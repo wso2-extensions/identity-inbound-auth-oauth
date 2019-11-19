@@ -28,16 +28,16 @@ public class CibaAuthCodeDO {
 
     }
 
-    private static String cibaAuthCodeDOKey;
-    private static String hashedCibaAuthReqId;
-    private static String authenticationStatus;
-    private static String authenticatedUser;
-    private static long lastPolledTime;
-    private static long interval;
-    private static long expiryTime;
-    private static String bindingMessage;
-    private static String transactionContext;
-    private static String scope;
+    private String cibaAuthCodeDOKey;
+    private String hashedCibaAuthReqId;
+    private String authenticationStatus;
+    private String authenticatedUser;
+    private long lastPolledTime;
+    private long interval;
+    private long expiryTime;
+    private String bindingMessage;
+    private String transactionContext;
+    private String scope;
 
     public String getCibaAuthCodeDOKey() {
 

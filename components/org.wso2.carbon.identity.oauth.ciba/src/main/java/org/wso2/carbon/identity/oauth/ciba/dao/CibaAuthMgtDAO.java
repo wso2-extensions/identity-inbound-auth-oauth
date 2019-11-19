@@ -87,8 +87,7 @@ public interface CibaAuthMgtDAO {
      * @param currentTime       CurrentTime in milliseconds.
      * @throws CibaCoreException Exception thrown from CibaCore Component.
      */
-    void updateLastPollingTime(String cibaAuthCodeDOKey, long currentTime)
-            throws CibaCoreException;
+    void updateLastPollingTime(String cibaAuthCodeDOKey, long currentTime) throws CibaCoreException;
 
     /**
      * Updates the polling Interval of tokenRequest.

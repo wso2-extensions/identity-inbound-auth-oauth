@@ -34,5 +34,3 @@ public class CibaAuthResponseWrapper extends CommonAuthResponseWrapper {
     }
 
 }
-
-

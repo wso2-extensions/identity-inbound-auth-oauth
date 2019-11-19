@@ -70,7 +70,7 @@ public class CibaAuthMgtDAOImpl implements CibaAuthMgtDAO {
      */
     public void persistStatus(String cibaAuthCodeDOKey, String cibaAuthentcationStatus) throws CibaCoreException {
 
-        try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
             try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.
                     CibaSQLQueries.UPDATE_AUTHENTICATION_STATUS)) {
 
@@ -105,7 +105,7 @@ public class CibaAuthMgtDAOImpl implements CibaAuthMgtDAO {
      */
     public void persistUser(String cibaAuthCodeDOKey, String cibaAuthenticatedUser) throws CibaCoreException {
 
-        try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
             try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.CibaSQLQueries.
                     UPDATE_CIBA_AUTHENTICATED_USER)) {
                 prepStmt.setString(1, cibaAuthenticatedUser);
@@ -139,7 +139,7 @@ public class CibaAuthMgtDAOImpl implements CibaAuthMgtDAO {
      */
     public boolean isHashedAuthReqIDExists(String hashedCibaAuthReqId) throws CibaCoreException {
 
-        try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
 
             try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.CibaSQLQueries.
                     CHECK_IF_AUTH_REQ_ID_HASH_EXISTS)) {
@@ -164,7 +164,6 @@ public class CibaAuthMgtDAOImpl implements CibaAuthMgtDAO {
                         return true;
 
                     } else {
-                        //connection.close();
                         prepStmt.close();
                         if (log.isDebugEnabled()) {
                             log.debug("Successfully checked whether provided hashedAuthReqId : " + hashedCibaAuthReqId +
@@ -198,7 +197,7 @@ public class CibaAuthMgtDAOImpl implements CibaAuthMgtDAO {
      */
     public String getCibaAuthCodeDOKey(String hashedCibaAuthReqId) throws CibaCoreException {
 
-        try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
             try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.CibaSQLQueries.
                     RETRIEVE_CIBA_AUTH_CODE_DO_KEY_BY_CIBA_AUTH_REQ_ID_HASH)) {
                 prepStmt.setString(1, hashedCibaAuthReqId);
@@ -240,7 +239,7 @@ public class CibaAuthMgtDAOImpl implements CibaAuthMgtDAO {
      */
     public long getCibaLastPolledTime(String cibaAuthCodeDOKey) throws CibaCoreException {
 
-        try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
             try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.
                     CibaSQLQueries.RETRIEVE_LAST_POLLED_TIME)) {
                 prepStmt.setString(1, cibaAuthCodeDOKey);
@@ -281,7 +280,7 @@ public class CibaAuthMgtDAOImpl implements CibaAuthMgtDAO {
      */
     public long getCibaPollingInterval(String cibaAuthCodeDOKey) throws CibaCoreException {
 
-        try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
             try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.
                     CibaSQLQueries.RETRIEVE_POLLING_INTERVAL)) {
                 prepStmt.setString(1, cibaAuthCodeDOKey);
@@ -322,7 +321,7 @@ public class CibaAuthMgtDAOImpl implements CibaAuthMgtDAO {
     public void updateLastPollingTime(String cibaAuthCodeDOKey, long currentTime)
             throws CibaCoreException {
 
-        try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
             try (PreparedStatement prepStmt =
                          connection.prepareStatement(SQLQueries.CibaSQLQueries.UPDATE_LAST_POLLED_TIME)) {
                 prepStmt.setLong(1, currentTime);
@@ -355,7 +354,7 @@ public class CibaAuthMgtDAOImpl implements CibaAuthMgtDAO {
     public void updatePollingInterval(String cibaAuthCodeDOKey, long newInterval)
             throws CibaCoreException {
 
-        try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
             try (PreparedStatement prepStmt =
                          connection.prepareStatement(SQLQueries.CibaSQLQueries.UPDATE_POLLING_INTERVAL)) {
                 prepStmt.setLong(1, newInterval);
@@ -387,7 +386,7 @@ public class CibaAuthMgtDAOImpl implements CibaAuthMgtDAO {
      */
     public String getAuthenticationStatus(String cibaAuthCodeDOKey) throws CibaCoreException {
 
-        try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
             try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.CibaSQLQueries.
                     RETRIEVE_AUTHENTICATION_STATUS)) {
                 prepStmt.setString(1, cibaAuthCodeDOKey);
@@ -428,7 +427,7 @@ public class CibaAuthMgtDAOImpl implements CibaAuthMgtDAO {
      */
     public String getAuthenticatedUser(String cibaAuthCodeDOKey) throws CibaCoreException {
 
-        try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
 
             try (PreparedStatement prepStmt =
                          connection.prepareStatement(SQLQueries.CibaSQLQueries.RETRIEVE_AUTHENTICATED_USER)) {
@@ -467,7 +466,7 @@ public class CibaAuthMgtDAOImpl implements CibaAuthMgtDAO {
      */
     public void persistCibaAuthCode(CibaAuthCodeDO cibaAuthCodeDO) throws CibaCoreException {
 
-        try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
             try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.
                     CibaSQLQueries.STORE_CIBA_AUTH_REQ_CODE)) {
                 prepStmt.setString(1, cibaAuthCodeDO.getCibaAuthCodeDOKey());
@@ -508,7 +507,7 @@ public class CibaAuthMgtDAOImpl implements CibaAuthMgtDAO {
     public CibaAuthCodeDO getCibaAuthCodeDO(String cibaAuthCodeDOKey) throws CibaCoreException {
 
         CibaAuthCodeDO cibaAuthCodeDO = new CibaAuthCodeDO();
-        try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
             try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.
                     CibaSQLQueries.RETRIEVE_AUTH_CODE_DO_FROM_CIBA_AUTH_CODE_DO_KEY)) {
 

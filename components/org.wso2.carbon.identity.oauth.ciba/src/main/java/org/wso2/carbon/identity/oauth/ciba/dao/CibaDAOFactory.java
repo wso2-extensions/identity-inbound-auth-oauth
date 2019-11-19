@@ -33,7 +33,7 @@ public class CibaDAOFactory {
 
     private CibaDAOFactory() {
 
-        // This factory creates instance of cibaDAOImplementation.
+        // This factory creates instance of ciba DAOImplementation.
         cibaAuthMgtDAOImpl = CibaAuthMgtDAOImpl.getInstance();
     }
 
@@ -60,7 +60,7 @@ public class CibaDAOFactory {
      * Manufactures CibaAuthMgtDAO and returns .
      */
     public CibaAuthMgtDAO getCibaAuthMgtDAO() {
-        // This returns created instance of cibaDAOImplementation.
+        // This returns created instance of ciba DAOImplementation.
 
         return cibaAuthMgtDAOImpl;
     }

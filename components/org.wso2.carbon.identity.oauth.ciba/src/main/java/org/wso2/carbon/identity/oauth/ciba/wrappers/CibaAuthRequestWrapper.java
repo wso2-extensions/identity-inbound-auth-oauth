@@ -73,5 +73,3 @@ public class CibaAuthRequestWrapper extends CommonAuthRequestWrapper {
     }
 
 }
-
-

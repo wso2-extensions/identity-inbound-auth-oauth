@@ -51,7 +51,7 @@ public class CibaServiceComponent {
                 log.debug("Ciba component bundle is activated");
             }
         } catch (Throwable e) {
-            if(log.isDebugEnabled()){
+            if (log.isDebugEnabled()) {
                 log.error("Ciba component bundle  activation Failed", e);
             }
         }

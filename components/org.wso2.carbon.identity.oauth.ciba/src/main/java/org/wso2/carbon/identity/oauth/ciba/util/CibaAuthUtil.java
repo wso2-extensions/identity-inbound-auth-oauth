@@ -36,7 +36,6 @@ public class CibaAuthUtil {
 
     private static final Log log = LogFactory.getLog(CibaAuthUtil.class);
 
-
     /**
      * Create and returns ciba auth_req_id as a JWT.
      *
@@ -88,7 +87,7 @@ public class CibaAuthUtil {
                 .claim("iat", cibaAuthResponseDTO.getIssuedTime())
                 .claim("nbf", cibaAuthResponseDTO.getNotBeforeTime())
                 .claim(CibaParams.SCOPE, OAuth2Util.buildScopeString(cibaAuthResponseDTO.getScope()))
-                .claim("acr", cibaAuthResponseDTO.getAcrValues())
+                .claim(CibaParams.ACR_VALUES, cibaAuthResponseDTO.getAcrValues())
                 .claim(CibaParams.USER_CODE, cibaAuthResponseDTO.getUserCode())
                 .claim(CibaParams.BINDING_MESSAGE, cibaAuthResponseDTO.getBindingMessage())
                 .claim(CibaParams.TRANSACTION_CONTEXT, cibaAuthResponseDTO.getTransactionContext())
@@ -300,8 +299,8 @@ public class CibaAuthUtil {
      * @param cibaAuthResponseDTO Status of the relevant Ciba Authentication.
      * @throws CibaCoreException Exception thrown from CibaCore Component.
      */
-    public static AuthzRequestDTO buildAuthzRequestDO(CibaAuthResponseDTO cibaAuthResponseDTO, CibaAuthCodeDO cibaAuthCodeDO)
-            throws CibaCoreException {
+    public static AuthzRequestDTO buildAuthzRequestDO(CibaAuthResponseDTO cibaAuthResponseDTO,
+                                                      CibaAuthCodeDO cibaAuthCodeDO) throws CibaCoreException {
 
         String clientID = cibaAuthResponseDTO.getAudience();
         try {
