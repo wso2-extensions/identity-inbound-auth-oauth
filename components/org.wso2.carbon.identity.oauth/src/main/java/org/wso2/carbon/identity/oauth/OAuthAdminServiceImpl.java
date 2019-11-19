@@ -219,11 +219,10 @@ public class OAuthAdminServiceImpl {
             OAuthAppDAO dao = new OAuthAppDAO();
             if (application != null) {
                 app.setApplicationName(application.getApplicationName());
-                if ((application.getGrantTypes().contains(AUTHORIZATION_CODE) || application.getGrantTypes().contains
-                        (IMPLICIT)) && StringUtils.isEmpty(application.getCallbackUrl())) {
-                    throw new IdentityOAuthAdminException("Callback Url is required for Code or Implicit grant types");
-                }
+
+                validateCallbackURI(application);
                 app.setCallbackUrl(application.getCallbackUrl());
+
                 app.setState(APP_STATE_ACTIVE);
                 if (StringUtils.isEmpty(application.getOauthConsumerKey())) {
                     app.setOauthConsumerKey(OAuthUtil.getRandomNumber());
@@ -247,17 +246,9 @@ public class OAuthAdminServiceImpl {
                     app.setOauthVersion(OAuthConstants.OAuthVersions.VERSION_2);
                 }
                 if (OAuthConstants.OAuthVersions.VERSION_2.equals(app.getOauthVersion())) {
-                    List<String> allowedGrantTypes = new ArrayList<String>(Arrays.asList(getAllowedGrantTypes()));
-                    String[] requestGrants = application.getGrantTypes().split("\\s");
-                    for (String requestedGrant : requestGrants) {
-                        if (StringUtils.isBlank(requestedGrant)) {
-                            continue;
-                        }
-                        if (!allowedGrantTypes.contains(requestedGrant)) {
-                            throw new IdentityOAuthAdminException(requestedGrant + " not allowed");
-                        }
-                    }
+                    validateGrantTypes(application);
                     app.setGrantTypes(application.getGrantTypes());
+
                     app.setScopeValidators(filterScopeValidators(application));
                     app.setAudiences(application.getAudiences());
                     app.setPkceMandatory(application.getPkceMandatory());
@@ -313,6 +304,40 @@ public class OAuthAdminServiceImpl {
         return OAuthUtil.buildConsumerAppDTO(app);
     }
 
+    private void validateGrantTypes(OAuthConsumerAppDTO application) throws IdentityOAuthClientException {
+
+        String[] requestGrants = application.getGrantTypes().split("\\s");
+
+        List<String> allowedGrantTypes = new ArrayList<>(Arrays.asList(getAllowedGrantTypes()));
+        for (String requestedGrant : requestGrants) {
+            if (StringUtils.isBlank(requestedGrant)) {
+                continue;
+            }
+
+            if (!allowedGrantTypes.contains(requestedGrant)) {
+                String msg = String.format("'%s' grant type is not allowed.", requestedGrant);
+                handleOAuthClientException(ErrorMessage.INVALID_REQUEST, msg);
+            }
+        }
+    }
+
+    private void handleOAuthClientException(ErrorMessage errorMessage,
+                                            String msg) throws IdentityOAuthClientException {
+
+        throw new IdentityOAuthClientException(errorMessage.getErrorCode(), msg);
+    }
+
+    private void validateCallbackURI(OAuthConsumerAppDTO application) throws IdentityOAuthClientException {
+
+        boolean isCallbackUriRequired = application.getGrantTypes().contains(AUTHORIZATION_CODE) ||
+                application.getGrantTypes().contains(IMPLICIT);
+
+        if (isCallbackUriRequired && StringUtils.isEmpty(application.getCallbackUrl())) {
+            String msg = "Callback URI is mandatory for Code or Implicit grant types";
+            handleOAuthClientException(ErrorMessage.INVALID_REQUEST, msg);
+        }
+    }
+
     /**
      * Update existing consumer application.
      *
@@ -329,7 +354,7 @@ public class OAuthAdminServiceImpl {
             if (log.isDebugEnabled()) {
                 log.debug(errorMessage);
             }
-            throw new IdentityOAuthAdminException(errorMessage);
+            handleOAuthClientException(ErrorMessage.INVALID_REQUEST, errorMessage);
         }
 
         String loggedInUserName = CarbonContext.getThreadLocalCarbonContext().getUsername();
@@ -341,11 +366,11 @@ public class OAuthAdminServiceImpl {
         try {
             oauthappdo = getOAuthApp(consumerAppDTO.getOauthConsumerKey());
             if (oauthappdo == null) {
+                String msg = "OAuth application cannot be found for consumerKey: " + consumerAppDTO.getOauthConsumerKey();
                 if (log.isDebugEnabled()) {
-                    log.debug("Error while retrieving the app information using " +
-                              "provided OauthConsumerKey: " + consumerAppDTO.getOauthConsumerKey());
+                    log.debug(msg);
                 }
-                throw new IdentityOAuthAdminException(errorMessage);
+                handleOAuthClientException(ErrorMessage.APPLICATION_NOT_FOUND, msg);
             }
             if (!StringUtils.equals(consumerAppDTO.getOauthConsumerSecret(), oauthappdo.getOauthConsumerSecret())) {
                 if (log.isDebugEnabled()) {
@@ -366,7 +391,10 @@ public class OAuthAdminServiceImpl {
 
         oauthappdo.setOauthConsumerKey(consumerKey);
         oauthappdo.setOauthConsumerSecret(consumerAppDTO.getOauthConsumerSecret());
+
+        validateCallbackURI(consumerAppDTO);
         oauthappdo.setCallbackUrl(consumerAppDTO.getCallbackUrl());
+
         oauthappdo.setApplicationName(consumerAppDTO.getApplicationName());
         oauthappdo.setPkceMandatory(consumerAppDTO.getPkceMandatory());
         oauthappdo.setPkceSupportPlain(consumerAppDTO.getPkceSupportPlain());
@@ -379,18 +407,9 @@ public class OAuthAdminServiceImpl {
         oauthappdo.setTokenType(consumerAppDTO.getTokenType());
         oauthappdo.setBypassClientCredentials(consumerAppDTO.isBypassClientCredentials());
         if (OAuthConstants.OAuthVersions.VERSION_2.equals(consumerAppDTO.getOAuthVersion())) {
-            List<String> allowedGrantsTypes = new ArrayList<String>(Arrays.asList(getAllowedGrantTypes()));
-            String[] requestGrants = consumerAppDTO.getGrantTypes().split("\\s");
-            for (String requestedGrant : requestGrants) {
-                if (StringUtils.isBlank(requestedGrant)) {
-                    continue;
-                }
-                if (!allowedGrantsTypes.contains(requestedGrant)) {
-                    throw new IdentityOAuthAdminException(requestedGrant + " not allowed for OAuth App with " +
-                                                          "consumerKey: " + consumerKey);
-                }
-            }
+            validateGrantTypes(consumerAppDTO);
             oauthappdo.setGrantTypes(consumerAppDTO.getGrantTypes());
+
             oauthappdo.setAudiences(consumerAppDTO.getAudiences());
             oauthappdo.setScopeValidators(filterScopeValidators(consumerAppDTO));
             oauthappdo.setRequestObjectSignatureValidationEnabled(consumerAppDTO
@@ -1148,7 +1167,8 @@ public class OAuthAdminServiceImpl {
         }
         for (String requestedScopeValidator : requestedScopeValidators) {
             if (!scopeValidators.contains(requestedScopeValidator)) {
-                throw new IdentityOAuthAdminException(requestedScopeValidator + " not allowed");
+                String msg = String.format("'%s' scope validator is not allowed.", requestedScopeValidator);
+                handleOAuthClientException(ErrorMessage.INVALID_REQUEST, msg);
             }
         }
         return requestedScopeValidators;
