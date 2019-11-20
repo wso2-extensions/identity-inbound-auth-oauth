@@ -664,10 +664,10 @@ public class OAuth2Service extends AbstractAdmin {
 
 
     /**
-     * Handles the authorization request denied by user.
+     * Handles authorization requests denied by user.
      *
      * @param oAuth2Parameters OAuth parameters.
-     * @return OAuthErrorDTO Authorization Failure Data Transfer Object.
+     * @return OAuthErrorDTO Error Data Transfer Object.
      * @throws IdentityOAuth2Exception Identity OAuth2 exception.
      */
     public OAuthErrorDTO handleUserConsentDenial(OAuth2Parameters oAuth2Parameters)
@@ -677,10 +677,10 @@ public class OAuth2Service extends AbstractAdmin {
     }
 
     /**
-     * Handles the authentication failures.
+     * Handles authentication failures.
      *
      * @param oauth2Params OAuth parameters.
-     * @return OAuthErrorDTO Authorization Failure Data Transfer Object.
+     * @return OAuthErrorDTO Error Data Transfer Object.
      * @throws IdentityOAuth2Exception Identity OAuth2 exception.
      */
     public OAuthErrorDTO handleAuthenticationFailure(OAuth2Parameters oauth2Params)
@@ -688,5 +688,4 @@ public class OAuth2Service extends AbstractAdmin {
 
         return AuthorizationHandlerManager.getInstance().handleAuthenticationFailure(oauth2Params);
     }
-
 }

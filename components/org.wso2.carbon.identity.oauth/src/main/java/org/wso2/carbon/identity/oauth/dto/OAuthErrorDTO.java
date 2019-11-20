@@ -23,13 +23,8 @@ package org.wso2.carbon.identity.oauth.dto;
  */
 public class OAuthErrorDTO {
 
-    private String errorCode;
     private String errorDescription;
     private String errorURI;
-
-    public OAuthErrorDTO() {
-
-    }
 
     public String getErrorDescription() {
 
@@ -41,16 +36,6 @@ public class OAuthErrorDTO {
         this.errorDescription = errorDescription;
     }
 
-    public String getErrorCode() {
-
-        return errorCode;
-    }
-
-    public void setErrorCode(String errorCode) {
-
-        this.errorCode = errorCode;
-    }
-
     public String getErrorURI() {
 
         return errorURI;
@@ -60,5 +45,4 @@ public class OAuthErrorDTO {
 
         this.errorURI = errorURI;
     }
-
 }

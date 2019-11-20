@@ -57,7 +57,7 @@ public interface ResponseTypeHandler {
     default OAuthErrorDTO handleUserConsentDenial(OAuth2Parameters oAuth2Parameters)
             throws IdentityOAuth2Exception {
 
-        return new OAuthErrorDTO();
+        return null;
     }
 
     /**
@@ -70,7 +70,6 @@ public interface ResponseTypeHandler {
     default OAuthErrorDTO handleAuthenticationFailure(OAuth2Parameters oAuth2Parameters)
             throws IdentityOAuth2Exception {
 
-        return new OAuthErrorDTO();
+        return null;
     }
-
 }
