@@ -630,7 +630,8 @@ public class OAuth2AuthzEndpoint {
             }
             return Response.status(HttpServletResponse.SC_FOUND).location(new URI(denyResponse)).build();
         } catch (IdentityOAuth2Exception e) {
-            throw new OAuthSystemException("Error in handling user consent denial." + e);
+            throw new OAuthSystemException("Error in handling user consent denial for the request made by client: " +
+                    oAuthMessage.getClientId(), e);
         }
     }
 
@@ -736,7 +737,8 @@ public class OAuth2AuthzEndpoint {
             OAuthProblemException oauthException = buildOAuthProblemException(authnResult, oAuthErrorDTO);
             return handleFailedState(oAuthMessage, oauth2Params, oauthException);
         } catch (IdentityOAuth2Exception e) {
-            throw new OAuthSystemException("Error occurred in handling authentication failure." + e);
+            throw new OAuthSystemException("Error occurred in handling authentication failure for client: " +
+                    oauth2Params.getClientId() , e);
         }
     }
 
