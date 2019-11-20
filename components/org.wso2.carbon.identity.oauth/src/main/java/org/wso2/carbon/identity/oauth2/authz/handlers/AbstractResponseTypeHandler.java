@@ -153,6 +153,7 @@ public abstract class AbstractResponseTypeHandler implements ResponseTypeHandler
      */
     public OAuth2AuthorizeRespDTO initResponse(OAuthAuthzReqMessageContext oauthAuthzMsgCtx)
             throws IdentityOAuth2Exception {
+
         OAuth2AuthorizeRespDTO respDTO = new OAuth2AuthorizeRespDTO();
         OAuth2AuthorizeReqDTO authorizationReqDTO = oauthAuthzMsgCtx.getAuthorizationReqDTO();
         respDTO.setCallbackURI(authorizationReqDTO.getCallbackUrl());
