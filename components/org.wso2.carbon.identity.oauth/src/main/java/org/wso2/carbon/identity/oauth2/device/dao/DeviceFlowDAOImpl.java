@@ -32,7 +32,6 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.TimeZone;
 import java.util.UUID;
 
@@ -55,8 +54,7 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
         PreparedStatement prepStmt = null;
         try {
             Date date = new Date();
-            String sql;
-            sql = SQLQueries.DeviceFlowDAOSQLQueries.STORE_DEVICE_CODE;
+            String sql = SQLQueries.DeviceFlowDAOSQLQueries.STORE_DEVICE_CODE;
             Timestamp timeCreated = new Timestamp(date.getTime());
             long timeExpired = timeCreated.getTime() + expiresIn;
             prepStmt = connection.prepareStatement(sql);
@@ -163,7 +161,6 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
         PreparedStatement ps = null;
         ResultSet rs = null;
         boolean checked = false;
-        HashMap<String, String> result = new HashMap<>();
         DeviceFlowDO deviceFlowDO = new DeviceFlowDO();
         try {
             String sqlQuery = SQLQueries.DeviceFlowDAOSQLQueries.GET_AUTHENTICATION_STATUS;
@@ -277,7 +274,7 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
     @Override
     public void setLastPollTime(String deviceCode, Timestamp newPOllTime) throws IdentityOAuth2Exception {
 
-        Connection connection = IdentityDatabaseUtil.getDBConnection();
+        Connection connection = IdentityDatabaseUtil.getDBConnection(true);
         PreparedStatement ps = null;
         try {
             String sql;
@@ -341,7 +338,7 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
     @Override
     public void setCallBackURI(String clientId, String callBackUri) throws IdentityOAuth2Exception {
 
-        Connection connection = IdentityDatabaseUtil.getDBConnection();
+        Connection connection = IdentityDatabaseUtil.getDBConnection(true);
         PreparedStatement prepStmt = null;
         try {
             String sql;

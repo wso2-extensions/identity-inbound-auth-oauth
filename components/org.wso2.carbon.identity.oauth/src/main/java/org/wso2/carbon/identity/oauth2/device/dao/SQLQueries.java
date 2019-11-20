@@ -39,8 +39,8 @@ public class SQLQueries {
 
         public static final String REMOVE_DEVICE_CODE = "DELETE FROM IDN_OAUTH2_DEVICE_FLOW WHERE DEVICE_CODE=?";
 
-        public static final String SET_USER_HAS_AUTHENTICATED = "UPDATE IDN_OAUTH2_DEVICE_FLOW SET " +
-                "STATUS = ? WHERE USER_CODE = ?";
+        public static final String SET_USER_HAS_AUTHENTICATED = "UPDATE IDN_OAUTH2_DEVICE_FLOW SET STATUS = ? WHERE " +
+                "USER_CODE = ?";
 
         public static final String GET_CONSUMER_KEY_FOR_DEVICE_CODE = "SELECT CONSUMER_KEY FROM ((SELECT *" +
                 " FROM IDN_OAUTH_CONSUMER_APPS INNER JOIN IDN_OAUTH2_DEVICE_FLOW ON IDN_OAUTH_CONSUMER_APPS.ID = " +
@@ -58,14 +58,14 @@ public class SQLQueries {
         public static final String GET_USER_CODE_STATUS = "SELECT STATUS FROM IDN_OAUTH2_DEVICE_FLOW WHERE " +
                 "USER_CODE = ?";
 
-        public static final String SET_LAST_POLL_TIME = "UPDATE IDN_OAUTH2_DEVICE_FLOW SET " +
-                "LAST_POLL_TIME = ? WHERE DEVICE_CODE = ?";
+        public static final String SET_LAST_POLL_TIME = "UPDATE IDN_OAUTH2_DEVICE_FLOW SET LAST_POLL_TIME = ? WHERE " +
+                "DEVICE_CODE = ?";
 
-        public static final String SET_AUTHZ_USER = "UPDATE IDN_OAUTH2_DEVICE_FLOW SET " +
-                "AUTHZ_USER = ? WHERE USER_CODE = ?";
+        public static final String SET_AUTHZ_USER = "UPDATE IDN_OAUTH2_DEVICE_FLOW SET AUTHZ_USER = ? WHERE " +
+                "USER_CODE = ?";
 
-        public static final String SET_DEVICE_CODE_EXPIRED = "UPDATE IDN_OAUTH2_DEVICE_FLOW SET " +
-                "STATUS = ? WHERE DEVICE_CODE = ?";
+        public static final String SET_DEVICE_CODE_EXPIRED = "UPDATE IDN_OAUTH2_DEVICE_FLOW SET STATUS = ? WHERE " +
+                "DEVICE_CODE = ?";
 
         public static final String SET_CALLBACK_URI = "UPDATE IDN_OAUTH_CONSUMER_APPS SET CALLBACK_URL = ? WHERE " +
                 "CONSUMER_KEY = ?";
