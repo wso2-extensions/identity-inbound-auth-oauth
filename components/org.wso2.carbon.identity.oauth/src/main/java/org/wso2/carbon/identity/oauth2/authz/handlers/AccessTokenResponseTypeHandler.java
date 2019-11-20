@@ -53,6 +53,7 @@ public class AccessTokenResponseTypeHandler extends AbstractResponseTypeHandler 
     @Override
     public OAuth2AuthorizeRespDTO issue(OAuthAuthzReqMessageContext oauthAuthzMsgCtx)
             throws IdentityOAuth2Exception {
+
         // Starting to trigger pre listeners.
         ResponseTypeHandlerUtil.triggerPreListeners(oauthAuthzMsgCtx);
         // Generating access token.
@@ -73,13 +74,11 @@ public class AccessTokenResponseTypeHandler extends AbstractResponseTypeHandler 
      */
     private OAuth2AuthorizeRespDTO buildResponseDTO(OAuthAuthzReqMessageContext oauthAuthzMsgCtx,
                                                     AccessTokenDO accessTokenDO) throws IdentityOAuth2Exception {
+
         // Initializing the response.
         OAuth2AuthorizeRespDTO respDTO = initResponse(oauthAuthzMsgCtx);
         // Add access token details to the response.
         return ResponseTypeHandlerUtil.buildAccessTokenResponseDTO(respDTO, accessTokenDO);
 
     }
-
 }
-
-
