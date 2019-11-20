@@ -619,14 +619,13 @@ public class OAuth2AuthzEndpoint {
                 false, oauth2Params.getClientId());
 
             // Handle user consent denial at responseTypeHandler level.
-            OAuthErrorDTO oAuthErrorDTO =
-                    EndpointUtil.getOAuth2Service().handleUserConsentDenial(oauth2Params);
+            OAuthErrorDTO oAuthErrorDTO = EndpointUtil.getOAuth2Service().handleUserConsentDenial(oauth2Params);
 
-            if (!StringUtils.isBlank(oAuthErrorDTO.getErrorDescription())) {
-                // Adding custom error description.
-                      errorDescription = oAuthErrorDTO.getErrorDescription();
+            if (StringUtils.isNotBlank(oAuthErrorDTO.getErrorDescription())) {
+                    // Adding custom error description.
+
+                    errorDescription = oAuthErrorDTO.getErrorDescription();
             }
-
              // Return an error if user denied.
             OAuthProblemException ex = OAuthProblemException.error(OAuth2ErrorCodes.ACCESS_DENIED, errorDescription);
             String denyResponse = EndpointUtil.getErrorRedirectURL(oAuthMessage.getRequest(), ex, oauth2Params);
@@ -742,19 +741,23 @@ public class OAuth2AuthzEndpoint {
             // Handle authentication failure at responseTypeHandler level.
             OAuthErrorDTO oAuthErrorDTO = EndpointUtil.getOAuth2Service().handleAuthenticationFailure(oauth2Params);
 
-            if (!StringUtils.isBlank(oAuthErrorDTO.getErrorCode())) {
+
+            if (StringUtils.isNotBlank(oAuthErrorDTO.getErrorCode())) {
                 // Adding custom error code to the authentication result.
+
                 authnResult.addProperty(FrameworkConstants.AUTH_ERROR_CODE, oAuthErrorDTO.getErrorCode());
             }
 
-            if (!StringUtils.isBlank(oAuthErrorDTO.getErrorDescription())) {
-                // Adding custom error description to the authentication result.
-                authnResult.addProperty(FrameworkConstants.AUTH_ERROR_MSG, oAuthErrorDTO.getErrorDescription());
+            if (StringUtils.isNotBlank(oAuthErrorDTO.getErrorDescription())) {
+                    // Adding custom error code to the authentication result.
+
+                    authnResult.addProperty(FrameworkConstants.AUTH_ERROR_MSG, oAuthErrorDTO.getErrorDescription());
             }
 
-            if (!StringUtils.isBlank(oAuthErrorDTO.getErrorURI())) {
-                // Adding custom error uri to the authentication result.
-                authnResult.addProperty(FrameworkConstants.AUTH_ERROR_URI, oAuthErrorDTO.getErrorURI());
+            if (StringUtils.isNotBlank(oAuthErrorDTO.getErrorURI())) {
+                    // Adding custom error code to the authentication result.
+
+                    authnResult.addProperty(FrameworkConstants.AUTH_ERROR_URI, oAuthErrorDTO.getErrorURI());
             }
 
             OAuthProblemException oauthException = buildOAuthProblemException(authnResult);
