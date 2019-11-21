@@ -719,9 +719,15 @@ public class ResponseTypeHandlerUtil {
                                                                         OAuthAuthzReqMessageContext oauthAuthzMsgCtx) {
 
         long refreshTokenValidityPeriodInMillis;
-        if (oauthAuthzMsgCtx.getRefreshTokenvalidityPeriod() != -1L) {
+        long callbackValidityPeriod = oauthAuthzMsgCtx.getRefreshTokenvalidityPeriod();
+        if (callbackValidityPeriod != OAuthConstants.UNASSIGNED_VALIDITY_PERIOD && callbackValidityPeriod > 0) {
             refreshTokenValidityPeriodInMillis = oauthAuthzMsgCtx.getRefreshTokenvalidityPeriod() *
                     SECOND_TO_MILLISECONDS_FACTOR;
+            if (log.isDebugEnabled()) {
+                log.debug("OAuth application id : " + oAuthAppBean.getOauthConsumerKey() + ", using access token " +
+                        "validity period configured from OAuthAuthzReqMessageContext: " +
+                        refreshTokenValidityPeriodInMillis + " ms");
+            }
         } else if (oAuthAppBean.getRefreshTokenExpiryTime() != 0) {
             refreshTokenValidityPeriodInMillis = oAuthAppBean.getRefreshTokenExpiryTime() *
                     SECOND_TO_MILLISECONDS_FACTOR;
