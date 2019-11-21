@@ -35,7 +35,6 @@ public class DeviceFlowResponseTypeValidator extends AbstractValidator<HttpServl
 
         this.requiredParams.add(Constants.RESPONSE_TYPE);
         this.requiredParams.add(Constants.CLIENT_ID);
-
     }
 
     @Override
@@ -44,12 +43,7 @@ public class DeviceFlowResponseTypeValidator extends AbstractValidator<HttpServl
         String method = request.getMethod();
         if (!OAuth.HttpMethod.GET.equals(method) && !OAuth.HttpMethod.POST.equals(method)) {
             throw OAuthProblemException.error(OAuthError.CodeResponse.INVALID_REQUEST)
-                    .description("Method not correct.");
+                    .description("Http method not correct.");
         }
-    }
-
-    @Override
-    public void validateContentType(HttpServletRequest request) throws OAuthProblemException {
-
     }
 }

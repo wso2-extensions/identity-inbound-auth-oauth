@@ -37,8 +37,6 @@ import java.util.HashMap;
 @WithH2Database(files = {"dbScripts/h2.sql", "dbScripts/identity.sql"})
 public class DeviceFlowGrantTest extends PowerMockTestCase {
 
-    private HashMap<String, String> results = new HashMap<>();
-    private HashMap<String, String> results1 = new HashMap<>();
     private Date date = new Date();
     private Timestamp newTime = new Timestamp(date.getTime());
     private DeviceFlowDO deviceFlowDO1 = new DeviceFlowDO();

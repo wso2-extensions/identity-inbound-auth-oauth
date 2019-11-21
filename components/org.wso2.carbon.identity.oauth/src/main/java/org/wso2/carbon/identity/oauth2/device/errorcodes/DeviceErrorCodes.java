@@ -27,7 +27,7 @@ public class DeviceErrorCodes {
     public static final String INVALID_REQUEST = "invalid_request";
     public static final String UNSUPPORTED_GRANT_TYPE = "invalid_grant";
 
-    public DeviceErrorCodes() {
+    private DeviceErrorCodes() {
 
     }
 

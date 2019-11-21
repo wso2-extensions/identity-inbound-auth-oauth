@@ -45,6 +45,7 @@ import java.sql.SQLException;
 
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyString;
+import static org.powermock.api.mockito.PowerMockito.doNothing;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertEquals;
@@ -62,40 +63,38 @@ public class DeviceFlowResponseTypeHandlerTest extends PowerMockTestCase {
 
     @BeforeMethod
     public void setUp() throws Exception {
+
         DAOUtils.initializeDataSource(DB_NAME, DAOUtils.getFilePath("identity.sql"));
         oAuth2AuthorizeReqDTO.setConsumerKey("testConsumerKey");
         oAuth2AuthorizeReqDTO.setNonce("testUserCode");
         AuthenticatedUser user = new AuthenticatedUser();
         user.setUserName("testUser");
         oAuth2AuthorizeReqDTO.setUser(user);
+        oAuth2AuthorizeReqDTO.setCallbackUrl(TEST_URL);
 
     }
 
     @Test
     public void testIssue() throws IdentityOAuth2Exception, InvalidOAuthClientException, SQLException {
-        try(Connection connection1 = DAOUtils.getConnection(DB_NAME)) {
+
+        try (Connection connection1 = DAOUtils.getConnection(DB_NAME)) {
 
             mockStatic(OAuth2Util.class);
             when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(oAuthAppDO);
-
             mockStatic(IdentityDatabaseUtil.class);
-            when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection1);
+            when(IdentityDatabaseUtil.getDBConnection(true)).thenReturn(connection1);
             when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection1);
-
             mockStatic(IdentityUtil.class);
-            when(IdentityUtil.getServerURL(anyString(),anyBoolean(),anyBoolean())).thenReturn(TEST_URL);
-
+            when(IdentityUtil.getServerURL(anyString(), anyBoolean(), anyBoolean())).thenReturn(TEST_URL);
             oAuthAppDO.setApplicationName("testApplicationName");
             DeviceFlowDAO deviceFlowPersistenceFactory = PowerMockito.spy(DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO());
-            PowerMockito.doNothing().when(deviceFlowPersistenceFactory).setAuthzUser(anyString(), anyString());
+            doNothing().when(deviceFlowPersistenceFactory).setAuthzUser(anyString(), anyString());
             OAuthAuthzReqMessageContext oAuthAuthzReqMessageContext =
                     new OAuthAuthzReqMessageContext(oAuth2AuthorizeReqDTO);
             DeviceFlowResponseTypeHandler deviceFlowResponseTypeHandler = new DeviceFlowResponseTypeHandler();
-            assertEquals(TEST_URL,deviceFlowResponseTypeHandler.issue(oAuthAuthzReqMessageContext).getCallbackURI());
-
+            assertEquals(TEST_URL, deviceFlowResponseTypeHandler.issue(oAuthAuthzReqMessageContext).getCallbackURI());
         } catch (SQLException e) {
-            throw new SQLException("Error while database processes",e);
+            throw new SQLException("Error while database processes", e);
         }
     }
-
 }

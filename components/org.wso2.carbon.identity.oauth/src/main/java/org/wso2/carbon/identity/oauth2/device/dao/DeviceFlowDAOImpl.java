@@ -50,177 +50,159 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
     public void insertDeviceFlow(String deviceCode, String userCode, String consumerKey, String scope, Long expiresIn,
                                  int interval) throws IdentityOAuth2Exception {
 
-        Connection connection = IdentityDatabaseUtil.getDBConnection(true);
-        PreparedStatement prepStmt = null;
-        try {
-            Date date = new Date();
-            String sql = SQLQueries.DeviceFlowDAOSQLQueries.STORE_DEVICE_CODE;
-            Timestamp timeCreated = new Timestamp(date.getTime());
-            long timeExpired = timeCreated.getTime() + expiresIn;
-            prepStmt = connection.prepareStatement(sql);
-            prepStmt.setString(1, UUID.randomUUID().toString());
-            prepStmt.setString(2, deviceCode);
-            prepStmt.setString(3, userCode);
-            prepStmt.setString(4, scope);
-            prepStmt.setTimestamp(5, timeCreated, Calendar.getInstance(TimeZone
-                    .getTimeZone(Constants.UTC)));
-            prepStmt.setTimestamp(6, timeCreated, Calendar.getInstance(TimeZone
-                    .getTimeZone(Constants.UTC)));
-            prepStmt.setLong(7, timeExpired);
-            prepStmt.setLong(8, interval);
-            prepStmt.setString(9, Constants.PENDING);
-            prepStmt.setString(10, consumerKey);
-            prepStmt.execute();
-            IdentityDatabaseUtil.commitTransaction(connection);
-
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
+            try (PreparedStatement prepStmt =
+                         connection.prepareStatement(SQLQueries.DeviceFlowDAOSQLQueries.STORE_DEVICE_CODE)) {
+                Date date = new Date();
+                Timestamp timeCreated = new Timestamp(date.getTime());
+                long timeExpired = timeCreated.getTime() + expiresIn;
+                prepStmt.setString(1, UUID.randomUUID().toString());
+                prepStmt.setString(2, deviceCode);
+                prepStmt.setString(3, userCode);
+                prepStmt.setString(4, scope);
+                prepStmt.setTimestamp(5, timeCreated, Calendar.getInstance(TimeZone
+                        .getTimeZone(Constants.UTC)));
+                prepStmt.setTimestamp(6, timeCreated, Calendar.getInstance(TimeZone
+                        .getTimeZone(Constants.UTC)));
+                prepStmt.setLong(7, timeExpired);
+                prepStmt.setLong(8, interval);
+                prepStmt.setString(9, Constants.PENDING);
+                prepStmt.setString(10, consumerKey);
+                prepStmt.execute();
+                IdentityDatabaseUtil.commitTransaction(connection);
+            } catch (SQLException e) {
+                IdentityDatabaseUtil.rollbackTransaction(connection);
+                throw new IdentityOAuth2Exception("Error when storing the device flow parameters for consumer key: " +
+                        consumerKey, e);
+            }
         } catch (SQLException e) {
-            IdentityDatabaseUtil.rollbackTransaction(connection);
-            throw new IdentityOAuth2Exception("Error when storing the device flow parameters for consumer key : " +
+            throw new IdentityOAuth2Exception("Error when storing the device flow parameters for consumer key: " +
                     consumerKey, e);
-        } finally {
-            IdentityDatabaseUtil.closeAllConnections(connection, null, prepStmt);
         }
     }
 
     @Override
     public String getClientIdByUserCode(String userCode) throws IdentityOAuth2Exception {
 
-        Connection connection = IdentityDatabaseUtil.getDBConnection(false);
-        PreparedStatement ps = null;
-        ResultSet rs = null;
-        try {
-            String sqlQuery = SQLQueries.DeviceFlowDAOSQLQueries.GET_CONSUMER_KEY_FOR_USER_CODE;
-            ps = connection.prepareStatement(sqlQuery);
-            ps.setString(1, userCode);
-            rs = ps.executeQuery();
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
+            try (PreparedStatement prepStmt =
+                         connection.prepareStatement(SQLQueries.DeviceFlowDAOSQLQueries.GET_CONSUMER_KEY_FOR_USER_CODE)) {
+                ResultSet resultSet = null;
+                prepStmt.setString(1, userCode);
+                resultSet = prepStmt.executeQuery();
 
-            while (rs.next()) {
-                clientId = rs.getString(1);
+                while (resultSet.next()) {
+                    clientId = resultSet.getString(1);
+                }
             }
-
         } catch (SQLException e) {
-            throw new IdentityOAuth2Exception("Error when getting client id for user code : " +
+            throw new IdentityOAuth2Exception("Error when getting client id for user code: " +
                     userCode, e);
-        } finally {
-            IdentityDatabaseUtil.closeAllConnections(connection, null, ps);
         }
         return clientId;
     }
 
-    @Override
-    public void setUserAuthenticated(String userCode, String status) throws IdentityOAuth2Exception {
 
-        Connection connection = IdentityDatabaseUtil.getDBConnection(true);
-        PreparedStatement prepStmt = null;
-        try {
-            String sql;
-            sql = SQLQueries.DeviceFlowDAOSQLQueries.SET_USER_HAS_AUTHENTICATED;
-            prepStmt = connection.prepareStatement(sql);
-            prepStmt.setString(1, status);
-            prepStmt.setString(2, userCode);
-            prepStmt.execute();
-            IdentityDatabaseUtil.commitTransaction(connection);
+    @Override
+    public void setAuthenticationStatus(String userCode, String status) throws IdentityOAuth2Exception {
+
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
+            try (PreparedStatement prepStmt =
+                         connection.prepareStatement(SQLQueries.DeviceFlowDAOSQLQueries.SET_AUTHENTICATION_STATUS)) {
+                prepStmt.setString(1, status);
+                prepStmt.setString(2, userCode);
+                prepStmt.execute();
+                IdentityDatabaseUtil.commitTransaction(connection);
+            } catch (SQLException e) {
+                IdentityDatabaseUtil.rollbackTransaction(connection);
+                throw new IdentityOAuth2Exception("Error when setting user has authenticated for user code: " +
+                        userCode, e);
+            }
         } catch (SQLException e) {
-            IdentityDatabaseUtil.rollbackTransaction(connection);
-            throw new IdentityOAuth2Exception("Error when setting user has authenticated for user code :" +
+            throw new IdentityOAuth2Exception("Error when setting user has authenticated for user code: " +
                     userCode, e);
-        } finally {
-            IdentityDatabaseUtil.closeAllConnections(connection, null, prepStmt);
         }
     }
 
     @Override
     public String getClientIdByDeviceCode(String deviceCode) throws IdentityOAuth2Exception {
 
-        Connection connection = IdentityDatabaseUtil.getDBConnection(false);
-        PreparedStatement ps = null;
-        ResultSet rs = null;
-        try {
-            String sqlQuery = SQLQueries.DeviceFlowDAOSQLQueries.GET_CONSUMER_KEY_FOR_DEVICE_CODE;
-            ps = connection.prepareStatement(sqlQuery);
-            ps.setString(1, deviceCode);
-            rs = ps.executeQuery();
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
+            try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.DeviceFlowDAOSQLQueries
+                    .GET_CONSUMER_KEY_FOR_DEVICE_CODE)) {
+                ResultSet resultSet = null;
+                prepStmt.setString(1, deviceCode);
+                resultSet = prepStmt.executeQuery();
 
-            while (rs.next()) {
-                clientId = rs.getString(1);
+                while (resultSet.next()) {
+                    clientId = resultSet.getString(1);
+                }
             }
-
         } catch (SQLException e) {
-            throw new IdentityOAuth2Exception("Error when getting client id for device code : " +
+            throw new IdentityOAuth2Exception("Error when getting client id for device code: " +
                     deviceCode, e);
-        } finally {
-            IdentityDatabaseUtil.closeAllConnections(connection, rs, ps);
         }
         return clientId;
     }
 
     @Override
-    public DeviceFlowDO getAuthenticationStatus(String deviceCode) throws IdentityOAuth2Exception {
+    public DeviceFlowDO getAuthenticationDetails(String deviceCode) throws IdentityOAuth2Exception {
 
-        Connection connection = IdentityDatabaseUtil.getDBConnection(false);
-        PreparedStatement ps = null;
-        ResultSet rs = null;
-        boolean checked = false;
-        DeviceFlowDO deviceFlowDO = new DeviceFlowDO();
-        try {
-            String sqlQuery = SQLQueries.DeviceFlowDAOSQLQueries.GET_AUTHENTICATION_STATUS;
-            ps = connection.prepareStatement(sqlQuery);
-            ps.setString(1, deviceCode);
-            rs = ps.executeQuery();
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
+            ResultSet resultSet = null;
+            boolean checked = false;
+            DeviceFlowDO deviceFlowDO = new DeviceFlowDO();
+            try (PreparedStatement prepStmt =
+                         connection.prepareStatement(SQLQueries.DeviceFlowDAOSQLQueries.GET_AUTHENTICATION_STATUS)) {
+                prepStmt.setString(1, deviceCode);
+                resultSet = prepStmt.executeQuery();
 
-            while (rs.next()) {
-                try {
-                    deviceFlowDO.setStatus(rs.getString(1));
-                    deviceFlowDO.setLastPollTime(rs.getTimestamp(2));
-                    deviceFlowDO.setPollTime(rs.getLong(3));
-                    deviceFlowDO.setExpiryTime(rs.getLong(4));
-                    deviceFlowDO.setScope(rs.getString(5));
-                    deviceFlowDO.setAuthzUser(rs.getString(6));
-                    checked = true;
-                } catch (NullPointerException e) {
+                while (resultSet.next()) {
+                    try {
+                        deviceFlowDO.setStatus(resultSet.getString(1));
+                        deviceFlowDO.setLastPollTime(resultSet.getTimestamp(2));
+                        deviceFlowDO.setPollTime(resultSet.getLong(3));
+                        deviceFlowDO.setExpiryTime(resultSet.getLong(4));
+                        deviceFlowDO.setScope(resultSet.getString(5));
+                        deviceFlowDO.setAuthzUser(resultSet.getString(6));
+                        checked = true;
+                    } catch (NullPointerException e) {
+                        deviceFlowDO.setStatus(Constants.NOT_EXIST);
+                        return deviceFlowDO;
+                    }
+                }
+                if (checked) {
+                    return deviceFlowDO;
+                } else {
                     deviceFlowDO.setStatus(Constants.NOT_EXIST);
                     return deviceFlowDO;
                 }
             }
-
         } catch (SQLException e) {
-            throw new IdentityOAuth2Exception("Error when getting authentication status for device code : " +
+            throw new IdentityOAuth2Exception("Error when getting authentication status for device code: " +
                     deviceCode, e);
-        } finally {
-            IdentityDatabaseUtil.closeAllConnections(connection, rs, ps);
-        }
-        if (checked) {
-            return deviceFlowDO;
-        } else {
-            deviceFlowDO.setStatus(Constants.NOT_EXIST);
-            return deviceFlowDO;
         }
     }
 
     @Override
     public boolean checkClientIdExist(String clientId) throws IdentityOAuth2Exception {
 
-        Connection connection = IdentityDatabaseUtil.getDBConnection(false);
-        PreparedStatement ps = null;
-        ResultSet rs = null;
-        try {
-            String sqlQuery = SQLQueries.DeviceFlowDAOSQLQueries.CHECK_CLIENT_ID_EXISTS;
-            ps = connection.prepareStatement(sqlQuery);
-            ps.setString(1, clientId);
-            rs = ps.executeQuery();
-            while (rs.next()) {
-                status = rs.getString(1);
-                if (status != null) {
-                    return true;
-                } else {
-                    return false;
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
+            try (PreparedStatement prepStmt =
+                    connection.prepareStatement(SQLQueries.DeviceFlowDAOSQLQueries.CHECK_CLIENT_ID_EXISTS)) {
+                ResultSet resultSet = null;
+                prepStmt.setString(1, clientId);
+                resultSet = prepStmt.executeQuery();
+                while (resultSet.next()) {
+                    status = resultSet.getString(1);
+                    if (status != null) {
+                        return true;
+                    }
                 }
             }
         } catch (SQLException e) {
-            throw new IdentityOAuth2Exception("Error when getting client id : " +
+            throw new IdentityOAuth2Exception("Error when check the existence of client id: " +
                     clientId, e);
-        } finally {
-            IdentityDatabaseUtil.closeAllConnections(connection, rs, ps);
         }
         return false;
     }
@@ -228,22 +210,19 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
     @Override
     public String getScopeForDevice(String userCode) throws IdentityOAuth2Exception {
 
-        Connection connection = IdentityDatabaseUtil.getDBConnection(false);
-        PreparedStatement ps = null;
-        ResultSet rs = null;
-        try {
-            String sqlQuery = SQLQueries.DeviceFlowDAOSQLQueries.GET_SCOPE_FOR_USER_CODE;
-            ps = connection.prepareStatement(sqlQuery);
-            ps.setString(1, userCode);
-            rs = ps.executeQuery();
-            while (rs.next()) {
-                scope = rs.getString(1);
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
+            try (PreparedStatement prepStmt =
+                         connection.prepareStatement(SQLQueries.DeviceFlowDAOSQLQueries.GET_SCOPE_FOR_USER_CODE)) {
+                ResultSet resultSet = null;
+                prepStmt.setString(1, userCode);
+                resultSet = prepStmt.executeQuery();
+                while (resultSet.next()) {
+                    scope = resultSet.getString(1);
+                }
             }
         } catch (SQLException e) {
-            throw new IdentityOAuth2Exception("Error when getting scopes for user code : " +
+            throw new IdentityOAuth2Exception("Error when getting scopes for user code: " +
                     userCode, e);
-        } finally {
-            IdentityDatabaseUtil.closeAllConnections(connection, rs, ps);
         }
         return scope;
     }
@@ -251,109 +230,99 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
     @Override
     public String getStatusForUserCode(String userCode) throws IdentityOAuth2Exception {
 
-        Connection connection = IdentityDatabaseUtil.getDBConnection(false);
-        PreparedStatement ps = null;
-        ResultSet rs = null;
-        try {
-            String sqlQuery = SQLQueries.DeviceFlowDAOSQLQueries.GET_USER_CODE_STATUS;
-            ps = connection.prepareStatement(sqlQuery);
-            ps.setString(1, userCode);
-            rs = ps.executeQuery();
-            while (rs.next()) {
-                status = rs.getString(1);
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
+            try (PreparedStatement prepStmt =
+                connection.prepareStatement(SQLQueries.DeviceFlowDAOSQLQueries.GET_USER_CODE_STATUS)) {
+                ResultSet resultSet = null;
+                prepStmt.setString(1, userCode);
+                resultSet = prepStmt.executeQuery();
+                while (resultSet.next()) {
+                    status = resultSet.getString(1);
+                }
             }
         } catch (SQLException e) {
-            throw new IdentityOAuth2Exception("Error when getting status for user code : " +
-                    userCode, e);
-        } finally {
-            IdentityDatabaseUtil.closeAllConnections(connection, rs, ps);
+            throw new IdentityOAuth2Exception("Error when getting status for user code: " + userCode, e);
         }
         return status;
     }
 
     @Override
-    public void setLastPollTime(String deviceCode, Timestamp newPOllTime) throws IdentityOAuth2Exception {
+    public void setLastPollTime(String deviceCode, Timestamp newPollTime) throws IdentityOAuth2Exception {
 
-        Connection connection = IdentityDatabaseUtil.getDBConnection(true);
-        PreparedStatement ps = null;
-        try {
-            String sql;
-            sql = SQLQueries.DeviceFlowDAOSQLQueries.SET_LAST_POLL_TIME;
-            ps = connection.prepareStatement(sql);
-            ps.setTimestamp(1, newPOllTime);
-            ps.setString(2, deviceCode);
-            ps.execute();
-            IdentityDatabaseUtil.commitTransaction(connection);
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
+            try (PreparedStatement prepStmt =
+                     connection.prepareStatement(SQLQueries.DeviceFlowDAOSQLQueries.SET_LAST_POLL_TIME)) {
+                prepStmt.setTimestamp(1, newPollTime, Calendar.getInstance(TimeZone
+                        .getTimeZone(Constants.UTC)));
+                prepStmt.setString(2, deviceCode);
+                prepStmt.execute();
+                IdentityDatabaseUtil.commitTransaction(connection);
+            } catch (SQLException e) {
+                IdentityDatabaseUtil.rollbackTransaction(connection);
+                throw new IdentityOAuth2Exception("Error when setting last poll time for device code: "
+                        + deviceCode, e);
+            }
         } catch (SQLException e) {
-            throw new IdentityOAuth2Exception("Error when setting last poll time", e);
-        } finally {
-            IdentityDatabaseUtil.closeAllConnections(connection, null, ps);
+            throw new IdentityOAuth2Exception("Error when setting last poll time for device code: " + deviceCode, e);
         }
     }
 
     @Override
     public void setAuthzUser(String userCode, String userName) throws IdentityOAuth2Exception {
 
-        Connection connection = IdentityDatabaseUtil.getDBConnection(true);
-        PreparedStatement ps = null;
-        try {
-            String sql;
-            sql = SQLQueries.DeviceFlowDAOSQLQueries.SET_AUTHZ_USER;
-            ps = connection.prepareStatement(sql);
-            ps.setString(1, userName);
-            ps.setString(2, userCode);
-            ps.execute();
-            IdentityDatabaseUtil.commitTransaction(connection);
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
+            try (PreparedStatement prepStmt =
+                         connection.prepareStatement(SQLQueries.DeviceFlowDAOSQLQueries.SET_AUTHZ_USER)) {
+                prepStmt.setString(1, userName);
+                prepStmt.setString(2, userCode);
+                prepStmt.execute();
+                IdentityDatabaseUtil.commitTransaction(connection);
+            } catch (SQLException e) {
+                IdentityDatabaseUtil.rollbackTransaction(connection);
+                throw new IdentityOAuth2Exception("Error when setting authenticated user for user code: " +
+                        userCode, e);
+            }
         } catch (SQLException e) {
-            IdentityDatabaseUtil.rollbackTransaction(connection);
-            throw new IdentityOAuth2Exception("Error when setting authenticated user for user code : " +
+            throw new IdentityOAuth2Exception("Error when setting authenticated user for user code: " +
                     userCode, e);
-        } finally {
-            IdentityDatabaseUtil.closeAllConnections(connection, null, ps);
         }
     }
 
     @Override
     public void setDeviceCodeExpired(String deviceCode, String status) throws IdentityOAuth2Exception {
 
-        Connection connection = IdentityDatabaseUtil.getDBConnection(true);
-        PreparedStatement prepStmt = null;
-        try {
-            String sql;
-            sql = SQLQueries.DeviceFlowDAOSQLQueries.SET_DEVICE_CODE_EXPIRED;
-            prepStmt = connection.prepareStatement(sql);
-            prepStmt.setString(1, status);
-            prepStmt.setString(2, deviceCode);
-            prepStmt.execute();
-            IdentityDatabaseUtil.commitTransaction(connection);
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
+            try (PreparedStatement prepStmt =
+                         connection.prepareStatement(SQLQueries.DeviceFlowDAOSQLQueries.SET_DEVICE_CODE_EXPIRED)) {
+                prepStmt.setString(1, status);
+                prepStmt.setString(2, deviceCode);
+                prepStmt.execute();
+                IdentityDatabaseUtil.commitTransaction(connection);
+            } catch (SQLException e) {
+                IdentityDatabaseUtil.rollbackTransaction(connection);
+                throw new IdentityOAuth2Exception("Error when setting expired status for device code: " +
+                        deviceCode, e);
+            }
         } catch (SQLException e) {
-            IdentityDatabaseUtil.rollbackTransaction(connection);
-            throw new IdentityOAuth2Exception("Error when setting expired status for device code : " +
+            throw new IdentityOAuth2Exception("Error when setting expired status for device code: " +
                     deviceCode, e);
-        } finally {
-            IdentityDatabaseUtil.closeAllConnections(connection, null, prepStmt);
         }
     }
 
     @Override
     public void setCallBackURI(String clientId, String callBackUri) throws IdentityOAuth2Exception {
 
-        Connection connection = IdentityDatabaseUtil.getDBConnection(true);
-        PreparedStatement prepStmt = null;
-        try {
-            String sql;
-            sql = SQLQueries.DeviceFlowDAOSQLQueries.SET_CALLBACK_URI;
-            prepStmt = connection.prepareStatement(sql);
-            prepStmt.setString(1, callBackUri);
-            prepStmt.setString(2, clientId);
-            prepStmt.execute();
-            IdentityDatabaseUtil.commitTransaction(connection);
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
+            try (PreparedStatement prepStmt =
+                    connection.prepareStatement(SQLQueries.DeviceFlowDAOSQLQueries.SET_CALLBACK_URL)) {
+                prepStmt.setString(1, callBackUri);
+                prepStmt.setString(2, clientId);
+                prepStmt.execute();
+                IdentityDatabaseUtil.commitTransaction(connection);
+            }
         } catch (SQLException e) {
             throw new IdentityOAuth2Exception("Error when setting expired callBackUri for consumer key: " +
                     clientId, e);
-        } finally {
-            IdentityDatabaseUtil.closeAllConnections(connection, null, prepStmt);
         }
     }
-
 }

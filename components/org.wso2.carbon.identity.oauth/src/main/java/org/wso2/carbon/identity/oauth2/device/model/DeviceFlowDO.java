@@ -44,7 +44,7 @@ public class DeviceFlowDO {
 
     private String authzUser;
 
-    private String callbackURI;
+    private String callbackUri;
 
     public DeviceFlowDO() {
 
@@ -130,7 +130,6 @@ public class DeviceFlowDO {
         return lastPollTime;
     }
 
-
     public long getExpiryTime() {
 
         return expiryTime;
@@ -161,13 +160,13 @@ public class DeviceFlowDO {
         this.authzUser = authzUser;
     }
 
-    public String getCallbackURI() {
+    public String getCallbackUri() {
 
-        return callbackURI;
+        return callbackUri;
     }
 
-    public void setCallbackURI(String callbackUri) {
+    public void setCallbackUri(String callbackUri) {
 
-        this.callbackURI = callbackUri;
+        this.callbackUri = callbackUri;
     }
 }

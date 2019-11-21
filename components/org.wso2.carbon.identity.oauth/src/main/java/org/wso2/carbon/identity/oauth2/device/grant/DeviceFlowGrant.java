@@ -51,7 +51,8 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
         OAuth2AccessTokenReqDTO tokenReq = oAuthTokenReqMessageContext.getOauth2AccessTokenReqDTO();
 
         boolean authStatus = false;
-        RequestParameter[] parameters = oAuthTokenReqMessageContext.getOauth2AccessTokenReqDTO().getRequestParameters();
+        RequestParameter[] parameters = oAuthTokenReqMessageContext.getOauth2AccessTokenReqDTO()
+                .getRequestParameters();
         String DeviceCode = null;
         String deviceStatus = null;
 
@@ -71,23 +72,21 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
             } else {
 
                 DeviceFlowDO deviceFlowDO = DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO()
-                        .getAuthenticationStatus(DeviceCode);
+                        .getAuthenticationDetails(DeviceCode);
                 Date date = new Date();
                 deviceStatus = deviceFlowDO.getStatus();
-                if (deviceStatus.equals(Constants.NOT_EXIST)) {
+                if (Constants.NOT_EXIST.equals(deviceStatus)) {
                     throw new IdentityOAuth2Exception(DeviceErrorCodes.INVALID_REQUEST);
-                } else if (deviceStatus.equals(Constants.EXPIRED)) {
+                } else if (Constants.EXPIRED.equals(deviceStatus) || isExpiredDeviceCode(deviceFlowDO, date)) {
                     throw new IdentityOAuth2Exception(DeviceErrorCodes.SubDeviceErrorCodes.EXPIRED_TOKEN);
-                } else if (isValidDeviceCode(deviceFlowDO, date)) {
-                    throw new IdentityOAuth2Exception(DeviceErrorCodes.SubDeviceErrorCodes.EXPIRED_TOKEN);
-                } else if (deviceStatus.equals(Constants.AUTHORIZED)) {
+                } else if (Constants.AUTHORIZED.equals(deviceStatus)) {
                     authStatus = true;
                     DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().setDeviceCodeExpired(DeviceCode,
                             Constants.EXPIRED);
                     if (StringUtils.isNotBlank(deviceFlowDO.getScope())) {
                         this.setPropertiesForTokenGeneration(oAuthTokenReqMessageContext, tokenReq, deviceFlowDO);
                     }
-                } else if (deviceStatus.equals(Constants.USED) || deviceStatus.equals(Constants.PENDING)) {
+                } else if (Constants.USED.equals(deviceStatus) || Constants.PENDING.equals(deviceStatus)) {
                     Timestamp newPollTime = new Timestamp(date.getTime());
                     if (isValidPollTime(newPollTime, deviceFlowDO)) {
                         DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO()
@@ -134,7 +133,7 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
      * @param date         Time that request has came
      * @return true or false
      */
-    private static boolean isValidDeviceCode(DeviceFlowDO deviceFlowDO, Date date) {
+    private static boolean isExpiredDeviceCode(DeviceFlowDO deviceFlowDO, Date date) {
 
         return deviceFlowDO.getExpiryTime() < date.getTime();
     }

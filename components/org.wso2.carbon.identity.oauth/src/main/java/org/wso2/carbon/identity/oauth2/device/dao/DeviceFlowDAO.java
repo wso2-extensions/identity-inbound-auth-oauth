@@ -61,7 +61,7 @@ public interface DeviceFlowDAO {
      * @param status   Status of the device and user codes
      * @throws IdentityOAuth2Exception
      */
-    void setUserAuthenticated(String userCode, String status) throws IdentityOAuth2Exception;
+    void setAuthenticationStatus(String userCode, String status) throws IdentityOAuth2Exception;
 
     /**
      * Get the client id that has involved with user code.
@@ -78,7 +78,7 @@ public interface DeviceFlowDAO {
      * @return Map of values
      * @throws IdentityOAuth2Exception
      */
-    DeviceFlowDO getAuthenticationStatus(String deviceCode) throws IdentityOAuth2Exception;
+    DeviceFlowDO getAuthenticationDetails(String deviceCode) throws IdentityOAuth2Exception;
 
     /**
      * Check client id is exist or not.

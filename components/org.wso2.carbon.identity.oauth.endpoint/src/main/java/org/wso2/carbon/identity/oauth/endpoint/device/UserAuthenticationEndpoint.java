@@ -72,13 +72,13 @@ public class UserAuthenticationEndpoint {
         if (StringUtils.isNotBlank(clientId) && StringUtils.equals(getUserCodeStatus(userCode), Constants.PENDING)) {
 
             setCallbackURI(clientId);
-            DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().setUserAuthenticated(userCode,
+            DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().setAuthenticationStatus(userCode,
                     Constants.USED);
 
             CommonAuthRequestWrapper commonAuthRequestWrapper = new CommonAuthRequestWrapper(request);
             commonAuthRequestWrapper.setParameter(Constants.CLIENT_ID, clientId);
             commonAuthRequestWrapper.setParameter(Constants.RESPONSE_TYPE, Constants.RESPONSE_TYPE_DEVICE);
-            commonAuthRequestWrapper.setParameter(Constants.REDIRECTION_URI, deviceFlowDO.getCallbackURI());
+            commonAuthRequestWrapper.setParameter(Constants.REDIRECTION_URI, deviceFlowDO.getCallbackUri());
             if (getScope(userCode) != null) {
                 commonAuthRequestWrapper.setParameter(Constants.SCOPE, getScope(userCode));
             }
@@ -149,7 +149,7 @@ public class UserAuthenticationEndpoint {
                 DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().setCallBackURI(clientId, redirectURI);
                 AppInfoCache.getInstance().clearCacheEntry(clientId);
             }
-            deviceFlowDO.setCallbackURI(redirectURI);
+            deviceFlowDO.setCallbackUri(redirectURI);
         } catch (InvalidOAuthClientException | URISyntaxException | IdentityOAuth2Exception e) {
             throw new IdentityOAuth2Exception("Error when getting app details for client id :" +
                     clientId, e);
