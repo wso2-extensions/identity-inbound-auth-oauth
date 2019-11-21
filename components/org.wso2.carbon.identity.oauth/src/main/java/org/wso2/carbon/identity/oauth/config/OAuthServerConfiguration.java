@@ -2032,15 +2032,6 @@ public class OAuthServerConfiguration {
             }
         }
 
-        //Adding default token types if not added in the configuration
-        if (!supportedTokenIssuers.containsKey(DEFAULT_TOKEN_TYPE)) {
-            supportedTokenIssuers.put(DEFAULT_TOKEN_TYPE,
-                    new TokenIssuerDO(DEFAULT_TOKEN_TYPE, DEFAULT_OAUTH_TOKEN_ISSUER_CLASS, true));
-        }
-        if (!supportedTokenIssuers.containsKey(JWT_TOKEN_TYPE)) {
-            supportedTokenIssuers.put(JWT_TOKEN_TYPE, new TokenIssuerDO(JWT_TOKEN_TYPE, JWT_TOKEN_ISSUER_CLASS, true));
-        }
-
         boolean isRegistered = false;
         //Adding global token issuer configured in the identity xml as a supported token issuer
         for (Map.Entry<String, TokenIssuerDO> entry : supportedTokenIssuers.entrySet()) {
@@ -2055,11 +2046,23 @@ public class OAuthServerConfiguration {
         if (!isRegistered && oauthIdentityTokenGeneratorClassName != null) {
             boolean isPersistTokenAlias = true;
             if (persistAccessTokenAlias != null) {
-                isPersistTokenAlias = Boolean.valueOf(persistAccessTokenAlias);
+                isPersistTokenAlias = Boolean.parseBoolean(persistAccessTokenAlias);
             }
-            supportedTokenIssuers.put(oauthIdentityTokenGeneratorClassName,
+
+            // If a server level <IdentityOAuthTokenGenerator> is defined, that will be our first choice for the
+            // "Default" token type issuer implementation.
+            supportedTokenIssuers.put(DEFAULT_TOKEN_TYPE,
                     new TokenIssuerDO(oauthIdentityTokenGeneratorClassName, oauthIdentityTokenGeneratorClassName,
                             isPersistTokenAlias));
+        }
+
+        // Adding default token types if not added in the configuration.
+        if (!supportedTokenIssuers.containsKey(DEFAULT_TOKEN_TYPE)) {
+            supportedTokenIssuers.put(DEFAULT_TOKEN_TYPE,
+                    new TokenIssuerDO(DEFAULT_TOKEN_TYPE, DEFAULT_OAUTH_TOKEN_ISSUER_CLASS, true));
+        }
+        if (!supportedTokenIssuers.containsKey(JWT_TOKEN_TYPE)) {
+            supportedTokenIssuers.put(JWT_TOKEN_TYPE, new TokenIssuerDO(JWT_TOKEN_TYPE, JWT_TOKEN_ISSUER_CLASS, true));
         }
     }
 
