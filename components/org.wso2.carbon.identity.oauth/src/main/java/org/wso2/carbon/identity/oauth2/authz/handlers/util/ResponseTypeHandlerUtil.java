@@ -724,7 +724,7 @@ public class ResponseTypeHandlerUtil {
             refreshTokenValidityPeriodInMillis = oauthAuthzMsgCtx.getRefreshTokenvalidityPeriod() *
                     SECOND_TO_MILLISECONDS_FACTOR;
             if (log.isDebugEnabled()) {
-                log.debug("OAuth application id : " + oAuthAppBean.getOauthConsumerKey() + ", using access token " +
+                log.debug("OAuth application id : " + oAuthAppBean.getOauthConsumerKey() + ", using refresh token " +
                         "validity period configured from OAuthAuthzReqMessageContext: " +
                         refreshTokenValidityPeriodInMillis + " ms");
             }
