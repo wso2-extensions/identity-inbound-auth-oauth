@@ -45,7 +45,7 @@ public class HttpRegistrationResponseFactory extends HttpIdentityResponseFactory
     public static String INVALID_SOFTWARE_STATEMENT = "invalid_software_statement";
     public static String UNAPPROVED_SOFTWARE_STATEMENT = "unapproved_software_statement";
     public static String BACKEND_FAILED = "backend_failed";
-    private static Log log = LogFactory.getLog(HttpRegistrationResponseFactory.class);
+    private static final Log log = LogFactory.getLog(HttpRegistrationResponseFactory.class);
 
     @Override
     public HttpIdentityResponse.HttpIdentityResponseBuilder create(IdentityResponse identityResponse) {

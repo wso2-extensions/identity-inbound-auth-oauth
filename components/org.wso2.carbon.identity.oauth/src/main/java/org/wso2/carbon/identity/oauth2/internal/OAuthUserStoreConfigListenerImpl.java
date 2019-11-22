@@ -65,7 +65,8 @@ public class OAuthUserStoreConfigListenerImpl extends AbstractUserStoreConfigLis
             Map<String, AccessTokenDO> latestAccessTokens = new HashMap<>();
             for (AccessTokenDO accessTokenDO : accessTokenDOs) {
                 String keyString = accessTokenDO.getConsumerKey() + ":" + accessTokenDO.getAuthzUser() + ":" +
-                        OAuth2Util.buildScopeString(accessTokenDO.getScope());
+                        OAuth2Util.buildScopeString(accessTokenDO.getScope()) + ":"
+                        + accessTokenDO.getAuthzUser().getFederatedIdPName();
                 AccessTokenDO accessTokenDOFromMap = latestAccessTokens.get(keyString);
                 if (accessTokenDOFromMap != null) {
                     if (accessTokenDOFromMap.getIssuedTime().before(accessTokenDO.getIssuedTime())) {
@@ -86,7 +87,8 @@ public class OAuthUserStoreConfigListenerImpl extends AbstractUserStoreConfigLis
                 tokensToRevoke.add(((AccessTokenDO) entry.getValue()).getAccessToken());
             }
             OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
-                    .revokeAccessTokens(tokensToRevoke.toArray(new String[tokensToRevoke.size()]));
+                    .revokeAccessTokens(tokensToRevoke.toArray(new String[tokensToRevoke.size()]),
+                            OAuth2Util.isHashEnabled());
             List<AuthzCodeDO> latestAuthzCodes = OAuthTokenPersistenceFactory.getInstance()
                     .getAuthorizationCodeDAO().getLatestAuthorizationCodesByUserStore(tenantId, userStoreName);
             for (AuthzCodeDO authzCodeDO : latestAuthzCodes) {

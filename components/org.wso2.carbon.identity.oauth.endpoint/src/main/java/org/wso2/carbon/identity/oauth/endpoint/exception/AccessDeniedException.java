@@ -32,4 +32,8 @@ public class AccessDeniedException extends InvalidRequestParentException {
         super(message, errorCode, cause);
         this.errorCode = errorCode;
     }
+
+    public AccessDeniedException(String message, String errorCode, String subErrorCode) {
+        super(message, errorCode, subErrorCode);
+    }
 }

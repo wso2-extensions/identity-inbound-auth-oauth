@@ -34,7 +34,7 @@ import javax.cache.event.CacheEntryRemovedListener;
 public class OAuthCacheRemoveListener extends AbstractCacheListener<OAuthCacheKey, CacheEntry>
         implements CacheEntryRemovedListener<OAuthCacheKey, CacheEntry> {
 
-    private static Log log = LogFactory.getLog(OAuthCacheRemoveListener.class);
+    private static final Log log = LogFactory.getLog(OAuthCacheRemoveListener.class);
 
     @Override
     public void entryRemoved(CacheEntryEvent<? extends OAuthCacheKey, ? extends CacheEntry> cacheEntryEvent)
@@ -57,11 +57,13 @@ public class OAuthCacheRemoveListener extends AbstractCacheListener<OAuthCacheKe
             String cacheKeyString;
             if (isUsernameCaseSensitive){
                 cacheKeyString = accessTokenDO.getConsumerKey() + ":" + accessTokenDO.getAuthzUser().getUserName() + ":"
-                        + OAuth2Util.buildScopeString(accessTokenDO.getScope());
+                        + OAuth2Util.buildScopeString(accessTokenDO.getScope()) + ":"
+                        + accessTokenDO.getAuthzUser().getFederatedIdPName();
             }else {
                 cacheKeyString =
                         accessTokenDO.getConsumerKey() + ":" + accessTokenDO.getAuthzUser().getUserName().toLowerCase()
-                                + ":" + OAuth2Util.buildScopeString(accessTokenDO.getScope());
+                                + ":" + OAuth2Util.buildScopeString(accessTokenDO.getScope()) + ":"
+                                + accessTokenDO.getAuthzUser().getFederatedIdPName();
             }
 
             OAuthCacheKey oauthcacheKey = new OAuthCacheKey(cacheKeyString);

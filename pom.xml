@@ -21,13 +21,13 @@
     <parent>
         <groupId>org.wso2</groupId>
         <artifactId>wso2</artifactId>
-        <version>1</version>
+        <version>1.2</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
     <artifactId>identity-inbound-auth-oauth</artifactId>
-    <version>6.0.129-SNAPSHOT</version>
+    <version>6.2.58-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>WSO2 Carbon OAuth module</name>
     <url>http://wso2.org</url>
@@ -42,8 +42,8 @@
     <modules>
         <module>service-stubs/org.wso2.carbon.claim.metadata.mgt.stub</module>
         <module>test-utils/org.wso2.carbon.identity.oauth.common.testng</module>
-        <module>components/org.wso2.carbon.identity.oauth</module>
         <module>components/org.wso2.carbon.identity.oauth.common</module>
+        <module>components/org.wso2.carbon.identity.oauth</module>
         <module>components/org.wso2.carbon.identity.oauth.endpoint</module>
         <module>components/org.wso2.carbon.identity.oauth.ui</module>
         <module>components/org.wso2.carbon.identity.oauth.stub</module>
@@ -113,17 +113,17 @@
             </dependency>
             <dependency>
                 <groupId>org.wso2.carbon</groupId>
-                <artifactId>org.wso2.carbon.logging</artifactId>
-                <version>${carbon.kernel.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.wso2.carbon</groupId>
                 <artifactId>javax.cache.wso2</artifactId>
                 <version>${carbon.kernel.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.wso2.carbon</groupId>
                 <artifactId>org.wso2.carbon.tomcat.ext</artifactId>
+                <version>${carbon.kernel.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.wso2.carbon</groupId>
+                <artifactId>org.wso2.carbon.tomcat</artifactId>
                 <version>${carbon.kernel.version}</version>
             </dependency>
             <dependency>
@@ -229,6 +229,12 @@
                 <version>${carbon.identity.framework.version}</version>
             </dependency>
 
+            <!--SAML Common Util dependency-->
+            <dependency>
+                <groupId>org.wso2.carbon.identity.saml.common</groupId>
+                <artifactId>org.wso2.carbon.identity.saml.common.util</artifactId>
+                <version>${saml.common.util.version}</version>
+            </dependency>
 
             <!-- Orbit dependencies -->
             <dependency>
@@ -257,9 +263,14 @@
                 <version>${json-smart.version}</version>
             </dependency>
             <dependency>
-                <groupId>org.wso2.orbit.org.apache.cxf</groupId>
-                <artifactId>cxf-bundle</artifactId>
-                <version>${cxf-bundle.wso2.version}</version>
+                <groupId>net.minidev</groupId>
+                <artifactId>accessors-smart</artifactId>
+                <version>${net.minidev.accessors-smart.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.ow2.asm</groupId>
+                <artifactId>asm-all</artifactId>
+                <version>${org.ow2.asm.asm.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.cxf</groupId>
@@ -327,11 +338,6 @@
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-api</artifactId>
                 <version>${org.slf4j.verison}</version>
-            </dependency>
-            <dependency>
-                <groupId>tomcat</groupId>
-                <artifactId>tomcat-util</artifactId>
-                <version>${tomcat-util.version}</version>
             </dependency>
             <dependency>
                 <groupId>javax.servlet</groupId>
@@ -507,6 +513,12 @@
             </dependency>
             <dependency>
                 <groupId>org.powermock</groupId>
+                <artifactId>powermock-module-junit4</artifactId>
+                <version>${powermock.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.powermock</groupId>
                 <artifactId>powermock-api-mockito</artifactId>
                 <version>${powermock.version}</version>
                 <scope>test</scope>
@@ -568,6 +580,24 @@
                 <artifactId>javax.ws.rs-api</artifactId>
                 <version>${javax.ws.rs-api.version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.wso2.orbit.javax.activation</groupId>
+                <artifactId>activation</artifactId>
+                <version>${version.org.wso2.orbit.javax.activation}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.wso2.orbit.javax.xml.bind</groupId>
+                <artifactId>jaxb-api</artifactId>
+                <version>${version.org.wso2.orbit.javax.xml.bind}</version>
+            </dependency>
+
+            <!-- Pax Logging -->
+            <dependency>
+                <groupId>org.ops4j.pax.logging</groupId>
+                <artifactId>pax-logging-api</artifactId>
+                <version>${pax.logging.api.version}</version>
+            </dependency>
+
         </dependencies>
     </dependencyManagement>
 
@@ -650,19 +680,6 @@
             <plugins>
                 <plugin>
                     <groupId>org.apache.felix</groupId>
-                    <artifactId>maven-scr-plugin</artifactId>
-                    <version>${maven.scr.plugin.version}</version>
-                    <executions>
-                        <execution>
-                            <id>generate-scr-scrdescriptor</id>
-                            <goals>
-                                <goal>scr</goal>
-                            </goals>
-                        </execution>
-                    </executions>
-                </plugin>
-                <plugin>
-                    <groupId>org.apache.felix</groupId>
                     <artifactId>maven-bundle-plugin</artifactId>
                     <version>${maven.bundle.plugin.version}</version>
                     <extensions>true</extensions>
@@ -721,6 +738,25 @@
                 <artifactId>buildnumber-maven-plugin</artifactId>
                 <version>${maven.buildnumber.plugin.version}</version>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <configuration>
+                    <source>1.8</source>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>attach-javadocs</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                        <configuration>
+                            <!--This parameter disables doclint-->
+                            <doclint>none</doclint>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 
@@ -728,7 +764,7 @@
     <properties>
         <!-- Identity Inbound Auth OAuth Version-->
         <identity.inbound.auth.oauth.exp.pkg.version>${project.version}</identity.inbound.auth.oauth.exp.pkg.version>
-        <identity.inbound.auth.oauth.imp.pkg.version.range>[6.0.0, 7.0.0)</identity.inbound.auth.oauth.imp.pkg.version.range>
+        <identity.inbound.auth.oauth.imp.pkg.version.range>[6.2.0, 7.0.0)</identity.inbound.auth.oauth.imp.pkg.version.range>
 
         <!-- OSGi/Equinox dependency version -->
         <equinox.javax.servlet.version>3.0.0.v201112011016</equinox.javax.servlet.version>
@@ -739,18 +775,15 @@
         <apache.felix.scr.ds.annotations.version>1.2.4</apache.felix.scr.ds.annotations.version>
 
         <!-- Carbon kernel version -->
-        <carbon.kernel.version>4.4.23</carbon.kernel.version>
-        <carbon.kernel.imp.pkg.version.range>[4.4.0, 5.0.0)</carbon.kernel.imp.pkg.version.range>
+        <carbon.kernel.version>4.5.0</carbon.kernel.version>
+        <carbon.kernel.feature.version>4.5.0</carbon.kernel.feature.version>
+        <carbon.kernel.imp.pkg.version.range>[4.5.0, 5.0.0)</carbon.kernel.imp.pkg.version.range>
         <carbon.kernel.registry.imp.pkg.version.range>[1.0.1, 2.0.0)</carbon.kernel.registry.imp.pkg.version.range>
 
         <!-- Carbon Identity Framework version -->
-        <carbon.identity.framework.version>5.12.327</carbon.identity.framework.version>
-        <carbon.identity.framework.imp.pkg.version.range>[5.0.0, 6.0.0)
+        <carbon.identity.framework.version>5.15.0</carbon.identity.framework.version>
+        <carbon.identity.framework.imp.pkg.version.range>[5.15.0, 6.0.0)
         </carbon.identity.framework.imp.pkg.version.range>
-        <claim.metadata.version.range>[5.0.0,7.0.0)</claim.metadata.version.range>
-
-        <!--SAML component version-->
-        <carbon.identity.sso.saml.version>5.3.0</carbon.identity.sso.saml.version>
 
         <!--Carbon component version-->
         <carbon.base.imp.pkg.version.range>[1.0.0, 2.0.0)</carbon.base.imp.pkg.version.range>
@@ -762,12 +795,16 @@
         <javax.ws.rs-api.version>2.1.1</javax.ws.rs-api.version>
 
         <!-- Axis2 Version -->
-        <axis2.wso2.version>1.6.1.wso2v12</axis2.wso2.version>
-        <axis2.osgi.version.range>[1.6.1.wso2v12, 2.0.0)</axis2.osgi.version.range>
+        <axis2.wso2.version>1.6.1-wso2v38</axis2.wso2.version>
+        <axis2.osgi.version.range>[1.6.1.wso2v38, 2.0.0)</axis2.osgi.version.range>
 
         <!-- Axiom Version -->
-        <axiom.wso2.version>1.2.11.wso2v10</axiom.wso2.version>
+        <axiom.wso2.version>1.2.11-wso2v16</axiom.wso2.version>
         <axiom.osgi.version.range>[1.2.11, 2.0.0)</axiom.osgi.version.range>
+
+        <!--SAML Common Util Version-->
+        <saml.common.util.version>1.0.3</saml.common.util.version>
+        <saml.common.util.version.range>[1.0.0,2.0.0)</saml.common.util.version.range>
 
         <!-- Commons -->
         <commons-lang.wso2.version>2.6.0.wso2v1</commons-lang.wso2.version>
@@ -787,12 +824,12 @@
         <org.apache.oltu.oauth2.client.version>1.0.0</org.apache.oltu.oauth2.client.version>
         <oltu.package.import.version.range>[1.0.0, 2.0.0)</oltu.package.import.version.range>
 
-        <waffle.imp.pkg.version.range>[1.6.wso2v5, 2.0)</waffle.imp.pkg.version.range>
-        <waffle-jna.wso2.version>1.6.wso2v5</waffle-jna.wso2.version>
-        <waffle-jna.imp.pkg.version.range>[1.6.wso2v1, 2.0)</waffle-jna.imp.pkg.version.range>
+        <waffle.imp.pkg.version.range>[1.6.0, 2.0)</waffle.imp.pkg.version.range>
+        <waffle-jna.wso2.version>1.6.wso2v6</waffle-jna.wso2.version>
+        <waffle-jna.imp.pkg.version.range>[1.6.0, 2.0)</waffle-jna.imp.pkg.version.range>
 
-        <nimbusds.version>5.8.0.wso2v1</nimbusds.version>
-        <nimbusds.osgi.version.range>[5.8.0,6.0.0)</nimbusds.osgi.version.range>
+        <nimbusds.version>7.3.0.wso2v1</nimbusds.version>
+        <nimbusds.osgi.version.range>[7.3.0,8.0.0)</nimbusds.osgi.version.range>
 
         <thetransactioncompany.cors-filter.wso2.version>1.7.0.wso2v1</thetransactioncompany.cors-filter.wso2.version>
         <thetransactioncompany.utils.wso2.version>1.9.0.wso2v1</thetransactioncompany.utils.wso2.version>
@@ -800,20 +837,18 @@
         <json.wso2.version>3.0.0.wso2v1</json.wso2.version>
         <json.wso2.version.range>[3.0.0.wso2v1, 4.0.0)</json.wso2.version.range>
 
-        <opensaml.version>2.6.4</opensaml.version>
-        <opensaml2.wso2.version>2.6.4.wso2v5</opensaml2.wso2.version>
-        <opensaml2.wso2.osgi.version.range>[2.6.0,3.0.0)</opensaml2.wso2.osgi.version.range>
+        <opensaml.version>3.3.1</opensaml.version>
+        <opensaml2.wso2.version>3.3.1.wso2v1</opensaml2.wso2.version>
+        <opensaml2.wso2.osgi.version.range>[3.3.1,3.4.0)</opensaml2.wso2.osgi.version.range>
 
         <joda.version>2.9.4</joda.version>
         <joda.wso2.version>2.9.4.wso2v1</joda.wso2.version>
         <joda.wso2.osgi.version.range>[2.8.2,3.0.0)</joda.wso2.osgi.version.range>
 
-        <tomcat.version>7.0.69</tomcat.version>
-        <tomcat-util.version>3.3.2</tomcat-util.version>
-        <tomcat.wso2.imp.pkg.version.range>[1.7.0,2.0)</tomcat.wso2.imp.pkg.version.range>
+        <tomcat.version>9.0.21</tomcat.version>
+        <tomcat.wso2.imp.pkg.version.range>[9.0.0, 9.5.0)</tomcat.wso2.imp.pkg.version.range>
 
         <google.guava.version>27.0-jre</google.guava.version>
-        <cxf-bundle.wso2.version>2.7.16.wso2v1</cxf-bundle.wso2.version>
         <org.apache.cxf.version>3.2.8</org.apache.cxf.version>
         <encoder.wso2.version>1.2.0.wso2v1</encoder.wso2.version>
         <json-simple.version>1.1.wso2v1</json-simple.version>
@@ -821,13 +856,16 @@
         <org.slf4j.verison>1.7.21</org.slf4j.verison>
         <com.google.code.gson.version>2.8.5</com.google.code.gson.version>
         <com.google.code.gson.osgi.version.range>[2.6.2,3.0.0)</com.google.code.gson.osgi.version.range>
-        <json-smart.version>1.3</json-smart.version>
+        <json-smart.version>2.3</json-smart.version>
+        <version.org.wso2.orbit.javax.xml.bind>2.3.1.wso2v1</version.org.wso2.orbit.javax.xml.bind>
+        <version.org.wso2.orbit.javax.activation>1.1.1.wso2v1</version.org.wso2.orbit.javax.activation>
+        <net.minidev.accessors-smart.version>1.2</net.minidev.accessors-smart.version>
+        <org.ow2.asm.asm.version>5.2</org.ow2.asm.asm.version>
 
         <!--Maven Plugin Version-->
-        <carbon.p2.plugin.version>1.5.3</carbon.p2.plugin.version>
-        <maven.compiler.plugin.version>2.3.1</maven.compiler.plugin.version>
-        <maven.scr.plugin.version>1.22.0</maven.scr.plugin.version>
-        <maven.bundle.plugin.version>2.4.0</maven.bundle.plugin.version>
+        <carbon.p2.plugin.version>5.1.2</carbon.p2.plugin.version>
+        <maven.compiler.plugin.version>3.8.0</maven.compiler.plugin.version>
+        <maven.bundle.plugin.version>3.2.0</maven.bundle.plugin.version>
         <maven.buildnumber.plugin.version>1.4</maven.buildnumber.plugin.version>
 
         <!--Swagger Dependency Version-->
@@ -849,7 +887,12 @@
         <h2database.version>1.3.175</h2database.version>
         <commons-codec.test.version>1.4</commons-codec.test.version>
         <org.wso2.carbon.identity.testutil.version>5.12.49</org.wso2.carbon.identity.testutil.version>
+        <!--SAML component version for test-->
+        <carbon.identity.sso.saml.version>5.7.0</carbon.identity.sso.saml.version>
+        <spring-context.version>5.1.1.RELEASE</spring-context.version>
 
+        <!-- Pax Logging Version -->
+        <pax.logging.api.version>1.10.1</pax.logging.api.version>
     </properties>
 
 </project>

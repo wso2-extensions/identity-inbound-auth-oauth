@@ -66,6 +66,7 @@ public class OAuthAppDO implements Serializable {
     @XmlTransient
     private AuthenticatedUser appOwner;
     private String tokenType;
+    private String tokenBindingType;
 
     public AuthenticatedUser getAppOwner() {
 
@@ -293,5 +294,15 @@ public class OAuthAppDO implements Serializable {
     public String getRenewRefreshTokenEnabled() {
 
         return renewRefreshTokenEnabled;
+    }
+
+    public String getTokenBindingType() {
+
+        return tokenBindingType;
+    }
+
+    public void setTokenBindingType(String tokenBindingType) {
+
+        this.tokenBindingType = tokenBindingType;
     }
 }

@@ -63,6 +63,7 @@ public class TestConstants {
     public static final String APP_STATE = "ACTIVE";
     public static final String CALLBACK = "http://localhost:8080/redirect";
     public static final String USER_DOMAIN_PRIMARY = "PRIMARY";
+    public static final String LOCAL_IDP = "LOCAL";
     public static final String SCOPE_STRING = "default";
     public static final String OPENID_SCOPE_STRING = "openid";
     public static final String GRANT_TYPES_STRING =
@@ -81,4 +82,7 @@ public class TestConstants {
     public static final String DB_SCRIPTS_FOLDER_NAME = "dbScripts";
     public static final String JAVA_NAMING_FACTORY_INITIAL = "java.naming.factory.initial";
     public static final String UNAUTHORIZED_CLIENT_ERROR_CODE = "unauthorized_client";
+
+    public static final String SAML_ISSUER = "travelocity.com";
+    public static final String IDP_ENTITY_ID_ALIAS = "wso2.is.com";
 }

@@ -106,7 +106,7 @@ public class OAuthServerConfiguration {
     private static final String JWT_TOKEN_ISSUER_CLASS =
             "org.wso2.carbon.identity.oauth2.token.JWTTokenIssuer";
     private static final String REQUEST_PARAM_VALUE_BUILDER = "request_param_value_builder";
-    private static Log log = LogFactory.getLog(OAuthServerConfiguration.class);
+    private static final Log log = LogFactory.getLog(OAuthServerConfiguration.class);
     private static OAuthServerConfiguration instance;
     private static String oauth1RequestTokenUrl = null;
     private static String oauth1AuthorizeUrl = null;
@@ -135,11 +135,13 @@ public class OAuthServerConfiguration {
     private String retainOldAccessTokens;
     private String tokenCleanupFeatureEnable;
     private OauthTokenIssuer oauthIdentityTokenGenerator;
+    private boolean scopeValidationConfigValue = true;
     private boolean cacheEnabled = false;
     private boolean isTokenRenewalPerRequestEnabled = false;
     private boolean isRefreshTokenRenewalEnabled = true;
     private boolean assertionsUserNameEnabled = false;
     private boolean accessTokenPartitioningEnabled = false;
+    private boolean redirectToRequestedRedirectUriEnabled = true;
     private String accessTokenPartitioningDomains = null;
     private TokenPersistenceProcessor persistenceProcessor = null;
     private Set<OAuthCallbackHandlerMetaData> callbackHandlerMetaData = new HashSet<>();
@@ -162,6 +164,7 @@ public class OAuthServerConfiguration {
     private Map<String, Properties> supportedClientAuthHandlerData = new HashMap<>();
     private String saml2TokenCallbackHandlerName = null;
     private String saml2BearerTokenUserType;
+    private boolean saml2UserIdFromClaims = false;
     private boolean mapFederatedUsersToLocal = false;
     private SAML2TokenCallbackHandler saml2TokenCallbackHandler = null;
     private Map<String, String> tokenValidatorClassNames = new HashMap();
@@ -179,10 +182,12 @@ public class OAuthServerConfiguration {
     private String authContextTTL = "15L";
     // property added to fix IDENTITY-4551 in backward compatible manner
     private boolean useMultiValueSeparatorForAuthContextToken = true;
+    private boolean addTenantDomainToIdTokenEnabled = false;
+    private boolean addUserstoreDomainToIdTokenEnabled = false;
 
     //default token types
-    private static final String DEFAULT_TOKEN_TYPE = "Default";
-    private static final String JWT_TOKEN_TYPE = "JWT";
+    public static final String DEFAULT_TOKEN_TYPE = "Default";
+    public static final String JWT_TOKEN_TYPE = "JWT";
 
     // OpenID Connect configurations
     private String openIDConnectIDTokenBuilderClassName = "org.wso2.carbon.identity.openidconnect.DefaultIDTokenBuilder";
@@ -218,7 +223,7 @@ public class OAuthServerConfiguration {
     private Set<OAuth2ScopeValidator> oAuth2ScopeValidators = new HashSet<>();
     private Set<OAuth2ScopeHandler> oAuth2ScopeHandlers = new HashSet<>();
     // property added to fix IDENTITY-4492 in backward compatible manner
-    private boolean isJWTSignedWithSPKey = false;
+    private boolean isJWTSignedWithSPKey = true;
     // property added to fix IDENTITY-4534 in backward compatible manner
     private boolean isImplicitErrorFragment = true;
     // property added to fix IDENTITY-4112 in backward compatible manner
@@ -285,6 +290,14 @@ public class OAuthServerConfiguration {
         //Get the configured scope validators
         OMElement scopeValidatorsElem = oauthElem.getFirstChildWithName(
                 getQNameWithIdentityNS(ConfigElements.SCOPE_VALIDATORS));
+
+        //Get scopeValidationEnabledConfigValue
+        OMElement scopeValidationElem = oauthElem.getFirstChildWithName(
+                getQNameWithIdentityNS(ConfigElements.SCOPE_VALIDATION_FOR_AUTHZ_CODE_AND_IMPLICIT));
+
+        if (scopeValidationElem != null) {
+            scopeValidationConfigValue = Boolean.parseBoolean(scopeValidationElem.getText());
+        }
 
         if (scopeValidatorElem != null) {
             parseScopeValidator(scopeValidatorElem);
@@ -386,6 +399,9 @@ public class OAuthServerConfiguration {
 
         // Read token introspection related configurations.
         parseTokenIntrospectionConfig(oauthElem);
+
+        // Read the property for error redirection URI
+        parseRedirectToOAuthErrorPageConfig(oauthElem);
     }
 
     private void parseTokenIntrospectionConfig(OMElement oauthElem) {
@@ -971,6 +987,10 @@ public class OAuthServerConfiguration {
         return idTokenNotAllowedGrantTypesSet;
     }
 
+    public boolean isRedirectToRequestedRedirectUriEnabled(){
+        return redirectToRequestedRedirectUriEnabled;
+    }
+
     public boolean isUserNameAssertionEnabled() {
         return assertionsUserNameEnabled;
     }
@@ -1238,6 +1258,11 @@ public class OAuthServerConfiguration {
         return saml2BearerTokenUserType;
     }
 
+    public boolean getSaml2UserIdFromClaims() {
+
+        return saml2UserIdFromClaims;
+    }
+
     public boolean isConvertOriginalClaimsFromAssertionsToOIDCDialect() {
         return convertOriginalClaimsFromAssertionsToOIDCDialect;
     }
@@ -1257,6 +1282,14 @@ public class OAuthServerConfiguration {
 
     public boolean isMapFederatedUsersToLocal() {
         return mapFederatedUsersToLocal;
+    }
+
+    public boolean isAddTenantDomainToIdTokenEnabled() {
+        return addTenantDomainToIdTokenEnabled;
+    }
+
+    public boolean isAddUserstoreDomainToIdTokenEnabled() {
+        return addUserstoreDomainToIdTokenEnabled;
     }
 
     private void parseOAuthCallbackHandlers(OMElement callbackHandlersElem) {
@@ -1999,15 +2032,6 @@ public class OAuthServerConfiguration {
             }
         }
 
-        //Adding default token types if not added in the configuration
-        if (!supportedTokenIssuers.containsKey(DEFAULT_TOKEN_TYPE)) {
-            supportedTokenIssuers.put(DEFAULT_TOKEN_TYPE,
-                    new TokenIssuerDO(DEFAULT_TOKEN_TYPE, DEFAULT_OAUTH_TOKEN_ISSUER_CLASS, true));
-        }
-        if (!supportedTokenIssuers.containsKey(JWT_TOKEN_TYPE)) {
-            supportedTokenIssuers.put(JWT_TOKEN_TYPE, new TokenIssuerDO(JWT_TOKEN_TYPE, JWT_TOKEN_ISSUER_CLASS, true));
-        }
-
         boolean isRegistered = false;
         //Adding global token issuer configured in the identity xml as a supported token issuer
         for (Map.Entry<String, TokenIssuerDO> entry : supportedTokenIssuers.entrySet()) {
@@ -2022,11 +2046,23 @@ public class OAuthServerConfiguration {
         if (!isRegistered && oauthIdentityTokenGeneratorClassName != null) {
             boolean isPersistTokenAlias = true;
             if (persistAccessTokenAlias != null) {
-                isPersistTokenAlias = Boolean.valueOf(persistAccessTokenAlias);
+                isPersistTokenAlias = Boolean.parseBoolean(persistAccessTokenAlias);
             }
-            supportedTokenIssuers.put(oauthIdentityTokenGeneratorClassName,
-                    new TokenIssuerDO(oauthIdentityTokenGeneratorClassName, oauthIdentityTokenGeneratorClassName,
+
+            // If a server level <IdentityOAuthTokenGenerator> is defined, that will be our first choice for the
+            // "Default" token type issuer implementation.
+            supportedTokenIssuers.put(DEFAULT_TOKEN_TYPE,
+                    new TokenIssuerDO(DEFAULT_TOKEN_TYPE, oauthIdentityTokenGeneratorClassName,
                             isPersistTokenAlias));
+        }
+
+        // Adding default token types if not added in the configuration.
+        if (!supportedTokenIssuers.containsKey(DEFAULT_TOKEN_TYPE)) {
+            supportedTokenIssuers.put(DEFAULT_TOKEN_TYPE,
+                    new TokenIssuerDO(DEFAULT_TOKEN_TYPE, DEFAULT_OAUTH_TOKEN_ISSUER_CLASS, true));
+        }
+        if (!supportedTokenIssuers.containsKey(JWT_TOKEN_TYPE)) {
+            supportedTokenIssuers.put(JWT_TOKEN_TYPE, new TokenIssuerDO(JWT_TOKEN_TYPE, JWT_TOKEN_ISSUER_CLASS, true));
         }
     }
 
@@ -2214,16 +2250,22 @@ public class OAuthServerConfiguration {
                 oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.SAML2_GRANT));
         OMElement saml2BearerUserTypeElement = null;
         OMElement saml2TokenHandlerElement = null;
+        OMElement saml2UserIdFromClaimElement = null;
         if (saml2GrantElement != null) {
             saml2BearerUserTypeElement = saml2GrantElement.getFirstChildWithName(getQNameWithIdentityNS
                     (ConfigElements.SAML2_BEARER_USER_TYPE));
             saml2TokenHandlerElement = saml2GrantElement.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.SAML2_TOKEN_HANDLER));
+            saml2UserIdFromClaimElement = saml2GrantElement.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.
+                    SAML2_USER_ID_FROM_CLAIMS));
         }
         if (saml2TokenHandlerElement != null && StringUtils.isNotBlank(saml2TokenHandlerElement.getText())) {
             saml2TokenCallbackHandlerName = saml2TokenHandlerElement.getText().trim();
         }
         if (saml2BearerUserTypeElement != null && StringUtils.isNotBlank(saml2BearerUserTypeElement.getText())) {
             saml2BearerTokenUserType = saml2BearerUserTypeElement.getText().trim();
+        }
+        if (saml2UserIdFromClaimElement != null && StringUtils.isNotBlank(saml2UserIdFromClaimElement.getText())) {
+            saml2UserIdFromClaims = Boolean.parseBoolean(saml2UserIdFromClaimElement.getText().trim());
         }
     }
 
@@ -2489,6 +2531,18 @@ public class OAuthServerConfiguration {
                 returnOnlyMappedLocalRoles = Boolean
                         .parseBoolean(IdentityUtil.getProperty(ConfigElements.SEND_ONLY_LOCALLY_MAPPED_ROLES_OF_IDP));
             }
+            if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements
+                    .OPENID_CONNECT_ADD_TENANT_DOMAIN_TO_ID_TOKEN)) != null) {
+                addTenantDomainToIdTokenEnabled =
+                        Boolean.parseBoolean(openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS
+                                (ConfigElements.OPENID_CONNECT_ADD_TENANT_DOMAIN_TO_ID_TOKEN)).getText().trim());
+            }
+            if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements
+                    .OPENID_CONNECT_ADD_USERSTORE_DOMAIN_TO_ID_TOKEN)) != null) {
+                addUserstoreDomainToIdTokenEnabled =
+                        Boolean.parseBoolean(openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS
+                                (ConfigElements.OPENID_CONNECT_ADD_USERSTORE_DOMAIN_TO_ID_TOKEN)).getText().trim());
+            }
         }
     }
 
@@ -2568,6 +2622,19 @@ public class OAuthServerConfiguration {
             }
         }
     }
+    private void parseRedirectToOAuthErrorPageConfig(OMElement oauthConfigElem){
+        OMElement redirectToOAuthErrorPageElem =
+                oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements
+                        .REDIRECT_TO_REQUESTED_REDIRECT_URI));
+        if (redirectToOAuthErrorPageElem != null) {
+            redirectToRequestedRedirectUriEnabled =
+                    Boolean.parseBoolean(redirectToOAuthErrorPageElem.getText());
+        }
+
+        if (log.isDebugEnabled()) {
+            log.debug("Redirecting to OAuth2 Error page is set to : " + redirectToOAuthErrorPageElem);
+        }
+    }
 
     public OAuth2ScopeValidator getoAuth2ScopeValidator() {
         return oAuth2ScopeValidator;
@@ -2624,6 +2691,43 @@ public class OAuthServerConfiguration {
     }
 
     /**
+     * This method populates oauthTokenIssuerMap by reading the supportedTokenIssuers map. Earlier we only
+     * populated the oauthTokenIssuerMap when a token is issued but now we use this map for token validation
+     * calls as well.
+     */
+    public void populateOAuthTokenIssuerMap() throws IdentityOAuth2Exception {
+
+        if (supportedTokenIssuers != null) {
+            for (Map.Entry<String, TokenIssuerDO> tokenIssuerDO : supportedTokenIssuers.entrySet()) {
+
+                try {
+                    Class clazz = Thread.currentThread().getContextClassLoader().loadClass(
+                            tokenIssuerDO.getValue().getTokenImplClass());
+                    OauthTokenIssuer oauthTokenIssuer = (OauthTokenIssuer) clazz.newInstance();
+                    oauthTokenIssuer.setPersistAccessTokenAlias(tokenIssuerDO.getValue().isPersistAccessTokenAlias());
+                    oauthTokenIssuerMap.put(tokenIssuerDO.getKey(), oauthTokenIssuer);
+
+                } catch (ClassNotFoundException | IllegalAccessException | InstantiationException e) {
+                    throw new IdentityOAuth2Exception("Error while populating OAuth Token Issuer Map. Issuer key: " +
+                            tokenIssuerDO.getKey() + ", Issuer value: " + tokenIssuerDO.getValue(), e);
+                }
+            }
+        } else {
+            throw new IdentityOAuth2Exception("supportedTokenIssuers map returned null when populating the " +
+                    "oauthTokenIssuerMap object.");
+        }
+    }
+
+    /**
+     * This method returns the value of the property ScopeValidationEnabledForAuthzCodeAndImplicitGrant  for the OAuth
+     * configuration
+     * in identity.xml.
+     */
+    public boolean isScopeValidationEnabledForCodeAndImplicitGrant() {
+        return scopeValidationConfigValue;
+    }
+
+    /**
      * Localpart names for the OAuth configuration in identity.xml.
      */
     private class ConfigElements {
@@ -2662,6 +2766,7 @@ public class OAuthServerConfiguration {
         public static final String ENABLE_ASSERTIONS = "EnableAssertions";
         public static final String ENABLE_ASSERTIONS_USERNAME = "UserName";
         public static final String ENABLE_ACCESS_TOKEN_PARTITIONING = "EnableAccessTokenPartitioning";
+        public static final String REDIRECT_TO_REQUESTED_REDIRECT_URI = "RedirectToRequestedRedirectUri";
         public static final String ACCESS_TOKEN_PARTITIONING_DOMAINS = "AccessTokenPartitioningDomains";
         // OpenIDConnect configurations
         public static final String OPENID_CONNECT = "OpenIDConnect";
@@ -2680,6 +2785,10 @@ public class OAuthServerConfiguration {
         public static final String OPENID_CONNECT_IDTOKEN_CUSTOM_CLAIM_CALLBACK_HANDLER = "IDTokenCustomClaimsCallBackHandler";
         public static final String OPENID_CONNECT_CONVERT_ORIGINAL_CLAIMS_FROM_ASSERTIONS_TO_OIDCDIALECT =
                 "ConvertOriginalClaimsFromAssertionsToOIDCDialect";
+        // Property to decide whether to add tenant domain to id_token.
+        private static final String OPENID_CONNECT_ADD_TENANT_DOMAIN_TO_ID_TOKEN = "AddTenantDomainToIdToken";
+        // Property to decide whether to add userstore domain to id_token.
+        private static final String OPENID_CONNECT_ADD_USERSTORE_DOMAIN_TO_ID_TOKEN = "AddUserstoreDomainToIdToken";
         public static final String SEND_ONLY_LOCALLY_MAPPED_ROLES_OF_IDP = "FederatedRoleManagement"
                 + ".ReturnOnlyMappedLocalRoles";
         public static final String OPENID_CONNECT_ADD_UN_MAPPED_USER_ATTRIBUTES = "AddUnmappedUserAttributes";
@@ -2712,6 +2821,9 @@ public class OAuthServerConfiguration {
         private static final String SCOPE_CLASS_ATTR = "class";
         private static final String SKIP_SCOPE_ATTR = "scopesToSkip";
         private static final String IMPLICIT_ERROR_FRAGMENT = "ImplicitErrorFragment";
+
+        // Enable/Disable scope validation for implicit grant and authorization code grant
+        private static final String SCOPE_VALIDATION_FOR_AUTHZ_CODE_AND_IMPLICIT = "ScopeValidationEnabledForAuthzCodeAndImplicitGrant";
 
         // Default timestamp skew
         private static final String TIMESTAMP_SKEW = "TimestampSkew";
@@ -2777,6 +2889,7 @@ public class OAuthServerConfiguration {
         private static final String SAML2_GRANT = "SAML2Grant";
         private static final String SAML2_TOKEN_HANDLER = "SAML2TokenHandler";
         private static final String SAML2_BEARER_USER_TYPE = "UserType";
+        private static final String SAML2_USER_ID_FROM_CLAIMS = "UseUserIdFromClaims";
 
         // To enable revoke response headers
         private static final String ENABLE_REVOKE_RESPONSE_HEADERS = "EnableRevokeResponseHeaders";

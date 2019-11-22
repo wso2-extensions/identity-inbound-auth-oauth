@@ -22,6 +22,7 @@ import com.nimbusds.jwt.SignedJWT;
 import org.apache.axis2.transport.http.HTTPConstants;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.oltu.oauth2.as.request.OAuthAuthzRequest;
 import org.apache.oltu.oauth2.as.validator.CodeValidator;
 import org.apache.oltu.oauth2.as.validator.TokenValidator;
@@ -277,6 +278,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
         mockStatic(OAuth2Util.OAuthURL.class);
         when(OAuth2Util.OAuthURL.getOAuth2ErrorPageUrl()).thenReturn(ERROR_PAGE_URL);
+        mockOAuthServerConfiguration();
 
         Response response;
 
@@ -313,12 +315,16 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                 { AuthenticatorFlowStatus.SUCCESS_COMPLETED, new String[]{CLIENT_ID_VALUE}, "invalidConsentCacheKey",
                         "true", "scope1", null, null, HttpServletResponse.SC_FOUND, OAuth2ErrorCodes.ACCESS_DENIED },
 
-                { AuthenticatorFlowStatus.SUCCESS_COMPLETED, new String[]{"invalidId"}, "invalidConsentCacheKey",
-                        "true", "scope1", SESSION_DATA_KEY_VALUE, null, HttpServletResponse.SC_UNAUTHORIZED,
+                { null, new String[]{""}, SESSION_DATA_KEY_CONSENT_VALUE,
+                        "true", "scope1", SESSION_DATA_KEY_VALUE, null, HttpServletResponse.SC_FOUND,
                         OAuth2ErrorCodes.INVALID_CLIENT },
 
-                { AuthenticatorFlowStatus.SUCCESS_COMPLETED, new String[]{INACTIVE_CLIENT_ID_VALUE}, "invalidConsentCacheKey",
-                        "true", "scope1", SESSION_DATA_KEY_VALUE, null, HttpServletResponse.SC_UNAUTHORIZED,
+                { null, new String[]{"invalidId"}, SESSION_DATA_KEY_CONSENT_VALUE,
+                        "true", "scope1", SESSION_DATA_KEY_VALUE, null, HttpServletResponse.SC_FOUND,
+                        OAuth2ErrorCodes.INVALID_CLIENT },
+
+                { null, new String[]{INACTIVE_CLIENT_ID_VALUE}, SESSION_DATA_KEY_CONSENT_VALUE,
+                        "true", "scope1", SESSION_DATA_KEY_VALUE, null, HttpServletResponse.SC_FOUND,
                         OAuth2ErrorCodes.INVALID_CLIENT },
 
                 { AuthenticatorFlowStatus.SUCCESS_COMPLETED, new String[]{CLIENT_ID_VALUE}, "invalidConsentCacheKey",
@@ -401,21 +407,24 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
 
         mockEndpointUtil();
-        when(oAuth2Service.validateClientInfo(anyString(), anyString())).thenReturn(oAuth2ClientValidationResponseDTO);
         when(oAuth2Service.getOauthApplicationState(CLIENT_ID_VALUE)).thenReturn("ACTIVE");
-        when(oAuth2ClientValidationResponseDTO.isValidClient()).thenReturn(true);
+        if (ArrayUtils.isNotEmpty(clientId) && (clientId[0].equalsIgnoreCase("invalidId") || clientId[0]
+                .equalsIgnoreCase(INACTIVE_CLIENT_ID_VALUE) || StringUtils.isEmpty(clientId[0]))) {
+            when(oAuth2Service.validateClientInfo(clientId[0], APP_REDIRECT_URL)).thenCallRealMethod();
+
+        } else {
+            when(oAuth2Service.validateClientInfo(anyString(), anyString())).thenReturn(oAuth2ClientValidationResponseDTO);
+            when(oAuth2ClientValidationResponseDTO.isValidClient()).thenReturn(true);
+        }
 
         final String[] redirectUrl = new String[1];
         if (e instanceof IOException) {
             doThrow(e).when(httpServletResponse).sendRedirect(anyString());
         } else {
-            doAnswer(new Answer<Object>() {
-                @Override
-                public Object answer(InvocationOnMock invocation) {
-                    String key = (String) invocation.getArguments()[0];
-                    redirectUrl[0] = key;
-                    return null;
-                }
+            doAnswer(invocation -> {
+                String key = (String) invocation.getArguments()[0];
+                redirectUrl[0] = key;
+                return null;
             }).when(httpServletResponse).sendRedirect(anyString());
         }
 
@@ -638,12 +647,14 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         requestParams.put(FrameworkConstants.RequestParams.TO_COMMONAUTH, new String[]{"false"});
         requestParams.put(OAuthConstants.OAuth20Params.SCOPE, new String[]{OAuthConstants.Scope.OPENID});
         requestParams.put(OAuthConstants.Prompt.CONSENT, new String[]{consent});
+        requestParams.put(CLIENT_ID, new String[]{CLIENT_ID_VALUE});
 
         requestAttributes.put(FrameworkConstants.RequestParams.FLOW_STATUS, AuthenticatorFlowStatus.INCOMPLETE);
 
         mockHttpRequest(requestParams, requestAttributes, HttpMethod.POST);
 
         OAuth2Parameters oAuth2Params = setOAuth2Parameters(scopes, APP_NAME, RESPONSE_MODE_FORM_POST, redirectUrl);
+        oAuth2Params.setClientId(CLIENT_ID_VALUE);
 
         when(consentCacheEntry.getoAuth2Parameters()).thenReturn(oAuth2Params);
         when(consentCacheEntry.getLoggedInUser()).thenReturn(new AuthenticatedUser());
@@ -960,6 +971,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         requestParams.put(FrameworkConstants.RequestParams.TO_COMMONAUTH, new String[]{"false"});
         requestParams.put(OAuthConstants.OAuth20Params.SCOPE, new String[]{OAuthConstants.Scope.OPENID});
         requestParams.put(OAuthConstants.Prompt.CONSENT, new String[]{consent});
+        requestParams.put(CLIENT_ID, new String[]{CLIENT_ID_VALUE});
 
         requestAttributes.put(FrameworkConstants.RequestParams.FLOW_STATUS, AuthenticatorFlowStatus.INCOMPLETE);
 
@@ -973,6 +985,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         OAuth2Parameters oAuth2Params = setOAuth2Parameters(new HashSet<String>(), APP_NAME, responseMode, APP_REDIRECT_URL);
         oAuth2Params.setResponseType(responseType);
         oAuth2Params.setState(state);
+        oAuth2Params.setClientId(CLIENT_ID_VALUE);
 
         when(consentCacheEntry.getoAuth2Parameters()).thenReturn(oAuth2Params);
         when(consentCacheEntry.getLoggedInUser()).thenReturn(new AuthenticatedUser());
@@ -1168,6 +1181,8 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                 { null, previousSessionState1, APP_REDIRECT_URL, null, HttpServletResponse.SC_FOUND, returnValues[0]},
                 { null, previousSessionState1, APP_REDIRECT_URL, null, HttpServletResponse.SC_FOUND, returnValues[0]},
                 { opBrowserStateCookie, null, APP_REDIRECT_URL, null, HttpServletResponse.SC_FOUND, returnValues[0]},
+                { opBrowserStateCookie, previousSessionState1, APP_REDIRECT_URL, RESPONSE_MODE_FORM_POST,
+                        HttpServletResponse.SC_OK, returnValues[1]},
         };
     }
 
@@ -1686,6 +1701,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         mockStatic(OAuthServerConfiguration.class);
         when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
         when(oAuthServerConfiguration.getPersistenceProcessor()).thenReturn(tokenPersistenceProcessor);
+        when(oAuthServerConfiguration.isRedirectToRequestedRedirectUriEnabled()).thenReturn(false);
         when(tokenPersistenceProcessor.getProcessedClientId(anyString())).thenAnswer(new Answer<Object>(){
             @Override
             public Object answer(InvocationOnMock invocation) {

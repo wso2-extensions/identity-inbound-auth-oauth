@@ -32,4 +32,9 @@ public class InvalidRequestException extends InvalidRequestParentException {
         super(message, errorCode, cause);
         this.errorCode = errorCode;
     }
+
+    public InvalidRequestException(String message, String errorCode, String subErrorCode) {
+        super(message, errorCode, subErrorCode);
+    }
+
 }

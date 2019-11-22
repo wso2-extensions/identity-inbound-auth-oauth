@@ -165,6 +165,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
     @Test
     public void getApplicationDTOTest() throws Exception {
 
+        startTenantFlow();
         OAuthConsumerAppDTO dto = new OAuthConsumerAppDTO();
         dto.setApplicationName(dummyClientName);
         String dummyConsumerSecret = "dummyConsumerSecret";
@@ -172,6 +173,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
         dto.setOauthConsumerKey(dummyConsumerKey);
         String dummyCallbackUrl = "dummyCallbackUrl";
         dto.setCallbackUrl(dummyCallbackUrl);
+        dto.setUsername(dummyUserName.concat("@").concat(dummyTenantDomain));
 
         OAuthConsumerAppDTO[] oAuthConsumerAppDTOS = new OAuthConsumerAppDTO[]{dto};
 
@@ -359,6 +361,8 @@ public class DCRMServiceTest extends PowerMockTestCase {
 
         when(mockOAuthAdminService
                 .getOAuthApplicationDataByAppName(dummyClientName)).thenReturn(oAuthConsumerApp);
+        when(mockOAuthAdminService.registerAndRetrieveOAuthApplicationData(any(OAuthConsumerAppDTO.class)))
+                .thenReturn(oAuthConsumerApp);
 
         Application application = dcrmService.registerApplication(applicationRegistrationRequest);
         assertEquals(application.getClient_name(), dummyClientName);
@@ -508,12 +512,15 @@ public class DCRMServiceTest extends PowerMockTestCase {
         oAuthConsumerApp.setGrantTypes(grantType);
         oAuthConsumerApp.setOAuthVersion(OAUTH_VERSION);
         oAuthConsumerApp.setOauthConsumerKey("dummyConsumerKey");
+        oAuthConsumerApp.setUsername(dummyUserName.concat("@").concat(dummyTenantDomain));
 
         when(mockOAuthAdminService
                 .getOAuthApplicationDataByAppName(dummyClientName)).thenReturn(oAuthConsumerApp);
         when(mockOAuthAdminService
                 .getOAuthApplicationData("dummyConsumerKey")).thenReturn(oAuthConsumerApp);
         when(mockOAuthAdminService.getAllOAuthApplicationData()).thenReturn(new OAuthConsumerAppDTO[]{oAuthConsumerApp});
+        when(mockOAuthAdminService.registerAndRetrieveOAuthApplicationData(any(OAuthConsumerAppDTO.class))).
+                thenReturn(oAuthConsumerApp);
 
         doThrow(new IdentityApplicationManagementException("ehweh")).when(mockApplicationManagementService)
                 .updateApplication(serviceProvider, dummyTenantDomain, dummyUserName);

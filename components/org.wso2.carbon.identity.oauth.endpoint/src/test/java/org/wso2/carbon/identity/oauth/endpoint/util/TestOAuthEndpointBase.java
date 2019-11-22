@@ -48,6 +48,7 @@ public class TestOAuthEndpointBase extends PowerMockIdentityBaseTest {
         connection.createStatement().executeUpdate("RUNSCRIPT FROM 'src/test/resources/dbscripts/h2.sql'");
         mockStatic(IdentityDatabaseUtil.class);
         when(IdentityDatabaseUtil.getDBConnection()).thenAnswer(invocationOnMock -> dataSource.getConnection());
+        when(IdentityDatabaseUtil.getDBConnection(false)).thenAnswer(invocationOnMock -> dataSource.getConnection());
     }
 
     protected void createOAuthApp(String clientId, String secret, String username, String appName, String appState)

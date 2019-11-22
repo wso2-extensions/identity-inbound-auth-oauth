@@ -26,6 +26,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.base.IdentityConstants;
@@ -69,7 +70,7 @@ each purpose  and factory class to get instance of each DAO classes were introdu
  */
 public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenManagementDAO {
 
-    private final Log log = LogFactory.getLog(TokenManagementDAOImpl.class);
+    private static final Log log = LogFactory.getLog(TokenManagementDAOImpl.class);
     public static final String AUTHZ_USER = "AUTHZ_USER";
     public static final String LOWER_AUTHZ_USER = "LOWER(AUTHZ_USER)";
     private static final String UTC = "UTC";
@@ -100,26 +101,44 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
         }
 
         RefreshTokenValidationDataDO validationDataDO = new RefreshTokenValidationDataDO();
-        Connection connection = IdentityDatabaseUtil.getDBConnection();
+        Connection connection = IdentityDatabaseUtil.getDBConnection(false);
         PreparedStatement prepStmt = null;
         ResultSet resultSet = null;
         String sql;
 
         try {
-            if (connection.getMetaData().getDriverName().contains("MySQL")
-                    || connection.getMetaData().getDriverName().contains("H2")) {
-                sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_MYSQL;
-            } else if (connection.getMetaData().getDatabaseProductName().contains("DB2")) {
-                sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_DB2SQL;
-            } else if (connection.getMetaData().getDriverName().contains("MS SQL")
-                    || connection.getMetaData().getDriverName().contains("Microsoft")) {
-                sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_MSSQL;
-            } else if (connection.getMetaData().getDriverName().contains("PostgreSQL")) {
-                sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_POSTGRESQL;
-            } else if (connection.getMetaData().getDriverName().contains("INFORMIX")) {
-                sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_INFORMIX;
+            if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
+                if (connection.getMetaData().getDriverName().contains("MySQL")
+                        || connection.getMetaData().getDriverName().contains("H2")) {
+                    sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_MYSQL;
+                } else if (connection.getMetaData().getDatabaseProductName().contains("DB2")) {
+                    sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_DB2SQL;
+                } else if (connection.getMetaData().getDriverName().contains("MS SQL")
+                        || connection.getMetaData().getDriverName().contains("Microsoft")) {
+                    sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_MSSQL;
+                } else if (connection.getMetaData().getDriverName().contains("PostgreSQL")) {
+                    sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_POSTGRESQL;
+                } else if (connection.getMetaData().getDriverName().contains("INFORMIX")) {
+                    sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_INFORMIX;
+                } else {
+                    sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_ORACLE;
+                }
             } else {
-                sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_ORACLE;
+                if (connection.getMetaData().getDriverName().contains("MySQL")
+                        || connection.getMetaData().getDriverName().contains("H2")) {
+                    sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_MYSQL;
+                } else if (connection.getMetaData().getDatabaseProductName().contains("DB2")) {
+                    sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_DB2SQL;
+                } else if (connection.getMetaData().getDriverName().contains("MS SQL")
+                        || connection.getMetaData().getDriverName().contains("Microsoft")) {
+                    sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_MSSQL;
+                } else if (connection.getMetaData().getDriverName().contains("PostgreSQL")) {
+                    sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_POSTGRESQL;
+                } else if (connection.getMetaData().getDriverName().contains("INFORMIX")) {
+                    sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_INFORMIX;
+                } else {
+                    sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_ORACLE;
+                }
             }
 
             sql = OAuth2Util.getTokenPartitionedSqlByToken(sql, refreshToken);
@@ -161,18 +180,14 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                     validationDataDO.setTokenId(resultSet.getString(9));
                     validationDataDO.setGrantType(resultSet.getString(10));
                     String subjectIdentifier = resultSet.getString(11);
-                    AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(userName, userDomain, tenantDomain);
-                    user.setAuthenticatedSubjectIdentifier(subjectIdentifier);
-
-                    if (!OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && userDomain.startsWith
-                            (OAuthConstants.UserType.FEDERATED_USER_DOMAIN_PREFIX)) {
-                        if (log.isDebugEnabled()) {
-                            log.debug("Federated prefix found in domain " + userDomain + " and " +
-                                    "federated users are not mapped to local users. " +
-                                    "Hence setting user to a federated user for client id" + consumerKey);
-                        }
-                        user.setFederatedUser(true);
+                    validationDataDO.setTokenBindingReference(resultSet.getString(12));
+                    String authenticatedIDP = null;
+                    if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
+                        authenticatedIDP = resultSet.getString(13);
                     }
+                    AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(userName, userDomain, tenantDomain,
+                            authenticatedIDP);
+                    user.setAuthenticatedSubjectIdentifier(subjectIdentifier);
                     validationDataDO.setAuthorizedUser(user);
 
                 } else {
@@ -186,8 +201,6 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                 validationDataDO.setScope((String[]) ArrayUtils.addAll(validationDataDO.getScope(),
                         scopes.toArray(new String[scopes.size()])));
             }
-
-            connection.commit();
 
         } catch (SQLException e) {
             throw new IdentityOAuth2Exception("Error when validating a refresh token", e);
@@ -208,11 +221,16 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
         }
 
         AccessTokenDO validationDataDO = null;
-        Connection connection = IdentityDatabaseUtil.getDBConnection();
+        Connection connection = IdentityDatabaseUtil.getDBConnection(false);
         PreparedStatement prepStmt = null;
         ResultSet resultSet = null;
 
-        String sql = SQLQueries.RETRIEVE_REFRESH_TOKEN;
+        String sql;
+        if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
+            sql = SQLQueries.RETRIEVE_REFRESH_TOKEN_WITH_IDP_NAME;
+        } else {
+            sql = SQLQueries.RETRIEVE_REFRESH_TOKEN;
+        }
 
         try {
             sql = OAuth2Util.getTokenPartitionedSqlByToken(sql, refreshToken);
@@ -241,11 +259,14 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                     String tokenId = resultSet.getString(12);
                     String grantType = resultSet.getString(13);
                     String subjectIdentifier = resultSet.getString(14);
+                    String authenticatedIDP = null;
+                    if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
+                        authenticatedIDP = resultSet.getString(15);
+                    }
 
-                    AuthenticatedUser user = new AuthenticatedUser();
-                    user.setUserName(authorizedUser);
-                    user.setUserStoreDomain(userDomain);
-                    user.setTenantDomain(tenantDomain);
+                    AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(authorizedUser, userDomain,
+                            tenantDomain, authenticatedIDP);
+
                     ServiceProvider serviceProvider;
                     try {
                         serviceProvider = OAuth2ServiceComponentHolder.getApplicationMgtService().
@@ -253,15 +274,6 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                     } catch (IdentityApplicationManagementException e) {
                         throw new IdentityOAuth2Exception("Error occurred while retrieving OAuth2 application data " +
                                 "for client id " + consumerKey, e);
-                    }
-
-                    if (!OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && userDomain.startsWith
-                            (OAuthConstants.UserType.FEDERATED_USER_DOMAIN_PREFIX)) {
-                        if (log.isDebugEnabled()) {
-                            log.debug("Federated prefix found in domain " + userDomain + "and federated users are not" +
-                                    " mapped to local users. Hence setting user to a federated user");
-                        }
-                        user.setFederatedUser(true);
                     }
 
                     user.setAuthenticatedSubjectIdentifier(subjectIdentifier, serviceProvider);
@@ -304,7 +316,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
             log.debug("Retrieving tenant and scope for resource: " + resourceUri);
         }
         String sql;
-        try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
 
             if (connection.getMetaData().getDriverName().contains(Oauth2ScopeConstants.DataBaseType.ORACLE)) {
                 sql = SQLQueries.RETRIEVE_SCOPE_WITH_TENANT_FOR_RESOURCE_ORACLE;
@@ -357,17 +369,16 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
         PreparedStatement ps = null;
 
         try {
-            connection.setAutoCommit(false);
-
             String sql = SQLQueries.DELETE_USER_RPS;
 
             ps = connection.prepareStatement(sql);
             ps.setString(1, username);
             ps.setString(2, applicationName);
             ps.execute();
-            connection.commit();
+            IdentityDatabaseUtil.commitTransaction(connection);
 
         } catch (SQLException e) {
+            IdentityDatabaseUtil.rollbackTransaction(connection);
             String errorMsg = "Error deleting OAuth consent of Application " + applicationName + " and User " + username;
             throw new IdentityOAuth2Exception(errorMsg, e);
         } finally {
@@ -401,8 +412,6 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
         PreparedStatement ps = null;
 
         try {
-            connection.setAutoCommit(false);
-
             String sql = SQLQueries.DELETE_USER_RPS_IN_TENANT;
 
             ps = connection.prepareStatement(sql);
@@ -410,9 +419,10 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
             ps.setInt(2, IdentityTenantUtil.getTenantId(tenantDomain));
             ps.setString(3, applicationName);
             ps.execute();
-            connection.commit();
+            IdentityDatabaseUtil.commitTransaction(connection);
 
         } catch (SQLException e) {
+            IdentityDatabaseUtil.rollbackTransaction(connection);
             String errorMsg = "Error deleting OAuth consent of Application " +
                     applicationName + " and User " + username;
             throw new IdentityOAuth2Exception(errorMsg, e);
@@ -449,8 +459,6 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
         PreparedStatement ps = null;
 
         try {
-            connection.setAutoCommit(false);
-
             String sql = SQLQueries.UPDATE_TRUSTED_ALWAYS_IDN_OPENID_USER_RPS;
 
             ps = connection.prepareStatement(sql);
@@ -459,9 +467,10 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
             ps.setInt(3, IdentityTenantUtil.getTenantId(tenantDomain));
             ps.setString(4, applicationName);
             ps.execute();
-            connection.commit();
+            IdentityDatabaseUtil.commitTransaction(connection);
 
         } catch (SQLException e) {
+            IdentityDatabaseUtil.rollbackTransaction(connection);
             String errorMsg = "Error updating trusted always in a consent of Application " +
                     applicationName + " and User " + tenantAwareUserName;
             throw new IdentityOAuth2Exception(errorMsg, e);
@@ -494,7 +503,6 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
         PreparedStatement deactivateActiveCodesStatement = null;
         try {
             connection = IdentityDatabaseUtil.getDBConnection();
-            connection.setAutoCommit(false);
             if (OAuthConstants.ACTION_REVOKE.equals(action)) {
                 String newAppState;
                 if (properties.containsKey(OAuthConstants.OAUTH_APP_NEW_STATE)) {
@@ -570,9 +578,10 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
             deactivateActiveCodesStatement.setString(2, consumerKey);
             deactivateActiveCodesStatement.executeUpdate();
 
-            connection.commit();
+            IdentityDatabaseUtil.commitTransaction(connection);
 
         } catch (SQLException e) {
+            IdentityDatabaseUtil.rollbackTransaction(connection);
             throw new IdentityApplicationManagementException("Error while executing the SQL statement.", e);
         } finally {
             IdentityDatabaseUtil.closeStatement(updateStateStatement);
@@ -636,11 +645,11 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
             ps.setString(4, consumerKey);
             ps.setInt(5, tenantId);
             ps.executeUpdate();
-            connection.commit();
+            IdentityDatabaseUtil.commitTransaction(connection);
         } catch (SQLException e) {
             String errorMsg = "Error revoking access tokens for client ID: "
                     + consumerKey + "and tenant ID:" + tenantId;
-            IdentityDatabaseUtil.rollBack(connection);
+            IdentityDatabaseUtil.rollbackTransaction(connection);
             throw new IdentityOAuth2Exception(errorMsg, e);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, null, ps);

@@ -32,7 +32,7 @@ import javax.servlet.http.HttpServletRequest;
 
 public class CarbonOAuthAuthzRequest extends OAuthAuthzRequest {
 
-    private static Log log = LogFactory.getLog(CarbonOAuthTokenRequest.class);
+    private static final Log log = LogFactory.getLog(CarbonOAuthTokenRequest.class);
 
     public CarbonOAuthAuthzRequest(HttpServletRequest request) throws OAuthSystemException, OAuthProblemException {
         super(request);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2019, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -21,11 +21,9 @@ package org.wso2.carbon.identity.oauth2.validators;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
-import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
@@ -39,8 +37,6 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
-import org.wso2.carbon.identity.oauth2.token.JWTTokenIssuer;
-import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.util.ArrayList;
@@ -56,7 +52,7 @@ public class TokenValidationHandler {
 
     private static TokenValidationHandler instance = null;
     AuthorizationContextTokenGenerator tokenGenerator = null;
-    private Log log = LogFactory.getLog(TokenValidationHandler.class);
+    private static final Log log = LogFactory.getLog(TokenValidationHandler.class);
     private Map<String, OAuth2TokenValidator> tokenValidators = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
     private static final String BUILD_FQU_FROM_SP_CONFIG = "OAuth.BuildSubjectIdentifierFromSPConfig";
 
@@ -169,7 +165,7 @@ public class TokenValidationHandler {
         }
 
         try {
-            accessTokenDO = findAccessToken(requestDTO.getAccessToken().getIdentifier());
+            accessTokenDO = OAuth2Util.findAccessToken(requestDTO.getAccessToken().getIdentifier(), false);
         } catch (IllegalArgumentException e) {
             // Access token not found in the system.
             return buildClientAppErrorResponse(e.getMessage());
@@ -199,6 +195,7 @@ public class TokenValidationHandler {
         responseDTO.setAuthorizedUser(getAuthzUser(accessTokenDO));
         responseDTO.setScope(accessTokenDO.getScope());
         responseDTO.setValid(true);
+        responseDTO.setTokenBinding(accessTokenDO.getTokenBinding());
 
         if (tokenGenerator != null) {
             tokenGenerator.generateToken(messageContext);
@@ -398,7 +395,7 @@ public class TokenValidationHandler {
         } else {
 
             try {
-                accessTokenDO = findAccessToken(validationRequest.getAccessToken().getIdentifier());
+                accessTokenDO = OAuth2Util.findAccessToken(validationRequest.getAccessToken().getIdentifier(), false);
             } catch (IllegalArgumentException e) {
                 // access token not found in the system.
                 return buildIntrospectionErrorResponse(e.getMessage());
@@ -423,6 +420,11 @@ public class TokenValidationHandler {
             introResp.setUsername(getAuthzUser(accessTokenDO));
             // add client id
             introResp.setClientId(accessTokenDO.getConsumerKey());
+            // Set token binding info.
+            if (accessTokenDO.getTokenBinding() != null) {
+                introResp.setBindingType(accessTokenDO.getTokenBinding().getBindingType());
+                introResp.setBindingReference(accessTokenDO.getTokenBinding().getBindingReference());
+            }
             // adding the AccessTokenDO as a context property for further use
             messageContext.addProperty("AccessTokenDO", accessTokenDO);
         }
@@ -478,13 +480,8 @@ public class TokenValidationHandler {
 
         String consumerKey = accessTokenDO.getConsumerKey();
         try {
-            boolean buildSubjectIdentifierFromSPConfig = true;
-            String subjectIdentifierFromSPConfig = IdentityUtil.getProperty(BUILD_FQU_FROM_SP_CONFIG);
-            if (StringUtils.isNotEmpty(subjectIdentifierFromSPConfig)) {
-                buildSubjectIdentifierFromSPConfig =
-                        Boolean.parseBoolean(subjectIdentifierFromSPConfig);
-            }
-
+            boolean buildSubjectIdentifierFromSPConfig = Boolean.parseBoolean(IdentityUtil.getProperty
+                    (BUILD_FQU_FROM_SP_CONFIG));
             if (buildSubjectIdentifierFromSPConfig) {
                 ServiceProvider serviceProvider = getServiceProvider(consumerKey);
                 boolean useTenantDomainInLocalSubjectIdentifier = serviceProvider
@@ -544,7 +541,6 @@ public class TokenValidationHandler {
      * @return
      * @throws IdentityOAuth2Exception
      */
-    @Deprecated
     private OAuth2TokenValidator findAccessTokenValidator(OAuth2TokenValidationRequestDTO.OAuth2AccessToken accessToken)
             throws IdentityOAuth2Exception {
         // incomplete token validation request
@@ -627,18 +623,6 @@ public class TokenValidationHandler {
         }
 
         return false;
-    }
-
-    /**
-     * Find access token for token validation
-     *
-     * @param tokenIdentifier access token data object from the validation request
-     * @return
-     * @throws IdentityOAuth2Exception
-     */
-    private AccessTokenDO findAccessToken(String tokenIdentifier) throws IdentityOAuth2Exception {
-
-        return OAuth2Util.getAccessTokenDOfromTokenIdentifier(tokenIdentifier);
     }
 
     private AccessTokenDO findRefreshToken(String refreshToken) throws IdentityOAuth2Exception {

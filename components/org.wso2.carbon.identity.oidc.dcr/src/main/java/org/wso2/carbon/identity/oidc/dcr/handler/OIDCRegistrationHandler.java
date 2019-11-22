@@ -31,7 +31,7 @@ import org.wso2.carbon.identity.oauth.dcr.model.RegistrationResponseProfile;
 import org.wso2.carbon.identity.oauth.dcr.service.DCRManagementService;
 
 public class OIDCRegistrationHandler extends RegistrationHandler {
-    private static Log log = LogFactory.getLog(OIDCRegistrationHandler.class);
+    private static final Log log = LogFactory.getLog(OIDCRegistrationHandler.class);
 
     @Override
     public IdentityResponse.IdentityResponseBuilder handle(DCRMessageContext dcrMessageContext) throws DCRException {

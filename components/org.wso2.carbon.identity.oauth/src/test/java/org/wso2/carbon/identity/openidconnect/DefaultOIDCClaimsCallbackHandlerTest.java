@@ -26,10 +26,9 @@ import org.apache.commons.logging.LogFactory;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.Spy;
-import org.opensaml.saml2.core.Attribute;
-import org.opensaml.saml2.core.impl.AttributeBuilder;
-import org.opensaml.xml.ConfigurationException;
-import org.opensaml.xml.XMLObject;
+import org.opensaml.saml.saml2.core.Attribute;
+import org.opensaml.saml.saml2.core.impl.AttributeBuilder;
+import org.opensaml.core.xml.XMLObject;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
@@ -46,10 +45,12 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.model.ClaimConfig;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
+import org.wso2.carbon.identity.application.common.model.LocalAndOutboundAuthenticationConfig;
 import org.wso2.carbon.identity.application.common.model.LocalRole;
 import org.wso2.carbon.identity.application.common.model.PermissionsAndRoleConfig;
 import org.wso2.carbon.identity.application.common.model.RoleMapping;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataHandler;
@@ -75,8 +76,11 @@ import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 
+import java.io.File;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -85,7 +89,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-
 import javax.sql.DataSource;
 
 import static org.mockito.Matchers.any;
@@ -107,8 +110,6 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.EM
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.PHONE_NUMBER_VERIFIED;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.UPDATED_AT;
 import static org.wso2.carbon.identity.oauth2.token.handlers.grant.RefreshGrantHandler.PREV_ACCESS_TOKEN;
-import static org.wso2.carbon.identity.openidconnect.util.TestUtils.getConnection;
-import static org.wso2.carbon.identity.openidconnect.util.TestUtils.initiateH2Base;
 import static org.wso2.carbon.user.core.UserCoreConstants.DOMAIN_SEPARATOR;
 
 /**
@@ -193,6 +194,8 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
     private static final String ROLE3 = "role3";
     private static final String ROLE_CLAIM_DEFAULT_VALUE =
             ROLE1 + MULTI_ATTRIBUTE_SEPARATOR_DEFAULT + ROLE2 + MULTI_ATTRIBUTE_SEPARATOR_DEFAULT + ROLE3;
+    private static final String ROLE_CLAIM_DEFAULT_VALUE_WITH_DOMAIN =
+            "Secondary/role1" + MULTI_ATTRIBUTE_SEPARATOR_DEFAULT + "Secondary/role2";
 
     private static final String SP_ROLE_2 = "SP_ROLE2";
 
@@ -208,7 +211,13 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
         put(LOCAL_ROLE_CLAIM_URI, ROLE_CLAIM_DEFAULT_VALUE);
     }};
 
-    private final Log log = LogFactory.getLog(DefaultOIDCClaimsCallbackHandlerTest.class);
+    private static final Log log = LogFactory.getLog(DefaultOIDCClaimsCallbackHandlerTest.class);
+    private static final Map<String, String> USER_CLAIMS_MAP_WITH_SECONDARY_ROLES = new HashMap<String, String>() {{
+        put(LOCAL_EMAIL_CLAIM_URI, "john@example.com");
+        put(LOCAL_USERNAME_CLAIM_URI, "john");
+        put(LOCAL_ROLE_CLAIM_URI, ROLE_CLAIM_DEFAULT_VALUE_WITH_DOMAIN);
+    }};
+
     public static final String DB_NAME = "jdbc/WSO2CarbonDB";
     public static final String H2_SCRIPT_NAME = "dbScripts/scope_claim.sql";
     Connection connection = null;
@@ -251,7 +260,16 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
     public static String getFilePath(String fileName) {
 
         if (StringUtils.isNotBlank(fileName)) {
-            return DefaultOIDCClaimsCallbackHandlerTest.class.getClassLoader().getResource(fileName).getPath();
+            URL url = DefaultOIDCClaimsCallbackHandlerTest.class.getClassLoader().getResource(fileName);
+            if (url != null) {
+                try {
+                    File file = new File(url.toURI());
+                    return file.getAbsolutePath();
+                } catch (URISyntaxException e) {
+                    throw new IllegalArgumentException("Could not resolve a file with given path: " +
+                            url.toExternalForm());
+                }
+            }
         }
         throw new IllegalArgumentException("DB Script file name cannot be empty.");
     }
@@ -498,6 +516,34 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
         JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx);
         assertNotNull(jwtClaimsSet);
         assertNotNull(jwtClaimsSet.getClaim("username"));
+
+    }
+
+    @Test
+    public void testHandleCustomClaimsWithOAuthTokenReqMsgCtxtWithRoleDomainRemoved() throws Exception {
+
+
+        JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
+        OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForLocalUser();
+
+        ServiceProvider serviceProvider = getSpWithDefaultRequestedClaimsMappings();
+        mockApplicationManagementService(serviceProvider);
+        LocalAndOutboundAuthenticationConfig localAndOutboundAuthenticationConfig =
+                new LocalAndOutboundAuthenticationConfig();
+        // Enable user store domain removal for roles
+        localAndOutboundAuthenticationConfig.setUseUserstoreDomainInRoles(false);
+        serviceProvider.setLocalAndOutBoundAuthenticationConfig(localAndOutboundAuthenticationConfig);
+
+        UserRealm userRealm = getUserRealmWithUserClaims(USER_CLAIMS_MAP_WITH_SECONDARY_ROLES);
+        mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm);
+
+        mockClaimHandler();
+
+        JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx);
+        assertNotNull(jwtClaimsSet);
+        assertNotNull(jwtClaimsSet.getClaim("username"));
+        assertEquals(jwtClaimsSet.getStringArrayClaim("role")[0],"role1");
+        assertEquals(jwtClaimsSet.getStringArrayClaim("role")[1],"role2");
 
     }
 
@@ -817,6 +863,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
         AuthenticatedUser authenticatedUser = getDefaultAuthenticatedUserFederatedUser();
         OAuth2AuthorizeReqDTO authorizeReqDTO = new OAuth2AuthorizeReqDTO();
         authorizeReqDTO.setUser(authenticatedUser);
+        authorizeReqDTO.setTenantDomain(TENANT_DOMAIN);
 
         OAuthAuthzReqMessageContext authzReqMessageContext = new OAuthAuthzReqMessageContext(authorizeReqDTO);
         authzReqMessageContext.setApprovedScope(APPROVED_SCOPES);
@@ -833,6 +880,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
         ClaimConfig claimConfig = new ClaimConfig();
         claimConfig.setClaimMappings(requestedLocalClaimMap);
         serviceProvider.setClaimConfig(claimConfig);
+        serviceProvider.setSpProperties(new ServiceProviderProperty[]{});
 
         mockApplicationManagementService(serviceProvider);
 
@@ -895,7 +943,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
         return authenticatedUser;
     }
 
-    private Attribute buildAttribute(String attributeName, String[] attributeValues) throws ConfigurationException {
+    private Attribute buildAttribute(String attributeName, String[] attributeValues)  {
 
         Attribute attribute = new AttributeBuilder().buildObject(Attribute.DEFAULT_ELEMENT_NAME);
         attribute.setName(attributeName);

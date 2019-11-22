@@ -36,6 +36,7 @@ import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeServerException;
+import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
@@ -51,7 +52,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
-
 /**
  * The JDBC Scope Validation implementation. This validates the Resource's scope (stored in IDN_OAUTH2_RESOURCE_SCOPE)
  * against the Access Token's scopes.
@@ -65,7 +65,7 @@ public class JDBCScopeValidator extends OAuth2ScopeValidator {
     private static final String SCOPE_VALIDATOR_NAME = "Role based scope validator";
     private static final String OPENID = "openid";
 
-    Log log = LogFactory.getLog(JDBCScopeValidator.class);
+    private static final Log log = LogFactory.getLog(JDBCScopeValidator.class);
 
     @Override
     public boolean validateScope(AccessTokenDO accessTokenDO, String resource) throws IdentityOAuth2Exception {
@@ -170,7 +170,29 @@ public class JDBCScopeValidator extends OAuth2ScopeValidator {
     public boolean validateScope(OAuthTokenReqMessageContext tokReqMsgCtx) throws
             UserStoreException, IdentityOAuth2Exception {
 
-        String[] requestedScopes = tokReqMsgCtx.getScope();
+        return validateScope(tokReqMsgCtx.getScope(), tokReqMsgCtx.getAuthorizedUser());
+    }
+
+    @Override
+    public boolean validateScope(OAuthAuthzReqMessageContext authzReqMessageContext) throws
+            UserStoreException, IdentityOAuth2Exception {
+
+        return validateScope(authzReqMessageContext.getAuthorizationReqDTO().getScopes(),
+                authzReqMessageContext.getAuthorizationReqDTO().getUser());
+    }
+
+    /**
+     * Validate given set of scopes against an authenticated user.
+     *
+     * @param requestedScopes Scopes to be validated.
+     * @param user Authenticated user.
+     * @return True is all scopes are valid. False otherwise.
+     * @throws UserStoreException If were unable to get tenant or user roles.
+     * @throws IdentityOAuth2Exception by an Underline method.
+     */
+    private boolean validateScope(String[] requestedScopes, AuthenticatedUser user)
+            throws UserStoreException, IdentityOAuth2Exception {
+
         // Remove openid scope from the list if available
         requestedScopes = (String[]) ArrayUtils.removeElement(requestedScopes, OPENID);
 
@@ -179,7 +201,6 @@ public class JDBCScopeValidator extends OAuth2ScopeValidator {
             return true;
         }
 
-        AuthenticatedUser user = tokReqMsgCtx.getAuthorizedUser();
         int tenantId = getTenantId(user);
         String[] userRoles = getUserRoles(user);
 

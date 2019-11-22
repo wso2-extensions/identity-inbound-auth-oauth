@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oauth.endpoint.user.impl;
 import org.apache.oltu.oauth2.common.utils.JSONUtils;
 import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.IObjectFactory;
 import org.testng.annotations.BeforeClass;
@@ -50,7 +51,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import javax.sql.DataSource;
 
 import static org.junit.Assert.assertNull;
@@ -67,8 +67,9 @@ import static org.testng.Assert.assertTrue;
  * This class contains tests for UserInfoJSONResponseBuilder.
  */
 @PrepareForTest({OAuthServerConfiguration.class, OAuth2Util.class, IdentityTenantUtil.class, RegistryService.class,
-        AuthorizationGrantCache.class, ClaimUtil.class, IdentityUtil.class, UserInfoEndpointConfig.class, JDBCPersistenceManager.class,
-        OAuthServerConfiguration.class})
+        AuthorizationGrantCache.class, ClaimUtil.class, IdentityUtil.class, UserInfoEndpointConfig.class,
+        JDBCPersistenceManager.class})
+@PowerMockIgnore({"javax.management.*"})
 public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
 
     private UserInfoJSONResponseBuilder userInfoJSONResponseBuilder;
@@ -132,6 +133,7 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
             setUpRequestObjectService();
             prepareForResponseClaimTest(inputClaims, oidcScopeMap, getClaimsFromCache);
             mockDataSource();
+            mockObjectsRelatedToTokenValidation();
             String responseString =
                     userInfoJSONResponseBuilder.getResponseString(
                             getTokenResponseDTO(AUTHORIZED_USER_FULL_QUALIFIED, requestedScopes));
@@ -172,6 +174,7 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
         when(OAuth2Util.getEssentialClaims(anyString(), anyString())).thenReturn(essentialClaims);
         when(authorizationGrantCacheEntry.getEssentialClaims()).thenReturn(ESSENTIAL_CLAIM_JSON);
         mockDataSource();
+        mockObjectsRelatedToTokenValidation();
         String responseString =
                 userInfoJSONResponseBuilder.getResponseString(getTokenResponseDTO(AUTHORIZED_USER_FULL_QUALIFIED));
 
@@ -218,6 +221,7 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
 
         setUpRequestObjectService();
         mockDataSource();
+        mockObjectsRelatedToTokenValidation();
         String responseString =
                 userInfoJSONResponseBuilder.getResponseString(getTokenResponseDTO(AUTHORIZED_USER_FULL_QUALIFIED));
 
@@ -232,6 +236,7 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
 
         initSingleClaimTest(claimUri, claimValue);
         mockDataSource();
+        mockObjectsRelatedToTokenValidation();
         String responseString =
                 userInfoJSONResponseBuilder.getResponseString(getTokenResponseDTO(AUTHORIZED_USER_FULL_QUALIFIED));
 
@@ -261,6 +266,7 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
             when(userInfoJSONResponseBuilder.retrieveUserClaims(any(OAuth2TokenValidationResponseDTO.class)))
                     .thenReturn(inputClaims);
             mockDataSource();
+            mockObjectsRelatedToTokenValidation();
             String responseString =
                     userInfoJSONResponseBuilder.getResponseString(getTokenResponseDTO((authzUser).toFullQualifiedUsername()));
 

@@ -57,7 +57,7 @@ import static org.wso2.carbon.identity.oauth.dcr.factory.HttpRegistrationRespons
  */
 public class RegistrationRequestFactory extends HttpIdentityRequestFactory {
 
-    private static Log log = LogFactory.getLog(RegistrationRequestFactory.class);
+    private static final Log log = LogFactory.getLog(RegistrationRequestFactory.class);
 
 
     @Override

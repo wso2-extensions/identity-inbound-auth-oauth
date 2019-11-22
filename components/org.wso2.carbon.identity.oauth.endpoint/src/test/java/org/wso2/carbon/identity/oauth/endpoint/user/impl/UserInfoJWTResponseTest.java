@@ -21,8 +21,8 @@ package org.wso2.carbon.identity.oauth.endpoint.user.impl;
 import com.nimbusds.jwt.JWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.JWTParser;
-import org.apache.commons.dbcp.BasicDataSource;
 import org.mockito.Mockito;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.IObjectFactory;
 import org.testng.annotations.BeforeClass;
@@ -34,20 +34,17 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.core.persistence.JDBCPersistenceManager;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
-import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImpl;
 import org.wso2.carbon.identity.openidconnect.RequestObjectService;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 
-import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-
 import javax.sql.DataSource;
 
 import static org.mockito.Matchers.any;
@@ -65,6 +62,7 @@ import static org.testng.Assert.assertTrue;
  */
 @PrepareForTest({AuthorizationGrantCache.class, JDBCPersistenceManager.class,
         OAuthServerConfiguration.class})
+@PowerMockIgnore({"javax.management.*"})
 public class UserInfoJWTResponseTest extends UserInfoResponseBaseTest {
 
     private UserInfoJWTResponse userInfoJWTResponse;
@@ -104,6 +102,8 @@ public class UserInfoJWTResponseTest extends UserInfoResponseBaseTest {
         try {
             AuthenticatedUser authenticatedUser = (AuthenticatedUser) authorizedUser;
             prepareForSubjectClaimTest(authenticatedUser, inputClaims, appendTenantDomain, appendUserStoreDomain);
+
+            mockObjectsRelatedToTokenValidation();
 
             userInfoJWTResponse = spy(new UserInfoJWTResponse());
             when(userInfoJWTResponse.retrieveUserClaims(any(OAuth2TokenValidationResponseDTO.class)))
@@ -160,6 +160,7 @@ public class UserInfoJWTResponseTest extends UserInfoResponseBaseTest {
 
         initSingleClaimTest(claimUri, claimValue);
         mockDataSource();
+        mockObjectsRelatedToTokenValidation();
         String responseString =
                 userInfoJWTResponse.getResponseString(getTokenResponseDTO(AUTHORIZED_USER_FULL_QUALIFIED));
 
@@ -178,6 +179,7 @@ public class UserInfoJWTResponseTest extends UserInfoResponseBaseTest {
         userInfoJWTResponse = new UserInfoJWTResponse();
         initSingleClaimTest(claimUri, claimValue);
         mockDataSource();
+        mockObjectsRelatedToTokenValidation();
         String responseString =
                 userInfoJWTResponse.getResponseString(getTokenResponseDTO(AUTHORIZED_USER_FULL_QUALIFIED));
 
@@ -207,6 +209,7 @@ public class UserInfoJWTResponseTest extends UserInfoResponseBaseTest {
         try {
             prepareForResponseClaimTest(inputClaims, oidcScopeMap, getClaimsFromCache);
             mockDataSource();
+            mockObjectsRelatedToTokenValidation();
             String responseString =
                     userInfoJWTResponse.getResponseString(
                             getTokenResponseDTO(AUTHORIZED_USER_FULL_QUALIFIED, requestedScopes));

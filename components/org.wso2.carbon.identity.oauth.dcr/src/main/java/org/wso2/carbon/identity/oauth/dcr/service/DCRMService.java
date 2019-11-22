@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oauth.dcr.service;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.InboundAuthenticationConfig;
@@ -45,6 +46,7 @@ import org.wso2.carbon.identity.oauth.dcr.util.DCRConstants;
 import org.wso2.carbon.identity.oauth.dcr.util.DCRMUtils;
 import org.wso2.carbon.identity.oauth.dcr.util.ErrorCodes;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
+import org.wso2.carbon.user.core.UserCoreConstants;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -359,8 +361,10 @@ public class DCRMService {
         if (log.isDebugEnabled()) {
             log.debug("Creating OAuth Application: " + spName + " in tenant: " + tenantDomain);
         }
+
+        OAuthConsumerAppDTO createdApp;
         try {
-            oAuthAdminService.registerOAuthApplicationData(oAuthConsumerApp);
+            createdApp = oAuthAdminService.registerAndRetrieveOAuthApplicationData(oAuthConsumerApp);
         } catch (IdentityOAuthAdminException e) {
             throw DCRMUtils.generateServerException(
                     DCRMConstants.ErrorMessages.FAILED_TO_REGISTER_APPLICATION, spName, e);
@@ -370,21 +374,8 @@ public class DCRMService {
             log.debug("Created OAuth Application: " + spName + " in tenant: " + tenantDomain);
         }
 
-        OAuthConsumerAppDTO createdApp;
-        try {
-            createdApp = oAuthAdminService.getOAuthApplicationDataByAppName(oAuthConsumerApp.getApplicationName());
-        } catch (IdentityOAuthAdminException e) {
-            throw DCRMUtils.generateServerException(
-                    DCRMConstants.ErrorMessages.FAILED_TO_GET_APPLICATION, oAuthConsumerApp.getApplicationName(), e);
-        }
-
         if (createdApp == null) {
             throw DCRMUtils.generateServerException(DCRMConstants.ErrorMessages.FAILED_TO_REGISTER_APPLICATION, spName);
-        }
-
-        if (log.isDebugEnabled()) {
-            log.debug("Retrieved Details of OAuth App: " + createdApp.getApplicationName() + " in tenant: " +
-                    tenantDomain);
         }
         return createdApp;
     }
@@ -429,16 +420,25 @@ public class DCRMService {
         return serviceProvider != null;
     }
 
-    private boolean isClientIdExist(String clientId) {
+    /**
+     * Check whether the provided client id is exists.
+     *
+     * @param clientId client id.
+     * @return true if application exists with the client id.
+     * @throws DCRMException in case of failure.
+     */
+    private boolean isClientIdExist(String clientId) throws DCRMException {
 
-        OAuthConsumerAppDTO app = null;
         try {
-            app = getApplicationById(clientId);
-        } catch (DCRMException e) {
-            log.error("Error while retrieving oauth application with client id: " + clientId);
+            OAuthConsumerAppDTO dto = oAuthAdminService.getOAuthApplicationData(clientId);
+            return dto != null && StringUtils.isNotBlank(dto.getApplicationName());
+        } catch (IdentityOAuthAdminException e) {
+            if (e.getCause() instanceof InvalidOAuthClientException) {
+                return false;
+            }
+            throw DCRMUtils
+                    .generateServerException(DCRMConstants.ErrorMessages.FAILED_TO_GET_APPLICATION_BY_ID, clientId, e);
         }
-
-        return app != null;
     }
 
     private ServiceProvider getServiceProvider(String applicationName, String tenantDomain) throws DCRMException {
@@ -610,14 +610,14 @@ public class DCRMService {
 
     private boolean isUserAuthorized(String clientId) throws DCRMServerException {
 
-        OAuthConsumerAppDTO[] oAuthConsumerAppDTOS;
+        OAuthConsumerAppDTO oAuthConsumerAppDTO;
         try {
             // Get applications owned by the user
-            oAuthConsumerAppDTOS = oAuthAdminService.getAllOAuthApplicationData();
-            for (OAuthConsumerAppDTO appDTO : oAuthConsumerAppDTOS) {
-                if (clientId.equals(appDTO.getOauthConsumerKey())) {
-                    return true;
-                }
+            oAuthConsumerAppDTO = oAuthAdminService.getOAuthApplicationData(clientId);
+            String appUserName = oAuthConsumerAppDTO.getUsername();
+            String threadLocalUserName = CarbonContext.getThreadLocalCarbonContext().getUsername().concat(UserCoreConstants.TENANT_DOMAIN_COMBINER).concat(CarbonContext.getThreadLocalCarbonContext().getTenantDomain());
+            if (threadLocalUserName.equals(appUserName)) {
+                return true;
             }
         } catch (IdentityOAuthAdminException e) {
             throw DCRMUtils.generateServerException(

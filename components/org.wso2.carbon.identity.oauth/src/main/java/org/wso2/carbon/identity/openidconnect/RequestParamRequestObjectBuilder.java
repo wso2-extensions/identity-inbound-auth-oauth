@@ -52,7 +52,7 @@ import static org.wso2.carbon.identity.openidconnect.model.Constants.NUMBER_OF_P
  */
 public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
 
-    private static Log log = LogFactory.getLog(RequestParamRequestObjectBuilder.class);
+    private static final Log log = LogFactory.getLog(RequestParamRequestObjectBuilder.class);
 
     /**
      * Builds request object which comes as the value of the request query parameter of OIDC authorization request

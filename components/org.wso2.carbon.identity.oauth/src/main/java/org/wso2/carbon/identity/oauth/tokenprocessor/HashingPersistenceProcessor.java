@@ -35,7 +35,7 @@ import java.security.NoSuchAlgorithmException;
  */
 public class HashingPersistenceProcessor implements TokenPersistenceProcessor {
 
-    protected Log log = LogFactory.getLog(HashingPersistenceProcessor.class);
+    protected static final Log log = LogFactory.getLog(HashingPersistenceProcessor.class);
     public static final String ALGORITHM = "algorithm";
     public static final String HASH = "hash";
 
@@ -85,7 +85,7 @@ public class HashingPersistenceProcessor implements TokenPersistenceProcessor {
     public String getPreprocessedAccessTokenIdentifier(String processedAccessTokenIdentifier)
             throws IdentityOAuth2Exception {
 
-        throw new UnsupportedOperationException("Invalid operation on hashed access token");
+        return processedAccessTokenIdentifier;
     }
 
     @Override
@@ -97,7 +97,7 @@ public class HashingPersistenceProcessor implements TokenPersistenceProcessor {
     @Override
     public String getPreprocessedRefreshToken(String processedRefreshToken) throws IdentityOAuth2Exception {
 
-        throw new UnsupportedOperationException("Invalid operation on hashed refresh token");
+        return processedRefreshToken;
     }
 
     /**

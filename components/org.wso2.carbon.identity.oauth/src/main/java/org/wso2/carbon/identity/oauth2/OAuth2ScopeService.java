@@ -22,10 +22,9 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.oauth.cache.OAuthScopeCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthScopeCacheKey;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
-import org.wso2.carbon.identity.oauth2.dao.ScopeMgtDAO;
+import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.util.Oauth2ScopeUtils;
 
-import java.util.HashSet;
 import java.util.Set;
 
 /**
@@ -33,7 +32,6 @@ import java.util.Set;
  */
 public class OAuth2ScopeService {
     private static final Log log = LogFactory.getLog(OAuth2ScopeService.class);
-    private static ScopeMgtDAO scopeMgtDAO = new ScopeMgtDAO();
 
     /**
      * Register a scope with the bindings
@@ -66,7 +64,7 @@ public class OAuth2ScopeService {
         }
 
         try {
-            scopeMgtDAO.addScope(scope, tenantID);
+            OAuthTokenPersistenceFactory.getInstance().getOAuthScopeDAO().addScope(scope, tenantID);
             if (log.isDebugEnabled()) {
                 log.debug("Scope is added to the database. \n" + scope.toString());
             }
@@ -75,7 +73,8 @@ public class OAuth2ScopeService {
                     ERROR_CODE_FAILED_TO_REGISTER_SCOPE, scope.toString(), e);
         }
 
-        OAuthScopeCache.getInstance().addToCache(new OAuthScopeCacheKey(scope.getName(), Integer.toString(tenantID)), scope);
+        OAuthScopeCache.getInstance().addToCache(new OAuthScopeCacheKey(scope.getName(), Integer.toString(tenantID)),
+                scope);
         return scope;
     }
 
@@ -95,7 +94,8 @@ public class OAuth2ScopeService {
         // check for no query params.
         if (startIndex == null && count == null) {
             try {
-                scopes = scopeMgtDAO.getAllScopes(Oauth2ScopeUtils.getTenantID());
+                scopes = OAuthTokenPersistenceFactory.getInstance().getOAuthScopeDAO()
+                        .getAllScopes(Oauth2ScopeUtils.getTenantID());
             } catch (IdentityOAuth2ScopeServerException e) {
                 throw Oauth2ScopeUtils.generateServerException(Oauth2ScopeConstants.ErrorMessages.
                         ERROR_CODE_FAILED_TO_GET_ALL_SCOPES, e);
@@ -122,16 +122,18 @@ public class OAuth2ScopeService {
                     ERROR_CODE_BAD_REQUEST_SCOPE_NAME_NOT_SPECIFIED, null);
         }
 
-        scope = OAuthScopeCache.getInstance().getValueFromCache(new OAuthScopeCacheKey(name, Integer.toString(tenantID)));
+        scope = OAuthScopeCache.getInstance().getValueFromCache(new OAuthScopeCacheKey(name,
+                Integer.toString(tenantID)));
 
         if (scope == null) {
             try {
-                scope = scopeMgtDAO.getScopeByName(name, tenantID);
+                scope = OAuthTokenPersistenceFactory.getInstance().getOAuthScopeDAO().getScopeByName(name, tenantID);
                 if (scope != null) {
                     if (log.isDebugEnabled()) {
                         log.debug("Scope is getting from the database. \n" + scope.toString());
                     }
-                    OAuthScopeCache.getInstance().addToCache(new OAuthScopeCacheKey(name, Integer.toString(tenantID)), scope);
+                    OAuthScopeCache.getInstance().addToCache(new OAuthScopeCacheKey(name, Integer.toString(tenantID))
+                            , scope);
                 }
 
             } catch (IdentityOAuth2ScopeServerException e) {
@@ -172,7 +174,8 @@ public class OAuth2ScopeService {
             isScopeExists = true;
         } else {
             try {
-                isScopeExists = scopeMgtDAO.isScopeExists(name, tenantID);
+                isScopeExists = OAuthTokenPersistenceFactory.getInstance().getOAuthScopeDAO().isScopeExists(name,
+                        tenantID);
             } catch (IdentityOAuth2ScopeServerException e) {
                 throw Oauth2ScopeUtils.generateServerException(Oauth2ScopeConstants.ErrorMessages.
                         ERROR_CODE_FAILED_TO_GET_SCOPE_BY_NAME, name, e);
@@ -206,7 +209,7 @@ public class OAuth2ScopeService {
         OAuthScopeCache.getInstance().clearCacheEntry(new OAuthScopeCacheKey(name, Integer.toString(tenantID)));
 
         try {
-            scopeMgtDAO.deleteScopeByName(name, tenantID);
+            OAuthTokenPersistenceFactory.getInstance().getOAuthScopeDAO().deleteScopeByName(name, tenantID);
             if (log.isDebugEnabled()) {
                 log.debug("Scope: " + name + " is deleted from the database.");
             }
@@ -245,7 +248,7 @@ public class OAuth2ScopeService {
         }
 
         try {
-            scopeMgtDAO.updateScopeByName(updatedScope, tenantID);
+            OAuthTokenPersistenceFactory.getInstance().getOAuthScopeDAO().updateScopeByName(updatedScope, tenantID);
         } catch (IdentityOAuth2ScopeServerException e) {
             throw Oauth2ScopeUtils.generateServerException(Oauth2ScopeConstants.ErrorMessages.
                     ERROR_CODE_FAILED_TO_UPDATE_SCOPE_BY_NAME, updatedScope.getName(), e);
@@ -283,7 +286,8 @@ public class OAuth2ScopeService {
         }
 
         try {
-            scopes = scopeMgtDAO.getScopesWithPagination(startIndex, count, Oauth2ScopeUtils.getTenantID());
+            scopes = OAuthTokenPersistenceFactory.getInstance().getOAuthScopeDAO().getScopesWithPagination(startIndex
+                    , count, Oauth2ScopeUtils.getTenantID());
         } catch (IdentityOAuth2ScopeServerException e) {
             throw Oauth2ScopeUtils.generateServerException(Oauth2ScopeConstants.ErrorMessages.
                     ERROR_CODE_FAILED_TO_GET_ALL_SCOPES_PAGINATION, e);

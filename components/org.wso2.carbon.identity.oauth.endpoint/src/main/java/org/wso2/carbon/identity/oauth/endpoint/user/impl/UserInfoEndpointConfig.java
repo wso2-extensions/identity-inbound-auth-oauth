@@ -31,7 +31,7 @@ import org.wso2.carbon.identity.oauth.user.UserInfoResponseBuilder;
  */
 public class UserInfoEndpointConfig {
 
-    private static Log log = LogFactory.getLog(UserInfoEndpointConfig.class);
+    private static final Log log = LogFactory.getLog(UserInfoEndpointConfig.class);
     private static UserInfoEndpointConfig config = new UserInfoEndpointConfig();
     private UserInfoRequestValidator requestValidator;
     private UserInfoAccessTokenValidator accessTokenValidator;

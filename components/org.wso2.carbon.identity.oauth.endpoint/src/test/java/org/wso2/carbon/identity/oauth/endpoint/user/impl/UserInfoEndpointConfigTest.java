@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth.endpoint.user.impl;
 
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.mockito.Mock;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.testng.PowerMockObjectFactory;
 import org.powermock.modules.testng.PowerMockTestCase;
@@ -47,6 +48,7 @@ import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 
 @PrepareForTest({EndpointUtil.class})
+@PowerMockIgnore({"javax.management.*"})
 public class UserInfoEndpointConfigTest extends PowerMockTestCase {
 
     @Mock

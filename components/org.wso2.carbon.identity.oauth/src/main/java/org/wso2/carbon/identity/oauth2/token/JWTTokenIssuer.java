@@ -55,8 +55,8 @@ import java.security.interfaces.RSAPrivateKey;
 import java.text.ParseException;
 import java.util.Arrays;
 import java.util.Calendar;
-import java.util.Collections;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -138,8 +138,12 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     @Override
     public String getAccessTokenHash(String accessToken) throws OAuthSystemException {
         try {
-            JWT parse = JWTParser.parse(accessToken);
-            return parse.getJWTClaimsSet().getJWTID();
+            JWT parsedJwtToken = JWTParser.parse(accessToken);
+            String jwtId = parsedJwtToken.getJWTClaimsSet().getJWTID();
+            if (jwtId == null) {
+                throw new OAuthSystemException("JTI could not be retrieved from the JWT token.");
+            }
+            return jwtId;
         } catch (ParseException e) {
             if (log.isDebugEnabled() && IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
                 log.debug("Error while getting JWTID from token: " + accessToken);
@@ -295,7 +299,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             JWSSigner signer = new RSASSASigner((RSAPrivateKey) privateKey);
             JWSHeader.Builder headerBuilder = new JWSHeader.Builder((JWSAlgorithm) signatureAlgorithm);
             String certThumbPrint = OAuth2Util.getThumbPrint(tenantDomain, tenantId);
-            headerBuilder.keyID(certThumbPrint);
+            headerBuilder.keyID(OAuth2Util.getKID(certThumbPrint, (JWSAlgorithm) signatureAlgorithm));
             headerBuilder.x509CertThumbprint(new Base64URL(certThumbPrint));
             SignedJWT signedJWT = new SignedJWT(headerBuilder.build(), jwtClaimsSet);
             signedJWT.sign(signer);
@@ -417,12 +421,12 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             jwtClaimsSetBuilder.claim(SCOPE, scope);
         }
 
-        jwtClaimsSetBuilder.expirationTime(
-                getExpiryTime(tokenReqMessageContext, new Date(curTimeInMillis + accessTokenLifeTimeInMillis)));
+        jwtClaimsSetBuilder.expirationTime(new Date(curTimeInMillis + accessTokenLifeTimeInMillis));
 
         // This is a spec (openid-connect-core-1_0:2.0) requirement for ID tokens. But we are keeping this in JWT
         // as well.
-        jwtClaimsSetBuilder.audience(Collections.singletonList(consumerKey));
+        List<String> audience = OAuth2Util.getOIDCAudience(consumerKey, oAuthAppDO);
+        jwtClaimsSetBuilder.audience(audience);
         JWTClaimsSet jwtClaimsSet;
 
         // Handle custom claims
@@ -498,35 +502,6 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             }
         }
         return scopeString;
-    }
-
-    /**
-     * To get the expiry time claim of the JWT token, based on the previous assertion expiry time.
-     *
-     * @param tokenReqMessageContext Token request message context.
-     * @param originalExpiryTime     Original expiry time
-     * @return expiry time of the token.
-     */
-    private Date getExpiryTime(OAuthTokenReqMessageContext tokenReqMessageContext, Date originalExpiryTime) {
-
-        if (tokenReqMessageContext != null) {
-            Object assertionExpiryTime = tokenReqMessageContext.getProperty(EXPIRY_TIME_JWT);
-            if (assertionExpiryTime != null) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Expiry time from the previous token " + ((Date) assertionExpiryTime).getTime());
-                }
-
-                if (originalExpiryTime.after((Date) assertionExpiryTime)) {
-                    if (log.isDebugEnabled()) {
-                        log.debug("Expiry time of newly generated token as per the configurations " + originalExpiryTime
-                                + ", since this time is after assertion expiry time " + assertionExpiryTime
-                                + " setting, " + assertionExpiryTime + " as the expiry time");
-                    }
-                    originalExpiryTime = (Date) assertionExpiryTime;
-                }
-            }
-        }
-        return originalExpiryTime;
     }
 
     /**

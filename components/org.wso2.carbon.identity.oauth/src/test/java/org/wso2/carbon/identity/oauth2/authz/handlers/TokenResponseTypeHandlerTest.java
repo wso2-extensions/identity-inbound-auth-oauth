@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oauth2.authz.handlers;
 import org.mockito.Mockito;
 import org.testng.Assert;
 import org.testng.annotations.BeforeTest;
+import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
@@ -31,9 +32,11 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth2.TestConstants;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.test.common.testng.utils.MockAuthenticatedUser;
 
@@ -45,7 +48,8 @@ import org.wso2.carbon.identity.test.common.testng.utils.MockAuthenticatedUser;
 @WithH2Database(files = { "dbScripts/token.sql" })
 public class TokenResponseTypeHandlerTest {
 
-    private static final String TEST_CLIENT_ID = "SDSDSDS23131231";
+    private static final String TEST_CLIENT_ID_1 = "SDSDSDS23131231";
+    private static final String TEST_CLIENT_ID_2 = "SDSDSDS23131232";
     private static final String TEST_USER_ID = "testUser";
     private AuthenticatedUser authenticatedUser = new MockAuthenticatedUser(TEST_USER_ID);
 
@@ -55,19 +59,34 @@ public class TokenResponseTypeHandlerTest {
         OAuthComponentServiceHolder.getInstance().addOauthEventInterceptorProxy(interceptor);
     }
 
-    @Test
-    public void testIssue() throws Exception {
+    /**
+     * This data provider is added to enable affected test cases to be tested in both
+     * where the IDP_ID column is available and not available in the relevant tables.
+     */
+    @DataProvider(name = "CommonDataProvider")
+    public Object[][] commonDataProvider() {
+        return new Object[][]{
+                {true, TEST_CLIENT_ID_1},
+                {false, TEST_CLIENT_ID_2}
+        };
+    }
+
+    @Test(dataProvider = "CommonDataProvider")
+    public void testIssue(boolean isIDPIdColumnEnabled, String clientId) throws Exception {
+
+        OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(isIDPIdColumnEnabled);
         AccessTokenResponseTypeHandler tokenResponseTypeHandler = new AccessTokenResponseTypeHandler();
         tokenResponseTypeHandler.init();
 
         OAuth2AuthorizeReqDTO authorizationReqDTO = new OAuth2AuthorizeReqDTO();
 
         authorizationReqDTO.setCallbackUrl("https://localhost:8000/callback");
-        authorizationReqDTO.setConsumerKey(TEST_CLIENT_ID);
+        authorizationReqDTO.setConsumerKey(clientId);
 
         authenticatedUser.setUserName(TEST_USER_ID);
         authenticatedUser.setTenantDomain("carbon.super");
         authenticatedUser.setUserStoreDomain("PTEST");
+        authenticatedUser.setFederatedIdPName(TestConstants.LOCAL_IDP);
         authorizationReqDTO.setUser(authenticatedUser);
         authorizationReqDTO.setResponseType(OAuthConstants.GrantTypes.TOKEN);
         OAuthAuthzReqMessageContext authAuthzReqMessageContext = new OAuthAuthzReqMessageContext(authorizationReqDTO);
@@ -75,7 +94,7 @@ public class TokenResponseTypeHandlerTest {
 
         OAuthAppDO oAuthAppDO = new OAuthAppDO();
         oAuthAppDO.setGrantTypes("implicit");
-        oAuthAppDO.setOauthConsumerKey(TEST_CLIENT_ID);
+        oAuthAppDO.setOauthConsumerKey(clientId);
         oAuthAppDO.setUser(authenticatedUser);
         oAuthAppDO.setOauthVersion(OAuthConstants.OAuthVersions.VERSION_2);
 

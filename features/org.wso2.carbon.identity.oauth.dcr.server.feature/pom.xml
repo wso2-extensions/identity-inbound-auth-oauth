@@ -22,7 +22,7 @@
         <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
         <artifactId>identity-inbound-auth-oauth</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <version>6.0.129-SNAPSHOT</version>
+        <version>6.2.58-SNAPSHOT</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -72,6 +72,14 @@
         <dependency>
             <groupId>net.minidev</groupId>
             <artifactId>json-smart</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.minidev</groupId>
+            <artifactId>accessors-smart</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.ow2.asm</groupId>
+            <artifactId>asm-all</artifactId>
         </dependency>
         <dependency>
             <groupId>org.wso2.orbit.com.github.dblock.waffle</groupId>
@@ -165,7 +173,7 @@
                                 <bundleDef>org.wso2.carbon.identity.inbound.auth.oauth2:org.wso2.carbon.identity.oidc.dcr</bundleDef>
                             </bundles>
                             <importFeatures>
-                                <importFeatureDef>org.wso2.carbon.core:compatible:${carbon.kernel.version}</importFeatureDef>
+                                <importFeatureDef>org.wso2.carbon.core:compatible:${carbon.kernel.feature.version}</importFeatureDef>
                                 <importFeatureDef>org.wso2.carbon.identity.core:compatible:${carbon.identity.framework.version}</importFeatureDef>
                                 <importFeatureDef>org.wso2.carbon.identity.oauth.common:compatible:${project.version}</importFeatureDef>
                                 <importFeatureDef>org.wso2.carbon.idp.mgt.server:compatible:${carbon.identity.framework.version}</importFeatureDef>

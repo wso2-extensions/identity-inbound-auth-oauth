@@ -107,6 +107,9 @@
         <operation name="getScopeNames" mep="http://www.w3.org/2006/01/wsdl/in-out">
             <parameter name="AuthorizationAction" locked="true">/permission/admin/manage/identity/applicationmgt/view</parameter>
         </operation>
+        <operation name="getSupportedTokenBindingsMetaData" mep="http://www.w3.org/2006/01/wsdl/in-out">
+            <parameter name="AuthorizationAction" locked="true">/permission/admin/manage/identity/applicationmgt/view</parameter>
+        </operation>
     </service>
 
     <service name="OAuth2TokenValidationService" scope="transportsession">

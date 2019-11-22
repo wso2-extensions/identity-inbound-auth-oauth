@@ -57,6 +57,10 @@ public final class OAuthConstants {
     public static final String OAUTH_ERROR_CODE = "oauthErrorCode";
     public static final String OAUTH_ERROR_MESSAGE = "oauthErrorMsg";
 
+    // Authentication Error Response according to specifications
+    public static final String OAUTH_ERROR = "error";
+    public static final String OAUTH_ERROR_DESCRIPTION = "error_description";
+
     // Constants for paging in OAuth UI
     public static final int DEFAULT_ITEMS_PER_PAGE = 10;
     public static final String OAUTH_ADMIN_CLIENT = "OAuthAdminClient";
@@ -129,6 +133,7 @@ public final class OAuthConstants {
 
     //Constants used for multiple scopes
     public static final String OIDC_SCOPE_CONFIG_PATH = "oidc-scope-config.xml";
+    public static final String OAUTH_SCOPE_BINDING_PATH = "oauth-scope-bindings.xml";
     public static final String SCOPE_RESOURCE_PATH = "/oidc";
 
     public static final String TENANT_NAME_FROM_CONTEXT = "TenantNameFromContext";
@@ -143,6 +148,7 @@ public final class OAuthConstants {
         public static final String IWA_NTLM = "iwa:ntlm";
         public static final String PASSWORD = "password";
         public static final String AUTHORIZATION_CODE = "authorization_code";
+        public static final String REFRESH_TOKEN = "refresh_token";
 
         private GrantTypes() {
         }
@@ -186,6 +192,8 @@ public final class OAuthConstants {
         public static final String ESSENTIAL = "essential";
         public static final String USERINFO = "userinfo";
         public static final String CLIENT_ID = "client_id";
+        public static final String REDIRECT_URI = "redirect_uri";
+        public static final String STATE = "state";
 
         private OAuth20Params() {
 
@@ -318,6 +326,9 @@ public final class OAuthConstants {
         // OIDC Specification : http://openid.net/specs/openid-connect-core-1_0.html
         public static final String C_HASH = "c_hash";
         public static final String SESSION_ID_CLAIM = "sid";
+        public static final String REALM = "realm";
+        public static final String TENANT = "tenant";
+        public static final String USERSTORE = "userstore";
 
         private OIDCClaims() {}
     }
@@ -335,6 +346,7 @@ public final class OAuthConstants {
         public static final String TOKEN_TYPE = "tokenType";
         public static final String BYPASS_CLIENT_CREDENTIALS = "bypassClientCredentials";
         public static final String RENEW_REFRESH_TOKEN = "renewRefreshToken";
+        public static final String TOKEN_BINDING_TYPE = "tokenBindingType";
 
         private OIDCConfigProperties() { }
     }
@@ -355,6 +367,11 @@ public final class OAuthConstants {
         public static final String SHA512 = "SHA-512";
 
         private SignatureAlgorithms() {}
+    }
+
+    public static class TokenBindings {
+
+        public static final String NONE = "NONE";
     }
 
     private OAuthConstants() {

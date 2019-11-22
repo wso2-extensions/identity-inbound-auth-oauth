@@ -113,8 +113,30 @@ public class TestUtils {
     public static String buildJWT(String issuer, String subject, String jti, String audience, String algorythm,
                                   Key privateKey, long notBeforeMillis, Map<String,Object> claims)
             throws RequestObjectException {
+        long lifetimeInMillis = 3600 * 1000;
+        return buildJWTWithExpiry(issuer, subject, jti, audience, algorythm, privateKey,notBeforeMillis, claims,
+                lifetimeInMillis);
+    }
 
-        JWTClaimsSet jwtClaimsSet = getJwtClaimsSet(issuer, subject, jti, audience, notBeforeMillis, claims);
+    /**
+     * Return a JWT string with provided info, and default time
+     *
+     * @param issuer
+     * @param subject
+     * @param jti
+     * @param audience
+     * @param algorythm
+     * @param privateKey
+     * @param notBeforeMillis
+     * @return
+     * @throws org.wso2.carbon.identity.oauth2.RequestObjectException
+     */
+    public static String buildJWTWithExpiry(String issuer, String subject, String jti, String audience, String
+            algorythm, Key privateKey, long notBeforeMillis, Map<String,Object> claims, long lifetimeInMillis)
+            throws RequestObjectException {
+
+        JWTClaimsSet jwtClaimsSet = getJwtClaimsSet(issuer, subject, jti, audience, notBeforeMillis, claims,
+                lifetimeInMillis);
         if (JWSAlgorithm.NONE.getName().equals(algorythm)) {
             return new PlainJWT(jwtClaimsSet).serialize();
         }
@@ -122,17 +144,17 @@ public class TestUtils {
         return signJWTWithRSA(jwtClaimsSet, privateKey);
     }
 
-    private static JWTClaimsSet getJwtClaimsSet(String issuer, String subject, String jti, String audience, long notBeforeMillis, Map<String, Object> claims) {
-        long lifetimeInMillis = 3600 * 1000;
-        long curTimeInMillis = Calendar.getInstance().getTimeInMillis();
+    private static JWTClaimsSet getJwtClaimsSet(String issuer, String subject, String jti, String audience, long
+            notBeforeMillis, Map<String, Object> claims, long lifetimeInMillis) {
 
+        long curTimeInMillis = Calendar.getInstance().getTimeInMillis();
         // Set claims to jwt token.
         JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
         jwtClaimsSetBuilder.issuer(issuer);
         jwtClaimsSetBuilder.subject(subject);
         jwtClaimsSetBuilder.audience(Arrays.asList(audience));
         jwtClaimsSetBuilder.jwtID(jti);
-        jwtClaimsSetBuilder.expirationTime(new Date(curTimeInMillis + lifetimeInMillis));
+        jwtClaimsSetBuilder.expirationTime(new Date((curTimeInMillis + lifetimeInMillis)));
         jwtClaimsSetBuilder.issueTime(new Date(curTimeInMillis));
 
         if (notBeforeMillis > 0) {
@@ -240,8 +262,7 @@ public class TestUtils {
      */
     public static KeyStore getKeyStoreFromFile(String keystoreName, String password,
                                                String home) throws Exception {
-        Path tenantKeystorePath = Paths.get(home, "repository",
-                "resources", "security", keystoreName);
+        Path tenantKeystorePath = Paths.get(home, "repository", "resources", "security", keystoreName);
         FileInputStream file = new FileInputStream(tenantKeystorePath.toString());
         KeyStore keystore = KeyStore.getInstance(KeyStore.getDefaultType());
         keystore.load(file, password.toCharArray());
@@ -252,7 +273,9 @@ public class TestUtils {
     public static String buildJWE(String issuer, String subject, String jti, String audience, String algorythm,
                                   Key privateKey,Key publicKey, long notBeforeMillis, Map<String,
             Object> claims) throws RequestObjectException {
-        JWTClaimsSet jwtClaimsSet = getJwtClaimsSet(issuer, subject, jti, audience, notBeforeMillis, claims);
+        long lifetimeInMillis = 3600 * 1000;
+        JWTClaimsSet jwtClaimsSet = getJwtClaimsSet(issuer, subject, jti, audience, notBeforeMillis, claims,
+                lifetimeInMillis);
 
         if (JWSAlgorithm.NONE.getName().equals(algorythm)) {
             return getEncryptedJWT((RSAPublicKey) publicKey, jwtClaimsSet);

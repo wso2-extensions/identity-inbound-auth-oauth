@@ -63,9 +63,7 @@ import java.util.regex.Pattern;
 
 import static org.apache.commons.collections.MapUtils.isEmpty;
 import static org.apache.commons.collections.MapUtils.isNotEmpty;
-import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants
-        .LOCAL_ROLE_CLAIM_URI;
-import static org.wso2.carbon.identity.oauth.common.GrantType.SAML20_BEARER;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.LOCAL_ROLE_CLAIM_URI;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ACCESS_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.AUTHZ_CODE;
 
@@ -221,10 +219,18 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
                                                        AuthenticatedUser authenticatedUser,
                                                        String grantType,
                                                        String clientId,
-                                                       String spTenantDomain) {
+                                                       String spTenantDomain) throws OAuthSystemException {
+
+        ServiceProvider serviceProvider;
+        try {
+            serviceProvider = getServiceProvider(spTenantDomain, clientId);
+        } catch (IdentityApplicationManagementException e) {
+            throw new OAuthSystemException("Error while obtaining service provider for tenant domain : " + spTenantDomain +
+                    " client id : " + clientId, e);
+        }
 
         return OIDCClaimUtil.filterUserClaimsBasedOnConsent(userClaims, authenticatedUser, clientId,
-                spTenantDomain, grantType);
+                spTenantDomain, grantType, serviceProvider);
     }
 
     private Map<ClaimMapping, String> getCachedUserAttributes(OAuthTokenReqMessageContext requestMsgCtx) {
