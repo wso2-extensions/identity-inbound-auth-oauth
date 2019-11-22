@@ -18,15 +18,10 @@
 
 package org.wso2.carbon.identity.oauth.ciba.exceptions;
 
-import org.wso2.carbon.identity.base.IdentityException;
-
 /**
  * Exception from ciba core component.
  */
-public class CibaCoreException extends IdentityException {
-
-    private String errorDescription;
-    private Throwable cause;
+public class CibaCoreException extends Exception {
 
     public CibaCoreException(String errorDescription, Throwable cause) {
 
@@ -36,14 +31,5 @@ public class CibaCoreException extends IdentityException {
     public CibaCoreException(String errorDescription) {
 
         super(errorDescription);
-    }
-    public String getErrorDescription() {
-
-        return errorDescription;
-    }
-
-    public void setErrorDescription(String errorDescription) {
-
-        this.errorDescription = errorDescription;
     }
 }

@@ -84,5 +84,4 @@ public class CibaServiceComponent {
         }
         CibaServiceDataHolder.setRealmService(null);
     }
-
 }

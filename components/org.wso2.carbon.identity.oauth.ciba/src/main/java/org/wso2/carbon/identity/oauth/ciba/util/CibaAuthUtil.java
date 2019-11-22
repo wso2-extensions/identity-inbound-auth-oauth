@@ -1,6 +1,7 @@
 
 package org.wso2.carbon.identity.oauth.ciba.util;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.oauth.ciba.common.AuthenticationStatus;
@@ -45,7 +46,7 @@ public class CibaAuthUtil {
      *
      * @return String Returns random uuid.
      */
-    private static String getAuthReqID() {
+    public static String getAuthReqID() {
 
         UUID id = UUID.randomUUID();
         return id.toString();
@@ -54,15 +55,15 @@ public class CibaAuthUtil {
     /**
      * Process and return the expires_in for auth_req_id.
      *
-     * @param cibaAuthResponseDTO DTO accumulating validated parameters from CibaAuthenticationRequest.
+     * @param CIbaAuthResponseDTO DTO accumulating validated parameters from CibaAuthenticationRequest.
      * @return long Returns expiry_time of the auth-req_id.
      */
-    public static long getExpiresIn(CibaAuthResponseDTO cibaAuthResponseDTO) {
+    public static long getExpiresIn(CibaAuthResponseDTO CIbaAuthResponseDTO) {
 
-        if (cibaAuthResponseDTO.getRequestedExpiry() == 0) {
+        if (CIbaAuthResponseDTO.getRequestedExpiry() == 0) {
             return CibaConstants.EXPIRES_IN_DEFAULT_VALUE_IN_SEC;
         } else {
-            return cibaAuthResponseDTO.getRequestedExpiry();
+            return CIbaAuthResponseDTO.getRequestedExpiry();
         }
     }
 
@@ -87,11 +88,10 @@ public class CibaAuthUtil {
     /**
      * Builds and returns AuthorizationRequestDTO.
      *
-     * @param cibaAuthCode        JWT with claims necessary for AuthCodeDO .
      * @param cibaAuthResponseDTO Status of the relevant Ciba Authentication.
      * @throws CibaCoreException Exception thrown from CibaCore Component.
      */
-    public static CibaAuthCodeDO generateCibaAuthCodeDO(String cibaAuthCode, CibaAuthResponseDTO cibaAuthResponseDTO)
+    public static CibaAuthCodeDO generateCibaAuthCodeDO(CibaAuthResponseDTO cibaAuthResponseDTO)
             throws CibaCoreException {
 
         CibaAuthCodeDO cibaAuthCodeDO = new CibaAuthCodeDO();
@@ -112,12 +112,7 @@ public class CibaAuthUtil {
         cibaAuthCodeDO.setInterval(CibaConstants.INTERVAL_DEFAULT_VALUE_IN_SEC);
         cibaAuthCodeDO.setExpiresIn(expiryTime);
         cibaAuthCodeDO.setScope(scope);
-
-        if (log.isDebugEnabled()) {
-            log.debug("Successful in creating AuthCodeDO with cibaAuthCode = " + cibaAuthCode);
-        }
         return cibaAuthCodeDO;
-
     }
 
     /**
@@ -157,7 +152,7 @@ public class CibaAuthUtil {
      * @param cibaAuthCodeDO DO with information regarding authenticationRequest.
      * @throws CibaCoreException Exception thrown from CibaCore Component.
      */
-    public void pesistScopes(CibaAuthCodeDO cibaAuthCodeDO) throws CibaCoreException {
+    private static void persistScopes(CibaAuthCodeDO cibaAuthCodeDO) throws CibaCoreException {
 
         CibaDAOFactory.getInstance().getCibaAuthMgtDAO().storeScope(cibaAuthCodeDO);
     }
@@ -168,8 +163,24 @@ public class CibaAuthUtil {
      * @param cibaAuthCodeDO DO with information regarding authenticationRequest.
      * @throws CibaCoreException Exception thrown from CibaCore Component.
      */
-    public void persistCibaAuthCode(CibaAuthCodeDO cibaAuthCodeDO) throws CibaCoreException {
+    public static void persistCibaAuthCode(CibaAuthCodeDO cibaAuthCodeDO) throws CibaCoreException {
 
         CibaDAOFactory.getInstance().getCibaAuthMgtDAO().persistCibaAuthCode(cibaAuthCodeDO);
+        persistScopes(cibaAuthCodeDO);
+    }
+
+    /**
+     * Build and return ACR string as array.
+     *
+     * @param acrString ACR values as a String.
+     * @return String Array.
+     */
+    public static String[] buildACRArray(String acrString) {
+
+        if (StringUtils.isNotBlank(acrString)) {
+            acrString = acrString.trim();
+            return acrString.split("\\s");
+        }
+        return new String[0];
     }
 }

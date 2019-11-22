@@ -67,4 +67,5 @@ public class CibaAuthRequestWrapper extends CommonAuthRequestWrapper {
         parameterMap.remove(CibaConstants.REQUEST);
         return Collections.unmodifiableMap(parameterMap);
     }
+
 }

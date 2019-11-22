@@ -31,4 +31,5 @@ public class CibaAuthResponseWrapper extends CommonAuthResponseWrapper {
 
         super(response);
     }
+
 }
