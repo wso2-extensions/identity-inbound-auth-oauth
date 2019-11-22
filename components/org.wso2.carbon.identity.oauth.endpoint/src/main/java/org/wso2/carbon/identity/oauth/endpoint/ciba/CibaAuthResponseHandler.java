@@ -18,18 +18,17 @@
 
 package org.wso2.carbon.identity.oauth.endpoint.ciba;
 
-import com.nimbusds.jwt.JWT;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.as.response.OAuthASResponse;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.message.OAuthResponse;
-import org.wso2.carbon.identity.oauth.ciba.common.CibaParams;
+import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
 import org.wso2.carbon.identity.oauth.ciba.dto.CibaAuthResponseDTO;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
-import org.wso2.carbon.identity.oauth.ciba.exceptions.ErrorCodes;
-import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthResponseDO;
-import org.wso2.carbon.identity.oauth.ciba.util.CibaAuthUtil;
+import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeDO;
+import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthResponse;
+import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.endpoint.exception.CibaAuthFailureException;
 
 import javax.servlet.http.HttpServletResponse;
@@ -75,39 +74,30 @@ public class CibaAuthResponseHandler {
      * @throws CibaAuthFailureException Ciba Authentication Failed Exception.
      */
     public Response createAuthResponse(@Context HttpServletResponse response,
-                                       CibaAuthResponseDTO cibaAuthResponseDTO, JWT cibaAuthCodeasJWT)
+                                       CibaAuthResponseDTO cibaAuthResponseDTO, CibaAuthCodeDO cibaAuthCodeDO)
             throws CibaAuthFailureException {
 
         try {
             // Set the ExpiryTime.
-            long expiresIn = CibaAuthUtil.getExpiresInForResponse(cibaAuthResponseDTO);
+            long expiresIn = cibaAuthResponseDTO.getRequestedExpiry();
             if (log.isDebugEnabled()) {
                 log.info("Setting ExpiryTime for the response to the  request made by client with clientID : " +
                         cibaAuthResponseDTO.getAudience() + ".");
             }
-
-            // Serialize so that can be returned in preferable manner.
-            String cibaAuthCode = cibaAuthCodeasJWT.serialize();
-            if (log.isDebugEnabled()) {
-                log.info("Ciba auth_req_id " + cibaAuthCode + " is created for the response to the request made by" +
-                        " client with clientID : " + cibaAuthResponseDTO.getAudience() + ".");
-            }
-
             // Create authentication response.
             response.setStatus(HttpServletResponse.SC_OK);
             response.setContentType(MediaType.APPLICATION_JSON);
 
-            CibaAuthResponseDO.CibaAuthResponseBuilder cibaAuthResponsebuilder = CibaAuthResponseDO
+            CibaAuthResponse.CibaAuthResponseBuilder cibaAuthResponsebuilder = CibaAuthResponse
                     .cibaAuthenticationResponse(HttpServletResponse.SC_OK)
-                    .setAuthReqID(cibaAuthCode)
+                    .setAuthReqID(cibaAuthCodeDO.getAuthReqID())
                     .setExpiresIn(Long.toString(expiresIn))
-                    .setInterval(Long.toString(CibaParams.INTERVAL_DEFAULT_VALUE));
+                    .setInterval(Long.toString(CibaConstants.INTERVAL_DEFAULT_VALUE_IN_SEC));
 
             if (log.isDebugEnabled()) {
                 log.info("Creating CIBA Authentication response to the request made by client with clientID : " +
                         cibaAuthResponseDTO.getAudience() + ".");
             }
-
             Response.ResponseBuilder respBuilder = Response.status(response.getStatus());
             OAuthResponse cibaAuthenticationresponse = cibaAuthResponsebuilder.buildJSONMessage();
 
@@ -116,14 +106,13 @@ public class CibaAuthResponseHandler {
                         cibaAuthResponseDTO.getAudience() + ".");
             }
             return respBuilder.entity(cibaAuthenticationresponse.getBody()).build();
-
         } catch (OAuthSystemException e) {
             if (log.isDebugEnabled()) {
                 log.debug("Error in building authenticationResponse for Authentication Request made by client with " +
                         "clientID : " + cibaAuthResponseDTO.getAudience() + ".");
             }
             throw new CibaAuthFailureException(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-                    ErrorCodes.INTERNAL_SERVER_ERROR, e.getMessage());
+                    OAuth2ErrorCodes.SERVER_ERROR, "error in creating authentication response.", e);
         }
     }
 
@@ -134,22 +123,24 @@ public class CibaAuthResponseHandler {
      * @return response Authentication Error Responses for AuthenticationRequest.
      * @throws OAuthSystemException SystemException.
      */
-    public Response createErrorResponse(CibaAuthFailureException cibaAuthFailureException)
-            throws OAuthSystemException {
-        // Create CIBA Authentication Error Response.
+    public Response createErrorResponse(CibaAuthFailureException cibaAuthFailureException) throws OAuthSystemException {
 
+        // Create CIBA Authentication Error Response.
         if (log.isDebugEnabled()) {
             log.debug("Creating Error Response for CIBA Authentication Request.");
         }
-
-        OAuthResponse errorresponse = OAuthASResponse
+        OAuthResponse errorResponse = OAuthASResponse
                 .errorResponse(cibaAuthFailureException.getStatus())
                 .setError(cibaAuthFailureException.getErrorCode())
-                .setErrorDescription(cibaAuthFailureException.getErrorDescription())
+                .setErrorDescription(cibaAuthFailureException.getMessage())
                 .buildJSONMessage();
 
+        if (cibaAuthFailureException.getCause() != null) {
+            // Log stackTrace.
+            log.error(cibaAuthFailureException.getCause());
+        }
         Response.ResponseBuilder respBuilder = Response.status(cibaAuthFailureException.getStatus());
-        return respBuilder.entity(errorresponse.getBody()).build();
+        return respBuilder.entity(errorResponse.getBody()).build();
     }
 
     /**
@@ -159,21 +150,23 @@ public class CibaAuthResponseHandler {
      * @return response Authentication Error Responses for AuthenticationRequest.
      * @throws OAuthSystemException SystemException.
      */
-    public Response createErrorResponse(CibaCoreException cibaCoreException)
-            throws OAuthSystemException {
-        //Create CIBA Authentication Error Response.
+    public Response createErrorResponse(CibaCoreException cibaCoreException) throws OAuthSystemException {
 
+        //Create CIBA Authentication Error Response.
         if (log.isDebugEnabled()) {
             log.debug("Creating Error Response for CIBA Authentication Request.");
         }
-
-        OAuthResponse errorresponse = OAuthASResponse
+        OAuthResponse errorResponse = OAuthASResponse
                 .errorResponse(HttpServletResponse.SC_INTERNAL_SERVER_ERROR)
-                .setError(cibaCoreException.getErrorCode())
-                .setErrorDescription(cibaCoreException.getErrorDescription())
+                .setError(OAuth2ErrorCodes.SERVER_ERROR)
+                .setErrorDescription(cibaCoreException.getMessage())
                 .buildJSONMessage();
 
+        if (cibaCoreException.getCause() != null) {
+            // Log stackTrace.
+            log.error(cibaCoreException.getCause());
+        }
         Response.ResponseBuilder respBuilder = Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-        return respBuilder.entity(errorresponse.getBody()).build();
+        return respBuilder.entity(errorResponse.getBody()).build();
     }
 }
