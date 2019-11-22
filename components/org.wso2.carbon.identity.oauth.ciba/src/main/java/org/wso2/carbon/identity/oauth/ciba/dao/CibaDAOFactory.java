@@ -18,47 +18,32 @@
 
 package org.wso2.carbon.identity.oauth.ciba.dao;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 /**
  * Creates required CibaDAO.
  */
 public class CibaDAOFactory {
-
-    private static final Log log = LogFactory.getLog(CibaDAOFactory.class);
 
     // Implementation of DAO.
     private CibaAuthMgtDAO cibaAuthMgtDAOImpl;
 
     private CibaDAOFactory() {
 
-        // This factory creates instance of ciba DAOImplementation.
-        cibaAuthMgtDAOImpl = CibaAuthMgtDAOImpl.getInstance();
+        // This factory creates instance of CIBA DAOImplementation.
+        cibaAuthMgtDAOImpl = new CibaAuthMgtDAOImpl();
     }
 
     private static CibaDAOFactory cibaDAOFactoryInstance = new CibaDAOFactory();
 
     public static CibaDAOFactory getInstance() {
 
-        if (cibaDAOFactoryInstance == null) {
-            synchronized (CibaDAOFactory.class) {
-                if (cibaDAOFactoryInstance == null) {
-                    /* instance will be created at request time */
-                    cibaDAOFactoryInstance = new CibaDAOFactory();
-                }
-            }
-        }
         return cibaDAOFactoryInstance;
     }
 
     /**
-     * Manufactures CibaAuthMgtDAO and returns .
+     * @return  CibaAuthMgtDAO.
      */
     public CibaAuthMgtDAO getCibaAuthMgtDAO() {
-        // This returns created instance of ciba DAOImplementation.
 
         return cibaAuthMgtDAOImpl;
     }
-
 }

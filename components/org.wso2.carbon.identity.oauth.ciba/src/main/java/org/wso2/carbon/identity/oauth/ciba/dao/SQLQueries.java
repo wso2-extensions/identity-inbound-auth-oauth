@@ -29,55 +29,52 @@ public class SQLQueries {
 
     public static class CibaSQLQueries {
 
-        public static final String STORE_CIBA_AUTH_REQ_CODE = "INSERT INTO IDN_OAUTH2_CIBA_AUTH_REQ " +
-                "(CIBA_AUTH_CODE_DO_KEY, CIBA_AUTH_REQ_ID_HASH,CIBA_AUTHENTICATION_STATUS," +
-                "LAST_POLLED_TIME,POLLING_INTERVAL,EXPIRY_TIME,BINDING_MESSAGE,TRANSACTION_CONTEXT,SCOPE) " +
-                "VALUES (?,?,?,?,?,?,?,?,?)";
+        public static final String STORE_CIBA_AUTH_CODE = "INSERT INTO IDN_OAUTH2_CIBA_AUTH_CODE " +
+                "(AUTH_CODE_KEY, AUTH_REQ_ID,CONSUMER_APP_KEY,ISSUED_TIME,LAST_POLLED_TIME,POLLING_INTERVAL," +
+                "EXPIRES_IN,AUTHENTICATION_STATUS) VALUES (?,?,?,?,?,?,?,?)";
 
-        public static final String UPDATE_CIBA_AUTHENTICATED_USER =
-                "UPDATE  IDN_OAUTH2_CIBA_AUTH_REQ SET CIBA_AUTHENTICATED_USER = ?" +
-                        "WHERE CIBA_AUTH_CODE_DO_KEY = ? ";
+        public static final String UPDATE_AUTHENTICATED_USER =
+                "UPDATE IDN_OAUTH2_CIBA_AUTH_CODE SET AUTHENTICATED_USER_NAME = ? ,USER_STORE_DOMAIN = ? ,TENANT_ID = ? " +
+                        " WHERE AUTH_CODE_KEY = ? ";
 
         public static final String RETRIEVE_AUTHENTICATED_USER =
-                "SELECT CIBA_AUTHENTICATED_USER FROM IDN_OAUTH2_CIBA_AUTH_REQ " +
-                        " WHERE CIBA_AUTH_CODE_DO_KEY = ? ";
+                "SELECT AUTHENTICATED_USER_NAME,USER_STORE_DOMAIN,TENANT_ID FROM IDN_OAUTH2_CIBA_AUTH_CODE " +
+                        " WHERE AUTH_CODE_KEY = ? ";
 
         public static final String UPDATE_AUTHENTICATION_STATUS =
-                "UPDATE IDN_OAUTH2_CIBA_AUTH_REQ SET CIBA_AUTHENTICATION_STATUS = ?" +
-                        " WHERE  CIBA_AUTH_CODE_DO_KEY = ? ";
+                "UPDATE IDN_OAUTH2_CIBA_AUTH_CODE SET AUTHENTICATION_STATUS = ? WHERE  AUTH_CODE_KEY = ? ";
 
         public static final String RETRIEVE_AUTHENTICATION_STATUS =
-                "SELECT CIBA_AUTHENTICATION_STATUS FROM IDN_OAUTH2_CIBA_AUTH_REQ" +
-                        " WHERE  CIBA_AUTH_CODE_DO_KEY = ? ";
+                "SELECT AUTHENTICATION_STATUS FROM IDN_OAUTH2_CIBA_AUTH_CODE" +
+                        " WHERE  AUTH_CODE_KEY = ? ";
 
-        public static final String RETRIEVE_CIBA_AUTH_CODE_DO_KEY_BY_CIBA_AUTH_REQ_ID_HASH =
-                "SELECT CIBA_AUTH_CODE_DO_KEY FROM " +
-                        " IDN_OAUTH2_CIBA_AUTH_REQ  WHERE CIBA_AUTH_REQ_ID_HASH = ?";
-
-        public static final String RETRIEVE_BINDING_MESSAGE_AND_TRANSACTION_CONTEXT = "SELECT BINDING_MESSAGE," +
-                "TRANSACTION_CONTEXT FROM IDN_OAUTH2_CIBA_AUTH_REQ WHERE CIBA_AUTH_CODE_DO_KEY = ? ";
+        public static final String RETRIEVE_CIBA_AUTH_CODE_KEY_BY_CIBA_AUTH_REQ_ID =
+                "SELECT AUTH_CODE_KEY FROM IDN_OAUTH2_CIBA_AUTH_CODE WHERE AUTH_REQ_ID = ?";
 
         public static final String RETRIEVE_LAST_POLLED_TIME =
-                "SELECT LAST_POLLED_TIME FROM IDN_OAUTH2_CIBA_AUTH_REQ " +
-                        " WHERE CIBA_AUTH_CODE_DO_KEY = ?";
+                "SELECT LAST_POLLED_TIME FROM IDN_OAUTH2_CIBA_AUTH_CODE WHERE AUTH_CODE_KEY = ?";
 
-        public static final String RETRIEVE_POLLING_INTERVAL = "SELECT POLLING_INTERVAL FROM IDN_OAUTH2_CIBA_AUTH_REQ" +
-                " WHERE CIBA_AUTH_CODE_DO_KEY = ?";
+        public static final String RETRIEVE_POLLING_INTERVAL =
+                "SELECT POLLING_INTERVAL FROM IDN_OAUTH2_CIBA_AUTH_CODE" +
+                        " WHERE AUTH_CODE_KEY = ?";
 
         public static final String UPDATE_LAST_POLLED_TIME =
-                "UPDATE IDN_OAUTH2_CIBA_AUTH_REQ SET LAST_POLLED_TIME = ? " +
-                        " WHERE  CIBA_AUTH_CODE_DO_KEY = ? ";
+                "UPDATE IDN_OAUTH2_CIBA_AUTH_CODE SET LAST_POLLED_TIME = ? WHERE  AUTH_CODE_KEY = ? ";
 
         public static final String UPDATE_POLLING_INTERVAL =
-                "UPDATE IDN_OAUTH2_CIBA_AUTH_REQ SET POLLING_INTERVAL = ? " +
-                        " WHERE  CIBA_AUTH_CODE_DO_KEY = ? ";
+                "UPDATE IDN_OAUTH2_CIBA_AUTH_CODE SET POLLING_INTERVAL = ? WHERE  AUTH_CODE_KEY = ? ";
 
-        public static final String CHECK_IF_AUTH_REQ_ID_HASH_EXISTS = "SELECT COUNT('CIBA_AUTH_CODE_DO_KEY') " +
-                "FROM IDN_OAUTH2_CIBA_AUTH_REQ " +
-                " WHERE CIBA_AUTH_REQ_ID_HASH = ? ";
+        public static final String CHECK_IF_AUTH_REQ_ID_EXISTS = "SELECT COUNT('AUTH_CODE_KEY') " +
+                "FROM IDN_OAUTH2_CIBA_AUTH_CODE WHERE AUTH_REQ_ID = ? ";
 
-        public static final String RETRIEVE_AUTH_CODE_DO_FROM_CIBA_AUTH_CODE_DO_KEY = "SELECT * FROM " +
-                "IDN_OAUTH2_CIBA_AUTH_REQ WHERE CIBA_AUTH_CODE_DO_KEY = ?";
+        public static final String RETRIEVE_AUTH_CODE_FROM_CIBA_AUTH_REQ_ID = "SELECT AUTH_CODE_KEY, " +
+                "AUTH_REQ_ID,CONSUMER_APP_KEY,LAST_POLLED_TIME,POLLING_INTERVAL,EXPIRES_IN,AUTHENTICATION_STATUS, " +
+                "ISSUED_TIME FROM IDN_OAUTH2_CIBA_AUTH_CODE WHERE AUTH_REQ_ID = ?";
 
+        public static final String STORE_SCOPES = "INSERT INTO IDN_OAUTH2_CIBA_REQ_SCOPES (SCOPE) VALUES (?) WHERE " +
+                "AUTH_CODE_KEY = ? ";
+
+        public static final String RETRIEVE_SCOPE = "SELECT SCOPE FROM IDN_OAUTH2_CIBA_REQ_SCOPES WHERE AUTH_CODE_KEY" +
+                " = ? ";
     }
 }

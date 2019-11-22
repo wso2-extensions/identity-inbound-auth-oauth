@@ -19,7 +19,7 @@
 package org.wso2.carbon.identity.oauth.ciba.wrappers;
 
 import org.wso2.carbon.identity.application.authentication.framework.model.CommonAuthRequestWrapper;
-import org.wso2.carbon.identity.oauth.ciba.common.CibaParams;
+import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -46,7 +46,7 @@ public class CibaAuthRequestWrapper extends CommonAuthRequestWrapper {
         if (extraParameters.containsKey(name)) {
             return extraParameters.get(name);
         } else {
-            if ((CibaParams.REQUEST.equals(name))) {
+            if ((CibaConstants.REQUEST.equals(name))) {
                 return "";
             }
             return super.getParameter(name);
@@ -64,8 +64,7 @@ public class CibaAuthRequestWrapper extends CommonAuthRequestWrapper {
 
         Map<String, String[]> parameterMap = new HashMap<>(super.getParameterMap());
         extraParameters.forEach((key, value) -> parameterMap.put(key, new String[]{value}));
-        parameterMap.remove(CibaParams.REQUEST);
+        parameterMap.remove(CibaConstants.REQUEST);
         return Collections.unmodifiableMap(parameterMap);
     }
-
 }

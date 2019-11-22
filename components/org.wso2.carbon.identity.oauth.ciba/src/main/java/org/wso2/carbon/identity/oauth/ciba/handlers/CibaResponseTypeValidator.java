@@ -19,26 +19,26 @@
 
 package org.wso2.carbon.identity.oauth.ciba.handlers;
 
-import org.apache.oltu.oauth2.as.validator.TokenValidator;
 import org.apache.oltu.oauth2.common.OAuth;
 import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
+import org.wso2.carbon.identity.oauth2.token.handlers.grant.AbstractValidator;
 
 import javax.servlet.http.HttpServletRequest;
 
 /**
  * Validates authorize responses with ciba as response type.
  */
-public class CibaResponseTypeValidator extends TokenValidator {
+public class CibaResponseTypeValidator extends AbstractValidator {
 
     public CibaResponseTypeValidator() {
-
+        this.configureParams();
     }
 
     @Override
-    public void validateRequiredParameters(HttpServletRequest request) throws OAuthProblemException {
-
-        super.validateRequiredParameters(request);
+    protected void configureParams() {
+        this.requiredParams.add("response_type");
+        this.requiredParams.add("client_id");
     }
 
     @Override

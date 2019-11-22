@@ -19,13 +19,13 @@
 package org.wso2.carbon.identity.oauth.ciba.common;
 
 /**
- * Represents possible Authentication statuses.
+ * Represents possible authentication status.
  */
 public enum AuthenticationStatus {
     REQUESTED,
     DENIED,
     AUTHENTICATED,
     EXPIRED,
-    TOKEN_DELIVERED,
+    TOKEN_ISSUED,
     FAILED
 }

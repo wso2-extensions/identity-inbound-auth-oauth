@@ -45,8 +45,6 @@ public class CibaServiceComponent {
     protected void activate(ComponentContext ctxt) {
 
         try {
-            CibaServiceComponent cibaServiceComponent = new CibaServiceComponent();
-            ctxt.getBundleContext().registerService(CibaServiceComponent.class, cibaServiceComponent, null);
             if (log.isDebugEnabled()) {
                 log.debug("Ciba component bundle is activated");
             }
@@ -64,7 +62,7 @@ public class CibaServiceComponent {
      */
     @Reference(
             name = "realm.service",
-            service = org.wso2.carbon.user.core.service.RealmService.class,
+            service = RealmService.class,
             cardinality = ReferenceCardinality.MANDATORY,
             policy = ReferencePolicy.DYNAMIC,
             unbind = "unsetRealmService")

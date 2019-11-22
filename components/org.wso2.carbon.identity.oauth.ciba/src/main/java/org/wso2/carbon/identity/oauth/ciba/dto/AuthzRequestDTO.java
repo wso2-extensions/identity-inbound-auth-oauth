@@ -24,7 +24,7 @@ package org.wso2.carbon.identity.oauth.ciba.dto;
 public class AuthzRequestDTO {
 
     private String user;
-    private String authReqIDasState;
+    private String nonce;
     private String client_id;
     private String callBackUrl;
     private String bindingMessage;
@@ -71,14 +71,14 @@ public class AuthzRequestDTO {
         this.user = user;
     }
 
-    public String getAuthReqIDasState() {
+    public String getNonce() {
 
-        return authReqIDasState;
+        return nonce;
     }
 
-    public void setAuthReqIDasState(String authReqIDasState) {
+    public void setNonce(String nonce) {
 
-        this.authReqIDasState = authReqIDasState;
+        this.nonce = nonce;
     }
 
     public String getClient_id() {

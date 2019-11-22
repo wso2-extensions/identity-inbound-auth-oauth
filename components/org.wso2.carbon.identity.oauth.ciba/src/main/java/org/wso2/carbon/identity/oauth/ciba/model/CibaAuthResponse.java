@@ -19,21 +19,21 @@
 package org.wso2.carbon.identity.oauth.ciba.model;
 
 import org.apache.oltu.oauth2.common.message.OAuthResponse;
-import org.wso2.carbon.identity.oauth.ciba.common.CibaParams;
+import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
 
 /**
  * Contains parameters that need to be sent in authentication response.
  */
-public class CibaAuthResponseDO extends OAuthResponse {
+public class CibaAuthResponse extends OAuthResponse {
 
-    protected CibaAuthResponseDO(String uri, int responseStatus) {
+    protected CibaAuthResponse(String uri, int responseStatus) {
 
         super(uri, responseStatus);
     }
 
-    public static CibaAuthResponseDO.CibaAuthResponseBuilder cibaAuthenticationResponse(int code) {
+    public static CibaAuthResponse.CibaAuthResponseBuilder cibaAuthenticationResponse(int code) {
 
-        return new CibaAuthResponseDO.CibaAuthResponseBuilder(code);
+        return new CibaAuthResponse.CibaAuthResponseBuilder(code);
     }
 
     public static class CibaAuthResponseBuilder extends OAuthResponseBuilder {
@@ -45,19 +45,19 @@ public class CibaAuthResponseDO extends OAuthResponse {
 
         public CibaAuthResponseBuilder setAuthReqID(String authReqID) {
 
-            this.parameters.put(CibaParams.AUTH_REQ_ID, authReqID);
+            this.parameters.put(CibaConstants.AUTH_REQ_ID, authReqID);
             return this;
         }
 
         public CibaAuthResponseBuilder setExpiresIn(String expiresIn) {
 
-            this.parameters.put(CibaParams.EXPIRES_IN, expiresIn == null ? null : Long.valueOf(expiresIn));
+            this.parameters.put(CibaConstants.EXPIRES_IN, expiresIn == null ? null : Long.valueOf(expiresIn));
             return this;
         }
 
         public CibaAuthResponseBuilder setInterval(String interval) {
 
-            this.parameters.put(CibaParams.INTERVAL, interval == null ? null : Long.valueOf(interval));
+            this.parameters.put(CibaConstants.INTERVAL, interval == null ? null : Long.valueOf(interval));
             return this;
         }
 

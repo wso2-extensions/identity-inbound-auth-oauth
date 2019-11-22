@@ -19,40 +19,26 @@
 package org.wso2.carbon.identity.oauth.ciba.exceptions;
 
 /**
- * Possess the needful error codes to be set in responses.
+ * Possess the error codes to be set in responses.
  */
 public class ErrorCodes {
 
-    public static final String UNAUTHORIZED_CLIENT = "unauthorized_client";
     public static final String INVALID_REQUEST = "invalid_request";
-    public static final String INVALID_CLIENT = "invalid_client";
-    public static final String UNAUTHORIZED_USER = "unauthorized_user";
     public static final String INVALID_SCOPE = "invalid_scope";
+    public static final String UNAUTHORIZED_CLIENT = "unauthorized_client";
+    public static final String UNKNOWN_USER_ID = "unknown_user_id";
     public static final String MISSING_USER_CODE = "missing_user_code";
     public static final String INVALID_USER_CODE = "invalid_user_code";
     public static final String INVALID_BINDING_MESSAGE = "invalid_binding_message";
-    public static final String INTERNAL_SERVER_ERROR = "internal_server_error";
+    public static final String INVALID_CLIENT = "invalid_client";
+    public static final String UNAUTHORIZED_USER = "unauthorized_user";
+    public static final String ACCESS_DENIED = "access_denied";
+    public static final String SLOW_DOWN = "slow_down";
+    public static final String AUTHORIZATION_PENDING = "authorization_pending";
+    public static final String EXPIRED_TOKEN = "expired_token";
 
     private ErrorCodes() {
 
     }
 
-    public class SubErrorCodes {
-
-        public static final String INVALID_AUTHORIZATION_REQUEST = "invalid_authorization_request";
-        public static final String UNEXPECTED_SERVER_ERROR = "unexpected_server_error";
-        public static final String CONSENT_DENIED = "consent_denied";
-        public static final String ACCESS_DENIED = "access_denied";
-        public static final String INVALID_PARAMETERS = "invalid_parameters";
-        public static final String MISSING_PARAMETERS = "missing_parameters";
-
-        public static final String UNKNOWN_CLIENT = "client_not_found";
-        public static final String MISSING_CLIENT_ID = "client_id_missing";
-        public static final String UNKNOWN_USER = "user_not_found";
-        public static final String MISSING_USER_ID = "user_hints_missing";
-        public static final String INVALID_SIGNATURE = "invalid_signture";
-        public static final String INVALID_ID_TOKEN_HINT = "invalid_id_token_hint";
-        public static final String AUTHENTICATION_FAILED = "authentication_failed";
-
-    }
 }

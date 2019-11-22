@@ -19,6 +19,10 @@
 
 package org.wso2.carbon.identity.oauth.ciba.model;
 
+import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+
+import java.sql.Timestamp;
+
 /**
  * Contains parameters to be stored in database tables.
  */
@@ -28,103 +32,73 @@ public class CibaAuthCodeDO {
 
     }
 
-    private String cibaAuthCodeDOKey;
-    private String hashedCibaAuthReqId;
-    private String authenticationStatus;
-    private String authenticatedUser;
-    private long lastPolledTime;
+    private String cibaAuthCodeKey;
+    private String authReqID;
+    private String consumerAppKey;
+    private Timestamp issuedTime;
+    private Timestamp lastPolledTime;
     private long interval;
-    private long expiryTime;
-    private String bindingMessage;
-    private String transactionContext;
-    private String scope;
+    private long expiresIn;
+    private Enum authenticationStatus;
+    private String[] scope;
+    private AuthenticatedUser authenticatedUser;
 
-    public String getCibaAuthCodeDOKey() {
+    public String getCibaAuthCodeKey() {
 
-        return cibaAuthCodeDOKey;
+        return cibaAuthCodeKey;
     }
 
-    public void setCibaAuthCodeDOKey(String cibaAuthCodeDOKey) {
+    public void setCibaAuthCodeKey(String cibaAuthCodeKey) {
 
-        this.cibaAuthCodeDOKey = cibaAuthCodeDOKey;
+        this.cibaAuthCodeKey = cibaAuthCodeKey;
     }
 
-    public String getHashedCibaAuthReqId() {
+    public String getAuthReqID() {
 
-        return hashedCibaAuthReqId;
+        return authReqID;
     }
 
-    public void setHashedCibaAuthReqId(String hashedCibaAuthReqId) {
+    public void setAuthReqID(String authReqID) {
 
-        this.hashedCibaAuthReqId = hashedCibaAuthReqId;
+        this.authReqID = authReqID;
     }
 
-    public String getAuthenticationStatus() {
+    public Enum getAuthenticationStatus() {
 
         return authenticationStatus;
     }
 
-    public void setAuthenticationStatus(String authenticationStatus) {
+    public void setAuthenticationStatus(Enum authenticationStatus) {
 
         this.authenticationStatus = authenticationStatus;
     }
 
-    public String getAuthenticatedUser() {
+    public void setExpiresIn(long expiresIn) {
 
-        return authenticatedUser;
+        this.expiresIn = expiresIn;
     }
 
-    public void setAuthenticatedUser(String authenticatedUser) {
+    public long getExpiresIn() {
 
-        this.authenticatedUser = authenticatedUser;
+        return expiresIn;
     }
 
-    public void setExpiryTime(long expiryTime) {
-
-        this.expiryTime = expiryTime;
-    }
-
-    public long getExpiryTime() {
-
-        return expiryTime;
-    }
-
-    public String getBindingMessage() {
-
-        return bindingMessage;
-    }
-
-    public void setBindingMessage(String bindingMessage) {
-
-        this.bindingMessage = bindingMessage;
-    }
-
-    public String getTransactionContext() {
-
-        return transactionContext;
-    }
-
-    public void setTransactionContext(String transactionContext) {
-
-        this.transactionContext = transactionContext;
-    }
-
-    public String getScope() {
+    public String[] getScope() {
 
         return scope;
     }
 
-    public void setScope(String scope) {
+    public void setScope(String[] scope) {
 
         this.scope = scope;
     }
 
-    public long getLastPolledTime() {
+    public Timestamp getLastPolledTime() {
 
         return lastPolledTime;
     }
 
-    public void setLastPolledTime(long lastPolledTime) {
+    public void setLastPolledTime(Timestamp lastPolledTime) {
 
         this.lastPolledTime = lastPolledTime;
     }
@@ -139,4 +113,34 @@ public class CibaAuthCodeDO {
         this.interval = interval;
     }
 
+    public String getConsumerAppKey() {
+
+        return consumerAppKey;
+    }
+
+    public void setConsumerAppKey(String consumerAppKey) {
+
+        this.consumerAppKey = consumerAppKey;
+    }
+
+    public Timestamp getIssuedTime() {
+
+        return issuedTime;
+    }
+
+    public void setIssuedTime(Timestamp issuedTime) {
+
+        this.issuedTime = issuedTime;
+    }
+
+    public AuthenticatedUser getAuthenticatedUser() {
+
+        return authenticatedUser;
+    }
+
+    public void setAuthenticatedUser(
+            AuthenticatedUser authenticatedUser) {
+
+        this.authenticatedUser = authenticatedUser;
+    }
 }

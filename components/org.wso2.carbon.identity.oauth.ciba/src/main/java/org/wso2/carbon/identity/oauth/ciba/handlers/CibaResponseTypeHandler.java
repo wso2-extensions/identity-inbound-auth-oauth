@@ -16,125 +16,97 @@
  * under the License.
  */
 
-
 package org.wso2.carbon.identity.oauth.ciba.handlers;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
+import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.oauth.ciba.common.AuthenticationStatus;
 import org.wso2.carbon.identity.oauth.ciba.dao.CibaDAOFactory;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
-import org.wso2.carbon.identity.oauth.ciba.exceptions.ErrorCodes;
-import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
+import org.wso2.carbon.identity.oauth.dto.OAuthErrorDTO;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.authz.handlers.AbstractResponseTypeHandler;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
-
-import static org.wso2.carbon.identity.oauth.ciba.exceptions.ErrorCodes.SubErrorCodes.CONSENT_DENIED;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 /**
- * Handles authorize requests with ciba as response type.
+ * Handles authorize requests with CIBA as response type.
  */
 public class CibaResponseTypeHandler extends AbstractResponseTypeHandler {
 
     private static Log log = LogFactory.getLog(CibaResponseTypeHandler.class);
+    private static String cibaAuthCodeKey;
 
-    public CibaResponseTypeHandler() {
-
-    }
-
-    public OAuth2AuthorizeRespDTO issue(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) {
-
-        OAuth2AuthorizeRespDTO respDTO = new OAuth2AuthorizeRespDTO();
-        OAuth2AuthorizeReqDTO authorizationReqDTO = oauthAuthzMsgCtx.getAuthorizationReqDTO();
-
-        // Obtaining key to update database tables.
-        String cibaAuthCodeID = authorizationReqDTO.getNonce();
-
-        // Assigning authenticated user for the request that to be persisted.
-        String cibaAuthenticatedUser = authorizationReqDTO.getUser().getUserName();
-
-        // Assigning the authentication status that to be persisted.
-        String authenticationStatus = AuthenticationStatus.AUTHENTICATED.toString();
+    @Override
+    public OAuth2AuthorizeRespDTO issue(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) throws IdentityOAuth2Exception {
 
         try {
+            OAuth2AuthorizeRespDTO respDTO = new OAuth2AuthorizeRespDTO();
+            OAuth2AuthorizeReqDTO authorizationReqDTO = oauthAuthzMsgCtx.getAuthorizationReqDTO();
+
+            // Obtaining key to update database tables.
+            cibaAuthCodeKey = CibaDAOFactory.getInstance().getCibaAuthMgtDAO().
+                    getCibaAuthCodeKey(authorizationReqDTO.getNonce());
+
+            // Assigning authenticated user for the request that to be persisted.
+            AuthenticatedUser cibaAuthenticatedUser = authorizationReqDTO.getUser();
+
+            // Assigning the authentication status that to be persisted.
+            Enum authenticationStatus = AuthenticationStatus.AUTHENTICATED;
 
             // Update ciba Authentication Status.
-            CibaDAOFactory.getInstance().getCibaAuthMgtDAO().persistStatus(cibaAuthCodeID, authenticationStatus);
+            CibaDAOFactory.getInstance().getCibaAuthMgtDAO().updateStatus(cibaAuthCodeKey, authenticationStatus);
+
+            int authenticatedTenant = OAuth2Util.getTenantIdFromUserName(cibaAuthenticatedUser.getUserName());
 
             // Update ciba Authenticated user.
-            CibaDAOFactory.getInstance().getCibaAuthMgtDAO().persistUser(cibaAuthCodeID, cibaAuthenticatedUser);
+            CibaDAOFactory.getInstance().getCibaAuthMgtDAO()
+                    .persistAuthenticatedUser(cibaAuthCodeKey, cibaAuthenticatedUser, authenticatedTenant);
 
+            // Building custom CallBack URL.
+            String callbackURL = authorizationReqDTO.getCallbackUrl() + "?authenticationStatus=" + authenticationStatus;
+            respDTO.setCallbackURI(callbackURL);
+            return respDTO;
         } catch (CibaCoreException e) {
-            try {
-                throw OAuthProblemException.error(OAuth2ErrorCodes.SERVER_ERROR)
-                        .description("OAuth System exception in issuing response for the authorize request" +
-                                " for the authenticated_user : " + cibaAuthenticatedUser + "of the request with ID : " +
-                                cibaAuthCodeID);
-            } catch (OAuthProblemException ex) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Error occurred in persisting user and authenticated user for the cibaAuthCodeDOKey : " +
-                            cibaAuthCodeID);
-                }
-            }
+            throw new IdentityOAuth2Exception("Error occurred in persisting user and authenticated user", e);
         }
-        // Building custom CallBack URL.
-        String callbackURL = authorizationReqDTO.getCallbackUrl() + "?authenticationStatus=" + authenticationStatus;
-        respDTO.setCallbackURI(callbackURL);
-        return respDTO;
     }
 
-    /**
-     * Handles user denial for authorization.
-     *
-     * @param oAuth2Parameters OAuth2parameters are captured by this.
-     * @return OAuth2AuthorizeRespDTO Authorize Response DTO.
-     */
-    public OAuth2AuthorizeRespDTO handleUserConsentDenial(OAuth2Parameters oAuth2Parameters) {
+    @Override
+    public OAuthErrorDTO handleUserConsentDenial(OAuth2Parameters oAuth2Parameters) {
 
-        String cibaAuthCodeDOKey = oAuth2Parameters.getNonce();
-        OAuth2AuthorizeRespDTO respDTO = new OAuth2AuthorizeRespDTO();
+        OAuthErrorDTO oAuthErrorDTO = new OAuthErrorDTO();
 
         try {
             // Update authenticationStatus when user denied the consent.
-            CibaDAOFactory.getInstance().getCibaAuthMgtDAO().persistStatus(cibaAuthCodeDOKey,
-                    AuthenticationStatus.DENIED.toString());
-            respDTO.setErrorCode(CONSENT_DENIED);
-            respDTO.setErrorMsg("User Denied the consent.");
-            return respDTO;
+            CibaDAOFactory.getInstance().getCibaAuthMgtDAO().updateStatus(cibaAuthCodeKey, AuthenticationStatus.DENIED);
+            oAuthErrorDTO.setErrorDescription("User denied the consent.");
+            return oAuthErrorDTO;
         } catch (CibaCoreException e) {
             if (log.isDebugEnabled()) {
-                log.debug("Error occurred in updating the authentication_status for the ID : " + cibaAuthCodeDOKey +
-                        "with " +
-                        "responseType as (ciba). ");
+                log.debug("Error occurred in updating the authentication_status for the ID : " + cibaAuthCodeKey +
+                        "with responseType as (ciba). ");
             }
         }
         return null;
     }
 
-    /**
-     * Handles failure in authentication process.
-     *
-     * @param oAuth2Parameters OAuth2parameters are captured by this.
-     * @return OAuth2AuthorizeRespDTO Authorize Response DTO.
-     */
-    public OAuth2AuthorizeRespDTO handleAuthenticationFailed(OAuth2Parameters oAuth2Parameters) {
+   @Override
+    public OAuthErrorDTO handleAuthenticationFailure(OAuth2Parameters oAuth2Parameters) {
 
-        String nonce = oAuth2Parameters.getNonce();
-        OAuth2AuthorizeRespDTO respDTO = new OAuth2AuthorizeRespDTO();
+        OAuthErrorDTO oAuthErrorDTO = new OAuthErrorDTO();
         try {
-            CibaDAOFactory.getInstance().getCibaAuthMgtDAO()
-                    .persistStatus(nonce, AuthenticationStatus.FAILED.toString());
-            respDTO.setErrorCode(ErrorCodes.SubErrorCodes.AUTHENTICATION_FAILED);
-            respDTO.setErrorMsg("Authentication failed.");
-            return respDTO;
+            CibaDAOFactory.getInstance().getCibaAuthMgtDAO().updateStatus(cibaAuthCodeKey, AuthenticationStatus.FAILED);
+            oAuthErrorDTO.setErrorDescription("Authentication failed.");
+            return oAuthErrorDTO;
         } catch (CibaCoreException e) {
             if (log.isDebugEnabled()) {
-                log.debug("Error occurred in updating the authentication_status for the ID : " + nonce + "with " +
-                        "responseType as (ciba). ");
+                log.debug("Error occurred in updating the authentication_status for the ID : " + cibaAuthCodeKey +
+                        "with responseType as (ciba). ");
             }
         }
         return null;
