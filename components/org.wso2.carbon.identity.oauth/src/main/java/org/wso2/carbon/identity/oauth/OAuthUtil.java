@@ -246,14 +246,12 @@ public final class OAuthUtil {
      * @return
      */
     public static IdentityOAuthAdminException handleError(String message, Exception exception) {
-        log.error(message);
+
         if (exception == null) {
             return new IdentityOAuthAdminException(message);
         } else {
-            if (log.isDebugEnabled()) {
-                log.debug(exception);
-            }
-            return new IdentityOAuthAdminException(message, exception);
+            String errorCode = Error.UNEXPECTED_SERVER_ERROR.getErrorCode();
+            return new IdentityOAuthAdminException(errorCode, message, exception);
         }
     }
 

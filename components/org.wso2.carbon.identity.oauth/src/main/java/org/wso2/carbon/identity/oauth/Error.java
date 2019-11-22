@@ -16,18 +16,21 @@
 package org.wso2.carbon.identity.oauth;
 
 /**
- * Container for error codes related to OAuth component.
+ * Container for error codes related to OAuth consumer apps management.
  */
-public enum ErrorMessage {
+public enum Error {
 
     // Client errors starts with 60, server errors starts with 65.
     INVALID_REQUEST("60001"),
-    APPLICATION_NOT_FOUND("60002");
+    INVALID_OAUTH_CLIENT("60002"),
+    AUTHENTICATED_USER_NOT_FOUND("60003"),
+
+    UNEXPECTED_SERVER_ERROR("65001");
 
     private static final String OAUTH_PREFIX = "OAUTH";
     private String errorCode;
 
-    ErrorMessage(String errorCode) {
+    Error(String errorCode) {
 
         this.errorCode = errorCode;
     }
@@ -35,5 +38,11 @@ public enum ErrorMessage {
     public String getErrorCode() {
 
         return OAUTH_PREFIX + "-" + errorCode;
+    }
+
+    @Override
+    public String toString() {
+
+        return getErrorCode();
     }
 }
