@@ -1688,7 +1688,7 @@ public class OAuth2Util {
     public static OauthTokenIssuer getOAuthTokenIssuerForOAuthApp(String clientId)
             throws IdentityOAuth2Exception, InvalidOAuthClientException {
 
-        OAuthAppDO appDO = null;
+        OAuthAppDO appDO;
         try {
             appDO = getAppInformationByClientId(clientId);
         } catch (IdentityOAuth2Exception e) {

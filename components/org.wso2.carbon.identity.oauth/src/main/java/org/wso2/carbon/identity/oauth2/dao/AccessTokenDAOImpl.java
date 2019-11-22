@@ -323,7 +323,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             if (isTokenCleanupFeatureEnabled && existingAccessTokenDO != null) {
                 oldTokenCleanupObject.cleanupTokenByTokenId(existingAccessTokenDO.getTokenId(), connection);
             }
-           IdentityDatabaseUtil.commitTransaction(connection);
+            IdentityDatabaseUtil.commitTransaction(connection);
             return true;
         } catch (SQLException e) {
             IdentityDatabaseUtil.rollbackTransaction(connection);
