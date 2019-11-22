@@ -135,7 +135,11 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                 tenantDomain);
         if (serviceProvider != null) {
             try {
-                deleteAssociatedOAuthApps(serviceProvider);
+                if (log.isDebugEnabled()) {
+                    log.debug("Deleting OAuth inbound data associated with application: " + applicationName
+                            + " in tenantDomain: " + tenantDomain + " during application delete.");
+                }
+                deleteAssociatedOAuthApps(serviceProvider, tenantDomain);
             } catch (IdentityOAuthAdminException | IdentityOAuth2Exception e) {
                 throw new IdentityApplicationManagementException("Error while cleaning up oauth application data " +
                         "associated with service provider: " + applicationName + " of tenantDomain: " + tenantDomain, e);
@@ -168,11 +172,15 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
         return oauthKeys;
     }
 
-    private void deleteAssociatedOAuthApps(ServiceProvider serviceProvider)
+    private void deleteAssociatedOAuthApps(ServiceProvider serviceProvider, String tenantDomain)
             throws IdentityOAuthAdminException, IdentityOAuth2Exception {
 
         Set<String> associatedOAuthConsumerKeys = getOAuthAppsAssociatedWithApplication(serviceProvider);
         for (String consumerKey : associatedOAuthConsumerKeys) {
+            if (log.isDebugEnabled()) {
+                log.debug("Removing OAuth application data for clientId: " + consumerKey + " associated with " +
+                        "application: " + serviceProvider.getApplicationName() + " tenantDomain: " + tenantDomain);
+            }
             OAuth2ServiceComponentHolder.getInstance().getOAuthAdminService().removeOAuthApplicationData(consumerKey);
         }
         removeEntriesFromCache(associatedOAuthConsumerKeys);
