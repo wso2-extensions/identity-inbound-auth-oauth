@@ -18,6 +18,8 @@
 
 package org.wso2.carbon.identity.oauth;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.core.AbstractAdmin;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
@@ -38,6 +40,7 @@ import java.util.Properties;
 
 public class OAuthAdminService extends AbstractAdmin {
 
+    private static final Log log = LogFactory.getLog(OAuthAdminService.class);
     protected final org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl OAuthAdminServiceImpl = new
             OAuthAdminServiceImpl();
 
@@ -51,7 +54,11 @@ public class OAuthAdminService extends AbstractAdmin {
      */
     public String[] registerOAuthConsumer() throws IdentityOAuthAdminException {
 
-        return OAuthAdminServiceImpl.registerOAuthConsumer();
+        try {
+            return OAuthAdminServiceImpl.registerOAuthConsumer();
+        } catch (IdentityOAuthAdminException ex) {
+            throw handleError(ex);
+        }
     }
 
     /**
@@ -63,7 +70,11 @@ public class OAuthAdminService extends AbstractAdmin {
      */
     public OAuthConsumerAppDTO[] getAllOAuthApplicationData() throws IdentityOAuthAdminException {
 
-        return OAuthAdminServiceImpl.getAllOAuthApplicationData();
+        try {
+            return OAuthAdminServiceImpl.getAllOAuthApplicationData();
+        } catch (IdentityOAuthAdminException ex) {
+            throw handleError(ex);
+        }
     }
 
     /**
@@ -75,7 +86,11 @@ public class OAuthAdminService extends AbstractAdmin {
      */
     public OAuthConsumerAppDTO getOAuthApplicationData(String consumerKey) throws IdentityOAuthAdminException {
 
-        return OAuthAdminServiceImpl.getOAuthApplicationData(consumerKey);
+        try {
+            return OAuthAdminServiceImpl.getOAuthApplicationData(consumerKey);
+        } catch (IdentityOAuthAdminException ex) {
+            throw handleError(ex);
+        }
     }
 
     /**
@@ -87,7 +102,11 @@ public class OAuthAdminService extends AbstractAdmin {
      */
     public OAuthConsumerAppDTO getOAuthApplicationDataByAppName(String appName) throws IdentityOAuthAdminException {
 
-        return OAuthAdminServiceImpl.getOAuthApplicationDataByAppName(appName);
+        try {
+            return OAuthAdminServiceImpl.getOAuthApplicationDataByAppName(appName);
+        } catch (IdentityOAuthAdminException ex) {
+            throw handleError(ex);
+        }
     }
 
     /**
@@ -98,7 +117,11 @@ public class OAuthAdminService extends AbstractAdmin {
      */
     public void registerOAuthApplicationData(OAuthConsumerAppDTO application) throws IdentityOAuthAdminException {
 
-        OAuthAdminServiceImpl.registerOAuthApplicationData(application);
+        try {
+            OAuthAdminServiceImpl.registerOAuthApplicationData(application);
+        } catch (IdentityOAuthAdminException ex) {
+            throw handleError(ex);
+        }
     }
 
     /**
@@ -111,7 +134,11 @@ public class OAuthAdminService extends AbstractAdmin {
     public OAuthConsumerAppDTO registerAndRetrieveOAuthApplicationData(OAuthConsumerAppDTO application)
             throws IdentityOAuthAdminException {
 
-        return OAuthAdminServiceImpl.registerAndRetrieveOAuthApplicationData(application);
+        try {
+            return OAuthAdminServiceImpl.registerAndRetrieveOAuthApplicationData(application);
+        } catch (IdentityOAuthAdminException ex) {
+            throw handleError(ex);
+        }
     }
 
     /**
@@ -122,8 +149,11 @@ public class OAuthAdminService extends AbstractAdmin {
      */
     public void updateConsumerApplication(OAuthConsumerAppDTO consumerAppDTO) throws IdentityOAuthAdminException {
 
-        // Validate access token expiry configurations.
-        OAuthAdminServiceImpl.updateConsumerApplication(consumerAppDTO);
+        try {
+            OAuthAdminServiceImpl.updateConsumerApplication(consumerAppDTO);
+        } catch (IdentityOAuthAdminException ex) {
+            throw handleError(ex);
+        }
     }
 
     /**
@@ -132,7 +162,11 @@ public class OAuthAdminService extends AbstractAdmin {
      */
     public String getOauthApplicationState(String consumerKey) throws IdentityOAuthAdminException {
 
-        return OAuthAdminServiceImpl.getOauthApplicationState(consumerKey);
+        try {
+            return OAuthAdminServiceImpl.getOauthApplicationState(consumerKey);
+        } catch (IdentityOAuthAdminException ex) {
+            throw handleError(ex);
+        }
     }
 
     /**
@@ -141,10 +175,13 @@ public class OAuthAdminService extends AbstractAdmin {
      * @param scope an oidc scope
      * @throws IdentityOAuthAdminException if an error occurs when inserting scopes or claims.
      */
-    public void addScope(String scope, String[] claims)
-            throws IdentityOAuthAdminException {
+    public void addScope(String scope, String[] claims) throws IdentityOAuthAdminException {
 
-        OAuthAdminServiceImpl.addScope(scope, claims);
+        try {
+            OAuthAdminServiceImpl.addScope(scope, claims);
+        } catch (IdentityOAuthAdminException ex) {
+            throw handleError(ex);
+        }
     }
 
     /**
@@ -155,7 +192,11 @@ public class OAuthAdminService extends AbstractAdmin {
      */
     public ScopeDTO[] getScopes() throws IdentityOAuthAdminException {
 
-        return OAuthAdminServiceImpl.getScopes();
+        try {
+            return OAuthAdminServiceImpl.getScopes();
+        } catch (IdentityOAuthAdminException ex) {
+            throw handleError(ex);
+        }
     }
 
     /**
@@ -166,7 +207,11 @@ public class OAuthAdminService extends AbstractAdmin {
      */
     public void deleteScope(String scope) throws IdentityOAuthAdminException {
 
-        OAuthAdminServiceImpl.deleteScope(scope);
+        try {
+            OAuthAdminServiceImpl.deleteScope(scope);
+        } catch (IdentityOAuthAdminException ex) {
+            throw handleError(ex);
+        }
     }
 
     /**
@@ -177,7 +222,11 @@ public class OAuthAdminService extends AbstractAdmin {
      */
     public String[] getScopeNames() throws IdentityOAuthAdminException {
 
-        return OAuthAdminServiceImpl.getScopeNames();
+        try {
+            return OAuthAdminServiceImpl.getScopeNames();
+        } catch (IdentityOAuthAdminException ex) {
+            throw handleError(ex);
+        }
     }
 
     /**
@@ -189,7 +238,11 @@ public class OAuthAdminService extends AbstractAdmin {
      */
     public String[] getClaims(String scope) throws IdentityOAuthAdminException {
 
-        return OAuthAdminServiceImpl.getClaims(scope);
+        try {
+            return OAuthAdminServiceImpl.getClaims(scope);
+        } catch (IdentityOAuthAdminException ex) {
+            throw handleError(ex);
+        }
     }
 
     /**
@@ -203,7 +256,11 @@ public class OAuthAdminService extends AbstractAdmin {
     public void updateScope(String scope, String[] addClaims, String[] deleteClaims)
             throws IdentityOAuthAdminException {
 
-        OAuthAdminServiceImpl.updateScope(scope, addClaims, deleteClaims);
+        try {
+            OAuthAdminServiceImpl.updateScope(scope, addClaims, deleteClaims);
+        } catch (IdentityOAuthAdminException ex) {
+            throw handleError(ex);
+        }
     }
 
     /**
@@ -215,7 +272,11 @@ public class OAuthAdminService extends AbstractAdmin {
      */
     public boolean isScopeExist(String scope) throws IdentityOAuthAdminException {
 
-        return OAuthAdminServiceImpl.isScopeExist(scope);
+        try {
+            return OAuthAdminServiceImpl.isScopeExist(scope);
+        } catch (IdentityOAuthAdminException ex) {
+            throw handleError(ex);
+        }
     }
 
     /**
@@ -225,7 +286,11 @@ public class OAuthAdminService extends AbstractAdmin {
      */
     public void updateConsumerAppState(String consumerKey, String newState) throws IdentityOAuthAdminException {
 
-        OAuthAdminServiceImpl.updateConsumerAppState(consumerKey, newState);
+        try {
+            OAuthAdminServiceImpl.updateConsumerAppState(consumerKey, newState);
+        } catch (IdentityOAuthAdminException ex) {
+            throw handleError(ex);
+        }
     }
 
     /**
@@ -236,7 +301,11 @@ public class OAuthAdminService extends AbstractAdmin {
      */
     public void updateOauthSecretKey(String consumerKey) throws IdentityOAuthAdminException {
 
-        OAuthAdminServiceImpl.updateOauthSecretKey(consumerKey);
+        try {
+            OAuthAdminServiceImpl.updateOauthSecretKey(consumerKey);
+        } catch (IdentityOAuthAdminException ex) {
+            throw handleError(ex);
+        }
     }
 
     /**
@@ -248,13 +317,21 @@ public class OAuthAdminService extends AbstractAdmin {
      */
     public OAuthConsumerAppDTO updateAndRetrieveOauthSecretKey(String consumerKey) throws IdentityOAuthAdminException {
 
-        return OAuthAdminServiceImpl.updateAndRetrieveOauthSecretKey(consumerKey);
+        try {
+            return OAuthAdminServiceImpl.updateAndRetrieveOauthSecretKey(consumerKey);
+        } catch (IdentityOAuthAdminException ex) {
+            throw handleError(ex);
+        }
     }
 
     private void updateAppAndRevokeTokensAndAuthzCodes(String consumerKey,
                                                        Properties properties) throws IdentityOAuthAdminException {
 
-        OAuthAdminServiceImpl.updateAppAndRevokeTokensAndAuthzCodes(consumerKey, properties);
+        try {
+            OAuthAdminServiceImpl.updateAppAndRevokeTokensAndAuthzCodes(consumerKey, properties);
+        } catch (IdentityOAuthAdminException ex) {
+            throw handleError(ex);
+        }
     }
 
     /**
@@ -266,8 +343,11 @@ public class OAuthAdminService extends AbstractAdmin {
     public void removeOAuthApplicationData(String consumerKey) throws IdentityOAuthAdminException {
 
         // remove client credentials from cache
-
-        OAuthAdminServiceImpl.removeOAuthApplicationData(consumerKey);
+        try {
+            OAuthAdminServiceImpl.removeOAuthApplicationData(consumerKey);
+        } catch (IdentityOAuthAdminException ex) {
+            throw handleError(ex);
+        }
     }
 
     /**
@@ -277,7 +357,11 @@ public class OAuthAdminService extends AbstractAdmin {
      */
     public OAuthConsumerAppDTO[] getAppsAuthorizedByUser() throws IdentityOAuthAdminException {
 
-        return OAuthAdminServiceImpl.getAppsAuthorizedByUser();
+        try {
+            return OAuthAdminServiceImpl.getAppsAuthorizedByUser();
+        } catch (IdentityOAuthAdminException ex) {
+            throw handleError(ex);
+        }
     }
 
     /**
@@ -289,7 +373,11 @@ public class OAuthAdminService extends AbstractAdmin {
     public OAuthRevocationResponseDTO revokeAuthzForAppsByResoureOwner(
             OAuthRevocationRequestDTO revokeRequestDTO) throws IdentityOAuthAdminException {
 
-        return OAuthAdminServiceImpl.revokeAuthzForAppsByResourceOwner(revokeRequestDTO);
+        try {
+            return OAuthAdminServiceImpl.revokeAuthzForAppsByResourceOwner(revokeRequestDTO);
+        } catch (IdentityOAuthAdminException ex) {
+            throw handleError(ex);
+        }
     }
 
     /**
@@ -302,13 +390,21 @@ public class OAuthAdminService extends AbstractAdmin {
     public OAuthRevocationResponseDTO updateApproveAlwaysForAppConsentByResourceOwner(String appName, String state)
             throws IdentityOAuthAdminException {
 
-        return OAuthAdminServiceImpl.updateApproveAlwaysForAppConsentByResourceOwner(appName, state);
+        try {
+            return OAuthAdminServiceImpl.updateApproveAlwaysForAppConsentByResourceOwner(appName, state);
+        } catch (IdentityOAuthAdminException ex) {
+            throw handleError(ex);
+        }
     }
 
     private void triggerPreRevokeListeners(OAuthRevocationRequestDTO
                                                    revokeRequestDTO) throws IdentityOAuthAdminException {
 
-        OAuthAdminServiceImpl.triggerPreRevokeListeners(revokeRequestDTO);
+        try {
+            OAuthAdminServiceImpl.triggerPreRevokeListeners(revokeRequestDTO);
+        } catch (IdentityOAuthAdminException ex) {
+            throw handleError(ex);
+        }
     }
 
     private void triggerPostRevokeListeners(OAuthRevocationRequestDTO revokeRequestDTO,
@@ -403,7 +499,11 @@ public class OAuthAdminService extends AbstractAdmin {
      */
     private String[] filterScopeValidators(OAuthConsumerAppDTO application) throws IdentityOAuthAdminException {
 
-        return OAuthAdminServiceImpl.filterScopeValidators(application);
+        try {
+            return OAuthAdminServiceImpl.filterScopeValidators(application);
+        } catch (IdentityOAuthAdminException ex) {
+            throw handleError(ex);
+        }
     }
 
     /**
@@ -442,5 +542,18 @@ public class OAuthAdminService extends AbstractAdmin {
     private OAuthAppDO getOAuthApp(String consumerKey) throws InvalidOAuthClientException, IdentityOAuth2Exception {
 
         return OAuthAdminServiceImpl.getOAuthApp(consumerKey);
+    }
+
+    private IdentityOAuthAdminException handleError(IdentityOAuthAdminException ex) {
+
+        if (ex instanceof IdentityOAuthClientException) {
+            if (log.isDebugEnabled()) {
+                log.debug(ex);
+            }
+        } else {
+            log.error(ex);
+        }
+
+        return ex;
     }
 }
