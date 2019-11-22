@@ -2051,9 +2051,12 @@ public class OAuthServerConfiguration {
 
             // If a server level <IdentityOAuthTokenGenerator> is defined, that will be our first choice for the
             // "Default" token type issuer implementation.
+            if (log.isDebugEnabled()) {
+                log.debug("TokenIssuer: " + oauthIdentityTokenGeneratorClassName + " is set as the " +
+                        "issuer implementation for 'Default' token type.");
+            }
             supportedTokenIssuers.put(DEFAULT_TOKEN_TYPE,
-                    new TokenIssuerDO(oauthIdentityTokenGeneratorClassName, oauthIdentityTokenGeneratorClassName,
-                            isPersistTokenAlias));
+                    new TokenIssuerDO(DEFAULT_TOKEN_TYPE, oauthIdentityTokenGeneratorClassName, isPersistTokenAlias));
         }
 
         // Adding default token types if not added in the configuration.
