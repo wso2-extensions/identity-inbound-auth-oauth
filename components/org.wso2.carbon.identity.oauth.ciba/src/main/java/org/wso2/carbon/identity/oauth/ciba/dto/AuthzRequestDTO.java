@@ -23,13 +23,13 @@ package org.wso2.carbon.identity.oauth.ciba.dto;
  */
 public class AuthzRequestDTO {
 
-    private String user;
+    private String userHint;
     private String nonce;
-    private String client_id;
+    private String clientId;
     private String callBackUrl;
     private String bindingMessage;
     private String transactionContext;
-    private String scope;
+    private String scopes;
 
     public String getBindingMessage() {
 
@@ -61,14 +61,14 @@ public class AuthzRequestDTO {
         this.callBackUrl = callBackUrl;
     }
 
-    public String getUser() {
+    public String getUserHint() {
 
-        return user;
+        return userHint;
     }
 
-    public void setUser(String user) {
+    public void setUserHint(String userHint) {
 
-        this.user = user;
+        this.userHint = userHint;
     }
 
     public String getNonce() {
@@ -81,23 +81,23 @@ public class AuthzRequestDTO {
         this.nonce = nonce;
     }
 
-    public String getClient_id() {
+    public String getClientId() {
 
-        return client_id;
+        return clientId;
     }
 
-    public void setClient_id(String client_id) {
+    public void setClientId(String clientId) {
 
-        this.client_id = client_id;
+        this.clientId = clientId;
     }
 
-    public void setScope(String scope) {
+    public void setScopes(String scopes) {
 
-        this.scope = scope;
+        this.scopes = scopes;
     }
 
-    public String getScope() {
+    public String getScopes() {
 
-        return scope;
+        return scopes;
     }
 }

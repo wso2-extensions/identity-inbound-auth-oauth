@@ -28,7 +28,7 @@ public class CibaAuthResponseDTO {
     private long issuedTime;
     private long expiredTime;
     private long notBeforeTime;
-    private String JWTID;
+    private String jwtId;
     private long requestedExpiry;
     private String userHint;
     private String bindingMessage;
@@ -98,14 +98,14 @@ public class CibaAuthResponseDTO {
         this.notBeforeTime = notBeforeTime;
     }
 
-    public String getJWTID() {
+    public String getJwtId() {
 
-        return JWTID;
+        return jwtId;
     }
 
-    public void setJWTID(String JWTID) {
+    public void setJWTID(String jwtId) {
 
-        this.JWTID = JWTID;
+        this.jwtId = jwtId;
     }
 
     public long getRequestedExpiry() {

@@ -31,9 +31,9 @@ public class CibaAuthResponse extends OAuthResponse {
         super(uri, responseStatus);
     }
 
-    public static CibaAuthResponse.CibaAuthResponseBuilder cibaAuthenticationResponse(int code) {
+    public static CibaAuthResponseBuilder cibaAuthenticationResponse(int code) {
 
-        return new CibaAuthResponse.CibaAuthResponseBuilder(code);
+        return new CibaAuthResponseBuilder(code);
     }
 
     public static class CibaAuthResponseBuilder extends OAuthResponseBuilder {

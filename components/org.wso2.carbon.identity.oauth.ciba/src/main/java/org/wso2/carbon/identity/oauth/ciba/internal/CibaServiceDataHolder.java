@@ -1,4 +1,3 @@
-
 /*
  * Copyright (c) 2019, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
@@ -17,7 +16,6 @@
  * under the License.
  */
 
-
 package org.wso2.carbon.identity.oauth.ciba.internal;
 
 import org.wso2.carbon.user.core.service.RealmService;
@@ -27,16 +25,26 @@ import org.wso2.carbon.user.core.service.RealmService;
  */
 public class CibaServiceDataHolder {
 
-    private static RealmService realmService;
+    private RealmService realmService;
+    private static CibaServiceDataHolder cibaServiceHolderInstance = new CibaServiceDataHolder();
+
+    private CibaServiceDataHolder() {
+
+    }
+
+    public static CibaServiceDataHolder getInstance() {
+
+        return cibaServiceHolderInstance;
+    }
 
     /**
      * Get realm service.
      *
      * @return RealmService
      */
-    public static RealmService getRealmService() {
+    public RealmService getRealmService() {
 
-        return CibaServiceDataHolder.realmService;
+        return realmService;
     }
 
     /**
@@ -44,9 +52,8 @@ public class CibaServiceDataHolder {
      *
      * @param realmService
      */
-    public static void setRealmService(RealmService realmService) {
+    public void setRealmService(RealmService realmService) {
 
-        CibaServiceDataHolder.realmService = realmService;
+        this.realmService = realmService;
     }
-
 }

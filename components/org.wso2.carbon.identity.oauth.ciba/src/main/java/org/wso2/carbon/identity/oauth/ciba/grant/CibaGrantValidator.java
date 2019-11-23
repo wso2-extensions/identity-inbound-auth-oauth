@@ -30,7 +30,7 @@ public class CibaGrantValidator extends AbstractValidator {
 
     public CibaGrantValidator() {
 
-        requiredParams.add(org.wso2.carbon.identity.openidconnect.model.Constants.RESPONSE_TYPE);
+        requiredParams.add("grant_type");
         requiredParams.add(CibaConstants.AUTH_REQ_ID);
     }
 }

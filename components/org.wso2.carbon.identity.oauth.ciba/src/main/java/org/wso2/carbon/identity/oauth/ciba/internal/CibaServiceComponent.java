@@ -19,10 +19,6 @@
 
 package org.wso2.carbon.identity.oauth.ciba.internal;
 
-/**
- * CIBA service component class.
- */
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.osgi.service.component.ComponentContext;
@@ -34,7 +30,7 @@ import org.osgi.service.component.annotations.ReferencePolicy;
 import org.wso2.carbon.user.core.service.RealmService;
 
 @Component(
-        name = "identity.ciba.service",
+        name = "identity.oauth.ciba.component",
         immediate = true
 )
 public class CibaServiceComponent {
@@ -44,19 +40,13 @@ public class CibaServiceComponent {
     @Activate
     protected void activate(ComponentContext ctxt) {
 
-        try {
-            if (log.isDebugEnabled()) {
-                log.debug("Ciba component bundle is activated");
-            }
-        } catch (Throwable e) {
-            if (log.isDebugEnabled()) {
-                log.error("Ciba component bundle  activation Failed", e);
-            }
+        if (log.isDebugEnabled()) {
+            log.debug("Ciba component bundle is activated.");
         }
     }
 
     /**
-     * Set realm service implementation
+     * Set realm service implementation.
      *
      * @param realmService RealmService
      */
@@ -65,13 +55,14 @@ public class CibaServiceComponent {
             service = RealmService.class,
             cardinality = ReferenceCardinality.MANDATORY,
             policy = ReferencePolicy.DYNAMIC,
-            unbind = "unsetRealmService")
+            unbind = "unsetRealmService"
+    )
     protected void setRealmService(RealmService realmService) {
 
         if (log.isDebugEnabled()) {
             log.debug("realmService set in CibaComponent bundle");
         }
-        CibaServiceDataHolder.setRealmService(realmService);
+        CibaServiceDataHolder.getInstance().setRealmService(realmService);
     }
 
     /**
@@ -82,6 +73,6 @@ public class CibaServiceComponent {
         if (log.isDebugEnabled()) {
             log.debug("realmService unset in CibaComponent bundle");
         }
-        CibaServiceDataHolder.setRealmService(null);
+        CibaServiceDataHolder.getInstance().setRealmService(null);
     }
 }

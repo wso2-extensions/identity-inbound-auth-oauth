@@ -29,8 +29,8 @@
     <modelVersion>4.0.0</modelVersion>
     <artifactId>org.wso2.carbon.identity.oauth.ciba</artifactId>
     <packaging>bundle</packaging>
-    <name>WSO2 Carbon - Identity Ciba Component</name>
-    <description>Ciba Core Component for OpenIdConnect</description>
+    <name>WSO2 Carbon - Identity CIBA Component</name>
+    <description>CIBA Core Component for OpenIdConnect</description>
     <url>http://wso2.org</url>
 
     <dependencies>

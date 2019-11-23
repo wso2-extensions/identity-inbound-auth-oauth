@@ -41,7 +41,7 @@ public class CibaConstants {
     public static final String USER_IDENTITY = "user";
     public static final String BINDING_MESSAGE = "binding_message";
     public static final String TRANSACTION_CONTEXT = "transaction_context";
-    public static final String UTC = "UTC" ;
+    public static final String UTC = "UTC";
     public static final String EXPIRES_IN = "expires_in";
 
     private CibaConstants() {

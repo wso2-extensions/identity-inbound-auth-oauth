@@ -34,8 +34,12 @@ public class SQLQueries {
                 "EXPIRES_IN,AUTHENTICATION_STATUS) VALUES (?,?,?,?,?,?,?,?)";
 
         public static final String UPDATE_AUTHENTICATED_USER =
-                "UPDATE IDN_OAUTH2_CIBA_AUTH_CODE SET AUTHENTICATED_USER_NAME = ? ,USER_STORE_DOMAIN = ? ,TENANT_ID = ? " +
-                        " WHERE AUTH_CODE_KEY = ? ";
+                "UPDATE IDN_OAUTH2_CIBA_AUTH_CODE SET AUTHENTICATED_USER_NAME = ? ,USER_STORE_DOMAIN = ? ," +
+                        "TENANT_ID = ? WHERE AUTH_CODE_KEY = ? ";
+
+        public static final String UPDATE_AUTHENTICATION_SUCCESS =
+                "UPDATE IDN_OAUTH2_CIBA_AUTH_CODE SET AUTHENTICATED_USER_NAME = ? ,USER_STORE_DOMAIN = ? ," +
+                        "TENANT_ID = ?, IDP_ID = ? , AUTHENTICATION_STATUS = ? WHERE AUTH_CODE_KEY = ? ";
 
         public static final String RETRIEVE_AUTHENTICATED_USER =
                 "SELECT AUTHENTICATED_USER_NAME,USER_STORE_DOMAIN,TENANT_ID FROM IDN_OAUTH2_CIBA_AUTH_CODE " +
@@ -44,19 +48,14 @@ public class SQLQueries {
         public static final String UPDATE_AUTHENTICATION_STATUS =
                 "UPDATE IDN_OAUTH2_CIBA_AUTH_CODE SET AUTHENTICATION_STATUS = ? WHERE  AUTH_CODE_KEY = ? ";
 
+        public static final String UPDATE_AUTHENTICATION_STATUS_WITH_AUTH_REQ_ID =
+                "UPDATE IDN_OAUTH2_CIBA_AUTH_CODE SET AUTHENTICATION_STATUS = ? WHERE AUTH_REQ_ID = ? ";
+
         public static final String RETRIEVE_AUTHENTICATION_STATUS =
-                "SELECT AUTHENTICATION_STATUS FROM IDN_OAUTH2_CIBA_AUTH_CODE" +
-                        " WHERE  AUTH_CODE_KEY = ? ";
+                "SELECT AUTHENTICATION_STATUS FROM IDN_OAUTH2_CIBA_AUTH_CODE WHERE  AUTH_CODE_KEY = ? ";
 
         public static final String RETRIEVE_CIBA_AUTH_CODE_KEY_BY_CIBA_AUTH_REQ_ID =
                 "SELECT AUTH_CODE_KEY FROM IDN_OAUTH2_CIBA_AUTH_CODE WHERE AUTH_REQ_ID = ?";
-
-        public static final String RETRIEVE_LAST_POLLED_TIME =
-                "SELECT LAST_POLLED_TIME FROM IDN_OAUTH2_CIBA_AUTH_CODE WHERE AUTH_CODE_KEY = ?";
-
-        public static final String RETRIEVE_POLLING_INTERVAL =
-                "SELECT POLLING_INTERVAL FROM IDN_OAUTH2_CIBA_AUTH_CODE" +
-                        " WHERE AUTH_CODE_KEY = ?";
 
         public static final String UPDATE_LAST_POLLED_TIME =
                 "UPDATE IDN_OAUTH2_CIBA_AUTH_CODE SET LAST_POLLED_TIME = ? WHERE  AUTH_CODE_KEY = ? ";
@@ -71,10 +70,11 @@ public class SQLQueries {
                 "AUTH_REQ_ID,CONSUMER_APP_KEY,LAST_POLLED_TIME,POLLING_INTERVAL,EXPIRES_IN,AUTHENTICATION_STATUS, " +
                 "ISSUED_TIME FROM IDN_OAUTH2_CIBA_AUTH_CODE WHERE AUTH_REQ_ID = ?";
 
-        public static final String STORE_SCOPES = "INSERT INTO IDN_OAUTH2_CIBA_REQ_SCOPES (SCOPE) VALUES (?) WHERE " +
-                "AUTH_CODE_KEY = ? ";
+        public static final String STORE_SCOPES = "INSERT INTO IDN_OAUTH2_CIBA_REQ_SCOPES (AUTH_CODE_KEY,SCOPE) " +
+                "VALUES (?,?)";
 
         public static final String RETRIEVE_SCOPE = "SELECT SCOPE FROM IDN_OAUTH2_CIBA_REQ_SCOPES WHERE AUTH_CODE_KEY" +
                 " = ? ";
+        public static final String GET_IDP_ID_FROM_IDP_NAME = "SELECT IDP.ID FROM IDP WHERE IDP.NAME = ? ";
     }
 }

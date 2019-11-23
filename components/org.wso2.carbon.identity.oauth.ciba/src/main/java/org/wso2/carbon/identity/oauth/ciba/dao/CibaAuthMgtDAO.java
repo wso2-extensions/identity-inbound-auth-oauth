@@ -50,6 +50,18 @@ public interface CibaAuthMgtDAO {
             throws CibaCoreException;
 
     /**
+     * Persists the authenticated_user and status of the relevant CibAuthCode identified by the CibaAuthCodeDOKey.
+     *
+     * @param key               Identifier for CibaAuthCode.
+     * @param idpID             Authenticated Identity provider identifier.
+     * @param authenticatedUser Authenticated user of the relevant CibaAuthCode.
+     * @param tenantID          Tenant ID.
+     * @throws CibaCoreException Exception thrown from CIBA Core Component.
+     */
+    void persistAuthenticationSuccess(String key, int idpID, AuthenticatedUser authenticatedUser, int tenantID)
+            throws CibaCoreException;
+
+    /**
      * Checks whether hash of CibaAuthCode exists.
      *
      * @param authReqId hash of CibaAuthReqID.
@@ -114,7 +126,7 @@ public interface CibaAuthMgtDAO {
     /**
      * Returns CibaAuthCodeDO identified by unique cibaAuthCodeDOKey.
      *
-     * @param authReqID  CIBA Authentication request identifier.
+     * @param authReqID CIBA Authentication request identifier.
      * @throws CibaCoreException Exception thrown from CIBA core Component.
      */
     CibaAuthCodeDO getCibaAuthCodeWithAuhReqID(String authReqID) throws CibaCoreException;
@@ -133,6 +145,23 @@ public interface CibaAuthMgtDAO {
      * @param cibaAuthCodeDO CibaAuthCode Data Object.
      * @throws CibaCoreException Exception thrown from CIBA core Component.
      */
-    String [] getScope(CibaAuthCodeDO cibaAuthCodeDO) throws CibaCoreException;
+    String[] getScope(CibaAuthCodeDO cibaAuthCodeDO) throws CibaCoreException;
 
+    /**
+     * Update status with available authentication request identifier.
+     *
+     * @param authReqID            Authentication request identifier.
+     * @param authenticationStatus Authentication Status.
+     * @throws CibaCoreException Exception thrown from CIBA core Component.
+     */
+    void updateStatusWithAuthReqID(String authReqID, Enum authenticationStatus) throws CibaCoreException;
+
+    /**
+     * Obtain idp id from idp name.
+     *
+     * @param idpName Name of Identity provider.
+     * @return Identity provider identifier.
+     * @throws CibaCoreException Exception thrown from CIBA core Component.
+     */
+    int getIdpID(String idpName) throws CibaCoreException;
 }

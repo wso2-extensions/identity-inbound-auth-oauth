@@ -16,7 +16,6 @@
  * under the License.
  */
 
-
 package org.wso2.carbon.identity.oauth.ciba.model;
 
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;

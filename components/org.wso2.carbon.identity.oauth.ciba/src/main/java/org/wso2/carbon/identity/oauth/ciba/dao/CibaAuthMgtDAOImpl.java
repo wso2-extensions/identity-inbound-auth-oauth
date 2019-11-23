@@ -97,6 +97,35 @@ public class CibaAuthMgtDAOImpl implements CibaAuthMgtDAO {
     }
 
     @Override
+    public void persistAuthenticationSuccess(String key, int idpID, AuthenticatedUser authenticatedUser,
+                                             int tenantID) throws CibaCoreException {
+
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
+            try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.CibaSQLQueries.
+                    UPDATE_AUTHENTICATION_SUCCESS)) {
+
+                prepStmt.setString(1, authenticatedUser.getUserName());
+                prepStmt.setString(2, authenticatedUser.getUserStoreDomain());
+                prepStmt.setInt(3, tenantID);
+                prepStmt.setInt(4, idpID);
+                prepStmt.setString(5, AuthenticationStatus.AUTHENTICATED.toString());
+                prepStmt.setString(6, key);
+                prepStmt.execute();
+                IdentityDatabaseUtil.commitTransaction(connection);
+                if (log.isDebugEnabled()) {
+                    log.debug("Successfully persisted the successful authentication identified by AuthCodeDOKey: " +
+                            key);
+                }
+            } catch (SQLException e) {
+                IdentityDatabaseUtil.rollbackTransaction(connection);
+                throw new CibaCoreException("Error occurred in persisting the successful authentication.", e);
+            }
+        } catch (SQLException e) {
+            throw new CibaCoreException("Error occurred in persisting the successful authentication.", e);
+        }
+    }
+
+    @Override
     public boolean isAuthReqIDExist(String authReqId) throws CibaCoreException {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
@@ -326,8 +355,8 @@ public class CibaAuthMgtDAOImpl implements CibaAuthMgtDAO {
             try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.CibaSQLQueries.STORE_SCOPES)) {
 
                 for (String singleScopeValue : cibaAuthCodeDO.getScope()) {
-                    prepStmt.setString(1, singleScopeValue);
-                    prepStmt.setString(2, cibaAuthCodeDO.getCibaAuthCodeKey());
+                    prepStmt.setString(1, cibaAuthCodeDO.getCibaAuthCodeKey());
+                    prepStmt.setString(2, singleScopeValue);
                     prepStmt.execute();
                     IdentityDatabaseUtil.commitTransaction(connection);
                 }
@@ -348,10 +377,9 @@ public class CibaAuthMgtDAOImpl implements CibaAuthMgtDAO {
                     CibaSQLQueries.RETRIEVE_SCOPE)) {
 
                 ArrayList<String> scopeArrayList = new ArrayList<>();
-
                 prepStmt.setString(1, cibaAuthCodeDO.getCibaAuthCodeKey());
                 ResultSet resultSet = prepStmt.executeQuery();
-                if (resultSet.next()) {
+                while (resultSet.next()) {
                     scopeArrayList.add(resultSet.getString(1));
                 }
                 return scopeArrayList.toArray(new String[scopeArrayList.size()]);
@@ -361,6 +389,48 @@ public class CibaAuthMgtDAOImpl implements CibaAuthMgtDAO {
         }
     }
 
+    @Override
+    public void updateStatusWithAuthReqID(String authReqID, Enum authenticationStatus) throws CibaCoreException {
 
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
+            try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.
+                    CibaSQLQueries.UPDATE_AUTHENTICATION_STATUS_WITH_AUTH_REQ_ID)) {
 
+                prepStmt.setString(1, authenticationStatus.toString());
+                prepStmt.setString(2, authReqID);
+                prepStmt.execute();
+                IdentityDatabaseUtil.commitTransaction(connection);
+                if (log.isDebugEnabled()) {
+                    log.debug("Successfully persisted the authentication status: " + authenticationStatus +
+                            " identified by auth_req_id: " + authReqID);
+                }
+            } catch (SQLException e) {
+                IdentityDatabaseUtil.rollbackTransaction(connection);
+                throw new CibaCoreException("Error occurred in persisting authentication status.", e);
+            }
+        } catch (SQLException e) {
+            throw new CibaCoreException("Error occurred in persisting authentication status.", e);
+        }
+    }
+
+    @Override
+    public int getIdpID(String idpName) throws CibaCoreException {
+
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
+            try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.
+                    CibaSQLQueries.GET_IDP_ID_FROM_IDP_NAME)) {
+
+                prepStmt.setString(1, idpName);
+                prepStmt.execute();
+                ResultSet resultSet = prepStmt.executeQuery();
+                if (resultSet.next()) {
+                    return resultSet.getInt(1);
+                } else {
+                    throw new CibaCoreException("Record not found.");
+                }
+            }
+        } catch (SQLException e) {
+            throw new CibaCoreException("Error occurred in obtaining IDP ID.", e);
+        }
+    }
 }
