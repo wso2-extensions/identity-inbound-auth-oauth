@@ -29,7 +29,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
 import org.wso2.carbon.identity.oauth.ciba.dto.CibaAuthResponseDTO;
-import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.ErrorCodes;
 import org.wso2.carbon.identity.oauth.ciba.util.CibaAuthUtil;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
@@ -62,19 +61,7 @@ public class CibaAuthRequestValidator {
 
     public static CibaAuthRequestValidator getInstance() {
 
-        if (cibaAuthRequestValidatorInstance == null) {
-
-            synchronized (CibaAuthRequestValidator.class) {
-
-                if (cibaAuthRequestValidatorInstance == null) {
-
-                    /* instance will be created at request time */
-                    cibaAuthRequestValidatorInstance = new CibaAuthRequestValidator();
-                }
-            }
-        }
         return cibaAuthRequestValidatorInstance;
-
     }
 
     /**
@@ -172,18 +159,7 @@ public class CibaAuthRequestValidator {
         }
         String requestedExpiryAsString = String.valueOf(authRequestAsJSON.get(CibaConstants.REQUESTED_EXPIRY));
         long requestedExpiry = Long.parseLong(requestedExpiryAsString);
-        if (requestedExpiry < CibaConstants.MAXIMUM_REQUESTED_EXPIRY_IN_SEC) {
-            log.warn("requested_expiry exceeds default maximum value for the CIBA authenticaton request made by : " +
-                    cibaAuthResponseDTO.getIssuer());
-            cibaAuthResponseDTO.setRequestedExpiry(requestedExpiry);
-        } else {
-            cibaAuthResponseDTO.setRequestedExpiry(CibaConstants.MAXIMUM_REQUESTED_EXPIRY_IN_SEC);
-            if (log.isDebugEnabled()) {
-                log.debug("Warning. CIBA Authentication Request made by client with clientID : " +
-                        cibaAuthResponseDTO.getAudience() + ".Requested expiry is too long." +
-                        "Setting the maximum default value.");
-            }
-        }
+        cibaAuthResponseDTO.setRequestedExpiry(requestedExpiry);
     }
 
     /**
@@ -210,8 +186,8 @@ public class CibaAuthRequestValidator {
             throw new CibaAuthFailureException(HttpServletResponse.SC_BAD_REQUEST,
                     ErrorCodes.INVALID_REQUEST, "invalid value for (transaction_context).");
         }
-        cibaAuthResponseDTO.setTransactionContext
-                (String.valueOf(authRequestAsJSON.get(CibaConstants.TRANSACTION_CONTEXT)));
+        cibaAuthResponseDTO
+                .setTransactionContext(String.valueOf(authRequestAsJSON.get(CibaConstants.TRANSACTION_CONTEXT)));
     }
 
     /**
@@ -742,15 +718,7 @@ public class CibaAuthRequestValidator {
                     throw new CibaAuthFailureException(HttpServletResponse.SC_UNAUTHORIZED,
                             ErrorCodes.UNAUTHORIZED_USER, "login_hint is blank.");
                 }
-                if (!doesUserExist(String.valueOf(jo.get(Constants.LOGIN_HINT)))) {
-                    // User exists in the store and setting the user hint here.
-                    if (log.isDebugEnabled()) {
-                        log.debug("Unknown user identity from the request : " + authRequest);
-                    }
-                    throw new CibaAuthFailureException(HttpServletResponse.SC_UNAUTHORIZED,
-                            ErrorCodes.UNAUTHORIZED_USER, "invalid value for login_hint");
-                }
-                // User exists in the store and setting the user hint here
+                // Setting the user hint here
                 authResponseDTO.setUserHint(String.valueOf(jo.get(Constants.LOGIN_HINT)));
                 return;
             }
@@ -775,46 +743,12 @@ public class CibaAuthRequestValidator {
                     throw new CibaAuthFailureException(HttpServletResponse.SC_UNAUTHORIZED,
                             ErrorCodes.UNAUTHORIZED_USER, "invalid id_token_hint.");
                 }
-                if (!doesUserExist(getUserfromIDToken(String.valueOf(jo.get(Constants.ID_TOKEN_HINT))))) {
-                    // User does not exist in store.
-                    if (log.isDebugEnabled()) {
-                        log.debug("Unknown user identity from the request " + authRequest);
-                    }
-                    throw new CibaAuthFailureException(HttpServletResponse.SC_UNAUTHORIZED,
-                            ErrorCodes.UNAUTHORIZED_USER, "user does not exist.");
-                }
                 // Adding user_hint to the CIBA authentication request after successful validation.
                 authResponseDTO.setUserHint(getUserfromIDToken(String.valueOf(jo.get(Constants.ID_TOKEN_HINT))));
             }
         } catch (ParseException ex) {
             throw new CibaAuthFailureException(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
                     OAuth2ErrorCodes.SERVER_ERROR, "error occurred in validating user hints.");
-        }
-    }
-
-    /**
-     * Verify whether the mentioned user exists.
-     *
-     * @param userHint Carries user identity.
-     * @return boolean Returns whether user exists in the store or not.
-     * @throws CibaAuthFailureException CIBA Authentication Failed Exception.
-     */
-    private boolean doesUserExist(String userHint) throws CibaAuthFailureException {
-
-        // Check whether given user exists in the store.Only username is supported as user_hint.
-        try {
-            if (log.isDebugEnabled()) {
-                log.debug("Checking whether user exists in the store for the user id " + userHint);
-            }
-
-            // Getting the tenantID of user - tenant in which he is registered in.
-            int tenantID = OAuth2Util.getTenantIdFromUserName(userHint);
-
-            // Checking with realm service whether user exists.
-            return CibaAuthUtil.isUserExists(tenantID, userHint);
-        } catch (CibaCoreException | IdentityOAuth2Exception e) {
-            throw new CibaAuthFailureException(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-                    OAuth2ErrorCodes.SERVER_ERROR, "error in validating whether user exists.", e);
         }
     }
 

@@ -49,22 +49,11 @@ public class CibaAuthzHandler {
 
     }
 
-    private static CibaAuthzHandler CibaAuthzHandlerInstance = new CibaAuthzHandler();
+    private static CibaAuthzHandler cibaAuthzHandler = new CibaAuthzHandler();
 
     public static CibaAuthzHandler getInstance() {
 
-        if (CibaAuthzHandlerInstance == null) {
-
-            synchronized (CibaAuthzHandler.class) {
-
-                if (CibaAuthzHandlerInstance == null) {
-
-                    /* instance will be created at request time */
-                    CibaAuthzHandlerInstance = new CibaAuthzHandler();
-                }
-            }
-        }
-        return CibaAuthzHandlerInstance;
+        return cibaAuthzHandler;
     }
 
     /**
@@ -79,12 +68,12 @@ public class CibaAuthzHandler {
         // Add custom parameters to the request by wrapping.
         CibaAuthRequestWrapper cibaAuthRequestWrapper = new CibaAuthRequestWrapper(request);
 
-        cibaAuthRequestWrapper.setParameter(Constants.SCOPE, authzRequestDto.getScope());
+        cibaAuthRequestWrapper.setParameter(Constants.SCOPE, authzRequestDto.getScopes());
         cibaAuthRequestWrapper.setParameter(Constants.RESPONSE_TYPE, CibaConstants.RESPONSE_TYPE_VALUE);
         cibaAuthRequestWrapper.setParameter(Constants.NONCE, authzRequestDto.getNonce());
         cibaAuthRequestWrapper.setParameter(Constants.REDIRECT_URI, authzRequestDto.getCallBackUrl());
-        cibaAuthRequestWrapper.setParameter(Constants.CLIENT_ID, authzRequestDto.getClient_id());
-        cibaAuthRequestWrapper.setParameter(CibaConstants.USER_IDENTITY, authzRequestDto.getUser());
+        cibaAuthRequestWrapper.setParameter(Constants.CLIENT_ID, authzRequestDto.getClientId());
+        cibaAuthRequestWrapper.setParameter(CibaConstants.USER_IDENTITY, authzRequestDto.getUserHint());
         if (!StringUtils.isBlank(authzRequestDto.getBindingMessage())) {
             cibaAuthRequestWrapper.setParameter(CibaConstants.BINDING_MESSAGE, authzRequestDto.getBindingMessage());
         }
@@ -97,8 +86,8 @@ public class CibaAuthzHandler {
         CibaAuthResponseWrapper commonAuthResponseWrapper = new CibaAuthResponseWrapper(response);
         if (log.isDebugEnabled()) {
             log.debug("Building AuthorizeRequest wrapper from CIBA component for the user : " +
-                    authzRequestDto.getUser() + " to continue the authentication request made by client with " +
-                    "clientID : " + authzRequestDto.getClient_id());
+                    authzRequestDto.getUserHint() + " to continue the authentication request made by client with " +
+                    "clientID : " + authzRequestDto.getClientId());
         }
         // Fire authorize request and forget.
         fireAuthzReq(cibaAuthRequestWrapper, commonAuthResponseWrapper);
