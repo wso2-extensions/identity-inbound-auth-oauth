@@ -34,7 +34,7 @@ import javax.cache.event.CacheEntryRemovedListener;
 public class OAuthCacheRemoveListener extends AbstractCacheListener<OAuthCacheKey, CacheEntry>
         implements CacheEntryRemovedListener<OAuthCacheKey, CacheEntry> {
 
-    private static Log log = LogFactory.getLog(OAuthCacheRemoveListener.class);
+    private static final Log log = LogFactory.getLog(OAuthCacheRemoveListener.class);
 
     @Override
     public void entryRemoved(CacheEntryEvent<? extends OAuthCacheKey, ? extends CacheEntry> cacheEntryEvent)

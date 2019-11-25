@@ -54,7 +54,7 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
     // This is used to keep the pre processed authorization code in the OAuthTokenReqMessageContext.
     private static final String AUTHZ_CODE = "AuthorizationCode";
     private static final int ALLOWED_MINIMUM_VALIDITY_PERIOD = 1000;
-    private static Log log = LogFactory.getLog(AuthorizationCodeGrantHandler.class);
+    private static final Log log = LogFactory.getLog(AuthorizationCodeGrantHandler.class);
 
     @Override
     public boolean validateGrant(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
@@ -280,12 +280,11 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
         }
     }
 
-
     private String buildCacheKeyForToken(String clientId, AuthzCodeDO authzCodeDO) {
+
         String scope = OAuth2Util.buildScopeString(authzCodeDO.getScope());
-        String authorizedUser = authzCodeDO.getAuthorizedUser().toString();
-        String authenticatedIDP = authzCodeDO.getAuthorizedUser().getFederatedIdPName();
-        return buildCacheKeyStringForToken(clientId, scope, authorizedUser, authenticatedIDP);
+        return buildCacheKeyStringForToken(clientId, scope, authzCodeDO.getAuthorizedUser().toString(),
+                authzCodeDO.getAuthorizedUser().getFederatedIdPName(), authzCodeDO.getTokenBindingReference());
     }
 
     /**

@@ -28,7 +28,7 @@ import java.util.concurrent.BlockingDeque;
  */
 public class TokenPersistenceTask implements Runnable {
 
-    private static Log log = LogFactory.getLog(TokenPersistenceTask.class);
+    private static final Log log = LogFactory.getLog(TokenPersistenceTask.class);
     private BlockingDeque<AccessContextTokenDO> accessContextTokenQueue;
 
     public TokenPersistenceTask(BlockingDeque<AccessContextTokenDO> accessContextTokenQueue) {

@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oauth.endpoint.user.impl;
 import org.apache.oltu.oauth2.common.utils.JSONUtils;
 import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.IObjectFactory;
 import org.testng.annotations.BeforeClass;
@@ -68,6 +69,7 @@ import static org.testng.Assert.assertTrue;
 @PrepareForTest({OAuthServerConfiguration.class, OAuth2Util.class, IdentityTenantUtil.class, RegistryService.class,
         AuthorizationGrantCache.class, ClaimUtil.class, IdentityUtil.class, UserInfoEndpointConfig.class,
         JDBCPersistenceManager.class})
+@PowerMockIgnore({"javax.management.*"})
 public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
 
     private UserInfoJSONResponseBuilder userInfoJSONResponseBuilder;

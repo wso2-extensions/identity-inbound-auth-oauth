@@ -33,7 +33,7 @@ import javax.ws.rs.core.MediaType;
 
 public class HttpOIDCRegistrationResponseFactory extends HttpRegistrationResponseFactory {
 
-    private static Log log = LogFactory.getLog(HttpOIDCRegistrationResponseFactory.class);
+    private static final Log log = LogFactory.getLog(HttpOIDCRegistrationResponseFactory.class);
 
     @Override
     public String getName() {

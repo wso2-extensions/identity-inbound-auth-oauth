@@ -65,7 +65,7 @@ public class JDBCScopeValidator extends OAuth2ScopeValidator {
     private static final String SCOPE_VALIDATOR_NAME = "Role based scope validator";
     private static final String OPENID = "openid";
 
-    Log log = LogFactory.getLog(JDBCScopeValidator.class);
+    private static final Log log = LogFactory.getLog(JDBCScopeValidator.class);
 
     @Override
     public boolean validateScope(AccessTokenDO accessTokenDO, String resource) throws IdentityOAuth2Exception {

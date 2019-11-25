@@ -42,7 +42,7 @@ import java.util.regex.Matcher;
 
 public class DCRProcessor extends IdentityProcessor {
 
-    private static Log log = LogFactory.getLog(DCRProcessor.class);
+    private static final Log log = LogFactory.getLog(DCRProcessor.class);
 
     @Override
     public IdentityResponse.IdentityResponseBuilder process(IdentityRequest identityRequest) throws DCRException {

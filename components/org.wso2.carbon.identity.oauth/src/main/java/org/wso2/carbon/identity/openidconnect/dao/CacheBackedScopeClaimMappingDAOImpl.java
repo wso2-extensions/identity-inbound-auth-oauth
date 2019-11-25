@@ -36,7 +36,7 @@ import java.util.List;
  */
 public class CacheBackedScopeClaimMappingDAOImpl extends ScopeClaimMappingDAOImpl {
 
-    private final Log log = LogFactory.getLog(CacheBackedScopeClaimMappingDAOImpl.class);
+    private static final Log log = LogFactory.getLog(CacheBackedScopeClaimMappingDAOImpl.class);
     private OIDCScopeClaimCache oidcScopeClaimCache = OIDCScopeClaimCache.getInstance();
     private ScopeClaimMappingDAO defaultScopeClaimMappingDAO = new ScopeClaimMappingDAOImpl();
 

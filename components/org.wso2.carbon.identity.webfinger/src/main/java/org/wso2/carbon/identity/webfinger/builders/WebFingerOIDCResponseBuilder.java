@@ -38,7 +38,7 @@ import static org.wso2.carbon.identity.discovery.DiscoveryUtil.isUseEntityIdAsIs
  */
 public class WebFingerOIDCResponseBuilder {
 
-    private static Log log = LogFactory.getLog(WebFingerOIDCResponseBuilder.class);
+    private static final Log log = LogFactory.getLog(WebFingerOIDCResponseBuilder.class);
 
     public WebFingerResponse buildWebFingerResponse(WebFingerRequest request) throws WebFingerEndpointException,
             ServerConfigurationException {

@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth2.token;
 
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -45,17 +46,26 @@ import org.wso2.carbon.identity.oauth2.ResponseHeader;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
+import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oauth2.validators.JDBCPermissionBasedInternalScopeValidator;
 import org.wso2.carbon.identity.openidconnect.IDTokenBuilder;
 import org.wso2.carbon.utils.CarbonUtils;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Hashtable;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.REFRESH_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
+import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
 
 /**
  * This class is used to issue access tokens and refresh tokens.
@@ -63,7 +73,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppState
 public class AccessTokenIssuer {
 
     private static AccessTokenIssuer instance;
-    private static Log log = LogFactory.getLog(AccessTokenIssuer.class);
+    private static final Log log = LogFactory.getLog(AccessTokenIssuer.class);
     private Map<String, AuthorizationGrantHandler> authzGrantHandlers =
             new Hashtable<String, AuthorizationGrantHandler>();
     private AppInfoCache appInfoCache;
@@ -258,8 +268,19 @@ public class AccessTokenIssuer {
             return tokenRespDTO;
         }
 
+        //Execute Internal SCOPE Validation.
+        JDBCPermissionBasedInternalScopeValidator scopeValidator = new JDBCPermissionBasedInternalScopeValidator();
+        String[] authorizedInternalScopes = scopeValidator.validateScope(tokReqMsgCtx);
+        // Clear the internal scopes. Internal scopes should only handle in JDBCPermissionBasedInternalScopeValidator.
+        // Those scopes should not send to the other scopes validators.
+        // Thus remove the scopes from the tokReqMsgCtx. Will be added to the response after executing
+        // the other scope validators.
+        removeInternalScopes(tokReqMsgCtx);
         boolean isValidScope = authzGrantHandler.validateScope(tokReqMsgCtx);
-        if (!isValidScope) {
+        if (isValidScope) {
+            //Add authorized internal scopes to the request for sending in the response.
+            addAuthorizedInternalScopes(tokReqMsgCtx, authorizedInternalScopes);
+        } else {
             if (log.isDebugEnabled()) {
                 log.debug("Invalid scope provided by client Id: " + tokenReqDTO.getClientId());
             }
@@ -268,6 +289,8 @@ public class AccessTokenIssuer {
             triggerPostListeners(tokenReqDTO, tokenRespDTO, tokReqMsgCtx, isRefreshRequest);
             return tokenRespDTO;
         }
+
+        handleTokenBinding(tokenReqDTO, grantType, tokReqMsgCtx, oAuthAppDO);
 
         try {
             // set the token request context to be used by downstream handlers. This is introduced as a fix for
@@ -326,6 +349,77 @@ public class AccessTokenIssuer {
         }
 
         return tokenRespDTO;
+    }
+
+    private void addAuthorizedInternalScopes(OAuthTokenReqMessageContext tokReqMsgCtx,
+                                             String[] authorizedInternalScopes) {
+
+        String[] scopes = tokReqMsgCtx.getScope();
+        String[] scopesToReturn = (String[]) ArrayUtils.addAll(scopes, authorizedInternalScopes);
+        tokReqMsgCtx.setScope(scopesToReturn);
+    }
+
+    private void removeInternalScopes(OAuthTokenReqMessageContext tokReqMsgCtx) {
+
+        if (tokReqMsgCtx.getScope() == null) {
+            return;
+        }
+        List<String> scopes = new ArrayList<>();
+        for (String scope : tokReqMsgCtx.getScope()) {
+            if (!scope.startsWith("internal_") && !scope.equalsIgnoreCase(SYSTEM_SCOPE)) {
+                scopes.add(scope);
+            }
+        }
+        tokReqMsgCtx.setScope(scopes.toArray(new String[0]));
+    }
+
+    /**
+     * Handle token binding for the grant type.
+     *
+     * @param tokenReqDTO token request DTO.
+     * @param grantType grant type.
+     * @param tokReqMsgCtx token request message context.
+     * @param oAuthAppDO oauth application.
+     * @throws IdentityOAuth2Exception in case of failure.
+     */
+    private void handleTokenBinding(OAuth2AccessTokenReqDTO tokenReqDTO, String grantType,
+            OAuthTokenReqMessageContext tokReqMsgCtx, OAuthAppDO oAuthAppDO) throws IdentityOAuth2Exception {
+
+        if (StringUtils.isBlank(oAuthAppDO.getTokenBindingType())) {
+            tokReqMsgCtx.setTokenBinding(null);
+            return;
+        }
+
+        Optional<TokenBinder> tokenBinderOptional = OAuth2ServiceComponentHolder.getInstance()
+                .getTokenBinder(oAuthAppDO.getTokenBindingType());
+        if (!tokenBinderOptional.isPresent()) {
+            throw new IdentityOAuth2Exception(
+                    "Token binder for the binding type: " + oAuthAppDO.getTokenBindingType() + " is not registered.");
+        }
+
+        if (REFRESH_TOKEN.equals(grantType)) {
+            // Token binding values are already set to the OAuthTokenReqMessageContext.
+            return;
+        }
+
+        tokReqMsgCtx.setTokenBinding(null);
+
+        TokenBinder tokenBinder = tokenBinderOptional.get();
+        if (!tokenBinder.getSupportedGrantTypes().contains(grantType)) {
+            return;
+        }
+
+        Optional<String> tokenBindingValueOptional = tokenBinder.getTokenBindingValue(tokenReqDTO);
+        if (!tokenBindingValueOptional.isPresent()) {
+            throw new IdentityOAuth2Exception(
+                    "Token binding reference cannot be retrieved form the token binder: " + tokenBinder
+                            .getBindingType());
+        }
+
+        String tokenBindingValue = tokenBindingValueOptional.get();
+        tokReqMsgCtx.setTokenBinding(
+                new TokenBinding(tokenBinder.getBindingType(), OAuth2Util.getTokenBindingReference(tokenBindingValue),
+                        tokenBindingValue));
     }
 
     private void triggerPreListeners(OAuth2AccessTokenReqDTO tokenReqDTO,

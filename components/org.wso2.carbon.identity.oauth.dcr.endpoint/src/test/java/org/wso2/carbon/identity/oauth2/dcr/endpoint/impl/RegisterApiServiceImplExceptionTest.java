@@ -40,6 +40,7 @@ import org.wso2.carbon.identity.oauth2.dcr.endpoint.Exceptions.DCRMEndpointExcep
 import org.wso2.carbon.identity.oauth2.dcr.endpoint.TestUtil;
 import org.wso2.carbon.identity.oauth2.dcr.endpoint.dto.RegistrationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dcr.endpoint.dto.UpdateRequestDTO;
+import org.wso2.carbon.identity.oauth2.dcr.endpoint.util.DCRMUtils;
 
 import javax.ws.rs.core.Response;
 import java.util.ArrayList;
@@ -75,6 +76,9 @@ public class RegisterApiServiceImplExceptionTest extends PowerMockTestCase {
     @Mock
     OAuthAdminService oAuthAdminService;
 
+    @Mock
+    DCRMService mockedDCRMService;
+
     @BeforeMethod
     public void setUp() throws Exception {
         //Initializing variables
@@ -92,6 +96,7 @@ public class RegisterApiServiceImplExceptionTest extends PowerMockTestCase {
     @Test
     public  void testDeleteApplicationClientException() throws Exception {
         try {
+            DCRMUtils.setOAuth2DCRMService(mockedDCRMService);
             registerApiService.deleteApplication("");
         } catch (DCRMEndpointException e){
             assertEquals(e.getResponse().getStatus(), Response.Status.BAD_REQUEST.getStatusCode());
@@ -111,6 +116,7 @@ public class RegisterApiServiceImplExceptionTest extends PowerMockTestCase {
     @Test
     public  void testGetApplicationClientException() throws Exception {
         try {
+            DCRMUtils.setOAuth2DCRMService(mockedDCRMService);
             registerApiService.getApplication("");
         } catch (DCRMEndpointException e){
             assertEquals(e.getResponse().getStatus(), Response.Status.BAD_REQUEST.getStatusCode());
@@ -140,6 +146,7 @@ public class RegisterApiServiceImplExceptionTest extends PowerMockTestCase {
         registrationRequestDTO.setRedirectUris(redirectUris);
 
         mockStatic(DCRDataHolder.class);
+        DCRMUtils.setOAuth2DCRMService(mockedDCRMService);
         when(DCRDataHolder.getInstance()).thenReturn(dataHolder);
         when(dataHolder.getApplicationManagementService()).thenReturn( applicationManagementService);
 
@@ -163,6 +170,7 @@ public class RegisterApiServiceImplExceptionTest extends PowerMockTestCase {
         registrationRequestDTO.setRedirectUris(redirectUris);
 
         mockStatic(DCRDataHolder.class);
+        DCRMUtils.setOAuth2DCRMService(mockedDCRMService);
         when(DCRDataHolder.getInstance()).thenReturn(dataHolder);
         when(dataHolder.getApplicationManagementService()).thenReturn( applicationManagementService);
         when(applicationManagementService.getServiceProvider(any(String.class),any(String.class))).
@@ -201,6 +209,7 @@ public class RegisterApiServiceImplExceptionTest extends PowerMockTestCase {
         updateRequestDTO.setRedirectUris(redirectUris);
 
         mockStatic(DCRDataHolder.class);
+        DCRMUtils.setOAuth2DCRMService(mockedDCRMService);
         when(DCRDataHolder.getInstance()).thenReturn(dataHolder);
         when(dataHolder.getApplicationManagementService()).thenReturn( applicationManagementService);
 

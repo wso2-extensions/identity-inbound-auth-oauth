@@ -42,7 +42,7 @@ import javax.ws.rs.HttpMethod;
  */
 public class OIDCRegistrationRequestFactory extends RegistrationRequestFactory {
 
-    private static Log log = LogFactory.getLog(OIDCRegistrationRequestFactory.class);
+    private static final Log log = LogFactory.getLog(OIDCRegistrationRequestFactory.class);
 
     @Override
     public boolean canHandle(HttpServletRequest request, HttpServletResponse response) throws

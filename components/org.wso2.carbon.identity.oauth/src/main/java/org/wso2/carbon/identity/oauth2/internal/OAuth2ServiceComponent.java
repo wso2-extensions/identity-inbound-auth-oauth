@@ -34,6 +34,7 @@ import org.wso2.carbon.identity.application.mgt.listener.ApplicationMgtListener;
 import org.wso2.carbon.identity.base.IdentityRuntimeException;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
+import org.wso2.carbon.identity.oauth.common.token.bindings.TokenBinderInfo;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
@@ -41,16 +42,18 @@ import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
 import org.wso2.carbon.identity.oauth2.client.authentication.BasicAuthClientAuthenticator;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnService;
+import org.wso2.carbon.identity.oauth2.client.authentication.PublicClientAuthenticator;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dao.SQLQueries;
 import org.wso2.carbon.identity.oauth2.listener.TenantCreationEventListener;
+import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
+import org.wso2.carbon.identity.oauth2.token.bindings.impl.CookieBasedTokenBinder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilter;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImpl;
 import org.wso2.carbon.identity.user.store.configuration.listener.UserStoreConfigListener;
 import org.wso2.carbon.registry.core.service.RegistryService;
 import org.wso2.carbon.stratos.common.listeners.TenantMgtListener;
-import org.wso2.carbon.identity.oauth2.client.authentication.PublicClientAuthenticator;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -66,7 +69,7 @@ import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkIDPIdColumnAv
 )
 public class OAuth2ServiceComponent {
 
-    private static Log log = LogFactory.getLog(OAuth2ServiceComponent.class);
+    private static final Log log = LogFactory.getLog(OAuth2ServiceComponent.class);
     private BundleContext bundleContext;
 
     @Reference(
@@ -116,6 +119,8 @@ public class OAuth2ServiceComponent {
             } else {
                 log.error("TenantMgtListener could not be registered");
             }
+            // iniating oauth scopes
+            OAuth2Util.initiateOAuthScopePermissionsBindings(tenantId);
             // exposing server configuration as a service
             OAuthServerConfiguration oauthServerConfig = OAuthServerConfiguration.getInstance();
             bundleContext.registerService(OAuthServerConfiguration.class.getName(), oauthServerConfig, null);
@@ -129,6 +134,10 @@ public class OAuth2ServiceComponent {
             PublicClientAuthenticator publicClientAuthenticator = new PublicClientAuthenticator();
             bundleContext.registerService(OAuthClientAuthenticator.class.getName(), publicClientAuthenticator,
                     null);
+
+            // Register cookie based access token binder.
+            CookieBasedTokenBinder cookieBasedTokenBinder = new CookieBasedTokenBinder();
+            bundleContext.registerService(TokenBinderInfo.class.getName(), cookieBasedTokenBinder, null);
 
             if (log.isDebugEnabled()) {
                 log.debug("Identity OAuth bundle is activated");
@@ -257,7 +266,7 @@ public class OAuth2ServiceComponent {
 
     private boolean checkPKCESupport() {
 
-        try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
 
             String sql;
             if (connection.getMetaData().getDriverName().contains("MySQL")
@@ -335,5 +344,30 @@ public class OAuth2ServiceComponent {
             log.debug("UnSetting the Registry Service");
         }
         OAuth2ServiceComponentHolder.getAuthenticationHandlers().remove(oAuthClientAuthenticator);
+    }
+
+    @Reference(name = "token.binding.service",
+               service = TokenBinderInfo.class,
+               cardinality = ReferenceCardinality.MULTIPLE,
+               policy = ReferencePolicy.DYNAMIC,
+               unbind = "unsetTokenBinderInfo")
+    protected void setTokenBinderInfo(TokenBinderInfo tokenBinderInfo) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Setting the token binder for: " + tokenBinderInfo.getBindingType());
+        }
+        if (tokenBinderInfo instanceof TokenBinder) {
+            OAuth2ServiceComponentHolder.getInstance().addTokenBinder((TokenBinder) tokenBinderInfo);
+        }
+    }
+
+    protected void unsetTokenBinderInfo(TokenBinderInfo tokenBinderInfo) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Un-setting the token binder for: " + tokenBinderInfo.getBindingType());
+        }
+        if (tokenBinderInfo instanceof TokenBinder) {
+            OAuth2ServiceComponentHolder.getInstance().removeTokenBinder((TokenBinder) tokenBinderInfo);
+        }
     }
 }

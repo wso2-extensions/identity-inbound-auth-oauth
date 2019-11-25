@@ -47,7 +47,6 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
-import org.apache.oltu.oauth2.common.message.types.ResponseType;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.wso2.carbon.core.util.KeyStoreManager;
@@ -86,8 +85,12 @@ import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcess
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeServerException;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
+import org.wso2.carbon.identity.oauth2.bean.Scope;
+import org.wso2.carbon.identity.oauth2.bean.ScopeBinding;
 import org.wso2.carbon.identity.oauth2.config.SpOAuth2ExpiryTimeConfiguration;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2IntrospectionResponseDTO;
@@ -100,6 +103,8 @@ import org.wso2.carbon.identity.oauth2.model.ClientCredentialDO;
 import org.wso2.carbon.identity.oauth2.token.JWTTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
+import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
+import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
@@ -141,16 +146,20 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import javax.servlet.http.HttpServletRequest;
 import javax.xml.namespace.QName;
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
+
+import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.PERMISSIONS_BINDING_TYPE;
 
 /**
  * Utility methods for OAuth 2.0 implementation
@@ -166,6 +175,11 @@ public class OAuth2Util {
     public static final String OPENID_CONNECT = "OpenIDConnect";
     public static final String ENABLE_OPENID_CONNECT_AUDIENCES = "EnableAudiences";
     public static final String OPENID_CONNECT_AUDIENCE = "audience";
+    /*
+     * Maintain a separate parameter "OPENID_CONNECT_AUDIENCE_IDENTITY_CONFIG" to get the audience from the identity.xml
+     * when user didn't add any audience in the UI while creating service provider.
+     */
+    public static final String OPENID_CONNECT_AUDIENCE_IDENTITY_CONFIG = "Audience";
     private static final String OPENID_CONNECT_AUDIENCES = "Audiences";
     private static final String DOT_SEPARATER = ".";
     private static final String IDP_ENTITY_ID = "IdPEntityId";
@@ -249,7 +263,13 @@ public class OAuth2Util {
      */
     public static final String APPLICATION_ACCESS_TOKEN_EXP_TIME_IN_MILLISECONDS = "applicationAccessTokenExpireTime";
 
-    private static Log log = LogFactory.getLog(OAuth2Util.class);
+    private static final Log log = LogFactory.getLog(OAuth2Util.class);
+    private static final String INTERNAL_LOGIN_SCOPE = "internal_login";
+    private static final String IDENTITY_PATH = "identity";
+    public static final String NAME = "name";
+    private static final String DISPLAY_NAME = "displayName";
+    private static final String DESCRIPTION = "description";
+    private static final String PERMISSION = "Permission";
     private static long timestampSkew = OAuthServerConfiguration.getInstance().getTimeStampSkewInSeconds() * 1000;
     private static ThreadLocal<Integer> clientTenantId = new ThreadLocal<>();
     private static ThreadLocal<OAuthTokenReqMessageContext> tokenRequestContext = new ThreadLocal<>();
@@ -489,6 +509,18 @@ public class OAuth2Util {
     }
 
     /**
+     * Check whether hashing oauth keys (consumer secret, access token, refresh token and authorization code)
+     * configuration is enabled or not in identity.xml file.
+     *
+     * @return Whether hash feature is enable or not.
+     */
+    public static boolean isHashEnabled() {
+
+        boolean isHashEnabled = OAuthServerConfiguration.getInstance().isClientSecretHashEnabled();
+        return isHashEnabled;
+    }
+
+    /**
      * @param clientId             Consumer Key/Id
      * @param clientSecretProvided Consumer Secret issued during the time of registration
      * @return Username of the user which own client id and client secret if authentication is
@@ -588,7 +620,9 @@ public class OAuth2Util {
      * @param authorizedUser   Authorised user.
      * @param authenticatedIDP Authenticated IdP.
      * @return Cache key string combining the input parameters.
+     * @deprecated use {@link #buildCacheKeyStringForToken(String, String, String, String, String)} instead.
      */
+    @Deprecated
     public static String buildCacheKeyStringForToken(String clientId, String scope, String authorizedUser,
                                                      String authenticatedIDP) {
 
@@ -598,6 +632,36 @@ public class OAuth2Util {
         } else {
             return clientId + ":" + authorizedUser.toLowerCase() + ":" + scope + ":" + authenticatedIDP;
         }
+    }
+
+    /**
+     * Build the cache key string when storing token info in cache.
+     *
+     * @param clientId         ClientId of the App.
+     * @param scope            Scopes used.
+     * @param authorizedUser   Authorised user.
+     * @param authenticatedIDP Authenticated IdP.
+     * @param tokenBindingReference Token binding reference.
+     * @return Cache key string combining the input parameters.
+     */
+    public static String buildCacheKeyStringForToken(String clientId, String scope, String authorizedUser,
+            String authenticatedIDP, String tokenBindingReference) {
+
+        boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authorizedUser);
+        if (isUsernameCaseSensitive) {
+            return clientId + ":" + authorizedUser + ":" + scope + ":" + authenticatedIDP + ":" + tokenBindingReference;
+        } else {
+            return clientId + ":" + authorizedUser.toLowerCase() + ":" + scope + ":" + authenticatedIDP + ":"
+                    + tokenBindingReference;
+        }
+    }
+
+    public static String getTokenBindingReference(String tokenBindingValue) {
+
+        if (StringUtils.isBlank(tokenBindingValue)) {
+            return null;
+        }
+        return DigestUtils.md5Hex(tokenBindingValue);
     }
 
     public static AccessTokenDO validateAccessTokenDO(AccessTokenDO accessTokenDO) {
@@ -1308,13 +1372,16 @@ public class OAuth2Util {
         return OAuth2ServiceComponentHolder.isPkceEnabled();
     }
 
+    /**
+     * To check whether the given response type is for Implicit flow.
+     *
+     * @param responseType response type
+     * @return true if the response type is for Implicit flow
+     */
     public static boolean isImplicitResponseType(String responseType) {
 
-        if (StringUtils.isNotBlank(responseType) && (responseType.contains(ResponseType.TOKEN.toString()) ||
-                responseType.contains(OAuthConstants.ID_TOKEN))) {
-            return true;
-        }
-        return false;
+        return (StringUtils.isNotBlank(responseType) && (OAuthConstants.ID_TOKEN).equals(responseType) ||
+                (OAuthConstants.TOKEN).equals(responseType) || (OAuthConstants.IDTOKEN_TOKEN).equals(responseType));
     }
 
     /**
@@ -1373,7 +1440,7 @@ public class OAuth2Util {
         String processedToken = getPersistenceProcessor().getProcessedAccessTokenIdentifier(accessTokenIdentifier);
 
         // check the cache, if caching is enabled.
-        OAuthCacheKey cacheKey = new OAuthCacheKey(processedToken);
+        OAuthCacheKey cacheKey = new OAuthCacheKey(accessTokenIdentifier);
         CacheEntry result = OAuthCache.getInstance().getValueFromCache(cacheKey);
         // cache hit, do the type check.
         if (result != null && result instanceof AccessTokenDO) {
@@ -1392,9 +1459,9 @@ public class OAuth2Util {
             throw new IllegalArgumentException("Invalid Access Token. Access token is not ACTIVE.");
         }
 
-        // add the token back to the cache in the case of a cache miss
-        if (!cacheHit) {
-            cacheKey = new OAuthCacheKey(processedToken);
+        // Add the token back to the cache in the case of a cache miss but don't add to cache when OAuth2 token
+        // hashing feature enabled inorder to reduce the complexity.
+        if (!cacheHit & OAuth2Util.isHashDisabled()) {
             OAuthCache.getInstance().addToCache(cacheKey, accessTokenDO);
             if (log.isDebugEnabled()) {
                 log.debug("Access Token Info object was added back to the cache.");
@@ -1587,7 +1654,7 @@ public class OAuth2Util {
         }
 
         Iterator iterator = audienceConfig.getChildrenWithName(new QName(IdentityCoreConstants.
-                IDENTITY_DEFAULT_NAMESPACE, OPENID_CONNECT_AUDIENCE));
+                IDENTITY_DEFAULT_NAMESPACE, OPENID_CONNECT_AUDIENCE_IDENTITY_CONFIG));
         while (iterator.hasNext()) {
             OMElement supportedAudience = (OMElement) iterator.next();
             String supportedAudienceName;
@@ -1621,7 +1688,7 @@ public class OAuth2Util {
     public static OauthTokenIssuer getOAuthTokenIssuerForOAuthApp(String clientId)
             throws IdentityOAuth2Exception, InvalidOAuthClientException {
 
-        OAuthAppDO appDO = null;
+        OAuthAppDO appDO;
         try {
             appDO = getAppInformationByClientId(clientId);
         } catch (IdentityOAuth2Exception e) {
@@ -3162,5 +3229,145 @@ public class OAuth2Util {
         }
 
         return isIdpIdAvailableInAuthzCodeTable && isIdpIdAvailableInTokenTable && isIdpIdAvailableInTokenAuditTable;
+    }
+
+    /**
+     * This can be used to load the oauth scope permissions bindings in oauth-scope-bindings.xml file.
+     */
+    public static void initiateOAuthScopePermissionsBindings(int tenantId) {
+
+        try {
+            //Check login scope is available. If exists, assumes all scopes are loaded using the file.
+            if (!hasScopesAlreadyAdded(tenantId)) {
+                List<Scope> scopes = loadOauthScopeBinding();
+                for (Scope scope : scopes) {
+                    OAuthTokenPersistenceFactory.getInstance().getOAuthScopeDAO().addScope(scope, tenantId);
+                }
+                if (log.isDebugEnabled()) {
+                    log.debug("OAuth scopes are loaded for the tenant : " + tenantId);
+                }
+            } else {
+                if (log.isDebugEnabled()) {
+                    log.debug("OAuth scopes are already loaded");
+                }
+            }
+        } catch (IdentityOAuth2ScopeException e) {
+            log.error("Error while registering OAuth scopes with permissions bindings", e);
+        }
+    }
+
+    private static boolean hasScopesAlreadyAdded(int tenantId) throws IdentityOAuth2ScopeServerException {
+
+        Scope loginScope = OAuthTokenPersistenceFactory.getInstance().getOAuthScopeDAO().getScopeByName(
+                INTERNAL_LOGIN_SCOPE, tenantId);
+        if (loginScope == null) {
+            return false;
+        } else {
+            List<ScopeBinding> scopeBindings = loginScope.getScopeBindings();
+            for (ScopeBinding scopeBinding : scopeBindings) {
+                if (PERMISSIONS_BINDING_TYPE.equalsIgnoreCase(scopeBinding.getBindingType())) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private static List<Scope> loadOauthScopeBinding() {
+
+        List<Scope> scopes = new ArrayList<>();
+        String configDirPath = CarbonUtils.getCarbonConfigDirPath();
+        String confXml = Paths.get(configDirPath, IDENTITY_PATH, OAuthConstants.OAUTH_SCOPE_BINDING_PATH)
+                .toString();
+        File configFile = new File(confXml);
+        if (!configFile.exists()) {
+            log.warn("OAuth scope binding File is not present at: " + confXml);
+            return new ArrayList<>();
+        }
+
+        XMLStreamReader parser = null;
+        InputStream stream = null;
+
+        try {
+            stream = new FileInputStream(configFile);
+            parser = XMLInputFactory.newInstance()
+                    .createXMLStreamReader(stream);
+            StAXOMBuilder builder = new StAXOMBuilder(parser);
+            OMElement documentElement = builder.getDocumentElement();
+            Iterator iterator = documentElement.getChildElements();
+            while (iterator.hasNext()) {
+                OMElement omElement = (OMElement) iterator.next();
+                String scopeName = omElement.getAttributeValue(new QName(
+                        NAME));
+                String displayName = omElement.getAttributeValue(new QName(
+                        DISPLAY_NAME));
+                String description = omElement.getAttributeValue(new QName(
+                        DESCRIPTION));
+                List<String> bindingPermissions = loadScopePermissions(omElement);
+                ScopeBinding scopeBinding = new ScopeBinding(PERMISSIONS_BINDING_TYPE, bindingPermissions);
+                ArrayList<ScopeBinding> scopeBindings = new ArrayList<>();
+                scopeBindings.add(scopeBinding);
+                Scope scope = new Scope(scopeName, displayName, scopeBindings, description);
+                scopes.add(scope);
+            }
+        } catch (XMLStreamException e) {
+            log.warn("Error while loading scope config.", e);
+        } catch (FileNotFoundException e) {
+            log.warn("Error while loading email config.", e);
+        } finally {
+            try {
+                if (parser != null) {
+                    parser.close();
+                }
+                if (stream != null) {
+                    IdentityIOStreamUtils.closeInputStream(stream);
+                }
+            } catch (XMLStreamException e) {
+                log.error("Error while closing XML stream", e);
+            }
+        }
+        return scopes;
+    }
+
+    private static List<String> loadScopePermissions(OMElement configElement) {
+
+        List<String> permissions = new ArrayList<>();
+        Iterator it = configElement.getChildElements();
+        while (it.hasNext()) {
+            OMElement element = (OMElement) it.next();
+            Iterator permissonsIterator = element.getChildElements();
+            while (permissonsIterator.hasNext()) {
+                OMElement PermissionElement = (OMElement) permissonsIterator.next();
+                if (PERMISSION.equals(PermissionElement.getLocalName())) {
+                    String permisson = PermissionElement.getText();
+                    permissions.add(permisson);
+                }
+            }
+        }
+        return permissions;
+    }
+
+    /**
+     * Check whether required token binding available in the request.
+     *
+     * @param tokenBinding token binding.
+     * @param request http request.
+     * @return true if binding is valid.
+     */
+    public static boolean isValidTokenBinding(TokenBinding tokenBinding, HttpServletRequest request) {
+
+        if (request == null || tokenBinding == null || StringUtils.isBlank(tokenBinding.getBindingReference())
+                || StringUtils.isBlank(tokenBinding.getBindingType())) {
+            return true;
+        }
+
+        Optional<TokenBinder> tokenBinderOptional = OAuth2ServiceComponentHolder.getInstance()
+                .getTokenBinder(tokenBinding.getBindingType());
+        if (!tokenBinderOptional.isPresent()) {
+            log.warn("Token binder with type: " + tokenBinding.getBindingType() + " is not available.");
+            return false;
+        }
+
+        return tokenBinderOptional.get().isValidTokenBinding(request, tokenBinding.getBindingReference());
     }
 }

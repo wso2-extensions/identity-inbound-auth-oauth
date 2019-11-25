@@ -17,10 +17,10 @@
  */
 package org.wso2.carbon.identity.oauth2.util;
 
-import org.opensaml.xml.security.credential.Credential;
-import org.opensaml.xml.security.credential.CredentialContextSet;
-import org.opensaml.xml.security.credential.UsageType;
-import org.opensaml.xml.security.x509.X509Credential;
+import org.opensaml.security.credential.Credential;
+import org.opensaml.security.credential.CredentialContextSet;
+import org.opensaml.security.credential.UsageType;
+import org.opensaml.security.x509.X509Credential;
 
 import javax.crypto.SecretKey;
 import java.math.BigInteger;
@@ -96,8 +96,12 @@ public class X509CredentialImpl implements X509Credential {
         return Collections.emptyList();
     }
 
+    /***
+     * Get the credential context set.
+     * @return This method is not supported so the return is null.
+     */
     @Override
-    public CredentialContextSet getCredentalContextSet() {
+    public CredentialContextSet getCredentialContextSet() {
         // This method is not implemented
         return null;
     }
@@ -132,9 +136,12 @@ public class X509CredentialImpl implements X509Credential {
         return null;
     }
 
+    /**
+     * Get the usage type.
+     * @return This method is not supported so, it returns the default value.
+     */
     @Override
     public UsageType getUsageType() {
-        // This method is not implemented
-        return null;
+        return UsageType.UNSPECIFIED;
     }
 }

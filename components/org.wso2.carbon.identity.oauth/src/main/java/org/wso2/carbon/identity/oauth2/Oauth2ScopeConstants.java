@@ -24,6 +24,9 @@ public class Oauth2ScopeConstants {
     public static final int MAX_FILTER_COUNT = 30;
     public static final int INVALID_SCOPE_ID = -1;
     public static final String SCOPE_ID = "SCOPE_ID";
+    public static final String DEFAULT_SCOPE_BINDING = "DEFAULT";
+    public static final String PERMISSIONS_BINDING_TYPE = "PERMISSION";
+    public static final String SYSTEM_SCOPE = "SYSTEM";
 
     public enum ErrorMessages {
         ERROR_CODE_BAD_REQUEST_SCOPE_NAME_NOT_SPECIFIED("41001", "Scope Name is not specified."),

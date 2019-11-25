@@ -1181,6 +1181,8 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                 { null, previousSessionState1, APP_REDIRECT_URL, null, HttpServletResponse.SC_FOUND, returnValues[0]},
                 { null, previousSessionState1, APP_REDIRECT_URL, null, HttpServletResponse.SC_FOUND, returnValues[0]},
                 { opBrowserStateCookie, null, APP_REDIRECT_URL, null, HttpServletResponse.SC_FOUND, returnValues[0]},
+                { opBrowserStateCookie, previousSessionState1, APP_REDIRECT_URL, RESPONSE_MODE_FORM_POST,
+                        HttpServletResponse.SC_OK, returnValues[1]},
         };
     }
 

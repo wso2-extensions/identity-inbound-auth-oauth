@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth2.token.handlers.grant.iwa.ntlm;
 
 import com.sun.jna.platform.win32.Sspi;
+import org.apache.catalina.connector.Connector;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.base.IdentityConstants;
@@ -46,7 +47,7 @@ import java.io.IOException;
 
 
 public class NTLMAuthenticationGrantHandler extends AbstractAuthorizationGrantHandler {
-    private static Log log = LogFactory.getLog(NTLMAuthenticationGrantHandler.class);
+    private static final Log log = LogFactory.getLog(NTLMAuthenticationGrantHandler.class);
     String securityPackage = "Negotiate";
 
     @Override
@@ -88,7 +89,7 @@ public class NTLMAuthenticationGrantHandler extends AbstractAuthorizationGrantHa
             clientContext.setSecurityPackage(securityPackage);
             clientContext.initialize(null, null, WindowsAccountImpl.getCurrentUsername());
 
-            SimpleHttpRequest request = new SimpleHttpRequest();
+            SimpleHttpRequest request = new SimpleHttpRequest(new Connector());
             SimpleFilterChain filterChain = new SimpleFilterChain();
 
             while (true) {

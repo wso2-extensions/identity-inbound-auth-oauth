@@ -52,6 +52,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import static org.mockito.Matchers.anyString;
 import static org.mockito.MockitoAnnotations.initMocks;
 import static org.powermock.api.mockito.PowerMockito.doNothing;
 import static org.powermock.api.mockito.PowerMockito.doThrow;
@@ -673,6 +674,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
     private void mockIdentityDataBaseUtilConnection(Connection connection) {
         mockStatic(IdentityDatabaseUtil.class);
         when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+        when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
     }
 
     private void mockIdentityUtilDataBaseConnection(Connection connection) throws SQLException {
@@ -680,13 +682,14 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
         doNothing().when(connection1).close();
         mockStatic(IdentityDatabaseUtil.class);
         when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection1);
+        when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection1);
     }
 
     private Connection getExceptionThrowingConnection(Connection connection) throws SQLException {
         // Spy the original connection to throw an exception during commit
         Connection exceptionThrowingConnection = spy(connection);
         doNothing().when(exceptionThrowingConnection).close();
-        doThrow(new SQLException()).when(exceptionThrowingConnection).commit();
+        doThrow(new SQLException()).when(exceptionThrowingConnection).prepareStatement(anyString());
         return exceptionThrowingConnection;
     }
 

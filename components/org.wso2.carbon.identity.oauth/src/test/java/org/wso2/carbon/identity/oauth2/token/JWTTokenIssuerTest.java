@@ -273,7 +273,7 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
                 != null) {
             assertTrue(jwtClaimSet.getExpirationTime().compareTo(
                     (Date) ((OAuthTokenReqMessageContext) tokenReqMessageContext)
-                            .getProperty(EXPIRY_TIME_JWT)) <= 0);
+                            .getProperty(EXPIRY_TIME_JWT)) >= 0);
         } else {
             assertEquals(new Duration(jwtClaimSet.getIssueTime().getTime(), jwtClaimSet.getExpirationTime().getTime())
                     .getMillis(), expectedExpiry);
