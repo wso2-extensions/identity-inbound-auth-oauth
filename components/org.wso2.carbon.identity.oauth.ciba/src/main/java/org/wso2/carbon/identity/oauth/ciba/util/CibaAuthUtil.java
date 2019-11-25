@@ -27,13 +27,11 @@ import org.wso2.carbon.identity.oauth.ciba.dao.CibaDAOFactory;
 import org.wso2.carbon.identity.oauth.ciba.dto.AuthzRequestDTO;
 import org.wso2.carbon.identity.oauth.ciba.dto.CibaAuthResponseDTO;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
-import org.wso2.carbon.identity.oauth.ciba.internal.CibaServiceDataHolder;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeDO;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
-import org.wso2.carbon.user.api.UserStoreException;
 
 import java.sql.Timestamp;
 import java.util.Calendar;
@@ -95,8 +93,7 @@ public class CibaAuthUtil {
      * @param cibaAuthResponseDTO Status of the relevant Ciba Authentication.
      * @throws CibaCoreException Exception thrown from CibaCore Component.
      */
-    public static CibaAuthCodeDO generateCibaAuthCodeDO(CibaAuthResponseDTO cibaAuthResponseDTO)
-            throws CibaCoreException {
+    public static CibaAuthCodeDO generateCibaAuthCodeDO(CibaAuthResponseDTO cibaAuthResponseDTO) {
 
         CibaAuthCodeDO cibaAuthCodeDO = new CibaAuthCodeDO();
         long issuedTimeInMillis = Calendar.getInstance(TimeZone.getTimeZone(CibaConstants.UTC)).getTimeInMillis();
@@ -168,7 +165,7 @@ public class CibaAuthUtil {
     }
 
     /**
-     * Persist cibaAuthCode
+     * Persist cibaAuthCode.
      *
      * @param cibaAuthCodeDO DO with information regarding authenticationRequest.
      * @throws CibaCoreException Exception thrown from CibaCore Component.
