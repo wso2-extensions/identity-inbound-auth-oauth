@@ -114,7 +114,7 @@ public class JWKSBasedJWTValidatorTest extends PowerMockIdentityBaseTest {
                         "Signature validation not handled properly.");
             }
             if (testScenario == TestScenario.INVALID_JWKS) {
-                assertEquals("Provided jwks_uri is malformed.", e.getMessage(), "Failed to validate jwks_uri.");
+                assertEquals("Provided jwks_uri: " + jwksUri + " is malformed.", e.getMessage(), "Failed to validate jwks_uri.");
             }
             if (testScenario == TestScenario.INVALID_SIGNATURE) {
                 assertEquals("Signature validation failed for the provided JWT.", e.getMessage(), "invalid algorithm");
