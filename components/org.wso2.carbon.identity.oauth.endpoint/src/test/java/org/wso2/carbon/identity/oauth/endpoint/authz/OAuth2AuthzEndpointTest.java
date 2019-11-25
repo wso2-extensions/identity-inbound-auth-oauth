@@ -115,7 +115,6 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
-import javax.validation.constraints.AssertTrue;
 import javax.ws.rs.HttpMethod;
 import javax.ws.rs.core.MultivaluedHashMap;
 import javax.ws.rs.core.MultivaluedMap;
@@ -1785,33 +1784,61 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
     @DataProvider(name = "provideFailedAuthenticationErrorInfo")
     public Object[][] provideFailedAuthenticationErrorInfo() {
 
+        OAuthErrorDTO oAuthErrorDTO = null;
+        AuthenticationResult authenticationResult = new AuthenticationResult();
+        authenticationResult.addProperty(FrameworkConstants.AUTH_ERROR_URI, null);
+        authenticationResult.addProperty(FrameworkConstants.AUTH_ERROR_MSG, null);
+        authenticationResult.addProperty(FrameworkConstants.AUTH_ERROR_CODE, null);
+
+        OAuthErrorDTO oAuthErrorDTONull = new OAuthErrorDTO();
+        AuthenticationResult authenticationResultEmpty = new AuthenticationResult();
+
+        OAuthErrorDTO oAuthErrorDTOEmpty = new OAuthErrorDTO();
+        AuthenticationResult authenticationResultWithURI = new AuthenticationResult();
+        authenticationResultWithURI.addProperty(FrameworkConstants.AUTH_ERROR_URI,"http://sample_error_uri.com");
+        authenticationResultWithURI.addProperty(FrameworkConstants.AUTH_ERROR_MSG, null);
+        authenticationResultWithURI.addProperty(FrameworkConstants.AUTH_ERROR_CODE, null);
+
+        OAuthErrorDTO oAuthErrorDTOEmptyTest = new OAuthErrorDTO();
+        AuthenticationResult authenticationResultWithoutErrorcode = new AuthenticationResult();
+        authenticationResultWithoutErrorcode.addProperty(FrameworkConstants.AUTH_ERROR_MSG,"OverRiddenMessage2");
+        authenticationResultWithoutErrorcode.addProperty(FrameworkConstants.AUTH_ERROR_URI,"http://sample_error_uri2.com");
+        authenticationResultWithoutErrorcode.addProperty(FrameworkConstants.AUTH_ERROR_CODE, null);
+
+        OAuthErrorDTO oAuthErrorDTOWithDes = new OAuthErrorDTO();
+        oAuthErrorDTOWithDes.setErrorDescription("messageFromErrorDTO");
+        AuthenticationResult authenticationResultWithURIOnly = new AuthenticationResult();
+        authenticationResultWithURIOnly.addProperty(FrameworkConstants.AUTH_ERROR_URI,"http://sample_error_uri3.com");
+        authenticationResultWithURIOnly.addProperty(FrameworkConstants.AUTH_ERROR_MSG, null);
+        authenticationResultWithURIOnly.addProperty(FrameworkConstants.AUTH_ERROR_CODE, null);
+
+        OAuthErrorDTO oAuthErrorDTOOverWritable = new OAuthErrorDTO();
+        oAuthErrorDTOOverWritable.setErrorDescription("messageFromErrorDTO");
+        AuthenticationResult authenticationResultOverRiding = new AuthenticationResult();
+        authenticationResultOverRiding.addProperty(FrameworkConstants.AUTH_ERROR_MSG,"OverRiddenMessage5");
+        authenticationResultOverRiding.addProperty(FrameworkConstants.AUTH_ERROR_URI,"http://sample_error_uri4.com");
+        authenticationResultOverRiding.addProperty(FrameworkConstants.AUTH_ERROR_CODE, null);
+
         return new Object[][]{
-                {null,null,null,null,null,"login_required", "Authentication required",null},
-                {"Authentication required1",null,null,null,null,"login_required", "Authentication required1",null},
-                {null,"http://sample_error_uri.com",null,null,null,"login_required", "Authentication required",
-                        "http://sample_error_uri.com"},
-                {"Authentication required2",null,null,"OverRiddenMessage2",null,"login_required","OverRiddenMessage2",
-                        null},
-                {"Authentication required3","http://sample_error_uri2.com",null,"OverRiddenMessage3", "http" +
-                        "://sample_error_urioverridden.com","login_required","OverRiddenMessage3","http" +
-                        "://sample_error_urioverridden.com"}
+                {null,authenticationResult,"login_required", "Authentication required",null},
+                {oAuthErrorDTONull,authenticationResultEmpty,"login_required","Authentication required",null},
+                {oAuthErrorDTOEmptyTest,authenticationResultWithURIOnly,"login_required","Authentication required", "http" +
+                        "://sample_error_uri.com"},
+                {oAuthErrorDTOEmptyTest,authenticationResultWithoutErrorcode,"login_required","OverRiddenMessage2","http" +
+                        "://sample_error_uri2.com"},
+                {oAuthErrorDTOWithDes,authenticationResultWithURIOnly,"login_required","messageFromErrorDTO","http" +
+                        "://sample_error_uri3.com"},
+                {oAuthErrorDTOOverWritable,authenticationResultOverRiding,"login_required","OverRiddenMessage5","http" +
+                        "://sample_error_uri4.com"},
         };
     }
 
     @Test(dataProvider = "provideFailedAuthenticationErrorInfo")
-    public void testBuildOAuthProblemException(String oAuthErrorDescription, String oAuthErrorURI,
-                                               String authnResultErrorCode, String authnResultErrorDesc,
-                                               String authnResultErrorURI, String expectedCode,
-                                               String expectedMessage, String expectedURI ) throws Exception {
+    public void testBuildOAuthProblemException(Object oAuthErrorDTOObject, Object authenticationResultObject
+            ,  String expectedCode, String expectedMessage, String expectedURI ) throws Exception {
 
-        OAuthErrorDTO oAuthErrorDTO = new OAuthErrorDTO();
-        AuthenticationResult authenticationResult = new AuthenticationResult();
-
-        oAuthErrorDTO.setErrorDescription(oAuthErrorDescription);
-        oAuthErrorDTO.setErrorURI(oAuthErrorURI);
-        authenticationResult.addProperty(FrameworkConstants.AUTH_ERROR_CODE,authnResultErrorCode);
-        authenticationResult.addProperty(FrameworkConstants.AUTH_ERROR_URI,authnResultErrorURI);
-        authenticationResult.addProperty(FrameworkConstants.AUTH_ERROR_MSG,authnResultErrorDesc);
+        OAuthErrorDTO oAuthErrorDTO = (OAuthErrorDTO) oAuthErrorDTOObject;
+       AuthenticationResult authenticationResult = (AuthenticationResult) authenticationResultObject;
 
         Assert.assertEquals(expectedCode,oAuth2AuthzEndpoint.buildOAuthProblemException(authenticationResult,
                 oAuthErrorDTO).getError());
@@ -1821,6 +1848,5 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
         Assert.assertEquals(expectedURI,oAuth2AuthzEndpoint.buildOAuthProblemException(authenticationResult,
                 oAuthErrorDTO).getUri());
-
     }
 }
