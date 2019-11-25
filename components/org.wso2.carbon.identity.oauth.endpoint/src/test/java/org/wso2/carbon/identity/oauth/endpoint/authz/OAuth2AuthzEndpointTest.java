@@ -1822,7 +1822,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         return new Object[][]{
                 {null,authenticationResult,"login_required", "Authentication required",null},
                 {oAuthErrorDTONull,authenticationResultEmpty,"login_required","Authentication required",null},
-                {oAuthErrorDTOEmptyTest,authenticationResultWithURIOnly,"login_required","Authentication required", "http" +
+                {oAuthErrorDTOEmptyTest,authenticationResultWithURI,"login_required","Authentication required", "http" +
                         "://sample_error_uri.com"},
                 {oAuthErrorDTOEmptyTest,authenticationResultWithoutErrorcode,"login_required","OverRiddenMessage2","http" +
                         "://sample_error_uri2.com"},
