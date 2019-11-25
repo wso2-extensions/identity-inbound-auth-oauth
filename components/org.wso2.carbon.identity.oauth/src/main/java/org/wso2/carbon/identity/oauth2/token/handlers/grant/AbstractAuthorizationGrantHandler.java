@@ -317,7 +317,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         // Revoke the existing token and generate new access and refresh tokens.
         OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                 .updateAccessTokenState(existingTokenBean.getTokenId(), OAuthConstants.TokenStates
-                        .TOKEN_STATE_REVOKED, getUserStoreDomain(tokReqMsgCtx.getAuthorizedUser()));
+                        .TOKEN_STATE_REVOKED);
         clearExistingTokenFromCache(tokReqMsgCtx, existingTokenBean);
 
         return generateNewAccessToken(tokReqMsgCtx, scope, consumerKey, null, oauthTokenIssuer);

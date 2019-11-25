@@ -922,17 +922,14 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         return dataDO;
     }
 
-    public void updateAccessTokenState(String tokenId, String tokenState,
-                                       String userStoreDomain) throws IdentityOAuth2Exception {
+    public void updateAccessTokenState(String tokenId, String tokenState) throws IdentityOAuth2Exception {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
             if (log.isDebugEnabled()) {
-                log.debug("Changing status of access token with id: " + tokenId + " to: " + tokenState +
-                        " userStoreDomain: " + userStoreDomain);
+                log.debug("Changing status of access token with id: " + tokenId + " to: " + tokenState);
             }
 
             String sql = SQLQueries.UPDATE_TOKEN_STATE;
-            sql = OAuth2Util.getTokenPartitionedSqlByUserStore(sql, userStoreDomain);
             try (PreparedStatement prepStmt = connection.prepareStatement(sql)) {
 
                 prepStmt.setString(1, tokenState);
