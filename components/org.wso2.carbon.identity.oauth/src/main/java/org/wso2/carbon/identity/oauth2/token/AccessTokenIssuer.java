@@ -46,6 +46,9 @@ import org.wso2.carbon.identity.oauth2.ResponseHeader;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
+import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.JDBCPermissionBasedInternalScopeValidator;
@@ -57,8 +60,10 @@ import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.REFRESH_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
 
@@ -285,6 +290,8 @@ public class AccessTokenIssuer {
             return tokenRespDTO;
         }
 
+        handleTokenBinding(tokenReqDTO, grantType, tokReqMsgCtx, oAuthAppDO);
+
         try {
             // set the token request context to be used by downstream handlers. This is introduced as a fix for
             // IDENTITY-4111.
@@ -364,6 +371,55 @@ public class AccessTokenIssuer {
             }
         }
         tokReqMsgCtx.setScope(scopes.toArray(new String[0]));
+    }
+
+    /**
+     * Handle token binding for the grant type.
+     *
+     * @param tokenReqDTO token request DTO.
+     * @param grantType grant type.
+     * @param tokReqMsgCtx token request message context.
+     * @param oAuthAppDO oauth application.
+     * @throws IdentityOAuth2Exception in case of failure.
+     */
+    private void handleTokenBinding(OAuth2AccessTokenReqDTO tokenReqDTO, String grantType,
+            OAuthTokenReqMessageContext tokReqMsgCtx, OAuthAppDO oAuthAppDO) throws IdentityOAuth2Exception {
+
+        if (StringUtils.isBlank(oAuthAppDO.getTokenBindingType())) {
+            tokReqMsgCtx.setTokenBinding(null);
+            return;
+        }
+
+        Optional<TokenBinder> tokenBinderOptional = OAuth2ServiceComponentHolder.getInstance()
+                .getTokenBinder(oAuthAppDO.getTokenBindingType());
+        if (!tokenBinderOptional.isPresent()) {
+            throw new IdentityOAuth2Exception(
+                    "Token binder for the binding type: " + oAuthAppDO.getTokenBindingType() + " is not registered.");
+        }
+
+        if (REFRESH_TOKEN.equals(grantType)) {
+            // Token binding values are already set to the OAuthTokenReqMessageContext.
+            return;
+        }
+
+        tokReqMsgCtx.setTokenBinding(null);
+
+        TokenBinder tokenBinder = tokenBinderOptional.get();
+        if (!tokenBinder.getSupportedGrantTypes().contains(grantType)) {
+            return;
+        }
+
+        Optional<String> tokenBindingValueOptional = tokenBinder.getTokenBindingValue(tokenReqDTO);
+        if (!tokenBindingValueOptional.isPresent()) {
+            throw new IdentityOAuth2Exception(
+                    "Token binding reference cannot be retrieved form the token binder: " + tokenBinder
+                            .getBindingType());
+        }
+
+        String tokenBindingValue = tokenBindingValueOptional.get();
+        tokReqMsgCtx.setTokenBinding(
+                new TokenBinding(tokenBinder.getBindingType(), OAuth2Util.getTokenBindingReference(tokenBindingValue),
+                        tokenBindingValue));
     }
 
     private void triggerPreListeners(OAuth2AccessTokenReqDTO tokenReqDTO,

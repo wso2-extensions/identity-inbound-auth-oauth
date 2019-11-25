@@ -26,10 +26,9 @@ import org.apache.commons.logging.LogFactory;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.Spy;
-import org.opensaml.saml2.core.Attribute;
-import org.opensaml.saml2.core.impl.AttributeBuilder;
-import org.opensaml.xml.ConfigurationException;
-import org.opensaml.xml.XMLObject;
+import org.opensaml.saml.saml2.core.Attribute;
+import org.opensaml.saml.saml2.core.impl.AttributeBuilder;
+import org.opensaml.core.xml.XMLObject;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
@@ -944,7 +943,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
         return authenticatedUser;
     }
 
-    private Attribute buildAttribute(String attributeName, String[] attributeValues) throws ConfigurationException {
+    private Attribute buildAttribute(String attributeName, String[] attributeValues)  {
 
         Attribute attribute = new AttributeBuilder().buildObject(Attribute.DEFAULT_ELEMENT_NAME);
         attribute.setName(attributeName);

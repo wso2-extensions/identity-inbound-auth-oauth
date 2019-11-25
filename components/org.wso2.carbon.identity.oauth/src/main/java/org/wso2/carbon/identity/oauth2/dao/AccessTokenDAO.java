@@ -45,6 +45,24 @@ public interface AccessTokenDAO {
     AccessTokenDO getLatestAccessToken(String consumerKey, AuthenticatedUser authzUser, String userStoreDomain,
                                        String scope, boolean includeExpiredTokens) throws IdentityOAuth2Exception;
 
+    /**
+     * Get latest access token.
+     *
+     * @param consumerKey consumer key.
+     * @param authzUser authorized user.
+     * @param userStoreDomain user store domain.
+     * @param scope scope.
+     * @param tokenBindingReference token binding reference.
+     * @param includeExpiredTokens include expired tokens.
+     * @return latest access token.
+     * @throws IdentityOAuth2Exception in case of failure.
+     */
+    default AccessTokenDO getLatestAccessToken(String consumerKey, AuthenticatedUser authzUser, String userStoreDomain,
+            String scope, String tokenBindingReference, boolean includeExpiredTokens) throws IdentityOAuth2Exception {
+
+        return getLatestAccessToken(consumerKey, authzUser, userStoreDomain, scope, includeExpiredTokens);
+    }
+
     Set<AccessTokenDO> getAccessTokens(String consumerKey, AuthenticatedUser userName,
                                        String userStoreDomain, boolean includeExpired) throws IdentityOAuth2Exception;
 
@@ -122,4 +140,33 @@ public interface AccessTokenDAO {
     List<AccessTokenDO> getLatestAccessTokens(String consumerKey, AuthenticatedUser authzUser,
                                               String userStoreDomain, String scope,
                                               boolean includeExpiredTokens, int limit) throws IdentityOAuth2Exception;
+
+    /**
+     * Get latest access tokens.
+     *
+     * @param consumerKey consumer key.
+     * @param authzUser authorized user.
+     * @param userStoreDomain user store domain.
+     * @param scope scope.
+     * @param tokenBindingReference token binding reference.
+     * @param includeExpiredTokens include expired tokens.
+     * @param limit limit.
+     * @return list of latest access tokens.
+     * @throws IdentityOAuth2Exception in case of failure.
+     */
+    default List<AccessTokenDO> getLatestAccessTokens(String consumerKey, AuthenticatedUser authzUser,
+            String userStoreDomain, String scope, String tokenBindingReference, boolean includeExpiredTokens, int limit)
+            throws IdentityOAuth2Exception {
+
+        return getLatestAccessTokens(consumerKey, authzUser, userStoreDomain, scope, includeExpiredTokens, limit);
+    }
+
+    /**
+     * Update access token to the given state.
+     *
+     * @param tokenId         ID of the access token to update the state.
+     * @param tokenState      state to update.
+     * @throws IdentityOAuth2Exception
+     */
+    void updateAccessTokenState(String tokenId, String tokenState) throws IdentityOAuth2Exception;
 }

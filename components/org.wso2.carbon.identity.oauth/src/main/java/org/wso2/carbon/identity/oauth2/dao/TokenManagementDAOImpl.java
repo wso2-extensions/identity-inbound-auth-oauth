@@ -180,9 +180,10 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                     validationDataDO.setTokenId(resultSet.getString(9));
                     validationDataDO.setGrantType(resultSet.getString(10));
                     String subjectIdentifier = resultSet.getString(11);
+                    validationDataDO.setTokenBindingReference(resultSet.getString(12));
                     String authenticatedIDP = null;
                     if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                        authenticatedIDP = resultSet.getString(12);
+                        authenticatedIDP = resultSet.getString(13);
                     }
                     AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(userName, userDomain, tenantDomain,
                             authenticatedIDP);

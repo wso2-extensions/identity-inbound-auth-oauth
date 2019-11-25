@@ -22,6 +22,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.StandardInboundProtocols;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementValidationException;
 import org.wso2.carbon.identity.application.common.model.InboundAuthenticationConfig;
@@ -67,6 +68,7 @@ import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
 import javax.xml.bind.Unmarshaller;
 
+import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
 
 public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener {
     public static final String OAUTH2 = "oauth2";
@@ -77,12 +79,15 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
 
     @Override
     public int getDefaultOrderId() {
-        return 11;
+        // Since we are deleting OAuth app data in pre delete operation, we want this listener to be executed as
+        // late as possible allowing other listeners to execute and break the flow if required.
+        return 901;
     }
 
     public boolean doPreUpdateApplication(ServiceProvider serviceProvider, String tenantDomain, String userName)
             throws IdentityApplicationManagementException {
 
+        handleOAuthAppAssociationRemoval(serviceProvider);
         storeSaaSPropertyValue(serviceProvider);
         removeClientSecret(serviceProvider);
         return true;
@@ -110,7 +115,7 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
         revokeAccessTokensWhenSaaSDisabled(serviceProvider, tenantDomain);
         addClientSecret(serviceProvider);
         updateAuthApplication(serviceProvider);
-        removeEntriesFromCache(serviceProvider, tenantDomain, userName);
+        removeEntriesFromCache(serviceProvider, tenantDomain);
         return true;
     }
 
@@ -121,13 +126,23 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
     }
 
     @Override
-    public boolean doPreDeleteApplication(String applicationName, String tenantDomain, String userName) throws IdentityApplicationManagementException {
+    public boolean doPreDeleteApplication(String applicationName,
+                                          String tenantDomain,
+                                          String userName) throws IdentityApplicationManagementException {
+
         ApplicationManagementService applicationMgtService = OAuth2ServiceComponentHolder.getApplicationMgtService();
-        ServiceProvider serviceProvider = applicationMgtService.getApplicationExcludingFileBasedSPs(applicationName, tenantDomain);
+        ServiceProvider serviceProvider = applicationMgtService.getApplicationExcludingFileBasedSPs(applicationName,
+                tenantDomain);
         if (serviceProvider != null) {
-            removeEntriesFromCache(serviceProvider, tenantDomain, userName);
-            if (OAuth2ServiceComponentHolder.isAudienceEnabled()) {
-                removeOauthConsumerAppProperties(serviceProvider, tenantDomain);
+            try {
+                if (log.isDebugEnabled()) {
+                    log.debug("Deleting OAuth inbound data associated with application: " + applicationName
+                            + " in tenantDomain: " + tenantDomain + " during application delete.");
+                }
+                deleteAssociatedOAuthApps(serviceProvider, tenantDomain);
+            } catch (IdentityOAuthAdminException | IdentityOAuth2Exception e) {
+                throw new IdentityApplicationManagementException("Error while cleaning up oauth application data " +
+                        "associated with service provider: " + applicationName + " of tenantDomain: " + tenantDomain, e);
             }
         } else {
             if (log.isDebugEnabled()) {
@@ -135,6 +150,40 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
             }
         }
         return true;
+    }
+
+    private Set<String> getOAuthAppsAssociatedWithApplication(ServiceProvider serviceProvider) {
+
+        Set<String> oauthKeys = new HashSet<>();
+        InboundAuthenticationConfig inboundAuthenticationConfig = serviceProvider.getInboundAuthenticationConfig();
+        if (inboundAuthenticationConfig != null) {
+            InboundAuthenticationRequestConfig[] inboundRequestConfigs = inboundAuthenticationConfig.
+                    getInboundAuthenticationRequestConfigs();
+            if (inboundRequestConfigs != null) {
+                for (InboundAuthenticationRequestConfig inboundRequestConfig : inboundRequestConfigs) {
+                    if (StringUtils.equals(OAUTH2, inboundRequestConfig.getInboundAuthType()) || StringUtils
+                            .equals(inboundRequestConfig.getInboundAuthType(), OAUTH)) {
+                        oauthKeys.add(inboundRequestConfig.getInboundAuthKey());
+                    }
+                }
+            }
+        }
+
+        return oauthKeys;
+    }
+
+    private void deleteAssociatedOAuthApps(ServiceProvider serviceProvider, String tenantDomain)
+            throws IdentityOAuthAdminException, IdentityOAuth2Exception {
+
+        Set<String> associatedOAuthConsumerKeys = getOAuthAppsAssociatedWithApplication(serviceProvider);
+        for (String consumerKey : associatedOAuthConsumerKeys) {
+            if (log.isDebugEnabled()) {
+                log.debug("Removing OAuth application data for clientId: " + consumerKey + " associated with " +
+                        "application: " + serviceProvider.getApplicationName() + " tenantDomain: " + tenantDomain);
+            }
+            OAuth2ServiceComponentHolder.getInstance().getOAuthAdminService().removeOAuthApplicationData(consumerKey);
+        }
+        removeEntriesFromCache(associatedOAuthConsumerKeys);
     }
 
     public void onPreCreateInbound(ServiceProvider serviceProvider, boolean isUpdate) throws
@@ -331,79 +380,80 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                 authenticationRequestConfigConfig.getInboundAuthKey());
     }
 
-    private void removeEntriesFromCache(ServiceProvider serviceProvider, String tenantDomain, String userName)
-            throws IdentityApplicationManagementException {
-        Set<String> accessTokens = new HashSet<>();
-        Set<String> authorizationCodes = new HashSet<>();
-        Set<String> oauthKeys = new HashSet<>();
-        try {
-            InboundAuthenticationConfig inboundAuthenticationConfig = serviceProvider.getInboundAuthenticationConfig();
-            if (inboundAuthenticationConfig != null) {
-                InboundAuthenticationRequestConfig[] inboundRequestConfigs = inboundAuthenticationConfig.
-                        getInboundAuthenticationRequestConfigs();
-                if (inboundRequestConfigs != null) {
-                    for (InboundAuthenticationRequestConfig inboundRequestConfig : inboundRequestConfigs) {
-                        if (StringUtils.equals(OAUTH2, inboundRequestConfig.getInboundAuthType()) || StringUtils
-                                .equals(inboundRequestConfig.getInboundAuthType(), OAUTH)) {
-                            oauthKeys.add(inboundRequestConfig.getInboundAuthKey());
-                        }
-                    }
-                }
-            }
-            if (oauthKeys.size() > 0) {
-                AppInfoCache appInfoCache = AppInfoCache.getInstance();
-                for (String oauthKey : oauthKeys) {
-                    accessTokens.addAll(OAuthTokenPersistenceFactory.getInstance()
-                            .getAccessTokenDAO().getActiveTokensByConsumerKey(oauthKey));
-                    authorizationCodes.addAll(OAuthTokenPersistenceFactory.getInstance()
-                            .getAuthorizationCodeDAO().getAuthorizationCodesByConsumerKey(oauthKey));
-                    // Remove client credential from AppInfoCache
-                    appInfoCache.clearCacheEntry(oauthKey);
-                    OAuthCache.getInstance().clearCacheEntry(new OAuthCacheKey(oauthKey));
-                }
-            }
-            if (accessTokens.size() > 0) {
-                for (String accessToken : accessTokens) {
-                    // Remove access token from AuthorizationGrantCache
-                    AuthorizationGrantCacheKey grantCacheKey = new AuthorizationGrantCacheKey(accessToken);
-                    AuthorizationGrantCacheEntry grantCacheEntry = (AuthorizationGrantCacheEntry) AuthorizationGrantCache
-                            .getInstance().getValueFromCacheByToken(grantCacheKey);
-                    if (grantCacheEntry != null) {
-                        AuthorizationGrantCache.getInstance().clearCacheEntryByToken(grantCacheKey);
-                    }
+    private void removeEntriesFromCache(Set<String> consumerKeys) throws IdentityOAuth2Exception {
 
-                    // Remove access token from OAuthCache
-                    OAuthCacheKey oauthCacheKey = new OAuthCacheKey(accessToken);
-                    CacheEntry oauthCacheEntry = OAuthCache.getInstance().getValueFromCache(oauthCacheKey);
-                    if (oauthCacheEntry != null) {
-                        OAuthCache.getInstance().clearCacheEntry(oauthCacheKey);
-                    }
-                }
+        if (isNotEmpty(consumerKeys)) {
+            Set<String> accessTokens = new HashSet<>();
+            Set<String> authorizationCodes = new HashSet<>();
+
+            AppInfoCache appInfoCache = AppInfoCache.getInstance();
+            for (String oauthKey : consumerKeys) {
+                accessTokens.addAll(OAuthTokenPersistenceFactory.getInstance()
+                        .getAccessTokenDAO().getActiveTokensByConsumerKey(oauthKey));
+                authorizationCodes.addAll(OAuthTokenPersistenceFactory.getInstance()
+                        .getAuthorizationCodeDAO().getAuthorizationCodesByConsumerKey(oauthKey));
+                // Remove client credential from AppInfoCache
+                appInfoCache.clearCacheEntry(oauthKey);
+                OAuthCache.getInstance().clearCacheEntry(new OAuthCacheKey(oauthKey));
             }
 
-            if (authorizationCodes.size() > 0) {
-                for (String authorizationCode : authorizationCodes) {
-                    // Remove authorization code from AuthorizationGrantCache
-                    AuthorizationGrantCacheKey grantCacheKey = new AuthorizationGrantCacheKey(authorizationCode);
-                    AuthorizationGrantCacheEntry grantCacheEntry = (AuthorizationGrantCacheEntry) AuthorizationGrantCache
-                            .getInstance().getValueFromCacheByToken(grantCacheKey);
-                    if (grantCacheEntry != null) {
-                        AuthorizationGrantCache.getInstance().clearCacheEntryByCode(grantCacheKey);
-                    }
-
-                    // Remove authorization code from OAuthCache
-                    OAuthCacheKey oauthCacheKey = new OAuthCacheKey(authorizationCode);
-                    CacheEntry oauthCacheEntry = OAuthCache.getInstance().getValueFromCache(oauthCacheKey);
-                    if (oauthCacheEntry != null) {
-                        OAuthCache.getInstance().clearCacheEntry(oauthCacheKey);
-                    }
-                }
+            if (isNotEmpty(accessTokens)) {
+                clearCacheEntriesAgainstToken(accessTokens);
             }
-        } catch (IdentityOAuth2Exception e) {
-            throw new IdentityApplicationManagementException("Error occurred when removing oauth cache entries upon " +
-                    "service provider update. ", e);
+
+            if (isNotEmpty(authorizationCodes)) {
+                clearCacheEntriesAgainstAuthzCode(authorizationCodes);
+            }
         }
+    }
 
+    private void removeEntriesFromCache(ServiceProvider serviceProvider,
+                                        String tenantDomain) throws IdentityApplicationManagementException {
+
+        Set<String> consumerKeys = getOAuthAppsAssociatedWithApplication(serviceProvider);
+        try {
+            removeEntriesFromCache(consumerKeys);
+        } catch (IdentityOAuth2Exception e) {
+            String applicationName = serviceProvider.getApplicationName();
+            throw new IdentityApplicationManagementException("Error while clearing cache for oauth application data " +
+                    "associated with service provider: " + applicationName + " of tenantDomain: " + tenantDomain, e);
+        }
+    }
+
+    private void clearCacheEntriesAgainstAuthzCode(Set<String> authorizationCodes) {
+
+        for (String authorizationCode : authorizationCodes) {
+            // Remove authorization code from AuthorizationGrantCache
+            AuthorizationGrantCacheKey grantCacheKey = new AuthorizationGrantCacheKey(authorizationCode);
+            AuthorizationGrantCache.getInstance().clearCacheEntryByCode(grantCacheKey);
+
+            // Remove authorization code from OAuthCache
+            OAuthCacheKey oauthCacheKey = new OAuthCacheKey(authorizationCode);
+            CacheEntry oauthCacheEntry = OAuthCache.getInstance().getValueFromCache(oauthCacheKey);
+            if (oauthCacheEntry != null) {
+                OAuthCache.getInstance().clearCacheEntry(oauthCacheKey);
+            }
+        }
+    }
+
+    private void clearCacheEntriesAgainstToken(Set<String> accessTokens) {
+
+        for (String accessToken : accessTokens) {
+            // Remove access token from AuthorizationGrantCache
+            AuthorizationGrantCacheKey grantCacheKey = new AuthorizationGrantCacheKey(accessToken);
+            AuthorizationGrantCacheEntry grantCacheEntry = AuthorizationGrantCache
+                    .getInstance().getValueFromCacheByToken(grantCacheKey);
+            if (grantCacheEntry != null) {
+                AuthorizationGrantCache.getInstance().clearCacheEntryByToken(grantCacheKey);
+            }
+
+            // Remove access token from OAuthCache
+            OAuthCacheKey oauthCacheKey = new OAuthCacheKey(accessToken);
+            CacheEntry oauthCacheEntry = OAuthCache.getInstance().getValueFromCache(oauthCacheKey);
+            if (oauthCacheEntry != null) {
+                OAuthCache.getInstance().clearCacheEntry(oauthCacheKey);
+            }
+        }
     }
 
     /**
@@ -417,6 +467,55 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
         ServiceProvider sp = OAuth2ServiceComponentHolder.getApplicationMgtService()
                 .getServiceProvider(serviceProvider.getApplicationID());
         IdentityUtil.threadLocalProperties.get().put(SAAS_PROPERTY, sp.isSaasApp());
+    }
+
+    private void handleOAuthAppAssociationRemoval(ServiceProvider updatedSp) throws IdentityApplicationManagementException {
+
+        // Get the stored app.
+        int appId = updatedSp.getApplicationID();
+
+        ServiceProvider storedSp = OAuth2ServiceComponentHolder.getApplicationMgtService().getServiceProvider(appId);
+
+        InboundAuthenticationRequestConfig storedOAuthConfig = getOAuthInbound(storedSp);
+        InboundAuthenticationRequestConfig updatedOAuthInboundConfig = getOAuthInbound(updatedSp);
+
+        if (isOAuthInboundAssociationRemoved(storedOAuthConfig, updatedOAuthInboundConfig)) {
+            // Remove OAuth app data.
+            String deletedConsumerKey = storedOAuthConfig.getInboundAuthKey();
+            try {
+                if (log.isDebugEnabled()) {
+                    log.debug("OAuth inbound with clientId: " + deletedConsumerKey + " has been removed from " +
+                            "service provider with id: " + appId + ". Removing the stale OAuth application for " +
+                            "clientId: " + deletedConsumerKey);
+                }
+                OAuth2ServiceComponentHolder.getInstance()
+                        .getOAuthAdminService().removeOAuthApplicationData(deletedConsumerKey);
+            } catch (IdentityOAuthAdminException e) {
+                String msg = "Error removing OAuth2 inbound data for clientId: %s associated with service provider " +
+                        "with id: %s during application update.";
+                throw new IdentityApplicationManagementException(String.format(msg, deletedConsumerKey, appId), e);
+            }
+        }
+    }
+
+    private boolean isOAuthInboundAssociationRemoved(InboundAuthenticationRequestConfig storedOAuthConfig,
+                                                     InboundAuthenticationRequestConfig updatedOAuthInboundConfig) {
+
+        return storedOAuthConfig != null && updatedOAuthInboundConfig == null;
+    }
+
+    private InboundAuthenticationRequestConfig getOAuthInbound(ServiceProvider sp) {
+
+        if (sp != null && sp.getInboundAuthenticationConfig() != null) {
+            if (ArrayUtils.isNotEmpty(sp.getInboundAuthenticationConfig().getInboundAuthenticationRequestConfigs())) {
+                return Arrays.stream(sp.getInboundAuthenticationConfig().getInboundAuthenticationRequestConfigs())
+                        .filter(inbound -> StandardInboundProtocols.OAUTH2.equals(inbound.getInboundAuthType()))
+                        .findAny()
+                        .orElse(null);
+            }
+        }
+
+        return null;
     }
 
     /**

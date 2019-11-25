@@ -21,19 +21,24 @@ package org.wso2.carbon.identity.oauth2.token.handlers.grant.saml;
 import com.google.gdata.util.common.base.Charsets;
 import org.apache.commons.codec.binary.Base64;
 import org.joda.time.DateTime;
+import org.junit.runner.RunWith;
+import org.mockito.Matchers;
 import org.mockito.Mock;
-import org.opensaml.saml2.core.Assertion;
-import org.opensaml.saml2.core.NameID;
-import org.opensaml.saml2.core.Subject;
-import org.opensaml.saml2.core.impl.NameIDBuilder;
-import org.opensaml.saml2.core.impl.SubjectBuilder;
-import org.opensaml.security.SAMLSignatureProfileValidator;
-import org.opensaml.xml.security.x509.X509Credential;
-import org.opensaml.xml.signature.Signature;
-import org.opensaml.xml.signature.SignatureValidator;
-import org.opensaml.xml.validation.ValidationException;
+import org.opensaml.core.xml.io.UnmarshallingException;
+import org.opensaml.saml.saml2.core.Assertion;
+import org.opensaml.saml.saml2.core.NameID;
+import org.opensaml.saml.saml2.core.Subject;
+import org.opensaml.saml.saml2.core.impl.NameIDBuilder;
+import org.opensaml.saml.saml2.core.impl.SubjectBuilder;
+import org.opensaml.saml.security.impl.SAMLSignatureProfileValidator;
+import org.opensaml.security.x509.X509Credential;
+import org.opensaml.xmlsec.signature.Signature;
+import org.opensaml.xmlsec.signature.support.SignatureException;
+import org.opensaml.xmlsec.signature.support.SignatureValidator;
+import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -50,7 +55,6 @@ import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
-import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.core.model.SAMLSSOServiceProviderDO;
 import org.wso2.carbon.identity.core.persistence.IdentityPersistenceManager;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
@@ -67,6 +71,8 @@ import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuerImpl;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.saml.common.util.UnmarshallUtils;
+import org.wso2.carbon.identity.saml.common.util.exception.IdentityUnmarshallingException;
 import org.wso2.carbon.identity.sso.saml.SSOServiceProviderConfigManager;
 import org.wso2.carbon.identity.sso.saml.dto.SAMLSSOAuthnReqDTO;
 import org.wso2.carbon.identity.sso.saml.util.SAMLSSOUtil;
@@ -93,10 +99,8 @@ import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
 import static org.powermock.api.mockito.PowerMockito.doNothing;
-import static org.powermock.api.mockito.PowerMockito.doThrow;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
-import static org.powermock.api.mockito.PowerMockito.whenNew;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
@@ -105,11 +109,12 @@ import static org.testng.Assert.fail;
 /**
  * tests for SAML2BearerGrantHandler
  */
-@PowerMockIgnore({"javax.net.*"})
+@PowerMockIgnore({"javax.net.*", "javax.xml.*", "org.w3c.*", "org.xml.*"})
+@RunWith(PowerMockRunner.class)
 @PrepareForTest({IdentityUtil.class, IdentityTenantUtil.class, IdentityProviderManager.class, MultitenantUtils.class,
         IdentityApplicationManagementUtil.class, OAuthServerConfiguration.class, SSOServiceProviderConfigManager.class,
         SAML2BearerGrantHandler.class, OAuthComponentServiceHolder.class, OAuth2ServiceComponentHolder.class,
-        OAuth2Util.class,IdentityPersistenceManager.class})
+        OAuth2Util.class,IdentityPersistenceManager.class, SignatureValidator.class, UnmarshallUtils.class})
 public class SAML2BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
 
     public static final String[] SCOPE_ARRAY = {"scope1"};
@@ -161,6 +166,7 @@ public class SAML2BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
         );
         mockStatic(OAuthServerConfiguration.class);
         mockStatic(IdentityUtil.class);
+        mockStatic(UnmarshallUtils.class);
         when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
         when(oAuthServerConfiguration.getIdentityOauthTokenIssuer()).thenReturn(oauthIssuer);
         when(oAuthServerConfiguration.getPersistenceProcessor()).thenReturn(persistenceProcessor);
@@ -221,9 +227,9 @@ public class SAML2BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
         DateTime validOnOrAfter = new DateTime(System.currentTimeMillis() + 10000000L);
         DateTime expiredOnOrAfter = new DateTime(System.currentTimeMillis() - 10000000L);
         return new Object[][] {
-                { validOnOrAfter, "LOCAL", true, true, TestConstants.OAUTH2_TOKEN_EP, TestConstants.LOACALHOST_DOMAIN, new IdentityException("Error"), "Error while unmashalling"},
+                { validOnOrAfter, "LOCAL", true, true, TestConstants.OAUTH2_TOKEN_EP, TestConstants.LOACALHOST_DOMAIN, new IdentityUnmarshallingException("Error"), "Error while unmashalling"},
                 { validOnOrAfter, "FED", true, true, TestConstants.OAUTH2_TOKEN_EP, TestConstants.LOACALHOST_DOMAIN, new IdentityProviderManagementException("Error"), "Error while retrieving identity provider"},
-                { validOnOrAfter, "FED", true, true, TestConstants.OAUTH2_TOKEN_EP, TestConstants.LOACALHOST_DOMAIN, new ValidationException(), "Error while validating the signature"},
+                { validOnOrAfter, "FED", true, true, TestConstants.OAUTH2_TOKEN_EP, TestConstants.LOACALHOST_DOMAIN, new SignatureException(), "Error while validating the signature"},
                 { validOnOrAfter, "LOCAL", true, true, TestConstants.OAUTH2_TOKEN_EP, TestConstants.LOACALHOST_DOMAIN, new IdentityApplicationManagementException("Error"), "Error while retrieving service provider"},
                 { validOnOrAfter, "LOCAL", true, true, TestConstants.OAUTH2_TOKEN_EP, TestConstants.LOACALHOST_DOMAIN, new UserStoreException(), "Error while building local user"},
                 { validOnOrAfter, "FED", true, true, TestConstants.OAUTH2_TOKEN_EP, TestConstants.LOACALHOST_DOMAIN, new CertificateException(), "Error occurred while decoding public certificate"},
@@ -269,10 +275,13 @@ public class SAML2BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
         if (e instanceof IdentityProviderManagementException) {
             when(identityProviderManager.getIdPByAuthenticatorPropertyValue(anyString(), anyString(), anyString(),
                     anyString(), anyBoolean())).thenThrow(e);
-        } else if (e instanceof IdentityException) {
-            when(IdentityUtil.unmarshall(anyString())).thenThrow(e);
-        } else if (e instanceof ValidationException) {
-            doThrow(e).when(signatureValidator).validate(any(Signature.class));
+        } else if (e instanceof IdentityUnmarshallingException) {
+            when(UnmarshallUtils.unmarshall(anyString())).thenThrow(e);
+        } else if (e instanceof SignatureException) {
+            PowerMockito.mockStatic(SignatureValidator.class);
+            PowerMockito.doThrow(e)
+                    .when(SignatureValidator.class,  "validate", Matchers.any(Signature.class),
+                            Matchers.any(X509Credential.class));
         } else if (e instanceof IdentityApplicationManagementException) {
             when(applicationManagementService.getServiceProviderByClientId(anyString(), anyString(), anyString()))
                     .thenThrow(e);
@@ -458,7 +467,7 @@ public class SAML2BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
         String assertionString = SAMLSSOUtil.marshall(assertion);
         assertionString = new String(Base64.encodeBase64(assertionString.getBytes(Charsets.UTF_8)), Charsets.UTF_8);
         oAuth2AccessTokenReqDTO.setAssertion(assertionString);
-        when(IdentityUtil.unmarshall(anyString())).thenReturn(assertion);
+        when(UnmarshallUtils.unmarshall(anyString())).thenReturn(assertion);
         when(IdentityUtil.isTokenLoggable(anyString())).thenReturn(true);
     }
 
@@ -472,8 +481,9 @@ public class SAML2BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
 
         when(IdentityApplicationManagementUtil.decodeCertificate(anyString()))
                 .thenReturn(x509Certificate);
-        whenNew(SignatureValidator.class).withArguments(any(X509Credential.class)).thenReturn(signatureValidator);
-        doNothing().when(signatureValidator).validate(any(Signature.class));
+        PowerMockito.mockStatic(SignatureValidator.class);
+        PowerMockito.doNothing().when(SignatureValidator.class,  "validate",
+                Matchers.any(Signature.class), Matchers.any(X509Credential.class));
     }
 
     private void initSAMLGrant(String userType, String idpName) throws Exception {

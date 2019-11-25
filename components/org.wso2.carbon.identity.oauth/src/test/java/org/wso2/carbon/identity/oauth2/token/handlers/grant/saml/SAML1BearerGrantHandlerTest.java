@@ -21,8 +21,7 @@ package org.wso2.carbon.identity.oauth2.token.handlers.grant.saml;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang.StringUtils;
 import org.joda.time.DateTime;
-import org.opensaml.DefaultBootstrap;
-import org.opensaml.security.SAMLSignatureProfileValidator;
+import org.opensaml.saml.security.impl.SAMLSignatureProfileValidator;
 import org.powermock.reflect.internal.WhiteboxImpl;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
@@ -41,6 +40,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.model.RequestParameter;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
+import org.wso2.carbon.identity.saml.common.util.SAMLInitializer;
 import org.wso2.carbon.idp.mgt.internal.IdpMgtServiceComponentHolder;
 import org.wso2.carbon.registry.core.service.RegistryService;
 import org.wso2.carbon.user.core.service.RealmService;
@@ -178,7 +178,7 @@ public class SAML1BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
         OAuthTokenReqMessageContext oAuthTokenReqMessageContext = buildOAuth2AccessTokenReqDTO();
         RequestParameter[] requestParameters = new RequestParameter[] {new RequestParameter("assertion",
                 Base64.encodeBase64String(assertion.getBytes()))};
-        DefaultBootstrap.bootstrap();
+        SAMLInitializer.doBootstrap();
         oAuthTokenReqMessageContext.getOauth2AccessTokenReqDTO().setRequestParameters(requestParameters);
         WhiteboxImpl.setInternalState(saml1BearerGrantHandler, "audienceRestrictionValidationEnabled",
                 enableAudienceRestriction);
@@ -228,5 +228,5 @@ public class SAML1BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
                 oAuth2AccessTokenReqDTO);
         return oAuthTokenReqMessageContext;
     }
-
 }
+
