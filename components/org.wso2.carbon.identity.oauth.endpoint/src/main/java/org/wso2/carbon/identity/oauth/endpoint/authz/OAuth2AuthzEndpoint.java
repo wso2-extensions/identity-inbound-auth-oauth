@@ -197,6 +197,7 @@ public class OAuth2AuthzEndpoint {
     private static final String ID_TOKEN = "id_token";
     private static final String ACCESS_CODE = "code";
     private static final String DEFAULT_ERROR_DESCRIPTION = "User denied the consent";
+    private static final String DEFAULT_ERROR_MSG_FOR_FAILURE = "Authentication required";
 
     private static final String OIDC_DIALECT = "http://wso2.org/oidc/claim";
 
@@ -2621,29 +2622,27 @@ public class OAuth2AuthzEndpoint {
      * @param authenticationResult
      * @return
      */
-    private OAuthProblemException buildOAuthProblemException(AuthenticationResult authenticationResult,
+    OAuthProblemException buildOAuthProblemException(AuthenticationResult authenticationResult,
                                                              OAuthErrorDTO oAuthErrorDTO) {
 
-        final String DEFAULT_ERROR_MSG = "Authentication required";
         String errorCode = String.valueOf(authenticationResult.getProperty(FrameworkConstants.AUTH_ERROR_CODE));
-        String errorMessage = String.valueOf(authenticationResult.getProperty(FrameworkConstants.AUTH_ERROR_MSG));
-        String errorUri = String.valueOf(authenticationResult.getProperty(FrameworkConstants.AUTH_ERROR_URI));
-
         if (IdentityUtil.isBlank(errorCode)) {
             // If there is no custom error code sent from framework we set our default error code.
             errorCode = OAuth2ErrorCodes.LOGIN_REQUIRED;
         }
 
+        String errorMessage = String.valueOf(authenticationResult.getProperty(FrameworkConstants.AUTH_ERROR_MSG));
         if (IdentityUtil.isBlank(errorMessage)) {
             if (oAuthErrorDTO != null && StringUtils.isNotBlank(oAuthErrorDTO.getErrorDescription())) {
                 // If there is a custom message from responseTypeHandler we set that as error message.
                 errorMessage = oAuthErrorDTO.getErrorDescription();
             } else {
                 // If there is no custom error message sent from framework we set our default error message.
-                errorMessage = DEFAULT_ERROR_MSG;
+                errorMessage = DEFAULT_ERROR_MSG_FOR_FAILURE;
             }
         }
 
+        String errorUri = String.valueOf(authenticationResult.getProperty(FrameworkConstants.AUTH_ERROR_URI));
         if (IdentityUtil.isBlank(errorUri)) {
             if (oAuthErrorDTO != null && StringUtils.isNotBlank(oAuthErrorDTO.getErrorURI())) {
                 // If there is a custom message from responseTypeHandler we set that as error message.
