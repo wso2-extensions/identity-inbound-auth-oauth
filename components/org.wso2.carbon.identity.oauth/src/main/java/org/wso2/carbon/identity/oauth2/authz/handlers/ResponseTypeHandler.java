@@ -46,16 +46,13 @@ public interface ResponseTypeHandler {
      */
     public boolean isAuthorizedClient(OAuthAuthzReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception;
 
-
     /**
      * Handles user consent denial at responseType level.
      *
      * @param oAuth2Parameters OAuth parameters.
      * @return OAuthErrorDTO Authorization Failure Data Transfer Object.
-     * @throws IdentityOAuth2Exception
      */
-    default OAuthErrorDTO handleUserConsentDenial(OAuth2Parameters oAuth2Parameters)
-            throws IdentityOAuth2Exception {
+    default OAuthErrorDTO handleUserConsentDenial(OAuth2Parameters oAuth2Parameters) {
 
         return null;
     }
@@ -65,10 +62,8 @@ public interface ResponseTypeHandler {
      *
      * @param oAuth2Parameters OAuth parameters.
      * @return OAuthErrorDTO Authorization Failure Data Transfer Object.
-     * @throws IdentityOAuth2Exception
      */
-    default OAuthErrorDTO handleAuthenticationFailure(OAuth2Parameters oAuth2Parameters)
-            throws IdentityOAuth2Exception {
+    default OAuthErrorDTO handleAuthenticationFailure(OAuth2Parameters oAuth2Parameters) {
 
         return null;
     }

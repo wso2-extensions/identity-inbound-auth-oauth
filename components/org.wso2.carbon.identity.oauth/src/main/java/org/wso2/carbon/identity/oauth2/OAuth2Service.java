@@ -668,12 +668,18 @@ public class OAuth2Service extends AbstractAdmin {
      *
      * @param oAuth2Parameters OAuth parameters.
      * @return OAuthErrorDTO Error Data Transfer Object.
-     * @throws IdentityOAuth2Exception Identity OAuth2 exception.
      */
-    public OAuthErrorDTO handleUserConsentDenial(OAuth2Parameters oAuth2Parameters)
-            throws IdentityOAuth2Exception {
+    public OAuthErrorDTO handleUserConsentDenial(OAuth2Parameters oAuth2Parameters) {
 
-        return AuthorizationHandlerManager.getInstance().handleUserConsentDenial(oAuth2Parameters);
+        try {
+            return AuthorizationHandlerManager.getInstance().handleUserConsentDenial(oAuth2Parameters);
+        } catch (IdentityOAuth2Exception e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Error in handling user consent denial for  authentication request made by clientID: " +
+                        oAuth2Parameters.getClientId());
+            }
+        }
+        return null;
     }
 
     /**
@@ -681,11 +687,18 @@ public class OAuth2Service extends AbstractAdmin {
      *
      * @param oauth2Params OAuth parameters.
      * @return OAuthErrorDTO Error Data Transfer Object.
-     * @throws IdentityOAuth2Exception Identity OAuth2 exception.
      */
-    public OAuthErrorDTO handleAuthenticationFailure(OAuth2Parameters oauth2Params)
-            throws IdentityOAuth2Exception {
+    public OAuthErrorDTO handleAuthenticationFailure(OAuth2Parameters oauth2Params) {
 
-        return AuthorizationHandlerManager.getInstance().handleAuthenticationFailure(oauth2Params);
+        try {
+            return AuthorizationHandlerManager.getInstance().handleAuthenticationFailure(oauth2Params);
+        } catch (IdentityOAuth2Exception e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Error in handling authentication failure for authentication request made by clientID: "
+                        + oauth2Params.getClientId());
+            }
+        }
+        return null;
     }
 }
+
