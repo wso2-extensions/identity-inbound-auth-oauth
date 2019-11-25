@@ -87,9 +87,6 @@ public class DeviceFlowResponseTypeHandlerTest extends PowerMockTestCase {
             mockStatic(IdentityUtil.class);
             when(IdentityUtil.getServerURL(anyString(), anyBoolean(), anyBoolean())).thenReturn(TEST_URL);
             oAuthAppDO.setApplicationName("testApplicationName");
-//            DeviceFlowDAO deviceFlowPersistenceFactory = PowerMockito.spy(DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO());
-//            doNothing().when(deviceFlowPersistenceFactory).setAuthzUserAndStatus(anyString(), anyString(),
-//                    AuthenticatedUser.class);
             OAuthAuthzReqMessageContext oAuthAuthzReqMessageContext =
                     new OAuthAuthzReqMessageContext(oAuth2AuthorizeReqDTO);
             DeviceFlowResponseTypeHandler deviceFlowResponseTypeHandler = new DeviceFlowResponseTypeHandler();

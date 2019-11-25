@@ -32,10 +32,6 @@ public class DeviceFlowDO {
 
     private String scope;
 
-    private Timestamp issuedTime;
-
-    private Timestamp expiredTime;
-
     private String Status;
 
     private Timestamp lastPollTime;
@@ -92,26 +88,6 @@ public class DeviceFlowDO {
     public void setScope(String scope) {
 
         this.scope = scope;
-    }
-
-    public Timestamp getIssuedTime() {
-
-        return issuedTime;
-    }
-
-    public void setIssuedTime(Timestamp issuedTime) {
-
-        this.issuedTime = issuedTime;
-    }
-
-    public Timestamp getExpiredTime() {
-
-        return expiredTime;
-    }
-
-    public void setExpiredTime(Timestamp expiredTime) {
-
-        this.expiredTime = expiredTime;
     }
 
     public String getStatus() {
