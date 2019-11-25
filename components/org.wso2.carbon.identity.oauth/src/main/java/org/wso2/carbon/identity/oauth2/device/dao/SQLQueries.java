@@ -60,8 +60,8 @@ public class SQLQueries {
         public static final String SET_LAST_POLL_TIME = "UPDATE IDN_OAUTH2_DEVICE_FLOW SET LAST_POLL_TIME = ? WHERE " +
                 "DEVICE_CODE = ?";
 
-        public static final String SET_AUTHZ_USER = "UPDATE IDN_OAUTH2_DEVICE_FLOW SET AUTHZ_USER = ? WHERE " +
-                "USER_CODE = ?";
+        public static final String SET_AUTHZ_USER_AND_STATUS = "UPDATE IDN_OAUTH2_DEVICE_FLOW SET AUTHZ_USER = ? ," +
+                "STATUS = ?, TENANT_ID = ?, USER_DOMAIN = ? WHERE USER_CODE = ?";
 
         public static final String SET_DEVICE_CODE_EXPIRED = "UPDATE IDN_OAUTH2_DEVICE_FLOW SET STATUS = ? WHERE " +
                 "DEVICE_CODE = ?";

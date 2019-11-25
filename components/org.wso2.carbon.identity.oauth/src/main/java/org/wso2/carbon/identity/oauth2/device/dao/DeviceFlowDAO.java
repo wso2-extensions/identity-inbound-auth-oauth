@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth2.device.dao;
 
+import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.device.model.DeviceFlowDO;
 
@@ -41,9 +42,8 @@ public interface DeviceFlowDAO {
      * @param expiresIn   Device code valid period
      * @throws IdentityOAuth2Exception
      */
-    void insertDeviceFlow(String deviceCode, String userCode, String consumerKey, String scope, Long expiresIn,
-                          int interval) throws
-            IdentityOAuth2Exception;
+    void insertDeviceFlowParameters(String deviceCode, String userCode, String consumerKey, String scope,
+                                    Long expiresIn, int interval) throws IdentityOAuth2Exception;
 
     /**
      * Get the client id that has involved with user code.
@@ -120,10 +120,11 @@ public interface DeviceFlowDAO {
      * Set authenticated user.
      *
      * @param userCode Code that is used to correlate user and device
-     * @param userName Name of the authenticated user
+     * @param status   Status of the device code
+     * @param authzUser Authenticated user
      * @throws IdentityOAuth2Exception
      */
-    void setAuthzUser(String userCode, String userName) throws IdentityOAuth2Exception;
+    void setAuthzUserAndStatus(String userCode, String status, AuthenticatedUser authzUser) throws IdentityOAuth2Exception;
 
     /**
      * Set device code as expired.
@@ -134,6 +135,13 @@ public interface DeviceFlowDAO {
      */
     void setDeviceCodeExpired(String deviceCode, String status) throws IdentityOAuth2Exception;
 
+    /**
+     * Set callback uri of the service provider.
+     *
+     * @param clientId    Consumer key of service provide
+     * @param callBackUri Callback uri of the service provider
+     * @throws IdentityOAuth2Exception
+     */
     void setCallBackURI(String clientId, String callBackUri) throws IdentityOAuth2Exception;
 
 }

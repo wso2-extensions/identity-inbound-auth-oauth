@@ -20,10 +20,12 @@ package org.wso2.carbon.identity.oauth2.device.dao;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.device.constants.Constants;
 import org.wso2.carbon.identity.oauth2.device.model.DeviceFlowDO;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -47,7 +49,8 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
     private String scope;
 
     @Override
-    public void insertDeviceFlow(String deviceCode, String userCode, String consumerKey, String scope, Long expiresIn,
+    public void insertDeviceFlowParameters(String deviceCode, String userCode, String consumerKey, String scope,
+                                    Long expiresIn,
                                  int interval) throws IdentityOAuth2Exception {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
@@ -85,8 +88,8 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
     public String getClientIdByUserCode(String userCode) throws IdentityOAuth2Exception {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
-            try (PreparedStatement prepStmt =
-                         connection.prepareStatement(SQLQueries.DeviceFlowDAOSQLQueries.GET_CONSUMER_KEY_FOR_USER_CODE)) {
+            try (PreparedStatement prepStmt = connection
+                    .prepareStatement(SQLQueries.DeviceFlowDAOSQLQueries.GET_CONSUMER_KEY_FOR_USER_CODE)) {
                 ResultSet resultSet = null;
                 prepStmt.setString(1, userCode);
                 resultSet = prepStmt.executeQuery();
@@ -96,8 +99,7 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
                 }
             }
         } catch (SQLException e) {
-            throw new IdentityOAuth2Exception("Error when getting client id for user code: " +
-                    userCode, e);
+            throw new IdentityOAuth2Exception("Error when getting client id for user code: " + userCode, e);
         }
         return clientId;
     }
@@ -158,18 +160,18 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
                 resultSet = prepStmt.executeQuery();
 
                 while (resultSet.next()) {
-                    try {
-                        deviceFlowDO.setStatus(resultSet.getString(1));
-                        deviceFlowDO.setLastPollTime(resultSet.getTimestamp(2));
-                        deviceFlowDO.setPollTime(resultSet.getLong(3));
-                        deviceFlowDO.setExpiryTime(resultSet.getLong(4));
-                        deviceFlowDO.setScope(resultSet.getString(5));
-                        deviceFlowDO.setAuthzUser(resultSet.getString(6));
-                        checked = true;
-                    } catch (NullPointerException e) {
-                        deviceFlowDO.setStatus(Constants.NOT_EXIST);
-                        return deviceFlowDO;
-                    }
+//                    try {
+                    deviceFlowDO.setStatus(resultSet.getString(1));
+                    deviceFlowDO.setLastPollTime(resultSet.getTimestamp(2));
+                    deviceFlowDO.setPollTime(resultSet.getLong(3));
+                    deviceFlowDO.setExpiryTime(resultSet.getLong(4));
+                    deviceFlowDO.setScope(resultSet.getString(5));
+                    deviceFlowDO.setAuthzUser(resultSet.getString(6));
+                    checked = true;
+//                    } catch (NullPointerException e) {
+//                        deviceFlowDO.setStatus(Constants.NOT_EXIST);
+//                        return deviceFlowDO;
+//                    }
                 }
                 if (checked) {
                     return deviceFlowDO;
@@ -268,13 +270,17 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
     }
 
     @Override
-    public void setAuthzUser(String userCode, String userName) throws IdentityOAuth2Exception {
+    public void setAuthzUserAndStatus(String userCode,String status, AuthenticatedUser authenticatedUser)
+            throws IdentityOAuth2Exception {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
             try (PreparedStatement prepStmt =
-                         connection.prepareStatement(SQLQueries.DeviceFlowDAOSQLQueries.SET_AUTHZ_USER)) {
-                prepStmt.setString(1, userName);
-                prepStmt.setString(2, userCode);
+                         connection.prepareStatement(SQLQueries.DeviceFlowDAOSQLQueries.SET_AUTHZ_USER_AND_STATUS)) {
+                prepStmt.setString(1, authenticatedUser.getUserName());
+                prepStmt.setString(2, status);
+                prepStmt.setInt(3, OAuth2Util.getTenantId(authenticatedUser.getTenantDomain()));
+                prepStmt.setString(4, OAuth2Util.getUserStoreDomain(authenticatedUser));
+                prepStmt.setString(5, userCode);
                 prepStmt.execute();
                 IdentityDatabaseUtil.commitTransaction(connection);
             } catch (SQLException e) {

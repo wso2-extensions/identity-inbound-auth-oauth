@@ -59,12 +59,12 @@ public class DeviceFlowGrantTest extends PowerMockTestCase {
     }
 
     @Test
-    public void testIsValidDeviceCode() throws Exception {
+    public void testIsExpiredDeviceCode() throws Exception {
 
         Assert.assertTrue(WhiteboxImpl.invokeMethod(DeviceFlowGrant.class,
-                "isValidDeviceCode",deviceFlowDO1, date));
+                "isExpiredDeviceCode",deviceFlowDO1, date));
         Assert.assertFalse(WhiteboxImpl.invokeMethod(DeviceFlowGrant.class,
-                "isValidDeviceCode",deviceFlowDO2, date));
+                "isExpiredDeviceCode",deviceFlowDO2, date));
     }
 
     @Test

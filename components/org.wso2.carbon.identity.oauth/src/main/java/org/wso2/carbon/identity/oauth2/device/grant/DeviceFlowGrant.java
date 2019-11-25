@@ -65,38 +65,31 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
         }
 
         if (DeviceCode != null) {
-
-            if (!tokenReq.getGrantType().equals(Constants.DEVICE_FLOW_GRANT_TYPE)) {
-
-                throw new IdentityOAuth2Exception(DeviceErrorCodes.UNSUPPORTED_GRANT_TYPE);
-            } else {
-
-                DeviceFlowDO deviceFlowDO = DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO()
-                        .getAuthenticationDetails(DeviceCode);
-                Date date = new Date();
-                deviceStatus = deviceFlowDO.getStatus();
-                if (Constants.NOT_EXIST.equals(deviceStatus)) {
-                    throw new IdentityOAuth2Exception(DeviceErrorCodes.INVALID_REQUEST);
-                } else if (Constants.EXPIRED.equals(deviceStatus) || isExpiredDeviceCode(deviceFlowDO, date)) {
-                    throw new IdentityOAuth2Exception(DeviceErrorCodes.SubDeviceErrorCodes.EXPIRED_TOKEN);
-                } else if (Constants.AUTHORIZED.equals(deviceStatus)) {
-                    authStatus = true;
-                    DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().setDeviceCodeExpired(DeviceCode,
-                            Constants.EXPIRED);
-                    if (StringUtils.isNotBlank(deviceFlowDO.getScope())) {
-                        this.setPropertiesForTokenGeneration(oAuthTokenReqMessageContext, tokenReq, deviceFlowDO);
-                    }
-                } else if (Constants.USED.equals(deviceStatus) || Constants.PENDING.equals(deviceStatus)) {
-                    Timestamp newPollTime = new Timestamp(date.getTime());
-                    if (isValidPollTime(newPollTime, deviceFlowDO)) {
-                        DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO()
-                                .setLastPollTime(DeviceCode, newPollTime);
-                        throw new IdentityOAuth2Exception(DeviceErrorCodes.SubDeviceErrorCodes.AUTHORIZATION_PENDING);
-                    } else {
-                        DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO()
-                                .setLastPollTime(DeviceCode, newPollTime);
-                        throw new IdentityOAuth2Exception(DeviceErrorCodes.SubDeviceErrorCodes.SLOW_DOWN);
-                    }
+            DeviceFlowDO deviceFlowDO = DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO()
+                    .getAuthenticationDetails(DeviceCode);
+            Date date = new Date();
+            deviceStatus = deviceFlowDO.getStatus();
+            if (Constants.NOT_EXIST.equals(deviceStatus)) {
+                throw new IdentityOAuth2Exception(DeviceErrorCodes.INVALID_REQUEST);
+            } else if (Constants.EXPIRED.equals(deviceStatus) || isExpiredDeviceCode(deviceFlowDO, date)) {
+                throw new IdentityOAuth2Exception(DeviceErrorCodes.SubDeviceErrorCodes.EXPIRED_TOKEN);
+            } else if (Constants.AUTHORIZED.equals(deviceStatus)) {
+                authStatus = true;
+                DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().setDeviceCodeExpired(DeviceCode,
+                        Constants.EXPIRED);
+                if (StringUtils.isNotBlank(deviceFlowDO.getScope())) {
+                    this.setPropertiesForTokenGeneration(oAuthTokenReqMessageContext, tokenReq, deviceFlowDO);
+                }
+            } else if (Constants.USED.equals(deviceStatus) || Constants.PENDING.equals(deviceStatus)) {
+                Timestamp newPollTime = new Timestamp(date.getTime());
+                if (isValidPollTime(newPollTime, deviceFlowDO)) {
+                    DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO()
+                            .setLastPollTime(DeviceCode, newPollTime);
+                    throw new IdentityOAuth2Exception(DeviceErrorCodes.SubDeviceErrorCodes.AUTHORIZATION_PENDING);
+                } else {
+                    DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO()
+                            .setLastPollTime(DeviceCode, newPollTime);
+                    throw new IdentityOAuth2Exception(DeviceErrorCodes.SubDeviceErrorCodes.SLOW_DOWN);
                 }
             }
         }

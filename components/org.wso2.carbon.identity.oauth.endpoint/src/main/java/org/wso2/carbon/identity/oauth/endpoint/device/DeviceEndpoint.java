@@ -58,7 +58,7 @@ public class DeviceEndpoint {
         OAuthResponse errorResponse;
         if (StringUtils.isBlank(clientId)) {
             errorResponse = OAuthASResponse
-                    .errorResponse(response.getStatus())
+                    .errorResponse(HttpServletResponse.SC_BAD_REQUEST)
                     .setError(DeviceErrorCodes.INVALID_REQUEST)
                     .setErrorDescription("Request missing required parameters").buildJSONMessage();
             Response.ResponseBuilder respBuilder = Response.status(HttpServletResponse.SC_BAD_REQUEST);
@@ -74,8 +74,8 @@ public class DeviceEndpoint {
                 String redirectionUri = IdentityUtil.getServerURL("/authenticationendpoint/device.do",
                         false, false);
                 String redirectionUriComplete = redirectionUri + "?user_code=" + userCode;
-                DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().insertDeviceFlow(deviceCode, userCode,
-                        clientId, scope, expiresIn, interval);
+                DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().insertDeviceFlowParameters(deviceCode,
+                        userCode, clientId, scope, expiresIn, interval);
 
                 OAuthResponse deviceResponse = OAuthResponse
                         .status(HttpServletResponse.SC_OK)
@@ -93,7 +93,7 @@ public class DeviceEndpoint {
                         .errorResponse(HttpServletResponse.SC_UNAUTHORIZED)
                         .setError(DeviceErrorCodes.UNAUTHORIZED_CLIENT)
                         .setErrorDescription("No registered client with the client id.").buildJSONMessage();
-                Response.ResponseBuilder respBuilder = Response.status(response.getStatus());
+                Response.ResponseBuilder respBuilder = Response.status(HttpServletResponse.SC_UNAUTHORIZED);
                 return respBuilder.entity(errorResponse.getBody()).build();
             }
         }

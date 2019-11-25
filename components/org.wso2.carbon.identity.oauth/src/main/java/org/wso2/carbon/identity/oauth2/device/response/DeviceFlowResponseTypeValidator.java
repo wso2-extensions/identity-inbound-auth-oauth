@@ -46,4 +46,9 @@ public class DeviceFlowResponseTypeValidator extends AbstractValidator<HttpServl
                     .description("Http method not correct.");
         }
     }
+
+    @Override
+    public void validateContentType(HttpServletRequest request) throws OAuthProblemException {
+    }
+
 }

@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth2.device.response;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.authz.handlers.AbstractResponseTypeHandler;
@@ -52,11 +53,10 @@ public class DeviceFlowResponseTypeHandler extends AbstractResponseTypeHandler {
 
         OAuth2AuthorizeRespDTO respDTO = new OAuth2AuthorizeRespDTO();
         OAuth2AuthorizeReqDTO authzReqDTO = oauthAuthzMsgCtx.getAuthorizationReqDTO();
-        String authenticatedUser = authzReqDTO.getUser().getUserName();
+        AuthenticatedUser authenticatedUser = authzReqDTO.getUser();
         String UserCode = authzReqDTO.getNonce();
-        DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().setAuthzUser(UserCode, authenticatedUser);
-        DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().setAuthenticationStatus(UserCode,
-                Constants.AUTHORIZED);
+        DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().setAuthzUserAndStatus(UserCode,
+         Constants.AUTHORIZED, authenticatedUser);
         respDTO.setCallbackURI(authzReqDTO.getCallbackUrl());
 
         return respDTO;

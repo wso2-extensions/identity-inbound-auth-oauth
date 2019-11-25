@@ -62,8 +62,9 @@ public class UserAuthenticationEndpoint {
 
         String userCode = request.getParameter(Constants.USER_CODE);
         if (StringUtils.isBlank(userCode)) {
-            response.sendRedirect(IdentityUtil.getServerURL("/authenticationendpoint/device.do",
-                    false, false));
+            response.sendRedirect(IdentityUtil.
+                    getServerURL("/authenticationendpoint/device.do?error=invalidRequest",
+                            false, false));
             return null;
         }
 
@@ -86,7 +87,8 @@ public class UserAuthenticationEndpoint {
             return oAuth2AuthzEndpoint.authorize(commonAuthRequestWrapper, response);
 
         } else {
-            response.sendRedirect(IdentityUtil.getServerURL("/authenticationendpoint/device.do",
+            response.sendRedirect(IdentityUtil
+                    .getServerURL("/authenticationendpoint/device.do?error=invalidUserCode",
                     false, false));
             return null;
         }

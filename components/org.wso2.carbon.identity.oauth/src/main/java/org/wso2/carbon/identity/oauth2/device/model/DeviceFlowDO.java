@@ -18,6 +18,8 @@
 
 package org.wso2.carbon.identity.oauth2.device.model;
 
+import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+
 import java.sql.Timestamp;
 
 public class DeviceFlowDO {
@@ -45,6 +47,8 @@ public class DeviceFlowDO {
     private String authzUser;
 
     private String callbackUri;
+
+    private AuthenticatedUser authorizedUser;
 
     public DeviceFlowDO() {
 
@@ -168,5 +172,15 @@ public class DeviceFlowDO {
     public void setCallbackUri(String callbackUri) {
 
         this.callbackUri = callbackUri;
+    }
+
+    public AuthenticatedUser getAuthorizedUser() {
+
+        return authorizedUser;
+    }
+
+    public void setAuthorizedUser(AuthenticatedUser authorizedUser) {
+
+        this.authorizedUser = authorizedUser;
     }
 }
