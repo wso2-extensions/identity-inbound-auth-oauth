@@ -19,7 +19,7 @@
 package org.wso2.carbon.identity.oauth.dto;
 
 /**
- * Carries Error from responseTypeHandler to Endpoint.
+ * Carries Error information from ResponseTypeHandler to Endpoint.
  */
 public class OAuthErrorDTO {
 

@@ -196,7 +196,7 @@ public class OAuth2AuthzEndpoint {
     private static final String DISPLAY_NAME = "DisplayName";
     private static final String ID_TOKEN = "id_token";
     private static final String ACCESS_CODE = "code";
-    private String errorDescription = "User denied the consent";
+    private static final String DEFAULT_ERROR_DESCRIPTION = "User denied the consent";
 
     private static final String OIDC_DIALECT = "http://wso2.org/oidc/claim";
 
@@ -612,27 +612,45 @@ public class OAuth2AuthzEndpoint {
 
     private Response handleDenyConsent(OAuthMessage oAuthMessage) throws OAuthSystemException, URISyntaxException {
 
-        try {
+
             OAuth2Parameters oauth2Params = getOauth2Params(oAuthMessage);
             OpenIDConnectUserRPStore.getInstance().putUserRPToStore(getLoggedInUser(oAuthMessage),
                     getOauth2Params(oAuthMessage).getApplicationName(), false, oauth2Params.getClientId());
 
-            OAuthErrorDTO oAuthErrorDTO = EndpointUtil.getOAuth2Service().handleUserConsentDenial(oauth2Params);
+        OAuthErrorDTO oAuthErrorDTO = null;
+        try {
+            oAuthErrorDTO = EndpointUtil.getOAuth2Service().handleUserConsentDenial(oauth2Params);
+        } catch (IdentityOAuth2Exception e) {
+            throw new OAuthSystemException("Error in handling user consent denial for the request made by clientID: " +
+                    oAuthMessage.getClientId(), e);
+        }
+        OAuthProblemException ex = buildConsentDenialException(oAuthErrorDTO);
 
-            // Adding custom error description.
-            if (oAuthErrorDTO != null && StringUtils.isNotBlank(oAuthErrorDTO.getErrorDescription())) {
-                errorDescription = oAuthErrorDTO.getErrorDescription();
-            }
-            OAuthProblemException ex = OAuthProblemException.error(OAuth2ErrorCodes.ACCESS_DENIED, errorDescription);
             String denyResponse = EndpointUtil.getErrorRedirectURL(oAuthMessage.getRequest(), ex, oauth2Params);
             if (StringUtils.equals(oauth2Params.getResponseMode(), RESPONSE_MODE_FORM_POST)) {
                 return handleFailedState(oAuthMessage, oauth2Params, ex);
             }
             return Response.status(HttpServletResponse.SC_FOUND).location(new URI(denyResponse)).build();
-        } catch (IdentityOAuth2Exception e) {
-            throw new OAuthSystemException("Error in handling user consent denial for the request made by client: " +
-                    oAuthMessage.getClientId(), e);
+
+    }
+
+    private OAuthProblemException buildConsentDenialException(OAuthErrorDTO oAuthErrorDTO) {
+
+        String errorDescription = DEFAULT_ERROR_DESCRIPTION;
+        String errorURI = null;
+
+        // Adding custom error description.
+        if (oAuthErrorDTO != null && StringUtils.isNotBlank(oAuthErrorDTO.getErrorDescription())) {
+             errorDescription = oAuthErrorDTO.getErrorDescription();
         }
+
+        OAuthProblemException error = OAuthProblemException.error(OAuth2ErrorCodes.ACCESS_DENIED, errorDescription);
+
+        // Adding Error URI if exist.
+        if (oAuthErrorDTO != null && StringUtils.isNotBlank(oAuthErrorDTO.getErrorURI())) {
+            error.uri(oAuthErrorDTO.getErrorURI());
+        }
+        return error;
     }
 
     private Response handleAuthenticationResponse(OAuthMessage oAuthMessage)
@@ -732,14 +750,16 @@ public class OAuth2AuthzEndpoint {
                                                 AuthenticationResult authnResult)
             throws URISyntaxException, OAuthSystemException {
 
+        OAuthErrorDTO oAuthErrorDTO = null;
         try {
-            OAuthErrorDTO oAuthErrorDTO = EndpointUtil.getOAuth2Service().handleAuthenticationFailure(oauth2Params);
-            OAuthProblemException oauthException = buildOAuthProblemException(authnResult, oAuthErrorDTO);
-            return handleFailedState(oAuthMessage, oauth2Params, oauthException);
+            oAuthErrorDTO = EndpointUtil.getOAuth2Service().handleAuthenticationFailure(oauth2Params);
         } catch (IdentityOAuth2Exception e) {
             throw new OAuthSystemException("Error occurred in handling authentication failure for client: " +
                     oauth2Params.getClientId() , e);
         }
+        OAuthProblemException oauthException = buildOAuthProblemException(authnResult, oAuthErrorDTO);
+            return handleFailedState(oAuthMessage, oauth2Params, oauthException);
+
     }
 
     private String handleOIDCSessionState(OAuthMessage oAuthMessage, OAuth2Parameters oauth2Params, String redirectURL) {
@@ -2632,6 +2652,7 @@ public class OAuth2AuthzEndpoint {
 
         if (IdentityUtil.isBlank(errorMessage)) {
             if (oAuthErrorDTO != null && StringUtils.isNotBlank(oAuthErrorDTO.getErrorDescription())) {
+                // If there is a custom message from responseTypeHandler we set that as error message.
                 errorMessage = oAuthErrorDTO.getErrorDescription();
             } else {
                 // If there is no custom error message sent from framework we set our default error message.
@@ -2641,8 +2662,10 @@ public class OAuth2AuthzEndpoint {
 
         if (IdentityUtil.isBlank(errorUri)) {
             if (oAuthErrorDTO != null && StringUtils.isNotBlank(oAuthErrorDTO.getErrorURI())) {
+                // If there is a custom message from responseTypeHandler we set that as error message.
                 return OAuthProblemException.error(errorCode, errorMessage).uri(oAuthErrorDTO.getErrorURI());
             } else {
+                // If there is no custom error URI we set just error code and message.
                 return OAuthProblemException.error(errorCode, errorMessage);
             }
         } else {
