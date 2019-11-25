@@ -741,10 +741,9 @@ public class OAuth2AuthzEndpoint {
     private Response handleFailedAuthentication(OAuthMessage oAuthMessage, OAuth2Parameters oauth2Params,
                                                 AuthenticationResult authnResult) throws URISyntaxException {
 
-        OAuthErrorDTO oAuthErrorDTO = null;
-        oAuthErrorDTO = EndpointUtil.getOAuth2Service().handleAuthenticationFailure(oauth2Params);
+        OAuthErrorDTO oAuthErrorDTO = EndpointUtil.getOAuth2Service().handleAuthenticationFailure(oauth2Params);
         OAuthProblemException oauthException = buildOAuthProblemException(authnResult, oAuthErrorDTO);
-            return handleFailedState(oAuthMessage, oauth2Params, oauthException);
+        return handleFailedState(oAuthMessage, oauth2Params, oauthException);
     }
 
     private String handleOIDCSessionState(OAuthMessage oAuthMessage, OAuth2Parameters oauth2Params, String redirectURL) {
