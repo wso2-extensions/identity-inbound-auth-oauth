@@ -922,6 +922,37 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         return dataDO;
     }
 
+    public void updateAccessTokenState(String tokenId, String tokenState,
+                                       String userStoreDomain) throws IdentityOAuth2Exception {
+
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
+            if (log.isDebugEnabled()) {
+                log.debug("Changing status of access token with id: " + tokenId + " to: " + tokenState +
+                        " userStoreDomain: " + userStoreDomain);
+            }
+
+            String sql = SQLQueries.UPDATE_TOKEN_STATE;
+            sql = OAuth2Util.getTokenPartitionedSqlByUserStore(sql, userStoreDomain);
+            try (PreparedStatement prepStmt = connection.prepareStatement(sql)) {
+
+                prepStmt.setString(1, tokenState);
+                prepStmt.setString(2, UUID.randomUUID().toString());
+                prepStmt.setString(3, tokenId);
+                prepStmt.executeUpdate();
+                OAuth2TokenUtil.postUpdateAccessToken(tokenId, tokenState);
+                IdentityDatabaseUtil.commitTransaction(connection);
+            } catch (SQLException e) {
+                IdentityDatabaseUtil.rollbackTransaction(connection);
+                throw new IdentityOAuth2Exception("Error while updating Access Token with ID : " +
+                        tokenId + " to Token State : " + tokenState, e);
+            }
+
+        } catch (SQLException e) {
+            throw new IdentityOAuth2Exception("Error while closing connection after updating Access Token with ID : " +
+                    tokenId + " to Token State : " + tokenState, e);
+        }
+    }
+
     private void updateAccessTokenState(Connection connection, String tokenId, String tokenState, String tokenStateId,
             String userStoreDomain) throws IdentityOAuth2Exception, SQLException {
 
@@ -932,7 +963,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                         " userStoreDomain: " + userStoreDomain);
             }
 
-            String sql = SQLQueries.UPDATE_TOKE_STATE;
+            String sql = SQLQueries.UPDATE_TOKEN_STATE;
             sql = OAuth2Util.getTokenPartitionedSqlByUserStore(sql, userStoreDomain);
             prepStmt = connection.prepareStatement(sql);
             prepStmt.setString(1, tokenState);

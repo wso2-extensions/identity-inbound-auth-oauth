@@ -314,10 +314,13 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                                                       OauthTokenIssuer oauthTokenIssuer)
             throws IdentityOAuth2Exception {
 
+        // Revoke the existing token and generate new access and refresh tokens.
+        OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                .updateAccessTokenState(existingTokenBean.getTokenId(), OAuthConstants.TokenStates
+                        .TOKEN_STATE_REVOKED, getUserStoreDomain(tokReqMsgCtx.getAuthorizedUser()));
         clearExistingTokenFromCache(tokReqMsgCtx, existingTokenBean);
 
-        return generateNewAccessToken(tokReqMsgCtx, scope, consumerKey, existingTokenBean,
-                oauthTokenIssuer);
+        return generateNewAccessToken(tokReqMsgCtx, scope, consumerKey, null, oauthTokenIssuer);
     }
 
     private OAuth2AccessTokenRespDTO issueExistingAccessToken(OAuthTokenReqMessageContext tokReqMsgCtx, String scope,

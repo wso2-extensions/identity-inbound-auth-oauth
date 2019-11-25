@@ -1206,7 +1206,7 @@ public class TokenMgtDAO {
                         " userStoreDomain: " + userStoreDomain);
             }
 
-            String sql = SQLQueries.UPDATE_TOKE_STATE;
+            String sql = SQLQueries.UPDATE_TOKEN_STATE;
             sql = OAuth2Util.getTokenPartitionedSqlByUserStore(sql, userStoreDomain);
             prepStmt = connection.prepareStatement(sql);
             prepStmt.setString(1, tokenState);
