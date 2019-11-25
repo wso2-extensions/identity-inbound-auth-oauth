@@ -160,4 +160,13 @@ public interface AccessTokenDAO {
 
         return getLatestAccessTokens(consumerKey, authzUser, userStoreDomain, scope, includeExpiredTokens, limit);
     }
+
+    /**
+     * Update access token to the given state.
+     *
+     * @param tokenId         ID of the access token to update the state.
+     * @param tokenState      state to update.
+     * @throws IdentityOAuth2Exception
+     */
+    void updateAccessTokenState(String tokenId, String tokenState) throws IdentityOAuth2Exception;
 }
