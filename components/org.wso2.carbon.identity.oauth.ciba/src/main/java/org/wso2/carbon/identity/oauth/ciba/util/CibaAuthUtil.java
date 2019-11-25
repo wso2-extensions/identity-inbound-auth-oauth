@@ -103,7 +103,7 @@ public class CibaAuthUtil {
         long lastPolledTimeInMillis = issuedTimeInMillis;
         Timestamp issuedTime = new Timestamp(issuedTimeInMillis);
         Timestamp lastPolledTime = new Timestamp(lastPolledTimeInMillis);
-        long expiryTime = cibaAuthResponseDTO.getRequestedExpiry();
+        long expiryTime = CibaAuthUtil.getExpiresIn(cibaAuthResponseDTO);
         String[] scope = cibaAuthResponseDTO.getScope();
         cibaAuthCodeDO.setCibaAuthCodeKey(CibaAuthUtil.getUniqueAuthCodeKey());
         cibaAuthCodeDO.setAuthReqID(CibaAuthUtil.getAuthReqID());
