@@ -32,6 +32,7 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.dto.OAuthErrorDTO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.authz.AuthorizationHandlerManager;
@@ -48,6 +49,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
 import org.wso2.carbon.identity.oauth2.token.AccessTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
@@ -667,4 +669,39 @@ public class OAuth2Service extends AbstractAdmin {
         return errorCode;
     }
 
+
+    /**
+     * Handles authorization requests denied by user.
+     *
+     * @param oAuth2Parameters OAuth parameters.
+     * @return OAuthErrorDTO Error Data Transfer Object.
+     */
+    public OAuthErrorDTO handleUserConsentDenial(OAuth2Parameters oAuth2Parameters) {
+
+        try {
+            return AuthorizationHandlerManager.getInstance().handleUserConsentDenial(oAuth2Parameters);
+        } catch (IdentityOAuth2Exception e) {
+            log.error("Error in handling user consent denial for authentication request made by clientID: " +
+                    oAuth2Parameters.getClientId(), e);
+        }
+        return null;
+    }
+
+    /**
+     * Handles authentication failures.
+     *
+     * @param oauth2Params OAuth parameters.
+     * @return OAuthErrorDTO Error Data Transfer Object.
+     */
+    public OAuthErrorDTO handleAuthenticationFailure(OAuth2Parameters oauth2Params) {
+
+        try {
+            return AuthorizationHandlerManager.getInstance().handleAuthenticationFailure(oauth2Params);
+        } catch (IdentityOAuth2Exception e) {
+            log.error("Error in handling authentication failure for authentication request made by clientID: "
+                    + oauth2Params.getClientId(), e);
+        }
+        return null;
+    }
 }
+

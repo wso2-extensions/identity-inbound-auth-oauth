@@ -71,6 +71,7 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.dto.OAuthErrorDTO;
 import org.wso2.carbon.identity.oauth.endpoint.OAuthRequestWrapper;
 import org.wso2.carbon.identity.oauth.endpoint.exception.ConsentHandlingFailedException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestException;
@@ -195,6 +196,8 @@ public class OAuth2AuthzEndpoint {
     private static final String DISPLAY_NAME = "DisplayName";
     private static final String ID_TOKEN = "id_token";
     private static final String ACCESS_CODE = "code";
+    private static final String DEFAULT_ERROR_DESCRIPTION = "User denied the consent";
+    private static final String DEFAULT_ERROR_MSG_FOR_FAILURE = "Authentication required";
 
     private static final String OIDC_DIALECT = "http://wso2.org/oidc/claim";
 
@@ -610,19 +613,37 @@ public class OAuth2AuthzEndpoint {
 
     private Response handleDenyConsent(OAuthMessage oAuthMessage) throws OAuthSystemException, URISyntaxException {
 
+
         OAuth2Parameters oauth2Params = getOauth2Params(oAuthMessage);
         OpenIDConnectUserRPStore.getInstance().putUserRPToStore(getLoggedInUser(oAuthMessage),
-                getOauth2Params(oAuthMessage).getApplicationName(),
-                false, oauth2Params.getClientId());
-        // return an error if user denied
-        OAuthProblemException ex = OAuthProblemException.error(OAuth2ErrorCodes.ACCESS_DENIED,
-                "User denied the consent");
-        String denyResponse = EndpointUtil.getErrorRedirectURL(oAuthMessage.getRequest(), ex, oauth2Params);
+                getOauth2Params(oAuthMessage).getApplicationName(), false, oauth2Params.getClientId());
 
+        OAuthErrorDTO oAuthErrorDTO = EndpointUtil.getOAuth2Service().handleUserConsentDenial(oauth2Params);
+        OAuthProblemException ex = buildConsentDenialException(oAuthErrorDTO);
+
+        String denyResponse = EndpointUtil.getErrorRedirectURL(oAuthMessage.getRequest(), ex, oauth2Params);
         if (StringUtils.equals(oauth2Params.getResponseMode(), RESPONSE_MODE_FORM_POST)) {
             return handleFailedState(oAuthMessage, oauth2Params, ex);
         }
         return Response.status(HttpServletResponse.SC_FOUND).location(new URI(denyResponse)).build();
+    }
+
+    private OAuthProblemException buildConsentDenialException(OAuthErrorDTO oAuthErrorDTO) {
+
+        String errorDescription = DEFAULT_ERROR_DESCRIPTION;
+
+        // Adding custom error description.
+        if (oAuthErrorDTO != null && StringUtils.isNotBlank(oAuthErrorDTO.getErrorDescription())) {
+             errorDescription = oAuthErrorDTO.getErrorDescription();
+        }
+
+        OAuthProblemException error = OAuthProblemException.error(OAuth2ErrorCodes.ACCESS_DENIED, errorDescription);
+
+        // Adding Error URI if exist.
+        if (oAuthErrorDTO != null && StringUtils.isNotBlank(oAuthErrorDTO.getErrorURI())) {
+            error.uri(oAuthErrorDTO.getErrorURI());
+        }
+        return error;
     }
 
     private Response handleAuthenticationResponse(OAuthMessage oAuthMessage)
@@ -669,7 +690,6 @@ public class OAuth2AuthzEndpoint {
 
         OIDCSessionState sessionState = new OIDCSessionState();
         String redirectURL = null;
-
         try {
             redirectURL = doUserAuthorization(oAuthMessage, oAuthMessage.getSessionDataKeyFromLogin(), sessionState);
         } catch (OAuthProblemException ex) {
@@ -722,7 +742,8 @@ public class OAuth2AuthzEndpoint {
     private Response handleFailedAuthentication(OAuthMessage oAuthMessage, OAuth2Parameters oauth2Params,
                                                 AuthenticationResult authnResult) throws URISyntaxException {
 
-        OAuthProblemException oauthException = buildOAuthProblemException(authnResult);
+        OAuthErrorDTO oAuthErrorDTO = EndpointUtil.getOAuth2Service().handleAuthenticationFailure(oauth2Params);
+        OAuthProblemException oauthException = buildOAuthProblemException(authnResult, oAuthErrorDTO);
         return handleFailedState(oAuthMessage, oauth2Params, oauthException);
     }
 
@@ -2601,28 +2622,38 @@ public class OAuth2AuthzEndpoint {
      * @param authenticationResult
      * @return
      */
-    private OAuthProblemException buildOAuthProblemException(AuthenticationResult authenticationResult) {
+    OAuthProblemException buildOAuthProblemException(AuthenticationResult authenticationResult,
+                                                             OAuthErrorDTO oAuthErrorDTO) {
 
-        final String DEFAULT_ERROR_MSG = "Authentication required";
         String errorCode = String.valueOf(authenticationResult.getProperty(FrameworkConstants.AUTH_ERROR_CODE));
-        String errorMessage = String.valueOf(authenticationResult.getProperty(FrameworkConstants.AUTH_ERROR_MSG));
-        String errorUri = String.valueOf(authenticationResult.getProperty(FrameworkConstants.AUTH_ERROR_URI));
-
         if (IdentityUtil.isBlank(errorCode)) {
-            // if there is no custom error code sent from framework we set our default error code
+            // If there is no custom error code sent from framework we set our default error code.
             errorCode = OAuth2ErrorCodes.LOGIN_REQUIRED;
         }
 
+        String errorMessage = String.valueOf(authenticationResult.getProperty(FrameworkConstants.AUTH_ERROR_MSG));
         if (IdentityUtil.isBlank(errorMessage)) {
-            // if there is no custom error message sent from framework we set our default error message
-            errorMessage = DEFAULT_ERROR_MSG;
+            if (oAuthErrorDTO != null && StringUtils.isNotBlank(oAuthErrorDTO.getErrorDescription())) {
+                // If there is a custom message from responseTypeHandler we set that as error message.
+                errorMessage = oAuthErrorDTO.getErrorDescription();
+            } else {
+                // If there is no custom error message sent from framework we set our default error message.
+                errorMessage = DEFAULT_ERROR_MSG_FOR_FAILURE;
+            }
         }
 
-        if (IdentityUtil.isNotBlank(errorUri)) {
-            // if there is a error uri sent in the authentication result we add that to the exception
-            return OAuthProblemException.error(errorCode, errorMessage).uri(errorUri);
+        String errorUri = String.valueOf(authenticationResult.getProperty(FrameworkConstants.AUTH_ERROR_URI));
+        if (IdentityUtil.isBlank(errorUri)) {
+            if (oAuthErrorDTO != null && StringUtils.isNotBlank(oAuthErrorDTO.getErrorURI())) {
+                // If there is a custom message from responseTypeHandler we set that as error message.
+                return OAuthProblemException.error(errorCode, errorMessage).uri(oAuthErrorDTO.getErrorURI());
+            } else {
+                // If there is no custom error URI we set just error code and message.
+                return OAuthProblemException.error(errorCode, errorMessage);
+            }
         } else {
-            return OAuthProblemException.error(errorCode, errorMessage);
+            // If there is a error uri sent in the authentication result we add that to the exception.
+            return OAuthProblemException.error(errorCode, errorMessage).uri(errorUri);
         }
     }
 
