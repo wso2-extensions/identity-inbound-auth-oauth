@@ -674,10 +674,8 @@ public class OAuth2Service extends AbstractAdmin {
         try {
             return AuthorizationHandlerManager.getInstance().handleUserConsentDenial(oAuth2Parameters);
         } catch (IdentityOAuth2Exception e) {
-            if (log.isDebugEnabled()) {
-                log.debug("Error in handling user consent denial for  authentication request made by clientID: " +
-                        oAuth2Parameters.getClientId());
-            }
+            log.error("Error in handling user consent denial for authentication request made by clientID: " +
+                    oAuth2Parameters.getClientId(), e);
         }
         return null;
     }
@@ -693,10 +691,8 @@ public class OAuth2Service extends AbstractAdmin {
         try {
             return AuthorizationHandlerManager.getInstance().handleAuthenticationFailure(oauth2Params);
         } catch (IdentityOAuth2Exception e) {
-            if (log.isDebugEnabled()) {
-                log.debug("Error in handling authentication failure for authentication request made by clientID: "
-                        + oauth2Params.getClientId());
-            }
+            log.error("Error in handling authentication failure for authentication request made by clientID: "
+                    + oauth2Params.getClientId(), e);
         }
         return null;
     }
