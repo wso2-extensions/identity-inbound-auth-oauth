@@ -152,6 +152,7 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
             ResultSet resultSet = null;
+            AuthenticatedUser user = null;
             boolean checked = false;
             DeviceFlowDO deviceFlowDO = new DeviceFlowDO();
             try (PreparedStatement prepStmt =
@@ -160,18 +161,18 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
                 resultSet = prepStmt.executeQuery();
 
                 while (resultSet.next()) {
-//                    try {
                     deviceFlowDO.setStatus(resultSet.getString(1));
                     deviceFlowDO.setLastPollTime(resultSet.getTimestamp(2));
                     deviceFlowDO.setPollTime(resultSet.getLong(3));
                     deviceFlowDO.setExpiryTime(resultSet.getLong(4));
                     deviceFlowDO.setScope(resultSet.getString(5));
-                    deviceFlowDO.setAuthzUser(resultSet.getString(6));
+                    String userName = resultSet.getString(6);
+                    int tenantId = resultSet.getInt(7);
+                    String userDomain = resultSet.getString(8);
+                    String tenantDomain = OAuth2Util.getTenantDomain(tenantId);
+                    user = OAuth2Util.createAuthenticatedUser(userName, userDomain, tenantDomain);
+                    deviceFlowDO.setAuthorizedUser(user);
                     checked = true;
-//                    } catch (NullPointerException e) {
-//                        deviceFlowDO.setStatus(Constants.NOT_EXIST);
-//                        return deviceFlowDO;
-//                    }
                 }
                 if (checked) {
                     return deviceFlowDO;

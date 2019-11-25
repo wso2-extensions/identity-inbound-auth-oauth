@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oauth2.device.grant;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.device.constants.Constants;
 import org.wso2.carbon.identity.oauth2.device.dao.DeviceFlowPersistenceFactory;
@@ -69,6 +70,7 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
                     .getAuthenticationDetails(DeviceCode);
             Date date = new Date();
             deviceStatus = deviceFlowDO.getStatus();
+            deviceFlowDO.setDeviceCode(DeviceCode);
             if (Constants.NOT_EXIST.equals(deviceStatus)) {
                 throw new IdentityOAuth2Exception(DeviceErrorCodes.INVALID_REQUEST);
             } else if (Constants.EXPIRED.equals(deviceStatus) || isExpiredDeviceCode(deviceFlowDO, date)) {
@@ -106,9 +108,9 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
     private void setPropertiesForTokenGeneration(OAuthTokenReqMessageContext tokReqMsgCtx,
                                                  OAuth2AccessTokenReqDTO tokenReq, DeviceFlowDO deviceFlowDO) {
 
-        String authzUser = deviceFlowDO.getAuthzUser();
+        AuthenticatedUser authzUser = deviceFlowDO.getAuthorizedUser();
         String[] scopeSet = OAuth2Util.buildScopeArray(deviceFlowDO.getScope());
-        tokReqMsgCtx.setAuthorizedUser(OAuth2Util.getUserFromUserName(authzUser));
+        tokReqMsgCtx.setAuthorizedUser(authzUser);
         tokReqMsgCtx.setScope(scopeSet);
     }
 
@@ -126,9 +128,15 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
      * @param date         Time that request has came
      * @return true or false
      */
-    private static boolean isExpiredDeviceCode(DeviceFlowDO deviceFlowDO, Date date) {
+    private static boolean isExpiredDeviceCode(DeviceFlowDO deviceFlowDO, Date date) throws IdentityOAuth2Exception {
 
-        return deviceFlowDO.getExpiryTime() < date.getTime();
+        if (deviceFlowDO.getExpiryTime() < date.getTime()) {
+            DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().
+                    setDeviceCodeExpired(deviceFlowDO.getDeviceCode(), Constants.EXPIRED);
+            return true;
+        } else {
+            return false;
+        }
     }
 
     /**

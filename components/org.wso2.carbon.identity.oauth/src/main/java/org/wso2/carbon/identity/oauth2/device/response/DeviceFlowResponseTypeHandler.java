@@ -36,10 +36,6 @@ public class DeviceFlowResponseTypeHandler extends AbstractResponseTypeHandler {
 
     private static Log log = LogFactory.getLog(DeviceFlowResponseTypeHandler.class);
 
-    public DeviceFlowResponseTypeHandler() {
-
-    }
-
     /**
      * This method is used to handle the response type. After authentication process finish this will redirect to the
      * constant page.

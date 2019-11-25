@@ -45,34 +45,27 @@ public class DeviceFlowGrantTest extends PowerMockTestCase {
     @BeforeTest
     public void setUp() throws Exception {
 
-        deviceFlowDO1.setExpiryTime(date.getTime()-1000);
-        deviceFlowDO1.setLastPollTime(new Timestamp(date.getTime()-1000));
+        deviceFlowDO1.setExpiryTime(date.getTime() - 1000);
+        deviceFlowDO1.setLastPollTime(new Timestamp(date.getTime() - 1000));
         deviceFlowDO1.setPollTime(1500);
-        deviceFlowDO2.setExpiryTime(date.getTime()+1000);
-        deviceFlowDO2.setLastPollTime(new Timestamp(date.getTime()-2000));
+        deviceFlowDO2.setExpiryTime(date.getTime() + 1000);
+        deviceFlowDO2.setLastPollTime(new Timestamp(date.getTime() - 2000));
         deviceFlowDO2.setPollTime(1500);
 
-    }
-
-    @AfterMethod
-    public void tearDown() {
     }
 
     @Test
     public void testIsExpiredDeviceCode() throws Exception {
 
-        Assert.assertTrue(WhiteboxImpl.invokeMethod(DeviceFlowGrant.class,
-                "isExpiredDeviceCode",deviceFlowDO1, date));
+        Assert.assertTrue(WhiteboxImpl.invokeMethod(DeviceFlowGrant.class, "isExpiredDeviceCode",deviceFlowDO1, date));
         Assert.assertFalse(WhiteboxImpl.invokeMethod(DeviceFlowGrant.class,
                 "isExpiredDeviceCode",deviceFlowDO2, date));
     }
 
     @Test
     public void testIsValidPollTime() throws Exception {
-        Assert.assertFalse(WhiteboxImpl.invokeMethod(DeviceFlowGrant.class,"isValidPollTime"
-                , newTime, deviceFlowDO1));
-        Assert.assertTrue(WhiteboxImpl.invokeMethod(DeviceFlowGrant.class,"isValidPollTime"
-                , newTime, deviceFlowDO2));
+        Assert.assertFalse(WhiteboxImpl.invokeMethod(DeviceFlowGrant.class,"isValidPollTime", newTime, deviceFlowDO1));
+        Assert.assertTrue(WhiteboxImpl.invokeMethod(DeviceFlowGrant.class,"isValidPollTime", newTime, deviceFlowDO2));
     }
 
 }

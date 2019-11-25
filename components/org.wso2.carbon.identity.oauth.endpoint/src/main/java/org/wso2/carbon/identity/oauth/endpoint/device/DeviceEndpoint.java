@@ -71,8 +71,7 @@ public class DeviceEndpoint {
                 String userCode = GenerateKeys.getKey(keyLength);
                 String deviceCode = UUID.randomUUID().toString();
                 String scope = request.getParameter(Constants.SCOPE);
-                String redirectionUri = IdentityUtil.getServerURL("/authenticationendpoint/device.do",
-                        false, false);
+                String redirectionUri = IdentityUtil.getServerURL("/authenticationendpoint/device.do", false, false);
                 String redirectionUriComplete = redirectionUri + "?user_code=" + userCode;
                 DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().insertDeviceFlowParameters(deviceCode,
                         userCode, clientId, scope, expiresIn, interval);
