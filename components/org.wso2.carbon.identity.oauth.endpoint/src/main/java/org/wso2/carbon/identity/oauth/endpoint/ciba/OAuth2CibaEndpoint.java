@@ -116,8 +116,7 @@ public class OAuth2CibaEndpoint {
             }
 
             // Build authCode from JWT with all the parameters that need to be persisted.
-            CibaAuthCodeDO cibaAuthCodeDO =
-                    CibaAuthUtil.generateCibaAuthCodeDO(cibaAuthResponseDTO);
+            CibaAuthCodeDO cibaAuthCodeDO = CibaAuthUtil.generateCibaAuthCodeDO(cibaAuthResponseDTO);
 
             // Persist CibaAuthCode.
             CibaAuthUtil.persistCibaAuthCode(cibaAuthCodeDO);
