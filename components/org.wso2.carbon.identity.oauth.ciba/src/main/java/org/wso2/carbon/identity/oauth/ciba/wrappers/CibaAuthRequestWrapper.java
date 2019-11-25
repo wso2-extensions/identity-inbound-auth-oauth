@@ -27,7 +27,7 @@ import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 
 /**
- * Wrap ciba authentication request.
+ * Wrap ciba authentication request to remove unwanted params and added required params.
  */
 public class CibaAuthRequestWrapper extends CommonAuthRequestWrapper {
 
@@ -47,6 +47,7 @@ public class CibaAuthRequestWrapper extends CommonAuthRequestWrapper {
             return extraParameters.get(name);
         } else {
             if ((CibaConstants.REQUEST.equals(name))) {
+                // In Authorize EndPoint we have defined (request) parameter already and hence to prevent conflict.
                 return "";
             }
             return super.getParameter(name);
@@ -67,5 +68,4 @@ public class CibaAuthRequestWrapper extends CommonAuthRequestWrapper {
         parameterMap.remove(CibaConstants.REQUEST);
         return Collections.unmodifiableMap(parameterMap);
     }
-
 }
