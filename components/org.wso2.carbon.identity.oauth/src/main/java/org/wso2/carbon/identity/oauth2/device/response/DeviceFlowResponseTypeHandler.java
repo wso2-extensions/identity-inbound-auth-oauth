@@ -40,8 +40,8 @@ public class DeviceFlowResponseTypeHandler extends AbstractResponseTypeHandler {
      * This method is used to handle the response type. After authentication process finish this will redirect to the
      * constant page.
      *
-     * @param oauthAuthzMsgCtx Authorization message context
-     * @return Response DTO
+     * @param oauthAuthzMsgCtx Authorization message context.
+     * @return Response DTO.
      * @throws IdentityOAuth2Exception
      */
     @Override

@@ -36,7 +36,7 @@ public class DeviceFlowDO {
 
     private Timestamp lastPollTime;
 
-    private long expiryTime;
+    private Timestamp expiryTime;
 
     private long pollTime;
 
@@ -45,10 +45,6 @@ public class DeviceFlowDO {
     private String callbackUri;
 
     private AuthenticatedUser authorizedUser;
-
-    public DeviceFlowDO() {
-
-    }
 
     public String getDeviceCode() {
 
@@ -110,12 +106,12 @@ public class DeviceFlowDO {
         return lastPollTime;
     }
 
-    public long getExpiryTime() {
+    public Timestamp getExpiryTime() {
 
         return expiryTime;
     }
 
-    public void setExpiryTime(long expiryTime) {
+    public void setExpiryTime(Timestamp expiryTime) {
 
         this.expiryTime = expiryTime;
     }

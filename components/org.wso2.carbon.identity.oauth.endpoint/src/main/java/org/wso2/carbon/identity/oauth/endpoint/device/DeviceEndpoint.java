@@ -24,14 +24,12 @@ import org.apache.oltu.oauth2.as.response.OAuthASResponse;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.message.OAuthResponse;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
-import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.device.codegenerator.GenerateKeys;
 import org.wso2.carbon.identity.oauth2.device.constants.Constants;
 import org.wso2.carbon.identity.oauth2.device.dao.DeviceFlowPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.device.errorcodes.DeviceErrorCodes;
 
-import java.io.IOException;
 import java.util.UUID;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -52,7 +50,7 @@ public class DeviceEndpoint {
     @Consumes("application/x-www-form-urlencoded")
     @Produces("application/json")
     public Response authorize(@Context HttpServletRequest request, @Context HttpServletResponse response)
-            throws IOException, IdentityOAuth2Exception, InvalidOAuthClientException, OAuthSystemException {
+            throws IdentityOAuth2Exception, OAuthSystemException {
 
         String clientId = request.getParameter(Constants.CLIENT_ID);
         OAuthResponse errorResponse;
@@ -65,16 +63,14 @@ public class DeviceEndpoint {
             return respBuilder.entity(errorResponse.getBody()).build();
         } else {
             if (validateClientId(clientId)) {
-                int keyLength = 6;
-                long expiresIn = 3600000L;
-                int interval = 5000;
-                String userCode = GenerateKeys.getKey(keyLength);
+                String userCode = GenerateKeys.getKey(Constants.KEY_LENGTH);
                 String deviceCode = UUID.randomUUID().toString();
                 String scope = request.getParameter(Constants.SCOPE);
                 String redirectionUri = IdentityUtil.getServerURL("/authenticationendpoint/device.do", false, false);
                 String redirectionUriComplete = redirectionUri + "?user_code=" + userCode;
                 DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().insertDeviceFlowParameters(deviceCode,
-                        userCode, clientId, scope, expiresIn, interval);
+                        userCode, clientId, Constants.EXPIRES_IN_VALUE, Constants.INTERVAL_VALUE);
+                DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().storeDeviceFlowScopes(scope, deviceCode);
 
                 OAuthResponse deviceResponse = OAuthResponse
                         .status(HttpServletResponse.SC_OK)
@@ -82,8 +78,9 @@ public class DeviceEndpoint {
                         .setParam(Constants.USER_CODE, userCode)
                         .setParam(Constants.VERIFICATION_URI, redirectionUri)
                         .setParam(Constants.VERIFICATION_URI_COMPLETE, redirectionUriComplete)
-                        .setParam(Constants.EXPIRES_IN, stringValueInSeconds(expiresIn))
-                        .setParam(Constants.INTERVAL, stringValueInSeconds(interval)).buildJSONMessage();
+                        .setParam(Constants.EXPIRES_IN, stringValueInSeconds(Constants.EXPIRES_IN_VALUE))
+                        .setParam(Constants.INTERVAL, stringValueInSeconds(Constants.INTERVAL_VALUE))
+                        .buildJSONMessage();
                 Response.ResponseBuilder respBuilder = Response.status(HttpServletResponse.SC_OK);
                 return respBuilder.entity(deviceResponse.getBody()).build();
 
@@ -101,8 +98,8 @@ public class DeviceEndpoint {
     /**
      * This method uses to validate the client is exist or not.
      *
-     * @param clientId Consumer key of the client
-     * @return Client is exist or not
+     * @param clientId Consumer key of the client.
+     * @return Client is exist or not.
      * @throws IdentityOAuth2Exception
      */
     private boolean validateClientId(String clientId) throws IdentityOAuth2Exception {
@@ -113,8 +110,8 @@ public class DeviceEndpoint {
     /**
      * This method converts time in milliseconds to seconds.
      *
-     * @param value Time in milliseconds
-     * @return String value of time in seconds
+     * @param value Time in milliseconds.
+     * @return String value of time in seconds.
      */
     private String stringValueInSeconds(long value) {
 

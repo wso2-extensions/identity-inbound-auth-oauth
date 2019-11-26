@@ -45,10 +45,10 @@ public class DeviceFlowGrantTest extends PowerMockTestCase {
     @BeforeTest
     public void setUp() throws Exception {
 
-        deviceFlowDO1.setExpiryTime(date.getTime() - 1000);
+        deviceFlowDO1.setExpiryTime(new Timestamp(date.getTime() - 1000));
         deviceFlowDO1.setLastPollTime(new Timestamp(date.getTime() - 1000));
         deviceFlowDO1.setPollTime(1500);
-        deviceFlowDO2.setExpiryTime(date.getTime() + 1000);
+        deviceFlowDO2.setExpiryTime(new Timestamp(date.getTime() + 1000));
         deviceFlowDO2.setLastPollTime(new Timestamp(date.getTime() - 2000));
         deviceFlowDO2.setPollTime(1500);
 

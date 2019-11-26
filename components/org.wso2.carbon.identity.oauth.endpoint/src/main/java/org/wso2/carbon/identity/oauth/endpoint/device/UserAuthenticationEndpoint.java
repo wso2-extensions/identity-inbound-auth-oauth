@@ -62,8 +62,11 @@ public class UserAuthenticationEndpoint {
 
         String userCode = request.getParameter(Constants.USER_CODE);
         if (StringUtils.isBlank(userCode)) {
+            if (log.isDebugEnabled()) {
+                log.debug("user_code is missing in the request.");
+            }
             response.sendRedirect(IdentityUtil.
-                    getServerURL("/authenticationendpoint/device.do?error=invalidRequest",false, false));
+                    getServerURL("/authenticationendpoint/device.do?error=invalidRequest", false, false));
             return null;
         }
 
@@ -80,14 +83,18 @@ public class UserAuthenticationEndpoint {
             commonAuthRequestWrapper.setParameter(Constants.RESPONSE_TYPE, Constants.RESPONSE_TYPE_DEVICE);
             commonAuthRequestWrapper.setParameter(Constants.REDIRECTION_URI, deviceFlowDO.getCallbackUri());
             if (getScope(userCode) != null) {
-                commonAuthRequestWrapper.setParameter(Constants.SCOPE, getScope(userCode));
+                String scope = String.join(Constants.SEPARATED_WITH_SPACE, getScope(userCode));
+                commonAuthRequestWrapper.setParameter(Constants.SCOPE, scope);
             }
             commonAuthRequestWrapper.setParameter(Constants.NONCE, userCode);
             return oAuth2AuthzEndpoint.authorize(commonAuthRequestWrapper, response);
 
         } else {
+            if (log.isDebugEnabled()) {
+                log.debug("Incorrect user_code:" + userCode);
+            }
             response.sendRedirect(IdentityUtil
-                    .getServerURL("/authenticationendpoint/device.do?error=invalidUserCode",false, false));
+                    .getServerURL("/authenticationendpoint/device.do?error=invalidUserCode", false, false));
             return null;
         }
     }
@@ -95,19 +102,19 @@ public class UserAuthenticationEndpoint {
     /**
      * Get the scopes from the database.
      *
-     * @param userCode User code that has delivered to the device
+     * @param userCode User code that has delivered to the device.
      * @return Scopes
      * @throws IdentityOAuth2Exception
      */
-    private String getScope(String userCode) throws IdentityOAuth2Exception {
+    private String[] getScope(String userCode) throws IdentityOAuth2Exception {
 
-        return DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().getScopeForDevice(userCode);
+        return DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().getScopesForUserCode(userCode);
     }
 
     /**
      * Get the user code status.
      *
-     * @param userCode User code that has delivered to the device
+     * @param userCode User code that has delivered to the device.
      * @return Status
      * @throws IdentityOAuth2Exception
      */
@@ -119,7 +126,7 @@ public class UserAuthenticationEndpoint {
     /**
      * This method is used to generate the redirection URI.
      *
-     * @param appName Service provider name
+     * @param appName Service provider name.
      * @return Redirection URI
      */
     private String getRedirectionURI(String appName) throws URISyntaxException {
@@ -134,7 +141,7 @@ public class UserAuthenticationEndpoint {
     /**
      * This method is used to set the callback uri. If there is no value it will set a default value.
      *
-     * @param clientId Consumer key
+     * @param clientId Consumer key of the application.
      * @throws IdentityOAuth2Exception
      */
     private void setCallbackURI(String clientId) throws IdentityOAuth2Exception {

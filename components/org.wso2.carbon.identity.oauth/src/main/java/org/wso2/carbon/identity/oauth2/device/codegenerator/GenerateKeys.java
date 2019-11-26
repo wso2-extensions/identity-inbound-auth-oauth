@@ -18,6 +18,8 @@
 
 package org.wso2.carbon.identity.oauth2.device.codegenerator;
 
+import org.wso2.carbon.identity.oauth2.device.constants.Constants;
+
 /**
  * This class will be used to generate user code.
  */
@@ -30,12 +32,12 @@ public class GenerateKeys {
     /**
      * This method is used to generate random string with fixed length.
      *
-     * @param num Length of the random string
-     * @return Random string
+     * @param num Length of the random string.
+     * @return Random string.
      */
     public static String getKey(int num) {
 
-        String AlphaNumericString = "BCDFGHJKLMNPQRSTVWXYZbcdfghjklmnpqrstvwxyz23456789";
+        String AlphaNumericString = Constants.KEY_SET;
         StringBuilder sb = new StringBuilder(num);
         for (int i = 0; i < num; i++) {
             int index = (int) (AlphaNumericString.length() * Math.random());

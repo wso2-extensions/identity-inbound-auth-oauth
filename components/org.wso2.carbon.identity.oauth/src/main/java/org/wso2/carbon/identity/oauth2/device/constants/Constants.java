@@ -48,5 +48,12 @@ public class Constants {
     public static final String REDIRECTION_URI = "redirect_uri";
     public static final String UTC = "UTC";
     public static final String APP_NAME = "app_name";
+    public static final String SEPARATED_WITH_SPACE = " ";
+
+    //configurable values
+    public static final int KEY_LENGTH = 6;
+    public static final long EXPIRES_IN_VALUE = 600000L;
+    public static final int INTERVAL_VALUE = 5000;
+    public static final String KEY_SET = "BCDFGHJKLMNPQRSTVWXYZbcdfghjklmnpqrstvwxyz23456789";
 
 }

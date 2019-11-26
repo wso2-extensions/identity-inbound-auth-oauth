@@ -54,30 +54,31 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
         boolean authStatus = false;
         RequestParameter[] parameters = oAuthTokenReqMessageContext.getOauth2AccessTokenReqDTO()
                 .getRequestParameters();
-        String DeviceCode = null;
+        String deviceCode = null;
         String deviceStatus = null;
 
         for (RequestParameter parameter : parameters) {
             if (Constants.DEVICE_CODE.equals(parameter.getKey())) {
                 if (parameter.getValue() != null && parameter.getValue().length > 0) {
-                    DeviceCode = parameter.getValue()[0];
+                    deviceCode = parameter.getValue()[0];
                 }
             }
         }
 
-        if (DeviceCode != null) {
+        if (deviceCode != null) {
             DeviceFlowDO deviceFlowDO = DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO()
-                    .getAuthenticationDetails(DeviceCode);
+                    .getAuthenticationDetails(deviceCode);
             Date date = new Date();
             deviceStatus = deviceFlowDO.getStatus();
-            deviceFlowDO.setDeviceCode(DeviceCode);
+            deviceFlowDO.setScope(getScopes(deviceCode));
+            deviceFlowDO.setDeviceCode(deviceCode);
             if (Constants.NOT_EXIST.equals(deviceStatus)) {
                 throw new IdentityOAuth2Exception(DeviceErrorCodes.INVALID_REQUEST);
             } else if (Constants.EXPIRED.equals(deviceStatus) || isExpiredDeviceCode(deviceFlowDO, date)) {
                 throw new IdentityOAuth2Exception(DeviceErrorCodes.SubDeviceErrorCodes.EXPIRED_TOKEN);
             } else if (Constants.AUTHORIZED.equals(deviceStatus)) {
                 authStatus = true;
-                DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().setDeviceCodeExpired(DeviceCode,
+                DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().setDeviceCodeExpired(deviceCode,
                         Constants.EXPIRED);
                 if (StringUtils.isNotBlank(deviceFlowDO.getScope())) {
                     this.setPropertiesForTokenGeneration(oAuthTokenReqMessageContext, tokenReq, deviceFlowDO);
@@ -86,11 +87,11 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
                 Timestamp newPollTime = new Timestamp(date.getTime());
                 if (isValidPollTime(newPollTime, deviceFlowDO)) {
                     DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO()
-                            .setLastPollTime(DeviceCode, newPollTime);
+                            .setLastPollTime(deviceCode, newPollTime);
                     throw new IdentityOAuth2Exception(DeviceErrorCodes.SubDeviceErrorCodes.AUTHORIZATION_PENDING);
                 } else {
                     DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO()
-                            .setLastPollTime(DeviceCode, newPollTime);
+                            .setLastPollTime(deviceCode, newPollTime);
                     throw new IdentityOAuth2Exception(DeviceErrorCodes.SubDeviceErrorCodes.SLOW_DOWN);
                 }
             }
@@ -101,9 +102,9 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
     /**
      * To set the properties of the token generation.
      *
-     * @param tokReqMsgCtx Token request message context
-     * @param tokenReq     Token request
-     * @param deviceFlowDO Device flow DO set
+     * @param tokReqMsgCtx Token request message context.
+     * @param tokenReq     Token request.
+     * @param deviceFlowDO Device flow DO set.
      */
     private void setPropertiesForTokenGeneration(OAuthTokenReqMessageContext tokReqMsgCtx,
                                                  OAuth2AccessTokenReqDTO tokenReq, DeviceFlowDO deviceFlowDO) {
@@ -122,15 +123,15 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
     }
 
     /**
-     * This method use to check whether device code is expired or not
+     * This method use to check whether device code is expired or not.
      *
-     * @param deviceFlowDO Result map that contains values from database
-     * @param date         Time that request has came
-     * @return true or false
+     * @param deviceFlowDO DO set that contains values from database.
+     * @param date         Time that request has came.
+     * @return true or false.
      */
     private static boolean isExpiredDeviceCode(DeviceFlowDO deviceFlowDO, Date date) throws IdentityOAuth2Exception {
 
-        if (deviceFlowDO.getExpiryTime() < date.getTime()) {
+        if (deviceFlowDO.getExpiryTime().getTime() < date.getTime()) {
             DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().
                     setDeviceCodeExpired(deviceFlowDO.getDeviceCode(), Constants.EXPIRED);
             return true;
@@ -140,16 +141,27 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
     }
 
     /**
-     * This checks whether polling frequency is correct or not
+     * This checks whether polling frequency is correct or not.
      *
-     * @param newPollTime  Time of the new poll request
-     * @param deviceFlowDO DO class that contains values from database
-     * @return true or false
+     * @param newPollTime  Time of the new poll request.
+     * @param deviceFlowDO DO class that contains values from database.
+     * @return true or false.
      */
     private static boolean isValidPollTime(Timestamp newPollTime, DeviceFlowDO deviceFlowDO) {
 
         return newPollTime.getTime() - deviceFlowDO.getLastPollTime().getTime() > deviceFlowDO.getPollTime();
     }
+
+    /**
+     * Get scopes for device code.
+     *
+     * @param deviceCode Code that is used to identify the device.
+     * @return scopes
+     * @throws IdentityOAuth2Exception
+     */
+    private String getScopes(String deviceCode) throws IdentityOAuth2Exception {
+
+        return String.join(Constants.SEPARATED_WITH_SPACE,
+                DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().getScopesForDeviceCode(deviceCode));
+    }
 }
-
-

@@ -23,8 +23,6 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.device.model.DeviceFlowDO;
 
 import java.sql.Timestamp;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * New set of DAO classes  for each purpose  and factory class to get instance of each DAO classes were introduced
@@ -35,20 +33,19 @@ public interface DeviceFlowDAO {
     /**
      * This will be used to enter the value to the database tables.
      *
-     * @param deviceCode  Code that is used to identify the device
-     * @param userCode    Code that is used to correlate user and device
-     * @param consumerKey Consumer key of the client application
-     * @param scope       Requesting scopes
-     * @param expiresIn   Device code valid period
+     * @param deviceCode  Code that is used to identify the device.
+     * @param userCode    Code that is used to correlate user and device.
+     * @param consumerKey Consumer key of the client application.
+     * @param expiresIn   Device code valid period.
      * @throws IdentityOAuth2Exception
      */
-    void insertDeviceFlowParameters(String deviceCode, String userCode, String consumerKey, String scope,
-                                    Long expiresIn, int interval) throws IdentityOAuth2Exception;
+    void insertDeviceFlowParameters(String deviceCode, String userCode, String consumerKey, Long expiresIn,
+                                    int interval) throws IdentityOAuth2Exception;
 
     /**
      * Get the client id that has involved with user code.
      *
-     * @param userCode Code that is used to correlate user and device
+     * @param userCode Code that is used to correlate user and device.
      * @return client_id
      * @throws IdentityOAuth2Exception
      */
@@ -57,8 +54,8 @@ public interface DeviceFlowDAO {
     /**
      * Set the status of the user code and device code.
      *
-     * @param userCode Code that is used to correlate user and device
-     * @param status   Status of the device and user codes
+     * @param userCode Code that is used to correlate user and device.
+     * @param status   Status of the device and user codes.
      * @throws IdentityOAuth2Exception
      */
     void setAuthenticationStatus(String userCode, String status) throws IdentityOAuth2Exception;
@@ -66,7 +63,7 @@ public interface DeviceFlowDAO {
     /**
      * Get the client id that has involved with user code.
      *
-     * @param deviceCode Code that is used to identify the device
+     * @param deviceCode Code that is used to identify the device.
      * @throws IdentityOAuth2Exception
      */
     String getClientIdByDeviceCode(String deviceCode) throws IdentityOAuth2Exception;
@@ -74,8 +71,8 @@ public interface DeviceFlowDAO {
     /**
      * Get the authentication status for device code.
      *
-     * @param deviceCode Code that is used to identify the device
-     * @return Map of values
+     * @param deviceCode Code that is used to identify the device.
+     * @return Map of values.
      * @throws IdentityOAuth2Exception
      */
     DeviceFlowDO getAuthenticationDetails(String deviceCode) throws IdentityOAuth2Exception;
@@ -83,8 +80,8 @@ public interface DeviceFlowDAO {
     /**
      * Check client id is exist or not.
      *
-     * @param clientId Consumer key of the application
-     * @return Exist or not
+     * @param clientId Consumer key of the application.
+     * @return Exist or not.
      * @throws IdentityOAuth2Exception
      */
     boolean checkClientIdExist(String clientId) throws IdentityOAuth2Exception;
@@ -92,7 +89,7 @@ public interface DeviceFlowDAO {
     /**
      * Get the scopes that are stored against user code.
      *
-     * @param userCode Code that is used to correlate user and device
+     * @param userCode Code that is used to correlate user and device.
      * @return scope
      * @throws IdentityOAuth2Exception
      */
@@ -101,7 +98,7 @@ public interface DeviceFlowDAO {
     /**
      * Get the status of the user code.
      *
-     * @param userCode Code that is used to correlate user and device
+     * @param userCode Code that is used to correlate user and device.
      * @return status
      * @throws IdentityOAuth2Exception
      */
@@ -110,8 +107,8 @@ public interface DeviceFlowDAO {
     /**
      * Set last poll time of the token request.
      *
-     * @param deviceCode  Code that is used to identify the device
-     * @param newPollTime Last poll time
+     * @param deviceCode  Code that is used to identify the device.
+     * @param newPollTime Last poll time.
      * @throws IdentityOAuth2Exception
      */
     void setLastPollTime(String deviceCode, Timestamp newPollTime) throws IdentityOAuth2Exception;
@@ -119,9 +116,9 @@ public interface DeviceFlowDAO {
     /**
      * Set authenticated user.
      *
-     * @param userCode Code that is used to correlate user and device
-     * @param status   Status of the device code
-     * @param authzUser Authenticated user
+     * @param userCode  Code that is used to correlate user and device.
+     * @param status    Status of the device code.
+     * @param authzUser Authenticated user.
      * @throws IdentityOAuth2Exception
      */
     void setAuthzUserAndStatus(String userCode, String status, AuthenticatedUser authzUser) throws IdentityOAuth2Exception;
@@ -129,8 +126,8 @@ public interface DeviceFlowDAO {
     /**
      * Set device code as expired.
      *
-     * @param deviceCode Code that is used to identify the device
-     * @param status     Status of the device code
+     * @param deviceCode Code that is used to identify the device.
+     * @param status     Status of the device code.
      * @throws IdentityOAuth2Exception
      */
     void setDeviceCodeExpired(String deviceCode, String status) throws IdentityOAuth2Exception;
@@ -138,10 +135,36 @@ public interface DeviceFlowDAO {
     /**
      * Set callback uri of the service provider.
      *
-     * @param clientId    Consumer key of service provide
-     * @param callBackUri Callback uri of the service provider
+     * @param clientId    Consumer key of service provide.
+     * @param callBackUri Callback uri of the service provider.
      * @throws IdentityOAuth2Exception
      */
     void setCallBackURI(String clientId, String callBackUri) throws IdentityOAuth2Exception;
 
+    /**
+     * Store device flow scopes in a new table.
+     *
+     * @param scope      Scope string.
+     * @param deviceCode Code that is used to identify the device.
+     * @throws IdentityOAuth2Exception
+     */
+    void storeDeviceFlowScopes(String scope, String deviceCode) throws IdentityOAuth2Exception;
+
+    /**
+     * Return scope array for user code.
+     *
+     * @param userCode Code that is used to correlate user and device.
+     * @return Array of scopes.
+     * @throws IdentityOAuth2Exception
+     */
+    String[] getScopesForUserCode(String userCode) throws IdentityOAuth2Exception;
+
+    /**
+     * Return scope array for device code.
+     *
+     * @param deviceCode Code that is used to identify the device.
+     * @return Array of scopes.
+     * @throws IdentityOAuth2Exception
+     */
+    String[] getScopesForDeviceCode(String deviceCode) throws IdentityOAuth2Exception;
 }
