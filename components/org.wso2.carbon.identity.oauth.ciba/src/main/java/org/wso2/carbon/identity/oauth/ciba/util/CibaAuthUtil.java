@@ -21,7 +21,7 @@ package org.wso2.carbon.identity.oauth.ciba.util;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.identity.oauth.ciba.common.AuthenticationStatus;
+import org.wso2.carbon.identity.oauth.ciba.common.AuthReqStatus;
 import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
 import org.wso2.carbon.identity.oauth.ciba.dao.CibaDAOFactory;
 import org.wso2.carbon.identity.oauth.ciba.dto.AuthzRequestDTO;
@@ -107,7 +107,7 @@ public class CibaAuthUtil {
         cibaAuthCodeDO.setConsumerAppKey(cibaAuthResponseDTO.getIssuer());
         cibaAuthCodeDO.setIssuedTime(issuedTime);
         cibaAuthCodeDO.setLastPolledTime(lastPolledTime);
-        cibaAuthCodeDO.setAuthenticationStatus(AuthenticationStatus.REQUESTED);
+        cibaAuthCodeDO.setAuthenticationStatus(AuthReqStatus.REQUESTED);
         cibaAuthCodeDO.setInterval(CibaConstants.INTERVAL_DEFAULT_VALUE_IN_SEC);
         cibaAuthCodeDO.setExpiresIn(expiryTime);
         cibaAuthCodeDO.setScope(scope);

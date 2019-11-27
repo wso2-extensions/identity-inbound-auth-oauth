@@ -27,7 +27,7 @@ import java.sql.Timestamp;
 /**
  * DAO layer for CIBA.
  */
-public interface CibaAuthMgtDAO {
+public interface CibaMgtDAO {
 
     /**
      * Persists the status of the relevant CibAuthCode identified by the CibaAuthCodeDOKey.
@@ -68,13 +68,13 @@ public interface CibaAuthMgtDAO {
      * @return boolean Returns whether given HashedAuthReqId present or not.
      * @throws CibaCoreException Exception thrown from CibaCore Component.
      */
-    boolean isAuthReqIDExist(String authReqId) throws CibaCoreException;
+    boolean isAuthReqIdExist(String authReqId) throws CibaCoreException;
 
     /**
      * Returns CibaAuthCodeKey for the authentication request identifier.
      *
      * @param authreqID Authentication request identifier.
-     * @return String Returns CibaAuthCodeKey.
+     * @return String Returns CibaAuthCodeKey mapped to authentication request identifier.
      * @throws CibaCoreException Exception thrown from CIBA core Component.
      */
     String getCibaAuthCodeKey(String authreqID) throws CibaCoreException;
@@ -96,15 +96,6 @@ public interface CibaAuthMgtDAO {
      * @throws CibaCoreException Exception thrown from CIBA core Component.
      */
     void updatePollingInterval(String key, long newInterval) throws CibaCoreException;
-
-    /**
-     * Returns authenticationStatus of authenticationRequest.
-     *
-     * @param key identifier of CibaAuthCode.
-     * @return String Returns AuthenticationStatus.
-     * @throws CibaCoreException Exception thrown from CIBA core Component.
-     */
-    Enum getAuthenticationStatus(String key) throws CibaCoreException;
 
     /**
      * Returns the authenticated user of authenticationRequest.
@@ -129,7 +120,7 @@ public interface CibaAuthMgtDAO {
      * @param authReqID CIBA Authentication request identifier.
      * @throws CibaCoreException Exception thrown from CIBA core Component.
      */
-    CibaAuthCodeDO getCibaAuthCodeWithAuhReqID(String authReqID) throws CibaCoreException;
+    CibaAuthCodeDO getCibaAuthCodeWithAuthReqID(String authReqID) throws CibaCoreException;
 
     /**
      * Store scopes requested in CIBA authentication request.

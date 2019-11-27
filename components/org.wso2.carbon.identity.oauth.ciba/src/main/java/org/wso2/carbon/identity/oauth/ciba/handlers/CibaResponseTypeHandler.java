@@ -21,7 +21,7 @@ package org.wso2.carbon.identity.oauth.ciba.handlers;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
-import org.wso2.carbon.identity.oauth.ciba.common.AuthenticationStatus;
+import org.wso2.carbon.identity.oauth.ciba.common.AuthReqStatus;
 import org.wso2.carbon.identity.oauth.ciba.dao.CibaDAOFactory;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
 import org.wso2.carbon.identity.oauth.dto.OAuthErrorDTO;
@@ -34,7 +34,7 @@ import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 /**
- * Handles authorize requests with CIBA as response type.
+ * Handles authorize requests with CibaAuthCode as response type.
  */
 public class CibaResponseTypeHandler extends AbstractResponseTypeHandler {
 
@@ -56,13 +56,13 @@ public class CibaResponseTypeHandler extends AbstractResponseTypeHandler {
             AuthenticatedUser cibaAuthenticatedUser = authorizationReqDTO.getUser();
 
             // Assigning the authentication status that to be persisted.
-            Enum authenticationStatus = AuthenticationStatus.AUTHENTICATED;
+            Enum authenticationStatus = AuthReqStatus.AUTHENTICATED;
 
             // Obtain authenticated identity provider's identifier.
             String authenticatedIDP = OAuth2Util.getAuthenticatedIDP(cibaAuthenticatedUser);
             int idpID = CibaDAOFactory.getInstance().getCibaAuthMgtDAO().getIdpID(authenticatedIDP);
 
-            int authenticatedTenant =  OAuth2Util.getTenantId(cibaAuthenticatedUser.getTenantDomain());
+            int authenticatedTenant = OAuth2Util.getTenantId(cibaAuthenticatedUser.getTenantDomain());
 
             // Update successful authentication.
             CibaDAOFactory.getInstance().getCibaAuthMgtDAO()
@@ -86,8 +86,7 @@ public class CibaResponseTypeHandler extends AbstractResponseTypeHandler {
 
         try {
             // Update authenticationStatus when user denied the consent.
-            CibaDAOFactory.getInstance().getCibaAuthMgtDAO()
-                    .updateStatusWithAuthReqID(authReqID, AuthenticationStatus.DENIED);
+            CibaDAOFactory.getInstance().getCibaAuthMgtDAO().updateStatusWithAuthReqID(authReqID, AuthReqStatus.DENIED);
             oAuthErrorDTO.setErrorDescription("User denied the consent.");
             return oAuthErrorDTO;
         } catch (CibaCoreException e) {
@@ -105,8 +104,7 @@ public class CibaResponseTypeHandler extends AbstractResponseTypeHandler {
         OAuthErrorDTO oAuthErrorDTO = new OAuthErrorDTO();
         String authReqID = oAuth2Parameters.getNonce();
         try {
-            CibaDAOFactory.getInstance().getCibaAuthMgtDAO().updateStatusWithAuthReqID(authReqID,
-                    AuthenticationStatus.FAILED);
+            CibaDAOFactory.getInstance().getCibaAuthMgtDAO().updateStatusWithAuthReqID(authReqID, AuthReqStatus.FAILED);
             oAuthErrorDTO.setErrorDescription("Authentication failed.");
             return oAuthErrorDTO;
         } catch (CibaCoreException e) {
@@ -117,5 +115,4 @@ public class CibaResponseTypeHandler extends AbstractResponseTypeHandler {
         }
         return null;
     }
-
 }

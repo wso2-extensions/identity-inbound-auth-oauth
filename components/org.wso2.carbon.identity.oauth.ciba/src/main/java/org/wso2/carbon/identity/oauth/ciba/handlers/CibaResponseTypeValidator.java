@@ -16,7 +16,6 @@
  * under the License.
  */
 
-
 package org.wso2.carbon.identity.oauth.ciba.handlers;
 
 import org.apache.oltu.oauth2.common.OAuth;

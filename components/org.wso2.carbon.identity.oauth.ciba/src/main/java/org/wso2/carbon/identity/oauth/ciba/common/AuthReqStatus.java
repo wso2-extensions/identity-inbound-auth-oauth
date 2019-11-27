@@ -21,7 +21,7 @@ package org.wso2.carbon.identity.oauth.ciba.common;
 /**
  * Represents possible authentication status.
  */
-public enum AuthenticationStatus {
+public enum AuthReqStatus {
     REQUESTED,
     DENIED,
     AUTHENTICATED,

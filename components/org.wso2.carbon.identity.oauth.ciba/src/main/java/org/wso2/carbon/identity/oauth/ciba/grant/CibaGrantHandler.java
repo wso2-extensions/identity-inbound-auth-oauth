@@ -21,7 +21,7 @@ package org.wso2.carbon.identity.oauth.ciba.grant;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
-import org.wso2.carbon.identity.oauth.ciba.common.AuthenticationStatus;
+import org.wso2.carbon.identity.oauth.ciba.common.AuthReqStatus;
 import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
 import org.wso2.carbon.identity.oauth.ciba.dao.CibaDAOFactory;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
@@ -65,7 +65,7 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
         OAuth2AccessTokenRespDTO responseDTO = super.issue(tokReqMsgCtx);
 
         try {
-            CibaDAOFactory.getInstance().getCibaAuthMgtDAO().updateStatus(cibaAuthCodeKey, AuthenticationStatus.
+            CibaDAOFactory.getInstance().getCibaAuthMgtDAO().updateStatus(cibaAuthCodeKey, AuthReqStatus.
                     TOKEN_ISSUED);
         } catch (CibaCoreException e) {
             throw new IdentityOAuth2Exception("Error occurred in persisting status.", e);
@@ -161,7 +161,7 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
      */
     private Boolean isConsentGiven(CibaAuthCodeDO cibaAuthCodeDO) {
 
-        return !cibaAuthCodeDO.getAuthenticationStatus().equals(AuthenticationStatus.DENIED);
+        return !cibaAuthCodeDO.getAuthenticationStatus().equals(AuthReqStatus.DENIED);
     }
 
     /**
@@ -174,7 +174,7 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
         // Validate whether provided auth_req_id is valid or not.
 
         try {
-            if (!CibaDAOFactory.getInstance().getCibaAuthMgtDAO().isAuthReqIDExist(authReqID)) {
+            if (!CibaDAOFactory.getInstance().getCibaAuthMgtDAO().isAuthReqIdExist(authReqID)) {
                 if (log.isDebugEnabled()) {
                     log.debug("Provided auth_req_id : " +
                             authReqID + " with the token request is not valid.Or not issued by Identity server.");
@@ -203,7 +203,7 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
                 log.debug("CIBA auth_req_id is in expired state.Token Request Denied.");
             }
             CibaDAOFactory.getInstance().getCibaAuthMgtDAO().updateStatus(cibaAuthCodeDO.getCibaAuthCodeKey(),
-                    AuthenticationStatus.EXPIRED);
+                    AuthReqStatus.EXPIRED);
             throw new IdentityOAuth2Exception(EXPIRED_TOKEN);
         }
     }
@@ -259,7 +259,7 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
 
         Enum authenticationStatus = cibaAuthCodeDO.getAuthenticationStatus();
         String cibaAuthCodeDOKey = cibaAuthCodeDO.getCibaAuthCodeKey();
-        if (!authenticationStatus.equals(AuthenticationStatus.AUTHENTICATED)) {
+        if (!authenticationStatus.equals(AuthReqStatus.AUTHENTICATED)) {
             // If authenticated update the status as token delivered.
             return true;
         } else {
@@ -282,7 +282,7 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
 
         Enum authenticationStatus = cibaAuthCodeDO.getAuthenticationStatus();
         String cibaAuthCodeDOKey = cibaAuthCodeDO.getCibaAuthCodeKey();
-        if (authenticationStatus.equals(AuthenticationStatus.TOKEN_ISSUED)) {
+        if (authenticationStatus.equals(AuthReqStatus.TOKEN_ISSUED)) {
             // Token is already delivered.
             return true;
         } else {
@@ -310,12 +310,12 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
     private CibaAuthCodeDO retrieveCibaAuthCodeDO(String authReqId) throws CibaCoreException {
 
         CibaAuthCodeDO cibaAuthCodeDO =
-                CibaDAOFactory.getInstance().getCibaAuthMgtDAO().getCibaAuthCodeWithAuhReqID(authReqId);
+                CibaDAOFactory.getInstance().getCibaAuthMgtDAO().getCibaAuthCodeWithAuthReqID(authReqId);
 
         // Retrieve scopes.
         String[] scope = CibaDAOFactory.getInstance().getCibaAuthMgtDAO().getScope(cibaAuthCodeDO);
         cibaAuthCodeDO.setScope(scope);
-        if (cibaAuthCodeDO.getAuthenticationStatus().equals(AuthenticationStatus.AUTHENTICATED)) {
+        if (cibaAuthCodeDO.getAuthenticationStatus().equals(AuthReqStatus.AUTHENTICATED)) {
             // Retrieve authenticated user.
             AuthenticatedUser authenticatedUser = CibaDAOFactory.getInstance().getCibaAuthMgtDAO()
                     .getAuthenticatedUser(cibaAuthCodeDO.getCibaAuthCodeKey());

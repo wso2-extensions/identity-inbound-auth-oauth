@@ -24,12 +24,12 @@ package org.wso2.carbon.identity.oauth.ciba.dao;
 public class CibaDAOFactory {
 
     // Implementation of DAO.
-    private CibaAuthMgtDAO cibaAuthMgtDAOImpl;
+    private CibaMgtDAO cibaMgtDAOImpl;
 
     private CibaDAOFactory() {
 
         // This factory creates instance of CIBA DAOImplementation.
-        cibaAuthMgtDAOImpl = new CibaAuthMgtDAOImpl();
+        cibaMgtDAOImpl = new CibaMgtDAOImpl();
     }
 
     private static CibaDAOFactory cibaDAOFactoryInstance = new CibaDAOFactory();
@@ -40,10 +40,10 @@ public class CibaDAOFactory {
     }
 
     /**
-     * @return  CibaAuthMgtDAO.
+     * @return  CibaMgtDAO.
      */
-    public CibaAuthMgtDAO getCibaAuthMgtDAO() {
+    public CibaMgtDAO getCibaAuthMgtDAO() {
 
-        return cibaAuthMgtDAOImpl;
+        return cibaMgtDAOImpl;
     }
 }

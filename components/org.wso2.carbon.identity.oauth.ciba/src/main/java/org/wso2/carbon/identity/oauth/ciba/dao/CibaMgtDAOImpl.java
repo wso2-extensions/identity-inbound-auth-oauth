@@ -22,7 +22,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
-import org.wso2.carbon.identity.oauth.ciba.common.AuthenticationStatus;
+import org.wso2.carbon.identity.oauth.ciba.common.AuthReqStatus;
 import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeDO;
@@ -41,9 +41,9 @@ import java.util.TimeZone;
 /**
  * Implementation of abstract DAO layer.
  */
-public class CibaAuthMgtDAOImpl implements CibaAuthMgtDAO {
+public class CibaMgtDAOImpl implements CibaMgtDAO {
 
-    private static final Log log = LogFactory.getLog(CibaAuthMgtDAOImpl.class);
+    private static final Log log = LogFactory.getLog(CibaMgtDAOImpl.class);
 
     @Override
     public void updateStatus(String key, Enum authenticationStatus) throws CibaCoreException {
@@ -108,7 +108,7 @@ public class CibaAuthMgtDAOImpl implements CibaAuthMgtDAO {
                 prepStmt.setString(2, authenticatedUser.getUserStoreDomain());
                 prepStmt.setInt(3, tenantID);
                 prepStmt.setInt(4, idpID);
-                prepStmt.setString(5, AuthenticationStatus.AUTHENTICATED.toString());
+                prepStmt.setString(5, AuthReqStatus.AUTHENTICATED.toString());
                 prepStmt.setString(6, key);
                 prepStmt.execute();
                 IdentityDatabaseUtil.commitTransaction(connection);
@@ -126,7 +126,7 @@ public class CibaAuthMgtDAOImpl implements CibaAuthMgtDAO {
     }
 
     @Override
-    public boolean isAuthReqIDExist(String authReqId) throws CibaCoreException {
+    public boolean isAuthReqIdExist(String authReqId) throws CibaCoreException {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
             try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.CibaSQLQueries.
@@ -228,30 +228,6 @@ public class CibaAuthMgtDAOImpl implements CibaAuthMgtDAO {
     }
 
     @Override
-    public Enum getAuthenticationStatus(String cibaAuthCodeDOKey) throws CibaCoreException {
-
-        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
-            try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.CibaSQLQueries.
-                    RETRIEVE_AUTHENTICATION_STATUS)) {
-
-                prepStmt.setString(1, cibaAuthCodeDOKey);
-                ResultSet resultSet = prepStmt.executeQuery();
-                if (resultSet.next()) {
-                    if (log.isDebugEnabled()) {
-                        log.debug("Successfully obtained authenticationStatus of TokenRequest  with " +
-                                "cibaAuthCodeDOKey : " + cibaAuthCodeDOKey);
-                    }
-                    return AuthenticationStatus.valueOf(resultSet.getString(1));
-                } else {
-                    throw new CibaCoreException("Record not found.");
-                }
-            }
-        } catch (SQLException e) {
-            throw new CibaCoreException("Error occurred in obtaining authenticationStatus of TokenRequest.", e);
-        }
-    }
-
-    @Override
     public AuthenticatedUser getAuthenticatedUser(String cibaAuthCodeDOKey) throws CibaCoreException {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
@@ -315,7 +291,7 @@ public class CibaAuthMgtDAOImpl implements CibaAuthMgtDAO {
     }
 
     @Override
-    public CibaAuthCodeDO getCibaAuthCodeWithAuhReqID(String authReqID) throws CibaCoreException {
+    public CibaAuthCodeDO getCibaAuthCodeWithAuthReqID(String authReqID) throws CibaCoreException {
 
         CibaAuthCodeDO cibaAuthCodeDO = new CibaAuthCodeDO();
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
@@ -332,7 +308,7 @@ public class CibaAuthMgtDAOImpl implements CibaAuthMgtDAO {
                             resultSet.getTimestamp(4, Calendar.getInstance(TimeZone.getTimeZone(CibaConstants.UTC))));
                     cibaAuthCodeDO.setInterval(resultSet.getLong(5));
                     cibaAuthCodeDO.setExpiresIn(resultSet.getLong(6));
-                    cibaAuthCodeDO.setAuthenticationStatus(AuthenticationStatus.valueOf(resultSet.getString(7)));
+                    cibaAuthCodeDO.setAuthenticationStatus(AuthReqStatus.valueOf(resultSet.getString(7)));
                     cibaAuthCodeDO.setIssuedTime(
                             resultSet.getTimestamp(8, Calendar.getInstance(TimeZone.getTimeZone(CibaConstants.UTC))));
                 }
