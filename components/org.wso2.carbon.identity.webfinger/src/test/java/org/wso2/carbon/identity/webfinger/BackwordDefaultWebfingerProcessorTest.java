@@ -18,25 +18,26 @@
 
 package org.wso2.carbon.identity.webfinger;
 
-        import org.apache.commons.collections.iterators.IteratorEnumeration;
-        import org.mockito.Matchers;
-        import org.mockito.Mockito;
-        import org.mockito.invocation.InvocationOnMock;
-        import org.mockito.stubbing.Answer;
-        import org.testng.annotations.DataProvider;
-        import org.testng.annotations.Test;
-        import org.wso2.carbon.identity.common.testng.WithCarbonHome;
-        import org.wso2.carbon.identity.common.testng.WithRealmService;
-        import org.wso2.carbon.identity.webfinger.internal.WebFingerServiceComponentHolder;
+import org.apache.commons.collections.iterators.IteratorEnumeration;
+import org.mockito.Matchers;
+import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
+import org.testng.annotations.DataProvider;
+import org.testng.annotations.Test;
+import org.wso2.carbon.identity.common.testng.WithCarbonHome;
+import org.wso2.carbon.identity.common.testng.WithRealmService;
+import org.wso2.carbon.identity.webfinger.internal.WebFingerServiceComponentHolder;
 
-        import java.util.HashMap;
-        import java.util.Map;
-        import javax.servlet.http.HttpServletRequest;
-        import javax.servlet.http.HttpServletResponse;
+import java.util.HashMap;
+import java.util.Map;
 
-        import static org.testng.Assert.assertEquals;
-        import static org.testng.Assert.assertNotNull;
-        import static org.testng.Assert.fail;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.fail;
 
 /**
  * Tests for DefaultWebFingerProcessor.
