@@ -49,6 +49,8 @@ public class Constants {
     public static final String UTC = "UTC";
     public static final String APP_NAME = "app_name";
     public static final String SEPARATED_WITH_SPACE = " ";
+    public static final String ERROR = "error";
+    public static final String ERROR_DESCRIPTION = "error_description";
 
     //configurable values
     public static final int KEY_LENGTH = 6;

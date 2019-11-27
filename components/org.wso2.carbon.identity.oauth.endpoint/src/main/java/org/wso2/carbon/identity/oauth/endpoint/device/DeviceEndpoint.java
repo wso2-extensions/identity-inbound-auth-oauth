@@ -17,12 +17,15 @@
  */
 package org.wso2.carbon.identity.oauth.endpoint.device;
 
+import org.apache.axis2.json.gson.JsonBuilder;
+import org.apache.axis2.json.gson.factory.JsonObject;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.as.response.OAuthASResponse;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.message.OAuthResponse;
+import org.json.JSONObject;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.device.codegenerator.GenerateKeys;
@@ -50,17 +53,15 @@ public class DeviceEndpoint {
     @Consumes("application/x-www-form-urlencoded")
     @Produces("application/json")
     public Response authorize(@Context HttpServletRequest request, @Context HttpServletResponse response)
-            throws IdentityOAuth2Exception, OAuthSystemException {
+            throws IdentityOAuth2Exception {
 
         String clientId = request.getParameter(Constants.CLIENT_ID);
-        OAuthResponse errorResponse;
+        JSONObject errorResponse = new JSONObject();
         if (StringUtils.isBlank(clientId)) {
-            errorResponse = OAuthASResponse
-                    .errorResponse(HttpServletResponse.SC_BAD_REQUEST)
-                    .setError(DeviceErrorCodes.INVALID_REQUEST)
-                    .setErrorDescription("Request missing required parameters").buildJSONMessage();
+            errorResponse.put(Constants.ERROR, DeviceErrorCodes.INVALID_REQUEST)
+                    .put(Constants.ERROR_DESCRIPTION,"Request missing required parameters");
             Response.ResponseBuilder respBuilder = Response.status(HttpServletResponse.SC_BAD_REQUEST);
-            return respBuilder.entity(errorResponse.getBody()).build();
+            return respBuilder.entity(errorResponse.toString()).build();
         } else {
             if (validateClientId(clientId)) {
                 String userCode = GenerateKeys.getKey(Constants.KEY_LENGTH);
@@ -72,25 +73,22 @@ public class DeviceEndpoint {
                         userCode, clientId, Constants.EXPIRES_IN_VALUE, Constants.INTERVAL_VALUE);
                 DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().storeDeviceFlowScopes(scope, deviceCode);
 
-                OAuthResponse deviceResponse = OAuthResponse
-                        .status(HttpServletResponse.SC_OK)
-                        .setParam(Constants.DEVICE_CODE, deviceCode)
-                        .setParam(Constants.USER_CODE, userCode)
-                        .setParam(Constants.VERIFICATION_URI, redirectionUri)
-                        .setParam(Constants.VERIFICATION_URI_COMPLETE, redirectionUriComplete)
-                        .setParam(Constants.EXPIRES_IN, stringValueInSeconds(Constants.EXPIRES_IN_VALUE))
-                        .setParam(Constants.INTERVAL, stringValueInSeconds(Constants.INTERVAL_VALUE))
-                        .buildJSONMessage();
+                JSONObject jsonObject = new JSONObject();
+                jsonObject.put(Constants.DEVICE_CODE, deviceCode)
+                        .put(Constants.USER_CODE, userCode)
+                        .put(Constants.VERIFICATION_URI, redirectionUri)
+                        .put(Constants.VERIFICATION_URI_COMPLETE, redirectionUriComplete)
+                        .put(Constants.EXPIRES_IN, stringValueInSeconds(Constants.EXPIRES_IN_VALUE))
+                        .put(Constants.INTERVAL, stringValueInSeconds(Constants.INTERVAL_VALUE));
                 Response.ResponseBuilder respBuilder = Response.status(HttpServletResponse.SC_OK);
-                return respBuilder.entity(deviceResponse.getBody()).build();
+
+                return respBuilder.entity(jsonObject.toString()).build();
 
             } else {
-                errorResponse = OAuthASResponse
-                        .errorResponse(HttpServletResponse.SC_UNAUTHORIZED)
-                        .setError(DeviceErrorCodes.UNAUTHORIZED_CLIENT)
-                        .setErrorDescription("No registered client with the client id.").buildJSONMessage();
+                errorResponse.put(Constants.ERROR, DeviceErrorCodes.UNAUTHORIZED_CLIENT)
+                        .put(Constants.ERROR_DESCRIPTION,"No registered client with the client id.");
                 Response.ResponseBuilder respBuilder = Response.status(HttpServletResponse.SC_UNAUTHORIZED);
-                return respBuilder.entity(errorResponse.getBody()).build();
+                return respBuilder.entity(errorResponse.toString()).build();
             }
         }
     }

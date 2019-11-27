@@ -137,29 +137,29 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
         }
     }
 
-    @Override
-    public String getClientIdByDeviceCode(String deviceCode) throws IdentityOAuth2Exception {
-
-        if (log.isDebugEnabled()) {
-            log.debug("Getting client_id for device_code: " + deviceCode);
-        }
-        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
-            try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.DeviceFlowDAOSQLQueries
-                    .GET_CONSUMER_KEY_FOR_DEVICE_CODE)) {
-                ResultSet resultSet = null;
-                prepStmt.setString(1, deviceCode);
-                resultSet = prepStmt.executeQuery();
-
-                while (resultSet.next()) {
-                    clientId = resultSet.getString(1);
-                }
-            }
-        } catch (SQLException e) {
-            throw new IdentityOAuth2Exception("Error when getting client id for device_code: " +
-                    deviceCode, e);
-        }
-        return clientId;
-    }
+//    @Override
+//    public String getClientIdByDeviceCode(String deviceCode) throws IdentityOAuth2Exception {
+//
+//        if (log.isDebugEnabled()) {
+//            log.debug("Getting client_id for device_code: " + deviceCode);
+//        }
+//        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
+//            try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.DeviceFlowDAOSQLQueries
+//                    .GET_CONSUMER_KEY_FOR_DEVICE_CODE)) {
+//                ResultSet resultSet = null;
+//                prepStmt.setString(1, deviceCode);
+//                resultSet = prepStmt.executeQuery();
+//
+//                while (resultSet.next()) {
+//                    clientId = resultSet.getString(1);
+//                }
+//            }
+//        } catch (SQLException e) {
+//            throw new IdentityOAuth2Exception("Error when getting client id for device_code: " +
+//                    deviceCode, e);
+//        }
+//        return clientId;
+//    }
 
     @Override
     public DeviceFlowDO getAuthenticationDetails(String deviceCode) throws IdentityOAuth2Exception {
@@ -231,28 +231,28 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
         return false;
     }
 
-    @Override
-    public String getScopeForDevice(String userCode) throws IdentityOAuth2Exception {
-
-        if (log.isDebugEnabled()) {
-            log.debug("Get scopes for user_code: " + userCode);
-        }
-        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
-            try (PreparedStatement prepStmt =
-                         connection.prepareStatement(SQLQueries.DeviceFlowDAOSQLQueries.GET_SCOPE_FOR_USER_CODE)) {
-                ResultSet resultSet = null;
-                prepStmt.setString(1, userCode);
-                resultSet = prepStmt.executeQuery();
-                while (resultSet.next()) {
-                    scope = resultSet.getString(1);
-                }
-            }
-        } catch (SQLException e) {
-            throw new IdentityOAuth2Exception("Error when getting scopes for user_code: " +
-                    userCode, e);
-        }
-        return scope;
-    }
+//    @Override
+//    public String getScopeForDevice(String userCode) throws IdentityOAuth2Exception {
+//
+//        if (log.isDebugEnabled()) {
+//            log.debug("Get scopes for user_code: " + userCode);
+//        }
+//        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
+//            try (PreparedStatement prepStmt =
+//                         connection.prepareStatement(SQLQueries.DeviceFlowDAOSQLQueries.GET_SCOPE_FOR_USER_CODE)) {
+//                ResultSet resultSet = null;
+//                prepStmt.setString(1, userCode);
+//                resultSet = prepStmt.executeQuery();
+//                while (resultSet.next()) {
+//                    scope = resultSet.getString(1);
+//                }
+//            }
+//        } catch (SQLException e) {
+//            throw new IdentityOAuth2Exception("Error when getting scopes for user_code: " +
+//                    userCode, e);
+//        }
+//        return scope;
+//    }
 
     @Override
     public String getStatusForUserCode(String userCode) throws IdentityOAuth2Exception {

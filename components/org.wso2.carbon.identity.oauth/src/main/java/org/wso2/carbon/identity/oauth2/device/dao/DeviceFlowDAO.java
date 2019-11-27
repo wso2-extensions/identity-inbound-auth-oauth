@@ -60,13 +60,13 @@ public interface DeviceFlowDAO {
      */
     void setAuthenticationStatus(String userCode, String status) throws IdentityOAuth2Exception;
 
-    /**
-     * Get the client id that has involved with user code.
-     *
-     * @param deviceCode Code that is used to identify the device.
-     * @throws IdentityOAuth2Exception
-     */
-    String getClientIdByDeviceCode(String deviceCode) throws IdentityOAuth2Exception;
+//    /**
+//     * Get the client id that has involved with user code.
+//     *
+//     * @param deviceCode Code that is used to identify the device.
+//     * @throws IdentityOAuth2Exception
+//     */
+//    String getClientIdByDeviceCode(String deviceCode) throws IdentityOAuth2Exception;
 
     /**
      * Get the authentication status for device code.
@@ -86,14 +86,14 @@ public interface DeviceFlowDAO {
      */
     boolean checkClientIdExist(String clientId) throws IdentityOAuth2Exception;
 
-    /**
-     * Get the scopes that are stored against user code.
-     *
-     * @param userCode Code that is used to correlate user and device.
-     * @return scope
-     * @throws IdentityOAuth2Exception
-     */
-    String getScopeForDevice(String userCode) throws IdentityOAuth2Exception;
+//    /**
+//     * Get the scopes that are stored against user code.
+//     *
+//     * @param userCode Code that is used to correlate user and device.
+//     * @return scope
+//     * @throws IdentityOAuth2Exception
+//     */
+//    String getScopeForDevice(String userCode) throws IdentityOAuth2Exception;
 
     /**
      * Get the status of the user code.
