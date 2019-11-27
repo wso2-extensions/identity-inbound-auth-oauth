@@ -58,16 +58,11 @@ public class CibaResponseTypeHandler extends AbstractResponseTypeHandler {
             // Assigning the authentication status that to be persisted.
             Enum authenticationStatus = AuthReqStatus.AUTHENTICATED;
 
-            // Obtain authenticated identity provider's identifier.
-            String authenticatedIDP = OAuth2Util.getAuthenticatedIDP(cibaAuthenticatedUser);
-            int idpID = CibaDAOFactory.getInstance().getCibaAuthMgtDAO().getIdpID(authenticatedIDP);
-
             int authenticatedTenant = OAuth2Util.getTenantId(cibaAuthenticatedUser.getTenantDomain());
 
             // Update successful authentication.
             CibaDAOFactory.getInstance().getCibaAuthMgtDAO()
-                    .persistAuthenticationSuccess(cibaAuthCodeKey, idpID, cibaAuthenticatedUser,
-                            authenticatedTenant);
+                    .persistAuthenticationSuccess(cibaAuthCodeKey, cibaAuthenticatedUser, authenticatedTenant);
 
             // Building custom CallBack URL.
             String callbackURL = authorizationReqDTO.getCallbackUrl() + "?authenticationStatus=" + authenticationStatus;

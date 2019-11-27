@@ -50,10 +50,9 @@ public class CibaAuthUtil {
      *
      * @return String Returns random uuid.
      */
-    private static String getUniqueAuthCodeKey() {
+    private static String generateAuthCodeKey() {
 
-        UUID id = UUID.randomUUID();
-        return id.toString();
+        return UUID.randomUUID().toString();
     }
 
     /**
@@ -61,10 +60,9 @@ public class CibaAuthUtil {
      *
      * @return String Returns random uuid.
      */
-    public static String getAuthReqID() {
+    public static String generateAuthRequestId() {
 
-        UUID id = UUID.randomUUID();
-        return id.toString();
+        return UUID.randomUUID().toString();
     }
 
     /**
@@ -81,7 +79,7 @@ public class CibaAuthUtil {
         } else if (requestedExpiry < CibaConstants.MAXIMUM_REQUESTED_EXPIRY_IN_SEC) {
             return requestedExpiry;
         } else {
-            log.warn("(requested_expiry) exceeds default maximum value for the CIBA authenticaton request made by : " +
+            log.warn("(requested_expiry) exceeds default maximum value for the CIBA authentication request made by : " +
                     cibaAuthResponseDTO.getIssuer());
             return CibaConstants.MAXIMUM_REQUESTED_EXPIRY_IN_SEC;
         }
@@ -91,7 +89,6 @@ public class CibaAuthUtil {
      * Builds and returns AuthorizationRequestDTO.
      *
      * @param cibaAuthResponseDTO Status of the relevant Ciba Authentication.
-     * @throws CibaCoreException Exception thrown from CibaCore Component.
      */
     public static CibaAuthCodeDO generateCibaAuthCodeDO(CibaAuthResponseDTO cibaAuthResponseDTO) {
 
@@ -102,8 +99,8 @@ public class CibaAuthUtil {
         Timestamp lastPolledTime = new Timestamp(lastPolledTimeInMillis);
         long expiryTime = CibaAuthUtil.getExpiresIn(cibaAuthResponseDTO);
         String[] scope = cibaAuthResponseDTO.getScope();
-        cibaAuthCodeDO.setCibaAuthCodeKey(CibaAuthUtil.getUniqueAuthCodeKey());
-        cibaAuthCodeDO.setAuthReqID(CibaAuthUtil.getAuthReqID());
+        cibaAuthCodeDO.setCibaAuthCodeKey(CibaAuthUtil.generateAuthCodeKey());
+        cibaAuthCodeDO.setAuthReqID(CibaAuthUtil.generateAuthRequestId());
         cibaAuthCodeDO.setConsumerAppKey(cibaAuthResponseDTO.getIssuer());
         cibaAuthCodeDO.setIssuedTime(issuedTime);
         cibaAuthCodeDO.setLastPolledTime(lastPolledTime);

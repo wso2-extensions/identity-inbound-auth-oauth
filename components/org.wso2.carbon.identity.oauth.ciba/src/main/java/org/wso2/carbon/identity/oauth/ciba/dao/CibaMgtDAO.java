@@ -53,12 +53,11 @@ public interface CibaMgtDAO {
      * Persists the authenticated_user and status of the relevant CibAuthCode identified by the CibaAuthCodeDOKey.
      *
      * @param key               Identifier for CibaAuthCode.
-     * @param idpID             Authenticated Identity provider identifier.
      * @param authenticatedUser Authenticated user of the relevant CibaAuthCode.
      * @param tenantID          Tenant ID.
      * @throws CibaCoreException Exception thrown from CIBA Core Component.
      */
-    void persistAuthenticationSuccess(String key, int idpID, AuthenticatedUser authenticatedUser, int tenantID)
+    void persistAuthenticationSuccess(String key, AuthenticatedUser authenticatedUser, int tenantID)
             throws CibaCoreException;
 
     /**
@@ -147,12 +146,4 @@ public interface CibaMgtDAO {
      */
     void updateStatusWithAuthReqID(String authReqID, Enum authenticationStatus) throws CibaCoreException;
 
-    /**
-     * Obtain idp id from idp name.
-     *
-     * @param idpName Name of Identity provider.
-     * @return Identity provider identifier.
-     * @throws CibaCoreException Exception thrown from CIBA core Component.
-     */
-    int getIdpID(String idpName) throws CibaCoreException;
 }

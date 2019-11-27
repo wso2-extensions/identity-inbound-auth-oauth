@@ -62,10 +62,12 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
                 }
             } catch (SQLException e) {
                 IdentityDatabaseUtil.rollbackTransaction(connection);
-                throw new CibaCoreException("Error occurred in persisting authentication status.", e);
+                throw new CibaCoreException(
+                        "Error occurred in persisting authentication status for the authCodeKey: " + key, e);
             }
         } catch (SQLException e) {
-            throw new CibaCoreException("Error occurred in persisting authentication status.", e);
+            throw new CibaCoreException(
+                    "Error occurred in persisting authentication status for the authCodeKey: " + key, e);
         }
     }
 
@@ -89,16 +91,24 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
                 }
             } catch (SQLException e) {
                 IdentityDatabaseUtil.rollbackTransaction(connection);
-                throw new CibaCoreException("Error occurred in persisting the authenticated user.", e);
+                throw new CibaCoreException(
+                        "Error occurred in persisting the authenticated user: " + authenticatedUser.getUserName() +
+                                " identified by AuthCodeDOKey: " + key, e);
             }
         } catch (SQLException e) {
-            throw new CibaCoreException("Error occurred in persisting the authenticated user.", e);
+            throw new CibaCoreException(
+                    "Error occurred in persisting the authenticated user: " + authenticatedUser.getUserName() +
+                            " identified by AuthCodeDOKey: " + key, e);
         }
     }
 
     @Override
-    public void persistAuthenticationSuccess(String key, int idpID, AuthenticatedUser authenticatedUser,
-                                             int tenantID) throws CibaCoreException {
+    public void persistAuthenticationSuccess(String key, AuthenticatedUser authenticatedUser, int tenantID)
+            throws CibaCoreException {
+
+        // Obtain authenticated identity provider's identifier.
+        String authenticatedIDP = OAuth2Util.getAuthenticatedIDP(authenticatedUser);
+        int idpID = getIdpID(authenticatedIDP);
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
             try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.CibaSQLQueries.
@@ -134,24 +144,21 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
 
                 prepStmt.setString(1, authReqId);
                 ResultSet resultSet = prepStmt.executeQuery();
-                int count;
 
-                while (resultSet.next()) {
-                    count = (resultSet.getInt(1));
-                    if (count == 1) {
-                        //do nothing
-                        if (log.isDebugEnabled()) {
-                            log.debug("Successfully checked whether provided hashedAuthReqId : " + authReqId +
-                                    " exists.Provided AuthReqId exists.It is from a valid auth_req_id.");
-                        }
-                        return true;
+                if (resultSet.next()) {
+                    //do nothing
+                    if (log.isDebugEnabled()) {
+                        log.debug("Successfully checked whether provided auth_req_id : " + authReqId +
+                                " exists.Provided AuthReqId exists.It is from a valid auth_req_id.");
                     }
+                    return true;
+                } else {
                     return false;
                 }
-                return false;
             }
         } catch (SQLException e) {
-            throw new CibaCoreException("Unsuccessful in checking whether provided AuthReqId exists.", e);
+            throw new CibaCoreException("Unsuccessful in checking whether provided auth_req_id: " + authReqId +
+                    " exists.", e);
         }
     }
 
@@ -389,8 +396,7 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
         }
     }
 
-    @Override
-    public int getIdpID(String idpName) throws CibaCoreException {
+    private int getIdpID(String idpName) throws CibaCoreException {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
             try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.

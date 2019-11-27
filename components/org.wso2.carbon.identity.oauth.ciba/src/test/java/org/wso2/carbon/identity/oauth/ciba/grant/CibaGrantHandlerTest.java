@@ -18,6 +18,63 @@
 
 package org.wso2.carbon.identity.oauth.ciba.grant;
 
-public class CibaGrantHandlerTest {
+import org.mockito.Mock;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.testng.PowerMockTestCase;
+import org.powermock.reflect.internal.WhiteboxImpl;
+import org.testng.Assert;
+import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.Test;
+import org.wso2.carbon.identity.common.testng.WithH2Database;
+import org.wso2.carbon.identity.oauth.ciba.common.AuthReqStatus;
+import org.wso2.carbon.identity.oauth.ciba.dao.CibaDAOFactory;
+import org.wso2.carbon.identity.oauth.ciba.dao.CibaMgtDAO;
+import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeDO;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
+import static org.powermock.api.mockito.PowerMockito.mockStatic;
+import static org.powermock.api.mockito.PowerMockito.when;
+
+@WithH2Database(files = {"dbScripts/h2.sql", "dbScripts/identity.sql"})
+@PrepareForTest({OAuth2Util.class, OAuthServerConfiguration.class, CibaDAOFactory.class})
+public class CibaGrantHandlerTest extends PowerMockTestCase {
+
+    @Mock
+    OAuthServerConfiguration oAuthServerConfiguration;
+
+    @Mock
+    CibaMgtDAO cibaMgtDAO;
+
+    @Mock
+    CibaDAOFactory cibaDAOFactory;
+
+    @Mock
+    CibaGrantHandler cibaGrantHandler;
+
+    @BeforeMethod
+    public void setUp() throws Exception {
+
+        mockStatic(OAuthServerConfiguration.class);
+        when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
+
+        mockStatic(CibaDAOFactory.class);
+        when(CibaDAOFactory.getInstance()).thenReturn(cibaDAOFactory);
+    }
+
+    @Test
+    public void testIsConsentGiven() throws Exception {
+
+        CibaAuthCodeDO cibaAuthCodeDoDenied = new CibaAuthCodeDO();
+        cibaAuthCodeDoDenied.setAuthenticationStatus(AuthReqStatus.DENIED);
+
+        Assert.assertFalse(WhiteboxImpl.invokeMethod(cibaGrantHandler, "isConsentGiven",
+                cibaAuthCodeDoDenied));
+
+        CibaAuthCodeDO cibaAuthCodeDoAuth = new CibaAuthCodeDO();
+        cibaAuthCodeDoAuth.setAuthenticationStatus(AuthReqStatus.AUTHENTICATED);
+
+        Assert.assertTrue(WhiteboxImpl.invokeMethod(cibaGrantHandler, "isConsentGiven",
+                cibaAuthCodeDoAuth));
+    }
 }

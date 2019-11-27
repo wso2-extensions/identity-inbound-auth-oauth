@@ -17,7 +17,6 @@
 
 package org.wso2.carbon.identity.oauth.ciba.handlers;
 
-import org.apache.commons.dbcp.BasicDataSource;
 import org.mockito.Mock;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
@@ -34,14 +33,11 @@ import org.wso2.carbon.identity.oauth.ciba.dao.CibaMgtDAOImpl;
 import org.wso2.carbon.identity.oauth.ciba.util.CibaAuthUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
-import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dto.OAuthErrorDTO;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
-
-import java.sql.Connection;
 
 import static org.mockito.Matchers.anyString;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
@@ -53,22 +49,13 @@ import static org.powermock.api.mockito.PowerMockito.when;
 @WithH2Database(files = {"dbScripts/h2.sql", "dbScripts/identity.sql"})
 public class CibaResponseTypeHandlerTest extends PowerMockTestCase {
 
-    private OAuth2AuthorizeReqDTO oAuth2AuthorizeReqDTO = new OAuth2AuthorizeReqDTO();
-    private OAuthAppDO oAuthAppDO = new OAuthAppDO();
     private static final String NONCE = "2201e5aa-1c5f-4a17-90c9-1956a3540b19";
-    private static final String AUTH_CODE_KEY = "e567a30e-bf16-4e5c-a321-2229d1e4d7a4";
     private static final String CONSUMER_KEY = "ZzxmDqqK8YYfjtlOh9vw85qnNVoa";
-    protected Connection connection;
-    protected BasicDataSource dataSource;
     private final String TEST_CALLBACK_URL = "https://localhost:8000/callback";
 
     OAuthAuthzReqMessageContext authAuthzReqMessageContext;
     OAuth2AuthorizeReqDTO authorizationReqDTO;
     AuthenticatedUser authenticatedUser;
-
-    public static final String STORE_CIBA_AUTH_CODE = "INSERT INTO IDN_OAUTH2_CIBA_AUTH_CODE " +
-            "(AUTH_CODE_KEY, AUTH_REQ_ID,CONSUMER_APP_KEY,ISSUED_TIME,LAST_POLLED_TIME,POLLING_INTERVAL," +
-            "EXPIRES_IN,AUTHENTICATION_STATUS) VALUES (?,?,?,?,?,?,?,?)";
 
     @Mock
     OAuthServerConfiguration oAuthServerConfiguration;
@@ -113,7 +100,6 @@ public class CibaResponseTypeHandlerTest extends PowerMockTestCase {
         CibaResponseTypeHandler cibaResponseTypeHandler = new CibaResponseTypeHandler();
 
         when(CibaDAOFactory.getInstance().getCibaAuthMgtDAO()).thenReturn(cibaAuthMgtDAO);
-        when(CibaDAOFactory.getInstance().getCibaAuthMgtDAO().getIdpID(anyString())).thenReturn(1);
 
         mockStatic(OAuth2Util.class);
         when(OAuth2Util.getTenantId(anyString())).thenReturn(1234);
