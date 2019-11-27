@@ -83,7 +83,7 @@ public class OAuthAdminServiceImpl {
     static final String RESPONSE_TYPE_ID_TOKEN = "id_token";
     static List<String> allowedGrants = null;
     static String[] allowedScopeValidators = null;
-    static List<String> supportedTokenTypes = null;
+    private static List<String> supportedTokenTypes = new ArrayList<>();
 
     protected static final Log log = LogFactory.getLog(OAuthAdminServiceImpl.class);
 
@@ -1066,14 +1066,12 @@ public class OAuthAdminServiceImpl {
      */
     public List<String> getSupportedTokenTypes() {
 
-        if (supportedTokenTypes == null) {
-            supportedTokenTypes = new ArrayList<String>();
-            Map<String, TokenIssuerDO> supportedTokenTypesMap = OAuthServerConfiguration.getInstance()
-                                                                                        .getSupportedTokenIssuers();
-            for (Object tokenTypeObj : supportedTokenTypesMap.keySet()) {
-                supportedTokenTypes.add(tokenTypeObj.toString());
-            }
+        Map<String, TokenIssuerDO> supportedTokenTypesMap = OAuthServerConfiguration.getInstance()
+                .getSupportedTokenIssuers();
+        for (Object tokenTypeObj : supportedTokenTypesMap.keySet()) {
+            supportedTokenTypes.add(tokenTypeObj.toString());
         }
+
         return supportedTokenTypes;
     }
 

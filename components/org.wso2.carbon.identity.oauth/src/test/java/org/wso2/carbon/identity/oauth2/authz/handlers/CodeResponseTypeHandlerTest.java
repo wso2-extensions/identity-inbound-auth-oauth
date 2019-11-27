@@ -49,8 +49,8 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
         injectToSingletons = {OAuthComponentServiceHolder.class})
 public class CodeResponseTypeHandlerTest {
 
-    private final String TEST_CONSUMER_KEY =  "testconsumenrkey";
-    private final String TEST_CALLBACK_URL = "https://localhost:8000/callback";
+    private static final String TEST_CONSUMER_KEY =  "testconsumenrkey";
+    private static final String TEST_CALLBACK_URL = "https://localhost:8000/callback";
 
     OAuthAuthzReqMessageContext authAuthzReqMessageContext;
     OAuth2AuthorizeReqDTO authorizationReqDTO;

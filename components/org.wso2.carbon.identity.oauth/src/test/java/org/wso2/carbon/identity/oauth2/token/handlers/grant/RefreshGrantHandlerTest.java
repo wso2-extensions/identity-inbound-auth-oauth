@@ -51,8 +51,13 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
-import static org.testng.Assert.*;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenStates.*;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNotEquals;
+import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertTrue;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenStates.TOKEN_STATE_EXPIRED;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenStates.TOKEN_STATE_INACTIVE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.UNASSIGNED_VALIDITY_PERIOD;
 
 /**
@@ -81,7 +86,9 @@ public class RefreshGrantHandlerTest {
 
     @BeforeMethod
     protected void setUpMethod() throws Exception {
-        ApplicationManagementServiceComponent applicationManagementServiceComponent = new ApplicationManagementServiceComponent();
+
+        ApplicationManagementServiceComponent applicationManagementServiceComponent =
+                new ApplicationManagementServiceComponent();
         Whitebox.invokeMethod(applicationManagementServiceComponent, "buildFileBasedSPList", null);
     }
 

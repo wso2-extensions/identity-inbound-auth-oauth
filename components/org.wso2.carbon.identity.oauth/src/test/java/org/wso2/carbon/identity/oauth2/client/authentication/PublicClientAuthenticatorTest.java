@@ -29,10 +29,10 @@ import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
-import javax.servlet.http.HttpServletRequest;
-
 import java.util.HashMap;
 import java.util.List;
+
+import javax.servlet.http.HttpServletRequest;
 
 import static org.testng.Assert.assertEquals;
 
@@ -44,9 +44,9 @@ import static org.testng.Assert.assertEquals;
 public class PublicClientAuthenticatorTest extends PowerMockIdentityBaseTest {
 
     private PublicClientAuthenticator publicClientAuthenticator = new PublicClientAuthenticator();
-    private static String SIMPLE_CASE_AUTHORIZATION_HEADER = "authorization";
-    private static String CLIENT_ID = "someclientid";
-    private static String CLIENT_SECRET = "someclientsecret";
+    private static final String SIMPLE_CASE_AUTHORIZATION_HEADER = "authorization";
+    private static final String CLIENT_ID = "someclientid";
+    private static final String CLIENT_SECRET = "someclientsecret";
 
     @Test
     public void testGetPriority() {

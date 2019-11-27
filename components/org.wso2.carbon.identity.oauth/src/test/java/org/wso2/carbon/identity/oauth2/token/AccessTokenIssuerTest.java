@@ -196,7 +196,8 @@ public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
         when(passwordGrantHandler.authorizeAccessDelegation(any(OAuthTokenReqMessageContext.class)))
                 .thenReturn(isAuthorizedAccessDelegation);
         when(passwordGrantHandler.validateScope(any(OAuthTokenReqMessageContext.class))).thenReturn(isValidScope);
-        when(passwordGrantHandler.issue(any(OAuthTokenReqMessageContext.class))).thenReturn(mockOAuth2AccessTokenRespDTO);
+        when(passwordGrantHandler.issue(any(OAuthTokenReqMessageContext.class)))
+                .thenReturn(mockOAuth2AccessTokenRespDTO);
         authzGrantHandlers.put("password", passwordGrantHandler);
         when(passwordGrantHandler.isConfidentialClient()).thenReturn(true);
 
@@ -461,7 +462,8 @@ public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
         authorizationGrantHandlers.put(DUMMY_GRANT_TYPE, dummyGrantHandler);
 
         mockOAuth2ServerConfiguration(authorizationGrantHandlers);
-        PowerMockito.whenNew(JDBCPermissionBasedInternalScopeValidator.class).withNoArguments().thenReturn(scopeValidator);
+        PowerMockito.whenNew(JDBCPermissionBasedInternalScopeValidator.class).withNoArguments()
+                .thenReturn(scopeValidator);
         when(scopeValidator.validateScope(any(OAuthTokenReqMessageContext.class))).thenReturn(null);
         OAuth2AccessTokenRespDTO tokenRespDTO = AccessTokenIssuer.getInstance().issue(reqDTO);
 
