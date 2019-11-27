@@ -71,6 +71,7 @@ import static org.wso2.carbon.identity.oauth.Error.INVALID_OAUTH_CLIENT;
 import static org.wso2.carbon.identity.oauth.Error.INVALID_REQUEST;
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.buildScopeString;
 
 
@@ -875,6 +876,13 @@ public class OAuthAdminServiceImpl {
                             //Clear cache with AccessTokenDO
                             authzUser = accessTokenDO.getAuthzUser();
 
+                            String tokenBindingReference = NONE;
+                            if (accessTokenDO.getTokenBinding() != null && StringUtils
+                                    .isNotBlank(accessTokenDO.getTokenBinding().getBindingReference())) {
+                                tokenBindingReference = accessTokenDO.getTokenBinding().getBindingReference();
+                            }
+                            OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), authzUser,
+                                    buildScopeString(accessTokenDO.getScope()), tokenBindingReference);
                             OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), authzUser,
                                                       buildScopeString(accessTokenDO.getScope()));
                             OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), authzUser);
