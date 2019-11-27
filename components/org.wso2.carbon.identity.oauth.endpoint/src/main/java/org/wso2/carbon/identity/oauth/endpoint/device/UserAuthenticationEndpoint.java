@@ -69,7 +69,6 @@ public class UserAuthenticationEndpoint {
                     getServerURL("/authenticationendpoint/device.do?error=invalidRequest", false, false));
             return null;
         }
-
         String clientId = DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().getClientIdByUserCode(userCode);
 
         if (StringUtils.isNotBlank(clientId) && StringUtils.equals(getUserCodeStatus(userCode), Constants.PENDING)) {
@@ -77,7 +76,6 @@ public class UserAuthenticationEndpoint {
             setCallbackURI(clientId);
             DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().setAuthenticationStatus(userCode,
                     Constants.USED);
-
             CommonAuthRequestWrapper commonAuthRequestWrapper = new CommonAuthRequestWrapper(request);
             commonAuthRequestWrapper.setParameter(Constants.CLIENT_ID, clientId);
             commonAuthRequestWrapper.setParameter(Constants.RESPONSE_TYPE, Constants.RESPONSE_TYPE_DEVICE);
@@ -88,7 +86,6 @@ public class UserAuthenticationEndpoint {
             }
             commonAuthRequestWrapper.setParameter(Constants.NONCE, userCode);
             return oAuth2AuthzEndpoint.authorize(commonAuthRequestWrapper, response);
-
         } else {
             if (log.isDebugEnabled()) {
                 log.debug("Incorrect user_code:" + userCode);
@@ -158,8 +155,8 @@ public class UserAuthenticationEndpoint {
             }
             deviceFlowDO.setCallbackUri(redirectURI);
         } catch (InvalidOAuthClientException | URISyntaxException | IdentityOAuth2Exception e) {
-            throw new IdentityOAuth2Exception("Error when getting app details for client id :" +
-                    clientId, e);
+            String errorMsg = String.format("Error when getting app details for client id : %s", clientId);
+            throw new IdentityOAuth2Exception(errorMsg, e);
         }
     }
 

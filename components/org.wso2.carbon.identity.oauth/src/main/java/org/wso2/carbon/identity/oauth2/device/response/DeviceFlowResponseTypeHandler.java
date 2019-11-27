@@ -42,7 +42,7 @@ public class DeviceFlowResponseTypeHandler extends AbstractResponseTypeHandler {
      *
      * @param oauthAuthzMsgCtx Authorization message context.
      * @return Response DTO.
-     * @throws IdentityOAuth2Exception
+     * @throws IdentityOAuth2Exception Error at device response type handler.
      */
     @Override
     public OAuth2AuthorizeRespDTO issue(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) throws IdentityOAuth2Exception {
@@ -52,10 +52,8 @@ public class DeviceFlowResponseTypeHandler extends AbstractResponseTypeHandler {
         AuthenticatedUser authenticatedUser = authzReqDTO.getUser();
         String UserCode = authzReqDTO.getNonce();
         DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().setAuthzUserAndStatus(UserCode,
-         Constants.AUTHORIZED, authenticatedUser);
+                Constants.AUTHORIZED, authenticatedUser);
         respDTO.setCallbackURI(authzReqDTO.getCallbackUrl());
-
         return respDTO;
     }
 }
-

@@ -52,7 +52,7 @@ public class Constants {
     public static final String ERROR = "error";
     public static final String ERROR_DESCRIPTION = "error_description";
 
-    //configurable values
+    // Configurable values.
     public static final int KEY_LENGTH = 6;
     public static final long EXPIRES_IN_VALUE = 600000L;
     public static final int INTERVAL_VALUE = 5000;

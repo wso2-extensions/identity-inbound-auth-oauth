@@ -78,6 +78,11 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
                 prepStmt.setString(9, consumerKey);
                 prepStmt.execute();
                 IdentityDatabaseUtil.commitTransaction(connection);
+
+                PreparedStatement preparedStatement = connection.prepareStatement("select * from " +
+                        "IDN_OAUTH2_DEVICE_FLOW where USER_CODE = 'testUserCode'");
+                ResultSet resultSet = preparedStatement.executeQuery();
+
             } catch (SQLException e) {
                 IdentityDatabaseUtil.rollbackTransaction(connection);
                 throw new IdentityOAuth2Exception("Error when storing the device flow parameters for consumer_key: " +
@@ -136,30 +141,6 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
                     userCode, e);
         }
     }
-
-//    @Override
-//    public String getClientIdByDeviceCode(String deviceCode) throws IdentityOAuth2Exception {
-//
-//        if (log.isDebugEnabled()) {
-//            log.debug("Getting client_id for device_code: " + deviceCode);
-//        }
-//        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
-//            try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.DeviceFlowDAOSQLQueries
-//                    .GET_CONSUMER_KEY_FOR_DEVICE_CODE)) {
-//                ResultSet resultSet = null;
-//                prepStmt.setString(1, deviceCode);
-//                resultSet = prepStmt.executeQuery();
-//
-//                while (resultSet.next()) {
-//                    clientId = resultSet.getString(1);
-//                }
-//            }
-//        } catch (SQLException e) {
-//            throw new IdentityOAuth2Exception("Error when getting client id for device_code: " +
-//                    deviceCode, e);
-//        }
-//        return clientId;
-//    }
 
     @Override
     public DeviceFlowDO getAuthenticationDetails(String deviceCode) throws IdentityOAuth2Exception {
@@ -230,29 +211,6 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
         }
         return false;
     }
-
-//    @Override
-//    public String getScopeForDevice(String userCode) throws IdentityOAuth2Exception {
-//
-//        if (log.isDebugEnabled()) {
-//            log.debug("Get scopes for user_code: " + userCode);
-//        }
-//        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
-//            try (PreparedStatement prepStmt =
-//                         connection.prepareStatement(SQLQueries.DeviceFlowDAOSQLQueries.GET_SCOPE_FOR_USER_CODE)) {
-//                ResultSet resultSet = null;
-//                prepStmt.setString(1, userCode);
-//                resultSet = prepStmt.executeQuery();
-//                while (resultSet.next()) {
-//                    scope = resultSet.getString(1);
-//                }
-//            }
-//        } catch (SQLException e) {
-//            throw new IdentityOAuth2Exception("Error when getting scopes for user_code: " +
-//                    userCode, e);
-//        }
-//        return scope;
-//    }
 
     @Override
     public String getStatusForUserCode(String userCode) throws IdentityOAuth2Exception {

@@ -29,7 +29,6 @@ import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestException
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
-import org.wso2.carbon.identity.oauth2.device.constants.Constants;
 
 import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.AUTHENTICATION_RESPONSE;
 import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.INITIAL_REQUEST;

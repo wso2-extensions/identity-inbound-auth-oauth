@@ -59,38 +59,33 @@ public class DeviceEndpoint {
         JSONObject errorResponse = new JSONObject();
         if (StringUtils.isBlank(clientId)) {
             errorResponse.put(Constants.ERROR, DeviceErrorCodes.INVALID_REQUEST)
-                    .put(Constants.ERROR_DESCRIPTION,"Request missing required parameters");
+                    .put(Constants.ERROR_DESCRIPTION, "Request missing required parameters");
             Response.ResponseBuilder respBuilder = Response.status(HttpServletResponse.SC_BAD_REQUEST);
             return respBuilder.entity(errorResponse.toString()).build();
-        } else {
-            if (validateClientId(clientId)) {
-                String userCode = GenerateKeys.getKey(Constants.KEY_LENGTH);
-                String deviceCode = UUID.randomUUID().toString();
-                String scope = request.getParameter(Constants.SCOPE);
-                String redirectionUri = IdentityUtil.getServerURL("/authenticationendpoint/device.do", false, false);
-                String redirectionUriComplete = redirectionUri + "?user_code=" + userCode;
-                DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().insertDeviceFlowParameters(deviceCode,
-                        userCode, clientId, Constants.EXPIRES_IN_VALUE, Constants.INTERVAL_VALUE);
-                DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().storeDeviceFlowScopes(scope, deviceCode);
-
-                JSONObject jsonObject = new JSONObject();
-                jsonObject.put(Constants.DEVICE_CODE, deviceCode)
-                        .put(Constants.USER_CODE, userCode)
-                        .put(Constants.VERIFICATION_URI, redirectionUri)
-                        .put(Constants.VERIFICATION_URI_COMPLETE, redirectionUriComplete)
-                        .put(Constants.EXPIRES_IN, stringValueInSeconds(Constants.EXPIRES_IN_VALUE))
-                        .put(Constants.INTERVAL, stringValueInSeconds(Constants.INTERVAL_VALUE));
-                Response.ResponseBuilder respBuilder = Response.status(HttpServletResponse.SC_OK);
-
-                return respBuilder.entity(jsonObject.toString()).build();
-
-            } else {
-                errorResponse.put(Constants.ERROR, DeviceErrorCodes.UNAUTHORIZED_CLIENT)
-                        .put(Constants.ERROR_DESCRIPTION,"No registered client with the client id.");
-                Response.ResponseBuilder respBuilder = Response.status(HttpServletResponse.SC_UNAUTHORIZED);
-                return respBuilder.entity(errorResponse.toString()).build();
-            }
         }
+        if (!validateClientId(clientId)) {
+            errorResponse.put(Constants.ERROR, DeviceErrorCodes.UNAUTHORIZED_CLIENT)
+                    .put(Constants.ERROR_DESCRIPTION, "No registered client with the client id.");
+            Response.ResponseBuilder respBuilder = Response.status(HttpServletResponse.SC_UNAUTHORIZED);
+            return respBuilder.entity(errorResponse.toString()).build();
+        }
+        String userCode = GenerateKeys.getKey(Constants.KEY_LENGTH);
+        String deviceCode = UUID.randomUUID().toString();
+        String scope = request.getParameter(Constants.SCOPE);
+        String redirectionUri = IdentityUtil.getServerURL("/authenticationendpoint/device.do", false, false);
+        String redirectionUriComplete = redirectionUri + "?user_code=" + userCode;
+        DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().insertDeviceFlowParameters(deviceCode,
+                userCode, clientId, Constants.EXPIRES_IN_VALUE, Constants.INTERVAL_VALUE);
+        DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().storeDeviceFlowScopes(scope, deviceCode);
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.put(Constants.DEVICE_CODE, deviceCode)
+                .put(Constants.USER_CODE, userCode)
+                .put(Constants.VERIFICATION_URI, redirectionUri)
+                .put(Constants.VERIFICATION_URI_COMPLETE, redirectionUriComplete)
+                .put(Constants.EXPIRES_IN, stringValueInSeconds(Constants.EXPIRES_IN_VALUE))
+                .put(Constants.INTERVAL, stringValueInSeconds(Constants.INTERVAL_VALUE));
+        Response.ResponseBuilder respBuilder = Response.status(HttpServletResponse.SC_OK);
+        return respBuilder.entity(jsonObject.toString()).build();
     }
 
     /**

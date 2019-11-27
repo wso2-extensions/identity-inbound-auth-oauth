@@ -37,7 +37,7 @@ public interface DeviceFlowDAO {
      * @param userCode    Code that is used to correlate user and device.
      * @param consumerKey Consumer key of the client application.
      * @param expiresIn   Device code valid period.
-     * @throws IdentityOAuth2Exception
+     * @throws IdentityOAuth2Exception Error while inserting device flow parameters.
      */
     void insertDeviceFlowParameters(String deviceCode, String userCode, String consumerKey, Long expiresIn,
                                     int interval) throws IdentityOAuth2Exception;
@@ -47,7 +47,7 @@ public interface DeviceFlowDAO {
      *
      * @param userCode Code that is used to correlate user and device.
      * @return client_id
-     * @throws IdentityOAuth2Exception
+     * @throws IdentityOAuth2Exception Error while getting client id for user code.
      */
     String getClientIdByUserCode(String userCode) throws IdentityOAuth2Exception;
 
@@ -56,24 +56,16 @@ public interface DeviceFlowDAO {
      *
      * @param userCode Code that is used to correlate user and device.
      * @param status   Status of the device and user codes.
-     * @throws IdentityOAuth2Exception
+     * @throws IdentityOAuth2Exception Error while setting authentication status.
      */
     void setAuthenticationStatus(String userCode, String status) throws IdentityOAuth2Exception;
-
-//    /**
-//     * Get the client id that has involved with user code.
-//     *
-//     * @param deviceCode Code that is used to identify the device.
-//     * @throws IdentityOAuth2Exception
-//     */
-//    String getClientIdByDeviceCode(String deviceCode) throws IdentityOAuth2Exception;
 
     /**
      * Get the authentication status for device code.
      *
      * @param deviceCode Code that is used to identify the device.
      * @return Map of values.
-     * @throws IdentityOAuth2Exception
+     * @throws IdentityOAuth2Exception Error while getting authentication details.
      */
     DeviceFlowDO getAuthenticationDetails(String deviceCode) throws IdentityOAuth2Exception;
 
@@ -82,25 +74,16 @@ public interface DeviceFlowDAO {
      *
      * @param clientId Consumer key of the application.
      * @return Exist or not.
-     * @throws IdentityOAuth2Exception
+     * @throws IdentityOAuth2Exception Error while checking client id exist.
      */
     boolean checkClientIdExist(String clientId) throws IdentityOAuth2Exception;
-
-//    /**
-//     * Get the scopes that are stored against user code.
-//     *
-//     * @param userCode Code that is used to correlate user and device.
-//     * @return scope
-//     * @throws IdentityOAuth2Exception
-//     */
-//    String getScopeForDevice(String userCode) throws IdentityOAuth2Exception;
 
     /**
      * Get the status of the user code.
      *
      * @param userCode Code that is used to correlate user and device.
      * @return status
-     * @throws IdentityOAuth2Exception
+     * @throws IdentityOAuth2Exception Error while getting status for user code.
      */
     String getStatusForUserCode(String userCode) throws IdentityOAuth2Exception;
 
@@ -109,7 +92,7 @@ public interface DeviceFlowDAO {
      *
      * @param deviceCode  Code that is used to identify the device.
      * @param newPollTime Last poll time.
-     * @throws IdentityOAuth2Exception
+     * @throws IdentityOAuth2Exception Error while setting last poll time.
      */
     void setLastPollTime(String deviceCode, Timestamp newPollTime) throws IdentityOAuth2Exception;
 
@@ -119,16 +102,17 @@ public interface DeviceFlowDAO {
      * @param userCode  Code that is used to correlate user and device.
      * @param status    Status of the device code.
      * @param authzUser Authenticated user.
-     * @throws IdentityOAuth2Exception
+     * @throws IdentityOAuth2Exception Error while setting authenticated user and status.
      */
-    void setAuthzUserAndStatus(String userCode, String status, AuthenticatedUser authzUser) throws IdentityOAuth2Exception;
+    void setAuthzUserAndStatus(String userCode, String status, AuthenticatedUser authzUser)
+            throws IdentityOAuth2Exception;
 
     /**
      * Set device code as expired.
      *
      * @param deviceCode Code that is used to identify the device.
      * @param status     Status of the device code.
-     * @throws IdentityOAuth2Exception
+     * @throws IdentityOAuth2Exception Error while setting device code as expired.
      */
     void setDeviceCodeExpired(String deviceCode, String status) throws IdentityOAuth2Exception;
 
@@ -137,7 +121,7 @@ public interface DeviceFlowDAO {
      *
      * @param clientId    Consumer key of service provide.
      * @param callBackUri Callback uri of the service provider.
-     * @throws IdentityOAuth2Exception
+     * @throws IdentityOAuth2Exception Error while Setting callback uri.
      */
     void setCallBackURI(String clientId, String callBackUri) throws IdentityOAuth2Exception;
 
@@ -146,7 +130,7 @@ public interface DeviceFlowDAO {
      *
      * @param scope      Scope string.
      * @param deviceCode Code that is used to identify the device.
-     * @throws IdentityOAuth2Exception
+     * @throws IdentityOAuth2Exception Error while storing device flow scopes.
      */
     void storeDeviceFlowScopes(String scope, String deviceCode) throws IdentityOAuth2Exception;
 
@@ -155,7 +139,7 @@ public interface DeviceFlowDAO {
      *
      * @param userCode Code that is used to correlate user and device.
      * @return Array of scopes.
-     * @throws IdentityOAuth2Exception
+     * @throws IdentityOAuth2Exception Error while getting scopes for user code.
      */
     String[] getScopesForUserCode(String userCode) throws IdentityOAuth2Exception;
 
@@ -164,7 +148,7 @@ public interface DeviceFlowDAO {
      *
      * @param deviceCode Code that is used to identify the device.
      * @return Array of scopes.
-     * @throws IdentityOAuth2Exception
+     * @throws IdentityOAuth2Exception Error while getting scopes for device code.
      */
     String[] getScopesForDeviceCode(String deviceCode) throws IdentityOAuth2Exception;
 }
