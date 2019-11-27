@@ -759,6 +759,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     String[] scope = OAuth2Util.buildScopeArray(resultSet.getString(8));
                     String tokenId = resultSet.getString(9);
                     String subjectIdentifier = resultSet.getString(10);
+                    String tokenBindingReference = resultSet.getString(11);
 
                     AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(tenantAwareUsernameWithNoUserDomain,
                             userDomain, tenantDomain, authenticatedIDP);
@@ -777,6 +778,9 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     dataDO.setAccessToken(accessToken);
                     dataDO.setRefreshToken(refreshToken);
                     dataDO.setTokenId(tokenId);
+                    if (StringUtils.isNotBlank(tokenBindingReference) && !NONE.equals(tokenBindingReference)) {
+                        setTokenBindingToAccessTokenDO(dataDO, connection, tokenId);
+                    }
                     accessTokenDOMap.put(accessToken, dataDO);
                 } else {
                     String scope = resultSet.getString(8).trim();
@@ -885,21 +889,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     dataDO.setTenantID(tenantId);
 
                     if (StringUtils.isNotBlank(tokenBindingReference) && !NONE.equals(tokenBindingReference)) {
-                        try (PreparedStatement tokenBindingPreparedStatement = connection
-                                .prepareStatement(RETRIEVE_TOKEN_BINDING_BY_TOKEN_ID)) {
-                            tokenBindingPreparedStatement.setString(1, tokenId);
-                            try (ResultSet tokenBindingResultSet = tokenBindingPreparedStatement.executeQuery()) {
-                                if (tokenBindingResultSet.next()) {
-                                    TokenBinding tokenBinding = new TokenBinding();
-                                    tokenBinding.setBindingType(tokenBindingResultSet.getString("TOKEN_BINDING_TYPE"));
-                                    tokenBinding
-                                            .setBindingReference(tokenBindingResultSet.getString("TOKEN_BINDING_REF"));
-                                    tokenBinding
-                                            .setBindingValue(tokenBindingResultSet.getString("TOKEN_BINDING_VALUE"));
-                                    dataDO.setTokenBinding(tokenBinding);
-                                }
-                            }
-                        }
+                        setTokenBindingToAccessTokenDO(dataDO, connection, tokenId);
                     }
                 } else {
                     scopes.add(resultSet.getString(5));
@@ -920,6 +910,24 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         }
 
         return dataDO;
+    }
+
+    private void setTokenBindingToAccessTokenDO(AccessTokenDO dataDO, Connection connection, String tokenId)
+            throws SQLException {
+
+        try (PreparedStatement tokenBindingPreparedStatement = connection
+                .prepareStatement(RETRIEVE_TOKEN_BINDING_BY_TOKEN_ID)) {
+            tokenBindingPreparedStatement.setString(1, tokenId);
+            try (ResultSet tokenBindingResultSet = tokenBindingPreparedStatement.executeQuery()) {
+                if (tokenBindingResultSet.next()) {
+                    TokenBinding tokenBinding = new TokenBinding();
+                    tokenBinding.setBindingType(tokenBindingResultSet.getString("TOKEN_BINDING_TYPE"));
+                    tokenBinding.setBindingReference(tokenBindingResultSet.getString("TOKEN_BINDING_REF"));
+                    tokenBinding.setBindingValue(tokenBindingResultSet.getString("TOKEN_BINDING_VALUE"));
+                    dataDO.setTokenBinding(tokenBinding);
+                }
+            }
+        }
     }
 
     public void updateAccessTokenState(String tokenId, String tokenState) throws IdentityOAuth2Exception {
