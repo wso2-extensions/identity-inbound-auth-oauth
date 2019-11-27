@@ -31,8 +31,10 @@ import org.wso2.carbon.identity.webfinger.internal.WebFingerServiceComponentHold
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.tenant.TenantManager;
+
 import java.util.Enumeration;
 import java.util.Vector;
+
 import javax.servlet.http.HttpServletRequest;
 
 import static org.mockito.Matchers.any;
@@ -42,11 +44,11 @@ import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 
-@PrepareForTest({HttpServletRequest.class, WebFingerServiceComponentHolder.class, RealmService.class,
-        TenantManager.class})
 /**
  * Unit test coverage for DefaultWebFingerRequestBuilder class
  */
+@PrepareForTest({HttpServletRequest.class, WebFingerServiceComponentHolder.class, RealmService.class,
+        TenantManager.class})
 public class DefaultWebFingerRequestBuilderTest extends PowerMockTestCase {
     private DefaultWebFingerRequestBuilder defaultWebFingerRequestBuilder;
     private final String rel = "http://openid.net/specs/connect/1.0/issuer";

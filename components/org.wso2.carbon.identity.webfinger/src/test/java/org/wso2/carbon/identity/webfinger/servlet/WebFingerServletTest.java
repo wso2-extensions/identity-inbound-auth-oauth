@@ -30,6 +30,7 @@ import org.wso2.carbon.identity.webfinger.internal.WebFingerServiceComponentHold
 
 import java.util.HashMap;
 import java.util.Map;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
