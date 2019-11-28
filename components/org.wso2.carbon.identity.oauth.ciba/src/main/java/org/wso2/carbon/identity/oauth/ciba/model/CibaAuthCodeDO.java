@@ -27,10 +27,6 @@ import java.sql.Timestamp;
  */
 public class CibaAuthCodeDO {
 
-    public CibaAuthCodeDO() {
-
-    }
-
     private String cibaAuthCodeKey;
     private String authReqID;
     private String consumerAppKey;

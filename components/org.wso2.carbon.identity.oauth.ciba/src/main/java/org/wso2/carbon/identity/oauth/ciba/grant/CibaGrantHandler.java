@@ -94,7 +94,7 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
             cibaAuthCodeKey = cibaAuthCodeDO.getCibaAuthCodeKey();
 
             // Check whether auth_req_id is not expired.
-            activeAuthreqID(cibaAuthCodeDO);
+            activeAuthReqId(cibaAuthCodeDO);
 
             // Check whether token is issued for the authReqId.
             if (isTokenAlreadyIssued(cibaAuthCodeDO)) {
@@ -192,7 +192,7 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
      * @param cibaAuthCodeDO DO that accumulates information regarding authentication and token requests.
      * @throws IdentityOAuth2Exception,CibaCoreException
      */
-    private void activeAuthreqID(CibaAuthCodeDO cibaAuthCodeDO) throws IdentityOAuth2Exception, CibaCoreException {
+    private void activeAuthReqId(CibaAuthCodeDO cibaAuthCodeDO) throws IdentityOAuth2Exception, CibaCoreException {
 
         // Check whether auth_req_id has expired or not.
         long expiresIn = cibaAuthCodeDO.getExpiresIn() * SEC_TO_MILLISEC_FACTOR;
@@ -219,10 +219,10 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
         // Check the frequency of polling and do the needful.
 
         long currentTimeInMillis = Calendar.getInstance(TimeZone.getTimeZone(CibaConstants.UTC)).getTimeInMillis();
-        long lastPolltimeInMillis = cibaAuthCodeDO.getLastPolledTime().getTime();
+        long lastPollTimeInMillis = cibaAuthCodeDO.getLastPolledTime().getTime();
         long intervalInSec = cibaAuthCodeDO.getInterval();
         String cibaAuthCodeID = cibaAuthCodeDO.getCibaAuthCodeKey();
-        if ((currentTimeInMillis < lastPolltimeInMillis + intervalInSec * SEC_TO_MILLISEC_FACTOR)) {
+        if ((currentTimeInMillis < lastPollTimeInMillis + intervalInSec * SEC_TO_MILLISEC_FACTOR)) {
             long newInterval = intervalInSec + CibaConstants.INTERVAL_INCREMENT_VALUE_IN_SEC;
             if (log.isDebugEnabled()) {
                 log.debug(" Rigorous polling for the token  made by client for request identified by " +

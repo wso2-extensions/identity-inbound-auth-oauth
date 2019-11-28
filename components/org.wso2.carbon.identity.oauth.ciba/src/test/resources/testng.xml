@@ -23,7 +23,7 @@
             <class name="org.wso2.carbon.identity.oauth.ciba.util.CibaAuthUtilTest"/>
             <class name="org.wso2.carbon.identity.oauth.ciba.handlers.CibaResponseTypeHandlerTest"></class>
             <class name="org.wso2.carbon.identity.oauth.ciba.grant.CibaGrantHandlerTest"></class>
-            <class name="org.wso2.carbon.identity.oauth.ciba.dao.CibaAuthMgtDAOImplTest"></class>
+            <class name="org.wso2.carbon.identity.oauth.ciba.dao.CibaMgtDAOImplTest"></class>
         </classes>
     </test>
 

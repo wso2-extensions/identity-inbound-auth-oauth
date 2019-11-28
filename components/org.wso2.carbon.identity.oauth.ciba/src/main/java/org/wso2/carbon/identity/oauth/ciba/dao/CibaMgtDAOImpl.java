@@ -173,8 +173,8 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
                 ResultSet resultSet = prepStmt.executeQuery();
                 if (resultSet.next()) {
                     if (log.isDebugEnabled()) {
-                        log.debug("Successfully returning CibaAuthCodeDOKey : " + resultSet.getString(1) + "for the " +
-                                "hashedCibaAuthReqId : " + authReqId);
+                        log.debug("Successfully returning CibaAuthCodeKey : " + resultSet.getString(1) + "for the " +
+                                "ciba auth_req_id : " + authReqId);
                     }
                     return resultSet.getString(1);
                 } else {
@@ -198,7 +198,7 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
                 prepStmt.execute();
                 IdentityDatabaseUtil.commitTransaction(connection);
                 if (log.isDebugEnabled()) {
-                    log.debug("Successfully updated lastPollingTime of TokenRequest  with cibaAuthCodeDOKey : " +
+                    log.debug("Successfully updated lastPollingTime of TokenRequest  with cibaAuthCodeKey : " +
                             key);
                 }
             } catch (SQLException e) {
@@ -222,7 +222,7 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
                 prepStmt.execute();
                 IdentityDatabaseUtil.commitTransaction(connection);
                 if (log.isDebugEnabled()) {
-                    log.debug("Successfully updated pollingInterval of TokenRequest  with cibaAuthCodeDOKey : " +
+                    log.debug("Successfully updated pollingInterval of TokenRequest  with CibaAuthCodeKey : " +
                             key);
                 }
             } catch (SQLException e) {
@@ -235,19 +235,19 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
     }
 
     @Override
-    public AuthenticatedUser getAuthenticatedUser(String cibaAuthCodeDOKey) throws CibaCoreException {
+    public AuthenticatedUser getAuthenticatedUser(String CibaAuthCodeKey) throws CibaCoreException {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
             try (PreparedStatement prepStmt =
                          connection.prepareStatement(SQLQueries.CibaSQLQueries.RETRIEVE_AUTHENTICATED_USER)) {
 
                 AuthenticatedUser authenticatedUser = new AuthenticatedUser();
-                prepStmt.setString(1, cibaAuthCodeDOKey);
+                prepStmt.setString(1, CibaAuthCodeKey);
                 ResultSet resultSet = prepStmt.executeQuery();
                 if (resultSet.next()) {
                     if (log.isDebugEnabled()) {
                         log.debug("Successfully obtained authenticatedUser of TokenRequest  with " +
-                                "cibaAuthCodeDOKey : " + cibaAuthCodeDOKey);
+                                "CibaAuthCodeKey : " + CibaAuthCodeKey);
                     }
                     authenticatedUser.setUserName(resultSet.getString(1));
                     authenticatedUser.setUserStoreDomain(resultSet.getString(2));
@@ -285,7 +285,7 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
                 IdentityDatabaseUtil.commitTransaction(connection);
 
                 if (log.isDebugEnabled()) {
-                    log.debug("Successfully persisted cibaAuthCodeDO for unique cibaAuthCodeDOKey : " +
+                    log.debug("Successfully persisted cibaAuthCodeDO for unique CibaAuthCodeKey : " +
                             cibaAuthCodeDO.getCibaAuthCodeKey());
                 }
             } catch (SQLException e) {
@@ -321,7 +321,7 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
                 }
 
                 if (log.isDebugEnabled()) {
-                    log.debug("Successfully obtained cibaAuthCode for unique cibaAuthCodeDOKey : " +
+                    log.debug("Successfully obtained cibaAuthCode for unique CibaAuthCodeKey : " +
                             authReqID);
                 }
             }

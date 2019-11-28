@@ -31,14 +31,27 @@ import org.wso2.carbon.identity.oauth.ciba.dao.CibaDAOFactory;
 import org.wso2.carbon.identity.oauth.ciba.dao.CibaMgtDAO;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeDO;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
+import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
+import java.sql.Timestamp;
+import java.util.Calendar;
+import java.util.TimeZone;
+
+import static org.mockito.Matchers.anyString;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
 
 @WithH2Database(files = {"dbScripts/h2.sql", "dbScripts/identity.sql"})
 @PrepareForTest({OAuth2Util.class, OAuthServerConfiguration.class, CibaDAOFactory.class})
 public class CibaGrantHandlerTest extends PowerMockTestCase {
+
+    private static final String NONCE = "2201e5aa-1c5f-4a17-90c9-1956a3540b19";
+    private static final String CONSUMER_KEY = "ZzxmDqqK8YYfjtlOh9vw85qnNVoa";
+    private static final String AUTH_CODE_KEY = "039e8fff-1b24-420a-9dae-0ad745c96e97";
+    private final String TEST_CALLBACK_URL = "https://localhost:8000/callback";
 
     @Mock
     OAuthServerConfiguration oAuthServerConfiguration;
@@ -51,6 +64,12 @@ public class CibaGrantHandlerTest extends PowerMockTestCase {
 
     @Mock
     CibaGrantHandler cibaGrantHandler;
+
+    @Mock
+    OAuthTokenReqMessageContext oAuthTokenReqMessageContext;
+
+    @Mock
+    OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO;
 
     @BeforeMethod
     public void setUp() throws Exception {
@@ -76,5 +95,112 @@ public class CibaGrantHandlerTest extends PowerMockTestCase {
 
         Assert.assertTrue(WhiteboxImpl.invokeMethod(cibaGrantHandler, "isConsentGiven",
                 cibaAuthCodeDoAuth));
+    }
+
+    @Test
+    public void testIsAuthorizationPending() throws Exception {
+
+        CibaAuthCodeDO cibaAuthCodeDoDenied = new CibaAuthCodeDO();
+        cibaAuthCodeDoDenied.setAuthenticationStatus(AuthReqStatus.AUTHENTICATED);
+
+        when(CibaDAOFactory.getInstance().getCibaAuthMgtDAO()).thenReturn(cibaMgtDAO);
+
+        Assert.assertFalse(WhiteboxImpl.invokeMethod(cibaGrantHandler, "isAuthorizationPending",
+                cibaAuthCodeDoDenied));
+
+        CibaAuthCodeDO cibaAuthCodeDoAuth = new CibaAuthCodeDO();
+        cibaAuthCodeDoAuth.setAuthenticationStatus(AuthReqStatus.REQUESTED);
+
+        Assert.assertTrue(WhiteboxImpl.invokeMethod(cibaGrantHandler, "isAuthorizationPending",
+                cibaAuthCodeDoAuth));
+    }
+
+    @Test
+    public void testUpdateLastPolledTime() throws Exception {
+
+        CibaAuthCodeDO cibaAuthCodeDoDenied = new CibaAuthCodeDO();
+
+        when(CibaDAOFactory.getInstance().getCibaAuthMgtDAO()).thenReturn(cibaMgtDAO);
+
+        Assert.assertNull(WhiteboxImpl.invokeMethod(cibaGrantHandler, "updateLastPolledTime",
+                cibaAuthCodeDoDenied));
+    }
+
+    @Test(expectedExceptions = IdentityOAuth2Exception.class)
+    public void testValidateAuthReqId() throws Exception {
+
+        when(CibaDAOFactory.getInstance().getCibaAuthMgtDAO()).thenReturn(cibaMgtDAO);
+        when(CibaDAOFactory.getInstance().getCibaAuthMgtDAO().isAuthReqIdExist(anyString())).thenReturn(false);
+
+        WhiteboxImpl.invokeMethod(cibaGrantHandler, "validateAuthReqID", "randomID");
+        Assert.fail();
+    }
+
+    @Test(expectedExceptions = IdentityOAuth2Exception.class)
+    public void testActiveAuthReqId() throws Exception {
+
+        CibaAuthCodeDO cibaAuthCodeDO = new CibaAuthCodeDO();
+        long issuedTimeInMillis = Calendar.getInstance(TimeZone.getTimeZone("UTC")).getTimeInMillis();
+        Timestamp issuedTime = new Timestamp(issuedTimeInMillis);
+        cibaAuthCodeDO.setExpiresIn(0);
+        cibaAuthCodeDO.setIssuedTime(issuedTime);
+
+        when(CibaDAOFactory.getInstance().getCibaAuthMgtDAO()).thenReturn(cibaMgtDAO);
+
+        WhiteboxImpl.invokeMethod(cibaGrantHandler, "activeAuthReqId", cibaAuthCodeDO);
+        Assert.fail();
+
+        cibaAuthCodeDO.setExpiresIn(120L);
+        Assert.assertNull(WhiteboxImpl.invokeMethod(cibaGrantHandler, "activeAuthReqId", cibaAuthCodeDO));
+    }
+
+    @Test
+    public void testIsTokenAlreadyIssued() throws Exception {
+
+        CibaAuthCodeDO cibaAuthCodeDoIssued = new CibaAuthCodeDO();
+        cibaAuthCodeDoIssued.setAuthenticationStatus(AuthReqStatus.TOKEN_ISSUED);
+
+        when(CibaDAOFactory.getInstance().getCibaAuthMgtDAO()).thenReturn(cibaMgtDAO);
+
+        Assert.assertTrue(WhiteboxImpl.invokeMethod(cibaGrantHandler, "isTokenAlreadyIssued",
+                cibaAuthCodeDoIssued));
+
+        CibaAuthCodeDO cibaAuthCodeDoAuth = new CibaAuthCodeDO();
+        cibaAuthCodeDoAuth.setAuthenticationStatus(AuthReqStatus.REQUESTED);
+
+        Assert.assertFalse(WhiteboxImpl.invokeMethod(cibaGrantHandler, "isTokenAlreadyIssued",
+                cibaAuthCodeDoAuth));
+    }
+
+    @Test(expectedExceptions = IdentityOAuth2Exception.class)
+    public void testValidatePollingFrequency() throws Exception {
+
+        CibaAuthCodeDO cibaAuthCodeDO = new CibaAuthCodeDO();
+
+        long lastPolledTimeInMillis = Calendar.getInstance(TimeZone.getTimeZone("UTC")).getTimeInMillis();
+        Timestamp polledTime = new Timestamp(lastPolledTimeInMillis - 1000);
+        cibaAuthCodeDO.setInterval(2);
+        cibaAuthCodeDO.setLastPolledTime(polledTime);
+
+        when(CibaDAOFactory.getInstance().getCibaAuthMgtDAO()).thenReturn(cibaMgtDAO);
+
+        WhiteboxImpl.invokeMethod(cibaGrantHandler, "validatePollingFrequency", cibaAuthCodeDO);
+        Assert.fail();
+    }
+
+    @Test
+    public void testValidateCorrectPollingFrequency() throws Exception {
+
+        CibaAuthCodeDO cibaAuthCodeDO = new CibaAuthCodeDO();
+
+        long lastPolledTimeInMillis = Calendar.getInstance(TimeZone.getTimeZone("UTC")).getTimeInMillis();
+        cibaAuthCodeDO.setInterval(2);
+        Timestamp polledTimeforSucess = new Timestamp(lastPolledTimeInMillis - 10000);
+        cibaAuthCodeDO.setLastPolledTime(polledTimeforSucess);
+
+        when(CibaDAOFactory.getInstance().getCibaAuthMgtDAO()).thenReturn(cibaMgtDAO);
+
+        Assert.assertNull(WhiteboxImpl.invokeMethod(cibaGrantHandler, "validatePollingFrequency",
+                cibaAuthCodeDO));
     }
 }
