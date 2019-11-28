@@ -133,10 +133,10 @@ public class OIDCRequestObjectUtilTest extends PowerMockTestCase {
         when((oauthServerConfigurationMock.getRequestObjectBuilders())).thenReturn(requestObjectBuilderMap);
 
         try {
-            RequestObject requestObject = OIDCRequestObjectUtil.buildRequestObject(oAuthAuthzRequest, oAuth2Parameters);
+            OIDCRequestObjectUtil.buildRequestObject(oAuthAuthzRequest, oAuth2Parameters);
         } catch (RequestObjectException e) {
             Assert.assertFalse(exceptionNotExpected,
-                    errorMsg + "Request Object Building failed due to " + e.getErrorMessage());
+                    errorMsg + " Request Object Building failed due to " + e.getErrorMessage());
         }
     }
 

@@ -247,7 +247,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
 
         // Skipping filtering with user consent.
         // TODO: Remove mocking claims filtering based on consent when fixing
-        //  https://github.com/wso2/product-is/issues/2676
+        // https://github.com/wso2/product-is/issues/2676
         OpenIDConnectClaimFilterImpl openIDConnectClaimFilter = spy(new OpenIDConnectClaimFilterImpl());
         when(openIDConnectClaimFilter
                 .getClaimsFilteredByUserConsent(anyMap(), any(AuthenticatedUser.class), anyString(), anyString()))

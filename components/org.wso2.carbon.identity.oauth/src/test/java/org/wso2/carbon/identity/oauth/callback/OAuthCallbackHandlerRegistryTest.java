@@ -45,6 +45,9 @@ import static org.testng.Assert.assertNull;
 @PrepareForTest({OAuthServerConfiguration.class})
 public class OAuthCallbackHandlerRegistryTest extends PowerMockIdentityBaseTest {
 
+    private static final int CALLBACK_HANDLER_PRIORITY = 0;
+    private static final int METADATA_SET_SIZE = 2;
+
     @Mock
     private OAuthServerConfiguration oAuthServerConfiguration;
 
@@ -59,14 +62,15 @@ public class OAuthCallbackHandlerRegistryTest extends PowerMockIdentityBaseTest 
     @Test(expectedExceptions = IdentityOAuth2Exception.class)
     public void testGetInstance() throws Exception {
         String className = "org.wso2.carbon.identity.oauth.callback.NonExistingCallbackHandler";
-        getOAuthCallbackHandlerRegistry(className, 2);
+        getOAuthCallbackHandlerRegistry(className, METADATA_SET_SIZE);
     }
 
     @Test(dataProvider = "testGetOAuthAuthzHandler")
     public void testGetOAuthAuthzHandler(String className) throws Exception {
 
         // Create OAuthCallbackHandlerRegistry.
-        OAuthCallbackHandlerRegistry oAuthCallbackHandlerRegistry = getOAuthCallbackHandlerRegistry(className, 2);
+        OAuthCallbackHandlerRegistry oAuthCallbackHandlerRegistry =
+                getOAuthCallbackHandlerRegistry(className, METADATA_SET_SIZE);
         // Create OAuthCallback to be handled.
         AuthenticatedUser authenticatedUser = new AuthenticatedUser();
         OAuthCallback oAuthCallback = new OAuthCallback(authenticatedUser, "client", OAuthCallback.OAuthCallbackType
@@ -77,8 +81,8 @@ public class OAuthCallbackHandlerRegistryTest extends PowerMockIdentityBaseTest 
         OAuthCallbackHandler oAuthCallbackHandler = oAuthCallbackHandlerRegistry.getOAuthAuthzHandler(oAuthCallback);
 
         if (StringUtils.isNotEmpty(className)) {
-            assertEquals(oAuthCallbackHandler.getPriority(), 0, "OAuthHandlers priority should be equal to" +
-                    " the given priority in the OAuthCallBackHandlerMetaData.");
+            assertEquals(oAuthCallbackHandler.getPriority(), CALLBACK_HANDLER_PRIORITY,
+                    "OAuthHandlers priority should be equal to the given priority in the OAuthCallBackHandlerMetaData.");
         } else {
             assertNull(oAuthCallbackHandler, "Should return null when there is no OAuthCallbackHandler can handle the" +
                     " given OAuthCallback.");
