@@ -106,7 +106,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
     private static final String COUNT_APPS = "SELECT count(*) FROM IDN_OAUTH_CONSUMER_APPS WHERE APP_NAME=? and " +
             "TENANT_ID=?";
 
-    private static final String BACKCHANNEL_LOGOUT="https://localhost:8090/playground2/backChannelLogout";
+    private static final String BACKCHANNEL_LOGOUT = "https://localhost:8090/playground2/backChannelLogout";
 
     @Mock
     private TenantManager mockedTenantManager;

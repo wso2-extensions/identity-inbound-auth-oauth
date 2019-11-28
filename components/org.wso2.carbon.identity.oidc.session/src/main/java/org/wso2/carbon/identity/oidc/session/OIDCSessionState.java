@@ -119,20 +119,22 @@ public class OIDCSessionState implements Serializable {
     }
 
     /**
-     * Returns sid claim
+     * Returns sid claim.
      *
      * @return sid claim
      */
     public String getSidClaim() {
+
         return sidClaim;
     }
 
     /**
-     * Sets sid claim
+     * Sets sid claim.
      *
      * @param sidClaim
      */
     public void setSidClaim(String sidClaim) {
+
         this.sidClaim = sidClaim;
     }
 }
