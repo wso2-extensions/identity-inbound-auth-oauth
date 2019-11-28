@@ -24,7 +24,6 @@ import org.joda.time.DateTime;
 import org.junit.runner.RunWith;
 import org.mockito.Matchers;
 import org.mockito.Mock;
-import org.opensaml.core.xml.io.UnmarshallingException;
 import org.opensaml.saml.saml2.core.Assertion;
 import org.opensaml.saml.saml2.core.NameID;
 import org.opensaml.saml.saml2.core.Subject;
@@ -114,7 +113,7 @@ import static org.testng.Assert.fail;
 @PrepareForTest({IdentityUtil.class, IdentityTenantUtil.class, IdentityProviderManager.class, MultitenantUtils.class,
         IdentityApplicationManagementUtil.class, OAuthServerConfiguration.class, SSOServiceProviderConfigManager.class,
         SAML2BearerGrantHandler.class, OAuthComponentServiceHolder.class, OAuth2ServiceComponentHolder.class,
-        OAuth2Util.class,IdentityPersistenceManager.class, SignatureValidator.class, UnmarshallUtils.class})
+        OAuth2Util.class, IdentityPersistenceManager.class, SignatureValidator.class, UnmarshallUtils.class})
 public class SAML2BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
 
     public static final String[] SCOPE_ARRAY = {"scope1"};
@@ -208,7 +207,8 @@ public class SAML2BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
         assertEquals(tokReqMsgCtx.getScope(), SCOPE_ARRAY, "Scope not set in message context");
         assertNotNull(tokReqMsgCtx.getValidityPeriod(), "Validity period not set in message context");
         assertNotNull(tokReqMsgCtx.getAuthorizedUser(), "AuthorizedUser not set in message context");
-        assertEquals(tokReqMsgCtx.getAuthorizedUser().getUserName(), MultitenantUtils.getTenantAwareUsername(TestConstants.TEST_USER_NAME));
+        assertEquals(tokReqMsgCtx.getAuthorizedUser().getUserName(),
+                MultitenantUtils.getTenantAwareUsername(TestConstants.TEST_USER_NAME));
     }
 
     @DataProvider (name = "validateGrantExceptionDataProvider")
@@ -226,23 +226,35 @@ public class SAML2BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
 
         DateTime validOnOrAfter = new DateTime(System.currentTimeMillis() + 10000000L);
         DateTime expiredOnOrAfter = new DateTime(System.currentTimeMillis() - 10000000L);
-        return new Object[][] {
-                { validOnOrAfter, "LOCAL", true, true, TestConstants.OAUTH2_TOKEN_EP, TestConstants.LOACALHOST_DOMAIN, new IdentityUnmarshallingException("Error"), "Error while unmashalling"},
-                { validOnOrAfter, "FED", true, true, TestConstants.OAUTH2_TOKEN_EP, TestConstants.LOACALHOST_DOMAIN, new IdentityProviderManagementException("Error"), "Error while retrieving identity provider"},
-                { validOnOrAfter, "FED", true, true, TestConstants.OAUTH2_TOKEN_EP, TestConstants.LOACALHOST_DOMAIN, new SignatureException(), "Error while validating the signature"},
-                { validOnOrAfter, "LOCAL", true, true, TestConstants.OAUTH2_TOKEN_EP, TestConstants.LOACALHOST_DOMAIN, new IdentityApplicationManagementException("Error"), "Error while retrieving service provider"},
-                { validOnOrAfter, "LOCAL", true, true, TestConstants.OAUTH2_TOKEN_EP, TestConstants.LOACALHOST_DOMAIN, new UserStoreException(), "Error while building local user"},
-                { validOnOrAfter, "FED", true, true, TestConstants.OAUTH2_TOKEN_EP, TestConstants.LOACALHOST_DOMAIN, new CertificateException(), "Error occurred while decoding public certificate"},
-                { validOnOrAfter, "LOCAL", true, false, TestConstants.OAUTH2_TOKEN_EP, TestConstants.LOACALHOST_DOMAIN, null, "User not found"},
-                { validOnOrAfter, "LOCAL", false, true, TestConstants.OAUTH2_TOKEN_EP, TestConstants.LOACALHOST_DOMAIN, null, "Non SaaS app"},
-                { validOnOrAfter, "LOCAL", true, true, "invalidAudience", TestConstants.LOACALHOST_DOMAIN, null, "Audience Restriction validation failed"},
-                { validOnOrAfter, "LOCAL", true, true, "", TestConstants.LOACALHOST_DOMAIN, null, "Token Endpoint alias has not been configured"},
-                { validOnOrAfter, "FED", true, true, "invalidAudience", TestConstants.LOACALHOST_DOMAIN, null, "Audience Restriction validation failed"},
-//                { validOnOrAfter, "LOCAL", false, true, TestConstants.OAUTH2_TOKEN_EP, "invalidEntityId", null, "Issuer verification failed"},
-//                { validOnOrAfter, "LOCAL", false, true, TestConstants.OAUTH2_TOKEN_EP, null, null, "Issuer verification failed"},
-                { validOnOrAfter, null, true, true, TestConstants.OAUTH2_TOKEN_EP, TestConstants.LOACALHOST_DOMAIN, null, "Identity provider is null"},
-                { expiredOnOrAfter, "LOCAL", true, true, TestConstants.OAUTH2_TOKEN_EP, TestConstants.LOACALHOST_DOMAIN, null, "Assertion is not valid"},
-                { null, "LOCAL", true, true, TestConstants.OAUTH2_TOKEN_EP, TestConstants.LOACALHOST_DOMAIN, null, "Cannot find valid NotOnOrAfter"},
+        return new Object[][]{
+                {validOnOrAfter, "LOCAL", true, true, TestConstants.OAUTH2_TOKEN_EP, TestConstants.LOACALHOST_DOMAIN,
+                        new IdentityUnmarshallingException("Error"), "Error while unmashalling"},
+                {validOnOrAfter, "FED", true, true, TestConstants.OAUTH2_TOKEN_EP, TestConstants.LOACALHOST_DOMAIN,
+                        new IdentityProviderManagementException("Error"), "Error while retrieving identity provider"},
+                {validOnOrAfter, "FED", true, true, TestConstants.OAUTH2_TOKEN_EP, TestConstants.LOACALHOST_DOMAIN,
+                        new SignatureException(), "Error while validating the signature"},
+                {validOnOrAfter, "LOCAL", true, true, TestConstants.OAUTH2_TOKEN_EP, TestConstants.LOACALHOST_DOMAIN,
+                        new IdentityApplicationManagementException("Error"), "Error while retrieving service provider"},
+                {validOnOrAfter, "LOCAL", true, true, TestConstants.OAUTH2_TOKEN_EP, TestConstants.LOACALHOST_DOMAIN,
+                        new UserStoreException(), "Error while building local user"},
+                {validOnOrAfter, "FED", true, true, TestConstants.OAUTH2_TOKEN_EP, TestConstants.LOACALHOST_DOMAIN,
+                        new CertificateException(), "Error occurred while decoding public certificate"},
+                {validOnOrAfter, "LOCAL", true, false, TestConstants.OAUTH2_TOKEN_EP, TestConstants.LOACALHOST_DOMAIN,
+                        null, "User not found"},
+                {validOnOrAfter, "LOCAL", false, true, TestConstants.OAUTH2_TOKEN_EP, TestConstants.LOACALHOST_DOMAIN,
+                        null, "Non SaaS app"},
+                {validOnOrAfter, "LOCAL", true, true, "invalidAudience", TestConstants.LOACALHOST_DOMAIN, null,
+                        "Audience Restriction validation failed"},
+                {validOnOrAfter, "LOCAL", true, true, "", TestConstants.LOACALHOST_DOMAIN, null,
+                        "Token Endpoint alias has not been configured"},
+                {validOnOrAfter, "FED", true, true, "invalidAudience", TestConstants.LOACALHOST_DOMAIN, null,
+                        "Audience Restriction validation failed"},
+                {validOnOrAfter, null, true, true, TestConstants.OAUTH2_TOKEN_EP, TestConstants.LOACALHOST_DOMAIN, null,
+                        "Identity provider is null"},
+                {expiredOnOrAfter, "LOCAL", true, true, TestConstants.OAUTH2_TOKEN_EP, TestConstants.LOACALHOST_DOMAIN,
+                        null, "Assertion is not valid"},
+                {null, "LOCAL", true, true, TestConstants.OAUTH2_TOKEN_EP, TestConstants.LOACALHOST_DOMAIN, null,
+                        "Cannot find valid NotOnOrAfter"},
         };
     }
 
@@ -327,7 +339,7 @@ public class SAML2BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
         federatedAuthenticatorConfig.setProperties(new Property[]
                 {getProperty(IdentityApplicationConstants.Authenticator.SAML2SSO.IDP_ENTITY_ID,
                         TestConstants.LOACALHOST_DOMAIN)});
-        federatedAuthenticatorConfig.setName( IdentityApplicationConstants.Authenticator.SAML2SSO.NAME);
+        federatedAuthenticatorConfig.setName(IdentityApplicationConstants.Authenticator.SAML2SSO.NAME);
         FederatedAuthenticatorConfig[] fedAuthConfs = {federatedAuthenticatorConfig};
         IdentityProvider identityProvider = getIdentityProvider("LOCAL", TestConstants.OAUTH2_TOKEN_EP);
         identityProvider.setFederatedAuthenticatorConfigs(fedAuthConfs);
@@ -413,7 +425,7 @@ public class SAML2BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
                 .thenReturn(serviceProvider);
     }
 
-    private IdentityProvider getIdentityProvider(String name, String alias){
+    private IdentityProvider getIdentityProvider(String name, String alias) {
 
         if (name == null) {
             return null;
@@ -519,6 +531,7 @@ public class SAML2BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
 
         mockStatic(SSOServiceProviderConfigManager.class);
         when(SSOServiceProviderConfigManager.getInstance()).thenReturn(ssoServiceProviderConfigManager);
-        when(ssoServiceProviderConfigManager.getServiceProvider(TestConstants.SAML_ISSUER)).thenReturn(samlssoServiceProviderDO);
+        when(ssoServiceProviderConfigManager.getServiceProvider(TestConstants.SAML_ISSUER))
+                .thenReturn(samlssoServiceProviderDO);
     }
 }
