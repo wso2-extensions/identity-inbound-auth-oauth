@@ -2372,6 +2372,13 @@ public class OAuth2Util {
         return buf.toString();
     }
 
+    /**
+     * Returns essential claims according to claim type: id_token/userinfo .
+     *
+     * @param essentialClaims
+     * @param claimType
+     * @return essential claims list
+     */
     public static List<String> getEssentialClaims(String essentialClaims, String claimType) {
 
         JSONObject jsonObjectClaims = new JSONObject(essentialClaims);
