@@ -50,7 +50,6 @@ import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.authz.handlers.ResponseTypeHandler;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
-import org.wso2.carbon.identity.oauth2.model.TokenIssuerDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeValidator;
 import org.wso2.carbon.user.api.UserStoreException;
@@ -83,7 +82,6 @@ public class OAuthAdminServiceImpl {
     static final String RESPONSE_TYPE_ID_TOKEN = "id_token";
     static List<String> allowedGrants = null;
     static String[] allowedScopeValidators = null;
-    private static List<String> supportedTokenTypes = new ArrayList<>();
 
     protected static final Log log = LogFactory.getLog(OAuthAdminServiceImpl.class);
 
@@ -1070,13 +1068,7 @@ public class OAuthAdminServiceImpl {
      */
     public List<String> getSupportedTokenTypes() {
 
-        Map<String, TokenIssuerDO> supportedTokenTypesMap = OAuthServerConfiguration.getInstance()
-                .getSupportedTokenIssuers();
-        for (Object tokenTypeObj : supportedTokenTypesMap.keySet()) {
-            supportedTokenTypes.add(tokenTypeObj.toString());
-        }
-
-        return supportedTokenTypes;
+        return OAuthServerConfiguration.getInstance().getSupportedTokenTypes();
     }
 
     /**
