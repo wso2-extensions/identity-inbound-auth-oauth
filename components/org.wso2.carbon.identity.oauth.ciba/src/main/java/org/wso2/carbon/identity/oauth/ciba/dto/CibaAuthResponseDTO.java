@@ -19,103 +19,47 @@
 package org.wso2.carbon.identity.oauth.ciba.dto;
 
 /**
- * Captures the authentication request validated parameters.
+ * Captures the values for authorization request.
  */
 public class CibaAuthResponseDTO {
 
-    private String issuer;
-    private String audience;
-    private long issuedTime;
-    private long expiredTime;
-    private long notBeforeTime;
-    private String jwtId;
-    private long requestedExpiry;
     private String userHint;
+    private String authReqId;
+    private String clientId;
+    private String callBackUrl;
     private String bindingMessage;
-    private String userCode;
-    private String[] scope;
-    private String clientNotificationToken;
-    private String[] acrValues;
     private String transactionContext;
+    private String scopes;
+    private long expiresIn;
+
+    public String getBindingMessage() {
+
+        return bindingMessage;
+    }
+
+    public void setBindingMessage(String bindingMessage) {
+
+        this.bindingMessage = bindingMessage;
+    }
 
     public String getTransactionContext() {
 
         return transactionContext;
     }
 
-    public void setTransactionContext(String transactionContext) {
+    public void setTransactionDetails(String transactionContext) {
 
         this.transactionContext = transactionContext;
     }
 
-    public String getIssuer() {
+    public String getCallBackUrl() {
 
-        return issuer;
+        return callBackUrl;
     }
 
-    public void setIssuer(String issuer) {
+    public void setCallBackUrl(String callBackUrl) {
 
-        this.issuer = issuer;
-    }
-
-    public String getAudience() {
-
-        return audience;
-    }
-
-    public void setAudience(String audience) {
-
-        this.audience = audience;
-    }
-
-    public long getIssuedTime() {
-
-        return issuedTime;
-    }
-
-    public void setIssuedTime(long issuedTime) {
-
-        this.issuedTime = issuedTime;
-    }
-
-    public long getExpiredTime() {
-
-        return expiredTime;
-    }
-
-    public void setExpiredTime(long expiredTime) {
-
-        this.expiredTime = expiredTime;
-    }
-
-    public long getNotBeforeTime() {
-
-        return notBeforeTime;
-    }
-
-    public void setNotBeforeTime(long notBeforeTime) {
-
-        this.notBeforeTime = notBeforeTime;
-    }
-
-    public String getJwtId() {
-
-        return jwtId;
-    }
-
-    public void setJWTID(String jwtId) {
-
-        this.jwtId = jwtId;
-    }
-
-    public long getRequestedExpiry() {
-
-        return requestedExpiry;
-    }
-
-    public void setRequestedExpiry(long requestedExpiry) {
-
-        this.requestedExpiry = requestedExpiry;
+        this.callBackUrl = callBackUrl;
     }
 
     public String getUserHint() {
@@ -128,53 +72,43 @@ public class CibaAuthResponseDTO {
         this.userHint = userHint;
     }
 
-    public String getBindingMessage() {
+    public String getAuthReqId() {
 
-        return bindingMessage;
+        return authReqId;
     }
 
-    public void setBindingMessage(String bindingMessage) {
+    public void setAuthReqId(String authReqId) {
 
-        this.bindingMessage = bindingMessage;
+        this.authReqId = authReqId;
     }
 
-    public String getUserCode() {
+    public String getClientId() {
 
-        return userCode;
+        return clientId;
     }
 
-    public void setUserCode(String userCode) {
+    public void setClientId(String clientId) {
 
-        this.userCode = userCode;
+        this.clientId = clientId;
     }
 
-    public String[] getScope() {
+    public void setScopes(String scopes) {
 
-        return scope;
+        this.scopes = scopes;
     }
 
-    public void setScope(String[] scope) {
+    public String getScopes() {
 
-        this.scope = scope;
+        return scopes;
     }
 
-    public String getClientNotificationToken() {
+    public long getExpiresIn() {
 
-        return clientNotificationToken;
+        return expiresIn;
     }
 
-    public void setClientNotificationToken(String clientNotificationToken) {
+    public void setExpiresIn(long expiresIn) {
 
-        this.clientNotificationToken = clientNotificationToken;
-    }
-
-    public String[] getAcrValues() {
-
-        return acrValues;
-    }
-
-    public void setAcrValues(String[] acrValues) {
-
-        this.acrValues = acrValues;
+        this.expiresIn = expiresIn;
     }
 }

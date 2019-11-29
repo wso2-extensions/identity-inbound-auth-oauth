@@ -25,8 +25,8 @@ import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
-import org.wso2.carbon.identity.oauth.ciba.dto.AuthzRequestDTO;
 import org.wso2.carbon.identity.oauth.ciba.dto.CibaAuthResponseDTO;
+import org.wso2.carbon.identity.oauth.ciba.dto.CibaAuthRequestDTO;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeDO;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
@@ -63,23 +63,23 @@ public class CibaAuthUtilTest extends PowerMockTestCase {
     @DataProvider(name = "provideRequestedExpiryData")
     public Object[][] provideRequestedExpiryData() {
 
-        CibaAuthResponseDTO cibaAuthResponseDTOEmpty = new CibaAuthResponseDTO();
+        CibaAuthRequestDTO cibaAuthRequestDTOEmpty = new CibaAuthRequestDTO();
 
-        CibaAuthResponseDTO cibaAuthResponseDTOLessVal = new CibaAuthResponseDTO();
-        cibaAuthResponseDTOLessVal.setRequestedExpiry(120L);
+        CibaAuthRequestDTO cibaAuthRequestDTOLessVal = new CibaAuthRequestDTO();
+        cibaAuthRequestDTOLessVal.setRequestedExpiry(120L);
 
-        CibaAuthResponseDTO cibaAuthResponseDTOHighVal = new CibaAuthResponseDTO();
-        cibaAuthResponseDTOHighVal.setIssuer(CONSUMER_KEY);
-        cibaAuthResponseDTOHighVal.setRequestedExpiry(5000L);
+        CibaAuthRequestDTO cibaAuthRequestDTOHighVal = new CibaAuthRequestDTO();
+        cibaAuthRequestDTOHighVal.setIssuer(CONSUMER_KEY);
+        cibaAuthRequestDTOHighVal.setRequestedExpiry(5000L);
 
-        CibaAuthResponseDTO cibaAuthResponseDTOZero = new CibaAuthResponseDTO();
-        cibaAuthResponseDTOZero.setRequestedExpiry(0);
+        CibaAuthRequestDTO cibaAuthRequestDTOZero = new CibaAuthRequestDTO();
+        cibaAuthRequestDTOZero.setRequestedExpiry(0);
 
         return new Object[][]{
-                {cibaAuthResponseDTOEmpty, EXPIRES_IN_DEFAULT_VALUE_IN_SEC},
-                {cibaAuthResponseDTOLessVal, 120L},
-                {cibaAuthResponseDTOHighVal, MAXIMUM_REQUESTED_EXPIRY_IN_SEC},
-                {cibaAuthResponseDTOZero, EXPIRES_IN_DEFAULT_VALUE_IN_SEC},
+                {cibaAuthRequestDTOEmpty, EXPIRES_IN_DEFAULT_VALUE_IN_SEC},
+                {cibaAuthRequestDTOLessVal, 120L},
+                {cibaAuthRequestDTOHighVal, MAXIMUM_REQUESTED_EXPIRY_IN_SEC},
+                {cibaAuthRequestDTOZero, EXPIRES_IN_DEFAULT_VALUE_IN_SEC},
 
         };
     }
@@ -87,44 +87,44 @@ public class CibaAuthUtilTest extends PowerMockTestCase {
     @Test(dataProvider = "provideRequestedExpiryData")
     public void testExpiresIn(Object cibaAuthResponseDTOObject, long expected) throws Exception {
 
-        CibaAuthResponseDTO cibaAuthResponseDTO = (CibaAuthResponseDTO) cibaAuthResponseDTOObject;
+        CibaAuthRequestDTO cibaAuthRequestDTO = (CibaAuthRequestDTO) cibaAuthResponseDTOObject;
 
-        Assert.assertEquals(expected, CibaAuthUtil.getExpiresIn(cibaAuthResponseDTO));
+        Assert.assertEquals(expected, CibaAuthUtil.getExpiresIn(cibaAuthRequestDTO));
     }
 
     @DataProvider(name = "provideRequestedResponseData")
     public Object[][] provideRequestedResponseData() {
 
-        CibaAuthResponseDTO cibaAuthResponseDTO = new CibaAuthResponseDTO();
-        cibaAuthResponseDTO.setRequestedExpiry(0);
-        cibaAuthResponseDTO.setIssuer(CONSUMER_KEY);
+        CibaAuthRequestDTO cibaAuthRequestDTO = new CibaAuthRequestDTO();
+        cibaAuthRequestDTO.setRequestedExpiry(0);
+        cibaAuthRequestDTO.setIssuer(CONSUMER_KEY);
 
         String[] scope = new String[]{"openid", "phone", "sms"};
 
-        cibaAuthResponseDTO.setScope(scope);
+        cibaAuthRequestDTO.setScope(scope);
 
         return new Object[][]{
-                {cibaAuthResponseDTO},
+                {cibaAuthRequestDTO},
         };
     }
 
     @Test(dataProvider = "provideRequestedResponseData")
     public void testGenerateCibaAuthCodeDO(Object cibaAuthResponseDTOObject) throws Exception {
 
-        CibaAuthResponseDTO cibaAuthResponseDTO = (CibaAuthResponseDTO) cibaAuthResponseDTOObject;
+        CibaAuthRequestDTO cibaAuthRequestDTO = (CibaAuthRequestDTO) cibaAuthResponseDTOObject;
 
         Assert.assertEquals("REQUESTED",
-                CibaAuthUtil.generateCibaAuthCodeDO(cibaAuthResponseDTO).getAuthenticationStatus().toString());
-        Assert.assertEquals(2L, CibaAuthUtil.generateCibaAuthCodeDO(cibaAuthResponseDTO).getInterval());
+                CibaAuthUtil.generateCibaAuthCodeDO(cibaAuthRequestDTO).getAuthenticationStatus().toString());
+        Assert.assertEquals(2L, CibaAuthUtil.generateCibaAuthCodeDO(cibaAuthRequestDTO).getInterval());
 
         Assert.assertEquals(EXPIRES_IN_DEFAULT_VALUE_IN_SEC,
-                CibaAuthUtil.generateCibaAuthCodeDO(cibaAuthResponseDTO).getExpiresIn());
+                CibaAuthUtil.generateCibaAuthCodeDO(cibaAuthRequestDTO).getExpiresIn());
 
-        Assert.assertEquals(CONSUMER_KEY, CibaAuthUtil.generateCibaAuthCodeDO(cibaAuthResponseDTO).getConsumerAppKey());
+        Assert.assertEquals(CONSUMER_KEY, CibaAuthUtil.generateCibaAuthCodeDO(cibaAuthRequestDTO).getConsumerAppKey());
 
-        Assert.assertNotNull(CibaAuthUtil.generateCibaAuthCodeDO(cibaAuthResponseDTO).getAuthReqID());
-        Assert.assertNotNull(CibaAuthUtil.generateCibaAuthCodeDO(cibaAuthResponseDTO).getCibaAuthCodeKey());
-        Assert.assertNotNull(CibaAuthUtil.generateCibaAuthCodeDO(cibaAuthResponseDTO).getScope());
+        Assert.assertNotNull(CibaAuthUtil.generateCibaAuthCodeDO(cibaAuthRequestDTO).getAuthReqID());
+        Assert.assertNotNull(CibaAuthUtil.generateCibaAuthCodeDO(cibaAuthRequestDTO).getCibaAuthCodeKey());
+        Assert.assertNotNull(CibaAuthUtil.generateCibaAuthCodeDO(cibaAuthRequestDTO).getScope());
     }
 
     @DataProvider(name = "provideRequestedAuthzData")
@@ -132,9 +132,9 @@ public class CibaAuthUtilTest extends PowerMockTestCase {
 
         String bindingMessage = "randomBinding";
 
-        CibaAuthResponseDTO cibaAuthResponseDTO = new CibaAuthResponseDTO();
-        cibaAuthResponseDTO.setUserHint(USER_HINT);
-        cibaAuthResponseDTO.setIssuer(CONSUMER_KEY);
+        CibaAuthRequestDTO cibaAuthRequestDTO = new CibaAuthRequestDTO();
+        cibaAuthRequestDTO.setUserHint(USER_HINT);
+        cibaAuthRequestDTO.setIssuer(CONSUMER_KEY);
         String scope[] = new String[]{"openid", "phone", "sms"};
 
         CibaAuthCodeDO cibaAuthCodeDO = new CibaAuthCodeDO();
@@ -143,14 +143,14 @@ public class CibaAuthUtilTest extends PowerMockTestCase {
         cibaAuthCodeDO.setAuthReqID(AUTH_REQ_ID);
         cibaAuthCodeDO.setCibaAuthCodeKey(AUTH_CODE_KEY);
 
-        CibaAuthResponseDTO cibaAuthResponseDTOWithBind = new CibaAuthResponseDTO();
-        cibaAuthResponseDTOWithBind.setUserHint(USER_HINT);
-        cibaAuthResponseDTOWithBind.setBindingMessage(bindingMessage);
-        cibaAuthResponseDTOWithBind.setIssuer(CONSUMER_KEY);
+        CibaAuthRequestDTO cibaAuthRequestDTOWithBind = new CibaAuthRequestDTO();
+        cibaAuthRequestDTOWithBind.setUserHint(USER_HINT);
+        cibaAuthRequestDTOWithBind.setBindingMessage(bindingMessage);
+        cibaAuthRequestDTOWithBind.setIssuer(CONSUMER_KEY);
 
         return new Object[][]{
-                {cibaAuthResponseDTO, cibaAuthCodeDO, null},
-                {cibaAuthResponseDTOWithBind, cibaAuthCodeDO, bindingMessage},
+                {cibaAuthRequestDTO, cibaAuthCodeDO, null},
+                {cibaAuthRequestDTOWithBind, cibaAuthCodeDO, bindingMessage},
         };
     }
 
@@ -158,7 +158,7 @@ public class CibaAuthUtilTest extends PowerMockTestCase {
     protected void testBuildAuthzRequestDOForCIBA(Object cibaAuthResponseDTOObject, Object cibaAuthCodeDoObject,
                                                   String bindingMessage) throws Exception {
 
-        CibaAuthResponseDTO cibaAuthResponseDTO = (CibaAuthResponseDTO) cibaAuthResponseDTOObject;
+        CibaAuthRequestDTO cibaAuthRequestDTO = (CibaAuthRequestDTO) cibaAuthResponseDTOObject;
         CibaAuthCodeDO cibaAuthCodeDO = (CibaAuthCodeDO) cibaAuthCodeDoObject;
 
         OAuthAppDO appDO = new OAuthAppDO();
@@ -167,12 +167,12 @@ public class CibaAuthUtilTest extends PowerMockTestCase {
         mockStatic(OAuth2Util.class);
         when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(appDO);
 
-        AuthzRequestDTO authzRequestDTO = CibaAuthUtil.buildAuthzRequestDO(cibaAuthResponseDTO, cibaAuthCodeDO);
+        CibaAuthResponseDTO cibaAuthResponseDTO = CibaAuthUtil.buildAuthResponseDTO(cibaAuthRequestDTO, cibaAuthCodeDO);
 
-        Assert.assertEquals(USER_HINT, authzRequestDTO.getUserHint());
-        Assert.assertEquals(CONSUMER_KEY, authzRequestDTO.getClientId());
-        Assert.assertEquals(DEFAULT_CALLBACK_URL, authzRequestDTO.getCallBackUrl());
-        Assert.assertEquals(bindingMessage, authzRequestDTO.getBindingMessage());
-        Assert.assertEquals(AUTH_REQ_ID, authzRequestDTO.getNonce());
+        Assert.assertEquals(USER_HINT, cibaAuthResponseDTO.getUserHint());
+        Assert.assertEquals(CONSUMER_KEY, cibaAuthResponseDTO.getClientId());
+        Assert.assertEquals(DEFAULT_CALLBACK_URL, cibaAuthResponseDTO.getCallBackUrl());
+        Assert.assertEquals(bindingMessage, cibaAuthResponseDTO.getBindingMessage());
+        Assert.assertEquals(AUTH_REQ_ID, cibaAuthResponseDTO.getAuthReqId());
     }
 }

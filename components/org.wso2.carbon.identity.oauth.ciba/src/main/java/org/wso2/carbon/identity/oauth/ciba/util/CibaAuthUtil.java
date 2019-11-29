@@ -24,7 +24,7 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.oauth.ciba.common.AuthReqStatus;
 import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
 import org.wso2.carbon.identity.oauth.ciba.dao.CibaDAOFactory;
-import org.wso2.carbon.identity.oauth.ciba.dto.AuthzRequestDTO;
+import org.wso2.carbon.identity.oauth.ciba.dto.CibaAuthRequestDTO;
 import org.wso2.carbon.identity.oauth.ciba.dto.CibaAuthResponseDTO;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeDO;
@@ -60,7 +60,7 @@ public class CibaAuthUtil {
      *
      * @return String Returns random uuid.
      */
-    public static String generateAuthRequestId() {
+    private static String generateAuthRequestId() {
 
         return UUID.randomUUID().toString();
     }
@@ -68,19 +68,19 @@ public class CibaAuthUtil {
     /**
      * Process and return the expires_in for auth_req_id.
      *
-     * @param cibaAuthResponseDTO DTO accumulating validated parameters from CibaAuthenticationRequest.
+     * @param cibaAuthRequestDTO DTO accumulating validated parameters from CibaAuthenticationRequest.
      * @return long Returns expiry_time of the auth-req_id.
      */
-    public static long getExpiresIn(CibaAuthResponseDTO cibaAuthResponseDTO) {
+    public static long getExpiresIn(CibaAuthRequestDTO cibaAuthRequestDTO) {
 
-        long requestedExpiry = cibaAuthResponseDTO.getRequestedExpiry();
+        long requestedExpiry = cibaAuthRequestDTO.getRequestedExpiry();
         if (requestedExpiry == 0) {
             return CibaConstants.EXPIRES_IN_DEFAULT_VALUE_IN_SEC;
         } else if (requestedExpiry < CibaConstants.MAXIMUM_REQUESTED_EXPIRY_IN_SEC) {
             return requestedExpiry;
         } else {
             log.warn("(requested_expiry) exceeds default maximum value for the CIBA authentication request made by : " +
-                    cibaAuthResponseDTO.getIssuer());
+                    cibaAuthRequestDTO.getIssuer());
             return CibaConstants.MAXIMUM_REQUESTED_EXPIRY_IN_SEC;
         }
     }
@@ -88,20 +88,20 @@ public class CibaAuthUtil {
     /**
      * Builds and returns AuthorizationRequestDTO.
      *
-     * @param cibaAuthResponseDTO Status of the relevant Ciba Authentication.
+     * @param cibaAuthRequestDTO Status of the relevant Ciba Authentication.
      */
-    public static CibaAuthCodeDO generateCibaAuthCodeDO(CibaAuthResponseDTO cibaAuthResponseDTO) {
+    public static CibaAuthCodeDO generateCibaAuthCodeDO(CibaAuthRequestDTO cibaAuthRequestDTO) {
 
         CibaAuthCodeDO cibaAuthCodeDO = new CibaAuthCodeDO();
         long issuedTimeInMillis = Calendar.getInstance(TimeZone.getTimeZone(CibaConstants.UTC)).getTimeInMillis();
         long lastPolledTimeInMillis = issuedTimeInMillis;
         Timestamp issuedTime = new Timestamp(issuedTimeInMillis);
         Timestamp lastPolledTime = new Timestamp(lastPolledTimeInMillis);
-        long expiryTime = CibaAuthUtil.getExpiresIn(cibaAuthResponseDTO);
-        String[] scope = cibaAuthResponseDTO.getScope();
+        long expiryTime = CibaAuthUtil.getExpiresIn(cibaAuthRequestDTO);
+        String[] scope = cibaAuthRequestDTO.getScope();
         cibaAuthCodeDO.setCibaAuthCodeKey(CibaAuthUtil.generateAuthCodeKey());
         cibaAuthCodeDO.setAuthReqID(CibaAuthUtil.generateAuthRequestId());
-        cibaAuthCodeDO.setConsumerAppKey(cibaAuthResponseDTO.getIssuer());
+        cibaAuthCodeDO.setConsumerAppKey(cibaAuthRequestDTO.getIssuer());
         cibaAuthCodeDO.setIssuedTime(issuedTime);
         cibaAuthCodeDO.setLastPolledTime(lastPolledTime);
         cibaAuthCodeDO.setAuthenticationStatus(AuthReqStatus.REQUESTED);
@@ -115,36 +115,37 @@ public class CibaAuthUtil {
      * Builds and returns AuthorizationRequestDTO.
      *
      * @param cibaAuthCodeDO      DO with information regarding authenticationRequest.
-     * @param cibaAuthResponseDTO Status of the relevant Ciba Authentication.
+     * @param cibaAuthRequestDTO Status of the relevant Ciba Authentication.
      * @throws CibaCoreException Exception thrown from CibaCore Component.
      */
-    public static AuthzRequestDTO buildAuthzRequestDO(CibaAuthResponseDTO cibaAuthResponseDTO,
-                                                      CibaAuthCodeDO cibaAuthCodeDO) throws CibaCoreException {
+    public static CibaAuthResponseDTO buildAuthResponseDTO(CibaAuthRequestDTO cibaAuthRequestDTO,
+                                                           CibaAuthCodeDO cibaAuthCodeDO) throws CibaCoreException {
 
-        String clientID = cibaAuthResponseDTO.getIssuer();
+        String clientID = cibaAuthRequestDTO.getIssuer();
         try {
-            AuthzRequestDTO authzRequestDTO = new AuthzRequestDTO();
-            String user = cibaAuthResponseDTO.getUserHint();
+            CibaAuthResponseDTO cibaAuthResponseDTO = new CibaAuthResponseDTO();
+            String user = cibaAuthRequestDTO.getUserHint();
             OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(clientID);
             String callbackUri = appDO.getCallbackUrl();
-            authzRequestDTO.setNonce(cibaAuthCodeDO.getAuthReqID());
-            authzRequestDTO.setCallBackUrl(callbackUri);
-            authzRequestDTO.setUserHint(user);
-            authzRequestDTO.setClientId(clientID);
-            authzRequestDTO.setScopes(OAuth2Util.buildScopeString(cibaAuthResponseDTO.getScope()));
+            cibaAuthResponseDTO.setAuthReqId(cibaAuthCodeDO.getAuthReqID());
+            cibaAuthResponseDTO.setCallBackUrl(callbackUri);
+            cibaAuthResponseDTO.setUserHint(user);
+            cibaAuthResponseDTO.setClientId(clientID);
+            cibaAuthResponseDTO.setScopes(OAuth2Util.buildScopeString(cibaAuthRequestDTO.getScope()));
+            cibaAuthResponseDTO.setExpiresIn(cibaAuthCodeDO.getExpiresIn());
 
-            if (StringUtils.isNotBlank(cibaAuthResponseDTO.getBindingMessage())) {
-                authzRequestDTO.setBindingMessage(cibaAuthResponseDTO.getBindingMessage());
+            if (StringUtils.isNotBlank(cibaAuthRequestDTO.getBindingMessage())) {
+                cibaAuthResponseDTO.setBindingMessage(cibaAuthRequestDTO.getBindingMessage());
             }
 
-            if (StringUtils.isNotBlank(cibaAuthResponseDTO.getTransactionContext())) {
-                authzRequestDTO.setTransactionDetails(cibaAuthResponseDTO.getTransactionContext());
+            if (StringUtils.isNotBlank(cibaAuthRequestDTO.getTransactionContext())) {
+                cibaAuthResponseDTO.setTransactionDetails(cibaAuthRequestDTO.getTransactionContext());
             }
 
             if (log.isDebugEnabled()) {
                 log.debug("Successful in creating AuthorizeRequestDTO for the client : " + clientID);
             }
-            return authzRequestDTO;
+            return cibaAuthResponseDTO;
         } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
             throw new CibaCoreException("Error in creating AuthorizeRequestDTO ", e);
         }
