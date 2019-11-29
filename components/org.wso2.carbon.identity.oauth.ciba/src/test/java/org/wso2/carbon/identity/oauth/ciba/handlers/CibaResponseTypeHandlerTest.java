@@ -30,7 +30,6 @@ import org.wso2.carbon.identity.common.testng.WithH2Database;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.oauth.ciba.dao.CibaDAOFactory;
 import org.wso2.carbon.identity.oauth.ciba.dao.CibaMgtDAOImpl;
-import org.wso2.carbon.identity.oauth.ciba.util.CibaAuthUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dto.OAuthErrorDTO;
@@ -43,7 +42,7 @@ import static org.mockito.Matchers.anyString;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
 
-@PrepareForTest({OAuth2Util.class, CibaDAOFactory.class, CibaAuthUtil.class, IdentityDatabaseUtil.class,
+@PrepareForTest({OAuth2Util.class, CibaDAOFactory.class, IdentityDatabaseUtil.class,
         OAuthServerConfiguration.class, CibaDAOFactory.class})
 @PowerMockIgnore({"javax.crypto.*"})
 @WithH2Database(files = {"dbScripts/h2.sql", "dbScripts/identity.sql"})
