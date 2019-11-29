@@ -46,7 +46,7 @@
             <groupId>commons-codec.wso2</groupId>
             <artifactId>commons-codec</artifactId>
         </dependency>
-         <dependency>
+        <dependency>
             <groupId>org.ops4j.pax.logging</groupId>
             <artifactId>pax-logging-api</artifactId>
         </dependency>
