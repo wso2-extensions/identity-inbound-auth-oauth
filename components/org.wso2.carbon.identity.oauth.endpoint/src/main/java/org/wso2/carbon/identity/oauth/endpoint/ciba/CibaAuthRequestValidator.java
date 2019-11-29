@@ -27,11 +27,11 @@ import net.minidev.json.JSONObject;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.oauth.ciba.api.CibaAuthServiceImpl;
 import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
 import org.wso2.carbon.identity.oauth.ciba.dto.CibaAuthRequestDTO;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaClientException;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.ErrorCodes;
-import org.wso2.carbon.identity.oauth.ciba.util.CibaAuthUtil;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -52,6 +52,8 @@ public class CibaAuthRequestValidator {
 
     private static final Log log = LogFactory.getLog(CibaAuthRequestValidator.class);
 
+    private CibaAuthServiceImpl cibaAuthService;
+
     private CibaAuthRequestValidator() {
 
     }
@@ -70,7 +72,7 @@ public class CibaAuthRequestValidator {
      * @param cibaAuthRequestDTO DTO that  captures validated parameters.
      * @throws CibaClientException CIBA Authentication Failed Exception.
      */
-    public void validateAuthRequestParameters(String request, CibaAuthRequestDTO cibaAuthRequestDTO)
+    public void processAuthRequestParameters(String request, CibaAuthRequestDTO cibaAuthRequestDTO)
             throws CibaClientException {
 
         try {
@@ -88,37 +90,37 @@ public class CibaAuthRequestValidator {
             }
 
             // Validate audience of the Request.
-            validateAudience(claimsSet, cibaAuthRequestDTO);
+            processAudienceParam(claimsSet, cibaAuthRequestDTO);
 
             // Validate  JWT-ID of the Request.
-            validateJWTID(claimsSet, cibaAuthRequestDTO);
+            processJWTIdParam(claimsSet, cibaAuthRequestDTO);
 
             // Validate the expiryTime of the Request.
-            validateExpiryTime(claimsSet, cibaAuthRequestDTO, timeInMillis, skewTime);
+            processExpiryTimeParam(claimsSet, cibaAuthRequestDTO, timeInMillis, skewTime);
 
             // Validate the issuedTime of the Request.
-            validateIssuedTime(claimsSet, cibaAuthRequestDTO, timeInMillis);
+            processIssuedTimeParam(claimsSet, cibaAuthRequestDTO, timeInMillis);
 
             // Validate the NBF of the Request.
-            validateNBF(claimsSet, cibaAuthRequestDTO, timeInMillis, skewTime);
+            processNBFParam(claimsSet, cibaAuthRequestDTO, timeInMillis, skewTime);
 
             // Validate the scope of the Request.
-            validateScope(authRequestAsJSON, cibaAuthRequestDTO);
+            processScopeParam(authRequestAsJSON, cibaAuthRequestDTO);
 
             // Validate the client_notification_token of the Request if ping.
-            validateClientNotificationToken(authRequestAsJSON, cibaAuthRequestDTO);
+            processClientNotificationTokenParam(authRequestAsJSON, cibaAuthRequestDTO);
 
             // Validate the client_notification_token of the Request.
-            validateACRValues(authRequestAsJSON, cibaAuthRequestDTO);
+            processACRParam(authRequestAsJSON, cibaAuthRequestDTO);
 
             // Validate the binding_message of the Request.
-            validateBindingMessage(authRequestAsJSON, cibaAuthRequestDTO);
+            processBindingMessageParam(authRequestAsJSON, cibaAuthRequestDTO);
 
             // Validate the transaction_context of the Request.
-            validateTransactionContext(authRequestAsJSON, cibaAuthRequestDTO);
+            processTransactionContextParam(authRequestAsJSON, cibaAuthRequestDTO);
 
             // Validate the requested_expiry of the Request.
-            validateRequestedExpiry(authRequestAsJSON, cibaAuthRequestDTO);
+            processRequestedExpiryParam(authRequestAsJSON, cibaAuthRequestDTO);
 
             if (log.isDebugEnabled()) {
                 log.debug(" CIBA Authentication Request made by client with clientID : " +
@@ -138,7 +140,7 @@ public class CibaAuthRequestValidator {
      * @param CibaAuthRequestDTO DTO that captures authentication request parameters.
      * @throws CibaClientException CIBA Authentication Failed Exception.
      */
-    private void validateRequestedExpiry(JSONObject authRequestAsJSON, CibaAuthRequestDTO CibaAuthRequestDTO)
+    private void processRequestedExpiryParam(JSONObject authRequestAsJSON, CibaAuthRequestDTO CibaAuthRequestDTO)
             throws CibaClientException {
 
         // Validation for requested_expiry.
@@ -168,7 +170,7 @@ public class CibaAuthRequestValidator {
      * @param CibaAuthRequestDTO DTO that captures authentication request parameters.
      * @throws CibaClientException CIBA Authentication Failed Exception.
      */
-    private void validateTransactionContext(JSONObject authRequestAsJSON, CibaAuthRequestDTO CibaAuthRequestDTO)
+    private void processTransactionContextParam(JSONObject authRequestAsJSON, CibaAuthRequestDTO CibaAuthRequestDTO)
             throws CibaClientException {
 
         // Validation for transaction_context.
@@ -196,7 +198,7 @@ public class CibaAuthRequestValidator {
      * @param CibaAuthRequestDTO DTO that captures authentication request parameters.
      * @throws CibaClientException CIBA Authentication Failed Exception.
      */
-    private void validateBindingMessage(JSONObject authRequestAsJSON, CibaAuthRequestDTO CibaAuthRequestDTO)
+    private void processBindingMessageParam(JSONObject authRequestAsJSON, CibaAuthRequestDTO CibaAuthRequestDTO)
             throws CibaClientException {
 
         // Validation for binding_message.
@@ -255,7 +257,7 @@ public class CibaAuthRequestValidator {
      * @param CibaAuthRequestDTO DTO that captures authentication request parameters.
      * @throws CibaClientException CIBA Authentication Failed Exception.
      */
-    private void validateACRValues(JSONObject authRequestAsJSON, CibaAuthRequestDTO CibaAuthRequestDTO)
+    private void processACRParam(JSONObject authRequestAsJSON, CibaAuthRequestDTO CibaAuthRequestDTO)
             throws CibaClientException {
 
         // Validation for acr values.
@@ -273,7 +275,8 @@ public class CibaAuthRequestValidator {
         }
         // Setting scope to CIBA AuthenticationResponse after validation.
         CibaAuthRequestDTO
-                .setAcrValues(CibaAuthUtil.buildACRArray(String.valueOf(authRequestAsJSON.get(Constants.ACR_VALUES))));
+                .setAcrValues(cibaAuthService.buildACRArray(String.valueOf(authRequestAsJSON.get(
+                        Constants.ACR_VALUES))));
     }
 
     /**
@@ -283,7 +286,7 @@ public class CibaAuthRequestValidator {
      * @param cibaAuthRequestDTO DTO that captures authentication request parameters.
      * @throws CibaClientException CIBA Authentication Failed Exception.
      */
-    private void validateClientNotificationToken(JSONObject authRequestAsJSON, CibaAuthRequestDTO cibaAuthRequestDTO)
+    private void processClientNotificationTokenParam(JSONObject authRequestAsJSON, CibaAuthRequestDTO cibaAuthRequestDTO)
             throws CibaClientException {
 
         // Validation for client_notification_token.Mandatory parameter for CIBA Authentication Request for ping mode.
@@ -313,7 +316,7 @@ public class CibaAuthRequestValidator {
      * @param cibaAuthRequestDTO DTO that captures authentication request parameters.
      * @throws CibaClientException CIBA Authentication Failed Exception.
      */
-    private void validateScope(JSONObject authRequestAsJSON, CibaAuthRequestDTO cibaAuthRequestDTO)
+    private void processScopeParam(JSONObject authRequestAsJSON, CibaAuthRequestDTO cibaAuthRequestDTO)
             throws CibaClientException {
 
         // Validation for scope.Mandatory parameter for CIBA AuthenticationRequest.
@@ -347,8 +350,8 @@ public class CibaAuthRequestValidator {
      * @param cibaAuthRequestDTO DTO that captures authentication request parameters.
      * @throws CibaClientException CIBA Authentication Failed Exception.
      */
-    private void validateNBF(JWTClaimsSet claimsSet, CibaAuthRequestDTO cibaAuthRequestDTO, long currentTime,
-                             long skewTime) throws CibaClientException {
+    private void processNBFParam(JWTClaimsSet claimsSet, CibaAuthRequestDTO cibaAuthRequestDTO, long currentTime,
+                                 long skewTime) throws CibaClientException {
 
         // Validation for nbf-time before signed request is acceptable. Mandatory parameter if signed.
         if (claimsSet.getNotBeforeTime() == null) {
@@ -380,7 +383,7 @@ public class CibaAuthRequestValidator {
      * @param cibaAuthRequestDTO DTO that captures authentication request parameters.
      * @throws CibaClientException CIBA Authentication Failed Exception.
      */
-    private void validateIssuedTime(JWTClaimsSet claimsSet, CibaAuthRequestDTO cibaAuthRequestDTO, long currentTime)
+    private void processIssuedTimeParam(JWTClaimsSet claimsSet, CibaAuthRequestDTO cibaAuthRequestDTO, long currentTime)
             throws CibaClientException {
 
         // Validation for (iat).Mandatory parameter if signed.
@@ -419,8 +422,8 @@ public class CibaAuthRequestValidator {
      * @param skewTime           skewtime in milliseconds.
      * @throws CibaClientException CIBA Authentication Failed Exception.
      */
-    private void validateExpiryTime(JWTClaimsSet claimsSet, CibaAuthRequestDTO cibaAuthRequestDTO, long currentTime,
-                                    long skewTime) throws CibaClientException {
+    private void processExpiryTimeParam(JWTClaimsSet claimsSet, CibaAuthRequestDTO cibaAuthRequestDTO, long currentTime,
+                                        long skewTime) throws CibaClientException {
 
         // Validation for expiryTime.
         if (claimsSet.getExpirationTime() == null) {
@@ -452,7 +455,7 @@ public class CibaAuthRequestValidator {
      * @param cibaAuthRequestDTO DTO that captures authentication request parameters.
      * @throws CibaClientException CIBA Authentication Failed Exception.
      */
-    private void validateJWTID(JWTClaimsSet claimsSet, CibaAuthRequestDTO cibaAuthRequestDTO)
+    private void processJWTIdParam(JWTClaimsSet claimsSet, CibaAuthRequestDTO cibaAuthRequestDTO)
             throws CibaClientException {
 
         // Validation for (jti).Mandatory parameter if signed.
@@ -507,7 +510,7 @@ public class CibaAuthRequestValidator {
      * @param cibaAuthRequestDTO DTO that captures authentication request parameters.
      * @throws CibaClientException CIBA Authentication Failed Exception.
      */
-    public void validateAudience(JWTClaimsSet claimsSet, CibaAuthRequestDTO cibaAuthRequestDTO)
+    public void processAudienceParam(JWTClaimsSet claimsSet, CibaAuthRequestDTO cibaAuthRequestDTO)
             throws CibaClientException {
 
         List<String> aud = claimsSet.getAudience();
@@ -556,7 +559,7 @@ public class CibaAuthRequestValidator {
      * @param authRequestDTO DTO that captures authentication request parameters.
      * @throws CibaClientException CIBA Authentication Failed Exception.
      */
-    public void validateClient(String request, CibaAuthRequestDTO authRequestDTO) throws CibaClientException {
+    public void processClientParam(String request, CibaAuthRequestDTO authRequestDTO) throws CibaClientException {
 
         try {
             SignedJWT signedJWT = SignedJWT.parse(request);
@@ -675,7 +678,7 @@ public class CibaAuthRequestValidator {
      * @param authRequestDTO DTO that captures authentication request parameters.
      * @throws CibaClientException CIBA Authentication Failed Exception.
      */
-    public void validateUser(String authRequest, CibaAuthRequestDTO authRequestDTO) throws CibaClientException {
+    public void processUserHintParam(String authRequest, CibaAuthRequestDTO authRequestDTO) throws CibaClientException {
 
         try {
             SignedJWT signedJWT = SignedJWT.parse(authRequest);

@@ -83,14 +83,14 @@ public class OAuth2CibaEndpoint {
 
             CibaAuthRequestValidator.getInstance().validateRequest(authRequest);
 
-            CibaAuthRequestValidator.getInstance().validateClient(authRequest, cibaAuthRequestDTO);
+            CibaAuthRequestValidator.getInstance().processClientParam(authRequest, cibaAuthRequestDTO);
             // The CIBA Authentication Request is with proper client.
             if (log.isDebugEnabled()) {
                 log.debug("CIBA Authentication Request 'request' :" + authRequest +
                         " is having a proper clientID : " + cibaAuthRequestDTO.getAudience() + " as the issuer.");
             }
 
-            CibaAuthRequestValidator.getInstance().validateUser(authRequest, cibaAuthRequestDTO);
+            CibaAuthRequestValidator.getInstance().processUserHintParam(authRequest, cibaAuthRequestDTO);
             // The CIBA Authentication Request is with proper user hint.
             if (log.isDebugEnabled()) {
                 log.debug("CIBA Authentication Request made by Client with clientID," +
@@ -107,7 +107,7 @@ public class OAuth2CibaEndpoint {
                 }
             }
 
-            CibaAuthRequestValidator.getInstance().validateAuthRequestParameters(authRequest, cibaAuthRequestDTO);
+            CibaAuthRequestValidator.getInstance().processAuthRequestParameters(authRequest, cibaAuthRequestDTO);
             // Authentication request is validated.
             if (log.isDebugEnabled()) {
                 log.debug("CIBA Authentication Request made by Client with clientID," +
@@ -115,7 +115,7 @@ public class OAuth2CibaEndpoint {
             }
 
             // Obtain Authentication service from CIBA.
-            CibaAuthServiceImpl cibaAuthServiceImpl = CibaEndpointUtil.getCibaAuthSerive();
+            CibaAuthServiceImpl cibaAuthServiceImpl = CibaServiceFactory.getCibaAuthSerive();
 
             // Obtain Response DTO from service layer of CIBA.
             CibaAuthResponseDTO cibaAuthResponseDTO = cibaAuthServiceImpl.generateAuthResponseDTO(cibaAuthRequestDTO);

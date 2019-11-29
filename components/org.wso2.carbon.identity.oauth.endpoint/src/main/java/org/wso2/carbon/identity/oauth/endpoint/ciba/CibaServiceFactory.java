@@ -25,7 +25,7 @@ import org.wso2.carbon.identity.oauth.ciba.api.CibaAuthServiceImpl;
 /**
  * Provide utility to endpoint.
  */
-public class CibaEndpointUtil {
+public class CibaServiceFactory {
 
     CibaAuthServiceImpl cibaAuthService;
 
