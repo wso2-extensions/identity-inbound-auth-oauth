@@ -66,6 +66,7 @@ import org.wso2.carbon.utils.CarbonUtils;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Hashtable;
@@ -159,6 +160,7 @@ public class OAuthServerConfiguration {
     private Map<String, String> supportedResponseTypeValidatorNames = new HashMap<>();
     private Map<String, Class<? extends OAuthValidator<HttpServletRequest>>> supportedResponseTypeValidators;
     private Map<String, TokenIssuerDO> supportedTokenIssuers = new HashMap<>();
+    private List<String> supportedTokenTypes = new ArrayList<>();
     private Map<String, OauthTokenIssuer> oauthTokenIssuerMap = new HashMap<>();
     private String[] supportedClaims = null;
     private Map<String, Properties> supportedClientAuthHandlerData = new HashMap<>();
@@ -2064,6 +2066,14 @@ public class OAuthServerConfiguration {
         if (!supportedTokenIssuers.containsKey(JWT_TOKEN_TYPE)) {
             supportedTokenIssuers.put(JWT_TOKEN_TYPE, new TokenIssuerDO(JWT_TOKEN_TYPE, JWT_TOKEN_ISSUER_CLASS, true));
         }
+
+        // Create the token types list.
+        supportedTokenTypes.addAll(supportedTokenIssuers.keySet());
+    }
+
+    public List<String> getSupportedTokenTypes() {
+
+        return Collections.unmodifiableList(supportedTokenTypes);
     }
 
     /**

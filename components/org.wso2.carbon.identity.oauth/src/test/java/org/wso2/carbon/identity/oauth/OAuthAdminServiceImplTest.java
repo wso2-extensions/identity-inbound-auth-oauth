@@ -530,4 +530,21 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
     public void testRemoveOAuthApplicationData() throws Exception {
 
     }
+
+    @Test
+    public void testGetSupportedTokens() throws Exception {
+
+        OAuthAdminServiceImpl oAuthAdminService = new OAuthAdminServiceImpl();
+
+        List<String> supportedTokenTypes = oAuthAdminService.getSupportedTokenTypes();
+        Assert.assertEquals(supportedTokenTypes.size(), 2);
+        Assert.assertTrue(supportedTokenTypes.contains("Default"));
+        Assert.assertTrue(supportedTokenTypes.contains("JWT"));
+
+        // Calling again to test that the same list is returned again.
+        List<String> supportedTokenTypesCall2 = oAuthAdminService.getSupportedTokenTypes();
+        Assert.assertEquals(supportedTokenTypesCall2.size(), 2);
+        Assert.assertTrue(supportedTokenTypesCall2.contains("Default"));
+        Assert.assertTrue(supportedTokenTypesCall2.contains("JWT"));
+    }
 }
