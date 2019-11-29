@@ -81,7 +81,7 @@ public class CibaResponseTypeHandler extends AbstractResponseTypeHandler {
 
         try {
             // Update authenticationStatus when user denied the consent.
-            CibaDAOFactory.getInstance().getCibaAuthMgtDAO().updateStatusWithAuthReqID(authReqID, AuthReqStatus.DENIED);
+            CibaDAOFactory.getInstance().getCibaAuthMgtDAO().updateStatusWithAuthReqID(authReqID, AuthReqStatus.CONSENT_DENIED);
             oAuthErrorDTO.setErrorDescription("User denied the consent.");
             return oAuthErrorDTO;
         } catch (CibaCoreException e) {

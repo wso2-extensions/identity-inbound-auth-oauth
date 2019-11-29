@@ -85,7 +85,7 @@ public class CibaGrantHandlerTest extends PowerMockTestCase {
     public void testIsConsentGiven() throws Exception {
 
         CibaAuthCodeDO cibaAuthCodeDoDenied = new CibaAuthCodeDO();
-        cibaAuthCodeDoDenied.setAuthenticationStatus(AuthReqStatus.DENIED);
+        cibaAuthCodeDoDenied.setAuthenticationStatus(AuthReqStatus.CONSENT_DENIED);
 
         Assert.assertFalse(WhiteboxImpl.invokeMethod(cibaGrantHandler, "isConsentGiven",
                 cibaAuthCodeDoDenied));

@@ -97,8 +97,8 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
             }
         } catch (SQLException e) {
             throw new CibaCoreException(
-                    "Error occurred in persisting the authenticated user: " + authenticatedUser.getUserName() +
-                            " identified by AuthCodeDOKey: " + key, e);
+                    "Error occurred in persisting the authenticated user: " +
+                            authenticatedUser.toFullQualifiedUsername() + " identified by AuthCodeDOKey: " + key, e);
         }
     }
 
@@ -123,15 +123,17 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
                 prepStmt.execute();
                 IdentityDatabaseUtil.commitTransaction(connection);
                 if (log.isDebugEnabled()) {
-                    log.debug("Successfully persisted the successful authentication identified by AuthCodeDOKey: " +
-                            key);
+                    log.debug("Successfully updated the authentication request status to 'AUTHENTICATED' for the " +
+                            "request identified by AuthCodeDOKey: " + key);
                 }
             } catch (SQLException e) {
                 IdentityDatabaseUtil.rollbackTransaction(connection);
-                throw new CibaCoreException("Error occurred in persisting the successful authentication.", e);
+                throw new CibaCoreException("Error occurred in persisting the successful authentication identified by" +
+                        " auth_req_id: " + key, e);
             }
         } catch (SQLException e) {
-            throw new CibaCoreException("Error occurred in persisting the successful authentication.", e);
+            throw new CibaCoreException("Error occurred in persisting the successful authentication identified by " +
+                    "auth_req_id: " + key, e);
         }
     }
 
@@ -146,10 +148,9 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
                 ResultSet resultSet = prepStmt.executeQuery();
 
                 if (resultSet.next()) {
-                    //do nothing
                     if (log.isDebugEnabled()) {
                         log.debug("Successfully checked whether provided auth_req_id : " + authReqId +
-                                " exists.Provided AuthReqId exists.It is from a valid auth_req_id.");
+                                " exists.Provided auth_req_id exists.");
                     }
                     return true;
                 } else {
@@ -173,16 +174,17 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
                 ResultSet resultSet = prepStmt.executeQuery();
                 if (resultSet.next()) {
                     if (log.isDebugEnabled()) {
-                        log.debug("Successfully returning CibaAuthCodeKey : " + resultSet.getString(1) + "for the " +
+                        log.debug("Successfully returning Ciba AuthCodeKey : " + resultSet.getString(1) + "for the " +
                                 "ciba auth_req_id : " + authReqId);
                     }
                     return resultSet.getString(1);
                 } else {
-                    throw new CibaCoreException("No auth_req_id found.");
+                    throw new CibaCoreException("No auth_req_id found for the provided identifier: " + authReqId);
                 }
             }
         } catch (SQLException e) {
-            throw new CibaCoreException("Error occurred when searching for CibaAuthCode.", e);
+            throw new CibaCoreException(
+                    "Error occurred when searching for Ciba AuthCodeKey for the identifier: " + authReqId, e);
         }
     }
 
@@ -203,10 +205,12 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
                 }
             } catch (SQLException e) {
                 IdentityDatabaseUtil.rollbackTransaction(connection);
-                throw new CibaCoreException("Error occurred in updating lastPollingTime of TokenRequest", e);
+                throw new CibaCoreException("Error occurred in updating lastPollingTime of TokenRequest identified by" +
+                        " AuthCodeKey: " + key, e);
             }
         } catch (SQLException e) {
-            throw new CibaCoreException("Error occurred in updating lastPollingTime of TokenRequest", e);
+            throw new CibaCoreException("Error occurred in updating lastPollingTime of TokenRequest identified by " +
+                    "AuthCodeKey: " + key, e);
         }
     }
 
@@ -227,27 +231,29 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
                 }
             } catch (SQLException e) {
                 IdentityDatabaseUtil.rollbackTransaction(connection);
-                throw new CibaCoreException("Error occurred in updating pollingInterval of TokenRequest", e);
+                throw new CibaCoreException("Error occurred in updating pollingInterval of TokenRequest identified by" +
+                        " AuthCodeKey: " + key, e);
             }
         } catch (SQLException e) {
-            throw new CibaCoreException("Error occurred in updating pollingInterval of TokenRequest", e);
+            throw new CibaCoreException("Error occurred in updating pollingInterval of TokenRequest identified by " +
+                    "AuthCodeKey: " + key, e);
         }
     }
 
     @Override
-    public AuthenticatedUser getAuthenticatedUser(String CibaAuthCodeKey) throws CibaCoreException {
+    public AuthenticatedUser getAuthenticatedUser(String cibaAuthCodeDOKey) throws CibaCoreException {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
             try (PreparedStatement prepStmt =
                          connection.prepareStatement(SQLQueries.CibaSQLQueries.RETRIEVE_AUTHENTICATED_USER)) {
 
                 AuthenticatedUser authenticatedUser = new AuthenticatedUser();
-                prepStmt.setString(1, CibaAuthCodeKey);
+                prepStmt.setString(1, cibaAuthCodeDOKey);
                 ResultSet resultSet = prepStmt.executeQuery();
                 if (resultSet.next()) {
                     if (log.isDebugEnabled()) {
                         log.debug("Successfully obtained authenticatedUser of TokenRequest  with " +
-                                "CibaAuthCodeKey : " + CibaAuthCodeKey);
+                                "CibaAuthCodeKey : " + cibaAuthCodeDOKey);
                     }
                     authenticatedUser.setUserName(resultSet.getString(1));
                     authenticatedUser.setUserStoreDomain(resultSet.getString(2));
@@ -257,10 +263,12 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
                     throw new CibaCoreException("No record found for authenticatedUser of TokenRequest.");
                 }
             } catch (IdentityOAuth2Exception e) {
-                throw new CibaCoreException("Error occurred in obtaining authenticatedUser of TokenRequest", e);
+                throw new CibaCoreException("Error occurred in obtaining authenticatedUser of TokenRequest identified" +
+                        " by AuthCodeKey: " + cibaAuthCodeDOKey, e);
             }
         } catch (SQLException e) {
-            throw new CibaCoreException("Error occurred in obtaining authenticatedUser of TokenRequest", e);
+            throw new CibaCoreException("Error occurred in obtaining authenticatedUser of TokenRequest identified by " +
+                    "AuthCodeKey: " + cibaAuthCodeDOKey, e);
         }
     }
 
@@ -290,10 +298,12 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
                 }
             } catch (SQLException e) {
                 IdentityDatabaseUtil.rollbackTransaction(connection);
-                throw new CibaCoreException("Error occurred while persisting cibaAuthCodeDO.", e);
+                throw new CibaCoreException("Error occurred while persisting cibaAuthCode for the application with " +
+                        "consumer key: " + cibaAuthCodeDO.getConsumerAppKey(), e);
             }
         } catch (SQLException e) {
-            throw new CibaCoreException("Error occurred while persisting cibaAuthCodeDO.", e);
+            throw new CibaCoreException("Error occurred while persisting cibaAuthCode for the application with " +
+                    "consumer key: " + cibaAuthCodeDO.getConsumerAppKey(), e);
         }
     }
 
@@ -321,12 +331,11 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
                 }
 
                 if (log.isDebugEnabled()) {
-                    log.debug("Successfully obtained cibaAuthCode for unique CibaAuthCodeKey : " +
-                            authReqID);
+                    log.debug("Successfully obtained cibaAuthCode for unique auth_req_id : " + authReqID);
                 }
             }
         } catch (SQLException e) {
-            throw new CibaCoreException("Error in obtaining cibaAuthCode.", e);
+            throw new CibaCoreException("Error in obtaining cibaAuthCode for unique auth_req_id : " + authReqID, e);
         }
         return cibaAuthCodeDO;
     }
@@ -345,10 +354,12 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
                 }
             } catch (SQLException e) {
                 IdentityDatabaseUtil.rollbackTransaction(connection);
-                throw new CibaCoreException("Error in persisting scopes.", e);
+                throw new CibaCoreException(
+                        "Error in persisting scopes for the client: " + cibaAuthCodeDO.getConsumerAppKey(), e);
             }
         } catch (SQLException e) {
-            throw new CibaCoreException("Error in persisting scopes.", e);
+            throw new CibaCoreException(
+                    "Error in persisting scopes for the client: " + cibaAuthCodeDO.getConsumerAppKey(), e);
         }
     }
 
@@ -368,7 +379,8 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
                 return scopeArrayList.toArray(new String[scopeArrayList.size()]);
             }
         } catch (SQLException e) {
-            throw new CibaCoreException("Error in retrieving scopes.", e);
+            throw new CibaCoreException(
+                    "Error in retrieving scopes for the client ID: " + cibaAuthCodeDO.getConsumerAppKey(), e);
         }
     }
 
@@ -389,10 +401,12 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
                 }
             } catch (SQLException e) {
                 IdentityDatabaseUtil.rollbackTransaction(connection);
-                throw new CibaCoreException("Error occurred in persisting authentication status.", e);
+                throw new CibaCoreException("Error occurred in persisting authentication status identified with " +
+                        "auth_req_id: " + authReqID, e);
             }
         } catch (SQLException e) {
-            throw new CibaCoreException("Error occurred in persisting authentication status.", e);
+            throw new CibaCoreException("Error occurred in persisting authentication status identified with " +
+                    "auth_req_id: " + authReqID, e);
         }
     }
 

@@ -64,11 +64,15 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
 
         OAuth2AccessTokenRespDTO responseDTO = super.issue(tokReqMsgCtx);
 
+        if (log.isDebugEnabled()) {
+            log.debug("Successfully issuing token for the request made by client :" +
+                    tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId());
+        }
         try {
             CibaDAOFactory.getInstance().getCibaAuthMgtDAO().updateStatus(cibaAuthCodeKey, AuthReqStatus.
                     TOKEN_ISSUED);
         } catch (CibaCoreException e) {
-            throw new IdentityOAuth2Exception("Error occurred in persisting status.", e);
+            throw new IdentityOAuth2Exception("Error occurred in persisting status .", e);
         }
         return responseDTO;
     }
@@ -77,6 +81,10 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
     public boolean validateGrant(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
 
         if (!super.validateGrant(tokReqMsgCtx)) {
+            if (log.isDebugEnabled()) {
+                log.debug("Successful in validating grant.Validation failed for the token request made by client: " +
+                        tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId());
+            }
             return false;
         }
 
@@ -161,7 +169,7 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
      */
     private Boolean isConsentGiven(CibaAuthCodeDO cibaAuthCodeDO) {
 
-        return !cibaAuthCodeDO.getAuthenticationStatus().equals(AuthReqStatus.DENIED);
+        return !cibaAuthCodeDO.getAuthenticationStatus().equals(AuthReqStatus.CONSENT_DENIED);
     }
 
     /**

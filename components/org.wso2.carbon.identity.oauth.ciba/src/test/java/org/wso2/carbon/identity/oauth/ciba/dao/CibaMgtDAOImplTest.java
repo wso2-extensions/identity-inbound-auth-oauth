@@ -23,6 +23,7 @@ import org.apache.commons.lang.StringUtils;
 import org.mockito.Mock;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.testng.PowerMockTestCase;
+import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -125,29 +126,30 @@ public class CibaMgtDAOImplTest extends PowerMockTestCase {
                 BACKCHANNELLOGOUT_URL);
 
         try (Connection connection1 = getConnection(DB_NAME)) {
-            mockStatic(IdentityDatabaseUtil.class);
-            when(IdentityDatabaseUtil.getDBConnection(true)).thenReturn(connection1);
+            prepareConnection(connection1, true);
             cibaMgtDAO.persistCibaAuthCode(cibaAuthCodeDO);
         }
         try (Connection connection2 = getConnection(DB_NAME)) {
-            mockStatic(IdentityDatabaseUtil.class);
-            when(IdentityDatabaseUtil.getDBConnection(true)).thenReturn(connection2);
+            prepareConnection(connection2, true);
             cibaMgtDAO.storeScope(cibaAuthCodeDO);
         }
+    }
+
+    @AfterClass
+    public void tearDown() throws Exception {
+        closeH2Base(DB_NAME);
     }
 
     private void createTables() throws Exception {
 
         try (Connection connection1 = getConnection(DB_NAME)) {
-            mockStatic(IdentityDatabaseUtil.class);
-            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection1);
+            prepareConnection(connection1, false);
             PreparedStatement statement = connection1.prepareStatement(CREATE_AUTH_CODE_TABLE);
             statement.execute();
         }
 
         try (Connection connection2 = getConnection(DB_NAME)) {
-            mockStatic(IdentityDatabaseUtil.class);
-            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection2);
+            prepareConnection(connection2, false);
             PreparedStatement statement = connection2.prepareStatement(CREATE_SCOPE_TABLE);
             statement.execute();
         }
@@ -156,38 +158,32 @@ public class CibaMgtDAOImplTest extends PowerMockTestCase {
     @Test
     public void testUpdateStatus() throws Exception {
 
-        mockStatic(IdentityDatabaseUtil.class);
         try (Connection connection1 = getConnection(DB_NAME)) {
-            mockStatic(IdentityDatabaseUtil.class);
-            when(IdentityDatabaseUtil.getDBConnection(true)).thenReturn(connection1);
-            cibaMgtDAO.updateStatusWithAuthReqID(AUTH_REQ_ID, AuthReqStatus.DENIED);
+            prepareConnection(connection1, true);
+            cibaMgtDAO.updateStatusWithAuthReqID(AUTH_REQ_ID, AuthReqStatus.CONSENT_DENIED);
         }
         try (Connection connection1 = getConnection(DB_NAME)) {
-            mockStatic(IdentityDatabaseUtil.class);
-            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection1);
+            prepareConnection(connection1, false);
             assertEquals(cibaMgtDAO.getCibaAuthCodeWithAuthReqID(AUTH_REQ_ID).getAuthenticationStatus(),
-                    AuthReqStatus.DENIED);
+                    AuthReqStatus.CONSENT_DENIED);
         }
     }
 
     @Test
     public void testPersistAuthenticatedUser() throws Exception {
 
-        mockStatic(IdentityDatabaseUtil.class);
         mockStatic(OAuthServerConfiguration.class);
         when(OAuthServerConfiguration.getInstance()).thenReturn(mockedServerConfig);
         mockStatic(OAuth2Util.class);
         when(OAuth2Util.getTenantDomain(anyInt())).thenReturn("super.wso2");
 
         try (Connection connection1 = getConnection(DB_NAME)) {
-            mockStatic(IdentityDatabaseUtil.class);
-            when(IdentityDatabaseUtil.getDBConnection(true)).thenReturn(connection1);
+            prepareConnection(connection1, true);
             cibaMgtDAO.persistAuthenticatedUser(AUTH_CODE_KEY, authenticatedUser, -1234);
         }
 
         try (Connection connection2 = getConnection(DB_NAME)) {
-            mockStatic(IdentityDatabaseUtil.class);
-            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection2);
+            prepareConnection(connection2, false);
             assertEquals(cibaMgtDAO.getAuthenticatedUser(AUTH_CODE_KEY).getUserName(), "randomUser");
         }
     }
@@ -195,16 +191,13 @@ public class CibaMgtDAOImplTest extends PowerMockTestCase {
     @Test
     public void testPersistAuthenticationSuccessStaus() throws Exception {
 
-        mockStatic(IdentityDatabaseUtil.class);
         try (Connection connection1 = getConnection(DB_NAME)) {
-            mockStatic(IdentityDatabaseUtil.class);
-            when(IdentityDatabaseUtil.getDBConnection(true)).thenReturn(connection1);
+            prepareConnection(connection1, true);
             cibaMgtDAO.updateStatus(AUTH_CODE_KEY, AuthReqStatus.AUTHENTICATED);
         }
 
         try (Connection connection2 = getConnection(DB_NAME)) {
-            mockStatic(IdentityDatabaseUtil.class);
-            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection2);
+            prepareConnection(connection2, false);
             assertEquals(cibaMgtDAO.getCibaAuthCodeWithAuthReqID(AUTH_REQ_ID).getAuthenticationStatus(),
                     AuthReqStatus.AUTHENTICATED);
         }
@@ -213,10 +206,8 @@ public class CibaMgtDAOImplTest extends PowerMockTestCase {
     @Test
     public void testIsAuthReqIdExist() throws Exception {
 
-        mockStatic(IdentityDatabaseUtil.class);
         try (Connection connection1 = getConnection(DB_NAME)) {
-            mockStatic(IdentityDatabaseUtil.class);
-            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection1);
+            prepareConnection(connection1, false);
             assertTrue(cibaMgtDAO.isAuthReqIdExist(AUTH_REQ_ID));
         }
     }
@@ -224,10 +215,8 @@ public class CibaMgtDAOImplTest extends PowerMockTestCase {
     @Test
     public void testGetCibaAuthCodeKey() throws Exception {
 
-        mockStatic(IdentityDatabaseUtil.class);
         try (Connection connection1 = getConnection(DB_NAME)) {
-            mockStatic(IdentityDatabaseUtil.class);
-            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection1);
+            prepareConnection(connection1, false);
             assertEquals(cibaMgtDAO.getCibaAuthCodeKey(AUTH_REQ_ID), AUTH_CODE_KEY);
         }
     }
@@ -238,16 +227,13 @@ public class CibaMgtDAOImplTest extends PowerMockTestCase {
         long lastPolledTimeInMillis = Calendar.getInstance(TimeZone.getTimeZone(CibaConstants.UTC)).getTimeInMillis();
         Timestamp lastPolledTime = new Timestamp(lastPolledTimeInMillis);
 
-        mockStatic(IdentityDatabaseUtil.class);
         try (Connection connection1 = getConnection(DB_NAME)) {
-            mockStatic(IdentityDatabaseUtil.class);
-            when(IdentityDatabaseUtil.getDBConnection(true)).thenReturn(connection1);
+            prepareConnection(connection1, true);
             cibaMgtDAO.updateLastPollingTime(AUTH_CODE_KEY, lastPolledTime);
         }
 
         try (Connection connection1 = getConnection(DB_NAME)) {
-            mockStatic(IdentityDatabaseUtil.class);
-            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection1);
+            prepareConnection(connection1, false);
             assertEquals(cibaMgtDAO.getCibaAuthCodeWithAuthReqID(AUTH_REQ_ID).getLastPolledTime(), lastPolledTime);
         }
     }
@@ -256,32 +242,23 @@ public class CibaMgtDAOImplTest extends PowerMockTestCase {
     public void testUpdatePollingInterval() throws Exception {
 
         long updatedInterval = 5;
-        mockStatic(IdentityDatabaseUtil.class);
         try (Connection connection1 = getConnection(DB_NAME)) {
-            mockStatic(IdentityDatabaseUtil.class);
-            when(IdentityDatabaseUtil.getDBConnection(true)).thenReturn(connection1);
+            prepareConnection(connection1, true);
             cibaMgtDAO.updatePollingInterval(AUTH_CODE_KEY, updatedInterval);
         }
 
         try (Connection connection1 = getConnection(DB_NAME)) {
-            mockStatic(IdentityDatabaseUtil.class);
-            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection1);
+            prepareConnection(connection1, false);
             assertEquals(cibaMgtDAO.getCibaAuthCodeWithAuthReqID(AUTH_REQ_ID).getInterval(), updatedInterval);
         }
     }
 
-    @Test
-    public void testGetAuthenticatedUser() {
-
-    }
 
     @Test
     public void testGetCibaAuthCodeWithAuthReqID() throws Exception {
 
-        mockStatic(IdentityDatabaseUtil.class);
         try (Connection connection1 = getConnection(DB_NAME)) {
-            mockStatic(IdentityDatabaseUtil.class);
-            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection1);
+            prepareConnection(connection1, false);
             assertEquals(cibaMgtDAO.getCibaAuthCodeWithAuthReqID(AUTH_REQ_ID).getConsumerAppKey(),
                     cibaAuthCodeDO.getConsumerAppKey());
         }
@@ -290,10 +267,8 @@ public class CibaMgtDAOImplTest extends PowerMockTestCase {
     @Test
     public void testGetScope() throws Exception {
 
-        mockStatic(IdentityDatabaseUtil.class);
         try (Connection connection1 = getConnection(DB_NAME)) {
-            mockStatic(IdentityDatabaseUtil.class);
-            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection1);
+            prepareConnection(connection1, false);
             assertEquals(cibaMgtDAO.getScope(cibaAuthCodeDO), scopes);
         }
     }
@@ -328,16 +303,14 @@ public class CibaMgtDAOImplTest extends PowerMockTestCase {
                 "           UNIQUE (UUID));";
 
         try (Connection connection0 = getConnection(DB_NAME)) {
-            mockStatic(IdentityDatabaseUtil.class);
-            when(IdentityDatabaseUtil.getDBConnection(true)).thenReturn(connection0);
+            prepareConnection(connection0, true);
 
             PreparedStatement statement = connection0.prepareStatement(createIdp);
             statement.execute();
         }
 
         try (Connection connection1 = getConnection(DB_NAME)) {
-            mockStatic(IdentityDatabaseUtil.class);
-            when(IdentityDatabaseUtil.getDBConnection(true)).thenReturn(connection1);
+            prepareConnection(connection1, true);
 
             String sql = "INSERT INTO IDP (TENANT_ID, NAME, UUID) VALUES (1234, 'LOCAL', 5678)";
             PreparedStatement statement = connection1.prepareStatement(sql);
@@ -350,8 +323,7 @@ public class CibaMgtDAOImplTest extends PowerMockTestCase {
             throws Exception {
 
         try (Connection connection4 = getConnection(DB_NAME)) {
-            mockStatic(IdentityDatabaseUtil.class);
-            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection4);
+            prepareConnection(connection4, false);
             PreparedStatement statement = connection4.prepareStatement(ADD_OAUTH_APP_SQL);
             statement.setString(1, clientId);
             statement.setString(2, secret);
@@ -366,6 +338,12 @@ public class CibaMgtDAOImplTest extends PowerMockTestCase {
             statement.setString(11, backchannelLogout);
             statement.execute();
         }
+    }
+
+    private void prepareConnection(Connection connection1, boolean b) {
+
+        mockStatic(IdentityDatabaseUtil.class);
+        when(IdentityDatabaseUtil.getDBConnection(b)).thenReturn(connection1);
     }
 
     protected void initiateH2Base(String databaseName, String scriptPath) throws Exception {

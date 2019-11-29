@@ -23,7 +23,7 @@ package org.wso2.carbon.identity.oauth.ciba.common;
  */
 public enum AuthReqStatus {
     REQUESTED, // Authentication request is accepted and requested for authentication & authorization.
-    DENIED,  // Consent denied for the authentication request.
+    CONSENT_DENIED,  // Consent denied for the authentication request.
     AUTHENTICATED, // Authentication request is successfully authenticated.
     EXPIRED, // Authentication request expired.
     TOKEN_ISSUED, // Token is issued for the authentication request.

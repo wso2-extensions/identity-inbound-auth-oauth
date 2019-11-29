@@ -47,8 +47,10 @@ public class CibaAuthRequestWrapper extends CommonAuthRequestWrapper {
             return extraParameters.get(name);
         } else {
             if ((CibaConstants.REQUEST.equals(name))) {
-                // In Authorize EndPoint we have defined (request) parameter already and hence to prevent conflict.
-                return "";
+                // Removing 'request' parameter which denotes the CIBA request.
+                // This is to prevent conflict with 'request' param in OAuth2
+                // which is usually used to denote request object.
+                return null;
             }
             return super.getParameter(name);
         }
