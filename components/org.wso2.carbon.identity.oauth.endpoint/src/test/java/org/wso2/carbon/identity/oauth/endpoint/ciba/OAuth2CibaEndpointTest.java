@@ -35,7 +35,6 @@ import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.ErrorCodes;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeDO;
 import org.wso2.carbon.identity.oauth.ciba.util.CibaAuthUtil;
-import org.wso2.carbon.identity.oauth.endpoint.exception.CibaAuthFailureException;
 import org.wso2.carbon.identity.oauth.endpoint.util.TestOAuthEndpointBase;
 
 import java.nio.file.Paths;
@@ -45,7 +44,7 @@ import javax.servlet.http.HttpServletResponse;
 
 @PrepareForTest({CibaParams.class, CibaDAOFactory.class, AuthzRequestDTO.class, CibaAuthRequestDTO.class,
         CibaAuthResponseDTO.class, CibaCoreException.class, ErrorCodes.class, CibaAuthCodeDO.class, CibaAuthUtil.class,
-        CibaAuthFailureException.class, JWT.class,})
+        CibaClientException.class, JWT.class,})
 public class OAuth2CibaEndpointTest extends TestOAuthEndpointBase {
 
     @Mock
@@ -58,7 +57,7 @@ public class OAuth2CibaEndpointTest extends TestOAuthEndpointBase {
     CibaAuthRequestDTO cibaAuthRequestDTO;
 
     @Mock
-    CibaAuthFailureException cibaAuthFailureException;
+    CibaClientException cibaClientException;
 
     @Mock
     CibaAuthResponseDTO cibaAuthResponseDTO;
