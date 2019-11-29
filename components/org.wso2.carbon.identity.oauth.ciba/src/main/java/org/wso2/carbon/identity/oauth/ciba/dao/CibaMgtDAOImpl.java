@@ -138,32 +138,6 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
     }
 
     @Override
-    public boolean isAuthReqIdExist(String authReqId) throws CibaCoreException {
-
-        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
-            try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.CibaSQLQueries.
-                    CHECK_IF_AUTH_REQ_ID_EXISTS)) {
-
-                prepStmt.setString(1, authReqId);
-                ResultSet resultSet = prepStmt.executeQuery();
-
-                if (resultSet.next()) {
-                    if (log.isDebugEnabled()) {
-                        log.debug("Successfully checked whether provided auth_req_id : " + authReqId +
-                                " exists.Provided auth_req_id exists.");
-                    }
-                    return true;
-                } else {
-                    return false;
-                }
-            }
-        } catch (SQLException e) {
-            throw new CibaCoreException("Unsuccessful in checking whether provided auth_req_id: " + authReqId +
-                    " exists.", e);
-        }
-    }
-
-    @Override
     public String getCibaAuthCodeKey(String authReqId) throws CibaCoreException {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
@@ -328,6 +302,8 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
                     cibaAuthCodeDO.setAuthenticationStatus(AuthReqStatus.valueOf(resultSet.getString(7)));
                     cibaAuthCodeDO.setIssuedTime(
                             resultSet.getTimestamp(8, Calendar.getInstance(TimeZone.getTimeZone(CibaConstants.UTC))));
+                } else {
+                    return null;
                 }
 
                 if (log.isDebugEnabled()) {

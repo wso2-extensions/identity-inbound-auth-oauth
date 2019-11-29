@@ -61,15 +61,6 @@ public interface CibaMgtDAO {
             throws CibaCoreException;
 
     /**
-     * Checks whether hash of CibaAuthCode exists.
-     *
-     * @param authReqId hash of CibaAuthReqID.
-     * @return boolean Returns whether given HashedAuthReqId present or not.
-     * @throws CibaCoreException Exception thrown from CibaCore Component.
-     */
-    boolean isAuthReqIdExist(String authReqId) throws CibaCoreException;
-
-    /**
      * Returns CibaAuthCodeKey for the authentication request identifier.
      *
      * @param authreqID Authentication request identifier.

@@ -127,16 +127,6 @@ public class CibaGrantHandlerTest extends PowerMockTestCase {
     }
 
     @Test(expectedExceptions = IdentityOAuth2Exception.class)
-    public void testValidateAuthReqId() throws Exception {
-
-        when(CibaDAOFactory.getInstance().getCibaAuthMgtDAO()).thenReturn(cibaMgtDAO);
-        when(CibaDAOFactory.getInstance().getCibaAuthMgtDAO().isAuthReqIdExist(anyString())).thenReturn(false);
-
-        WhiteboxImpl.invokeMethod(cibaGrantHandler, "validateAuthReqID", "randomID");
-        Assert.fail();
-    }
-
-    @Test(expectedExceptions = IdentityOAuth2Exception.class)
     public void testActiveAuthReqId() throws Exception {
 
         CibaAuthCodeDO cibaAuthCodeDO = new CibaAuthCodeDO();

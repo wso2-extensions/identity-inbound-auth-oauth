@@ -189,7 +189,7 @@ public class CibaMgtDAOImplTest extends PowerMockTestCase {
     }
 
     @Test
-    public void testPersistAuthenticationSuccessStaus() throws Exception {
+    public void testPersistAuthenticationSuccessStatus() throws Exception {
 
         try (Connection connection1 = getConnection(DB_NAME)) {
             prepareConnection(connection1, true);
@@ -200,15 +200,6 @@ public class CibaMgtDAOImplTest extends PowerMockTestCase {
             prepareConnection(connection2, false);
             assertEquals(cibaMgtDAO.getCibaAuthCodeWithAuthReqID(AUTH_REQ_ID).getAuthenticationStatus(),
                     AuthReqStatus.AUTHENTICATED);
-        }
-    }
-
-    @Test
-    public void testIsAuthReqIdExist() throws Exception {
-
-        try (Connection connection1 = getConnection(DB_NAME)) {
-            prepareConnection(connection1, false);
-            assertTrue(cibaMgtDAO.isAuthReqIdExist(AUTH_REQ_ID));
         }
     }
 
