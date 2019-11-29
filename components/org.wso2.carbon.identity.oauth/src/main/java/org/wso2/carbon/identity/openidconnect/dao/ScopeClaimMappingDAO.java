@@ -69,7 +69,7 @@ public interface ScopeClaimMappingDAO {
     /**
      * To remove persisted scopes and claims.
      *
-     * @param scope oidc scope
+     * @param scope    oidc scope
      * @param tenantId tenant id
      * @throws IdentityOAuth2Exception if an error occurs when deleting scopes and claims.
      */
