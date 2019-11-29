@@ -24,6 +24,9 @@ import org.apache.commons.logging.LogFactory;
 import java.util.Calendar;
 import java.util.Map;
 
+/**
+ * Remember me store.
+ */
 public class RememberMeStore {
 
     private static RememberMeStore store = new RememberMeStore();

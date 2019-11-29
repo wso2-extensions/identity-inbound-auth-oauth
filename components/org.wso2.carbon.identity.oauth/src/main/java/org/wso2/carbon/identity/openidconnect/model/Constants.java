@@ -18,6 +18,9 @@
 
 package org.wso2.carbon.identity.openidconnect.model;
 
+/**
+ * Constants for openid connect.
+ */
 public class Constants {
 
     public static final String REQUEST = "request";
@@ -38,7 +41,7 @@ public class Constants {
     public static final String LOGIN_HINT = "login_hint";
     public static final String ID_TOKEN_HINT = "id_token_hint";
     public static final String PROMPT = "prompt";
-    public static String CLAIMS = "claims";
+    public static final String CLAIMS = "claims";
     public static final String JWKS_URI = "jwksURI";
 
 

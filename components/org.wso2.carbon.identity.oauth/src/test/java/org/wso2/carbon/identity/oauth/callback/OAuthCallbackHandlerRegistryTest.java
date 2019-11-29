@@ -82,7 +82,8 @@ public class OAuthCallbackHandlerRegistryTest extends PowerMockIdentityBaseTest 
 
         if (StringUtils.isNotEmpty(className)) {
             assertEquals(oAuthCallbackHandler.getPriority(), CALLBACK_HANDLER_PRIORITY,
-                    "OAuthHandlers priority should be equal to the given priority in the OAuthCallBackHandlerMetaData.");
+                    "OAuthHandlers priority should be equal to the given priority in the OAuthCallBackHandlerMetaData" +
+                            ".");
         } else {
             assertNull(oAuthCallbackHandler, "Should return null when there is no OAuthCallbackHandler can handle the" +
                     " given OAuthCallback.");
