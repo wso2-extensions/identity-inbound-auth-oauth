@@ -22,12 +22,12 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
-import org.wso2.carbon.identity.oauth.ciba.dto.AuthzRequestDTO;
+import org.wso2.carbon.identity.oauth.ciba.dto.CibaAuthResponseDTO;
+import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaClientException;
 import org.wso2.carbon.identity.oauth.ciba.wrappers.CibaAuthRequestWrapper;
 import org.wso2.carbon.identity.oauth.ciba.wrappers.CibaAuthResponseWrapper;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpoint;
-import org.wso2.carbon.identity.oauth.endpoint.exception.CibaAuthFailureException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 import org.wso2.carbon.identity.openidconnect.model.Constants;
 
@@ -59,35 +59,35 @@ public class CibaAuthzHandler {
     /**
      * Trigger authorize request after building the url.
      *
-     * @param authzRequestDto AuthorizeRequest Data Transfer Object..
-     * @throws CibaAuthFailureException CibaAuthentication related exception.
+     * @param authResponseDTO AuthorizeRequest Data Transfer Object..
+     * @throws CibaClientException CibaAuthentication related exception.
      */
-    public void initiateAuthzRequest(AuthzRequestDTO authzRequestDto, @Context HttpServletRequest request,
-                                     @Context HttpServletResponse response) throws CibaAuthFailureException {
+    public void initiateAuthzRequest(CibaAuthResponseDTO authResponseDTO, @Context HttpServletRequest request,
+                                     @Context HttpServletResponse response) throws CibaClientException {
 
         // Add custom parameters to the request by wrapping.
         CibaAuthRequestWrapper cibaAuthRequestWrapper = new CibaAuthRequestWrapper(request);
 
-        cibaAuthRequestWrapper.setParameter(Constants.SCOPE, authzRequestDto.getScopes());
+        cibaAuthRequestWrapper.setParameter(Constants.SCOPE, authResponseDTO.getScopes());
         cibaAuthRequestWrapper.setParameter(Constants.RESPONSE_TYPE, CibaConstants.RESPONSE_TYPE_VALUE);
-        cibaAuthRequestWrapper.setParameter(Constants.NONCE, authzRequestDto.getNonce());
-        cibaAuthRequestWrapper.setParameter(Constants.REDIRECT_URI, authzRequestDto.getCallBackUrl());
-        cibaAuthRequestWrapper.setParameter(Constants.CLIENT_ID, authzRequestDto.getClientId());
-        cibaAuthRequestWrapper.setParameter(CibaConstants.USER_IDENTITY, authzRequestDto.getUserHint());
-        if (!StringUtils.isBlank(authzRequestDto.getBindingMessage())) {
-            cibaAuthRequestWrapper.setParameter(CibaConstants.BINDING_MESSAGE, authzRequestDto.getBindingMessage());
+        cibaAuthRequestWrapper.setParameter(Constants.NONCE, authResponseDTO.getAuthReqId());
+        cibaAuthRequestWrapper.setParameter(Constants.REDIRECT_URI, authResponseDTO.getCallBackUrl());
+        cibaAuthRequestWrapper.setParameter(Constants.CLIENT_ID, authResponseDTO.getClientId());
+        cibaAuthRequestWrapper.setParameter(CibaConstants.USER_IDENTITY, authResponseDTO.getUserHint());
+        if (!StringUtils.isBlank(authResponseDTO.getBindingMessage())) {
+            cibaAuthRequestWrapper.setParameter(CibaConstants.BINDING_MESSAGE, authResponseDTO.getBindingMessage());
         }
 
-        if (!StringUtils.isBlank(authzRequestDto.getTransactionContext())) {
+        if (!StringUtils.isBlank(authResponseDTO.getTransactionContext())) {
             cibaAuthRequestWrapper.setParameter(CibaConstants.TRANSACTION_CONTEXT,
-                    authzRequestDto.getTransactionContext());
+                    authResponseDTO.getTransactionContext());
         }
         // Create an instance of response.
         CibaAuthResponseWrapper commonAuthResponseWrapper = new CibaAuthResponseWrapper(response);
         if (log.isDebugEnabled()) {
             log.debug("Building AuthorizeRequest wrapper from CIBA component for the user : " +
-                    authzRequestDto.getUserHint() + " to continue the authentication request made by client with " +
-                    "clientID : " + authzRequestDto.getClientId());
+                    authResponseDTO.getUserHint() + " to continue the authentication request made by client with " +
+                    "clientID : " + authResponseDTO.getClientId());
         }
         // Fire authorize request and forget.
         fireAuthzReq(cibaAuthRequestWrapper, commonAuthResponseWrapper);
@@ -100,12 +100,12 @@ public class CibaAuthzHandler {
      * @param responseWrapper AuthenticationResponse wrapper.
      */
     private void fireAuthzReq(CibaAuthRequestWrapper requestWrapper, CibaAuthResponseWrapper responseWrapper)
-            throws CibaAuthFailureException {
+            throws CibaClientException {
 
         try {
             authzEndPoint.authorize(requestWrapper, responseWrapper);
         } catch (URISyntaxException | InvalidRequestParentException e) {
-            throw new CibaAuthFailureException(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+            throw new CibaClientException(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
                     OAuth2ErrorCodes.SERVER_ERROR, "error in making internal authorization call.", e);
         }
     }

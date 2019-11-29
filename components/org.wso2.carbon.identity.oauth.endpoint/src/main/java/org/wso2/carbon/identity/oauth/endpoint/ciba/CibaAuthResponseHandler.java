@@ -23,11 +23,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
 import org.wso2.carbon.identity.oauth.ciba.dto.CibaAuthResponseDTO;
+import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaClientException;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
-import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeDO;
-import org.wso2.carbon.identity.oauth.ciba.util.CibaAuthUtil;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
-import org.wso2.carbon.identity.oauth.endpoint.exception.CibaAuthFailureException;
 
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.Context;
@@ -58,32 +56,31 @@ public class CibaAuthResponseHandler {
      * @param cibaAuthResponseDTO CIBA Authentication Request Data Transfer Object.
      * @return Response for AuthenticationRequest.
      */
-    public Response createAuthResponse(@Context HttpServletResponse response,
-                                       CibaAuthResponseDTO cibaAuthResponseDTO, CibaAuthCodeDO cibaAuthCodeDO) {
+    public Response createAuthResponse(@Context HttpServletResponse response, CibaAuthResponseDTO cibaAuthResponseDTO) {
 
         // Set the ExpiryTime.
-        long expiresIn = CibaAuthUtil.getExpiresIn(cibaAuthResponseDTO);
+        long expiresIn = cibaAuthResponseDTO.getExpiresIn();
         if (log.isDebugEnabled()) {
             log.info("Setting ExpiryTime for the response to the  request made by client with clientID : " +
-                    cibaAuthResponseDTO.getAudience() + ".");
+                    cibaAuthResponseDTO.getClientId() + ".");
         }
         // Create authentication response.
         response.setContentType(MediaType.APPLICATION_JSON);
 
         // Creating authentication response for the request.
         JSONObject cibaAuthResponse = new JSONObject();
-        cibaAuthResponse.put(CibaConstants.AUTH_REQ_ID, cibaAuthCodeDO.getAuthReqID());
+        cibaAuthResponse.put(CibaConstants.AUTH_REQ_ID, cibaAuthResponseDTO.getAuthReqId());
         cibaAuthResponse.put(CibaConstants.EXPIRES_IN, expiresIn);
         cibaAuthResponse.put(CibaConstants.INTERVAL, CibaConstants.INTERVAL_DEFAULT_VALUE_IN_SEC);
 
         if (log.isDebugEnabled()) {
             log.info("Creating CIBA Authentication response to the request made by client with clientID : " +
-                    cibaAuthResponseDTO.getAudience() + ".");
+                    cibaAuthResponseDTO.getClientId() + ".");
         }
         Response.ResponseBuilder respBuilder = Response.status(HttpServletResponse.SC_OK);
         if (log.isDebugEnabled()) {
             log.info("Returning CIBA Authentication Response for the request made by client with clientID : " +
-                    cibaAuthResponseDTO.getAudience() + ".");
+                    cibaAuthResponseDTO.getClientId() + ".");
         }
         return respBuilder.entity(cibaAuthResponse.toString()).build();
     }
@@ -91,10 +88,10 @@ public class CibaAuthResponseHandler {
     /**
      * Creates CIBA Authentication Error Response.
      *
-     * @param cibaAuthFailureException CIBA Authentication Failed Exception.
+     * @param CibaClientException Ciba Authentication Failed Exception.
      * @return response Authentication Error Responses for AuthenticationRequest.
      */
-    public Response createErrorResponse(CibaAuthFailureException cibaAuthFailureException) {
+    public Response createErrorResponse(CibaClientException CibaClientException) {
 
         // Create CIBA Authentication Error Response.
         if (log.isDebugEnabled()) {
@@ -103,20 +100,20 @@ public class CibaAuthResponseHandler {
 
         // Creating error response for the request.
         JSONObject cibaErrorResponse = new JSONObject();
-        cibaErrorResponse.put("error", cibaAuthFailureException.getErrorCode());
-        cibaErrorResponse.put("error_description", cibaAuthFailureException.getMessage());
+        cibaErrorResponse.put("error", CibaClientException.getErrorCode());
+        cibaErrorResponse.put("error_description", CibaClientException.getMessage());
 
-        if (cibaAuthFailureException.getCause() != null) {
-            log.error(cibaAuthFailureException.getCause());
+        if (CibaClientException.getCause() != null) {
+            log.error(CibaClientException.getCause());
         }
-        Response.ResponseBuilder respBuilder = Response.status(cibaAuthFailureException.getStatus());
+        Response.ResponseBuilder respBuilder = Response.status(CibaClientException.getStatus());
         return respBuilder.entity(cibaErrorResponse.toString()).build();
     }
 
     /**
      * Creates CIBA Authentication Error Response.
      *
-     * @param cibaCoreException CIBA Component Core Exception.
+     * @param cibaCoreException Ciba Component Core Exception.
      * @return response Authentication Error Responses for AuthenticationRequest.
      */
     public Response createErrorResponse(CibaCoreException cibaCoreException) {
