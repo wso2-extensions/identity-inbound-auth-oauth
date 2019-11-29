@@ -18,6 +18,9 @@
 
 package org.wso2.carbon.identity.openidconnect.dao;
 
+/**
+ * OIDC sql queries
+ */
 public class SQLQueries {
 
     private SQLQueries() {
@@ -28,7 +31,8 @@ public class SQLQueries {
      * OIDC Request Object related queries
      */
     public static final String STORE_IDN_OIDC_REQ_OBJECT_REFERENCE = "INSERT INTO IDN_OIDC_REQ_OBJECT_REFERENCE " +
-            "(CONSUMER_KEY_ID, SESSION_DATA_KEY) VALUES ((SELECT ID FROM IDN_OAUTH_CONSUMER_APPS WHERE CONSUMER_KEY=?),?)";
+            "(CONSUMER_KEY_ID, SESSION_DATA_KEY) VALUES ((SELECT ID FROM IDN_OAUTH_CONSUMER_APPS WHERE " +
+            "CONSUMER_KEY=?),?)";
 
     public static final String STORE_IDN_OIDC_REQ_OBJECT_CLAIMS = "INSERT INTO IDN_OIDC_REQ_OBJECT_CLAIMS " +
             "(REQ_OBJECT_ID,CLAIM_ATTRIBUTE, ESSENTIAL, VALUE, IS_USERINFO) VALUES (?, ?, ?, ?, ?)";
@@ -45,17 +49,17 @@ public class SQLQueries {
     public static final String REFRESH_REQUEST_OBJECT = "UPDATE IDN_OIDC_REQ_OBJECT_REFERENCE SET " +
             "TOKEN_ID=? WHERE TOKEN_ID=?";
 
-    public static final String DELETE_REQ_OBJECT_TOKEN_FOR_CODE = "DELETE FROM IDN_OIDC_REQ_OBJECT_REFERENCE WHERE TOKEN_ID =" +
-            " ?";
+    public static final String DELETE_REQ_OBJECT_TOKEN_FOR_CODE =
+            "DELETE FROM IDN_OIDC_REQ_OBJECT_REFERENCE WHERE TOKEN_ID = ?";
 
     public static final String UPDATE_REQUEST_OBJECT_TOKEN_FOR_CODE = "UPDATE IDN_OIDC_REQ_OBJECT_REFERENCE SET " +
             "TOKEN_ID=? WHERE CODE_ID=?";
 
-    public static final String DELETE_REQ_OBJECT_BY_CODE_ID = "DELETE FROM IDN_OIDC_REQ_OBJECT_REFERENCE WHERE CODE_ID =" +
-            " ?";
+    public static final String DELETE_REQ_OBJECT_BY_CODE_ID =
+            "DELETE FROM IDN_OIDC_REQ_OBJECT_REFERENCE WHERE CODE_ID = ?";
 
-    public static final String DELETE_REQ_OBJECT_BY_TOKEN_ID = "DELETE FROM IDN_OIDC_REQ_OBJECT_REFERENCE WHERE TOKEN_ID" +
-            " = ?";
+    public static final String DELETE_REQ_OBJECT_BY_TOKEN_ID =
+            "DELETE FROM IDN_OIDC_REQ_OBJECT_REFERENCE WHERE TOKEN_ID = ?";
 
     public static final String RETRIEVE_REQUESTED_CLAIMS_BY_TOKEN = "SELECT CLAIM_ATTRIBUTE, ESSENTIAL, VALUE " +
             " FROM IDN_OIDC_REQ_OBJECT_CLAIMS" +
@@ -69,8 +73,8 @@ public class SQLQueries {
             " ON IDN_OIDC_REQ_OBJECT_CLAIMS.REQ_OBJECT_ID = IDN_OIDC_REQ_OBJECT_REFERENCE.ID" +
             " WHERE SESSION_DATA_KEY=? AND IS_USERINFO=?";
 
-    public static final String RETRIEVE_REQUESTED_CLAIMS_ID = "SELECT ID, CLAIM_ATTRIBUTE FROM IDN_OIDC_REQ_OBJECT_CLAIMS" +
-            " WHERE REQ_OBJECT_ID=? ";
+    public static final String RETRIEVE_REQUESTED_CLAIMS_ID =
+            "SELECT ID, CLAIM_ATTRIBUTE FROM IDN_OIDC_REQ_OBJECT_CLAIMS WHERE REQ_OBJECT_ID=? ";
 
     /**
      * OIDC Scope claims mapping related queries.
