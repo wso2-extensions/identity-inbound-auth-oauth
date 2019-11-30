@@ -23,8 +23,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
 import org.wso2.carbon.identity.oauth.ciba.dto.CibaAuthResponseDTO;
-import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaClientException;
-import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
+import org.wso2.carbon.identity.oauth.ciba.exceptions.ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 
 import javax.servlet.http.HttpServletResponse;
@@ -88,50 +87,55 @@ public class CibaAuthResponseHandler {
     /**
      * Creates CIBA Authentication Error Response.
      *
-     * @param CibaClientException Ciba Authentication Failed Exception.
+     * @param cibaAuthFailureException Ciba Authentication Failed Exception.
      * @return response Authentication Error Responses for AuthenticationRequest.
      */
-    public Response createErrorResponse(CibaClientException CibaClientException) {
+    public Response createErrorResponse(CibaAuthFailureException cibaAuthFailureException) {
 
         // Create CIBA Authentication Error Response.
         if (log.isDebugEnabled()) {
             log.debug("Creating Error Response for CIBA Authentication Request.");
         }
 
-        // Creating error response for the request.
-        JSONObject cibaErrorResponse = new JSONObject();
-        cibaErrorResponse.put("error", CibaClientException.getErrorCode());
-        cibaErrorResponse.put("error_description", CibaClientException.getMessage());
+        if (cibaAuthFailureException.getErrorCode().equals(OAuth2ErrorCodes.SERVER_ERROR)) {
 
-        if (CibaClientException.getCause() != null) {
-            log.error(CibaClientException.getCause());
+            return handleServerError(cibaAuthFailureException);
+        } else {
+            return handleClientException(cibaAuthFailureException);
         }
-        Response.ResponseBuilder respBuilder = Response.status(CibaClientException.getStatus());
-        return respBuilder.entity(cibaErrorResponse.toString()).build();
     }
 
-    /**
-     * Creates CIBA Authentication Error Response.
-     *
-     * @param cibaCoreException Ciba Component Core Exception.
-     * @return response Authentication Error Responses for AuthenticationRequest.
-     */
-    public Response createErrorResponse(CibaCoreException cibaCoreException) {
+    private Response handleClientException(CibaAuthFailureException cibaAuthFailureException) {
 
-        // Create CIBA Authentication Error Response.
-        if (log.isDebugEnabled()) {
-            log.debug("Creating Error Response for CIBA Authentication Request.");
+        String errorCode = cibaAuthFailureException.getErrorCode();
+        JSONObject cibaErrorResponse = new JSONObject();
+        cibaErrorResponse.put("error", cibaAuthFailureException.getErrorCode());
+        cibaErrorResponse.put("error_description", cibaAuthFailureException.getMessage());
+
+        if (errorCode.equals(ErrorCodes.UNAUTHORIZED_CLIENT) || errorCode.equals(ErrorCodes.UNAUTHORIZED_USER)) {
+
+            // Creating error response for the request.
+            Response.ResponseBuilder respBuilder = Response.status(HttpServletResponse.SC_UNAUTHORIZED);
+            return respBuilder.entity(cibaErrorResponse.toString()).build();
+
+        } else {
+            Response.ResponseBuilder respBuilder = Response.status(HttpServletResponse.SC_BAD_REQUEST);
+            return respBuilder.entity(cibaErrorResponse.toString()).build();
         }
+    }
+
+    private Response handleServerError(CibaAuthFailureException cibaAuthFailureException) {
 
         // Creating error response for the request.
         JSONObject cibaErrorResponse = new JSONObject();
-        cibaErrorResponse.put("error", OAuth2ErrorCodes.SERVER_ERROR);
-        cibaErrorResponse.put("error_description", cibaCoreException.getMessage());
+        cibaErrorResponse.put("error", cibaAuthFailureException.getErrorCode());
+        cibaErrorResponse.put("error_description", cibaAuthFailureException.getMessage());
 
-        if (cibaCoreException.getCause() != null) {
-            log.error(cibaCoreException.getCause());
+        if (cibaAuthFailureException.getCause() != null) {
+            log.error(cibaAuthFailureException);
         }
         Response.ResponseBuilder respBuilder = Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
         return respBuilder.entity(cibaErrorResponse.toString()).build();
     }
+
 }

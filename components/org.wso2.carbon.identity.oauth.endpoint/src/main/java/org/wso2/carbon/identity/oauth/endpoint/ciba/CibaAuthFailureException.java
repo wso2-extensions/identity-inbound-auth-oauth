@@ -18,20 +18,36 @@
 
 package org.wso2.carbon.identity.oauth.endpoint.ciba;
 
-import org.wso2.carbon.context.PrivilegedCarbonContext;
-import org.wso2.carbon.identity.oauth.ciba.api.CibaAuthService;
-import org.wso2.carbon.identity.oauth.ciba.api.CibaAuthServiceImpl;
+import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
 
 /**
- * Provide utility to endpoint.
+ * Client Exception .
  */
-public class CibaServiceFactory {
+public class CibaAuthFailureException extends CibaCoreException {
 
-    CibaAuthServiceImpl cibaAuthService;
+    private String errorCode;
 
-    public static CibaAuthServiceImpl getCibaAuthSerive() {
+    public CibaAuthFailureException(String errorCode, String errorDescription) {
 
-        return (CibaAuthServiceImpl) PrivilegedCarbonContext.getThreadLocalCarbonContext()
-                .getOSGiService(CibaAuthService.class, null);
+        super(errorDescription);
+        this.errorCode = errorCode;
+    }
+
+    public CibaAuthFailureException(String errorCode, String errorDescription, Throwable cause) {
+
+        super(errorDescription, cause);
+        this.errorCode = errorCode;
+    }
+
+    @Override
+    public String getErrorCode() {
+
+        return errorCode;
+    }
+
+    @Override
+    public void setErrorCode(String errorCode) {
+
+        this.errorCode = errorCode;
     }
 }

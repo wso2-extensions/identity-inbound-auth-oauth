@@ -23,14 +23,12 @@ import com.nimbusds.jose.Payload;
 import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
-import net.minidev.json.JSONObject;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.oauth.ciba.api.CibaAuthServiceImpl;
 import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
 import org.wso2.carbon.identity.oauth.ciba.dto.CibaAuthRequestDTO;
-import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaClientException;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
@@ -41,9 +39,9 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.model.Constants;
 
 import java.text.ParseException;
-import java.time.ZonedDateTime;
+import java.util.Calendar;
 import java.util.List;
-import javax.servlet.http.HttpServletResponse;
+import java.util.TimeZone;
 
 /**
  * Handles the validation of ciba authentication request.
@@ -66,336 +64,254 @@ public class CibaAuthRequestValidator {
     }
 
     /**
-     * Create CIBA Authentication Error Response.
+     * Validate CIBA Authentication Request.
      *
-     * @param request            CIBA Authentication Request.
-     * @param cibaAuthRequestDTO DTO that  captures validated parameters.
-     * @throws CibaClientException CIBA Authentication Failed Exception.
+     * @param request CIBA Authentication Request.
+     * @throws CibaAuthFailureException CIBA Authentication Failed Exception.
+     * @throws CibaAuthFailureException CIBA server serror.
      */
-    public void processAuthRequestParameters(String request, CibaAuthRequestDTO cibaAuthRequestDTO)
-            throws CibaClientException {
+    public void validateAuthRequestParams(String request) throws CibaAuthFailureException {
 
         try {
-            long timeInMillis = ZonedDateTime.now().toInstant().toEpochMilli();
+            long timeInMillis = Calendar.getInstance(TimeZone.getTimeZone(CibaConstants.UTC)).getTimeInMillis();
             long skewTime = OAuthServerConfiguration.getInstance().getTimeStampSkewInSeconds() *
                     CibaConstants.SEC_TO_MILLISEC_FACTOR;
             SignedJWT signedJWT = SignedJWT.parse(request);
             JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
-            JSONObject authRequestAsJSON = signedJWT.getJWTClaimsSet().toJSONObject();
 
-            if (isValidSignature(signedJWT).equals(false)) {
+            if (!isValidSignature(signedJWT)) {
                 // Signature is invalid.
-                throw new CibaClientException(HttpServletResponse.SC_UNAUTHORIZED, ErrorCodes.UNAUTHORIZED_CLIENT,
-                        "invalid signature.");
+                throw new CibaAuthFailureException(ErrorCodes.UNAUTHORIZED_CLIENT, "invalid signature.");
             }
 
             // Validate audience of the Request.
-            processAudienceParam(claimsSet, cibaAuthRequestDTO);
+            validateAudience(claimsSet);
 
             // Validate  JWT-ID of the Request.
-            processJWTIdParam(claimsSet, cibaAuthRequestDTO);
+            validateJWT(claimsSet);
 
             // Validate the expiryTime of the Request.
-            processExpiryTimeParam(claimsSet, cibaAuthRequestDTO, timeInMillis, skewTime);
+            validateExpiryTime(claimsSet, timeInMillis, skewTime);
 
             // Validate the issuedTime of the Request.
-            processIssuedTimeParam(claimsSet, cibaAuthRequestDTO, timeInMillis);
+            validateIssuedTime(claimsSet, timeInMillis);
 
             // Validate the NBF of the Request.
-            processNBFParam(claimsSet, cibaAuthRequestDTO, timeInMillis, skewTime);
+            validateNBF(claimsSet, timeInMillis, skewTime);
 
             // Validate the scope of the Request.
-            processScopeParam(authRequestAsJSON, cibaAuthRequestDTO);
-
-            // Validate the client_notification_token of the Request if ping.
-            processClientNotificationTokenParam(authRequestAsJSON, cibaAuthRequestDTO);
+            validateScopes(claimsSet);
 
             // Validate the client_notification_token of the Request.
-            processACRParam(authRequestAsJSON, cibaAuthRequestDTO);
+            validateACR(claimsSet);
 
             // Validate the binding_message of the Request.
-            processBindingMessageParam(authRequestAsJSON, cibaAuthRequestDTO);
+            validateBindingMessage(claimsSet);
 
             // Validate the transaction_context of the Request.
-            processTransactionContextParam(authRequestAsJSON, cibaAuthRequestDTO);
+            valiateTransactionContext(claimsSet);
 
             // Validate the requested_expiry of the Request.
-            processRequestedExpiryParam(authRequestAsJSON, cibaAuthRequestDTO);
+            validateRequestedExpiry(claimsSet);
 
             if (log.isDebugEnabled()) {
                 log.debug(" CIBA Authentication Request made by client with clientID : " +
-                        cibaAuthRequestDTO.getAudience() + "is properly validated.");
+                        claimsSet.getIssuer() + "is properly validated.");
             }
 
         } catch (ParseException e) {
-            throw new CibaClientException(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-                    OAuth2ErrorCodes.SERVER_ERROR, "error in validating authentication request.", e);
+            throw new CibaAuthFailureException(OAuth2ErrorCodes.SERVER_ERROR,
+                    "error in validating authentication request.",
+                    e);
         }
     }
 
     /**
      * Checks whether the requested_expiry values exists and is valid.
      *
-     * @param authRequestAsJSON  CIBA Authentication request as JSON.
-     * @param CibaAuthRequestDTO DTO that captures authentication request parameters.
-     * @throws CibaClientException CIBA Authentication Failed Exception.
+     * @param claimsSet JWT claimsets of the authentication request.
+     * @throws CibaAuthFailureException CIBA Authentication Failed Server Exception.
      */
-    private void processRequestedExpiryParam(JSONObject authRequestAsJSON, CibaAuthRequestDTO CibaAuthRequestDTO)
-            throws CibaClientException {
+    private void validateRequestedExpiry(JWTClaimsSet claimsSet) throws CibaAuthFailureException {
 
         // Validation for requested_expiry.
-        if ((authRequestAsJSON.get(CibaConstants.REQUESTED_EXPIRY)) == null) {
+        if ((claimsSet.getClaim(CibaConstants.REQUESTED_EXPIRY)) == null) {
             //  Requested_expiry claim value does not exist.
             return;
         }
-        if (StringUtils.isBlank(authRequestAsJSON.get(CibaConstants.REQUESTED_EXPIRY).toString())) {
+        if (StringUtils.isBlank(String.valueOf(claimsSet.getClaim(CibaConstants.REQUESTED_EXPIRY)))) {
             // Requested expiry is a blank value.
             if (log.isDebugEnabled()) {
                 log.debug("Invalid CIBA Authentication Request made by client with clientID : " +
-                        CibaAuthRequestDTO.getIssuer() + " .The request is with invalid  value for " +
+                        claimsSet.getIssuer() + " .The request is with invalid  value for " +
                         "(requested_expiry).");
             }
-            throw new CibaClientException(HttpServletResponse.SC_BAD_REQUEST, ErrorCodes.INVALID_REQUEST,
-                    "invalid value for (requested_expiry).");
+            throw new CibaAuthFailureException(ErrorCodes.INVALID_REQUEST, "invalid value for (requested_expiry).");
         }
-        String requestedExpiryAsString = String.valueOf(authRequestAsJSON.get(CibaConstants.REQUESTED_EXPIRY));
-        long requestedExpiry = Long.parseLong(requestedExpiryAsString);
-        CibaAuthRequestDTO.setRequestedExpiry(requestedExpiry);
     }
 
     /**
      * Checks whether the transaction_context values exists and is valid.
      *
-     * @param authRequestAsJSON  CIBA Authentication request as JSON.
-     * @param CibaAuthRequestDTO DTO that captures authentication request parameters.
-     * @throws CibaClientException CIBA Authentication Failed Exception.
+     * @param claimsSet JWT claimsets of the authentication request.
+     * @throws CibaAuthFailureException CIBA Authentication Failed Server Exception.
      */
-    private void processTransactionContextParam(JSONObject authRequestAsJSON, CibaAuthRequestDTO CibaAuthRequestDTO)
-            throws CibaClientException {
+    private void valiateTransactionContext(JWTClaimsSet claimsSet) throws CibaAuthFailureException {
 
-        // Validation for transaction_context.
-        if ((authRequestAsJSON.get(CibaConstants.TRANSACTION_CONTEXT)) == null) {
-            // Request has no transaction_context claim.
-            return;
-        }
-        if (StringUtils.isBlank(authRequestAsJSON.get(CibaConstants.TRANSACTION_CONTEXT).toString())) {
-            if (log.isDebugEnabled()) {
-                log.debug("Invalid CIBA Authentication Request made by client with clientID : " +
-                        CibaAuthRequestDTO.getAudience() + ".The request is with invalid  " +
-                        "value for (transaction_context).");
+        try {
+            // Validation for transaction_context.
+            if ((claimsSet.getClaim(CibaConstants.TRANSACTION_CONTEXT)) == null) {
+                // Request has no transaction_context claim.
+                return;
             }
-            throw new CibaClientException(HttpServletResponse.SC_BAD_REQUEST,
-                    ErrorCodes.INVALID_REQUEST, "invalid value for (transaction_context).");
+            if (StringUtils.isBlank(claimsSet.getStringClaim(CibaConstants.TRANSACTION_CONTEXT))) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Invalid CIBA Authentication Request made by client with clientID : " +
+                            claimsSet.getIssuer() + ".The request is with invalid  " +
+                            "value for (transaction_context).");
+                }
+                throw new CibaAuthFailureException(ErrorCodes.INVALID_REQUEST,
+                        "invalid value for (transaction_context).");
+            }
+        } catch (ParseException e) {
+            throw new CibaAuthFailureException(OAuth2ErrorCodes.SERVER_ERROR, "Error in validating request parameters.",
+                    e);
         }
-        CibaAuthRequestDTO
-                .setTransactionContext(String.valueOf(authRequestAsJSON.get(CibaConstants.TRANSACTION_CONTEXT)));
     }
 
     /**
      * Checks whether the binding_message values exists and is valid.
      *
-     * @param authRequestAsJSON  CIBA Authentication request as JSON.
-     * @param CibaAuthRequestDTO DTO that captures authentication request parameters.
-     * @throws CibaClientException CIBA Authentication Failed Exception.
+     * @param claimsSet JWT claimsets of the authentication request.
+     * @throws CibaAuthFailureException CIBA Authentication Failed Server Exception.
      */
-    private void processBindingMessageParam(JSONObject authRequestAsJSON, CibaAuthRequestDTO CibaAuthRequestDTO)
-            throws CibaClientException {
+    private void validateBindingMessage(JWTClaimsSet claimsSet) throws CibaAuthFailureException {
 
-        // Validation for binding_message.
-        if ((authRequestAsJSON.get(CibaConstants.BINDING_MESSAGE)) == null) {
-            // Request has claim for binding_message.
-            return;
-        }
-        if (StringUtils.isBlank(authRequestAsJSON.get(CibaConstants.BINDING_MESSAGE).toString())) {
-            // Binding_message with a blank value which is not acceptable.
-            if (log.isDebugEnabled()) {
-                log.debug("Invalid CIBA Authentication Request made by client with clientID : " +
-                        CibaAuthRequestDTO.getAudience() +
-                        ".The request is with invalid  value for (binding_message).");
+        try {
+            // Validation for binding_message.
+            if ((claimsSet.getClaim(CibaConstants.BINDING_MESSAGE)) == null) {
+                // Request has claim for binding_message.
+                return;
             }
-            throw new CibaClientException(HttpServletResponse.SC_BAD_REQUEST,
-                    ErrorCodes.INVALID_REQUEST, "invalid value for (binding_message).");
-        }
-        // Adding binding_message to CibaAuthenticationResponse after successful validation.
-        CibaAuthRequestDTO.setBindingMessage(String.valueOf(authRequestAsJSON.get(CibaConstants.BINDING_MESSAGE)));
-    }
 
-    /**
-     * Checks whether the user_code values exists and is valid.
-     *
-     * @param authRequestAsJSON  CIBA Authentication request as JSON.
-     * @param CibaAuthRequestDTO DTO that captures authentication request parameters.
-     * @throws CibaClientException CIBA Authentication Failed Exception.
-     */
-    private void validateUserCode(JSONObject authRequestAsJSON, CibaAuthRequestDTO CibaAuthRequestDTO)
-            throws CibaClientException {
-
-        // Validation for user_code values.
-        if ((authRequestAsJSON.get(CibaConstants.USER_CODE)) != null) {
-            // No claims for user_code.
-
-            if ((StringUtils.isBlank(authRequestAsJSON.get(CibaConstants.USER_CODE).toString()))) {
-                // User_code with blank values.
-
+            if (StringUtils.isBlank(claimsSet.getStringClaim(CibaConstants.BINDING_MESSAGE))) {
+                // Binding_message with a blank value which is not acceptable.
                 if (log.isDebugEnabled()) {
                     log.debug("Invalid CIBA Authentication Request made by client with clientID : " +
-                            CibaAuthRequestDTO.getAudience() + ".The request is with invalid  value for (user_code).");
+                            claimsSet.getIssuer() +
+                            ".The request is with invalid  value for (binding_message).");
                 }
-
-                throw new CibaClientException(HttpServletResponse.SC_BAD_REQUEST, ErrorCodes.INVALID_REQUEST,
-                        "invalid  value for (user_code)");
+                throw new CibaAuthFailureException(ErrorCodes.INVALID_REQUEST, "invalid value for (binding_message).");
             }
-            // Setting the user_code to CibaAuthenticationResponse after validation.
-            CibaAuthRequestDTO.setUserCode(String.valueOf(authRequestAsJSON.get(CibaConstants.USER_CODE)));
+        } catch (ParseException e) {
+            throw new CibaAuthFailureException(OAuth2ErrorCodes.SERVER_ERROR, "Error in validating request parameters.",
+                    e);
         }
     }
 
     /**
      * Checks whether the ACR values exists and is valid.
      *
-     * @param authRequestAsJSON  CIBA Authentication request as JSON.
-     * @param CibaAuthRequestDTO DTO that captures authentication request parameters.
-     * @throws CibaClientException CIBA Authentication Failed Exception.
+     * @param claimsSet JWT claimsets of the authentication request.
+     * @throws CibaAuthFailureException CIBA Authentication Failed Server Exception.
      */
-    private void processACRParam(JSONObject authRequestAsJSON, CibaAuthRequestDTO CibaAuthRequestDTO)
-            throws CibaClientException {
+    private void validateACR(JWTClaimsSet claimsSet) throws CibaAuthFailureException {
 
-        // Validation for acr values.
-        if ((authRequestAsJSON.get(Constants.ACR_VALUES)) == null) {
-            return;
-        }
-        if (StringUtils.isBlank(authRequestAsJSON.get(Constants.ACR_VALUES).toString())) {
-            // ACR claim with blank values.
-            if (log.isDebugEnabled()) {
-                log.debug("Invalid CIBA Authentication Request made by client with clientID : " +
-                        CibaAuthRequestDTO.getAudience() + ".The request is with invalid  value for (acr).");
+        try {
+            // Validation for acr values.
+            if ((claimsSet.getClaim(Constants.ACR_VALUES)) == null) {
+                return;
             }
-            throw new CibaClientException(HttpServletResponse.SC_BAD_REQUEST, ErrorCodes.INVALID_REQUEST,
-                    "invalid values for (acr).");
-        }
-        // Setting scope to CIBA AuthenticationResponse after validation.
-        CibaAuthRequestDTO
-                .setAcrValues(cibaAuthService.buildACRArray(String.valueOf(authRequestAsJSON.get(
-                        Constants.ACR_VALUES))));
-    }
 
-    /**
-     * Checks whether the client_notification_token exists and is valid.
-     *
-     * @param authRequestAsJSON  CIBA Authentication request as JSON.
-     * @param cibaAuthRequestDTO DTO that captures authentication request parameters.
-     * @throws CibaClientException CIBA Authentication Failed Exception.
-     */
-    private void processClientNotificationTokenParam(JSONObject authRequestAsJSON, CibaAuthRequestDTO cibaAuthRequestDTO)
-            throws CibaClientException {
-
-        // Validation for client_notification_token.Mandatory parameter for CIBA Authentication Request for ping mode.
-        if (authRequestAsJSON.get(CibaConstants.CLIENT_NOTIFICATION_TOKEN) == null) {
-            // Client_notification_token does not exist.
-            return;
-        }
-        if (StringUtils.isBlank(authRequestAsJSON.get(CibaConstants.CLIENT_NOTIFICATION_TOKEN).toString())) {
-            // Blank values for client_notification_token.
-            if (log.isDebugEnabled()) {
-                log.debug("Invalid CIBA Authentication Request made by client with clientID : " +
-                        cibaAuthRequestDTO.getAudience() + ".The request is with invalid  value for " +
-                        "(client_notification_token).");
+            if (StringUtils.isBlank(claimsSet.getStringClaim(Constants.ACR_VALUES))) {
+                // ACR claim with blank values.
+                if (log.isDebugEnabled()) {
+                    log.debug("Invalid CIBA Authentication Request made by client with clientID : " +
+                            claimsSet.getIssuer() + ".The request is with invalid  value for (acr).");
+                }
+                throw new CibaAuthFailureException(ErrorCodes.INVALID_REQUEST, "invalid values for (acr).");
             }
-            throw new CibaClientException(HttpServletResponse.SC_BAD_REQUEST, ErrorCodes.INVALID_REQUEST,
-                    "invalid values for (client_notification_token).");
+        } catch (ParseException e) {
+            throw new CibaAuthFailureException(OAuth2ErrorCodes.SERVER_ERROR, "Error in validating request parameters.",
+                    e);
         }
-        // Setting the client_notification_token to CibAuthenticationResponse
-        cibaAuthRequestDTO.setClientNotificationToken(String.valueOf(authRequestAsJSON.
-                get(CibaConstants.CLIENT_NOTIFICATION_TOKEN)));
     }
 
     /**
      * Checks whether the scope exists and is valid.
      *
-     * @param authRequestAsJSON  CIBA Authentication request as JSON.
-     * @param cibaAuthRequestDTO DTO that captures authentication request parameters.
-     * @throws CibaClientException CIBA Authentication Failed Exception.
+     * @param claimsSet CIBA Authentication request as JWT claim sets.
+     * @throws CibaAuthFailureException CIBA Authentication Failed Exception.
      */
-    private void processScopeParam(JSONObject authRequestAsJSON, CibaAuthRequestDTO cibaAuthRequestDTO)
-            throws CibaClientException {
+    private void validateScopes(JWTClaimsSet claimsSet) throws CibaAuthFailureException {
 
-        // Validation for scope.Mandatory parameter for CIBA AuthenticationRequest.
-        if (authRequestAsJSON.get(Constants.SCOPE) == null) {
-            // Missing 'scope' claim in the request.
-            if (log.isDebugEnabled()) {
-                log.debug("Invalid CIBA Authentication Request made by client with clientID : " +
-                        cibaAuthRequestDTO.getAudience() + ".The request is missing the mandatory claim (scope).");
+        try {
+            // Validation for scope.Mandatory parameter for CIBA AuthenticationRequest.
+            if (claimsSet.getClaim(Constants.SCOPE) == null) {
+                // Missing 'scope' claim in the request.
+                if (log.isDebugEnabled()) {
+                    log.debug("Invalid CIBA Authentication Request made by client with clientID : " +
+                            claimsSet.getIssuer() + ".The request is missing the mandatory claim (scope).");
+                }
+                throw new CibaAuthFailureException(ErrorCodes.INVALID_REQUEST, "missing parameter (scope).");
             }
-            throw new CibaClientException(HttpServletResponse.SC_BAD_REQUEST, ErrorCodes.INVALID_REQUEST,
-                    "missing parameter (scope).");
-        }
-        if (StringUtils.isBlank(String.valueOf(authRequestAsJSON.get(Constants.SCOPE)))) {
-            // Scope is with blank value.
-            if (log.isDebugEnabled()) {
-                log.debug("Invalid CIBA Authentication Request made by client with clientID : " +
-                        cibaAuthRequestDTO.getAudience() + ".The request is with invalid  value for (scope).");
+            if (StringUtils.isBlank(claimsSet.getStringClaim(Constants.SCOPE))) {
+                // Scope is with blank value.
+                if (log.isDebugEnabled()) {
+                    log.debug("Invalid CIBA Authentication Request made by client with clientID : " +
+                            claimsSet.getIssuer() + ".The request is with invalid  value for (scope).");
+                }
+                throw new CibaAuthFailureException(ErrorCodes.INVALID_REQUEST, "invalid values for (scope).");
             }
-            throw new CibaClientException(HttpServletResponse.SC_BAD_REQUEST, ErrorCodes.INVALID_REQUEST,
-                    "invalid values for (scope).");
+        } catch (ParseException e) {
+            throw new CibaAuthFailureException(OAuth2ErrorCodes.SERVER_ERROR, "Error in validating request parameters.",
+                    e);
         }
-        // Setting the scope of the cibaAuthenticationResponse.
-        cibaAuthRequestDTO.setScope(OAuth2Util.buildScopeArray
-                (String.valueOf(authRequestAsJSON.get(Constants.SCOPE))));
     }
 
     /**
      * Checks whether the JWT-NBF is valid.
      *
-     * @param claimsSet          CIBA Authentication request as claim sets for the ease.
-     * @param cibaAuthRequestDTO DTO that captures authentication request parameters.
-     * @throws CibaClientException CIBA Authentication Failed Exception.
+     * @param claimsSet CIBA Authentication request as claim sets..
+     * @throws CibaAuthFailureException CIBA Authentication Failed Exception.
      */
-    private void processNBFParam(JWTClaimsSet claimsSet, CibaAuthRequestDTO cibaAuthRequestDTO, long currentTime,
-                                 long skewTime) throws CibaClientException {
+    private void validateNBF(JWTClaimsSet claimsSet, long currentTime, long skewTime) throws CibaAuthFailureException {
 
         // Validation for nbf-time before signed request is acceptable. Mandatory parameter if signed.
         if (claimsSet.getNotBeforeTime() == null) {
             if (log.isDebugEnabled()) {
                 log.debug("Invalid CIBA Authentication Request made by client with clientID : " +
-                        cibaAuthRequestDTO.getAudience() + ".The request is missing the mandatory parameter (nbf).");
+                        claimsSet.getIssuer() + ".The request is missing the mandatory parameter (nbf).");
             }
-            throw new CibaClientException(HttpServletResponse.SC_BAD_REQUEST, ErrorCodes.INVALID_REQUEST,
-                    "missing parameter (nbf).");
+            throw new CibaAuthFailureException(ErrorCodes.INVALID_REQUEST, "missing parameter (nbf).");
         }
         long nbfTime = claimsSet.getNotBeforeTime().getTime();
         if (checkNotBeforeTime(currentTime, nbfTime, skewTime)) {
             if (log.isDebugEnabled()) {
                 log.debug("Invalid CIBA Authentication Request made by client with clientID : " +
-                        cibaAuthRequestDTO.getAudience() + ".The request is with invalid  value for (nbf).");
+                        claimsSet.getIssuer() + ".The request is with invalid  value for (nbf).");
             }
-            throw new CibaClientException(HttpServletResponse.SC_BAD_REQUEST, ErrorCodes.INVALID_REQUEST,
-                    "Cannot use this JWT.Failed (nbf).");
+            throw new CibaAuthFailureException(ErrorCodes.INVALID_REQUEST, "Cannot use this JWT.Failed (nbf).");
         }
-        // Setting the validated NBF after validation of the AuthenticationRequest.
-        cibaAuthRequestDTO.setNotBeforeTime(nbfTime);
     }
 
     /**
      * Checks whether the JWT-Issued time is valid.
      *
-     * @param currentTime        Current system time
-     * @param claimsSet          CIBA Authentication request as claim sets for the ease.
-     * @param cibaAuthRequestDTO DTO that captures authentication request parameters.
-     * @throws CibaClientException CIBA Authentication Failed Exception.
+     * @param currentTime Current system time.
+     * @param claimsSet   CIBA Authentication request as claim sets.
+     * @throws CibaAuthFailureException CIBA Authentication Failed Exception.
      */
-    private void processIssuedTimeParam(JWTClaimsSet claimsSet, CibaAuthRequestDTO cibaAuthRequestDTO, long currentTime)
-            throws CibaClientException {
+    private void validateIssuedTime(JWTClaimsSet claimsSet, long currentTime) throws CibaAuthFailureException {
 
         // Validation for (iat).Mandatory parameter if signed.
         if (claimsSet.getIssueTime() == null) {
             // (iat) is a null value.
             if (log.isDebugEnabled()) {
                 log.debug("Invalid CIBA Authentication Request made by client with clientID : " +
-                        cibaAuthRequestDTO.getAudience() + ".The request is missing the mandatory parameter (iat).");
+                        claimsSet.getIssuer() + ".The request is missing the mandatory parameter (iat).");
             }
-
-            throw new CibaClientException(HttpServletResponse.SC_BAD_REQUEST, ErrorCodes.INVALID_REQUEST,
-                    "missing parameter (iat).");
+            throw new CibaAuthFailureException(ErrorCodes.INVALID_REQUEST, "missing parameter (iat).");
         }
 
         long issuedTime = claimsSet.getIssueTime().getTime();
@@ -403,82 +319,69 @@ public class CibaAuthRequestValidator {
             // Invalid issued time.Issued time is in future.
             if (log.isDebugEnabled()) {
                 log.debug("Invalid CIBA Authentication Request made by client with clientID : " +
-                        cibaAuthRequestDTO.getAudience() + ".The request is with invalid value for (iat) .");
+                        claimsSet.getIssuer() + ".The request is with invalid value for (iat) .");
             }
-            throw new CibaClientException(HttpServletResponse.SC_BAD_REQUEST, ErrorCodes.INVALID_REQUEST,
-                    "invalid value for (iat).");
+            throw new CibaAuthFailureException(ErrorCodes.INVALID_REQUEST, "invalid value for (iat).");
         }
-
-        // Setting the validated IssuedTime.
-        cibaAuthRequestDTO.setIssuedTime(issuedTime);
     }
 
     /**
      * Checks whether the JWT-Expiry time is valid.
      *
-     * @param claimsSet          CIBA Authentication request as claim sets for the ease.
-     * @param cibaAuthRequestDTO DTO that captures authentication request parameters.
-     * @param currentTime        CurrentTime in milliseconds.
-     * @param skewTime           skewtime in milliseconds.
-     * @throws CibaClientException CIBA Authentication Failed Exception.
+     * @param claimsSet   CIBA Authentication request as claim sets.
+     * @param currentTime CurrentTime in milliseconds.
+     * @param skewTime    skewtime in milliseconds.
+     * @throws CibaAuthFailureException CIBA Authentication Failed Exception.
      */
-    private void processExpiryTimeParam(JWTClaimsSet claimsSet, CibaAuthRequestDTO cibaAuthRequestDTO, long currentTime,
-                                        long skewTime) throws CibaClientException {
+    private void validateExpiryTime(JWTClaimsSet claimsSet, long currentTime, long skewTime)
+            throws CibaAuthFailureException {
 
         // Validation for expiryTime.
         if (claimsSet.getExpirationTime() == null) {
             if (log.isDebugEnabled()) {
                 log.debug("Invalid CIBA Authentication Request made by client with clientID : " +
-                        cibaAuthRequestDTO.getAudience() + ".The request is missing the mandatory parameter (exp).");
+                        claimsSet.getIssuer() + ".The request is missing the mandatory parameter (exp).");
             }
-            throw new CibaClientException(HttpServletResponse.SC_BAD_REQUEST, ErrorCodes.INVALID_REQUEST,
-                    "missing parameter (exp).");
+            throw new CibaAuthFailureException(ErrorCodes.INVALID_REQUEST, "missing parameter (exp).");
         }
         long expiryTime = claimsSet.getExpirationTime().getTime();
         if (expiryTime < currentTime + skewTime) {
             // Invalid token as expired time has passed.
             if (log.isDebugEnabled()) {
                 log.debug("Invalid CIBA Authentication Request made by client with clientID : " +
-                        cibaAuthRequestDTO.getAudience() + ".The provided JWT is expired.");
+                        claimsSet.getIssuer() + ".The provided JWT is expired.");
             }
-            throw new CibaClientException(HttpServletResponse.SC_BAD_REQUEST, ErrorCodes.INVALID_REQUEST,
-                    "JWT expired.");
+            throw new CibaAuthFailureException(ErrorCodes.INVALID_REQUEST, "JWT expired.");
         }
-        // Setting the validated expiredTime of the AuthenticationRequest.
-        cibaAuthRequestDTO.setExpiredTime(expiryTime);
     }
 
     /**
      * Checks whether the JWT-ID is valid.
      *
-     * @param claimsSet          CIBA Authentication request as claim sets for the ease.
-     * @param cibaAuthRequestDTO DTO that captures authentication request parameters.
-     * @throws CibaClientException CIBA Authentication Failed Exception.
+     * @param claimsSet CIBA Authentication request as claim sets.
+     * @throws CibaAuthFailureException CIBA Authentication Failed Exception.
      */
-    private void processJWTIdParam(JWTClaimsSet claimsSet, CibaAuthRequestDTO cibaAuthRequestDTO)
-            throws CibaClientException {
+    private void validateJWT(JWTClaimsSet claimsSet) throws CibaAuthFailureException {
 
         // Validation for (jti).Mandatory parameter if signed.
         if (claimsSet.getJWTID() == null) {
             // (jti) is null.
             if (log.isDebugEnabled()) {
                 log.debug("Invalid CIBA Authentication Request made by client with clientID : " +
-                        cibaAuthRequestDTO.getAudience() + ".The request is missing the mandatory parameter (jti).");
+                        claimsSet.getIssuer() + ".The request is missing the mandatory parameter (jti).");
             }
-            throw new CibaClientException(HttpServletResponse.SC_BAD_REQUEST, ErrorCodes.INVALID_REQUEST,
+            throw new CibaAuthFailureException(ErrorCodes.INVALID_REQUEST,
                     "mandated parameter (JWTID) does not available.");
         }
+
         if (StringUtils.isBlank(claimsSet.getJWTID())) {
             // (jti) is a blank value.
             if (log.isDebugEnabled()) {
                 log.debug("Invalid CIBA Authentication Request made by client with clientID : " +
-                        cibaAuthRequestDTO.getAudience() + ".The request has invalid values for the parameter (jti).");
+                        claimsSet.getIssuer() + ".The request has invalid values for the parameter (jti).");
             }
-            throw new CibaClientException(HttpServletResponse.SC_BAD_REQUEST, ErrorCodes.INVALID_REQUEST,
-                    "invalid value for the parameter (JWTID)");
+            throw new CibaAuthFailureException(ErrorCodes.INVALID_REQUEST, "invalid value for the parameter (JWTID)");
         }
-        // Set the validated value to JWT.
-        cibaAuthRequestDTO.setJWTID(claimsSet.getJWTID());
     }
 
     /**
@@ -486,19 +389,17 @@ public class CibaAuthRequestValidator {
      *
      * @param signedJWT SignedJWT.
      * @return Boolean.
-     * @throws CibaClientException CIBA Authentication Failed Exception.
+     * @throws CibaAuthFailureException CIBA Authentication Failed Exception.
      */
-    private Boolean isValidSignature(SignedJWT signedJWT) throws CibaClientException {
+    private Boolean isValidSignature(SignedJWT signedJWT) throws CibaAuthFailureException {
 
         String alg = signedJWT.getHeader().getAlgorithm().getName();
         if (StringUtils.isEmpty(alg)) {
-            throw new CibaClientException(HttpServletResponse.SC_BAD_REQUEST, ErrorCodes.INVALID_REQUEST,
-                    "Algorithm must not be null.");
+            throw new CibaAuthFailureException(ErrorCodes.INVALID_REQUEST, "Algorithm must not be null.");
         }
 
         if (alg.startsWith("RS")) {
-            throw new CibaClientException(HttpServletResponse.SC_BAD_REQUEST, ErrorCodes.INVALID_REQUEST,
-                    "Algorithms not supported.");
+            throw new CibaAuthFailureException(ErrorCodes.INVALID_REQUEST, "Algorithms not supported.");
         }
         return true;
     }
@@ -506,60 +407,53 @@ public class CibaAuthRequestValidator {
     /**
      * Checks whether the audience is valid as expected.
      *
-     * @param claimsSet          CIBA Authentication request as claim sets for the ease.
-     * @param cibaAuthRequestDTO DTO that captures authentication request parameters.
-     * @throws CibaClientException CIBA Authentication Failed Exception.
+     * @param claimsSet CIBA Authentication request as claim sets.
+     * @throws CibaAuthFailureException CIBA Authentication Failed Exception.
      */
-    public void processAudienceParam(JWTClaimsSet claimsSet, CibaAuthRequestDTO cibaAuthRequestDTO)
-            throws CibaClientException {
+    private void validateAudience(JWTClaimsSet claimsSet) throws CibaAuthFailureException {
 
         List<String> aud = claimsSet.getAudience();
-        String clientId = cibaAuthRequestDTO.getIssuer();
+        String clientId = claimsSet.getIssuer();
+
         try {
+            // Validation for aud-audience.
+            if (aud.isEmpty()) {
+                // No value for audience found in the request.
+                if (log.isDebugEnabled()) {
+                    log.debug("Invalid CIBA Authentication Request made by client with clientID : " +
+                            claimsSet.getIssuer() + ".The request is missing the mandatory parameter 'aud'.");
+                }
+                throw new CibaAuthFailureException(ErrorCodes.INVALID_REQUEST, " missing (aud) parameter.");
+            }
+
             OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(clientId);
             String domain = OAuth2Util.getTenantDomainOfOauthApp(appDO);
 
             // Getting expected audience dynamically from configs.
             String expectedAudience = OAuth2Util.getIdTokenIssuer(domain);
 
-            // Validation for aud-audience.
-            if (aud.isEmpty()) {
-                // No value for audience found in the request.
-                if (log.isDebugEnabled()) {
-                    log.debug("Invalid CIBA Authentication Request made by client with clientID : " +
-                            cibaAuthRequestDTO.getAudience() +
-                            ".The request is missing the mandatory parameter 'aud'.");
-                }
-                throw new CibaClientException(HttpServletResponse.SC_BAD_REQUEST,
-                        ErrorCodes.INVALID_REQUEST, " missing (aud) parameter.");
-            }
-
             // Validation for aud-audience to meet mandated value.
             if (!aud.contains(expectedAudience)) {
                 // The audience value does not suit mandated value.
                 if (log.isDebugEnabled()) {
-                    log.debug("Invalid CIBA Authentication Request made by client with clientID : " +
-                            cibaAuthRequestDTO.getAudience() + ".Invalid value for (aud).");
+                    log.debug("Invalid CIBA Authentication Request made by client with clientID : " + clientId +
+                            ".Invalid value for (aud).");
                 }
-                throw new CibaClientException(HttpServletResponse.SC_BAD_REQUEST,
-                        ErrorCodes.INVALID_REQUEST, "parameter (aud) does not meet the mandated value.");
+                throw new CibaAuthFailureException(ErrorCodes.INVALID_REQUEST,
+                        "parameter (aud) does not meet the mandated value.");
             }
-            // Adding issuer of the request to AuthenticationRequest after validation.
-            cibaAuthRequestDTO.setAudience(aud.toString());
         } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
-            throw new CibaClientException(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-                    OAuth2ErrorCodes.SERVER_ERROR, "error in validating for (aud).", e);
+            throw new CibaAuthFailureException(OAuth2ErrorCodes.SERVER_ERROR, "Error in validating for (aud).", e);
         }
     }
 
     /**
      * Checks whether the client is valid.
      *
-     * @param request        CIBA Authentication request.
-     * @param authRequestDTO DTO that captures authentication request parameters.
-     * @throws CibaClientException CIBA Authentication Failed Exception.
+     * @param request CIBA Authentication request.
+     * @throws CibaAuthFailureException CIBA Authentication Failed Exception.
      */
-    public void processClientParam(String request, CibaAuthRequestDTO authRequestDTO) throws CibaClientException {
+    public void validateClient(String request) throws CibaAuthFailureException {
 
         try {
             SignedJWT signedJWT = SignedJWT.parse(request);
@@ -573,9 +467,7 @@ public class CibaAuthRequestValidator {
                 if (log.isDebugEnabled()) {
                     log.debug("Missing issuer of the JWT of the request : " + request);
                 }
-
-                throw new CibaClientException(HttpServletResponse.SC_UNAUTHORIZED,
-                        ErrorCodes.UNAUTHORIZED_CLIENT, "missing mandated parameter (iss).");
+                throw new CibaAuthFailureException(ErrorCodes.UNAUTHORIZED_CLIENT, "missing mandated parameter (iss).");
             }
 
             // Validate whether the claim for the issuer is a valid value.
@@ -585,9 +477,7 @@ public class CibaAuthRequestValidator {
                 if (log.isDebugEnabled()) {
                     log.debug("Missing issuer of the JWT of the request : " + request);
                 }
-
-                throw new CibaClientException(HttpServletResponse.SC_UNAUTHORIZED,
-                        ErrorCodes.UNAUTHORIZED_CLIENT, "invalid (iss) parameter.");
+                throw new CibaAuthFailureException(ErrorCodes.UNAUTHORIZED_CLIENT, "invalid (iss) parameter.");
             }
 
             // Validation for existence of clientApp  in the store.
@@ -598,24 +488,20 @@ public class CibaAuthRequestValidator {
                 if (log.isDebugEnabled()) {
                     log.debug("The request : " + request + " doesn't have a proper clientID.");
                 }
-                throw new CibaClientException(HttpServletResponse.SC_UNAUTHORIZED,
-                        ErrorCodes.UNAUTHORIZED_CLIENT, "unknown (iss) client.");
+                throw new CibaAuthFailureException(ErrorCodes.UNAUTHORIZED_CLIENT, "unknown (iss) client.");
             }
-
-            // Set the clientID since properly validated.
-            authRequestDTO.setIssuer(clientId);
-
+            if (log.isDebugEnabled()) {
+                log.debug("CIBA Authentication Request 'request' :" + request +
+                        " is having a proper clientID : " + claimsSet.getIssuer() + " as the issuer.");
+            }
         } catch (InvalidOAuthClientException e) {
             if (log.isDebugEnabled()) {
                 log.debug("The request : " + request + " doesn't have a proper clientID.");
             }
-            throw new CibaClientException(HttpServletResponse.SC_UNAUTHORIZED,
-                    ErrorCodes.UNAUTHORIZED_CLIENT, "unknown (iss) client.");
+            throw new CibaAuthFailureException(ErrorCodes.UNAUTHORIZED_CLIENT, "unknown (iss) client.");
 
         } catch (IdentityOAuth2Exception | ParseException ex) {
-            log.error(ex);
-            throw new CibaClientException(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-                    OAuth2ErrorCodes.SERVER_ERROR, "exception in validating for (iss). ");
+            throw new CibaAuthFailureException(OAuth2ErrorCodes.SERVER_ERROR, "exception in validating for (iss). ");
         }
     }
 
@@ -644,112 +530,92 @@ public class CibaAuthRequestValidator {
     }
 
     /**
-     * Verify whether the user_code matches with the user.
-     *
-     * @param authRequest        CIBA Authentication request.
-     * @param cibaAuthRequestDTO DTO that captures authentication request parameters.
-     * @return boolean Returns whether user_code is matching with existing.
-     * @throws CibaClientException CIBA Authentication Failed Exception.
-     */
-    public boolean isMatchingUserCode(String authRequest, CibaAuthRequestDTO cibaAuthRequestDTO)
-            throws CibaClientException {
-
-        try {
-            SignedJWT signedJWT = SignedJWT.parse(authRequest);
-            JSONObject authRequestAsJSON = signedJWT.getJWTClaimsSet().toJSONObject();
-
-            // Validate user_code.
-            validateUserCode(authRequestAsJSON, cibaAuthRequestDTO);
-
-            // No implementation for the moment.Modify if needed.
-            return true;
-
-        } catch (ParseException e) {
-            throw new CibaClientException(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-                    OAuth2ErrorCodes.SERVER_ERROR, "error in  validating user_code", e);
-        }
-    }
-
-    /**
      * Validation for login_hint_token,id_token_hint.
      * Anyone and exactly one is mandatory.
      *
-     * @param authRequest    CIBA Authentication request.
-     * @param authRequestDTO DTO that captures authentication request parameters.
-     * @throws CibaClientException CIBA Authentication Failed Exception.
+     * @param authRequest CIBA Authentication request.
+     * @throws CibaAuthFailureException CIBA Authentication Failed Exception.
      */
-    public void processUserHintParam(String authRequest, CibaAuthRequestDTO authRequestDTO) throws CibaClientException {
+    public void validateUserHint(String authRequest) throws CibaAuthFailureException {
 
         try {
             SignedJWT signedJWT = SignedJWT.parse(authRequest);
-            JSONObject jo = signedJWT.getJWTClaimsSet().toJSONObject();
+            JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
 
             // Validation to  check if any hints present.
-            if ((jo.get(CibaConstants.LOGIN_HINT_TOKEN) == null)
-                    && (jo.get(Constants.LOGIN_HINT) == null)
-                    && (jo.get(Constants.ID_TOKEN_HINT) == null)) {
-                // All hints are null.
+            if ((claimsSet.getClaim(CibaConstants.LOGIN_HINT_TOKEN) == null)
+                    && (claimsSet.getClaim(Constants.LOGIN_HINT) == null)
+                    && (claimsSet.getClaim(Constants.ID_TOKEN_HINT) == null)) {
 
+                // All hints are null.
                 if (log.isDebugEnabled()) {
                     log.debug("Invalid request. Missing mandatory parameter, 'hints' from the request : "
                             + authRequest);
                 }
-                throw new CibaClientException(HttpServletResponse.SC_UNAUTHORIZED, ErrorCodes.UNAUTHORIZED_USER,
-                        "missing user hints.");
+                throw new CibaAuthFailureException(ErrorCodes.UNAUTHORIZED_USER, "missing user hints.");
             }
+
             // Validation when login_hint_token exists.
-            if (!(jo.get(CibaConstants.LOGIN_HINT_TOKEN) == null)
-                    && (jo.get(Constants.LOGIN_HINT) == null)
-                    && (jo.get(Constants.ID_TOKEN_HINT) == null)) {
+            if (!(claimsSet.getClaim(CibaConstants.LOGIN_HINT_TOKEN) == null)
+                    && (claimsSet.getClaim(Constants.LOGIN_HINT) == null)
+                    && (claimsSet.getClaim(Constants.ID_TOKEN_HINT) == null)) {
                 if (log.isDebugEnabled()) {
                     log.debug("No Login_hint_token support for current version of IS.Invalid CIBA Authentication " +
                             "request : " + authRequest);
                 }
-                throw new CibaClientException(HttpServletResponse.SC_BAD_REQUEST, ErrorCodes.INVALID_REQUEST,
-                        "invalid parameter (login_hint_token)");
+                throw new CibaAuthFailureException(ErrorCodes.INVALID_REQUEST, "invalid parameter (login_hint_token)");
             }
-            // Validation when login_hint exists.
-            if ((jo.get(CibaConstants.LOGIN_HINT_TOKEN) == null)
-                    && (!(jo.get(Constants.LOGIN_HINT) == null))
-                    && (jo.get(Constants.ID_TOKEN_HINT) == null)) {
-                // Claim exists for login_hint.
 
-                if (StringUtils.isBlank(jo.get(Constants.LOGIN_HINT).toString())) {
+            // Validation when login_hint exists.
+            if ((claimsSet.getClaim(CibaConstants.LOGIN_HINT_TOKEN) == null)
+                    && (!(claimsSet.getClaim(Constants.LOGIN_HINT) == null))
+                    && (claimsSet.getClaim(Constants.ID_TOKEN_HINT) == null)) {
+
+                // Claim exists for login_hint.
+                if (StringUtils.isBlank(claimsSet.getClaim(Constants.LOGIN_HINT).toString())) {
                     // Login_hint is blank.
-                    throw new CibaClientException(HttpServletResponse.SC_UNAUTHORIZED,
-                            ErrorCodes.UNAUTHORIZED_USER, "login_hint is blank.");
+                    throw new CibaAuthFailureException(ErrorCodes.UNAUTHORIZED_USER, "login_hint is blank.");
                 }
-                // Setting the user hint here
-                authRequestDTO.setUserHint(String.valueOf(jo.get(Constants.LOGIN_HINT)));
+                if (log.isDebugEnabled()) {
+                    log.debug("CIBA Authentication Request made by Client with clientID," +
+                            claimsSet.getIssuer() + " is having a proper user hint  : " +
+                            claimsSet.getClaim(Constants.LOGIN_HINT) + ".");
+                }
                 return;
             }
+
             // Validation when id_token_hint exists.
-            if ((jo.get(CibaConstants.LOGIN_HINT_TOKEN) == null)
-                    && (jo.get(Constants.LOGIN_HINT) == null)
-                    && (!(jo.get(Constants.ID_TOKEN_HINT) == null))) {
+            if ((claimsSet.getClaim(CibaConstants.LOGIN_HINT_TOKEN) == null)
+                    && (claimsSet.getClaim(Constants.LOGIN_HINT) == null)
+                    && (!(claimsSet.getClaim(Constants.ID_TOKEN_HINT) == null))) {
+
                 // Value exists for id_token_hint
-                if (StringUtils.isBlank(jo.get(Constants.ID_TOKEN_HINT).toString())) {
+                if (StringUtils.isBlank(claimsSet.getClaim(Constants.ID_TOKEN_HINT).toString())) {
                     // Existing values for id_token_hint are blank.
                     if (log.isDebugEnabled()) {
                         log.debug("Unknown user identity from the request " + authRequest);
                     }
-                    throw new CibaClientException(HttpServletResponse.SC_UNAUTHORIZED,
-                            ErrorCodes.UNAUTHORIZED_USER, "invalid (sub) value for the provided id_token_hint");
+                    throw new CibaAuthFailureException(ErrorCodes.UNAUTHORIZED_USER,
+                            "invalid (sub) value for the provided id_token_hint");
                 }
-                if (!OAuth2Util.validateIdToken(String.valueOf(jo.get(Constants.ID_TOKEN_HINT)))) {
+
+                if (!OAuth2Util.validateIdToken(String.valueOf(claimsSet.getClaim(Constants.ID_TOKEN_HINT)))) {
                     // Provided id_token_hint is not valid.
                     if (log.isDebugEnabled()) {
                         log.debug("Invalid id_token_hint from the request " + authRequest);
                     }
-                    throw new CibaClientException(HttpServletResponse.SC_UNAUTHORIZED,
-                            ErrorCodes.UNAUTHORIZED_USER, "invalid id_token_hint.");
+                    throw new CibaAuthFailureException(ErrorCodes.UNAUTHORIZED_USER, "invalid id_token_hint.");
                 }
-                // Adding user_hint to the CIBA authentication request after successful validation.
-                authRequestDTO.setUserHint(getUserfromIDToken(String.valueOf(jo.get(Constants.ID_TOKEN_HINT))));
+
+                if (log.isDebugEnabled()) {
+                    log.debug("CIBA Authentication Request made by Client with clientID," +
+                            claimsSet.getAudience() + " is having a proper id_token_hint: " +
+                            claimsSet.getClaim(Constants.ID_TOKEN_HINT) + ".");
+                }
             }
         } catch (ParseException ex) {
-            throw new CibaClientException(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-                    OAuth2ErrorCodes.SERVER_ERROR, "error occurred in validating user hints.");
+            throw new CibaAuthFailureException(OAuth2ErrorCodes.SERVER_ERROR,
+                    "error occurred in validating user hints.");
         }
     }
 
@@ -758,9 +624,9 @@ public class CibaAuthRequestValidator {
      *
      * @param idTokenHint it carries user identity
      * @return String- the user identity
-     * @throws CibaClientException CIBA Authentication Failed Exception.
+     * @throws CibaAuthFailureException CIBA Authentication Failed Exception.
      */
-    private String getUserfromIDToken(String idTokenHint) throws CibaClientException {
+    private String getUserfromIDToken(String idTokenHint) throws CibaAuthFailureException {
 
         // Obtain (sub) from id_token_hint
         try {
@@ -771,8 +637,8 @@ public class CibaAuthRequestValidator {
             JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
             return claimsSet.getSubject();
         } catch (ParseException e) {
-            throw new CibaClientException(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-                    OAuth2ErrorCodes.SERVER_ERROR, "error in obtaining (sub) from id_token.", e);
+            throw new CibaAuthFailureException(OAuth2ErrorCodes.SERVER_ERROR, "error in obtaining (sub) from id_token.",
+                    e);
         }
     }
 
@@ -780,9 +646,9 @@ public class CibaAuthRequestValidator {
      * Validate whether Request JWT is in proper formatting.
      *
      * @param authRequest CIBA Authentication Request as a String.
-     * @throws CibaClientException CIBA Authentication Failed Exception.
+     * @throws CibaAuthFailureException CIBA Authentication Failed Exception.
      */
-    public void validateRequest(String authRequest) throws CibaClientException {
+    public void validateRequest(String authRequest) throws CibaAuthFailureException {
 
         try {
             // The assertion is not an encrypted one.
@@ -792,7 +658,7 @@ public class CibaAuthRequestValidator {
             JWSHeader header = signedJWT.getHeader();
 
             if (payload == null || header == null || signature == null) {
-                throw new CibaClientException(HttpServletResponse.SC_BAD_REQUEST, ErrorCodes.INVALID_REQUEST,
+                throw new CibaAuthFailureException(ErrorCodes.INVALID_REQUEST,
                         "Missing components(header,payload or signature) of JWT ");
             }
             if (log.isDebugEnabled()) {
@@ -806,15 +672,84 @@ public class CibaAuthRequestValidator {
                 if (log.isDebugEnabled()) {
                     log.debug("Claim values are empty in the given JSON Web Token");
                 }
-                throw new CibaClientException(HttpServletResponse.SC_BAD_REQUEST, ErrorCodes.INVALID_REQUEST,
-                        "invalid parameter (request)");
+                throw new CibaAuthFailureException(ErrorCodes.INVALID_REQUEST, "invalid parameter (request)");
             }
         } catch (ParseException e) {
             String errorMessage =
                     "Unexpected number of Base64URL parts of the nested JWT payload. Expected number" +
                             " of parts must be three. ";
-            throw new CibaClientException(HttpServletResponse.SC_BAD_REQUEST, ErrorCodes.INVALID_REQUEST,
-                    errorMessage, e);
+            throw new CibaAuthFailureException(ErrorCodes.INVALID_REQUEST, errorMessage, e);
         }
+    }
+
+    /**
+     * Extracts validated parameters from request and prepare a DTO.
+     *
+     * @param request CIBA Authentication Request as a String.
+     * @throws CibaAuthFailureException CIBA Authentication Failed Exception.
+     */
+    public CibaAuthRequestDTO prepareRequestDTO(String request) throws CibaAuthFailureException {
+
+        CibaAuthRequestDTO cibaAuthRequestDTO = new CibaAuthRequestDTO();
+        try {
+
+            SignedJWT signedJWT = SignedJWT.parse(request);
+
+            JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
+
+            // Set the clientID since properly validated.
+            cibaAuthRequestDTO.setIssuer(claimsSet.getIssuer());
+
+            List<String> aud = claimsSet.getAudience();
+            // Adding issuer of the request to AuthenticationRequest after validation.
+            cibaAuthRequestDTO.setAudience(aud.toArray(new String[aud.size()]));
+
+            // Adding user_hint to the CIBA authentication request after successful validation.
+            if (claimsSet.getClaim(Constants.LOGIN_HINT) != null) {
+                // Since we have multiple parameters for user hints we need this check.
+                cibaAuthRequestDTO.setUserHint(String.valueOf(claimsSet.getClaim(Constants.LOGIN_HINT)));
+            } else {
+                if (claimsSet.getClaim(Constants.ID_TOKEN_HINT) != null) {
+                    cibaAuthRequestDTO.setUserHint(
+                            getUserfromIDToken(String.valueOf(claimsSet.getClaim(Constants.ID_TOKEN_HINT))));
+                }
+            }
+
+            // Set the validated value to JWT.
+            cibaAuthRequestDTO.setJWTID(claimsSet.getJWTID());
+
+            // Setting the validated expiredTime of the AuthenticationRequest.
+            cibaAuthRequestDTO.setExpiredTime(claimsSet.getExpirationTime().getTime());
+
+            // Setting the validated IssuedTime.
+            cibaAuthRequestDTO.setIssuedTime(claimsSet.getIssueTime().getTime());
+
+            // Setting the validated NBF after validation of the AuthenticationRequest.
+            cibaAuthRequestDTO.setNotBeforeTime(claimsSet.getNotBeforeTime().getTime());
+
+            // Setting the scope of the AuthenticationRequest.
+            cibaAuthRequestDTO.setScope(OAuth2Util.buildScopeArray(claimsSet.getStringClaim(Constants.SCOPE)));
+
+            // Setting scope to CIBA AuthenticationRequest after validation.
+            cibaAuthRequestDTO.setAcrValues(CibaServiceFactory.getCibaAuthSerive()
+                    .buildACRArray(claimsSet.getStringClaim(Constants.ACR_VALUES)));
+
+            // Setting binding_message to AuthenticationRequest after successful validation.
+            cibaAuthRequestDTO.setBindingMessage(claimsSet.getStringClaim(CibaConstants.BINDING_MESSAGE));
+
+            // Setting transaction_context to AuthenticationRequest after successful validation.
+            cibaAuthRequestDTO.setTransactionContext((claimsSet.getStringClaim(CibaConstants.TRANSACTION_CONTEXT)));
+
+            // Setting requested_expiry to AuthenticationRequest after successful validation.
+            if (claimsSet.getClaim(CibaConstants.REQUESTED_EXPIRY) != null) {
+                cibaAuthRequestDTO.setRequestedExpiry(claimsSet.getLongClaim(CibaConstants.REQUESTED_EXPIRY));
+            } else {
+                cibaAuthRequestDTO.setRequestedExpiry(0);
+            }
+        } catch (ParseException e) {
+            throw new CibaAuthFailureException(OAuth2ErrorCodes.SERVER_ERROR,
+                    "error when processing request parameters.", e);
+        }
+        return cibaAuthRequestDTO;
     }
 }

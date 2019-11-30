@@ -23,7 +23,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
 import org.wso2.carbon.identity.oauth.ciba.dto.CibaAuthResponseDTO;
-import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaClientException;
 import org.wso2.carbon.identity.oauth.ciba.wrappers.CibaAuthRequestWrapper;
 import org.wso2.carbon.identity.oauth.ciba.wrappers.CibaAuthResponseWrapper;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
@@ -60,10 +59,10 @@ public class CibaAuthzHandler {
      * Trigger authorize request after building the url.
      *
      * @param authResponseDTO AuthorizeRequest Data Transfer Object..
-     * @throws CibaClientException CibaAuthentication related exception.
+     * @throws CibaAuthFailureException CibaAuthentication related exception.
      */
     public void initiateAuthzRequest(CibaAuthResponseDTO authResponseDTO, @Context HttpServletRequest request,
-                                     @Context HttpServletResponse response) throws CibaClientException {
+                                     @Context HttpServletResponse response) throws CibaAuthFailureException {
 
         // Add custom parameters to the request by wrapping.
         CibaAuthRequestWrapper cibaAuthRequestWrapper = new CibaAuthRequestWrapper(request);
@@ -100,13 +99,13 @@ public class CibaAuthzHandler {
      * @param responseWrapper AuthenticationResponse wrapper.
      */
     private void fireAuthzReq(CibaAuthRequestWrapper requestWrapper, CibaAuthResponseWrapper responseWrapper)
-            throws CibaClientException {
+            throws CibaAuthFailureException {
 
         try {
             authzEndPoint.authorize(requestWrapper, responseWrapper);
         } catch (URISyntaxException | InvalidRequestParentException e) {
-            throw new CibaClientException(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-                    OAuth2ErrorCodes.SERVER_ERROR, "error in making internal authorization call.", e);
+            throw new CibaAuthFailureException(OAuth2ErrorCodes.SERVER_ERROR,
+                    "error in making internal authorization call.", e);
         }
     }
 }
