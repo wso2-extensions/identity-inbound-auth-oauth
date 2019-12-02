@@ -2688,6 +2688,11 @@ public class OAuthServerConfiguration {
         }
     }
 
+    /**
+     * Parses the token renewal per request configuration.
+     *
+     * @param oauthConfigElem oauthConfigElem.
+     */
     private void parseTokenRenewalPerRequestConfiguration(OMElement oauthConfigElem) {
 
         OMElement enableTokenRenewalElem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
