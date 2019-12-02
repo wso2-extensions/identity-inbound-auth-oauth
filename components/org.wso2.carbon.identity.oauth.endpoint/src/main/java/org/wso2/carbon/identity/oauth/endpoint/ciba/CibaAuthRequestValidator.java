@@ -164,7 +164,7 @@ public class CibaAuthRequestValidator {
                 // Request has no transaction_context claim.
                 return;
             }
-            if (StringUtils.isBlank(claimsSet.getStringClaim(CibaConstants.TRANSACTION_CONTEXT))) {
+            if (StringUtils.isBlank(claimsSet.getJSONObjectClaim(CibaConstants.TRANSACTION_CONTEXT).toJSONString())) {
                 if (log.isDebugEnabled()) {
                     log.debug("Invalid CIBA Authentication Request made by client with clientID : " +
                             claimsSet.getIssuer() + ".The request is with invalid  " +
@@ -738,7 +738,8 @@ public class CibaAuthRequestValidator {
             cibaAuthRequestDTO.setBindingMessage(claimsSet.getStringClaim(CibaConstants.BINDING_MESSAGE));
 
             // Setting transaction_context to AuthenticationRequest after successful validation.
-            cibaAuthRequestDTO.setTransactionContext((claimsSet.getStringClaim(CibaConstants.TRANSACTION_CONTEXT)));
+            cibaAuthRequestDTO.setTransactionContext(
+                    (claimsSet.getJSONObjectClaim(CibaConstants.TRANSACTION_CONTEXT).toJSONString()));
 
             // Setting requested_expiry to AuthenticationRequest after successful validation.
             if (claimsSet.getClaim(CibaConstants.REQUESTED_EXPIRY) != null) {
