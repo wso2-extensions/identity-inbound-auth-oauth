@@ -36,6 +36,9 @@ import javax.servlet.http.HttpServletRequest;
 
 import static org.testng.Assert.assertEquals;
 
+/**
+ * This class contains the test cased related to the public client authentication functionality.
+ */
 @PrepareForTest({
         HttpServletRequest.class,
         OAuth2Util.class
@@ -55,6 +58,16 @@ public class PublicClientAuthenticatorTest extends PowerMockIdentityBaseTest {
                 "Default priority of the public client authenticator has changed");
     }
 
+    /**
+     * Test for client authentication.
+     *
+     * @param headerName    Header name.
+     * @param headerValue   Header value.
+     * @param bodyContent   Message body content.
+     * @param publicClient  Flag for public client state.
+     * @param canHandle     Flag for authentication handle state.
+     * @throws Exception    Exception.
+     */
     @Test(dataProvider = "testCanAuthenticateData")
     public void testCanAuthenticate(String headerName, String headerValue, HashMap<String, List> bodyContent,
                                     boolean publicClient, boolean canHandle) throws Exception {
@@ -72,6 +85,11 @@ public class PublicClientAuthenticatorTest extends PowerMockIdentityBaseTest {
                 OAuthClientAuthnContext()), canHandle, "Expected can authenticate evaluation not received");
     }
 
+    /**
+     * Test for authentication scenarios.
+     *
+     * @return An object array containing authentication data.
+     */
     @DataProvider(name = "testCanAuthenticateData")
     public Object[][] testCanAuthenticateData() {
 
