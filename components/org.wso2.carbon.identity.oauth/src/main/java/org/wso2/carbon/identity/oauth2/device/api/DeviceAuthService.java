@@ -37,4 +37,56 @@ public class DeviceAuthService {
         DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().setAuthenticationStatus(userCode,
                 Constants.USED);
     }
+
+    /**
+     * Insert redirect uri to the database.
+     *
+     * @param clientId Consumer key of the application.
+     * @param redirectURI Redirection uri of the application.
+     * @throws IdentityOAuth2Exception Error while storing redirect uri.
+     */
+    public void setCallbackUri(String clientId, String redirectURI) throws IdentityOAuth2Exception {
+
+        DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().setCallBackURI(clientId, redirectURI);
+    }
+
+    /**
+     * Get client id for user code.
+     * @param userCode Code that is used to correlate two devices.
+     * @return client id
+     * @throws IdentityOAuth2Exception Error while getting client id for user code.
+     */
+    public String getClientId(String userCode) throws IdentityOAuth2Exception {
+        return DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().getClientIdByUserCode(userCode);
+    }
+
+    /**
+     * Get scopes for user code.
+     * @param userCode Code that is used to correlate two devices.
+     * @return scopes
+     * @throws IdentityOAuth2Exception Error while getting scopes for user code.
+     */
+    public String[] getScope(String userCode) throws IdentityOAuth2Exception {
+        return DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().getScopesForUserCode(userCode);
+    }
+
+    /**
+     * Get status of the user code.
+     * @param userCode Code that is used to correlate two devices.
+     * @return status of the user code.
+     * @throws IdentityOAuth2Exception Error while getting the status.
+     */
+    public String getStatus(String userCode) throws IdentityOAuth2Exception {
+        return DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().getStatusForUserCode(userCode);
+    }
+
+    /**
+     * Validate client id.
+     * @param clientId Consumer key of the application.
+     * @return true or false.
+     * @throws IdentityOAuth2Exception Error while validate the client id.
+     */
+    public boolean validateClientInfo(String clientId) throws IdentityOAuth2Exception {
+        return DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().checkClientIdExist(clientId);
+    }
 }

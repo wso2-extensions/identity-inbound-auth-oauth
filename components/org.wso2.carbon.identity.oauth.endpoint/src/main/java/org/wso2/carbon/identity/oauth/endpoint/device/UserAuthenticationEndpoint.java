@@ -71,8 +71,7 @@ public class UserAuthenticationEndpoint {
                     getServerURL("/authenticationendpoint/device.do?error=invalidRequest", false, false));
             return null;
         }
-        String clientId = DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().getClientIdByUserCode(userCode);
-
+        String clientId = deviceAuthService.getClientId(userCode);
         if (StringUtils.isNotBlank(clientId) && StringUtils.equals(getUserCodeStatus(userCode), Constants.PENDING)) {
 
             setCallbackURI(clientId);
@@ -106,7 +105,7 @@ public class UserAuthenticationEndpoint {
      */
     private String[] getScope(String userCode) throws IdentityOAuth2Exception {
 
-        return DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().getScopesForUserCode(userCode);
+        return deviceAuthService.getScope(userCode);
     }
 
     /**
@@ -118,7 +117,7 @@ public class UserAuthenticationEndpoint {
      */
     private String getUserCodeStatus(String userCode) throws IdentityOAuth2Exception {
 
-        return DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().getStatusForUserCode(userCode);
+        return deviceAuthService.getStatus(userCode);
     }
 
     /**
@@ -151,7 +150,7 @@ public class UserAuthenticationEndpoint {
             if (StringUtils.isBlank(redirectURI)) {
                 String appName = oAuthAppDO.getApplicationName();
                 redirectURI = getRedirectionURI(appName);
-                DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().setCallBackURI(clientId, redirectURI);
+                deviceAuthService.setCallbackUri(clientId, redirectURI);
                 AppInfoCache.getInstance().clearCacheEntry(clientId);
             }
             deviceFlowDO.setCallbackUri(redirectURI);
@@ -160,5 +159,4 @@ public class UserAuthenticationEndpoint {
             throw new IdentityOAuth2Exception(errorMsg, e);
         }
     }
-
 }

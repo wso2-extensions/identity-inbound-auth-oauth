@@ -97,7 +97,7 @@ public class DeviceEndpoint {
      */
     private boolean validateClientId(String clientId) throws IdentityOAuth2Exception {
 
-        return DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().checkClientIdExist(clientId);
+        return deviceAuthService.validateClientInfo(clientId);
     }
 
     /**
