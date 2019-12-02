@@ -28,6 +28,7 @@ import org.apache.oltu.oauth2.common.message.OAuthResponse;
 import org.json.JSONObject;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthService;
 import org.wso2.carbon.identity.oauth2.device.codegenerator.GenerateKeys;
 import org.wso2.carbon.identity.oauth2.device.constants.Constants;
 import org.wso2.carbon.identity.oauth2.device.dao.DeviceFlowPersistenceFactory;
@@ -47,6 +48,7 @@ import javax.ws.rs.core.Response;
 public class DeviceEndpoint {
 
     private static final Log log = LogFactory.getLog(DeviceEndpoint.class);
+    DeviceAuthService deviceAuthService = new DeviceAuthService();
 
     @POST
     @Path("/")
@@ -74,9 +76,7 @@ public class DeviceEndpoint {
         String scope = request.getParameter(Constants.SCOPE);
         String redirectionUri = IdentityUtil.getServerURL("/authenticationendpoint/device.do", false, false);
         String redirectionUriComplete = redirectionUri + "?user_code=" + userCode;
-        DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().insertDeviceFlowParameters(deviceCode,
-                userCode, clientId, Constants.EXPIRES_IN_VALUE, Constants.INTERVAL_VALUE);
-        DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().storeDeviceFlowScopes(scope, deviceCode);
+        deviceAuthService.generateDeviceResponse(deviceCode, userCode, clientId, scope);
         JSONObject jsonObject = new JSONObject();
         jsonObject.put(Constants.DEVICE_CODE, deviceCode)
                 .put(Constants.USER_CODE, userCode)
