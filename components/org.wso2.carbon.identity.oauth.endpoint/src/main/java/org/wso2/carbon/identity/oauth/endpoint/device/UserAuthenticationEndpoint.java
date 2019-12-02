@@ -39,7 +39,7 @@ import java.net.URISyntaxException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.Consumes;
-import javax.ws.rs.GET;
+import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
@@ -53,7 +53,7 @@ public class UserAuthenticationEndpoint {
     private OAuth2AuthzEndpoint oAuth2AuthzEndpoint = new OAuth2AuthzEndpoint();
     private DeviceFlowDO deviceFlowDO = new DeviceFlowDO();
 
-    @GET
+    @POST
     @Path("/")
     @Consumes("application/x-www-form-urlencoded")
     @Produces("text/html")
