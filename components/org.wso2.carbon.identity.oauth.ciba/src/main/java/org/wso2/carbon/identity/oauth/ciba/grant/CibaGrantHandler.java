@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth.ciba.grant;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -286,7 +287,7 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
 
         tokReqMsgCtx
                 .setAuthorizedUser(OAuth2Util.getUserFromUserName(cibaAuthCodeDO.getAuthenticatedUser().getUserName()));
-        tokReqMsgCtx.setScope(cibaAuthCodeDO.getScope());
+        tokReqMsgCtx.setScope(cibaAuthCodeDO.getScopes());
     }
 
     /**
@@ -298,10 +299,9 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
     private CibaAuthCodeDO retrieveCibaAuthCode(String authReqId) throws IdentityOAuth2Exception {
 
         try {
-            CibaAuthCodeDO cibaAuthCodeDO =
-                    CibaDAOFactory.getInstance().getCibaAuthMgtDAO().getCibaAuthCodeWithAuthReqID(authReqId);
+            String authCodeKey = CibaDAOFactory.getInstance().getCibaAuthMgtDAO().getCibaAuthCodeKey(authReqId);
 
-            if (cibaAuthCodeDO == null) {
+            if(StringUtils.isBlank(authCodeKey)){
                 if (log.isDebugEnabled()) {
                     log.debug("Provided auth_req_id : " +
                             authReqId + " with the token request is not valid.Or not issued by Identity server.");
@@ -309,10 +309,16 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
                 throw new IdentityOAuth2Exception(INVALID_AUTH_REQ_ID);
             }
 
-            // Retrieve scopes.
-            String[] scope = CibaDAOFactory.getInstance().getCibaAuthMgtDAO().getScope(cibaAuthCodeDO);
-            cibaAuthCodeDO.setScope(scope);
+            CibaAuthCodeDO cibaAuthCodeDO =
+                    CibaDAOFactory.getInstance().getCibaAuthMgtDAO().getCibaAuthCode(authCodeKey);
+
             if (cibaAuthCodeDO.getAuthenticationStatus().equals(AuthReqStatus.AUTHENTICATED)) {
+
+                // Retrieve scopes.
+                String[] scope =
+                        CibaDAOFactory.getInstance().getCibaAuthMgtDAO().getScope(cibaAuthCodeDO.getCibaAuthCodeKey());
+                cibaAuthCodeDO.setScope(scope);
+
                 // Retrieve authenticated user.
                 AuthenticatedUser authenticatedUser = CibaDAOFactory.getInstance().getCibaAuthMgtDAO()
                         .getAuthenticatedUser(cibaAuthCodeDO.getCibaAuthCodeKey());

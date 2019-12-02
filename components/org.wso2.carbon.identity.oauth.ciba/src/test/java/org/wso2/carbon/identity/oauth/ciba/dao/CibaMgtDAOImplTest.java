@@ -129,10 +129,6 @@ public class CibaMgtDAOImplTest extends PowerMockTestCase {
             prepareConnection(connection1, true);
             cibaMgtDAO.persistCibaAuthCode(cibaAuthCodeDO);
         }
-        try (Connection connection2 = getConnection(DB_NAME)) {
-            prepareConnection(connection2, true);
-            cibaMgtDAO.storeScope(cibaAuthCodeDO);
-        }
     }
 
     @AfterClass
@@ -160,11 +156,11 @@ public class CibaMgtDAOImplTest extends PowerMockTestCase {
 
         try (Connection connection1 = getConnection(DB_NAME)) {
             prepareConnection(connection1, true);
-            cibaMgtDAO.updateStatusWithAuthReqID(AUTH_REQ_ID, AuthReqStatus.CONSENT_DENIED);
+            cibaMgtDAO.updateStatus(AUTH_CODE_KEY, AuthReqStatus.CONSENT_DENIED);
         }
         try (Connection connection1 = getConnection(DB_NAME)) {
             prepareConnection(connection1, false);
-            assertEquals(cibaMgtDAO.getCibaAuthCodeWithAuthReqID(AUTH_REQ_ID).getAuthenticationStatus(),
+            assertEquals(cibaMgtDAO.getCibaAuthCode(AUTH_CODE_KEY).getAuthenticationStatus(),
                     AuthReqStatus.CONSENT_DENIED);
         }
     }
@@ -198,7 +194,7 @@ public class CibaMgtDAOImplTest extends PowerMockTestCase {
 
         try (Connection connection2 = getConnection(DB_NAME)) {
             prepareConnection(connection2, false);
-            assertEquals(cibaMgtDAO.getCibaAuthCodeWithAuthReqID(AUTH_REQ_ID).getAuthenticationStatus(),
+            assertEquals(cibaMgtDAO.getCibaAuthCode(AUTH_CODE_KEY).getAuthenticationStatus(),
                     AuthReqStatus.AUTHENTICATED);
         }
     }
@@ -225,7 +221,7 @@ public class CibaMgtDAOImplTest extends PowerMockTestCase {
 
         try (Connection connection1 = getConnection(DB_NAME)) {
             prepareConnection(connection1, false);
-            assertEquals(cibaMgtDAO.getCibaAuthCodeWithAuthReqID(AUTH_REQ_ID).getLastPolledTime(), lastPolledTime);
+            assertEquals(cibaMgtDAO.getCibaAuthCode(AUTH_CODE_KEY).getLastPolledTime(), lastPolledTime);
         }
     }
 
@@ -240,7 +236,7 @@ public class CibaMgtDAOImplTest extends PowerMockTestCase {
 
         try (Connection connection1 = getConnection(DB_NAME)) {
             prepareConnection(connection1, false);
-            assertEquals(cibaMgtDAO.getCibaAuthCodeWithAuthReqID(AUTH_REQ_ID).getInterval(), updatedInterval);
+            assertEquals(cibaMgtDAO.getCibaAuthCode(AUTH_CODE_KEY).getInterval(), updatedInterval);
         }
     }
 
@@ -250,7 +246,7 @@ public class CibaMgtDAOImplTest extends PowerMockTestCase {
 
         try (Connection connection1 = getConnection(DB_NAME)) {
             prepareConnection(connection1, false);
-            assertEquals(cibaMgtDAO.getCibaAuthCodeWithAuthReqID(AUTH_REQ_ID).getConsumerAppKey(),
+            assertEquals(cibaMgtDAO.getCibaAuthCode(AUTH_CODE_KEY).getConsumerAppKey(),
                     cibaAuthCodeDO.getConsumerAppKey());
         }
     }
@@ -260,7 +256,7 @@ public class CibaMgtDAOImplTest extends PowerMockTestCase {
 
         try (Connection connection1 = getConnection(DB_NAME)) {
             prepareConnection(connection1, false);
-            assertEquals(cibaMgtDAO.getScope(cibaAuthCodeDO), scopes);
+            assertEquals(cibaMgtDAO.getScope(AUTH_CODE_KEY), scopes);
         }
     }
 

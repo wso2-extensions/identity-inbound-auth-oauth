@@ -27,15 +27,15 @@ import java.sql.Timestamp;
  */
 public class CibaAuthCodeDO {
 
-    private String cibaAuthCodeKey;
-    private String authReqID;
+    private String cibaAuthCodeKey; // Internal primary key for storage management.
+    private String authReqID; // Authentication request identifier mapped to cibaAuthCode key.
     private String consumerAppKey;
     private Timestamp issuedTime;
     private Timestamp lastPolledTime;
     private long interval;
     private long expiresIn;
     private Enum authenticationStatus;
-    private String[] scope;
+    private String[] scopes;
     private AuthenticatedUser authenticatedUser;
 
     public String getCibaAuthCodeKey() {
@@ -78,14 +78,14 @@ public class CibaAuthCodeDO {
         return expiresIn;
     }
 
-    public String[] getScope() {
+    public String[] getScopes() {
 
-        return scope;
+        return scopes;
     }
 
-    public void setScope(String[] scope) {
+    public void setScope(String[] scopes) {
 
-        this.scope = scope;
+        this.scopes = scopes;
     }
 
     public Timestamp getLastPolledTime() {

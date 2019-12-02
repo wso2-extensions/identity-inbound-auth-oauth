@@ -16,15 +16,15 @@
  * under the License.
  */
 
-package org.wso2.carbon.identity.oauth.ciba.dto;
+package org.wso2.carbon.identity.oauth.ciba.model;
 
 /**
  * Captures the values for authorization request.
  */
-public class CibaAuthResponseDTO {
+public class CibaAuthCodeResponse {
 
     private String userHint;
-    private String authReqId;
+    private String authReqId; // authentication request identifier.
     private String clientId;
     private String callBackUrl;
     private String bindingMessage;

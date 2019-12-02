@@ -16,12 +16,12 @@
  * under the License.
  */
 
-package org.wso2.carbon.identity.oauth.ciba.dto;
+package org.wso2.carbon.identity.oauth.ciba.model;
 
 /**
  * Captures the authentication request validated parameters.
  */
-public class CibaAuthRequestDTO {
+public class CibaAuthCodeRequest {
 
     private String issuer;
     private String audience;
@@ -148,7 +148,7 @@ public class CibaAuthRequestDTO {
         this.userCode = userCode;
     }
 
-    public String[] getScope() {
+    public String[] getScopes() {
 
         return scope;
     }
