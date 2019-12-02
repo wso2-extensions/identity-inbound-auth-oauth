@@ -23,10 +23,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.identity.oauth.ciba.api.CibaAuthServiceImpl;
 import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
-import org.wso2.carbon.identity.oauth.ciba.dto.CibaAuthRequestDTO;
-import org.wso2.carbon.identity.oauth.ciba.dto.CibaAuthResponseDTO;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.ErrorCodes;
+import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeRequest;
+import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeResponse;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 
 import java.util.Map;
@@ -90,30 +90,30 @@ public class OAuth2CibaEndpoint {
             CibaAuthRequestValidator.getInstance().validateAuthRequestParams(authRequest);
 
             // Prepare RequestDTO with validated parameters.
-            CibaAuthRequestDTO cibaAuthRequestDTO =
+            CibaAuthCodeRequest cibaAuthCodeRequest =
                     CibaAuthRequestValidator.getInstance().prepareRequestDTO(authRequest);
 
             // Obtain Authentication service from CIBA.
             CibaAuthServiceImpl cibaAuthServiceImpl = CibaServiceFactory.getCibaAuthSerive();
 
             // Obtain Response DTO from service layer of CIBA.
-            CibaAuthResponseDTO cibaAuthResponseDTO = null;
+            CibaAuthCodeResponse cibaAuthCodeResponse = null;
             try {
-                cibaAuthResponseDTO = cibaAuthServiceImpl.generateAuthResponseDTO(cibaAuthRequestDTO);
+                cibaAuthCodeResponse = cibaAuthServiceImpl.generateAuthCodeResponse(cibaAuthCodeRequest);
             } catch (CibaCoreException e) {
                 throw new CibaAuthFailureException(OAuth2ErrorCodes.SERVER_ERROR, "Error while generating " +
                         "authentication response.", e);
             }
 
             //  Internal authorize java call to /authorize end point.
-            CibaAuthzHandler.getInstance().initiateAuthzRequest(cibaAuthResponseDTO, request, response);
+            CibaAuthzHandler.getInstance().initiateAuthzRequest(cibaAuthCodeResponse, request, response);
             if (log.isDebugEnabled()) {
                 log.info("Firing a Authorization request in regard to the request made by client with clientID: "
-                        + cibaAuthResponseDTO.getClientId() + ".");
+                        + cibaAuthCodeResponse.getClientId() + ".");
             }
 
             // Create and return Ciba Authentication Response.
-            return CibaAuthResponseHandler.getInstance().createAuthResponse(response, cibaAuthResponseDTO);
+            return CibaAuthResponseHandler.getInstance().createAuthResponse(response, cibaAuthCodeResponse);
 
         } catch (CibaAuthFailureException e) {
             //Returning error response.

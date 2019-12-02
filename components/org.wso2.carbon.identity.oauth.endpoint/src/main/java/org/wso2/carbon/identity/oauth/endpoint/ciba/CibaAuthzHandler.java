@@ -22,7 +22,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
-import org.wso2.carbon.identity.oauth.ciba.dto.CibaAuthResponseDTO;
+import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeResponse;
 import org.wso2.carbon.identity.oauth.ciba.wrappers.CibaAuthRequestWrapper;
 import org.wso2.carbon.identity.oauth.ciba.wrappers.CibaAuthResponseWrapper;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
@@ -58,35 +58,35 @@ public class CibaAuthzHandler {
     /**
      * Trigger authorize request after building the url.
      *
-     * @param authResponseDTO AuthorizeRequest Data Transfer Object..
+     * @param authCodeResponse AuthorizeRequest Data Transfer Object..
      * @throws CibaAuthFailureException CibaAuthentication related exception.
      */
-    public void initiateAuthzRequest(CibaAuthResponseDTO authResponseDTO, @Context HttpServletRequest request,
+    public void initiateAuthzRequest(CibaAuthCodeResponse authCodeResponse, @Context HttpServletRequest request,
                                      @Context HttpServletResponse response) throws CibaAuthFailureException {
 
         // Add custom parameters to the request by wrapping.
         CibaAuthRequestWrapper cibaAuthRequestWrapper = new CibaAuthRequestWrapper(request);
 
-        cibaAuthRequestWrapper.setParameter(Constants.SCOPE, authResponseDTO.getScopes());
+        cibaAuthRequestWrapper.setParameter(Constants.SCOPE, authCodeResponse.getScopes());
         cibaAuthRequestWrapper.setParameter(Constants.RESPONSE_TYPE, CibaConstants.RESPONSE_TYPE_VALUE);
-        cibaAuthRequestWrapper.setParameter(Constants.NONCE, authResponseDTO.getAuthReqId());
-        cibaAuthRequestWrapper.setParameter(Constants.REDIRECT_URI, authResponseDTO.getCallBackUrl());
-        cibaAuthRequestWrapper.setParameter(Constants.CLIENT_ID, authResponseDTO.getClientId());
-        cibaAuthRequestWrapper.setParameter(CibaConstants.USER_IDENTITY, authResponseDTO.getUserHint());
-        if (!StringUtils.isBlank(authResponseDTO.getBindingMessage())) {
-            cibaAuthRequestWrapper.setParameter(CibaConstants.BINDING_MESSAGE, authResponseDTO.getBindingMessage());
+        cibaAuthRequestWrapper.setParameter(Constants.NONCE, authCodeResponse.getAuthReqId());
+        cibaAuthRequestWrapper.setParameter(Constants.REDIRECT_URI, authCodeResponse.getCallBackUrl());
+        cibaAuthRequestWrapper.setParameter(Constants.CLIENT_ID, authCodeResponse.getClientId());
+        cibaAuthRequestWrapper.setParameter(CibaConstants.USER_IDENTITY, authCodeResponse.getUserHint());
+        if (!StringUtils.isBlank(authCodeResponse.getBindingMessage())) {
+            cibaAuthRequestWrapper.setParameter(CibaConstants.BINDING_MESSAGE, authCodeResponse.getBindingMessage());
         }
 
-        if (!StringUtils.isBlank(authResponseDTO.getTransactionContext())) {
+        if (!StringUtils.isBlank(authCodeResponse.getTransactionContext())) {
             cibaAuthRequestWrapper.setParameter(CibaConstants.TRANSACTION_CONTEXT,
-                    authResponseDTO.getTransactionContext());
+                    authCodeResponse.getTransactionContext());
         }
         // Create an instance of response.
         CibaAuthResponseWrapper commonAuthResponseWrapper = new CibaAuthResponseWrapper(response);
         if (log.isDebugEnabled()) {
             log.debug("Building AuthorizeRequest wrapper from CIBA component for the user : " +
-                    authResponseDTO.getUserHint() + " to continue the authentication request made by client with " +
-                    "clientID : " + authResponseDTO.getClientId());
+                    authCodeResponse.getUserHint() + " to continue the authentication request made by client with " +
+                    "clientID : " + authCodeResponse.getClientId());
         }
         // Fire authorize request and forget.
         fireAuthzReq(cibaAuthRequestWrapper, commonAuthResponseWrapper);

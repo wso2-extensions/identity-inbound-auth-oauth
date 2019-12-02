@@ -26,10 +26,9 @@ import com.nimbusds.jwt.SignedJWT;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.identity.oauth.ciba.api.CibaAuthServiceImpl;
 import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
-import org.wso2.carbon.identity.oauth.ciba.dto.CibaAuthRequestDTO;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.ErrorCodes;
+import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeRequest;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -49,8 +48,6 @@ import java.util.TimeZone;
 public class CibaAuthRequestValidator {
 
     private static final Log log = LogFactory.getLog(CibaAuthRequestValidator.class);
-
-    private CibaAuthServiceImpl cibaAuthService;
 
     private CibaAuthRequestValidator() {
 
@@ -688,9 +685,9 @@ public class CibaAuthRequestValidator {
      * @param request CIBA Authentication Request as a String.
      * @throws CibaAuthFailureException CIBA Authentication Failed Exception.
      */
-    public CibaAuthRequestDTO prepareRequestDTO(String request) throws CibaAuthFailureException {
+    public CibaAuthCodeRequest prepareRequestDTO(String request) throws CibaAuthFailureException {
 
-        CibaAuthRequestDTO cibaAuthRequestDTO = new CibaAuthRequestDTO();
+        CibaAuthCodeRequest cibaAuthCodeRequest = new CibaAuthCodeRequest();
         try {
 
             SignedJWT signedJWT = SignedJWT.parse(request);
@@ -698,59 +695,73 @@ public class CibaAuthRequestValidator {
             JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
 
             // Set the clientID since properly validated.
-            cibaAuthRequestDTO.setIssuer(claimsSet.getIssuer());
+            cibaAuthCodeRequest.setIssuer(claimsSet.getIssuer());
 
             List<String> aud = claimsSet.getAudience();
             // Adding issuer of the request to AuthenticationRequest after validation.
-            cibaAuthRequestDTO.setAudience(aud.toArray(new String[aud.size()]));
+            cibaAuthCodeRequest.setAudience(aud.toArray(new String[aud.size()]));
 
             // Adding user_hint to the CIBA authentication request after successful validation.
             if (claimsSet.getClaim(Constants.LOGIN_HINT) != null) {
                 // Since we have multiple parameters for user hints we need this check.
-                cibaAuthRequestDTO.setUserHint(String.valueOf(claimsSet.getClaim(Constants.LOGIN_HINT)));
+                cibaAuthCodeRequest.setUserHint(String.valueOf(claimsSet.getClaim(Constants.LOGIN_HINT)));
             } else {
                 if (claimsSet.getClaim(Constants.ID_TOKEN_HINT) != null) {
-                    cibaAuthRequestDTO.setUserHint(
+                    cibaAuthCodeRequest.setUserHint(
                             getUserfromIDToken(String.valueOf(claimsSet.getClaim(Constants.ID_TOKEN_HINT))));
                 }
             }
 
             // Set the validated value to JWT.
-            cibaAuthRequestDTO.setJWTID(claimsSet.getJWTID());
+            cibaAuthCodeRequest.setJWTID(claimsSet.getJWTID());
 
             // Setting the validated expiredTime of the AuthenticationRequest.
-            cibaAuthRequestDTO.setExpiredTime(claimsSet.getExpirationTime().getTime());
+            cibaAuthCodeRequest.setExpiredTime(claimsSet.getExpirationTime().getTime());
 
             // Setting the validated IssuedTime.
-            cibaAuthRequestDTO.setIssuedTime(claimsSet.getIssueTime().getTime());
+            cibaAuthCodeRequest.setIssuedTime(claimsSet.getIssueTime().getTime());
 
             // Setting the validated NBF after validation of the AuthenticationRequest.
-            cibaAuthRequestDTO.setNotBeforeTime(claimsSet.getNotBeforeTime().getTime());
+            cibaAuthCodeRequest.setNotBeforeTime(claimsSet.getNotBeforeTime().getTime());
 
             // Setting the scope of the AuthenticationRequest.
-            cibaAuthRequestDTO.setScope(OAuth2Util.buildScopeArray(claimsSet.getStringClaim(Constants.SCOPE)));
+            cibaAuthCodeRequest.setScope(OAuth2Util.buildScopeArray(claimsSet.getStringClaim(Constants.SCOPE)));
 
             // Setting scope to CIBA AuthenticationRequest after validation.
-            cibaAuthRequestDTO.setAcrValues(CibaServiceFactory.getCibaAuthSerive()
-                    .buildACRArray(claimsSet.getStringClaim(Constants.ACR_VALUES)));
+            cibaAuthCodeRequest.setAcrValues(buildACRArray(claimsSet.getStringClaim(Constants.ACR_VALUES)));
 
             // Setting binding_message to AuthenticationRequest after successful validation.
-            cibaAuthRequestDTO.setBindingMessage(claimsSet.getStringClaim(CibaConstants.BINDING_MESSAGE));
+            cibaAuthCodeRequest.setBindingMessage(claimsSet.getStringClaim(CibaConstants.BINDING_MESSAGE));
 
             // Setting transaction_context to AuthenticationRequest after successful validation.
-            cibaAuthRequestDTO.setTransactionContext(
+            cibaAuthCodeRequest.setTransactionContext(
                     (claimsSet.getJSONObjectClaim(CibaConstants.TRANSACTION_CONTEXT).toJSONString()));
 
             // Setting requested_expiry to AuthenticationRequest after successful validation.
             if (claimsSet.getClaim(CibaConstants.REQUESTED_EXPIRY) != null) {
-                cibaAuthRequestDTO.setRequestedExpiry(claimsSet.getLongClaim(CibaConstants.REQUESTED_EXPIRY));
+                cibaAuthCodeRequest.setRequestedExpiry(claimsSet.getLongClaim(CibaConstants.REQUESTED_EXPIRY));
             } else {
-                cibaAuthRequestDTO.setRequestedExpiry(0);
+                cibaAuthCodeRequest.setRequestedExpiry(0);
             }
         } catch (ParseException e) {
             throw new CibaAuthFailureException(OAuth2ErrorCodes.SERVER_ERROR,
                     "error when processing request parameters.", e);
         }
-        return cibaAuthRequestDTO;
+        return cibaAuthCodeRequest;
+    }
+
+    /**
+     * Build and return ACR string as array.
+     *
+     * @param acrString ACR values as a String.
+     * @return String Array.
+     */
+    public static String[] buildACRArray(String acrString) {
+
+        if (StringUtils.isNotBlank(acrString)) {
+            acrString = acrString.trim();
+            return acrString.split("\\s");
+        }
+        return new String[0];
     }
 }

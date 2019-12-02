@@ -22,8 +22,8 @@ import net.minidev.json.JSONObject;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
-import org.wso2.carbon.identity.oauth.ciba.dto.CibaAuthResponseDTO;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.ErrorCodes;
+import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeResponse;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 
 import javax.servlet.http.HttpServletResponse;
@@ -52,34 +52,34 @@ public class CibaAuthResponseHandler {
     /**
      * Creates CIBA AuthenticationResponse.
      *
-     * @param cibaAuthResponseDTO CIBA Authentication Request Data Transfer Object.
+     * @param cibaAuthCodeResponse CIBA Authentication Request Data Transfer Object.
      * @return Response for AuthenticationRequest.
      */
-    public Response createAuthResponse(@Context HttpServletResponse response, CibaAuthResponseDTO cibaAuthResponseDTO) {
+    public Response createAuthResponse(@Context HttpServletResponse response, CibaAuthCodeResponse cibaAuthCodeResponse) {
 
         // Set the ExpiryTime.
-        long expiresIn = cibaAuthResponseDTO.getExpiresIn();
+        long expiresIn = cibaAuthCodeResponse.getExpiresIn();
         if (log.isDebugEnabled()) {
             log.info("Setting ExpiryTime for the response to the  request made by client with clientID : " +
-                    cibaAuthResponseDTO.getClientId() + ".");
+                    cibaAuthCodeResponse.getClientId() + ".");
         }
         // Create authentication response.
         response.setContentType(MediaType.APPLICATION_JSON);
 
         // Creating authentication response for the request.
         JSONObject cibaAuthResponse = new JSONObject();
-        cibaAuthResponse.put(CibaConstants.AUTH_REQ_ID, cibaAuthResponseDTO.getAuthReqId());
+        cibaAuthResponse.put(CibaConstants.AUTH_REQ_ID, cibaAuthCodeResponse.getAuthReqId());
         cibaAuthResponse.put(CibaConstants.EXPIRES_IN, expiresIn);
         cibaAuthResponse.put(CibaConstants.INTERVAL, CibaConstants.INTERVAL_DEFAULT_VALUE_IN_SEC);
 
         if (log.isDebugEnabled()) {
             log.info("Creating CIBA Authentication response to the request made by client with clientID : " +
-                    cibaAuthResponseDTO.getClientId() + ".");
+                    cibaAuthCodeResponse.getClientId() + ".");
         }
         Response.ResponseBuilder respBuilder = Response.status(HttpServletResponse.SC_OK);
         if (log.isDebugEnabled()) {
             log.info("Returning CIBA Authentication Response for the request made by client with clientID : " +
-                    cibaAuthResponseDTO.getClientId() + ".");
+                    cibaAuthCodeResponse.getClientId() + ".");
         }
         return respBuilder.entity(cibaAuthResponse.toString()).build();
     }

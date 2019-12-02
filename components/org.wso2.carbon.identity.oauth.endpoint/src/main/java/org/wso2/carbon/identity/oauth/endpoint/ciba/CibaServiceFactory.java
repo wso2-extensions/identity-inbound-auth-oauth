@@ -30,7 +30,6 @@ public class CibaServiceFactory {
     CibaAuthServiceImpl cibaAuthService;
 
     public static CibaAuthServiceImpl getCibaAuthSerive() {
-
         return (CibaAuthServiceImpl) PrivilegedCarbonContext.getThreadLocalCarbonContext()
                 .getOSGiService(CibaAuthService.class, null);
     }
