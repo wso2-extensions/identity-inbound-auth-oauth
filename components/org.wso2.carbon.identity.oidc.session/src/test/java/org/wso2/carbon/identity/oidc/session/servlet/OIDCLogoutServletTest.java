@@ -114,14 +114,15 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
     private static final String CALLBACK_URL = "http://localhost:8080/playground2/oauth2client";
     private static final String OPBROWSER_STATE = "090907ce-eab0-40d2-a46d-acd4bb33f0d0";
     private static final int TENANT_ID = -1234;
+    private static final String SUPER_TENANT_DOMAIN_NAME = "carbon.super";
     private static final String INVALID_CALLBACK_URL = "http://localhost:8080/playground2/auth";
     private static final String REGEX_CALLBACK_URL = "regexp=http://localhost:8080/playground2/oauth2client";
-
 
     private OIDCLogoutServlet logoutServlet;
 
     @BeforeTest
     public void setUp() throws Exception {
+
         logoutServlet = new OIDCLogoutServlet();
 
         initiateInMemoryH2();
@@ -133,6 +134,7 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
 
     @DataProvider(name = "provideDataForTestDoGet")
     public Object[][] provideDataForTestDoGet() {
+
         Cookie opbsCookie = new Cookie("opbs", OPBROWSER_STATE);
 
         String idTokenHint =
@@ -278,7 +280,6 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
                 {opbsCookie, true, redirectUrl[5], CALLBACK_URL, " ", null, true,
                         idTokenHintWithRealm, false, CALLBACK_URL, null},
 
-
         };
     }
 
@@ -286,6 +287,7 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
     public void testDoGet(Object cookie, boolean sessionExists, String redirectUrl, String expected, String consent,
                           String sessionDataKey, boolean skipUserConsent, String idTokenHint,
                           boolean isJWTSignedWithSPKey, String postLogoutUrl, Object flowStatus) throws Exception {
+
         TestUtil.startTenantFlow(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
 
         mockStatic(OIDCSessionManagementUtil.class);
@@ -327,6 +329,7 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
 
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(TENANT_ID);
+        when(IdentityTenantUtil.getTenantDomain(TENANT_ID)).thenReturn(SUPER_TENANT_DOMAIN_NAME);
 
         mockStatic(OAuthServerConfiguration.class);
         when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
@@ -471,7 +474,7 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
 
     @AfterTest
     public void cleanData() throws Exception {
+
         super.cleanData();
     }
-
 }

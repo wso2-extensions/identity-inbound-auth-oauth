@@ -29,7 +29,6 @@ import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementServic
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
-import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.openidconnect.ClaimProvider;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilter;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectSystemClaimImpl;
@@ -38,13 +37,16 @@ import org.wso2.carbon.identity.openidconnect.handlers.RequestObjectHandler;
 
 import java.util.Comparator;
 
+/**
+ * OpenID Connect service component.
+ */
 @Component(
         name = "identity.openidconnect.component",
         immediate = true
 )
 public class OpenIDConnectServiceComponent {
 
-    private Log log = LogFactory.getLog(OpenIDConnectServiceComponent.class);
+    private static final Log log = LogFactory.getLog(OpenIDConnectServiceComponent.class);
     private BundleContext bundleContext;
 
     protected void activate(ComponentContext context) {

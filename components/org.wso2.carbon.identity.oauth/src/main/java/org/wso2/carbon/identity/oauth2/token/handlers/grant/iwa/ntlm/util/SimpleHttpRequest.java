@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth2.token.handlers.grant.iwa.ntlm.util;
 
+import org.apache.catalina.connector.Connector;
 import org.apache.catalina.connector.Request;
 
 import javax.servlet.http.HttpSession;
@@ -43,8 +44,8 @@ public class SimpleHttpRequest extends Request {
     private HttpSession _session = new SimpleHttpSession();
     private Principal _principal = null;
 
-    public SimpleHttpRequest() {
-        super();
+    public SimpleHttpRequest(Connector connector) {
+        super(connector);
         _remotePort = nextRemotePort();
     }
 

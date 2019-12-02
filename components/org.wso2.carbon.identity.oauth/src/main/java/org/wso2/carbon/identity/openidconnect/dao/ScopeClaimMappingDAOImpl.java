@@ -47,7 +47,7 @@ import static org.wso2.carbon.identity.core.util.LambdaExceptionUtils.rethrowCon
  */
 public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
 
-    private final Log log = LogFactory.getLog(ScopeClaimMappingDAOImpl.class);
+    private static final Log log = LogFactory.getLog(ScopeClaimMappingDAOImpl.class);
     private static final String OIDC_DIALECT_URI = "http://wso2.org/oidc/claim";
 
     @Override

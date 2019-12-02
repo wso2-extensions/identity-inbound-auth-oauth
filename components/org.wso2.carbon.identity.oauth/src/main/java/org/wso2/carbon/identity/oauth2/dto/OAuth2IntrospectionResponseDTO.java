@@ -97,6 +97,16 @@ public class OAuth2IntrospectionResponseDTO {
     private String userContext;
 
     /*
+     * OPTIONAL. Token binding type.
+     */
+    private String bindingType;
+
+    /*
+     * OPTIONAL. Token binding reference.
+     */
+    private String bindingReference;
+
+    /*
      * this is used for extensions.
      */
     private Map<String, Object> properties = new HashMap<String, Object>();
@@ -223,4 +233,23 @@ public class OAuth2IntrospectionResponseDTO {
 	this.userContext = userContext;
     }
 
+    public String getBindingType() {
+
+        return bindingType;
+    }
+
+    public void setBindingType(String bindingType) {
+
+        this.bindingType = bindingType;
+    }
+
+    public String getBindingReference() {
+
+        return bindingReference;
+    }
+
+    public void setBindingReference(String bindingReference) {
+
+        this.bindingReference = bindingReference;
+    }
 }

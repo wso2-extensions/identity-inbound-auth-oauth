@@ -16,21 +16,33 @@
  * under the License.
  */
 
-package org.wso2.carbon.identity.oauth2.util;
+package org.wso2.carbon.identity.oauth.dto;
 
-public class AppPortalConstants {
+/**
+ * Carries Error information from ResponseTypeHandler to Endpoint.
+ */
+public class OAuthErrorDTO {
 
-    public final static String INBOUND_AUTH2_TYPE = "oauth2";
+    private String errorDescription;
+    private String errorURI;
 
-    public static final String USER_PORTAL_APP_NAME = "USER_PORTAL";
+    public String getErrorDescription() {
 
-    public static final String USER_PORTAL_APP_DESCRIPTION = "This is the user portal application.";
+        return errorDescription;
+    }
 
-    public static final String USER_PORTAL_CONSUMER_KEY = "USER_PORTAL";
+    public void setErrorDescription(String errorDescription) {
 
-    public  static final String USER_PORTAL_PATH = "/user-portal/login";
+        this.errorDescription = errorDescription;
+    }
 
-    private AppPortalConstants() {
+    public String getErrorURI() {
 
+        return errorURI;
+    }
+
+    public void setErrorURI(String errorURI) {
+
+        this.errorURI = errorURI;
     }
 }

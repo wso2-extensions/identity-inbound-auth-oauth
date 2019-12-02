@@ -75,6 +75,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingDeque;
 
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
+import static org.wso2.carbon.identity.oauth2.dao.SQLQueries.STORE_TOKEN_BINDING;
+
 /**
  * Data Access Layer functionality for Token management in OAuth 2.0 implementation. This includes
  * storing and retrieving access tokens, authorization codes and refresh tokens.
@@ -82,6 +85,7 @@ import java.util.concurrent.LinkedBlockingDeque;
 @Deprecated
 public class TokenMgtDAO {
 
+    private static final Log log = LogFactory.getLog(TokenMgtDAO.class);
     public static final String AUTHZ_USER = "AUTHZ_USER";
     public static final String LOWER_AUTHZ_USER = "LOWER(AUTHZ_USER)";
     private static final String UTC = "UTC";
@@ -101,8 +105,6 @@ public class TokenMgtDAO {
 
     private static BlockingDeque<AuthContextTokenDO> authContextTokenQueue = new LinkedBlockingDeque<>();
 
-    private static final Log log = LogFactory.getLog(TokenMgtDAO.class);
-
     private static final String IDN_OAUTH2_ACCESS_TOKEN = "IDN_OAUTH2_ACCESS_TOKEN";
     private static final String IDN_OAUTH2_AUTHORIZATION_CODE = "IDN_OAUTH2_AUTHORIZATION_CODE";
 
@@ -117,8 +119,6 @@ public class TokenMgtDAO {
 
 
     static {
-
-        final Log log = LogFactory.getLog(TokenMgtDAO.class);
 
         maxPoolSize = getTokenPersistPoolSize();
         if (maxPoolSize > 0) {
@@ -364,7 +364,12 @@ public class TokenMgtDAO {
             }else{
                 insertTokenPrepStmt.setString(17, accessTokenDO.getRefreshToken());
             }
-            insertTokenPrepStmt.setString(18, persistenceProcessor.getProcessedClientId(consumerKey));
+            String tokenBindingReference = NONE;
+            if(accessTokenDO.getTokenBinding() != null) {
+                tokenBindingReference =  accessTokenDO.getTokenBinding().getBindingReference();
+            }
+            insertTokenPrepStmt.setString(18, tokenBindingReference);
+            insertTokenPrepStmt.setString(19, persistenceProcessor.getProcessedClientId(consumerKey));
             insertTokenPrepStmt.execute();
 
             String accessTokenId = accessTokenDO.getTokenId();
@@ -378,6 +383,18 @@ public class TokenMgtDAO {
                     addScopePrepStmt.execute();
                 }
             }
+
+            if (accessTokenDO.getTokenBinding() != null) {
+                try (PreparedStatement preparedStatement = connection.prepareStatement(STORE_TOKEN_BINDING)) {
+                    preparedStatement.setString(1, accessTokenId);
+                    preparedStatement.setString(2, accessTokenDO.getTokenBinding().getBindingType());
+                    preparedStatement.setString(3, accessTokenDO.getTokenBinding().getBindingReference());
+                    preparedStatement.setString(4, accessTokenDO.getTokenBinding().getBindingValue());
+                    preparedStatement.setInt(5, tenantId);
+                    preparedStatement.execute();
+                }
+            }
+
             if (retryAttempt > 0) {
                 log.info("Successfully recovered 'CON_APP_KEY' constraint violation with the attempt : " +
                         retryAttempt);
@@ -556,6 +573,11 @@ public class TokenMgtDAO {
 
             if (hashedScope != null) {
                 prepStmt.setString(5, hashedScope);
+                // Since this class is deprecated, this is added to fix the test cases.
+                prepStmt.setString(6, NONE);
+            } else {
+                // Since this class is deprecated, this is added to fix the test cases.
+                prepStmt.setString(5, NONE);
             }
 
             resultSet = prepStmt.executeQuery();
@@ -1184,7 +1206,7 @@ public class TokenMgtDAO {
                         " userStoreDomain: " + userStoreDomain);
             }
 
-            String sql = SQLQueries.UPDATE_TOKE_STATE;
+            String sql = SQLQueries.UPDATE_TOKEN_STATE;
             sql = OAuth2Util.getTokenPartitionedSqlByUserStore(sql, userStoreDomain);
             prepStmt = connection.prepareStatement(sql);
             prepStmt.setString(1, tokenState);
@@ -2884,6 +2906,11 @@ public class TokenMgtDAO {
 
             if (hashedScope != null) {
                 prepStmt.setString(5, hashedScope);
+                // Since this class is deprecated, this is added to fix the test cases.
+                prepStmt.setString(6, NONE);
+            } else {
+                // Since this class is deprecated, this is added to fix the test cases.
+                prepStmt.setString(5, NONE);
             }
 
             resultSet = prepStmt.executeQuery();

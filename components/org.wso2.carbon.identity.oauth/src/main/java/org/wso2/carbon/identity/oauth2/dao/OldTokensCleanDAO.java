@@ -39,7 +39,7 @@ import org.apache.commons.logging.LogFactory;
  */
 public class OldTokensCleanDAO {
 
-    private static Log log = LogFactory.getLog(OldTokensCleanDAO.class);
+    private static final Log log = LogFactory.getLog(OldTokensCleanDAO.class);
 
     public void cleanupTokenByTokenId(String tokenId, Connection connection) throws SQLException {
 

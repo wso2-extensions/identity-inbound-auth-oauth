@@ -32,6 +32,7 @@
 <%@ page import="java.util.ArrayList" %>
 <%@ page import="java.util.List" %>
 <%@ page import="java.util.Objects" %>
+<%@ page import="org.apache.commons.lang.StringUtils" %>
 
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt"%>
 <%@ taglib uri="http://wso2.org/projects/carbon/taglibs/carbontags.jar" prefix="carbon"%>
@@ -80,6 +81,8 @@
     if (request.getParameter("bypass_client_credentials") != null) {
         bypassClientCredentials = true;
     }
+
+    String tokenBindingType = request.getParameter("accessTokenBindingType");
 
     // OIDC related properties
     boolean isRequestObjectSignatureValidated = Boolean.parseBoolean(request.getParameter("validateRequestObjectSignature"));
@@ -156,6 +159,9 @@
                 app.setIdTokenEncryptionMethod(idTokenEncryptionMethod);
             }
             app.setBypassClientCredentials(bypassClientCredentials);
+            if (StringUtils.isNotBlank(tokenBindingType)) {
+                app.setTokenBindingType(tokenBindingType);
+            }
 
             if (OAuthConstants.OIDCConfigProperties.BACK_CHANNEL_LOGOUT.equalsIgnoreCase(logoutMechanism)) {
                 app.setBackChannelLogoutUrl(logoutUrl);

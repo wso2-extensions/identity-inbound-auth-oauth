@@ -29,7 +29,6 @@ import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.AuthorizationCodeDAOImpl;
-
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.openidconnect.OIDCConstants;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
@@ -52,7 +51,7 @@ import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
 public class RequestObjectDAOImpl implements RequestObjectDAO {
 
     private static final String ID = "ID";
-    private final Log log = LogFactory.getLog(AuthorizationCodeDAOImpl.class);
+    private static final Log log = LogFactory.getLog(AuthorizationCodeDAOImpl.class);
 
     /**
      * Store request object related data into related db tables.
@@ -113,7 +112,8 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
      * @throws IdentityOAuth2Exception
      */
     @Override
-    public void updateRequestObjectReferencebyCodeId(String sessionDataKey, String codeId) throws IdentityOAuth2Exception {
+    public void updateRequestObjectReferencebyCodeId(String sessionDataKey, String codeId)
+            throws IdentityOAuth2Exception {
 
         Connection connection = null;
         PreparedStatement ps = null;
@@ -145,7 +145,8 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
      * @throws IdentityOAuth2Exception
      */
     @Override
-    public void updateRequestObjectReferencebyTokenId(String sessionDataKey, String accessTokenId) throws IdentityOAuth2Exception {
+    public void updateRequestObjectReferencebyTokenId(String sessionDataKey, String accessTokenId)
+            throws IdentityOAuth2Exception {
 
         Connection connection = null;
         PreparedStatement ps = null;
@@ -169,8 +170,8 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
         }
     }
 
-    private void insertRequestObjectClaims(int requestObjectId, List<List<RequestedClaim>> claims, Connection connection)
-            throws IdentityOAuth2Exception {
+    private void insertRequestObjectClaims(int requestObjectId, List<List<RequestedClaim>> claims,
+                                           Connection connection) throws IdentityOAuth2Exception {
 
         String sqlStmt = SQLQueries.STORE_IDN_OIDC_REQ_OBJECT_CLAIMS;
         PreparedStatement prepStmt = null;
@@ -194,7 +195,8 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
                         }
                         prepStmt.addBatch();
                         if (log.isDebugEnabled()) {
-                            log.debug("Claim :" + claim.getName() + "is added to the batch against :" + claim.getType());
+                            log.debug(
+                                    "Claim :" + claim.getName() + "is added to the batch against :" + claim.getType());
                         }
                     }
                 }
@@ -424,7 +426,8 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
     private void deleteRequestObjectReferenceforCode(String tokenId) throws IdentityOAuthAdminException {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
-            try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.DELETE_REQ_OBJECT_TOKEN_FOR_CODE)) {
+            try (PreparedStatement prepStmt = connection
+                    .prepareStatement(SQLQueries.DELETE_REQ_OBJECT_TOKEN_FOR_CODE)) {
                 prepStmt.setString(1, tokenId);
                 prepStmt.execute();
                 IdentityDatabaseUtil.commitTransaction(connection);
@@ -456,7 +459,7 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
     public void deleteRequestObjectReferenceByCode(String codeId) throws IdentityOAuthAdminException {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
-            try(PreparedStatement prepStmt = connection
+            try (PreparedStatement prepStmt = connection
                     .prepareStatement(SQLQueries.DELETE_REQ_OBJECT_BY_CODE_ID)) {
                 prepStmt.setString(1, codeId);
                 prepStmt.execute();

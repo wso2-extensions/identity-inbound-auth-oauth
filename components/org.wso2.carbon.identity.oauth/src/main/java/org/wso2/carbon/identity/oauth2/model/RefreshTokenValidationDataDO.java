@@ -43,6 +43,8 @@ public class RefreshTokenValidationDataDO {
 
     private long validityPeriodInMillis;
 
+    private String tokenBindingReference;
+
     public String getAccessToken() {
         return accessToken;
     }
@@ -105,5 +107,15 @@ public class RefreshTokenValidationDataDO {
 
     public void setGrantType(String grantType) {
         this.grantType = grantType;
+    }
+
+    public String getTokenBindingReference() {
+
+        return tokenBindingReference;
+    }
+
+    public void setTokenBindingReference(String tokenBindingReference) {
+
+        this.tokenBindingReference = tokenBindingReference;
     }
 }

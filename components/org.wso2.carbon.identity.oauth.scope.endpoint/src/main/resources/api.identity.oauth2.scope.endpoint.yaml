@@ -59,7 +59,7 @@ paths:
     # Endpoint uses to create scope
     post:
       description: |
-         This API is used to create a scope.
+        This API is used to create a scope.
       x-wso2-request: |
         curl -X POST -H "Authorization: Basic YWRtaW46YWRtaW4=" -H "Content-Type: application/json" -d '{"name": "profile", "displayName": "profile", "description": "get all profile information", "bindings": ["role1", "role2"]}' "https://localhost:9443/api/identity/oauth2/v1.0/scopes"
 
@@ -89,24 +89,24 @@ paths:
         400:
           description: Bad Request
           schema:
-             $ref: '#/definitions/error'
+            $ref: '#/definitions/error'
         409:
           description: Conflict
           schema:
-             $ref: '#/definitions/error'
+            $ref: '#/definitions/error'
         500:
           description: Server Error
           schema:
-             $ref: '#/definitions/error'
+            $ref: '#/definitions/error'
       tags:
         - Scope Management
 
     # Endpoint uses to get all the available scopes
     get:
       description: |
-         This API is used to get all the available scopes.
+        This API is used to get all the available scopes.
       x-wso2-request: |
-              curl -X GET -H "Authorization: Basic YWRtaW46YWRtaW4=" -H "Content-Type: application/json" "https://localhost:9443/api/identity/oauth2/v1.0/scopes"
+        curl -X GET -H "Authorization: Basic YWRtaW46YWRtaW4=" -H "Content-Type: application/json" "https://localhost:9443/api/identity/oauth2/v1.0/scopes"
 
       x-wso2-response: |
         [{"name":"profile","description":"get all profile information","displayName":"profile","bindings":["role1","role2"]}]
@@ -140,11 +140,11 @@ paths:
         404:
           description: Not Found
           schema:
-             $ref: '#/definitions/error'
+            $ref: '#/definitions/error'
         500:
           description: Server Error
           schema:
-             $ref: '#/definitions/error'
+            $ref: '#/definitions/error'
       tags:
         - Scope Management
 
@@ -152,7 +152,7 @@ paths:
   /scopes/name/{name}:
     get:
       description: |
-         This API is used to retrieve details of a scope by a given scope name.
+        This API is used to retrieve details of a scope by a given scope name.
       x-wso2-request: |
         curl -X GET -H "Authorization: Basic YWRtaW46YWRtaW4=" -H "Content-Type: application/json" "https://localhost:9443/api/identity/oauth2/v1.0/scopes/name/profile"
 
@@ -180,18 +180,18 @@ paths:
         404:
           description: Not Found
           schema:
-             $ref: '#/definitions/error'
+            $ref: '#/definitions/error'
         500:
           description: Server Error
           schema:
-             $ref: '#/definitions/error'
+            $ref: '#/definitions/error'
       tags:
         - Scope Management
 
     # Endpoint uses to delete scope by scope name
     delete:
       description: |
-         This API is used to delete a scope by a given scope name.
+        This API is used to delete a scope by a given scope name.
       x-wso2-request: |
         curl -X DELETE -H "Authorization: Basic YWRtaW46YWRtaW4=" -H "Content-Type: application/json" "https://localhost:9443/api/identity/oauth2/v1.0/scopes/name/profile"
 
@@ -220,14 +220,14 @@ paths:
         500:
           description: Server Error
           schema:
-             $ref: '#/definitions/error'
+            $ref: '#/definitions/error'
       tags:
         - Scope Management
 
     # Endpoint uses to update a scope using scope name
     put:
       description: |
-         This API is used to update a scope by a given scope name.
+        This API is used to update a scope by a given scope name.
       x-wso2-request: |
         curl -X PUT -H "Authorization: Basic YWRtaW46YWRtaW4=" -H "Content-Type: application/json" -d '{"description": "get all profile information", "displayName": "profile", "bindings": ["role3", "role4"]}' "https://localhost:9443/api/identity/oauth2/v1.0/scopes/name/profile"
 
@@ -263,18 +263,18 @@ paths:
         409:
           description: Conflict
           schema:
-             $ref: '#/definitions/error'
+            $ref: '#/definitions/error'
         500:
           description: Server Error
           schema:
-             $ref: '#/definitions/error'
+            $ref: '#/definitions/error'
       tags:
         - Scope Management
 
     # Endpoint uses to check scope existance using scope name
     head:
       description: |
-         This API is used to check a scope's existance using a given scope name.
+        This API is used to check a scope's existance using a given scope name.
       x-wso2-request: |
         curl -I -H "Authorization: Basic YWRtaW46YWRtaW4=" -H "Content-Type: application/json" "https://localhost:9443/api/identity/oauth2/v1.0/scopes/name/profile"
 
@@ -303,18 +303,18 @@ paths:
         404:
           description: Not Found
           schema:
-             $ref: '#/definitions/error'
+            $ref: '#/definitions/error'
         500:
           description: Server Error
           schema:
-             $ref: '#/definitions/error'
+            $ref: '#/definitions/error'
       tags:
         - Scope Management
 
 definitions:
-#-----------------------------------------------------
-# The Scope Object
-#-----------------------------------------------------
+  #-----------------------------------------------------
+  # The Scope Object
+  #-----------------------------------------------------
   scope:
     type: object
     required:
@@ -331,10 +331,14 @@ definitions:
         type: array
         items:
           type: string
+      scopeBindings:
+        type: array
+        items:
+          $ref: '#/definitions/scopeBinding'
 
-#-----------------------------------------------------
-# The Update Scope Object
-#-----------------------------------------------------
+  #-----------------------------------------------------
+  # The Update Scope Object
+  #-----------------------------------------------------
   scopeToUpdate:
     type: object
     required:
@@ -348,10 +352,14 @@ definitions:
         type: array
         items:
           type: string
+      scopeBindings:
+        type: array
+        items:
+          $ref: '#/definitions/scopeBinding'
 
-#-----------------------------------------------------
-# The Error Response object
-#-----------------------------------------------------
+  #-----------------------------------------------------
+  # The Error Response object
+  #-----------------------------------------------------
   error:
     type: object
     properties:
@@ -361,3 +369,15 @@ definitions:
         type: string
       description:
         type: string
+  #-----------------------------------------------------
+  # The Scope Binding
+  #-----------------------------------------------------
+  scopeBinding:
+    type: object
+    properties:
+      bindingType:
+        type: string
+      binding:
+        type: array
+        items:
+          type: string

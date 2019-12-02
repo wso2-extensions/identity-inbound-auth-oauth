@@ -45,6 +45,24 @@ public interface AccessTokenDAO {
     AccessTokenDO getLatestAccessToken(String consumerKey, AuthenticatedUser authzUser, String userStoreDomain,
                                        String scope, boolean includeExpiredTokens) throws IdentityOAuth2Exception;
 
+    /**
+     * Get latest access token.
+     *
+     * @param consumerKey consumer key.
+     * @param authzUser authorized user.
+     * @param userStoreDomain user store domain.
+     * @param scope scope.
+     * @param tokenBindingReference token binding reference.
+     * @param includeExpiredTokens include expired tokens.
+     * @return latest access token.
+     * @throws IdentityOAuth2Exception in case of failure.
+     */
+    default AccessTokenDO getLatestAccessToken(String consumerKey, AuthenticatedUser authzUser, String userStoreDomain,
+            String scope, String tokenBindingReference, boolean includeExpiredTokens) throws IdentityOAuth2Exception {
+
+        return getLatestAccessToken(consumerKey, authzUser, userStoreDomain, scope, includeExpiredTokens);
+    }
+
     Set<AccessTokenDO> getAccessTokens(String consumerKey, AuthenticatedUser userName,
                                        String userStoreDomain, boolean includeExpired) throws IdentityOAuth2Exception;
 
@@ -61,11 +79,52 @@ public interface AccessTokenDAO {
     Set<AccessTokenDO> getAccessTokensOfUserStore(int tenantId, String userStoreDomain) throws
             IdentityOAuth2Exception;
 
+    /**
+     * This method is to revoke specific tokens where tokens should be plain text tokens.
+     *
+     * @param tokens tokens that needs to be revoked
+     * @throws IdentityOAuth2Exception if failed to revoke the access token
+     */
     void revokeAccessTokens(String[] tokens) throws IdentityOAuth2Exception;
 
     void revokeAccessTokensInBatch(String[] tokens) throws IdentityOAuth2Exception;
 
     void revokeAccessTokensIndividually(String[] tokens) throws IdentityOAuth2Exception;
+
+    /**
+     * This method is to revoke specific tokens where tokens can be plain text tokens or hashed tokens. Hashed tokens
+     * can be reached here from internal calls such as from any listeners ex: IdentityOathEventListener etc. We need
+     * to differentiate this types of internal calls hence these calls retrieved the tokens from the DB and then try
+     * to revoke it.
+     * When the Token Hashing Feature enabled, the token which is retrieve from the DB will be a hashed token. Hence
+     * we don't need to hash it again.
+     *
+     * @param tokens        Tokens that needs to be revoked.
+     * @param isHashedToken Indicate provided token is a hashed token or plain text token.
+     * @throws IdentityOAuth2Exception if failed to revoke the access token
+     */
+    default void revokeAccessTokens(String[] tokens, boolean isHashedToken) throws IdentityOAuth2Exception {
+    }
+
+    /**
+     * Revoke the access token(s) as a batch.
+     *
+     * @param tokens        Token that needs to be revoked.
+     * @param isHashedToken Given token is hashed token or plain text.
+     * @throws IdentityOAuth2Exception
+     */
+    default void revokeAccessTokensInBatch(String[] tokens, boolean isHashedToken) throws IdentityOAuth2Exception {
+    }
+
+    /**
+     * Revoke the access token(s) individually.
+     *
+     * @param tokens        Token that needs to be revoked.
+     * @param isHashedToken Given token is hashed token or plain text.
+     * @throws IdentityOAuth2Exception
+     */
+    default void revokeAccessTokensIndividually(String[] tokens, boolean isHashedToken) throws IdentityOAuth2Exception {
+    }
 
     void revokeAccessToken(String tokenId, String userId) throws IdentityOAuth2Exception;
 
@@ -81,4 +140,33 @@ public interface AccessTokenDAO {
     List<AccessTokenDO> getLatestAccessTokens(String consumerKey, AuthenticatedUser authzUser,
                                               String userStoreDomain, String scope,
                                               boolean includeExpiredTokens, int limit) throws IdentityOAuth2Exception;
+
+    /**
+     * Get latest access tokens.
+     *
+     * @param consumerKey consumer key.
+     * @param authzUser authorized user.
+     * @param userStoreDomain user store domain.
+     * @param scope scope.
+     * @param tokenBindingReference token binding reference.
+     * @param includeExpiredTokens include expired tokens.
+     * @param limit limit.
+     * @return list of latest access tokens.
+     * @throws IdentityOAuth2Exception in case of failure.
+     */
+    default List<AccessTokenDO> getLatestAccessTokens(String consumerKey, AuthenticatedUser authzUser,
+            String userStoreDomain, String scope, String tokenBindingReference, boolean includeExpiredTokens, int limit)
+            throws IdentityOAuth2Exception {
+
+        return getLatestAccessTokens(consumerKey, authzUser, userStoreDomain, scope, includeExpiredTokens, limit);
+    }
+
+    /**
+     * Update access token to the given state.
+     *
+     * @param tokenId         ID of the access token to update the state.
+     * @param tokenState      state to update.
+     * @throws IdentityOAuth2Exception
+     */
+    void updateAccessTokenState(String tokenId, String tokenState) throws IdentityOAuth2Exception;
 }

@@ -70,7 +70,7 @@ each purpose  and factory class to get instance of each DAO classes were introdu
  */
 public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenManagementDAO {
 
-    private final Log log = LogFactory.getLog(TokenManagementDAOImpl.class);
+    private static final Log log = LogFactory.getLog(TokenManagementDAOImpl.class);
     public static final String AUTHZ_USER = "AUTHZ_USER";
     public static final String LOWER_AUTHZ_USER = "LOWER(AUTHZ_USER)";
     private static final String UTC = "UTC";
@@ -180,9 +180,10 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                     validationDataDO.setTokenId(resultSet.getString(9));
                     validationDataDO.setGrantType(resultSet.getString(10));
                     String subjectIdentifier = resultSet.getString(11);
+                    validationDataDO.setTokenBindingReference(resultSet.getString(12));
                     String authenticatedIDP = null;
                     if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                        authenticatedIDP = resultSet.getString(12);
+                        authenticatedIDP = resultSet.getString(13);
                     }
                     AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(userName, userDomain, tenantDomain,
                             authenticatedIDP);

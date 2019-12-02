@@ -29,22 +29,13 @@ import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationMethodNameTranslator;
-import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
-import org.wso2.carbon.identity.application.common.model.InboundAuthenticationConfig;
-import org.wso2.carbon.identity.application.common.model.InboundAuthenticationRequestConfig;
-import org.wso2.carbon.identity.application.common.model.Property;
-import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.application.mgt.listener.ApplicationMgtListener;
 import org.wso2.carbon.identity.base.IdentityRuntimeException;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
-import org.wso2.carbon.identity.core.util.IdentityUtil;
-import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
-import org.wso2.carbon.identity.oauth.OAuthAdminService;
-import org.wso2.carbon.identity.oauth.OAuthUtil;
+import org.wso2.carbon.identity.oauth.common.token.bindings.TokenBinderInfo;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
-import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
@@ -55,36 +46,22 @@ import org.wso2.carbon.identity.oauth2.client.authentication.PublicClientAuthent
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dao.SQLQueries;
 import org.wso2.carbon.identity.oauth2.listener.TenantCreationEventListener;
+import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
+import org.wso2.carbon.identity.oauth2.token.bindings.impl.CookieBasedTokenBinder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilter;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImpl;
 import org.wso2.carbon.identity.user.store.configuration.listener.UserStoreConfigListener;
-import org.wso2.carbon.registry.core.exceptions.RegistryException;
 import org.wso2.carbon.registry.core.service.RegistryService;
 import org.wso2.carbon.stratos.common.listeners.TenantMgtListener;
-import org.wso2.carbon.user.core.UserRealm;
-import org.wso2.carbon.user.core.UserStoreException;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.AUTHORIZATION_CODE;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.REFRESH_TOKEN;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuthVersions.VERSION_2;
-import static org.wso2.carbon.identity.oauth2.util.AppPortalConstants.INBOUND_AUTH2_TYPE;
-import static org.wso2.carbon.identity.oauth2.util.AppPortalConstants.USER_PORTAL_APP_DESCRIPTION;
-import static org.wso2.carbon.identity.oauth2.util.AppPortalConstants.USER_PORTAL_APP_NAME;
-import static org.wso2.carbon.identity.oauth2.util.AppPortalConstants.USER_PORTAL_CONSUMER_KEY;
-import static org.wso2.carbon.identity.oauth2.util.AppPortalConstants.USER_PORTAL_PATH;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkAudienceEnabled;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkIDPIdColumnAvailable;
-import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
-import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_ID;
 
 @Component(
         name = "identity.oauth2.component",
@@ -92,7 +69,7 @@ import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENA
 )
 public class OAuth2ServiceComponent {
 
-    private static Log log = LogFactory.getLog(OAuth2ServiceComponent.class);
+    private static final Log log = LogFactory.getLog(OAuth2ServiceComponent.class);
     private BundleContext bundleContext;
 
     @Reference(
@@ -142,6 +119,8 @@ public class OAuth2ServiceComponent {
             } else {
                 log.error("TenantMgtListener could not be registered");
             }
+            // iniating oauth scopes
+            OAuth2Util.initiateOAuthScopePermissionsBindings(tenantId);
             // exposing server configuration as a service
             OAuthServerConfiguration oauthServerConfig = OAuthServerConfiguration.getInstance();
             bundleContext.registerService(OAuthServerConfiguration.class.getName(), oauthServerConfig, null);
@@ -155,6 +134,10 @@ public class OAuth2ServiceComponent {
             PublicClientAuthenticator publicClientAuthenticator = new PublicClientAuthenticator();
             bundleContext.registerService(OAuthClientAuthenticator.class.getName(), publicClientAuthenticator,
                     null);
+
+            // Register cookie based access token binder.
+            CookieBasedTokenBinder cookieBasedTokenBinder = new CookieBasedTokenBinder();
+            bundleContext.registerService(TokenBinderInfo.class.getName(), cookieBasedTokenBinder, null);
 
             if (log.isDebugEnabled()) {
                 log.debug("Identity OAuth bundle is activated");
@@ -202,9 +185,6 @@ public class OAuth2ServiceComponent {
             if (log.isDebugEnabled()) {
                 log.debug("Default OpenIDConnect Claim filter registered successfully.");
             }
-
-            // Initiate portal applications.
-            initiatePortals();
         } catch (Throwable e) {
             log.error("Error while activating OAuth2ServiceComponent.", e);
         }
@@ -366,110 +346,28 @@ public class OAuth2ServiceComponent {
         OAuth2ServiceComponentHolder.getAuthenticationHandlers().remove(oAuthClientAuthenticator);
     }
 
-    /**
-     * Initiate portal applications.
-     *
-     * @throws IdentityApplicationManagementException IdentityApplicationManagementException.
-     * @throws IdentityOAuthAdminException            IdentityOAuthAdminException.
-     */
-    private void initiatePortals()
-            throws IdentityApplicationManagementException, IdentityOAuthAdminException, RegistryException,
-            UserStoreException {
+    @Reference(name = "token.binding.service",
+               service = TokenBinderInfo.class,
+               cardinality = ReferenceCardinality.MULTIPLE,
+               policy = ReferencePolicy.DYNAMIC,
+               unbind = "unsetTokenBinderInfo")
+    protected void setTokenBinderInfo(TokenBinderInfo tokenBinderInfo) {
 
-        ApplicationManagementService applicationMgtService = OAuth2ServiceComponentHolder.getApplicationMgtService();
-        OAuthAdminService oAuthAdminService = new OAuthAdminService();
-
-        UserRealm userRealm = OAuth2ServiceComponentHolder.getRegistryService().getUserRealm(SUPER_TENANT_ID);
-        String adminUsername = userRealm.getRealmConfiguration().getAdminUserName();
-
-        if (applicationMgtService.getApplicationExcludingFileBasedSPs(USER_PORTAL_APP_NAME, SUPER_TENANT_DOMAIN_NAME)
-                == null) {
-            // Initiate user-portal
-            String userPortalConsumerSecret = OAuthUtil.getRandomNumber();
-            createOAuth2Application(oAuthAdminService, USER_PORTAL_APP_NAME, USER_PORTAL_PATH, USER_PORTAL_CONSUMER_KEY,
-                    userPortalConsumerSecret, adminUsername);
-            createApplication(applicationMgtService, USER_PORTAL_APP_NAME, adminUsername, USER_PORTAL_APP_DESCRIPTION,
-                    USER_PORTAL_CONSUMER_KEY, userPortalConsumerSecret);
+        if (log.isDebugEnabled()) {
+            log.debug("Setting the token binder for: " + tokenBinderInfo.getBindingType());
+        }
+        if (tokenBinderInfo instanceof TokenBinder) {
+            OAuth2ServiceComponentHolder.getInstance().addTokenBinder((TokenBinder) tokenBinderInfo);
         }
     }
 
-    /**
-     * Create portal application.
-     *
-     * @param applicationMgtService Application management service instant.
-     * @param appName               Application name.
-     * @param appOwner              Application owner.
-     * @param appDescription        Application description.
-     * @param consumerKey           Consumer key.
-     * @param consumerSecret        Consumer secret.
-     * @throws IdentityApplicationManagementException IdentityApplicationManagementException.
-     */
-    private void createApplication(ApplicationManagementService applicationMgtService, String appName, String appOwner,
-            String appDescription, String consumerKey, String consumerSecret)
-            throws IdentityApplicationManagementException {
+    protected void unsetTokenBinderInfo(TokenBinderInfo tokenBinderInfo) {
 
-        ServiceProvider serviceProvider = new ServiceProvider();
-        serviceProvider.setApplicationName(appName);
-        serviceProvider.setDescription(appDescription);
-        applicationMgtService.createApplicationWithTemplate(serviceProvider, SUPER_TENANT_DOMAIN_NAME, appOwner, null);
-
-        InboundAuthenticationRequestConfig inboundAuthenticationRequestConfig = new InboundAuthenticationRequestConfig();
-        inboundAuthenticationRequestConfig.setInboundAuthKey(consumerKey);
-        inboundAuthenticationRequestConfig.setInboundAuthType(INBOUND_AUTH2_TYPE);
-        Property property = new Property();
-        property.setName("oauthConsumerSecret");
-        property.setValue(consumerSecret);
-        Property[] properties = { property };
-        inboundAuthenticationRequestConfig.setProperties(properties);
-
-        serviceProvider = applicationMgtService
-                .getApplicationExcludingFileBasedSPs(appName, SUPER_TENANT_DOMAIN_NAME);
-        InboundAuthenticationConfig inboundAuthenticationConfig = serviceProvider.getInboundAuthenticationConfig();
-
-        List<InboundAuthenticationRequestConfig> inboundAuthenticationRequestConfigs = new ArrayList<>();
-        if (inboundAuthenticationConfig.getInboundAuthenticationRequestConfigs() != null
-                && inboundAuthenticationConfig.getInboundAuthenticationRequestConfigs().length > 0) {
-            inboundAuthenticationRequestConfigs
-                    .addAll(Arrays.asList(inboundAuthenticationConfig.getInboundAuthenticationRequestConfigs()));
+        if (log.isDebugEnabled()) {
+            log.debug("Un-setting the token binder for: " + tokenBinderInfo.getBindingType());
         }
-        inboundAuthenticationRequestConfigs.add(inboundAuthenticationRequestConfig);
-        inboundAuthenticationConfig.setInboundAuthenticationRequestConfigs(
-                inboundAuthenticationRequestConfigs.toArray(new InboundAuthenticationRequestConfig[0]));
-
-        applicationMgtService
-                .updateApplication(serviceProvider, SUPER_TENANT_DOMAIN_NAME, appOwner);
-    }
-
-    /**
-     * Create OAuth2 application.
-     *
-     * @param oAuthAdminService OAuthAdminService instance.
-     * @param applicationName   Application name.
-     * @param portalPath        Portal path.
-     * @param consumerKey       Consumer key.
-     * @throws IdentityOAuthAdminException IdentityOAuthAdminException.
-     */
-    private void createOAuth2Application(OAuthAdminService oAuthAdminService, String applicationName, String portalPath,
-            String consumerKey, String consumerSecret, String appOwner) throws IdentityOAuthAdminException {
-
-        OAuthConsumerAppDTO oAuthConsumerAppDTO = new OAuthConsumerAppDTO();
-        oAuthConsumerAppDTO.setApplicationName(applicationName);
-        oAuthConsumerAppDTO.setOAuthVersion(VERSION_2);
-        oAuthConsumerAppDTO.setOauthConsumerKey(consumerKey);
-        oAuthConsumerAppDTO.setOauthConsumerSecret(consumerSecret);
-        oAuthConsumerAppDTO.setCallbackUrl(IdentityUtil.getServerURL(portalPath, false, true));
-        oAuthConsumerAppDTO.setBypassClientCredentials(true);
-        oAuthConsumerAppDTO.setGrantTypes(AUTHORIZATION_CODE + " " + REFRESH_TOKEN);
-
-        try {
-            PrivilegedCarbonContext.startTenantFlow();
-            PrivilegedCarbonContext privilegedCarbonContext = PrivilegedCarbonContext.getThreadLocalCarbonContext();
-            privilegedCarbonContext.setTenantId(SUPER_TENANT_ID);
-            privilegedCarbonContext.setTenantDomain(SUPER_TENANT_DOMAIN_NAME);
-            privilegedCarbonContext.setUsername(appOwner);
-            oAuthAdminService.registerOAuthApplicationData(oAuthConsumerAppDTO);
-        } finally {
-            PrivilegedCarbonContext.endTenantFlow();
+        if (tokenBinderInfo instanceof TokenBinder) {
+            OAuth2ServiceComponentHolder.getInstance().removeTokenBinder((TokenBinder) tokenBinderInfo);
         }
     }
 }

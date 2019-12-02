@@ -20,7 +20,6 @@
 
 package org.wso2.carbon.identity.openidconnect.dao;
 
-import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 
@@ -70,8 +69,9 @@ public interface ScopeClaimMappingDAO {
     /**
      * To remove persisted scopes and claims.
      *
-     * @param scope oidc scope
-     * @throws IdentityOAuthAdminException if an error occurs when deleting scopes and claims.
+     * @param scope    oidc scope
+     * @param tenantId tenant id
+     * @throws IdentityOAuth2Exception if an error occurs when deleting scopes and claims.
      */
     void deleteScope(String scope, int tenantId) throws IdentityOAuth2Exception;
 

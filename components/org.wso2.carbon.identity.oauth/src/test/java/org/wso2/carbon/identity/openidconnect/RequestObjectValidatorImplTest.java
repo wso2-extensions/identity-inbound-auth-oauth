@@ -72,6 +72,7 @@ import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENA
         OAuthServerConfiguration.class, OAuth2Util.class})
 @PowerMockIgnore({"javax.crypto.*"})
 public class RequestObjectValidatorImplTest extends PowerMockTestCase {
+
     public static final String SOME_SERVER_URL = "some-server-url";
     public static final String CLIENT_PUBLIC_CERT_ALIAS = "wso2carbon";
     private RSAPrivateKey rsaPrivateKey;
@@ -81,16 +82,19 @@ public class RequestObjectValidatorImplTest extends PowerMockTestCase {
 
     @BeforeTest
     public void setUp() throws Exception {
+
         System.setProperty(CarbonBaseConstants.CARBON_HOME,
                 Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString());
         clientKeyStore =
-                getKeyStoreFromFile("testkeystore.jks", CLIENT_PUBLIC_CERT_ALIAS, System.getProperty(CarbonBaseConstants.CARBON_HOME));
+                getKeyStoreFromFile("testkeystore.jks", CLIENT_PUBLIC_CERT_ALIAS,
+                        System.getProperty(CarbonBaseConstants.CARBON_HOME));
         wso2KeyStore = getKeyStoreFromFile("wso2carbon.jks", "wso2carbon", System.getProperty(CarbonBaseConstants
                 .CARBON_HOME));
     }
 
     @DataProvider(name = "provideJWT")
     public Object[][] createJWT() throws Exception {
+
         Key privateKey = clientKeyStore.getKey("wso2carbon", "wso2carbon".toCharArray());
         PublicKey publicKey = wso2KeyStore.getCertificate("wso2carbon").getPublicKey();
         String audience = SOME_SERVER_URL;
@@ -102,9 +106,9 @@ public class RequestObjectValidatorImplTest extends PowerMockTestCase {
         String jsonWebToken2 = buildJWT(TEST_CLIENT_ID_1, TEST_CLIENT_ID_1, "1001", audience, "none", privateKey, 0,
                 claims1);
         String jsonWebToken3 = buildJWTWithExpiry(TEST_CLIENT_ID_1, TEST_CLIENT_ID_1, "1003", audience, "none",
-                privateKey, 0, claims1, (- 3600 * 1000));
+                privateKey, 0, claims1, (-3600 * 1000));
         String jsonWebToken4 = buildJWTWithExpiry(TEST_CLIENT_ID_1, TEST_CLIENT_ID_1, "1004", audience, "RSA265",
-                privateKey, 0,claims1, (- 3600 * 1000));
+                privateKey, 0, claims1, (-3600 * 1000));
         String jsonWebEncryption1 = buildJWE(TEST_CLIENT_ID_1, TEST_CLIENT_ID_1, "2000", audience,
                 JWSAlgorithm.NONE.getName(), privateKey, publicKey, 0, claims1);
         String jsonWebEncryption2 = buildJWE(TEST_CLIENT_ID_1, TEST_CLIENT_ID_1, "2001", audience,
@@ -127,6 +131,7 @@ public class RequestObjectValidatorImplTest extends PowerMockTestCase {
                                        boolean validSignature,
                                        boolean validRequestObj,
                                        String errorMsg) throws Exception {
+
         OAuth2Parameters oAuth2Parameters = new OAuth2Parameters();
         oAuth2Parameters.setTenantDomain(SUPER_TENANT_DOMAIN_NAME);
         oAuth2Parameters.setClientId(TEST_CLIENT_ID_1);

@@ -94,7 +94,7 @@ public interface RequestObjectDAO {
      * @throws IdentityOAuth2Exception
      */
     default List<RequestedClaim> getRequestedClaimsbySessionDataKey(String sessionDataKey, boolean isUserInfo) throws
-            IdentityOAuth2Exception{
+            IdentityOAuth2Exception {
         return new ArrayList<>();
     }
 

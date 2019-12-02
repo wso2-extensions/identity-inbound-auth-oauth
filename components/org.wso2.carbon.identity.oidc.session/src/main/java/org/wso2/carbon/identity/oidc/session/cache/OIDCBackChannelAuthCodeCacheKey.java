@@ -31,15 +31,18 @@ public class OIDCBackChannelAuthCodeCacheKey extends CacheKey {
      * @param authCode is the cache key
      */
     public OIDCBackChannelAuthCodeCacheKey(String authCode) {
+
         this.authCode = authCode;
     }
 
     public String getAuthCode() {
+
         return authCode;
     }
 
     @Override
     public boolean equals(Object o) {
+
         if (!(o instanceof OIDCBackChannelAuthCodeCacheKey)) {
             return false;
         }
@@ -48,6 +51,7 @@ public class OIDCBackChannelAuthCodeCacheKey extends CacheKey {
 
     @Override
     public int hashCode() {
+
         return authCode.hashCode();
     }
 }

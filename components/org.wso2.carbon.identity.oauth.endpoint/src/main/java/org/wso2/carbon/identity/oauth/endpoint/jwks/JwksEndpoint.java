@@ -27,6 +27,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.core.util.KeyStoreManager;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -80,6 +81,7 @@ public class JwksEndpoint {
                     String errorMessage = "Invalid Tenant: " + tenantDomain;
                     return logAndReturnError(errorMessage, null);
                 }
+                FrameworkUtils.startTenantFlow(tenantDomain);
                 KeyStoreManager keyStoreManager = KeyStoreManager.getInstance(tenantId);
                 keystore = keyStoreManager.getKeyStore(generateKSNameFromDomainName(tenantDomain));
             }
@@ -95,6 +97,8 @@ public class JwksEndpoint {
         } catch (Exception e) {
             String errorMessage = "Error while generating the keyset for tenant domain: " + tenantDomain;
             return logAndReturnError(errorMessage, e);
+        } finally {
+            FrameworkUtils.endTenantFlow();
         }
     }
 

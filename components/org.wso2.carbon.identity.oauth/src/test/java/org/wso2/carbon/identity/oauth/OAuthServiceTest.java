@@ -440,7 +440,8 @@ public class OAuthServiceTest extends PowerMockIdentityBaseTest {
 
     private void prepareForauthorizeOauthRequestToken(String tenantAwareUserName,
                                                       boolean shouldMakeAuthenticated,
-                                                      boolean shouldThrow) throws IdentityException, UserStoreException {
+                                                      boolean shouldThrow)
+            throws IdentityException, UserStoreException {
 
         mockStatic(MultitenantUtils.class);
         when(MultitenantUtils.getTenantAwareUsername(anyString())).thenReturn(tenantAwareUserName);

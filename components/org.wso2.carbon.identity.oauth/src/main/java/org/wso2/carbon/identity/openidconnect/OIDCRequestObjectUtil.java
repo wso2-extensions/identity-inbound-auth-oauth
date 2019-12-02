@@ -33,8 +33,8 @@ import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 
 /**
  * According to the OIDC spec requestObject is passed as a query param value of request/request_uri parameters. This is
- * associated with OIDC authorization request. This class is used to select the corresponding builder class and build the
- * request object according to the parameter.
+ * associated with OIDC authorization request. This class is used to select the corresponding builder class and build
+ * the request object according to the parameter.
  */
 public class OIDCRequestObjectUtil {
 

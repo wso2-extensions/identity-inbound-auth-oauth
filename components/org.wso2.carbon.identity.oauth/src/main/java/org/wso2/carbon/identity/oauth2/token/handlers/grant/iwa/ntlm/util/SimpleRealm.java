@@ -24,7 +24,6 @@ import java.security.Principal;
 
 public class SimpleRealm extends RealmBase {
 
-    @Override
     protected String getName() {
         return "simpleRealm";
     }

@@ -1,6 +1,7 @@
 package org.wso2.carbon.identity.oauth2.token.handlers.grant.iwa.ntlm;
 
 import com.sun.jna.platform.win32.Sspi;
+import org.apache.catalina.connector.Connector;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
@@ -25,6 +26,7 @@ import waffle.windows.auth.impl.WindowsCredentialsHandleImpl;
 import waffle.windows.auth.impl.WindowsSecurityContextImpl;
 
 import java.security.Principal;
+
 import javax.security.auth.Subject;
 
 import static org.powermock.api.mockito.PowerMockito.doNothing;
@@ -40,13 +42,13 @@ import static org.powermock.api.mockito.PowerMockito.whenNew;
 @PowerMockIgnore({ "com.google.common.cache.*" })
 public class NTLMAuthenticationGrantHandlerTest extends PowerMockIdentityBaseTest {
 
-    private static String SECURITY_PACKAGE = "Negotiate";
-    private static String TOKEN = "tretertertert43t3t43t34t3t3t3";
-    private static String CURRENT_USERNAME = "test\\testdomain/testuser.carbon.super";
-    private static String TOKEN_STRING = " NTLM, Basic realm=\"BasicSecurityFilterProvider\"" ;
-    private static String PRINCIPAL_NAME = "testPrincipal" ;
+    private static final String SECURITY_PACKAGE = "Negotiate";
+    private static final String TOKEN = "tretertertert43t3t43t34t3t3t3";
+    private static final String CURRENT_USERNAME = "test\\testdomain/testuser.carbon.super";
+    private static final String TOKEN_STRING = " NTLM, Basic realm=\"BasicSecurityFilterProvider\"";
+    private static final String PRINCIPAL_NAME = "testPrincipal";
 
-    private static String SECURITY_HEADER = "javax.security.auth.subject";
+    private static final String SECURITY_HEADER = "javax.security.auth.subject";
 
 
     @Mock
@@ -118,8 +120,8 @@ public class NTLMAuthenticationGrantHandlerTest extends PowerMockIdentityBaseTes
         OAuthTokenReqMessageContext oAuthTokenReqMessageContext = new OAuthTokenReqMessageContext(
                 oAuth2AccessTokenReqDTO);
 
-        SimpleHttpRequest simpleHttpRequest = new SimpleHttpRequest();
-        whenNew(SimpleHttpRequest.class).withNoArguments().thenReturn(simpleHttpRequest);
+        SimpleHttpRequest simpleHttpRequest = new SimpleHttpRequest(new Connector());
+        whenNew(SimpleHttpRequest.class).withAnyArguments().thenReturn(simpleHttpRequest);
         Subject subject = new Subject();
         subject.getPrincipals().add(new Principal() {
             @Override

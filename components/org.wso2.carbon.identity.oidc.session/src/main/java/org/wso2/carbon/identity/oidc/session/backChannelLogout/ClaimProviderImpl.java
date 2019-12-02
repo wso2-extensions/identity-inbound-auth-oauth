@@ -47,7 +47,7 @@ import java.util.UUID;
  */
 public class ClaimProviderImpl implements ClaimProvider {
 
-    private static Log log = LogFactory.getLog(ClaimProviderImpl.class);
+    private static final Log log = LogFactory.getLog(ClaimProviderImpl.class);
 
     @Override
     public Map<String, Object> getAdditionalClaims(OAuthAuthzReqMessageContext oAuthAuthzReqMessageContext,
@@ -71,9 +71,7 @@ public class ClaimProviderImpl implements ClaimProvider {
             }
         }
         additionalClaims.put(OAuthConstants.OIDCClaims.SESSION_ID_CLAIM, claimValue);
-
         addSidToCacheWhenIDTokenIsEncrypted(oAuthAuthzReqMessageContext, claimValue);
-
         return additionalClaims;
     }
 
