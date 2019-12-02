@@ -37,9 +37,9 @@ public class SQLQueries {
                 "UPDATE IDN_OAUTH2_CIBA_AUTH_CODE SET AUTHENTICATED_USER_NAME = ? ,USER_STORE_DOMAIN = ? ," +
                         "TENANT_ID = ? WHERE AUTH_CODE_KEY = ? ";
 
-        public static final String UPDATE_AUTHENTICATION_SUCCESS =
+        public static final String UPDATE_AUTHENTICATION_SUCCESS_WITH_AUTH_REQ_ID =
                 "UPDATE IDN_OAUTH2_CIBA_AUTH_CODE SET AUTHENTICATED_USER_NAME = ? ,USER_STORE_DOMAIN = ? ," +
-                        "TENANT_ID = ?, IDP_ID = ? , AUTHENTICATION_STATUS = ? WHERE AUTH_CODE_KEY = ? ";
+                        "TENANT_ID = ?, IDP_ID = ? , AUTHENTICATION_STATUS = ? WHERE AUTH_REQ_ID = ? ";
 
         public static final String RETRIEVE_AUTHENTICATED_USER =
                 "SELECT AUTHENTICATED_USER_NAME,USER_STORE_DOMAIN,TENANT_ID FROM IDN_OAUTH2_CIBA_AUTH_CODE " +

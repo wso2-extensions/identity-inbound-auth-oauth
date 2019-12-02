@@ -52,7 +52,7 @@ public interface CibaMgtDAO {
     /**
      * Persists the authenticated_user and status of the relevant CibAuthCode identified by the CibaAuthCodeDOKey.
      *
-     * @param key               Identifier for CibaAuthCode.
+     * @param key               Identifier for Authentication Request.
      * @param authenticatedUser Authenticated user of the relevant CibaAuthCode.
      * @param tenantID          Tenant ID.
      * @throws CibaCoreException Exception thrown from CIBA Core Component.

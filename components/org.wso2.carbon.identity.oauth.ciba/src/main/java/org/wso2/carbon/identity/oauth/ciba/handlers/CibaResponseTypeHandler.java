@@ -39,7 +39,6 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 public class CibaResponseTypeHandler extends AbstractResponseTypeHandler {
 
     private static Log log = LogFactory.getLog(CibaResponseTypeHandler.class);
-    private static String cibaAuthCodeKey;
 
     @Override
     public OAuth2AuthorizeRespDTO issue(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) throws IdentityOAuth2Exception {
@@ -47,10 +46,6 @@ public class CibaResponseTypeHandler extends AbstractResponseTypeHandler {
         try {
             OAuth2AuthorizeRespDTO respDTO = new OAuth2AuthorizeRespDTO();
             OAuth2AuthorizeReqDTO authorizationReqDTO = oauthAuthzMsgCtx.getAuthorizationReqDTO();
-
-            // Obtaining key to update database tables.
-            cibaAuthCodeKey = CibaDAOFactory.getInstance().getCibaAuthMgtDAO().
-                    getCibaAuthCodeKey(authorizationReqDTO.getNonce());
 
             // Assigning authenticated user for the request that to be persisted.
             AuthenticatedUser cibaAuthenticatedUser = authorizationReqDTO.getUser();
@@ -62,7 +57,8 @@ public class CibaResponseTypeHandler extends AbstractResponseTypeHandler {
 
             // Update successful authentication.
             CibaDAOFactory.getInstance().getCibaAuthMgtDAO()
-                    .persistAuthenticationSuccess(cibaAuthCodeKey, cibaAuthenticatedUser, authenticatedTenant);
+                    .persistAuthenticationSuccess(authorizationReqDTO.getNonce(), cibaAuthenticatedUser,
+                            authenticatedTenant);
 
             // Building custom CallBack URL.
             String callbackURL = authorizationReqDTO.getCallbackUrl() + "?authenticationStatus=" + authenticationStatus;
@@ -81,7 +77,9 @@ public class CibaResponseTypeHandler extends AbstractResponseTypeHandler {
 
         try {
             // Update authenticationStatus when user denied the consent.
-            CibaDAOFactory.getInstance().getCibaAuthMgtDAO().updateStatusWithAuthReqID(authReqID, AuthReqStatus.CONSENT_DENIED);
+            CibaDAOFactory.getInstance().getCibaAuthMgtDAO()
+                    .updateStatusWithAuthReqID(authReqID, AuthReqStatus.CONSENT_DENIED);
+
             oAuthErrorDTO.setErrorDescription("User denied the consent.");
             return oAuthErrorDTO;
         } catch (CibaCoreException e) {
@@ -104,7 +102,7 @@ public class CibaResponseTypeHandler extends AbstractResponseTypeHandler {
             return oAuthErrorDTO;
         } catch (CibaCoreException e) {
             if (log.isDebugEnabled()) {
-                log.debug("Error occurred in updating the authentication_status for the ID : " + cibaAuthCodeKey +
+                log.debug("Error occurred in updating the authentication_status for the ID : " + authReqID +
                         "with responseType as (ciba). ");
             }
         }

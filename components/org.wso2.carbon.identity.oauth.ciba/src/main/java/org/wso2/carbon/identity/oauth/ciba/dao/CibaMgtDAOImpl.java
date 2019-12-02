@@ -103,7 +103,7 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
     }
 
     @Override
-    public void persistAuthenticationSuccess(String key, AuthenticatedUser authenticatedUser, int tenantID)
+    public void persistAuthenticationSuccess(String authReqId, AuthenticatedUser authenticatedUser, int tenantID)
             throws CibaCoreException {
 
         // Obtain authenticated identity provider's identifier.
@@ -112,28 +112,28 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
             try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.CibaSQLQueries.
-                    UPDATE_AUTHENTICATION_SUCCESS)) {
+                    UPDATE_AUTHENTICATION_SUCCESS_WITH_AUTH_REQ_ID)) {
 
                 prepStmt.setString(1, authenticatedUser.getUserName());
                 prepStmt.setString(2, authenticatedUser.getUserStoreDomain());
                 prepStmt.setInt(3, tenantID);
                 prepStmt.setInt(4, idpID);
                 prepStmt.setString(5, AuthReqStatus.AUTHENTICATED.toString());
-                prepStmt.setString(6, key);
+                prepStmt.setString(6, authReqId);
                 prepStmt.execute();
                 IdentityDatabaseUtil.commitTransaction(connection);
                 if (log.isDebugEnabled()) {
                     log.debug("Successfully updated the authentication request status to 'AUTHENTICATED' for the " +
-                            "request identified by AuthCodeDOKey: " + key);
+                            "request identified by auth_req_id: " + authReqId);
                 }
             } catch (SQLException e) {
                 IdentityDatabaseUtil.rollbackTransaction(connection);
                 throw new CibaCoreException("Error occurred in persisting the successful authentication identified by" +
-                        " auth_req_id: " + key, e);
+                        " auth_req_id: " + authReqId, e);
             }
         } catch (SQLException e) {
             throw new CibaCoreException("Error occurred in persisting the successful authentication identified by " +
-                    "auth_req_id: " + key, e);
+                    "auth_req_id: " + authReqId, e);
         }
     }
 
@@ -153,7 +153,7 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
                     }
                     return resultSet.getString(1);
                 } else {
-                    throw new CibaCoreException("No auth_req_id found for the provided identifier: " + authReqId);
+                    throw new CibaCoreException("No authCodeKey found for the provided identifier: " + authReqId);
                 }
             }
         } catch (SQLException e) {
