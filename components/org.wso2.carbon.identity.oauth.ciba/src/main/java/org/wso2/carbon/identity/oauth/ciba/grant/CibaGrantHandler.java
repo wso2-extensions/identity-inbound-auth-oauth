@@ -315,7 +315,7 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
                 // Retrieve scopes.
                 String[] scope =
                         CibaDAOFactory.getInstance().getCibaAuthMgtDAO().getScope(cibaAuthCodeDO.getCibaAuthCodeKey());
-                cibaAuthCodeDO.setScope(scope);
+                cibaAuthCodeDO.setScopes(scope);
 
                 // Retrieve authenticated user.
                 AuthenticatedUser authenticatedUser = CibaDAOFactory.getInstance().getCibaAuthMgtDAO()

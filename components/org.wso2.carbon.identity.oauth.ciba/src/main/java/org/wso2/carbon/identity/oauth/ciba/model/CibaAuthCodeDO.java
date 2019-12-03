@@ -83,7 +83,7 @@ public class CibaAuthCodeDO {
         return scopes;
     }
 
-    public void setScope(String[] scopes) {
+    public void setScopes(String[] scopes) {
 
         this.scopes = scopes;
     }

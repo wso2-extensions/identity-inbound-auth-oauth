@@ -113,7 +113,7 @@ public class CibaMgtDAOImplTest extends PowerMockTestCase {
         cibaAuthCodeDO.setIssuedTime(issuedTime);
         cibaAuthCodeDO.setInterval(2L);
         cibaAuthCodeDO.setExpiresIn(3600L);
-        cibaAuthCodeDO.setScope(scopes);
+        cibaAuthCodeDO.setScopes(scopes);
 
         authenticatedUser.setTenantDomain("super.wso2");
         authenticatedUser.setUserName("randomUser");
