@@ -162,7 +162,7 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
             }
         } catch (SQLException e) {
             throw new CibaCoreException(
-                    "Error occurred when searching for Ciba authCodeKey for the auth_req_id: " + authReqId, e);
+                    "Error occurred when searching for  authCodeKey for the auth_req_id: " + authReqId, e);
         }
     }
 
@@ -193,28 +193,28 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
     }
 
     @Override
-    public void updatePollingInterval(String key, long newInterval) throws CibaCoreException {
+    public void updatePollingInterval(String authCodeKey, long newInterval) throws CibaCoreException {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
             try (PreparedStatement prepStmt =
                          connection.prepareStatement(SQLQueries.CibaSQLQueries.UPDATE_POLLING_INTERVAL)) {
 
                 prepStmt.setLong(1, newInterval);
-                prepStmt.setString(2, key);
+                prepStmt.setString(2, authCodeKey);
                 prepStmt.execute();
                 IdentityDatabaseUtil.commitTransaction(connection);
                 if (log.isDebugEnabled()) {
-                    log.debug("Successfully updated pollingInterval of TokenRequest  with CibaAuthCodeKey : " +
-                            key);
+                    log.debug("Successfully updated pollingInterval of TokenRequest  with authCodeKey : " +
+                            authCodeKey);
                 }
             } catch (SQLException e) {
                 IdentityDatabaseUtil.rollbackTransaction(connection);
                 throw new CibaCoreException("Error occurred in updating pollingInterval of TokenRequest identified by" +
-                        " AuthCodeKey: " + key, e);
+                        " authCodeKey: " + authCodeKey, e);
             }
         } catch (SQLException e) {
             throw new CibaCoreException("Error occurred in updating pollingInterval of TokenRequest identified by " +
-                    "AuthCodeKey: " + key, e);
+                    "authCodeKey: " + authCodeKey, e);
         }
     }
 
@@ -259,14 +259,14 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
 
                 prepStmt.setString(1, cibaAuthCodeDO.getCibaAuthCodeKey());
                 prepStmt.setString(2, cibaAuthCodeDO.getAuthReqID());
-                prepStmt.setString(3, cibaAuthCodeDO.getConsumerAppKey());
+                prepStmt.setString(3, cibaAuthCodeDO.getConsumerKey());
                 prepStmt.setTimestamp(4, cibaAuthCodeDO.getIssuedTime(), Calendar
                         .getInstance(TimeZone.getTimeZone(CibaConstants.UTC)));
                 prepStmt.setTimestamp(5, cibaAuthCodeDO.getLastPolledTime(),
                         Calendar.getInstance(TimeZone.getTimeZone(CibaConstants.UTC)));
                 prepStmt.setLong(6, cibaAuthCodeDO.getInterval());
                 prepStmt.setLong(7, cibaAuthCodeDO.getExpiresIn());
-                prepStmt.setString(8, cibaAuthCodeDO.getAuthenticationStatus().toString());
+                prepStmt.setString(8, cibaAuthCodeDO.getAuthReqStatus().toString());
                 prepStmt.execute();
 
                 if (log.isDebugEnabled()) {
@@ -276,18 +276,19 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
             } catch (SQLException e) {
                 IdentityDatabaseUtil.rollbackTransaction(connection);
                 throw new CibaCoreException("Error occurred while persisting cibaAuthCode for the application with " +
-                        "consumer key: " + cibaAuthCodeDO.getConsumerAppKey(), e);
+                        "consumer key: " + cibaAuthCodeDO.getConsumerKey(), e);
             }
 
-            try (PreparedStatement prepStmt2 = connection.prepareStatement(SQLQueries.CibaSQLQueries.STORE_SCOPES)) {
+            try (PreparedStatement prepStmtForScope =
+                         connection.prepareStatement(SQLQueries.CibaSQLQueries.STORE_SCOPES)) {
 
                 for (String singleScopeValue : cibaAuthCodeDO.getScopes()) {
 
-                    prepStmt2.setString(1, cibaAuthCodeDO.getCibaAuthCodeKey());
-                    prepStmt2.setString(2, singleScopeValue);
-                    prepStmt2.addBatch();
+                    prepStmtForScope.setString(1, cibaAuthCodeDO.getCibaAuthCodeKey());
+                    prepStmtForScope.setString(2, singleScopeValue);
+                    prepStmtForScope.addBatch();
                 }
-                prepStmt2.executeBatch();
+                prepStmtForScope.executeBatch();
 
                 if (log.isDebugEnabled()) {
                     log.debug("Successfully persisted scopes for unique authCodeKey : " +
@@ -296,13 +297,13 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
             } catch (SQLException e) {
                 IdentityDatabaseUtil.rollbackTransaction(connection);
                 throw new CibaCoreException("Error occurred while persisting scopes for the application with " +
-                        "consumer key: " + cibaAuthCodeDO.getConsumerAppKey(), e);
+                        "consumer key: " + cibaAuthCodeDO.getConsumerKey(), e);
             }
 
             IdentityDatabaseUtil.commitTransaction(connection);
         } catch (SQLException e) {
             throw new CibaCoreException("Error occurred while persisting cibaAuthCode for the application with " +
-                    "consumer key: " + cibaAuthCodeDO.getConsumerAppKey(), e);
+                    "consumer key: " + cibaAuthCodeDO.getConsumerKey(), e);
         }
     }
 
@@ -319,12 +320,12 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
                 if (resultSet.next()) {
                     cibaAuthCodeDO.setCibaAuthCodeKey(resultSet.getString(1));
                     cibaAuthCodeDO.setAuthReqID(resultSet.getString(2));
-                    cibaAuthCodeDO.setConsumerAppKey(resultSet.getString(3));
+                    cibaAuthCodeDO.setConsumerKey(resultSet.getString(3));
                     cibaAuthCodeDO.setLastPolledTime(
                             resultSet.getTimestamp(4, Calendar.getInstance(TimeZone.getTimeZone(CibaConstants.UTC))));
                     cibaAuthCodeDO.setInterval(resultSet.getLong(5));
                     cibaAuthCodeDO.setExpiresIn(resultSet.getLong(6));
-                    cibaAuthCodeDO.setAuthenticationStatus(AuthReqStatus.valueOf(resultSet.getString(7)));
+                    cibaAuthCodeDO.setAuthReqStatus(AuthReqStatus.valueOf(resultSet.getString(7)));
                     cibaAuthCodeDO.setIssuedTime(
                             resultSet.getTimestamp(8, Calendar.getInstance(TimeZone.getTimeZone(CibaConstants.UTC))));
                 } else {

@@ -40,7 +40,6 @@ import java.sql.Timestamp;
 import java.util.Calendar;
 import java.util.TimeZone;
 
-import static org.mockito.Matchers.anyString;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
 
@@ -85,13 +84,13 @@ public class CibaGrantHandlerTest extends PowerMockTestCase {
     public void testIsConsentGiven() throws Exception {
 
         CibaAuthCodeDO cibaAuthCodeDoDenied = new CibaAuthCodeDO();
-        cibaAuthCodeDoDenied.setAuthenticationStatus(AuthReqStatus.CONSENT_DENIED);
+        cibaAuthCodeDoDenied.setAuthReqStatus(AuthReqStatus.CONSENT_DENIED);
 
         Assert.assertFalse(WhiteboxImpl.invokeMethod(cibaGrantHandler, "isConsentGiven",
                 cibaAuthCodeDoDenied));
 
         CibaAuthCodeDO cibaAuthCodeDoAuth = new CibaAuthCodeDO();
-        cibaAuthCodeDoAuth.setAuthenticationStatus(AuthReqStatus.AUTHENTICATED);
+        cibaAuthCodeDoAuth.setAuthReqStatus(AuthReqStatus.AUTHENTICATED);
 
         Assert.assertTrue(WhiteboxImpl.invokeMethod(cibaGrantHandler, "isConsentGiven",
                 cibaAuthCodeDoAuth));
@@ -101,7 +100,7 @@ public class CibaGrantHandlerTest extends PowerMockTestCase {
     public void testIsAuthorizationPending() throws Exception {
 
         CibaAuthCodeDO cibaAuthCodeDoDenied = new CibaAuthCodeDO();
-        cibaAuthCodeDoDenied.setAuthenticationStatus(AuthReqStatus.AUTHENTICATED);
+        cibaAuthCodeDoDenied.setAuthReqStatus(AuthReqStatus.AUTHENTICATED);
 
         when(CibaDAOFactory.getInstance().getCibaAuthMgtDAO()).thenReturn(cibaMgtDAO);
 
@@ -109,7 +108,7 @@ public class CibaGrantHandlerTest extends PowerMockTestCase {
                 cibaAuthCodeDoDenied));
 
         CibaAuthCodeDO cibaAuthCodeDoAuth = new CibaAuthCodeDO();
-        cibaAuthCodeDoAuth.setAuthenticationStatus(AuthReqStatus.REQUESTED);
+        cibaAuthCodeDoAuth.setAuthReqStatus(AuthReqStatus.REQUESTED);
 
         Assert.assertTrue(WhiteboxImpl.invokeMethod(cibaGrantHandler, "isAuthorizationPending",
                 cibaAuthCodeDoAuth));
@@ -137,18 +136,18 @@ public class CibaGrantHandlerTest extends PowerMockTestCase {
 
         when(CibaDAOFactory.getInstance().getCibaAuthMgtDAO()).thenReturn(cibaMgtDAO);
 
-        WhiteboxImpl.invokeMethod(cibaGrantHandler, "activeAuthReqId", cibaAuthCodeDO);
+        WhiteboxImpl.invokeMethod(cibaGrantHandler, "validateAuthReqId", cibaAuthCodeDO);
         Assert.fail();
 
         cibaAuthCodeDO.setExpiresIn(120L);
-        Assert.assertNull(WhiteboxImpl.invokeMethod(cibaGrantHandler, "activeAuthReqId", cibaAuthCodeDO));
+        Assert.assertNull(WhiteboxImpl.invokeMethod(cibaGrantHandler, "validateAuthReqId", cibaAuthCodeDO));
     }
 
     @Test
     public void testIsTokenAlreadyIssued() throws Exception {
 
         CibaAuthCodeDO cibaAuthCodeDoIssued = new CibaAuthCodeDO();
-        cibaAuthCodeDoIssued.setAuthenticationStatus(AuthReqStatus.TOKEN_ISSUED);
+        cibaAuthCodeDoIssued.setAuthReqStatus(AuthReqStatus.TOKEN_ISSUED);
 
         when(CibaDAOFactory.getInstance().getCibaAuthMgtDAO()).thenReturn(cibaMgtDAO);
 
@@ -156,7 +155,7 @@ public class CibaGrantHandlerTest extends PowerMockTestCase {
                 cibaAuthCodeDoIssued));
 
         CibaAuthCodeDO cibaAuthCodeDoAuth = new CibaAuthCodeDO();
-        cibaAuthCodeDoAuth.setAuthenticationStatus(AuthReqStatus.REQUESTED);
+        cibaAuthCodeDoAuth.setAuthReqStatus(AuthReqStatus.REQUESTED);
 
         Assert.assertFalse(WhiteboxImpl.invokeMethod(cibaGrantHandler, "isTokenAlreadyIssued",
                 cibaAuthCodeDoAuth));

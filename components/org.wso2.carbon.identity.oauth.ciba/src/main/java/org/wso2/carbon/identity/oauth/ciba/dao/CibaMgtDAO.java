@@ -30,18 +30,18 @@ import java.sql.Timestamp;
 public interface CibaMgtDAO {
 
     /**
-     * Persists the status of the relevant CibAuthCode identified by the CibaAuthCodeDOKey.
+     * Persists the status of the relevant CibAuthCode identified by the CibaAuthCodeKey.
      *
-     * @param authCodeKey                  Identifier for CibaAuthCode.
+     * @param authCodeKey          Identifier for CibaAuthCode.
      * @param authenticationStatus Status of the relevant CIBA Authentication.
      * @throws CibaCoreException Exception thrown from CIBA core Component.
      */
     void updateStatus(String authCodeKey, Enum authenticationStatus) throws CibaCoreException;
 
     /**
-     * Persists the authenticated_user of the relevant CibAuthCode identified by the CibaAuthCodeDOKey.
+     * Persists the authenticated_user of the relevant CibAuthCode identified by the CibaAuthCodeKey.
      *
-     * @param authCodeKey               Identifier for CibaAuthCode.
+     * @param authCodeKey       Identifier for CibaAuthCode.
      * @param authenticatedUser Authenticated user of the relevant CibaAuthCode.
      * @param tenantID          Tenant ID.
      * @throws CibaCoreException Exception thrown from CIBA Core Component.
@@ -50,9 +50,9 @@ public interface CibaMgtDAO {
             throws CibaCoreException;
 
     /**
-     * Persists the authenticated_user and status of the relevant CibAuthCode identified by the CibaAuthCodeDOKey.
+     * Persists the authenticated_user and status of the relevant CibAuthCode identified by the CibaAuthCodeKey.
      *
-     * @param authCodeKey               Identifier for CibaAuthCode.
+     * @param authCodeKey       Identifier for CibaAuthCode.
      * @param authenticatedUser Authenticated user of the relevant CibaAuthCode.
      * @param tenantID          Tenant ID.
      * @throws CibaCoreException Exception thrown from CIBA Core Component.
@@ -72,7 +72,7 @@ public interface CibaMgtDAO {
     /**
      * Updates the last polled time of tokenRequest.
      *
-     * @param authCodeKey            Identifier of CibaAuthCodeDO.
+     * @param authCodeKey    Identifier of CibaAuthCode.
      * @param lastPolledTime CurrentTime in milliseconds.
      * @throws CibaCoreException Exception thrown from CIBA core Component.
      */
@@ -81,7 +81,7 @@ public interface CibaMgtDAO {
     /**
      * Updates the polling Interval of tokenRequest.
      *
-     * @param authCodeKey         identifier of CibaAuthCode.
+     * @param authCodeKey identifier of CibaAuthCode.
      * @param newInterval Updated polling frequency.
      * @throws CibaCoreException Exception thrown from CIBA core Component.
      */
@@ -90,7 +90,7 @@ public interface CibaMgtDAO {
     /**
      * Returns the authenticated user of authenticationRequest.
      *
-     * @param authCodeKey identifier of CibaAuthCode
+     * @param authCodeKey identifier of CibaAuthCode.
      * @return Returns AuthenticatedUser.
      * @throws CibaCoreException Exception thrown from CIBA core Component.
      */
@@ -105,7 +105,7 @@ public interface CibaMgtDAO {
     void persistCibaAuthCode(CibaAuthCodeDO cibaAuthCodeDO) throws CibaCoreException;
 
     /**
-     * Returns CibaAuthCodeDO identified by unique cibaAuthCodeDOKey.
+     * Returns CibaAuthCodeDO identified by unique cibaAuthCodeKey.
      *
      * @param authCodeKey identifier of CibaAuthCode.
      * @throws CibaCoreException Exception thrown from CIBA core Component.
@@ -115,7 +115,7 @@ public interface CibaMgtDAO {
     /**
      * Retrieve scopes requested in CIBA authentication request.
      *
-     * @param authCodeKey identifier of CibaAuthCode
+     * @param authCodeKey identifier of CibaAuthCode.
      * @throws CibaCoreException Exception thrown from CIBA core Component.
      */
     String[] getScope(String authCodeKey) throws CibaCoreException;

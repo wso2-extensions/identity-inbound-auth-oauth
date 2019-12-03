@@ -28,13 +28,13 @@ import java.sql.Timestamp;
 public class CibaAuthCodeDO {
 
     private String cibaAuthCodeKey; // Internal primary key for storage management.
-    private String authReqID; // Authentication request identifier mapped to cibaAuthCode key.
-    private String consumerAppKey;
+    private String authReqID; // Authentication request identifier mapped to authCodeKey.
+    private String consumerKey;
     private Timestamp issuedTime;
     private Timestamp lastPolledTime;
     private long interval;
     private long expiresIn;
-    private Enum authenticationStatus;
+    private Enum authReqStatus;
     private String[] scopes;
     private AuthenticatedUser authenticatedUser;
 
@@ -58,14 +58,14 @@ public class CibaAuthCodeDO {
         this.authReqID = authReqID;
     }
 
-    public Enum getAuthenticationStatus() {
+    public Enum getAuthReqStatus() {
 
-        return authenticationStatus;
+        return authReqStatus;
     }
 
-    public void setAuthenticationStatus(Enum authenticationStatus) {
+    public void setAuthReqStatus(Enum authReqStatus) {
 
-        this.authenticationStatus = authenticationStatus;
+        this.authReqStatus = authReqStatus;
     }
 
     public void setExpiresIn(long expiresIn) {
@@ -108,14 +108,14 @@ public class CibaAuthCodeDO {
         this.interval = interval;
     }
 
-    public String getConsumerAppKey() {
+    public String getConsumerKey() {
 
-        return consumerAppKey;
+        return consumerKey;
     }
 
-    public void setConsumerAppKey(String consumerAppKey) {
+    public void setConsumerKey(String consumerKey) {
 
-        this.consumerAppKey = consumerAppKey;
+        this.consumerKey = consumerKey;
     }
 
     public Timestamp getIssuedTime() {
@@ -133,8 +133,7 @@ public class CibaAuthCodeDO {
         return authenticatedUser;
     }
 
-    public void setAuthenticatedUser(
-            AuthenticatedUser authenticatedUser) {
+    public void setAuthenticatedUser(AuthenticatedUser authenticatedUser) {
 
         this.authenticatedUser = authenticatedUser;
     }

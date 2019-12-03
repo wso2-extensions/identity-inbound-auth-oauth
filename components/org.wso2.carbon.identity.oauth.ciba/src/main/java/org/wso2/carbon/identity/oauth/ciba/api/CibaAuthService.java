@@ -28,11 +28,11 @@ import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
 public interface CibaAuthService {
 
     /**
-     * Accepts authentication request DTO and responds with responseDTO.
+     * Accepts auth code request  and responds with auth code response.
      *
      * @param cibaAuthCodeRequest CIBA Authentication Request Data Transfer Object.
      * @return CibaAuthCodeResponse CIBA Authentication Response Data Transfer Object.
-     * @throws CibaCoreException
+     * @throws CibaCoreException Core exception from CIBA module.
      */
     CibaAuthCodeResponse generateAuthCodeResponse(CibaAuthCodeRequest cibaAuthCodeRequest) throws CibaCoreException;
 }

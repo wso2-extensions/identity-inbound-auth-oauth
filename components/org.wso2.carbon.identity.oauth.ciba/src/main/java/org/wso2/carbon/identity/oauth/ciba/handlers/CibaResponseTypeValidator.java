@@ -36,6 +36,7 @@ public class CibaResponseTypeValidator extends AbstractValidator {
 
     @Override
     protected void configureParams() {
+        
         this.requiredParams.add("response_type");
         this.requiredParams.add("client_id");
     }

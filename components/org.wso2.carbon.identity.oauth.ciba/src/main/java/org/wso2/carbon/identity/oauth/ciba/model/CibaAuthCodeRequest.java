@@ -24,7 +24,7 @@ package org.wso2.carbon.identity.oauth.ciba.model;
 public class CibaAuthCodeRequest {
 
     private String issuer;
-    private String audience;
+    private String[] audience;
     private long issuedTime;
     private long expiredTime;
     private long notBeforeTime;
@@ -33,7 +33,7 @@ public class CibaAuthCodeRequest {
     private String userHint;
     private String bindingMessage;
     private String userCode;
-    private String[] scope;
+    private String[] scopes;
     private String clientNotificationToken;
     private String[] acrValues;
     private String transactionContext;
@@ -58,12 +58,12 @@ public class CibaAuthCodeRequest {
         this.issuer = issuer;
     }
 
-    public String getAudience() {
+    public String[] getAudience() {
 
         return audience;
     }
 
-    public void setAudience(String audience) {
+    public void setAudience(String audience[]) {
 
         this.audience = audience;
     }
@@ -150,12 +150,12 @@ public class CibaAuthCodeRequest {
 
     public String[] getScopes() {
 
-        return scope;
+        return scopes;
     }
 
-    public void setScope(String[] scope) {
+    public void setScopes(String[] scopes) {
 
-        this.scope = scope;
+        this.scopes = scopes;
     }
 
     public String getClientNotificationToken() {

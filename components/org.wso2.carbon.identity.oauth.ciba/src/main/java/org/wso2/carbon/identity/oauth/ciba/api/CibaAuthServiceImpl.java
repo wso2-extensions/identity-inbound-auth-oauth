@@ -24,10 +24,10 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.oauth.ciba.common.AuthReqStatus;
 import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
 import org.wso2.carbon.identity.oauth.ciba.dao.CibaDAOFactory;
-import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeRequest;
-import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeResponse;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeDO;
+import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeRequest;
+import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeResponse;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -55,7 +55,7 @@ public class CibaAuthServiceImpl implements CibaAuthService {
     }
 
     /**
-     * Returns a unique AuthCodeDOKey.
+     * Returns a unique AuthCodeKey.
      *
      * @return String Returns random uuid.
      */
@@ -77,8 +77,8 @@ public class CibaAuthServiceImpl implements CibaAuthService {
     /**
      * Process and return the expires_in for auth_req_id.
      *
-     * @param cibaAuthCodeRequest DTO accumulating validated parameters from CibaAuthenticationRequest.
-     * @return long Returns expiry_time of the auth-req_id.
+     * @param cibaAuthCodeRequest Accumulating validated parameters from CibaAuthenticationRequest.
+     * @return long Returns expiry_time of the auth_req_id.
      */
     private static long getExpiresIn(CibaAuthCodeRequest cibaAuthCodeRequest) {
 
@@ -88,7 +88,7 @@ public class CibaAuthServiceImpl implements CibaAuthService {
         } else if (requestedExpiry < CibaConstants.MAXIMUM_REQUESTED_EXPIRY_IN_SEC) {
             return requestedExpiry;
         } else {
-            log.warn("(requested_expiry) exceeds default maximum value for the CIBA authentication request made by : " +
+            log.warn("(requested_expiry) exceeds default maximum value for the CIBA authentication request made by: " +
                     cibaAuthCodeRequest.getIssuer());
             return CibaConstants.MAXIMUM_REQUESTED_EXPIRY_IN_SEC;
         }
@@ -109,10 +109,10 @@ public class CibaAuthServiceImpl implements CibaAuthService {
         String[] scopes = cibaAuthCodeRequest.getScopes();
         cibaAuthCodeDO.setCibaAuthCodeKey(generateAuthCodeKey());
         cibaAuthCodeDO.setAuthReqID(generateAuthRequestId());
-        cibaAuthCodeDO.setConsumerAppKey(cibaAuthCodeRequest.getIssuer());
+        cibaAuthCodeDO.setConsumerKey(cibaAuthCodeRequest.getIssuer());
         cibaAuthCodeDO.setIssuedTime(issuedTime);
         cibaAuthCodeDO.setLastPolledTime(issuedTime); // Initially last polled time is set to issued time.
-        cibaAuthCodeDO.setAuthenticationStatus(AuthReqStatus.REQUESTED);
+        cibaAuthCodeDO.setAuthReqStatus(AuthReqStatus.REQUESTED);
         cibaAuthCodeDO.setInterval(CibaConstants.INTERVAL_DEFAULT_VALUE_IN_SEC);
         cibaAuthCodeDO.setExpiresIn(expiryTime);
         cibaAuthCodeDO.setScope(scopes);
@@ -123,7 +123,7 @@ public class CibaAuthServiceImpl implements CibaAuthService {
      * Builds and returns CibaAuthCodeResponse.
      *
      * @param cibaAuthCodeDO      DO with information regarding authenticationRequest.
-     * @param cibaAuthCodeRequest Status of the relevant Ciba Authentication.
+     * @param cibaAuthCodeRequest Auth Code request object.
      * @throws CibaCoreException Exception thrown from CibaCore Component.
      */
     private static CibaAuthCodeResponse buildAuthCodeResponse(CibaAuthCodeRequest cibaAuthCodeRequest,
@@ -151,11 +151,11 @@ public class CibaAuthServiceImpl implements CibaAuthService {
             }
 
             if (log.isDebugEnabled()) {
-                log.debug("Successful in creating AuthorizeRequestDTO for the client : " + clientID);
+                log.debug("Successful in creating AuthCodeResponse for the client: " + clientID);
             }
             return cibaAuthCodeResponse;
         } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
-            throw new CibaCoreException("Error in creating AuthorizeRequestDTO ", e);
+            throw new CibaCoreException("Error in creating AuthCodeResponse for the client: " + clientID, e);
         }
     }
 

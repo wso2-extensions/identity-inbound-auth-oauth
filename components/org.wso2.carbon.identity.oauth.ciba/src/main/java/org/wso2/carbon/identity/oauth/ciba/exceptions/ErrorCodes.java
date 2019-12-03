@@ -23,19 +23,15 @@ package org.wso2.carbon.identity.oauth.ciba.exceptions;
  */
 public class ErrorCodes {
 
-    public static final String INVALID_REQUEST = "invalid_request";
     public static final String INVALID_SCOPE = "invalid_scope";
-    public static final String UNAUTHORIZED_CLIENT = "unauthorized_client";
     public static final String UNKNOWN_USER_ID = "unknown_user_id";
     public static final String MISSING_USER_CODE = "missing_user_code";
     public static final String INVALID_USER_CODE = "invalid_user_code";
     public static final String INVALID_BINDING_MESSAGE = "invalid_binding_message";
-    public static final String INVALID_CLIENT = "invalid_client";
-    public static final String UNAUTHORIZED_USER = "unauthorized_user";
-    public static final String ACCESS_DENIED = "access_denied";
     public static final String SLOW_DOWN = "slow_down";
     public static final String AUTHORIZATION_PENDING = "authorization_pending";
-    public static final String EXPIRED_TOKEN = "expired_token";
+    public static final String EXPIRED_AUTH_REQ_ID = "expired auth_req_id";
+    public static final String UNAUTHORIZED_USER = "unauthorized_user";
 
     private ErrorCodes() {
 

@@ -24,7 +24,7 @@ package org.wso2.carbon.identity.oauth.ciba.model;
 public class CibaAuthCodeResponse {
 
     private String userHint;
-    private String authReqId; // authentication request identifier.
+    private String authReqId; // Authentication request identifier.
     private String clientId;
     private String callBackUrl;
     private String bindingMessage;

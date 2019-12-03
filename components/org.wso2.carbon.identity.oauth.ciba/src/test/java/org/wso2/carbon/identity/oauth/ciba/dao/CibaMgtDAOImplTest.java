@@ -80,16 +80,16 @@ public class CibaMgtDAOImplTest extends PowerMockTestCase {
     private static final String BACKCHANNELLOGOUT_URL = "http://localhost:8080/backChannelLogout";
 
     private static final String CREATE_AUTH_CODE_TABLE = "CREATE TABLE IF NOT EXISTS IDN_OAUTH2_CIBA_AUTH_CODE ( " +
-            "AUTH_CODE_KEY VARCHAR (255), AUTH_REQ_ID VARCHAR(255), ISSUED_TIME TIMESTAMP NOT NULL DEFAULT " +
-            "CURRENT_TIMESTAMP, CONSUMER_APP_KEY VARCHAR(255), LAST_POLLED_TIME TIMESTAMP NOT NULL, POLLING_INTERVAL " +
+            "AUTH_CODE_KEY CHAR (36), AUTH_REQ_ID CHAR(36), ISSUED_TIME TIMESTAMP NOT NULL DEFAULT " +
+            "CURRENT_TIMESTAMP, CONSUMER_KEY VARCHAR(255), LAST_POLLED_TIME TIMESTAMP NOT NULL, POLLING_INTERVAL " +
             "INTEGER, EXPIRES_IN  INTEGER, AUTHENTICATED_USER_NAME VARCHAR(255), USER_STORE_DOMAIN VARCHAR(100)," +
-            "TENANT_ID INTEGER, AUTHENTICATION_STATUS VARCHAR (100) DEFAULT ('REQUESTED'), IDP_ID INTEGER, UNIQUE" +
+            "TENANT_ID INTEGER, AUTH_REQ_STATUS VARCHAR (100) DEFAULT ('REQUESTED'), IDP_ID INTEGER, UNIQUE" +
             "(AUTH_REQ_ID), " +
             "PRIMARY KEY (AUTH_CODE_KEY)," +
-            "FOREIGN KEY (CONSUMER_APP_KEY) REFERENCES IDN_OAUTH_CONSUMER_APPS(CONSUMER_KEY) ON DELETE CASCADE )";
+            "FOREIGN KEY (CONSUMER_KEY) REFERENCES IDN_OAUTH_CONSUMER_APPS(CONSUMER_KEY) ON DELETE CASCADE )";
 
     private static final String CREATE_SCOPE_TABLE = "CREATE TABLE IF NOT EXISTS IDN_OAUTH2_CIBA_REQ_SCOPES (" +
-            "AUTH_CODE_KEY  VARCHAR (255), SCOPE VARCHAR (255)," +
+            "AUTH_CODE_KEY  CHAR (36), SCOPE VARCHAR (255)," +
             "FOREIGN KEY (AUTH_CODE_KEY) REFERENCES IDN_OAUTH2_CIBA_AUTH_CODE(AUTH_CODE_KEY) ON DELETE CASCADE)";
 
     private static final String ADD_OAUTH_APP_SQL = "INSERT INTO IDN_OAUTH_CONSUMER_APPS " +
@@ -105,10 +105,10 @@ public class CibaMgtDAOImplTest extends PowerMockTestCase {
         Timestamp lastPolledTime = new Timestamp(lastPolledTimeInMillis);
         scopes = new String[]{"openid", "sms", "email"};
 
-        cibaAuthCodeDO.setAuthenticationStatus(AuthReqStatus.REQUESTED);
+        cibaAuthCodeDO.setAuthReqStatus(AuthReqStatus.REQUESTED);
         cibaAuthCodeDO.setCibaAuthCodeKey(AUTH_CODE_KEY);
         cibaAuthCodeDO.setAuthReqID(AUTH_REQ_ID);
-        cibaAuthCodeDO.setConsumerAppKey(CONSUMER_KEY);
+        cibaAuthCodeDO.setConsumerKey(CONSUMER_KEY);
         cibaAuthCodeDO.setLastPolledTime(lastPolledTime);
         cibaAuthCodeDO.setIssuedTime(issuedTime);
         cibaAuthCodeDO.setInterval(2L);
@@ -160,7 +160,7 @@ public class CibaMgtDAOImplTest extends PowerMockTestCase {
         }
         try (Connection connection1 = getConnection(DB_NAME)) {
             prepareConnection(connection1, false);
-            assertEquals(cibaMgtDAO.getCibaAuthCode(AUTH_CODE_KEY).getAuthenticationStatus(),
+            assertEquals(cibaMgtDAO.getCibaAuthCode(AUTH_CODE_KEY).getAuthReqStatus(),
                     AuthReqStatus.CONSENT_DENIED);
         }
     }
@@ -194,7 +194,7 @@ public class CibaMgtDAOImplTest extends PowerMockTestCase {
 
         try (Connection connection2 = getConnection(DB_NAME)) {
             prepareConnection(connection2, false);
-            assertEquals(cibaMgtDAO.getCibaAuthCode(AUTH_CODE_KEY).getAuthenticationStatus(),
+            assertEquals(cibaMgtDAO.getCibaAuthCode(AUTH_CODE_KEY).getAuthReqStatus(),
                     AuthReqStatus.AUTHENTICATED);
         }
     }
@@ -246,8 +246,8 @@ public class CibaMgtDAOImplTest extends PowerMockTestCase {
 
         try (Connection connection1 = getConnection(DB_NAME)) {
             prepareConnection(connection1, false);
-            assertEquals(cibaMgtDAO.getCibaAuthCode(AUTH_CODE_KEY).getConsumerAppKey(),
-                    cibaAuthCodeDO.getConsumerAppKey());
+            assertEquals(cibaMgtDAO.getCibaAuthCode(AUTH_CODE_KEY).getConsumerKey(),
+                    cibaAuthCodeDO.getConsumerKey());
         }
     }
 
