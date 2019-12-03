@@ -123,7 +123,7 @@ public interface DeviceFlowDAO {
      * @param callBackUri Callback uri of the service provider.
      * @throws IdentityOAuth2Exception Error while Setting callback uri.
      */
-    void setCallBackURI(String clientId, String callBackUri) throws IdentityOAuth2Exception;
+    void setCallbackURI(String clientId, String callBackUri) throws IdentityOAuth2Exception;
 
     /**
      * Return scope array for user code.

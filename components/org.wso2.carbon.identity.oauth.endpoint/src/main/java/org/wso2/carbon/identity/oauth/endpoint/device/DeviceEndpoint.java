@@ -23,7 +23,7 @@ import org.apache.commons.logging.LogFactory;
 import org.json.JSONObject;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
-import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthService;
+import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthServiceImpl;
 import org.wso2.carbon.identity.oauth2.device.codegenerator.GenerateKeys;
 import org.wso2.carbon.identity.oauth2.device.constants.Constants;
 import org.wso2.carbon.identity.oauth2.device.errorcodes.DeviceErrorCodes;
@@ -42,7 +42,12 @@ import javax.ws.rs.core.Response;
 public class DeviceEndpoint {
 
     private static final Log log = LogFactory.getLog(DeviceEndpoint.class);
-    DeviceAuthService deviceAuthService = new DeviceAuthService();
+    private DeviceAuthServiceImpl deviceAuthService = new DeviceAuthServiceImpl();
+
+    public void setDeviceAuthService(DeviceAuthServiceImpl deviceAuthService) {
+
+        this.deviceAuthService = deviceAuthService;
+    }
 
     @POST
     @Path("/")
@@ -71,15 +76,7 @@ public class DeviceEndpoint {
         String redirectionUri = IdentityUtil.getServerURL("/authenticationendpoint/device.do", false, false);
         String redirectionUriComplete = redirectionUri + "?user_code=" + userCode;
         deviceAuthService.generateDeviceResponse(deviceCode, userCode, clientId, scope);
-        JSONObject jsonObject = new JSONObject();
-        jsonObject.put(Constants.DEVICE_CODE, deviceCode)
-                .put(Constants.USER_CODE, userCode)
-                .put(Constants.VERIFICATION_URI, redirectionUri)
-                .put(Constants.VERIFICATION_URI_COMPLETE, redirectionUriComplete)
-                .put(Constants.EXPIRES_IN, stringValueInSeconds(Constants.EXPIRES_IN_VALUE))
-                .put(Constants.INTERVAL, stringValueInSeconds(Constants.INTERVAL_VALUE));
-        Response.ResponseBuilder respBuilder = Response.status(HttpServletResponse.SC_OK);
-        return respBuilder.entity(jsonObject.toString()).build();
+        return buildResponseObject(deviceCode, userCode, redirectionUri, redirectionUriComplete);
     }
 
     /**
@@ -103,5 +100,28 @@ public class DeviceEndpoint {
     private String stringValueInSeconds(long value) {
 
         return String.valueOf((value / 1000));
+    }
+
+    /**
+     * This use to build the response.
+     *
+     * @param deviceCode             Code that is used to identify the device.
+     * @param userCode               Code that is used to correlate user and device.
+     * @param redirectionUri         Redirection instruction to the user.
+     * @param redirectionUriComplete QR instruction to the user.
+     * @return
+     */
+    private Response buildResponseObject(String deviceCode, String userCode, String redirectionUri,
+                                         String redirectionUriComplete) {
+
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.put(Constants.DEVICE_CODE, deviceCode)
+                .put(Constants.USER_CODE, userCode)
+                .put(Constants.VERIFICATION_URI, redirectionUri)
+                .put(Constants.VERIFICATION_URI_COMPLETE, redirectionUriComplete)
+                .put(Constants.EXPIRES_IN, stringValueInSeconds(Constants.EXPIRES_IN_VALUE))
+                .put(Constants.INTERVAL, stringValueInSeconds(Constants.INTERVAL_VALUE));
+        Response.ResponseBuilder respBuilder = Response.status(HttpServletResponse.SC_OK);
+        return respBuilder.entity(jsonObject.toString()).build();
     }
 }

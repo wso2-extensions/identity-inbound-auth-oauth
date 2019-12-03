@@ -43,6 +43,8 @@ import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenti
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnService;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dao.SQLQueries;
+import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthService;
+import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthServiceImpl;
 import org.wso2.carbon.identity.oauth2.listener.TenantCreationEventListener;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilter;
@@ -169,6 +171,17 @@ public class OAuth2ServiceComponent {
             } else {
                 OAuth2ServiceComponentHolder.setPkceEnabled(false);
                 log.info("PKCE Support is disabled.");
+            }
+
+            // Register device auth service.
+            ServiceRegistration deviceAuthService = bundleContext.registerService(DeviceAuthService.class.getName(),
+                    new DeviceAuthServiceImpl(), null);
+            if (deviceAuthService != null) {
+                if (log.isDebugEnabled()) {
+                    log.debug("DeviceAuthService registered.");
+                }
+            } else {
+                log.error("DeviceAuthService could not be registered.");
             }
 
             // Register the default OpenIDConnect claim filter

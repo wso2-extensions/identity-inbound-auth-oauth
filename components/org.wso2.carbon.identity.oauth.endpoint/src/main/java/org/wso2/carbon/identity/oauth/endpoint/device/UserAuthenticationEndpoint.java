@@ -29,7 +29,7 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpoint;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
-import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthService;
+import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthServiceImpl;
 import org.wso2.carbon.identity.oauth2.device.constants.Constants;
 import org.wso2.carbon.identity.oauth2.device.model.DeviceFlowDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -52,7 +52,12 @@ public class UserAuthenticationEndpoint {
 
     private OAuth2AuthzEndpoint oAuth2AuthzEndpoint = new OAuth2AuthzEndpoint();
     private DeviceFlowDO deviceFlowDO = new DeviceFlowDO();
-    private DeviceAuthService deviceAuthService = new DeviceAuthService();
+    private DeviceAuthServiceImpl deviceAuthService = new DeviceAuthServiceImpl();
+
+    public void setDeviceAuthService(DeviceAuthServiceImpl deviceAuthService) {
+
+        this.deviceAuthService = deviceAuthService;
+    }
 
     @POST
     @Path("/")

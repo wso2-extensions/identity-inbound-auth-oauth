@@ -23,7 +23,7 @@ package org.wso2.carbon.identity.oauth2.device.dao;
  */
 public class DeviceFlowPersistenceFactory {
 
-    private static DeviceFlowPersistenceFactory factory;
+    private static DeviceFlowPersistenceFactory factory = new DeviceFlowPersistenceFactory();
     private DeviceFlowDAO deviceFlowDAO;
 
     private DeviceFlowPersistenceFactory() {
@@ -33,9 +33,6 @@ public class DeviceFlowPersistenceFactory {
 
     public static DeviceFlowPersistenceFactory getInstance() {
 
-        if (factory == null) {
-            factory = new DeviceFlowPersistenceFactory();
-        }
         return factory;
     }
 

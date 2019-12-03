@@ -55,10 +55,10 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
         String deviceStatus;
 
         for (RequestParameter parameter : parameters) {
-            if (Constants.DEVICE_CODE.equals(parameter.getKey())) {
-                if (parameter.getValue() != null && parameter.getValue().length > 0) {
-                    deviceCode = parameter.getValue()[0];
-                }
+            if (Constants.DEVICE_CODE.equals(parameter.getKey()) && parameter.getValue() != null
+                    && parameter.getValue().length > 0) {
+                deviceCode = parameter.getValue()[0];
+                break;
             }
         }
 

@@ -25,7 +25,7 @@ import org.wso2.carbon.identity.oauth2.device.constants.Constants;
  */
 public class GenerateKeys {
 
-    public GenerateKeys(){
+    public GenerateKeys() {
 
     }
 
