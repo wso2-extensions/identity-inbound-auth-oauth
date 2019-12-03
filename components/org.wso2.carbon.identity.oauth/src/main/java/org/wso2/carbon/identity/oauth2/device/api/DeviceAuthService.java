@@ -22,8 +22,7 @@ public class DeviceAuthService {
             throws IdentityOAuth2Exception {
 
         DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().insertDeviceFlowParameters(deviceCode,
-                userCode, clientId, Constants.EXPIRES_IN_VALUE, Constants.INTERVAL_VALUE);
-        DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().storeDeviceFlowScopes(scope, deviceCode);
+                userCode, clientId, Constants.EXPIRES_IN_VALUE, Constants.INTERVAL_VALUE, scope);
     }
 
     /**

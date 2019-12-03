@@ -17,21 +17,15 @@
  */
 package org.wso2.carbon.identity.oauth.endpoint.device;
 
-import org.apache.axis2.json.gson.JsonBuilder;
-import org.apache.axis2.json.gson.factory.JsonObject;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.oltu.oauth2.as.response.OAuthASResponse;
-import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
-import org.apache.oltu.oauth2.common.message.OAuthResponse;
 import org.json.JSONObject;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthService;
 import org.wso2.carbon.identity.oauth2.device.codegenerator.GenerateKeys;
 import org.wso2.carbon.identity.oauth2.device.constants.Constants;
-import org.wso2.carbon.identity.oauth2.device.dao.DeviceFlowPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.device.errorcodes.DeviceErrorCodes;
 
 import java.util.UUID;

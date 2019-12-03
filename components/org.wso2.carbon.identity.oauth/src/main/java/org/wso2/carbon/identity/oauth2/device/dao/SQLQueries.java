@@ -70,7 +70,7 @@ public class SQLQueries {
                 "CONSUMER_KEY = ?";
 
         public static final String STORE_DEVICE_FLOW_SCOPES = "INSERT INTO IDN_OAUTH2_DEVICE_FLOW_SCOPES (SCOPE_ID, " +
-                "SCOPE) SELECT CODE_ID, ? FROM IDN_OAUTH2_DEVICE_FLOW WHERE DEVICE_CODE = ?";
+                "SCOPE) VALUES (?, ?)";
 
         public static final String GET_SCOPES_FOR_USER_CODE = "SELECT SCOPE FROM (SELECT * FROM " +
                 "IDN_OAUTH2_DEVICE_FLOW  INNER JOIN IDN_OAUTH2_DEVICE_FLOW_SCOPES  ON IDN_OAUTH2_DEVICE_FLOW.CODE_ID" +

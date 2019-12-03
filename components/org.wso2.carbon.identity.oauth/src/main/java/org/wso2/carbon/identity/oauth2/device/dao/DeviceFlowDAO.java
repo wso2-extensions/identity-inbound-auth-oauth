@@ -40,7 +40,7 @@ public interface DeviceFlowDAO {
      * @throws IdentityOAuth2Exception Error while inserting device flow parameters.
      */
     void insertDeviceFlowParameters(String deviceCode, String userCode, String consumerKey, Long expiresIn,
-                                    int interval) throws IdentityOAuth2Exception;
+                                    int interval, String scopes) throws IdentityOAuth2Exception;
 
     /**
      * Get the client id that has involved with user code.
@@ -124,15 +124,6 @@ public interface DeviceFlowDAO {
      * @throws IdentityOAuth2Exception Error while Setting callback uri.
      */
     void setCallBackURI(String clientId, String callBackUri) throws IdentityOAuth2Exception;
-
-    /**
-     * Store device flow scopes in a new table.
-     *
-     * @param scope      Scope string.
-     * @param deviceCode Code that is used to identify the device.
-     * @throws IdentityOAuth2Exception Error while storing device flow scopes.
-     */
-    void storeDeviceFlowScopes(String scope, String deviceCode) throws IdentityOAuth2Exception;
 
     /**
      * Return scope array for user code.

@@ -52,19 +52,20 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
 
     @Override
     public void insertDeviceFlowParameters(String deviceCode, String userCode, String consumerKey, Long expiresIn,
-                                 int interval) throws IdentityOAuth2Exception {
+                                           int interval, String scope) throws IdentityOAuth2Exception {
 
         if (log.isDebugEnabled()) {
             log.debug("Persisting device_code: " + deviceCode + "for client: " + consumerKey);
         }
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
+            String codeId = UUID.randomUUID().toString();
             try (PreparedStatement prepStmt =
                          connection.prepareStatement(SQLQueries.DeviceFlowDAOSQLQueries.STORE_DEVICE_CODE)) {
                 Date date = new Date();
                 Timestamp timeCreated = new Timestamp(date.getTime());
                 long timeExpired = timeCreated.getTime() + expiresIn;
                 Timestamp expiredTime = new Timestamp(timeExpired);
-                prepStmt.setString(1, UUID.randomUUID().toString());
+                prepStmt.setString(1, codeId);
                 prepStmt.setString(2, deviceCode);
                 prepStmt.setString(3, userCode);
                 prepStmt.setTimestamp(4, timeCreated, Calendar.getInstance(TimeZone
@@ -77,17 +78,28 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
                 prepStmt.setString(8, Constants.PENDING);
                 prepStmt.setString(9, consumerKey);
                 prepStmt.execute();
-                IdentityDatabaseUtil.commitTransaction(connection);
-
-                PreparedStatement preparedStatement = connection.prepareStatement("select * from " +
-                        "IDN_OAUTH2_DEVICE_FLOW where USER_CODE = 'testUserCode'");
-                ResultSet resultSet = preparedStatement.executeQuery();
 
             } catch (SQLException e) {
                 IdentityDatabaseUtil.rollbackTransaction(connection);
                 throw new IdentityOAuth2Exception("Error when storing the device flow parameters for consumer_key: " +
                         consumerKey, e);
             }
+
+            String[] scopeSet = OAuth2Util.buildScopeArray(scope);
+            try (PreparedStatement prepStmt =
+                         connection.prepareStatement(SQLQueries.DeviceFlowDAOSQLQueries.STORE_DEVICE_FLOW_SCOPES)) {
+                for (String scopes : scopeSet) {
+                    prepStmt.setString(1, codeId);
+                    prepStmt.setString(2, scopes);
+                    prepStmt.execute();
+                }
+
+            } catch (SQLException e) {
+                IdentityDatabaseUtil.rollbackTransaction(connection);
+                throw new IdentityOAuth2Exception("Error when storing scopes for device_code: " +
+                        deviceCode, e);
+            }
+            IdentityDatabaseUtil.commitTransaction(connection);
         } catch (SQLException e) {
             throw new IdentityOAuth2Exception("Error when storing the device flow parameters for consumer_key: " +
                     consumerKey, e);
@@ -332,33 +344,6 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
         } catch (SQLException e) {
             throw new IdentityOAuth2Exception("Error when setting expired callBackUri for consumer_key: " +
                     clientId, e);
-        }
-    }
-
-    @Override
-    public void storeDeviceFlowScopes(String scope, String deviceCode) throws IdentityOAuth2Exception {
-
-        if (log.isDebugEnabled()) {
-            log.debug("Storing scopes for device code: " + deviceCode);
-        }
-        String[] scopeSet = OAuth2Util.buildScopeArray(scope);
-        try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
-            try (PreparedStatement prepStmt =
-                         connection.prepareStatement(SQLQueries.DeviceFlowDAOSQLQueries.STORE_DEVICE_FLOW_SCOPES)) {
-                 for (String scopes : scopeSet) {
-                     prepStmt.setString(1, scopes);
-                     prepStmt.setString(2, deviceCode);
-                     prepStmt.execute();
-                 }
-                 IdentityDatabaseUtil.commitTransaction(connection);
-            } catch (SQLException e) {
-                IdentityDatabaseUtil.rollbackTransaction(connection);
-                throw new IdentityOAuth2Exception("Error when storing scopes for device_code: " +
-                        deviceCode, e);
-            }
-        } catch (SQLException e) {
-            throw new IdentityOAuth2Exception("Error when storing scopes for device_code: " +
-                    deviceCode, e);
         }
     }
 

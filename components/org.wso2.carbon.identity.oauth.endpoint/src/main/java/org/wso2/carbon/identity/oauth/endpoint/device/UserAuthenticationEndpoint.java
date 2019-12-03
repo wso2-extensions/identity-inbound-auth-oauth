@@ -31,7 +31,6 @@ import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentExc
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthService;
 import org.wso2.carbon.identity.oauth2.device.constants.Constants;
-import org.wso2.carbon.identity.oauth2.device.dao.DeviceFlowPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.device.model.DeviceFlowDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
