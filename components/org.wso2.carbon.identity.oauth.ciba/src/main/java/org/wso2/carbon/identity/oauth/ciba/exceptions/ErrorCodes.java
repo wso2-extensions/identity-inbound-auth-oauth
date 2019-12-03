@@ -30,7 +30,7 @@ public class ErrorCodes {
     public static final String INVALID_BINDING_MESSAGE = "invalid_binding_message";
     public static final String SLOW_DOWN = "slow_down";
     public static final String AUTHORIZATION_PENDING = "authorization_pending";
-    public static final String EXPIRED_AUTH_REQ_ID = "expired auth_req_id";
+    public static final String EXPIRED_AUTH_REQ_ID = "expired_token";
     public static final String UNAUTHORIZED_USER = "unauthorized_user";
 
     private ErrorCodes() {
