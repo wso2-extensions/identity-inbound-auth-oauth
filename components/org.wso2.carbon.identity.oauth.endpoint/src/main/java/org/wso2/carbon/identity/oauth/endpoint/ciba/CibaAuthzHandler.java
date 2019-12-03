@@ -27,6 +27,7 @@ import org.wso2.carbon.identity.oauth.ciba.wrappers.CibaAuthRequestWrapper;
 import org.wso2.carbon.identity.oauth.ciba.wrappers.CibaAuthResponseWrapper;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpoint;
+import org.wso2.carbon.identity.oauth.endpoint.exception.CibaAuthFailureException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 import org.wso2.carbon.identity.openidconnect.model.Constants;
 

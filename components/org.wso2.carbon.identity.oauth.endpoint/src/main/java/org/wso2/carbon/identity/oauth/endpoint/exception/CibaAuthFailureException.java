@@ -16,7 +16,7 @@
  * under the License.
  */
 
-package org.wso2.carbon.identity.oauth.endpoint.ciba;
+package org.wso2.carbon.identity.oauth.endpoint.exception;
 
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
 

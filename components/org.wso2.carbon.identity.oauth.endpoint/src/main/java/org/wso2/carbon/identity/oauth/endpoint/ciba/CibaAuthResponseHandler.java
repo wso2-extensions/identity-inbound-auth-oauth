@@ -25,6 +25,7 @@ import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.ErrorCodes;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeResponse;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
+import org.wso2.carbon.identity.oauth.endpoint.exception.CibaAuthFailureException;
 
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.Context;
