@@ -64,4 +64,12 @@ public interface AuthorizationCodeDAO {
             newUserStoreDomain) throws IdentityOAuth2Exception;
 
     String getCodeIdByAuthorizationCode(String authzCode) throws IdentityOAuth2Exception;
+
+    default Set<AuthzCodeDO> getAuthorizationCodeDOSetByConsumerKeyForOpenidScope(String consumerKey) throws
+            IdentityOAuth2Exception{
+
+        return null;
+    }
+
+
 }

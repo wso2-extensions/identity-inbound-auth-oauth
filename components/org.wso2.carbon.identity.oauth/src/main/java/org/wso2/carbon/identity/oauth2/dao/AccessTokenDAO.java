@@ -169,4 +169,10 @@ public interface AccessTokenDAO {
      * @throws IdentityOAuth2Exception
      */
     void updateAccessTokenState(String tokenId, String tokenState) throws IdentityOAuth2Exception;
+
+    default Set<AccessTokenDO> getActiveTokenSetWithTokenIdByConsumerKeyForOpenidScope(String consumerKey)
+            throws IdentityOAuth2Exception {
+
+        return null;
+    }
 }
