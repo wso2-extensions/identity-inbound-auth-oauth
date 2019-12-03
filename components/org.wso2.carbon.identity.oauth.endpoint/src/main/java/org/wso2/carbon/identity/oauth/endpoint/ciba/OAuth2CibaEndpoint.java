@@ -24,7 +24,6 @@ import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.identity.oauth.ciba.api.CibaAuthServiceImpl;
 import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
-import org.wso2.carbon.identity.oauth.ciba.exceptions.ErrorCodes;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeRequest;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeResponse;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
@@ -66,7 +65,7 @@ public class OAuth2CibaEndpoint {
                     log.debug("CIBA Authentication Request that hits Client Initiated Authentication Endpoint has " +
                             "no 'request' parameter.");
                 }
-                throw new CibaAuthFailureException(ErrorCodes.INVALID_REQUEST,
+                throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST,
                         "missing the mandated parameter : (request)");
             }
 

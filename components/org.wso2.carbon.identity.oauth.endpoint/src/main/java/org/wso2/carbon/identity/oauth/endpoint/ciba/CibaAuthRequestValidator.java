@@ -78,7 +78,7 @@ public class CibaAuthRequestValidator {
 
             if (!isValidSignature(signedJWT)) {
                 // Signature is invalid.
-                throw new CibaAuthFailureException(ErrorCodes.UNAUTHORIZED_CLIENT, "invalid signature.");
+                throw new CibaAuthFailureException(OAuth2ErrorCodes.UNAUTHORIZED_CLIENT, "invalid signature.");
             }
 
             // Validate audience of the Request.
@@ -143,7 +143,8 @@ public class CibaAuthRequestValidator {
                         claimsSet.getIssuer() + " .The request is with invalid  value for " +
                         "(requested_expiry).");
             }
-            throw new CibaAuthFailureException(ErrorCodes.INVALID_REQUEST, "invalid value for (requested_expiry).");
+            throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST,
+                    "invalid value for (requested_expiry).");
         }
     }
 
@@ -167,7 +168,7 @@ public class CibaAuthRequestValidator {
                             claimsSet.getIssuer() + ".The request is with invalid  " +
                             "value for (transaction_context).");
                 }
-                throw new CibaAuthFailureException(ErrorCodes.INVALID_REQUEST,
+                throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST,
                         "invalid value for (transaction_context).");
             }
         } catch (ParseException e) {
@@ -198,7 +199,8 @@ public class CibaAuthRequestValidator {
                             claimsSet.getIssuer() +
                             ".The request is with invalid  value for (binding_message).");
                 }
-                throw new CibaAuthFailureException(ErrorCodes.INVALID_REQUEST, "invalid value for (binding_message).");
+                throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST,
+                        "invalid value for (binding_message).");
             }
         } catch (ParseException e) {
             throw new CibaAuthFailureException(OAuth2ErrorCodes.SERVER_ERROR, "Error in validating request parameters.",
@@ -226,7 +228,7 @@ public class CibaAuthRequestValidator {
                     log.debug("Invalid CIBA Authentication Request made by client with clientID : " +
                             claimsSet.getIssuer() + ".The request is with invalid  value for (acr).");
                 }
-                throw new CibaAuthFailureException(ErrorCodes.INVALID_REQUEST, "invalid values for (acr).");
+                throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST, "invalid values for (acr).");
             }
         } catch (ParseException e) {
             throw new CibaAuthFailureException(OAuth2ErrorCodes.SERVER_ERROR, "Error in validating request parameters.",
@@ -250,7 +252,7 @@ public class CibaAuthRequestValidator {
                     log.debug("Invalid CIBA Authentication Request made by client with clientID : " +
                             claimsSet.getIssuer() + ".The request is missing the mandatory claim (scope).");
                 }
-                throw new CibaAuthFailureException(ErrorCodes.INVALID_REQUEST, "missing parameter (scope).");
+                throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST, "missing parameter (scope).");
             }
             if (StringUtils.isBlank(claimsSet.getStringClaim(Constants.SCOPE))) {
                 // Scope is with blank value.
@@ -258,7 +260,7 @@ public class CibaAuthRequestValidator {
                     log.debug("Invalid CIBA Authentication Request made by client with clientID : " +
                             claimsSet.getIssuer() + ".The request is with invalid  value for (scope).");
                 }
-                throw new CibaAuthFailureException(ErrorCodes.INVALID_REQUEST, "invalid values for (scope).");
+                throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST, "invalid values for (scope).");
             }
         } catch (ParseException e) {
             throw new CibaAuthFailureException(OAuth2ErrorCodes.SERVER_ERROR, "Error in validating request parameters.",
@@ -280,7 +282,7 @@ public class CibaAuthRequestValidator {
                 log.debug("Invalid CIBA Authentication Request made by client with clientID : " +
                         claimsSet.getIssuer() + ".The request is missing the mandatory parameter (nbf).");
             }
-            throw new CibaAuthFailureException(ErrorCodes.INVALID_REQUEST, "missing parameter (nbf).");
+            throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST, "missing parameter (nbf).");
         }
         long nbfTime = claimsSet.getNotBeforeTime().getTime();
         if (checkNotBeforeTime(currentTime, nbfTime, skewTime)) {
@@ -288,7 +290,7 @@ public class CibaAuthRequestValidator {
                 log.debug("Invalid CIBA Authentication Request made by client with clientID : " +
                         claimsSet.getIssuer() + ".The request is with invalid  value for (nbf).");
             }
-            throw new CibaAuthFailureException(ErrorCodes.INVALID_REQUEST, "Cannot use this JWT.Failed (nbf).");
+            throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST, "Cannot use this JWT.Failed (nbf).");
         }
     }
 
@@ -308,7 +310,7 @@ public class CibaAuthRequestValidator {
                 log.debug("Invalid CIBA Authentication Request made by client with clientID : " +
                         claimsSet.getIssuer() + ".The request is missing the mandatory parameter (iat).");
             }
-            throw new CibaAuthFailureException(ErrorCodes.INVALID_REQUEST, "missing parameter (iat).");
+            throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST, "missing parameter (iat).");
         }
 
         long issuedTime = claimsSet.getIssueTime().getTime();
@@ -318,7 +320,7 @@ public class CibaAuthRequestValidator {
                 log.debug("Invalid CIBA Authentication Request made by client with clientID : " +
                         claimsSet.getIssuer() + ".The request is with invalid value for (iat) .");
             }
-            throw new CibaAuthFailureException(ErrorCodes.INVALID_REQUEST, "invalid value for (iat).");
+            throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST, "invalid value for (iat).");
         }
     }
 
@@ -339,7 +341,7 @@ public class CibaAuthRequestValidator {
                 log.debug("Invalid CIBA Authentication Request made by client with clientID : " +
                         claimsSet.getIssuer() + ".The request is missing the mandatory parameter (exp).");
             }
-            throw new CibaAuthFailureException(ErrorCodes.INVALID_REQUEST, "missing parameter (exp).");
+            throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST, "missing parameter (exp).");
         }
         long expiryTime = claimsSet.getExpirationTime().getTime();
         if (expiryTime < currentTime + skewTime) {
@@ -348,7 +350,7 @@ public class CibaAuthRequestValidator {
                 log.debug("Invalid CIBA Authentication Request made by client with clientID : " +
                         claimsSet.getIssuer() + ".The provided JWT is expired.");
             }
-            throw new CibaAuthFailureException(ErrorCodes.INVALID_REQUEST, "JWT expired.");
+            throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST, "JWT expired.");
         }
     }
 
@@ -367,7 +369,7 @@ public class CibaAuthRequestValidator {
                 log.debug("Invalid CIBA Authentication Request made by client with clientID : " +
                         claimsSet.getIssuer() + ".The request is missing the mandatory parameter (jti).");
             }
-            throw new CibaAuthFailureException(ErrorCodes.INVALID_REQUEST,
+            throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST,
                     "mandated parameter (JWTID) does not available.");
         }
 
@@ -377,7 +379,8 @@ public class CibaAuthRequestValidator {
                 log.debug("Invalid CIBA Authentication Request made by client with clientID : " +
                         claimsSet.getIssuer() + ".The request has invalid values for the parameter (jti).");
             }
-            throw new CibaAuthFailureException(ErrorCodes.INVALID_REQUEST, "invalid value for the parameter (JWTID)");
+            throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST,
+                    "invalid value for the parameter (JWTID)");
         }
     }
 
@@ -392,11 +395,11 @@ public class CibaAuthRequestValidator {
 
         String alg = signedJWT.getHeader().getAlgorithm().getName();
         if (StringUtils.isEmpty(alg)) {
-            throw new CibaAuthFailureException(ErrorCodes.INVALID_REQUEST, "Algorithm must not be null.");
+            throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST, "Algorithm must not be null.");
         }
 
         if (alg.startsWith("RS")) {
-            throw new CibaAuthFailureException(ErrorCodes.INVALID_REQUEST, "Algorithms not supported.");
+            throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST, "Algorithms not supported.");
         }
         return true;
     }
@@ -420,7 +423,7 @@ public class CibaAuthRequestValidator {
                     log.debug("Invalid CIBA Authentication Request made by client with clientID : " +
                             claimsSet.getIssuer() + ".The request is missing the mandatory parameter 'aud'.");
                 }
-                throw new CibaAuthFailureException(ErrorCodes.INVALID_REQUEST, " missing (aud) parameter.");
+                throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST, " missing (aud) parameter.");
             }
 
             OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(clientId);
@@ -436,7 +439,7 @@ public class CibaAuthRequestValidator {
                     log.debug("Invalid CIBA Authentication Request made by client with clientID : " + clientId +
                             ".Invalid value for (aud).");
                 }
-                throw new CibaAuthFailureException(ErrorCodes.INVALID_REQUEST,
+                throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST,
                         "parameter (aud) does not meet the mandated value.");
             }
         } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
@@ -464,7 +467,8 @@ public class CibaAuthRequestValidator {
                 if (log.isDebugEnabled()) {
                     log.debug("Missing issuer of the JWT of the request : " + request);
                 }
-                throw new CibaAuthFailureException(ErrorCodes.UNAUTHORIZED_CLIENT, "missing mandated parameter (iss).");
+                throw new CibaAuthFailureException(OAuth2ErrorCodes.UNAUTHORIZED_CLIENT,
+                        "missing mandated parameter (iss).");
             }
 
             // Validate whether the claim for the issuer is a valid value.
@@ -474,7 +478,7 @@ public class CibaAuthRequestValidator {
                 if (log.isDebugEnabled()) {
                     log.debug("Missing issuer of the JWT of the request : " + request);
                 }
-                throw new CibaAuthFailureException(ErrorCodes.UNAUTHORIZED_CLIENT, "invalid (iss) parameter.");
+                throw new CibaAuthFailureException(OAuth2ErrorCodes.UNAUTHORIZED_CLIENT, "invalid (iss) parameter.");
             }
 
             // Validation for existence of clientApp  in the store.
@@ -485,7 +489,7 @@ public class CibaAuthRequestValidator {
                 if (log.isDebugEnabled()) {
                     log.debug("The request : " + request + " doesn't have a proper clientID.");
                 }
-                throw new CibaAuthFailureException(ErrorCodes.UNAUTHORIZED_CLIENT, "unknown (iss) client.");
+                throw new CibaAuthFailureException(OAuth2ErrorCodes.UNAUTHORIZED_CLIENT, "unknown (iss) client.");
             }
             if (log.isDebugEnabled()) {
                 log.debug("CIBA Authentication Request 'request' :" + request +
@@ -495,7 +499,7 @@ public class CibaAuthRequestValidator {
             if (log.isDebugEnabled()) {
                 log.debug("The request : " + request + " doesn't have a proper clientID.");
             }
-            throw new CibaAuthFailureException(ErrorCodes.UNAUTHORIZED_CLIENT, "unknown (iss) client.");
+            throw new CibaAuthFailureException(OAuth2ErrorCodes.UNAUTHORIZED_CLIENT, "unknown (iss) client.");
 
         } catch (IdentityOAuth2Exception | ParseException ex) {
             throw new CibaAuthFailureException(OAuth2ErrorCodes.SERVER_ERROR, "exception in validating for (iss). ");
@@ -560,7 +564,8 @@ public class CibaAuthRequestValidator {
                     log.debug("No Login_hint_token support for current version of IS.Invalid CIBA Authentication " +
                             "request : " + authRequest);
                 }
-                throw new CibaAuthFailureException(ErrorCodes.INVALID_REQUEST, "invalid parameter (login_hint_token)");
+                throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST,
+                        "invalid parameter (login_hint_token)");
             }
 
             // Validation when login_hint exists.
@@ -655,7 +660,7 @@ public class CibaAuthRequestValidator {
             JWSHeader header = signedJWT.getHeader();
 
             if (payload == null || header == null || signature == null) {
-                throw new CibaAuthFailureException(ErrorCodes.INVALID_REQUEST,
+                throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST,
                         "Missing components(header,payload or signature) of JWT ");
             }
             if (log.isDebugEnabled()) {
@@ -669,13 +674,13 @@ public class CibaAuthRequestValidator {
                 if (log.isDebugEnabled()) {
                     log.debug("Claim values are empty in the given JSON Web Token");
                 }
-                throw new CibaAuthFailureException(ErrorCodes.INVALID_REQUEST, "invalid parameter (request)");
+                throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST, "invalid parameter (request)");
             }
         } catch (ParseException e) {
             String errorMessage =
                     "Unexpected number of Base64URL parts of the nested JWT payload. Expected number" +
                             " of parts must be three. ";
-            throw new CibaAuthFailureException(ErrorCodes.INVALID_REQUEST, errorMessage, e);
+            throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST, errorMessage, e);
         }
     }
 
@@ -725,7 +730,7 @@ public class CibaAuthRequestValidator {
             cibaAuthCodeRequest.setNotBeforeTime(claimsSet.getNotBeforeTime().getTime());
 
             // Setting the scope of the AuthenticationRequest.
-            cibaAuthCodeRequest.setScope(OAuth2Util.buildScopeArray(claimsSet.getStringClaim(Constants.SCOPE)));
+            cibaAuthCodeRequest.setScopes(OAuth2Util.buildScopeArray(claimsSet.getStringClaim(Constants.SCOPE)));
 
             // Setting scope to CIBA AuthenticationRequest after validation.
             cibaAuthCodeRequest.setAcrValues(buildACRArray(claimsSet.getStringClaim(Constants.ACR_VALUES)));

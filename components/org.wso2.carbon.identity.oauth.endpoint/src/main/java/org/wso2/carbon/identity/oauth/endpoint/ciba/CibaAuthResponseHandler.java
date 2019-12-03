@@ -112,7 +112,7 @@ public class CibaAuthResponseHandler {
         cibaErrorResponse.put("error", cibaAuthFailureException.getErrorCode());
         cibaErrorResponse.put("error_description", cibaAuthFailureException.getMessage());
 
-        if (errorCode.equals(ErrorCodes.UNAUTHORIZED_CLIENT) || errorCode.equals(ErrorCodes.UNAUTHORIZED_USER)) {
+        if (errorCode.equals(OAuth2ErrorCodes.UNAUTHORIZED_CLIENT) || errorCode.equals(ErrorCodes.UNAUTHORIZED_USER)) {
 
             // Creating error response for the request.
             Response.ResponseBuilder respBuilder = Response.status(HttpServletResponse.SC_UNAUTHORIZED);
