@@ -49,11 +49,13 @@ public class DefaultOAuth2TokenValidatorTest {
     public void setUp() throws Exception {
         defaultOAuth2TokenValidator = new DefaultOAuth2TokenValidator();
         oAuth2TokenValidationRequestDTO = new OAuth2TokenValidationRequestDTO();
-        OAuth2TokenValidationRequestDTO.TokenValidationContextParam tokenValidationContextParam = mock(OAuth2TokenValidationRequestDTO.TokenValidationContextParam.class);
+        OAuth2TokenValidationRequestDTO.TokenValidationContextParam tokenValidationContextParam =
+                mock(OAuth2TokenValidationRequestDTO.TokenValidationContextParam.class);
         tokenValidationContextParam.setKey("sampleKey");
         tokenValidationContextParam.setValue("sampleValue");
 
-        OAuth2TokenValidationRequestDTO.TokenValidationContextParam[] tokenValidationContextParams = {tokenValidationContextParam};
+        OAuth2TokenValidationRequestDTO.TokenValidationContextParam[] tokenValidationContextParams =
+                {tokenValidationContextParam};
         oAuth2TokenValidationRequestDTO.setContext(tokenValidationContextParams);
         oAuth2TokenValidationResponseDTO = new OAuth2TokenValidationResponseDTO();
         oAuth2TokenValidationMessageContext =

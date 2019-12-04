@@ -41,7 +41,7 @@ import static org.testng.Assert.assertEquals;
 @PrepareForTest({OAuthServerConfiguration.class})
 public class HashingPersistenceProcessorTest extends PowerMockIdentityBaseTest {
 
-    private String TEST = "test";
+    private static final String CLIENT_ID = "test";
 
     @Mock
     private OAuthServerConfiguration mockedServerConfig;
@@ -55,56 +55,56 @@ public class HashingPersistenceProcessorTest extends PowerMockIdentityBaseTest {
 
     @Test
     public void testGetPreprocessedClientId() throws IdentityOAuth2Exception {
-        assertEquals(hashingPersistenceProcessor.getPreprocessedClientId(TEST), TEST);
+        assertEquals(hashingPersistenceProcessor.getPreprocessedClientId(CLIENT_ID), CLIENT_ID);
     }
 
     @Test
     public void testGetProcessedClientId() throws Exception {
-        assertEquals(hashingPersistenceProcessor.getProcessedClientId(TEST), TEST);
+        assertEquals(hashingPersistenceProcessor.getProcessedClientId(CLIENT_ID), CLIENT_ID);
     }
 
     @Test(expectedExceptions = UnsupportedOperationException.class)
     public void testPreprocessedAuthzCodeWithException() throws IdentityOAuth2Exception {
-        hashingPersistenceProcessor.getPreprocessedAuthzCode(TEST);
+        hashingPersistenceProcessor.getPreprocessedAuthzCode(CLIENT_ID);
     }
 
     @Test(expectedExceptions = UnsupportedOperationException.class)
     public void testPreprocessedAccessTokenIdentifierWithException() throws IdentityOAuth2Exception {
-        hashingPersistenceProcessor.getPreprocessedAccessTokenIdentifier(TEST);
+        hashingPersistenceProcessor.getPreprocessedAccessTokenIdentifier(CLIENT_ID);
     }
 
     @Test(expectedExceptions = UnsupportedOperationException.class)
     public void testPreprocessedRefreshTokenWithException() throws IdentityOAuth2Exception {
-        hashingPersistenceProcessor.getPreprocessedRefreshToken(TEST);
+        hashingPersistenceProcessor.getPreprocessedRefreshToken(CLIENT_ID);
     }
 
     @Test(expectedExceptions = UnsupportedOperationException.class)
     public void testPreprocessedClientSecretWithException() throws IdentityOAuth2Exception {
-        hashingPersistenceProcessor.getPreprocessedClientSecret(TEST);
+        hashingPersistenceProcessor.getPreprocessedClientSecret(CLIENT_ID);
     }
 
     @Test
     public void testGetProcessedClientSecret() throws IdentityOAuth2Exception {
         setupMocksForTest();
-        assertEquals(hashingPersistenceProcessor.getProcessedClientSecret(TEST), hash(TEST));
+        assertEquals(hashingPersistenceProcessor.getProcessedClientSecret(CLIENT_ID), hash(CLIENT_ID));
     }
 
     @Test
     public void testGetProcessedAuthzCode() throws IdentityOAuth2Exception {
         setupMocksForTest();
-        assertEquals(hashingPersistenceProcessor.getProcessedAuthzCode(TEST), hash(TEST));
+        assertEquals(hashingPersistenceProcessor.getProcessedAuthzCode(CLIENT_ID), hash(CLIENT_ID));
     }
 
     @Test
     public void testGetProcessedAccessTokenIdentifier() throws IdentityOAuth2Exception {
         setupMocksForTest();
-        assertEquals(hashingPersistenceProcessor.getProcessedAccessTokenIdentifier(TEST), hash(TEST));
+        assertEquals(hashingPersistenceProcessor.getProcessedAccessTokenIdentifier(CLIENT_ID), hash(CLIENT_ID));
     }
 
     @Test
     public void testGetProcessedRefreshToken() throws IdentityOAuth2Exception {
         setupMocksForTest();
-        assertEquals(hashingPersistenceProcessor.getProcessedRefreshToken(TEST), hash(TEST));
+        assertEquals(hashingPersistenceProcessor.getProcessedRefreshToken(CLIENT_ID), hash(CLIENT_ID));
     }
 
     @Test(expectedExceptions = IllegalArgumentException.class)

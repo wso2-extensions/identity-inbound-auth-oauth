@@ -48,8 +48,8 @@ public class JDBCScopeValidatorTest extends IdentityBaseTest {
     private JDBCScopeValidator validator;
 
     @BeforeMethod
-    public void setUp()
-    {
+    public void setUp() {
+
         validator = new JDBCScopeValidator();
     }
 

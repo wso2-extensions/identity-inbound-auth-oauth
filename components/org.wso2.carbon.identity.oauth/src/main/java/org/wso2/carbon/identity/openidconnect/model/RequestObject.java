@@ -15,7 +15,6 @@
  */
 package org.wso2.carbon.identity.openidconnect.model;
 
-
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.PlainJWT;
 import com.nimbusds.jwt.SignedJWT;
@@ -157,10 +156,12 @@ public class RequestObject implements Serializable {
                             JSONObject jsonObjectAllRequestedClaims  = (JSONObject)
                                     jsonObjectClaim.get(requesterClaimsMap.getKey());
                             if (jsonObjectAllRequestedClaims != null) {
-                                for (Map.Entry<String, Object> requestedClaims : jsonObjectAllRequestedClaims.entrySet()) {
+                                for (Map.Entry<String, Object> requestedClaims : jsonObjectAllRequestedClaims
+                                        .entrySet()) {
                                     JSONObject jsonObjectClaimAttributes = null;
                                     if (jsonObjectAllRequestedClaims.get(requestedClaims.getKey()) != null) {
-                                        jsonObjectClaimAttributes = (JSONObject) jsonObjectAllRequestedClaims.get(requestedClaims.getKey());
+                                        jsonObjectClaimAttributes =
+                                                (JSONObject) jsonObjectAllRequestedClaims.get(requestedClaims.getKey());
                                     }
                                     populateRequestedClaimValues(requestedClaimsList, jsonObjectClaimAttributes,
                                             requestedClaims.getKey(), requesterClaimsMap.getKey());
@@ -179,7 +180,8 @@ public class RequestObject implements Serializable {
     }
 
     private void populateRequestedClaimValues(List<RequestedClaim> requestedClaims,
-                                              JSONObject jsonObjectClaimAttributes, String claimName, String claimType) {
+                                              JSONObject jsonObjectClaimAttributes, String claimName,
+                                              String claimType) {
 
         RequestedClaim claim = new RequestedClaim();
         claim.setName(claimName);

@@ -41,6 +41,7 @@ public class UserInfoEndpointExceptionTest extends IdentityBaseTest {
 
         userInfoEndpointException = new UserInfoEndpointException(UserInfoEndpointException.
                 ERROR_CODE_INSUFFICIENT_SCOPE, new Throwable());
-        assertEquals(userInfoEndpointException.getErrorMessage(), UserInfoEndpointException.ERROR_CODE_INSUFFICIENT_SCOPE);
+        assertEquals(userInfoEndpointException.getErrorMessage(),
+                UserInfoEndpointException.ERROR_CODE_INSUFFICIENT_SCOPE);
     }
 }

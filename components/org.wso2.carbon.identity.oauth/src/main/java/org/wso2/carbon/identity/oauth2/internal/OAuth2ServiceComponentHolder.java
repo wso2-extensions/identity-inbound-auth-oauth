@@ -155,6 +155,7 @@ public class OAuth2ServiceComponentHolder {
      * @param claimProvider
      */
     public static void setClaimProvider(ClaimProvider claimProvider) {
+
         OAuth2ServiceComponentHolder.claimProviders.add(claimProvider);
     }
 
@@ -164,6 +165,7 @@ public class OAuth2ServiceComponentHolder {
      * @param claimProvider
      */
     public static void unregisterClaimProvider(ClaimProvider claimProvider) {
+
         claimProviders.remove(claimProvider);
     }
 

@@ -82,9 +82,10 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
 
         initiateH2Base(DB_NAME, getFilePath("h2.sql"));
 
-        int consumer_ID = createBaseOAuthApp(DB_NAME, CLIENT_ID, SECRET, USER_NAME, APP_NAME, CALLBACK, APP_STATE, BACKCHANNELLOGOUT_URL);
-        createAccessTokenTable(DB_NAME, consumer_ID, ACC_TOKEN, ACC_TOKEN_SECRET, SCOPE, AUTHZ_USER);
-        createReqTokenTable(DB_NAME, consumer_ID, REQ_TOKEN, REQ_TOKEN_SECRET, SCOPE, CALLBACK, OAUTH_VERIFIER,
+        int consumerId = createBaseOAuthApp(DB_NAME, CLIENT_ID, SECRET, USER_NAME, APP_NAME, CALLBACK, APP_STATE,
+                BACKCHANNELLOGOUT_URL);
+        createAccessTokenTable(DB_NAME, consumerId, ACC_TOKEN, ACC_TOKEN_SECRET, SCOPE, AUTHZ_USER);
+        createReqTokenTable(DB_NAME, consumerId, REQ_TOKEN, REQ_TOKEN_SECRET, SCOPE, CALLBACK, OAUTH_VERIFIER,
                 AUTHZ_USER);
     }
 
@@ -131,7 +132,7 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
     @Test
     public void testUpdateSecretKey() throws Exception {
 
-        String GET_SECRET_SQL = "SELECT CONSUMER_SECRET FROM IDN_OAUTH_CONSUMER_APPS WHERE CONSUMER_KEY=?";
+        String getSecretSql = "SELECT CONSUMER_SECRET FROM IDN_OAUTH_CONSUMER_APPS WHERE CONSUMER_KEY=?";
 
         mockStatic(OAuthServerConfiguration.class);
         when(OAuthServerConfiguration.getInstance()).thenReturn(mockedServerConfig);
@@ -140,7 +141,7 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
 
         try (Connection connection = getConnection(DB_NAME)) {
 
-            PreparedStatement statement = connection.prepareStatement(GET_SECRET_SQL);
+            PreparedStatement statement = connection.prepareStatement(getSecretSql);
             mockStatic(IdentityDatabaseUtil.class);
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
             when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
@@ -151,8 +152,8 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
 
             try (ResultSet resultSet = statement.executeQuery()) {
                 if (resultSet.next()) {
-                    assertEquals(resultSet.getString(1), NEW_SECRET, "Checking whether the passed value is set to the " +
-                            " CONSUMER_SECRET.");
+                    assertEquals(resultSet.getString(1), NEW_SECRET,
+                            "Checking whether the passed value is set to the  CONSUMER_SECRET.");
                 }
             }
         }
@@ -222,7 +223,8 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
     }
 
     @Test(dataProvider = "provideTokens", expectedExceptions = IdentityOAuthAdminException.class)
-    public void testGetOAuthTokenSecretWithExceptions(String token, Boolean isAccessToken, String expected) throws Exception {
+    public void testGetOAuthTokenSecretWithExceptions(String token, Boolean isAccessToken, String expected)
+            throws Exception {
 
         mockStatic(OAuthServerConfiguration.class);
         when(OAuthServerConfiguration.getInstance()).thenReturn(mockedServerConfig);
@@ -283,10 +285,10 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
     @Test
     public void testCreateOAuthRequestToken_01() throws Exception {
 
-        String GET_ID_SQL = "SELECT ID FROM IDN_OAUTH_CONSUMER_APPS WHERE CONSUMER_KEY=?";
-        String REQ_ID_SQL = "SELECT REQUEST_TOKEN FROM IDN_OAUTH1A_REQUEST_TOKEN WHERE CONSUMER_KEY_ID=?";
-        Integer ID = null;
-        String req_Token = null;
+        String getIdSql = "SELECT ID FROM IDN_OAUTH_CONSUMER_APPS WHERE CONSUMER_KEY=?";
+        String reqIdSql = "SELECT REQUEST_TOKEN FROM IDN_OAUTH1A_REQUEST_TOKEN WHERE CONSUMER_KEY_ID=?";
+        Integer id = null;
+        String reqToken = null;
         PreparedStatement statement1 = null;
         PreparedStatement statement2 = null;
 
@@ -306,22 +308,22 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
             consumerDAO.createOAuthRequestToken(CLIENT_ID, ACC_TOKEN, SECRET, CALLBACK, SCOPE);
 
             try {
-                statement1 = connection3.prepareStatement(GET_ID_SQL);
+                statement1 = connection3.prepareStatement(getIdSql);
                 statement1.setString(1, CLIENT_ID);
                 resultSet1 = statement1.executeQuery();
                 if (resultSet1.next()) {
-                    ID = resultSet1.getInt(1);
+                    id = resultSet1.getInt(1);
                 }
-                statement2 = connection3.prepareStatement(REQ_ID_SQL);
-                statement2.setInt(1, ID);
+                statement2 = connection3.prepareStatement(reqIdSql);
+                statement2.setInt(1, id);
                 resultSet2 = statement2.executeQuery();
                 if (resultSet2.next()) {
-                    req_Token = resultSet2.getString(1);
+                    reqToken = resultSet2.getString(1);
                 }
             } finally {
                 IdentityDatabaseUtil.closeAllConnections(connection3, resultSet1, statement1);
             }
-            assertEquals(REQ_TOKEN, req_Token, "Checking whether the passed req_Token is set to the " +
+            assertEquals(REQ_TOKEN, reqToken, "Checking whether the passed req_Token is set to the " +
                     "REQ_TOKEN.");
         }
     }
@@ -329,9 +331,9 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
     @Test
     public void testCreateOAuthRequestToken_02() throws Exception {
 
-        String callback_URL = null;
-        String c_Id = "fakeClientId";
-        String ac_Token = "fakeAccToken";
+        String callbackUrl = null;
+        String clientId = "fakeClientId";
+        String accToken = "fakeAccToken";
         String secretFake = "fakeSecret";
         String fakeScope = "fakeScope";
 
@@ -346,16 +348,16 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
             when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection3);
 
             OAuthConsumerDAO consumerDAO = new OAuthConsumerDAO();
-            consumerDAO.createOAuthRequestToken(c_Id, ac_Token, secretFake, callback_URL, fakeScope);
+            consumerDAO.createOAuthRequestToken(clientId, accToken, secretFake, callbackUrl, fakeScope);
         }
     }
 
     @Test(expectedExceptions = IdentityOAuthAdminException.class)
     public void testCreateOAuthRequestTokenWithExceptions() throws Exception {
 
-        String callback_URL = null;
-        String c_Id = "fakeClientId";
-        String ac_Token = "fakeAccToken";
+        String callbackUrl = null;
+        String clientId = "fakeClientId";
+        String accToken = "fakeAccToken";
         String secretFake = "fakeSecret";
         String fakeScope = "fakeScope";
 
@@ -372,7 +374,7 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
             when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection1);
 
             OAuthConsumerDAO consumerDAO = new OAuthConsumerDAO();
-            consumerDAO.createOAuthRequestToken(c_Id, ac_Token, secretFake, callback_URL, fakeScope);
+            consumerDAO.createOAuthRequestToken(clientId, accToken, secretFake, callbackUrl, fakeScope);
         }
     }
 

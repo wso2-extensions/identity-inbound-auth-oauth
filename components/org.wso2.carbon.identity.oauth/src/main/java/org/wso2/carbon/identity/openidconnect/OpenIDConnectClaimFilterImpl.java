@@ -75,7 +75,7 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
 
     private static final String ADDRESS_PREFIX = "address.";
     private static final String ADDRESS_SCOPE = "address";
-    private static final String OIDC_SCOPE_CLAIM_SEPARATOR = ",";
+    private static final String OIDC_DIALECT = "http://wso2.org/oidc/claim";
 
     private static final Log log = LogFactory.getLog(OpenIDConnectClaimFilterImpl.class);
     private static final int DEFAULT_PRIORITY = 100;
@@ -204,7 +204,8 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
             if (isConsentManagementServiceDisabled(serviceProvider)) {
                 if (log.isDebugEnabled()) {
                     log.debug("Consent Management disabled or not applicable for Service Provider: "
-                            + serviceProvider.getApplicationName() + ". Skipping filtering user claims based on consent.");
+                            + serviceProvider.getApplicationName() +
+                            ". Skipping filtering user claims based on consent.");
                 }
                 return userClaims;
             }
@@ -400,7 +401,8 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
         return StringUtils.startsWith(scopeClaim, ADDRESS_PREFIX) || addressScopeClaims.contains(scopeClaim);
     }
 
-    private List<String> getClaimUrisInSupportedOIDCScope(Map<String, List<String>> scopeClaimsMap, String requestedScope) {
+    private List<String> getClaimUrisInSupportedOIDCScope(Map<String, List<String>> scopeClaimsMap,
+                                                          String requestedScope) {
 
         List<String> requestedScopeClaimsList = new ArrayList<>();
         if (scopeClaimsMap.containsKey(requestedScope)) {
@@ -429,13 +431,14 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
 
     private void handlePhoneNumberVerifiedClaim(Map<String, Object> returnClaims) {
 
-        if (returnClaims.containsKey(PHONE_NUMBER_VERIFIED))
+        if (returnClaims.containsKey(PHONE_NUMBER_VERIFIED)) {
             if (returnClaims.get(PHONE_NUMBER_VERIFIED) != null) {
                 if (returnClaims.get(PHONE_NUMBER_VERIFIED) instanceof String) {
                     returnClaims.put(PHONE_NUMBER_VERIFIED, (Boolean.valueOf((String)
                             (returnClaims.get(PHONE_NUMBER_VERIFIED)))));
                 }
             }
+        }
     }
 
     private void handleEmailVerifiedClaim(Map<String, Object> returnClaims) {
@@ -488,7 +491,6 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
     private List<String> getOIDCClaimURIs(List<String> userConsentedClaimUris,
                                           String tenantDomain) {
 
-        final String OIDC_DIALECT = "http://wso2.org/oidc/claim";
         try {
             List<ExternalClaim> externalClaims = OpenIDConnectServiceComponentHolder.getInstance()
                     .getClaimMetadataManagementService()

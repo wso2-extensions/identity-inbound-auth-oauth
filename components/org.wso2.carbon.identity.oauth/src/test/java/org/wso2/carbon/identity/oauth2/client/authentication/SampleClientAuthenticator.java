@@ -20,6 +20,7 @@ import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 
 import java.util.List;
 import java.util.Map;
+
 import javax.servlet.http.HttpServletRequest;
 
 /**
@@ -33,7 +34,8 @@ public class SampleClientAuthenticator extends AbstractOAuthClientAuthenticator 
 
     @Override
     public boolean authenticateClient(HttpServletRequest request, Map<String, List> content,
-                                      OAuthClientAuthnContext oAuthClientAuthnContext) throws OAuthClientAuthnException {
+                                      OAuthClientAuthnContext oAuthClientAuthnContext)
+            throws OAuthClientAuthnException {
 
         if (EXPECTED_SAMPLE_HEADER.equalsIgnoreCase(request.getHeader(SAMPLE_HEADER))) {
             return true;
@@ -44,7 +46,8 @@ public class SampleClientAuthenticator extends AbstractOAuthClientAuthenticator 
     }
 
     @Override
-    public boolean canAuthenticate(HttpServletRequest request, Map<String, List> content, OAuthClientAuthnContext oAuthClientAuthnContext) {
+    public boolean canAuthenticate(HttpServletRequest request, Map<String, List> content,
+                                   OAuthClientAuthnContext oAuthClientAuthnContext) {
 
         if (request.getHeader(SAMPLE_HEADER) != null) {
             return true;

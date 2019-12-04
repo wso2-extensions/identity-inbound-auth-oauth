@@ -1122,7 +1122,7 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
     private Assertion getAssertionObject(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
         try {
             XMLObject samlObject = UnmarshallUtils.unmarshall(new String(Base64.decodeBase64(
-                    tokReqMsgCtx.getOauth2AccessTokenReqDTO().getAssertion())));
+                    tokReqMsgCtx.getOauth2AccessTokenReqDTO().getAssertion()), StandardCharsets.UTF_8));
             validateAssertionList(samlObject);
             return getAssertion(samlObject);
         } catch (IdentityUnmarshallingException e) {

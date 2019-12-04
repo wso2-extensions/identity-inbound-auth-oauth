@@ -26,6 +26,7 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.json.JSONObject;
 
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
@@ -117,7 +118,7 @@ public class HashingPersistenceProcessor implements TokenPersistenceProcessor {
         String hashAlgorithm = OAuthServerConfiguration.getInstance().getHashAlgorithm();
         try {
             messageDigest = MessageDigest.getInstance(hashAlgorithm);
-            messageDigest.update(plainText.getBytes());
+            messageDigest.update(plainText.getBytes(StandardCharsets.UTF_8));
             hash = messageDigest.digest();
 
         } catch (NoSuchAlgorithmException e) {

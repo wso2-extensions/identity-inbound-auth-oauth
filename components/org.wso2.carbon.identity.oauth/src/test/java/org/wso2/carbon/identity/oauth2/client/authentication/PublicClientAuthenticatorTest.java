@@ -29,13 +29,16 @@ import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
-import javax.servlet.http.HttpServletRequest;
-
 import java.util.HashMap;
 import java.util.List;
 
+import javax.servlet.http.HttpServletRequest;
+
 import static org.testng.Assert.assertEquals;
 
+/**
+ * This class contains the test cased related to the public client authentication functionality.
+ */
 @PrepareForTest({
         HttpServletRequest.class,
         OAuth2Util.class
@@ -44,9 +47,9 @@ import static org.testng.Assert.assertEquals;
 public class PublicClientAuthenticatorTest extends PowerMockIdentityBaseTest {
 
     private PublicClientAuthenticator publicClientAuthenticator = new PublicClientAuthenticator();
-    private static String SIMPLE_CASE_AUTHORIZATION_HEADER = "authorization";
-    private static String CLIENT_ID = "someclientid";
-    private static String CLIENT_SECRET = "someclientsecret";
+    private static final String SIMPLE_CASE_AUTHORIZATION_HEADER = "authorization";
+    private static final String CLIENT_ID = "someclientid";
+    private static final String CLIENT_SECRET = "someclientsecret";
 
     @Test
     public void testGetPriority() {
@@ -55,6 +58,16 @@ public class PublicClientAuthenticatorTest extends PowerMockIdentityBaseTest {
                 "Default priority of the public client authenticator has changed");
     }
 
+    /**
+     * Test for client authentication.
+     *
+     * @param headerName    Header name.
+     * @param headerValue   Header value.
+     * @param bodyContent   Message body content.
+     * @param publicClient  Flag for public client state.
+     * @param canHandle     Flag for authentication handle state.
+     * @throws Exception    Exception.
+     */
     @Test(dataProvider = "testCanAuthenticateData")
     public void testCanAuthenticate(String headerName, String headerValue, HashMap<String, List> bodyContent,
                                     boolean publicClient, boolean canHandle) throws Exception {
@@ -72,6 +85,11 @@ public class PublicClientAuthenticatorTest extends PowerMockIdentityBaseTest {
                 OAuthClientAuthnContext()), canHandle, "Expected can authenticate evaluation not received");
     }
 
+    /**
+     * Test for authentication scenarios.
+     *
+     * @return An object array containing authentication data.
+     */
     @DataProvider(name = "testCanAuthenticateData")
     public Object[][] testCanAuthenticateData() {
 

@@ -31,6 +31,8 @@ import java.util.Map;
 public interface ClaimProvider {
 
     /**
+     * Returns map of additional claims to IDToken.
+     *
      * @param authAuthzReqMessageContext
      * @param authorizeRespDTO
      * @return map of id token claims
@@ -41,6 +43,8 @@ public interface ClaimProvider {
             throws IdentityOAuth2Exception;
 
     /**
+     * Returns map of Additional claims to IDToken.
+     *
      * @param tokenReqMessageContext
      * @param tokenRespDTO
      * @return map of id token claims

@@ -27,6 +27,9 @@ import org.wso2.carbon.identity.openidconnect.handlers.RequestObjectHandler;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * OpenID connect service component data holder.
+ */
 public class OpenIDConnectServiceComponentHolder {
 
     private static OpenIDConnectServiceComponentHolder instance = new OpenIDConnectServiceComponentHolder();
