@@ -72,7 +72,7 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
                     }
                     if (log.isDebugEnabled() && ArrayUtils.isNotEmpty(claims)) {
                         log.debug("The scope: " + scope + " and the claims: " + Arrays.asList(claims) +
-                                "are successfully inserted for the tenant: " + tenantId);
+                                " are successfully inserted for the tenant: " + tenantId);
                     }
                 } else {
                     String errorMessage =
