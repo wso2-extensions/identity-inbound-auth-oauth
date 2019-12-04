@@ -419,7 +419,7 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
             oidcScopeClaimList.add(scopeDTO);
             if (log.isDebugEnabled()) {
                 log.debug("The scope: " + scopeName + " and the claims: " + String.join(",", claimsList)
-                        + "are successfully loaded for the tenant: " + tenantId);
+                        + " are successfully loaded for the tenant: " + tenantId);
             }
         }
         return oidcScopeClaimList;
