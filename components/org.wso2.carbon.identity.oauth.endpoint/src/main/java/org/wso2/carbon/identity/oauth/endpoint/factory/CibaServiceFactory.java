@@ -42,7 +42,7 @@ public class CibaServiceFactory extends AbstractFactoryBean<CibaAuthServiceImpl>
         } else {
             CibaAuthServiceImpl cibaAuthService = (CibaAuthServiceImpl)
                     PrivilegedCarbonContext.getThreadLocalCarbonContext().
-                            getOSGiService(CibaAuthServiceImpl.class, null);
+                            getOSGiService(CibaAuthService.class, null);
             if (cibaAuthService != null) {
                 this.cibaAuthService = cibaAuthService;
             }

@@ -29,6 +29,7 @@ import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeResponse;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.endpoint.exception.CibaAuthFailureException;
 import org.wso2.carbon.identity.oauth.endpoint.factory.CibaServiceFactory;
+import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 
 import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
@@ -44,9 +45,6 @@ import javax.ws.rs.core.Response;
 public class OAuth2CibaEndpoint {
 
     private static final Log log = LogFactory.getLog(OAuth2CibaEndpoint.class);
-
-    // Preparing CIBA authentication service.
-    private static CibaAuthService cibaAuthService;
 
     @POST
     @Path("/")
@@ -100,7 +98,7 @@ public class OAuth2CibaEndpoint {
              // Obtain Response DTO from service layer of CIBA.
             CibaAuthCodeResponse cibaAuthCodeResponse = null;
             try {
-                cibaAuthCodeResponse = cibaAuthService.generateAuthCodeResponse(cibaAuthCodeRequest);
+                cibaAuthCodeResponse = EndpointUtil.getCibaAuthService().generateAuthCodeResponse(cibaAuthCodeRequest);
             } catch (CibaCoreException e) {
                 throw new CibaAuthFailureException(OAuth2ErrorCodes.SERVER_ERROR, "Error while generating " +
                         "authentication response.", e);

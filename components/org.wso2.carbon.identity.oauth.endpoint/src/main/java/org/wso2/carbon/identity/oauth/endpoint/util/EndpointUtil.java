@@ -104,6 +104,7 @@ public class EndpointUtil {
     private static SSOConsentService ssoConsentService;
     private static OAuthServerConfiguration oauthServerConfiguration;
     private static RequestObjectService requestObjectService;
+    private static CibaAuthServiceImpl cibaAuthService;
 
     public static void setOAuth2Service(OAuth2Service oAuth2Service) {
 
@@ -864,5 +865,15 @@ public class EndpointUtil {
         if (isNotBlank(name) && isNotBlank(value)) {
             map.put(name, value);
         }
+    }
+
+    public static CibaAuthServiceImpl getCibaAuthService() {
+
+        return cibaAuthService;
+    }
+
+    public static void setCibaAuthService(CibaAuthServiceImpl cibaAuthService) {
+
+        EndpointUtil.cibaAuthService = cibaAuthService;
     }
 }
