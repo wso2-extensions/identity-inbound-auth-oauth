@@ -36,6 +36,7 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.sql.Timestamp;
 import java.util.Calendar;
+import java.util.List;
 import java.util.TimeZone;
 
 import static org.wso2.carbon.identity.oauth.ciba.common.CibaConstants.AUTH_REQ_ID;
@@ -313,9 +314,9 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
             if (cibaAuthCodeDO.getAuthReqStatus().equals(AuthReqStatus.AUTHENTICATED)) {
 
                 // Retrieve scopes.
-                String[] scope =
-                        CibaDAOFactory.getInstance().getCibaAuthMgtDAO().getScope(cibaAuthCodeDO.getCibaAuthCodeKey());
-                cibaAuthCodeDO.setScopes(scope);
+                List<String> scope =
+                        CibaDAOFactory.getInstance().getCibaAuthMgtDAO().getScopes(cibaAuthCodeDO.getCibaAuthCodeKey());
+                cibaAuthCodeDO.setScopes(scope.toArray(new String[scope.size()]));
 
                 // Retrieve authenticated user.
                 AuthenticatedUser authenticatedUser = CibaDAOFactory.getInstance().getCibaAuthMgtDAO()

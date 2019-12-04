@@ -36,6 +36,7 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.List;
 import java.util.TimeZone;
 
 /**
@@ -343,7 +344,7 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
     }
 
     @Override
-    public String[] getScope(String authCodeKey) throws CibaCoreException {
+    public List<String> getScopes(String authCodeKey) throws CibaCoreException {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
             try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.
@@ -355,7 +356,7 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
                 while (resultSet.next()) {
                     scopeArrayList.add(resultSet.getString(1));
                 }
-                return scopeArrayList.toArray(new String[scopeArrayList.size()]);
+                return scopeArrayList;
             }
         } catch (SQLException e) {
             throw new CibaCoreException(

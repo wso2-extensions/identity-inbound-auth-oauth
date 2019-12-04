@@ -29,7 +29,7 @@ public class CibaAuthCodeResponse {
     private String callBackUrl;
     private String bindingMessage;
     private String transactionContext;
-    private String scopes;
+    private String[] scopes;
     private long expiresIn;
 
     public String getBindingMessage() {
@@ -92,12 +92,12 @@ public class CibaAuthCodeResponse {
         this.clientId = clientId;
     }
 
-    public void setScopes(String scopes) {
+    public void setScopes(String[] scopes) {
 
         this.scopes = scopes;
     }
 
-    public String getScopes() {
+    public String[] getScopes() {
 
         return scopes;
     }

@@ -23,6 +23,7 @@ import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeDO;
 
 import java.sql.Timestamp;
+import java.util.List;
 
 /**
  * DAO layer for CIBA.
@@ -118,6 +119,6 @@ public interface CibaMgtDAO {
      * @param authCodeKey identifier of CibaAuthCode.
      * @throws CibaCoreException Exception thrown from CIBA core Component.
      */
-    String[] getScope(String authCodeKey) throws CibaCoreException;
+    List<String> getScopes(String authCodeKey) throws CibaCoreException;
 
 }

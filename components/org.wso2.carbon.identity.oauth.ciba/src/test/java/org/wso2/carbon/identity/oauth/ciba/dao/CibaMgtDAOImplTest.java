@@ -42,6 +42,7 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.Calendar;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
 
@@ -228,7 +229,8 @@ public class CibaMgtDAOImplTest extends PowerMockTestCase {
 
         try (Connection connection1 = getConnection(DB_NAME)) {
             prepareConnection(connection1, false);
-            assertEquals(cibaMgtDAO.getScope(AUTH_CODE_KEY), scopes);
+            List<String> scope = cibaMgtDAO.getScopes(AUTH_CODE_KEY);
+            assertEquals(scope.toArray(new String[scope.size()]), scopes);
         }
     }
 

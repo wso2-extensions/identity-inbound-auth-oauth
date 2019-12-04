@@ -143,7 +143,7 @@ public class CibaAuthServiceImpl implements CibaAuthService {
             cibaAuthCodeResponse.setCallBackUrl(callbackUri);
             cibaAuthCodeResponse.setUserHint(user);
             cibaAuthCodeResponse.setClientId(clientID);
-            cibaAuthCodeResponse.setScopes(OAuth2Util.buildScopeString(cibaAuthCodeRequest.getScopes()));
+            cibaAuthCodeResponse.setScopes(cibaAuthCodeRequest.getScopes());
             cibaAuthCodeResponse.setExpiresIn(cibaAuthCodeDO.getExpiresIn());
 
             if (StringUtils.isNotBlank(cibaAuthCodeRequest.getBindingMessage())) {
