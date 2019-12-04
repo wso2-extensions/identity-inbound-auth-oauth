@@ -78,7 +78,7 @@ public class CibaAuthRequestWrapper extends CommonAuthRequestWrapper {
     }
 
     /**
-     * Will construct the new query parameter with the params
+     * Will construct the new query parameter with the params.
      */
     @Override
     public String getQueryString() {

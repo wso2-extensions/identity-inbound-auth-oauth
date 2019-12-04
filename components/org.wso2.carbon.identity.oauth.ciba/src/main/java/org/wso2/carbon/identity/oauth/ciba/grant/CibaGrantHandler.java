@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oauth.ciba.grant;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.joda.time.DateTime;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.oauth.ciba.common.AuthReqStatus;
 import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
@@ -99,6 +100,9 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
             // Check whether provided authReqId is a valid and retrieve AuthCode if exists.
             CibaAuthCodeDO cibaAuthCodeDO = retrieveCibaAuthCode(authReqId);
 
+            // Check whether auth_req_id is not expired.
+            validateAuthReqId(cibaAuthCodeDO);
+
             // Check whether token is issued for the authReqId.
             if (isTokenAlreadyIssued(cibaAuthCodeDO)) {
                 throw new IdentityOAuth2Exception(INVALID_REQUEST);
@@ -109,9 +113,6 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
                 throw new IdentityOAuth2Exception(CONSENT_DENIED);
             }
 
-            // Check whether auth_req_id is not expired.
-            validateAuthReqId(cibaAuthCodeDO);
-
             // Validate whether polling is under proper rate limiting.
             validatePollingFrequency(cibaAuthCodeDO);
 
@@ -121,7 +122,7 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
                 throw new IdentityOAuth2Exception(AUTHORIZATION_PENDING);
             }
 
-            this.setPropertiesForTokenGeneration(tokReqMsgCtx, cibaAuthCodeDO);
+            setPropertiesForTokenGeneration(tokReqMsgCtx, cibaAuthCodeDO);
             return true;
         } catch (CibaCoreException e) {
             throw new IdentityOAuth2Exception(INVALID_PARAMETERS, e);

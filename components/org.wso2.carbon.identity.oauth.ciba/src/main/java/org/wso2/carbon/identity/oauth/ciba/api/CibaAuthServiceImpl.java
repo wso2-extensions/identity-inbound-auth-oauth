@@ -89,9 +89,11 @@ public class CibaAuthServiceImpl implements CibaAuthService {
         } else if (requestedExpiry < CibaConstants.MAXIMUM_REQUESTED_EXPIRY_IN_SEC) {
             return requestedExpiry;
         } else {
-            log.warn("requested_expiry: " + requestedExpiry + "exceeds default maximum value: " +
-                    CibaConstants.MAXIMUM_REQUESTED_EXPIRY_IN_SEC + " for the CIBA authentication request made by:" +
-                    cibaAuthCodeRequest.getIssuer());
+            if (log.isDebugEnabled()) {
+                log.debug("The requested_expiry: " + requestedExpiry + " exceeds default maximum value: " +
+                        CibaConstants.MAXIMUM_REQUESTED_EXPIRY_IN_SEC + " for the CIBA authentication request made " +
+                        "by: " + cibaAuthCodeRequest.getIssuer());
+            }
             return CibaConstants.MAXIMUM_REQUESTED_EXPIRY_IN_SEC;
         }
     }

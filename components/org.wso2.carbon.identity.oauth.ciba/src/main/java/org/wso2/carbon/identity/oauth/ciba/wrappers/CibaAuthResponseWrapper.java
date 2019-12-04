@@ -23,7 +23,8 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Commo
 import javax.servlet.http.HttpServletResponse;
 
 /**
- * Wrap ciba authentication response.
+ * Wrap CIBA authentication response.
+ * Should be wrapped to passed to the authorize call of authorize endpoint.
  */
 public class CibaAuthResponseWrapper extends CommonAuthResponseWrapper {
 

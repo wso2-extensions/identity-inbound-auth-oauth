@@ -36,10 +36,10 @@ public class CibaServiceComponent {
     private static final Log log = LogFactory.getLog(CibaServiceComponent.class);
 
     @Activate
-    protected void activate(ComponentContext ctxt) {
+    protected void activate(ComponentContext context) {
 
         try {
-            ctxt.getBundleContext().registerService(CibaAuthService.class.getName(),
+            context.getBundleContext().registerService(CibaAuthService.class.getName(),
                     new CibaAuthServiceImpl(), null);
             if (log.isDebugEnabled()) {
                 log.debug("CIBA component bundle is activated.");
@@ -53,7 +53,7 @@ public class CibaServiceComponent {
     protected void deactivate(ComponentContext context) {
 
         if (log.isDebugEnabled()) {
-            log.debug("CIBA Service bundle is deactivated.");
+            log.debug("CIBA component bundle is deactivated.");
         }
     }
 }
