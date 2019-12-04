@@ -103,7 +103,7 @@ public class CibaAuthCodeRequest {
         return jwtId;
     }
 
-    public void setJWTID(String jwtId) {
+    public void setJwtId(String jwtId) {
 
         this.jwtId = jwtId;
     }

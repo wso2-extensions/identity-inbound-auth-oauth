@@ -24,6 +24,7 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.oauth.ciba.common.AuthReqStatus;
 import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
 import org.wso2.carbon.identity.oauth.ciba.dao.CibaDAOFactory;
+import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaClientException;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeDO;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeRequest;
@@ -47,10 +48,10 @@ public class CibaAuthServiceImpl implements CibaAuthService {
 
     @Override
     public CibaAuthCodeResponse generateAuthCodeResponse(CibaAuthCodeRequest cibaAuthCodeRequest)
-            throws CibaCoreException {
+            throws CibaCoreException, CibaClientException {
 
         CibaAuthCodeDO cibaAuthCodeDO = generateCibaAuthCodeDO(cibaAuthCodeRequest);
-        persistCibaAuthCode(cibaAuthCodeDO);
+        CibaDAOFactory.getInstance().getCibaAuthMgtDAO().persistCibaAuthCode(cibaAuthCodeDO);
         return buildAuthCodeResponse(cibaAuthCodeRequest, cibaAuthCodeDO);
     }
 
@@ -59,7 +60,7 @@ public class CibaAuthServiceImpl implements CibaAuthService {
      *
      * @return String Returns random uuid.
      */
-    private static String generateAuthCodeKey() {
+    private String generateAuthCodeKey() {
 
         return UUID.randomUUID().toString();
     }
@@ -69,7 +70,7 @@ public class CibaAuthServiceImpl implements CibaAuthService {
      *
      * @return String Returns random uuid.
      */
-    private static String generateAuthRequestId() {
+    private String generateAuthRequestId() {
 
         return UUID.randomUUID().toString();
     }
@@ -80,7 +81,7 @@ public class CibaAuthServiceImpl implements CibaAuthService {
      * @param cibaAuthCodeRequest Accumulating validated parameters from CibaAuthenticationRequest.
      * @return long Returns expiry_time of the auth_req_id.
      */
-    private static long getExpiresIn(CibaAuthCodeRequest cibaAuthCodeRequest) {
+    private long getExpiresIn(CibaAuthCodeRequest cibaAuthCodeRequest) {
 
         long requestedExpiry = cibaAuthCodeRequest.getRequestedExpiry();
         if (requestedExpiry == 0) {
@@ -88,7 +89,8 @@ public class CibaAuthServiceImpl implements CibaAuthService {
         } else if (requestedExpiry < CibaConstants.MAXIMUM_REQUESTED_EXPIRY_IN_SEC) {
             return requestedExpiry;
         } else {
-            log.warn("(requested_expiry) exceeds default maximum value for the CIBA authentication request made by: " +
+            log.warn("requested_expiry: " + requestedExpiry + "exceeds default maximum value: " +
+                    CibaConstants.MAXIMUM_REQUESTED_EXPIRY_IN_SEC + " for the CIBA authentication request made by:" +
                     cibaAuthCodeRequest.getIssuer());
             return CibaConstants.MAXIMUM_REQUESTED_EXPIRY_IN_SEC;
         }
@@ -100,15 +102,15 @@ public class CibaAuthServiceImpl implements CibaAuthService {
      * @param cibaAuthCodeRequest CIBA Request Data Transfer Object.
      * @return CibaAuthCodeDO.
      */
-    private static CibaAuthCodeDO generateCibaAuthCodeDO(CibaAuthCodeRequest cibaAuthCodeRequest) {
+    private CibaAuthCodeDO generateCibaAuthCodeDO(CibaAuthCodeRequest cibaAuthCodeRequest) {
 
         CibaAuthCodeDO cibaAuthCodeDO = new CibaAuthCodeDO();
         long issuedTimeInMillis = Calendar.getInstance(TimeZone.getTimeZone(CibaConstants.UTC)).getTimeInMillis();
         Timestamp issuedTime = new Timestamp(issuedTimeInMillis);
         long expiryTime = getExpiresIn(cibaAuthCodeRequest);
         String[] scopes = cibaAuthCodeRequest.getScopes();
-        cibaAuthCodeDO.setCibaAuthCodeKey(generateAuthCodeKey());
-        cibaAuthCodeDO.setAuthReqID(generateAuthRequestId());
+        cibaAuthCodeDO.setCibaAuthCodeKey(this.generateAuthCodeKey());
+        cibaAuthCodeDO.setAuthReqID(this.generateAuthRequestId());
         cibaAuthCodeDO.setConsumerKey(cibaAuthCodeRequest.getIssuer());
         cibaAuthCodeDO.setIssuedTime(issuedTime);
         cibaAuthCodeDO.setLastPolledTime(issuedTime); // Initially last polled time is set to issued time.
@@ -124,10 +126,12 @@ public class CibaAuthServiceImpl implements CibaAuthService {
      *
      * @param cibaAuthCodeDO      DO with information regarding authenticationRequest.
      * @param cibaAuthCodeRequest Auth Code request object.
-     * @throws CibaCoreException Exception thrown from CibaCore Component.
+     * @throws CibaCoreException   Exception thrown from CibaCore Component.
+     * @throws CibaClientException Client exception thrown from CibaCore Component.
      */
-    private static CibaAuthCodeResponse buildAuthCodeResponse(CibaAuthCodeRequest cibaAuthCodeRequest,
-                                                              CibaAuthCodeDO cibaAuthCodeDO) throws CibaCoreException {
+    private CibaAuthCodeResponse buildAuthCodeResponse(CibaAuthCodeRequest cibaAuthCodeRequest,
+                                                       CibaAuthCodeDO cibaAuthCodeDO)
+            throws CibaCoreException, CibaClientException {
 
         String clientID = cibaAuthCodeRequest.getIssuer();
         try {
@@ -154,19 +158,10 @@ public class CibaAuthServiceImpl implements CibaAuthService {
                 log.debug("Successful in creating AuthCodeResponse for the client: " + clientID);
             }
             return cibaAuthCodeResponse;
-        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+        } catch (IdentityOAuth2Exception e) {
             throw new CibaCoreException("Error in creating AuthCodeResponse for the client: " + clientID, e);
+        } catch (InvalidOAuthClientException e) {
+            throw new CibaClientException("Error in creating AuthCodeResponse for the client: " + clientID, e);
         }
-    }
-
-    /**
-     * Persist cibaAuthCode.
-     *
-     * @param cibaAuthCodeDO DO with information regarding authenticationRequest.
-     * @throws CibaCoreException Exception thrown from CibaCore Component.
-     */
-    private static void persistCibaAuthCode(CibaAuthCodeDO cibaAuthCodeDO) throws CibaCoreException {
-
-        CibaDAOFactory.getInstance().getCibaAuthMgtDAO().persistCibaAuthCode(cibaAuthCodeDO);
     }
 }

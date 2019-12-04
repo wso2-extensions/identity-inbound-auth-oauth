@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth.ciba.api;
 
+import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaClientException;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeRequest;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeResponse;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
@@ -33,6 +34,8 @@ public interface CibaAuthService {
      * @param cibaAuthCodeRequest CIBA Authentication Request Data Transfer Object.
      * @return CibaAuthCodeResponse CIBA Authentication Response Data Transfer Object.
      * @throws CibaCoreException Core exception from CIBA module.
+     * @throws CibaClientException Client exception from CIBA core component.
      */
-    CibaAuthCodeResponse generateAuthCodeResponse(CibaAuthCodeRequest cibaAuthCodeRequest) throws CibaCoreException;
+    CibaAuthCodeResponse generateAuthCodeResponse(CibaAuthCodeRequest cibaAuthCodeRequest) throws CibaCoreException,
+            CibaClientException;
 }

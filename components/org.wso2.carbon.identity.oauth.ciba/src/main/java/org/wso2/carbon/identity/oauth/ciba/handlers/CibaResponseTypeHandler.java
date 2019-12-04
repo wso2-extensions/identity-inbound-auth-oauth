@@ -43,10 +43,9 @@ public class CibaResponseTypeHandler extends AbstractResponseTypeHandler {
     @Override
     public OAuth2AuthorizeRespDTO issue(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) throws IdentityOAuth2Exception {
 
+        OAuth2AuthorizeRespDTO respDTO = new OAuth2AuthorizeRespDTO();
+        OAuth2AuthorizeReqDTO authorizationReqDTO = oauthAuthzMsgCtx.getAuthorizationReqDTO();
         try {
-            OAuth2AuthorizeRespDTO respDTO = new OAuth2AuthorizeRespDTO();
-            OAuth2AuthorizeReqDTO authorizationReqDTO = oauthAuthzMsgCtx.getAuthorizationReqDTO();
-
             // Assigning authenticated user for the request that to be persisted.
             AuthenticatedUser cibaAuthenticatedUser = authorizationReqDTO.getUser();
 
@@ -67,8 +66,8 @@ public class CibaResponseTypeHandler extends AbstractResponseTypeHandler {
             respDTO.setCallbackURI(callbackURL);
             return respDTO;
         } catch (CibaCoreException e) {
-            throw new IdentityOAuth2Exception("Error occurred in persisting authenticated user and authentication user",
-                    e);
+            throw new IdentityOAuth2Exception("Error occurred in persisting authenticated user and authentication " +
+                    "status for the request made by client: " + authorizationReqDTO.getConsumerKey(), e);
         }
     }
 
