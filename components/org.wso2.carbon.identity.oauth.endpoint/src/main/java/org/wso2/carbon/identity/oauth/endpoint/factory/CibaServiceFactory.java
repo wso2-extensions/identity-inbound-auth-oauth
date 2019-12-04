@@ -18,7 +18,9 @@
 
 package org.wso2.carbon.identity.oauth.endpoint.factory;
 
+import org.springframework.beans.factory.config.AbstractFactoryBean;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.oauth.ciba.api.CibaAuthService;
 import org.wso2.carbon.identity.oauth.ciba.api.CibaAuthServiceImpl;
 
 /**

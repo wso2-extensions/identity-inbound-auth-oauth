@@ -20,15 +20,15 @@ package org.wso2.carbon.identity.oauth.endpoint.ciba;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
+import org.wso2.carbon.identity.oauth.ciba.api.CibaAuthService;
 import org.wso2.carbon.identity.oauth.ciba.api.CibaAuthServiceImpl;
 import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
+import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaClientException;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeRequest;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeResponse;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.endpoint.exception.CibaAuthFailureException;
-import org.wso2.carbon.identity.oauth.endpoint.factory.CibaServiceFactory;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 
 import java.util.Map;
@@ -51,7 +51,7 @@ public class OAuth2CibaEndpoint {
     @Consumes("application/x-www-form-urlencoded")
     @Produces("application/json")
     public Response ciba(@Context HttpServletRequest request, @Context HttpServletResponse response)
-            throws OAuthSystemException {
+            throws  CibaClientException {
 
         // Capture all  Authentication Request parameters.
         Map<String, String[]> requestParameterMap = request.getParameterMap();
@@ -95,7 +95,7 @@ public class OAuth2CibaEndpoint {
             CibaAuthCodeRequest cibaAuthCodeRequest =
                     CibaAuthRequestValidator.getInstance().prepareRequestDTO(authRequest);
 
-             // Obtain Response DTO from service layer of CIBA.
+            // Obtain Response from service layer of CIBA.
             CibaAuthCodeResponse cibaAuthCodeResponse = null;
             try {
                 cibaAuthCodeResponse = EndpointUtil.getCibaAuthService().generateAuthCodeResponse(cibaAuthCodeRequest);
@@ -108,7 +108,7 @@ public class OAuth2CibaEndpoint {
             CibaAuthzHandler.getInstance().initiateAuthzRequest(cibaAuthCodeResponse, request, response);
             if (log.isDebugEnabled()) {
                 log.info("Firing a Authorization request in regard to the request made by client with clientID: "
-                        + cibaAuthCodeResponse.getClientId() + ".");
+                        + cibaAuthCodeResponse.getClientId() + " .");
             }
 
             // Create and return Ciba Authentication Response.

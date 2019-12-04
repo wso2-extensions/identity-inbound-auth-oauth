@@ -27,8 +27,8 @@ import org.wso2.carbon.identity.oauth.ciba.wrappers.CibaAuthRequestWrapper;
 import org.wso2.carbon.identity.oauth.ciba.wrappers.CibaAuthResponseWrapper;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpoint;
-import org.wso2.carbon.identity.oauth.endpoint.exception.CibaAuthFailureException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.model.Constants;
 
 import java.net.URISyntaxException;
@@ -68,7 +68,7 @@ public class CibaAuthzHandler {
         // Add custom parameters to the request by wrapping.
         CibaAuthRequestWrapper cibaAuthRequestWrapper = new CibaAuthRequestWrapper(request);
 
-        cibaAuthRequestWrapper.setParameter(Constants.SCOPE, authCodeResponse.getScopes());
+        cibaAuthRequestWrapper.setParameter(Constants.SCOPE, OAuth2Util.buildScopeString(authCodeResponse.getScopes()));
         cibaAuthRequestWrapper.setParameter(Constants.RESPONSE_TYPE, CibaConstants.RESPONSE_TYPE_VALUE);
         cibaAuthRequestWrapper.setParameter(Constants.NONCE, authCodeResponse.getAuthReqId());
         cibaAuthRequestWrapper.setParameter(Constants.REDIRECT_URI, authCodeResponse.getCallBackUrl());
