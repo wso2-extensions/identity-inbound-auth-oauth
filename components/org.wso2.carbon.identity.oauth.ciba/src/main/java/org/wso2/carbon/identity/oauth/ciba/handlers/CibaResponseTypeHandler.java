@@ -31,7 +31,6 @@ import org.wso2.carbon.identity.oauth2.authz.handlers.AbstractResponseTypeHandle
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
-import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 /**
  * Handles authorize requests with CibaAuthCode as response type.
@@ -52,14 +51,12 @@ public class CibaResponseTypeHandler extends AbstractResponseTypeHandler {
             // Assigning the authentication status that to be persisted.
             Enum authenticationStatus = AuthReqStatus.AUTHENTICATED;
 
-            int authenticatedTenant = OAuth2Util.getTenantId(cibaAuthenticatedUser.getTenantDomain());
-
             String authCodeKey =
                     CibaDAOFactory.getInstance().getCibaAuthMgtDAO().getCibaAuthCodeKey(authorizationReqDTO.getNonce());
 
             // Update successful authentication.
             CibaDAOFactory.getInstance().getCibaAuthMgtDAO()
-                    .persistAuthenticationSuccess(authCodeKey, cibaAuthenticatedUser, authenticatedTenant);
+                    .persistAuthenticationSuccess(authCodeKey, cibaAuthenticatedUser);
 
             // Building custom CallBack URL.
             String callbackURL = authorizationReqDTO.getCallbackUrl() + "?authenticationStatus=" + authenticationStatus;

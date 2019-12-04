@@ -69,6 +69,8 @@ public class SQLQueries {
                 "VALUES (?,?)";
 
         public static final String RETRIEVE_SCOPE =
-                "SELECT SCOPE FROM IDN_OAUTH2_CIBA_REQUEST_SCOPES WHERE AUTH_CODE_KEY = ? ";
+                "SELECT SCOPE FROM IDN_OAUTH2_CIBA_AUTH_CODE INNER JOIN IDN_OAUTH2_CIBA_REQUEST_SCOPES ON " +
+                        "(IDN_OAUTH2_CIBA_AUTH_CODE.AUTH_CODE_KEY = IDN_OAUTH2_CIBA_REQUEST_SCOPES.AUTH_CODE_KEY) " +
+                        " WHERE IDN_OAUTH2_CIBA_AUTH_CODE.AUTH_CODE_KEY= ? ";
     }
 }

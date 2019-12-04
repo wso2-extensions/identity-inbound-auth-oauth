@@ -139,25 +139,6 @@ public class CibaMgtDAOImplTest extends PowerMockTestCase {
     }
 
     @Test
-    public void testPersistAuthenticatedUser() throws Exception {
-
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(mockedServerConfig);
-        mockStatic(OAuth2Util.class);
-        when(OAuth2Util.getTenantDomain(anyInt())).thenReturn("super.wso2");
-
-        try (Connection connection1 = getConnection(DB_NAME)) {
-            prepareConnection(connection1, true);
-            cibaMgtDAO.persistAuthenticatedUser(AUTH_CODE_KEY, authenticatedUser, -1234);
-        }
-
-        try (Connection connection2 = getConnection(DB_NAME)) {
-            prepareConnection(connection2, false);
-            assertEquals(cibaMgtDAO.getAuthenticatedUser(AUTH_CODE_KEY).getUserName(), "randomUser");
-        }
-    }
-
-    @Test
     public void testPersistAuthenticationSuccessStatus() throws Exception {
 
         try (Connection connection1 = getConnection(DB_NAME)) {

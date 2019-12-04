@@ -73,39 +73,7 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
     }
 
     @Override
-    public void persistAuthenticatedUser(String authCodeKey, AuthenticatedUser authenticatedUser, int tenantID)
-            throws CibaCoreException {
-
-        try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
-            try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.CibaSQLQueries.
-                    UPDATE_AUTHENTICATED_USER)) {
-
-                prepStmt.setString(1, authenticatedUser.getUserName());
-                prepStmt.setString(2, authenticatedUser.getUserStoreDomain());
-                prepStmt.setInt(3, tenantID);
-                prepStmt.setString(4, authCodeKey);
-                prepStmt.execute();
-                IdentityDatabaseUtil.commitTransaction(connection);
-                if (log.isDebugEnabled()) {
-                    log.debug("Successfully persisted the authenticated_user identified by AuthCodeKey : " +
-                            authCodeKey);
-                }
-            } catch (SQLException e) {
-                IdentityDatabaseUtil.rollbackTransaction(connection);
-                throw new CibaCoreException(
-                        "Error occurred in persisting the authenticated user: " + authenticatedUser.getUserName() +
-                                " identified by authCodeKey: " + authCodeKey, e);
-            }
-        } catch (SQLException e) {
-            throw new CibaCoreException(
-                    "Error occurred in persisting the authenticated user: " +
-                            authenticatedUser.toFullQualifiedUsername() + " identified by authCodeKey: " + authCodeKey,
-                    e);
-        }
-    }
-
-    @Override
-    public void persistAuthenticationSuccess(String authCodeKey, AuthenticatedUser authenticatedUser, int tenantID)
+    public void persistAuthenticationSuccess(String authCodeKey, AuthenticatedUser authenticatedUser)
             throws CibaCoreException {
 
         // Obtain authenticated identity provider's identifier.
@@ -115,11 +83,12 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
             try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.CibaSQLQueries.
                     UPDATE_AUTHENTICATION_SUCCESS)) {
 
+                int authenticatedTenant = OAuth2Util.getTenantId(authenticatedUser.getTenantDomain());
                 prepStmt.setString(1, authenticatedUser.getUserName());
                 prepStmt.setString(2, authenticatedUser.getUserStoreDomain());
-                prepStmt.setInt(3, tenantID);
+                prepStmt.setInt(3, authenticatedTenant);
                 prepStmt.setString(4, authenticatedIDP);
-                prepStmt.setInt(5, tenantID);
+                prepStmt.setInt(5, authenticatedTenant);
                 prepStmt.setString(6, AuthReqStatus.AUTHENTICATED.toString());
                 prepStmt.setString(7, authCodeKey);
                 prepStmt.execute();
@@ -128,7 +97,7 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
                     log.debug("Successfully updated the authentication request status to 'AUTHENTICATED' for the " +
                             "request identified by authCodeKey: " + authCodeKey);
                 }
-            } catch (SQLException e) {
+            } catch (SQLException | IdentityOAuth2Exception e) {
                 IdentityDatabaseUtil.rollbackTransaction(connection);
                 throw new CibaCoreException("Error occurred in persisting the successful authentication identified by" +
                         " authCodeKey: " + authCodeKey, e);
@@ -239,7 +208,8 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
                     authenticatedUser.setTenantDomain(OAuth2Util.getTenantDomain(resultSet.getInt(3)));
                     return authenticatedUser;
                 } else {
-                    throw new CibaCoreException("No record found for authenticatedUser of TokenRequest.");
+                    throw new CibaCoreException("No record found for authenticatedUser of TokenRequest identified by " +
+                            "authCodeKey: " + authCodeKey);
                 }
             } catch (IdentityOAuth2Exception e) {
                 throw new CibaCoreException("Error occurred in obtaining authenticatedUser of TokenRequest identified" +
@@ -277,7 +247,8 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
             } catch (SQLException e) {
                 IdentityDatabaseUtil.rollbackTransaction(connection);
                 throw new CibaCoreException("Error occurred while persisting cibaAuthCode for the application with " +
-                        "consumer key: " + cibaAuthCodeDO.getConsumerKey(), e);
+                        "consumer key: " + cibaAuthCodeDO.getConsumerKey() + " and with authCodeKey: " +
+                        cibaAuthCodeDO.getCibaAuthCodeKey(), e);
             }
 
             try (PreparedStatement prepStmtForScope =
@@ -298,13 +269,15 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
             } catch (SQLException e) {
                 IdentityDatabaseUtil.rollbackTransaction(connection);
                 throw new CibaCoreException("Error occurred while persisting scopes for the application with " +
-                        "consumer key: " + cibaAuthCodeDO.getConsumerKey(), e);
+                        "consumer key: " + cibaAuthCodeDO.getConsumerKey() + " and with authCodeKey: " +
+                        cibaAuthCodeDO.getCibaAuthCodeKey(), e);
             }
 
             IdentityDatabaseUtil.commitTransaction(connection);
         } catch (SQLException e) {
             throw new CibaCoreException("Error occurred while persisting cibaAuthCode for the application with " +
-                    "consumer key: " + cibaAuthCodeDO.getConsumerKey(), e);
+                    "consumer key: " + cibaAuthCodeDO.getConsumerKey() + " and with authCodeKey: " +
+                    cibaAuthCodeDO.getCibaAuthCodeKey(), e);
         }
     }
 

@@ -40,26 +40,13 @@ public interface CibaMgtDAO {
     void updateStatus(String authCodeKey, Enum authenticationStatus) throws CibaCoreException;
 
     /**
-     * Persists the authenticated_user of the relevant CibAuthCode identified by the CibaAuthCodeKey.
-     *
-     * @param authCodeKey       Identifier for CibaAuthCode.
-     * @param authenticatedUser Authenticated user of the relevant CibaAuthCode.
-     * @param tenantID          Tenant ID.
-     * @throws CibaCoreException Exception thrown from CIBA Core Component.
-     */
-    void persistAuthenticatedUser(String authCodeKey, AuthenticatedUser authenticatedUser, int tenantID)
-            throws CibaCoreException;
-
-    /**
      * Persists the authenticated_user and status of the relevant CibAuthCode identified by the CibaAuthCodeKey.
      *
      * @param authCodeKey       Identifier for CibaAuthCode.
      * @param authenticatedUser Authenticated user of the relevant CibaAuthCode.
-     * @param tenantID          Tenant ID.
      * @throws CibaCoreException Exception thrown from CIBA Core Component.
      */
-    void persistAuthenticationSuccess(String authCodeKey, AuthenticatedUser authenticatedUser, int tenantID)
-            throws CibaCoreException;
+    void persistAuthenticationSuccess(String authCodeKey, AuthenticatedUser authenticatedUser) throws CibaCoreException;
 
     /**
      * Returns CibaAuthCodeKey for the authentication request identifier.
