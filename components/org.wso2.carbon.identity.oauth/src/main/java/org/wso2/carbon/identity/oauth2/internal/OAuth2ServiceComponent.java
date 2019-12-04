@@ -48,6 +48,7 @@ import org.wso2.carbon.identity.oauth2.dao.SQLQueries;
 import org.wso2.carbon.identity.oauth2.listener.TenantCreationEventListener;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.token.bindings.impl.CookieBasedTokenBinder;
+import org.wso2.carbon.identity.oauth2.token.bindings.impl.SSOSessionBasedTokenBinder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilter;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImpl;
@@ -138,6 +139,10 @@ public class OAuth2ServiceComponent {
             // Register cookie based access token binder.
             CookieBasedTokenBinder cookieBasedTokenBinder = new CookieBasedTokenBinder();
             bundleContext.registerService(TokenBinderInfo.class.getName(), cookieBasedTokenBinder, null);
+
+            // SSO session based access token binder.
+            SSOSessionBasedTokenBinder ssoSessionBasedTokenBinder = new SSOSessionBasedTokenBinder();
+            bundleContext.registerService(TokenBinderInfo.class.getName(), ssoSessionBasedTokenBinder, null);
 
             if (log.isDebugEnabled()) {
                 log.debug("Identity OAuth bundle is activated");

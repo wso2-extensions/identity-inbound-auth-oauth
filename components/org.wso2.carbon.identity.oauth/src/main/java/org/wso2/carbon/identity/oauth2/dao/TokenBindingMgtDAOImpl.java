@@ -77,7 +77,7 @@ public class TokenBindingMgtDAOImpl implements TokenBindingMgtDAO {
             }
         } catch (SQLException e) {
             throw new IdentityOAuth2Exception(
-                    "Failed to check the existance of token binding reference: " + tokenBindingReference, e);
+                    "Failed to check the existence of token binding reference: " + tokenBindingReference, e);
         }
     }
 
