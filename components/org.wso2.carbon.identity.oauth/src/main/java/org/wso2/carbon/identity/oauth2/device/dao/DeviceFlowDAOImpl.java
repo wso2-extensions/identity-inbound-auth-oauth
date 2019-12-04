@@ -124,7 +124,10 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
             ResultSet resultSet = null;
             AuthenticatedUser user = null;
+            int tenantId = 0;
+            String userName = null;
             boolean checked = false;
+            String userDomain = null;
             DeviceFlowDO deviceFlowDO = new DeviceFlowDO();
             try (PreparedStatement prepStmt =
                          connection.prepareStatement(SQLQueries.DeviceFlowDAOSQLQueries.GET_AUTHENTICATION_STATUS)) {
@@ -138,15 +141,17 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
                     deviceFlowDO.setPollTime(resultSet.getLong(3));
                     deviceFlowDO.setExpiryTime(resultSet.getTimestamp(4,
                             Calendar.getInstance(TimeZone.getTimeZone(Constants.UTC))));
-                    String userName = resultSet.getString(5);
-                    int tenantId = resultSet.getInt(6);
-                    String userDomain = resultSet.getString(7);
-                    String tenantDomain = OAuth2Util.getTenantDomain(tenantId);
-                    user = OAuth2Util.createAuthenticatedUser(userName, userDomain, tenantDomain);
-                    deviceFlowDO.setAuthorizedUser(user);
+                    userName = resultSet.getString(5);
+                    tenantId = resultSet.getInt(6);
+                    userDomain = resultSet.getString(7);
                     checked = true;
                 }
                 if (checked) {
+                    if (userName != null && tenantId != 0 && userDomain != null) {
+                        String tenantDomain = OAuth2Util.getTenantDomain(tenantId);
+                        user = OAuth2Util.createAuthenticatedUser(userName, userDomain, tenantDomain);
+                        deviceFlowDO.setAuthorizedUser(user);
+                    }
                     return deviceFlowDO;
                 } else {
                     deviceFlowDO.setStatus(Constants.NOT_EXIST);
