@@ -51,7 +51,7 @@ public class SQLQueries {
 
         public static final String RETRIEVE_AUTHENTICATION_STATUS =
                 "SELECT AUTH_REQ_STATUS FROM IDN_OAUTH2_CIBA_AUTH_CODE WHERE AUTH_CODE_KEY = ? ";
-        
+
         public static final String RETRIEVE_CIBA_AUTH_CODE_KEY_BY_CIBA_AUTH_REQ_ID =
                 "SELECT AUTH_CODE_KEY FROM IDN_OAUTH2_CIBA_AUTH_CODE WHERE AUTH_REQ_ID = ?";
 
@@ -65,10 +65,10 @@ public class SQLQueries {
                 " AUTH_REQ_ID, CONSUMER_KEY, LAST_POLLED_TIME, POLLING_INTERVAL, EXPIRES_IN, AUTH_REQ_STATUS, " +
                 " ISSUED_TIME FROM IDN_OAUTH2_CIBA_AUTH_CODE WHERE AUTH_CODE_KEY = ?";
 
-        public static final String STORE_SCOPES = "INSERT INTO IDN_OAUTH2_CIBA_REQ_SCOPES (AUTH_CODE_KEY,SCOPE) " +
+        public static final String STORE_SCOPES = "INSERT INTO IDN_OAUTH2_CIBA_REQUEST_SCOPES (AUTH_CODE_KEY,SCOPE) " +
                 "VALUES (?,?)";
 
-        public static final String RETRIEVE_SCOPE = "SELECT SCOPE FROM IDN_OAUTH2_CIBA_REQ_SCOPES WHERE AUTH_CODE_KEY" +
-                " = ? ";
+        public static final String RETRIEVE_SCOPE =
+                "SELECT SCOPE FROM IDN_OAUTH2_CIBA_REQUEST_SCOPES WHERE AUTH_CODE_KEY = ? ";
     }
 }
