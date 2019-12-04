@@ -21,28 +21,27 @@ package org.wso2.carbon.identity.oauth.endpoint.factory;
 import org.springframework.beans.factory.config.AbstractFactoryBean;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthService;
-import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthServiceImpl;
 
 /**
  * This class is used to register DeviceAuthService as a factory bean.
  */
-public class DeviceAuthServiceFactory extends AbstractFactoryBean<DeviceAuthServiceImpl> {
+public class DeviceAuthServiceFactory extends AbstractFactoryBean<DeviceAuthService> {
 
-    private DeviceAuthServiceImpl deviceAuthService;
+    private DeviceAuthService deviceAuthService;
 
     @Override
-    public Class<DeviceAuthServiceImpl> getObjectType() {
+    public Class<DeviceAuthService> getObjectType() {
 
-        return DeviceAuthServiceImpl.class;
+        return DeviceAuthService.class;
     }
 
     @Override
-    protected DeviceAuthServiceImpl createInstance() throws Exception {
+    protected DeviceAuthService createInstance() throws Exception {
 
         if (this.deviceAuthService != null) {
             return this.deviceAuthService;
         } else {
-            DeviceAuthServiceImpl deviceAuthService = (DeviceAuthServiceImpl)
+            DeviceAuthService deviceAuthService = (DeviceAuthService)
                     PrivilegedCarbonContext.getThreadLocalCarbonContext().
                             getOSGiService(DeviceAuthService.class, null);
             if (deviceAuthService != null) {

@@ -43,6 +43,7 @@ import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.OpenIDConnectUserRPStore;
 import org.wso2.carbon.identity.oauth.endpoint.util.TestOAuthEndpointBase;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
+import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthServiceImpl;
 import org.wso2.carbon.identity.oauth2.device.dao.DeviceFlowDAO;
 import org.wso2.carbon.identity.oauth2.device.dao.DeviceFlowPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.model.CarbonOAuthAuthzRequest;
@@ -159,7 +160,9 @@ public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
         mockStatic(IdentityUtil.class);
         when(IdentityUtil.getServerURL(anyString(), anyBoolean(), anyBoolean())).thenReturn(TEST_URL);
         when(oAuth2AuthzEndpoint.authorize(any(CommonAuthRequestWrapper.class), any(HttpServletResponse.class))).thenReturn(response);
+        DeviceAuthServiceImpl deviceAuthService = new DeviceAuthServiceImpl();
         userAuthenticationEndpoint = new UserAuthenticationEndpoint();
+        userAuthenticationEndpoint.setDeviceAuthService(deviceAuthService);
         WhiteboxImpl.setInternalState(userAuthenticationEndpoint, OAuth2AuthzEndpoint.class, oAuth2AuthzEndpoint);
         response1 = userAuthenticationEndpoint.deviceAuthorize(httpServletRequest, httpServletResponse);
         if (expectedValue == HttpServletResponse.SC_ACCEPTED) {

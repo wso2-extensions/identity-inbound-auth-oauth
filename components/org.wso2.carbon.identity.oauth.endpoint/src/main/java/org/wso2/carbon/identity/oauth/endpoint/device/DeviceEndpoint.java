@@ -23,7 +23,7 @@ import org.apache.commons.logging.LogFactory;
 import org.json.JSONObject;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
-import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthServiceImpl;
+import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthService;
 import org.wso2.carbon.identity.oauth2.device.codegenerator.GenerateKeys;
 import org.wso2.carbon.identity.oauth2.device.constants.Constants;
 import org.wso2.carbon.identity.oauth2.device.errorcodes.DeviceErrorCodes;
@@ -42,9 +42,8 @@ import javax.ws.rs.core.Response;
 public class DeviceEndpoint {
 
     private static final Log log = LogFactory.getLog(DeviceEndpoint.class);
-    private DeviceAuthServiceImpl deviceAuthService = new DeviceAuthServiceImpl();
-
-    public void setDeviceAuthService(DeviceAuthServiceImpl deviceAuthService) {
+    private DeviceAuthService deviceAuthService;
+    public void setDeviceAuthService(DeviceAuthService deviceAuthService) {
 
         this.deviceAuthService = deviceAuthService;
     }

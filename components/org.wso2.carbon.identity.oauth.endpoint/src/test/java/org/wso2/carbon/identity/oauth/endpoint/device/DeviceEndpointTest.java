@@ -131,6 +131,8 @@ public class DeviceEndpointTest extends TestOAuthEndpointBase {
     @Test(dataProvider = "dataValues")
     public void testDevice(String clientId, int expectedStatus, boolean status) throws IdentityOAuth2Exception {
 
+        DeviceAuthServiceImpl deviceAuthService = new DeviceAuthServiceImpl();
+        deviceEndpoint.setDeviceAuthService(deviceAuthService);
         mockStatic(IdentityDatabaseUtil.class);
         when(IdentityDatabaseUtil.getDBConnection(true)).thenReturn(connection);
         when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
@@ -142,7 +144,6 @@ public class DeviceEndpointTest extends TestOAuthEndpointBase {
         when(DeviceFlowPersistenceFactory.getInstance()).thenReturn(deviceFlowPersistenceFactory);
         when(deviceFlowPersistenceFactory.getDeviceFlowDAO()).thenReturn(deviceFlowDAO);
         when(deviceFlowDAO.checkClientIdExist(anyString())).thenReturn(status);
-//        WhiteboxImpl.setInternalState(deviceEndpoint, DeviceAuthService.class, deviceAuthService);
         response = deviceEndpoint.authorize(httpServletRequest, httpServletResponse);
         Assert.assertEquals(response.getStatus(), expectedStatus);
     }
