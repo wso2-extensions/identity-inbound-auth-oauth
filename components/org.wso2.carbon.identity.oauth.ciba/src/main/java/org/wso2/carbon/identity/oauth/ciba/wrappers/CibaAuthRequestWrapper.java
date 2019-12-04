@@ -18,9 +18,13 @@
 
 package org.wso2.carbon.identity.oauth.ciba.wrappers;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.model.CommonAuthRequestWrapper;
 import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -33,6 +37,8 @@ public class CibaAuthRequestWrapper extends CommonAuthRequestWrapper {
 
     // Map to accumulate additional parameters.
     private Map<String, String> extraParameters;
+
+    private static final Log log = LogFactory.getLog(CibaAuthRequestWrapper.class);
 
     public CibaAuthRequestWrapper(HttpServletRequest request) {
 
@@ -69,5 +75,28 @@ public class CibaAuthRequestWrapper extends CommonAuthRequestWrapper {
         extraParameters.forEach((key, value) -> parameterMap.put(key, new String[]{value}));
         parameterMap.remove(CibaConstants.REQUEST);
         return Collections.unmodifiableMap(parameterMap);
+    }
+
+    /**
+     * Will construct the new query parameter with the params
+     */
+    @Override
+    public String getQueryString() {
+
+        StringBuilder sb = new StringBuilder();
+        for (Map.Entry<String, String[]> entry : getParameterMap().entrySet()) {
+            if (sb.length() > 0) {
+                sb.append('&');
+            }
+            try {
+                sb.append(URLEncoder.encode(entry.getKey(), "UTF-8"))
+                        .append('=')
+                        .append(URLEncoder.encode(entry.getValue()[0], "UTF-8"));
+            } catch (UnsupportedEncodingException e) {
+                log.error("Error while encoding query string built using entry key : " + entry.
+                        getKey() + " and value : " + entry.getValue()[0], e);
+            }
+        }
+        return sb.toString();
     }
 }
