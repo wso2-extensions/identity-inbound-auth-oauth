@@ -2228,4 +2228,92 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 .isNotBlank(tokenBinding.getBindingReference()) && StringUtils
                 .isNotBlank(tokenBinding.getBindingValue());
     }
+
+    /**
+     * Retrieves active AccessTokenDOs with token id for the given consumer key.
+     *
+     * @param consumerKey client id
+     * @return access token data object set
+     * @throws IdentityOAuth2Exception
+     */
+    @Override
+    public Set<AccessTokenDO> getActiveTokenSetWithTokenIdByConsumerKeyForOpenidScope(String consumerKey)
+            throws IdentityOAuth2Exception {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Retrieving active access token set with token id of client: " + consumerKey);
+        }
+        Set<AccessTokenDO> activeAccessTokenDOSet = getActiveAccessTokenSetByConsumerKeyForOpenidScope(consumerKey,
+                IdentityUtil.getPrimaryDomainName());
+
+        if (OAuth2Util.checkAccessTokenPartitioningEnabled() && OAuth2Util.checkUserNameAssertionEnabled()) {
+            Map<String, String> availableDomainMappings = OAuth2Util.getAvailableUserStoreDomainMappings();
+            for (Map.Entry<String, String> availableDomainMapping : availableDomainMappings.entrySet()) {
+                activeAccessTokenDOSet.addAll(getActiveAccessTokenSetByConsumerKeyForOpenidScope(consumerKey,
+                        availableDomainMapping.getKey()));
+            }
+        }
+        return activeAccessTokenDOSet;
+    }
+
+    /**
+     * Retrieves active AccessTokenDOs with token id for a given consumer key
+     * @param consumerKey client id
+     * @param userStoreDomain
+     * @return set of access token data objects
+     * @throws IdentityOAuth2Exception
+     */
+    private Set<AccessTokenDO> getActiveAccessTokenSetByConsumerKeyForOpenidScope(String consumerKey, String userStoreDomain)
+            throws IdentityOAuth2Exception {
+
+        Connection connection = IdentityDatabaseUtil.getDBConnection();
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        Set<AccessTokenDO> accessTokens = new HashSet<>();
+        try {
+            String sqlQuery = OAuth2Util.getTokenPartitionedSqlByUserStore(SQLQueries.
+                    GET_ACCESS_TOKENS_AND_TOKEN_IDS_FOR_CONSUMER_KEY, userStoreDomain);
+            ps = connection.prepareStatement(sqlQuery);
+            ps.setString(1, consumerKey);
+            ps.setString(2, OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
+            ps.setString(3, OAuthConstants.Scope.OPENID);
+            rs = ps.executeQuery();
+
+            while (rs.next()) {
+                String accessToken = getPersistenceProcessor().getPreprocessedAccessTokenIdentifier(rs.getString(1));
+                String tokenId = rs.getString(2);
+                Timestamp timeCreated = rs.getTimestamp(3, Calendar.getInstance(TimeZone.getTimeZone(UTC)));
+                long issuedTimeInMillis = timeCreated.getTime();
+                long validityPeriodInMillis = rs.getLong(4);
+
+                if (!isAccessTokenExpired(issuedTimeInMillis, validityPeriodInMillis)) {
+                    AccessTokenDO accessTokenDO = new AccessTokenDO();
+                    accessTokenDO.setAccessToken(accessToken);
+                    accessTokenDO.setTokenId(tokenId);
+                    accessTokens.add(accessTokenDO);
+                }
+
+            }
+            connection.commit();
+        } catch (SQLException e) {
+            IdentityDatabaseUtil.rollBack(connection);
+            throw new IdentityOAuth2Exception("Error occurred while getting access tokens from access token table for "
+                    + "the application with consumer key : " + consumerKey, e);
+        } finally {
+            IdentityDatabaseUtil.closeAllConnections(connection, rs, ps);
+        }
+        return accessTokens;
+    }
+
+    /**
+     * Checks whether the issued token is expired.
+     *
+     * @param issuedTimeInMillis
+     * @param validityPeriodMillis
+     * @return true if access token is expired. False if not.
+     */
+    private boolean isAccessTokenExpired(long issuedTimeInMillis, long validityPeriodMillis) {
+
+        return OAuth2Util.getTimeToExpire(issuedTimeInMillis, validityPeriodMillis) < 0;
+    }
 }

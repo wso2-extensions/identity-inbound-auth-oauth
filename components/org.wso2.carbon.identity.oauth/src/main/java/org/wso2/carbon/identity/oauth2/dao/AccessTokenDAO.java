@@ -24,6 +24,7 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 /*
@@ -169,4 +170,10 @@ public interface AccessTokenDAO {
      * @throws IdentityOAuth2Exception
      */
     void updateAccessTokenState(String tokenId, String tokenState) throws IdentityOAuth2Exception;
+
+    default Set<AccessTokenDO> getActiveTokenSetWithTokenIdByConsumerKeyForOpenidScope(String consumerKey)
+            throws IdentityOAuth2Exception {
+
+        return Collections.emptySet();
+    }
 }

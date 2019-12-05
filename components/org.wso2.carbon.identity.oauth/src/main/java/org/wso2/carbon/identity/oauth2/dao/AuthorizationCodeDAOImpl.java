@@ -44,6 +44,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.HashSet;
 import java.util.List;
@@ -747,5 +748,78 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
         return new AuthzCodeDO(user, OAuth2Util.buildScopeArray(scopeString), issuedTime, validityPeriod, callbackUrl,
                 consumerKey, authorizationKey, codeId, codeState, pkceCodeChallenge, pkceCodeChallengeMethod,
                 tokenBindingReference);
+    }
+
+    private boolean isActiveAuthzCodeIssuedForOidcFlow(String[] scope, long issuedTimeInMillis,
+            long validityPeriodInMillis) {
+
+        return isAuthorizationCodeIssuedForOpenidScope(scope) && (
+                OAuth2Util.getTimeToExpire(issuedTimeInMillis, validityPeriodInMillis) > 0);
+    }
+
+    /**
+     * This method will retrieve the authorization code and code id from the IDN_OAUTH2_AUTHORIZATION_CODE table and
+     * return as a dataobject.
+     * @param consumerKey client id
+     * @return authorization code data object
+     * @throws IdentityOAuth2Exception
+     */
+    public Set<AuthzCodeDO> getAuthorizationCodeDOSetByConsumerKeyForOpenidScope(String consumerKey) throws IdentityOAuth2Exception {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Retrieving active authorization code data objects for client: " + consumerKey);
+        }
+        Connection connection = IdentityDatabaseUtil.getDBConnection();
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        Set<AuthzCodeDO> authzCodeDOs = new HashSet<>();
+        String sqlQuery = SQLQueries.GET_DETAILED_ACTIVE_AUTHORIZATION_CODES_FOR_CONSUMER_KEY;
+        try {
+            ps = connection.prepareStatement(sqlQuery);
+            ps.setString(1, consumerKey);
+            ps.setString(2, OAuthConstants.AuthorizationCodeState.ACTIVE);
+            rs = ps.executeQuery();
+            while (rs.next()) {
+
+                AuthzCodeDO authzCodeDO = new AuthzCodeDO();
+                String authzCode = getPersistenceProcessor().getPreprocessedAuthzCode(rs.getString(1));
+                String codeId = rs.getString(2);
+                Timestamp timeCreated = rs.getTimestamp(3, Calendar.getInstance(TimeZone.getTimeZone(UTC)));
+                long issuedTimeInMillis = timeCreated.getTime();
+                long validityPeriodInMillis = rs.getLong(4);
+                String[] scope = OAuth2Util.buildScopeArray(rs.getString(5));
+                authzCodeDO.setAuthorizationCode(authzCode);
+                authzCodeDO.setAuthzCodeId(codeId);
+
+                if (isActiveAuthzCodeIssuedForOidcFlow(scope, issuedTimeInMillis, validityPeriodInMillis)) {
+                    if (isHashDisabled) {
+                        authzCodeDOs.add(authzCodeDO);
+                    }
+                }
+            }
+            connection.commit();
+        } catch (SQLException e) {
+            IdentityDatabaseUtil.rollBack(connection);
+            throw new IdentityOAuth2Exception(
+                    "Error occurred while getting authorization codes and code ids from " + "authorization code "
+                            + "table for the application with consumer key : " + consumerKey, e);
+        } finally {
+            IdentityDatabaseUtil.closeAllConnections(connection, rs, ps);
+        }
+        return authzCodeDOs;
+    }
+
+    /**
+     * Checks whether the issued authorization code is for openid scope.
+     *
+     * @param scopes
+     * @return true if authorization code issued for openid scope. False if not.
+     */
+    private boolean isAuthorizationCodeIssuedForOpenidScope(String[] scopes) {
+
+        if (ArrayUtils.isNotEmpty(scopes)) {
+            return Arrays.asList(scopes).contains(OAuthConstants.Scope.OPENID);
+        }
+        return false;
     }
 }
