@@ -97,7 +97,7 @@ public class OIDCSessionManagementUtil {
     public static String addSessionStateToURL(String url, String sessionState, String responseType) {
 
         if (StringUtils.isNotBlank(url) && StringUtils.isNotBlank(sessionState)) {
-            if(OAuth2Util.isImplicitResponseType(responseType)) {
+            if (OAuth2Util.isImplicitResponseType(responseType) || OAuth2Util.isHybridResponseType(responseType)) {
                 if (url.indexOf('#') > 0) {
                     return url + "&" + OIDCSessionConstants.OIDC_SESSION_STATE_PARAM + "=" + sessionState;
                 } else {
