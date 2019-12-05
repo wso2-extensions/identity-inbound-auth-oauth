@@ -50,7 +50,7 @@ public class CibaGrantHandlerTest extends PowerMockTestCase {
     private static final String NONCE = "2201e5aa-1c5f-4a17-90c9-1956a3540b19";
     private static final String CONSUMER_KEY = "ZzxmDqqK8YYfjtlOh9vw85qnNVoa";
     private static final String AUTH_CODE_KEY = "039e8fff-1b24-420a-9dae-0ad745c96e97";
-    private final String TEST_CALLBACK_URL = "https://localhost:8000/callback";
+    private static final String TEST_CALLBACK_URL = "https://localhost:8000/callback";
 
     @Mock
     OAuthServerConfiguration oAuthServerConfiguration;

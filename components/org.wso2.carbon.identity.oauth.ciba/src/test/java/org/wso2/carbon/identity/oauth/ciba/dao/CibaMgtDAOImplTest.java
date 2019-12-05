@@ -46,11 +46,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
 
-import static org.mockito.Matchers.anyInt;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertTrue;
 
 @PrepareForTest({IdentityDatabaseUtil.class, OAuthServerConfiguration.class, OAuth2Util.class})
 @WithH2Database(files = {"dbScripts/h2.sql", "dbScripts/identity.sql"})
@@ -95,7 +93,7 @@ public class CibaMgtDAOImplTest extends PowerMockTestCase {
 
         cibaAuthCodeDO.setAuthReqStatus(AuthReqStatus.REQUESTED);
         cibaAuthCodeDO.setCibaAuthCodeKey(AUTH_CODE_KEY);
-        cibaAuthCodeDO.setAuthReqID(AUTH_REQ_ID);
+        cibaAuthCodeDO.setAuthReqId(AUTH_REQ_ID);
         cibaAuthCodeDO.setConsumerKey(CONSUMER_KEY);
         cibaAuthCodeDO.setLastPolledTime(lastPolledTime);
         cibaAuthCodeDO.setIssuedTime(issuedTime);

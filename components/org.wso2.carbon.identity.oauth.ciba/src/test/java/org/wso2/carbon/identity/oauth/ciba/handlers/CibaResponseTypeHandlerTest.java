@@ -50,7 +50,7 @@ public class CibaResponseTypeHandlerTest extends PowerMockTestCase {
 
     private static final String NONCE = "2201e5aa-1c5f-4a17-90c9-1956a3540b19";
     private static final String CONSUMER_KEY = "ZzxmDqqK8YYfjtlOh9vw85qnNVoa";
-    private final String TEST_CALLBACK_URL = "https://localhost:8000/callback";
+    private static final String TEST_CALLBACK_URL = "https://localhost:8000/callback";
 
     OAuthAuthzReqMessageContext authAuthzReqMessageContext;
     OAuth2AuthorizeReqDTO authorizationReqDTO;
