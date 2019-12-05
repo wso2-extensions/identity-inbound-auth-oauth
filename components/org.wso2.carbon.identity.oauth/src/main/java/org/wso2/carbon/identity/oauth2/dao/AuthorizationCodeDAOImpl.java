@@ -818,7 +818,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
     private boolean isAuthorizationCodeIssuedForOpenidScope(String[] scopes) {
 
         if (ArrayUtils.isNotEmpty(scopes)) {
-            return Arrays.asList(scopes).contains("openid");
+            return Arrays.asList(scopes).contains(OAuthConstants.Scope.OPENID);
         }
         return false;
     }
