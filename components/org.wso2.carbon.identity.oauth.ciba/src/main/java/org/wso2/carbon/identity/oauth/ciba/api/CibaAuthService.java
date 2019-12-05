@@ -19,9 +19,9 @@
 package org.wso2.carbon.identity.oauth.ciba.api;
 
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaClientException;
+import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeRequest;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeResponse;
-import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
 
 /**
  * Provides authentication services.

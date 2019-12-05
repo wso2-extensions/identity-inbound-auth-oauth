@@ -112,7 +112,7 @@ public class CibaAuthServiceImpl implements CibaAuthService {
         long expiryTime = getExpiresIn(cibaAuthCodeRequest);
         String[] scopes = cibaAuthCodeRequest.getScopes();
         cibaAuthCodeDO.setCibaAuthCodeKey(this.generateAuthCodeKey());
-        cibaAuthCodeDO.setAuthReqID(this.generateAuthRequestId());
+        cibaAuthCodeDO.setAuthReqId(this.generateAuthRequestId());
         cibaAuthCodeDO.setConsumerKey(cibaAuthCodeRequest.getIssuer());
         cibaAuthCodeDO.setIssuedTime(issuedTime);
         cibaAuthCodeDO.setLastPolledTime(issuedTime); // Initially last polled time is set to issued time.
@@ -141,7 +141,7 @@ public class CibaAuthServiceImpl implements CibaAuthService {
             String user = cibaAuthCodeRequest.getUserHint();
             OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(clientID);
             String callbackUri = appDO.getCallbackUrl();
-            cibaAuthCodeResponse.setAuthReqId(cibaAuthCodeDO.getAuthReqID());
+            cibaAuthCodeResponse.setAuthReqId(cibaAuthCodeDO.getAuthReqId());
             cibaAuthCodeResponse.setCallBackUrl(callbackUri);
             cibaAuthCodeResponse.setUserHint(user);
             cibaAuthCodeResponse.setClientId(clientID);

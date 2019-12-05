@@ -116,18 +116,20 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
                     RETRIEVE_CIBA_AUTH_CODE_KEY_BY_CIBA_AUTH_REQ_ID)) {
 
                 prepStmt.setString(1, authReqId);
-                ResultSet resultSet = prepStmt.executeQuery();
-                if (resultSet.next()) {
-                    if (log.isDebugEnabled()) {
-                        log.debug("Successfully returning Ciba AuthCodeKey : " + resultSet.getString(1) + "for the " +
-                                "ciba auth_req_id : " + authReqId);
+                try (ResultSet resultSet = prepStmt.executeQuery()) {
+                    if (resultSet.next()) {
+                        if (log.isDebugEnabled()) {
+                            log.debug(
+                                    "Successfully returning Ciba AuthCodeKey : " + resultSet.getString(1) + "for the " +
+                                            "ciba auth_req_id : " + authReqId);
+                        }
+                        return resultSet.getString(1);
+                    } else {
+                        if (log.isDebugEnabled()) {
+                            log.debug("No authCodeKey found for the provided auth_req_id: " + authReqId);
+                        }
+                        return null;
                     }
-                    return resultSet.getString(1);
-                } else {
-                    if (log.isDebugEnabled()) {
-                        log.debug("No authCodeKey found for the provided auth_req_id: " + authReqId);
-                    }
-                    return null;
                 }
             }
         } catch (SQLException e) {
@@ -197,19 +199,21 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
 
                 AuthenticatedUser authenticatedUser = new AuthenticatedUser();
                 prepStmt.setString(1, authCodeKey);
-                ResultSet resultSet = prepStmt.executeQuery();
-                if (resultSet.next()) {
-                    if (log.isDebugEnabled()) {
-                        log.debug("Successfully obtained authenticatedUser of TokenRequest  with " +
-                                "authCodeKey : " + authCodeKey);
+                try (ResultSet resultSet = prepStmt.executeQuery()) {
+                    if (resultSet.next()) {
+                        if (log.isDebugEnabled()) {
+                            log.debug("Successfully obtained authenticatedUser of TokenRequest  with " +
+                                    "authCodeKey : " + authCodeKey);
+                        }
+                        authenticatedUser.setUserName(resultSet.getString(1));
+                        authenticatedUser.setUserStoreDomain(resultSet.getString(2));
+                        authenticatedUser.setTenantDomain(OAuth2Util.getTenantDomain(resultSet.getInt(3)));
+                        return authenticatedUser;
+                    } else {
+                        throw new CibaCoreException(
+                                "No record found for authenticatedUser of TokenRequest identified by " +
+                                        "authCodeKey: " + authCodeKey);
                     }
-                    authenticatedUser.setUserName(resultSet.getString(1));
-                    authenticatedUser.setUserStoreDomain(resultSet.getString(2));
-                    authenticatedUser.setTenantDomain(OAuth2Util.getTenantDomain(resultSet.getInt(3)));
-                    return authenticatedUser;
-                } else {
-                    throw new CibaCoreException("No record found for authenticatedUser of TokenRequest identified by " +
-                            "authCodeKey: " + authCodeKey);
                 }
             } catch (IdentityOAuth2Exception e) {
                 throw new CibaCoreException("Error occurred in obtaining authenticatedUser of TokenRequest identified" +
@@ -229,7 +233,7 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
                     CibaSQLQueries.STORE_CIBA_AUTH_CODE)) {
 
                 prepStmt.setString(1, cibaAuthCodeDO.getCibaAuthCodeKey());
-                prepStmt.setString(2, cibaAuthCodeDO.getAuthReqID());
+                prepStmt.setString(2, cibaAuthCodeDO.getAuthReqId());
                 prepStmt.setString(3, cibaAuthCodeDO.getConsumerKey());
                 prepStmt.setTimestamp(4, cibaAuthCodeDO.getIssuedTime(), Calendar
                         .getInstance(TimeZone.getTimeZone(CibaConstants.UTC)));
@@ -290,24 +294,27 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
                     CibaSQLQueries.RETRIEVE_AUTH_CODE)) {
 
                 prepStmt.setString(1, authCodeKey);
-                ResultSet resultSet = prepStmt.executeQuery();
-                if (resultSet.next()) {
-                    cibaAuthCodeDO.setCibaAuthCodeKey(resultSet.getString(1));
-                    cibaAuthCodeDO.setAuthReqID(resultSet.getString(2));
-                    cibaAuthCodeDO.setConsumerKey(resultSet.getString(3));
-                    cibaAuthCodeDO.setLastPolledTime(
-                            resultSet.getTimestamp(4, Calendar.getInstance(TimeZone.getTimeZone(CibaConstants.UTC))));
-                    cibaAuthCodeDO.setInterval(resultSet.getLong(5));
-                    cibaAuthCodeDO.setExpiresIn(resultSet.getLong(6));
-                    cibaAuthCodeDO.setAuthReqStatus(AuthReqStatus.valueOf(resultSet.getString(7)));
-                    cibaAuthCodeDO.setIssuedTime(
-                            resultSet.getTimestamp(8, Calendar.getInstance(TimeZone.getTimeZone(CibaConstants.UTC))));
-                } else {
-                    return null;
-                }
+                try (ResultSet resultSet = prepStmt.executeQuery()) {
+                    if (resultSet.next()) {
+                        cibaAuthCodeDO.setCibaAuthCodeKey(resultSet.getString(1));
+                        cibaAuthCodeDO.setAuthReqId(resultSet.getString(2));
+                        cibaAuthCodeDO.setConsumerKey(resultSet.getString(3));
+                        cibaAuthCodeDO.setLastPolledTime(
+                                resultSet.getTimestamp(4,
+                                        Calendar.getInstance(TimeZone.getTimeZone(CibaConstants.UTC))));
+                        cibaAuthCodeDO.setInterval(resultSet.getLong(5));
+                        cibaAuthCodeDO.setExpiresIn(resultSet.getLong(6));
+                        cibaAuthCodeDO.setAuthReqStatus(AuthReqStatus.valueOf(resultSet.getString(7)));
+                        cibaAuthCodeDO.setIssuedTime(
+                                resultSet.getTimestamp(8,
+                                        Calendar.getInstance(TimeZone.getTimeZone(CibaConstants.UTC))));
+                    } else {
+                        return null;
+                    }
 
-                if (log.isDebugEnabled()) {
-                    log.debug("Successfully obtained cibaAuthCode for unique authCodeKey : " + authCodeKey);
+                    if (log.isDebugEnabled()) {
+                        log.debug("Successfully obtained cibaAuthCode for unique authCodeKey : " + authCodeKey);
+                    }
                 }
             }
         } catch (SQLException e) {
@@ -325,11 +332,12 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
 
                 ArrayList<String> scopeArrayList = new ArrayList<>();
                 prepStmt.setString(1, authCodeKey);
-                ResultSet resultSet = prepStmt.executeQuery();
-                while (resultSet.next()) {
-                    scopeArrayList.add(resultSet.getString(1));
+                try (ResultSet resultSet = prepStmt.executeQuery()) {
+                    while (resultSet.next()) {
+                        scopeArrayList.add(resultSet.getString(1));
+                    }
+                    return scopeArrayList;
                 }
-                return scopeArrayList;
             }
         } catch (SQLException e) {
             throw new CibaCoreException(

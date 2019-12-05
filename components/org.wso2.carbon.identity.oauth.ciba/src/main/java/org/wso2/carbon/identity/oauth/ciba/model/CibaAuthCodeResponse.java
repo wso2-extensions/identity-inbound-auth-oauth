@@ -18,6 +18,8 @@
 
 package org.wso2.carbon.identity.oauth.ciba.model;
 
+import java.util.Arrays;
+
 /**
  * Captures the values for authorization request.
  */
@@ -94,12 +96,12 @@ public class CibaAuthCodeResponse {
 
     public void setScopes(String[] scopes) {
 
-        this.scopes = scopes;
+        this.scopes = Arrays.copyOf(scopes, scopes.length);
     }
 
     public String[] getScopes() {
 
-        return scopes;
+        return scopes != null ? Arrays.copyOf(scopes, scopes.length) : new String[0];
     }
 
     public long getExpiresIn() {

@@ -27,6 +27,9 @@ public class SQLQueries {
 
     }
 
+    /**
+     * SQL queries.
+     */
     public static class CibaSQLQueries {
 
         public static final String STORE_CIBA_AUTH_CODE = "INSERT INTO IDN_OAUTH2_CIBA_AUTH_CODE " +

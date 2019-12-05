@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oauth.ciba.model;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 
 import java.sql.Timestamp;
+import java.util.Arrays;
 
 /**
  * Contains parameters to be stored in database tables.
@@ -28,7 +29,7 @@ import java.sql.Timestamp;
 public class CibaAuthCodeDO {
 
     private String cibaAuthCodeKey; // Internal primary key for storage management.
-    private String authReqID; // Authentication request identifier mapped to authCodeKey.
+    private String authReqId; // Authentication request identifier mapped to authCodeKey.
     private String consumerKey;
     private Timestamp issuedTime;
     private Timestamp lastPolledTime;
@@ -48,14 +49,14 @@ public class CibaAuthCodeDO {
         this.cibaAuthCodeKey = cibaAuthCodeKey;
     }
 
-    public String getAuthReqID() {
+    public String getAuthReqId() {
 
-        return authReqID;
+        return authReqId;
     }
 
-    public void setAuthReqID(String authReqID) {
+    public void setAuthReqId(String authReqID) {
 
-        this.authReqID = authReqID;
+        this.authReqId = authReqID;
     }
 
     public Enum getAuthReqStatus() {
@@ -80,22 +81,22 @@ public class CibaAuthCodeDO {
 
     public String[] getScopes() {
 
-        return scopes;
+        return scopes != null ? Arrays.copyOf(scopes, scopes.length) : new String[0];
     }
 
     public void setScopes(String[] scopes) {
 
-        this.scopes = scopes;
+        this.scopes = Arrays.copyOf(scopes, scopes.length);
     }
 
     public Timestamp getLastPolledTime() {
 
-        return lastPolledTime;
+        return lastPolledTime != null ? (Timestamp) lastPolledTime.clone() : null;
     }
 
     public void setLastPolledTime(Timestamp lastPolledTime) {
 
-        this.lastPolledTime = lastPolledTime;
+        this.lastPolledTime = (Timestamp) lastPolledTime.clone();
     }
 
     public long getInterval() {
@@ -120,12 +121,12 @@ public class CibaAuthCodeDO {
 
     public Timestamp getIssuedTime() {
 
-        return issuedTime;
+        return issuedTime != null ? (Timestamp) issuedTime.clone() : null;
     }
 
     public void setIssuedTime(Timestamp issuedTime) {
 
-        this.issuedTime = issuedTime;
+        this.issuedTime = (Timestamp) issuedTime.clone();
     }
 
     public AuthenticatedUser getAuthenticatedUser() {

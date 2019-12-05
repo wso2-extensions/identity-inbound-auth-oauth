@@ -18,6 +18,8 @@
 
 package org.wso2.carbon.identity.oauth.ciba.model;
 
+import java.util.Arrays;
+
 /**
  * Captures the authentication request validated parameters.
  */
@@ -60,12 +62,12 @@ public class CibaAuthCodeRequest {
 
     public String[] getAudience() {
 
-        return audience;
+        return audience != null ? Arrays.copyOf(audience, audience.length) : new String[0];
     }
 
-    public void setAudience(String audience[]) {
+    public void setAudience(String[] audience) {
 
-        this.audience = audience;
+        this.audience = Arrays.copyOf(audience, audience.length);
     }
 
     public long getIssuedTime() {
@@ -150,12 +152,12 @@ public class CibaAuthCodeRequest {
 
     public String[] getScopes() {
 
-        return scopes;
+        return scopes != null ? Arrays.copyOf(scopes, scopes.length) : new String[0];
     }
 
     public void setScopes(String[] scopes) {
 
-        this.scopes = scopes;
+        this.scopes = Arrays.copyOf(scopes, scopes.length);
     }
 
     public String getClientNotificationToken() {
@@ -170,11 +172,11 @@ public class CibaAuthCodeRequest {
 
     public String[] getAcrValues() {
 
-        return acrValues;
+        return acrValues != null ? Arrays.copyOf(acrValues, acrValues.length) : new String[0];
     }
 
     public void setAcrValues(String[] acrValues) {
 
-        this.acrValues = acrValues;
+        this.acrValues = Arrays.copyOf(acrValues, acrValues.length);
     }
 }
