@@ -810,7 +810,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
     }
 
     /**
-     * Checks whether the issued token is for openid scope.
+     * Checks whether the issued authorization code is for openid scope.
      *
      * @param scopes
      * @return true if authorization code issued for openid scope. False if not.
