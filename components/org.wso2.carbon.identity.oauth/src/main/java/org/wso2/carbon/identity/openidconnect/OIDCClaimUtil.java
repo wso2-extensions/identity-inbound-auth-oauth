@@ -205,7 +205,8 @@ public class OIDCClaimUtil {
                                                                      String grantType,
                                                                      ServiceProvider serviceProvider) {
 
-        if (isConsentBasedClaimFilteringApplicable(grantType) && !FrameworkUtils.isConsentPageSkippedForSP(serviceProvider)) {
+        if (isConsentBasedClaimFilteringApplicable(grantType) &&
+                !FrameworkUtils.isConsentPageSkippedForSP(serviceProvider)) {
             return OpenIDConnectServiceComponentHolder.getInstance()
                     .getHighestPriorityOpenIDConnectClaimFilter()
                     .getClaimsFilteredByUserConsent(userClaims, authenticatedUser, clientId, spTenantDomain);
