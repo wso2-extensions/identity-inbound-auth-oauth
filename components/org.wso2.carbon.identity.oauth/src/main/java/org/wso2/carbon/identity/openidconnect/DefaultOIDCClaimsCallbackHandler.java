@@ -230,7 +230,7 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
             serviceProvider = getServiceProvider(spTenantDomain, clientId);
         } catch (IdentityApplicationManagementException e) {
             throw new OAuthSystemException(
-                    "Error while obtaining service provider for tenant domain : " + spTenantDomain + " client id : "
+                    "Error while obtaining service provider for tenant domain: " + spTenantDomain + " client id: "
                             + clientId, e);
         }
 
