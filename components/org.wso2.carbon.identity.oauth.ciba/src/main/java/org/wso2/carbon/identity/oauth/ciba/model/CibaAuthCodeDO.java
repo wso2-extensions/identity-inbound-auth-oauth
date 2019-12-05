@@ -86,7 +86,9 @@ public class CibaAuthCodeDO {
 
     public void setScopes(String[] scopes) {
 
-        this.scopes = Arrays.copyOf(scopes, scopes.length);
+        if (scopes != null) {
+            this.scopes = Arrays.copyOf(scopes, scopes.length);
+        }
     }
 
     public Timestamp getLastPolledTime() {

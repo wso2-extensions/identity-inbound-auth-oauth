@@ -67,7 +67,9 @@ public class CibaAuthCodeRequest {
 
     public void setAudience(String[] audience) {
 
-        this.audience = Arrays.copyOf(audience, audience.length);
+        if (audience != null) {
+            this.audience = Arrays.copyOf(audience, audience.length);
+        }
     }
 
     public long getIssuedTime() {
@@ -157,7 +159,9 @@ public class CibaAuthCodeRequest {
 
     public void setScopes(String[] scopes) {
 
-        this.scopes = Arrays.copyOf(scopes, scopes.length);
+        if (scopes != null) {
+            this.scopes = Arrays.copyOf(scopes, scopes.length);
+        }
     }
 
     public String getClientNotificationToken() {
@@ -177,6 +181,8 @@ public class CibaAuthCodeRequest {
 
     public void setAcrValues(String[] acrValues) {
 
-        this.acrValues = Arrays.copyOf(acrValues, acrValues.length);
+        if (acrValues != null) {
+            this.acrValues = Arrays.copyOf(acrValues, acrValues.length);
+        }
     }
 }
