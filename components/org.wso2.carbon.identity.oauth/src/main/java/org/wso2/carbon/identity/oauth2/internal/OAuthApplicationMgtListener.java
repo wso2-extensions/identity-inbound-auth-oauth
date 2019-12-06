@@ -23,7 +23,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.StandardInboundProtocols;
+import org.wso2.carbon.identity.application.common.IdentityApplicationManagementClientException;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
+import org.wso2.carbon.identity.application.common.IdentityApplicationManagementServerException;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementValidationException;
 import org.wso2.carbon.identity.application.common.model.InboundAuthenticationConfig;
 import org.wso2.carbon.identity.application.common.model.InboundAuthenticationRequestConfig;
@@ -36,7 +38,9 @@ import org.wso2.carbon.identity.application.mgt.listener.AbstractApplicationMgtL
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
+import org.wso2.carbon.identity.oauth.IdentityOAuthClientException;
 import org.wso2.carbon.identity.oauth.OAuthAdminService;
+import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
@@ -52,10 +56,12 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dao.OAuthConsumerDAO;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.io.ByteArrayInputStream;
 import java.io.StringWriter;
@@ -214,15 +220,28 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                         User owner = serviceProvider.getOwner();
                         OAuthAppDO oAuthAppDO = marshelOAuthDO(authConfig.getInboundConfiguration(),
                                 serviceProvider.getApplicationName(), owner.getTenantDomain());
-                        oAuthAppDO.setUser(buildAuthenticatedUser(owner));
+                        oAuthAppDO.setAppOwner(buildAuthenticatedUser(owner));
 
                         OAuthConsumerAppDTO oAuthConsumerAppDTO = OAuthUtil.buildConsumerAppDTO(oAuthAppDO);
-                        if (oAuthConsumerAppDTO.getOauthConsumerSecret() == null) {
-                            oAuthConsumerAppDTO.setOauthConsumerSecret(OAuthUtil.getRandomNumber());
-                        }
-                        OAuthAdminService oAuthAdminService = new OAuthAdminService();
                         OAuthAppDAO dao = new OAuthAppDAO();
-                        if (dao.isDuplicateConsumer(oAuthConsumerAppDTO.getOauthConsumerKey())) {
+
+                        String oauthConsumerKey = oAuthConsumerAppDTO.getOauthConsumerKey();
+                        boolean isExistingClient = dao.isDuplicateConsumer(oauthConsumerKey);
+
+                        // Set the client secret before doing registering/updating the oauth app.
+                        if (oAuthConsumerAppDTO.getOauthConsumerSecret() == null) {
+                            if (isExistingClient) {
+                                // For existing client, we fetch the existing client secret and set.
+                                OAuthAppDO app = OAuth2Util.getAppInformationByClientId(oauthConsumerKey);
+                                oAuthConsumerAppDTO.setOauthConsumerSecret(app.getOauthConsumerSecret());
+                            } else {
+                                oAuthConsumerAppDTO.setOauthConsumerSecret(OAuthUtil.getRandomNumber());
+                            }
+                        }
+
+                        OAuthAdminServiceImpl oAuthAdminService =
+                                OAuthComponentServiceHolder.getInstance().getoAuthAdminService();
+                        if (isExistingClient) {
                             oAuthAdminService.updateConsumerApplication(oAuthConsumerAppDTO);
                         } else {
                             oAuthAdminService.registerOAuthApplicationData(oAuthConsumerAppDTO);
@@ -231,8 +250,18 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                     }
                 }
             }
-        } catch (IdentityOAuthAdminException e) {
-            throw new IdentityApplicationManagementException("Error occurred when importing OAuth application ", e);
+        } catch (IdentityOAuthAdminException | InvalidOAuthClientException | IdentityOAuth2Exception e) {
+            String message = "Error occurred when importing OAuth inbound.";
+            throw handleException(message, e);
+        }
+    }
+
+    private IdentityApplicationManagementException handleException(String message, Exception ex) {
+
+        if (ex instanceof IdentityOAuthClientException || ex instanceof InvalidOAuthClientException) {
+            return new IdentityApplicationManagementClientException(message, ex);
+        } else {
+            return new IdentityApplicationManagementServerException(message, ex);
         }
     }
 

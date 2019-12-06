@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth.internal;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.common.token.bindings.TokenBinderInfo;
 import org.wso2.carbon.identity.oauth.dto.TokenBindingMetaDataDTO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
@@ -41,6 +42,7 @@ public class OAuthComponentServiceHolder {
     private static final Log log = LogFactory.getLog(OAuthComponentServiceHolder.class);
     private OAuth2ScopeService oauth2ScopeService;
     private List<TokenBindingMetaDataDTO> tokenBindingMetaDataDTOs = new ArrayList<>();
+    private OAuthAdminServiceImpl oAuthAdminService;
 
     private OAuthComponentServiceHolder() {
 
@@ -97,7 +99,6 @@ public class OAuthComponentServiceHolder {
         this.oauth2ScopeService = oauth2ScopeService;
     }
 
-
     public List<TokenBindingMetaDataDTO> getTokenBindingMetaDataDTOs() {
 
         return tokenBindingMetaDataDTOs;
@@ -114,5 +115,15 @@ public class OAuthComponentServiceHolder {
 
         tokenBindingMetaDataDTOs.removeIf(tokenBindingMetaDataDTO -> tokenBinderInfo.getBindingType()
                 .equals(tokenBindingMetaDataDTO.getTokenBindingType()));
+    }
+
+    public OAuthAdminServiceImpl getoAuthAdminService() {
+
+        return oAuthAdminService;
+    }
+
+    public void setOAuthAdminService(OAuthAdminServiceImpl oAuthAdminService) {
+
+        this.oAuthAdminService = oAuthAdminService;
     }
 }
