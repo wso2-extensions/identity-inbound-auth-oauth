@@ -91,7 +91,7 @@ public class UserAuthenticationEndpoint {
             return oAuth2AuthzEndpoint.authorize(commonAuthRequestWrapper, response);
         } else {
             if (log.isDebugEnabled()) {
-                log.debug("Incorrect user_code:" + userCode);
+                log.debug("Incorrect user_code: " + userCode);
             }
             response.sendRedirect(IdentityUtil
                     .getServerURL("/authenticationendpoint/device.do?error=invalidUserCode", false, false));
