@@ -54,8 +54,7 @@ public class OAuth2CibaEndpoint {
     @Path("/")
     @Consumes("application/x-www-form-urlencoded")
     @Produces("application/json")
-    public Response ciba(@Context HttpServletRequest request, @Context HttpServletResponse response)
-            throws CibaClientException {
+    public Response ciba(@Context HttpServletRequest request, @Context HttpServletResponse response) {
 
         // Capture all  Authentication Request parameters.
         Map<String, String[]> requestParameterMap = request.getParameterMap();
@@ -121,14 +120,13 @@ public class OAuth2CibaEndpoint {
      * @param cibaAuthCodeRequest CIBA Authentication Request Data Transfer Object.
      * @return CibaAuthCodeResponse CIBA Authentication Response Data Transfer Object.
      * @throws CibaAuthFailureException Core exception from CIBA module.
-     * @throws CibaClientException      Client excpetion from CIBA.
      */
     private CibaAuthCodeResponse getCibaAuthCodeResponse(CibaAuthCodeRequest cibaAuthCodeRequest)
-            throws CibaClientException, CibaAuthFailureException {
+            throws CibaAuthFailureException {
 
         try {
             cibaAuthCodeResponse = EndpointUtil.getCibaAuthService().generateAuthCodeResponse(cibaAuthCodeRequest);
-        } catch (CibaCoreException e) {
+        } catch (CibaCoreException | CibaClientException e) {
             throw new CibaAuthFailureException(OAuth2ErrorCodes.SERVER_ERROR, "Error while generating " +
                     "authentication response.", e);
         }

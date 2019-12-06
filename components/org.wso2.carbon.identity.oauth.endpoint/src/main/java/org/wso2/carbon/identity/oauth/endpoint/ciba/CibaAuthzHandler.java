@@ -89,14 +89,14 @@ public class CibaAuthzHandler {
      * @param requestWrapper  Authentication request wrapper.
      * @param responseWrapper AuthenticationResponse wrapper.
      */
-    private void fireAuthzReq(CibaAuthRequestWrapper requestWrapper, CibaAuthResponseWrapper responseWrapper)
+    public void fireAuthzReq(CibaAuthRequestWrapper requestWrapper, CibaAuthResponseWrapper responseWrapper)
             throws CibaAuthFailureException {
 
         try {
             authzEndPoint.authorize(requestWrapper, responseWrapper);
         } catch (URISyntaxException | InvalidRequestParentException e) {
             throw new CibaAuthFailureException(OAuth2ErrorCodes.SERVER_ERROR,
-                    "error in making internal authorization call.", e);
+                    "Error in making internal authorization call.", e);
         }
     }
 }
