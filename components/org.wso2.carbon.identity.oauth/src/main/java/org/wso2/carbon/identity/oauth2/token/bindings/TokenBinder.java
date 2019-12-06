@@ -72,4 +72,13 @@ public interface TokenBinder extends TokenBinderInfo {
      * @return true if token binding is valid.
      */
     boolean isValidTokenBinding(Object request, String bindingReference);
+
+    /**
+     * Check validity of the token binding.
+     *
+     * @param oAuth2AccessTokenReqDTO OAuth2 access token request DTO.
+     * @param bindingReference token binding reference.
+     * @return true if token binding is valid.
+     */
+    boolean isValidTokenBinding(OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO, String bindingReference);
 }
