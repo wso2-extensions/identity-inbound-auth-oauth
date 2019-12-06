@@ -544,7 +544,7 @@
 
                     // Set selected encryption algorithm and encryption method.
                     $('select[name=idTokenEncryptionAlgorithm]').val('<%=Encode.forJavaScriptAttribute(app.getIdTokenEncryptionAlgorithm())%>');
-                    $('select[name=idTokenEncryptionMethod]').val('<%=Encode.forJavaScriptAttribute(app.getIdTokenEncryptionAlgorithm())%>');
+                    $('select[name=idTokenEncryptionMethod]').val('<%=Encode.forJavaScriptAttribute(app.getIdTokenEncryptionMethod())%>');
                 })
             </script>
 

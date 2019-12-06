@@ -94,6 +94,9 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
     private static final String ID_TOKEN_ISSUER = "idTokenIssuer";
     private static final String EXPIRY_TIME_JWT = "EXPIRY_TIME_JWT";
 
+    private static final long USER_ACCESS_TOKEN_LIFE_TIME = 9999L;
+    private static final long APPLICATION_ACCESS_TOKEN_LIFE_TIME = 7777L;
+
     @Mock
     private OAuthServerConfiguration oAuthServerConfiguration;
 
@@ -111,12 +114,12 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
 
     @DataProvider(name = "requestScopesProvider")
     public Object[][] provideRequestScopes() {
-        final String[] SCOPES_WITH_AUD = new String[]{"aud", "scope1", "scope1"};
+        final String[] scopesWithAud = new String[]{"aud", "scope1", "scope1"};
         return new Object[][]{
                 {null, Collections.emptyList()},
                 {new String[0], Collections.emptyList()},
                 {new String[]{"scope1", "scope1"}, Collections.emptyList()},
-                {SCOPES_WITH_AUD, Arrays.asList(SCOPES_WITH_AUD)}
+                {scopesWithAud, Arrays.asList(scopesWithAud)}
         };
     }
 
@@ -194,8 +197,8 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         authenticatedUser.setTenantDomain("DUMMY_TENANT.COM");
         authenticatedUser.setUserStoreDomain("DUMMY_DOMAIN");
 
-        final String AUTHENTICATED_SUBJECT_IDENTIFIER = authenticatedUser.toString();
-        authenticatedUser.setAuthenticatedSubjectIdentifier(AUTHENTICATED_SUBJECT_IDENTIFIER);
+        final String authenticatedSubjectIdentifier = authenticatedUser.toString();
+        authenticatedUser.setAuthenticatedSubjectIdentifier(authenticatedSubjectIdentifier);
 
         OAuth2AuthorizeReqDTO authorizeReqDTO = new OAuth2AuthorizeReqDTO();
         authorizeReqDTO.setUser(authenticatedUser);
@@ -214,13 +217,13 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
                 {
                         authzReqMessageContext,
                         null,
-                        AUTHENTICATED_SUBJECT_IDENTIFIER,
+                        authenticatedSubjectIdentifier,
                         DEFAULT_USER_ACCESS_TOKEN_EXPIRY_TIME * 1000
                 },
                 {
                         null,
                         tokenReqMessageContext,
-                        AUTHENTICATED_SUBJECT_IDENTIFIER,
+                        authenticatedSubjectIdentifier,
                         DEFAULT_APPLICATION_ACCESS_TOKEN_EXPIRY_TIME * 1000
                 }
         };
@@ -386,8 +389,6 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
 
     @DataProvider(name = "userAccessTokenExpiryTimeProviderForTokenContext")
     public Object[][] provideUserAccessTokenExpiryTimeForTokenMsgContext() {
-        final long USER_ACCESS_TOKEN_LIFE_TIME = 9999L;
-        final long APPLICATION_ACCESS_TOKEN_LIFE_TIME = 7777L;
         return new Object[][]{
                 // SP level expiry time set for user access token type
                 {

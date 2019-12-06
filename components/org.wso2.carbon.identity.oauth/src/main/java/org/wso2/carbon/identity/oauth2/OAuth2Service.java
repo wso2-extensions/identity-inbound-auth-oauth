@@ -32,6 +32,7 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.dto.OAuthErrorDTO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.authz.AuthorizationHandlerManager;
@@ -48,6 +49,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
 import org.wso2.carbon.identity.oauth2.token.AccessTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
@@ -375,7 +377,12 @@ public class OAuth2Service extends AbstractAdmin {
                 }
 
                 if (refreshTokenDO != null) {
-
+                    String tokenBindingReference = NONE;
+                    if (StringUtils.isNotBlank(refreshTokenDO.getTokenBindingReference())) {
+                        tokenBindingReference = refreshTokenDO.getTokenBindingReference();
+                    }
+                    OAuthUtil.clearOAuthCache(revokeRequestDTO.getConsumerKey(), refreshTokenDO.getAuthorizedUser(),
+                            OAuth2Util.buildScopeString(refreshTokenDO.getScope()), tokenBindingReference);
                     OAuthUtil.clearOAuthCache(revokeRequestDTO.getConsumerKey(), refreshTokenDO.getAuthorizedUser(),
                             OAuth2Util.buildScopeString(refreshTokenDO.getScope()));
                     OAuthUtil.clearOAuthCache(revokeRequestDTO.getConsumerKey(), refreshTokenDO.getAuthorizedUser());
@@ -395,17 +402,19 @@ public class OAuth2Service extends AbstractAdmin {
                             revokeResponseDTO.setErrorMsg("Valid token binding value not present in the request.");
                             return revokeResponseDTO;
                         }
+                        String tokenBindingReference = NONE;
+                        if (accessTokenDO.getTokenBinding() != null && StringUtils
+                                .isNotBlank(accessTokenDO.getTokenBinding().getBindingReference())) {
+                            tokenBindingReference = accessTokenDO.getTokenBinding().getBindingReference();
+                        }
+                        OAuthUtil.clearOAuthCache(revokeRequestDTO.getConsumerKey(), accessTokenDO.getAuthzUser(),
+                                OAuth2Util.buildScopeString(accessTokenDO.getScope()), tokenBindingReference);
                         OAuthUtil.clearOAuthCache(revokeRequestDTO.getConsumerKey(), accessTokenDO.getAuthzUser(),
                                 OAuth2Util.buildScopeString(accessTokenDO.getScope()));
                         OAuthUtil.clearOAuthCache(revokeRequestDTO.getConsumerKey(), accessTokenDO.getAuthzUser());
                         OAuthUtil.clearOAuthCache(accessTokenDO.getAccessToken());
                         String scope = OAuth2Util.buildScopeString(accessTokenDO.getScope());
                         String authorizedUser = accessTokenDO.getAuthzUser().toString();
-                        String tokenBindingReference = NONE;
-                        if (accessTokenDO.getTokenBinding() != null && StringUtils
-                                .isNotBlank(accessTokenDO.getTokenBinding().getBindingReference())) {
-                            tokenBindingReference = accessTokenDO.getTokenBinding().getBindingReference();
-                        }
                         synchronized ((revokeRequestDTO.getConsumerKey() + ":" + authorizedUser + ":" + scope + ":"
                                 + tokenBindingReference).intern()) {
                             OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
@@ -660,4 +669,39 @@ public class OAuth2Service extends AbstractAdmin {
         return errorCode;
     }
 
+
+    /**
+     * Handles authorization requests denied by user.
+     *
+     * @param oAuth2Parameters OAuth parameters.
+     * @return OAuthErrorDTO Error Data Transfer Object.
+     */
+    public OAuthErrorDTO handleUserConsentDenial(OAuth2Parameters oAuth2Parameters) {
+
+        try {
+            return AuthorizationHandlerManager.getInstance().handleUserConsentDenial(oAuth2Parameters);
+        } catch (IdentityOAuth2Exception e) {
+            log.error("Error in handling user consent denial for authentication request made by clientID: " +
+                    oAuth2Parameters.getClientId(), e);
+        }
+        return null;
+    }
+
+    /**
+     * Handles authentication failures.
+     *
+     * @param oauth2Params OAuth parameters.
+     * @return OAuthErrorDTO Error Data Transfer Object.
+     */
+    public OAuthErrorDTO handleAuthenticationFailure(OAuth2Parameters oauth2Params) {
+
+        try {
+            return AuthorizationHandlerManager.getInstance().handleAuthenticationFailure(oauth2Params);
+        } catch (IdentityOAuth2Exception e) {
+            log.error("Error in handling authentication failure for authentication request made by clientID: "
+                    + oauth2Params.getClientId(), e);
+        }
+        return null;
+    }
 }
+

@@ -47,22 +47,21 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyBoolean;
+import static org.mockito.Matchers.anyInt;
+import static org.mockito.Matchers.anyString;
 import static org.mockito.MockitoAnnotations.initMocks;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.mock;
+import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.powermock.api.mockito.PowerMockito.whenNew;
-import static org.powermock.api.mockito.PowerMockito.spy;
 import static org.testng.Assert.assertEquals;
 import static org.testng.AssertJUnit.assertTrue;
 
 @PrepareForTest({UserCoreUtil.class, IdentityTenantUtil.class, OAuthServerConfiguration.class,
         IdentityOathEventListener.class, AuthorizationGrantCache.class, IdentityUtil.class,
-        StringUtils.class, ClaimMetaDataCache.class,OAuth2Util.class})
+        StringUtils.class, ClaimMetaDataCache.class, OAuth2Util.class})
 public class IdentityOathEventListenerTest extends IdentityBaseTest {
 
     private IdentityOathEventListener identityOathEventListener = new IdentityOathEventListener();
@@ -380,7 +379,8 @@ public class IdentityOathEventListenerTest extends IdentityBaseTest {
     public void testForExceptionInTokenRevocationPath2() throws Exception {
         when(UserCoreUtil.getDomainName(userStoreManager.getRealmConfiguration())).thenReturn("DOMAIN_NAME");
         whenNew(TokenMgtDAO.class).withNoArguments().thenReturn(tokenMgtDAO);
-        when(tokenMgtDAO.getAllTimeAuthorizedClientIds(any(AuthenticatedUser.class))).thenThrow(new IdentityOAuth2Exception("message"));
+        when(tokenMgtDAO.getAllTimeAuthorizedClientIds(any(AuthenticatedUser.class)))
+                .thenThrow(new IdentityOAuth2Exception("message"));
 
         IdentityOathEventListener listener = new IdentityOathEventListener();
         assertTrue(listener.doPostUpdateCredentialByAdmin(username, new Object(), userStoreManager));

@@ -172,6 +172,8 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         if (existingToken.getRefreshTokenIssuedTime() != null) {
             tokReqMsgCtx.setRefreshTokenIssuedTime(existingToken.getRefreshTokenIssuedTime().getTime());
         }
+
+        tokReqMsgCtx.setRefreshTokenvalidityPeriod(existingToken.getRefreshTokenValidityPeriodInMillis());
     }
 
     @Override
@@ -312,11 +314,13 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                                                       OauthTokenIssuer oauthTokenIssuer)
             throws IdentityOAuth2Exception {
 
-        revokeExistingToken(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getoAuthClientAuthnContext(),
-                existingTokenBean.getAccessToken());
-        // Passing existingTokenBean as null since it is already revoked
-        return generateNewAccessToken(tokReqMsgCtx, scope, consumerKey, null,
-                oauthTokenIssuer);
+        // Revoke the existing token and generate new access and refresh tokens.
+        OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                .updateAccessTokenState(existingTokenBean.getTokenId(), OAuthConstants.TokenStates
+                        .TOKEN_STATE_REVOKED);
+        clearExistingTokenFromCache(tokReqMsgCtx, existingTokenBean);
+
+        return generateNewAccessToken(tokReqMsgCtx, scope, consumerKey, null, oauthTokenIssuer);
     }
 
     private OAuth2AccessTokenRespDTO issueExistingAccessToken(OAuthTokenReqMessageContext tokReqMsgCtx, String scope,
@@ -428,7 +432,6 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             throws IdentityOAuth2Exception {
 
         if (isHashDisabled && cacheEnabled) {
-            OauthTokenIssuer tokenIssuer = null;
             OAuthCacheKey cacheKey = getOAuthCacheKey(scope, newTokenBean.getConsumerKey(),
                     newTokenBean.getAuthzUser().toString(), newTokenBean.getAuthzUser().getFederatedIdPName(),
                     getTokenBindingReference(newTokenBean));
@@ -575,6 +578,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
 
     private OAuthCacheKey getOAuthCacheKey(String scope, String consumerKey, String authorizedUser,
                                            String authenticatedIDP, String tokenBindingType) {
+
         String cacheKeyString = OAuth2Util.buildCacheKeyStringForToken(consumerKey, scope, authorizedUser,
                 authenticatedIDP, tokenBindingType);
         return new OAuthCacheKey(cacheKeyString);
@@ -841,20 +845,21 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                 isRenewTokenPerRequestEnabledInConfig;
     }
 
-    private void revokeExistingToken(OAuthClientAuthnContext oAuthClientAuthnContext, String accessToken) throws
-            IdentityOAuth2Exception {
+    private void clearExistingTokenFromCache(OAuthTokenReqMessageContext tokenMsgCtx,
+                                             AccessTokenDO existingTokenBean) {
 
-        OAuthRevocationRequestDTO revocationRequestDTO =
-                OAuth2Util.buildOAuthRevocationRequest(oAuthClientAuthnContext, accessToken);
+        if (cacheEnabled) {
+            OAuth2AccessTokenReqDTO tokenReq = tokenMsgCtx.getOauth2AccessTokenReqDTO();
 
-        OAuthRevocationResponseDTO revocationResponseDTO =
-                getOauth2Service().revokeTokenByOAuthClient(revocationRequestDTO);
+            String scope = OAuth2Util.buildScopeString(tokenMsgCtx.getScope());
+            String consumerKey = tokenMsgCtx.getOauth2AccessTokenReqDTO().getClientId();
+            String authorizedUser = tokenMsgCtx.getAuthorizedUser().toString();
+            String authenticatedIDP = tokenMsgCtx.getAuthorizedUser().getFederatedIdPName();
+            String tokenBindingReference = getTokenBindingReference(tokenMsgCtx);
 
-        if (revocationResponseDTO.isError()) {
-            String msg = "Error while revoking tokens for clientId:" + oAuthClientAuthnContext.getClientId() +
-                    " Error Message:" + revocationResponseDTO.getErrorMsg();
-            log.error(msg);
-            throw new IdentityOAuth2Exception(msg);
+            OAuthCacheKey cacheKey =
+                    getOAuthCacheKey(scope, consumerKey, authorizedUser, authenticatedIDP, tokenBindingReference);
+            removeFromCache(cacheKey, tokenReq.getClientId(), existingTokenBean);
         }
     }
 

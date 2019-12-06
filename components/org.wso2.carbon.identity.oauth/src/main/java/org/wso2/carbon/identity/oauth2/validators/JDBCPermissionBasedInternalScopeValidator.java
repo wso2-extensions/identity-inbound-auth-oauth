@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oauth2.validators;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -35,6 +36,7 @@ import org.wso2.carbon.user.api.AuthorizationManager;
 import org.wso2.carbon.user.api.UserStoreException;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -51,13 +53,14 @@ public class JDBCPermissionBasedInternalScopeValidator {
     private static final Log log = LogFactory.getLog(JDBCPermissionBasedInternalScopeValidator.class);
     private static final String PERMISSION_BINDING_TYPE = "PERMISSION";
     private static final String ROOT = "/";
+    private static final String ADMIN_PERMISSION_ROOT = "/permission/admin";
     private static final String INTERNAL_SCOPE_PREFIX = "internal_";
 
     public String[] validateScope(OAuthTokenReqMessageContext tokReqMsgCtx) {
 
         // filter internal scopes
         String[] requestedScopes = getRequestedScopes(tokReqMsgCtx.getScope());
-        List<Scope> userAllowedScopes = getUserAllowedScopes(tokReqMsgCtx.getAuthorizedUser());
+        List<Scope> userAllowedScopes = getUserAllowedScopes(tokReqMsgCtx.getAuthorizedUser(), requestedScopes);
         //If the token is not requested for specific scopes, return true
         if (ArrayUtils.isEmpty(requestedScopes)) {
             return requestedScopes;
@@ -82,7 +85,8 @@ public class JDBCPermissionBasedInternalScopeValidator {
         // Remove openid scope from the list if available
         String[] requestedScopes = getRequestedScopes(authzReqMessageContext.getAuthorizationReqDTO
                 ().getScopes());
-        List<Scope> userAllowedScopes = getUserAllowedScopes(authzReqMessageContext.getAuthorizationReqDTO().getUser());
+        List<Scope> userAllowedScopes =
+                getUserAllowedScopes(authzReqMessageContext.getAuthorizationReqDTO().getUser(), requestedScopes);
         //If the token is not requested for specific scopes, return true
         if (ArrayUtils.isEmpty(requestedScopes)) {
             return requestedScopes;
@@ -122,12 +126,16 @@ public class JDBCPermissionBasedInternalScopeValidator {
                 .map(Scope::getName).toArray(String[]::new);
     }
 
-    private List<Scope> getUserAllowedScopes(AuthenticatedUser authenticatedUser) {
+    private List<Scope> getUserAllowedScopes(AuthenticatedUser authenticatedUser, String[] requestedScopes) {
 
         List<Scope> userAllowedScopes = new ArrayList<>();
 
         try {
+            if (requestedScopes == null) {
+                return new ArrayList<>();
+            }
             int tenantId = IdentityTenantUtil.getTenantId(authenticatedUser.getTenantDomain());
+            startTenantFlow(authenticatedUser.getTenantDomain(), tenantId);
             AuthorizationManager authorizationManager = OAuthComponentServiceHolder.getInstance().getRealmService()
                     .getTenantUserRealm(tenantId).getAuthorizationManager();
             String[] allowedUIResourcesForUser = authorizationManager.getAllowedUIResourcesForUser(IdentityUtil
@@ -137,9 +145,14 @@ public class JDBCPermissionBasedInternalScopeValidator {
             if (ArrayUtils.contains(allowedUIResourcesForUser, ROOT) || ArrayUtils.contains(allowedUIResourcesForUser,
                     PERMISSION_ROOT)) {
                 return new ArrayList<>(allScopes);
+            } else if (ArrayUtils.contains(allowedUIResourcesForUser, ADMIN_PERMISSION_ROOT)) {
+                return new ArrayList<>(getAdminAllowedScopes(allScopes, requestedScopes));
             }
 
             for (Scope scope : allScopes) {
+                if (!ArrayUtils.contains(requestedScopes, scope.getName())) {
+                    continue;
+                }
                 List<ScopeBinding> bindings = scope.getScopeBindings();
                 boolean isScopeAllowed = true;
                 for (ScopeBinding scopeBinding : bindings) {
@@ -161,7 +174,44 @@ public class JDBCPermissionBasedInternalScopeValidator {
             log.error("Error while accessing Authorization Manager.", e);
         } catch (IdentityOAuth2ScopeServerException e) {
             log.error("Error while retrieving oAuth2 scopes.", e);
+        } finally {
+            endTenantFlow();
         }
         return userAllowedScopes;
+    }
+
+    private void startTenantFlow(String tenantDomain, int tenantId) {
+
+        PrivilegedCarbonContext.startTenantFlow();
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(tenantId);
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(tenantDomain);
+    }
+
+    private void endTenantFlow() {
+
+        PrivilegedCarbonContext.endTenantFlow();
+    }
+
+    private Set<Scope> getAdminAllowedScopes(Set<Scope> allScopes, String[] requestedScopes) {
+
+        Set<Scope> adminAllowedScopes = new HashSet<>(allScopes);
+        for (Scope scope : allScopes) {
+            if (!ArrayUtils.contains(requestedScopes, scope.getName())) {
+                continue;
+            }
+            List<ScopeBinding> scopeBindings = scope.getScopeBindings();
+            for (ScopeBinding scopeBinding : scopeBindings) {
+                if (PERMISSION_BINDING_TYPE.equalsIgnoreCase(scopeBinding.getBindingType())) {
+                    List<String> bindings = scopeBinding.getBindings();
+                    for (String binding : bindings) {
+                        if (!binding.startsWith(ADMIN_PERMISSION_ROOT)) {
+                            adminAllowedScopes.remove(scope);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        return adminAllowedScopes;
     }
 }

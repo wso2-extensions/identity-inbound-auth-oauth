@@ -44,11 +44,15 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.TimeZone;
+
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
+import static org.wso2.carbon.identity.oauth2.dao.SQLQueries.RETRIEVE_TOKEN_BINDING_REFERENCE_TOKEN_ID;
 
 /*
 NOTE
@@ -255,6 +259,10 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                 user.setAuthenticatedSubjectIdentifier(subjectIdentifier, serviceProvider);
 
                 String tokenId = resultSet.getString(9);
+                String tokenBindingReference = NONE;
+                if (StringUtils.isNotBlank(tokenId)) {
+                    tokenBindingReference = getTokenBindingReference(connection, tokenId, tenantId);
+                }
                 // If the scope value is empty. It could have stored in the IDN_OAUTH2_AUTHZ_CODE_SCOPE table
                 // for on demand scope migration.
                 if (StringUtils.isBlank(scopeString)) {
@@ -263,7 +271,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                 }
                 AuthzCodeDO codeDo = createAuthzCodeDo(consumerKey, authorizationKey, user, codeState,
                         scopeString, callbackUrl, codeId, pkceCodeChallenge, pkceCodeChallengeMethod, issuedTime,
-                        validityPeriod);
+                        validityPeriod, tokenBindingReference);
                 result = new AuthorizationCodeValidationResult(codeDo, tokenId);
             }
 
@@ -275,6 +283,21 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             IdentityDatabaseUtil.closeAllConnections(connection, resultSet, prepStmt);
         }
 
+    }
+
+    private String getTokenBindingReference(Connection connection, String tokenId, int tenantId) throws SQLException {
+
+        try (PreparedStatement preparedStatement = connection
+                .prepareStatement(RETRIEVE_TOKEN_BINDING_REFERENCE_TOKEN_ID)) {
+            preparedStatement.setString(1, tokenId);
+            preparedStatement.setInt(2, tenantId);
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                if (resultSet.next()) {
+                    return resultSet.getString("TOKEN_BINDING_REF");
+                }
+            }
+        }
+        return NONE;
     }
 
     @Override
@@ -718,13 +741,85 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
 
     }
 
-    private AuthzCodeDO createAuthzCodeDo(String consumerKey, String authorizationKey,
-                                          AuthenticatedUser user, String codeState, String scopeString,
-                                          String callbackUrl, String codeId, String pkceCodeChallenge,
-                                          String pkceCodeChallengeMethod, Timestamp issuedTime, long validityPeriod) {
+    private AuthzCodeDO createAuthzCodeDo(String consumerKey, String authorizationKey, AuthenticatedUser user,
+            String codeState, String scopeString, String callbackUrl, String codeId, String pkceCodeChallenge,
+            String pkceCodeChallengeMethod, Timestamp issuedTime, long validityPeriod, String tokenBindingReference) {
 
-        return new AuthzCodeDO(user, OAuth2Util.buildScopeArray(scopeString), issuedTime, validityPeriod,
-                callbackUrl, consumerKey, authorizationKey, codeId, codeState, pkceCodeChallenge,
-                pkceCodeChallengeMethod);
+        return new AuthzCodeDO(user, OAuth2Util.buildScopeArray(scopeString), issuedTime, validityPeriod, callbackUrl,
+                consumerKey, authorizationKey, codeId, codeState, pkceCodeChallenge, pkceCodeChallengeMethod,
+                tokenBindingReference);
+    }
+
+    private boolean isActiveAuthzCodeIssuedForOidcFlow(String[] scope, long issuedTimeInMillis,
+            long validityPeriodInMillis) {
+
+        return isAuthorizationCodeIssuedForOpenidScope(scope) && (
+                OAuth2Util.getTimeToExpire(issuedTimeInMillis, validityPeriodInMillis) > 0);
+    }
+
+    /**
+     * This method will retrieve the authorization code and code id from the IDN_OAUTH2_AUTHORIZATION_CODE table and
+     * return as a dataobject.
+     * @param consumerKey client id
+     * @return authorization code data object
+     * @throws IdentityOAuth2Exception
+     */
+    public Set<AuthzCodeDO> getAuthorizationCodeDOSetByConsumerKeyForOpenidScope(String consumerKey) throws IdentityOAuth2Exception {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Retrieving active authorization code data objects for client: " + consumerKey);
+        }
+        Connection connection = IdentityDatabaseUtil.getDBConnection();
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        Set<AuthzCodeDO> authzCodeDOs = new HashSet<>();
+        String sqlQuery = SQLQueries.GET_DETAILED_ACTIVE_AUTHORIZATION_CODES_FOR_CONSUMER_KEY;
+        try {
+            ps = connection.prepareStatement(sqlQuery);
+            ps.setString(1, consumerKey);
+            ps.setString(2, OAuthConstants.AuthorizationCodeState.ACTIVE);
+            rs = ps.executeQuery();
+            while (rs.next()) {
+
+                AuthzCodeDO authzCodeDO = new AuthzCodeDO();
+                String authzCode = getPersistenceProcessor().getPreprocessedAuthzCode(rs.getString(1));
+                String codeId = rs.getString(2);
+                Timestamp timeCreated = rs.getTimestamp(3, Calendar.getInstance(TimeZone.getTimeZone(UTC)));
+                long issuedTimeInMillis = timeCreated.getTime();
+                long validityPeriodInMillis = rs.getLong(4);
+                String[] scope = OAuth2Util.buildScopeArray(rs.getString(5));
+                authzCodeDO.setAuthorizationCode(authzCode);
+                authzCodeDO.setAuthzCodeId(codeId);
+
+                if (isActiveAuthzCodeIssuedForOidcFlow(scope, issuedTimeInMillis, validityPeriodInMillis)) {
+                    if (isHashDisabled) {
+                        authzCodeDOs.add(authzCodeDO);
+                    }
+                }
+            }
+            connection.commit();
+        } catch (SQLException e) {
+            IdentityDatabaseUtil.rollBack(connection);
+            throw new IdentityOAuth2Exception(
+                    "Error occurred while getting authorization codes and code ids from " + "authorization code "
+                            + "table for the application with consumer key : " + consumerKey, e);
+        } finally {
+            IdentityDatabaseUtil.closeAllConnections(connection, rs, ps);
+        }
+        return authzCodeDOs;
+    }
+
+    /**
+     * Checks whether the issued authorization code is for openid scope.
+     *
+     * @param scopes
+     * @return true if authorization code issued for openid scope. False if not.
+     */
+    private boolean isAuthorizationCodeIssuedForOpenidScope(String[] scopes) {
+
+        if (ArrayUtils.isNotEmpty(scopes)) {
+            return Arrays.asList(scopes).contains(OAuthConstants.Scope.OPENID);
+        }
+        return false;
     }
 }

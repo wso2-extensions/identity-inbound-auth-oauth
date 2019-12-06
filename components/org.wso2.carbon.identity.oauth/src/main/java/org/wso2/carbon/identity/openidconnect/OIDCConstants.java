@@ -28,6 +28,9 @@ public class OIDCConstants {
     public static final String IDN_OIDC_REQ_OBJECT_CLAIMS = "STORE_IDN_OIDC_REQ_OBJECT_CLAIMS";
     public static final String HAS_NON_OIDC_CLAIMS = "hasNonOIDCClaims";
 
+    /**
+     * This class is used to define constants related to OIDC event specific features.
+     */
     public class Event {
 
         public static final String CODE_ID = "CODE_ID";

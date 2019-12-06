@@ -600,6 +600,8 @@ public class OAuth2Util {
      * @param scope
      * @param authorizedUser
      * @return
+     * @deprecated To make the cache key completely unique the authenticated IDP should also be introduced.
+     * Use {@link #buildCacheKeyStringForToken(String, String, String, String)} instead.
      */
     @Deprecated
     public static String buildCacheKeyStringForToken(String clientId, String scope, String authorizedUser) {
@@ -1385,6 +1387,19 @@ public class OAuth2Util {
     }
 
     /**
+     * To check whether the given response type is for Hybrid flow.
+     *
+     * @param responseType response type
+     * @return true if the response type is for Hybrid flow.
+     */
+    public static boolean isHybridResponseType(String responseType) {
+
+        return (StringUtils.isNotBlank(responseType) && (OAuthConstants.CODE_TOKEN).equals(responseType) ||
+                (OAuthConstants.CODE_IDTOKEN).equals(responseType) || (OAuthConstants.CODE_IDTOKEN_TOKEN).equals
+                (responseType));
+    }
+
+    /**
      * To populate the database in the very first server startup.
      *
      * @param tenantId tenant id
@@ -1688,7 +1703,7 @@ public class OAuth2Util {
     public static OauthTokenIssuer getOAuthTokenIssuerForOAuthApp(String clientId)
             throws IdentityOAuth2Exception, InvalidOAuthClientException {
 
-        OAuthAppDO appDO = null;
+        OAuthAppDO appDO;
         try {
             appDO = getAppInformationByClientId(clientId);
         } catch (IdentityOAuth2Exception e) {
@@ -2372,6 +2387,13 @@ public class OAuth2Util {
         return buf.toString();
     }
 
+    /**
+     * Returns essential claims according to claim type: id_token/userinfo .
+     *
+     * @param essentialClaims
+     * @param claimType
+     * @return essential claims list
+     */
     public static List<String> getEssentialClaims(String essentialClaims, String claimType) {
 
         JSONObject jsonObjectClaims = new JSONObject(essentialClaims);
@@ -2836,6 +2858,7 @@ public class OAuth2Util {
      * @param userStoreDomain user store domain
      * @param tenantDomain    tenent domain
      * @return an instance of AuthenticatedUser{@link AuthenticatedUser}
+     * @deprecated use {@link #createAuthenticatedUser(String, String, String, String)} instead.
      */
     @Deprecated
     public static AuthenticatedUser createAuthenticatedUser(String username, String userStoreDomain, String tenantDomain) {
@@ -2846,8 +2869,8 @@ public class OAuth2Util {
         if (StringUtils.startsWith(userStoreDomain, OAuthConstants.UserType.FEDERATED_USER_DOMAIN_PREFIX) &&
                 !OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal()) {
             if (log.isDebugEnabled()) {
-                log.debug("Federated prefix found in domain: " + userStoreDomain + " for user: " + username + " in " +
-                        "tenant domain:" + tenantDomain + ". Flag user as a federated user.");
+                log.debug("Federated prefix found in domain: " + userStoreDomain + " for user: " + username
+                        + " in tenant domain: " + tenantDomain + ". Flag user as a federated user.");
             }
             authenticatedUser.setFederatedUser(true);
             authenticatedUser.setFederatedIdPName(OAuth2Util.getFederatedIdPFromDomain(userStoreDomain));
@@ -2892,8 +2915,8 @@ public class OAuth2Util {
                 authenticatedUser.setFederatedIdPName(OAuth2Util.getFederatedIdPFromDomain(userStoreDomain));
             }
             if (log.isDebugEnabled()) {
-                log.debug("Federated prefix found in domain: " + userStoreDomain + " for user: " + username + " in " +
-                        "tenant domain:" + tenantDomain + ". Flag user as a federated user. " +
+                log.debug("Federated prefix found in domain: " + userStoreDomain + " for user: " + username +
+                        " in tenant domain: " + tenantDomain + ". Flag user as a federated user. " +
                         authenticatedUser.getFederatedIdPName() + " is set as the authenticated idp.");
             }
         } else {
@@ -2928,12 +2951,12 @@ public class OAuth2Util {
     /**
      * Used to build an OAuth revocation request DTO.
      *
-     * @param oAuthClientAuthnContext  OAuth client authentication context.
-     * @param accessToken Access token to be revoked.
+     * @param oAuthClientAuthnContext OAuth client authentication context.
+     * @param accessToken             Access token to be revoked.
      * @return Returns a OAuth revocation request DTO.
      */
     public static OAuthRevocationRequestDTO buildOAuthRevocationRequest(OAuthClientAuthnContext oAuthClientAuthnContext,
-                                                                        String accessToken){
+                                                                        String accessToken) {
 
         OAuthRevocationRequestDTO revocationRequestDTO = new OAuthRevocationRequestDTO();
 

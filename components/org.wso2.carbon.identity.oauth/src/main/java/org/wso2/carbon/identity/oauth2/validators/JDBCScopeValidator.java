@@ -61,7 +61,10 @@ public class JDBCScopeValidator extends OAuth2ScopeValidator {
     // The following constants are as same as the constants defined in
     // org.wso2.carbon.apimgt.keymgt.handlers.ResourceConstants.
     // If any changes are taking place in that these should also be updated accordingly.
+    // Setting the "retrieveRolesFromUserStoreForScopeValidation" as a System property which is used when
+    // skipping the scope role validation during token issuing using JWT bearer grant.
     public static final String CHECK_ROLES_FROM_SAML_ASSERTION = "checkRolesFromSamlAssertion";
+    public static final String RETRIEVE_ROLES_FROM_USERSTORE_FOR_SCOPE_VALIDATION = "retrieveRolesFromUserStoreForScopeValidation";
     private static final String SCOPE_VALIDATOR_NAME = "Role based scope validator";
     private static final String OPENID = "openid";
 
@@ -138,10 +141,12 @@ public class JDBCScopeValidator extends OAuth2ScopeValidator {
         }
 
         // If a federated user and CHECK_ROLES_FROM_SAML_ASSERTION system property is set to true,
+        // or if a federated user and RETRIEVE_ROLES_FROM_USERSTORE_FOR_SCOPE_VALIDATION system property is false,
         // avoid validating user roles.
         // This system property is set at server start using -D option, Thus will be a permanent property.
         if (accessTokenDO.getAuthzUser().isFederatedUser()
-                && Boolean.parseBoolean(System.getProperty(CHECK_ROLES_FROM_SAML_ASSERTION))) {
+                && (Boolean.parseBoolean(System.getProperty(CHECK_ROLES_FROM_SAML_ASSERTION)) ||
+                !(Boolean.parseBoolean(System.getProperty(RETRIEVE_ROLES_FROM_USERSTORE_FOR_SCOPE_VALIDATION))))) {
             return true;
         }
 

@@ -385,13 +385,14 @@ public class TokenMgtDAO {
             }
 
             if (accessTokenDO.getTokenBinding() != null) {
-                PreparedStatement preparedStatement = connection.prepareStatement(STORE_TOKEN_BINDING);
-                preparedStatement.setString(1, accessTokenId);
-                preparedStatement.setString(2, accessTokenDO.getTokenBinding().getBindingType());
-                preparedStatement.setString(3, accessTokenDO.getTokenBinding().getBindingReference());
-                preparedStatement.setString(4, accessTokenDO.getTokenBinding().getBindingValue());
-                preparedStatement.setInt(5, tenantId);
-                preparedStatement.execute();
+                try (PreparedStatement preparedStatement = connection.prepareStatement(STORE_TOKEN_BINDING)) {
+                    preparedStatement.setString(1, accessTokenId);
+                    preparedStatement.setString(2, accessTokenDO.getTokenBinding().getBindingType());
+                    preparedStatement.setString(3, accessTokenDO.getTokenBinding().getBindingReference());
+                    preparedStatement.setString(4, accessTokenDO.getTokenBinding().getBindingValue());
+                    preparedStatement.setInt(5, tenantId);
+                    preparedStatement.execute();
+                }
             }
 
             if (retryAttempt > 0) {
@@ -1205,7 +1206,7 @@ public class TokenMgtDAO {
                         " userStoreDomain: " + userStoreDomain);
             }
 
-            String sql = SQLQueries.UPDATE_TOKE_STATE;
+            String sql = SQLQueries.UPDATE_TOKEN_STATE;
             sql = OAuth2Util.getTokenPartitionedSqlByUserStore(sql, userStoreDomain);
             prepStmt = connection.prepareStatement(sql);
             prepStmt.setString(1, tokenState);

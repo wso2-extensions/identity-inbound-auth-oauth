@@ -30,7 +30,8 @@ public class RememberMeStoreTest {
     private RememberMeStore rememberMeStore;
 
     @BeforeTest
-    public void setUp(){
+    public void setUp() {
+
         rememberMeStore = RememberMeStore.getInstance();
     }
 

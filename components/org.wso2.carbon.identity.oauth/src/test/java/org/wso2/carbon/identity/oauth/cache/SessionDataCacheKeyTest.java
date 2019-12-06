@@ -21,9 +21,8 @@ package org.wso2.carbon.identity.oauth.cache;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
-import static junit.framework.TestCase.assertFalse;
-import static junit.framework.TestCase.assertTrue;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertTrue;
 
 public class SessionDataCacheKeyTest {
     String sessionDataId = "org.wso2.carbon.identity.oauth.cache.SessionDataCacheKey@54d4dc7";
@@ -51,7 +50,7 @@ public class SessionDataCacheKeyTest {
         if (istrue) {
             assertTrue(sessionDataCacheKey.equals(sessionDataCacheKeySample));
         }
-        assertFalse(sessionDataCacheKey.equals(object));
+        assertTrue(!sessionDataCacheKey.equals(object));
     }
 
     @Test

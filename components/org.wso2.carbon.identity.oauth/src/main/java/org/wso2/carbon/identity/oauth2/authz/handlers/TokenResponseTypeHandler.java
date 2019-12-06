@@ -152,7 +152,7 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
 
                     if ((expireTime > 0 || expireTime < 0)) {
                         // Return still valid existing access token when JWTTokenIssuer is not used.
-                        if (isNotRenewAccessTokenPerRequest()) {
+                        if (isNotRenewAccessTokenPerRequest(oauthAuthzMsgCtx)) {
                             if (log.isDebugEnabled()) {
                                 if (expireTime > 0) {
                                     log.debug("Access Token is valid for another " + expireTime + "ms");
@@ -229,7 +229,7 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
                     if (OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE.equals(existingAccessTokenDO.getTokenState())
                             && (expiryTime > 0 || expiryTime < 0)) {
                         // Return still valid existing access token when JWTTokenIssuer is not used.
-                        if (isNotRenewAccessTokenPerRequest()) {
+                        if (isNotRenewAccessTokenPerRequest(oauthAuthzMsgCtx)) {
                             // token is active and valid
                             if (log.isDebugEnabled()) {
                                 if (expiryTime > 0) {
@@ -556,9 +556,9 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
         }
     }
 
-    private boolean isNotRenewAccessTokenPerRequest() {
+    private boolean isNotRenewAccessTokenPerRequest(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) {
 
-        boolean isRenew = oauthIssuerImpl.renewAccessTokenPerRequest();
+        boolean isRenew = oauthIssuerImpl.renewAccessTokenPerRequest(oauthAuthzMsgCtx);
         if (log.isDebugEnabled()) {
             log.debug("Access Token renew per request: " + isRenew);
         }

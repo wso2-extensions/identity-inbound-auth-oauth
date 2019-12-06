@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oauth2.internal;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationMethodNameTranslator;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.handler.HandlerComparator;
+import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.openidconnect.ClaimProvider;
@@ -45,6 +46,7 @@ public class OAuth2ServiceComponentHolder {
     private static List<ClaimProvider> claimProviders = new ArrayList<>();
     private static boolean idpIdColumnEnabled = false;
     private List<TokenBinder> tokenBinders = new ArrayList<>();
+    private OAuthAdminServiceImpl oauthAdminService;
 
     private OAuth2ServiceComponentHolder() {
 
@@ -153,6 +155,7 @@ public class OAuth2ServiceComponentHolder {
      * @param claimProvider
      */
     public static void setClaimProvider(ClaimProvider claimProvider) {
+
         OAuth2ServiceComponentHolder.claimProviders.add(claimProvider);
     }
 
@@ -162,6 +165,7 @@ public class OAuth2ServiceComponentHolder {
      * @param claimProvider
      */
     public static void unregisterClaimProvider(ClaimProvider claimProvider) {
+
         claimProviders.remove(claimProvider);
     }
 
@@ -183,5 +187,15 @@ public class OAuth2ServiceComponentHolder {
     public void removeTokenBinder(TokenBinder tokenBinder) {
 
         this.tokenBinders.remove(tokenBinder);
+    }
+
+    public OAuthAdminServiceImpl getOAuthAdminService() {
+
+        return oauthAdminService;
+    }
+
+    public void setOAuthAdminService(OAuthAdminServiceImpl oauthAdminService) {
+
+        this.oauthAdminService = oauthAdminService;
     }
 }

@@ -28,7 +28,6 @@ import org.wso2.carbon.identity.oauth.util.ClaimCacheKey;
 import org.wso2.carbon.identity.oauth.util.ClaimMetaDataCache;
 import org.wso2.carbon.identity.oauth.util.UserClaims;
 
-import java.util.SortedMap;
 import javax.cache.Cache;
 import javax.cache.event.CacheEntryEvent;
 
@@ -45,9 +44,9 @@ public class ClaimCacheRemoveListenerTest {
     @DataProvider(name = "provideParams")
     public Object[][] providePostParams() {
         Cache cache = mock(Cache.class);
-        CacheEntryEvent<? extends ClaimCacheKey, ? extends UserClaims> cacheEntryEvent_NullInstance = null;
+        CacheEntryEvent<? extends ClaimCacheKey, ? extends UserClaims> cacheEntryEventNullInstance = null;
 
-        CacheEntryEvent<? extends ClaimCacheKey, ? extends UserClaims> cacheEntryEvent_KeyNull =
+        CacheEntryEvent<? extends ClaimCacheKey, ? extends UserClaims> cacheEntryEventKeyNull =
                 new CacheEntryEvent<ClaimCacheKey, UserClaims>(cache) {
                     @Override
                     public ClaimCacheKey getKey() {
@@ -60,7 +59,7 @@ public class ClaimCacheRemoveListenerTest {
                     }
                 };
 
-        CacheEntryEvent<? extends ClaimCacheKey, ? extends UserClaims> cacheEntryEvent_KeyNotNull =
+        CacheEntryEvent<? extends ClaimCacheKey, ? extends UserClaims> cacheEntryEventKeyNotNull =
                 new CacheEntryEvent<ClaimCacheKey, UserClaims>(cache) {
                     AuthenticatedUser authenticatedUser = null;
                     ClaimCacheKey claimCacheKey = new ClaimCacheKey(authenticatedUser);
@@ -76,7 +75,7 @@ public class ClaimCacheRemoveListenerTest {
                     }
                 };
 
-        CacheEntryEvent<? extends ClaimCacheKey, ? extends UserClaims> cacheEntryEvent_Qualified =
+        CacheEntryEvent<? extends ClaimCacheKey, ? extends UserClaims> cacheEntryEventQualified =
                 new CacheEntryEvent<ClaimCacheKey, UserClaims>(cache) {
                     AuthenticatedUser authenticatedUser = new AuthenticatedUser();
                     ClaimCacheKey claimCacheKey = new ClaimCacheKey(authenticatedUser);
@@ -93,8 +92,8 @@ public class ClaimCacheRemoveListenerTest {
                 };
 
         return new Object[][]{
-                {cacheEntryEvent_NullInstance}, {cacheEntryEvent_KeyNull}, {cacheEntryEvent_KeyNotNull},
-                {cacheEntryEvent_Qualified}
+                {cacheEntryEventNullInstance}, {cacheEntryEventKeyNull}, {cacheEntryEventKeyNotNull},
+                {cacheEntryEventQualified}
         };
     }
 

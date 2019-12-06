@@ -46,7 +46,10 @@ public class OpenIDConnectSystemClaimImpl implements ClaimProvider {
     private JWSAlgorithm signatureAlgorithm = null;
 
     @Override
-    public Map<String, Object> getAdditionalClaims(OAuthAuthzReqMessageContext authAuthzReqMessageContext, OAuth2AuthorizeRespDTO authorizeRespDTO) throws IdentityOAuth2Exception {
+    public Map<String, Object> getAdditionalClaims(OAuthAuthzReqMessageContext authAuthzReqMessageContext,
+                                                   OAuth2AuthorizeRespDTO authorizeRespDTO)
+            throws IdentityOAuth2Exception {
+
         //First set the signature Algorithm
         setSignatureAlgorithm();
 
@@ -69,7 +72,10 @@ public class OpenIDConnectSystemClaimImpl implements ClaimProvider {
     }
 
     @Override
-    public Map<String, Object> getAdditionalClaims(OAuthTokenReqMessageContext tokenReqMessageContext, OAuth2AccessTokenRespDTO tokenRespDTO) throws IdentityOAuth2Exception {
+    public Map<String, Object> getAdditionalClaims(OAuthTokenReqMessageContext tokenReqMessageContext,
+                                                   OAuth2AccessTokenRespDTO tokenRespDTO)
+            throws IdentityOAuth2Exception {
+
         //First set the signature Algorithm
         setSignatureAlgorithm();
 
