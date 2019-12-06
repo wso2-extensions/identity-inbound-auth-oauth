@@ -21,7 +21,7 @@ package org.wso2.carbon.identity.oauth.endpoint.exception;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
 
 /**
- * Client Exception .
+ * CIBA Authentication failure.
  */
 public class CibaAuthFailureException extends CibaCoreException {
 

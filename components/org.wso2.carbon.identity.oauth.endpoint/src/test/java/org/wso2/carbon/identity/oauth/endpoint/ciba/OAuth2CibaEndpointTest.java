@@ -18,33 +18,19 @@
 
 package org.wso2.carbon.identity.oauth.endpoint.ciba;
 
-import com.nimbusds.jwt.JWT;
 import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.Assert;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
-import org.wso2.carbon.identity.oauth.ciba.common.CibaParams;
-import org.wso2.carbon.identity.oauth.ciba.dao.CibaDAOFactory;
-import org.wso2.carbon.identity.oauth.ciba.dto.AuthzRequestDTO;
-import org.wso2.carbon.identity.oauth.ciba.dto.CibaAuthRequestDTO;
-import org.wso2.carbon.identity.oauth.ciba.dto.CibaAuthResponseDTO;
-import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
-import org.wso2.carbon.identity.oauth.ciba.exceptions.ErrorCodes;
-import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeDO;
-import org.wso2.carbon.identity.oauth.ciba.util.CibaAuthUtil;
+import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaClientException;
 import org.wso2.carbon.identity.oauth.endpoint.util.TestOAuthEndpointBase;
 
 import java.nio.file.Paths;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-
-@PrepareForTest({CibaParams.class, CibaDAOFactory.class, AuthzRequestDTO.class, CibaAuthRequestDTO.class,
-        CibaAuthResponseDTO.class, CibaCoreException.class, ErrorCodes.class, CibaAuthCodeDO.class, CibaAuthUtil.class,
-        CibaClientException.class, JWT.class,})
 public class OAuth2CibaEndpointTest extends TestOAuthEndpointBase {
 
     @Mock
@@ -54,22 +40,12 @@ public class OAuth2CibaEndpointTest extends TestOAuthEndpointBase {
     HttpServletResponse httpServletResponse;
 
     @Mock
-    CibaAuthRequestDTO cibaAuthRequestDTO;
-
-    @Mock
     CibaClientException cibaClientException;
-
-    @Mock
-    CibaAuthResponseDTO cibaAuthResponseDTO;
-
-    @Mock
-    AuthzRequestDTO authzRequestDTO;
 
     private static final String request = "eyJhbGciOiJIUzUxMiJ9" +
             ".eyJpc3MiOiJaenhtRHFxSzhZWWZqdGxPaDl2dzg1cW5OVm9hIiwiYXVkIjoiaHR0cHM6Ly9sb2NhbGhvc3Q6OTQ0My9vYXV0aDIvY2liYSIsImJpbmRpbmdfbWVzc2FnZSI6IjE5MDgxOTk1IiwibG9naW5faGludCI6InZpdmVrIiwic2NvcGUiOiJvcGVuaWQgc21zIiwiaWF0IjoxNTczMDk5NDEzLCJleHAiOjE1NzMxNDQzNzEsIm5iZiI6MTU3MzA5OTQxMywianRpIjoiOWZmODQ1YjktMjBiZi00MDMzLTllZDMtM2NjYzYzZjUyMDRjIiwicmVxdWVzdGVkX2V4cGlyeSI6MzcwMH0.dcyX4dNaI-u0maButJ4h3q383OnDXCPMzgHzpU3ZHxsjlGIC_I-B_3QApMnQCav8-cSaYv62FWTqoUOF9wf4yw";
 
-
-   private static final String REQUEST_ATTRIBUTE = "request";
+    private static final String REQUEST_ATTRIBUTE = "request";
     private OAuth2CibaEndpoint oAuth2CibaEndpoint;
     private Object oauth2CibaEndpontObject;
 
@@ -86,24 +62,22 @@ public class OAuth2CibaEndpointTest extends TestOAuthEndpointBase {
         oauth2CibaEndpontObject = clazz.newInstance();
     }
 
-
     @DataProvider(name = "provideRequestParams")
     public Object[][] provideRequestParams() {
 
         return new Object[][]{
                 {REQUEST_ATTRIBUTE, request, HttpServletResponse.SC_BAD_REQUEST},
-                {REQUEST_ATTRIBUTE,request+"frsgtg.ftetryyru",HttpServletResponse.SC_BAD_REQUEST},
-                {REQUEST_ATTRIBUTE,"eftaeg",HttpServletResponse.SC_BAD_REQUEST},
-                {REQUEST_ATTRIBUTE,"etfcra.cesavr",HttpServletResponse.SC_BAD_REQUEST},
-                {REQUEST_ATTRIBUTE,"vrsgyb.waygersh.reygsrab",HttpServletResponse.SC_BAD_REQUEST},
+                {REQUEST_ATTRIBUTE, request + "frsgtg.ftetryyru", HttpServletResponse.SC_BAD_REQUEST},
+                {REQUEST_ATTRIBUTE, "eftaeg", HttpServletResponse.SC_BAD_REQUEST},
+                {REQUEST_ATTRIBUTE, "etfcra.cesavr", HttpServletResponse.SC_BAD_REQUEST},
+                {REQUEST_ATTRIBUTE, "vrsgyb.waygersh.reygsrab", HttpServletResponse.SC_BAD_REQUEST},
                 {"", "", HttpServletResponse.SC_BAD_REQUEST},
         };
-
     }
 
     @Test(dataProvider = "provideRequestParams")
-    public void testCiba(String parameter, String paramValue, int expectedStatus){
+    public void testCiba(String parameter, String paramValue, int expectedStatus) {
 
-        Assert.assertEquals(HttpServletResponse.SC_BAD_REQUEST,expectedStatus);
+        Assert.assertEquals(HttpServletResponse.SC_BAD_REQUEST, expectedStatus);
     }
 }

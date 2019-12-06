@@ -27,6 +27,7 @@ import org.wso2.carbon.identity.oauth.ciba.wrappers.CibaAuthRequestWrapper;
 import org.wso2.carbon.identity.oauth.ciba.wrappers.CibaAuthResponseWrapper;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpoint;
+import org.wso2.carbon.identity.oauth.endpoint.exception.CibaAuthFailureException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.model.Constants;
@@ -44,17 +45,6 @@ public class CibaAuthzHandler {
     private static final Log log = LogFactory.getLog(CibaAuthzHandler.class);
 
     OAuth2AuthzEndpoint authzEndPoint = new OAuth2AuthzEndpoint();
-
-    private CibaAuthzHandler() {
-
-    }
-
-    private static CibaAuthzHandler cibaAuthzHandler = new CibaAuthzHandler();
-
-    public static CibaAuthzHandler getInstance() {
-
-        return cibaAuthzHandler;
-    }
 
     /**
      * Trigger authorize request after building the url.

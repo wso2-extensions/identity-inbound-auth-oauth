@@ -39,8 +39,8 @@ public class CibaServiceFactory extends AbstractFactoryBean<CibaAuthServiceImpl>
     @Override
     protected CibaAuthServiceImpl createInstance() throws Exception {
 
-        if (this.cibaAuthService != null) {
-            return this.cibaAuthService;
+        if (cibaAuthService != null) {
+            return cibaAuthService;
         } else {
             CibaAuthServiceImpl cibaAuthService = (CibaAuthServiceImpl)
                     PrivilegedCarbonContext.getThreadLocalCarbonContext().

@@ -39,24 +39,14 @@ public class CibaAuthResponseHandler {
 
     private static final Log log = LogFactory.getLog(CibaAuthResponseHandler.class);
 
-    private CibaAuthResponseHandler() {
-
-    }
-
-    private static CibaAuthResponseHandler cibaAuthResponseHandlerInstance = new CibaAuthResponseHandler();
-
-    public static CibaAuthResponseHandler getInstance() {
-
-        return cibaAuthResponseHandlerInstance;
-    }
-
     /**
      * Creates CIBA AuthenticationResponse.
      *
      * @param cibaAuthCodeResponse CIBA Authentication Request Data Transfer Object.
      * @return Response for AuthenticationRequest.
      */
-    public Response createAuthResponse(@Context HttpServletResponse response, CibaAuthCodeResponse cibaAuthCodeResponse) {
+    public Response createAuthResponse(@Context HttpServletResponse response,
+                                       CibaAuthCodeResponse cibaAuthCodeResponse) {
 
         // Set the ExpiryTime.
         long expiresIn = cibaAuthCodeResponse.getExpiresIn();
@@ -106,6 +96,12 @@ public class CibaAuthResponseHandler {
         }
     }
 
+    /**
+     * Handles client exception.
+     *
+     * @param cibaAuthFailureException Authentication Failure Exception.
+     * @return Response for AuthenticationRequest.
+     */
     private Response handleClientException(CibaAuthFailureException cibaAuthFailureException) {
 
         String errorCode = cibaAuthFailureException.getErrorCode();
@@ -125,6 +121,12 @@ public class CibaAuthResponseHandler {
         }
     }
 
+    /**
+     * Handles server exception.
+     *
+     * @param cibaAuthFailureException Authentication Failure Exception.
+     * @return Response for AuthenticationRequest.
+     */
     private Response handleServerError(CibaAuthFailureException cibaAuthFailureException) {
 
         // Creating error response for the request.
@@ -138,5 +140,4 @@ public class CibaAuthResponseHandler {
         Response.ResponseBuilder respBuilder = Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
         return respBuilder.entity(cibaErrorResponse.toString()).build();
     }
-
 }
