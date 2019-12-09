@@ -242,7 +242,11 @@ public class OAuthConsumerAppDTO {
         return bypassClientCredentials;
     }
 
-    public boolean getBypassClientCredentials() {
+    /**
+     * This method is deprecated. Use the 'isBypassClientCredentials' method instead.
+     */
+    @Deprecated
+    public boolean getBypassClientCredentials() { 
         return bypassClientCredentials;
     }
 

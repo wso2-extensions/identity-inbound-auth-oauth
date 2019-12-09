@@ -142,7 +142,7 @@ public class OAuthApplicationMgtListenerTest extends TestOAuthDAOBase {
     }
 
     @DataProvider(name = "GetSPConfigData")
-    public Object[][] SPConfigData() {
+    public Object[][] spConfigData() {
 
         return new Object[][]{
                 {true, true, OAUTH2, OAUTH_CONSUMER_SECRET},
@@ -216,7 +216,8 @@ public class OAuthApplicationMgtListenerTest extends TestOAuthDAOBase {
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
             when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
             ServiceProvider serviceProvider = createServiceProvider(1, true, true, OAUTH2, OAUTH_CONSUMER_SECRET);
-            boolean result = oAuthApplicationMgtListener.doPostCreateApplication(serviceProvider, tenantDomain, userName);
+            boolean result =
+                    oAuthApplicationMgtListener.doPostCreateApplication(serviceProvider, tenantDomain, userName);
             assertTrue(result, "Post-create application failed.");
         }
     }
@@ -261,8 +262,9 @@ public class OAuthApplicationMgtListenerTest extends TestOAuthDAOBase {
                 when(mockTokenMgtDAO.getActiveTokensForConsumerKey(anyString())).thenReturn(accessTokens);
                 when(mockTokenMgtDAO.getAuthorizationCodesForConsumerKey(anyString())).thenReturn(authCodes);
             } else {
-                when(mockTokenMgtDAO.getActiveTokensForConsumerKey(anyString())).thenReturn(new HashSet<String>());
-                when(mockTokenMgtDAO.getActiveAuthorizationCodesForConsumerKey(anyString())).thenReturn(new HashSet<String>());
+                when(mockTokenMgtDAO.getActiveTokensForConsumerKey(anyString())).thenReturn(new HashSet<>());
+                when(mockTokenMgtDAO.getActiveAuthorizationCodesForConsumerKey(anyString()))
+                        .thenReturn(new HashSet<>());
             }
 
             if (cacheEnabled) {
@@ -279,8 +281,10 @@ public class OAuthApplicationMgtListenerTest extends TestOAuthDAOBase {
             }
 
             System.setProperty(CarbonBaseConstants.CARBON_HOME, "");
-            ServiceProvider serviceProvider = createServiceProvider(1, hasAuthConfig, hasRequestConfig, authType, propName);
-            boolean result = oAuthApplicationMgtListener.doPostUpdateApplication(serviceProvider, tenantDomain, userName);
+            ServiceProvider serviceProvider =
+                    createServiceProvider(1, hasAuthConfig, hasRequestConfig, authType, propName);
+            boolean result =
+                    oAuthApplicationMgtListener.doPostUpdateApplication(serviceProvider, tenantDomain, userName);
             assertTrue(result, "Post-update application failed.");
         }
     }
@@ -292,7 +296,8 @@ public class OAuthApplicationMgtListenerTest extends TestOAuthDAOBase {
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
             when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
             ServiceProvider serviceProvider = createServiceProvider(1, true, true, OAUTH2, OAUTH_CONSUMER_SECRET);
-            boolean result = oAuthApplicationMgtListener.doPostGetApplicationExcludingFileBasedSPs(serviceProvider, spName, tenantDomain);
+            boolean result = oAuthApplicationMgtListener
+                    .doPostGetApplicationExcludingFileBasedSPs(serviceProvider, spName, tenantDomain);
             assertTrue(result, "Post-get application excluding file based service providers failed.");
         }
     }
@@ -305,7 +310,8 @@ public class OAuthApplicationMgtListenerTest extends TestOAuthDAOBase {
             when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
             ServiceProvider serviceProvider = createServiceProvider(1, false, false, "otherAuthType",
                     OAUTH_CONSUMER_SECRET);
-            when(mockAppMgtService.getApplicationExcludingFileBasedSPs(anyString(), anyString())).thenReturn(serviceProvider);
+            when(mockAppMgtService.getApplicationExcludingFileBasedSPs(anyString(), anyString()))
+                    .thenReturn(serviceProvider);
 
             boolean result = oAuthApplicationMgtListener.doPreDeleteApplication(spName, tenantDomain, userName);
             assertTrue(result, "Post-delete application failed.");

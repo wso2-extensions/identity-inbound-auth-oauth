@@ -37,6 +37,7 @@ import javax.servlet.http.HttpServletRequest;
  */
 public class PublicClientAuthenticator extends AbstractOAuthClientAuthenticator {
 
+    public static final String PUBLIC_CLIENT_AUTHENTICATOR = "PublicClientAuthenticator";
     private static final Log log = LogFactory.getLog(PublicClientAuthenticator.class);
 
     /**
@@ -120,7 +121,7 @@ public class PublicClientAuthenticator extends AbstractOAuthClientAuthenticator 
     @Override
     public String getName() {
 
-        return "PublicClientAuthenticator";
+        return PUBLIC_CLIENT_AUTHENTICATOR;
     }
 
     /**

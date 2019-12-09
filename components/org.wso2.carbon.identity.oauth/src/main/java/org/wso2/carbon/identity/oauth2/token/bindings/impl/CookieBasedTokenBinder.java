@@ -21,14 +21,10 @@ package org.wso2.carbon.identity.oauth2.token.bindings.impl;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
-import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
-import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
-import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.model.HttpRequestHeader;
-import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.net.HttpCookie;
@@ -44,11 +40,12 @@ import javax.ws.rs.core.HttpHeaders;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.AUTHORIZATION_CODE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.REFRESH_TOKEN;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 
 /**
  * This class provides the cookie based token binder implementation.
  */
-public class CookieBasedTokenBinder implements TokenBinder {
+public class CookieBasedTokenBinder extends AbstractTokenBinder {
 
     private static final String BINDING_TYPE = "cookie";
 
@@ -112,47 +109,6 @@ public class CookieBasedTokenBinder implements TokenBinder {
     }
 
     @Override
-    public Optional<String> getTokenBindingValue(OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO) {
-
-        if (AUTHORIZATION_CODE.equals(oAuth2AccessTokenReqDTO.getGrantType()) && StringUtils
-                .isNotBlank(oAuth2AccessTokenReqDTO.getAuthorizationCode())) {
-
-            AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(
-                    oAuth2AccessTokenReqDTO.getAuthorizationCode());
-            AuthorizationGrantCacheEntry authorizationGrantCacheEntry = AuthorizationGrantCache.getInstance()
-                    .getValueFromCacheByCode(cacheKey);
-            if (authorizationGrantCacheEntry != null && StringUtils
-                    .isNotBlank(authorizationGrantCacheEntry.getTokenBindingValue())) {
-                return Optional.of(authorizationGrantCacheEntry.getTokenBindingValue());
-            }
-        } else if (REFRESH_TOKEN.equals(oAuth2AccessTokenReqDTO.getGrantType())) {
-
-            HttpRequestHeader[] httpRequestHeaders = oAuth2AccessTokenReqDTO.getHttpRequestHeaders();
-            if (ArrayUtils.isEmpty(httpRequestHeaders)) {
-                return Optional.empty();
-            }
-
-            for (HttpRequestHeader httpRequestHeader : httpRequestHeaders) {
-                if (HttpHeaders.COOKIE.equalsIgnoreCase(httpRequestHeader.getName())) {
-                    if (ArrayUtils.isEmpty(httpRequestHeader.getValue())) {
-                        return Optional.empty();
-                    }
-
-                    String[] cookies = httpRequestHeader.getValue()[0].split(";");
-                    String cookiePrefix = COOKIE_NAME + "=";
-                    for (String cookie : cookies) {
-                        if (StringUtils.isNotBlank(cookie) && cookie.trim().startsWith(cookiePrefix)) {
-                            return Optional.of((HttpCookie.parse(cookie).get(0).getValue()));
-                        }
-                    }
-                }
-            }
-        }
-
-        return Optional.empty();
-    }
-
-    @Override
     public void setTokenBindingValueForResponse(HttpServletResponse response, String bindingValue) {
 
         Cookie cookie = new Cookie(COOKIE_NAME, bindingValue);
@@ -198,5 +154,38 @@ public class CookieBasedTokenBinder implements TokenBinder {
         }
 
         throw new RuntimeException("Unsupported request type: " + request.getClass().getName());
+    }
+
+    @Override
+    public boolean isValidTokenBinding(OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO, String bindingReference) {
+
+        if (StringUtils.isBlank(bindingReference) || NONE.equals(bindingReference)) {
+            return true;
+        }
+
+        if (REFRESH_TOKEN.equals(oAuth2AccessTokenReqDTO.getGrantType())) {
+
+            HttpRequestHeader[] httpRequestHeaders = oAuth2AccessTokenReqDTO.getHttpRequestHeaders();
+            if (ArrayUtils.isEmpty(httpRequestHeaders)) {
+                return false;
+            }
+
+            for (HttpRequestHeader httpRequestHeader : httpRequestHeaders) {
+                if (HttpHeaders.COOKIE.equalsIgnoreCase(httpRequestHeader.getName())) {
+                    if (ArrayUtils.isEmpty(httpRequestHeader.getValue())) {
+                        return false;
+                    }
+
+                    String[] cookies = httpRequestHeader.getValue()[0].split(";");
+                    String cookiePrefix = COOKIE_NAME + "=";
+                    for (String cookie : cookies) {
+                        if (StringUtils.isNotBlank(cookie) && cookie.trim().startsWith(cookiePrefix)) {
+                            return bindingReference.equals(HttpCookie.parse(cookie).get(0).getValue());
+                        }
+                    }
+                }
+            }
+        }
+        return false;
     }
 }

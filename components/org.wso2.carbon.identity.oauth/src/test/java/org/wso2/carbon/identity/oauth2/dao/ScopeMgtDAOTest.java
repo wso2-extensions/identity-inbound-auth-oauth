@@ -100,7 +100,8 @@ public class ScopeMgtDAOTest extends IdentityBaseTest {
 
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection2);
             when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection2);
-            assertNotNull(oAuthScopeDAO.getScopeByName(((Scope) scope).getName(), tenantId),"Failed to persist scope.");
+            assertNotNull(oAuthScopeDAO.getScopeByName(((Scope) scope).getName(), tenantId),
+                    "Failed to persist scope.");
 
             // Clean after test
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection3);
@@ -116,8 +117,9 @@ public class ScopeMgtDAOTest extends IdentityBaseTest {
                 {
                         Arrays.asList(
                                 new Scope("scope3", "scope3", "scope3"),
-                                new Scope("scope4", "scope4", "scope4", Arrays.asList("sampleBinding3", "sampleBinding4"))
-                        ),
+                                new Scope("scope4", "scope4", "scope4",
+                                        Arrays.asList("sampleBinding3", "sampleBinding4"))
+                                     ),
                         MultitenantConstants.SUPER_TENANT_ID
                 },
                 {
@@ -125,7 +127,7 @@ public class ScopeMgtDAOTest extends IdentityBaseTest {
                                 new Scope("scope5", "scope5", "scope5"),
                                 new Scope("scope6", "scope6", "scope6", Arrays.asList("sampleBinding3",
                                         "sampleBinding4"))
-                        ),
+                                     ),
                         SAMPLE_TENANT_ID
                 },
         };
@@ -155,17 +157,21 @@ public class ScopeMgtDAOTest extends IdentityBaseTest {
                 {
                         Arrays.asList(
                                 new Scope("scope7", "scope7", "scope7"),
-                                new Scope("scope8", "scope8", "scope8", Arrays.asList("sampleBinding5", "sampleBinding6")),
-                                new Scope("scope9", "scope9", "scope9", Arrays.asList("sampleBinding7", "sampleBinding8"))
-                        ),
+                                new Scope("scope8", "scope8", "scope8",
+                                        Arrays.asList("sampleBinding5", "sampleBinding6")),
+                                new Scope("scope9", "scope9", "scope9",
+                                        Arrays.asList("sampleBinding7", "sampleBinding8"))
+                                     ),
                         MultitenantConstants.SUPER_TENANT_ID
                 },
                 {
                         Arrays.asList(
                                 new Scope("scope10", "scope10", "scope10"),
-                                new Scope("scope11", "scope11", "scope11", Arrays.asList("sampleBinding5", "sampleBinding6")),
-                                new Scope("scope12", "scope12", "scope12", Arrays.asList("sampleBinding7", "sampleBinding8"))
-                        ),
+                                new Scope("scope11", "scope11", "scope11",
+                                        Arrays.asList("sampleBinding5", "sampleBinding6")),
+                                new Scope("scope12", "scope12", "scope12",
+                                        Arrays.asList("sampleBinding7", "sampleBinding8"))
+                                     ),
                         SAMPLE_TENANT_ID
                 },
         };

@@ -49,7 +49,7 @@ public class ClaimMetaDataCacheRemoveListenerTest {
                 ? extends ClaimMetaDataCacheEntry> cacheEntryEventNullInstance = null;
 
         CacheEntryEvent<? extends ClaimMetaDataCacheEntry,
-                ? extends ClaimMetaDataCacheEntry> cacheEntryEvent_ValueNull =
+                ? extends ClaimMetaDataCacheEntry> cacheEntryEventValueNull =
                 new CacheEntryEvent<ClaimMetaDataCacheEntry, ClaimMetaDataCacheEntry>(cache) {
                     @Override
                     public ClaimMetaDataCacheEntry getKey() {
@@ -64,7 +64,7 @@ public class ClaimMetaDataCacheRemoveListenerTest {
                 };
 
         CacheEntryEvent<? extends ClaimMetaDataCacheEntry,
-                ? extends ClaimMetaDataCacheEntry> cacheEntryEvent_ValueNotnull =
+                ? extends ClaimMetaDataCacheEntry> cacheEntryEventValueNotnull =
                 new CacheEntryEvent<ClaimMetaDataCacheEntry, ClaimMetaDataCacheEntry>(cache) {
                     AuthenticatedUser authenticatedUser = new AuthenticatedUser();
                     ClaimCacheKey claimCacheKey = new ClaimCacheKey(authenticatedUser);
@@ -80,7 +80,7 @@ public class ClaimMetaDataCacheRemoveListenerTest {
                         return claimMetaDataCacheEntry;
                     }
                 };
-        cacheEntryEvent_ValueNotnull.getValue().setClaimCacheKey(null);
+        cacheEntryEventValueNotnull.getValue().setClaimCacheKey(null);
 
         CacheEntryEvent<? extends ClaimMetaDataCacheEntry,
                 ? extends ClaimMetaDataCacheEntry> cacheEntryEventQualified =
@@ -102,8 +102,8 @@ public class ClaimMetaDataCacheRemoveListenerTest {
 
         return new Object[][]{
                 {cacheEntryEventNullInstance},
-                {cacheEntryEvent_ValueNull},
-                {cacheEntryEvent_ValueNotnull},
+                {cacheEntryEventValueNull},
+                {cacheEntryEventValueNotnull},
                 {cacheEntryEventQualified}
         };
     }

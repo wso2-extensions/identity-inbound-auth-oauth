@@ -51,9 +51,11 @@ import static org.powermock.api.mockito.PowerMockito.when;
 import static org.wso2.carbon.identity.openidconnect.util.TestUtils.getKeyStoreFromFile;
 import static org.wso2.carbon.identity.openidconnect.util.TestUtils.getRequestObjects;
 
-@PrepareForTest({OAuth2Util.class, IdentityUtil.class, OAuthServerConfiguration.class, RequestObjectValidatorImpl.class})
+@PrepareForTest({OAuth2Util.class, IdentityUtil.class, OAuthServerConfiguration.class,
+        RequestObjectValidatorImpl.class})
 @PowerMockIgnore({"javax.crypto.*"})
 public class RequestParamRequestObjectBuilderTest extends PowerMockTestCase {
+
     private RSAPrivateKey rsaPrivateKey;
     private KeyStore clientKeyStore;
     private KeyStore wso2KeyStore;
@@ -62,21 +64,23 @@ public class RequestParamRequestObjectBuilderTest extends PowerMockTestCase {
 
     @BeforeTest
     public void setUp() throws Exception {
+
         System.setProperty(CarbonBaseConstants.CARBON_HOME,
                 Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString());
-        clientKeyStore = getKeyStoreFromFile("testkeystore.jks", "wso2carbon", System.getProperty(CarbonBaseConstants.CARBON_HOME));
+        clientKeyStore = getKeyStoreFromFile("testkeystore.jks", "wso2carbon",
+                System.getProperty(CarbonBaseConstants.CARBON_HOME));
         wso2KeyStore = getKeyStoreFromFile("wso2carbon.jks", "wso2carbon", System.getProperty(CarbonBaseConstants
                 .CARBON_HOME));
     }
 
     @DataProvider(name = "TestBuildRequestObjectTest")
     public Object[][] buildRequestObjectData() throws Exception {
+
         Key privateKey = clientKeyStore.getKey("wso2carbon", "wso2carbon".toCharArray());
         Key privateKey2 = wso2KeyStore.getKey("wso2carbon", "wso2carbon".toCharArray());
         PublicKey publicKey = wso2KeyStore.getCertificate("wso2carbon").getPublicKey();
         return getRequestObjects(privateKey, privateKey2, publicKey, TEST_CLIENT_ID_1, SOME_SERVER_URL);
     }
-
 
     @Test(dataProvider = "TestBuildRequestObjectTest")
     public void buildRequestObjectTest(String requestObjectString, Map<String, Object> claims, boolean isSigned,

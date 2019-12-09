@@ -246,10 +246,12 @@ public class OAuthAppDO implements Serializable {
     }
 
     public void setBackChannelLogoutUrl(String backChannelLogoutUrl) {
+
         this.backChannelLogoutUrl = backChannelLogoutUrl;
     }
 
     public String getBackChannelLogoutUrl() {
+
         return backChannelLogoutUrl;
     }
 

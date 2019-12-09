@@ -19,10 +19,7 @@
 package org.wso2.carbon.identity.oauth2.token.handlers.grant;
 
 import org.apache.commons.lang.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
-import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.testng.PowerMockTestCase;
 import org.powermock.reflect.internal.WhiteboxImpl;
 import org.testng.annotations.BeforeTest;
@@ -31,7 +28,6 @@ import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
-import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -42,14 +38,12 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.TestConstants;
-import org.wso2.carbon.identity.oauth2.dao.TokenMgtDAO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
-
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
@@ -164,13 +158,18 @@ public class AuthorizationCodeGrantHandlerTest extends PowerMockTestCase {
         WhiteboxImpl.setInternalState(authzCodeDO2, "callbackUrl", "callBackUrl");
         WhiteboxImpl.setInternalState(authzCodeDO2, "validityPeriod", 3000000L);
 
-        return new Object[][] {
+        return new Object[][]{
                 {oAuthTokenReqMessageContext1, null, CLIENT_ID_VALUE, true, 1000L, "Invalid authorization code"},
-                {oAuthTokenReqMessageContext1, authzCodeDO1, CLIENT_ID_VALUE, true, 1000L, "Inactive authorization code"},
-                {oAuthTokenReqMessageContext1, authzCodeDO2, CLIENT_ID_VALUE, true, 1000L, "Expired authorization code"},
-                {oAuthTokenReqMessageContext1, authzCodeDO2, CLIENT_ID_VALUE, true, System.currentTimeMillis(), "Callback url mismatch"},
-                {oAuthTokenReqMessageContext2, authzCodeDO2, CLIENT_ID_VALUE, false, System.currentTimeMillis(), "PKCE validation failed"},
-                {oAuthTokenReqMessageContext2, authzCodeDO2, INVALID_CLIENT, true, System.currentTimeMillis(), "Error while retrieving app information"},
+                {oAuthTokenReqMessageContext1, authzCodeDO1, CLIENT_ID_VALUE, true, 1000L,
+                        "Inactive authorization code"},
+                {oAuthTokenReqMessageContext1, authzCodeDO2, CLIENT_ID_VALUE, true, 1000L,
+                        "Expired authorization code"},
+                {oAuthTokenReqMessageContext1, authzCodeDO2, CLIENT_ID_VALUE, true, System.currentTimeMillis(),
+                        "Callback url mismatch"},
+                {oAuthTokenReqMessageContext2, authzCodeDO2, CLIENT_ID_VALUE, false, System.currentTimeMillis(),
+                        "PKCE validation failed"},
+                {oAuthTokenReqMessageContext2, authzCodeDO2, INVALID_CLIENT, true, System.currentTimeMillis(),
+                        "Error while retrieving app information"},
         };
     }
 

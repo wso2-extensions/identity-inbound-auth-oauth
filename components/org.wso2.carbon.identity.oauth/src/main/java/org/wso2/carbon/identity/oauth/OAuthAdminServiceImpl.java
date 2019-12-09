@@ -50,7 +50,6 @@ import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.authz.handlers.ResponseTypeHandler;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
-import org.wso2.carbon.identity.oauth2.model.TokenIssuerDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeValidator;
 import org.wso2.carbon.user.api.UserStoreException;
@@ -71,6 +70,7 @@ import static org.wso2.carbon.identity.oauth.Error.INVALID_OAUTH_CLIENT;
 import static org.wso2.carbon.identity.oauth.Error.INVALID_REQUEST;
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.buildScopeString;
 
 
@@ -82,7 +82,6 @@ public class OAuthAdminServiceImpl {
     static final String RESPONSE_TYPE_ID_TOKEN = "id_token";
     static List<String> allowedGrants = null;
     static String[] allowedScopeValidators = null;
-    static List<String> supportedTokenTypes = null;
 
     protected static final Log log = LogFactory.getLog(OAuthAdminServiceImpl.class);
 
@@ -387,9 +386,10 @@ public class OAuthAdminServiceImpl {
                 throw handleClientError(INVALID_OAUTH_CLIENT, msg);
             }
             if (!StringUtils.equals(consumerAppDTO.getOauthConsumerSecret(), oauthappdo.getOauthConsumerSecret())) {
+                errorMessage = "Invalid ConsumerSecret is provided for updating the OAuth application with " +
+                        "consumerKey: " + oauthConsumerKey;
                 if (log.isDebugEnabled()) {
-                    log.debug("Invalid ConsumerSecret is provided for updating the OAuth" +
-                              " application with ConsumerKey: " + oauthConsumerKey);
+                    log.debug(errorMessage);
                 }
                 throw handleClientError(INVALID_REQUEST, errorMessage);
             }
@@ -657,7 +657,8 @@ public class OAuthAdminServiceImpl {
     public OAuthConsumerAppDTO updateAndRetrieveOauthSecretKey(String consumerKey) throws IdentityOAuthAdminException {
 
         Properties properties = new Properties();
-        properties.setProperty(OAuthConstants.OAUTH_APP_NEW_SECRET_KEY, OAuthUtil.getRandomNumber());
+        String newSecret = OAuthUtil.getRandomNumber();
+        properties.setProperty(OAuthConstants.OAUTH_APP_NEW_SECRET_KEY, newSecret);
         properties.setProperty(OAuthConstants.ACTION_PROPERTY_KEY, OAuthConstants.ACTION_REGENERATE);
 
         AppInfoCache.getInstance().clearCacheEntry(consumerKey);
@@ -666,7 +667,10 @@ public class OAuthAdminServiceImpl {
             log.debug("Client Secret for OAuth app with consumerKey: " + consumerKey + " updated in OAuthCache.");
         }
 
-        return getOAuthApplicationData(consumerKey);
+        OAuthConsumerAppDTO updatedApplication = getOAuthApplicationData(consumerKey);
+        updatedApplication.setOauthConsumerSecret(newSecret);
+
+        return updatedApplication;
 
     }
 
@@ -875,6 +879,13 @@ public class OAuthAdminServiceImpl {
                             //Clear cache with AccessTokenDO
                             authzUser = accessTokenDO.getAuthzUser();
 
+                            String tokenBindingReference = NONE;
+                            if (accessTokenDO.getTokenBinding() != null && StringUtils
+                                    .isNotBlank(accessTokenDO.getTokenBinding().getBindingReference())) {
+                                tokenBindingReference = accessTokenDO.getTokenBinding().getBindingReference();
+                            }
+                            OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), authzUser,
+                                    buildScopeString(accessTokenDO.getScope()), tokenBindingReference);
                             OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), authzUser,
                                                       buildScopeString(accessTokenDO.getScope()));
                             OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), authzUser);
@@ -1058,15 +1069,7 @@ public class OAuthAdminServiceImpl {
      */
     public List<String> getSupportedTokenTypes() {
 
-        if (supportedTokenTypes == null) {
-            supportedTokenTypes = new ArrayList<String>();
-            Map<String, TokenIssuerDO> supportedTokenTypesMap = OAuthServerConfiguration.getInstance()
-                                                                                        .getSupportedTokenIssuers();
-            for (Object tokenTypeObj : supportedTokenTypesMap.keySet()) {
-                supportedTokenTypes.add(tokenTypeObj.toString());
-            }
-        }
-        return supportedTokenTypes;
+        return OAuthServerConfiguration.getInstance().getSupportedTokenTypes();
     }
 
     /**

@@ -171,7 +171,7 @@ public class SAML1BearerGrantHandler extends AbstractAuthorizationGrantHandler {
 
         try {
             XMLObject samlObject = UnmarshallUtils.unmarshall(new String(Base64.decodeBase64(
-                    tokReqMsgCtx.getOauth2AccessTokenReqDTO().getAssertion())));
+                    tokReqMsgCtx.getOauth2AccessTokenReqDTO().getAssertion()), StandardCharsets.UTF_8));
             // Validating for multiple assertions
             NodeList assertionList = samlObject.getDOM().getElementsByTagNameNS(SAMLConstants.SAML1_NS, "Assertion");
             if (assertionList.getLength() > 0) {
@@ -307,7 +307,7 @@ public class SAML1BearerGrantHandler extends AbstractAuthorizationGrantHandler {
             }
         }
 
-        /**
+        /*
          * The Assertion MUST contain <Conditions> element with an <AudienceRestriction> element with an <Audience>
          * element containing a URI reference that identifies the authorization server, or the service provider
          * SAML entity of its controlling domain, as an intended audience.  The token endpoint URL of the
@@ -368,13 +368,13 @@ public class SAML1BearerGrantHandler extends AbstractAuthorizationGrantHandler {
             }
         }
 
-        /**
+        /*
          * The Assertion MUST have an expiry that limits the time window during which it can be used.  The expiry
          * can be expressed either as the NotOnOrAfter attribute of the <Conditions> element or as the NotOnOrAfter
          * attribute of a suitable <SubjectConfirmationData> element.
          */
 
-        /**
+        /*
          * The <Subject> element MUST contain at least one <SubjectConfirmation> element that allows the
          * authorization server to confirm it as a Bearer Assertion.  Such a <SubjectConfirmation> element MUST
          * have a Method attribute with a value of "urn:oasis:names:tc:SAML:1.0:cm:bearer".  The
@@ -405,7 +405,8 @@ public class SAML1BearerGrantHandler extends AbstractAuthorizationGrantHandler {
         }
         if (!bearerFound) {
             if (log.isDebugEnabled()) {
-                log.debug("Cannot find Method attribute in SubjectConfirmation " + subject.getSubjectConfirmation());
+                log.debug("Cannot find a subject confirmation with method " + OAuthConstants.OAUTH_SAML1_BEARER_METHOD +
+                        " in subject confirmation " + subject.getSubjectConfirmation());
             }
             return false;
         }
@@ -415,15 +416,7 @@ public class SAML1BearerGrantHandler extends AbstractAuthorizationGrantHandler {
             log.warn("Subject confirmation data is missing.");
         }
 
-        if (!bearerFound) {
-            if (log.isDebugEnabled()) {
-                log.debug("Failed to find a SubjectConfirmation with a Method attribute having : " +
-                          OAuthConstants.OAUTH_SAML1_BEARER_METHOD);
-            }
-            return false;
-        }
-
-        /**
+        /*
          * The authorization server MUST verify that the NotOnOrAfter instant has not passed, subject to allowable
          * clock skew between systems.  An invalid NotOnOrAfter instant on the <Conditions> element invalidates
          * the entire Assertion.  An invalid NotOnOrAfter instant on a <SubjectConfirmationData> element only
@@ -456,7 +449,7 @@ public class SAML1BearerGrantHandler extends AbstractAuthorizationGrantHandler {
             return false;
         }
 
-        /**
+        /*
          * The Assertion MUST be digitally signed by the issuer and the authorization server MUST verify the
          * signature.
          */
