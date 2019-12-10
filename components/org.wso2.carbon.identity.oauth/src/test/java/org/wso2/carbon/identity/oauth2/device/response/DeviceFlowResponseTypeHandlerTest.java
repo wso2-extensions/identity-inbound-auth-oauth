@@ -67,14 +67,12 @@ public class DeviceFlowResponseTypeHandlerTest extends PowerMockTestCase {
         user.setUserName("testUser");
         oAuth2AuthorizeReqDTO.setUser(user);
         oAuth2AuthorizeReqDTO.setCallbackUrl(TEST_URL);
-
     }
 
     @Test
     public void testIssue() throws IdentityOAuth2Exception, InvalidOAuthClientException, SQLException {
 
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
-
             mockStatic(OAuth2Util.class);
             when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(oAuthAppDO);
             mockStatic(IdentityDatabaseUtil.class);
@@ -87,8 +85,6 @@ public class DeviceFlowResponseTypeHandlerTest extends PowerMockTestCase {
                     new OAuthAuthzReqMessageContext(oAuth2AuthorizeReqDTO);
             DeviceFlowResponseTypeHandler deviceFlowResponseTypeHandler = new DeviceFlowResponseTypeHandler();
             assertEquals(TEST_URL, deviceFlowResponseTypeHandler.issue(oAuthAuthzReqMessageContext).getCallbackURI());
-        } catch (SQLException e) {
-            throw new SQLException("Error while database processes", e);
         }
     }
 }

@@ -37,6 +37,8 @@ public interface DeviceFlowDAO {
      * @param userCode    Code that is used to correlate user and device.
      * @param consumerKey Consumer key of the client application.
      * @param expiresIn   Device code valid period.
+     * @param interval    Polling interval.
+     * @param scopes      Requested scopes.
      * @throws IdentityOAuth2Exception Error while inserting device flow parameters.
      */
     void insertDeviceFlowParameters(String deviceCode, String userCode, String consumerKey, Long expiresIn,

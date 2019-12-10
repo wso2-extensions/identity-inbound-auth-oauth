@@ -53,6 +53,7 @@ public class UserAuthenticationEndpoint {
     private OAuth2AuthzEndpoint oAuth2AuthzEndpoint = new OAuth2AuthzEndpoint();
     private DeviceFlowDO deviceFlowDO = new DeviceFlowDO();
     private DeviceAuthService deviceAuthService;
+
     public void setDeviceAuthService(DeviceAuthService deviceAuthService) {
 
         this.deviceAuthService = deviceAuthService;

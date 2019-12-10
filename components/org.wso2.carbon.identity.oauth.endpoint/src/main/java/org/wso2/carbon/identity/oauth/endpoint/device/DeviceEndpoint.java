@@ -71,10 +71,10 @@ public class DeviceEndpoint {
         }
         String userCode = GenerateKeys.getKey(Constants.KEY_LENGTH);
         String deviceCode = UUID.randomUUID().toString();
-        String scope = request.getParameter(Constants.SCOPE);
+        String scopes = request.getParameter(Constants.SCOPE);
         String redirectionUri = IdentityUtil.getServerURL("/authenticationendpoint/device.do", false, false);
         String redirectionUriComplete = redirectionUri + "?user_code=" + userCode;
-        deviceAuthService.generateDeviceResponse(deviceCode, userCode, clientId, scope);
+        deviceAuthService.generateDeviceResponse(deviceCode, userCode, clientId, scopes);
         return buildResponseObject(deviceCode, userCode, redirectionUri, redirectionUriComplete);
     }
 
@@ -98,7 +98,7 @@ public class DeviceEndpoint {
      */
     private String stringValueInSeconds(long value) {
 
-        return String.valueOf((value / 1000));
+        return String.valueOf(value / 1000);
     }
 
     /**

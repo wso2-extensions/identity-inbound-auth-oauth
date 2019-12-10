@@ -51,7 +51,6 @@ public class DeviceFlowGrantTest extends PowerMockTestCase {
         deviceFlowDO2.setExpiryTime(new Timestamp(date.getTime() + 1000));
         deviceFlowDO2.setLastPollTime(new Timestamp(date.getTime() - 2000));
         deviceFlowDO2.setPollTime(1500);
-
     }
 
     @Test
@@ -67,5 +66,4 @@ public class DeviceFlowGrantTest extends PowerMockTestCase {
         Assert.assertFalse(WhiteboxImpl.invokeMethod(DeviceFlowGrant.class,"isValidPollTime", newTime, deviceFlowDO1));
         Assert.assertTrue(WhiteboxImpl.invokeMethod(DeviceFlowGrant.class,"isValidPollTime", newTime, deviceFlowDO2));
     }
-
 }

@@ -28,11 +28,11 @@ import org.wso2.carbon.identity.oauth2.device.dao.DeviceFlowPersistenceFactory;
 public class DeviceAuthServiceImpl implements DeviceAuthService {
 
     @Override
-    public void generateDeviceResponse(String deviceCode, String userCode, String clientId, String scope)
+    public void generateDeviceResponse(String deviceCode, String userCode, String clientId, String scopes)
             throws IdentityOAuth2Exception {
 
         DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().insertDeviceFlowParameters(deviceCode,
-                userCode, clientId, Constants.EXPIRES_IN_VALUE, Constants.INTERVAL_VALUE, scope);
+                userCode, clientId, Constants.EXPIRES_IN_VALUE, Constants.INTERVAL_VALUE, scopes);
     }
 
     @Override

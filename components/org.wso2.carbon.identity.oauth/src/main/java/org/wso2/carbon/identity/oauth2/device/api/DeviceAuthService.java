@@ -28,10 +28,10 @@ public interface DeviceAuthService {
      * @param deviceCode Code that is used to identify the device.
      * @param userCode   Code that is used to correlate two devices.
      * @param clientId   Consumer key of the application.
-     * @param scope      Requested scopes.
+     * @param scopes     Requested scopes.
      * @throws IdentityOAuth2Exception Error while storing device flow parameters.
      */
-    void generateDeviceResponse(String deviceCode, String userCode, String clientId, String scope)
+    void generateDeviceResponse(String deviceCode, String userCode, String clientId, String scopes)
             throws IdentityOAuth2Exception;
 
     /**

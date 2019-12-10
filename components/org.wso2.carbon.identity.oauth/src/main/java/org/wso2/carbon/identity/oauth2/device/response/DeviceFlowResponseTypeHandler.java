@@ -18,8 +18,6 @@
 
 package org.wso2.carbon.identity.oauth2.device.response;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
@@ -33,8 +31,6 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
  * Device response type handler.
  */
 public class DeviceFlowResponseTypeHandler extends AbstractResponseTypeHandler {
-
-    private static Log log = LogFactory.getLog(DeviceFlowResponseTypeHandler.class);
 
     /**
      * This method is used to handle the response type. After authentication process finish this will redirect to the

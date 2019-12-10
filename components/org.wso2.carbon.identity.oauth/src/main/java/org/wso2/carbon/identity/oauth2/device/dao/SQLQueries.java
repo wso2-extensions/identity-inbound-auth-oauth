@@ -46,7 +46,8 @@ public class SQLQueries {
                 "IDN_OAUTH2_DEVICE_FLOW.CONSUMER_KEY_ID) WHERE DEVICE_CODE = ?";
 
         public static final String GET_AUTHENTICATION_STATUS = "SELECT STATUS, LAST_POLL_TIME, POLL_TIME, EXPIRY_TIME, " +
-                "AUTHZ_USER, TENANT_ID, USER_DOMAIN FROM IDN_OAUTH2_DEVICE_FLOW WHERE DEVICE_CODE = ?";
+                "AUTHZ_USER, TENANT_ID, USER_DOMAIN, NAME FROM (SELECT * FROM IDN_OAUTH2_DEVICE_FLOW INNER JOIN " +
+                "IPD ON IDN_OAUTH2_DEVICE_FLOW.IDP_ID = IPD.ID) WHERE DEVICE_CODE = ?";
 
         public static final String CHECK_CLIENT_ID_EXISTS = "SELECT CONSUMER_KEY FROM IDN_OAUTH_CONSUMER_APPS WHERE " +
                 "CONSUMER_KEY = ?";
@@ -61,7 +62,8 @@ public class SQLQueries {
                 "DEVICE_CODE = ?";
 
         public static final String SET_AUTHZ_USER_AND_STATUS = "UPDATE IDN_OAUTH2_DEVICE_FLOW SET AUTHZ_USER = ?, " +
-                "STATUS = ?, TENANT_ID = ?, USER_DOMAIN = ? WHERE USER_CODE = ?";
+                "STATUS = ?, TENANT_ID = ?, USER_DOMAIN = ?, IDP_ID = (SELECT ID FROM IDP WHERE NAME = ? AND " +
+                "TENANT_ID = ?) WHERE USER_CODE = ?";
 
         public static final String SET_DEVICE_CODE_EXPIRED = "UPDATE IDN_OAUTH2_DEVICE_FLOW SET STATUS = ? WHERE " +
                 "DEVICE_CODE = ?";
