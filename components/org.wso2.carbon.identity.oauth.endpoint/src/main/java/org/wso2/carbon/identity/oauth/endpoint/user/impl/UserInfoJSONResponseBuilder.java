@@ -43,6 +43,4 @@ public class UserInfoJSONResponseBuilder extends AbstractUserInfoResponseBuilder
                                    Map<String, Object> filteredUserClaims) throws UserInfoEndpointException {
         return JSONUtils.buildJSON(filteredUserClaims);
     }
-
-
 }

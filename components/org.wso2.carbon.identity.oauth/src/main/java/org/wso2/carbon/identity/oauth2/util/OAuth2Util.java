@@ -2419,7 +2419,6 @@ public class OAuth2Util {
                 }
             }
         }
-
         return essentialClaimsList;
     }
 
