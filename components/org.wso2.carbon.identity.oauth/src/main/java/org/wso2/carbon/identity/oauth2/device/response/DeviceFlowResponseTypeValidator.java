@@ -49,6 +49,5 @@ public class DeviceFlowResponseTypeValidator extends AbstractValidator<HttpServl
 
     @Override
     public void validateContentType(HttpServletRequest request) throws OAuthProblemException {
-
     }
 }
