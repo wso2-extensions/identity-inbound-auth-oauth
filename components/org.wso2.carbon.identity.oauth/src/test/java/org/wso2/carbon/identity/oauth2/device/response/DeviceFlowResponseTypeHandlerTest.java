@@ -73,13 +73,13 @@ public class DeviceFlowResponseTypeHandlerTest extends PowerMockTestCase {
     @Test
     public void testIssue() throws IdentityOAuth2Exception, InvalidOAuthClientException, SQLException {
 
-        try (Connection connection1 = DAOUtils.getConnection(DB_NAME)) {
+        try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
 
             mockStatic(OAuth2Util.class);
             when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(oAuthAppDO);
             mockStatic(IdentityDatabaseUtil.class);
-            when(IdentityDatabaseUtil.getDBConnection(true)).thenReturn(connection1);
-            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection1);
+            when(IdentityDatabaseUtil.getDBConnection(true)).thenReturn(connection);
+            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
             mockStatic(IdentityUtil.class);
             when(IdentityUtil.getServerURL(anyString(), anyBoolean(), anyBoolean())).thenReturn(TEST_URL);
             oAuthAppDO.setApplicationName("testApplicationName");
