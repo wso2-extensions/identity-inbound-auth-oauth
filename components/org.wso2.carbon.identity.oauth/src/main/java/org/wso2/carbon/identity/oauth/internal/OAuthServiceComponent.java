@@ -36,7 +36,6 @@ import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.listener.IdentityOathEventListener;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
-import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponent;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.registry.core.service.RegistryService;
 import org.wso2.carbon.user.core.listener.UserOperationEventListener;
@@ -49,7 +48,6 @@ import org.wso2.carbon.user.core.service.RealmService;
 public class OAuthServiceComponent {
 
     private static final Log log = LogFactory.getLog(OAuthServiceComponent.class);
-    private static IdentityOathEventListener listener = null;
     private ServiceRegistration serviceRegistration = null;
 
     protected void activate(ComponentContext context) {
@@ -61,7 +59,7 @@ public class OAuthServiceComponent {
                 log.debug("OAuth Caching is enabled. Initializing the cache.");
             }
 
-            listener = new IdentityOathEventListener();
+            IdentityOathEventListener listener = new IdentityOathEventListener();
             serviceRegistration = context.getBundleContext().registerService(UserOperationEventListener.class.getName(),
                     listener, null);
             log.debug("Identity Oath Event Listener is enabled");
@@ -75,6 +73,8 @@ public class OAuthServiceComponent {
 
             OAuthAdminServiceImpl oauthAdminService = new OAuthAdminServiceImpl();
             context.getBundleContext().registerService(OAuthAdminServiceImpl.class.getName(), oauthAdminService, null);
+
+            OAuthComponentServiceHolder.getInstance().setOAuthAdminService(oauthAdminService);
             OAuth2ServiceComponentHolder.getInstance().setOAuthAdminService(oauthAdminService);
 
             if (log.isDebugEnabled()) {

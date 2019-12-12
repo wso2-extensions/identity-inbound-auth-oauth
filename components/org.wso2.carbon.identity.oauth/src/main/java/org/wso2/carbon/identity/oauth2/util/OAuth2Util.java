@@ -1387,6 +1387,19 @@ public class OAuth2Util {
     }
 
     /**
+     * To check whether the given response type is for Hybrid flow.
+     *
+     * @param responseType response type
+     * @return true if the response type is for Hybrid flow.
+     */
+    public static boolean isHybridResponseType(String responseType) {
+
+        return (StringUtils.isNotBlank(responseType) && (OAuthConstants.CODE_TOKEN).equals(responseType) ||
+                (OAuthConstants.CODE_IDTOKEN).equals(responseType) || (OAuthConstants.CODE_IDTOKEN_TOKEN).equals
+                (responseType));
+    }
+
+    /**
      * To populate the database in the very first server startup.
      *
      * @param tenantId tenant id

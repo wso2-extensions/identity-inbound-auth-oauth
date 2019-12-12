@@ -23,7 +23,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.StandardInboundProtocols;
+import org.wso2.carbon.identity.application.common.IdentityApplicationManagementClientException;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
+import org.wso2.carbon.identity.application.common.IdentityApplicationManagementServerException;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementValidationException;
 import org.wso2.carbon.identity.application.common.model.InboundAuthenticationConfig;
 import org.wso2.carbon.identity.application.common.model.InboundAuthenticationRequestConfig;
@@ -36,7 +38,9 @@ import org.wso2.carbon.identity.application.mgt.listener.AbstractApplicationMgtL
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
+import org.wso2.carbon.identity.oauth.IdentityOAuthClientException;
 import org.wso2.carbon.identity.oauth.OAuthAdminService;
+import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
@@ -52,8 +56,12 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dao.OAuthConsumerDAO;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
+import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.io.ByteArrayInputStream;
 import java.io.StringWriter;
@@ -212,15 +220,28 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                         User owner = serviceProvider.getOwner();
                         OAuthAppDO oAuthAppDO = marshelOAuthDO(authConfig.getInboundConfiguration(),
                                 serviceProvider.getApplicationName(), owner.getTenantDomain());
-                        oAuthAppDO.setUser(buildAuthenticatedUser(owner));
+                        oAuthAppDO.setAppOwner(buildAuthenticatedUser(owner));
 
                         OAuthConsumerAppDTO oAuthConsumerAppDTO = OAuthUtil.buildConsumerAppDTO(oAuthAppDO);
-                        if (oAuthConsumerAppDTO.getOauthConsumerSecret() == null) {
-                            oAuthConsumerAppDTO.setOauthConsumerSecret(OAuthUtil.getRandomNumber());
-                        }
-                        OAuthAdminService oAuthAdminService = new OAuthAdminService();
                         OAuthAppDAO dao = new OAuthAppDAO();
-                        if (dao.isDuplicateConsumer(oAuthConsumerAppDTO.getOauthConsumerKey())) {
+
+                        String oauthConsumerKey = oAuthConsumerAppDTO.getOauthConsumerKey();
+                        boolean isExistingClient = dao.isDuplicateConsumer(oauthConsumerKey);
+
+                        // Set the client secret before doing registering/updating the oauth app.
+                        if (oAuthConsumerAppDTO.getOauthConsumerSecret() == null) {
+                            if (isExistingClient) {
+                                // For existing client, we fetch the existing client secret and set.
+                                OAuthAppDO app = OAuth2Util.getAppInformationByClientId(oauthConsumerKey);
+                                oAuthConsumerAppDTO.setOauthConsumerSecret(app.getOauthConsumerSecret());
+                            } else {
+                                oAuthConsumerAppDTO.setOauthConsumerSecret(OAuthUtil.getRandomNumber());
+                            }
+                        }
+
+                        OAuthAdminServiceImpl oAuthAdminService =
+                                OAuthComponentServiceHolder.getInstance().getoAuthAdminService();
+                        if (isExistingClient) {
                             oAuthAdminService.updateConsumerApplication(oAuthConsumerAppDTO);
                         } else {
                             oAuthAdminService.registerOAuthApplicationData(oAuthConsumerAppDTO);
@@ -229,8 +250,18 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                     }
                 }
             }
-        } catch (IdentityOAuthAdminException e) {
-            throw new IdentityApplicationManagementException("Error occurred when importing OAuth application ", e);
+        } catch (IdentityOAuthAdminException | InvalidOAuthClientException | IdentityOAuth2Exception e) {
+            String message = "Error occurred when importing OAuth inbound.";
+            throw handleException(message, e);
+        }
+    }
+
+    private IdentityApplicationManagementException handleException(String message, Exception ex) {
+
+        if (ex instanceof IdentityOAuthClientException || ex instanceof InvalidOAuthClientException) {
+            return new IdentityApplicationManagementClientException(message, ex);
+        } else {
+            return new IdentityApplicationManagementServerException(message, ex);
         }
     }
 
@@ -382,27 +413,29 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
 
     private void removeEntriesFromCache(Set<String> consumerKeys) throws IdentityOAuth2Exception {
 
+
+
         if (isNotEmpty(consumerKeys)) {
-            Set<String> accessTokens = new HashSet<>();
-            Set<String> authorizationCodes = new HashSet<>();
+            Set<AccessTokenDO> accessTokenDOSet = new HashSet<>();
+            Set<AuthzCodeDO> authzCodeDOSet = new HashSet<>();
 
             AppInfoCache appInfoCache = AppInfoCache.getInstance();
             for (String oauthKey : consumerKeys) {
-                accessTokens.addAll(OAuthTokenPersistenceFactory.getInstance()
-                        .getAccessTokenDAO().getActiveTokensByConsumerKey(oauthKey));
-                authorizationCodes.addAll(OAuthTokenPersistenceFactory.getInstance()
-                        .getAuthorizationCodeDAO().getAuthorizationCodesByConsumerKey(oauthKey));
+                accessTokenDOSet.addAll(OAuthTokenPersistenceFactory.getInstance()
+                        .getAccessTokenDAO().getActiveTokenSetWithTokenIdByConsumerKeyForOpenidScope(oauthKey));
+                authzCodeDOSet.addAll(OAuthTokenPersistenceFactory.getInstance()
+                        .getAuthorizationCodeDAO().getAuthorizationCodeDOSetByConsumerKeyForOpenidScope(oauthKey));
                 // Remove client credential from AppInfoCache
                 appInfoCache.clearCacheEntry(oauthKey);
                 OAuthCache.getInstance().clearCacheEntry(new OAuthCacheKey(oauthKey));
             }
 
-            if (isNotEmpty(accessTokens)) {
-                clearCacheEntriesAgainstToken(accessTokens);
+            if (isNotEmpty(accessTokenDOSet)) {
+                clearCacheEntriesAgainstToken(accessTokenDOSet);
             }
 
-            if (isNotEmpty(authorizationCodes)) {
-                clearCacheEntriesAgainstAuthzCode(authorizationCodes);
+            if (isNotEmpty(authzCodeDOSet)) {
+                clearCacheEntriesAgainstAuthzCode(authzCodeDOSet);
             }
         }
     }
@@ -420,15 +453,16 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
         }
     }
 
-    private void clearCacheEntriesAgainstAuthzCode(Set<String> authorizationCodes) {
+    private void clearCacheEntriesAgainstAuthzCode(Set<AuthzCodeDO> authzCodeDOSet) {
 
-        for (String authorizationCode : authorizationCodes) {
+        for (AuthzCodeDO authzCodeDO : authzCodeDOSet) {
             // Remove authorization code from AuthorizationGrantCache
-            AuthorizationGrantCacheKey grantCacheKey = new AuthorizationGrantCacheKey(authorizationCode);
-            AuthorizationGrantCache.getInstance().clearCacheEntryByCode(grantCacheKey);
-
+            AuthorizationGrantCacheKey grantCacheKey = new AuthorizationGrantCacheKey(
+                    authzCodeDO.getAuthorizationCode());
+            AuthorizationGrantCache.getInstance()
+                    .clearCacheEntryByCodeId(grantCacheKey, authzCodeDO.getAuthzCodeId());
             // Remove authorization code from OAuthCache
-            OAuthCacheKey oauthCacheKey = new OAuthCacheKey(authorizationCode);
+            OAuthCacheKey oauthCacheKey = new OAuthCacheKey(authzCodeDO.getAuthorizationCode());
             CacheEntry oauthCacheEntry = OAuthCache.getInstance().getValueFromCache(oauthCacheKey);
             if (oauthCacheEntry != null) {
                 OAuthCache.getInstance().clearCacheEntry(oauthCacheKey);
@@ -436,19 +470,16 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
         }
     }
 
-    private void clearCacheEntriesAgainstToken(Set<String> accessTokens) {
+    private void clearCacheEntriesAgainstToken(Set<AccessTokenDO> accessTokenDOSet) {
 
-        for (String accessToken : accessTokens) {
+        for (AccessTokenDO accessTokenDo : accessTokenDOSet) {
             // Remove access token from AuthorizationGrantCache
-            AuthorizationGrantCacheKey grantCacheKey = new AuthorizationGrantCacheKey(accessToken);
-            AuthorizationGrantCacheEntry grantCacheEntry = AuthorizationGrantCache
-                    .getInstance().getValueFromCacheByToken(grantCacheKey);
-            if (grantCacheEntry != null) {
-                AuthorizationGrantCache.getInstance().clearCacheEntryByToken(grantCacheKey);
-            }
-
+            AuthorizationGrantCacheKey grantCacheKey = new AuthorizationGrantCacheKey(
+                    accessTokenDo.getAccessToken());
+            AuthorizationGrantCache.getInstance()
+                    .clearCacheEntryByTokenId(grantCacheKey, accessTokenDo.getTokenId());
             // Remove access token from OAuthCache
-            OAuthCacheKey oauthCacheKey = new OAuthCacheKey(accessToken);
+            OAuthCacheKey oauthCacheKey = new OAuthCacheKey(accessTokenDo.getAccessToken());
             CacheEntry oauthCacheEntry = OAuthCache.getInstance().getValueFromCache(oauthCacheKey);
             if (oauthCacheEntry != null) {
                 OAuthCache.getInstance().clearCacheEntry(oauthCacheKey);

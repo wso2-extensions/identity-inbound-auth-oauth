@@ -27,7 +27,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
     <artifactId>identity-inbound-auth-oauth</artifactId>
-    <version>6.2.72-SNAPSHOT</version>
+    <version>6.2.79-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>WSO2 Carbon OAuth module</name>
     <url>http://wso2.org</url>
@@ -55,6 +55,7 @@
         <module>components/org.wso2.carbon.identity.webfinger</module>
         <module>components/org.wso2.carbon.identity.oauth.dcr.endpoint</module>
         <module>components/org.wso2.carbon.identity.oauth.client.authn.filter</module>
+        <module>components/org.wso2.carbon.identity.oauth.ciba</module>
         <module>features/org.wso2.carbon.identity.oauth.common.feature</module>
         <module>features/org.wso2.carbon.identity.oauth.feature</module>
         <module>features/org.wso2.carbon.identity.oauth.server.feature</module>

@@ -32,7 +32,8 @@ public interface RequestObjectValidator {
      *
      * @param requestObject
      */
-    boolean validateSignature(RequestObject requestObject, OAuth2Parameters oAuth2Parameters) throws RequestObjectException;
+    boolean validateSignature(RequestObject requestObject, OAuth2Parameters oAuth2Parameters)
+            throws RequestObjectException;
 
     /**
      * To validate request object

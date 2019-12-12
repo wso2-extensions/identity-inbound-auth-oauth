@@ -386,9 +386,10 @@ public class OAuthAdminServiceImpl {
                 throw handleClientError(INVALID_OAUTH_CLIENT, msg);
             }
             if (!StringUtils.equals(consumerAppDTO.getOauthConsumerSecret(), oauthappdo.getOauthConsumerSecret())) {
+                errorMessage = "Invalid ConsumerSecret is provided for updating the OAuth application with " +
+                        "consumerKey: " + oauthConsumerKey;
                 if (log.isDebugEnabled()) {
-                    log.debug("Invalid ConsumerSecret is provided for updating the OAuth" +
-                              " application with ConsumerKey: " + oauthConsumerKey);
+                    log.debug(errorMessage);
                 }
                 throw handleClientError(INVALID_REQUEST, errorMessage);
             }

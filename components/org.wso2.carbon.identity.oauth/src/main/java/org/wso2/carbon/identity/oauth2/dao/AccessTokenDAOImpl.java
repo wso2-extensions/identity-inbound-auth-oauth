@@ -1944,40 +1944,65 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             AccessTokenDO latestActiveToken = getLatestAccessTokenByState(connection, consumerKey,
                     accessTokenDO.getAuthzUser(), userStoreDomain,
                     OAuth2Util.buildScopeString(accessTokenDO.getScope()), true);
+            OauthTokenIssuer oauthTokenIssuer = OAuth2Util.getOAuthTokenIssuerForOAuthApp(consumerKey);
 
-            if (latestActiveToken != null) {
-                if (latestNonActiveToken == null || latestActiveToken.getIssuedTime()
-                        .after(latestNonActiveToken.getIssuedTime())) {
-                    // In here we can use existing token since we have a synchronised communication
-                    accessTokenDO.setTokenId(latestActiveToken.getTokenId());
-                    accessTokenDO.setAccessToken(latestActiveToken.getAccessToken());
-                    accessTokenDO.setRefreshToken(latestActiveToken.getRefreshToken());
-                    accessTokenDO.setIssuedTime(latestActiveToken.getIssuedTime());
-                    accessTokenDO.setRefreshTokenIssuedTime(latestActiveToken.getRefreshTokenIssuedTime());
-                    accessTokenDO.setValidityPeriodInMillis(latestActiveToken.getValidityPeriodInMillis());
-                    accessTokenDO.setRefreshTokenValidityPeriodInMillis(
-                            latestActiveToken.getRefreshTokenValidityPeriodInMillis());
-                    accessTokenDO.setTokenType(latestActiveToken.getTokenType());
-                    log.info("Successfully recovered 'CON_APP_KEY' constraint violation with the attempt : "
-                            + retryAttemptCounter);
+                if (latestActiveToken != null) {
+
+                    // For JWT tokens, always issue a new token expiring the existing token.
+                    if (oauthTokenIssuer.renewAccessTokenPerRequest()) {
+                        updateAccessTokenState(connection, latestActiveToken.getTokenId(), OAuthConstants.TokenStates
+                                .TOKEN_STATE_EXPIRED, UUID.randomUUID().toString(), userStoreDomain);
+                        // Update token issued time make this token as latest token & try to store it again.
+                        accessTokenDO.setIssuedTime(new Timestamp(new Date().getTime()));
+                        insertAccessToken(accessTokenDO.getAccessToken(), consumerKey, accessTokenDO, connection,
+                                userStoreDomain, retryAttemptCounter);
+                    } else if (OAuth2Util.getAccessTokenExpireMillis(latestActiveToken) != 0 &&
+                            (latestNonActiveToken == null || latestActiveToken.getIssuedTime().after
+                                    (latestNonActiveToken.getIssuedTime()))) {
+
+                        // If there is an active token in the database, it is not expired and it is the last issued
+                        // token, use the existing token. In here we can use existing token since we have a
+                        // synchronised communication.
+                        accessTokenDO.setTokenId(latestActiveToken.getTokenId());
+                        accessTokenDO.setAccessToken(latestActiveToken.getAccessToken());
+                        accessTokenDO.setRefreshToken(latestActiveToken.getRefreshToken());
+                        accessTokenDO.setIssuedTime(latestActiveToken.getIssuedTime());
+                        accessTokenDO.setRefreshTokenIssuedTime(latestActiveToken.getRefreshTokenIssuedTime());
+                        accessTokenDO.setValidityPeriodInMillis(latestActiveToken.getValidityPeriodInMillis());
+                        accessTokenDO.setRefreshTokenValidityPeriodInMillis(
+                                latestActiveToken.getRefreshTokenValidityPeriodInMillis());
+                        accessTokenDO.setTokenType(latestActiveToken.getTokenType());
+                        log.info("Successfully recovered 'CON_APP_KEY' constraint violation with the attempt : "
+                                + retryAttemptCounter);
+
+                    } else if (!(OAuth2Util.getAccessTokenExpireMillis(latestActiveToken) == 0)) {
+                        // If the last active token in the database is expired, update the token status in the database.
+                        updateAccessTokenState(connection, latestActiveToken.getTokenId(), OAuthConstants.TokenStates
+                                .TOKEN_STATE_EXPIRED, UUID.randomUUID().toString(), userStoreDomain);
+
+                        // Update token issued time make this token as latest token & try to store it again.
+                        accessTokenDO.setIssuedTime(new Timestamp(new Date().getTime()));
+                        insertAccessToken(accessToken, consumerKey, accessTokenDO, connection, userStoreDomain,
+                                retryAttemptCounter);
+
+                    } else {
+                        // Inactivate latest active token.
+                        updateAccessTokenState(connection, latestActiveToken.getTokenId(), OAuthConstants.TokenStates
+                                .TOKEN_STATE_INACTIVE, UUID.randomUUID().toString(), userStoreDomain);
+
+                        // Update token issued time make this token as latest token & try to store it again.
+                        accessTokenDO.setIssuedTime(new Timestamp(new Date().getTime()));
+                        insertAccessToken(accessToken, consumerKey, accessTokenDO, connection, userStoreDomain,
+                                retryAttemptCounter);
+                    }
                 } else {
-                    // Inactivate latest active token.
-                    updateAccessTokenState(connection, latestActiveToken.getTokenId(), "INACTIVE",
-                            UUID.randomUUID().toString(), userStoreDomain);
+                    // In this case another process already updated the latest active token to inactive.
 
                     // Update token issued time make this token as latest token & try to store it again.
                     accessTokenDO.setIssuedTime(new Timestamp(new Date().getTime()));
                     insertAccessToken(accessToken, consumerKey, accessTokenDO, connection, userStoreDomain,
                             retryAttemptCounter);
                 }
-            } else {
-                // In this case another process already updated the latest active token to inactive.
-
-                // Update token issued time make this token as latest token & try to store it again.
-                accessTokenDO.setIssuedTime(new Timestamp(new Date().getTime()));
-                insertAccessToken(accessToken, consumerKey, accessTokenDO, connection, userStoreDomain,
-                        retryAttemptCounter);
-            }
             connection.commit();
         } catch (SQLException e) {
             try {
@@ -1986,11 +2011,13 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 }
             } catch (SQLException e1) {
                 throw new IdentityOAuth2Exception("An rolling back transactions error occurred while trying to "
-                        + "recover 'CON_APP_KEY' "
-                        + "constraint violation . ", e1);
+                        + "recover 'CON_APP_KEY' constraint violation. ", e1);
             }
-            String errorMsg = "SQL error occurred while trying to recover 'CON_APP_KEY' constraint violation";
+            String errorMsg = "SQL error occurred while trying to recover 'CON_APP_KEY' constraint violation.";
             throw new IdentityOAuth2Exception(errorMsg, e);
+        } catch (InvalidOAuthClientException e) {
+            throw new IdentityOAuth2Exception(
+                    "Error while retrieving oauth issuer for the app with clientId: " + consumerKey + ".", e);
         }
     }
 
@@ -2227,5 +2254,93 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         return tokenBinding != null && StringUtils.isNotBlank(tokenBinding.getBindingType()) && StringUtils
                 .isNotBlank(tokenBinding.getBindingReference()) && StringUtils
                 .isNotBlank(tokenBinding.getBindingValue());
+    }
+
+    /**
+     * Retrieves active AccessTokenDOs with token id for the given consumer key.
+     *
+     * @param consumerKey client id
+     * @return access token data object set
+     * @throws IdentityOAuth2Exception
+     */
+    @Override
+    public Set<AccessTokenDO> getActiveTokenSetWithTokenIdByConsumerKeyForOpenidScope(String consumerKey)
+            throws IdentityOAuth2Exception {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Retrieving active access token set with token id of client: " + consumerKey);
+        }
+        Set<AccessTokenDO> activeAccessTokenDOSet = getActiveAccessTokenSetByConsumerKeyForOpenidScope(consumerKey,
+                IdentityUtil.getPrimaryDomainName());
+
+        if (OAuth2Util.checkAccessTokenPartitioningEnabled() && OAuth2Util.checkUserNameAssertionEnabled()) {
+            Map<String, String> availableDomainMappings = OAuth2Util.getAvailableUserStoreDomainMappings();
+            for (Map.Entry<String, String> availableDomainMapping : availableDomainMappings.entrySet()) {
+                activeAccessTokenDOSet.addAll(getActiveAccessTokenSetByConsumerKeyForOpenidScope(consumerKey,
+                        availableDomainMapping.getKey()));
+            }
+        }
+        return activeAccessTokenDOSet;
+    }
+
+    /**
+     * Retrieves active AccessTokenDOs with token id for a given consumer key
+     * @param consumerKey client id
+     * @param userStoreDomain
+     * @return set of access token data objects
+     * @throws IdentityOAuth2Exception
+     */
+    private Set<AccessTokenDO> getActiveAccessTokenSetByConsumerKeyForOpenidScope(String consumerKey, String userStoreDomain)
+            throws IdentityOAuth2Exception {
+
+        Connection connection = IdentityDatabaseUtil.getDBConnection();
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        Set<AccessTokenDO> accessTokens = new HashSet<>();
+        try {
+            String sqlQuery = OAuth2Util.getTokenPartitionedSqlByUserStore(SQLQueries.
+                    GET_ACCESS_TOKENS_AND_TOKEN_IDS_FOR_CONSUMER_KEY, userStoreDomain);
+            ps = connection.prepareStatement(sqlQuery);
+            ps.setString(1, consumerKey);
+            ps.setString(2, OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
+            ps.setString(3, OAuthConstants.Scope.OPENID);
+            rs = ps.executeQuery();
+
+            while (rs.next()) {
+                String accessToken = getPersistenceProcessor().getPreprocessedAccessTokenIdentifier(rs.getString(1));
+                String tokenId = rs.getString(2);
+                Timestamp timeCreated = rs.getTimestamp(3, Calendar.getInstance(TimeZone.getTimeZone(UTC)));
+                long issuedTimeInMillis = timeCreated.getTime();
+                long validityPeriodInMillis = rs.getLong(4);
+
+                if (!isAccessTokenExpired(issuedTimeInMillis, validityPeriodInMillis)) {
+                    AccessTokenDO accessTokenDO = new AccessTokenDO();
+                    accessTokenDO.setAccessToken(accessToken);
+                    accessTokenDO.setTokenId(tokenId);
+                    accessTokens.add(accessTokenDO);
+                }
+
+            }
+            connection.commit();
+        } catch (SQLException e) {
+            IdentityDatabaseUtil.rollBack(connection);
+            throw new IdentityOAuth2Exception("Error occurred while getting access tokens from access token table for "
+                    + "the application with consumer key : " + consumerKey, e);
+        } finally {
+            IdentityDatabaseUtil.closeAllConnections(connection, rs, ps);
+        }
+        return accessTokens;
+    }
+
+    /**
+     * Checks whether the issued token is expired.
+     *
+     * @param issuedTimeInMillis
+     * @param validityPeriodMillis
+     * @return true if access token is expired. False if not.
+     */
+    private boolean isAccessTokenExpired(long issuedTimeInMillis, long validityPeriodMillis) {
+
+        return OAuth2Util.getTimeToExpire(issuedTimeInMillis, validityPeriodMillis) < 0;
     }
 }
