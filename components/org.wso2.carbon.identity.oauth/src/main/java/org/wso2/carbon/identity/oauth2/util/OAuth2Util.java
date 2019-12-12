@@ -3530,11 +3530,12 @@ public class OAuth2Util {
             ByteArrayInputStream bais = new ByteArrayInputStream(certificate.getEncoded());
             X509Certificate x509 = (X509Certificate) cf.generateCertificate(bais);
             Base64URL jwkThumbprint = RSAKey.parse(x509).computeThumbprint(Constants.SHA1);
+            String thumbprintString = jwkThumbprint.toString();
             if (log.isDebugEnabled()) {
                 log.debug(String.format("Calculated SHA-1 JWK thumbprint %s from the certificate",
-                        jwkThumbprint.toString()));
+                        thumbprintString));
             }
-            return jwkThumbprint.toString();
+            return thumbprintString;
         } catch (CertificateException | JOSEException e) {
             throw new IdentityOAuth2Exception("Error occurred while generating SHA-1 JWK thumbprint", e);
         }
