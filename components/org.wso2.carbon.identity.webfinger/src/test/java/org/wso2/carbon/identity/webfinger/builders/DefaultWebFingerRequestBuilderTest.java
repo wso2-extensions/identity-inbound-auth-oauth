@@ -45,11 +45,12 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 
 /**
- * Unit test coverage for DefaultWebFingerRequestBuilder class
+ * Unit test coverage for DefaultWebFingerRequestBuilder class.
  */
 @PrepareForTest({HttpServletRequest.class, WebFingerServiceComponentHolder.class, RealmService.class,
         TenantManager.class})
 public class DefaultWebFingerRequestBuilderTest extends PowerMockTestCase {
+
     private DefaultWebFingerRequestBuilder defaultWebFingerRequestBuilder;
     private final String rel = "http://openid.net/specs/connect/1.0/issuer";
     private final String resource = "https://oidc.testdomain.wso2.org:9443/.well-known/webfinger";
@@ -72,6 +73,7 @@ public class DefaultWebFingerRequestBuilderTest extends PowerMockTestCase {
 
     @BeforeMethod
     public void setUp() throws Exception {
+
         defaultWebFingerRequestBuilder = new DefaultWebFingerRequestBuilder();
 
         mockStatic(WebFingerServiceComponentHolder.class);
@@ -81,6 +83,7 @@ public class DefaultWebFingerRequestBuilderTest extends PowerMockTestCase {
 
     @DataProvider(name = "BuildParameters")
     public Object[][] buildScopeString() {
+
         Vector<String> vector1 = new Vector<>();
         vector1.add("value1");
         vector1.add("value2");
@@ -99,13 +102,15 @@ public class DefaultWebFingerRequestBuilderTest extends PowerMockTestCase {
         vector3.add(WebFingerConstants.RESOURCE);
         vector3.add("value2");
         Enumeration<String> params4 = vector4.elements();
-        return new Object[][] {
+        return new Object[][]{
                 {params1}, {params2}, {params3}, {params4}
         };
     }
-    //Test for exception "Bad webfinger request"
+
+    // Test for exception "Bad webfinger request".
     @Test(dataProvider = "BuildParameters", expectedExceptions = WebFingerEndpointException.class)
     public void testInvalidRequest(Enumeration<String> params) throws WebFingerEndpointException {
+
         when(request.getParameterNames()).thenReturn(params);
         try {
             defaultWebFingerRequestBuilder.buildRequest(request);
@@ -116,7 +121,8 @@ public class DefaultWebFingerRequestBuilderTest extends PowerMockTestCase {
     }
 
     @Test(expectedExceptions = WebFingerEndpointException.class)
-    public  void testInvalidResource() throws WebFingerEndpointException {
+    public void testInvalidResource() throws WebFingerEndpointException {
+
         returnParams();
         try {
             defaultWebFingerRequestBuilder.buildRequest(request);
@@ -127,7 +133,8 @@ public class DefaultWebFingerRequestBuilderTest extends PowerMockTestCase {
     }
 
     @Test(expectedExceptions = WebFingerEndpointException.class)
-    public  void testResourceEmpty() throws WebFingerEndpointException {
+    public void testResourceEmpty() throws WebFingerEndpointException {
+
         returnParams();
         returnRelAndResource("9443/.well-known/webfinger", rel);
         try {
@@ -138,7 +145,8 @@ public class DefaultWebFingerRequestBuilderTest extends PowerMockTestCase {
     }
 
     @Test(expectedExceptions = WebFingerEndpointException.class)
-    public  void testUserInfoInvalid() throws WebFingerEndpointException {
+    public void testUserInfoInvalid() throws WebFingerEndpointException {
+
         returnParams();
         returnRelAndResource(invalidAcctResource, rel);
         try {
@@ -149,7 +157,8 @@ public class DefaultWebFingerRequestBuilderTest extends PowerMockTestCase {
     }
 
     @Test
-    public  void testUserInfo() throws WebFingerEndpointException, UserStoreException {
+    public void testUserInfo() throws WebFingerEndpointException, UserStoreException {
+
         returnParams();
         returnRelAndResource(acctResource, rel);
         when(tenantManager.getTenantId(anyString())).thenReturn(MultitenantConstants.SUPER_TENANT_ID);
@@ -158,10 +167,11 @@ public class DefaultWebFingerRequestBuilderTest extends PowerMockTestCase {
         assertNotNull(webFingerRequest, "WebFinger request is not null");
         assertEquals(webFingerRequest.getResource(), acctResource, "Resource is assigned properly");
         assertEquals(webFingerRequest.getRel(), rel, "Rel is assigned properly");
-     }
+    }
 
     @Test
-    public  void testBuildRequest() throws WebFingerEndpointException, UserStoreException {
+    public void testBuildRequest() throws WebFingerEndpointException, UserStoreException {
+
         returnParams();
         returnRelAndResource(resource, rel);
         when(tenantManager.getTenantId(any(String.class))).thenReturn(MultitenantConstants.SUPER_TENANT_ID);
@@ -179,6 +189,7 @@ public class DefaultWebFingerRequestBuilderTest extends PowerMockTestCase {
 
     @Test(expectedExceptions = WebFingerEndpointException.class)
     public void testInvalidTenant() throws Exception {
+
         when(tenantManager.getTenantId(any(String.class))).thenReturn(-1);
         try {
             DefaultWebFingerRequestBuilder.validateTenant("InvalidtenantDomain");
@@ -190,6 +201,7 @@ public class DefaultWebFingerRequestBuilderTest extends PowerMockTestCase {
 
     @Test(expectedExceptions = WebFingerEndpointException.class)
     public void testTenantException() throws Exception {
+
         when(tenantManager.getTenantId(any(String.class))).thenThrow(new UserStoreException());
         try {
             DefaultWebFingerRequestBuilder.validateTenant("InvalidtenantDomain");
@@ -200,6 +212,7 @@ public class DefaultWebFingerRequestBuilderTest extends PowerMockTestCase {
     }
 
     private void returnParams() {
+
         Vector<String> vector = new Vector<>();
         vector.add(WebFingerConstants.REL);
         vector.add(WebFingerConstants.RESOURCE);
@@ -208,6 +221,7 @@ public class DefaultWebFingerRequestBuilderTest extends PowerMockTestCase {
     }
 
     private void returnRelAndResource(String resource, String rel) {
+
         when(request.getParameter(WebFingerConstants.RESOURCE)).thenReturn(resource);
         when(request.getParameter(WebFingerConstants.REL)).thenReturn(rel);
     }
