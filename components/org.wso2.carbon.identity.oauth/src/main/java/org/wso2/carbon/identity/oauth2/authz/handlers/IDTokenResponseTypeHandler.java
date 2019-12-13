@@ -53,5 +53,4 @@ public class IDTokenResponseTypeHandler extends AbstractResponseTypeHandler {
         // Add id_token details to the response.
         return ResponseTypeHandlerUtil.buildIDTokenResponseDTO(respDTO, accessTokenDO, oauthAuthzMsgCtx);
     }
-
 }

@@ -54,7 +54,5 @@ public class IDTokenTokenResponseTypeHandler extends IDTokenResponseTypeHandler 
         ResponseTypeHandlerUtil.buildIDTokenResponseDTO(respDTO, accessTokenDO, oauthAuthzMsgCtx);
         // Add access token details to the response.
         return ResponseTypeHandlerUtil.buildAccessTokenResponseDTO(respDTO, accessTokenDO);
-
     }
-
 }

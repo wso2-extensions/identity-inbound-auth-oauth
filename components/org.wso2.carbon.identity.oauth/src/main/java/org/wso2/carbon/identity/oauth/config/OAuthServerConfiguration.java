@@ -2186,13 +2186,20 @@ public class OAuthServerConfiguration {
             log.warn("\'SupportedResponseTypes\' element not configured in identity.xml. " +
                     "Therefore instantiating default response type handlers");
             Map<String, String> defaultResponseTypes = new HashMap<>();
-            defaultResponseTypes.put(ResponseType.CODE.toString(), "org.wso2.carbon.identity.oauth2.authz.handlers.CodeResponseTypeHandler");
-            defaultResponseTypes.put(ResponseType.TOKEN.toString(), "org.wso2.carbon.identity.oauth2.authz.handlers.AccessTokenResponseTypeHandler");
-            defaultResponseTypes.put(OAuthConstants.ID_TOKEN, "org.wso2.carbon.identity.oauth2.authz.handlers.IDTokenResponseTypeHandler");
-            defaultResponseTypes.put(OAuthConstants.IDTOKEN_TOKEN, "org.wso2.carbon.identity.oauth2.authz.handlers.IDTokenTokenResponseTypeHandler");
-            defaultResponseTypes.put(OAuthConstants.CODE_TOKEN, "org.wso2.carbon.identity.oauth2.authz.handlers.HybridResponseTypeHandler");
-            defaultResponseTypes.put(OAuthConstants.CODE_IDTOKEN, "org.wso2.carbon.identity.oauth2.authz.handlers.HybridResponseTypeHandler");
-            defaultResponseTypes.put(OAuthConstants.CODE_IDTOKEN_TOKEN, "org.wso2.carbon.identity.oauth2.authz.handlers.HybridResponseTypeHandler");
+            defaultResponseTypes.put(ResponseType.CODE.toString(),
+                    "org.wso2.carbon.identity.oauth2.authz.handlers.CodeResponseTypeHandler");
+            defaultResponseTypes.put(ResponseType.TOKEN.toString(),
+                    "org.wso2.carbon.identity.oauth2.authz.handlers.AccessTokenResponseTypeHandler");
+            defaultResponseTypes.put(OAuthConstants.ID_TOKEN,
+                    "org.wso2.carbon.identity.oauth2.authz.handlers.IDTokenResponseTypeHandler");
+            defaultResponseTypes.put(OAuthConstants.IDTOKEN_TOKEN,
+                    "org.wso2.carbon.identity.oauth2.authz.handlers.IDTokenTokenResponseTypeHandler");
+            defaultResponseTypes.put(OAuthConstants.CODE_TOKEN,
+                    "org.wso2.carbon.identity.oauth2.authz.handlers.HybridResponseTypeHandler");
+            defaultResponseTypes.put(OAuthConstants.CODE_IDTOKEN,
+                    "org.wso2.carbon.identity.oauth2.authz.handlers.HybridResponseTypeHandler");
+            defaultResponseTypes.put(OAuthConstants.CODE_IDTOKEN_TOKEN,
+                    "org.wso2.carbon.identity.oauth2.authz.handlers.HybridResponseTypeHandler");
             supportedResponseTypeClassNames.putAll(defaultResponseTypes);
         }
 

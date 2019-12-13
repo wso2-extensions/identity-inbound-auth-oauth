@@ -951,5 +951,3 @@ public class ResponseTypeHandlerUtil {
         return oAuthClientAuthnContext;
     }
 }
-
-
