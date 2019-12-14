@@ -18,67 +18,65 @@
 
 package org.wso2.carbon.identity.oauth2.authcontext;
 
-import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.JWSAlgorithm;
-import com.nimbusds.jose.JWSSigner;
-import com.nimbusds.jose.crypto.RSASSASigner;
-import com.nimbusds.jwt.JWT;
-import com.nimbusds.jwt.JWTClaimsSet;
-import com.nimbusds.jwt.PlainJWT;
-import com.nimbusds.jwt.SignedJWT;
-import org.apache.commons.codec.binary.Base64;
-import org.apache.commons.io.Charsets;
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.base.MultitenantConstants;
-import org.wso2.carbon.core.util.KeyStoreManager;
-import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
-import org.wso2.carbon.identity.base.IdentityException;
-import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
-import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
-import org.wso2.carbon.identity.core.util.IdentityUtil;
-import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
-import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
-import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
-import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
-import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
-import org.wso2.carbon.identity.oauth.util.ClaimCache;
-import org.wso2.carbon.identity.oauth.util.ClaimCacheKey;
-import org.wso2.carbon.identity.oauth.util.ClaimMetaDataCache;
-import org.wso2.carbon.identity.oauth.util.ClaimMetaDataCacheEntry;
-import org.wso2.carbon.identity.oauth.util.ClaimMetaDataCacheKey;
-import org.wso2.carbon.identity.oauth.util.UserClaims;
-import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
-import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
-import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
-import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
-import org.wso2.carbon.identity.oauth2.validators.OAuth2TokenValidationMessageContext;
-import org.wso2.carbon.user.api.RealmConfiguration;
-import org.wso2.carbon.user.api.UserRealm;
-import org.wso2.carbon.user.api.UserStoreException;
-import org.wso2.carbon.user.core.UserStoreManager;
-import org.wso2.carbon.user.core.service.RealmService;
-import org.wso2.carbon.user.core.util.UserCoreUtil;
-import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
+    import com.nimbusds.jose.JOSEException;
+    import com.nimbusds.jose.JWSAlgorithm;
+    import com.nimbusds.jose.JWSSigner;
+    import com.nimbusds.jose.crypto.RSASSASigner;
+    import com.nimbusds.jwt.JWT;
+    import com.nimbusds.jwt.JWTClaimsSet;
+    import com.nimbusds.jwt.PlainJWT;
+    import com.nimbusds.jwt.SignedJWT;
+    import org.apache.commons.codec.binary.Base64;
+    import org.apache.commons.io.Charsets;
+    import org.apache.commons.lang.StringUtils;
+    import org.apache.commons.logging.Log;
+    import org.apache.commons.logging.LogFactory;
+    import org.wso2.carbon.base.MultitenantConstants;
+    import org.wso2.carbon.core.util.KeyStoreManager;
+    import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+    import org.wso2.carbon.identity.base.IdentityException;
+    import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
+    import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+    import org.wso2.carbon.identity.core.util.IdentityUtil;
+    import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
+    import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+    import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
+    import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+    import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+    import org.wso2.carbon.identity.oauth.util.ClaimCache;
+    import org.wso2.carbon.identity.oauth.util.ClaimCacheKey;
+    import org.wso2.carbon.identity.oauth.util.ClaimMetaDataCache;
+    import org.wso2.carbon.identity.oauth.util.ClaimMetaDataCacheEntry;
+    import org.wso2.carbon.identity.oauth.util.ClaimMetaDataCacheKey;
+    import org.wso2.carbon.identity.oauth.util.UserClaims;
+    import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+    import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
+    import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+    import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+    import org.wso2.carbon.identity.oauth2.validators.OAuth2TokenValidationMessageContext;
+    import org.wso2.carbon.user.api.RealmConfiguration;
+    import org.wso2.carbon.user.api.UserRealm;
+    import org.wso2.carbon.user.api.UserStoreException;
+    import org.wso2.carbon.user.core.UserStoreManager;
+    import org.wso2.carbon.user.core.service.RealmService;
+    import org.wso2.carbon.user.core.util.UserCoreUtil;
+    import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
-import java.security.Key;
-import java.security.KeyStore;
-import java.security.MessageDigest;
-import java.security.cert.Certificate;
-import java.security.interfaces.RSAPrivateKey;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.SortedMap;
-import java.util.StringTokenizer;
-import java.util.TreeSet;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.text.ParseException;
+    import java.security.Key;
+    import java.security.KeyStore;
+    import java.security.MessageDigest;
+    import java.security.cert.Certificate;
+    import java.security.interfaces.RSAPrivateKey;
+    import java.text.ParseException;
+    import java.util.ArrayList;
+    import java.util.Calendar;
+    import java.util.Date;
+    import java.util.List;
+    import java.util.Map;
+    import java.util.SortedMap;
+    import java.util.StringTokenizer;
+    import java.util.TreeSet;
+    import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * This class represents the JSON Web Token generator.
@@ -119,14 +117,11 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
 
     private boolean useMultiValueSeparator = true;
 
-    private final static String JWT_TOKEN_TYPE = "JWT";
-
     //constructor for testing purposes
     public JWTTokenGenerator(boolean includeClaims, boolean enableSigning) {
         this.includeClaims = includeClaims;
         this.enableSigning = enableSigning;
         signatureAlgorithm = new JWSAlgorithm(JWSAlgorithm.NONE.getName());
-
     }
 
     /**
@@ -137,24 +132,26 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
      */
     @Override
     public void init() throws IdentityOAuth2Exception {
+
         if (includeClaims && enableSigning) {
             String claimsRetrieverImplClass = OAuthServerConfiguration.getInstance().getClaimsRetrieverImplClass();
-            String sigAlg =  OAuthServerConfiguration.getInstance().getSignatureAlgorithm();
-            if(sigAlg != null && !sigAlg.trim().isEmpty()){
+            String sigAlg = OAuthServerConfiguration.getInstance().getSignatureAlgorithm();
+            if (sigAlg != null && !sigAlg.trim().isEmpty()) {
                 signatureAlgorithm = OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(sigAlg);
             }
-            useMultiValueSeparator = OAuthServerConfiguration.getInstance().isUseMultiValueSeparatorForAuthContextToken();
-            if(claimsRetrieverImplClass != null){
-                try{
-                    claimsRetriever = (ClaimsRetriever)Class.forName(claimsRetrieverImplClass).newInstance();
+            useMultiValueSeparator =
+                    OAuthServerConfiguration.getInstance().isUseMultiValueSeparatorForAuthContextToken();
+            if (claimsRetrieverImplClass != null) {
+                try {
+                    claimsRetriever = (ClaimsRetriever) Class.forName(claimsRetrieverImplClass).newInstance();
                     claimsRetriever.init();
-                } catch (ClassNotFoundException e){
+                } catch (ClassNotFoundException e) {
                     log.error("Cannot find class: " + claimsRetrieverImplClass, e);
                 } catch (InstantiationException e) {
                     log.error("Error instantiating " + claimsRetrieverImplClass, e);
                 } catch (IllegalAccessException e) {
                     log.error("Illegal access to " + claimsRetrieverImplClass, e);
-                } catch (IdentityOAuth2Exception e){
+                } catch (IdentityOAuth2Exception e) {
                     log.error("Error while initializing " + claimsRetrieverImplClass, e);
                 }
             }
@@ -164,13 +161,12 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
     /**
      * Method that generates the JWT.
      *
-     * @return signed JWT token
      * @throws IdentityOAuth2Exception
      */
     @Override
     public void generateToken(OAuth2TokenValidationMessageContext messageContext) throws IdentityOAuth2Exception {
 
-        AccessTokenDO accessTokenDO = (AccessTokenDO)messageContext.getProperty("AccessTokenDO");
+        AccessTokenDO accessTokenDO = (AccessTokenDO) messageContext.getProperty("AccessTokenDO");
         String clientId = accessTokenDO.getConsumerKey();
         long issuedTime = accessTokenDO.getIssuedTime().getTime();
         long validityPeriodInMillis = accessTokenDO.getValidityPeriodInMillis();
@@ -231,13 +227,11 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
         claimsSetBuilder.claim(API_GATEWAY_ID + "/enduser", authzUser);
         //TODO: check setting audience
 
-
-
-        if(claimsRetriever != null){
+        if (claimsRetriever != null) {
 
             //check in local cache
             String[] requestedClaims = messageContext.getRequestDTO().getRequiredClaimURIs();
-            if(requestedClaims == null && isExistingUser)  {
+            if (requestedClaims == null && isExistingUser) {
                 // if no claims were requested, return all
                 requestedClaims = claimsRetriever.getDefaultClaims(authzUser);
             }
@@ -255,7 +249,7 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
                 result = claimsLocalCache.getValueFromCache(cacheKey);
             }
 
-            SortedMap<String,String> claimValues = null;
+            SortedMap<String, String> claimValues = null;
             if (result != null) {
                 claimValues = result.getClaimValues();
             } else if (isExistingUser) {
@@ -267,19 +261,17 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
                         new ClaimMetaDataCacheEntry(cacheKey));
             }
 
-            if(isExistingUser) {
+            if (isExistingUser) {
                 String claimSeparator = getMultiAttributeSeparator(authzUser, tenantId);
                 if (StringUtils.isNotBlank(claimSeparator)) {
                     userAttributeSeparator = claimSeparator;
                 }
             }
 
-            if(claimValues != null) {
-                Iterator<String> it = new TreeSet(claimValues.keySet()).iterator();
-                while (it.hasNext()) {
-                    String claimURI = it.next();
+            if (claimValues != null) {
+                for (String claimURI : new TreeSet<>(claimValues.keySet())) {
                     String claimVal = claimValues.get(claimURI);
-                    List<String> claimList = new ArrayList<String>();
+                    List<String> claimList = new ArrayList<>();
                     if (useMultiValueSeparator && userAttributeSeparator != null &&
                             claimVal.contains(userAttributeSeparator)) {
                         StringTokenizer st = new StringTokenizer(claimVal, userAttributeSeparator);
@@ -299,7 +291,7 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
 
         JWTClaimsSet claimsSet = claimsSetBuilder.build();
         JWT jwt = null;
-        if(!JWSAlgorithm.NONE.equals(signatureAlgorithm)){
+        if (!JWSAlgorithm.NONE.equals(signatureAlgorithm)) {
             jwt = OAuth2Util.signJWT(claimsSet, signatureAlgorithm, tenantDomain);
         } else {
             jwt = new PlainJWT(claimsSet);
@@ -455,7 +447,8 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
             try {
                 IdentityTenantUtil.initializeRegistry(tenantId, tenantDomain);
             } catch (IdentityException e) {
-                throw new IdentityOAuth2Exception("Error occurred while loading registry for tenant " + tenantDomain, e);
+                throw new IdentityOAuth2Exception("Error occurred while loading registry for tenant " + tenantDomain,
+                        e);
             }
 
             // get tenant's key store manager
@@ -501,7 +494,8 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
             try {
                 IdentityTenantUtil.initializeRegistry(tenantId, tenantDomain);
             } catch (IdentityException e) {
-                throw new IdentityOAuth2Exception("Error occurred while loading registry for tenant " + tenantDomain, e);
+                throw new IdentityOAuth2Exception("Error occurred while loading registry for tenant " + tenantDomain,
+                        e);
             }
 
             // get tenant's key store manager
@@ -563,7 +557,8 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
             }
 
             if (realmConfiguration != null) {
-                claimSeparator = realmConfiguration.getUserStoreProperty(IdentityCoreConstants.MULTI_ATTRIBUTE_SEPARATOR);
+                claimSeparator =
+                        realmConfiguration.getUserStoreProperty(IdentityCoreConstants.MULTI_ATTRIBUTE_SEPARATOR);
                 if (claimSeparator != null && !claimSeparator.trim().isEmpty()) {
                     return claimSeparator;
                 }

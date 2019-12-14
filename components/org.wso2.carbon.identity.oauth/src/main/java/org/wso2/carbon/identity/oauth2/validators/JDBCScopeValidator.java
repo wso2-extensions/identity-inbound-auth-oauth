@@ -64,7 +64,8 @@ public class JDBCScopeValidator extends OAuth2ScopeValidator {
     // Setting the "retrieveRolesFromUserStoreForScopeValidation" as a System property which is used when
     // skipping the scope role validation during token issuing using JWT bearer grant.
     public static final String CHECK_ROLES_FROM_SAML_ASSERTION = "checkRolesFromSamlAssertion";
-    public static final String RETRIEVE_ROLES_FROM_USERSTORE_FOR_SCOPE_VALIDATION = "retrieveRolesFromUserStoreForScopeValidation";
+    public static final String RETRIEVE_ROLES_FROM_USERSTORE_FOR_SCOPE_VALIDATION =
+            "retrieveRolesFromUserStoreForScopeValidation";
     private static final String SCOPE_VALIDATOR_NAME = "Role based scope validator";
     private static final String OPENID = "openid";
 
@@ -123,7 +124,7 @@ public class JDBCScopeValidator extends OAuth2ScopeValidator {
 
         //Return TRUE if - There does not exist a scope definition for the resource
         if (resourceScope == null) {
-            if(log.isDebugEnabled()){
+            if (log.isDebugEnabled()) {
                 log.debug("Resource '" + resource + "' is not protected with a scope");
             }
             return true;
@@ -131,9 +132,9 @@ public class JDBCScopeValidator extends OAuth2ScopeValidator {
 
         List<String> scopeList = new ArrayList<>(Arrays.asList(scopes));
 
-        //If the access token does not bear the scope required for accessing the Resource.
-        if(!scopeList.contains(resourceScope)){
-            if(log.isDebugEnabled() && IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)){
+        // If the access token does not bear the scope required for accessing the Resource.
+        if (!scopeList.contains(resourceScope)) {
+            if (log.isDebugEnabled() && IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
                 log.debug("Access token '" + accessTokenDO.getAccessToken() + "' does not bear the scope '" +
                             resourceScope + "'");
             }
@@ -156,7 +157,7 @@ public class JDBCScopeValidator extends OAuth2ScopeValidator {
             String[] userRoles = getUserRoles(authzUser);
 
             if (ArrayUtils.isEmpty(userRoles)) {
-                if(log.isDebugEnabled()){
+                if (log.isDebugEnabled()) {
                     log.debug("No roles associated for the user " + authzUser.getUserName());
                 }
                 return false;
@@ -290,7 +291,7 @@ public class JDBCScopeValidator extends OAuth2ScopeValidator {
             if (tenantId != MultitenantConstants.SUPER_TENANT_ID) {
                 PrivilegedCarbonContext.startTenantFlow();
                 PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(
-                        realmService.getTenantManager().getDomain(tenantId),true);
+                        realmService.getTenantManager().getDomain(tenantId), true);
                 tenantFlowStarted = true;
             }
 

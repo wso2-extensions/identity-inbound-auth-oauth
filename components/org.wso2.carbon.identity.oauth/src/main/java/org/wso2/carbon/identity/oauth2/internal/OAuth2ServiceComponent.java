@@ -64,6 +64,9 @@ import java.sql.SQLException;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkAudienceEnabled;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkIDPIdColumnAvailable;
 
+/**
+ * OAuth 2 OSGi service component.
+ */
 @Component(
         name = "identity.oauth2.component",
         immediate = true

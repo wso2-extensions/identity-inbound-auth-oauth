@@ -37,7 +37,7 @@ public interface ClaimsRetriever {
      *
      * @throws IdentityOAuth2Exception
      */
-    public void init() throws IdentityOAuth2Exception;
+    void init() throws IdentityOAuth2Exception;
 
     /**
      * Method that retrieves user claims
@@ -48,7 +48,8 @@ public interface ClaimsRetriever {
      * values - claim values.
      * @throws IdentityOAuth2Exception
      */
-    public SortedMap<String, String> getClaims(String endUserName, String[] requestedClaims) throws IdentityOAuth2Exception;
+    SortedMap<String, String> getClaims(String endUserName, String[] requestedClaims)
+            throws IdentityOAuth2Exception;
 
     /**
      * Method that retrieves user defaultClaims
@@ -56,6 +57,6 @@ public interface ClaimsRetriever {
      * @return a String[]
      * @throws IdentityOAuth2Exception
      */
-    public String[] getDefaultClaims(String endUserName) throws IdentityOAuth2Exception;
+    String[] getDefaultClaims(String endUserName) throws IdentityOAuth2Exception;
 
 }

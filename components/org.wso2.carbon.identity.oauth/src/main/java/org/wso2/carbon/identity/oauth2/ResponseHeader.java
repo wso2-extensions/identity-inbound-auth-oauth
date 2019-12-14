@@ -18,6 +18,9 @@
 
 package org.wso2.carbon.identity.oauth2;
 
+/**
+ * OAuth 2 response header.
+ */
 public class ResponseHeader {
 
     private String key;

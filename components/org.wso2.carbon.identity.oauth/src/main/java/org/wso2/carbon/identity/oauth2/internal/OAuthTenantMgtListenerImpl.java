@@ -33,6 +33,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * Tenant management listener for OAuth related functionality.
+ */
 public class OAuthTenantMgtListenerImpl extends AbstractIdentityTenantMgtListener {
 
     @Override

@@ -21,10 +21,14 @@ package org.wso2.carbon.identity.oauth2.client.authentication;
 import org.wso2.carbon.identity.core.handler.IdentityHandler;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 
-import javax.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.Map;
 
+import javax.servlet.http.HttpServletRequest;
+
+/**
+ * OAuth client authenticator interface.
+ */
 public interface OAuthClientAuthenticator extends IdentityHandler {
 
     /**

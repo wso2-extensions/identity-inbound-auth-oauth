@@ -56,8 +56,9 @@ public class AuthzCodeDO extends CacheEntry {
 
     private String tokenBindingReference;
 
-    public AuthzCodeDO(AuthenticatedUser authorizedUser, String[] scope, Timestamp issuedTime, long validityPeriod, String
-            callbackUrl, String consumerKey, String authorizationCode, String authzCodeId) {
+    public AuthzCodeDO(AuthenticatedUser authorizedUser, String[] scope, Timestamp issuedTime, long validityPeriod,
+                       String callbackUrl, String consumerKey, String authorizationCode, String authzCodeId) {
+
         this.authorizedUser = authorizedUser;
         this.scope = scope;
         this.issuedTime = issuedTime;
@@ -68,8 +69,10 @@ public class AuthzCodeDO extends CacheEntry {
         this.authzCodeId = authzCodeId;
     }
 
-    public AuthzCodeDO(AuthenticatedUser authorizedUser, String[] scope, Timestamp issuedTime, long validityPeriod, String
-            callbackUrl, String consumerKey, String authorizationCode, String authzCodeId, String state) {
+    public AuthzCodeDO(AuthenticatedUser authorizedUser, String[] scope, Timestamp issuedTime, long validityPeriod,
+                       String callbackUrl, String consumerKey, String authorizationCode, String authzCodeId,
+                       String state) {
+
         this.authorizedUser = authorizedUser;
         this.scope = scope;
         this.issuedTime = issuedTime;
@@ -81,16 +84,22 @@ public class AuthzCodeDO extends CacheEntry {
         this.state = state;
     }
 
-    public AuthzCodeDO(AuthenticatedUser authorizedUser, String[] scope, Timestamp issuedTime, long validityPeriod, String
-            callbackUrl, String consumerKey, String authorizationCode, String authzCodeId, String pkceCodeChallenge, String pkceCodeChallengeMethod) {
-        this(authorizedUser, scope, issuedTime, validityPeriod, callbackUrl, consumerKey,authorizationCode,authzCodeId);
+    public AuthzCodeDO(AuthenticatedUser authorizedUser, String[] scope, Timestamp issuedTime, long validityPeriod,
+                       String callbackUrl, String consumerKey, String authorizationCode, String authzCodeId,
+                       String pkceCodeChallenge, String pkceCodeChallengeMethod) {
+
+        this(authorizedUser, scope, issuedTime, validityPeriod, callbackUrl, consumerKey, authorizationCode,
+                authzCodeId);
         this.pkceCodeChallenge = pkceCodeChallenge;
         this.pkceCodeChallengeMethod = pkceCodeChallengeMethod;
     }
 
-    public AuthzCodeDO(AuthenticatedUser authorizedUser, String[] scope, Timestamp issuedTime, long validityPeriod, String
-            callbackUrl, String consumerKey, String authorizationCode, String authzCodeId, String state, String pkceCodeChallenge, String pkceCodeChallengeMethod) {
-        this(authorizedUser, scope, issuedTime, validityPeriod, callbackUrl, consumerKey,authorizationCode,authzCodeId, state);
+    public AuthzCodeDO(AuthenticatedUser authorizedUser, String[] scope, Timestamp issuedTime, long validityPeriod,
+                       String callbackUrl, String consumerKey, String authorizationCode, String authzCodeId,
+                       String state, String pkceCodeChallenge, String pkceCodeChallengeMethod) {
+
+        this(authorizedUser, scope, issuedTime, validityPeriod, callbackUrl, consumerKey, authorizationCode,
+                authzCodeId, state);
         this.pkceCodeChallenge = pkceCodeChallenge;
         this.pkceCodeChallengeMethod = pkceCodeChallengeMethod;
     }

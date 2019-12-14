@@ -427,7 +427,8 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
             return userClaimsMappedToOIDCDialect;
         } else {
             if (log.isDebugEnabled()) {
-                log.debug("Number of user claims retrieved for " + fullQualifiedUsername + " from user store: " + userClaims.size());
+                log.debug("Number of user claims retrieved for " + fullQualifiedUsername + " from user store: " +
+                        userClaims.size());
             }
             // Map the local roles to SP defined roles.
             handleServiceProviderRoleMappings(serviceProvider, ATTRIBUTE_SEPARATOR, userClaims);
