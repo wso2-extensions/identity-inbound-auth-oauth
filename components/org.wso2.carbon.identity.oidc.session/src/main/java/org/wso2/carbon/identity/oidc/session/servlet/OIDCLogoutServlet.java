@@ -184,44 +184,48 @@ public class OIDCLogoutServlet extends HttpServlet {
                 return;
             }
             String idTokenHint = request.getParameter(OIDCSessionConstants.OIDC_ID_TOKEN_HINT_PARAM);
+            boolean skipConsent;
             // Get user consent to logout
             try {
-                boolean skipConsent = getOpenIDConnectSkipUserConsent(idTokenHint);
-                if (skipConsent) {
-                    if (StringUtils.isNotBlank(idTokenHint)) {
-                        redirectURL = processLogoutRequest(request, response);
-                        if (StringUtils.isNotBlank(redirectURL)) {
-                            response.sendRedirect(getRedirectURL(redirectURL, request));
-                            return;
-                        }
-                    } else {
-                        // Add OIDC Cache entry without properties since OIDC Logout should work without id_token_hint
-                        OIDCSessionDataCacheEntry cacheEntry = new OIDCSessionDataCacheEntry();
-
-                        // Logout request without id_token_hint will redirected to an IDP's page once logged out, rather a RP's
-                        // callback endpoint. The state parameter is set here in the cache, so that it will be available in the
-                        // redirected IDP's page to support any custom requirement.
-                        setStateParameterInCache(request, cacheEntry);
-                        addSessionDataToCache(opBrowserStateCookie.getValue(), cacheEntry);
-                    }
-
-                    sendToFrameworkForLogout(request, response);
-                    return;
-                } else {
-                    sendToConsentUri(request, response);
-                    return;
-                }
+                skipConsent = getOpenIDConnectSkipUserConsent(idTokenHint);
             } catch (ParseException e) {
-                log.error("Error while getting clientId from the IdTokenHint.");
+                log.error("Error while getting clientId from the IdTokenHint.", e);
                 redirectURL = OIDCSessionManagementUtil
                         .getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, "ID token signature validation failed.");
+                response.sendRedirect(getRedirectURL(redirectURL, request));
+                return;
             } catch (IdentityOAuth2Exception e) {
-                log.error("Error while getting service provider from the clientId.");
+                log.error("Error while getting service provider from the clientId.", e);
                 redirectURL = OIDCSessionManagementUtil
                         .getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, "ID token signature validation failed.");
+                response.sendRedirect(getRedirectURL(redirectURL, request));
+                return;
+            }
+            if (skipConsent) {
+                if (StringUtils.isNotBlank(idTokenHint)) {
+                    redirectURL = processLogoutRequest(request, response);
+                    if (StringUtils.isNotBlank(redirectURL)) {
+                        response.sendRedirect(getRedirectURL(redirectURL, request));
+                        return;
+                    }
+                } else {
+                    // Add OIDC Cache entry without properties since OIDC Logout should work without id_token_hint
+                    OIDCSessionDataCacheEntry cacheEntry = new OIDCSessionDataCacheEntry();
+
+                    // Logout request without id_token_hint will redirected to an IDP's page once logged out, rather a RP's
+                    // callback endpoint. The state parameter is set here in the cache, so that it will be available in the
+                    // redirected IDP's page to support any custom requirement.
+                    setStateParameterInCache(request, cacheEntry);
+                    addSessionDataToCache(opBrowserStateCookie.getValue(), cacheEntry);
+                }
+
+                sendToFrameworkForLogout(request, response);
+                return;
+            } else {
+                sendToConsentUri(request, response);
+                return;
             }
         }
-
         response.sendRedirect(getRedirectURL(redirectURL, request));
     }
 
@@ -738,7 +742,7 @@ public class OIDCLogoutServlet extends HttpServlet {
                 ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(clientId);
                 if (serviceProvider != null) {
                     if (log.isDebugEnabled()) {
-                        log.debug("Get the logout consent skip from service prover");
+                        log.debug("Get the logout consent skip from service prover. Client id: " + clientId);
                     }
                     return FrameworkUtils.isLogoutConsentPageSkippedForSP(serviceProvider);
                 }
@@ -747,7 +751,7 @@ public class OIDCLogoutServlet extends HttpServlet {
             }
         }
         if (log.isDebugEnabled()) {
-            log.debug("Get the logout consent skip from identity.xml");
+            log.debug("Reading the skipConsent property from the identity.xml");
         }
         return OAuthServerConfiguration.getInstance().getOpenIDConnectSkipeUserConsentConfig();
     }
