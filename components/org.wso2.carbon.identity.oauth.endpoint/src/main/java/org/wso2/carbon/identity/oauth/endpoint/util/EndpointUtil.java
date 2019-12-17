@@ -43,6 +43,7 @@ import org.wso2.carbon.identity.discovery.builders.OIDCProviderRequestBuilder;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCache;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheKey;
+import org.wso2.carbon.identity.oauth.ciba.api.CibaAuthServiceImpl;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
@@ -104,6 +105,7 @@ public class EndpointUtil {
     private static SSOConsentService ssoConsentService;
     private static OAuthServerConfiguration oauthServerConfiguration;
     private static RequestObjectService requestObjectService;
+    private static CibaAuthServiceImpl cibaAuthService;
 
     public static void setOAuth2Service(OAuth2Service oAuth2Service) {
 
@@ -864,5 +866,15 @@ public class EndpointUtil {
         if (isNotBlank(name) && isNotBlank(value)) {
             map.put(name, value);
         }
+    }
+
+    public static CibaAuthServiceImpl getCibaAuthService() {
+
+        return cibaAuthService;
+    }
+
+    public static void setCibaAuthService(CibaAuthServiceImpl cibaAuthService) {
+
+        EndpointUtil.cibaAuthService = cibaAuthService;
     }
 }
