@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth2.validators;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -25,6 +26,8 @@ import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.cache.OAuthScopeBindingCache;
+import org.wso2.carbon.identity.oauth.cache.OAuthScopeBindingCacheKey;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeServerException;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
@@ -36,9 +39,11 @@ import org.wso2.carbon.user.api.AuthorizationManager;
 import org.wso2.carbon.user.api.UserStoreException;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
 
@@ -55,6 +60,7 @@ public class JDBCPermissionBasedInternalScopeValidator {
     private static final String ROOT = "/";
     private static final String ADMIN_PERMISSION_ROOT = "/permission/admin";
     private static final String INTERNAL_SCOPE_PREFIX = "internal_";
+    private static final String EVERYONE_PERMISSION = "everyone_permission";
 
     public String[] validateScope(OAuthTokenReqMessageContext tokReqMsgCtx) {
 
@@ -138,10 +144,8 @@ public class JDBCPermissionBasedInternalScopeValidator {
             startTenantFlow(authenticatedUser.getTenantDomain(), tenantId);
             AuthorizationManager authorizationManager = OAuthComponentServiceHolder.getInstance().getRealmService()
                     .getTenantUserRealm(tenantId).getAuthorizationManager();
-            String[] allowedUIResourcesForUser = authorizationManager.getAllowedUIResourcesForUser(IdentityUtil
-                    .addDomainToName(authenticatedUser.getUserName(), authenticatedUser.getUserStoreDomain()), "/");
-            Set<Scope> allScopes = OAuthTokenPersistenceFactory.getInstance().getOAuthScopeDAO().getScopes(tenantId,
-                    PERMISSION_BINDING_TYPE);
+            String[] allowedUIResourcesForUser = getAllowedUIResourcesOfUser(authenticatedUser, authorizationManager);
+            Set<Scope> allScopes = getScopesOfPermissionType(tenantId);
             if (ArrayUtils.contains(allowedUIResourcesForUser, ROOT) || ArrayUtils.contains(allowedUIResourcesForUser,
                     PERMISSION_ROOT)) {
                 return new ArrayList<>(allScopes);
@@ -178,6 +182,31 @@ public class JDBCPermissionBasedInternalScopeValidator {
             endTenantFlow();
         }
         return userAllowedScopes;
+    }
+
+    private String[] getAllowedUIResourcesOfUser(AuthenticatedUser authenticatedUser, AuthorizationManager authorizationManager) throws UserStoreException {
+
+        String[] allowedUIResourcesForUser = authorizationManager.getAllowedUIResourcesForUser(IdentityUtil
+                .addDomainToName(authenticatedUser.getUserName(), authenticatedUser.getUserStoreDomain()), "/");
+        return (String[]) ArrayUtils.add(allowedUIResourcesForUser, EVERYONE_PERMISSION);
+    }
+
+    private Set<Scope> getScopesOfPermissionType(int tenantId) throws IdentityOAuth2ScopeServerException {
+
+        Scope[] scopesFromCache = OAuthScopeBindingCache.getInstance()
+                .getValueFromCache(new OAuthScopeBindingCacheKey(PERMISSION_BINDING_TYPE, tenantId));
+        Set<Scope> allScopes;
+        if (scopesFromCache != null) {
+            allScopes = Arrays.stream(scopesFromCache).collect(Collectors.toSet());
+        } else {
+            allScopes = OAuthTokenPersistenceFactory.getInstance().getOAuthScopeDAO().getScopes(tenantId,
+                    PERMISSION_BINDING_TYPE);
+            if (CollectionUtils.isNotEmpty(allScopes)) {
+                OAuthScopeBindingCache.getInstance().addToCache(new OAuthScopeBindingCacheKey(PERMISSION_BINDING_TYPE,
+                        tenantId), allScopes.toArray(new Scope[0]));
+            }
+        }
+        return allScopes;
     }
 
     private void startTenantFlow(String tenantDomain, int tenantId) {
