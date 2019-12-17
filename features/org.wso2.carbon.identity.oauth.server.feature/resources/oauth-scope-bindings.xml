@@ -83,7 +83,7 @@
 </Scope>
 <Scope name="internal_login" displayName="Login">
     <Permissions>
-      <Permission>/permission/admin/login</Permission>
+      <Permission>everyone_permission</Permission>
    </Permissions>
 </Scope>
 <Scope name="internal_manage_event_streams" displayName="Event streams">
