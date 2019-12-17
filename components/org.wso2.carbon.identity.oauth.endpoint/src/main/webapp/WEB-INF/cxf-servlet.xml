@@ -32,6 +32,8 @@
             <ref bean="userinfoEndpointBean"/>
             <ref bean="jwksEndpointBean"/>
             <ref bean="oidcdiscoveryEndpointBean"/>
+            <ref bean="deviceAuthEndpointBean"/>
+            <ref bean="userAuthenticationEndpointBean"/>
             <ref bean="cibaEndpointBean"/>
         </jaxrs:serviceBeans>
         <jaxrs:inInterceptors>
@@ -67,6 +69,13 @@
     <bean id="oauthServerConfigurationFactoryBean" class="org.wso2.carbon.identity.oauth.endpoint.factory.OAuthServerConfigurationFactory"/>
     <bean id="requestObjectServiceFactoryBean" class="org.wso2.carbon.identity.oauth.endpoint.factory.RequestObjectServiceFactory"/>
     <bean id="openIDConnectClaimFilterFactoryBean" class="org.wso2.carbon.identity.oauth.endpoint.factory.OpenIDConnectClaimFilterFactory"/>
+    <bean id="deviceAuthServiceFactoryBean" class="org.wso2.carbon.identity.oauth.endpoint.factory.DeviceAuthServiceFactory"/>
+    <bean id="deviceAuthEndpointBean" class="org.wso2.carbon.identity.oauth.endpoint.device.DeviceEndpoint">
+            <property name="deviceAuthService" ref="deviceAuthServiceFactoryBean"/>
+    </bean>
+    <bean id="userAuthenticationEndpointBean" class="org.wso2.carbon.identity.oauth.endpoint.device.UserAuthenticationEndpoint">
+        <property name="deviceAuthService" ref="deviceAuthServiceFactoryBean"/>
+    </bean>
     <bean id="cibaEndpointBean" class="org.wso2.carbon.identity.oauth.endpoint.ciba.OAuth2CibaEndpoint"/>
     <bean id="cibaAuthServiceFactoryBean" class="org.wso2.carbon.identity.oauth.endpoint.factory.CibaServiceFactory"/>
 </beans>
