@@ -180,7 +180,9 @@ public class CookieBasedTokenBinder extends AbstractTokenBinder {
                     String cookiePrefix = COOKIE_NAME + "=";
                     for (String cookie : cookies) {
                         if (StringUtils.isNotBlank(cookie) && cookie.trim().startsWith(cookiePrefix)) {
-                            return bindingReference.equals(HttpCookie.parse(cookie).get(0).getValue());
+                            String receivedBindingReference = OAuth2Util
+                                    .getTokenBindingReference(HttpCookie.parse(cookie).get(0).getValue());
+                            return bindingReference.equals(receivedBindingReference);
                         }
                     }
                 }
