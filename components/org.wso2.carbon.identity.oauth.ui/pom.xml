@@ -22,7 +22,7 @@
         <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
         <artifactId>identity-inbound-auth-oauth</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <version>6.2.30</version>
+        <version>6.2.83-SNAPSHOT</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -134,6 +134,20 @@
                         </Export-Package>
                         <Carbon-Component>UIBundle</Carbon-Component>
                     </instructions>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+                <configuration>
+                    <skip>true</skip>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>findbugs-maven-plugin</artifactId>
+                <configuration>
+                    <skip>true</skip>
                 </configuration>
             </plugin>
         </plugins>

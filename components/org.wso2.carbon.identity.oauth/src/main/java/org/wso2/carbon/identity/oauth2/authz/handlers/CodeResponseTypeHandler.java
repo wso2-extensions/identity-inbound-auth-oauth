@@ -39,7 +39,7 @@ public class CodeResponseTypeHandler extends AbstractResponseTypeHandler {
      * First the respDTO must be initialized using initResponse method in abstract class.
      *
      * @param oauthAuthzMsgCtx
-     * @return
+     * @return OAuth2AuthorizeRespDTO
      * @throws IdentityOAuth2Exception
      */
     @Override
@@ -59,6 +59,7 @@ public class CodeResponseTypeHandler extends AbstractResponseTypeHandler {
 
     private OAuth2AuthorizeRespDTO buildResponseDTO(OAuthAuthzReqMessageContext oauthAuthzMsgCtx, AuthzCodeDO authzCodeDO)
             throws IdentityOAuth2Exception {
+
         // Initializing the response.
         OAuth2AuthorizeRespDTO respDTO = initResponse(oauthAuthzMsgCtx);
         // Add authorization code details to the response.

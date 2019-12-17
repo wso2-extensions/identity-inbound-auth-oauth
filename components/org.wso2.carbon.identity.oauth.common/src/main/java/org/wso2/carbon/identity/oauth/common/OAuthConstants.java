@@ -133,6 +133,7 @@ public final class OAuthConstants {
 
     //Constants used for multiple scopes
     public static final String OIDC_SCOPE_CONFIG_PATH = "oidc-scope-config.xml";
+    public static final String OAUTH_SCOPE_BINDING_PATH = "oauth-scope-bindings.xml";
     public static final String SCOPE_RESOURCE_PATH = "/oidc";
 
     public static final String TENANT_NAME_FROM_CONTEXT = "TenantNameFromContext";
@@ -345,6 +346,7 @@ public final class OAuthConstants {
         public static final String TOKEN_TYPE = "tokenType";
         public static final String BYPASS_CLIENT_CREDENTIALS = "bypassClientCredentials";
         public static final String RENEW_REFRESH_TOKEN = "renewRefreshToken";
+        public static final String TOKEN_BINDING_TYPE = "tokenBindingType";
 
         private OIDCConfigProperties() { }
     }
@@ -365,6 +367,11 @@ public final class OAuthConstants {
         public static final String SHA512 = "SHA-512";
 
         private SignatureAlgorithms() {}
+    }
+
+    public static class TokenBindings {
+
+        public static final String NONE = "NONE";
     }
 
     private OAuthConstants() {

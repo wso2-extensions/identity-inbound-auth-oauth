@@ -34,6 +34,7 @@
             <ref bean="oidcdiscoveryEndpointBean"/>
             <ref bean="deviceAuthEndpointBean"/>
             <ref bean="userAuthenticationEndpointBean"/>
+            <ref bean="cibaEndpointBean"/>
         </jaxrs:serviceBeans>
         <jaxrs:inInterceptors>
             <ref bean="oauthClientAuthnBean"/>
@@ -61,6 +62,7 @@
         <property name="SSOConsentService"  ref="ssoConsentServiceFactoryBean"/>
         <property name="oauthServerConfiguration"  ref="oauthServerConfigurationFactoryBean"/>
         <property name="requestObjectService"  ref="requestObjectServiceFactoryBean"/>
+        <property name="cibaAuthService"  ref="cibaAuthServiceFactoryBean"/>
     </bean>
     <bean id="oAuth2ServiceFactoryBean" class="org.wso2.carbon.identity.oauth.endpoint.factory.OAuth2ServiceFactory"/>
     <bean id="ssoConsentServiceFactoryBean" class="org.wso2.carbon.identity.oauth.endpoint.factory.SSOConsentServiceFactory"/>
@@ -74,5 +76,6 @@
     <bean id="userAuthenticationEndpointBean" class="org.wso2.carbon.identity.oauth.endpoint.device.UserAuthenticationEndpoint">
         <property name="deviceAuthService" ref="deviceAuthServiceFactoryBean"/>
     </bean>
-
+    <bean id="cibaEndpointBean" class="org.wso2.carbon.identity.oauth.endpoint.ciba.OAuth2CibaEndpoint"/>
+    <bean id="cibaAuthServiceFactoryBean" class="org.wso2.carbon.identity.oauth.endpoint.factory.CibaServiceFactory"/>
 </beans>

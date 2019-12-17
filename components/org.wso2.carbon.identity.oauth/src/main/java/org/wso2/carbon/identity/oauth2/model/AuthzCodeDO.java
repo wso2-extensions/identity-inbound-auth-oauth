@@ -54,6 +54,8 @@ public class AuthzCodeDO extends CacheEntry {
 
     private String pkceCodeChallengeMethod;
 
+    private String tokenBindingReference;
+
     public AuthzCodeDO(AuthenticatedUser authorizedUser, String[] scope, Timestamp issuedTime, long validityPeriod, String
             callbackUrl, String consumerKey, String authorizationCode, String authzCodeId) {
         this.authorizedUser = authorizedUser;
@@ -92,6 +94,16 @@ public class AuthzCodeDO extends CacheEntry {
         this.pkceCodeChallenge = pkceCodeChallenge;
         this.pkceCodeChallengeMethod = pkceCodeChallengeMethod;
     }
+
+    public AuthzCodeDO(AuthenticatedUser authorizedUser, String[] scope, Timestamp issuedTime, long validityPeriod,
+            String callbackUrl, String consumerKey, String authorizationCode, String authzCodeId, String state,
+            String pkceCodeChallenge, String pkceCodeChallengeMethod, String tokenBindingReference) {
+
+        this(authorizedUser, scope, issuedTime, validityPeriod, callbackUrl, consumerKey, authorizationCode,
+                authzCodeId, state, pkceCodeChallenge, pkceCodeChallengeMethod);
+        this.tokenBindingReference = tokenBindingReference;
+    }
+
     public AuthzCodeDO() {
     }
 
@@ -165,5 +177,15 @@ public class AuthzCodeDO extends CacheEntry {
 
     public void setPkceCodeChallengeMethod(String pkceCodeChallengeMethod) {
         this.pkceCodeChallengeMethod = pkceCodeChallengeMethod;
+    }
+
+    public String getTokenBindingReference() {
+
+        return tokenBindingReference;
+    }
+
+    public void setTokenBindingReference(String tokenBindingReference) {
+
+        this.tokenBindingReference = tokenBindingReference;
     }
 }

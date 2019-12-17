@@ -40,6 +40,8 @@ public interface OAuthScopeDAO {
 
     Set<Scope> getAllScopes(int tenantID) throws IdentityOAuth2ScopeServerException;
 
+    Set<Scope> getScopes(int tenantID, String bindingType) throws IdentityOAuth2ScopeServerException;
+
     Set<Scope> getScopesWithPagination(Integer offset, Integer limit, int tenantID) throws IdentityOAuth2ScopeServerException;
 
     Scope getScopeByName(String name, int tenantID) throws IdentityOAuth2ScopeServerException;

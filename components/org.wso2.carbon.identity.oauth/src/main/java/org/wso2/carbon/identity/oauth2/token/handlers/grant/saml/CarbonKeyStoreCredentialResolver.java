@@ -20,10 +20,10 @@ package org.wso2.carbon.identity.oauth2.token.handlers.grant.saml;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.opensaml.xml.security.CriteriaSet;
-import org.opensaml.xml.security.credential.Credential;
-import org.opensaml.xml.security.credential.KeyStoreCredentialResolver;
-import org.opensaml.xml.security.criteria.EntityIDCriteria;
+import net.shibboleth.utilities.java.support.resolver.CriteriaSet;
+import org.opensaml.security.credential.Credential;
+import org.opensaml.security.credential.impl.KeyStoreCredentialResolver;
+import org.opensaml.core.criterion.EntityIdCriterion;
 import org.wso2.carbon.identity.oauth2.util.X509CredentialImpl;
 
 import java.security.KeyStore;
@@ -55,8 +55,8 @@ public class CarbonKeyStoreCredentialResolver extends KeyStoreCredentialResolver
                 String alias = en.nextElement();
                 X509Certificate cert = (X509Certificate) keyStore.getCertificate(alias);
                 Credential credential = new X509CredentialImpl(cert);
-                if (criteriaSet.get(EntityIDCriteria.class) != null) {
-                    if (criteriaSet.get(EntityIDCriteria.class).getEntityID().equals(alias)) {
+                if (criteriaSet.get(EntityIdCriterion.class) != null) {
+                    if (criteriaSet.get(EntityIdCriterion.class).getEntityId().equals(alias)) {
                         credentialSet.add(credential);
                         break;
                     }

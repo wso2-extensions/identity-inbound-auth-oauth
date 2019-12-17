@@ -47,6 +47,7 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionManagementException;
@@ -194,6 +195,11 @@ public class OIDCLogoutServlet extends HttpServlet {
                 } else {
                     // Add OIDC Cache entry without properties since OIDC Logout should work without id_token_hint
                     OIDCSessionDataCacheEntry cacheEntry = new OIDCSessionDataCacheEntry();
+
+                    // Logout request without id_token_hint will redirected to an IDP's page once logged out, rather a RP's
+                    // callback endpoint. The state parameter is set here in the cache, so that it will be available in the
+                    // redirected IDP's page to support any custom requirement.
+                    setStateParameterInCache(request, cacheEntry);
                     addSessionDataToCache(opBrowserStateCookie.getValue(), cacheEntry);
                 }
 
@@ -407,10 +413,21 @@ public class OIDCLogoutServlet extends HttpServlet {
         } else {
             // Add OIDC Cache entry without properties since OIDC Logout should work without id_token_hint
             OIDCSessionDataCacheEntry cacheEntry = new OIDCSessionDataCacheEntry();
+
+            // Logout request without id_token_hint will redirected to an IDP's page once logged out, rather a RP's
+            // callback endpoint. The state parameter is set here in the cache, so that it will be available in the
+            // redirected IDP's page to support any custom requirement.
+            setStateParameterInCache(request, cacheEntry);
             Cookie opBrowserStateCookie = OIDCSessionManagementUtil.getOPBrowserStateCookie(request);
             addSessionDataToCache(opBrowserStateCookie.getValue(), cacheEntry);
         }
         response.sendRedirect(getRedirectURL(redirectURL, request));
+    }
+
+    private void setStateParameterInCache(HttpServletRequest request, OIDCSessionDataCacheEntry cacheEntry) {
+
+        String state = request.getParameter(OIDCSessionConstants.OIDC_STATE_PARAM);
+        cacheEntry.setState(state);
     }
 
     /**
@@ -610,6 +627,9 @@ public class OIDCLogoutServlet extends HttpServlet {
             removeSessionDataFromCache(sessionDataKey);
             Cookie opBrowserStateCookie = OIDCSessionManagementUtil.removeOPBrowserStateCookie(request, response);
             OIDCSessionManagementUtil.getSessionManager().removeOIDCSessionState(opBrowserStateCookie.getValue());
+            // Clear binding elements from the response.
+            clearTokenBindingElements(cacheEntry.getParamMap().get(OIDCSessionConstants.OIDC_CACHE_CLIENT_ID_PARAM),
+                    request, response);
             response.sendRedirect(getRedirectURL(redirectURL, request));
         } else {
             response.sendRedirect(getRedirectURL(OIDCSessionManagementUtil.getErrorPageURL(OAuth2ErrorCodes
@@ -743,15 +763,28 @@ public class OIDCLogoutServlet extends HttpServlet {
             response.sendRedirect(getRedirectURL(redirectURL, request));
             return;
         }
+        String clientId;
+        try {
+            clientId = extractClientFromIdToken(idTokenHint);
+        } catch (ParseException e) {
+            String msg = "Error occurred while extracting data from id token.";
+            if (log.isDebugEnabled()) {
+                log.debug("Error occurred while retrieving client id from id token.", e);
+            }
+            redirectURL = OIDCSessionManagementUtil.getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, msg);
+            response.sendRedirect(getRedirectURL(redirectURL, request));
+            return;
+        }
         if (!validateIdToken(idTokenHint)) {
             String msg = "ID token signature validation failed.";
-            log.error(msg);
+            if (log.isDebugEnabled()) {
+                log.debug(msg + " Client id from id token: " + clientId);
+            }
             redirectURL = OIDCSessionManagementUtil.getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, msg);
             response.sendRedirect(getRedirectURL(redirectURL, request));
             return;
         }
         try {
-            String clientId = extractClientFromIdToken(idTokenHint);
             String callbackUrl = new OAuthAppDAO().getAppInformation(clientId).getCallbackUrl();
             if (validatePostLogoutUri(postLogoutRedirectUri, callbackUrl)) {
                 redirectURL = postLogoutRedirectUri;
@@ -759,15 +792,40 @@ public class OIDCLogoutServlet extends HttpServlet {
                 redirectURL = OIDCSessionManagementUtil.getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED,
                         "Post logout URI does not match with registered callback URI.");
             }
-        } catch (ParseException e) {
-            String msg = "Error occurred while getting application information.";
-            log.error(msg, e);
-            redirectURL = OIDCSessionManagementUtil.getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, msg);
-        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+        } catch (InvalidOAuthClientException e) {
             String msg = "Error occurred while getting application information. Client id not found.";
-            log.error(msg, e);
+            if (log.isDebugEnabled()) {
+                log.debug(msg + " Client id from id token: " + clientId, e);
+            }
+            redirectURL = OIDCSessionManagementUtil.getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, msg);
+        } catch (IdentityOAuth2Exception e) {
+            String msg = "Error occurred while getting application information. Client id not found.";
+            log.error(msg + " Client id from id token: " + clientId, e);
             redirectURL = OIDCSessionManagementUtil.getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, msg);
         }
         response.sendRedirect(getRedirectURL(redirectURL, request));
+    }
+
+    private void clearTokenBindingElements(String clientId, HttpServletRequest request, HttpServletResponse response) {
+
+        OAuthAppDO oAuthAppDO;
+        try {
+            oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
+        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+            log.error("Failed to load the app information for the client id: " + clientId, e);
+            return;
+        }
+
+        if (StringUtils.isBlank(oAuthAppDO.getTokenBindingType())) {
+            return;
+        }
+
+        List<TokenBinder> tokenBinders = OIDCSessionManagementComponentServiceHolder.getInstance().getTokenBinders();
+        if (tokenBinders.isEmpty()) {
+            return;
+        }
+
+        tokenBinders.stream().filter(t -> oAuthAppDO.getTokenBindingType().equals(t.getBindingType())).findAny()
+                .ifPresent(t -> t.clearTokenBindingElements(request, response));
     }
 }

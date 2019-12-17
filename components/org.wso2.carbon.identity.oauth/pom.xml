@@ -23,7 +23,7 @@
         <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
         <artifactId>identity-inbound-auth-oauth</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <version>6.2.30</version>
+        <version>6.2.83-SNAPSHOT</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -130,6 +130,16 @@
         <dependency>
             <groupId>org.wso2.carbon.identity.framework</groupId>
             <artifactId>org.wso2.carbon.identity.application.mgt</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.opensaml</groupId>
+                    <artifactId>opensaml</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.opensaml</groupId>
+                    <artifactId>opensaml1</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.wso2.carbon.identity.framework</groupId>
@@ -138,6 +148,12 @@
         <dependency>
             <groupId>org.wso2.carbon.identity.framework</groupId>
             <artifactId>org.wso2.carbon.identity.entitlement</artifactId>
+        </dependency>
+
+        <!--SAML Common Util dependency-->
+        <dependency>
+            <groupId>org.wso2.carbon.identity.saml.common</groupId>
+            <artifactId>org.wso2.carbon.identity.saml.common.util</artifactId>
         </dependency>
         <dependency>
             <groupId>org.wso2.orbit.com.github.dblock.waffle</groupId>
@@ -223,6 +239,11 @@
         </dependency>
         <dependency>
             <groupId>org.powermock</groupId>
+            <artifactId>powermock-module-junit4</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.powermock</groupId>
             <artifactId>powermock-api-mockito</artifactId>
             <scope>test</scope>
         </dependency>
@@ -250,7 +271,6 @@
         <dependency>
             <groupId>org.wso2.orbit.org.opensaml</groupId>
             <artifactId>opensaml</artifactId>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.wso2.carbon</groupId>
@@ -322,6 +342,7 @@
 
                             org.joda.time;version="${joda.wso2.osgi.version.range}",
                             org.opensaml.*; version="${opensaml2.wso2.osgi.version.range}",
+                            net.shibboleth.utilities.java.support.*; version="${opensaml2.wso2.osgi.version.range}",
 
                             org.osgi.framework; version="${osgi.framework.imp.pkg.version.range}",
                             org.osgi.service.component; version="${osgi.service.component.imp.pkg.version.range}",
@@ -334,6 +355,8 @@
                             org.wso2.carbon.identity.application.common.*;version="${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.identity.application.authentication.framework.*;version="${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.identity.user.store.configuration.*;version="${carbon.identity.framework.imp.pkg.version.range}",
+                            org.wso2.carbon.identity.oauth.common.token.bindings.*;version="${identity.inbound.auth.oauth.imp.pkg.version.range}",
+                            org.wso2.carbon.identity.saml.common.util.*; version="${saml.common.util.version.range}",
 
                             org.wso2.carbon.base; version="${carbon.base.imp.pkg.version.range}",
                             org.wso2.carbon.registry.api;version="${carbon.kernel.registry.imp.pkg.version.range}",
@@ -448,6 +471,20 @@
                         </configuration>
                     </execution>
                 </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+                <configuration>
+                    <skip>true</skip>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>findbugs-maven-plugin</artifactId>
+                <configuration>
+                    <skip>true</skip>
+                </configuration>
             </plugin>
         </plugins>
     </build>

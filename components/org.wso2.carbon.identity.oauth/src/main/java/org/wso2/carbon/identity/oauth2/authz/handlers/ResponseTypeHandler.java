@@ -18,9 +18,11 @@
 
 package org.wso2.carbon.identity.oauth2.authz.handlers;
 
+import org.wso2.carbon.identity.oauth.dto.OAuthErrorDTO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
+import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 
 public interface ResponseTypeHandler {
 
@@ -43,5 +45,26 @@ public interface ResponseTypeHandler {
      * @throws IdentityOAuth2Exception
      */
     public boolean isAuthorizedClient(OAuthAuthzReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception;
-}
 
+    /**
+     * Handles user consent denial at responseType level.
+     *
+     * @param oAuth2Parameters OAuth parameters.
+     * @return OAuthErrorDTO Authorization Failure Data Transfer Object.
+     */
+    default OAuthErrorDTO handleUserConsentDenial(OAuth2Parameters oAuth2Parameters) {
+
+        return null;
+    }
+
+    /**
+     * Handles authentication failures at responseType level.
+     *
+     * @param oAuth2Parameters OAuth parameters.
+     * @return OAuthErrorDTO Authorization Failure Data Transfer Object.
+     */
+    default OAuthErrorDTO handleAuthenticationFailure(OAuth2Parameters oAuth2Parameters) {
+
+        return null;
+    }
+}

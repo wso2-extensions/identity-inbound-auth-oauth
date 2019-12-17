@@ -157,7 +157,7 @@ public class ResponseTypeHandlerUtil {
             AccessTokenDO existingTokenBean = getExistingToken(oauthAuthzMsgCtx, cacheEnabled);
 
             // Return a new access token in each request when JWTTokenIssuer is used.
-            if (isNotRenewAccessTokenPerRequest(oauthIssuerImpl)) {
+            if (isNotRenewAccessTokenPerRequest(oauthIssuerImpl, oauthAuthzMsgCtx)) {
                 if (existingTokenBean != null) {
 
                     // Revoke token if RenewTokenPerRequest configuration is enabled.
@@ -234,7 +234,6 @@ public class ResponseTypeHandlerUtil {
         // if this is set before - then this will override it by the calculated new value.
         oauthAuthzMsgCtx.setValidityPeriod(validityPeriod);
         oauthAuthzMsgCtx.setAuthorizationCodeValidityPeriod(validityPeriod);
-
         // set code issued time.this is needed by downstream handlers.
         oauthAuthzMsgCtx.setCodeIssuedTime(timestamp.getTime());
 
@@ -587,7 +586,7 @@ public class ResponseTypeHandlerUtil {
         } else {
             newTokenBean.setRefreshTokenIssuedTime(timestamp);
             newTokenBean.setRefreshTokenValidityPeriodInMillis(getConfiguredRefreshTokenValidityPeriodInMillis
-                    (oAuthAppBean));
+                    (oAuthAppBean, oauthAuthzMsgCtx));
             newTokenBean.setRefreshToken(getNewRefreshToken(oauthAuthzMsgCtx, oauthIssuerImpl));
         }
     }
@@ -716,10 +715,20 @@ public class ResponseTypeHandlerUtil {
         return validityPeriodInMillis;
     }
 
-    private static long getConfiguredRefreshTokenValidityPeriodInMillis(OAuthAppDO oAuthAppBean) {
+    private static long getConfiguredRefreshTokenValidityPeriodInMillis(OAuthAppDO oAuthAppBean,
+                                                                        OAuthAuthzReqMessageContext oauthAuthzMsgCtx) {
 
         long refreshTokenValidityPeriodInMillis;
-        if (oAuthAppBean.getRefreshTokenExpiryTime() != 0) {
+        long refreshTokenValidityPeriod = oauthAuthzMsgCtx.getRefreshTokenvalidityPeriod();
+        if (refreshTokenValidityPeriod != OAuthConstants.UNASSIGNED_VALIDITY_PERIOD && refreshTokenValidityPeriod > 0) {
+            refreshTokenValidityPeriodInMillis = oauthAuthzMsgCtx.getRefreshTokenvalidityPeriod() *
+                    SECOND_TO_MILLISECONDS_FACTOR;
+            if (log.isDebugEnabled()) {
+                log.debug("OAuth application id : " + oAuthAppBean.getOauthConsumerKey() + ", using refresh token " +
+                        "validity period configured from OAuthAuthzReqMessageContext: " +
+                        refreshTokenValidityPeriodInMillis + " ms");
+            }
+        } else if (oAuthAppBean.getRefreshTokenExpiryTime() != 0) {
             refreshTokenValidityPeriodInMillis = oAuthAppBean.getRefreshTokenExpiryTime() *
                     SECOND_TO_MILLISECONDS_FACTOR;
             if (log.isDebugEnabled()) {
@@ -828,9 +837,10 @@ public class ResponseTypeHandlerUtil {
         return oAuthAppBean;
     }
 
-    private static boolean isNotRenewAccessTokenPerRequest(OauthTokenIssuer oauthIssuerImpl) {
+    private static boolean isNotRenewAccessTokenPerRequest(OauthTokenIssuer oauthIssuerImpl,
+                                                           OAuthAuthzReqMessageContext oauthAuthzMsgCtx) {
 
-        boolean isRenew = oauthIssuerImpl.renewAccessTokenPerRequest();
+        boolean isRenew = oauthIssuerImpl.renewAccessTokenPerRequest(oauthAuthzMsgCtx);
         if (log.isDebugEnabled()) {
             log.debug("Enable Access Token renew per request: " + isRenew);
         }
@@ -902,6 +912,12 @@ public class ResponseTypeHandlerUtil {
         }
     }
 
+    /**
+     * Builds the revocation request and calls the revoke oauth service.
+     *
+     * @param clientId client id.
+     * @param accessToken access token.
+     */
     private static void revokeExistingToken(String clientId, String accessToken) throws IdentityOAuth2Exception {
 
         // This is used to avoid client validation failure in revokeTokenByOAuthClient.
@@ -944,5 +960,3 @@ public class ResponseTypeHandlerUtil {
         return oAuthClientAuthnContext;
     }
 }
-
-

@@ -123,7 +123,7 @@ public class OAuth2TokenEndpoint {
         } else {
             log.error("Error while creating the Carbon OAuth token request", e);
         }
-        throw new TokenEndpointBadRequestException(e);
+        throw new TokenEndpointBadRequestException(e.getDescription(), e);
     }
 
     private boolean isUnsupportedGrantType(OAuthProblemException e) {

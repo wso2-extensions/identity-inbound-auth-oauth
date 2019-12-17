@@ -34,13 +34,14 @@ each purpose  and factory class to get instance of each DAO classes were introdu
  */
 public class OAuthTokenPersistenceFactory {
 
-    private static OAuthTokenPersistenceFactory factory;
+    private static OAuthTokenPersistenceFactory factory = new OAuthTokenPersistenceFactory();
     private AuthorizationCodeDAO authorizationCodeDAO;
     private AccessTokenDAO tokenDAO;
     private OAuthScopeDAO scopeDAO;
     private TokenManagementDAO managementDAO;
     private RequestObjectDAO requestObjectDAO;
     private ScopeClaimMappingDAO scopeClaimMappingDAO;
+    private TokenBindingMgtDAO tokenBindingMgtDAO;
 
     public OAuthTokenPersistenceFactory() {
 
@@ -50,13 +51,11 @@ public class OAuthTokenPersistenceFactory {
         this.managementDAO = new TokenManagementDAOImpl();
         this.requestObjectDAO = new RequestObjectDAOImpl();
         this.scopeClaimMappingDAO = new CacheBackedScopeClaimMappingDAOImpl();
+        this.tokenBindingMgtDAO = new TokenBindingMgtDAOImpl();
     }
 
     public static OAuthTokenPersistenceFactory getInstance() {
 
-        if (factory == null) {
-            factory = new OAuthTokenPersistenceFactory();
-        }
         return factory;
     }
 
@@ -88,5 +87,10 @@ public class OAuthTokenPersistenceFactory {
     public ScopeClaimMappingDAO getScopeClaimMappingDAO() {
 
         return scopeClaimMappingDAO;
+    }
+
+    public TokenBindingMgtDAO getTokenBindingMgtDAO() {
+
+        return tokenBindingMgtDAO;
     }
 }

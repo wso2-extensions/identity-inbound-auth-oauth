@@ -19,6 +19,8 @@ package org.wso2.carbon.identity.oauth.user;
 
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 
+import javax.servlet.http.HttpServletRequest;
+
 /**
  * Validates the Access Token
  */
@@ -27,11 +29,23 @@ public interface UserInfoAccessTokenValidator {
     /**
      * Validates the access token and returns the token info
      *
-     * @param accessToken
-     * @return
-     * @throws UserInfoEndpointException
+     * @param accessToken access token.
+     * @return token validation response.
+     * @throws UserInfoEndpointException in case of failure.
      */
-    public OAuth2TokenValidationResponseDTO validateToken(String accessToken)
-            throws UserInfoEndpointException;
+    OAuth2TokenValidationResponseDTO validateToken(String accessToken) throws UserInfoEndpointException;
 
+    /**
+     * Validates the access token, token bindings and returns the token info.
+     *
+     * @param accessToken access token.
+     * @param request     http servlet request.
+     * @return token validation response.
+     * @throws UserInfoEndpointException in case of failure.
+     */
+    default OAuth2TokenValidationResponseDTO validateToken(String accessToken, HttpServletRequest request)
+            throws UserInfoEndpointException {
+
+        return validateToken(accessToken);
+    }
 }

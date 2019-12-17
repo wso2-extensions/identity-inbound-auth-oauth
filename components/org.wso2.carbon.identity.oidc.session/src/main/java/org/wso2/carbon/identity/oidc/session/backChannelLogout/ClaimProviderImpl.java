@@ -71,9 +71,7 @@ public class ClaimProviderImpl implements ClaimProvider {
             }
         }
         additionalClaims.put(OAuthConstants.OIDCClaims.SESSION_ID_CLAIM, claimValue);
-
         addSidToCacheWhenIDTokenIsEncrypted(oAuthAuthzReqMessageContext, claimValue);
-
         return additionalClaims;
     }
 
