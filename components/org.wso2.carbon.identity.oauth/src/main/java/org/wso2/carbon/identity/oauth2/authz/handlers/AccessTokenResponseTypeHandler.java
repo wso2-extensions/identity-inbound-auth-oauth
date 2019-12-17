@@ -79,6 +79,5 @@ public class AccessTokenResponseTypeHandler extends AbstractResponseTypeHandler 
         OAuth2AuthorizeRespDTO respDTO = initResponse(oauthAuthzMsgCtx);
         // Add access token details to the response.
         return ResponseTypeHandlerUtil.buildAccessTokenResponseDTO(respDTO, accessTokenDO);
-
     }
 }

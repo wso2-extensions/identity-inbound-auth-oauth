@@ -23,7 +23,6 @@ import org.osgi.framework.BundleContext;
 import org.osgi.util.tracker.ServiceTracker;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.testng.PowerMockTestCase;
-import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.MultitenantConstants;
@@ -52,7 +51,8 @@ import static org.powermock.api.mockito.PowerMockito.when;
 import static org.powermock.api.mockito.PowerMockito.whenNew;
 import static org.testng.Assert.assertEquals;
 
-@PrepareForTest({BundleContext.class, ServiceTracker.class, PrivilegedCarbonContext.class,  DCRDataHolder.class, ApplicationManagementService.class, ServiceProvider.class, OAuthAdminService.class})
+@PrepareForTest({BundleContext.class, ServiceTracker.class, PrivilegedCarbonContext.class, DCRDataHolder.class,
+        ApplicationManagementService.class, ServiceProvider.class, OAuthAdminService.class})
 public class RegisterApiServiceImplExceptionTest extends PowerMockTestCase {
 
     private RegisterApiServiceImpl registerApiService = null;
@@ -62,13 +62,13 @@ public class RegisterApiServiceImplExceptionTest extends PowerMockTestCase {
     BundleContext bundleContext;
 
     @Mock
-    ServiceTracker serviceTracker ;
+    ServiceTracker serviceTracker;
 
     @Mock
     DCRDataHolder dataHolder;
 
     @Mock
-    ApplicationManagementService applicationManagementService  ;
+    ApplicationManagementService applicationManagementService;
 
     @Mock
     ServiceProvider serviceProvider;
@@ -81,7 +81,8 @@ public class RegisterApiServiceImplExceptionTest extends PowerMockTestCase {
 
     @BeforeMethod
     public void setUp() throws Exception {
-        //Initializing variables
+
+        // Initializing variables.
         registerApiService = new RegisterApiServiceImpl();
 
         //Get OSGIservice by starting the tenant flow.
@@ -94,47 +95,50 @@ public class RegisterApiServiceImplExceptionTest extends PowerMockTestCase {
     }
 
     @Test
-    public  void testDeleteApplicationClientException() throws Exception {
+    public void testDeleteApplicationClientException() throws Exception {
+
         try {
             DCRMUtils.setOAuth2DCRMService(mockedDCRMService);
             registerApiService.deleteApplication("");
-        } catch (DCRMEndpointException e){
+        } catch (DCRMEndpointException e) {
             assertEquals(e.getResponse().getStatus(), Response.Status.BAD_REQUEST.getStatusCode());
         }
     }
 
     @Test
-    public  void testDeleteApplicationThrowableException() throws DCRMException {
-        //Test for invalid client id.
+    public void testDeleteApplicationThrowableException() throws DCRMException {
+
+        // Test for invalid client id.
         try {
             registerApiService.deleteApplication("ClientIDInvalid");
-        } catch (DCRMEndpointException e){
-            assertEquals(e.getResponse().getStatus(),Response.Status.INTERNAL_SERVER_ERROR.getStatusCode());
+        } catch (DCRMEndpointException e) {
+            assertEquals(e.getResponse().getStatus(), Response.Status.INTERNAL_SERVER_ERROR.getStatusCode());
         }
     }
 
     @Test
-    public  void testGetApplicationClientException() throws Exception {
+    public void testGetApplicationClientException() throws Exception {
+
         try {
             DCRMUtils.setOAuth2DCRMService(mockedDCRMService);
             registerApiService.getApplication("");
-        } catch (DCRMEndpointException e){
+        } catch (DCRMEndpointException e) {
             assertEquals(e.getResponse().getStatus(), Response.Status.BAD_REQUEST.getStatusCode());
         }
     }
 
     @Test
-    public  void testGetApplicationThrowableException() throws DCRMException {
+    public void testGetApplicationThrowableException() throws DCRMException {
         //Test for invalid client id.
         try {
             registerApiService.getApplication("N2QqQluzQuL5X6CtM3KZwqzLQyyy");
-        } catch (DCRMEndpointException e){
-            assertEquals(e.getResponse().getStatus(),Response.Status.INTERNAL_SERVER_ERROR.getStatusCode());
+        } catch (DCRMEndpointException e) {
+            assertEquals(e.getResponse().getStatus(), Response.Status.INTERNAL_SERVER_ERROR.getStatusCode());
         }
     }
 
     @Test
-    public  void testRegisterApplicationClientException() throws DCRMException {
+    public void testRegisterApplicationClientException() throws DCRMException {
 
         List<String> granttypes = new ArrayList<>();
         granttypes.add("code");
@@ -144,21 +148,20 @@ public class RegisterApiServiceImplExceptionTest extends PowerMockTestCase {
         registrationRequestDTO.setClientName("Test App");
         registrationRequestDTO.setGrantTypes(granttypes);
         registrationRequestDTO.setRedirectUris(redirectUris);
-
         mockStatic(DCRDataHolder.class);
         DCRMUtils.setOAuth2DCRMService(mockedDCRMService);
         when(DCRDataHolder.getInstance()).thenReturn(dataHolder);
-        when(dataHolder.getApplicationManagementService()).thenReturn( applicationManagementService);
+        when(dataHolder.getApplicationManagementService()).thenReturn(applicationManagementService);
 
         try {
             registerApiService.registerApplication(registrationRequestDTO);
-        } catch (DCRMEndpointException e){
-            assertEquals(e.getResponse().getStatus(),Response.Status.BAD_REQUEST.getStatusCode());
+        } catch (DCRMEndpointException e) {
+            assertEquals(e.getResponse().getStatus(), Response.Status.BAD_REQUEST.getStatusCode());
         }
     }
 
     @Test
-    public  void testRegisterApplicationServerException() throws DCRMException, IdentityApplicationManagementException {
+    public void testRegisterApplicationServerException() throws DCRMException, IdentityApplicationManagementException {
 
         List<String> granttypes = new ArrayList<>();
         granttypes.add("code");
@@ -172,32 +175,31 @@ public class RegisterApiServiceImplExceptionTest extends PowerMockTestCase {
         mockStatic(DCRDataHolder.class);
         DCRMUtils.setOAuth2DCRMService(mockedDCRMService);
         when(DCRDataHolder.getInstance()).thenReturn(dataHolder);
-        when(dataHolder.getApplicationManagementService()).thenReturn( applicationManagementService);
-        when(applicationManagementService.getServiceProvider(any(String.class),any(String.class))).
+        when(dataHolder.getApplicationManagementService()).thenReturn(applicationManagementService);
+        when(applicationManagementService.getServiceProvider(any(String.class), any(String.class))).
                 thenThrow(new IdentityApplicationManagementException("execption"));
 
         try {
             registerApiService.registerApplication(registrationRequestDTO);
-        } catch (DCRMEndpointException e){
-            assertEquals(e.getResponse().getStatus(),Response.Status.BAD_REQUEST.getStatusCode());
+        } catch (DCRMEndpointException e) {
+            assertEquals(e.getResponse().getStatus(), Response.Status.BAD_REQUEST.getStatusCode());
         }
-
     }
 
     @Test
-    public  void testRegisterApplicationThrowableException() throws DCRMException {
+    public void testRegisterApplicationThrowableException() throws DCRMException {
         //Test for invalid client id.
         RegistrationRequestDTO registrationRequestDTO = new RegistrationRequestDTO();
         registrationRequestDTO.setClientName("");
         try {
             registerApiService.registerApplication(registrationRequestDTO);
-        } catch (DCRMEndpointException e){
-            assertEquals(e.getResponse().getStatus(),Response.Status.INTERNAL_SERVER_ERROR.getStatusCode());
+        } catch (DCRMEndpointException e) {
+            assertEquals(e.getResponse().getStatus(), Response.Status.INTERNAL_SERVER_ERROR.getStatusCode());
         }
     }
 
     @Test
-    public  void testUpdateApplicationClientException() throws DCRMException {
+    public void testUpdateApplicationClientException() throws DCRMException {
 
         List<String> granttypes = new ArrayList<>();
         granttypes.add("code");
@@ -207,31 +209,28 @@ public class RegisterApiServiceImplExceptionTest extends PowerMockTestCase {
         updateRequestDTO.setClientName("Test App");
         updateRequestDTO.setGrantTypes(granttypes);
         updateRequestDTO.setRedirectUris(redirectUris);
-
         mockStatic(DCRDataHolder.class);
         DCRMUtils.setOAuth2DCRMService(mockedDCRMService);
         when(DCRDataHolder.getInstance()).thenReturn(dataHolder);
-        when(dataHolder.getApplicationManagementService()).thenReturn( applicationManagementService);
+        when(dataHolder.getApplicationManagementService()).thenReturn(applicationManagementService);
 
-        //Test when clientID is null
+        // Test when clientID is null.
         try {
-            registerApiService.updateApplication(updateRequestDTO,"");
-        } catch (DCRMEndpointException e){
-            assertEquals(e.getResponse().getStatus(),Response.Status.BAD_REQUEST.getStatusCode());
+            registerApiService.updateApplication(updateRequestDTO, "");
+        } catch (DCRMEndpointException e) {
+            assertEquals(e.getResponse().getStatus(), Response.Status.BAD_REQUEST.getStatusCode());
         }
     }
 
     @Test
-    public  void testUpdateApplicationThrowableException() throws DCRMException {
+    public void testUpdateApplicationThrowableException() throws DCRMException {
         //Test for invalid client id.
         UpdateRequestDTO updateRequestDTO = new UpdateRequestDTO();
         updateRequestDTO.setClientName("");
         try {
             registerApiService.updateApplication(updateRequestDTO, "ClientID");
-        } catch (DCRMEndpointException e){
-            assertEquals(e.getResponse().getStatus(),Response.Status.INTERNAL_SERVER_ERROR.getStatusCode());
+        } catch (DCRMEndpointException e) {
+            assertEquals(e.getResponse().getStatus(), Response.Status.INTERNAL_SERVER_ERROR.getStatusCode());
         }
     }
-
 }
-

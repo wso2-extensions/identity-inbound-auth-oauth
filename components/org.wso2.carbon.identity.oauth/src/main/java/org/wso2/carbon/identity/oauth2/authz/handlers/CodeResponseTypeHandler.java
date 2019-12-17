@@ -39,7 +39,7 @@ public class CodeResponseTypeHandler extends AbstractResponseTypeHandler {
      * First the respDTO must be initialized using initResponse method in abstract class.
      *
      * @param oauthAuthzMsgCtx
-     * @return
+     * @return OAuth2AuthorizeRespDTO
      * @throws IdentityOAuth2Exception
      */
     @Override

@@ -71,7 +71,6 @@ public class HybridResponseTypeHandler extends AbstractResponseTypeHandler {
             ResponseTypeHandlerUtil.triggerPostListeners(oauthAuthzMsgCtx, accessTokenDO, respDTO);
             ResponseTypeHandlerUtil.buildIDTokenResponseDTO(respDTO, accessTokenDO, oauthAuthzMsgCtx);
         }
-
         return respDTO;
     }
 
@@ -87,6 +86,4 @@ public class HybridResponseTypeHandler extends AbstractResponseTypeHandler {
     private boolean isIDTokenIssued(String responseType) {
         return StringUtils.contains(responseType, OAuthConstants.ID_TOKEN);
     }
-
 }
-
