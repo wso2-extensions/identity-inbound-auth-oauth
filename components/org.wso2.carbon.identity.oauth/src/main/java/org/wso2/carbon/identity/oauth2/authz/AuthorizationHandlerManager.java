@@ -39,7 +39,6 @@ import org.wso2.carbon.identity.oauth2.validators.JDBCPermissionBasedInternalSco
 import org.wso2.carbon.utils.CarbonUtils;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -48,6 +47,9 @@ import static org.apache.oltu.oauth2.common.error.OAuthError.CodeResponse.UNAUTH
 import static org.apache.oltu.oauth2.common.error.OAuthError.CodeResponse.UNSUPPORTED_RESPONSE_TYPE;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
 
+/**
+ * Authorization handler manager.
+ */
 public class AuthorizationHandlerManager {
 
     public static final String OAUTH_APP_PROPERTY = "OAuthAppDO";
@@ -55,8 +57,7 @@ public class AuthorizationHandlerManager {
 
     private static AuthorizationHandlerManager instance;
 
-    private Map<String, ResponseTypeHandler> responseHandlers = new HashMap<>();
-
+    private Map<String, ResponseTypeHandler> responseHandlers;
 
     private AuthorizationHandlerManager() throws IdentityOAuth2Exception {
         responseHandlers = OAuthServerConfiguration.getInstance().getSupportedResponseTypes();
@@ -91,17 +92,17 @@ public class AuthorizationHandlerManager {
         OAuth2AuthorizeRespDTO authorizeRespDTO = validateAuthzRequest(authzReqDTO, authzReqMsgCtx, authzHandler);
         if (isErrorResponseFound(authorizeRespDTO)) {
             if (log.isDebugEnabled()) {
-                log.debug("Error response received for authorization request by user : " + authzReqDTO.getUser()  +
+                log.debug("Error response received for authorization request by user : " + authzReqDTO.getUser() +
                         ", client : " + authzReqDTO.getConsumerKey() + ", scope : " +
                         OAuth2Util.buildScopeString(authzReqDTO.getScopes()));
             }
             return authorizeRespDTO;
         }
         try {
-	    // set the authorization request context to be used by downstream handlers. This is introduced as a fix for
-	    // IDENTITY-4111
-	    OAuth2Util.setAuthzRequestContext(authzReqMsgCtx);
-	    authorizeRespDTO = authzHandler.issue(authzReqMsgCtx);
+            // set the authorization request context to be used by downstream handlers. This is introduced as a fix for
+            // IDENTITY-4111
+            OAuth2Util.setAuthzRequestContext(authzReqMsgCtx);
+            authorizeRespDTO = authzHandler.issue(authzReqMsgCtx);
         } finally {
             // clears authorization request context
             OAuth2Util.clearAuthzRequestContext();
@@ -195,9 +196,11 @@ public class AuthorizationHandlerManager {
         return authzReqMsgCtx.getApprovedScope() == null || authzReqMsgCtx.getApprovedScope().length == 0;
     }
 
-    private boolean isInvalidAccessDelegation(OAuth2AuthorizeReqDTO authzReqDTO, OAuth2AuthorizeRespDTO authorizeRespDTO,
+    private boolean isInvalidAccessDelegation(OAuth2AuthorizeReqDTO authzReqDTO,
+                                              OAuth2AuthorizeRespDTO authorizeRespDTO,
                                               OAuthAuthzReqMessageContext authzReqMsgCtx,
                                               ResponseTypeHandler authzHandler) throws IdentityOAuth2Exception {
+
         boolean accessDelegationAuthzStatus = authzHandler.validateAccessDelegation(authzReqMsgCtx);
         if (!accessDelegationAuthzStatus) {
             handleErrorRequest(authorizeRespDTO, UNAUTHORIZED_CLIENT, "Authorization Failure!");
@@ -237,7 +240,8 @@ public class AuthorizationHandlerManager {
         authorizeRequestMessageContext.addProperty(OAUTH_APP_PROPERTY, oAuthAppDO);
 
         // load the SP tenant domain from the OAuth App info
-        authorizeRequestMessageContext.getAuthorizationReqDTO().setTenantDomain(OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO));
+        authorizeRequestMessageContext.getAuthorizationReqDTO()
+                .setTenantDomain(OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO));
         return authorizeRequestMessageContext;
     }
 

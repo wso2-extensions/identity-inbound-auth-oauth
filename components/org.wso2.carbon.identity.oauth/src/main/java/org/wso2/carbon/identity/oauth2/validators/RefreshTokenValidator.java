@@ -20,6 +20,9 @@ package org.wso2.carbon.identity.oauth2.validators;
 
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 
+/**
+ * Refresh token validator.
+ */
 public class RefreshTokenValidator implements OAuth2TokenValidator {
 
     public static final String TOKEN_TYPE = "refresh_token";

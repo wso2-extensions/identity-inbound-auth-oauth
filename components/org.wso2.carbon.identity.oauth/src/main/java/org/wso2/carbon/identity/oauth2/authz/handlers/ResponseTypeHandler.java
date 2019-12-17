@@ -24,18 +24,21 @@ import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 
+/**
+ * Handler interface for OAuth 2 response types.
+ */
 public interface ResponseTypeHandler {
 
-    public void init()
+    void init()
             throws IdentityOAuth2Exception;
 
-    public boolean validateAccessDelegation(OAuthAuthzReqMessageContext oauthAuthzMsgCtx)
+    boolean validateAccessDelegation(OAuthAuthzReqMessageContext oauthAuthzMsgCtx)
             throws IdentityOAuth2Exception;
 
-    public boolean validateScope(OAuthAuthzReqMessageContext oauthAuthzMsgCtx)
+    boolean validateScope(OAuthAuthzReqMessageContext oauthAuthzMsgCtx)
             throws IdentityOAuth2Exception;
 
-    public OAuth2AuthorizeRespDTO issue(OAuthAuthzReqMessageContext oauthAuthzMsgCtx)
+    OAuth2AuthorizeRespDTO issue(OAuthAuthzReqMessageContext oauthAuthzMsgCtx)
             throws IdentityOAuth2Exception;
 
     /**
@@ -44,7 +47,7 @@ public interface ResponseTypeHandler {
      * @return
      * @throws IdentityOAuth2Exception
      */
-    public boolean isAuthorizedClient(OAuthAuthzReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception;
+    boolean isAuthorizedClient(OAuthAuthzReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception;
 
     /**
      * Handles user consent denial at responseType level.
