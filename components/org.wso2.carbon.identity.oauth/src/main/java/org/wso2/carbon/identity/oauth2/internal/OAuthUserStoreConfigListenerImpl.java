@@ -33,7 +33,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * Userstore config listener for OAuth related functionality.
+ */
 public class OAuthUserStoreConfigListenerImpl extends AbstractUserStoreConfigListener {
+
     @Override
     public void onUserStoreNamePreUpdate(int tenantId, String currentUserStoreName, String newUserStoreName) throws
             UserStoreException {

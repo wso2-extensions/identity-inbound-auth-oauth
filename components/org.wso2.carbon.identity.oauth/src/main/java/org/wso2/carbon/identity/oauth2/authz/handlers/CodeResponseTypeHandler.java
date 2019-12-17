@@ -43,10 +43,10 @@ public class CodeResponseTypeHandler extends AbstractResponseTypeHandler {
      * @throws IdentityOAuth2Exception
      */
     @Override
-    public OAuth2AuthorizeRespDTO issue(OAuthAuthzReqMessageContext oauthAuthzMsgCtx)
-            throws IdentityOAuth2Exception {
+    public OAuth2AuthorizeRespDTO issue(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) throws IdentityOAuth2Exception {
 
-        AuthzCodeDO authorizationCode = ResponseTypeHandlerUtil.generateAuthorizationCode(oauthAuthzMsgCtx, cacheEnabled);
+        AuthzCodeDO authorizationCode =
+                ResponseTypeHandlerUtil.generateAuthorizationCode(oauthAuthzMsgCtx, cacheEnabled);
         String sessionDataKey = oauthAuthzMsgCtx.getAuthorizationReqDTO().getSessionDataKey();
 
         if (log.isDebugEnabled()) {
@@ -57,8 +57,8 @@ public class CodeResponseTypeHandler extends AbstractResponseTypeHandler {
         return buildResponseDTO(oauthAuthzMsgCtx, authorizationCode);
     }
 
-    private OAuth2AuthorizeRespDTO buildResponseDTO(OAuthAuthzReqMessageContext oauthAuthzMsgCtx, AuthzCodeDO authzCodeDO)
-            throws IdentityOAuth2Exception {
+    private OAuth2AuthorizeRespDTO buildResponseDTO(OAuthAuthzReqMessageContext oauthAuthzMsgCtx,
+                                                    AuthzCodeDO authzCodeDO) throws IdentityOAuth2Exception {
 
         // Initializing the response.
         OAuth2AuthorizeRespDTO respDTO = initResponse(oauthAuthzMsgCtx);

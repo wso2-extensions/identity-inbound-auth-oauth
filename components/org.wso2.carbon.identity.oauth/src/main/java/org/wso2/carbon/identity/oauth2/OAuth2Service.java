@@ -162,8 +162,8 @@ public class OAuth2Service extends AbstractAdmin {
                 }
                 validationResponseDTO.setValidClient(false);
                 validationResponseDTO.setErrorCode(OAuth2ErrorCodes.UNAUTHORIZED_CLIENT);
-                validationResponseDTO.setErrorMsg("The authenticated client is not authorized to use this authorization" +
-                        " grant type");
+                validationResponseDTO
+                        .setErrorMsg("The authenticated client is not authorized to use this authorization grant type");
                 return validationResponseDTO;
             }
 
@@ -470,8 +470,9 @@ public class OAuth2Service extends AbstractAdmin {
         if (oAuthEventInterceptorProxy != null && oAuthEventInterceptorProxy.isEnabled()) {
             try {
                 Map<String, Object> paramMap = new HashMap<>();
-                oAuthEventInterceptorProxy.onPostTokenRevocationByClient(revokeRequestDTO, revokeResponseDTO, accessTokenDO,
-                        refreshTokenDO, paramMap);
+                oAuthEventInterceptorProxy
+                        .onPostTokenRevocationByClient(revokeRequestDTO, revokeResponseDTO, accessTokenDO,
+                                refreshTokenDO, paramMap);
             } catch (IdentityOAuth2Exception e) {
                 log.error("Error occurred when invoking post token revoke listener ", e);
             }

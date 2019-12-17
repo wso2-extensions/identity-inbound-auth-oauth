@@ -19,7 +19,6 @@ package org.wso2.carbon.identity.oauth2.authz.handlers;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.oltu.oauth2.common.message.types.ResponseType;
-
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;

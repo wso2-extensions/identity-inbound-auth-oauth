@@ -20,6 +20,9 @@ package org.wso2.carbon.identity.oauth2.model;
 
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 
+/**
+ * OAuth 2 resource scope cache entry.
+ */
 public class ResourceScopeCacheEntry extends CacheEntry {
 
     private static final long serialVersionUID = 8986718905978405685L;

@@ -194,8 +194,8 @@ public class ResponseTypeHandlerUtil {
         }
     }
 
-    public static AuthzCodeDO generateAuthorizationCode(OAuthAuthzReqMessageContext oauthAuthzMsgCtx, boolean cacheEnabled)
-            throws IdentityOAuth2Exception {
+    public static AuthzCodeDO generateAuthorizationCode(OAuthAuthzReqMessageContext oauthAuthzMsgCtx,
+                                                        boolean cacheEnabled) throws IdentityOAuth2Exception {
         OAuth2AuthorizeReqDTO authorizationReqDTO = oauthAuthzMsgCtx.getAuthorizationReqDTO();
         String consumerKey = authorizationReqDTO.getConsumerKey();
         try {
@@ -207,8 +207,8 @@ public class ResponseTypeHandlerUtil {
         }
     }
 
-    public static AuthzCodeDO generateAuthorizationCode(OAuthAuthzReqMessageContext oauthAuthzMsgCtx, boolean cacheEnabled,
-                                                 OauthTokenIssuer oauthIssuerImpl)
+    public static AuthzCodeDO generateAuthorizationCode(OAuthAuthzReqMessageContext oauthAuthzMsgCtx,
+                                                        boolean cacheEnabled, OauthTokenIssuer oauthIssuerImpl)
             throws IdentityOAuth2Exception {
 
         OAuth2AuthorizeReqDTO authorizationReqDTO = oauthAuthzMsgCtx.getAuthorizationReqDTO();
@@ -279,14 +279,17 @@ public class ResponseTypeHandlerUtil {
         return authzCodeDO;
     }
 
-    public static OAuth2AuthorizeRespDTO buildAuthorizationCodeResponseDTO(OAuth2AuthorizeRespDTO respDTO, AuthzCodeDO authzCodeDO)
+    public static OAuth2AuthorizeRespDTO buildAuthorizationCodeResponseDTO(OAuth2AuthorizeRespDTO respDTO,
+                                                                           AuthzCodeDO authzCodeDO)
             throws IdentityOAuth2Exception {
+
         respDTO.setAuthorizationCode(authzCodeDO.getAuthorizationCode());
         respDTO.setCodeId(authzCodeDO.getAuthzCodeId());
-        return  respDTO;
+        return respDTO;
     }
 
-    public  static OAuth2AuthorizeRespDTO buildAccessTokenResponseDTO(OAuth2AuthorizeRespDTO respDTO, AccessTokenDO accessTokenDO) {
+    public static OAuth2AuthorizeRespDTO buildAccessTokenResponseDTO(OAuth2AuthorizeRespDTO respDTO,
+                                                                     AccessTokenDO accessTokenDO) {
 
         long expireTime = OAuth2Util.getTokenExpireTimeMillis(accessTokenDO);
         if (log.isDebugEnabled()) {
@@ -319,8 +322,9 @@ public class ResponseTypeHandlerUtil {
      * @return OAuth2AuthorizeRespDTO object with id_token details.
      * @throws IdentityOAuth2Exception
      */
-    public static OAuth2AuthorizeRespDTO buildIDTokenResponseDTO(OAuth2AuthorizeRespDTO respDTO, AccessTokenDO accessTokenDO,
-                                                   OAuthAuthzReqMessageContext oauthAuthzMsgCtx)
+    public static OAuth2AuthorizeRespDTO buildIDTokenResponseDTO(OAuth2AuthorizeRespDTO respDTO,
+                                                                 AccessTokenDO accessTokenDO,
+                                                                 OAuthAuthzReqMessageContext oauthAuthzMsgCtx)
             throws IdentityOAuth2Exception {
         if (isOIDCRequest(oauthAuthzMsgCtx)) {
             OAuth2AuthorizeRespDTO newRespDTO = new OAuth2AuthorizeRespDTO();
@@ -387,7 +391,8 @@ public class ResponseTypeHandlerUtil {
             userAttributes.put(key, sub);
         }
 
-        authorizationGrantCacheEntry.setValidityPeriod(TimeUnit.MILLISECONDS.toNanos(accessTokenDO.getValidityPeriodInMillis()));
+        authorizationGrantCacheEntry
+                .setValidityPeriod(TimeUnit.MILLISECONDS.toNanos(accessTokenDO.getValidityPeriodInMillis()));
         AuthorizationGrantCache.getInstance().addToCacheByToken(authorizationGrantCacheKey,
                 authorizationGrantCacheEntry);
     }

@@ -44,7 +44,6 @@ import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
-import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
@@ -71,6 +70,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
@@ -78,6 +78,9 @@ import javax.xml.bind.Unmarshaller;
 
 import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
 
+/**
+ * Application management listener for OAuth related functionality.
+ */
 public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener {
     public static final String OAUTH2 = "oauth2";
     public static final String OAUTH2_CONSUMER_SECRET = "oauthConsumerSecret";
@@ -101,24 +104,31 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
         return true;
     }
 
-    public boolean doPostGetServiceProvider(ServiceProvider serviceProvider, String serviceProviderName, String tenantDomain)
+    public boolean doPostGetServiceProvider(ServiceProvider serviceProvider, String serviceProviderName,
+                                            String tenantDomain)
             throws IdentityApplicationManagementException {
+
         addClientSecret(serviceProvider);
         return true;
     }
 
-    public boolean doPostGetServiceProviderByClientId(ServiceProvider serviceProvider, String clientId, String clientType,
-                                                      String tenantDomain) throws IdentityApplicationManagementException {
+    public boolean doPostGetServiceProviderByClientId(ServiceProvider serviceProvider, String clientId,
+                                                      String clientType, String tenantDomain)
+            throws IdentityApplicationManagementException {
+
         addClientSecret(serviceProvider);
         return true;
     }
 
-    public boolean doPostCreateApplication(ServiceProvider serviceProvider, String tenantDomain, String userName) throws IdentityApplicationManagementException {
+    public boolean doPostCreateApplication(ServiceProvider serviceProvider, String tenantDomain, String userName)
+            throws IdentityApplicationManagementException {
+
         addClientSecret(serviceProvider);
         return true;
     }
 
-    public boolean doPostUpdateApplication(ServiceProvider serviceProvider, String tenantDomain, String userName) throws IdentityApplicationManagementException {
+    public boolean doPostUpdateApplication(ServiceProvider serviceProvider, String tenantDomain, String userName)
+            throws IdentityApplicationManagementException {
 
         revokeAccessTokensWhenSaaSDisabled(serviceProvider, tenantDomain);
         addClientSecret(serviceProvider);
@@ -128,7 +138,10 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
     }
 
     @Override
-    public boolean doPostGetApplicationExcludingFileBasedSPs(ServiceProvider serviceProvider, String applicationName, String tenantDomain) throws IdentityApplicationManagementException {
+    public boolean doPostGetApplicationExcludingFileBasedSPs(ServiceProvider serviceProvider, String applicationName,
+                                                             String tenantDomain)
+            throws IdentityApplicationManagementException {
+
         addClientSecret(serviceProvider);
         return true;
     }
@@ -150,7 +163,8 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                 deleteAssociatedOAuthApps(serviceProvider, tenantDomain);
             } catch (IdentityOAuthAdminException | IdentityOAuth2Exception e) {
                 throw new IdentityApplicationManagementException("Error while cleaning up oauth application data " +
-                        "associated with service provider: " + applicationName + " of tenantDomain: " + tenantDomain, e);
+                        "associated with service provider: " + applicationName + " of tenantDomain: " + tenantDomain,
+                        e);
             }
         } else {
             if (log.isDebugEnabled()) {
@@ -321,7 +335,7 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                                 //ignore
                             }
                         }
-                        continue;// we are interested only on oauth2 config. Only one will be present.
+                        continue; // we are interested only on oauth2 config. Only one will be present.
                     } else {
                         //ignore
                     }
@@ -354,7 +368,7 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                             property.setValue(getClientSecret(inboundRequestConfig.getInboundAuthKey()));
                             props = (Property[]) ArrayUtils.add(props, property);
                             inboundRequestConfig.setProperties(props);
-                            continue;// we are interested only on oauth2 config. Only one will be present.
+                            continue; // we are interested only on oauth2 config. Only one will be present.
                         } else {
                             //ignore
                         }
@@ -500,7 +514,8 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
         IdentityUtil.threadLocalProperties.get().put(SAAS_PROPERTY, sp.isSaasApp());
     }
 
-    private void handleOAuthAppAssociationRemoval(ServiceProvider updatedSp) throws IdentityApplicationManagementException {
+    private void handleOAuthAppAssociationRemoval(ServiceProvider updatedSp)
+            throws IdentityApplicationManagementException {
 
         // Get the stored app.
         int appId = updatedSp.getApplicationID();
@@ -554,9 +569,8 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
      *
      * @param serviceProvider Service Provider
      * @param tenantDomain    Application tenant domain
-     * @throws IdentityApplicationManagementException
      */
-    private void revokeAccessTokensWhenSaaSDisabled(final ServiceProvider serviceProvider, final String tenantDomain) throws IdentityApplicationManagementException {
+    private void revokeAccessTokensWhenSaaSDisabled(final ServiceProvider serviceProvider, final String tenantDomain) {
 
         try {
             boolean wasSaasEnabled = false;
@@ -567,25 +581,25 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
             if (wasSaasEnabled && !serviceProvider.isSaasApp()) {
                 if (log.isDebugEnabled()) {
                     log.debug("SaaS setting removed for application: " + serviceProvider.getApplicationName()
-                            + "in tenant domain: " + tenantDomain + ", hence proceeding to token revocation of other tenants.");
+                            + "in tenant domain: " + tenantDomain +
+                            ", hence proceeding to token revocation of other tenants.");
                 }
                 final int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
 
-                new Thread(new Runnable() {
-                    public void run() {
-                        InboundAuthenticationRequestConfig[] configs = serviceProvider.getInboundAuthenticationConfig()
-                                .getInboundAuthenticationRequestConfigs();
-                        for (InboundAuthenticationRequestConfig config : configs) {
-                            if (IdentityApplicationConstants.OAuth2.NAME.equalsIgnoreCase(config.getInboundAuthType()) &&
-                                    config.getInboundAuthKey() != null) {
-                                String oauthKey = config.getInboundAuthKey();
-                                try {
-                                    OAuthTokenPersistenceFactory.getInstance().getTokenManagementDAO()
-                                            .revokeSaaSTokensOfOtherTenants(oauthKey, tenantId);
-                                } catch (IdentityOAuth2Exception e) {
-                                    log.error("Error occurred while revoking access tokens for client ID: "
-                                            + config.getInboundAuthKey() + " and tenant domain: " + tenantDomain, e);
-                                }
+                new Thread(() -> {
+                    InboundAuthenticationRequestConfig[] configs = serviceProvider.getInboundAuthenticationConfig()
+                            .getInboundAuthenticationRequestConfigs();
+                    for (InboundAuthenticationRequestConfig config : configs) {
+                        if (IdentityApplicationConstants.OAuth2.NAME
+                                .equalsIgnoreCase(config.getInboundAuthType()) &&
+                                config.getInboundAuthKey() != null) {
+                            String oauthKey = config.getInboundAuthKey();
+                            try {
+                                OAuthTokenPersistenceFactory.getInstance().getTokenManagementDAO()
+                                        .revokeSaaSTokensOfOtherTenants(oauthKey, tenantId);
+                            } catch (IdentityOAuth2Exception e) {
+                                log.error("Error occurred while revoking access tokens for client ID: "
+                                        + config.getInboundAuthKey() + " and tenant domain: " + tenantDomain, e);
                             }
                         }
                     }
@@ -593,37 +607,6 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
             }
         } finally {
             IdentityUtil.threadLocalProperties.get().remove(SAAS_PROPERTY);
-        }
-    }
-
-    /**
-     * Remove oauth consumer app related properties.
-     *
-     * @param serviceProvider Service provider
-     * @param tenantDomain Application tenant domain
-     * @throws IdentityApplicationManagementException
-     */
-    private void removeOauthConsumerAppProperties(ServiceProvider serviceProvider, String tenantDomain) throws IdentityApplicationManagementException {
-
-        try {
-            InboundAuthenticationConfig inboundAuthenticationConfig = serviceProvider.getInboundAuthenticationConfig();
-            if (inboundAuthenticationConfig != null) {
-                InboundAuthenticationRequestConfig[] inboundRequestConfigs = inboundAuthenticationConfig.
-                        getInboundAuthenticationRequestConfigs();
-                if (inboundRequestConfigs != null) {
-                    for (InboundAuthenticationRequestConfig inboundRequestConfig : inboundRequestConfigs) {
-                        if (StringUtils.equals(OAUTH2, inboundRequestConfig.getInboundAuthType()) || StringUtils
-                                .equals(inboundRequestConfig.getInboundAuthType(), OAUTH)) {
-                            String oauthKey = inboundRequestConfig.getInboundAuthKey();
-                            OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
-                            oAuthAppDAO.removeOIDCProperties(tenantDomain, oauthKey);
-                        }
-                    }
-                }
-            }
-        } catch (IdentityOAuthAdminException ex) {
-            throw new IdentityApplicationManagementException("Error occurred while removing OIDC properties " +
-                    "for application:" + serviceProvider.getApplicationName() + " in tenant domain: " + tenantDomain);
         }
     }
 

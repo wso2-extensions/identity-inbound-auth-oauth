@@ -33,6 +33,7 @@ import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
+
 import javax.servlet.http.HttpServletRequest;
 
 /**
@@ -43,7 +44,7 @@ public class CarbonOAuthTokenRequest extends OAuthTokenRequest {
     private static final Log log = LogFactory.getLog(CarbonOAuthTokenRequest.class);
 
     private String assertion;
-    private String windows_token;
+    private String windowsToken;
     private String tenantDomain;
     private String pkceCodeVerifier;
     private RequestParameter[] requestParameters;
@@ -62,7 +63,7 @@ public class CarbonOAuthTokenRequest extends OAuthTokenRequest {
 
         super(request);
         assertion = request.getParameter(OAuth.OAUTH_ASSERTION);
-        windows_token = request.getParameter(OAuthConstants.WINDOWS_TOKEN);
+        windowsToken = request.getParameter(OAuthConstants.WINDOWS_TOKEN);
         pkceCodeVerifier = request.getParameter(OAuthConstants.OAUTH_PKCE_CODE_VERIFIER);
         setClientAuthnContext(request);
 
@@ -145,7 +146,7 @@ public class CarbonOAuthTokenRequest extends OAuthTokenRequest {
      * @return window token
      */
     public String getWindowsToken() {
-        return windows_token;
+        return windowsToken;
     }
 
     /**

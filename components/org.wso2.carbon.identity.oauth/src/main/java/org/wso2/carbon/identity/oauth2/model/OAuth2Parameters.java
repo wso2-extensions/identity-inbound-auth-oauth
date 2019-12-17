@@ -38,8 +38,8 @@ public class OAuth2Parameters implements Serializable {
     private String nonce;
     private String display;
     private String prompt;
-    private String id_token_hint;
-    private String login_hint;
+    private String idTokenHint;
+    private String loginHint;
     private String pkceCodeChallenge;
     private String pkceCodeChallengeMethod;
     private LinkedHashSet acrValues;
@@ -182,31 +182,31 @@ public class OAuth2Parameters implements Serializable {
     }
 
     /**
-     * @return the id_token_hint
+     * @return the idTokenHint
      */
     public String getIDTokenHint() {
-        return id_token_hint;
+        return idTokenHint;
     }
 
     /**
-     * @param id_token_hint the id_token_hint to set
+     * @param idTokenHint the idTokenHint to set
      */
-    public void setIDTokenHint(String id_token_hint) {
-        this.id_token_hint = id_token_hint;
+    public void setIDTokenHint(String idTokenHint) {
+        this.idTokenHint = idTokenHint;
     }
 
     /**
-     * @return the login_hint
+     * @return the loginHint
      */
     public String getLoginHint() {
-        return login_hint;
+        return loginHint;
     }
 
     /**
-     * @param login_hint the login_hint to set
+     * @param loginHint the loginHint to set
      */
-    public void setLoginHint(String login_hint) {
-        this.login_hint = login_hint;
+    public void setLoginHint(String loginHint) {
+        this.loginHint = loginHint;
     }
 
     public LinkedHashSet getACRValues() {
