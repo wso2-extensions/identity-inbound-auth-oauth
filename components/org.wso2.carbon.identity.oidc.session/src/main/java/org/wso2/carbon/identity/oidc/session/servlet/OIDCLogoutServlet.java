@@ -37,6 +37,7 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Commo
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
+import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -182,10 +183,25 @@ public class OIDCLogoutServlet extends HttpServlet {
                 handleLogoutResponseFromFramework(request, response);
                 return;
             }
+            String idTokenHint = request.getParameter(OIDCSessionConstants.OIDC_ID_TOKEN_HINT_PARAM);
+            boolean skipConsent;
             // Get user consent to logout
-            boolean skipConsent = getOpenIDConnectSkipeUserConsent();
+            try {
+                skipConsent = getOpenIDConnectSkipUserConsent(idTokenHint);
+            } catch (ParseException e) {
+                log.error("Error while getting clientId from the IdTokenHint.", e);
+                redirectURL = OIDCSessionManagementUtil
+                        .getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, "ID token signature validation failed.");
+                response.sendRedirect(getRedirectURL(redirectURL, request));
+                return;
+            } catch (IdentityOAuth2Exception e) {
+                log.error("Error while getting service provider from the clientId.", e);
+                redirectURL = OIDCSessionManagementUtil
+                        .getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, "ID token signature validation failed.");
+                response.sendRedirect(getRedirectURL(redirectURL, request));
+                return;
+            }
             if (skipConsent) {
-                String idTokenHint = request.getParameter(OIDCSessionConstants.OIDC_ID_TOKEN_HINT_PARAM);
                 if (StringUtils.isNotBlank(idTokenHint)) {
                     redirectURL = processLogoutRequest(request, response);
                     if (StringUtils.isNotBlank(redirectURL)) {
@@ -210,7 +226,6 @@ public class OIDCLogoutServlet extends HttpServlet {
                 return;
             }
         }
-
         response.sendRedirect(getRedirectURL(redirectURL, request));
     }
 
@@ -713,13 +728,32 @@ public class OIDCLogoutServlet extends HttpServlet {
     }
 
     /**
-     * Returns the OpenIDConnect User Consent.
+     * Returns the OpenIDConnect User logout Consent.
      *
-     * @return
+     * @param idTokenHint Id token params.
+     * @return true/false whether the user skip user consent or not.
      */
-    private static boolean getOpenIDConnectSkipeUserConsent() {
-        return OAuthServerConfiguration.getInstance().getOpenIDConnectSkipeUserConsentConfig();
+    private boolean getOpenIDConnectSkipUserConsent(String idTokenHint) throws ParseException, IdentityOAuth2Exception {
 
+        String clientId;
+        if (StringUtils.isNotBlank(idTokenHint)) {
+            if (validateIdToken(idTokenHint)) {
+                clientId = extractClientFromIdToken(idTokenHint);
+                ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(clientId);
+                if (serviceProvider != null) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Get the logout consent skip from service prover. Client id: " + clientId);
+                    }
+                    return FrameworkUtils.isLogoutConsentPageSkippedForSP(serviceProvider);
+                }
+            } else {
+                throw new IdentityOAuth2Exception("ID token signature validation failed.");
+            }
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("Reading the skipConsent property from the identity.xml");
+        }
+        return OAuthServerConfiguration.getInstance().getOpenIDConnectSkipeUserConsentConfig();
     }
 
     /**
