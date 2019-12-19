@@ -14,22 +14,27 @@
  *  limitations under the License.
  */
 
-package org.wso2.carbon.identity.oauth.scope.endpoint.Exceptions;
+package org.wso2.carbon.identity.oauth.scope.endpoint.exceptions;
 
 import org.wso2.carbon.identity.oauth.scope.endpoint.dto.ErrorDTO;
 
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
 
+/**
+ * This class used to handle the scope related exceptions.
+ */
 public class ScopeEndpointException extends WebApplicationException {
 
     public ScopeEndpointException(Response.Status status, ErrorDTO errorDTO) {
+
         super(Response.status(status)
                 .entity(errorDTO)
                 .build());
     }
 
     public ScopeEndpointException(Response.Status status) {
+
         super(Response.status(status)
                 .build());
     }

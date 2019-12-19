@@ -73,8 +73,7 @@ paths:
       operationId: registerScope
 
       parameters:
-        -
-          name: scope
+        - name: scope
           in: body
           description: Define a scope with bindings to register it
           required: true
@@ -117,14 +116,12 @@ paths:
       operationId: getScopes
 
       parameters:
-        -
-          name: startIndex
+        - name: startIndex
           in: query
           description: The start index of the list of scopes to be retrieved
           required: false
           type: integer
-        -
-          name: count
+        - name: count
           in: query
           description: Number of scopes to retrieve from the point of the start index
           required: false
@@ -165,8 +162,7 @@ paths:
       operationId: getScope
 
       parameters:
-        -
-          name: name
+        - name: name
           in: path
           description: Name of the scope that is to be retrieved
           required: true
@@ -204,8 +200,7 @@ paths:
       operationId: deleteScope
 
       parameters:
-        -
-          name: name
+        - name: name
           in: path
           description: Name of the scope that is to be deleted
           required: true
@@ -241,15 +236,13 @@ paths:
       operationId: updateScope
 
       parameters:
-        -
-          name: scope
+        - name: scope
           in: body
           description: updated scope
           required: true
           schema:
             $ref: '#/definitions/scopeToUpdate'
-        -
-          name: name
+        - name: name
           in: path
           description: Name of the scope that is to be updated
           required: true
@@ -287,8 +280,7 @@ paths:
       operationId: isScopeExists
 
       parameters:
-        -
-          name: name
+        - name: name
           in: path
           description: Name of the scope that is to be checked
           required: true

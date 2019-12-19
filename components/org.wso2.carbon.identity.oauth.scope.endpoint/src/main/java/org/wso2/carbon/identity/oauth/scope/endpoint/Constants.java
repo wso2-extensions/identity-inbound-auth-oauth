@@ -20,4 +20,5 @@ package org.wso2.carbon.identity.oauth.scope.endpoint;
  * This class holds the constants used by ScopesApiServiceImpl.
  */
 public final class Constants {
+
 }
