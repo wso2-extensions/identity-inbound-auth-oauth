@@ -44,6 +44,7 @@ public class DeviceEndpoint {
 
     private static final Log log = LogFactory.getLog(DeviceEndpoint.class);
     private DeviceAuthService deviceAuthService;
+
     public void setDeviceAuthService(DeviceAuthService deviceAuthService) {
 
         this.deviceAuthService = deviceAuthService;

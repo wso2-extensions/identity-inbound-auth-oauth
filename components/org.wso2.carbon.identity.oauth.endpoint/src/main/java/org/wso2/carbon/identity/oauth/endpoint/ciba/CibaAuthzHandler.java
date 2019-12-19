@@ -18,6 +18,10 @@
 
 package org.wso2.carbon.identity.oauth.endpoint.ciba;
 
+import java.net.URISyntaxException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.core.Context;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -31,11 +35,6 @@ import org.wso2.carbon.identity.oauth.endpoint.exception.CibaAuthFailureExceptio
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.model.Constants;
-
-import java.net.URISyntaxException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.core.Context;
 
 /**
  * Handles making authorize request to authorize endpoint as internal call.

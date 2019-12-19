@@ -26,6 +26,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 
 import java.util.Arrays;
+
 import javax.servlet.http.HttpServletRequest;
 
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.isValidTokenBinding;

@@ -55,6 +55,7 @@ import javax.ws.rs.core.MediaType;
 
 @WebService
 public class JwksEndpoint {
+
     private static final Log log = LogFactory.getLog(JwksEndpoint.class);
     private static final String KEY_USE = "sig";
     private static final String SECURITY_KEY_STORE_LOCATION = "Security.KeyStore.Location";
@@ -133,7 +134,6 @@ public class JwksEndpoint {
     }
 
     /**
-     *
      * @deprecated Earlier for all the type of JWT Tokens(eg: accessToken, ID token) only one algorithm is shown as
      * "algo" in keysets on the JWKS endpoint. But it is possible to configure different algorithms for different
      * JWT Types via identity.xml. Thus it is recommended to create keysets for different algorithms. In earlier
@@ -143,7 +143,6 @@ public class JwksEndpoint {
      *
      * This method is marked as @deprecated because this method should not be used in any other places. In future
      * this method should be removed.
-     *
      */
     @Deprecated
     private JSONArray createKeysetUsingOldKeyID(JSONArray jwksArray, Map<String, Certificate> certificates,
@@ -164,6 +163,7 @@ public class JwksEndpoint {
 
     /**
      * This method read identity.xml and find different signing algorithms
+     *
      * @param accessTokenSignAlgorithm
      * @param config
      * @return
@@ -189,10 +189,12 @@ public class JwksEndpoint {
     }
 
     private boolean isInvalidTenantId(int tenantId) {
+
         return tenantId < 1 && tenantId != MultitenantConstants.SUPER_TENANT_ID;
     }
 
     private String getTenantDomain() {
+
         Object tenantObj = IdentityUtil.threadLocalProperties.get().get(OAuthConstants.TENANT_NAME_FROM_CONTEXT);
         if (tenantObj != null && StringUtils.isNotBlank((String) tenantObj)) {
             return (String) tenantObj;
@@ -201,6 +203,7 @@ public class JwksEndpoint {
     }
 
     private String logAndReturnError(String errorMesage, Exception e) {
+
         if (e != null) {
             log.error(errorMesage, e);
         } else {
@@ -215,6 +218,7 @@ public class JwksEndpoint {
      * @return key store file name
      */
     private String generateKSNameFromDomainName(String tenantDomain) {
+
         String ksName = tenantDomain.trim().replace(".", "-");
         return (ksName + ".jks");
     }

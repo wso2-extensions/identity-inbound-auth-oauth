@@ -70,7 +70,8 @@ public class OAuthRequestStateValidator {
     }
 
     private boolean handleToCommonauthState(OAuthMessage oAuthMessage) {
-        return (oAuthMessage.isRequestToCommonauth() && oAuthMessage.getFlowStatus() == null) ;
+
+        return (oAuthMessage.isRequestToCommonauth() && oAuthMessage.getFlowStatus() == null);
     }
 
     private void validateRequest(OAuthMessage oAuthMessage)
@@ -100,7 +101,8 @@ public class OAuthRequestStateValidator {
         } else if (oAuthMessage.getSessionDataKeyFromLogin() != null && oAuthMessage.getResultFromLogin() == null) {
 
             if (log.isDebugEnabled()) {
-                log.debug("Session data not found in SessionDataCache for " + oAuthMessage.getSessionDataKeyFromLogin());
+                log.debug(
+                        "Session data not found in SessionDataCache for " + oAuthMessage.getSessionDataKeyFromLogin());
             }
             throw new AccessDeniedException("Session Timed Out", OAuth2ErrorCodes.ACCESS_DENIED, OAuth2ErrorCodes
                     .OAuth2SubErrorCodes.SESSION_TIME_OUT);
@@ -143,6 +145,7 @@ public class OAuthRequestStateValidator {
 
     public void validateRepeatedParameters(OAuthMessage oAuthMessage) throws
             BadRequestException {
+
         if (!(oAuthMessage.getRequest() instanceof OAuthRequestWrapper)) {
             if (!EndpointUtil.validateParams(oAuthMessage, null)) {
                 throw new BadRequestException("Invalid authorization request with repeated parameters",

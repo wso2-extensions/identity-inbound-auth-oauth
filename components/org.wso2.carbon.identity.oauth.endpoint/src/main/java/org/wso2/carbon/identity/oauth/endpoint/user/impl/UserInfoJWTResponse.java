@@ -49,6 +49,7 @@ public class UserInfoJWTResponse extends AbstractUserInfoResponseBuilder {
     @Override
     protected Map<String, Object> retrieveUserClaims(OAuth2TokenValidationResponseDTO tokenValidationResponse)
             throws UserInfoEndpointException {
+
         return ClaimUtil.getUserClaimsUsingTokenResponse(tokenValidationResponse);
     }
 
@@ -67,6 +68,7 @@ public class UserInfoJWTResponse extends AbstractUserInfoResponseBuilder {
     private String buildJWTResponse(OAuth2TokenValidationResponseDTO tokenResponse,
                                     String spTenantDomain,
                                     JWTClaimsSet jwtClaimsSet) throws UserInfoEndpointException {
+
         JWSAlgorithm signatureAlgorithm = getJWTSignatureAlgorithm();
         if (JWSAlgorithm.NONE.equals(signatureAlgorithm)) {
             if (log.isDebugEnabled()) {
@@ -85,6 +87,7 @@ public class UserInfoJWTResponse extends AbstractUserInfoResponseBuilder {
     }
 
     private JWSAlgorithm getJWTSignatureAlgorithm() throws UserInfoEndpointException {
+
         JWSAlgorithm signatureAlgorithm = DEFAULT_SIGNATURE_ALGORITHM;
         String sigAlg = OAuthServerConfiguration.getInstance().getUserInfoJWTSignatureAlgorithm();
         if (isNotBlank(sigAlg)) {
@@ -100,6 +103,7 @@ public class UserInfoJWTResponse extends AbstractUserInfoResponseBuilder {
 
     private String getSigningTenantDomain(OAuth2TokenValidationResponseDTO tokenResponse,
                                           String spTenantDomain) throws UserInfoEndpointException {
+
         boolean isJWTSignedWithSPKey = OAuthServerConfiguration.getInstance().isJWTSignedWithSPKey();
         String signingTenantDomain;
         if (isJWTSignedWithSPKey) {

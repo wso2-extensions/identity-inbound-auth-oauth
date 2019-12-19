@@ -22,20 +22,25 @@ import java.util.List;
 public class RepeatedParameterException extends Exception {
 
     List<String> repeatedParameter;
+
     public RepeatedParameterException(String message) {
+
         super(message);
     }
 
     public RepeatedParameterException(String message, List<String> repeatedParameter) {
+
         super(message);
         this.repeatedParameter = repeatedParameter;
     }
 
     public RepeatedParameterException(String message, Throwable cause) {
+
         super(message, cause);
     }
 
     public List<String> getRepeatedParameter() {
+
         return repeatedParameter;
     }
 }

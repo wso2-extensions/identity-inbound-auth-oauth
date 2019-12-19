@@ -32,6 +32,7 @@ public class UserInfoUserStoreClaimRetriever implements UserInfoClaimRetriever {
 
     @Override
     public Map<String, Object> getClaimsMap(Map<ClaimMapping, String> userAttributes) {
+
         Map<String, Object> claims = new HashMap<String, Object>();
         if (MapUtils.isNotEmpty(userAttributes)) {
             for (Map.Entry<ClaimMapping, String> entry : userAttributes.entrySet()) {

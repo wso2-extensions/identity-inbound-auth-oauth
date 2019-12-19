@@ -27,12 +27,13 @@ import org.wso2.carbon.identity.discovery.builders.OIDProviderResponseBuilder;
 
 import java.util.Map;
 
-
 public class OIDProviderJSONResponseBuilder implements OIDProviderResponseBuilder {
+
     private static final Log log = LogFactory.getLog(OIDProviderResponseBuilder.class);
 
     public String getOIDProviderConfigString(OIDProviderConfigResponse oidProviderConfigResponse) throws
             OIDCDiscoveryEndPointException {
+
         Map<String, Object> configs = oidProviderConfigResponse.getConfigMap();
         return new Gson().toJson(configs);
     }

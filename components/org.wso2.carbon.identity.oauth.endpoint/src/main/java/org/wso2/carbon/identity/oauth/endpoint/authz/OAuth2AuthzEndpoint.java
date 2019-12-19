@@ -573,7 +573,7 @@ public class OAuth2AuthzEndpoint {
         }
         return Response.status(HttpServletResponse.SC_FOUND).location(new URI(getErrorPageURL(
                 oAuthMessage.getRequest(), OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes
-                                .OAuth2SubErrorCodes.INVALID_AUTHORIZATION_REQUEST,
+                        .OAuth2SubErrorCodes.INVALID_AUTHORIZATION_REQUEST,
                 "Invalid authorization request", appName))).build();
     }
 
@@ -1669,8 +1669,8 @@ public class OAuth2AuthzEndpoint {
                     "Object from the authorization request.");
         }
             /*
-              When the request parameter is used, the OpenID Connect request parameter values contained in the JWT supersede
-              those passed using the OAuth 2.0 request syntax
+              When the request parameter is used, the OpenID Connect request parameter values contained in the JWT
+              supersede those passed using the OAuth 2.0 request syntax
              */
         overrideAuthzParameters(oAuthMessage, parameters, oauthRequest.getParam(REQUEST),
                 oauthRequest.getParam(REQUEST_URI), requestObject);
@@ -2573,9 +2573,9 @@ public class OAuth2AuthzEndpoint {
 
             if (authenticatedIdPs != null && !authenticatedIdPs.isEmpty()) {
                 try {
-                    String IDPAppendedRedirectURL = redirectURL + "&AuthenticatedIdPs=" + URLEncoder.encode
+                    String idpAppendedRedirectURL = redirectURL + "&AuthenticatedIdPs=" + URLEncoder.encode
                             (authenticatedIdPs, "UTF-8");
-                    return IDPAppendedRedirectURL;
+                    return idpAppendedRedirectURL;
                 } catch (UnsupportedEncodingException e) {
                     //this exception should not occur
                     log.error("Error while encoding the url", e);
@@ -2830,8 +2830,9 @@ public class OAuth2AuthzEndpoint {
         String authCode = null;
         List<NameValuePair> queryParameters = new URIBuilder(redirectURL).getQueryParams();
         for (NameValuePair param : queryParameters) {
-            if ((ACCESS_CODE).equals(param.getName()))
+            if ((ACCESS_CODE).equals(param.getName())) {
                 authCode = param.getValue();
+            }
         }
         return authCode;
     }

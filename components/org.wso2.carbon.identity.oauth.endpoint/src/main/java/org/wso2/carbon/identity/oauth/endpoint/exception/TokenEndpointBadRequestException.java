@@ -20,19 +20,23 @@ package org.wso2.carbon.identity.oauth.endpoint.exception;
 public class TokenEndpointBadRequestException extends InvalidRequestParentException {
 
     public TokenEndpointBadRequestException(String message) {
+
         super(message);
     }
 
     public TokenEndpointBadRequestException(Throwable cause) {
+
         super(cause);
     }
 
     public TokenEndpointBadRequestException(String message, String errorCode) {
+
         super(message);
         this.errorCode = errorCode;
     }
 
     public TokenEndpointBadRequestException(String message, String errorCode, Throwable cause) {
+
         super(message, errorCode, cause);
         this.errorCode = errorCode;
     }

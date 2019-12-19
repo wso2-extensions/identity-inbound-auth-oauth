@@ -27,10 +27,12 @@ import java.util.HashSet;
 import java.util.Set;
 
 public class OAuthRequestWrapper extends HttpServletRequestWrapper {
+
     private MultivaluedMap<String, String> form;
     private Enumeration<String> parameterNames;
 
     public OAuthRequestWrapper(HttpServletRequest request, MultivaluedMap<String, String> form) {
+
         super(request);
         this.form = form;
 
@@ -48,6 +50,7 @@ public class OAuthRequestWrapper extends HttpServletRequestWrapper {
 
     @Override
     public String getParameter(String name) {
+
         String value = super.getParameter(name);
         if (value == null) {
             value = form.getFirst(name);
@@ -57,6 +60,7 @@ public class OAuthRequestWrapper extends HttpServletRequestWrapper {
 
     @Override
     public Enumeration<String> getParameterNames() {
+
         return parameterNames;
     }
 }
