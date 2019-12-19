@@ -25,6 +25,9 @@ import java.util.List;
 
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.DEFAULT_SCOPE_BINDING;
 
+/**
+ * Representation of scope with bindings.
+ */
 public class Scope implements Serializable {
 
     private String name;

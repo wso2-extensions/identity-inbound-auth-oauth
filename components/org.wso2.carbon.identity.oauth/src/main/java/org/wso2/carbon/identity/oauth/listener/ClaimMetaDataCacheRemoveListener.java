@@ -31,12 +31,11 @@ public class ClaimMetaDataCacheRemoveListener
         extends AbstractCacheListener<ClaimMetaDataCacheEntry, ClaimMetaDataCacheEntry>
         implements CacheEntryRemovedListener<ClaimMetaDataCacheEntry, ClaimMetaDataCacheEntry> {
 
-
     @Override
     public void entryRemoved(CacheEntryEvent<? extends ClaimMetaDataCacheEntry,
             ? extends ClaimMetaDataCacheEntry> cacheEntryEvent) throws CacheEntryListenerException {
 
-        if(cacheEntryEvent == null || cacheEntryEvent.getValue() == null ||
+        if (cacheEntryEvent == null || cacheEntryEvent.getValue() == null ||
                 cacheEntryEvent.getValue().getClaimCacheKey() == null) {
             return;
         }

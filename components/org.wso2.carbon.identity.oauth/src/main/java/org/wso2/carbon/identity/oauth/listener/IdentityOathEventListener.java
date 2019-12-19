@@ -60,6 +60,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings
  * for some of the core user management operations
  */
 public class IdentityOathEventListener extends AbstractIdentityUserOperationEventListener {
+
     private static final Log log = LogFactory.getLog(IdentityOathEventListener.class);
 
     /**
@@ -107,11 +108,14 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
     }
 
     @Override
-    public boolean doPostSetUserClaimValue(String userName, UserStoreManager userStoreManager) throws UserStoreException {
+    public boolean doPostSetUserClaimValue(String userName, UserStoreManager userStoreManager)
+            throws UserStoreException {
+
         if (!isEnable()) {
             return true;
         }
-        return revokeTokensOfLockedUser(userName, userStoreManager) && revokeTokensOfDisabledUser(userName, userStoreManager)
+        return revokeTokensOfLockedUser(userName, userStoreManager) &&
+                revokeTokensOfDisabledUser(userName, userStoreManager)
                 && removeUserClaimsFromCache(userName, userStoreManager);
     }
 
@@ -122,7 +126,8 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
         if (!isEnable()) {
             return true;
         }
-        return revokeTokensOfLockedUser(userName, userStoreManager) && revokeTokensOfDisabledUser(userName, userStoreManager)
+        return revokeTokensOfLockedUser(userName, userStoreManager) &&
+                revokeTokensOfDisabledUser(userName, userStoreManager)
                 && removeUserClaimsFromCache(userName, userStoreManager);
     }
 
@@ -133,11 +138,13 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
         if (!isEnable()) {
             return true;
         }
-        return revokeTokensOfLockedUser(userName, userStoreManager) && revokeTokensOfDisabledUser(userName, userStoreManager);
+        return revokeTokensOfLockedUser(userName, userStoreManager) &&
+                revokeTokensOfDisabledUser(userName, userStoreManager);
     }
 
     @Override
-    public boolean doPostUpdateCredential(String userName, Object credential, UserStoreManager userStoreManager) throws UserStoreException {
+    public boolean doPostUpdateCredential(String userName, Object credential, UserStoreManager userStoreManager)
+            throws UserStoreException {
 
         if (!isEnable()) {
             return true;
@@ -146,7 +153,8 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
     }
 
     @Override
-    public boolean doPostUpdateCredentialByAdmin(String userName, Object credential, UserStoreManager userStoreManager) throws UserStoreException {
+    public boolean doPostUpdateCredentialByAdmin(String userName, Object credential, UserStoreManager userStoreManager)
+            throws UserStoreException {
 
         if (!isEnable()) {
             return true;
@@ -176,7 +184,7 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
     public boolean doPreUpdateUserListOfRole(String roleName, String[] deletedUsers, String[] newUsers,
                                              UserStoreManager userStoreManager) throws UserStoreException {
 
-        List<String> userList = new ArrayList();
+        List<String> userList = new ArrayList<>();
         userList.addAll(Arrays.asList(deletedUsers));
         userList.addAll(Arrays.asList(newUsers));
         for (String username : userList) {
@@ -192,7 +200,7 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
         if (!isEnable()) {
             return true;
         }
-        List<String> userList = new ArrayList();
+        List<String> userList = new ArrayList<>();
         userList.addAll(Arrays.asList(deletedUsers));
         userList.addAll(Arrays.asList(newUsers));
         for (String username : userList) {
@@ -201,9 +209,11 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
         return true;
     }
 
-    private boolean revokeTokensOfLockedUser(String userName, UserStoreManager userStoreManager) throws UserStoreException {
+    private boolean revokeTokensOfLockedUser(String userName, UserStoreManager userStoreManager)
+            throws UserStoreException {
 
-        String errorCode = (String) IdentityUtil.threadLocalProperties.get().get(IdentityCoreConstants.USER_ACCOUNT_STATE);
+        String errorCode =
+                (String) IdentityUtil.threadLocalProperties.get().get(IdentityCoreConstants.USER_ACCOUNT_STATE);
 
         if (errorCode != null && (errorCode.equalsIgnoreCase(UserCoreConstants.ErrorCode.USER_IS_LOCKED))) {
             return revokeTokens(userName, userStoreManager);
@@ -211,9 +221,11 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
         return true;
     }
 
-    private boolean revokeTokensOfDisabledUser(String userName, UserStoreManager userStoreManager) throws UserStoreException {
+    private boolean revokeTokensOfDisabledUser(String userName, UserStoreManager userStoreManager)
+            throws UserStoreException {
 
-        String errorCode = (String) IdentityUtil.threadLocalProperties.get().get(IdentityCoreConstants.USER_ACCOUNT_STATE);
+        String errorCode =
+                (String) IdentityUtil.threadLocalProperties.get().get(IdentityCoreConstants.USER_ACCOUNT_STATE);
 
         if (errorCode != null && errorCode.equalsIgnoreCase(IdentityCoreConstants.USER_ACCOUNT_DISABLED_ERROR_CODE)) {
             return revokeTokens(userName, userStoreManager);
@@ -265,7 +277,7 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
             }
 
             Set<String> scopes = new HashSet<>();
-            List<String> accessTokens =  new ArrayList<>();
+            List<String> accessTokens = new ArrayList<>();
             boolean tokenBindingEnabled = false;
             for (AccessTokenDO accessTokenDO : accessTokenDOs) {
                 // Clear cache
@@ -336,7 +348,7 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
                 try {
                     // Revoking token from database
                     OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
-                            .revokeAccessTokens(new String[] { scopedToken.getAccessToken() },
+                            .revokeAccessTokens(new String[]{scopedToken.getAccessToken()},
                                     OAuth2Util.isHashEnabled());
                 } catch (IdentityOAuth2Exception e) {
                     String errorMsg = "Error occurred while revoking " + "Access Token : "
@@ -402,7 +414,9 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
      *
      * @param userName
      */
-    private boolean removeUserClaimsFromCache(String userName, UserStoreManager userStoreManager) throws UserStoreException {
+    private boolean removeUserClaimsFromCache(String userName, UserStoreManager userStoreManager)
+            throws UserStoreException {
+
         ClaimCache claimCache = ClaimCache.getInstance();
         AuthenticatedUser authenticatedUser = new AuthenticatedUser();
         authenticatedUser.setUserName(userName);
@@ -430,7 +444,7 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
 
         ClaimMetaDataCacheEntry cacheEntry = ClaimMetaDataCache.getInstance().getValueFromCache(
                 new ClaimMetaDataCacheKey(authenticatedUser));
-        if(cacheEntry == null) {
+        if (cacheEntry == null) {
             return;
         }
         ClaimCache.getInstance().clearCacheEntry(cacheEntry.getClaimCacheKey());

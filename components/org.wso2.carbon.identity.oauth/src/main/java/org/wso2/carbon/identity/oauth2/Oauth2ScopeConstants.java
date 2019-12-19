@@ -28,6 +28,9 @@ public class Oauth2ScopeConstants {
     public static final String PERMISSIONS_BINDING_TYPE = "PERMISSION";
     public static final String SYSTEM_SCOPE = "SYSTEM";
 
+    /**
+     * Enums for error messages.
+     */
     public enum ErrorMessages {
         ERROR_CODE_BAD_REQUEST_SCOPE_NAME_NOT_SPECIFIED("41001", "Scope Name is not specified."),
         ERROR_CODE_BAD_REQUEST_SCOPE_DISPLAY_NAME_NOT_SPECIFIED("41002", "Scope Display Name is not specified."),
@@ -41,7 +44,8 @@ public class Oauth2ScopeConstants {
         ERROR_CODE_FAILED_TO_GET_SCOPE_BY_NAME("51003", "Error occurred while retrieving scope %s."),
         ERROR_CODE_FAILED_TO_DELETE_SCOPE_BY_NAME("51004", "Error occurred while deleting scope %s."),
         ERROR_CODE_FAILED_TO_UPDATE_SCOPE_BY_NAME("51005", "Error occurred while updating scope %s."),
-        ERROR_CODE_FAILED_TO_GET_ALL_SCOPES_PAGINATION("51006", "Error occurred while retrieving scopes with pagination."),
+        ERROR_CODE_FAILED_TO_GET_ALL_SCOPES_PAGINATION("51006",
+                "Error occurred while retrieving scopes with pagination."),
         ERROR_CODE_UNEXPECTED("51007", "Unexpected error");
 
         private final String code;
@@ -77,6 +81,9 @@ public class Oauth2ScopeConstants {
         public static final String OFFSET = "offset";
     }
 
+    /**
+     * Database types constants.
+     */
     public static final class DataBaseType {
         public static final String ORACLE = "Oracle";
     }

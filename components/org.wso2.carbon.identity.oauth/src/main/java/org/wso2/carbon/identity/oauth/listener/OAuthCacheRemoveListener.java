@@ -31,6 +31,9 @@ import javax.cache.event.CacheEntryEvent;
 import javax.cache.event.CacheEntryListenerException;
 import javax.cache.event.CacheEntryRemovedListener;
 
+/**
+ * Cache listener to clear OAuth cache.
+ */
 public class OAuthCacheRemoveListener extends AbstractCacheListener<OAuthCacheKey, CacheEntry>
         implements CacheEntryRemovedListener<OAuthCacheKey, CacheEntry> {
 
@@ -41,39 +44,35 @@ public class OAuthCacheRemoveListener extends AbstractCacheListener<OAuthCacheKe
             throws CacheEntryListenerException {
 
         CacheEntry cacheEntry = cacheEntryEvent.getValue();
-        if(cacheEntry == null || !(cacheEntry instanceof AccessTokenDO)){
+        if (!(cacheEntry instanceof AccessTokenDO)) {
             return;
         }
-        AccessTokenDO accessTokenDO = (AccessTokenDO) cacheEntryEvent.getValue();
+        AccessTokenDO accessTokenDO = (AccessTokenDO) cacheEntry;
 
-        if (accessTokenDO != null) {
-
-            if (log.isDebugEnabled()) {
-                log.debug("OAuth cache removed for consumer id : " + accessTokenDO.getConsumerKey());
-            }
-
-            boolean isUsernameCaseSensitive = IdentityUtil
-                    .isUserStoreInUsernameCaseSensitive(accessTokenDO.getAuthzUser().getUserName());
-            String cacheKeyString;
-            if (isUsernameCaseSensitive){
-                cacheKeyString = accessTokenDO.getConsumerKey() + ":" + accessTokenDO.getAuthzUser().getUserName() + ":"
-                        + OAuth2Util.buildScopeString(accessTokenDO.getScope()) + ":"
-                        + accessTokenDO.getAuthzUser().getFederatedIdPName();
-            }else {
-                cacheKeyString =
-                        accessTokenDO.getConsumerKey() + ":" + accessTokenDO.getAuthzUser().getUserName().toLowerCase()
-                                + ":" + OAuth2Util.buildScopeString(accessTokenDO.getScope()) + ":"
-                                + accessTokenDO.getAuthzUser().getFederatedIdPName();
-            }
-
-            OAuthCacheKey oauthcacheKey = new OAuthCacheKey(cacheKeyString);
-            OAuthCache oauthCache = OAuthCache.getInstance();
-
-            oauthCache.clearCacheEntry(oauthcacheKey);
-            oauthcacheKey = new OAuthCacheKey(accessTokenDO.getAccessToken());
-
-            oauthCache.clearCacheEntry(oauthcacheKey);
-
+        if (log.isDebugEnabled()) {
+            log.debug("OAuth cache removed for consumer id : " + accessTokenDO.getConsumerKey());
         }
+
+        boolean isUsernameCaseSensitive = IdentityUtil
+                .isUserStoreInUsernameCaseSensitive(accessTokenDO.getAuthzUser().getUserName());
+        String cacheKeyString;
+        if (isUsernameCaseSensitive) {
+            cacheKeyString = accessTokenDO.getConsumerKey() + ":" + accessTokenDO.getAuthzUser().getUserName() + ":"
+                    + OAuth2Util.buildScopeString(accessTokenDO.getScope()) + ":"
+                    + accessTokenDO.getAuthzUser().getFederatedIdPName();
+        } else {
+            cacheKeyString =
+                    accessTokenDO.getConsumerKey() + ":" + accessTokenDO.getAuthzUser().getUserName().toLowerCase()
+                            + ":" + OAuth2Util.buildScopeString(accessTokenDO.getScope()) + ":"
+                            + accessTokenDO.getAuthzUser().getFederatedIdPName();
+        }
+
+        OAuthCacheKey oauthcacheKey = new OAuthCacheKey(cacheKeyString);
+        OAuthCache oauthCache = OAuthCache.getInstance();
+
+        oauthCache.clearCacheEntry(oauthcacheKey);
+        oauthcacheKey = new OAuthCacheKey(accessTokenDO.getAccessToken());
+
+        oauthCache.clearCacheEntry(oauthcacheKey);
     }
 }

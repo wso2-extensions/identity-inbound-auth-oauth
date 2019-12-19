@@ -18,6 +18,9 @@
 
 package org.wso2.carbon.identity.oauth.dto;
 
+/**
+ * OAuth revocation response dto.
+ */
 public class OAuthRevocationResponseDTO {
 
     private boolean error;
@@ -49,5 +52,4 @@ public class OAuthRevocationResponseDTO {
     public void setErrorMsg(String errorMsg) {
         this.errorMsg = errorMsg;
     }
-
 }

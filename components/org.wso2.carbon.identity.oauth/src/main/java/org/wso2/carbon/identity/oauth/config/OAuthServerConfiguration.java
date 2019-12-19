@@ -192,9 +192,12 @@ public class OAuthServerConfiguration {
     public static final String JWT_TOKEN_TYPE = "JWT";
 
     // OpenID Connect configurations
-    private String openIDConnectIDTokenBuilderClassName = "org.wso2.carbon.identity.openidconnect.DefaultIDTokenBuilder";
-    private String defaultRequestValidatorClassName = "org.wso2.carbon.identity.openidconnect.RequestObjectValidatorImpl";
-    private String openIDConnectIDTokenCustomClaimsHanlderClassName = "org.wso2.carbon.identity.openidconnect.SAMLAssertionClaimsCallback";
+    private String openIDConnectIDTokenBuilderClassName =
+            "org.wso2.carbon.identity.openidconnect.DefaultIDTokenBuilder";
+    private String defaultRequestValidatorClassName =
+            "org.wso2.carbon.identity.openidconnect.RequestObjectValidatorImpl";
+    private String openIDConnectIDTokenCustomClaimsHanlderClassName =
+            "org.wso2.carbon.identity.openidconnect.SAMLAssertionClaimsCallback";
     private IDTokenBuilder openIDConnectIDTokenBuilder = null;
     private Map<String, String> requestObjectBuilderClassNames = new HashMap<>();
     private volatile RequestObjectValidator requestObjectValidator = null;
@@ -207,11 +210,14 @@ public class OAuthServerConfiguration {
 
     private String openIDConnectUserInfoEndpointClaimDialect = "http://wso2.org/claims";
 
-
-    private String openIDConnectUserInfoEndpointClaimRetriever = "org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoUserStoreClaimRetriever";
-    private String openIDConnectUserInfoEndpointRequestValidator = "org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInforRequestDefaultValidator";
-    private String openIDConnectUserInfoEndpointAccessTokenValidator = "org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoISAccessTokenValidator";
-    private String openIDConnectUserInfoEndpointResponseBuilder = "org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoJSONResponseBuilder";
+    private String openIDConnectUserInfoEndpointClaimRetriever =
+            "org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoUserStoreClaimRetriever";
+    private String openIDConnectUserInfoEndpointRequestValidator =
+            "org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInforRequestDefaultValidator";
+    private String openIDConnectUserInfoEndpointAccessTokenValidator =
+            "org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoISAccessTokenValidator";
+    private String openIDConnectUserInfoEndpointResponseBuilder =
+            "org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoJSONResponseBuilder";
 
     // Property added to preserve the backward compatibility to send the original claim uris comes in the assertion.
     private boolean convertOriginalClaimsFromAssertionsToOIDCDialect = false;
@@ -568,8 +574,9 @@ public class OAuthServerConfiguration {
                                     + " is created for Identity OAuth token generation.");
                         } else {
                             oauthIdentityTokenGenerator = new OauthTokenIssuerImpl();
-                            log.info("The default Identity OAuth token issuer will be used. No custom token generator" +
-                                    " is set.");
+                            log.info(
+                                    "The default Identity OAuth token issuer will be used. No custom token " +
+                                            "generator is set.");
                         }
                     } catch (Exception e) {
                         String errorMsg = "Error when instantiating the OAuthIssuer : "
@@ -584,14 +591,21 @@ public class OAuthServerConfiguration {
     }
 
     public boolean usePersistedAccessTokenAlias() {
-        return persistAccessTokenAlias != null ? Boolean.TRUE.toString().equalsIgnoreCase(persistAccessTokenAlias) : true;
+
+        return persistAccessTokenAlias != null ? Boolean.TRUE.toString().equalsIgnoreCase(persistAccessTokenAlias) :
+                true;
     }
 
     public boolean useRetainOldAccessTokens() {
-        return ((retainOldAccessTokens != null) && Boolean.TRUE.toString().equalsIgnoreCase(retainOldAccessTokens))  ? true : false;
+
+        return ((retainOldAccessTokens != null) && Boolean.TRUE.toString().equalsIgnoreCase(retainOldAccessTokens)) ?
+                true : false;
     }
+
     public boolean isTokenCleanupEnabled() {
-        return ((tokenCleanupFeatureEnable != null) && Boolean.TRUE.toString().equalsIgnoreCase(tokenCleanupFeatureEnable))  ? true : false;
+
+        return ((tokenCleanupFeatureEnable != null) &&
+                Boolean.TRUE.toString().equalsIgnoreCase(tokenCleanupFeatureEnable)) ? true : false;
     }
 
     public String getOIDCConsentPageUrl() {
@@ -664,7 +678,8 @@ public class OAuthServerConfiguration {
                     for (Map.Entry<String, String> entry : supportedGrantTypeClassNames.entrySet()) {
                         AuthorizationGrantHandler authzGrantHandler = null;
                         try {
-                            authzGrantHandler = (AuthorizationGrantHandler) Class.forName(entry.getValue()).newInstance();
+                            authzGrantHandler =
+                                    (AuthorizationGrantHandler) Class.forName(entry.getValue()).newInstance();
                             authzGrantHandler.init();
                         } catch (InstantiationException e) {
                             log.error("Error instantiating " + entry.getValue(), e);
@@ -928,8 +943,8 @@ public class OAuthServerConfiguration {
                         if (requestObjectBuilder != null) {
                             requestBuilderTemp.put(entry.getKey(), requestObjectBuilder);
                         } else {
-                            log.warn("Failed to initiate request object builder class which is associated with the " +
-                                    "builder " + entry.getKey());
+                            log.warn("Failed to initiate request object builder class which is associated with " +
+                                    "the builder " + entry.getKey());
                         }
                     }
                     requestObjectBuilder = requestBuilderTemp;
@@ -1075,7 +1090,8 @@ public class OAuthServerConfiguration {
                     } catch (Exception e) {
                         String errorMsg =
                                 "Error when instantiating the TokenPersistenceProcessor : " +
-                                        tokenPersistenceProcessorClassName + ". Defaulting to PlainTextPersistenceProcessor";
+                                        tokenPersistenceProcessorClassName +
+                                        ". Defaulting to PlainTextPersistenceProcessor";
                         log.error(errorMsg, e);
                         persistenceProcessor = new PlainTextPersistenceProcessor();
                     }
@@ -1125,7 +1141,8 @@ public class OAuthServerConfiguration {
                         Class clazz =
                                 Thread.currentThread().getContextClassLoader()
                                         .loadClass(openIDConnectIDTokenCustomClaimsHanlderClassName);
-                        openidConnectIDTokenCustomClaimsCallbackHandler = (CustomClaimsCallbackHandler) clazz.newInstance();
+                        openidConnectIDTokenCustomClaimsCallbackHandler =
+                                (CustomClaimsCallbackHandler) clazz.newInstance();
                     } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
                         log.error("Error while instantiating the IDTokenBuilder ", e);
                     }
@@ -1547,7 +1564,8 @@ public class OAuthServerConfiguration {
 
         // set the authorization code default timeout
         OMElement authzCodeTimeoutElem =
-                oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.AUTHORIZATION_CODE_DEFAULT_VALIDITY_PERIOD));
+                oauthConfigElem.getFirstChildWithName(
+                        getQNameWithIdentityNS(ConfigElements.AUTHORIZATION_CODE_DEFAULT_VALIDITY_PERIOD));
 
         if (authzCodeTimeoutElem != null) {
             authorizationCodeValidityPeriodInSeconds = Long.parseLong(authzCodeTimeoutElem.getText());
@@ -1717,21 +1735,11 @@ public class OAuthServerConfiguration {
         }
     }
 
-    private void parseMapFederatedUsersToLocalConfiguration(OMElement oauthConfigElem) {
-
-        OMElement mapFederatedUsersToLocalConfigElem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
-                ConfigElements.MAP_FED_USERS_TO_LOCAL));
-        if (mapFederatedUsersToLocalConfigElem != null) {
-            mapFederatedUsersToLocal = Boolean.parseBoolean(mapFederatedUsersToLocalConfigElem.getText());
-        }
-        if (log.isDebugEnabled()) {
-            log.debug("MapFederatedUsersToLocal was set to : " + mapFederatedUsersToLocal);
-        }
-    }
-
     private void parseAccessTokenPartitioningConfig(OMElement oauthConfigElem) {
+
         OMElement enableAccessTokenPartitioningElem =
-                oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.ENABLE_ACCESS_TOKEN_PARTITIONING));
+                oauthConfigElem
+                        .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.ENABLE_ACCESS_TOKEN_PARTITIONING));
         if (enableAccessTokenPartitioningElem != null) {
             accessTokenPartitioningEnabled =
                     Boolean.parseBoolean(enableAccessTokenPartitioningElem.getText());
@@ -1743,8 +1751,10 @@ public class OAuthServerConfiguration {
     }
 
     private void parseAccessTokenPartitioningDomainsConfig(OMElement oauthConfigElem) {
+
         OMElement enableAccessTokenPartitioningElem =
-                oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.ACCESS_TOKEN_PARTITIONING_DOMAINS));
+                oauthConfigElem.getFirstChildWithName(
+                        getQNameWithIdentityNS(ConfigElements.ACCESS_TOKEN_PARTITIONING_DOMAINS));
         if (enableAccessTokenPartitioningElem != null) {
             accessTokenPartitioningDomains = enableAccessTokenPartitioningElem.getText();
         }
@@ -1756,11 +1766,13 @@ public class OAuthServerConfiguration {
     }
 
     private void parseEnableAssertionsUserNameConfig(OMElement oauthConfigElem) {
+
         OMElement enableAssertionsElem =
                 oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.ENABLE_ASSERTIONS));
         if (enableAssertionsElem != null) {
             OMElement enableAssertionsUserNameElem =
-                    enableAssertionsElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.ENABLE_ASSERTIONS_USERNAME));
+                    enableAssertionsElem
+                            .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.ENABLE_ASSERTIONS_USERNAME));
             if (enableAssertionsUserNameElem != null) {
                 assertionsUserNameEnabled = Boolean.parseBoolean(enableAssertionsUserNameElem.getText());
             }
@@ -1774,7 +1786,8 @@ public class OAuthServerConfiguration {
     private void parseTokenPersistenceProcessorConfig(OMElement oauthConfigElem) {
 
         OMElement persistenceprocessorConfigElem =
-                oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.TOKEN_PERSISTENCE_PROCESSOR));
+                oauthConfigElem
+                        .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.TOKEN_PERSISTENCE_PROCESSOR));
         if (persistenceprocessorConfigElem != null &&
                 StringUtils.isNotBlank(persistenceprocessorConfigElem.getText())) {
             tokenPersistenceProcessorClassName = persistenceprocessorConfigElem.getText().trim();
@@ -1828,7 +1841,8 @@ public class OAuthServerConfiguration {
 
         OMElement clientIdValidationRegexConfigElem = oauthConfigElem
                 .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.CLIENT_ID_VALIDATE_REGEX));
-        if (clientIdValidationRegexConfigElem != null && !"".equals(clientIdValidationRegexConfigElem.getText().trim())) {
+        if (clientIdValidationRegexConfigElem != null &&
+                !"".equals(clientIdValidationRegexConfigElem.getText().trim())) {
             clientIdValidationRegex = clientIdValidationRegexConfigElem.getText().trim();
         }
         if (log.isDebugEnabled()) {
@@ -1854,9 +1868,11 @@ public class OAuthServerConfiguration {
 
     private void parseRetainOldAccessTokensConfig(OMElement oauthCleanupConfigElem) {
 
-        OMElement tokenCleanElem = oauthCleanupConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OAUTH2_TOKEN_CLEAN_ELEM));
+        OMElement tokenCleanElem = oauthCleanupConfigElem
+                .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OAUTH2_TOKEN_CLEAN_ELEM));
         if (tokenCleanElem != null) {
-            OMElement oldTokenRetainConfigElem = tokenCleanElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.RETAIN_OLD_ACCESS_TOKENS));
+            OMElement oldTokenRetainConfigElem = tokenCleanElem
+                    .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.RETAIN_OLD_ACCESS_TOKENS));
             if (oldTokenRetainConfigElem != null && !"".equals(oldTokenRetainConfigElem.getText().trim())) {
                 retainOldAccessTokens = oldTokenRetainConfigElem.getText().trim();
                 if (log.isDebugEnabled()) {
@@ -1875,9 +1891,11 @@ public class OAuthServerConfiguration {
 
     private void tokenCleanupFeatureConfig(OMElement oauthCleanupConfigElem) {
 
-        OMElement tokenCleanElem = oauthCleanupConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OAUTH2_TOKEN_CLEAN_ELEM));
+        OMElement tokenCleanElem = oauthCleanupConfigElem
+                .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OAUTH2_TOKEN_CLEAN_ELEM));
         if (tokenCleanElem != null) {
-            OMElement tokenCleanupConfigElem = tokenCleanElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.TOKEN_CLEANUP_FEATURE));
+            OMElement tokenCleanupConfigElem =
+                    tokenCleanElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.TOKEN_CLEANUP_FEATURE));
             if (tokenCleanupConfigElem != null && !"".equals(tokenCleanupConfigElem.getText().trim())) {
                 tokenCleanupFeatureEnable = tokenCleanupConfigElem.getText().trim();
                 if (log.isDebugEnabled()) {
@@ -2111,7 +2129,8 @@ public class OAuthServerConfiguration {
     private void parseUserConsentEnabledGrantTypesConfig(OMElement oauthConfigElem) {
 
         OMElement userConsentEnabledGrantTypesElement =
-                oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.USER_CONSENT_ENABLED_GRANT_TYPES));
+                oauthConfigElem
+                        .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.USER_CONSENT_ENABLED_GRANT_TYPES));
 
         if (userConsentEnabledGrantTypesElement != null) {
             Iterator iterator = userConsentEnabledGrantTypesElement
@@ -2120,7 +2139,8 @@ public class OAuthServerConfiguration {
             while (iterator.hasNext()) {
                 OMElement supportedGrantTypeElement = (OMElement) iterator.next();
                 OMElement grantTypeNameElement = supportedGrantTypeElement
-                        .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.USER_CONSENT_ENABLED_GRANT_TYPE_NAME));
+                        .getFirstChildWithName(
+                                getQNameWithIdentityNS(ConfigElements.USER_CONSENT_ENABLED_GRANT_TYPE_NAME));
                 String grantTypeName = null;
                 if (grantTypeNameElement != null) {
                     grantTypeName = grantTypeNameElement.getText();
@@ -2129,15 +2149,15 @@ public class OAuthServerConfiguration {
                 if (StringUtils.isNotEmpty(grantTypeName)) {
                     userConsentEnabledGrantTypes.add(grantTypeName);
                 } else {
-                    log.warn("Grant Type: " + grantTypeName + " is not a supported grant type. Therefore skipping it " +
-                            "from user consent enabled grant type list.");
+                    log.warn("Grant Type: " + grantTypeName + " is not a supported grant type. Therefore " +
+                            "skipping it from user consent enabled grant type list.");
                 }
             }
 
         } else {
             // Assume the default case.
-            log.warn("<UserConsentEnabledGrantTypes> element in not found in identity.xml. Adding 'authorization_code' " +
-                    "and 'implicit' grant types as default user consent enabled grant types.");
+            log.warn("<UserConsentEnabledGrantTypes> element in not found in identity.xml. Adding " +
+                    "'authorization_code' and 'implicit' grant types as default user consent enabled grant types.");
             userConsentEnabledGrantTypes.add(OAuthConstants.GrantTypes.AUTHORIZATION_CODE);
             userConsentEnabledGrantTypes.add(OAuthConstants.GrantTypes.IMPLICIT);
         }
@@ -2148,7 +2168,8 @@ public class OAuthServerConfiguration {
                 oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.SUPPORTED_RESP_TYPES));
 
         if (supportedRespTypesElem != null) {
-            Iterator<OMElement> iterator = supportedRespTypesElem.getChildrenWithName(getQNameWithIdentityNS(ConfigElements.SUPPORTED_RESP_TYPE));
+            Iterator<OMElement> iterator = supportedRespTypesElem
+                    .getChildrenWithName(getQNameWithIdentityNS(ConfigElements.SUPPORTED_RESP_TYPE));
             while (iterator.hasNext()) {
                 OMElement supportedResponseTypeElement = iterator.next();
                 OMElement responseTypeNameElement = supportedResponseTypeElement.
@@ -2169,7 +2190,8 @@ public class OAuthServerConfiguration {
                         responseTypeHandlerImplClass != null && !"".equals(responseTypeHandlerImplClass)) {
                     supportedResponseTypeClassNames.put(responseTypeName, responseTypeHandlerImplClass);
                     OMElement responseTypeValidatorClassNameElement = supportedResponseTypeElement
-                            .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.RESPONSE_TYPE_VALIDATOR_IMPL_CLASS));
+                            .getFirstChildWithName(
+                                    getQNameWithIdentityNS(ConfigElements.RESPONSE_TYPE_VALIDATOR_IMPL_CLASS));
 
                     String responseTypeValidatorImplClass = null;
                     if (responseTypeValidatorClassNameElement != null) {
@@ -2183,7 +2205,7 @@ public class OAuthServerConfiguration {
             }
         } else {
             // if this element is not present, assume the default case.
-            log.warn("\'SupportedResponseTypes\' element not configured in identity.xml. " +
+            log.warn("'SupportedResponseTypes' element not configured in identity.xml. " +
                     "Therefore instantiating default response type handlers");
             Map<String, String> defaultResponseTypes = new HashMap<>();
             defaultResponseTypes.put(ResponseType.CODE.toString(),
@@ -2216,8 +2238,9 @@ public class OAuthServerConfiguration {
 
         if (clientAuthElement != null) {
 
-            log.warn("\'SupportedClientAuthMethods\' is no longer supported (ClientAuthHandler in identity.xml). If " +
-                    "you have customized ClientAuthHandler implementations migrate them");
+            log.warn(
+                    "\'SupportedClientAuthMethods\' is no longer supported (ClientAuthHandler in identity.xml). " +
+                            "If you have customized ClientAuthHandler implementations migrate them");
 
             Iterator<OMElement> iterator = clientAuthElement.getChildrenWithLocalName(
                     ConfigElements.CLIENT_AUTH_HANDLER_IMPL_CLASS);
@@ -2271,7 +2294,8 @@ public class OAuthServerConfiguration {
         if (saml2GrantElement != null) {
             saml2BearerUserTypeElement = saml2GrantElement.getFirstChildWithName(getQNameWithIdentityNS
                     (ConfigElements.SAML2_BEARER_USER_TYPE));
-            saml2TokenHandlerElement = saml2GrantElement.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.SAML2_TOKEN_HANDLER));
+            saml2TokenHandlerElement =
+                    saml2GrantElement.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.SAML2_TOKEN_HANDLER));
             saml2UserIdFromClaimElement = saml2GrantElement.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.
                     SAML2_USER_ID_FROM_CLAIMS));
         }
@@ -2288,7 +2312,8 @@ public class OAuthServerConfiguration {
 
     private void parseAuthorizationContextTokenGeneratorConfig(OMElement oauthConfigElem) {
         OMElement authContextTokGenConfigElem =
-                oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.AUTHORIZATION_CONTEXT_TOKEN_GENERATION));
+                oauthConfigElem.getFirstChildWithName(
+                        getQNameWithIdentityNS(ConfigElements.AUTHORIZATION_CONTEXT_TOKEN_GENERATION));
         if (authContextTokGenConfigElem != null) {
             OMElement enableJWTGenerationConfigElem =
                     authContextTokGenConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.ENABLED));
@@ -2296,35 +2321,50 @@ public class OAuthServerConfiguration {
                 String enableJWTGeneration = enableJWTGenerationConfigElem.getText().trim();
                 if (enableJWTGeneration != null && JavaUtils.isTrueExplicitly(enableJWTGeneration)) {
                     isAuthContextTokGenEnabled = true;
-                    if (authContextTokGenConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.TOKEN_GENERATOR_IMPL_CLASS)) != null) {
+                    if (authContextTokGenConfigElem
+                            .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.TOKEN_GENERATOR_IMPL_CLASS)) !=
+                            null) {
                         tokenGeneratorImplClass =
-                                authContextTokGenConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.TOKEN_GENERATOR_IMPL_CLASS))
+                                authContextTokGenConfigElem.getFirstChildWithName(
+                                        getQNameWithIdentityNS(ConfigElements.TOKEN_GENERATOR_IMPL_CLASS))
                                         .getText().trim();
                     }
-                    if (authContextTokGenConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.CLAIMS_RETRIEVER_IMPL_CLASS)) != null) {
+                    if (authContextTokGenConfigElem.getFirstChildWithName(
+                            getQNameWithIdentityNS(ConfigElements.CLAIMS_RETRIEVER_IMPL_CLASS)) != null) {
                         claimsRetrieverImplClass =
-                                authContextTokGenConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.CLAIMS_RETRIEVER_IMPL_CLASS))
+                                authContextTokGenConfigElem.getFirstChildWithName(
+                                        getQNameWithIdentityNS(ConfigElements.CLAIMS_RETRIEVER_IMPL_CLASS))
                                         .getText().trim();
                     }
-                    if (authContextTokGenConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.CONSUMER_DIALECT_URI)) != null) {
+                    if (authContextTokGenConfigElem
+                            .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.CONSUMER_DIALECT_URI)) !=
+                            null) {
                         consumerDialectURI =
-                                authContextTokGenConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.CONSUMER_DIALECT_URI))
+                                authContextTokGenConfigElem.getFirstChildWithName(
+                                        getQNameWithIdentityNS(ConfigElements.CONSUMER_DIALECT_URI))
                                         .getText().trim();
                     }
-                    if (authContextTokGenConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.SIGNATURE_ALGORITHM)) != null) {
+                    if (authContextTokGenConfigElem
+                            .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.SIGNATURE_ALGORITHM)) !=
+                            null) {
                         signatureAlgorithm =
-                                authContextTokGenConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.SIGNATURE_ALGORITHM))
+                                authContextTokGenConfigElem.getFirstChildWithName(
+                                        getQNameWithIdentityNS(ConfigElements.SIGNATURE_ALGORITHM))
                                         .getText().trim();
                     }
-                    if (authContextTokGenConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.SECURITY_CONTEXT_TTL)) != null) {
+                    if (authContextTokGenConfigElem
+                            .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.SECURITY_CONTEXT_TTL)) !=
+                            null) {
                         authContextTTL =
-                                authContextTokGenConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.SECURITY_CONTEXT_TTL))
+                                authContextTokGenConfigElem.getFirstChildWithName(
+                                        getQNameWithIdentityNS(ConfigElements.SECURITY_CONTEXT_TTL))
                                         .getText().trim();
                     }
                     if (authContextTokGenConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
                             ConfigElements.AUTH_CONTEXT_TOKEN_USE_MULTIVALUE_SEPARATOR)) != null) {
                         useMultiValueSeparatorForAuthContextToken =
-                                Boolean.parseBoolean(authContextTokGenConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
+                                Boolean.parseBoolean(
+                                        authContextTokGenConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
                                         ConfigElements.AUTH_CONTEXT_TOKEN_USE_MULTIVALUE_SEPARATOR)).getText().trim());
                     }
                 }
@@ -2355,7 +2395,8 @@ public class OAuthServerConfiguration {
 
     private void parseRevokeResponseHeadersEnableConfig(OMElement oauthConfigElem) {
         OMElement enableRevokeResponseHeadersElem =
-                oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.ENABLE_REVOKE_RESPONSE_HEADERS));
+                oauthConfigElem
+                        .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.ENABLE_REVOKE_RESPONSE_HEADERS));
         if (enableRevokeResponseHeadersElem != null) {
             isRevokeResponseHeadersEnabled = Boolean.parseBoolean(enableRevokeResponseHeadersElem.getText());
         }
@@ -2396,22 +2437,27 @@ public class OAuthServerConfiguration {
                         openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.
                                 REQUEST_OBJECT_VALIDATOR)).getText().trim();
             }
-            if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_IDTOKEN_BUILDER)) != null) {
+            if (openIDConnectConfigElem
+                    .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_IDTOKEN_BUILDER)) !=
+                    null) {
                 openIDConnectIDTokenBuilderClassName =
-                        openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_IDTOKEN_BUILDER))
+                        openIDConnectConfigElem.getFirstChildWithName(
+                                getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_IDTOKEN_BUILDER))
                                 .getText().trim();
             }
 
-            if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.SIGNATURE_ALGORITHM)) != null) {
+            if (openIDConnectConfigElem
+                    .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.SIGNATURE_ALGORITHM)) != null) {
                 idTokenSignatureAlgorithm =
-                        openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.SIGNATURE_ALGORITHM))
+                        openIDConnectConfigElem
+                                .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.SIGNATURE_ALGORITHM))
                                 .getText().trim();
             }
 
             if (openIDConnectConfigElem.getFirstChildWithName(
                     getQNameWithIdentityNS(ConfigElements.ID_TOKEN_ENCRYPTION_ALGORITHM)) != null) {
                 defaultIdTokenEncryptionAlgorithm = openIDConnectConfigElem.getFirstChildWithName(
-                                getQNameWithIdentityNS(ConfigElements.ID_TOKEN_ENCRYPTION_ALGORITHM)).getText().trim();
+                        getQNameWithIdentityNS(ConfigElements.ID_TOKEN_ENCRYPTION_ALGORITHM)).getText().trim();
             }
 
             if (openIDConnectConfigElem.getFirstChildWithName(
@@ -2443,79 +2489,109 @@ public class OAuthServerConfiguration {
                 supportedIdTokenEncryptionMethods.add("A128CBC+HS256");
             }
 
-            if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_IDTOKEN_CUSTOM_CLAIM_CALLBACK_HANDLER)) != null) {
+            if (openIDConnectConfigElem.getFirstChildWithName(
+                    getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_IDTOKEN_CUSTOM_CLAIM_CALLBACK_HANDLER)) !=
+                    null) {
                 openIDConnectIDTokenCustomClaimsHanlderClassName =
-                        openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_IDTOKEN_CUSTOM_CLAIM_CALLBACK_HANDLER))
+                        openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
+                                ConfigElements.OPENID_CONNECT_IDTOKEN_CUSTOM_CLAIM_CALLBACK_HANDLER))
                                 .getText().trim();
             }
-            if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_IDTOKEN_SUB_CLAIM)) != null) {
+            if (openIDConnectConfigElem
+                    .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_IDTOKEN_SUB_CLAIM)) !=
+                    null) {
                 openIDConnectIDTokenSubClaim =
-                        openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_IDTOKEN_SUB_CLAIM))
+                        openIDConnectConfigElem.getFirstChildWithName(
+                                getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_IDTOKEN_SUB_CLAIM))
                                 .getText().trim();
             }
-            if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_SKIP_USER_CONSENT)) != null) {
+            if (openIDConnectConfigElem
+                    .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_SKIP_USER_CONSENT)) !=
+                    null) {
                 openIDConnectSkipUserConsent =
-                        openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_SKIP_USER_CONSENT))
+                        openIDConnectConfigElem.getFirstChildWithName(
+                                getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_SKIP_USER_CONSENT))
                                 .getText().trim();
             }
-            if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_IDTOKEN_ISSUER_ID)) != null) {
+            if (openIDConnectConfigElem
+                    .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_IDTOKEN_ISSUER_ID)) !=
+                    null) {
                 openIDConnectIDTokenIssuerIdentifier = IdentityUtil.fillURLPlaceholders(
                         openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
                                 ConfigElements.OPENID_CONNECT_IDTOKEN_ISSUER_ID)).getText().trim());
             }
-            if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_IDTOKEN_EXPIRATION)) != null) {
+            if (openIDConnectConfigElem
+                    .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_IDTOKEN_EXPIRATION)) !=
+                    null) {
                 openIDConnectIDTokenExpiration =
-                        openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_IDTOKEN_EXPIRATION))
+                        openIDConnectConfigElem.getFirstChildWithName(
+                                getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_IDTOKEN_EXPIRATION))
                                 .getText().trim();
 
                 try {
                     openIDConnectIDTokenExpiryTimeInSeconds = Long.parseLong(openIDConnectIDTokenExpiration);
                 } catch (NumberFormatException ex) {
-                    log.warn("Invalid value: '" + openIDConnectIDTokenExpiration + "' set for ID Token Expiry Time in " +
-                            "Seconds. Value should be an integer. Setting expiry time to default value: " +
-                            openIDConnectIDTokenExpiryTimeInSeconds + " seconds.");
+                    log.warn(
+                            "Invalid value: '" + openIDConnectIDTokenExpiration + "' set for ID Token Expiry Time in " +
+                                    "Seconds. Value should be an integer. Setting expiry time to default value: " +
+                                    openIDConnectIDTokenExpiryTimeInSeconds + " seconds.");
                 }
 
             }
-            if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_USERINFO_ENDPOINT_CLAIM_DIALECT)) != null) {
+            if (openIDConnectConfigElem.getFirstChildWithName(
+                    getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_USERINFO_ENDPOINT_CLAIM_DIALECT)) != null) {
                 openIDConnectUserInfoEndpointClaimDialect =
-                        openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_USERINFO_ENDPOINT_CLAIM_DIALECT))
+                        openIDConnectConfigElem.getFirstChildWithName(
+                                getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_USERINFO_ENDPOINT_CLAIM_DIALECT))
                                 .getText().trim();
             }
-            if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_USERINFO_ENDPOINT_CLAIM_RETRIEVER)) != null) {
+            if (openIDConnectConfigElem.getFirstChildWithName(
+                    getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_USERINFO_ENDPOINT_CLAIM_RETRIEVER)) != null) {
                 openIDConnectUserInfoEndpointClaimRetriever =
-                        openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_USERINFO_ENDPOINT_CLAIM_RETRIEVER))
+                        openIDConnectConfigElem.getFirstChildWithName(
+                                getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_USERINFO_ENDPOINT_CLAIM_RETRIEVER))
                                 .getText().trim();
             }
-            if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_USERINFO_ENDPOINT_REQUEST_VALIDATOR)) != null) {
+            if (openIDConnectConfigElem.getFirstChildWithName(
+                    getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_USERINFO_ENDPOINT_REQUEST_VALIDATOR)) !=
+                    null) {
                 openIDConnectUserInfoEndpointRequestValidator =
-                        openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_USERINFO_ENDPOINT_REQUEST_VALIDATOR))
+                        openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
+                                ConfigElements.OPENID_CONNECT_USERINFO_ENDPOINT_REQUEST_VALIDATOR))
                                 .getText().trim();
             }
-            if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_USERINFO_ENDPOINT_ACCESS_TOKEN_VALIDATOR)) != null) {
+            if (openIDConnectConfigElem.getFirstChildWithName(
+                    getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_USERINFO_ENDPOINT_ACCESS_TOKEN_VALIDATOR)) !=
+                    null) {
                 openIDConnectUserInfoEndpointAccessTokenValidator =
-                        openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_USERINFO_ENDPOINT_ACCESS_TOKEN_VALIDATOR))
+                        openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
+                                ConfigElements.OPENID_CONNECT_USERINFO_ENDPOINT_ACCESS_TOKEN_VALIDATOR))
                                 .getText().trim();
             }
-            if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_USERINFO_ENDPOINT_RESPONSE_BUILDER)) != null) {
+            if (openIDConnectConfigElem.getFirstChildWithName(
+                    getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_USERINFO_ENDPOINT_RESPONSE_BUILDER)) != null) {
                 openIDConnectUserInfoEndpointResponseBuilder =
-                        openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_USERINFO_ENDPOINT_RESPONSE_BUILDER))
+                        openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
+                                ConfigElements.OPENID_CONNECT_USERINFO_ENDPOINT_RESPONSE_BUILDER))
                                 .getText().trim();
             }
-            if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_USERINFO_JWT_SIGNATURE_ALGORITHM)) != null) {
+            if (openIDConnectConfigElem.getFirstChildWithName(
+                    getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_USERINFO_JWT_SIGNATURE_ALGORITHM)) != null) {
                 userInfoJWTSignatureAlgorithm =
-                        openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_USERINFO_JWT_SIGNATURE_ALGORITHM))
+                        openIDConnectConfigElem.getFirstChildWithName(
+                                getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_USERINFO_JWT_SIGNATURE_ALGORITHM))
                                 .getText().trim();
             }
-            if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_SIGN_JWT_WITH_SP_KEY)) != null) {
-                isJWTSignedWithSPKey =
-                        Boolean.parseBoolean(openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_SIGN_JWT_WITH_SP_KEY))
-                                .getText().trim());
+            if (openIDConnectConfigElem.getFirstChildWithName(
+                    getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_SIGN_JWT_WITH_SP_KEY)) != null) {
+                isJWTSignedWithSPKey = Boolean.parseBoolean(openIDConnectConfigElem.getFirstChildWithName(
+                        getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_SIGN_JWT_WITH_SP_KEY)).getText().trim());
             }
-            if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.SUPPORTED_CLAIMS)) != null) {
-                String supportedClaimStr =
-                        openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.SUPPORTED_CLAIMS))
-                                .getText().trim();
+            if (openIDConnectConfigElem
+                    .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.SUPPORTED_CLAIMS)) != null) {
+                String supportedClaimStr = openIDConnectConfigElem
+                        .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.SUPPORTED_CLAIMS)).getText()
+                        .trim();
                 if (log.isDebugEnabled()) {
                     log.debug("Supported Claims : " + supportedClaimStr);
                 }
@@ -2523,12 +2599,14 @@ public class OAuthServerConfiguration {
                     supportedClaims = supportedClaimStr.split(",");
                 }
             }
-            if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_BACK_CHANNEL_LOGOUT_TOKEN_EXPIRATION)) != null) {
+            if (openIDConnectConfigElem.getFirstChildWithName(
+                    getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_BACK_CHANNEL_LOGOUT_TOKEN_EXPIRATION)) !=
+                    null) {
 
                 openIDConnectBCLogoutTokenExpiryInSeconds =
-                        openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_BACK_CHANNEL_LOGOUT_TOKEN_EXPIRATION))
+                        openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
+                                ConfigElements.OPENID_CONNECT_BACK_CHANNEL_LOGOUT_TOKEN_EXPIRATION))
                                 .getText().trim();
-
             }
 
             OMElement convertOriginalClaimsFromAssertionsToOIDCDialectElement = openIDConnectConfigElem
@@ -2639,7 +2717,9 @@ public class OAuthServerConfiguration {
             }
         }
     }
-    private void parseRedirectToOAuthErrorPageConfig(OMElement oauthConfigElem){
+
+    private void parseRedirectToOAuthErrorPageConfig(OMElement oauthConfigElem) {
+
         OMElement redirectToOAuthErrorPageElem =
                 oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements
                         .REDIRECT_TO_REQUESTED_REDIRECT_URI));
@@ -2799,12 +2879,16 @@ public class OAuthServerConfiguration {
         public static final String OPENID_CONNECT_SKIP_USER_CONSENT = "SkipUserConsent";
         public static final String OPENID_CONNECT_USERINFO_ENDPOINT_CLAIM_DIALECT = "UserInfoEndpointClaimDialect";
         public static final String OPENID_CONNECT_USERINFO_ENDPOINT_CLAIM_RETRIEVER = "UserInfoEndpointClaimRetriever";
-        public static final String OPENID_CONNECT_USERINFO_ENDPOINT_REQUEST_VALIDATOR = "UserInfoEndpointRequestValidator";
-        public static final String OPENID_CONNECT_USERINFO_ENDPOINT_ACCESS_TOKEN_VALIDATOR = "UserInfoEndpointAccessTokenValidator";
-        public static final String OPENID_CONNECT_USERINFO_ENDPOINT_RESPONSE_BUILDER = "UserInfoEndpointResponseBuilder";
+        public static final String OPENID_CONNECT_USERINFO_ENDPOINT_REQUEST_VALIDATOR =
+                "UserInfoEndpointRequestValidator";
+        public static final String OPENID_CONNECT_USERINFO_ENDPOINT_ACCESS_TOKEN_VALIDATOR =
+                "UserInfoEndpointAccessTokenValidator";
+        public static final String OPENID_CONNECT_USERINFO_ENDPOINT_RESPONSE_BUILDER =
+                "UserInfoEndpointResponseBuilder";
         public static final String OPENID_CONNECT_USERINFO_JWT_SIGNATURE_ALGORITHM = "UserInfoJWTSignatureAlgorithm";
         public static final String OPENID_CONNECT_SIGN_JWT_WITH_SP_KEY = "SignJWTWithSPKey";
-        public static final String OPENID_CONNECT_IDTOKEN_CUSTOM_CLAIM_CALLBACK_HANDLER = "IDTokenCustomClaimsCallBackHandler";
+        public static final String OPENID_CONNECT_IDTOKEN_CUSTOM_CLAIM_CALLBACK_HANDLER =
+                "IDTokenCustomClaimsCallBackHandler";
         public static final String OPENID_CONNECT_CONVERT_ORIGINAL_CLAIMS_FROM_ASSERTIONS_TO_OIDCDIALECT =
                 "ConvertOriginalClaimsFromAssertionsToOIDCDialect";
         // Property to decide whether to add tenant domain to id_token.
@@ -2845,12 +2929,14 @@ public class OAuthServerConfiguration {
         private static final String IMPLICIT_ERROR_FRAGMENT = "ImplicitErrorFragment";
 
         // Enable/Disable scope validation for implicit grant and authorization code grant
-        private static final String SCOPE_VALIDATION_FOR_AUTHZ_CODE_AND_IMPLICIT = "ScopeValidationEnabledForAuthzCodeAndImplicitGrant";
+        private static final String SCOPE_VALIDATION_FOR_AUTHZ_CODE_AND_IMPLICIT =
+                "ScopeValidationEnabledForAuthzCodeAndImplicitGrant";
 
         // Default timestamp skew
         private static final String TIMESTAMP_SKEW = "TimestampSkew";
         // Default validity periods
-        private static final String AUTHORIZATION_CODE_DEFAULT_VALIDITY_PERIOD = "AuthorizationCodeDefaultValidityPeriod";
+        private static final String AUTHORIZATION_CODE_DEFAULT_VALIDITY_PERIOD =
+                "AuthorizationCodeDefaultValidityPeriod";
         private static final String USER_ACCESS_TOKEN_DEFAULT_VALIDITY_PERIOD = "UserAccessTokenDefaultValidityPeriod";
         private static final String APPLICATION_ACCESS_TOKEN_VALIDATION_PERIOD = "AccessTokenDefaultValidityPeriod";
         private static final String REFRESH_TOKEN_VALIDITY_PERIOD = "RefreshTokenValidityPeriod";
@@ -2889,7 +2975,6 @@ public class OAuthServerConfiguration {
         private static final String USER_CONSENT_ENABLED_GRANT_TYPE_NAME = "GrantTypeName";
 
         private static final String ID_TOKEN_ALLOWED = "IdTokenAllowed";
-        private static final String GET_CONSENT_FOR_USER_CLAIMS = "GetConsentForUserClaims";
         private static final String GRANT_TYPE_HANDLER_IMPL_CLASS = "GrantTypeHandlerImplClass";
         private static final String GRANT_TYPE_VALIDATOR_IMPL_CLASS = "GrantTypeValidatorImplClass";
         private static final String RESPONSE_TYPE_VALIDATOR_IMPL_CLASS = "ResponseTypeValidatorImplClass";
@@ -2897,9 +2982,9 @@ public class OAuthServerConfiguration {
         // Supported Client Authentication Methods
         private static final String CLIENT_AUTH_HANDLERS = "ClientAuthHandlers";
         private static final String CLIENT_AUTH_HANDLER_IMPL_CLASS = "ClientAuthHandler";
-        private static final String STRICT_CLIENT_AUTHENTICATION = "StrictClientCredentialValidation";
         private static final String CLIENT_AUTH_CLASS = "Class";
-        private static final String DEFAULT_CLIENT_AUTHENTICATOR = "org.wso2.carbon.identity.oauth2.token.handlers.clientauth.BasicAuthClientAuthHandler";
+        private static final String DEFAULT_CLIENT_AUTHENTICATOR =
+                "org.wso2.carbon.identity.oauth2.token.handlers.clientauth.BasicAuthClientAuthHandler";
         private static final String CLIENT_AUTH_PROPERTY = "Property";
         private static final String CLIENT_AUTH_NAME = "Name";
         // Supported Response Types

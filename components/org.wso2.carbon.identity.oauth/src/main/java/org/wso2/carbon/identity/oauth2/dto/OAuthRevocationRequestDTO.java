@@ -22,6 +22,9 @@ import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 
 import javax.servlet.http.HttpServletRequest;
 
+/**
+ * OAuth token revocation request dto.
+ */
 public class OAuthRevocationRequestDTO {
 
     private String token;

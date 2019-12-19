@@ -37,11 +37,10 @@ public class GenerateKeys {
      */
     public static String getKey(int num) {
 
-        String AlphaNumericString = Constants.KEY_SET;
         StringBuilder sb = new StringBuilder(num);
         for (int i = 0; i < num; i++) {
-            int index = (int) (AlphaNumericString.length() * Math.random());
-            sb.append(AlphaNumericString.charAt(index));
+            int index = (int) (Constants.KEY_SET.length() * Math.random());
+            sb.append(Constants.KEY_SET.charAt(index));
         }
         return sb.toString();
     }

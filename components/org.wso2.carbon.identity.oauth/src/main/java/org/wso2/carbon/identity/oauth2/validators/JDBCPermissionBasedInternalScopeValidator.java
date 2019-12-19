@@ -184,7 +184,8 @@ public class JDBCPermissionBasedInternalScopeValidator {
         return userAllowedScopes;
     }
 
-    private String[] getAllowedUIResourcesOfUser(AuthenticatedUser authenticatedUser, AuthorizationManager authorizationManager) throws UserStoreException {
+    private String[] getAllowedUIResourcesOfUser(AuthenticatedUser authenticatedUser,
+                                                 AuthorizationManager authorizationManager) throws UserStoreException {
 
         String[] allowedUIResourcesForUser = authorizationManager.getAllowedUIResourcesForUser(IdentityUtil
                 .addDomainToName(authenticatedUser.getUserName(), authenticatedUser.getUserStoreDomain()), "/");

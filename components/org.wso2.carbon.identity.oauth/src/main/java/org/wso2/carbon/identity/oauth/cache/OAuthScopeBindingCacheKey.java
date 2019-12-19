@@ -16,6 +16,9 @@
 
 package org.wso2.carbon.identity.oauth.cache;
 
+/**
+ * OAuth scope binding cache key.
+ */
 public class OAuthScopeBindingCacheKey extends CacheKey {
 
     private static final long serialVersionUID = -5673700756314713187L;

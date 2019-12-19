@@ -27,6 +27,9 @@ public class SQLQueries {
 
     }
 
+    /**
+     * SQL queries related to device flow.
+     */
     public static class DeviceFlowDAOSQLQueries {
 
         public static final String STORE_DEVICE_CODE = "INSERT INTO IDN_OAUTH2_DEVICE_FLOW (CODE_ID, DEVICE_CODE, " +
@@ -45,9 +48,9 @@ public class SQLQueries {
                 "FROM IDN_OAUTH_CONSUMER_APPS INNER JOIN IDN_OAUTH2_DEVICE_FLOW ON IDN_OAUTH_CONSUMER_APPS.ID = " +
                 "IDN_OAUTH2_DEVICE_FLOW.CONSUMER_KEY_ID) WHERE DEVICE_CODE = ?";
 
-        public static final String GET_AUTHENTICATION_STATUS = "SELECT STATUS, LAST_POLL_TIME, POLL_TIME, EXPIRY_TIME, " +
-                "AUTHZ_USER, TENANT_ID, USER_DOMAIN, NAME FROM (SELECT * FROM IDN_OAUTH2_DEVICE_FLOW INNER JOIN " +
-                "IDP ON IDN_OAUTH2_DEVICE_FLOW.IDP_ID = IDP.ID) WHERE DEVICE_CODE = ?";
+        public static final String GET_AUTHENTICATION_STATUS = "SELECT STATUS, LAST_POLL_TIME, POLL_TIME, " +
+                "EXPIRY_TIME, AUTHZ_USER, TENANT_ID, USER_DOMAIN, NAME FROM (SELECT * FROM IDN_OAUTH2_DEVICE_FLOW " +
+                "INNER JOIN IDP ON IDN_OAUTH2_DEVICE_FLOW.IDP_ID = IDP.ID) WHERE DEVICE_CODE = ?";
 
         public static final String CHECK_CLIENT_ID_EXISTS = "SELECT CONSUMER_KEY FROM IDN_OAUTH_CONSUMER_APPS WHERE " +
                 "CONSUMER_KEY = ?";

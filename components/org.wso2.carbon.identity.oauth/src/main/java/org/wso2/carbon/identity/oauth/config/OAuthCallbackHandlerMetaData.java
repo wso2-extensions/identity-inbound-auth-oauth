@@ -20,6 +20,9 @@ package org.wso2.carbon.identity.oauth.config;
 
 import java.util.Properties;
 
+/**
+ * OAuth callback handler meta data.
+ */
 public class OAuthCallbackHandlerMetaData {
 
     private int priority;

@@ -21,6 +21,9 @@ package org.wso2.carbon.identity.oauth.util;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.oauth.cache.CacheKey;
 
+/**
+ * User claim cache key.
+ */
 public class ClaimCacheKey extends CacheKey {
 
     private static final long serialVersionUID = -1695934146647205833L;

@@ -46,8 +46,8 @@ public class DeviceFlowResponseTypeHandler extends AbstractResponseTypeHandler {
         OAuth2AuthorizeRespDTO respDTO = new OAuth2AuthorizeRespDTO();
         OAuth2AuthorizeReqDTO authzReqDTO = oauthAuthzMsgCtx.getAuthorizationReqDTO();
         AuthenticatedUser authenticatedUser = authzReqDTO.getUser();
-        String UserCode = authzReqDTO.getNonce();
-        DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().setAuthzUserAndStatus(UserCode,
+        String userCode = authzReqDTO.getNonce();
+        DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().setAuthzUserAndStatus(userCode,
                 Constants.AUTHORIZED, authenticatedUser);
         respDTO.setCallbackURI(authzReqDTO.getCallbackUrl());
         return respDTO;

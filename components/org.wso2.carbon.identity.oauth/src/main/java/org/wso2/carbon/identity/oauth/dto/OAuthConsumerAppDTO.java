@@ -18,6 +18,9 @@
 
 package org.wso2.carbon.identity.oauth.dto;
 
+/**
+ * OAuth consumer app dto.
+ */
 public class OAuthConsumerAppDTO {
 
     private String oauthConsumerKey;
@@ -125,7 +128,8 @@ public class OAuthConsumerAppDTO {
     }
 
     public void setGrantTypes(String grantTypes) {
-        if(grantTypes != null) {
+
+        if (grantTypes != null) {
             this.grantTypes = grantTypes;
         }
     }

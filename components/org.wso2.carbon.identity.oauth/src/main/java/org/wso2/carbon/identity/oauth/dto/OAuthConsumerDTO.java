@@ -18,6 +18,9 @@
 
 package org.wso2.carbon.identity.oauth.dto;
 
+/**
+ * OAuth consumer dto.
+ */
 public class OAuthConsumerDTO {
 
     // oauth_signature

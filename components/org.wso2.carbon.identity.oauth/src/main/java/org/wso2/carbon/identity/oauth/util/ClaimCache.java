@@ -23,6 +23,9 @@ import org.wso2.carbon.identity.application.common.cache.BaseCache;
 import org.wso2.carbon.identity.oauth.listener.ClaimCacheRemoveListener;
 import org.wso2.carbon.utils.CarbonUtils;
 
+/**
+ * User claim cache key.
+ */
 public class ClaimCache extends BaseCache<ClaimCacheKey, UserClaims> {
 
     private static final String CLAIM_CACHE_NAME = "ClaimCache";
