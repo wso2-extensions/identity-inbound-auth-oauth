@@ -38,17 +38,21 @@ import org.wso2.carbon.identity.oauth.endpoint.exception.TokenEndpointAccessDeni
 import org.wso2.carbon.identity.oauth.endpoint.exception.TokenEndpointBadRequestException;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 
+import java.net.URI;
+import java.net.URISyntaxException;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
-import java.net.URI;
-import java.net.URISyntaxException;
 
 import static org.apache.commons.lang.StringUtils.isBlank;
 
+/**
+ * This class build error response for exceptions.
+ */
 public class InvalidRequestExceptionMapper implements ExceptionMapper<InvalidRequestParentException> {
 
     private static final String TEXT_HTML = "text/html";

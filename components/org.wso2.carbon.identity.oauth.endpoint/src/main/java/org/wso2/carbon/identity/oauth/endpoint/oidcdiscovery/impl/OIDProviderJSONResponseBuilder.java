@@ -27,6 +27,9 @@ import org.wso2.carbon.identity.discovery.builders.OIDProviderResponseBuilder;
 
 import java.util.Map;
 
+/**
+ * This class builds the JSON response.
+ */
 public class OIDProviderJSONResponseBuilder implements OIDProviderResponseBuilder {
 
     private static final Log log = LogFactory.getLog(OIDProviderResponseBuilder.class);

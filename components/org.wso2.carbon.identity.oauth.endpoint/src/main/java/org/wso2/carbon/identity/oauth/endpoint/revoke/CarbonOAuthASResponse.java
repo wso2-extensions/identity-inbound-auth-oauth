@@ -20,6 +20,9 @@ package org.wso2.carbon.identity.oauth.endpoint.revoke;
 
 import org.apache.oltu.oauth2.common.message.OAuthResponse;
 
+/**
+ * Implementation of OAuth response.
+ */
 public class CarbonOAuthASResponse extends OAuthResponse {
 
     private static OAuthRevokeResponseBuilder revokeResponseBuilder;
@@ -35,6 +38,9 @@ public class CarbonOAuthASResponse extends OAuthResponse {
         return revokeResponseBuilder;
     }
 
+    /**
+     * This class build OAuth revoke response.
+     */
     public static class OAuthRevokeResponseBuilder extends OAuthResponseBuilder {
 
         public OAuthRevokeResponseBuilder(int responseCode) {

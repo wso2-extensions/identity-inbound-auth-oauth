@@ -65,6 +65,9 @@ import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.triggerO
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.validateOauthApplication;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.validateParams;
 
+/**
+ * Rest implementation for OAuthu2 token endpoint.
+ */
 @Path("/token")
 @InInterceptors(classes = OAuthClientAuthenticatorProxy.class)
 public class OAuth2TokenEndpoint {

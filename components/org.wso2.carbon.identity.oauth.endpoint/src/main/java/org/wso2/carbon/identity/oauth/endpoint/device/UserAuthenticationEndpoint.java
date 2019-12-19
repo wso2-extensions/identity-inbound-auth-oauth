@@ -46,6 +46,9 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 
+/**
+ * Rest implementation for device authentication flow.
+ */
 @Path("/device")
 public class UserAuthenticationEndpoint {
 

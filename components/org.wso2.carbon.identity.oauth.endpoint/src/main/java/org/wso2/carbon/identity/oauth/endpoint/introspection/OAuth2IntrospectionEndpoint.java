@@ -41,6 +41,9 @@ import javax.ws.rs.core.Response;
 
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.triggerOnIntrospectionExceptionListeners;
 
+/**
+ * Rest implementation of OAuth2 introspection endpoint.
+ */
 @Path("/introspect")
 @Consumes({MediaType.APPLICATION_FORM_URLENCODED})
 @Produces(MediaType.APPLICATION_JSON)

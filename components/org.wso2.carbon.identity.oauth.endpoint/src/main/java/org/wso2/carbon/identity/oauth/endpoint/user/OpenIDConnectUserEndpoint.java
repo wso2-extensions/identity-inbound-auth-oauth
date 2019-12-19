@@ -49,6 +49,9 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.HTTP_RESP_HEA
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.HTTP_RESP_HEADER_VAL_CACHE_CONTROL_NO_STORE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.HTTP_RESP_HEADER_VAL_PRAGMA_NO_CACHE;
 
+/**
+ * Rest implementation for OIDC user info endpoint.
+ */
 @Path("/userinfo")
 public class OpenIDConnectUserEndpoint {
 

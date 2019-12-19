@@ -67,6 +67,9 @@ import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getRealm
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.startSuperTenantFlow;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.validateParams;
 
+/**
+ * Rest implementation for oauth revocation endpoint.
+ */
 @Path("/revoke")
 @InInterceptors(classes = OAuthClientAuthenticatorProxy.class)
 public class OAuthRevocationEndpoint {

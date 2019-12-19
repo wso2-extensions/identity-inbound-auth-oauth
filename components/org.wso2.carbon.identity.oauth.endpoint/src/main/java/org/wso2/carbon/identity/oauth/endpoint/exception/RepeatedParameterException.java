@@ -19,6 +19,9 @@ package org.wso2.carbon.identity.oauth.endpoint.exception;
 
 import java.util.List;
 
+/**
+ * Exception class for RepeatedParameterException.
+ */
 public class RepeatedParameterException extends Exception {
 
     List<String> repeatedParameter;

@@ -27,11 +27,15 @@ import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentExc
 import org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState;
 import org.wso2.carbon.identity.oauth.endpoint.state.OAuthRequestStateValidator;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import java.util.HashMap;
 import java.util.Map;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+/**
+ * This class contains OAuth related messages.
+ */
 public class OAuthMessage {
 
     private static final String CLIENT_ID = "client_id";
@@ -249,6 +253,9 @@ public class OAuthMessage {
                 '}';
     }
 
+    /**
+     * This class build the OAuth message.
+     */
     public static class OAuthMessageBuilder {
 
         protected HttpServletRequest request;

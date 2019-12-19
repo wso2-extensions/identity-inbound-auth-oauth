@@ -34,6 +34,9 @@ import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.
 import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.INITIAL_REQUEST;
 import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.USER_CONSENT_RESPONSE;
 
+/**
+ * This class validate the OAuth request state.
+ */
 public class OAuthRequestStateValidator {
 
     private static final Log log = LogFactory.getLog(OAuthRequestStateValidator.class);
@@ -117,8 +120,8 @@ public class OAuthRequestStateValidator {
                 throw new AccessDeniedException("Session Timed Out", OAuth2ErrorCodes.ACCESS_DENIED, OAuth2ErrorCodes
                         .OAuth2SubErrorCodes.SESSION_TIME_OUT);
             } else {
-                // if the sessionDataKeyFromConsent parameter present in the login request, skip it and allow login since
-                // result from login is there
+                // if the sessionDataKeyFromConsent parameter present in the login request, skip it and allow login
+                // since result from login is there.
                 oAuthMessage.setSessionDataKeyFromConsent(null);
             }
         }

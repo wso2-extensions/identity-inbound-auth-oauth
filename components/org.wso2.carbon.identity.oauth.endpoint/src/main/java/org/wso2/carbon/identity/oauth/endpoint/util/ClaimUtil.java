@@ -68,6 +68,9 @@ import static org.apache.commons.collections.MapUtils.isNotEmpty;
 import static org.apache.commons.lang.StringUtils.isNotEmpty;
 import static org.wso2.carbon.identity.core.util.IdentityUtil.isTokenLoggable;
 
+/**
+ * Util class which contains claim related data.
+ */
 public class ClaimUtil {
 
     private static final String SP_DIALECT = "http://wso2.org/oidc/claim";

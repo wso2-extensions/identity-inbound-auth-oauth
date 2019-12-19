@@ -40,6 +40,9 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 
+/**
+ * Rest implementation of OIDC discovery endpoint.
+ */
 @Path("/{issuer}/.well-known/openid-configuration")
 public class OIDCDiscoveryEndpoint {
 

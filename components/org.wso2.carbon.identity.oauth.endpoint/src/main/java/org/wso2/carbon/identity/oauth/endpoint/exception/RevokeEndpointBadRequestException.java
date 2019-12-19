@@ -17,6 +17,9 @@
  */
 package org.wso2.carbon.identity.oauth.endpoint.exception;
 
+/**
+ * Exception class for revoke endpoint's bad request.
+ */
 public class RevokeEndpointBadRequestException extends InvalidRequestParentException {
 
     public RevokeEndpointBadRequestException(String message) {

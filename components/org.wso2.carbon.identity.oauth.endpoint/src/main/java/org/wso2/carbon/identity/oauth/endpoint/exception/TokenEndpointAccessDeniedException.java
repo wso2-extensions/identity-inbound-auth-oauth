@@ -17,6 +17,9 @@
  */
 package org.wso2.carbon.identity.oauth.endpoint.exception;
 
+/**
+ * Exception class for TokenEndpointAccessDeniedException.
+ */
 public class TokenEndpointAccessDeniedException extends InvalidRequestParentException {
 
     public TokenEndpointAccessDeniedException(String message) {

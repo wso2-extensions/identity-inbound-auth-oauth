@@ -173,6 +173,9 @@ import static org.wso2.carbon.identity.openidconnect.model.Constants.PROMPT;
 import static org.wso2.carbon.identity.openidconnect.model.Constants.SCOPE;
 import static org.wso2.carbon.identity.openidconnect.model.Constants.STATE;
 
+/**
+ * Rest implementation of OAuth2 authorize endpoint.
+ */
 @Path("/authorize")
 public class OAuth2AuthzEndpoint {
 
