@@ -29,6 +29,7 @@ import java.nio.CharBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
+import java.nio.charset.StandardCharsets;
 
 /**
  * Validates the schema and authorization header according to the specification
@@ -64,7 +65,7 @@ public class UserInforRequestDefaultValidator implements UserInfoRequestValidato
 
     public static boolean isPureAscii(String requestBody) {
 
-        byte[] bytearray = requestBody.getBytes();
+        byte[] bytearray = requestBody.getBytes(StandardCharsets.UTF_8);
         CharsetDecoder charsetDecoder = Charset.forName(US_ASCII).newDecoder();
         try {
             CharBuffer charBuffer = charsetDecoder.decode(ByteBuffer.wrap(bytearray));
