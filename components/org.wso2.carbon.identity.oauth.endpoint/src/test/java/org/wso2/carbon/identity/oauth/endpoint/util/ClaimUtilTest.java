@@ -67,7 +67,7 @@ import static org.mockito.Matchers.isNull;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
 
-@PrepareForTest ( {IdentityTenantUtil.class, OAuth2Util.class, OAuthServerConfiguration.class,
+@PrepareForTest({IdentityTenantUtil.class, OAuth2Util.class, OAuthServerConfiguration.class,
         OAuth2ServiceComponentHolder.class, ClaimMetadataHandler.class, IdentityUtil.class})
 public class ClaimUtilTest extends PowerMockIdentityBaseTest {
 
@@ -109,7 +109,6 @@ public class ClaimUtilTest extends PowerMockIdentityBaseTest {
 
     @Mock
     private PermissionsAndRoleConfig mockedPermissionAndRoleConfig;
-
 
     private Field claimUtilLogField;
     private Object claimUtilObject;
@@ -189,42 +188,43 @@ public class ClaimUtilTest extends PowerMockIdentityBaseTest {
 
     @DataProvider(name = "provideDataForGetClaimsFromUser")
     public Object[][] provideDataForGetClaimsFromUser() {
-        return new Object[][] {
+
+        return new Object[][]{
                 // TODO: Realm is NULL
 //                { false, true, true, requestedClaimMappings, spToLocalClaimMappings, userClaimsMap, CLIENT_ID,
 //                        USERNAME_CLAIM_URI, "PRIMARY", CLAIM_SEPARATOR, false, false,, 1},
-                { true, false, true, requestedClaimMappings, spToLocalClaimMappings, userClaimsMap, CLIENT_ID,
+                {true, false, true, requestedClaimMappings, spToLocalClaimMappings, userClaimsMap, CLIENT_ID,
                         USERNAME_CLAIM_URI, "PRIMARY", CLAIM_SEPARATOR, false, false, -1},
                 // TODO: SP NULL
 //                { true, true, false, requestedClaimMappings, spToLocalClaimMappings, userClaimsMap, CLIENT_ID,
 //                        USERNAME_CLAIM_URI, "PRIMARY", CLAIM_SEPARATOR, false, false, 1},
-                { true, true, true, new ClaimMapping[0], spToLocalClaimMappings, userClaimsMapWithSubject, CLIENT_ID,
+                {true, true, true, new ClaimMapping[0], spToLocalClaimMappings, userClaimsMapWithSubject, CLIENT_ID,
                         USERNAME_CLAIM_URI, "PRIMARY", CLAIM_SEPARATOR, false, false, 1},
-                { true, true, true, requestedClaimMappings, new HashMap<String, String>(), userClaimsMap, CLIENT_ID,
+                {true, true, true, requestedClaimMappings, new HashMap<String, String>(), userClaimsMap, CLIENT_ID,
                         USERNAME_CLAIM_URI, "PRIMARY", CLAIM_SEPARATOR, false, false, 1},
-                { true, true, true, requestedClaimMappings, spToLocalClaimMappings, new HashMap<String, String>(),
+                {true, true, true, requestedClaimMappings, spToLocalClaimMappings, new HashMap<String, String>(),
                         CLIENT_ID, null, "PRIMARY", CLAIM_SEPARATOR, false, false, 1},
-                { true, true, true, requestedClaimMappings, spToLocalClaimMappings, userClaimsMap, CLIENT_ID,
+                {true, true, true, requestedClaimMappings, spToLocalClaimMappings, userClaimsMap, CLIENT_ID,
                         EMAIL_CLAIM_URI, "PRIMARY", CLAIM_SEPARATOR, false, false, 4},
-                { true, true, true, null, spToLocalClaimMappings, userClaimsMapWithSubject, CLIENT_ID, null, "PRIMARY",
+                {true, true, true, null, spToLocalClaimMappings, userClaimsMapWithSubject, CLIENT_ID, null, "PRIMARY",
                         CLAIM_SEPARATOR, false, false, 1},
-                { true, true, true, new ClaimMapping[0], spToLocalClaimMappings, userClaimsMap, CLIENT_ID, null,
+                {true, true, true, new ClaimMapping[0], spToLocalClaimMappings, userClaimsMap, CLIENT_ID, null,
                         "PRIMARY", CLAIM_SEPARATOR, false, false, 1},
-                { true, true, true, requestedClaimMappings, spToLocalClaimMappings, userClaimsMap, CLIENT_ID,
+                {true, true, true, requestedClaimMappings, spToLocalClaimMappings, userClaimsMap, CLIENT_ID,
                         USERNAME_CLAIM_URI, "", CLAIM_SEPARATOR, false, false, 3},
-                { true, true, true, requestedClaimMappings, spToLocalClaimMappings, userClaimsMap, CLIENT_ID,
+                {true, true, true, requestedClaimMappings, spToLocalClaimMappings, userClaimsMap, CLIENT_ID,
                         USERNAME_CLAIM_URI, "FEDERATED_UM", CLAIM_SEPARATOR, false, false, 1},
-                { true, true, true, requestedClaimMappings, spToLocalClaimMappings, userClaimsMap, CLIENT_ID,
+                {true, true, true, requestedClaimMappings, spToLocalClaimMappings, userClaimsMap, CLIENT_ID,
                         USERNAME_CLAIM_URI, "PRIMARY", "", false, false, 3},
-                { true, true, true, requestedClaimMappings, spToLocalClaimMappings, userClaimsMap, CLIENT_ID,
+                {true, true, true, requestedClaimMappings, spToLocalClaimMappings, userClaimsMap, CLIENT_ID,
                         USERNAME_CLAIM_URI, "PRIMARY", CLAIM_SEPARATOR, true, false, 1},
-                { true, true, true, requestedClaimMappings, spToLocalClaimMappings, userClaimsMap, CLIENT_ID,
+                {true, true, true, requestedClaimMappings, spToLocalClaimMappings, userClaimsMap, CLIENT_ID,
                         USERNAME_CLAIM_URI, "PRIMARY", CLAIM_SEPARATOR, false, true, 3},
-                { true, true, true, requestedClaimMappings, spToLocalClaimMappings, userClaimsMap, CLIENT_ID,
+                {true, true, true, requestedClaimMappings, spToLocalClaimMappings, userClaimsMap, CLIENT_ID,
                         USERNAME_CLAIM_URI, "PRIMARY", CLAIM_SEPARATOR, false, false, 3},
-                { true, true, true, requestedClaimMappings, spToLocalClaimMappings, userClaimsMap, CLIENT_ID,
+                {true, true, true, requestedClaimMappings, spToLocalClaimMappings, userClaimsMap, CLIENT_ID,
                         USERNAME_CLAIM_URI, "FEDERATED_UM", CLAIM_SEPARATOR, false, false, 1},
-                    // TODO : Userstore exception
+                // TODO : Userstore exception
 //                { true, true, true, requestedClaimMappings, spToLocalClaimMappings, null, CLIENT_ID,
 //                        USERNAME_CLAIM_URI, "PRIMARY", CLAIM_SEPARATOR, false, false, 0},
 
@@ -237,7 +237,7 @@ public class ClaimUtilTest extends PowerMockIdentityBaseTest {
                                            Object claimMappingObject, Map<String, String> spToLocalClaimMappings,
                                            Map<String, String> userClaimsMap, String clientId, String subjectClaimUri,
                                            String userStoreDomain, String claimSeparator, boolean isFederated,
-                                           boolean mapFedUsersToLocal, int expectedMapSize) throws  Exception {
+                                           boolean mapFedUsersToLocal, int expectedMapSize) throws Exception {
 
         ClaimMapping[] claimMappings = (ClaimMapping[]) claimMappingObject;
         mockStatic(IdentityTenantUtil.class);
@@ -267,7 +267,6 @@ public class ClaimUtilTest extends PowerMockIdentityBaseTest {
             when(mockedApplicationManagementService.getApplicationExcludingFileBasedSPs(anyString(), anyString())).
                     thenReturn(mockedServiceProvider);
         }
-
 
         when(mockedValidationTokenResponseDTO.getAuthorizedUser()).thenReturn(AUTHORIZED_USER);
         when(mockedValidationTokenResponseDTO.getAuthorizationContextToken()).thenReturn(mockedAuthzContextToken);
@@ -314,6 +313,7 @@ public class ClaimUtilTest extends PowerMockIdentityBaseTest {
     }
 
     protected void mockOAuth2Util() throws IdentityOAuth2Exception, InvalidOAuthClientException {
+
         mockStatic(OAuth2Util.class);
         when(OAuth2Util.getAuthenticatedUser(any(AccessTokenDO.class))).thenCallRealMethod();
         when(OAuth2Util.isFederatedUser(any(AuthenticatedUser.class))).thenCallRealMethod();
@@ -322,6 +322,7 @@ public class ClaimUtilTest extends PowerMockIdentityBaseTest {
     }
 
     private AccessTokenDO getAccessTokenDO(String clientId, String userStoreDomain, boolean isFederated) {
+
         AuthenticatedUser authenticatedUser = getAuthenticatedUser(userStoreDomain, isFederated);
         AccessTokenDO accessTokenDO = new AccessTokenDO();
         accessTokenDO.setConsumerKey(clientId);
@@ -330,6 +331,7 @@ public class ClaimUtilTest extends PowerMockIdentityBaseTest {
     }
 
     private AuthenticatedUser getAuthenticatedUser(String userStoreDomain, boolean isFederated) {
+
         AuthenticatedUser authenticatedUser = new AuthenticatedUser();
         authenticatedUser.setUserStoreDomain(userStoreDomain);
         authenticatedUser.setFederatedUser(isFederated);
@@ -339,20 +341,28 @@ public class ClaimUtilTest extends PowerMockIdentityBaseTest {
     @DataProvider(name = "provideRoleMappingData")
     public Object[][] provideRoleMappingData() {
 
-        return new Object[][] {
-                {new ArrayList<String>(), roleMappings,  ",", null},
-                {null, null,  ",", null},
-                {new ArrayList<String>(){{add("role1"); add("role2"); }}, null,  ",,,", "role1,,,role2"},
-                {new ArrayList<String>(){{add("role1"); add("role2");}}, roleMappings, "#", "remoteRole1#remoteRole2"},
-                {new ArrayList<String>(){{add("role1"); }}, new RoleMapping[0], "," , "role1"}
+        return new Object[][]{
+                {new ArrayList<String>(), roleMappings, ",", null},
+                {null, null, ",", null},
+                {new ArrayList<String>() {{
+                    add("role1");
+                    add("role2");
+                }}, null, ",,,", "role1,,,role2"},
+                {new ArrayList<String>() {{
+                    add("role1");
+                    add("role2");
+                }}, roleMappings, "#", "remoteRole1#remoteRole2"},
+                {new ArrayList<String>() {{
+                    add("role1");
+                }}, new RoleMapping[0], ",", "role1"}
         };
     }
 
-    @Test (dataProvider = "provideRoleMappingData")
+    @Test(dataProvider = "provideRoleMappingData")
     public void testGetServiceProviderMappedUserRoles(List<String> locallyMappedUserRoles,
                                                       Object roleMappingObject,
                                                       String claimSeparator,
-                                                      String expected)  throws Exception {
+                                                      String expected) throws Exception {
 
         RoleMapping[] roleMappings = (RoleMapping[]) roleMappingObject;
         when(mockedServiceProvider.getPermissionAndRoleConfig()).thenReturn(mockedPermissionAndRoleConfig);

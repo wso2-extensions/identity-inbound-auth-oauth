@@ -39,6 +39,7 @@ import org.wso2.carbon.identity.oauth.user.UserInfoResponseBuilder;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 
 import java.util.Map;
+
 import javax.servlet.http.HttpServletRequest;
 
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
@@ -55,33 +56,37 @@ public class UserInfoEndpointConfigTest extends PowerMockTestCase {
     private EndpointUtil endpointUtil;
     @Mock
     private OAuthServerConfiguration oAuthServerConfiguration;
-    private final String NON_EXISTING_CLASS = "org.wso2.carbon.identity.NonExistingClass";
+    private final String nonExistingClass = "org.wso2.carbon.identity.NonExistingClass";
 
     @ObjectFactory
     public IObjectFactory getObjectFactory() {
+
         return new PowerMockObjectFactory();
     }
 
     @Test
     public void testGetInstance() throws Exception {
+
         assertNotNull(UserInfoEndpointConfig.getInstance(), "UserInfoEndpoint config is expected not to be null");
     }
 
     @DataProvider
     public Object[][] getUserInfoRequestValidator() {
+
         return new Object[][]{
-                {NON_EXISTING_CLASS, null, false},
+                {nonExistingClass, null, false},
                 {TestUserInfoRequestValidator.class.getName(), null, false},
-                {org.wso2.carbon.identity.oauth.endpoint.user.impl.extension.TestUserInfoRequestValidator.class.getName(),
-                        null, false},
+                {org.wso2.carbon.identity.oauth.endpoint.user.impl.extension.TestUserInfoRequestValidator.class.
+                        getName(), null, false},
                 {UserInforRequestDefaultValidator.class.getName(), UserInforRequestDefaultValidator.class, true},
-                {NON_EXISTING_CLASS, UserInforRequestDefaultValidator.class, true},
+                {nonExistingClass, UserInforRequestDefaultValidator.class, true},
         };
     }
 
     @Test(dataProvider = "getUserInfoRequestValidator")
     public void testGetUserInfoRequestValidator(String validatorClass, Class validatorClassType, boolean
             isClassExisting) throws Exception {
+
         mockStatic(EndpointUtil.class);
         when(EndpointUtil.getUserInfoRequestValidator()).thenReturn(validatorClass);
         UserInfoRequestValidator userInfoRequestValidator = UserInfoEndpointConfig.getInstance()
@@ -100,19 +105,21 @@ public class UserInfoEndpointConfigTest extends PowerMockTestCase {
 
     @DataProvider
     public Object[][] getAccessTokenValidators() {
+
         return new Object[][]{
-                {NON_EXISTING_CLASS, null, false},
+                {nonExistingClass, null, false},
                 {TestUserInfoValidator.class.getName(), null, false},
                 {org.wso2.carbon.identity.oauth.endpoint.user.impl.extension.TestUserInfoValidator.class.getName(),
                         null, false},
                 {UserInfoISAccessTokenValidator.class.getName(), UserInfoISAccessTokenValidator.class, true},
-                {NON_EXISTING_CLASS, UserInfoISAccessTokenValidator.class, true},
+                {nonExistingClass, UserInfoISAccessTokenValidator.class, true},
         };
     }
 
     @Test(dataProvider = "getAccessTokenValidators")
     public void testGetUserUserInfoAccessTokenValidator(String validatorClass, Class validatorClassType, boolean
             isClassExisting) throws Exception {
+
         mockStatic(EndpointUtil.class);
         when(EndpointUtil.getAccessTokenValidator()).thenReturn(validatorClass);
         UserInfoAccessTokenValidator userInfoAccessTokenValidator = UserInfoEndpointConfig.getInstance()
@@ -124,26 +131,29 @@ public class UserInfoEndpointConfigTest extends PowerMockTestCase {
             assertEquals(validatorClassType, userInfoAccessTokenValidator.getClass(), "Expected type of " +
                     "AccessTokenValidator was not found");
         } else {
-            assertNull(userInfoAccessTokenValidator, "Non-existing or invalid class passed. Hence validator should be " +
-                    "null");
+            assertNull(userInfoAccessTokenValidator,
+                    "Non-existing or invalid class passed. Hence validator should be " +
+                            "null");
         }
     }
 
     @DataProvider
     public Object[][] getUserInfoResponseBuilder() {
+
         return new Object[][]{
-                {NON_EXISTING_CLASS, null, false},
+                {nonExistingClass, null, false},
                 {TesUserInfoResponseBuilder.class.getName(), null, false},
                 {org.wso2.carbon.identity.oauth.endpoint.user.impl.extension.TesUserInfoResponseBuilder.class.getName
                         (), null, false},
                 {UserInfoJSONResponseBuilder.class.getName(), UserInfoJSONResponseBuilder.class, true},
-                {NON_EXISTING_CLASS, UserInfoJSONResponseBuilder.class, true},
+                {nonExistingClass, UserInfoJSONResponseBuilder.class, true},
         };
     }
 
     @Test(dataProvider = "getUserInfoResponseBuilder")
     public void testGetUserInfoResponseBuilder(String validatorClass, Class validatorClassType, boolean
             isClassExisting) throws Exception {
+
         mockStatic(EndpointUtil.class);
         when(EndpointUtil.getUserInfoResponseBuilder()).thenReturn(validatorClass);
         UserInfoResponseBuilder userInfoResponseBuilder = UserInfoEndpointConfig.getInstance()
@@ -162,19 +172,21 @@ public class UserInfoEndpointConfigTest extends PowerMockTestCase {
 
     @DataProvider
     public Object[][] getUserUserInfoClaimRetriever() {
+
         return new Object[][]{
-                {NON_EXISTING_CLASS, null, false},
+                {nonExistingClass, null, false},
                 {TestUserInfoClaimRetriever.class.getName(), null, false},
                 {org.wso2.carbon.identity.oauth.endpoint.user.impl.extension.TestUserInfoClaimRetriever.class.getName
                         (), null, false},
                 {UserInfoUserStoreClaimRetriever.class.getName(), UserInfoUserStoreClaimRetriever.class, true},
-                {NON_EXISTING_CLASS, UserInfoUserStoreClaimRetriever.class, true},
+                {nonExistingClass, UserInfoUserStoreClaimRetriever.class, true},
         };
     }
 
     @Test(dataProvider = "getUserUserInfoClaimRetriever")
     public void testGetUserInfoClaimRetriever(String validatorClass, Class validatorClassType, boolean
             isClassExisting) throws Exception {
+
         mockStatic(EndpointUtil.class);
         when(EndpointUtil.getUserInfoClaimRetriever()).thenReturn(validatorClass);
         UserInfoClaimRetriever userInfoClaimRetriever = UserInfoEndpointConfig.getInstance()
@@ -195,6 +207,7 @@ public class UserInfoEndpointConfigTest extends PowerMockTestCase {
      * This is just a sample extension class which will cause InstantiationException while instantiating
      */
     public class TestUserInfoValidator implements UserInfoAccessTokenValidator {
+
         @Override
         public OAuth2TokenValidationResponseDTO validateToken(String accessToken) throws UserInfoEndpointException {
             // Do Nothing
@@ -206,6 +219,7 @@ public class UserInfoEndpointConfigTest extends PowerMockTestCase {
      * This is just a sample extension class which will cause InstantiationException while instantiating
      */
     public class TesUserInfoResponseBuilder implements UserInfoResponseBuilder {
+
         @Override
         public String getResponseString(OAuth2TokenValidationResponseDTO tokenResponse) throws
                 UserInfoEndpointException, OAuthSystemException {
@@ -218,6 +232,7 @@ public class UserInfoEndpointConfigTest extends PowerMockTestCase {
      * This is just a sample extension class which will cause InstantiationException while instantiating
      */
     public class TestUserInfoClaimRetriever implements UserInfoClaimRetriever {
+
         @Override
         public Map<String, Object> getClaimsMap(Map<ClaimMapping, String> userAttributes) {
             // Do Nothing.
@@ -229,6 +244,7 @@ public class UserInfoEndpointConfigTest extends PowerMockTestCase {
      * This is just a sample extension class which will cause InstantiationException while instantiating
      */
     public class TestUserInfoRequestValidator implements UserInfoRequestValidator {
+
         @Override
         public String validateRequest(HttpServletRequest request) throws UserInfoEndpointException {
             // Do Nothing

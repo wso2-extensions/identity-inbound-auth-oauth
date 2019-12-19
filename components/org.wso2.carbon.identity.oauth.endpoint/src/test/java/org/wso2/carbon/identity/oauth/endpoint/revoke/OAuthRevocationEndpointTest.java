@@ -30,7 +30,6 @@ import org.testng.annotations.BeforeTest;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
-import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -40,13 +39,14 @@ import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.ResponseHeader;
-import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationResponseDTO;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
+
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.HttpMethod;
@@ -95,15 +95,17 @@ public class OAuthRevocationEndpointTest extends PowerMockIdentityBaseTest {
 
     @BeforeTest
     public void setUp() {
+
         System.setProperty(
                 CarbonBaseConstants.CARBON_HOME,
                 Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString()
-        );
+                          );
         revocationEndpoint = new OAuthRevocationEndpoint();
     }
 
     @DataProvider(name = "testRevokeAccessTokenDataProvider")
     public Object[][] testRevokeAccessTokenDataProvider() {
+
         String inCorrectAuthzHeader = "Basic value1 value2";
         ResponseHeader contentType = new ResponseHeader();
         contentType.setKey(OAuth.HeaderType.CONTENT_TYPE);
@@ -113,80 +115,80 @@ public class OAuthRevocationEndpointTest extends PowerMockIdentityBaseTest {
         ResponseHeader[] headers2 = new ResponseHeader[]{null};
         ResponseHeader[] headers3 = new ResponseHeader[0];
 
-        return new Object[][] {
+        return new Object[][]{
                 // Client id and secret in both header and request params.
                 // Will return unauthorized error since multiple methods of authentication
-                { AUTHORIZATION_HEADER, true, ACCESS_TOKEN, TOKEN_HINT, APP_REDIRECT_URL, CLIENT_ID_VALUE, SECRET,
+                {AUTHORIZATION_HEADER, true, ACCESS_TOKEN, TOKEN_HINT, APP_REDIRECT_URL, CLIENT_ID_VALUE, SECRET,
                         OAuth2ErrorCodes.INVALID_CLIENT, null, null, HttpServletResponse.SC_UNAUTHORIZED,
                         OAuth2ErrorCodes.INVALID_CLIENT},
 
                 // Client id and secret in both header and request params.
                 // Will return unauthorized error since multiple methods of authentication
-                { AUTHORIZATION_HEADER, false, ACCESS_TOKEN, TOKEN_HINT, null, CLIENT_ID_VALUE, SECRET,
+                {AUTHORIZATION_HEADER, false, ACCESS_TOKEN, TOKEN_HINT, null, CLIENT_ID_VALUE, SECRET,
                         OAuth2ErrorCodes.INVALID_CLIENT, null, null, HttpServletResponse.SC_UNAUTHORIZED,
                         OAuth2ErrorCodes.INVALID_CLIENT},
 
                 // Invalid authz header. Will return unauthorized error response.
-                { inCorrectAuthzHeader, true, ACCESS_TOKEN, null, "", null, null, OAuth2ErrorCodes.INVALID_CLIENT,
+                {inCorrectAuthzHeader, true, ACCESS_TOKEN, null, "", null, null, OAuth2ErrorCodes.INVALID_CLIENT,
                         null, null, HttpServletResponse.SC_UNAUTHORIZED, OAuth2ErrorCodes.INVALID_CLIENT},
 
                 // Will return bad request when the tocken is empty in the request
-                { AUTHORIZATION_HEADER, true, null, null, "", null, null, OAuth2ErrorCodes.INVALID_CLIENT, null, null,
+                {AUTHORIZATION_HEADER, true, null, null, "", null, null, OAuth2ErrorCodes.INVALID_CLIENT, null, null,
                         HttpServletResponse.SC_BAD_REQUEST, OAuth2ErrorCodes.INVALID_REQUEST},
 
                 // Token not found in the request (callback is empty). Will return bad request error response.
-                { AUTHORIZATION_HEADER, false, null, null, "", null, null, null, null, null,
+                {AUTHORIZATION_HEADER, false, null, null, "", null, null, null, null, null,
                         HttpServletResponse.SC_BAD_REQUEST, OAuth2ErrorCodes.INVALID_REQUEST},
 
                 // Token not found in the request (callback is null). Will return bad request error response.
-                { AUTHORIZATION_HEADER, false, null, null, null, null, null, null, null, null,
+                {AUTHORIZATION_HEADER, false, null, null, null, null, null, null, null, null,
                         HttpServletResponse.SC_BAD_REQUEST, OAuth2ErrorCodes.INVALID_REQUEST},
 
                 // Auth revocation response has invalid client error. Will return unauthorized error response.
-                { AUTHORIZATION_HEADER, true, ACCESS_TOKEN, TOKEN_HINT, "", null, SECRET,
+                {AUTHORIZATION_HEADER, true, ACCESS_TOKEN, TOKEN_HINT, "", null, SECRET,
                         OAuth2ErrorCodes.INVALID_CLIENT, null, null, HttpServletResponse.SC_UNAUTHORIZED,
                         OAuth2ErrorCodes.INVALID_CLIENT},
 
                 // Auth revocation response has unauthorized client error (with callback value).
                 // Will return unauthorized error response.
-                { AUTHORIZATION_HEADER, true, ACCESS_TOKEN, TOKEN_HINT, APP_REDIRECT_URL, CLIENT_ID_VALUE, null,
+                {AUTHORIZATION_HEADER, true, ACCESS_TOKEN, TOKEN_HINT, APP_REDIRECT_URL, CLIENT_ID_VALUE, null,
                         OAuth2ErrorCodes.UNAUTHORIZED_CLIENT, null, null, HttpServletResponse.SC_UNAUTHORIZED,
                         OAuth2ErrorCodes.UNAUTHORIZED_CLIENT},
 
                 // Auth revocation response has unauthorized client error (callback is empty).
                 // Will return unauthorized error response.
-                { AUTHORIZATION_HEADER, true, ACCESS_TOKEN, TOKEN_HINT, "", null, null,
+                {AUTHORIZATION_HEADER, true, ACCESS_TOKEN, TOKEN_HINT, "", null, null,
                         OAuth2ErrorCodes.UNAUTHORIZED_CLIENT, null, null, HttpServletResponse.SC_UNAUTHORIZED,
                         OAuth2ErrorCodes.UNAUTHORIZED_CLIENT},
 
                 // No authz header and client id, secret params (with callback value).
                 // Auth revocation response will return invalid request error. Will return bad request error response.
-                { null, true, ACCESS_TOKEN, null, APP_REDIRECT_URL, null, null, OAuth2ErrorCodes.INVALID_REQUEST, null,
+                {null, true, ACCESS_TOKEN, null, APP_REDIRECT_URL, null, null, OAuth2ErrorCodes.INVALID_REQUEST, null,
                         null, HttpServletResponse.SC_BAD_REQUEST, OAuth2ErrorCodes.INVALID_REQUEST},
 
                 // No authz header and client id, secret params (callback is empty).
                 // Auth revocation response will return invalid request error. Will return bad request error response.
-                { null, true, ACCESS_TOKEN, null, "", null, null, OAuth2ErrorCodes.INVALID_REQUEST, null, null,
+                {null, true, ACCESS_TOKEN, null, "", null, null, OAuth2ErrorCodes.INVALID_REQUEST, null, null,
                         HttpServletResponse.SC_BAD_REQUEST, OAuth2ErrorCodes.INVALID_REQUEST},
 
                 // Correct authz header, Access token sent as a parameter, no client id and secret parameters
                 // (No headers in the request). Will return 200 ok
-                { AUTHORIZATION_HEADER, true, ACCESS_TOKEN, TOKEN_HINT, APP_REDIRECT_URL, null, null, null, null, null,
+                {AUTHORIZATION_HEADER, true, ACCESS_TOKEN, TOKEN_HINT, APP_REDIRECT_URL, null, null, null, null, null,
                         HttpServletResponse.SC_OK, null},
 
                 // No authz header, Access token sent as a parameter,
                 // client id and secret sent as params (with content type header). Will return 200 ok
-                { null, true, ACCESS_TOKEN, TOKEN_HINT, APP_REDIRECT_URL, CLIENT_ID_VALUE, SECRET, null, headers1, null,
+                {null, true, ACCESS_TOKEN, TOKEN_HINT, APP_REDIRECT_URL, CLIENT_ID_VALUE, SECRET, null, headers1, null,
                         HttpServletResponse.SC_OK, null},
 
                 // No authz header, Access token sent as a parameter,
                 // client id and secret sent as params (header with null value). Will return 200 ok
-                { null, true, ACCESS_TOKEN, TOKEN_HINT, "", CLIENT_ID_VALUE, SECRET, null, headers2, null,
+                {null, true, ACCESS_TOKEN, TOKEN_HINT, "", CLIENT_ID_VALUE, SECRET, null, headers2, null,
                         HttpServletResponse.SC_OK, null},
 
                 // No authz header, Access token sent as a parameter,
                 // client id and secret sent as params (header array without values). Will return 200 ok
-                { null, true, ACCESS_TOKEN, TOKEN_HINT, APP_REDIRECT_URL, CLIENT_ID_VALUE, SECRET, null, headers3, null,
+                {null, true, ACCESS_TOKEN, TOKEN_HINT, APP_REDIRECT_URL, CLIENT_ID_VALUE, SECRET, null, headers3, null,
                         HttpServletResponse.SC_OK, null},
         };
     }
@@ -196,6 +198,7 @@ public class OAuthRevocationEndpointTest extends PowerMockIdentityBaseTest {
                                       String callback, String clientId, String secret, String respError,
                                       Object headerObj, Exception e, int expectedStatus, String expectedErrorCode)
             throws Exception {
+
         MultivaluedMap<String, String> parameterMap = new MultivaluedHashMap<String, String>();
         ResponseHeader[] responseHeaders = (ResponseHeader[]) headerObj;
         parameterMap.add(TOKEN_PARAM, token);
@@ -220,6 +223,7 @@ public class OAuthRevocationEndpointTest extends PowerMockIdentityBaseTest {
         doAnswer(new Answer<Object>() {
             @Override
             public Object answer(InvocationOnMock invocation) throws Throwable {
+
                 revokeReqDTO[0] = (OAuthRevocationRequestDTO) invocation.getArguments()[0];
                 return oAuthRevocationResponseDTO;
             }
@@ -230,7 +234,7 @@ public class OAuthRevocationEndpointTest extends PowerMockIdentityBaseTest {
 
         Response response;
         try {
-             response = revocationEndpoint.revokeAccessToken(request, parameterMap);
+            response = revocationEndpoint.revokeAccessToken(request, parameterMap);
         } catch (InvalidRequestParentException ire) {
             InvalidRequestExceptionMapper invalidRequestExceptionMapper = new InvalidRequestExceptionMapper();
             response = invalidRequestExceptionMapper.toResponse(ire);
@@ -249,26 +253,30 @@ public class OAuthRevocationEndpointTest extends PowerMockIdentityBaseTest {
 
     private HttpServletRequest mockHttpRequest(final Map<String, String[]> requestParams,
                                                final Map<String, Object> requestAttributes) {
+
         HttpServletRequest httpServletRequest = mock(HttpServletRequest.class);
-        doAnswer(new Answer<Object>(){
+        doAnswer(new Answer<Object>() {
             @Override
             public Object answer(InvocationOnMock invocation) throws Throwable {
+
                 String key = (String) invocation.getArguments()[0];
-                return requestParams.get(key) != null ? requestParams.get(key)[0]: null;
+                return requestParams.get(key) != null ? requestParams.get(key)[0] : null;
             }
         }).when(httpServletRequest).getParameter(anyString());
 
-        doAnswer(new Answer<Object>(){
+        doAnswer(new Answer<Object>() {
             @Override
             public Object answer(InvocationOnMock invocation) throws Throwable {
+
                 String key = (String) invocation.getArguments()[0];
                 return requestAttributes.get(key);
             }
         }).when(httpServletRequest).getAttribute(anyString());
 
-        doAnswer(new Answer<Object>(){
+        doAnswer(new Answer<Object>() {
             @Override
             public Object answer(InvocationOnMock invocation) throws Throwable {
+
                 String key = (String) invocation.getArguments()[0];
                 Object value = invocation.getArguments()[1];
                 requestAttributes.put(key, value);

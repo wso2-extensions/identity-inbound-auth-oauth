@@ -46,10 +46,11 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
 import org.wso2.carbon.utils.CarbonUtils;
 
+import java.nio.file.Paths;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.Response;
-import java.nio.file.Paths;
 
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyString;

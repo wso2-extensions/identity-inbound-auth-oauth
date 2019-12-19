@@ -52,6 +52,7 @@ import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
 import org.wso2.carbon.utils.CarbonUtils;
 
 import java.nio.file.Paths;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.Response;
@@ -114,7 +115,7 @@ public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
         System.setProperty(
                 CarbonBaseConstants.CARBON_HOME,
                 Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString()
-        );
+                          );
     }
 
     @DataProvider(name = "providePostParams")
@@ -159,7 +160,8 @@ public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
         Response response1;
         mockStatic(IdentityUtil.class);
         when(IdentityUtil.getServerURL(anyString(), anyBoolean(), anyBoolean())).thenReturn(TEST_URL);
-        when(oAuth2AuthzEndpoint.authorize(any(CommonAuthRequestWrapper.class), any(HttpServletResponse.class))).thenReturn(response);
+        when(oAuth2AuthzEndpoint.authorize(any(CommonAuthRequestWrapper.class), any(HttpServletResponse.class)))
+                .thenReturn(response);
         DeviceAuthServiceImpl deviceAuthService = new DeviceAuthServiceImpl();
         userAuthenticationEndpoint = new UserAuthenticationEndpoint();
         userAuthenticationEndpoint.setDeviceAuthService(deviceAuthService);
