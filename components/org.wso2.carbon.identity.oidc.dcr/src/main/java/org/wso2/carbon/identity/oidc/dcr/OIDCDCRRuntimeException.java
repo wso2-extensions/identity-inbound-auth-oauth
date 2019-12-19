@@ -19,13 +19,18 @@ package org.wso2.carbon.identity.oidc.dcr;
 
 import org.wso2.carbon.identity.oauth.dcr.DCRRuntimeException;
 
-
+/**
+ * Handles OIDC DCR runtime related exceptions.
+ */
 public class OIDCDCRRuntimeException extends DCRRuntimeException {
+
     protected OIDCDCRRuntimeException(String errorDescription) {
+
         super(errorDescription);
     }
 
     protected OIDCDCRRuntimeException(String errorDescription, Throwable cause) {
+
         super(errorDescription, cause);
     }
 }
