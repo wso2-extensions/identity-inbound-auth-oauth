@@ -32,6 +32,9 @@ import java.util.regex.Pattern;
 
 import static org.wso2.carbon.identity.oauth.dcr.util.DCRConstants.APP_NAME_VALIDATING_REGEX;
 
+/**
+ * Util class used for OAuth DCRM.
+ */
 public class DCRMUtils {
 
     private static final Log log = LogFactory.getLog(DCRMUtils.class);
@@ -43,7 +46,7 @@ public class DCRMUtils {
         if (log.isDebugEnabled()) {
             log.debug("Validating uri: " + redirectUri);
         }
-        
+
         if (IdentityUtil.isBlank(redirectUri)) {
             log.error("The redirection URI is either null or blank.");
             return false;
@@ -64,7 +67,7 @@ public class DCRMUtils {
 
     public static boolean isBackchannelLogoutUriValid(String backchannelLogoutUri) {
 
-        if(StringUtils.isBlank(backchannelLogoutUri)) {
+        if (StringUtils.isBlank(backchannelLogoutUri)) {
             return true;
         }
 
@@ -72,7 +75,7 @@ public class DCRMUtils {
             log.debug("Validating back-channel logout uri: " + backchannelLogoutUri);
         }
 
-        if(backchannelLogoutUri.contains("#")) {
+        if (backchannelLogoutUri.contains("#")) {
             if (log.isDebugEnabled()) {
                 String errorMessage = "The back-channel logout URI: " + backchannelLogoutUri
                         + ", contains a fragment component.";
@@ -92,7 +95,7 @@ public class DCRMUtils {
             return false;
         }
 
-        if(!uri.isAbsolute()) {
+        if (!uri.isAbsolute()) {
             if (log.isDebugEnabled()) {
                 String errorMessage = "The back-channel logout URI: " + backchannelLogoutUri
                         + ", is not an absolute URI.";
@@ -105,7 +108,7 @@ public class DCRMUtils {
     }
 
     public static DCRMServerException generateServerException(DCRMConstants.ErrorMessages
-                                                                                     error, String data, Throwable e)
+                                                                      error, String data, Throwable e)
             throws DCRMServerException {
 
         String errorDescription;

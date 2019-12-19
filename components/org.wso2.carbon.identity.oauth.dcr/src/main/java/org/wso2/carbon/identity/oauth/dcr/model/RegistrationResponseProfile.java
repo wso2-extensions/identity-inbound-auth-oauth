@@ -37,58 +37,72 @@ public class RegistrationResponseProfile implements Serializable {
     private List<String> grantTypes = new ArrayList<>();
 
     public String getClientId() {
+
         return clientId;
     }
 
     public void setClientId(String clientId) {
+
         this.clientId = clientId;
     }
 
     public String getClientSecret() {
+
         return clientSecret;
     }
 
     public void setClientSecret(String clientSecret) {
+
         this.clientSecret = clientSecret;
     }
 
     public String getClientIdIssueAt() {
+
         return new java.util.Date().toString();
     }
 
     public void setClientIdIssueAt(String clientIdIssueAt) {
+
         this.clientIdIssueAt = clientIdIssueAt;
     }
 
     public String getClientSecretExpiresAt() {
+
         return clientSecretExpiresAt;
     }
 
     public void setClientSecretExpiresAt(String clientSecretExpiresAt) {
+
         this.clientSecretExpiresAt = clientSecretExpiresAt;
     }
 
     public String getClientName() {
+
         return clientName;
     }
 
     public void setClientName(String clientName) {
+
         this.clientName = clientName;
     }
 
     public List<String> getRedirectUrls() {
+
         return redirectUrls;
     }
 
     public void setRedirectUrls(List<String> redirectUrls) {
+
         this.redirectUrls = redirectUrls;
     }
 
     public List<String> getGrantTypes() {
+
         return grantTypes;
     }
 
     public void setGrantTypes(List<String> grantTypes) {
+
         this.grantTypes = grantTypes;
     }
 }

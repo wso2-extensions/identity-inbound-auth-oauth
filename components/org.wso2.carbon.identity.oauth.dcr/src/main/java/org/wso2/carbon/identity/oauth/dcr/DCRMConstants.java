@@ -18,19 +18,25 @@
 
 package org.wso2.carbon.identity.oauth.dcr;
 
+/**
+ * This class holds the constants used by DCRM component.
+ */
 public class DCRMConstants {
 
+    /**
+     * Enum for OAuth DCR service related error messages.
+     */
     public enum ErrorMessages {
 
         CONFLICT_EXISTING_APPLICATION("Application with the name %s already exist in the system"),
-        FAILED_TO_REGISTER_SP("Error occurred while creating service provider %s" ),
-        FAILED_TO_GET_SP("Error occurred while retrieving service provider %s" ),
-        FAILED_TO_UPDATE_SP("Error occurred while updating service provider %s" ),
-        FAILED_TO_DELETE_SP("Error occurred while deleting service provider %s" ),
-        FAILED_TO_REGISTER_APPLICATION("Error occurred while creating application with application name:  %s" ),
-        FAILED_TO_GET_APPLICATION("Error occurred while retrieving application with application name: %s" ),
-        FAILED_TO_GET_APPLICATION_BY_ID("Error occurred while retrieving application with client key: %s" ),
-        FAILED_TO_UPDATE_APPLICATION("Error occurred while updating application with client key: %s" ),
+        FAILED_TO_REGISTER_SP("Error occurred while creating service provider %s"),
+        FAILED_TO_GET_SP("Error occurred while retrieving service provider %s"),
+        FAILED_TO_UPDATE_SP("Error occurred while updating service provider %s"),
+        FAILED_TO_DELETE_SP("Error occurred while deleting service provider %s"),
+        FAILED_TO_REGISTER_APPLICATION("Error occurred while creating application with application name:  %s"),
+        FAILED_TO_GET_APPLICATION("Error occurred while retrieving application with application name: %s"),
+        FAILED_TO_GET_APPLICATION_BY_ID("Error occurred while retrieving application with client key: %s"),
+        FAILED_TO_UPDATE_APPLICATION("Error occurred while updating application with client key: %s"),
         BAD_REQUEST_INVALID_REDIRECT_URI("Invalid redirect URI: %s"),
         BAD_REQUEST_INVALID_BACKCHANNEL_LOGOUT_URI("Invalid back-channel logout URI: %s"),
         BAD_REQUEST_INVALID_SP_NAME("Client Name is not adhering to the regex: %s"),
@@ -44,24 +50,29 @@ public class DCRMConstants {
         FORBIDDEN_UNAUTHORIZED_USER("User does not have access to the application %s"),
         ERROR_CODE_UNEXPECTED("Unexpected error");
 
-
         private final String message;
 
         ErrorMessages(String message) {
+
             this.message = message;
         }
 
         public String getMessage() {
+
             return message;
         }
 
     }
 
+    /**
+     * OAuth DCR service related error codes.
+     */
     public static class ErrorCodes {
-        public static String INVALID_REDIRECT_URI = "invalid_redirect_uri";
-        public static String INVALID_CLIENT_METADATA = "invalid_client_metadata";
-        public static String INVALID_SOFTWARE_STATEMENT = "invalid_software_statement";
-        public static String UNAPPROVED_SOFTWARE_STATEMENT = "unapproved_software_statement";
+
+        public static final String INVALID_REDIRECT_URI = "invalid_redirect_uri";
+        public static final String INVALID_CLIENT_METADATA = "invalid_client_metadata";
+        public static final String INVALID_SOFTWARE_STATEMENT = "invalid_software_statement";
+        public static final String UNAPPROVED_SOFTWARE_STATEMENT = "unapproved_software_statement";
     }
 
     public static final String OAUTH2 = "oauth2";

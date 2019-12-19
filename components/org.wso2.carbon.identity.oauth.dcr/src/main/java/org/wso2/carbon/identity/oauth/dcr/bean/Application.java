@@ -21,57 +21,66 @@ package org.wso2.carbon.identity.oauth.dcr.bean;
 import java.io.Serializable;
 import java.util.List;
 
+/**
+ * This object contains the context related to OAuth application.
+ */
 public class Application implements Serializable {
 
     private static final long serialVersionUID = -4515815791420125411L;
 
-    private String client_name = null;
-    private String client_id = null;
-    private String client_secret = null;
-    private List<String> redirect_uris = null;
+    private String clientName = null;
+    private String clientId = null;
+    private String clientSecret = null;
+    private List<String> redirectUris = null;
 
-    public String getClient_name() {
-        return client_name;
+    public String getClientName() {
+
+        return clientName;
     }
 
-    public void setClient_name(String clientName) {
-        this.client_name = clientName;
+    public void setClientName(String clientName) {
+
+        this.clientName = clientName;
     }
 
-    public String getClient_id() {
-        return client_id;
+    public String getClientId() {
+
+        return clientId;
     }
 
-    public void setClient_id(String client_id) {
-        this.client_id = client_id;
+    public void setClientId(String clientId) {
+
+        this.clientId = clientId;
     }
 
-    public String getClient_secret() {
-        return client_secret;
+    public String getClientSecret() {
+
+        return clientSecret;
     }
 
-    public void setClient_secret(String client_secret) {
-        this.client_secret = client_secret;
+    public void setClientSecret(String clientSecret) {
+
+        this.clientSecret = clientSecret;
     }
 
+    public List<String> getRedirectUris() {
 
-    public List<String> getRedirect_uris() {
-        return redirect_uris;
+        return redirectUris;
     }
 
-    public void setRedirect_uris(List<String> redirect_uris) {
-        this.redirect_uris = redirect_uris;
+    public void setRedirectUris(List<String> redirectUris) {
+
+        this.redirectUris = redirectUris;
     }
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("Application {\n");
-        sb.append("  client_name: ").append(this.client_name).append("\n");
-        sb.append("  client_id: ").append(this.client_id).append("\n");
-        sb.append("  client_secret: ").append(this.client_secret).append("\n");
-        sb.append("  redirect_uris: ").append(this.redirect_uris).append("\n");
-        sb.append("}\n");
-        return sb.toString();
+
+        return "Application {\n" +
+                "  clientName: " + this.clientName + "\n" +
+                "  clientId: " + this.clientId + "\n" +
+                "  clientSecret: " + this.clientSecret + "\n" +
+                "  redirectUris: " + this.redirectUris + "\n" +
+                "}\n";
     }
 }

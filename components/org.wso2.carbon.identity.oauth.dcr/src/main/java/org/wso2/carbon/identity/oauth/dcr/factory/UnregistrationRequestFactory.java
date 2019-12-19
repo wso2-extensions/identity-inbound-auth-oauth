@@ -26,13 +26,14 @@ import org.wso2.carbon.identity.application.authentication.framework.inbound.Ide
 import org.wso2.carbon.identity.oauth.dcr.model.UnregistrationRequest;
 import org.wso2.carbon.identity.oauth.dcr.util.DCRConstants;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.regex.Matcher;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.HttpMethod;
 import javax.ws.rs.core.HttpHeaders;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.regex.Matcher;
 
 /**
  * UnRegistration Request Factory.
@@ -43,7 +44,8 @@ public class UnregistrationRequestFactory extends HttpIdentityRequestFactory {
 
     @Override
     public boolean canHandle(HttpServletRequest request, HttpServletResponse response) throws
-                                                                                       FrameworkRuntimeException {
+            FrameworkRuntimeException {
+
         boolean canHandle = false;
         if (request != null) {
             Matcher matcher = DCRConstants.DCR_ENDPOINT_UNREGISTER_URL_PATTERN.matcher(request.getRequestURI());
@@ -65,7 +67,6 @@ public class UnregistrationRequestFactory extends HttpIdentityRequestFactory {
                 new UnregistrationRequest.DCRUnregisterRequestBuilder();
         create(unregisterRequestBuilder, request, response);
         return unregisterRequestBuilder;
-
     }
 
     @Override
@@ -100,7 +101,5 @@ public class UnregistrationRequestFactory extends HttpIdentityRequestFactory {
             log.error("Can't create unregisterRequestBuilder. builder is not an instance of " +
                     "UnregistrationRequest.DCRUnregisterRequestBuilder");
         }
-
     }
-
 }

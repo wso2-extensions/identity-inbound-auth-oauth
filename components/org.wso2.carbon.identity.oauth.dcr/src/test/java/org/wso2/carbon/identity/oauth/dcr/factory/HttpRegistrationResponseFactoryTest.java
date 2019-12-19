@@ -40,12 +40,10 @@ import javax.ws.rs.core.MediaType;
 
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
-
-import static org.powermock.api.mockito.PowerMockito.when;
-import static org.powermock.api.mockito.PowerMockito.mock;
-import static org.powermock.api.mockito.PowerMockito.whenNew;
 import static org.powermock.api.mockito.PowerMockito.doAnswer;
-
+import static org.powermock.api.mockito.PowerMockito.mock;
+import static org.powermock.api.mockito.PowerMockito.when;
+import static org.powermock.api.mockito.PowerMockito.whenNew;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
