@@ -18,6 +18,9 @@
 
 package org.wso2.carbon.identity.oauth.common;
 
+/**
+ * This class define OAuth related constants.
+ */
 public final class OAuthConstants {
 
     //OIDC request headers.
@@ -130,7 +133,6 @@ public final class OAuthConstants {
     public static final String RESPONSE_HEADERS_PROPERTY = "RESPONSE_HEADERS";
     public static final String CLIENT_AUTHN_CONTEXT = "oauth.client.authentication.context";
 
-
     //Constants used for multiple scopes
     public static final String OIDC_SCOPE_CONFIG_PATH = "oidc-scope-config.xml";
     public static final String OAUTH_SCOPE_BINDING_PATH = "oauth-scope-bindings.xml";
@@ -141,7 +143,15 @@ public final class OAuthConstants {
     //Oauth2 sp expire time configuration.
     public static final String TOKEN_EXPIRE_TIME_RESOURCE_PATH = "/identity/config/spTokenExpireTime";
 
+    private OAuthConstants() {
+
+    }
+
+    /**
+     * This class define grant types constants.
+     */
     public static class GrantTypes {
+
         public static final String IMPLICIT = "implicit";
         public static final String TOKEN = "token";
         public static final String CLIENT_CREDENTIALS = "client_credentials";
@@ -151,10 +161,15 @@ public final class OAuthConstants {
         public static final String REFRESH_TOKEN = "refresh_token";
 
         private GrantTypes() {
+
         }
     }
 
+    /**
+     * Define OAuth versions.
+     */
     public static class OAuthVersions {
+
         public static final String VERSION_1A = "OAuth-1.0a";
         public static final String VERSION_2 = "OAuth-2.0";
 
@@ -163,8 +178,11 @@ public final class OAuthConstants {
         }
     }
 
-    // OAuth1.0a request parameters
+    /**
+     * Define OAuth1.0a request parameters.
+     */
     public static class OAuth10AParams {
+
         public static final String OAUTH_VERSION = "oauth_version";
         public static final String OAUTH_NONCE = "oauth_nonce";
         public static final String OAUTH_TIMESTAMP = "oauth_timestamp";
@@ -180,8 +198,11 @@ public final class OAuthConstants {
         }
     }
 
-    // OAuth2.0 request parameters
+    /**
+     * Define OAuth2.0 request parameters
+     */
     public static class OAuth20Params {
+
         public static final String SCOPE = "scope";
         public static final String PROMPT = "prompt";
         public static final String NONCE = "nonce";
@@ -200,8 +221,11 @@ public final class OAuthConstants {
         }
     }
 
-    // OIDC prompt values
+    /**
+     * Define OIDC prompt values
+     */
     public static class Prompt {
+
         public static final String LOGIN = "login";
         public static final String CONSENT = "consent";
         public static final String NONE = "none";
@@ -212,8 +236,11 @@ public final class OAuthConstants {
         }
     }
 
-    // OAuth1.0a endpoints
+    /**
+     * Define OAuth1.0a endpoints.
+     */
     public static class OAuth10AEndpoints {
+
         public static final String ACCESS_TOKEN_URL = "/access-token";
         public static final String REQUEST_TOKEN_URL = "/request-token";
         public static final String AUTHORIZE_TOKEN_URL = "/authorize-token";
@@ -223,8 +250,11 @@ public final class OAuthConstants {
         }
     }
 
-    // OAuth2.0 endpoints
+    /**
+     * Define OAuth2.0 endpoints
+     */
     public static class OAuth20Endpoints {
+
         public static final String OAUTH20_ACCESS_TOKEN_URL = "/token";
         public static final String OAUTH20_AUTHORIZE_TOKEN_URL = "/authorize";
 
@@ -233,7 +263,11 @@ public final class OAuthConstants {
         }
     }
 
+    /**
+     * Define consent related constants.
+     */
     public static class Consent {
+
         public static final String DENY = "deny";
         public static final String APPROVE = "approve";
         public static final String APPROVE_ALWAYS = "approveAlways";
@@ -243,7 +277,11 @@ public final class OAuthConstants {
         }
     }
 
+    /**
+     * Define constants for each token state.
+     */
     public static class TokenStates {
+
         public static final String TOKEN_STATE_ACTIVE = "ACTIVE";
         public static final String TOKEN_STATE_REVOKED = "REVOKED";
         public static final String TOKEN_STATE_EXPIRED = "EXPIRED";
@@ -254,7 +292,11 @@ public final class OAuthConstants {
         }
     }
 
+    /**
+     * Define constants for authorization code state.
+     */
     public static class AuthorizationCodeState {
+
         public static final String ACTIVE = "ACTIVE";
         public static final String REVOKED = "REVOKED";
         public static final String EXPIRED = "EXPIRED";
@@ -265,7 +307,11 @@ public final class OAuthConstants {
         }
     }
 
+    /**
+     * Define constants for OAuth app states.
+     */
     public static class OauthAppStates {
+
         public static final String APP_STATE_ACTIVE = "ACTIVE";
         public static final String APP_STATE_REVOKED = "REVOKED";
 
@@ -274,21 +320,34 @@ public final class OAuthConstants {
         }
     }
 
+    /**
+     * Define constants for OAuth errors.
+     */
     public static class OAuthError {
+
+        private OAuthError() {
+
+        }
+
+        /**
+         * Define Token response constants.
+         */
         public static class TokenResponse {
-            public static final String UNSUPPORTED_CLIENT_AUTHENTICATION_METHOD = "unsupported_client_authentication_method";
+
+            public static final String UNSUPPORTED_CLIENT_AUTHENTICATION_METHOD =
+                    "unsupported_client_authentication_method";
 
             private TokenResponse() {
 
             }
         }
-
-        private OAuthError() {
-
-        }
     }
 
+    /**
+     * Define supported scope constants.
+     */
     public static class Scope {
+
         public static final String OPENID = "openid";
         public static final String OAUTH2 = "oauth2";
         public static final String OIDC = "oidc";
@@ -298,7 +357,11 @@ public final class OAuthConstants {
         }
     }
 
+    /**
+     * Define constants for user types.
+     */
     public static class UserType {
+
         public static final String APPLICATION = "APPLICATION";
         public static final String APPLICATION_USER = "APPLICATION_USER";
         public static final String FEDERATED_USER_DOMAIN_PREFIX = "FEDERATED";
@@ -311,7 +374,11 @@ public final class OAuthConstants {
         }
     }
 
+    /**
+     * OIDC claims constants.
+     */
     public static class OIDCClaims {
+
         public static final String UPDATED_AT = "updated_at";
         public static final String PHONE_NUMBER_VERIFIED = "phone_number_verified";
         public static final String EMAIL_VERIFIED = "email_verified";
@@ -330,10 +397,16 @@ public final class OAuthConstants {
         public static final String TENANT = "tenant";
         public static final String USERSTORE = "userstore";
 
-        private OIDCClaims() {}
+        private OIDCClaims() {
+
+        }
     }
 
+    /**
+     * OIDC config property constants.
+     */
     public static class OIDCConfigProperties {
+
         public static final String REQUEST_OBJECT_SIGNED = "requestObjectSigned";
         public static final String ID_TOKEN_ENCRYPTED = "idTokenEncrypted";
         public static final String ID_TOKEN_ENCRYPTION_ALGORITHM = "idTokenEncryptionAlgorithm";
@@ -348,10 +421,16 @@ public final class OAuthConstants {
         public static final String RENEW_REFRESH_TOKEN = "renewRefreshToken";
         public static final String TOKEN_BINDING_TYPE = "tokenBindingType";
 
-        private OIDCConfigProperties() { }
+        private OIDCConfigProperties() {
+
+        }
     }
 
+    /**
+     * Signature algorithms constants.
+     */
     public static class SignatureAlgorithms {
+
         public static final String NONE = "NONE";
         public static final String SHA256_WITH_RSA = "SHA256withRSA";
         public static final String SHA384_WITH_RSA = "SHA384withRSA";
@@ -366,15 +445,16 @@ public final class OAuthConstants {
         public static final String SHA384 = "SHA-384";
         public static final String SHA512 = "SHA-512";
 
-        private SignatureAlgorithms() {}
+        private SignatureAlgorithms() {
+
+        }
     }
 
+    /**
+     * Define token binding constants.
+     */
     public static class TokenBindings {
 
         public static final String NONE = "NONE";
-    }
-
-    private OAuthConstants() {
-
     }
 }

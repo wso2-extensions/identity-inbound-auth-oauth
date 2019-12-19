@@ -11,6 +11,7 @@ import org.testng.annotations.Test;
 
 import java.util.HashMap;
 import java.util.Map;
+
 import javax.servlet.http.HttpServletRequest;
 
 import static org.powermock.api.mockito.PowerMockito.mock;
@@ -27,15 +28,18 @@ public class NTLMAuthenticationValidatorTest {
 
     @BeforeMethod
     public void setUp() throws Exception {
+
         testedValidator = new NTLMAuthenticationValidator();
     }
 
     @AfterMethod
     public void tearDown() throws Exception {
+
     }
 
     @DataProvider(name = "Request Provider")
     public Object[][] getRequestParams() {
+
         Map<String, String> allParamPresentMap = new HashMap<>();
         allParamPresentMap.put(OAuth.OAUTH_GRANT_TYPE, GrantType.IWA_NTLM.toString());
         allParamPresentMap.put(OAuthConstants.WINDOWS_TOKEN, "ntlm_token");
@@ -65,6 +69,7 @@ public class NTLMAuthenticationValidatorTest {
 
     @Test(dataProvider = "Request Provider")
     public void testValidateRequiredParameters(Map<String, String> headerMap, boolean shouldPass) throws Exception {
+
         HttpServletRequest mockRequest = mock(HttpServletRequest.class);
         for (Map.Entry<String, String> entry : headerMap.entrySet()) {
             when(mockRequest.getParameter(entry.getKey())).thenReturn(entry.getValue());
