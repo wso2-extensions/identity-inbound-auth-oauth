@@ -62,7 +62,8 @@ public class OpenIDConnectUserEndpoint {
         String userInfoResponse;
         try {
             // validate the request
-            UserInfoRequestValidator requestValidator = UserInfoEndpointConfig.getInstance().getUserInfoRequestValidator();
+            UserInfoRequestValidator requestValidator = UserInfoEndpointConfig.getInstance().
+                    getUserInfoRequestValidator();
             String accessToken = requestValidator.validateRequest(request);
 
             // validate the access token

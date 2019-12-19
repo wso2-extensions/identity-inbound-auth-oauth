@@ -85,8 +85,8 @@ public class UserInfoISAccessTokenValidator implements UserInfoAccessTokenValida
                     "Valid token binding value not present in the request.");
         }
 
-        OAuth2TokenValidationResponseDTO.AuthorizationContextToken authorizationContextToken = response.new AuthorizationContextToken(
-                accessToken.getTokenType(), accessToken.getIdentifier());
+        OAuth2TokenValidationResponseDTO.AuthorizationContextToken authorizationContextToken = response.
+                new AuthorizationContextToken(accessToken.getTokenType(), accessToken.getIdentifier());
         response.setAuthorizationContextToken(authorizationContextToken);
         return response;
     }

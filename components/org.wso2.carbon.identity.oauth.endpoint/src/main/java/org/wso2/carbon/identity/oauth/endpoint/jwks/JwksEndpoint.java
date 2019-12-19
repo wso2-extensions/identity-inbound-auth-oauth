@@ -46,6 +46,7 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import javax.jws.WebService;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -148,7 +149,6 @@ public class JwksEndpoint {
     private JSONArray createKeysetUsingOldKeyID(JSONArray jwksArray, Map<String, Certificate> certificates,
                                                 JWSAlgorithm algorithm) throws IdentityOAuth2Exception, ParseException {
 
-        JSONArray OldJwksArray = jwksArray;
         for (Map.Entry certificateWithAlias : certificates.entrySet()) {
             Certificate cert = (Certificate) certificateWithAlias.getValue();
             String alias = (String) certificateWithAlias.getKey();
@@ -159,7 +159,7 @@ public class JwksEndpoint {
             jwk.keyUse(KeyUse.parse(KEY_USE));
             jwksArray.put(jwk.build().toJSONObject());
         }
-        return OldJwksArray;
+        return jwksArray;
     }
 
     /**

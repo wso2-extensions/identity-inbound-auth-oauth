@@ -39,6 +39,7 @@ import org.wso2.carbon.identity.oauth2.ResponseHeader;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationResponseDTO;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
@@ -110,7 +111,8 @@ public class OAuthRevocationEndpoint {
 
     }
 
-    private Response handleRevokeResponse(String callback, OAuthRevocationResponseDTO oauthRevokeResp) throws OAuthSystemException {
+    private Response handleRevokeResponse(String callback, OAuthRevocationResponseDTO oauthRevokeResp)
+            throws OAuthSystemException {
 
         OAuthResponse response;
         if (isNotEmpty(callback)) {

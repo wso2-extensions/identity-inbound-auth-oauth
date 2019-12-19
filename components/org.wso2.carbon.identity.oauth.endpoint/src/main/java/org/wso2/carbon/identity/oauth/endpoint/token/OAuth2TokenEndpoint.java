@@ -114,7 +114,8 @@ public class OAuth2TokenEndpoint {
         }
     }
 
-    private CarbonOAuthTokenRequest handleInvalidRequest(OAuthProblemException e) throws TokenEndpointBadRequestException {
+    private CarbonOAuthTokenRequest handleInvalidRequest(OAuthProblemException e)
+            throws TokenEndpointBadRequestException {
 
         if (isInvalidRequest(e) || isUnsupportedGrantType(e)) {
             if (log.isDebugEnabled()) {
@@ -142,7 +143,8 @@ public class OAuth2TokenEndpoint {
         }
     }
 
-    private void validateOAuthApplication(OAuthClientAuthnContext oAuthClientAuthnContext) throws InvalidApplicationClientException, TokenEndpointBadRequestException {
+    private void validateOAuthApplication(OAuthClientAuthnContext oAuthClientAuthnContext)
+            throws InvalidApplicationClientException, TokenEndpointBadRequestException {
 
         if (isNotBlank(oAuthClientAuthnContext.getClientId()) && !oAuthClientAuthnContext
                 .isMultipleAuthenticatorsEngaged()) {
