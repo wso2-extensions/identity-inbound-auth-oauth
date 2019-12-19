@@ -23,6 +23,9 @@ import org.apache.axis2.context.ConfigurationContext;
 import org.wso2.carbon.identity.oauth.stub.OAuthServiceStub;
 import org.wso2.carbon.identity.oauth.stub.types.Parameters;
 
+/**
+ * Client for OAuth service.
+ */
 public class OAuthServiceClient {
 
     private OAuthServiceStub stub;
@@ -36,31 +39,38 @@ public class OAuthServiceClient {
      */
     public OAuthServiceClient(String backendServerURL, ConfigurationContext configCtx)
             throws AxisFault {
+
         String serviceURL = backendServerURL + "OAuthService";
         stub = new OAuthServiceStub(configCtx, serviceURL);
     }
 
     public Parameters getAccessToken(Parameters params) throws Exception {
+
         return stub.getAccessToken(params);
     }
 
     public Parameters getOAuthApplicationData(Parameters params) throws Exception {
+
         return stub.authorizeOauthRequestToken(params);
     }
 
     public Parameters getOauthRequestToken(Parameters params) throws Exception {
+
         return stub.getOauthRequestToken(params);
     }
 
     public Parameters authorizeOauthRequestToken(Parameters params) throws Exception {
+
         return stub.authorizeOauthRequestToken(params);
     }
 
     public Parameters getScope(String token) throws Exception {
+
         return stub.getScopeAndAppName(token);
     }
 
     public Parameters removeOAuthApplicationData(Parameters params) throws Exception {
+
         return stub.validateAuthenticationRequest(params);
     }
 }

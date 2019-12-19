@@ -35,6 +35,9 @@ import org.wso2.carbon.identity.oauth.stub.dto.TokenBindingMetaDataDTO;
 
 import java.rmi.RemoteException;
 
+/**
+ * Admin client for OAuth service.
+ */
 public class OAuthAdminClient {
 
     private static String[] allowedGrantTypes = null;
@@ -125,7 +128,8 @@ public class OAuthAdminClient {
         return stub.getAppsAuthorizedByUser();
     }
 
-    public OAuthRevocationResponseDTO revokeAuthzForAppsByRessourceOwner(OAuthRevocationRequestDTO reqDTO) throws Exception {
+    public OAuthRevocationResponseDTO revokeAuthzForAppsByRessourceOwner(OAuthRevocationRequestDTO reqDTO)
+            throws Exception {
 
         return stub.revokeAuthzForAppsByResoureOwner(reqDTO);
     }
@@ -257,8 +261,9 @@ public class OAuthAdminClient {
     /**
      * To remove persisted scopes and claims.
      *
-     * @param scope@throws OAuthAdminServiceIdentityOAuthAdminException if an error occurs when deleting scopes and claims.
-     * @throws RemoteException if an exception occured during remote call.
+     * @param scope
+     * @throws OAuthAdminServiceIdentityOAuthAdminException If an error occurs when deleting scopes and claims.
+     * @throws RemoteException                              If an exception occured during remote call.
      */
     public void deleteScope(String scope)
             throws OAuthAdminServiceIdentityOAuthAdminException, RemoteException {
@@ -271,8 +276,8 @@ public class OAuthAdminClient {
      *
      * @param scope     scope name
      * @param addClaims addClaims
-     * @throws RemoteException                          if an exception occured during remote call.
-     * @throws OAuthAdminServiceIdentityOAuthAdminException if an error occurs when adding new claims for scope.
+     * @throws RemoteException                              If an exception occured during remote call.
+     * @throws OAuthAdminServiceIdentityOAuthAdminException If an error occurs when adding new claims for scope.
      */
     public void updateScope(String scope, String[] addClaims, String[] deleteClaims) throws RemoteException,
             OAuthAdminServiceIdentityOAuthAdminException {
