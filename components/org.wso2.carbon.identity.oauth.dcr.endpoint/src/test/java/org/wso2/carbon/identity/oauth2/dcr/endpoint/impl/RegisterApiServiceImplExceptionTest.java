@@ -41,7 +41,6 @@ import org.wso2.carbon.identity.oauth2.dcr.endpoint.dto.UpdateRequestDTO;
 import org.wso2.carbon.identity.oauth2.dcr.endpoint.exceptions.DCRMEndpointException;
 import org.wso2.carbon.identity.oauth2.dcr.endpoint.util.DCRMUtils;
 
-
 import java.util.ArrayList;
 import java.util.List;
 
