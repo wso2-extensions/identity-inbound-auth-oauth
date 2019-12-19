@@ -29,10 +29,10 @@ import org.testng.IObjectFactory;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
-import org.wso2.carbon.identity.oauth.scope.endpoint.Exceptions.ScopeEndpointException;
 import org.wso2.carbon.identity.oauth.scope.endpoint.dto.ErrorDTO;
 import org.wso2.carbon.identity.oauth.scope.endpoint.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth.scope.endpoint.dto.ScopeToUpdateDTO;
+import org.wso2.carbon.identity.oauth.scope.endpoint.exceptions.ScopeEndpointException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
@@ -41,8 +41,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
-import javax.ws.rs.core.Response;
 
+import javax.ws.rs.core.Response;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
@@ -50,33 +50,31 @@ import static org.testng.Assert.assertTrue;
 
 public class ScopeUtilsTest extends PowerMockTestCase {
 
-    private final String CLIENT_NAME = "clientname";
-    private final String CODE = "AJYRKLWB68NSB9";
-    private final String MESSAGE = "Lifecycle exception occurred";
-    private final String DESCRIPTION = "Error occurred while changing lifecycle state";
-    private final String SCOPE_DESCRIPTION = "This is a sample scope";
-
     private static final Log log = LogFactory.getLog(ScopeUtilsTest.class);
-
+    private static final String CLIENT_NAME = "clientname";
+    private static final String CODE = "AJYRKLWB68NSB9";
+    private static final String MESSAGE = "Lifecycle exception occurred";
+    private static final String DESCRIPTION = "Error occurred while changing lifecycle state";
+    private static final String SCOPE_DESCRIPTION = "This is a sample scope";
     @Mock
     BundleContext bundleContext;
 
     @Mock
     ServiceTracker serviceTracker;
-
+    @Mock
+    OAuth2ScopeService service;
     @Mock
     private IdentityOAuth2ScopeException identityOAuth2ScopeException;
 
-    @Mock
-    OAuth2ScopeService service;
-
     @ObjectFactory
     public IObjectFactory getObjectFactory() {
+
         return new org.powermock.modules.testng.PowerMockObjectFactory();
     }
 
     @Test(description = "Testing getErrorDTO")
     public void testGetErrorDTO() throws Exception {
+
         ErrorDTO errorDTOexpected = new ErrorDTO();
         errorDTOexpected.setCode(CODE);
         errorDTOexpected.setMessage(MESSAGE);
@@ -84,8 +82,10 @@ public class ScopeUtilsTest extends PowerMockTestCase {
 
         ErrorDTO errorDTO1 = ScopeUtils.getErrorDTO(MESSAGE, CODE, DESCRIPTION);
         assertEquals(errorDTO1.getCode(), errorDTOexpected.getCode(), "Actual code is not match for expected code");
-        assertEquals(errorDTO1.getMessage(), errorDTOexpected.getMessage(), "Actual message is not match for expected message");
-        assertEquals(errorDTO1.getDescription(), errorDTOexpected.getDescription(), "Actual description is not match for expected description");
+        assertEquals(errorDTO1.getMessage(), errorDTOexpected.getMessage(),
+                "Actual message is not match for expected message");
+        assertEquals(errorDTO1.getDescription(), errorDTOexpected.getDescription(),
+                "Actual description is not match for expected description");
     }
 
     @Test(description = "Testing getScope")
@@ -99,13 +99,16 @@ public class ScopeUtilsTest extends PowerMockTestCase {
 
         Scope scope1 = ScopeUtils.getScope(scopeDTO);
         assertEquals(scope1.getName(), CLIENT_NAME, "Actual name is not match for expected name");
-        assertEquals(scope1.getDisplayName(), CLIENT_NAME, "Actual display name is not match for expected display name");
-        assertEquals(scope1.getDescription(), SCOPE_DESCRIPTION, "Actual description is not match for expected description");
+        assertEquals(scope1.getDisplayName(), CLIENT_NAME,
+                "Actual display name is not match for expected display name");
+        assertEquals(scope1.getDescription(), SCOPE_DESCRIPTION,
+                "Actual description is not match for expected description");
         assertEquals(scope1.getBindings(), binding, "Actual binding is not match for expected binding");
     }
 
     @Test(description = "Testing getScopeDTO")
     public void testGetScopeDTO() throws Exception {
+
         ArrayList bindings = new ArrayList();
         bindings.add("binding1");
         Scope scope = new Scope(CLIENT_NAME, CLIENT_NAME, SCOPE_DESCRIPTION, bindings);
@@ -113,8 +116,10 @@ public class ScopeUtilsTest extends PowerMockTestCase {
         ScopeDTO scopeDTO1 = ScopeUtils.getScopeDTO(scope);
         assertEquals(scopeDTO1.getBindings(), bindings, "Actual binding is not match for expected binding");
         assertTrue(scopeDTO1.getBindings().get(0).contains("binding1"));
-        assertEquals(scopeDTO1.getDisplayName(), CLIENT_NAME, "Actual display name is not match for expected display name");
-        assertEquals(scopeDTO1.getDescription(), SCOPE_DESCRIPTION, "Actual description is not match for expected description");
+        assertEquals(scopeDTO1.getDisplayName(), CLIENT_NAME,
+                "Actual display name is not match for expected display name");
+        assertEquals(scopeDTO1.getDescription(), SCOPE_DESCRIPTION,
+                "Actual description is not match for expected description");
         assertEquals(scopeDTO1.getName(), CLIENT_NAME, "Actual name is not match for expected name");
     }
 
@@ -128,11 +133,13 @@ public class ScopeUtilsTest extends PowerMockTestCase {
 
         Scope scope1 = ScopeUtils.getUpdatedScope(sc, "Actual name is not match for expected name");
         assertEquals(scope1.getBindings(), bindings, "Actual binding is not match for expected binding");
-        assertEquals(scope1.getDescription(), SCOPE_DESCRIPTION, "Actual description is not match for expected description");
+        assertEquals(scope1.getDescription(), SCOPE_DESCRIPTION,
+                "Actual description is not match for expected description");
     }
 
     @Test(description = "Testing getScopeDTO")
     public void testGetScopeDTOs() throws Exception {
+
         int scopeName;
         int scopeSize = 15;
         Set<Scope> scopes = new HashSet<>();
@@ -148,6 +155,7 @@ public class ScopeUtilsTest extends PowerMockTestCase {
 
     @DataProvider(name = "BuildScopeEndpointException")
     public Object[][] buildScopeEndpointException() {
+
         Response.Status status = Response.Status.BAD_REQUEST;
         Throwable throwable1 = new ScopeEndpointException(status);
         Throwable throwable2 = new RuntimeException("BAD_REQUEST_INVALID_REDIRECT_URI");
@@ -161,7 +169,9 @@ public class ScopeUtilsTest extends PowerMockTestCase {
     }
 
     @Test(dataProvider = "BuildScopeEndpointException")
-    public void testHandleErrorResponse(Response.Status status, Throwable throwable, boolean isServerException) throws Exception {
+    public void testHandleErrorResponse(Response.Status status, Throwable throwable, boolean isServerException)
+            throws Exception {
+
         String message = "Scope";
         // To check whether exception generated correctly.
         try {

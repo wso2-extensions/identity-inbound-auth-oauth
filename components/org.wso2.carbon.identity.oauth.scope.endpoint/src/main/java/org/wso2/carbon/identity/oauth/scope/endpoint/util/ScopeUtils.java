@@ -18,11 +18,11 @@ package org.wso2.carbon.identity.oauth.scope.endpoint.util;
 
 import org.apache.commons.logging.Log;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
-import org.wso2.carbon.identity.oauth.scope.endpoint.Exceptions.ScopeEndpointException;
 import org.wso2.carbon.identity.oauth.scope.endpoint.dto.ErrorDTO;
 import org.wso2.carbon.identity.oauth.scope.endpoint.dto.ScopeBindingDTO;
 import org.wso2.carbon.identity.oauth.scope.endpoint.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth.scope.endpoint.dto.ScopeToUpdateDTO;
+import org.wso2.carbon.identity.oauth.scope.endpoint.exceptions.ScopeEndpointException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants;
@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
 import javax.ws.rs.core.Response;
 
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.DEFAULT_SCOPE_BINDING;
@@ -43,6 +44,7 @@ import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.DEFAULT_SCOPE
 public class ScopeUtils {
 
     public static OAuth2ScopeService getOAuth2ScopeService() {
+
         return (OAuth2ScopeService) PrivilegedCarbonContext.getThreadLocalCarbonContext()
                 .getOSGiService(OAuth2ScopeService.class, null);
     }
@@ -50,9 +52,9 @@ public class ScopeUtils {
     /**
      * Logs the error, builds a ScopeEndpointException with specified details and throws it
      *
-     * @param status      response status
-     * @param message     error message
-     * @param throwable   throwable
+     * @param status    response status
+     * @param message   error message
+     * @param throwable throwable
      * @throws ScopeEndpointException
      */
     public static void handleErrorResponse(Response.Status status, String message, Throwable throwable,
@@ -80,8 +82,9 @@ public class ScopeUtils {
     private static ScopeEndpointException buildScopeEndpointException(Response.Status status, String message,
                                                                       String code, String description,
                                                                       boolean isServerException) {
+
         ErrorDTO errorDTO = getErrorDTO(message, code, description);
-        if(isServerException) {
+        if (isServerException) {
             return new ScopeEndpointException(status);
         } else {
             return new ScopeEndpointException(status, errorDTO);
@@ -95,6 +98,7 @@ public class ScopeUtils {
      * @return A generic errorDTO with the specified details
      */
     public static ErrorDTO getErrorDTO(String message, String code, String description) {
+
         ErrorDTO errorDTO = new ErrorDTO();
         errorDTO.setCode(code);
         errorDTO.setMessage(message);
@@ -151,6 +155,7 @@ public class ScopeUtils {
     }
 
     public static ScopeDTO getScopeDTO(Scope scope) {
+
         ScopeDTO scopeDTO = new ScopeDTO();
         scopeDTO.setName(scope.getName());
         scopeDTO.setDisplayName(scope.getDisplayName());
@@ -161,6 +166,7 @@ public class ScopeUtils {
     }
 
     public static Set<ScopeDTO> getScopeDTOs(Set<Scope> scopes) {
+
         Set<ScopeDTO> scopeDTOs = new HashSet<>();
         for (Scope scope : scopes) {
             ScopeDTO scopeDTO = new ScopeDTO();
