@@ -28,12 +28,16 @@ import org.wso2.carbon.identity.oauth2.dcr.endpoint.util.DCRMUtils;
 
 import javax.ws.rs.core.Response;
 
+/**
+ * API Service implementation to manage a DCR application.
+ */
 public class RegisterApiServiceImpl extends RegisterApiService {
 
     private static final Log LOG = LogFactory.getLog(RegisterApiServiceImpl.class);
 
     @Override
     public Response deleteApplication(String clientId) {
+
         try {
             DCRMUtils.getOAuth2DCRMService().deleteApplication(clientId);
         } catch (DCRMClientException e) {
@@ -52,6 +56,7 @@ public class RegisterApiServiceImpl extends RegisterApiService {
 
     @Override
     public Response getApplication(String clientId) {
+
         Application application = null;
         try {
             application = DCRMUtils.getOAuth2DCRMService().getApplication(clientId);
@@ -71,9 +76,11 @@ public class RegisterApiServiceImpl extends RegisterApiService {
 
     @Override
     public Response registerApplication(RegistrationRequestDTO registrationRequest) {
+
         Application application = null;
         try {
-            application = DCRMUtils.getOAuth2DCRMService().registerApplication(DCRMUtils.getApplicationRegistrationRequest(registrationRequest));
+            application = DCRMUtils.getOAuth2DCRMService()
+                    .registerApplication(DCRMUtils.getApplicationRegistrationRequest(registrationRequest));
         } catch (DCRMClientException e) {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Client error while registering application \n" + registrationRequest.toString(), e);
@@ -90,9 +97,11 @@ public class RegisterApiServiceImpl extends RegisterApiService {
 
     @Override
     public Response updateApplication(UpdateRequestDTO updateRequest, String clientId) {
+
         Application application = null;
         try {
-            application = DCRMUtils.getOAuth2DCRMService().updateApplication(DCRMUtils.getApplicationUpdateRequest(updateRequest), clientId);
+            application = DCRMUtils.getOAuth2DCRMService()
+                    .updateApplication(DCRMUtils.getApplicationUpdateRequest(updateRequest), clientId);
         } catch (DCRMClientException e) {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Client error while updating application \n" + updateRequest.toString(), e);

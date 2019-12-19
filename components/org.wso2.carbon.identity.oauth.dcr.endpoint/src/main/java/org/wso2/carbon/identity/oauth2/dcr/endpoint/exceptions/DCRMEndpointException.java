@@ -14,22 +14,27 @@
  *  limitations under the License.
  */
 
-package org.wso2.carbon.identity.oauth2.dcr.endpoint.Exceptions;
+package org.wso2.carbon.identity.oauth2.dcr.endpoint.exceptions;
 
 import org.wso2.carbon.identity.oauth2.dcr.endpoint.dto.ErrorDTO;
 
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
 
+/**
+ * Exception class to handle DCRM endpoint related exceptions.
+ */
 public class DCRMEndpointException extends WebApplicationException {
 
     public DCRMEndpointException(Response.Status status, ErrorDTO errorDTO) {
+
         super(Response.status(status)
                 .entity(errorDTO)
                 .build());
     }
 
     public DCRMEndpointException(Response.Status status) {
+
         super(Response.status(status)
                 .build());
     }
