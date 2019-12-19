@@ -40,11 +40,11 @@ import javax.ws.rs.core.MediaType;
  */
 public class HttpRegistrationResponseFactory extends HttpIdentityResponseFactory {
 
-    public static String INVALID_REDIRECT_URI = "invalid_redirect_uri";
-    public static String INVALID_CLIENT_METADATA = "invalid_client_metadata";
-    public static String INVALID_SOFTWARE_STATEMENT = "invalid_software_statement";
-    public static String UNAPPROVED_SOFTWARE_STATEMENT = "unapproved_software_statement";
-    public static String BACKEND_FAILED = "backend_failed";
+    public static final String INVALID_REDIRECT_URI = "invalid_redirect_uri";
+    public static final String INVALID_CLIENT_METADATA = "invalid_client_metadata";
+    public static final String INVALID_SOFTWARE_STATEMENT = "invalid_software_statement";
+    public static final String UNAPPROVED_SOFTWARE_STATEMENT = "unapproved_software_statement";
+    public static final String BACKEND_FAILED = "backend_failed";
     private static final Log log = LogFactory.getLog(HttpRegistrationResponseFactory.class);
 
     @Override
