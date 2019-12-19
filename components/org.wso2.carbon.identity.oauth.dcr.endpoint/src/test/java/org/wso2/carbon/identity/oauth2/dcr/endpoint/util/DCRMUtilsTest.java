@@ -23,19 +23,20 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMException;
-import org.wso2.carbon.identity.oauth2.dcr.endpoint.Exceptions.DCRMEndpointException;
 import org.wso2.carbon.identity.oauth2.dcr.endpoint.dto.RegistrationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dcr.endpoint.dto.UpdateRequestDTO;
+import org.wso2.carbon.identity.oauth2.dcr.endpoint.exceptions.DCRMEndpointException;
 
-import javax.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.List;
+
+import javax.ws.rs.core.Response;
 
 public class DCRMUtilsTest {
 
     private List<String> redirectUris = new ArrayList<>();
     private List<String> grantTypes = new ArrayList<>();
-    private final String client_name = "Application";
+    private final String clientName = "Application";
 
     @BeforeMethod
     public void setUp() throws Exception {
@@ -48,12 +49,12 @@ public class DCRMUtilsTest {
     public void testGetApplicationRegistrationRequest() throws Exception {
 
         RegistrationRequestDTO registrationRequestDTO = new RegistrationRequestDTO();
-        registrationRequestDTO.setClientName(client_name);
+        registrationRequestDTO.setClientName(clientName);
         registrationRequestDTO.setRedirectUris(redirectUris);
         registrationRequestDTO.setGrantTypes(grantTypes);
         Assert.assertNotNull(DCRMUtils.getApplicationRegistrationRequest(registrationRequestDTO));
         Assert.assertEquals(DCRMUtils.getApplicationRegistrationRequest
-                (registrationRequestDTO).getClientName(), client_name);
+                (registrationRequestDTO).getClientName(), clientName);
         Assert.assertEquals(DCRMUtils.getApplicationRegistrationRequest
                 (registrationRequestDTO).getGrantTypes(), grantTypes);
         Assert.assertEquals(DCRMUtils.getApplicationRegistrationRequest
@@ -64,12 +65,12 @@ public class DCRMUtilsTest {
     public void testGetApplicationUpdateRequest() throws Exception {
 
         UpdateRequestDTO updateRequestDTO = new UpdateRequestDTO();
-        updateRequestDTO.setClientName(client_name);
+        updateRequestDTO.setClientName(clientName);
         updateRequestDTO.setRedirectUris(redirectUris);
         updateRequestDTO.setGrantTypes(grantTypes);
         Assert.assertNotNull(DCRMUtils.getApplicationUpdateRequest(updateRequestDTO));
         Assert.assertEquals(DCRMUtils.getApplicationUpdateRequest
-                (updateRequestDTO).getClientName(), client_name);
+                (updateRequestDTO).getClientName(), clientName);
         Assert.assertEquals(DCRMUtils.getApplicationUpdateRequest
                 (updateRequestDTO).getGrantTypes(), grantTypes);
         Assert.assertEquals(DCRMUtils.getApplicationUpdateRequest
@@ -81,7 +82,8 @@ public class DCRMUtilsTest {
 
         DCRMException dcrmException1 = new DCRMException(null, "error code null");
         DCRMException dcrmException2 = new DCRMException("CONFLICT_", "error code start with conflict");
-        DCRMException dcrmException3 = new DCRMException("BAD_REQUEST_INVALID_REDIRECT_URI", "error code for invalid redirect URI");
+        DCRMException dcrmException3 =
+                new DCRMException("BAD_REQUEST_INVALID_REDIRECT_URI", "error code for invalid redirect URI");
         DCRMException dcrmException4 = new DCRMException("NOT_FOUND_", "error code start with not found");
         DCRMException dcrmException5 = new DCRMException("BAD_REQUEST_", "error code start with bad request");
         return new Object[][]{
@@ -105,7 +107,8 @@ public class DCRMUtilsTest {
 
         Response.Status status = Response.Status.BAD_REQUEST;
         Log log = LogFactory.getLog(DCRMUtils.class);
-        Throwable throwable1 = new DCRMException("BAD_REQUEST_INVALID_REDIRECT_URI", "error code for invalid redirect URI");
+        Throwable throwable1 =
+                new DCRMException("BAD_REQUEST_INVALID_REDIRECT_URI", "error code for invalid redirect URI");
         Throwable throwable2 = new RuntimeException("BAD_REQUEST_INVALID_REDIRECT_URI");
 
         return new Object[][]{

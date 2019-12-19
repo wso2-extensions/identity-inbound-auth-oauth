@@ -35,15 +35,16 @@ import org.wso2.carbon.identity.oauth.OAuthAdminService;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMException;
 import org.wso2.carbon.identity.oauth.dcr.internal.DCRDataHolder;
 import org.wso2.carbon.identity.oauth.dcr.service.DCRMService;
-import org.wso2.carbon.identity.oauth2.dcr.endpoint.Exceptions.DCRMEndpointException;
 import org.wso2.carbon.identity.oauth2.dcr.endpoint.TestUtil;
 import org.wso2.carbon.identity.oauth2.dcr.endpoint.dto.RegistrationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dcr.endpoint.dto.UpdateRequestDTO;
+import org.wso2.carbon.identity.oauth2.dcr.endpoint.exceptions.DCRMEndpointException;
 import org.wso2.carbon.identity.oauth2.dcr.endpoint.util.DCRMUtils;
 
-import javax.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.List;
+
+import javax.ws.rs.core.Response;
 
 import static org.mockito.Matchers.any;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
