@@ -28,18 +28,22 @@ public class DCRException extends FrameworkException {
     private static final long serialVersionUID = -3151279311929070297L;
 
     public DCRException(String message) {
+
         super(message);
     }
 
     public DCRException(String errorCode, String message) {
+
         super(errorCode, message);
     }
 
     public DCRException(String message, Throwable cause) {
+
         super(message, cause);
     }
 
     public DCRException(String errorCode, String message, Throwable cause) {
+
         super(errorCode, message, cause);
     }
 }

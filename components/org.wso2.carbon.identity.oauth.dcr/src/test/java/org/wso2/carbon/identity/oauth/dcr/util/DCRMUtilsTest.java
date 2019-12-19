@@ -25,8 +25,6 @@ import org.wso2.carbon.identity.oauth.dcr.exception.DCRMClientException;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMServerException;
 import org.wso2.carbon.identity.testutil.IdentityBaseTest;
 
-import static org.testng.Assert.fail;
-
 public class DCRMUtilsTest extends IdentityBaseTest {
 
     @DataProvider(name = "BuildRedirectUrl")

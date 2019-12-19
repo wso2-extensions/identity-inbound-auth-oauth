@@ -56,6 +56,7 @@ public class RegistrationHandlerTest extends PowerMockIdentityBaseTest {
 
     @BeforeMethod
     public void setUp() {
+
         registrationHandler = new RegistrationHandler();
     }
 
@@ -70,14 +71,15 @@ public class RegistrationHandlerTest extends PowerMockIdentityBaseTest {
         when(mockRegisterRequest.getTenantDomain()).thenReturn(testTenantDomain);
 
         mockStatic(DCRManagementService.class);
-        when (DCRManagementService.getInstance()).thenReturn(mockDCRManagementService);
+        when(DCRManagementService.getInstance()).thenReturn(mockDCRManagementService);
 
         when(mockDCRManagementService.registerOAuthApplication(mockRegistrationRequestProfile)).
                 thenReturn(mockRegistrationResponseProfile);
 
         RegistrationResponse.DCRRegisterResponseBuilder registerResponseBuilder =
                 new RegistrationResponse.DCRRegisterResponseBuilder();
-        whenNew(RegistrationResponse.DCRRegisterResponseBuilder.class).withNoArguments().thenReturn(registerResponseBuilder);
+        whenNew(RegistrationResponse.DCRRegisterResponseBuilder.class).withNoArguments()
+                .thenReturn(registerResponseBuilder);
 
         assertEquals(registrationHandler.handle(mockDcrMessageContext), registerResponseBuilder,
                 "Expected response builder is different from the actual");

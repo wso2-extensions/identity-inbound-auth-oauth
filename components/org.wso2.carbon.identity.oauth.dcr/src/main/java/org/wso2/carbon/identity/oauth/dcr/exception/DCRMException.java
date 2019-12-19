@@ -27,21 +27,25 @@ public class DCRMException extends IdentityException {
     private static final long serialVersionUID = 3410706411312659760L;
 
     public DCRMException(String message) {
+
         super(message);
         this.setErrorCode(getDefaultErrorCode());
     }
 
     public DCRMException(String message, Throwable cause) {
+
         super(message, cause);
         this.setErrorCode(getDefaultErrorCode());
     }
 
     public DCRMException(String errorCode, String message) {
+
         super(errorCode, message);
         this.setErrorCode(errorCode);
     }
 
     public DCRMException(String errorCode, String message, Throwable throwable) {
+
         super(errorCode, message, throwable);
         this.setErrorCode(errorCode);
     }

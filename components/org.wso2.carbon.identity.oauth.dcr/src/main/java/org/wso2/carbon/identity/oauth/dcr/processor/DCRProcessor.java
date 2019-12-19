@@ -17,7 +17,6 @@
  */
 package org.wso2.carbon.identity.oauth.dcr.processor;
 
-
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -40,6 +39,9 @@ import org.wso2.carbon.identity.oauth.dcr.util.HandlerManager;
 
 import java.util.regex.Matcher;
 
+/**
+ * OAuth DCR Processor class.
+ */
 public class DCRProcessor extends IdentityProcessor {
 
     private static final Log log = LogFactory.getLog(DCRProcessor.class);
@@ -62,16 +64,19 @@ public class DCRProcessor extends IdentityProcessor {
 
     @Override
     public String getCallbackPath(IdentityMessageContext context) {
+
         return null;
     }
 
     @Override
     public String getRelyingPartyId() {
+
         return null;
     }
 
     @Override
     public String getRelyingPartyId(IdentityMessageContext identityMessageContext) {
+
         return null;
     }
 
@@ -87,10 +92,10 @@ public class DCRProcessor extends IdentityProcessor {
         } catch (DCRException e) {
             if (StringUtils.isBlank(e.getErrorCode())) {
                 throw IdentityException.error(RegistrationException.class,
-                    ErrorCodes.BAD_REQUEST.toString(), e.getMessage(), e);
+                        ErrorCodes.BAD_REQUEST.toString(), e.getMessage(), e);
             } else {
-                throw  IdentityException.error(RegistrationException.class, e.getErrorCode(),
-                    e.getMessage(), e);
+                throw IdentityException.error(RegistrationException.class, e.getErrorCode(),
+                        e.getMessage(), e);
             }
         }
         return identityResponseBuilder;
@@ -98,6 +103,7 @@ public class DCRProcessor extends IdentityProcessor {
 
     protected IdentityResponse.IdentityResponseBuilder unRegisterOAuthApplication(DCRMessageContext dcrMessageContext)
             throws DCRException {
+
         IdentityResponse.IdentityResponseBuilder identityResponseBuilder = null;
         try {
             UnRegistrationHandler unRegistrationHandler =
@@ -107,7 +113,7 @@ public class DCRProcessor extends IdentityProcessor {
             if (StringUtils.isBlank(e.getErrorCode())) {
                 throw IdentityException.error(UnRegistrationException.class, ErrorCodes.BAD_REQUEST.toString(), e);
             } else {
-                throw  IdentityException.error(UnRegistrationException.class, e.getErrorCode(), e);
+                throw IdentityException.error(UnRegistrationException.class, e.getErrorCode(), e);
             }
         }
         return identityResponseBuilder;
@@ -115,6 +121,7 @@ public class DCRProcessor extends IdentityProcessor {
 
     @Override
     public boolean canHandle(IdentityRequest identityRequest) {
+
         boolean canHandle = false;
         if (identityRequest != null) {
             Matcher registerMatcher =

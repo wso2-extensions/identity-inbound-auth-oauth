@@ -74,10 +74,10 @@ public class RegisterApiServiceImplTest extends PowerMockTestCase {
         validclientId = "N2QqQluzQuL5X6CtM3KZwqzLQhUa";
         application = new Application();
         redirectUris.add("https://op.certification.openid.net:60845/authz_cb");
-        application.setClient_name("Application");
-        application.setClient_id("N2QqQluzQuL5X6CtM3KZwqzLQhUa");
-        application.setClient_secret("4AXWrN88aEfMvq2h_G0dN05KRsUa");
-        application.setRedirect_uris(redirectUris);
+        application.setClientName("Application");
+        application.setClientId("N2QqQluzQuL5X6CtM3KZwqzLQhUa");
+        application.setClientSecret("4AXWrN88aEfMvq2h_G0dN05KRsUa");
+        application.setRedirectUris(redirectUris);
 
         //Get OSGIservice by starting the tenant flow.
         whenNew(ServiceTracker.class).withAnyArguments().thenReturn(serviceTracker);
