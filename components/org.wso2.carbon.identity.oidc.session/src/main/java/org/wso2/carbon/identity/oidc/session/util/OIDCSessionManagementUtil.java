@@ -33,19 +33,18 @@ import org.wso2.carbon.identity.oidc.session.OIDCSessionStateManager;
 import org.wso2.carbon.identity.oidc.session.config.OIDCSessionManagementConfiguration;
 
 import java.io.UnsupportedEncodingException;
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.net.URLEncoder;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 /**
- * This class includes all the utility methods with regard to OIDC session management
+ * This class includes all the utility methods with regard to OIDC session management.
  */
 public class OIDCSessionManagementUtil {
 
@@ -63,16 +62,17 @@ public class OIDCSessionManagementUtil {
     }
 
     /**
-     * Returns an instance of SessionManager which manages session persistence
+     * Returns an instance of SessionManager which manages session persistence.
      *
      * @return
      */
     public static OIDCSessionManager getSessionManager() {
+
         return sessionManager;
     }
 
     /**
-     * Generates a session state using the provided client id, client callback url and browser state cookie id
+     * Generates a session state using the provided client id, client callback url and browser state cookie id.
      *
      * @param clientId
      * @param rpCallBackUrl
@@ -117,7 +117,7 @@ public class OIDCSessionManagementUtil {
 
     /**
      * Generates a session state using the provided client id, client callback url and browser state cookie id and
-     * adds the generated value to the url as a query parameter
+     * adds the generated value to the url as a query parameter.
      *
      * @param url
      * @param clientId
@@ -130,16 +130,16 @@ public class OIDCSessionManagementUtil {
                                               Cookie opBrowserStateCookie, String responseType) {
 
         String sessionStateParam = getSessionStateParam(clientId, rpCallBackUrl, opBrowserStateCookie == null ? null :
-                                                                                 opBrowserStateCookie.getValue());
+                opBrowserStateCookie.getValue());
         return addSessionStateToURL(url, sessionStateParam, responseType);
     }
 
     /**
-     * Returns the browser state cookie
+     * Returns the browser state cookie.
      *
      * @param request
      * @return CookieString url, String clientId, String rpCallBackUrl,
-                                              Cookie opBrowserStateCookie, String responseType
+     * Cookie opBrowserStateCookie, String responseType
      */
     public static Cookie getOPBrowserStateCookie(HttpServletRequest request) {
 
@@ -156,7 +156,7 @@ public class OIDCSessionManagementUtil {
     }
 
     /**
-     * Adds the browser state cookie to the response
+     * Adds the browser state cookie to the response.
      *
      * @param response
      * @return Cookie
@@ -167,7 +167,7 @@ public class OIDCSessionManagementUtil {
     }
 
     /**
-     * Invalidate the browser state cookie
+     * Invalidate the browser state cookie.
      *
      * @param request
      * @param response
@@ -192,7 +192,7 @@ public class OIDCSessionManagementUtil {
     }
 
     /**
-     * Returns the origin of the provided url
+     * Returns the origin of the provided url.
      * <scheme>://<host>:<port>
      *
      * @param url
@@ -211,37 +211,38 @@ public class OIDCSessionManagementUtil {
     }
 
     /**
-     * Returns OIDC logout consent page URL
+     * Returns OIDC logout consent page URL.
      *
      * @return OIDC logout consent page URL
      */
     public static String getOIDCLogoutConsentURL() {
 
-        String OIDCLogutConsentPageUrl = OIDCSessionManagementConfiguration.getInstance().getOIDCLogoutConsentPageUrl();
-        if (StringUtils.isBlank(OIDCLogutConsentPageUrl)) {
-            OIDCLogutConsentPageUrl =
+        String oidcLogoutConsentPageUrl = OIDCSessionManagementConfiguration.getInstance()
+                .getOIDCLogoutConsentPageUrl();
+        if (StringUtils.isBlank(oidcLogoutConsentPageUrl)) {
+            oidcLogoutConsentPageUrl =
                     IdentityUtil.getServerURL("/authenticationendpoint/oauth2_logout_consent.do", false, false);
         }
-        return OIDCLogutConsentPageUrl;
+        return oidcLogoutConsentPageUrl;
     }
 
     /**
-     * Returns OIDC logout URL
+     * Returns OIDC logout URL.
      *
      * @return OIDC logout URL
      */
     public static String getOIDCLogoutURL() {
 
-        String OIDCLogutPageUrl = OIDCSessionManagementConfiguration.getInstance().getOIDCLogoutPageUrl();
-        if (StringUtils.isBlank(OIDCLogutPageUrl)) {
-            OIDCLogutPageUrl =
+        String oidcLogoutPageUrl = OIDCSessionManagementConfiguration.getInstance().getOIDCLogoutPageUrl();
+        if (StringUtils.isBlank(oidcLogoutPageUrl)) {
+            oidcLogoutPageUrl =
                     IdentityUtil.getServerURL("/authenticationendpoint/oauth2_logout.do", false, false);
         }
-        return OIDCLogutPageUrl;
+        return oidcLogoutPageUrl;
     }
 
     /**
-     * Returns the error page URL with given error code and error message as query parameters
+     * Returns the error page URL with given error code and error message as query parameters.
      *
      * @param errorCode
      * @param errorMessage
@@ -256,7 +257,7 @@ public class OIDCSessionManagementUtil {
 
         try {
             errorPageUrl += "?" + OAuthConstants.OAUTH_ERROR_CODE + "=" + URLEncoder.encode(errorCode, "UTF-8") + "&"
-                            + OAuthConstants.OAUTH_ERROR_MESSAGE + "=" + URLEncoder.encode(errorMessage, "UTF-8");
+                    + OAuthConstants.OAUTH_ERROR_MESSAGE + "=" + URLEncoder.encode(errorMessage, "UTF-8");
         } catch (UnsupportedEncodingException e) {
             //ignore
             if (log.isDebugEnabled()) {
@@ -266,7 +267,6 @@ public class OIDCSessionManagementUtil {
 
         return errorPageUrl;
     }
-
 
     /**
      * Returns the OpenIDConnect User Consent.

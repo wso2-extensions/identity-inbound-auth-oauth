@@ -21,7 +21,7 @@ package org.wso2.carbon.identity.oidc.session.cache;
 import org.wso2.carbon.identity.application.common.cache.BaseCache;
 
 /**
- * This is the class used to cache request session
+ * This is the class used to cache request session.
  */
 public class OIDCSessionDataCache extends BaseCache<OIDCSessionDataCacheKey, OIDCSessionDataCacheEntry> {
 
@@ -30,10 +30,12 @@ public class OIDCSessionDataCache extends BaseCache<OIDCSessionDataCacheKey, OID
     private static volatile OIDCSessionDataCache instance;
 
     private OIDCSessionDataCache() {
+
         super(SESSION_DATA_CACHE_NAME);
     }
 
     public static OIDCSessionDataCache getInstance() {
+
         if (instance == null) {
             synchronized (OIDCSessionDataCache.class) {
                 if (instance == null) {

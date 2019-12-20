@@ -20,7 +20,7 @@ package org.wso2.carbon.identity.oidc.session.cache;
 import org.wso2.carbon.identity.application.common.cache.CacheKey;
 
 /**
- * This class holds the cache key which is AuthorizationCode
+ * This class holds the cache key which is AuthorizationCode.
  */
 public class OIDCBackChannelAuthCodeCacheKey extends CacheKey {
 

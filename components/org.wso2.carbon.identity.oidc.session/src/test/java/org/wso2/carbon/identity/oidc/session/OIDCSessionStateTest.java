@@ -17,7 +17,6 @@
  */
 package org.wso2.carbon.identity.oidc.session;
 
-import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
@@ -62,10 +61,10 @@ public class OIDCSessionStateTest extends PowerMockIdentityBaseTest {
     @Test
     public void testAddSessionParticipant() {
 
-        String client_id = "ES9l2uUf8AzNOfmGS9lPEIsdrR8a";
-        oidcSessionState.addSessionParticipant(client_id);
+        String clientId = "ES9l2uUf8AzNOfmGS9lPEIsdrR8a";
+        oidcSessionState.addSessionParticipant(clientId);
         Set sessionParticipants = oidcSessionState.getSessionParticipants();
-        assertNotNull(sessionParticipants.contains(client_id), "Client_id is not a session participant");
+        assertNotNull(sessionParticipants.contains(clientId), "Client_id is not a session participant");
     }
 
     @Test

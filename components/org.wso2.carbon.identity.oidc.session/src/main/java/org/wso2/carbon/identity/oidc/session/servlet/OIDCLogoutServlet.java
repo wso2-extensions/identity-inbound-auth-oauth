@@ -53,7 +53,7 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionManagementException;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionState;
-import org.wso2.carbon.identity.oidc.session.backChannelLogout.LogoutRequestSender;
+import org.wso2.carbon.identity.oidc.session.backchannellogout.LogoutRequestSender;
 import org.wso2.carbon.identity.oidc.session.cache.OIDCSessionDataCache;
 import org.wso2.carbon.identity.oidc.session.cache.OIDCSessionDataCacheEntry;
 import org.wso2.carbon.identity.oidc.session.cache.OIDCSessionDataCacheKey;
@@ -72,6 +72,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+
 import javax.servlet.ServletException;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
@@ -82,6 +83,9 @@ import static org.wso2.carbon.identity.application.authentication.framework.util
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils.getRedirectURL;
 import static org.wso2.carbon.identity.oidc.session.OIDCSessionConstants.OIDC_LOGOUT_CONSENT_DENIAL_REDIRECT_URL;
 
+/**
+ * Servlet class of OIDC Logout.
+ */
 public class OIDCLogoutServlet extends HttpServlet {
 
     private static final Log log = LogFactory.getLog(OIDCLogoutServlet.class);
@@ -212,9 +216,11 @@ public class OIDCLogoutServlet extends HttpServlet {
                     // Add OIDC Cache entry without properties since OIDC Logout should work without id_token_hint
                     OIDCSessionDataCacheEntry cacheEntry = new OIDCSessionDataCacheEntry();
 
-                    // Logout request without id_token_hint will redirected to an IDP's page once logged out, rather a RP's
-                    // callback endpoint. The state parameter is set here in the cache, so that it will be available in the
-                    // redirected IDP's page to support any custom requirement.
+                    /*
+                     Logout request without id_token_hint will redirected to an IDP's page once logged out, rather a
+                     RP's callback endpoint. The state parameter is set here in the cache, so that it will be
+                     available in the redirected IDP's page to support any custom requirement.
+                     */
                     setStateParameterInCache(request, cacheEntry);
                     addSessionDataToCache(opBrowserStateCookie.getValue(), cacheEntry);
                 }
@@ -230,7 +236,8 @@ public class OIDCLogoutServlet extends HttpServlet {
     }
 
     /**
-     * If postLogoutRedirectUri is send in Logout request parameter then set it as redirect URL
+     * If postLogoutRedirectUri is send in Logout request parameter then set it as redirect URL.
+     *
      * @param redirectURL
      * @param opBrowserStateCookie
      * @return
@@ -256,11 +263,11 @@ public class OIDCLogoutServlet extends HttpServlet {
     }
 
     /**
-     * Process OIDC Logout request
-     * Validate Id token
-     * Add OIDC parameters to cache
+     * Process OIDC Logout request.
+     * Validate Id token.
+     * Add OIDC parameters to cache.
      *
-     * @param request Http servlet request
+     * @param request  Http servlet request
      * @param response Http servlet response
      * @return Redirect URI
      * @throws IOException
@@ -329,7 +336,8 @@ public class OIDCLogoutServlet extends HttpServlet {
     }
 
     /**
-     * Validate Id token signature
+     * Validate Id token signature.
+     *
      * @param idToken Id token
      * @return validation state
      */
@@ -370,10 +378,12 @@ public class OIDCLogoutServlet extends HttpServlet {
      * Get tenant domain for signature validation.
      * There is a problem If Id token signed using SP's tenant and there is no direct way to get the tenant domain
      * using client id. So have iterate all the Tenants until get the right client id.
+     *
      * @param idToken id token
      * @return Tenant domain
      */
     private String getTenantDomainForSignatureValidation(String idToken) {
+
         boolean isJWTSignedWithSPKey = OAuthServerConfiguration.getInstance().isJWTSignedWithSPKey();
         if (log.isDebugEnabled()) {
             log.debug("'SignJWTWithSPKey' property is set to : " + isJWTSignedWithSPKey);
@@ -406,8 +416,9 @@ public class OIDCLogoutServlet extends HttpServlet {
     }
 
     /**
-     * Send request to consent URI
-     * @param request Http servlet request
+     * Send request to consent URI.
+     *
+     * @param request  Http servlet request
      * @param response Http servlet response
      * @throws IOException
      */
@@ -446,9 +457,10 @@ public class OIDCLogoutServlet extends HttpServlet {
     }
 
     /**
-     * Append state query parameter
+     * Append state query parameter.
+     *
      * @param redirectURL redirect URL
-     * @param stateParam state query parameter
+     * @param stateParam  state query parameter
      * @return Redirect URL after appending state query param if exist
      */
     private String appendStateQueryParam(String redirectURL, String stateParam) {
@@ -460,8 +472,9 @@ public class OIDCLogoutServlet extends HttpServlet {
     }
 
     /**
-     * Validate post logout URI with registered callback URI
-     * @param postLogoutUri Post logout redirect URI
+     * Validate post logout URI with registered callback URI.
+     *
+     * @param postLogoutUri         Post logout redirect URI
      * @param registeredCallbackUri registered callback URI
      * @return Validation state
      */
@@ -487,7 +500,8 @@ public class OIDCLogoutServlet extends HttpServlet {
     }
 
     /**
-     * Extract Client Id from Id token
+     * Extract Client Id from Id token.
+     *
      * @param idToken id token
      * @return Client Id
      * @throws ParseException
@@ -507,7 +521,8 @@ public class OIDCLogoutServlet extends HttpServlet {
     }
 
     /**
-     * Extract tenant domain from id token
+     * Extract tenant domain from id token.
+     *
      * @param idToken id token
      * @return tenant domain
      * @throws ParseException
@@ -545,6 +560,7 @@ public class OIDCLogoutServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+
         doGet(request, response);
     }
 
@@ -568,9 +584,9 @@ public class OIDCLogoutServlet extends HttpServlet {
         //Add all parameters to authentication context before sending to authentication framework
         AuthenticationRequest authenticationRequest = new AuthenticationRequest();
         Map<String, String[]> map = new HashMap<>();
-        map.put(OIDCSessionConstants.OIDC_SESSION_DATA_KEY_PARAM, new String[] { sessionDataKey });
+        map.put(OIDCSessionConstants.OIDC_SESSION_DATA_KEY_PARAM, new String[]{sessionDataKey});
         authenticationRequest.setRequestQueryParams(map);
-        authenticationRequest.addRequestQueryParam(FrameworkConstants.RequestParams.LOGOUT, new String[] { "true" });
+        authenticationRequest.addRequestQueryParam(FrameworkConstants.RequestParams.LOGOUT, new String[]{"true"});
         authenticationRequest.setCommonAuthCallerPath(request.getRequestURI());
         authenticationRequest.setPost(true);
 
@@ -601,7 +617,6 @@ public class OIDCLogoutServlet extends HttpServlet {
 
         String sessionDataKey = request.getParameter(FrameworkConstants.SESSION_DATA_KEY);
         OIDCSessionDataCacheEntry cacheEntry = getSessionDataFromCache(sessionDataKey);
-
 
         if (cacheEntry != null) {
             if (log.isDebugEnabled()) {
@@ -653,7 +668,8 @@ public class OIDCLogoutServlet extends HttpServlet {
     }
 
     private void triggerLogoutHandlersForPostLogout(HttpServletRequest request,
-                                                    HttpServletResponse response) throws OIDCSessionManagementException {
+                                                    HttpServletResponse response)
+            throws OIDCSessionManagementException {
 
         List<OIDCLogoutHandler> oidcLogoutHandlers =
                 OIDCSessionManagementComponentServiceHolder.getOIDCLogoutHandlers();
@@ -676,6 +692,7 @@ public class OIDCLogoutServlet extends HttpServlet {
 
     private void addAuthenticationRequestToRequest(HttpServletRequest request,
                                                    AuthenticationRequestCacheEntry authRequest) {
+
         request.setAttribute(FrameworkConstants.RequestAttribute.AUTH_REQUEST, authRequest);
     }
 
@@ -782,7 +799,8 @@ public class OIDCLogoutServlet extends HttpServlet {
             spName = OIDCSessionManagementComponentServiceHolder.getApplicationMgtService()
                     .getServiceProviderNameByClientId(clientId, IdentityApplicationConstants.OAuth2.NAME, tenantDomain);
         } catch (IdentityApplicationManagementException e) {
-            log.error("Error while getting Service provider name for client Id:" + clientId + " in tenant: " + tenantDomain, e);
+            log.error("Error while getting Service provider name for client Id:" + clientId + " in tenant: " +
+                    tenantDomain, e);
         }
         return spName;
     }

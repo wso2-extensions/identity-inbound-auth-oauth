@@ -32,7 +32,7 @@ import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.oauth.common.token.bindings.TokenBinderInfo;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
-import org.wso2.carbon.identity.oidc.session.backChannelLogout.ClaimProviderImpl;
+import org.wso2.carbon.identity.oidc.session.backchannellogout.ClaimProviderImpl;
 import org.wso2.carbon.identity.oidc.session.handler.OIDCLogoutEventHandler;
 import org.wso2.carbon.identity.oidc.session.handler.OIDCLogoutHandler;
 import org.wso2.carbon.identity.oidc.session.servlet.OIDCLogoutServlet;
@@ -42,11 +42,15 @@ import org.wso2.carbon.user.core.service.RealmService;
 
 import javax.servlet.Servlet;
 
+/**
+ * OIDC session management component class.
+ */
 @Component(
         name = "identity.oidc.session.component",
         immediate = true
 )
 public class OIDCSessionManagementComponent {
+
     private static final Log log = LogFactory.getLog(OIDCSessionManagementComponent.class);
 
     protected void activate(ComponentContext context) {
@@ -163,6 +167,7 @@ public class OIDCSessionManagementComponent {
             unbind = "unregisterOIDCLogoutHandler"
     )
     protected void registerOIDCLogoutHandler(OIDCLogoutHandler oidcLogoutHandler) {
+
         if (log.isDebugEnabled()) {
             log.debug("Registering OIDC Logout Handler: " + oidcLogoutHandler.getClass().getName());
         }
@@ -170,6 +175,7 @@ public class OIDCSessionManagementComponent {
     }
 
     protected void unregisterOIDCLogoutHandler(OIDCLogoutHandler oidcLogoutHandler) {
+
         if (log.isDebugEnabled()) {
             log.debug("Un-registering OIDC Logout Handler: " + oidcLogoutHandler.getClass().getName());
         }
@@ -200,10 +206,10 @@ public class OIDCSessionManagementComponent {
     }
 
     @Reference(name = "token.binding.service",
-               service = TokenBinderInfo.class,
-               cardinality = ReferenceCardinality.MULTIPLE,
-               policy = ReferencePolicy.DYNAMIC,
-               unbind = "unsetTokenBinderInfo")
+            service = TokenBinderInfo.class,
+            cardinality = ReferenceCardinality.MULTIPLE,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetTokenBinderInfo")
     protected void setTokenBinderInfo(TokenBinderInfo tokenBinderInfo) {
 
         if (log.isDebugEnabled()) {

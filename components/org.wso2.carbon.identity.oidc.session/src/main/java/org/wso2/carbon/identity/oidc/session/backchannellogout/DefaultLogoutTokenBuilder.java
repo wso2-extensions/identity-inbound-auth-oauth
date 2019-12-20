@@ -15,7 +15,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.wso2.carbon.identity.oidc.session.backChannelLogout;
+package org.wso2.carbon.identity.oidc.session.backchannellogout;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
@@ -45,8 +45,6 @@ import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequest;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
 import java.util.ArrayList;
@@ -58,13 +56,16 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletRequest;
+
 /**
  * This is the logout token generator for the OpenID Connect back-channel logout Implementation. This
  * Logout token Generator utilizes the Nimbus SDK to build the Logout token.
  */
 public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
 
-    public static final Log log = LogFactory.getLog(DefaultLogoutTokenBuilder.class);
+    private static final Log log = LogFactory.getLog(DefaultLogoutTokenBuilder.class);
     private OAuthServerConfiguration config = null;
     private JWSAlgorithm signatureAlgorithm = null;
     private static final String OPENID_IDP_ENTITY_ID = "IdPEntityId";
@@ -97,7 +98,6 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
                     }
                     if (StringUtils.isNotBlank(backChannelLogoutUrl)) {
                         // Send back-channel logout request to all RPs those registered their back-channel logout uri.
-
                         JWTClaimsSet jwtClaimsSet = buildJwtToken(sessionState, getTenanatDomain(oAuthAppDO), clientID);
                         String logoutToken =
                                 OAuth2Util.signJWT(jwtClaimsSet, signatureAlgorithm, getSigningTenantDomain(oAuthAppDO))
@@ -116,6 +116,7 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
 
     /**
      * Builds jwtClaimSet.
+     *
      * @param sessionState
      * @param tenantDomain
      * @param clientID
@@ -151,6 +152,7 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
 
     /**
      * Returns client id from servlet request.
+     *
      * @param request
      * @return
      * @throws IdentityOAuth2Exception
@@ -196,9 +198,8 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
         return signingTenantDomain;
     }
 
-
     /**
-     * Returns the OIDCsessionState of the obps cookie
+     * Returns the OIDCsessionState of the obps cookie.
      *
      * @param request
      * @return
@@ -206,12 +207,12 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
     private OIDCSessionState getSessionState(HttpServletRequest request) {
 
         Cookie opbsCookie = OIDCSessionManagementUtil.getOPBrowserStateCookie(request);
-        if (opbsCookie !=null) {
-        String obpsCookieValue = opbsCookie.getValue();
+        if (opbsCookie != null) {
+            String obpsCookieValue = opbsCookie.getValue();
             OIDCSessionState sessionState = OIDCSessionManagementUtil.getSessionManager()
                     .getOIDCSessionState(obpsCookieValue);
             return sessionState;
-        }else {
+        } else {
             return null;
         }
     }
@@ -274,7 +275,7 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
     }
 
     /**
-     * Returns OAuthAppDo using clientID
+     * Returns OAuthAppDo using clientID.
      *
      * @param clientID
      * @return
@@ -300,7 +301,7 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
     }
 
     /**
-     * Returns a list of audience
+     * Returns a list of audience.
      *
      * @param clientID
      * @return
@@ -324,7 +325,7 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
     }
 
     /**
-     * Returns ID Token
+     * Returns ID Token.
      *
      * @param request
      * @return
@@ -359,6 +360,7 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
 
     /**
      * Extract client Id from ID Token Hint.
+     *
      * @param idToken
      * @return
      * @throws ParseException
@@ -370,6 +372,7 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
 
     /**
      * Validate Id Token Hint.
+     *
      * @param clientId
      * @param idToken
      * @return
