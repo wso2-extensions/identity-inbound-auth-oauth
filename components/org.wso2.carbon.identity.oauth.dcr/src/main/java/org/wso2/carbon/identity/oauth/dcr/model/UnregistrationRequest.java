@@ -25,6 +25,7 @@ import org.wso2.carbon.identity.application.authentication.framework.inbound.Ide
  */
 public class UnregistrationRequest extends IdentityRequest {
 
+    private static final long serialVersionUID = -5760272509104069285L;
     private String consumerKey;
     private String applicationName;
     private String userId;
