@@ -20,10 +20,12 @@ package org.wso2.carbon.identity.oauth2.dcr.endpoint.util;
 
 import org.apache.commons.logging.Log;
 import org.wso2.carbon.identity.oauth.dcr.DCRMConstants;
+import org.wso2.carbon.identity.oauth.dcr.bean.Application;
 import org.wso2.carbon.identity.oauth.dcr.bean.ApplicationRegistrationRequest;
 import org.wso2.carbon.identity.oauth.dcr.bean.ApplicationUpdateRequest;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMException;
 import org.wso2.carbon.identity.oauth.dcr.service.DCRMService;
+import org.wso2.carbon.identity.oauth2.dcr.endpoint.dto.ApplicationDTO;
 import org.wso2.carbon.identity.oauth2.dcr.endpoint.dto.ErrorDTO;
 import org.wso2.carbon.identity.oauth2.dcr.endpoint.dto.RegistrationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dcr.endpoint.dto.UpdateRequestDTO;
@@ -129,6 +131,21 @@ public class DCRMUtils {
         }
         throw buildDCRMEndpointException(status, errorCode, throwable == null ? "" : throwable.getMessage(),
                 isServerException);
+    }
+
+    public static ApplicationDTO getApplicationDTOFromApplication(Application application) {
+
+        if (application == null) {
+            return null;
+        }
+
+        ApplicationDTO applicationDTO = new ApplicationDTO();
+        applicationDTO.setClientId(application.getClientId());
+        applicationDTO.setClientName(application.getClientName());
+        applicationDTO.setClientSecret(application.getClientSecret());
+        applicationDTO.setRedirectUris(application.getRedirectUris());
+
+        return applicationDTO;
     }
 
     private static DCRMEndpointException buildDCRMEndpointException(Response.Status status,
