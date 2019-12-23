@@ -574,8 +574,7 @@ public class OAuthServerConfiguration {
                                     + " is created for Identity OAuth token generation.");
                         } else {
                             oauthIdentityTokenGenerator = new OauthTokenIssuerImpl();
-                            log.info(
-                                    "The default Identity OAuth token issuer will be used. No custom token " +
+                            log.info("The default Identity OAuth token issuer will be used. No custom token " +
                                             "generator is set.");
                         }
                     } catch (Exception e) {
@@ -1562,7 +1561,7 @@ public class OAuthServerConfiguration {
 
     private void parseDefaultValidityPeriods(OMElement oauthConfigElem) {
 
-        // set the authorization code default timeout
+        // Set the authorization code default timeout
         OMElement authzCodeTimeoutElem =
                 oauthConfigElem.getFirstChildWithName(
                         getQNameWithIdentityNS(ConfigElements.AUTHORIZATION_CODE_DEFAULT_VALIDITY_PERIOD));
@@ -2394,6 +2393,7 @@ public class OAuthServerConfiguration {
     }
 
     private void parseRevokeResponseHeadersEnableConfig(OMElement oauthConfigElem) {
+
         OMElement enableRevokeResponseHeadersElem =
                 oauthConfigElem
                         .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.ENABLE_REVOKE_RESPONSE_HEADERS));
