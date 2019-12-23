@@ -17,6 +17,9 @@
  */
 package org.wso2.carbon.identity.oauth.common;
 
+/**
+ * This class defined the grant types.
+ */
 public enum GrantType {
 
     SAML20_BEARER("urn:ietf:params:oauth:grant-type:saml2-bearer"),
@@ -25,11 +28,13 @@ public enum GrantType {
     private String grantTypeName;
 
     GrantType(String grantTypeName) {
+
         this.grantTypeName = grantTypeName;
     }
 
     @Override
     public String toString() {
+
         return grantTypeName;
     }
 }

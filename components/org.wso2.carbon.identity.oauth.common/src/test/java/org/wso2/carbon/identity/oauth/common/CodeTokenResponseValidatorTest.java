@@ -27,6 +27,7 @@ import org.testng.annotations.Test;
 
 import java.util.HashMap;
 import java.util.Map;
+
 import javax.servlet.http.HttpServletRequest;
 
 import static org.powermock.api.mockito.PowerMockito.mock;
@@ -34,7 +35,6 @@ import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.CLIENT_ID;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.NONCE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.SCOPE;
 
 /**
@@ -52,6 +52,7 @@ public class CodeTokenResponseValidatorTest {
 
     @AfterMethod
     public void tearDown() throws Exception {
+
     }
 
     @DataProvider(name = "Request Provider")
@@ -134,6 +135,7 @@ public class CodeTokenResponseValidatorTest {
      * @return response_type
      */
     protected String getResponseTypeValue() {
+
         return "code token";
     }
 }

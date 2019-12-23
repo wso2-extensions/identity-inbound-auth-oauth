@@ -18,5 +18,9 @@
 
 package org.wso2.carbon.identity.oauth.common;
 
+/**
+ * Validator for IDtoken token response.
+ */
 public class IDTokenTokenResponseValidator extends IDTokenResponseValidator {
+
 }

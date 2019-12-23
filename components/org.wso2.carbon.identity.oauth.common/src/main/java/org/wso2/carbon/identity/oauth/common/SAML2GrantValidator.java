@@ -22,9 +22,13 @@ import org.apache.oltu.oauth2.common.validators.AbstractValidator;
 
 import javax.servlet.http.HttpServletRequest;
 
+/**
+ * This class used to validate the SAML2 grant.
+ */
 public class SAML2GrantValidator extends AbstractValidator<HttpServletRequest> {
 
     public SAML2GrantValidator() {
+
         requiredParams.add(OAuth.OAUTH_GRANT_TYPE);
         requiredParams.add(OAuth.OAUTH_ASSERTION);
     }
