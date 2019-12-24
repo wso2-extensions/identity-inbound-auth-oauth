@@ -111,6 +111,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Vector;
+
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -141,7 +142,7 @@ import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 import static org.testng.FileAssert.fail;
 
-@PrepareForTest({ OAuth2Util.class, SessionDataCache.class, OAuthServerConfiguration.class, IdentityDatabaseUtil.class,
+@PrepareForTest({OAuth2Util.class, SessionDataCache.class, OAuthServerConfiguration.class, IdentityDatabaseUtil.class,
         EndpointUtil.class, FrameworkUtils.class, EndpointUtil.class, OpenIDConnectUserRPStore.class,
         CarbonOAuthAuthzRequest.class, IdentityTenantUtil.class, OAuthResponse.class, SignedJWT.class,
         OIDCSessionManagementUtil.class, CarbonUtils.class, SessionDataCache.class, IdentityUtil.class})
@@ -774,8 +775,8 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                 {CLIENT_ID_VALUE, APP_REDIRECT_URL, "dummmyPkceChallenge", OAuthConstants.OAUTH_PKCE_PLAIN_CHALLENGE,
                         null, true, true, true, ERROR_PAGE_URL},
 
-                // Valid client, PKCE is enabled but not mandatory, valid plain PKCE code, un supported PKCE challenge method,
-                // plain PKCE is not supported. Redirected to error page with invalid_request error
+                // Valid client, PKCE is enabled but not mandatory, valid plain PKCE code, un supported PKCE
+                // challenge method, plain PKCE is not supported. Redirected to error page with invalid_request error
                 {CLIENT_ID_VALUE, APP_REDIRECT_URL, validPKCEChallenge, "invalidMethod", null, true, true, false,
                         ERROR_PAGE_URL},
 
@@ -784,12 +785,12 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                 {CLIENT_ID_VALUE, APP_REDIRECT_URL, validPKCEChallenge, OAuthConstants.OAUTH_PKCE_PLAIN_CHALLENGE, null,
                         true, true, false, ERROR_PAGE_URL},
 
-                // Valid client, PKCE is enabled but not mandatory, valid plain PKCE code, PKCE challenge method is null,
-                // plain PKCE is not supported. Redirected to error page with invalid_request error
+                // Valid client, PKCE is enabled but not mandatory, valid plain PKCE code, PKCE challenge method is
+                // null plain PKCE is not supported. Redirected to error page with invalid_request error
                 {CLIENT_ID_VALUE, APP_REDIRECT_URL, validPKCEChallenge, null, null, true, true, false, ERROR_PAGE_URL},
 
-                // Valid client, PKCE is enabled but not mandatory, valid plain PKCE code, PKCE challenge method is s256,
-                // plain PKCE is not supported. Redirected to error page with invalid_request error
+                // Valid client, PKCE is enabled but not mandatory, valid plain PKCE code, PKCE challenge method is
+                // s256, plain PKCE is not supported. Redirected to error page with invalid_request error
                 {CLIENT_ID_VALUE, APP_REDIRECT_URL, validPKCEChallenge, OAuthConstants.OAUTH_PKCE_S256_CHALLENGE, null,
                         true, true, false, ERROR_PAGE_URL},
 
@@ -1795,58 +1796,63 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
         OAuthErrorDTO oAuthErrorDTOEmpty = new OAuthErrorDTO();
         AuthenticationResult authenticationResultWithURI = new AuthenticationResult();
-        authenticationResultWithURI.addProperty(FrameworkConstants.AUTH_ERROR_URI,"http://sample_error_uri.com");
+        authenticationResultWithURI.addProperty(FrameworkConstants.AUTH_ERROR_URI, "http://sample_error_uri.com");
         authenticationResultWithURI.addProperty(FrameworkConstants.AUTH_ERROR_MSG, null);
         authenticationResultWithURI.addProperty(FrameworkConstants.AUTH_ERROR_CODE, null);
 
         OAuthErrorDTO oAuthErrorDTOEmptyTest = new OAuthErrorDTO();
         AuthenticationResult authenticationResultWithoutErrorcode = new AuthenticationResult();
-        authenticationResultWithoutErrorcode.addProperty(FrameworkConstants.AUTH_ERROR_MSG,"OverRiddenMessage2");
-        authenticationResultWithoutErrorcode.addProperty(FrameworkConstants.AUTH_ERROR_URI,"http://sample_error_uri2.com");
+        authenticationResultWithoutErrorcode.addProperty(FrameworkConstants.AUTH_ERROR_MSG, "OverRiddenMessage2");
+        authenticationResultWithoutErrorcode
+                .addProperty(FrameworkConstants.AUTH_ERROR_URI, "http://sample_error_uri2.com");
         authenticationResultWithoutErrorcode.addProperty(FrameworkConstants.AUTH_ERROR_CODE, null);
 
         OAuthErrorDTO oAuthErrorDTOWithDes = new OAuthErrorDTO();
         oAuthErrorDTOWithDes.setErrorDescription("messageFromErrorDTO");
         AuthenticationResult authenticationResultWithURIOnly = new AuthenticationResult();
-        authenticationResultWithURIOnly.addProperty(FrameworkConstants.AUTH_ERROR_URI,"http://sample_error_uri3.com");
+        authenticationResultWithURIOnly.addProperty(FrameworkConstants.AUTH_ERROR_URI, "http://sample_error_uri3.com");
         authenticationResultWithURIOnly.addProperty(FrameworkConstants.AUTH_ERROR_MSG, null);
         authenticationResultWithURIOnly.addProperty(FrameworkConstants.AUTH_ERROR_CODE, null);
 
         OAuthErrorDTO oAuthErrorDTOOverWritable = new OAuthErrorDTO();
         oAuthErrorDTOOverWritable.setErrorDescription("messageFromErrorDTO");
         AuthenticationResult authenticationResultOverRiding = new AuthenticationResult();
-        authenticationResultOverRiding.addProperty(FrameworkConstants.AUTH_ERROR_MSG,"OverRiddenMessage5");
-        authenticationResultOverRiding.addProperty(FrameworkConstants.AUTH_ERROR_URI,"http://sample_error_uri4.com");
+        authenticationResultOverRiding.addProperty(FrameworkConstants.AUTH_ERROR_MSG, "OverRiddenMessage5");
+        authenticationResultOverRiding.addProperty(FrameworkConstants.AUTH_ERROR_URI, "http://sample_error_uri4.com");
         authenticationResultOverRiding.addProperty(FrameworkConstants.AUTH_ERROR_CODE, null);
 
         return new Object[][]{
-                {null,authenticationResult,"login_required", "Authentication required",null},
-                {oAuthErrorDTONull,authenticationResultEmpty,"login_required","Authentication required",null},
-                {oAuthErrorDTOEmptyTest,authenticationResultWithURI,"login_required","Authentication required", "http" +
-                        "://sample_error_uri.com"},
-                {oAuthErrorDTOEmptyTest,authenticationResultWithoutErrorcode,"login_required","OverRiddenMessage2","http" +
-                        "://sample_error_uri2.com"},
-                {oAuthErrorDTOWithDes,authenticationResultWithURIOnly,"login_required","messageFromErrorDTO","http" +
-                        "://sample_error_uri3.com"},
-                {oAuthErrorDTOOverWritable,authenticationResultOverRiding,"login_required","OverRiddenMessage5","http" +
-                        "://sample_error_uri4.com"},
+                {null, authenticationResult, "login_required", "Authentication required", null},
+                {oAuthErrorDTONull, authenticationResultEmpty, "login_required", "Authentication required", null},
+                {oAuthErrorDTOEmptyTest, authenticationResultWithURI, "login_required", "Authentication required",
+                        "http" +
+                                "://sample_error_uri.com"},
+                {oAuthErrorDTOEmptyTest, authenticationResultWithoutErrorcode, "login_required", "OverRiddenMessage2",
+                        "http" +
+                                "://sample_error_uri2.com"},
+                {oAuthErrorDTOWithDes, authenticationResultWithURIOnly, "login_required", "messageFromErrorDTO",
+                        "http" +
+                                "://sample_error_uri3.com"},
+                {oAuthErrorDTOOverWritable, authenticationResultOverRiding, "login_required", "OverRiddenMessage5",
+                        "http" +
+                                "://sample_error_uri4.com"},
         };
     }
 
     @Test(dataProvider = "provideFailedAuthenticationErrorInfo")
     public void testBuildOAuthProblemException(Object oAuthErrorDTOObject, Object authenticationResultObject
-            ,  String expectedCode, String expectedMessage, String expectedURI ) throws Exception {
+            , String expectedCode, String expectedMessage, String expectedURI) throws Exception {
 
         OAuthErrorDTO oAuthErrorDTO = (OAuthErrorDTO) oAuthErrorDTOObject;
-       AuthenticationResult authenticationResult = (AuthenticationResult) authenticationResultObject;
+        AuthenticationResult authenticationResult = (AuthenticationResult) authenticationResultObject;
 
-        Assert.assertEquals(expectedCode,oAuth2AuthzEndpoint.buildOAuthProblemException(authenticationResult,
+        Assert.assertEquals(expectedCode, oAuth2AuthzEndpoint.buildOAuthProblemException(authenticationResult,
                 oAuthErrorDTO).getError());
 
-        Assert.assertEquals(expectedMessage,oAuth2AuthzEndpoint.buildOAuthProblemException(authenticationResult,
+        Assert.assertEquals(expectedMessage, oAuth2AuthzEndpoint.buildOAuthProblemException(authenticationResult,
                 oAuthErrorDTO).getDescription());
 
-        Assert.assertEquals(expectedURI,oAuth2AuthzEndpoint.buildOAuthProblemException(authenticationResult,
+        Assert.assertEquals(expectedURI, oAuth2AuthzEndpoint.buildOAuthProblemException(authenticationResult,
                 oAuthErrorDTO).getUri());
     }
 }

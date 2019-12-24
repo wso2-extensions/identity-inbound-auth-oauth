@@ -30,6 +30,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2IntrospectionResponseDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 
 import java.util.List;
+
 import javax.ws.rs.Consumes;
 import javax.ws.rs.FormParam;
 import javax.ws.rs.POST;
@@ -40,18 +41,21 @@ import javax.ws.rs.core.Response;
 
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.triggerOnIntrospectionExceptionListeners;
 
+/**
+ * Rest implementation of OAuth2 introspection endpoint.
+ */
 @Path("/introspect")
 @Consumes({MediaType.APPLICATION_FORM_URLENCODED})
 @Produces(MediaType.APPLICATION_JSON)
 public class OAuth2IntrospectionEndpoint {
 
-    private final static Log log = LogFactory.getLog(OAuth2IntrospectionEndpoint.class);
-    private final static String DEFAULT_TOKEN_TYPE_HINT = "bearer";
-    private final static String DEFAULT_TOKEN_TYPE = "Bearer";
-    private final static String JWT_TOKEN_TYPE = "JWT";
-    private final static String INVALID_INPUT = "Invalid input";
+    private static final Log log = LogFactory.getLog(OAuth2IntrospectionEndpoint.class);
+    private static final String DEFAULT_TOKEN_TYPE_HINT = "bearer";
+    private static final String DEFAULT_TOKEN_TYPE = "Bearer";
+    private static final String JWT_TOKEN_TYPE = "JWT";
+    private static final String INVALID_INPUT = "Invalid input";
 
-    private final static String ACCESS_TOKEN_HINT = "access_token";
+    private static final String ACCESS_TOKEN_HINT = "access_token";
 
     /**
      * Token introspection endpoint.
@@ -64,7 +68,7 @@ public class OAuth2IntrospectionEndpoint {
     @POST
     public Response introspect(@FormParam("token") String token, @FormParam("token_type_hint") String tokenTypeHint,
                                @FormParam("required_claims") String requiredClaims) {
-      
+
         OAuth2TokenValidationRequestDTO introspectionRequest;
         OAuth2IntrospectionResponseDTO introspectionResponse;
 
@@ -164,9 +168,9 @@ public class OAuth2IntrospectionEndpoint {
                         log.error("Error occurred while processing additional token introspection data.", e);
 
                         return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                                       .entity("{\"error\": \"Error occurred while building the introspection " +
-                                               "response.\"}")
-                                       .build();
+                                .entity("{\"error\": \"Error occurred while building the introspection " +
+                                        "response.\"}")
+                                .build();
                     }
                 }
             }

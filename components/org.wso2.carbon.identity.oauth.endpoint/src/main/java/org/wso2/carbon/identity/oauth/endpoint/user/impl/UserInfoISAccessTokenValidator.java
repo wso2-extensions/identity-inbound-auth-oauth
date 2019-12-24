@@ -26,6 +26,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 
 import java.util.Arrays;
+
 import javax.servlet.http.HttpServletRequest;
 
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.isValidTokenBinding;
@@ -85,8 +86,8 @@ public class UserInfoISAccessTokenValidator implements UserInfoAccessTokenValida
                     "Valid token binding value not present in the request.");
         }
 
-        OAuth2TokenValidationResponseDTO.AuthorizationContextToken authorizationContextToken = response.new AuthorizationContextToken(
-                accessToken.getTokenType(), accessToken.getIdentifier());
+        OAuth2TokenValidationResponseDTO.AuthorizationContextToken authorizationContextToken = response.
+                new AuthorizationContextToken(accessToken.getTokenType(), accessToken.getIdentifier());
         response.setAuthorizationContextToken(authorizationContextToken);
         return response;
     }

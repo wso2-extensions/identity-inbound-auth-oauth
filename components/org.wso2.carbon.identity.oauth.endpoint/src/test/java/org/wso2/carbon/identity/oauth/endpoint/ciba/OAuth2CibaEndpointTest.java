@@ -40,6 +40,7 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.Response;
@@ -75,7 +76,11 @@ public class OAuth2CibaEndpointTest extends PowerMockTestCase {
     private OAuth2CibaEndpoint oAuth2CibaEndpoint;
 
     private static final String request = "eyJhbGciOiJIUzUxMiJ9" +
-            ".eyJpc3MiOiJaenhtRHFxSzhZWWZqdGxPaDl2dzg1cW5OVm9hIiwiYXVkIjoiaHR0cHM6Ly9sb2NhbGhvc3Q6OTQ0My9vYXV0aDIvY2liYSIsImJpbmRpbmdfbWVzc2FnZSI6IjE5MDgxOTk1IiwibG9naW5faGludCI6InZpdmVrIiwic2NvcGUiOiJvcGVuaWQgc21zIiwiaWF0IjoxNTczMDk5NDEzLCJleHAiOjE1NzMxNDQzNzEsIm5iZiI6MTU3MzA5OTQxMywianRpIjoiOWZmODQ1YjktMjBiZi00MDMzLTllZDMtM2NjYzYzZjUyMDRjIiwicmVxdWVzdGVkX2V4cGlyeSI6MzcwMH0.dcyX4dNaI-u0maButJ4h3q383OnDXCPMzgHzpU3ZHxsjlGIC_I-B_3QApMnQCav8-cSaYv62FWTqoUOF9wf4yw";
+            ".eyJpc3MiOiJaenhtRHFxSzhZWWZqdGxPaDl2dzg1cW5OVm9hIiwiYXVkIjoiaHR0cHM6Ly9sb2NhbGhvc3Q6OTQ0My9vYXV0aD" +
+            "IvY2liYSIsImJpbmRpbmdfbWVzc2FnZSI6IjE5MDgxOTk1IiwibG9naW5faGludCI6InZpdmVrIiwic2NvcGUiOiJvcGVuaWQgc" +
+            "21zIiwiaWF0IjoxNTczMDk5NDEzLCJleHAiOjE1NzMxNDQzNzEsIm5iZiI6MTU3MzA5OTQxMywianRpIjoiOWZmODQ1YjktMjBi" +
+            "Zi00MDMzLTllZDMtM2NjYzYzZjUyMDRjIiwicmVxdWVzdGVkX2V4cGlyeSI6MzcwMH0.dcyX4dNaI-u0maButJ4h3q383OnDXCP" +
+            "MzgHzpU3ZHxsjlGIC_I-B_3QApMnQCav8-cSaYv62FWTqoUOF9wf4yw";
 
     private static final String REQUEST_ATTRIBUTE = "request";
 
@@ -110,28 +115,76 @@ public class OAuth2CibaEndpointTest extends PowerMockTestCase {
     public Object[][] provideRequestParamsForBadRequest() {
 
         String requestWithImproperClient =
-                "eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiIiLCJhdWQiOiJodHRwczovL2xvY2FsaG9zdDo5NDQzL29hdXRoMi9jaWJhIiwiYmluZGluZ19tZXNzYWdlIjoidHJ5IiwibG9naW5faGludCI6InZpdmVrIiwic2NvcGUiOiJvcGVuaWQgc2NvcGUxIHNjb3BleCIsImlhdCI6MTU3NDk2OTU3NiwiZXhwIjo5NzYwODU1NTksIm5iZiI6MTU3NDk2OTU3NiwiYWNyIjoiNTc4ODg3ODgiLCJqdGkiOiI5ZmY4NDViOS0yMGJmLTQwMzMtOWVkMy0zY2NjNjNmNTIwNGMiLCJ0cmFuc2FjdGlvbl9jb250ZXh0Ijp7InVzZXIiOiJ1c2VyIiwiYW1vdW50IjoxMDAwLCJzaG9wIjoiV1NPMiBDSUJBIERFTU8gQ09OU09MRSIsImFwcGxpY2F0aW9uIjoiUGF5SGVyZSJ9fQ.kFmduZ6Uq3fKNEPz1vYz7VtY0vWMSqVx85um8SZazKY";
+                "eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiIiLCJhdWQiOiJodHRwczovL2xvY2FsaG9zdDo5NDQzL29hdXRoMi9jaWJ" +
+                        "hIiwiYmluZGluZ19tZXNzYWdlIjoidHJ5IiwibG9naW5faGludCI6InZpdmVrIiwic2NvcGUiOiJvcGVuaW" +
+                        "Qgc2NvcGUxIHNjb3BleCIsImlhdCI6MTU3NDk2OTU3NiwiZXhwIjo5NzYwODU1NTksIm5iZiI6MTU3NDk2O" +
+                        "TU3NiwiYWNyIjoiNTc4ODg3ODgiLCJqdGkiOiI5ZmY4NDViOS0yMGJmLTQwMzMtOWVkMy0zY2NjNjNmNTIw" +
+                        "NGMiLCJ0cmFuc2FjdGlvbl9jb250ZXh0Ijp7InVzZXIiOiJ1c2VyIiwiYW1vdW50IjoxMDAwLCJzaG9wIjo" +
+                        "iV1NPMiBDSUJBIERFTU8gQ09OU09MRSIsImFwcGxpY2F0aW9uIjoiUGF5SGVyZSJ9fQ.kFmduZ6Uq3fKNEP" +
+                        "z1vYz7VtY0vWMSqVx85um8SZazKY";
 
         String requestWithWrongIAT =
-                "eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJaenhtRHFxSzhZWWZqdGxPaDl2dzg1cW5OVm9hIiwiYXVkIjoiaHR0cHM6Ly9sb2NhbGhvc3Q6OTQ0My9vYXV0aDIvY2liYSIsImJpbmRpbmdfbWVzc2FnZSI6InRyeSIsImxvZ2luX2hpbnQiOiJ2aXZlayIsInNjb3BlIjoib3BlbmlkIHNjb3BlMSBzY29wZXgiLCJpYXQiOjMyNTMyOTk2MTU5LCJleHAiOjE1NzU1Mjc1NzYsIm5iZiI6MTU3NDk2OTU3NiwiYWNyIjoiNTc4ODg3ODgiLCJqdGkiOiI5ZmY4NDViOS0yMGJmLTQwMzMtOWVkMy0zY2NjNjNmNTIwNGMiLCJ0cmFuc2FjdGlvbl9jb250ZXh0Ijp7InVzZXIiOiJ1c2VyIiwiYW1vdW50IjoxMDAwLCJzaG9wIjoiV1NPMiBDSUJBIERFTU8gQ09OU09MRSIsImFwcGxpY2F0aW9uIjoiUGF5SGVyZSJ9fQ.ddpoZ2V34qoKh-NzPHK_lfs0xxPiOWfwFDMGaJzEpNk";
+                "eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJaenhtRHFxSzhZWWZqdGxPaDl2dzg1cW5OVm9hIiwiYXVkIjoiaHR0cHM6Ly9sb2Nhb" +
+                        "Ghvc3Q6OTQ0My9vYXV0aDIvY2liYSIsImJpbmRpbmdfbWVzc2FnZSI6InRyeSIsImxvZ2luX2hpbnQiOiJ2aXZlay" +
+                        "IsInNjb3BlIjoib3BlbmlkIHNjb3BlMSBzY29wZXgiLCJpYXQiOjMyNTMyOTk2MTU5LCJleHAiOjE1NzU1Mjc1NzYs" +
+                        "Im5iZiI6MTU3NDk2OTU3NiwiYWNyIjoiNTc4ODg3ODgiLCJqdGkiOiI5ZmY4NDViOS0yMGJmLTQwMzMtOWVkMy0zY2N" +
+                        "jNjNmNTIwNGMiLCJ0cmFuc2FjdGlvbl9jb250ZXh0Ijp7InVzZXIiOiJ1c2VyIiwiYW1vdW50IjoxMDAwLCJzaG9wIjo" +
+                        "iV1NPMiBDSUJBIERFTU8gQ09OU09MRSIsImFwcGxpY2F0aW9uIjoiUGF5SGVyZSJ9fQ.ddpoZ2V34qoKh-NzPHK_lfs" +
+                        "0xxPiOWfwFDMGaJzEpNk";
 
         String requestWithWrongNBF =
-                "eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJaenhtRHFxSzhZWWZqdGxPaDl2dzg1cW5OVm9hIiwiYXVkIjoiaHR0cHM6Ly9sb2NhbGhvc3Q6OTQ0My9vYXV0aDIvY2liYSIsImJpbmRpbmdfbWVzc2FnZSI6InRyeSIsImxvZ2luX2hpbnQiOiJ2aXZlayIsInNjb3BlIjoib3BlbmlkIHNjb3BlMSBzY29wZXgiLCJpYXQiOjE1NzQ5Njk1NzYsImV4cCI6MTU3NTUyNzU3NiwibmJmIjozMjUzMjk5NjE1OSwiYWNyIjoiNTc4ODg3ODgiLCJqdGkiOiI5ZmY4NDViOS0yMGJmLTQwMzMtOWVkMy0zY2NjNjNmNTIwNGMiLCJ0cmFuc2FjdGlvbl9jb250ZXh0Ijp7InVzZXIiOiJ1c2VyIiwiYW1vdW50IjoxMDAwLCJzaG9wIjoiV1NPMiBDSUJBIERFTU8gQ09OU09MRSIsImFwcGxpY2F0aW9uIjoiUGF5SGVyZSJ9fQ.PF1clOqVCEWCjT8Z6jsJBlYnwtOvRaJsXn3OXzrm8p0";
+                "eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJaenhtRHFxSzhZWWZqdGxPaDl2dzg1cW5OVm9hIiwiYXVkIjoiaHR0cHM6Ly9sb" +
+                        "2NhbGhvc3Q6OTQ0My9vYXV0aDIvY2liYSIsImJpbmRpbmdfbWVzc2FnZSI6InRyeSIsImxvZ2luX2hpbnQiOiJ" +
+                        "2aXZlayIsInNjb3BlIjoib3BlbmlkIHNjb3BlMSBzY29wZXgiLCJpYXQiOjE1NzQ5Njk1NzYsImV4cCI6MTU3N" +
+                        "TUyNzU3NiwibmJmIjozMjUzMjk5NjE1OSwiYWNyIjoiNTc4ODg3ODgiLCJqdGkiOiI5ZmY4NDViOS0yMGJmLTQ" +
+                        "wMzMtOWVkMy0zY2NjNjNmNTIwNGMiLCJ0cmFuc2FjdGlvbl9jb250ZXh0Ijp7InVzZXIiOiJ1c2VyIiwiYW1vdW" +
+                        "50IjoxMDAwLCJzaG9wIjoiV1NPMiBDSUJBIERFTU8gQ09OU09MRSIsImFwcGxpY2F0aW9uIjoiUGF5SGVyZSJ9" +
+                        "fQ.PF1clOqVCEWCjT8Z6jsJBlYnwtOvRaJsXn3OXzrm8p0";
 
         String requestWithWrongEXP =
-                "eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJaenhtRHFxSzhZWWZqdGxPaDl2dzg1cW5OVm9hIiwiYXVkIjoiaHR0cHM6Ly9sb2NhbGhvc3Q6OTQ0My9vYXV0aDIvY2liYSIsImJpbmRpbmdfbWVzc2FnZSI6InRyeSIsImxvZ2luX2hpbnQiOiJ2aXZlayIsInNjb3BlIjoib3BlbmlkIHNjb3BlMSBzY29wZXgiLCJpYXQiOjE1NzQ5Njk1NzYsImV4cCI6OTc2MDg1NTU5LCJuYmYiOjE1NzQ5Njk1NzYsImFjciI6IjU3ODg4Nzg4IiwianRpIjoiOWZmODQ1YjktMjBiZi00MDMzLTllZDMtM2NjYzYzZjUyMDRjIiwidHJhbnNhY3Rpb25fY29udGV4dCI6eyJ1c2VyIjoidXNlciIsImFtb3VudCI6MTAwMCwic2hvcCI6IldTTzIgQ0lCQSBERU1PIENPTlNPTEUiLCJhcHBsaWNhdGlvbiI6IlBheUhlcmUifX0.46v5geegF72oFWMTbJ2t84NfYOjHzC1ThaGPq0fbrdI";
+                "eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJaenhtRHFxSzhZWWZqdGxPaDl2dzg1cW5OVm9hIiwiYXVkIjoiaHR0" +
+                        "cHM6Ly9sb2NhbGhvc3Q6OTQ0My9vYXV0aDIvY2liYSIsImJpbmRpbmdfbWVzc2FnZSI6InRyeSIs" +
+                        "ImxvZ2luX2hpbnQiOiJ2aXZlayIsInNjb3BlIjoib3BlbmlkIHNjb3BlMSBzY29wZXgiLCJpYXQi" +
+                        "OjE1NzQ5Njk1NzYsImV4cCI6OTc2MDg1NTU5LCJuYmYiOjE1NzQ5Njk1NzYsImFjciI6IjU3ODg4N" +
+                        "zg4IiwianRpIjoiOWZmODQ1YjktMjBiZi00MDMzLTllZDMtM2NjYzYzZjUyMDRjIiwidHJhbnNhY3" +
+                        "Rpb25fY29udGV4dCI6eyJ1c2VyIjoidXNlciIsImFtb3VudCI6MTAwMCwic2hvcCI6IldTTzIgQ0l" +
+                        "CQSBERU1PIENPTlNPTEUiLCJhcHBsaWNhdGlvbiI6IlBheUhlcmUifX0.46v5geegF72oFWMTbJ2t8" +
+                        "4NfYOjHzC1ThaGPq0fbrdI";
 
         String requestwithnojti =
-                "eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJaenhtRHFxSzhZWWZqdGxPaDl2dzg1cW5OVm9hIiwiYXVkIjoiaHR0cHM6Ly9sb2NhbGhvc3Q6OTQ0My9vYXV0aDIvY2liYSIsImJpbmRpbmdfbWVzc2FnZSI6InRyeSIsImxvZ2luX2hpbnQiOiJ2aXZlayIsInNjb3BlIjoib3BlbmlkIHNjb3BlMSBzY29wZXgiLCJpYXQiOjE1NzQ5Njk1NzYsImV4cCI6OTc2MDg1NTU5LCJuYmYiOjE1NzQ5Njk1NzYsImFjciI6IjU3ODg4Nzg4IiwidHJhbnNhY3Rpb25fY29udGV4dCI6eyJ1c2VyIjoidXNlciIsImFtb3VudCI6MTAwMCwic2hvcCI6IldTTzIgQ0lCQSBERU1PIENPTlNPTEUiLCJhcHBsaWNhdGlvbiI6IlBheUhlcmUifX0.fDNjJbpLHHNTm4crh0eMO3gc-rdDVtjYC_JXGqxx9ik";
+                "eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJaenhtRHFxSzhZWWZqdGxPaDl2dzg1cW5OVm9hIiwiYXVkIjoiaHR0cHM6Ly9sb2" +
+                        "NhbGhvc3Q6OTQ0My9vYXV0aDIvY2liYSIsImJpbmRpbmdfbWVzc2FnZSI6InRyeSIsImxvZ2luX2hpbnQiOiJ2a" +
+                        "XZlayIsInNjb3BlIjoib3BlbmlkIHNjb3BlMSBzY29wZXgiLCJpYXQiOjE1NzQ5Njk1NzYsImV4cCI6OTc2MDg1" +
+                        "NTU5LCJuYmYiOjE1NzQ5Njk1NzYsImFjciI6IjU3ODg4Nzg4IiwidHJhbnNhY3Rpb25fY29udGV4dCI6eyJ1c2V" +
+                        "yIjoidXNlciIsImFtb3VudCI6MTAwMCwic2hvcCI6IldTTzIgQ0lCQSBERU1PIENPTlNPTEUiLCJhcHBsaWNhdG" +
+                        "lvbiI6IlBheUhlcmUifX0.fDNjJbpLHHNTm4crh0eMO3gc-rdDVtjYC_JXGqxx9ik";
 
         String requestWithNoScope =
-                "eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJaenhtRHFxSzhZWWZqdGxPaDl2dzg1cW5OVm9hIiwiYXVkIjoiaHR0cHM6Ly9sb2NhbGhvc3Q6OTQ0My9vYXV0aDIvY2liYSIsImJpbmRpbmdfbWVzc2FnZSI6InRyeSIsImxvZ2luX2hpbnQiOiJ2aXZlayIsImlhdCI6MTU3NDk2OTU3NiwiZXhwIjo5NzYwODU1NTksIm5iZiI6MTU3NDk2OTU3NiwiYWNyIjoiNTc4ODg3ODgiLCJqdGkiOiI5ZmY4NDViOS0yMGJmLTQwMzMtOWVkMy0zY2NjNjNmNTIwNGMiLCJ0cmFuc2FjdGlvbl9jb250ZXh0Ijp7InVzZXIiOiJ1c2VyIiwiYW1vdW50IjoxMDAwLCJzaG9wIjoiV1NPMiBDSUJBIERFTU8gQ09OU09MRSIsImFwcGxpY2F0aW9uIjoiUGF5SGVyZSJ9fQ.xbr7unhGmMm9auurwYGvEGAy9sJSxom1kWmciZdUJbQ";
+                "eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJaenhtRHFxSzhZWWZqdGxPaDl2dzg1cW5OVm9hIiwiYXVkIjoiaHR0cH" +
+                        "M6Ly9sb2NhbGhvc3Q6OTQ0My9vYXV0aDIvY2liYSIsImJpbmRpbmdfbWVzc2FnZSI6InRyeSIsImxvZ" +
+                        "2luX2hpbnQiOiJ2aXZlayIsImlhdCI6MTU3NDk2OTU3NiwiZXhwIjo5NzYwODU1NTksIm5iZiI6MTU3" +
+                        "NDk2OTU3NiwiYWNyIjoiNTc4ODg3ODgiLCJqdGkiOiI5ZmY4NDViOS0yMGJmLTQwMzMtOWVkMy0zY2N" +
+                        "jNjNmNTIwNGMiLCJ0cmFuc2FjdGlvbl9jb250ZXh0Ijp7InVzZXIiOiJ1c2VyIiwiYW1vdW50IjoxMD" +
+                        "AwLCJzaG9wIjoiV1NPMiBDSUJBIERFTU8gQ09OU09MRSIsImFwcGxpY2F0aW9uIjoiUGF5SGVyZSJ9fQ" +
+                        ".xbr7unhGmMm9auurwYGvEGAy9sJSxom1kWmciZdUJbQ";
 
         String requestWithBlankLoginHint =
-                "eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJaenhtRHFxSzhZWWZqdGxPaDl2dzg1cW5OVm9hIiwiYXVkIjoiaHR0cHM6Ly9sb2NhbGhvc3Q6OTQ0My9vYXV0aDIvY2liYSIsImJpbmRpbmdfbWVzc2FnZSI6InRyeSIsImxvZ2luX2hpbnQiOiIiLCJzY29wZSI6Im9wZW5pZCBzY29wZTEgc2NvcGV4IiwiaWF0IjoxNTc0OTY5NTc2LCJleHAiOjk3NjA4NTU1OSwibmJmIjoxNTc0OTY5NTc2LCJhY3IiOiI1Nzg4ODc4OCIsImp0aSI6IjlmZjg0NWI5LTIwYmYtNDAzMy05ZWQzLTNjY2M2M2Y1MjA0YyIsInRyYW5zYWN0aW9uX2NvbnRleHQiOnsidXNlciI6InVzZXIiLCJhbW91bnQiOjEwMDAsInNob3AiOiJXU08yIENJQkEgREVNTyBDT05TT0xFIiwiYXBwbGljYXRpb24iOiJQYXlIZXJlIn19.w6T8VDlzcTz8tEbkXvXYoMaZ9yp4VW-z7U4qf-KmC6A";
+                "eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJaenhtRHFxSzhZWWZqdGxPaDl2dzg1cW5OVm9hIiwiYXVkIjoiaHR0cHM6Ly9" +
+                        "sb2NhbGhvc3Q6OTQ0My9vYXV0aDIvY2liYSIsImJpbmRpbmdfbWVzc2FnZSI6InRyeSIsImxvZ2luX2hpbnQ" +
+                        "iOiIiLCJzY29wZSI6Im9wZW5pZCBzY29wZTEgc2NvcGV4IiwiaWF0IjoxNTc0OTY5NTc2LCJleHAiOjk3NjA" +
+                        "4NTU1OSwibmJmIjoxNTc0OTY5NTc2LCJhY3IiOiI1Nzg4ODc4OCIsImp0aSI6IjlmZjg0NWI5LTIwYmYtNDA" +
+                        "zMy05ZWQzLTNjY2M2M2Y1MjA0YyIsInRyYW5zYWN0aW9uX2NvbnRleHQiOnsidXNlciI6InVzZXIiLCJhbW9" +
+                        "1bnQiOjEwMDAsInNob3AiOiJXU08yIENJQkEgREVNTyBDT05TT0xFIiwiYXBwbGljYXRpb24iOiJQYXlIZXJ" +
+                        "lIn19.w6T8VDlzcTz8tEbkXvXYoMaZ9yp4VW-z7U4qf-KmC6A";
 
         String requestWithBadIDToken = "   String requestWithBlankLoginHint =" +
-                "                eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJaenhtRHFxSzhZWWZqdGxPaDl2dzg1cW5OVm9hIiwiYXVkIjoiaHR0cHM6Ly9sb2NhbGhvc3Q6OTQ0My9vYXV0aDIvY2liYSIsImJpbmRpbmdfbWVzc2FnZSI6InRyeSIsImxvZ2luX2hpbnQiOiIiLCJzY29wZSI6Im9wZW5pZCBzY29wZTEgc2NvcGV4IiwiaWF0IjoxNTc0OTY5NTc2LCJleHAiOjk3NjA4NTU1OSwibmJmIjoxNTc0OTY5NTc2LCJhY3IiOiI1Nzg4ODc4OCIsImp0aSI6IjlmZjg0NWI5LTIwYmYtNDAzMy05ZWQzLTNjY2M2M2Y1MjA0YyIsInRyYW5zYWN0aW9uX2NvbnRleHQiOnsidXNlciI6InVzZXIiLCJhbW91bnQiOjEwMDAsInNob3AiOiJXU08yIENJQkEgREVNTyBDT05TT0xFIiwiYXBwbGljYXRpb24iOiJQYXlIZXJlIn19.w6T8VDlzcTz8tEbkXvXYoMaZ9yp4VW-z7U4qf-KmC6A";
+                "                eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJaenhtRHFxSzhZWWZqdGxPaDl2dzg1cW5OVm9hIiwiYXVkI" +
+                "joiaHR0cHM6Ly9sb2NhbGhvc3Q6OTQ0My9vYXV0aDIvY2liYSIsImJpbmRpbmdfbWVzc2FnZSI6InRyeSIsImxvZ2luX2h" +
+                "pbnQiOiIiLCJzY29wZSI6Im9wZW5pZCBzY29wZTEgc2NvcGV4IiwiaWF0IjoxNTc0OTY5NTc2LCJleHAiOjk3NjA4NTU1O" +
+                "SwibmJmIjoxNTc0OTY5NTc2LCJhY3IiOiI1Nzg4ODc4OCIsImp0aSI6IjlmZjg0NWI5LTIwYmYtNDAzMy05ZWQzLTNjY2M2" +
+                "M2Y1MjA0YyIsInRyYW5zYWN0aW9uX2NvbnRleHQiOnsidXNlciI6InVzZXIiLCJhbW91bnQiOjEwMDAsInNob3AiOiJXU08" +
+                "yIENJQkEgREVNTyBDT05TT0xFIiwiYXBwbGljYXRpb24iOiJQYXlIZXJlIn19.w6T8VDlzcTz8tEbkXvXYoMaZ9yp4VW-z7" +
+                "U4qf-KmC6A";
         return new Object[][]{
                 {REQUEST_ATTRIBUTE, request, HttpServletResponse.SC_BAD_REQUEST},
                 {REQUEST_ATTRIBUTE, requestWithImproperClient, HttpServletResponse.SC_UNAUTHORIZED},
@@ -177,14 +230,26 @@ public class OAuth2CibaEndpointTest extends PowerMockTestCase {
 
         Map<String, String[]> requestParams = new HashMap<>();
         requestParams.put(REQUEST_ATTRIBUTE, new String[]{
-                "eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJaenhtRHFxSzhZWWZqdGxPaDl2dzg1cW5OVm9hIiwiYXVkIjoiaHR0cHM6Ly9sb2NhbGhvc3Q6OTQ0My9vYXV0aDIvY2liYSIsImJpbmRpbmdfbWVzc2FnZSI6InRyeSIsImxvZ2luX2hpbnQiOiJ2aXZlayIsInNjb3BlIjoib3BlbmlkIHNjb3BlMSBzY29wZXgiLCJpYXQiOjk3NjA4NTU1OSwiZXhwIjozMjUzMjk5NjE1OSwibmJmIjo5NzYwODU1NTksImFjciI6IjU3ODg4Nzg4IiwianRpIjoiOWZmODQ1YjktMjBiZi00MDMzLTllZDMtM2NjYzYzZjUyMDRjIiwidHJhbnNhY3Rpb25fY29udGV4dCI6eyJ1c2VyIjoidXNlciIsImFtb3VudCI6MTAwMCwic2hvcCI6IldTTzIgQ0lCQSBERU1PIENPTlNPTEUiLCJhcHBsaWNhdGlvbiI6IlBheUhlcmUifX0.LaOFJFtR74mNmG8ggfz9FTNZqRb3LINmtA3dudM-Irw"});
+                "eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJaenhtRHFxSzhZWWZqdGxPaDl2dzg1cW5OVm9hIiwiYXVkIjoiaHR0cHM6Ly9sb2" +
+                        "NhbGhvc3Q6OTQ0My9vYXV0aDIvY2liYSIsImJpbmRpbmdfbWVzc2FnZSI6InRyeSIsImxvZ2luX2hpbnQiOiJ2" +
+                        "aXZlayIsInNjb3BlIjoib3BlbmlkIHNjb3BlMSBzY29wZXgiLCJpYXQiOjk3NjA4NTU1OSwiZXhwIjozMjUzMj" +
+                        "k5NjE1OSwibmJmIjo5NzYwODU1NTksImFjciI6IjU3ODg4Nzg4IiwianRpIjoiOWZmODQ1YjktMjBiZi00MDMz" +
+                        "LTllZDMtM2NjYzYzZjUyMDRjIiwidHJhbnNhY3Rpb25fY29udGV4dCI6eyJ1c2VyIjoidXNlciIsImFtb3VudC" +
+                        "I6MTAwMCwic2hvcCI6IldTTzIgQ0lCQSBERU1PIENPTlNPTEUiLCJhcHBsaWNhdGlvbiI6IlBheUhlcmUifX0." +
+                        "LaOFJFtR74mNmG8ggfz9FTNZqRb3LINmtA3dudM-Irw"});
 
         mockStatic(OAuthServerConfiguration.class);
         when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
 
         when(httpServletRequest.getParameterMap()).thenReturn(requestParams);
         when(httpServletRequest.getParameter(REQUEST_ATTRIBUTE)).thenReturn(
-                "eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJaenhtRHFxSzhZWWZqdGxPaDl2dzg1cW5OVm9hIiwiYXVkIjoiaHR0cHM6Ly9sb2NhbGhvc3Q6OTQ0My9vYXV0aDIvY2liYSIsImJpbmRpbmdfbWVzc2FnZSI6InRyeSIsImxvZ2luX2hpbnQiOiJ2aXZlayIsInNjb3BlIjoib3BlbmlkIHNjb3BlMSBzY29wZXgiLCJpYXQiOjk3NjA4NTU1OSwiZXhwIjozMjUzMjk5NjE1OSwibmJmIjo5NzYwODU1NTksImFjciI6IjU3ODg4Nzg4IiwianRpIjoiOWZmODQ1YjktMjBiZi00MDMzLTllZDMtM2NjYzYzZjUyMDRjIiwidHJhbnNhY3Rpb25fY29udGV4dCI6eyJ1c2VyIjoidXNlciIsImFtb3VudCI6MTAwMCwic2hvcCI6IldTTzIgQ0lCQSBERU1PIENPTlNPTEUiLCJhcHBsaWNhdGlvbiI6IlBheUhlcmUifX0.LaOFJFtR74mNmG8ggfz9FTNZqRb3LINmtA3dudM-Irw");
+                "eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJaenhtRHFxSzhZWWZqdGxPaDl2dzg1cW5OVm9hIiwiYXVkIjoiaHR0cHM6Ly9sb2Nh" +
+                        "bGhvc3Q6OTQ0My9vYXV0aDIvY2liYSIsImJpbmRpbmdfbWVzc2FnZSI6InRyeSIsImxvZ2luX2hpbnQiOiJ2aXZla" +
+                        "yIsInNjb3BlIjoib3BlbmlkIHNjb3BlMSBzY29wZXgiLCJpYXQiOjk3NjA4NTU1OSwiZXhwIjozMjUzMjk5NjE1OS" +
+                        "wibmJmIjo5NzYwODU1NTksImFjciI6IjU3ODg4Nzg4IiwianRpIjoiOWZmODQ1YjktMjBiZi00MDMzLTllZDMtM2N" +
+                        "jYzYzZjUyMDRjIiwidHJhbnNhY3Rpb25fY29udGV4dCI6eyJ1c2VyIjoidXNlciIsImFtb3VudCI6MTAwMCwic2h" +
+                        "vcCI6IldTTzIgQ0lCQSBERU1PIENPTlNPTEUiLCJhcHBsaWNhdGlvbiI6IlBheUhlcmUifX0.LaOFJFtR74mNmG8" +
+                        "ggfz9FTNZqRb3LINmtA3dudM-Irw");
         mockStatic(OAuth2Util.class);
         when(OAuth2Util.getAppInformationByClientId(CONSUMER_KEY)).thenReturn(oAuthAppDO);
         when(OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO)).thenReturn("super");

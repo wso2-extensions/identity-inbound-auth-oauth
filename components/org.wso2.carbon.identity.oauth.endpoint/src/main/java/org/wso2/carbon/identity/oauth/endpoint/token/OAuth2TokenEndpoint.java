@@ -65,6 +65,9 @@ import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.triggerO
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.validateOauthApplication;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.validateParams;
 
+/**
+ * Rest implementation for OAuthu2 token endpoint.
+ */
 @Path("/token")
 @InInterceptors(classes = OAuthClientAuthenticatorProxy.class)
 public class OAuth2TokenEndpoint {
@@ -114,7 +117,8 @@ public class OAuth2TokenEndpoint {
         }
     }
 
-    private CarbonOAuthTokenRequest handleInvalidRequest(OAuthProblemException e) throws TokenEndpointBadRequestException {
+    private CarbonOAuthTokenRequest handleInvalidRequest(OAuthProblemException e)
+            throws TokenEndpointBadRequestException {
 
         if (isInvalidRequest(e) || isUnsupportedGrantType(e)) {
             if (log.isDebugEnabled()) {
@@ -127,10 +131,12 @@ public class OAuth2TokenEndpoint {
     }
 
     private boolean isUnsupportedGrantType(OAuthProblemException e) {
+
         return OAuthError.TokenResponse.UNSUPPORTED_GRANT_TYPE.equalsIgnoreCase(e.getError());
     }
 
     private boolean isInvalidRequest(OAuthProblemException e) {
+
         return OAuthError.TokenResponse.INVALID_REQUEST.equalsIgnoreCase(e.getError());
     }
 
@@ -142,7 +148,8 @@ public class OAuth2TokenEndpoint {
         }
     }
 
-    private void validateOAuthApplication(OAuthClientAuthnContext oAuthClientAuthnContext) throws InvalidApplicationClientException, TokenEndpointBadRequestException {
+    private void validateOAuthApplication(OAuthClientAuthnContext oAuthClientAuthnContext)
+            throws InvalidApplicationClientException, TokenEndpointBadRequestException {
 
         if (isNotBlank(oAuthClientAuthnContext.getClientId()) && !oAuthClientAuthnContext
                 .isMultipleAuthenticatorsEngaged()) {
@@ -259,19 +266,23 @@ public class OAuth2TokenEndpoint {
     }
 
     private boolean isClientCredentialsExistsAsParams(MultivaluedMap<String, String> paramMap) {
+
         return paramMap.containsKey(OAuth.OAUTH_CLIENT_ID) && paramMap.containsKey(OAuth.OAUTH_CLIENT_SECRET);
     }
 
     private String[] getClientCredentials(HttpServletRequest request) throws OAuthClientException {
+
         return EndpointUtil.extractCredentialsFromAuthzHeader(
                 request.getHeader(OAuthConstants.HTTP_REQ_HEADER_AUTHZ));
     }
 
     private boolean isAuthorizationHeaderExists(HttpServletRequest request) {
+
         return request.getHeader(OAuthConstants.HTTP_REQ_HEADER_AUTHZ) != null;
     }
 
     private Response handleBasicAuthFailure(String errorCode, String errorMessage) throws OAuthSystemException {
+
         OAuthResponse response = OAuthASResponse.errorResponse(HttpServletResponse.SC_UNAUTHORIZED)
                 .setError(OAuth2ErrorCodes.INVALID_CLIENT)
                 .setErrorDescription("Client Authentication failed.").buildJSONMessage();
@@ -281,6 +292,7 @@ public class OAuth2TokenEndpoint {
     }
 
     private Response handleServerError() throws OAuthSystemException {
+
         OAuthResponse response = OAuthASResponse.errorResponse(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).
                 setError(OAuth2ErrorCodes.SERVER_ERROR).setErrorDescription("Internal Server Error.")
                 .buildJSONMessage();
@@ -291,6 +303,7 @@ public class OAuth2TokenEndpoint {
     }
 
     private Response handleSQLError() throws OAuthSystemException {
+
         OAuthResponse response = OAuthASResponse.errorResponse(HttpServletResponse.SC_BAD_GATEWAY).
                 setError(OAuth2ErrorCodes.SERVER_ERROR).setErrorDescription("Service Unavailable Error.")
                 .buildJSONMessage();

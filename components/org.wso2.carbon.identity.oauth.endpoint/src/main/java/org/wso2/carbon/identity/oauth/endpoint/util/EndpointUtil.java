@@ -75,6 +75,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MultivaluedMap;
@@ -84,6 +85,9 @@ import static org.wso2.carbon.identity.application.authentication.framework.util
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.HTTP_REQ_HEADER_AUTH_METHOD_BASIC;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
 
+/**
+ * Util class which contains common methods used by all the OAuth endpoints.
+ */
 public class EndpointUtil {
 
     private static final Log log = LogFactory.getLog(EndpointUtil.class);
@@ -147,6 +151,7 @@ public class EndpointUtil {
      * @return DefaultWebFingerProcessor
      */
     public static DefaultWebFingerProcessor getWebFingerService() {
+
         return (DefaultWebFingerProcessor) PrivilegedCarbonContext.getThreadLocalCarbonContext().getOSGiService
                 (WebFingerProcessor.class, null);
     }
@@ -157,6 +162,7 @@ public class EndpointUtil {
      * @return DefaultOIDCProviderRequestBuilder
      */
     public static DefaultOIDCProviderRequestBuilder getOIDProviderRequestValidator() {
+
         return (DefaultOIDCProviderRequestBuilder) PrivilegedCarbonContext.getThreadLocalCarbonContext().getOSGiService
                 (OIDCProviderRequestBuilder.class, null);
     }
@@ -167,6 +173,7 @@ public class EndpointUtil {
      * @return DefaultOIDCProcessor
      */
     public static DefaultOIDCProcessor getOIDCService() {
+
         return (DefaultOIDCProcessor) PrivilegedCarbonContext.getThreadLocalCarbonContext().getOSGiService
                 (OIDCProcessor.class, null);
     }
@@ -207,6 +214,7 @@ public class EndpointUtil {
      * @return OAuth2TokenValidationService
      */
     public static OAuth2TokenValidationService getOAuth2TokenValidationService() {
+
         return (OAuth2TokenValidationService) PrivilegedCarbonContext.getThreadLocalCarbonContext()
                 .getOSGiService(OAuth2TokenValidationService.class, null);
     }
@@ -217,6 +225,7 @@ public class EndpointUtil {
      * @return UserInfoEndpointRequestValidator
      */
     public static String getUserInfoRequestValidator() throws OAuthSystemException {
+
         return getOAuthServerConfiguration().getOpenIDConnectUserInfoEndpointRequestValidator();
     }
 
@@ -226,6 +235,7 @@ public class EndpointUtil {
      * @return AccessTokenValidator
      */
     public static String getAccessTokenValidator() {
+
         return getOAuthServerConfiguration().getOpenIDConnectUserInfoEndpointAccessTokenValidator();
     }
 
@@ -235,6 +245,7 @@ public class EndpointUtil {
      * @return UserInfoResponseBuilder
      */
     public static String getUserInfoResponseBuilder() {
+
         return getOAuthServerConfiguration().getOpenIDConnectUserInfoEndpointResponseBuilder();
     }
 
@@ -244,6 +255,7 @@ public class EndpointUtil {
      * @return UserInfoClaimRetriever
      */
     public static String getUserInfoClaimRetriever() {
+
         return getOAuthServerConfiguration().getOpenIDConnectUserInfoEndpointClaimRetriever();
     }
 
@@ -253,6 +265,7 @@ public class EndpointUtil {
      * @return UserInfoClaimDialect
      */
     public static String getUserInfoClaimDialect() {
+
         return getOAuthServerConfiguration().getOpenIDConnectUserInfoEndpointClaimDialect();
     }
 
@@ -292,9 +305,9 @@ public class EndpointUtil {
      * Returns the error page URL. If appName is not <code>null</code> it will be added as query parameter
      * to be displayed to the user. If redirect_uri is <code>null</code> the common error page URL will be returned.
      *
-     * @param errorCode : Error Code
+     * @param errorCode    : Error Code
      * @param errorMessage : Error Message
-     * @param appName : Application Name
+     * @param appName      : Application Name
      * @return ErrorPageURL
      */
     public static String getErrorPageURL(String errorCode, String errorMessage, String appName) {
@@ -314,7 +327,7 @@ public class EndpointUtil {
 
         } catch (UnsupportedEncodingException e) {
             //ignore
-            if (log.isDebugEnabled()){
+            if (log.isDebugEnabled()) {
                 log.debug("Error while encoding the error page url", e);
             }
         }
@@ -324,7 +337,7 @@ public class EndpointUtil {
                 errorPageUrl += "&application" + "=" + URLEncoder.encode(appName, UTF_8);
             } catch (UnsupportedEncodingException e) {
                 //ignore
-                if (log.isDebugEnabled()){
+                if (log.isDebugEnabled()) {
                     log.debug("Error while encoding the error page url", e);
                 }
             }
@@ -467,8 +480,8 @@ public class EndpointUtil {
      * Returns the login page URL.
      *
      * @param checkAuthentication : True if Passive Authentication
-     * @param forceAuthenticate : True if need to authenticate forcefully
-     * @param scopes : Scopes set
+     * @param forceAuthenticate   : True if need to authenticate forcefully
+     * @param scopes              : Scopes set
      * @return LoginPageURL
      */
     public static String getLoginPageURL(String clientId, String sessionDataKey,
@@ -516,7 +529,8 @@ public class EndpointUtil {
         }
     }
 
-    private static String buildQueryString(String sessionDataKey, Set<String> scopes) throws UnsupportedEncodingException {
+    private static String buildQueryString(String sessionDataKey, Set<String> scopes)
+            throws UnsupportedEncodingException {
 
         String type = getProtocolType(scopes);
         String commonAuthURL = IdentityUtil.getServerURL(FrameworkConstants.COMMONAUTH, false, true);
@@ -536,7 +550,9 @@ public class EndpointUtil {
     }
 
     private static AuthenticationRequestCacheEntry buildAuthenticationRequestCacheEntry(String clientId,
-                 boolean forceAuthenticate, boolean checkAuthentication, Map<String, String[]> reqParams)
+                                                                                        boolean forceAuthenticate,
+                                                                                        boolean checkAuthentication,
+                                                                                        Map<String, String[]> reqParams)
             throws IdentityOAuth2Exception {
 
         String selfPath = OAUTH2_AUTHORIZE;
@@ -557,6 +573,7 @@ public class EndpointUtil {
     }
 
     private static String getProtocolType(Set<String> scopes) {
+
         String type = OAUTH2;
 
         if (scopes != null && scopes.contains(OPENID)) {
@@ -574,6 +591,7 @@ public class EndpointUtil {
      */
     public static String getUserConsentURL(OAuth2Parameters params, String loggedInUser, String sessionDataKey,
                                            boolean isOIDC) throws OAuthSystemException {
+
         String queryString = "";
         if (log.isDebugEnabled()) {
             log.debug("Received Session Data Key is :  " + sessionDataKey);
@@ -633,6 +651,7 @@ public class EndpointUtil {
     }
 
     public static String getScope(OAuth2Parameters params) {
+
         StringBuilder scopes = new StringBuilder();
         for (String scope : params.getScopes()) {
             scopes.append(scope).append(" ");
@@ -646,20 +665,25 @@ public class EndpointUtil {
      * @return
      */
     public static ApplicationManagementService getApplicationManagementService() {
+
         return (ApplicationManagementService) PrivilegedCarbonContext.getThreadLocalCarbonContext().getOSGiService
                 (ApplicationManagementService.class, null);
     }
+
     public static String getRealmInfo() {
+
         return "Basic realm=" + getHostName();
     }
 
     public static String getHostName() {
+
         return ServerConfiguration.getInstance().getFirstProperty("HostName");
     }
 
     @Deprecated
     public static boolean validateParams(HttpServletRequest request, HttpServletResponse response,
                                          MultivaluedMap<String, String> paramMap) {
+
         return validateParams(request, paramMap);
     }
 
@@ -690,6 +714,7 @@ public class EndpointUtil {
     }
 
     public static boolean validateParams(OAuthMessage oAuthMessage, MultivaluedMap<String, String> paramMap) {
+
         return validateParams(oAuthMessage.getRequest(), paramMap);
     }
 
@@ -707,6 +732,7 @@ public class EndpointUtil {
     /**
      * This API validate the oauth application. Check whether an application exits for given cosumerKey and check
      * it's status
+     *
      * @param consumerKey clientId
      * @throws InvalidApplicationClientException
      */
@@ -736,6 +762,7 @@ public class EndpointUtil {
     }
 
     private static boolean isNotActiveState(String appState) {
+
         return !APP_STATE_ACTIVE.equalsIgnoreCase(appState);
     }
 
@@ -754,8 +781,8 @@ public class EndpointUtil {
      * Extract information related to the token request and exception and publish the event to listeners.
      *
      * @param exception Exception occurred.
-     * @param request Token servlet request
-     * @param paramMap Additional parameters.
+     * @param request   Token servlet request
+     * @param paramMap  Additional parameters.
      */
     public static void triggerOnTokenExceptionListeners(Exception exception, HttpServletRequest request,
                                                         MultivaluedMap<String, String> paramMap) {
@@ -788,11 +815,12 @@ public class EndpointUtil {
     /**
      * Extract information related to the token request and token validation error and publish the event to listeners.
      *
-     * @param oAuthMessage OAuth message.
+     * @param oAuthMessage       OAuth message.
      * @param validationResponse token validation response.
      */
     public static void triggerOnRequestValidationFailure(OAuthMessage oAuthMessage,
                                                          OAuth2ClientValidationResponseDTO validationResponse) {
+
         Map<String, Object> params = new HashMap<>();
 
         String clientId = oAuthMessage.getRequest().getParameter(PROP_CLIENT_ID);
@@ -809,7 +837,7 @@ public class EndpointUtil {
         if (OAuth2ErrorCodes.INVALID_CALLBACK.equals(validationResponse.getErrorCode())) {
 
             errorDesc = validationResponse.getErrorMsg() + " Callback URL: " +
-                        oAuthMessage.getRequest().getParameter(PROP_REDIRECT_URI);
+                    oAuthMessage.getRequest().getParameter(PROP_REDIRECT_URI);
         }
         params.put(PROP_ERROR_DESCRIPTION, errorDesc);
         OAuth2Util.triggerOnTokenExceptionListeners(null, params);

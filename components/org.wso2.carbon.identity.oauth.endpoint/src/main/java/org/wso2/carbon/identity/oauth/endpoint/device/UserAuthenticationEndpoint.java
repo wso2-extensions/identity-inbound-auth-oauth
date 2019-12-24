@@ -36,6 +36,7 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.Consumes;
@@ -45,6 +46,9 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 
+/**
+ * Rest implementation for device authentication flow.
+ */
 @Path("/device")
 public class UserAuthenticationEndpoint {
 

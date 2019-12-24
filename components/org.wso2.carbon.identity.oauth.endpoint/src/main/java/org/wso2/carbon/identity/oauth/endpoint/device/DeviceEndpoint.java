@@ -29,6 +29,7 @@ import org.wso2.carbon.identity.oauth2.device.constants.Constants;
 import org.wso2.carbon.identity.oauth2.device.errorcodes.DeviceErrorCodes;
 
 import java.util.UUID;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.Consumes;
@@ -38,11 +39,15 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 
+/**
+ * Rest implementation for device authorization flow.
+ */
 @Path("/device_authorize")
 public class DeviceEndpoint {
 
     private static final Log log = LogFactory.getLog(DeviceEndpoint.class);
     private DeviceAuthService deviceAuthService;
+
     public void setDeviceAuthService(DeviceAuthService deviceAuthService) {
 
         this.deviceAuthService = deviceAuthService;

@@ -20,27 +20,33 @@ package org.wso2.carbon.identity.oauth.endpoint.exception;
 /**
  * This exception should be thrown when client authentication fails in the revoke endpoint.
  * callback is a qualified name of a JavaScript function which is defined in the
+ *
  * @see <a href="https://tools.ietf.org/html/rfc7009#page-3">Oauth Token Revocation specification</a>
  */
 public class RevokeEndpointAccessDeniedException extends InvalidRequestParentException {
 
     private String callback;
+
     public RevokeEndpointAccessDeniedException(String message) {
+
         super(message);
     }
 
     public RevokeEndpointAccessDeniedException(String message, String errorCode, String callback) {
+
         super(message);
         this.errorCode = errorCode;
         this.callback = callback;
     }
 
     public RevokeEndpointAccessDeniedException(String message, String errorCode, Throwable cause) {
+
         super(message, errorCode, cause);
         this.errorCode = errorCode;
     }
 
     public String getCallback() {
+
         return callback;
     }
 }

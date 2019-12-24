@@ -39,6 +39,7 @@ public class IntrospectionResponseBuilder {
      * @throws JSONException
      */
     public String build() throws JSONException {
+
         return JSONUtils.buildJSON(parameters);
     }
 
@@ -47,6 +48,7 @@ public class IntrospectionResponseBuilder {
      * @return IntrospectionResponseBuilder
      */
     public IntrospectionResponseBuilder setActive(boolean isActive) {
+
         parameters.put(IntrospectionResponse.ACTIVE, isActive);
         if (!isActive) {
             // if the token is not active we do not want to return back the expiration time.
@@ -63,6 +65,7 @@ public class IntrospectionResponseBuilder {
      * @return IntrospectionResponseBuilder
      */
     public IntrospectionResponseBuilder setIssuedAt(long issuedAt) {
+
         if (issuedAt != 0) {
             parameters.put(IntrospectionResponse.IAT, issuedAt);
         }
@@ -74,6 +77,7 @@ public class IntrospectionResponseBuilder {
      * @return IntrospectionResponseBuilder
      */
     public IntrospectionResponseBuilder setJwtId(String jwtId) {
+
         if (StringUtils.isNotBlank(jwtId)) {
             parameters.put(IntrospectionResponse.JTI, jwtId);
         }
@@ -85,6 +89,7 @@ public class IntrospectionResponseBuilder {
      * @return IntrospectionResponseBuilder
      */
     public IntrospectionResponseBuilder setSubject(String subject) {
+
         if (StringUtils.isNotBlank(subject)) {
             parameters.put(IntrospectionResponse.SUB, subject);
         }
@@ -96,6 +101,7 @@ public class IntrospectionResponseBuilder {
      * @return IntrospectionResponseBuilder
      */
     public IntrospectionResponseBuilder setExpiration(long expiration) {
+
         if (isActive && expiration != 0) {
             // if the token is not active we do not want to return back the expiration time.
             parameters.put(IntrospectionResponse.EXP, expiration);
@@ -108,6 +114,7 @@ public class IntrospectionResponseBuilder {
      * @return IntrospectionResponseBuilder
      */
     public IntrospectionResponseBuilder setUsername(String username) {
+
         if (StringUtils.isNotBlank(username)) {
             parameters.put(IntrospectionResponse.USERNAME, username);
         }
@@ -119,6 +126,7 @@ public class IntrospectionResponseBuilder {
      * @return IntrospectionResponseBuilder
      */
     public IntrospectionResponseBuilder setTokenType(String tokenType) {
+
         if (StringUtils.isNotBlank(tokenType)) {
             parameters.put(IntrospectionResponse.TOKEN_TYPE, tokenType);
         }
@@ -130,6 +138,7 @@ public class IntrospectionResponseBuilder {
      * @return IntrospectionResponseBuilder
      */
     public IntrospectionResponseBuilder setNotBefore(long notBefore) {
+
         if (isActive && notBefore != 0) {
             // if the token is not active we do not want to return back the nbf time.
             parameters.put(IntrospectionResponse.NBF, notBefore);
@@ -142,6 +151,7 @@ public class IntrospectionResponseBuilder {
      * @return IntrospectionResponseBuilder
      */
     public IntrospectionResponseBuilder setAudience(String audience) {
+
         if (StringUtils.isNotBlank(audience)) {
             parameters.put(IntrospectionResponse.AUD, audience);
         }
@@ -153,6 +163,7 @@ public class IntrospectionResponseBuilder {
      * @return IntrospectionResponseBuilder
      */
     public IntrospectionResponseBuilder setIssuer(String issuer) {
+
         if (StringUtils.isNotBlank(issuer)) {
             parameters.put(IntrospectionResponse.ISS, issuer);
         }
@@ -164,6 +175,7 @@ public class IntrospectionResponseBuilder {
      * @return IntrospectionResponseBuilder
      */
     public IntrospectionResponseBuilder setScope(String scope) {
+
         if (StringUtils.isNotBlank(scope)) {
             parameters.put(IntrospectionResponse.SCOPE, scope);
         }
@@ -175,6 +187,7 @@ public class IntrospectionResponseBuilder {
      * @return IntrospectionResponseBuilder
      */
     public IntrospectionResponseBuilder setClientId(String consumerKey) {
+
         if (StringUtils.isNotBlank(consumerKey)) {
             parameters.put(IntrospectionResponse.CLIENT_ID, consumerKey);
         }
@@ -182,6 +195,7 @@ public class IntrospectionResponseBuilder {
     }
 
     public IntrospectionResponseBuilder setTokenString(String tokenString) {
+
         if (StringUtils.isNotBlank(tokenString)) {
             parameters.put(IntrospectionResponse.TOKEN_STRING, tokenString);
         }
@@ -195,6 +209,7 @@ public class IntrospectionResponseBuilder {
      * @return IntrospectionResponseBuilder.
      */
     public IntrospectionResponseBuilder setBindingType(String bindingType) {
+
         if (StringUtils.isNotBlank(bindingType)) {
             parameters.put(IntrospectionResponse.BINDING_TYPE, bindingType);
         }
@@ -208,6 +223,7 @@ public class IntrospectionResponseBuilder {
      * @return IntrospectionResponseBuilder.
      */
     public IntrospectionResponseBuilder setBindingReference(String bindingReference) {
+
         if (StringUtils.isNotBlank(bindingReference)) {
             parameters.put(IntrospectionResponse.BINDING_REFERENCE, bindingReference);
         }
@@ -219,6 +235,7 @@ public class IntrospectionResponseBuilder {
      * @return IntrospectionResponseBuilder
      */
     public IntrospectionResponseBuilder setErrorCode(String errorCode) {
+
         parameters.put(IntrospectionResponse.Error.ERROR, errorCode);
         return this;
     }
@@ -228,6 +245,7 @@ public class IntrospectionResponseBuilder {
      * @return IntrospectionResponseBuilder
      */
     public IntrospectionResponseBuilder setErrorDescription(String description) {
+
         parameters.put(IntrospectionResponse.Error.ERROR_DESCRIPTION, description);
         return this;
     }
