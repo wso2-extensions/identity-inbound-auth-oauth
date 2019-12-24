@@ -33,6 +33,7 @@ import org.wso2.carbon.identity.oidc.dcr.model.OIDCRegistrationRequestProfile;
 import org.wso2.carbon.identity.oidc.dcr.util.OIDCDCRConstants;
 
 import java.util.regex.Matcher;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.HttpMethod;
@@ -61,7 +62,6 @@ public class OIDCRegistrationRequestFactory extends RegistrationRequestFactory {
         return canHandle;
     }
 
-
     @Override
     public OIDCRegistrationRequest.OIDCRegistrationRequestBuilder create(HttpServletRequest request,
                                                                          HttpServletResponse response)
@@ -72,7 +72,6 @@ public class OIDCRegistrationRequestFactory extends RegistrationRequestFactory {
         }
         OIDCRegistrationRequest.OIDCRegistrationRequestBuilder registerRequestBuilder = new
                 OIDCRegistrationRequest.OIDCRegistrationRequestBuilder(request, response);
-
 
         create(registerRequestBuilder, request, response);
 
@@ -102,6 +101,7 @@ public class OIDCRegistrationRequestFactory extends RegistrationRequestFactory {
     @Override
     protected void parseJson(JSONObject jsonData, RegistrationRequest.RegistrationRequestBuilder requestBuilder)
             throws FrameworkClientException {
+
         super.parseJson(jsonData, requestBuilder);
         RegistrationRequestProfile registrationRequestProfile = requestBuilder.getRegistrationRequestProfile();
         if (registrationRequestProfile instanceof OIDCRegistrationRequestProfile) {
