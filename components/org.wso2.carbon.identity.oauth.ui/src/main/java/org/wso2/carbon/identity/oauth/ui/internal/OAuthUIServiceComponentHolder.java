@@ -34,30 +34,37 @@ public class OAuthUIServiceComponentHolder {
     private HttpService httpService;
 
     public static OAuthUIServiceComponentHolder getInstance() {
+
         return instance;
     }
 
     public ConfigurationContextService getConfigurationContextService() {
+
         return configurationContextService;
     }
 
     public void setConfigurationContextService(ConfigurationContextService configurationContextService) {
+
         this.configurationContextService = configurationContextService;
     }
 
     public ServerConfigurationService getServerConfigurationService() {
+
         return serverConfigurationService;
     }
 
     public void setServerConfigurationService(ServerConfigurationService serverConfigurationService) {
+
         this.serverConfigurationService = serverConfigurationService;
     }
 
     public HttpService getHttpService() {
+
         return httpService;
     }
 
     public void setHttpService(HttpService httpService) {
+
         this.httpService = httpService;
     }
 

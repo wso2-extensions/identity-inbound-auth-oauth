@@ -45,7 +45,7 @@
     String forwardTo = null;
     String addAction = "add.jsp";
     OAuthAdminClient client = null;
-
+    
     int numberOfPages = 0;
     String isPaginatedString = request.getParameter("isPaginated");
     if (isPaginatedString != null && isPaginatedString.equals("true")) {
@@ -53,8 +53,7 @@
         numberOfPages = (Integer) session.getAttribute(OAuthConstants.OAUTH_DATA_PAGE_COUNT);
     }
     String paginationValue = "isPaginated=true";
-
-
+    
     String pageNumber = request.getParameter("pageNumber");
     if (pageNumber == null) {
         pageNumber = "0";
@@ -64,7 +63,7 @@
         pageNumberInt = Integer.parseInt(pageNumber);
     } catch (NumberFormatException ignored) {
     }
-
+    
     try {
         String cookie = (String) session.getAttribute(ServerConstants.ADMIN_SERVICE_COOKIE);
         String backendServerURL = CarbonUIUtil.getServerURL(config.getServletContext(), session);
@@ -82,7 +81,7 @@
         if (client != null && client.getAllOAuthApplicationData() != null) {
             apps = OAuthUIUtil.doPaging(pageNumberInt, client.getAllOAuthApplicationData());
         }
-
+        
     } catch (Exception e) {
         String message = resourceBundle.getString("error.while.loading.user.application.data");
         CarbonUIMessage.sendCarbonUIMessage(message, CarbonUIMessage.ERROR, request);
@@ -108,15 +107,15 @@
             resourceBundle="org.wso2.carbon.identity.oauth.ui.i18n.Resources"
             topPage="true"
             request="<%=request%>"/>
-
+    
     <script type="text/javascript" src="../carbon/admin/js/breadcrumbs.js"></script>
     <script type="text/javascript" src="../carbon/admin/js/cookies.js"></script>
     <script type="text/javascript" src="../carbon/admin/js/main.js"></script>
-
+    
     <div id="middle">
-
+        
         <h2><fmt:message key='oauth.management'/></h2>
-
+        
         <div id="workArea">
             <script type="text/javascript">
                 function itemRemove(consumerkey, appname) {
@@ -139,16 +138,16 @@
                     }
 
                     CARBON.showConfirmationDialog('<fmt:message key='remove.message1'/>' + appname + '<fmt:message key='remove.message2'/>',
-                            doDelete, null);
+                        doDelete, null);
                 }
             </script>
-
+            
             <div style="height:30px;">
                 <a href="javascript:document.location.href='<%=addAction%>'" class="icon-link"
                    style="background-image:url(../admin/images/add.gif);"><fmt:message
                         key='add.new.application'/></a>
             </div>
-
+            
             <table style="width: 100%" class="styledLeft">
                 <thead>
                 <tr>
@@ -163,7 +162,8 @@
                 %>
                 <tr>
                     <td width="50%"><a
-                            href="edit.jsp?consumerkey=<%=Encode.forUriComponent(apps[i].getOauthConsumerKey())%>"><%=Encode.forHtml(apps[i].getApplicationName())%>
+                            href="edit.jsp?consumerkey=<%=Encode.forUriComponent(apps[i].getOauthConsumerKey())%>"><%=Encode
+                            .forHtml(apps[i].getApplicationName())%>
                     </a></td>
                     <td width="50%"><a title="<fmt:message key='remove.app'/>"
                                        onclick="itemRemove('<%=Encode.forJavaScriptAttribute(apps[i].getOauthConsumerKey())%>','<%=Encode.forJavaScriptAttribute(apps[i].getApplicationName())%>');return false;"
@@ -184,15 +184,15 @@
                     }
                 %>
                 </tbody>
-                </table>
-                    <carbon:paginator pageNumber="<%=pageNumberInt%>"
-                                      numberOfPages="<%=numberOfPages%>"
-                                      page="index.jsp"
-                                      pageNumberParameterName="pageNumber"
-                                      parameters="<%=Encode.forHtmlAttribute(paginationValue)%>"
-                                      resourceBundle="org.wso2.carbon.identity.oauth.ui.i18n.Resources"
-                                      prevKey="prev" nextKey="next"/>
-
+            </table>
+            <carbon:paginator pageNumber="<%=pageNumberInt%>"
+                              numberOfPages="<%=numberOfPages%>"
+                              page="index.jsp"
+                              pageNumberParameterName="pageNumber"
+                              parameters="<%=Encode.forHtmlAttribute(paginationValue)%>"
+                              resourceBundle="org.wso2.carbon.identity.oauth.ui.i18n.Resources"
+                              prevKey="prev" nextKey="next"/>
+        
         </div>
     </div>
 </fmt:bundle>

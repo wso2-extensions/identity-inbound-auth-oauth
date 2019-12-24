@@ -18,7 +18,10 @@
 <%@ taglib prefix="carbon" uri="http://wso2.org/projects/carbon/taglibs/carbontags.jar" %>
 <%@ page import="org.apache.axis2.context.ConfigurationContext" %>
 <%@ page import="org.json.JSONObject" %>
+<%@ page import="org.owasp.encoder.Encode" %>
 <%@ page import="org.wso2.carbon.CarbonConstants" %>
+<%@ page import="org.wso2.carbon.identity.claim.metadata.mgt.stub.dto.ExternalClaimDTO" %>
+<%@ page import="org.wso2.carbon.identity.oauth.ui.client.ClaimMetadataAdminClient" %>
 <%@ page import="org.wso2.carbon.ui.CarbonUIMessage" %>
 <%@ page import="org.wso2.carbon.ui.CarbonUIUtil" %>
 <%@ page import="org.wso2.carbon.utils.ServerConstants" %>
@@ -27,9 +30,6 @@
 <%@ page import="java.util.Arrays" %>
 <%@ page import="java.util.List" %>
 <%@ page import="java.util.ResourceBundle" %>
-<%@ page import="org.owasp.encoder.Encode" %>
-<%@ page import="org.wso2.carbon.identity.oauth.ui.client.ClaimMetadataAdminClient" %>
-<%@ page import="org.wso2.carbon.identity.claim.metadata.mgt.stub.dto.ExternalClaimDTO" %>
 <%@ page import="static org.wso2.carbon.identity.oauth.ui.util.OAuthUIConstants.CLAIM_URI" %>
 <jsp:include page="../dialog/display_messages.jsp"/>
 
@@ -51,7 +51,8 @@
             oidcClaims.addAll(Arrays.asList(externalClaimDTOS));
         }
     } catch (Exception e) {
-        String message = MessageFormat.format(resourceBundle.getString("error.while.loading.oidc.claims"), e.getMessage());
+        String message =
+                MessageFormat.format(resourceBundle.getString("error.while.loading.oidc.claims"), e.getMessage());
         CarbonUIMessage.sendCarbonUIMessage(message, CarbonUIMessage.ERROR, request);
     }
 %>
@@ -72,6 +73,7 @@
         }
 
         var deleteClaimRows = [];
+
         function deleteClaimRow(obj) {
             if (jQuery(obj).parent().prev().children()[0].value != '') {
                 deleteClaimRows.push(jQuery(obj).parent().prev().children()[0].value);
