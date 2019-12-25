@@ -18,6 +18,9 @@
 
 package org.wso2.carbon.identity.oidc.session;
 
+/**
+ * Contains the constants related to OIDC session.
+ */
 public class OIDCSessionConstants {
 
     public static final String OPBS_COOKIE_ID = "opbs";
@@ -31,7 +34,7 @@ public class OIDCSessionConstants {
     public static final String OIDC_POST_LOGOUT_REDIRECT_URI_PARAM = "post_logout_redirect_uri";
     public static final String OIDC_STATE_PARAM = "state";
     public static final String OIDC_SESSION_DATA_KEY_PARAM = "sessionDataKey";
-    public static final String OIDC_LOGOUT_CONSENT_DENIAL_REDIRECT_URL =  "OAuth.OpenIDConnect" +
+    public static final String OIDC_LOGOUT_CONSENT_DENIAL_REDIRECT_URL = "OAuth.OpenIDConnect" +
             ".RedirectToPostLogoutUriOnConsentDenial";
 
     public static final String OIDC_CACHE_CLIENT_ID_PARAM = "client_id";
@@ -39,18 +42,27 @@ public class OIDCSessionConstants {
 
     public static final String OIDC_ID_TOKEN_AZP_CLAIM = "azp";
 
+    /**
+     * Contains the constants related to OIDC config elements.
+     */
     public static class OIDCConfigElements {
+
         public static final String OIDC_LOGOUT_CONSENT_PAGE_URL = "OIDCLogoutConsentPage";
         public static final String OIDC_LOGOUT_PAGE_URL = "OIDCLogoutPage";
         public static final String HANDLE_ALREADY_LOGGED_OUT_SESSIONS_GRACEFULLY =
                 "HandleAlreadyLoggedOutSessionsGracefully";
     }
 
+    /**
+     * Contains the constants related to OIDC endpoints.
+     */
     public static class OIDCEndpoints {
+
         public static final String OIDC_SESSION_IFRAME_ENDPOINT = "/oidc/checksession";
         public static final String OIDC_LOGOUT_ENDPOINT = "/oidc/logout";
     }
 
     private OIDCSessionConstants() {
+
     }
 }

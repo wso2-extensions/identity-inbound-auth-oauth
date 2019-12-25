@@ -15,7 +15,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.wso2.carbon.identity.oidc.session.backChannelLogout;
+package org.wso2.carbon.identity.oidc.session.backchannellogout;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -37,13 +37,14 @@ import org.wso2.carbon.identity.oidc.session.cache.OIDCBackChannelAuthCodeCacheK
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
 import org.wso2.carbon.identity.openidconnect.ClaimProvider;
 
-import javax.servlet.http.Cookie;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+import javax.servlet.http.Cookie;
+
 /**
- * This class is used to insert sid claim into ID token
+ * This class is used to insert sid claim into ID token.
  */
 public class ClaimProviderImpl implements ClaimProvider {
 
@@ -84,6 +85,7 @@ public class ClaimProviderImpl implements ClaimProvider {
      */
     private void addSidToCacheWhenIDTokenIsEncrypted(OAuthAuthzReqMessageContext oAuthAuthzReqMessageContext,
                                                      String claimValue) throws IdentityOAuth2Exception {
+
         try {
             OAuthAppDO app = OAuth2Util.getAppInformationByClientId(
                     oAuthAuthzReqMessageContext.getAuthorizationReqDTO().getConsumerKey());

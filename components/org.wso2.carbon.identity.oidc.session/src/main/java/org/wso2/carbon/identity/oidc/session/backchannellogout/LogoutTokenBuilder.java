@@ -15,13 +15,14 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.wso2.carbon.identity.oidc.session.backChannelLogout;
+package org.wso2.carbon.identity.oidc.session.backchannellogout;
 
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 
-import javax.servlet.http.HttpServletRequest;
 import java.util.Map;
+
+import javax.servlet.http.HttpServletRequest;
 
 /**
  * Logout token generator for the OpenID Connect back-channel logout Implementation.
@@ -29,7 +30,7 @@ import java.util.Map;
 public interface LogoutTokenBuilder {
 
     /**
-     * Returns logout token and back-channel logout uri map
+     * Returns logout token and back-channel logout uri map.
      *
      * @param request HttpServletRequest
      * @return a map of logout tokens and corresponding back-channel logout URLs.

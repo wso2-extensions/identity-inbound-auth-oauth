@@ -25,7 +25,7 @@ import org.wso2.carbon.identity.event.IdentityEventException;
 import org.wso2.carbon.identity.event.event.Event;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
-import org.wso2.carbon.identity.oidc.session.backChannelLogout.LogoutRequestSender;
+import org.wso2.carbon.identity.oidc.session.backchannellogout.LogoutRequestSender;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
 
 import javax.servlet.http.Cookie;
@@ -89,7 +89,7 @@ public class OIDCLogoutEventHandler extends AbstractEventHandler {
         return (HttpServletRequest) event.getEventProperties().get(EventProperty.REQUEST);
     }
 
-    private boolean hasOPBSCookieValue (Cookie opbsCookie) {
+    private boolean hasOPBSCookieValue(Cookie opbsCookie) {
 
         String opbsCookieValue = null;
 

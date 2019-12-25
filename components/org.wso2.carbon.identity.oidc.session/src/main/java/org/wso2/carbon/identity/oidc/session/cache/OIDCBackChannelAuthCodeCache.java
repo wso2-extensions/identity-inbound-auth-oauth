@@ -23,7 +23,7 @@ import org.wso2.carbon.identity.application.authentication.framework.store.Sessi
 import org.wso2.carbon.identity.application.common.cache.BaseCache;
 
 /**
- * This class is used to cache Authorization code  against session ID (sid) for OIDCBackChannel Logout
+ * This class is used to cache Authorization code  against session ID (sid) for OIDCBackChannel Logout.
  */
 public class OIDCBackChannelAuthCodeCache extends BaseCache<OIDCBackChannelAuthCodeCacheKey,
         OIDCBackChannelAuthCodeCacheEntry> {
@@ -34,6 +34,7 @@ public class OIDCBackChannelAuthCodeCache extends BaseCache<OIDCBackChannelAuthC
     private static volatile OIDCBackChannelAuthCodeCache instance;
 
     public OIDCBackChannelAuthCodeCache() {
+
         super(OIDC_BACKCHANNEL_DATA_CACHE_NAME);
     }
 
@@ -43,6 +44,7 @@ public class OIDCBackChannelAuthCodeCache extends BaseCache<OIDCBackChannelAuthC
      * @return OIDCBackChannelAuthCodeCache instance.
      */
     public static OIDCBackChannelAuthCodeCache getInstance() {
+
         if (instance == null) {
             synchronized (OIDCBackChannelAuthCodeCache.class) {
                 if (instance == null) {
@@ -63,6 +65,7 @@ public class OIDCBackChannelAuthCodeCache extends BaseCache<OIDCBackChannelAuthC
      */
     @Override
     public void addToCache(OIDCBackChannelAuthCodeCacheKey key, OIDCBackChannelAuthCodeCacheEntry entry) {
+
         super.addToCache(key, entry);
         SessionDataStore.getInstance().storeSessionData(key.getAuthCode(), OIDC_BACKCHANNEL_DATA_CACHE_NAME, entry);
         if (log.isDebugEnabled()) {
@@ -79,6 +82,7 @@ public class OIDCBackChannelAuthCodeCache extends BaseCache<OIDCBackChannelAuthC
      */
     @Override
     public OIDCBackChannelAuthCodeCacheEntry getValueFromCache(OIDCBackChannelAuthCodeCacheKey key) {
+
         OIDCBackChannelAuthCodeCacheEntry entry = super.getValueFromCache(key);
         if (entry == null) {
             if (log.isDebugEnabled()) {
@@ -97,6 +101,7 @@ public class OIDCBackChannelAuthCodeCache extends BaseCache<OIDCBackChannelAuthC
      */
     @Override
     public void clearCacheEntry(OIDCBackChannelAuthCodeCacheKey key) {
+
         super.clearCacheEntry(key);
         SessionDataStore.getInstance().clearSessionData(key.getAuthCode(), OIDC_BACKCHANNEL_DATA_CACHE_NAME);
         if (log.isDebugEnabled()) {

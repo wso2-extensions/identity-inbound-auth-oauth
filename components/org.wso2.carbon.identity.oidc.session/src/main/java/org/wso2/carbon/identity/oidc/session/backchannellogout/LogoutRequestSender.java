@@ -15,7 +15,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.wso2.carbon.identity.oidc.session.backChannelLogout;
+package org.wso2.carbon.identity.oidc.session.backchannellogout;
 
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.logging.Log;
@@ -33,7 +33,6 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 
-import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
@@ -42,6 +41,11 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import javax.servlet.http.HttpServletRequest;
+
+/**
+ * Used to send logout request.
+ */
 public class LogoutRequestSender {
 
     private static final Log log = LogFactory.getLog(LogoutRequestSender.class);
@@ -54,7 +58,7 @@ public class LogoutRequestSender {
     }
 
     /**
-     * getInstance() method of LogoutRequestSender, as it is a singleton
+     * getInstance() method of LogoutRequestSender, as it is a singleton.
      *
      * @return LogoutRequestSender instance
      */
@@ -119,9 +123,9 @@ public class LogoutRequestSender {
             this.backChannelLogouturl = backChannelLogouturl;
         }
 
-
         @Override
         public void run() {
+
             if (log.isDebugEnabled()) {
                 log.debug("Starting backchannel logout request to: " + backChannelLogouturl);
             }

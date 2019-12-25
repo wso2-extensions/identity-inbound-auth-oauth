@@ -21,7 +21,7 @@ package org.wso2.carbon.identity.oidc.session.cache;
 import org.wso2.carbon.identity.application.common.cache.CacheKey;
 
 /**
- * This class holds the cache key which is the browser session cookie id
+ * This class holds the cache key which is the browser session cookie id.
  */
 public class OIDCSessionParticipantCacheKey extends CacheKey {
 
@@ -30,25 +30,28 @@ public class OIDCSessionParticipantCacheKey extends CacheKey {
     private String sessionID;
 
     /**
-     * Returns session id
+     * Returns session id.
      *
      * @return session id value
      */
     public String getSessionID() {
+
         return sessionID;
     }
 
     /**
-     * Sets session id
+     * Sets session id.
      *
      * @param sessionID session id value
      */
     public void setSessionID(String sessionID) {
+
         this.sessionID = sessionID;
     }
 
     @Override
     public boolean equals(Object o) {
+
         if (this == o) {
             return true;
         }
@@ -70,6 +73,7 @@ public class OIDCSessionParticipantCacheKey extends CacheKey {
 
     @Override
     public int hashCode() {
+
         int result = super.hashCode();
         result = 31 * result + sessionID.hashCode();
         return result;

@@ -21,10 +21,13 @@ package org.wso2.carbon.identity.oidc.session;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
 
+/**
+ * Manages the OIDC session state.
+ */
 public interface OIDCSessionStateManager {
 
     /**
-     * Generates a session state using the provided client id, client callback url and browser state cookie id
+     * Generates a session state using the provided client id, client callback url and browser state cookie id.
      *
      * @param clientId
      * @param rpCallBackUrl
@@ -34,7 +37,7 @@ public interface OIDCSessionStateManager {
     String getSessionStateParam(String clientId, String rpCallBackUrl, String opBrowserState);
 
     /**
-     * Adds the browser state cookie to the response
+     * Adds the browser state cookie to the response.
      *
      * @param response
      * @return Cookie
