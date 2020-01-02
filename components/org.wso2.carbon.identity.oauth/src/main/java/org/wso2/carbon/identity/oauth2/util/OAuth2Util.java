@@ -153,6 +153,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.xml.namespace.QName;
 import javax.xml.stream.XMLInputFactory;
@@ -170,7 +171,6 @@ public class OAuth2Util {
     public static final String JWT_ACCESS_TOKEN = "JWT_ACCESS_TOKEN";
     public static final String ACCESS_TOKEN_DO = "AccessTokenDo";
     public static final String OAUTH2_VALIDATION_MESSAGE_CONTEXT = "OAuth2TokenValidationMessageContext";
-    private static final String ESSENTAIL = "essential";
     public static final String CONFIG_ELEM_OAUTH = "OAuth";
     public static final String OPENID_CONNECT = "OpenIDConnect";
     public static final String ENABLE_OPENID_CONNECT_AUDIENCES = "EnableAudiences";
@@ -186,7 +186,6 @@ public class OAuth2Util {
 
     public static final String DEFAULT_TOKEN_TYPE = "Default";
 
-    private static final String ALGORITHM_NONE = "NONE";
     /*
      * OPTIONAL. A JSON string containing a space-separated list of scopes associated with this token, in the format
      * described in Section 3.3 of OAuth 2.0
@@ -708,7 +707,8 @@ public class OAuth2Util {
 
     public static Map<String, String> getAvailableUserStoreDomainMappings() throws
             IdentityOAuth2Exception {
-        //TreeMap is used to ignore the case sensitivity of key. Because when user logged in, the case of the username is ignored.
+        // TreeMap is used to ignore the case sensitivity of key. Because when user logged in, the case of the
+        // username is ignored.
         Map<String, String> userStoreDomainMap = new TreeMap<String, String>(String.CASE_INSENSITIVE_ORDER);
         String domainsStr = getAccessTokenPartitioningDomains();
         if (domainsStr != null) {
@@ -918,10 +918,10 @@ public class OAuth2Util {
         String userStore;
         if (userId != null) {
             String[] strArr = userId.split(UserCoreConstants.DOMAIN_SEPARATOR);
-            if (strArr != null && strArr.length > 1) {
+            if (strArr.length > 1) {
                 userStore = strArr[0];
-                accessTokenStoreTable = OAuth2Util.getPartitionedTableByUserStore(OAuthConstants.ACCESS_TOKEN_STORE_TABLE,
-                        userStore);
+                accessTokenStoreTable =
+                        OAuth2Util.getPartitionedTableByUserStore(OAuthConstants.ACCESS_TOKEN_STORE_TABLE, userStore);
             }
         }
         return accessTokenStoreTable;
@@ -1099,6 +1099,9 @@ public class OAuth2Util {
         return issuer;
     }
 
+    /**
+     * OAuth URL related utility functions.
+     */
     public static class OAuthURL {
 
         public static String getOAuth1RequestTokenUrl() {
@@ -1206,12 +1209,12 @@ public class OAuth2Util {
 
         public static String getOIDCConsentPageUrl() {
 
-            String OIDCConsentPageUrl = OAuthServerConfiguration.getInstance().getOIDCConsentPageUrl();
-            if (StringUtils.isBlank(OIDCConsentPageUrl)) {
-                OIDCConsentPageUrl = IdentityUtil.getServerURL("/authenticationendpoint/oauth2_consent.do", false,
+            String oidcConsentPageUrl = OAuthServerConfiguration.getInstance().getOIDCConsentPageUrl();
+            if (StringUtils.isBlank(oidcConsentPageUrl)) {
+                oidcConsentPageUrl = IdentityUtil.getServerURL("/authenticationendpoint/oauth2_consent.do", false,
                         false);
             }
-            return OIDCConsentPageUrl;
+            return oidcConsentPageUrl;
         }
 
         public static String getOAuth2ConsentPageUrl() {
@@ -1295,20 +1298,20 @@ public class OAuth2Util {
     }
 
     @Deprecated
-    public static boolean doPKCEValidation(String referenceCodeChallenge, String codeVerifier, String challenge_method,
+    public static boolean doPKCEValidation(String referenceCodeChallenge, String codeVerifier, String challengeMethod,
                                            OAuthAppDO oAuthAppDO) throws IdentityOAuth2Exception {
 
-        return validatePKCE(referenceCodeChallenge, codeVerifier, challenge_method, oAuthAppDO);
+        return validatePKCE(referenceCodeChallenge, codeVerifier, challengeMethod, oAuthAppDO);
     }
 
-    public static boolean validatePKCE(String referenceCodeChallenge, String verificationCode, String challenge_method,
+    public static boolean validatePKCE(String referenceCodeChallenge, String verificationCode, String challengeMethod,
                                        OAuthAppDO oAuthApp) throws IdentityOAuth2Exception {
 
         if (oAuthApp != null && oAuthApp.isPkceMandatory() || referenceCodeChallenge != null) {
 
             //As per RFC 7636 Fallback to 'plain' if no code_challenge_method parameter is sent
-            if (challenge_method == null || challenge_method.trim().length() == 0) {
-                challenge_method = "plain";
+            if (challengeMethod == null || challengeMethod.trim().length() == 0) {
+                challengeMethod = "plain";
             }
 
             //if app with no PKCE code verifier arrives
@@ -1332,15 +1335,16 @@ public class OAuth2Util {
             if (!validatePKCECodeVerifier(verificationCode)) {
                 throw new IdentityOAuth2Exception("Code verifier used is not up to RFC 7636 specifications.");
             }
-            if (OAuthConstants.OAUTH_PKCE_PLAIN_CHALLENGE.equals(challenge_method)) {
+            if (OAuthConstants.OAUTH_PKCE_PLAIN_CHALLENGE.equals(challengeMethod)) {
                 //if the current application explicitly doesn't support plain, throw exception
                 if (!oAuthApp.isPkceSupportPlain()) {
-                    throw new IdentityOAuth2Exception("This application does not allow 'plain' transformation algorithm.");
+                    throw new IdentityOAuth2Exception(
+                            "This application does not allow 'plain' transformation algorithm.");
                 }
                 if (!referenceCodeChallenge.equals(verificationCode)) {
                     return false;
                 }
-            } else if (OAuthConstants.OAUTH_PKCE_S256_CHALLENGE.equals(challenge_method)) {
+            } else if (OAuthConstants.OAUTH_PKCE_S256_CHALLENGE.equals(challengeMethod)) {
 
                 try {
                     MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
@@ -1361,7 +1365,7 @@ public class OAuth2Util {
             } else {
                 //Invalid OAuth2 token response
                 throw new IdentityOAuth2Exception("Invalid OAuth2 Token Response. Invalid PKCE Code Challenge Method '"
-                        + challenge_method + "'");
+                        + challengeMethod + "'");
             }
         }
         //pkce validation successful
@@ -1507,7 +1511,8 @@ public class OAuth2Util {
                 registry.put(OAuthConstants.TOKEN_EXPIRE_TIME_RESOURCE_PATH, resource);
             }
         } catch (RegistryException e) {
-            log.error("Error while creating registry collection for :" + OAuthConstants.TOKEN_EXPIRE_TIME_RESOURCE_PATH, e);
+            log.error("Error while creating registry collection for :" + OAuthConstants.TOKEN_EXPIRE_TIME_RESOURCE_PATH,
+                    e);
         }
     }
 
@@ -1551,9 +1556,11 @@ public class OAuth2Util {
                                         "  for application id : " + consumerKey);
                             }
                         } catch (NumberFormatException e) {
-                            String errorMsg = String.format("Invalid value provided as user access token expiry time " +
-                                            "for consumer key %s, tenant id : %d. Given value: %s, Expected a long value",
-                                    consumerKey, tenantId, spTimeObject.get(USER_ACCESS_TOKEN_EXP_TIME_IN_MILLISECONDS).toString());
+                            String errorMsg = String.format(
+                                    "Invalid value provided as user access token expiry time for consumer " +
+                                            "key %s, tenant id : %d. Given value: %s, Expected a long value",
+                                    consumerKey, tenantId,
+                                    spTimeObject.get(USER_ACCESS_TOKEN_EXP_TIME_IN_MILLISECONDS).toString());
                             log.error(errorMsg, e);
                         }
                     } else {
@@ -1572,9 +1579,11 @@ public class OAuth2Util {
                                         "  for application id : " + consumerKey);
                             }
                         } catch (NumberFormatException e) {
-                            String errorMsg = String.format("Invalid value provided as application access token " +
-                                            "expiry time for consumer key %s, tenant id : %d. Given value: %s, Expected a long value ",
-                                    consumerKey, tenantId, spTimeObject.get(APPLICATION_ACCESS_TOKEN_EXP_TIME_IN_MILLISECONDS).toString());
+                            String errorMsg = String.format(
+                                    "Invalid value provided as application access token expiry time for consumer " +
+                                            "key %s, tenant id : %d. Given value: %s, Expected a long value ",
+                                    consumerKey, tenantId,
+                                    spTimeObject.get(APPLICATION_ACCESS_TOKEN_EXP_TIME_IN_MILLISECONDS).toString());
                             log.error(errorMsg, e);
                         }
                     } else {
@@ -1594,9 +1603,11 @@ public class OAuth2Util {
                             }
 
                         } catch (NumberFormatException e) {
-                            String errorMsg = String.format("Invalid value provided as refresh token expiry time for " +
-                                            "consumer key %s, tenant id : %d. Given value: %s, Expected a long value", consumerKey,
-                                    tenantId, spTimeObject.get(REFRESH_TOKEN_EXP_TIME_IN_MILLISECONDS).toString());
+                            String errorMsg = String.format(
+                                    "Invalid value provided as refresh token expiry time for consumer key %s, tenant " +
+                                            "id : %d. Given value: %s, Expected a long value",
+                                    consumerKey, tenantId,
+                                    spTimeObject.get(REFRESH_TOKEN_EXP_TIME_IN_MILLISECONDS).toString());
                             log.error(errorMsg, e);
                         }
                     } else {
@@ -1927,7 +1938,8 @@ public class OAuth2Util {
      * @return mapped JWSAlgorithm
      * @throws IdentityOAuth2Exception
      */
-    public static JWSAlgorithm mapSignatureAlgorithmForJWSAlgorithm(String signatureAlgorithm) throws IdentityOAuth2Exception {
+    public static JWSAlgorithm mapSignatureAlgorithmForJWSAlgorithm(String signatureAlgorithm)
+            throws IdentityOAuth2Exception {
 
         if (NONE.equalsIgnoreCase(signatureAlgorithm)) {
             return new JWSAlgorithm(JWSAlgorithm.NONE.getName());
@@ -1972,15 +1984,15 @@ public class OAuth2Util {
             log.warn("Error in OAuth Configuration. OAuth element is not available.");
             return isAudienceEnabled;
         }
-        OMElement configOpenIDConnect = oauthElem.getFirstChildWithName(new QName(IdentityCoreConstants.IDENTITY_DEFAULT_NAMESPACE,
-                        OPENID_CONNECT));
+        OMElement configOpenIDConnect = oauthElem
+                .getFirstChildWithName(new QName(IdentityCoreConstants.IDENTITY_DEFAULT_NAMESPACE, OPENID_CONNECT));
 
         if (configOpenIDConnect == null) {
             log.warn("Error in OAuth Configuration. OpenID element is not available.");
             return isAudienceEnabled;
         }
-        OMElement configAudience = configOpenIDConnect.getFirstChildWithName(new QName(IdentityCoreConstants.IDENTITY_DEFAULT_NAMESPACE,
-                        ENABLE_OPENID_CONNECT_AUDIENCES));
+        OMElement configAudience = configOpenIDConnect.getFirstChildWithName(
+                new QName(IdentityCoreConstants.IDENTITY_DEFAULT_NAMESPACE, ENABLE_OPENID_CONNECT_AUDIENCES));
 
         if (configAudience != null) {
             String configAudienceValue = configAudience.getText();
@@ -2000,8 +2012,8 @@ public class OAuth2Util {
     public static String getFederatedUserDomain(String authenticatedIDP) {
 
         if (IdentityUtil.isNotBlank(authenticatedIDP)) {
-            return OAuthConstants.UserType.FEDERATED_USER_DOMAIN_PREFIX + OAuthConstants.UserType.FEDERATED_USER_DOMAIN_SEPARATOR +
-                    authenticatedIDP;
+            return OAuthConstants.UserType.FEDERATED_USER_DOMAIN_PREFIX +
+                    OAuthConstants.UserType.FEDERATED_USER_DOMAIN_SEPARATOR + authenticatedIDP;
         } else {
             return OAuthConstants.UserType.FEDERATED_USER_DOMAIN_PREFIX;
         }
@@ -2025,7 +2037,8 @@ public class OAuth2Util {
             } else {
                 //It is not sending tenant domain with the subject in id_token by default, So to work this as
                 //expected, need to enable the option "Use tenant domain in local subject identifier" in SP config
-                tenantDomain = MultitenantUtils.getTenantDomain(SignedJWT.parse(idToken).getJWTClaimsSet().getSubject());
+                tenantDomain =
+                        MultitenantUtils.getTenantDomain(SignedJWT.parse(idToken).getJWTClaimsSet().getSubject());
             }
             if (StringUtils.isEmpty(tenantDomain)) {
                 return false;
@@ -2313,7 +2326,8 @@ public class OAuth2Util {
         }
     }
 
-    private static String getThumbPrint(Certificate certificate) throws NoSuchAlgorithmException, CertificateEncodingException {
+    private static String getThumbPrint(Certificate certificate)
+            throws NoSuchAlgorithmException, CertificateEncodingException {
         // Generate the SHA-1 thumbprint of the certificate.
         MessageDigest digestValue = MessageDigest.getInstance("SHA-1");
         byte[] der = certificate.getEncoded();
@@ -2340,7 +2354,8 @@ public class OAuth2Util {
             try {
                 IdentityTenantUtil.initializeRegistry(tenantId, tenantDomain);
             } catch (IdentityException e) {
-                throw new IdentityOAuth2Exception("Error occurred while loading registry for tenant " + tenantDomain, e);
+                throw new IdentityOAuth2Exception("Error occurred while loading registry for tenant " + tenantDomain,
+                        e);
             }
 
             // get tenant's key store manager
@@ -2411,7 +2426,8 @@ public class OAuth2Util {
                         while (claimKeyValues.hasNext()) {
                             String claimKey = (String) claimKeyValues.next();
                             String claimValue = jsonObjectValues.get(claimKey).toString();
-                            if (Boolean.parseBoolean(claimValue) && claimKey.equals(OAuthConstants.OAuth20Params.ESSENTIAL)) {
+                            if (Boolean.parseBoolean(claimValue) &&
+                                    claimKey.equals(OAuthConstants.OAuth20Params.ESSENTIAL)) {
                                 essentialClaimsList.add(key);
                             }
                         }
@@ -2486,7 +2502,8 @@ public class OAuth2Util {
         }
 
         String usernameForToken = authenticatedUser.toString();
-        if (!OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && authenticatedUser.isFederatedUser()) {
+        if (!OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() &&
+                authenticatedUser.isFederatedUser()) {
             usernameForToken = OAuth2Util.getFederatedUserDomain(authenticatedUser.getFederatedIdPName());
             usernameForToken = usernameForToken + UserCoreConstants.DOMAIN_SEPARATOR + authenticatedUser.
                     getAuthenticatedSubjectIdentifier();
@@ -2712,8 +2729,8 @@ public class OAuth2Util {
     public static void triggerOnTokenExceptionListeners(Throwable exception, Map<String, Object> params) {
 
         try {
-            OAuthEventInterceptor oAuthEventInterceptorProxy = OAuthComponentServiceHolder.getInstance()
-                                                                                          .getOAuthEventInterceptorProxy();
+            OAuthEventInterceptor oAuthEventInterceptorProxy =
+                    OAuthComponentServiceHolder.getInstance().getOAuthEventInterceptorProxy();
 
             if (oAuthEventInterceptorProxy != null) {
                 try {
@@ -2860,7 +2877,8 @@ public class OAuth2Util {
      * @deprecated use {@link #createAuthenticatedUser(String, String, String, String)} instead.
      */
     @Deprecated
-    public static AuthenticatedUser createAuthenticatedUser(String username, String userStoreDomain, String tenantDomain) {
+    public static AuthenticatedUser createAuthenticatedUser(String username, String userStoreDomain,
+                                                            String tenantDomain) {
 
         AuthenticatedUser authenticatedUser = new AuthenticatedUser();
         authenticatedUser.setUserName(username);
@@ -2942,7 +2960,8 @@ public class OAuth2Util {
         try {
             return IdentityProviderManager.getInstance().getResidentIdP(tenantDomain);
         } catch (IdentityProviderManagementException e) {
-            String errorMsg = String.format("Error while getting Resident Identity Provider of '%s' tenant.", tenantDomain);
+            String errorMsg =
+                    String.format("Error while getting Resident Identity Provider of '%s' tenant.", tenantDomain);
             throw new IdentityOAuth2Exception(errorMsg, e);
         }
     }
@@ -3025,9 +3044,9 @@ public class OAuth2Util {
                     OauthTokenIssuer oauthTokenIssuer = oauthTokenIssuerEntry.getValue();
                     String tokenAlias = oauthTokenIssuer.getAccessTokenHash(tokenIdentifier);
                     if (oauthTokenIssuer.usePersistedAccessTokenAlias()) {
-                        accessTokenDO =  OAuth2Util.getAccessTokenDOFromTokenIdentifier(tokenAlias, includeExpired);
+                        accessTokenDO = OAuth2Util.getAccessTokenDOFromTokenIdentifier(tokenAlias, includeExpired);
                     } else {
-                        accessTokenDO =  OAuth2Util.getAccessTokenDOFromTokenIdentifier(tokenIdentifier, includeExpired);
+                        accessTokenDO = OAuth2Util.getAccessTokenDOFromTokenIdentifier(tokenIdentifier, includeExpired);
                     }
                     if (accessTokenDO != null) {
                         return accessTokenDO;
@@ -3062,10 +3081,10 @@ public class OAuth2Util {
      * Differentiate default token issuers from all available token issuers map.
      *
      * @param allOAuthTokenIssuerMap Map of all available token issuers.
-     * @param
+     * @param defaultOAuthTokenIssuerMap default token issuers
      */
-    private static void extractDefaultOauthTokenIssuers( Map<String, OauthTokenIssuer> allOAuthTokenIssuerMap,
-            Map<String, OauthTokenIssuer> defaultOAuthTokenIssuerMap) {
+    private static void extractDefaultOauthTokenIssuers(Map<String, OauthTokenIssuer> allOAuthTokenIssuerMap,
+                                                        Map<String, OauthTokenIssuer> defaultOAuthTokenIssuerMap) {
 
         // TODO: 4/9/19 Implement logic to read default issuer from config.
         // TODO: 4/9/19 add sorting mechanism to use JWT issuer first.
@@ -3359,9 +3378,9 @@ public class OAuth2Util {
             OMElement element = (OMElement) it.next();
             Iterator permissonsIterator = element.getChildElements();
             while (permissonsIterator.hasNext()) {
-                OMElement PermissionElement = (OMElement) permissonsIterator.next();
-                if (PERMISSION.equals(PermissionElement.getLocalName())) {
-                    String permisson = PermissionElement.getText();
+                OMElement permissionElement = (OMElement) permissonsIterator.next();
+                if (PERMISSION.equals(permissionElement.getLocalName())) {
+                    String permisson = permissionElement.getText();
                     permissions.add(permisson);
                 }
             }

@@ -20,10 +20,13 @@ package org.wso2.carbon.identity.oauth2.device.api;
 
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 
+/**
+ * Device authentication service.
+ */
 public interface DeviceAuthService {
 
     /**
-     * Store device flow parameters and scopes in diffrent tables.
+     * Store device flow parameters and scopes in different tables.
      *
      * @param deviceCode Code that is used to identify the device.
      * @param userCode   Code that is used to correlate two devices.

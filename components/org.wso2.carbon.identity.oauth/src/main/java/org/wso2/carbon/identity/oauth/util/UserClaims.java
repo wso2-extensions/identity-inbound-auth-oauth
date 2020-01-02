@@ -22,6 +22,9 @@ import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 
 import java.util.SortedMap;
 
+/**
+ * User claims cache entry.
+ */
 public class UserClaims extends CacheEntry {
     private static final long serialVersionUID = -8123522530178387354L;
     private SortedMap<String, String> claimValues;

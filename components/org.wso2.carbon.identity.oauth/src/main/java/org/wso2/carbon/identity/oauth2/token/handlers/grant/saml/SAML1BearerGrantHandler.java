@@ -22,6 +22,8 @@ import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.joda.time.DateTime;
+import org.opensaml.core.config.InitializationException;
+import org.opensaml.core.xml.XMLObject;
 import org.opensaml.saml.common.xml.SAMLConstants;
 import org.opensaml.saml.saml1.core.Assertion;
 import org.opensaml.saml.saml1.core.Audience;
@@ -32,11 +34,9 @@ import org.opensaml.saml.saml1.core.ConfirmationMethod;
 import org.opensaml.saml.saml1.core.Subject;
 import org.opensaml.saml.saml1.core.SubjectConfirmation;
 import org.opensaml.saml.security.impl.SAMLSignatureProfileValidator;
-import org.opensaml.core.config.InitializationException;
-import org.opensaml.core.xml.XMLObject;
 import org.opensaml.security.x509.X509Credential;
-import org.opensaml.xmlsec.signature.support.SignatureValidator;
 import org.opensaml.xmlsec.signature.support.SignatureException;
+import org.opensaml.xmlsec.signature.support.SignatureValidator;
 import org.w3c.dom.NodeList;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -166,7 +166,8 @@ public class SAML1BearerGrantHandler extends AbstractAuthorizationGrantHandler {
 
         if (log.isDebugEnabled() && IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.SAML_ASSERTION)) {
             log.debug("Received SAML assertion : " +
-                      new String(Base64.decodeBase64(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getAssertion()), StandardCharsets.UTF_8));
+                    new String(Base64.decodeBase64(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getAssertion()),
+                            StandardCharsets.UTF_8));
         }
 
         try {
@@ -192,7 +193,7 @@ public class SAML1BearerGrantHandler extends AbstractAuthorizationGrantHandler {
             return false;
         }
 
-        /**
+        /*
          * The Assertion MUST contain a <Subject> element.  The subject MAY identify the resource owner for whom
          * the access token is being requested.  For client authentication, the Subject MUST be the "client_id"
          * of the OAuth client.  When using an Assertion as an authorization grant, the Subject SHOULD identify
@@ -314,9 +315,10 @@ public class SAML1BearerGrantHandler extends AbstractAuthorizationGrantHandler {
          * authorization server MAY be used as an acceptable value for an <Audience> element.  The authorization
          * server MUST verify that it is an intended audience for the Assertion.
          *
-         * In some cases, adding multiple audiences are not allowed by token providers. As a result, audience restriction
-         * validation is set to false by default. To enable audience restriction, you need to place a properties file at
-         * repository/conf/SAML-1.0-BearerGrantType.properties witch content audienceRestrictionValidationEnabled = true
+         * In some cases, adding multiple audiences are not allowed by token providers. As a result, audience
+         * restriction validation is set to false by default. To enable audience restriction, you need to place a
+         * properties file at repository/conf/SAML-1.0-BearerGrantType.properties witch content
+         * audienceRestrictionValidationEnabled = true
          */
 
         if (audienceRestrictionValidationEnabled) {
@@ -458,7 +460,7 @@ public class SAML1BearerGrantHandler extends AbstractAuthorizationGrantHandler {
             profileValidator.validate(assertion.getSignature());
         } catch (SignatureException e) {
             // Indicates signature did not conform to SAML1.0 Signature profile
-            if(log.isDebugEnabled()) {
+            if (log.isDebugEnabled()) {
                 log.debug("Signature did not conform to SAML1.0 Signature profile", e);
             }
             return false;
@@ -477,7 +479,7 @@ public class SAML1BearerGrantHandler extends AbstractAuthorizationGrantHandler {
         try {
             X509Credential x509Credential = new X509CredentialImpl(x509Certificate);
             SignatureValidator.validate(assertion.getSignature(), x509Credential);
-            if(log.isDebugEnabled()) {
+            if (log.isDebugEnabled()) {
                 log.debug("Signature validation successful");
             }
         } catch (SignatureException e) {

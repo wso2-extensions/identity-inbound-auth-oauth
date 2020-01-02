@@ -22,7 +22,6 @@ import org.opensaml.security.credential.CredentialContextSet;
 import org.opensaml.security.credential.UsageType;
 import org.opensaml.security.x509.X509Credential;
 
-import javax.crypto.SecretKey;
 import java.math.BigInteger;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
@@ -34,6 +33,8 @@ import java.security.spec.InvalidKeySpecException;
 import java.security.spec.RSAPublicKeySpec;
 import java.util.Collection;
 import java.util.Collections;
+
+import javax.crypto.SecretKey;
 
 /**
  * X509Credential implementation for signature verification of self issued tokens. The key is

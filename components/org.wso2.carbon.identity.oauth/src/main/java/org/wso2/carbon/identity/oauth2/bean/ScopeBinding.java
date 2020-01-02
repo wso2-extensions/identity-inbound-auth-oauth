@@ -20,6 +20,9 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Representation of bindings of a scope.
+ */
 public class ScopeBinding implements Serializable {
 
     private String bindingType;

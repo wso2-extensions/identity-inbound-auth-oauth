@@ -26,7 +26,6 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
-import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.base.IdentityConstants;
@@ -34,7 +33,6 @@ import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
-import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
@@ -57,10 +55,6 @@ import java.util.Set;
 import java.util.TimeZone;
 import java.util.UUID;
 
-/**
- * Data Access Layer functionality for Token management in OAuth 2.0 implementation. This includes
- * storing and retrieving access tokens, authorization codes and refresh tokens.
- */
 /*
 NOTE
 This is the very first step of moving to simplified architecture for token persistence. New set of DAO classes  for
@@ -68,23 +62,18 @@ each purpose  and factory class to get instance of each DAO classes were introdu
  on org.wso2.carbon.identity.oauth2.dao.TokenMgtDAO were distributed among new set of classes, each of these method
  need to be reviewed  and refactored  during next step.
  */
+/**
+ * Data Access Layer functionality for Token management in OAuth 2.0 implementation. This includes
+ * storing and retrieving access tokens, authorization codes and refresh tokens.
+ */
 public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenManagementDAO {
 
     private static final Log log = LogFactory.getLog(TokenManagementDAOImpl.class);
     public static final String AUTHZ_USER = "AUTHZ_USER";
     public static final String LOWER_AUTHZ_USER = "LOWER(AUTHZ_USER)";
     private static final String UTC = "UTC";
-    private static final int DEFAULT_POOL_SIZE = 0;
-    private static final boolean DEFAULT_PERSIST_ENABLED = true;
     private boolean isHashDisabled = OAuth2Util.isHashDisabled();
 
-    // These config properties are defined in identity.xml
-    private static final String OAUTH_TOKEN_PERSISTENCE_ENABLE = "OAuth.TokenPersistence.Enable";
-    private static final String OAUTH_TOKEN_PERSISTENCE_POOLSIZE = "OAuth.TokenPersistence.PoolSize";
-
-    // We read from these properties for the sake of backward compatibility
-    private static final String FRAMEWORK_PERSISTENCE_ENABLE = "JDBCPersistenceManager.SessionDataPersist.Enable";
-    private static final String FRAMEWORK_PERSISTENCE_POOLSIZE = "JDBCPersistenceManager.SessionDataPersist.PoolSize";
     private static final String IDN_OAUTH2_ACCESS_TOKEN = "IDN_OAUTH2_ACCESS_TOKEN";
 
     @Override
@@ -379,7 +368,8 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
 
         } catch (SQLException e) {
             IdentityDatabaseUtil.rollbackTransaction(connection);
-            String errorMsg = "Error deleting OAuth consent of Application " + applicationName + " and User " + username;
+            String errorMsg =
+                    "Error deleting OAuth consent of Application " + applicationName + " and User " + username;
             throw new IdentityOAuth2Exception(errorMsg, e);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, null, ps);

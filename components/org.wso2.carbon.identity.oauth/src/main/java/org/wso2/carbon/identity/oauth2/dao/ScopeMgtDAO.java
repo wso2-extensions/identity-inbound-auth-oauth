@@ -62,9 +62,11 @@ public class ScopeMgtDAO {
      * @return available scope list
      * @throws IdentityOAuth2ScopeServerException IdentityOAuth2ScopeServerException
      */
-    public Set<Scope> getScopesWithPagination(Integer offset, Integer limit, int tenantID) throws IdentityOAuth2ScopeServerException {
+    public Set<Scope> getScopesWithPagination(Integer offset, Integer limit, int tenantID)
+            throws IdentityOAuth2ScopeServerException {
 
-        return OAuthTokenPersistenceFactory.getInstance().getOAuthScopeDAO().getScopesWithPagination(offset, limit, tenantID);
+        return OAuthTokenPersistenceFactory.getInstance().getOAuthScopeDAO()
+                .getScopesWithPagination(offset, limit, tenantID);
     }
 
     /**

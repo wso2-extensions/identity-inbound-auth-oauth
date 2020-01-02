@@ -18,12 +18,12 @@
 
 package org.wso2.carbon.identity.oauth2.token.handlers.grant.saml;
 
+import net.shibboleth.utilities.java.support.resolver.CriteriaSet;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import net.shibboleth.utilities.java.support.resolver.CriteriaSet;
+import org.opensaml.core.criterion.EntityIdCriterion;
 import org.opensaml.security.credential.Credential;
 import org.opensaml.security.credential.impl.KeyStoreCredentialResolver;
-import org.opensaml.core.criterion.EntityIdCriterion;
 import org.wso2.carbon.identity.oauth2.util.X509CredentialImpl;
 
 import java.security.KeyStore;
@@ -34,14 +34,18 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * Carbon keystore credential resolver.
+ */
 public class CarbonKeyStoreCredentialResolver extends KeyStoreCredentialResolver {
 
     private static final Log log = LogFactory.getLog(CarbonKeyStoreCredentialResolver.class);
 
-    private KeyStore keyStore = null;
-    private Set<Credential> credentialSet = null;
+    private KeyStore keyStore;
 
-    public CarbonKeyStoreCredentialResolver(KeyStore store, Map<String, String> passwords) throws IllegalArgumentException {
+    public CarbonKeyStoreCredentialResolver(KeyStore store, Map<String, String> passwords)
+            throws IllegalArgumentException {
+
         super(store, passwords);
         this.keyStore = store;
     }
@@ -49,7 +53,7 @@ public class CarbonKeyStoreCredentialResolver extends KeyStoreCredentialResolver
     @Override
     public Iterable<Credential> resolveFromSource(CriteriaSet criteriaSet) throws SecurityException {
         try {
-            credentialSet = new HashSet<Credential>();
+            Set<Credential> credentialSet = new HashSet<>();
             Enumeration<String> en = keyStore.aliases();
             while (en.hasMoreElements()) {
                 String alias = en.nextElement();

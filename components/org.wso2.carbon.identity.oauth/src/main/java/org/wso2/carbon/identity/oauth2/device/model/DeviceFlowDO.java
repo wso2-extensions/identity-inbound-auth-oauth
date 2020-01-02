@@ -22,6 +22,9 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 
 import java.sql.Timestamp;
 
+/**
+ * Device flow data object.
+ */
 public class DeviceFlowDO {
 
     private String deviceCode;
@@ -32,7 +35,7 @@ public class DeviceFlowDO {
 
     private String scope;
 
-    private String Status;
+    private String status;
 
     private Timestamp lastPollTime;
 
@@ -88,12 +91,12 @@ public class DeviceFlowDO {
 
     public String getStatus() {
 
-        return Status;
+        return status;
     }
 
     public void setStatus(String status) {
 
-        Status = status;
+        this.status = status;
     }
 
     public void setLastPollTime(Timestamp lastPollTime) {

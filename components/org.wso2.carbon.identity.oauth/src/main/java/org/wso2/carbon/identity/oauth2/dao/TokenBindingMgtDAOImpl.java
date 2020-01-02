@@ -37,6 +37,9 @@ import static org.wso2.carbon.identity.oauth2.dao.SQLQueries.RETRIEVE_TOKEN_BIND
 import static org.wso2.carbon.identity.oauth2.dao.SQLQueries.RETRIEVE_TOKEN_BINDING_REF_EXISTS;
 import static org.wso2.carbon.identity.oauth2.dao.SQLQueries.STORE_TOKEN_BINDING;
 
+/**
+ * Token binding data access object implementation.
+ */
 public class TokenBindingMgtDAOImpl implements TokenBindingMgtDAO {
 
     private static final Log log = LogFactory.getLog(TokenBindingMgtDAOImpl.class);
@@ -45,7 +48,7 @@ public class TokenBindingMgtDAOImpl implements TokenBindingMgtDAO {
     public Optional<TokenBinding> getTokenBinding(String tokenId) throws IdentityOAuth2Exception {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(false);
-                PreparedStatement preparedStatement = connection.prepareStatement(RETRIEVE_TOKEN_BINDING_BY_TOKEN_ID)) {
+             PreparedStatement preparedStatement = connection.prepareStatement(RETRIEVE_TOKEN_BINDING_BY_TOKEN_ID)) {
             preparedStatement.setString(1, tokenId);
 
             try (ResultSet resultSet = preparedStatement.executeQuery()) {

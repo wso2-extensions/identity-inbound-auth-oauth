@@ -39,6 +39,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * Utility functions related to OAuth 2 scopes.
+ */
 public class Oauth2ScopeUtils {
 
     private static final Log log = LogFactory.getLog(Oauth2ScopeUtils.class);
@@ -171,7 +174,8 @@ public class Oauth2ScopeUtils {
         return tokenReqMsgContext != null;
     }
 
-    private static OAuthAppDO getOAuthAppDO(OAuthTokenReqMessageContext tokenReqMsgContext) throws IdentityOAuth2Exception {
+    private static OAuthAppDO getOAuthAppDO(OAuthTokenReqMessageContext tokenReqMsgContext)
+            throws IdentityOAuth2Exception {
 
         OAuthAppDO oAuthAppDO =
                 (OAuthAppDO) tokenReqMsgContext.getProperty(OAUTH_APP_DO_PROPERTY_NAME);

@@ -570,7 +570,8 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
                 }
             } else {
                 lifetimeInMillis =
-                        OAuthServerConfiguration.getInstance().getApplicationAccessTokenValidityPeriodInSeconds() * 1000;
+                        OAuthServerConfiguration.getInstance().getApplicationAccessTokenValidityPeriodInSeconds() *
+                                1000;
                 if (log.isDebugEnabled()) {
                     log.debug("Application access token time was 0ms. Setting default Application access token " +
                             "lifetime : " + lifetimeInMillis + "ms.");
@@ -592,7 +593,9 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
      * @throws IdentityOAuth2Exception
      */
     protected JWTClaimsSet handleCustomClaims(JWTClaimsSet.Builder jwtClaimsSetBuilder,
-                                      OAuthTokenReqMessageContext tokenReqMessageContext) throws IdentityOAuth2Exception {
+                                              OAuthTokenReqMessageContext tokenReqMessageContext)
+            throws IdentityOAuth2Exception {
+
         CustomClaimsCallbackHandler claimsCallBackHandler =
                 OAuthServerConfiguration.getInstance().getOpenIDConnectCustomClaimsCallbackHandler();
         return claimsCallBackHandler.handleCustomClaims(jwtClaimsSetBuilder, tokenReqMessageContext);
@@ -606,7 +609,9 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
      * @throws IdentityOAuth2Exception
      */
     protected JWTClaimsSet handleCustomClaims(JWTClaimsSet.Builder jwtClaimsSetBuilder,
-                                      OAuthAuthzReqMessageContext authzReqMessageContext) throws IdentityOAuth2Exception {
+                                              OAuthAuthzReqMessageContext authzReqMessageContext)
+            throws IdentityOAuth2Exception {
+
         CustomClaimsCallbackHandler claimsCallBackHandler =
                 OAuthServerConfiguration.getInstance().getOpenIDConnectCustomClaimsCallbackHandler();
         return claimsCallBackHandler.handleCustomClaims(jwtClaimsSetBuilder, authzReqMessageContext);

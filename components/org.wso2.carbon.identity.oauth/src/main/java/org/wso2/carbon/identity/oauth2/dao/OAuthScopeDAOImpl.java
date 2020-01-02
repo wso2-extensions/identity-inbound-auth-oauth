@@ -47,12 +47,8 @@ import java.util.Set;
 
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.DEFAULT_SCOPE_BINDING;
 
-/*
-NOTE
-This is the very first step of moving to simplified architecture for token persistence. New set of DAO classes  for
-each purpose  and factory class to get instance of each DAO classes were introduced  during  this step. Further methods
- on org.wso2.carbon.identity.oauth2.dao.TokenMgtDAO were distributed among new set of classes, each of these method
- need to be reviewed  and refactored  during next step.
+/**
+ * OAuth scope management data access object implementation.
  */
 public class OAuthScopeDAOImpl implements OAuthScopeDAO {
 
@@ -216,7 +212,8 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
      * @throws IdentityOAuth2ScopeServerException IdentityOAuth2ScopeServerException
      */
     @Override
-    public Set<Scope> getScopesWithPagination(Integer offset, Integer limit, int tenantID) throws IdentityOAuth2ScopeServerException {
+    public Set<Scope> getScopesWithPagination(Integer offset, Integer limit, int tenantID)
+            throws IdentityOAuth2ScopeServerException {
 
         if (log.isDebugEnabled()) {
             log.debug("Get scopes with pagination for tenantId  :" + tenantID);
@@ -548,7 +545,7 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
             } else {
                 sql = SQLQueries.RETRIEVE_SCOPE_NAME_FOR_RESOURCE;
             }
-            try(PreparedStatement ps = connection.prepareStatement(sql)) {
+            try (PreparedStatement ps = connection.prepareStatement(sql)) {
                 ps.setString(1, resourceUri);
                 try (ResultSet rs = ps.executeQuery()) {
                     if (rs.next()) {

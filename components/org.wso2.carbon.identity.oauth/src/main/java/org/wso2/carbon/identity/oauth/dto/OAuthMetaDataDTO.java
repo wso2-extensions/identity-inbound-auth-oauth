@@ -18,6 +18,9 @@
 
 package org.wso2.carbon.identity.oauth.dto;
 
+/**
+ * OAuth metadata dto.
+ */
 public class OAuthMetaDataDTO {
 
     private String requestTokenUrl;

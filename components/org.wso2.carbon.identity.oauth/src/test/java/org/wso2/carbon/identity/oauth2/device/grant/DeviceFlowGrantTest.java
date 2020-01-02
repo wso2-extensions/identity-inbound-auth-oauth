@@ -21,17 +21,14 @@ package org.wso2.carbon.identity.oauth2.device.grant;
 import org.powermock.modules.testng.PowerMockTestCase;
 import org.powermock.reflect.internal.WhiteboxImpl;
 import org.testng.Assert;
-import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithH2Database;
-import org.wso2.carbon.identity.oauth2.device.constants.Constants;
 import org.wso2.carbon.identity.oauth2.device.model.DeviceFlowDO;
 
 import java.sql.Timestamp;
 import java.util.Date;
-import java.util.HashMap;
 
 @WithCarbonHome
 @WithH2Database(files = {"dbScripts/h2.sql", "dbScripts/identity.sql"})
@@ -56,14 +53,15 @@ public class DeviceFlowGrantTest extends PowerMockTestCase {
     @Test
     public void testIsExpiredDeviceCode() throws Exception {
 
-        Assert.assertTrue(WhiteboxImpl.invokeMethod(DeviceFlowGrant.class, "isExpiredDeviceCode",deviceFlowDO1, date));
+        Assert.assertTrue(WhiteboxImpl.invokeMethod(DeviceFlowGrant.class, "isExpiredDeviceCode", deviceFlowDO1, date));
         Assert.assertFalse(WhiteboxImpl.invokeMethod(DeviceFlowGrant.class,
-                "isExpiredDeviceCode",deviceFlowDO2, date));
+                "isExpiredDeviceCode", deviceFlowDO2, date));
     }
 
     @Test
     public void testIsValidPollTime() throws Exception {
-        Assert.assertFalse(WhiteboxImpl.invokeMethod(DeviceFlowGrant.class,"isValidPollTime", newTime, deviceFlowDO1));
-        Assert.assertTrue(WhiteboxImpl.invokeMethod(DeviceFlowGrant.class,"isValidPollTime", newTime, deviceFlowDO2));
+
+        Assert.assertFalse(WhiteboxImpl.invokeMethod(DeviceFlowGrant.class, "isValidPollTime", newTime, deviceFlowDO1));
+        Assert.assertTrue(WhiteboxImpl.invokeMethod(DeviceFlowGrant.class, "isValidPollTime", newTime, deviceFlowDO2));
     }
 }

@@ -27,12 +27,9 @@ import org.wso2.carbon.identity.oauth2.bean.Scope;
 
 import java.sql.Connection;
 import java.util.Set;
-/*
-NOTE
-This is the very first step of moving to simplified architecture for token persistence. New set of DAO classes  for
-each purpose  and factory class to get instance of each DAO classes were introduced  during  this step. Further methods
- on org.wso2.carbon.identity.oauth2.dao.TokenMgtDAO were distributed among new set of classes, each of these method
- need to be reviewed  and refactored  during next step.
+
+/**
+ * OAuth scope management data access interface.
  */
 public interface OAuthScopeDAO {
 
@@ -42,7 +39,8 @@ public interface OAuthScopeDAO {
 
     Set<Scope> getScopes(int tenantID, String bindingType) throws IdentityOAuth2ScopeServerException;
 
-    Set<Scope> getScopesWithPagination(Integer offset, Integer limit, int tenantID) throws IdentityOAuth2ScopeServerException;
+    Set<Scope> getScopesWithPagination(Integer offset, Integer limit, int tenantID)
+            throws IdentityOAuth2ScopeServerException;
 
     Scope getScopeByName(String name, int tenantID) throws IdentityOAuth2ScopeServerException;
 
