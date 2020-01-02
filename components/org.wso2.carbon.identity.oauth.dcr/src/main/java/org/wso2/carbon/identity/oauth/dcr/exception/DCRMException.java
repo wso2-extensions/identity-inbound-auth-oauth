@@ -51,22 +51,11 @@ public class DCRMException extends IdentityException {
 
     public String getErrorDescription() {
 
-        String errorDescription = this.getMessage();
-//        if (StringUtils.isEmpty(errorDescription)) {
-//            TODO define error codes for DCRM
-//            errorDescription = Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_UNEXPECTED.getMessage();
-//        }
-        return errorDescription;
+        return this.getMessage();
     }
 
     private String getDefaultErrorCode() {
 
-        String errorCode = super.getErrorCode();
-//        if (StringUtils.isEmpty(errorCode)) {
-//            TODO define error codes for DCRM
-//            errorCode = Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_UNEXPECTED.getCode();
-//        }
-        return errorCode;
+        return super.getErrorCode();
     }
-
 }
