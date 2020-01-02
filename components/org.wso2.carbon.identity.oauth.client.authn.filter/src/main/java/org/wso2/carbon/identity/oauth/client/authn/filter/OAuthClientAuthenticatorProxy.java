@@ -70,7 +70,7 @@ public class OAuthClientAuthenticatorProxy extends AbstractPhaseInterceptor<Mess
     public void handleMessage(Message message) {
 
         Map<String, List> bodyContentParams = getContentParams(message);
-        HttpServletRequest request = ((HttpServletRequest) message.get(httpRequest));
+        HttpServletRequest request = ((HttpServletRequest) message.get(HTTP_REQUEST));
         OAuthClientAuthnContext oAuthClientAuthnContext = oAuthClientAuthnService.authenticateClient(request,
                 bodyContentParams);
         if (!oAuthClientAuthnContext.isPreviousAuthenticatorEngaged()) {
