@@ -24,16 +24,16 @@ import org.apache.cxf.jaxrs.impl.MetadataMap;
 import org.apache.cxf.message.Message;
 import org.apache.cxf.phase.AbstractPhaseInterceptor;
 import org.apache.cxf.phase.Phase;
-import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnService;
 
-import javax.servlet.http.HttpServletRequest;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import javax.servlet.http.HttpServletRequest;
 
 /**
  * JAX-RS interceptor which intercepts requests. This interceptor will act as a proxy for OAuth2 Client Authenticators.
@@ -42,7 +42,7 @@ import java.util.Map;
 public class OAuthClientAuthenticatorProxy extends AbstractPhaseInterceptor<Message> {
 
     private static final Log log = LogFactory.getLog(OAuthClientAuthenticatorProxy.class);
-    private static String HTTP_REQUEST = "HTTP.REQUEST";
+    private static final String HTTP_REQUEST = "HTTP.REQUEST";
     private OAuthClientAuthnService oAuthClientAuthnService;
 
     public OAuthClientAuthenticatorProxy() {
