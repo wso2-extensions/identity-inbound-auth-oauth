@@ -28,6 +28,7 @@ import java.util.Map;
  */
 public class DCRMessageContext extends MessageContext {
 
+    private static final long serialVersionUID = -737090105446050708L;
     private IdentityRequest identityRequest = null;
 
     public DCRMessageContext(Map parameters) {
