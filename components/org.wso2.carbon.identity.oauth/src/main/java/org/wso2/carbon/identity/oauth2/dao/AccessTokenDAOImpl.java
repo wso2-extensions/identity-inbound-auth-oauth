@@ -1358,18 +1358,6 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
     }
 
     /**
-     * Checks whether the issued token is expired.
-     *
-     * @param issuedTimeInMillis
-     * @param validityPeriodMillis
-     * @return true if access token is expired. False if not.
-     */
-    private boolean isAccessTokenExpired(long issuedTimeInMillis, long validityPeriodMillis) {
-
-        return OAuth2Util.getTimeToExpire(issuedTimeInMillis, validityPeriodMillis) < 0;
-    }
-
-    /**
      * Retrieves active access tokens for the given consumer key.
      *
      * @param consumerKey
