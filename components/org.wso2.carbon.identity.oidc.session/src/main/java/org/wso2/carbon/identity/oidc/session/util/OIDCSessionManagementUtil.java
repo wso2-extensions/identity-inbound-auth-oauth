@@ -18,7 +18,6 @@
 
 package org.wso2.carbon.identity.oidc.session.util;
 
-import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -36,8 +35,6 @@ import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
 
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
