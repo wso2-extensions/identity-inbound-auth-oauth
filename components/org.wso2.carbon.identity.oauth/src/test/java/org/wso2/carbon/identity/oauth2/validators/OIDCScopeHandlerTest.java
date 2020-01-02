@@ -28,8 +28,6 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 
-import org.wso2.carbon.identity.testutil.IdentityBaseTest;
-
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 

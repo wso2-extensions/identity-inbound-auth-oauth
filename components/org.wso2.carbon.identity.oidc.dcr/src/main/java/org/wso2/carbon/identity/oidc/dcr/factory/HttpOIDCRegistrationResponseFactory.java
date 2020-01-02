@@ -17,7 +17,6 @@
  */
 package org.wso2.carbon.identity.oidc.dcr.factory;
 
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.exception.FrameworkException;
@@ -31,17 +30,22 @@ import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 
+/**
+ * Factory class responsible for http OIDC registration response.
+ */
 public class HttpOIDCRegistrationResponseFactory extends HttpRegistrationResponseFactory {
 
     private static final Log log = LogFactory.getLog(HttpOIDCRegistrationResponseFactory.class);
 
     @Override
     public String getName() {
+
         return null;
     }
 
     @Override
     public HttpIdentityResponse.HttpIdentityResponseBuilder create(IdentityResponse identityResponse) {
+
         HttpIdentityResponse.HttpIdentityResponseBuilder httpIdentityResponseBuilder = new HttpIdentityResponse
                 .HttpIdentityResponseBuilder();
         create(httpIdentityResponseBuilder, identityResponse);
@@ -70,11 +74,13 @@ public class HttpOIDCRegistrationResponseFactory extends HttpRegistrationRespons
     }
 
     public HttpIdentityResponse.HttpIdentityResponseBuilder handleException(FrameworkException exception) {
+
         return super.handleException(exception);
     }
 
     @Override
     public boolean canHandle(IdentityResponse identityResponse) {
+
         if (identityResponse instanceof RegistrationResponse) {
             return true;
         }
@@ -83,6 +89,7 @@ public class HttpOIDCRegistrationResponseFactory extends HttpRegistrationRespons
 
     @Override
     public int getPriority() {
+
         return 50;
     }
 
@@ -90,6 +97,5 @@ public class HttpOIDCRegistrationResponseFactory extends HttpRegistrationRespons
 
         return false;
     }
-
 
 }

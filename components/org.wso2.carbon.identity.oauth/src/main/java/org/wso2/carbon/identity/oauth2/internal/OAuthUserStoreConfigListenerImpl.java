@@ -33,7 +33,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * Userstore config listener for OAuth related functionality.
+ */
 public class OAuthUserStoreConfigListenerImpl extends AbstractUserStoreConfigListener {
+
     @Override
     public void onUserStoreNamePreUpdate(int tenantId, String currentUserStoreName, String newUserStoreName) throws
             UserStoreException {
@@ -88,7 +92,7 @@ public class OAuthUserStoreConfigListenerImpl extends AbstractUserStoreConfigLis
             }
             OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                     .revokeAccessTokens(tokensToRevoke.toArray(new String[tokensToRevoke.size()]),
-                            !OAuth2Util.isHashDisabled());
+                            OAuth2Util.isHashEnabled());
             List<AuthzCodeDO> latestAuthzCodes = OAuthTokenPersistenceFactory.getInstance()
                     .getAuthorizationCodeDAO().getLatestAuthorizationCodesByUserStore(tenantId, userStoreName);
             for (AuthzCodeDO authzCodeDO : latestAuthzCodes) {

@@ -17,6 +17,9 @@
  */
 package org.wso2.carbon.identity.oauth.endpoint.exception;
 
+/**
+ * Exception class for InvalidRequestParentException.
+ */
 public class InvalidRequestParentException extends Exception {
 
     protected String errorCode = null;
@@ -24,42 +27,51 @@ public class InvalidRequestParentException extends Exception {
     private String subErrorCode = null;
 
     public InvalidRequestParentException(String message) {
+
         super(message);
     }
 
     public InvalidRequestParentException(Throwable cause) {
+
         super(cause);
     }
 
     public InvalidRequestParentException(String message, Throwable cause) {
+
         super(message, cause);
     }
 
     public InvalidRequestParentException(String message, String errorCode) {
+
         super(message);
         this.errorCode = errorCode;
     }
 
     public InvalidRequestParentException(String message, String errorCode, Throwable cause) {
+
         super(message, cause);
         this.errorCode = errorCode;
     }
 
     public InvalidRequestParentException(String message, String errorCode, String subErrorCode) {
+
         super(message);
         this.errorCode = errorCode;
         this.subErrorCode = subErrorCode;
     }
 
     public String getErrorCode() {
+
         return errorCode;
     }
 
     public String getErrorMessage() {
+
         return errorMessage;
     }
 
     public String getSubErrorCode() {
+
         return subErrorCode;
     }
 }

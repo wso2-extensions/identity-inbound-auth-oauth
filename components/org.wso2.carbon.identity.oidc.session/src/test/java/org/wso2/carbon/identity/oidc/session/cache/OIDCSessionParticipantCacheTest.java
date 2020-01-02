@@ -36,11 +36,13 @@ public class OIDCSessionParticipantCacheTest extends PowerMockTestCase {
 
     @Test
     public void testGetInstance() {
+
         assertNotNull(OIDCSessionParticipantCache.getInstance(), "OIDCSessionParticipantCache is null");
     }
 
     @Test
     public void testAddToCache() {
+
         TestUtil.startTenantFlow(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         OIDCSessionParticipantCacheKey key = mock(OIDCSessionParticipantCacheKey.class);
         OIDCSessionParticipantCacheEntry entry = mock(OIDCSessionParticipantCacheEntry.class);
@@ -52,6 +54,7 @@ public class OIDCSessionParticipantCacheTest extends PowerMockTestCase {
 
     @Test
     public void testClearCacheEntry() {
+
         TestUtil.startTenantFlow("carbon.super");
         OIDCSessionParticipantCacheKey key = mock(OIDCSessionParticipantCacheKey.class);
         when(key.getSessionID()).thenReturn(SESSION_ID);

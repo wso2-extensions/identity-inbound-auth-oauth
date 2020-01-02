@@ -9,13 +9,13 @@ import org.testng.annotations.Test;
 
 import java.util.HashMap;
 import java.util.Map;
+
 import javax.servlet.http.HttpServletRequest;
 
 import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.NONCE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.SCOPE;
 
 /**
@@ -27,23 +27,26 @@ public class IDTokenResponseValidatorTest {
 
     @BeforeMethod
     public void setUp() throws Exception {
+
         testedResponseValidator = new IDTokenResponseValidator();
     }
 
     @AfterMethod
     public void tearDown() throws Exception {
+
     }
 
     @DataProvider(name = "Request Provider")
     public Object[][] getRequestParams() {
-        Map<String, String> ValidOIDCScopeMap = new HashMap<>();
-        ValidOIDCScopeMap.put(SCOPE, OAuthConstants.Scope.OPENID);
+
+        Map<String, String> validOIDCScopeMap = new HashMap<>();
+        validOIDCScopeMap.put(SCOPE, OAuthConstants.Scope.OPENID);
         Map<String, String> nonOIDCScopeMap = new HashMap<>();
         nonOIDCScopeMap.put(SCOPE, "notOpenid");
         Map<String, String> blankScopeMap = new HashMap<>();
         blankScopeMap.put(SCOPE, "");
         return new Object[][]{
-                {ValidOIDCScopeMap, true},
+                {validOIDCScopeMap, true},
                 {nonOIDCScopeMap, false},
                 {blankScopeMap, false}
         };
@@ -51,6 +54,7 @@ public class IDTokenResponseValidatorTest {
 
     @Test(dataProvider = "Request Provider")
     public void testValidateRequiredParameters(Map<String, String> headerMap, boolean shouldPass) throws Exception {
+
         HttpServletRequest mockRequest = mock(HttpServletRequest.class);
         for (Map.Entry<String, String> entry : headerMap.entrySet()) {
             when(mockRequest.getParameter(entry.getKey())).thenReturn(entry.getValue());
@@ -74,6 +78,7 @@ public class IDTokenResponseValidatorTest {
 
     @DataProvider(name = "Request Method Provider")
     public Object[][] getRequestMethod() {
+
         return new Object[][]{
                 {"GET", true},
                 {"POST", true},
@@ -88,6 +93,7 @@ public class IDTokenResponseValidatorTest {
 
     @Test(dataProvider = "Request Method Provider")
     public void testValidateMethod(String method, boolean shouldPass) throws Exception {
+
         HttpServletRequest mockRequest = mock(HttpServletRequest.class);
         when(mockRequest.getMethod()).thenReturn(method);
         if (shouldPass) {

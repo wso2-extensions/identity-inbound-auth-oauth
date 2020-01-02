@@ -35,7 +35,7 @@ public class OAuth2ErrorCodes {
     public static final String TEMPORARY_UNAVAILABLE = "temporarily_unavailable";
     public static final String CONSENT_REQUIRED = "consent_required";
 
-    private OAuth2ErrorCodes(){
+    private OAuth2ErrorCodes() {
 
     }
 

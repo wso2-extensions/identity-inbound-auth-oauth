@@ -22,8 +22,11 @@ import org.wso2.carbon.identity.core.handler.AbstractIdentityHandler;
 import org.wso2.carbon.identity.oauth.dcr.DCRException;
 import org.wso2.carbon.identity.oauth.dcr.context.DCRMessageContext;
 
-
+/**
+ * Abstract class of OAuth DCR Handler.
+ */
 public abstract class AbstractDCRHandler extends AbstractIdentityHandler {
-    public abstract IdentityResponse.IdentityResponseBuilder handle(DCRMessageContext dcrMessageContext) throws
-                                                                                                         DCRException;
+
+    public abstract IdentityResponse.IdentityResponseBuilder handle(DCRMessageContext dcrMessageContext)
+            throws DCRException;
 }

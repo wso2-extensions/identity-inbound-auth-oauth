@@ -47,140 +47,173 @@ public class RegistrationRequestProfile implements Serializable {
 
     private String tenantDomain;
 
-
     public List<String> getRedirectUris() {
+
         return redirectUris;
     }
 
     public void setRedirectUris(List<String> redirectUris) {
+
         this.redirectUris = redirectUris;
     }
 
     public String getTokenEndpointAuthMethod() {
+
         return tokenEndpointAuthMethod;
     }
 
     public void setTokenEndpointAuthMethod(String tokenEndpointAuthMethod) {
+
         this.tokenEndpointAuthMethod = tokenEndpointAuthMethod;
     }
 
     public List<String> getGrantTypes() {
+
         return grantTypes;
     }
 
     public void setGrantTypes(List<String> grantTypes) {
+
         this.grantTypes = grantTypes;
     }
 
     public List<String> getResponseTypes() {
+
         return responseTypes;
     }
 
     public void setResponseTypes(List<String> responseTypes) {
+
         this.responseTypes = responseTypes;
     }
 
     public String getClientName() {
+
         return clientName;
     }
 
     public void setClientName(String clientName) {
+
         this.clientName = clientName;
     }
 
     public String getClientUri() {
+
         return clientUri;
     }
 
     public void setClientUri(String clientUri) {
+
         this.clientUri = clientUri;
     }
 
     public String getLogoUri() {
+
         return logoUri;
     }
 
     public void setLogoUri(String logoUri) {
+
         this.logoUri = logoUri;
     }
 
     public List<String> getScopes() {
+
         return scopes;
     }
 
     public void setScopes(List<String> scopes) {
+
         this.scopes = scopes;
     }
 
     public List<String> getContacts() {
+
         return contacts;
     }
 
     public void setContacts(List<String> contacts) {
+
         this.contacts = contacts;
     }
 
     public String getTosUri() {
+
         return tosUri;
     }
 
     public void setTosUri(String tosUri) {
+
         this.tosUri = tosUri;
     }
 
     public String getPolicyUri() {
+
         return policyUri;
     }
 
     public void setPolicyUri(String policyUri) {
+
         this.policyUri = policyUri;
     }
 
     public String getJwksUri() {
+
         return jwksUri;
     }
 
     public void setJwksUri(String jwksUri) {
+
         this.jwksUri = jwksUri;
     }
 
     public String getJkws() {
+
         return jkws;
     }
 
     public void setJkws(String jkws) {
+
         this.jkws = jkws;
     }
 
     public String getSoftwareId() {
+
         return softwareId;
     }
 
     public void setSoftwareId(String softwareId) {
+
         this.softwareId = softwareId;
     }
 
     public String getSoftwareVersion() {
+
         return softwareVersion;
     }
 
     public void setSoftwareVersion(String softwareVersion) {
+
         this.softwareVersion = softwareVersion;
     }
 
     public String getOwner() {
+
         return owner;
     }
 
     public void setOwner(String owner) {
+
         this.owner = owner;
     }
 
     public String getTenantDomain() {
+
         return tenantDomain;
     }
 
     public void setTenantDomain(String tenantDomain) {
+
         this.tenantDomain = tenantDomain;
     }
 }

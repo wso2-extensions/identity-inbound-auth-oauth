@@ -19,11 +19,7 @@ package org.wso2.carbon.identity.oauth.endpoint.util;
 
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.mockito.Mock;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.AfterMethod;
 import org.testng.annotations.AfterTest;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.DataProvider;
@@ -36,6 +32,7 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
+
 import java.nio.file.Paths;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -46,12 +43,12 @@ import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
-@PrepareForTest({ IdentityTenantUtil.class, IdentityDatabaseUtil.class, OAuthServerConfiguration.class})
+@PrepareForTest({IdentityTenantUtil.class, IdentityDatabaseUtil.class, OAuthServerConfiguration.class})
 public class OpenIDConnectUserRPStoreTest extends TestOAuthEndpointBase {
 
     private static final String RETRIEVE_PERSISTED_USER_SQL = "SELECT USER_NAME FROM IDN_OPENID_USER_RPS";
 
-    private  AuthenticatedUser user;
+    private AuthenticatedUser user;
     private OpenIDConnectUserRPStore store;
     private String clientId;
     private String secret;
@@ -76,10 +73,11 @@ public class OpenIDConnectUserRPStoreTest extends TestOAuthEndpointBase {
 
     @BeforeTest
     public void setUp() throws Exception {
+
         System.setProperty(
                 CarbonBaseConstants.CARBON_HOME,
                 Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString()
-        );
+                          );
         clientId = "ca19a540f544777860e44e75f605d927";
         secret = "87n9a540f544777860e44e75f605d435";
         appName = "myApp";
@@ -97,21 +95,23 @@ public class OpenIDConnectUserRPStoreTest extends TestOAuthEndpointBase {
 
     @AfterTest
     public void cleanData() throws Exception {
+
         super.cleanData();
     }
 
     @DataProvider(name = "provideStoreDataToPut")
     public Object[][] provideStoreDataToPut() {
 
-        return new Object[][] {
-                { username, clientId },
-                { null, clientId },
-                { null, "dummyClientId"}
+        return new Object[][]{
+                {username, clientId},
+                {null, clientId},
+                {null, "dummyClientId"}
         };
     }
 
     @Test(dataProvider = "provideStoreDataToPut")
     public void testPutUserRPToStore(String usernameValue, String consumerKey) throws Exception {
+
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(MultitenantConstants.SUPER_TENANT_ID);
         mockStatic(IdentityDatabaseUtil.class);
@@ -120,7 +120,8 @@ public class OpenIDConnectUserRPStoreTest extends TestOAuthEndpointBase {
         mockStatic(OAuthServerConfiguration.class);
         when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
         when(oAuthServerConfiguration.getPersistenceProcessor()).thenReturn(tokenPersistenceProcessor);
-        when(tokenPersistenceProcessor.getProcessedClientId(anyString())).thenAnswer(invocation -> invocation.getArguments()[0]);
+        when(tokenPersistenceProcessor.getProcessedClientId(anyString()))
+                .thenAnswer(invocation -> invocation.getArguments()[0]);
 
         user.setUserName(usernameValue);
         try {
@@ -133,36 +134,38 @@ public class OpenIDConnectUserRPStoreTest extends TestOAuthEndpointBase {
         PreparedStatement statement = null;
         ResultSet rs = null;
         String name = null;
-         try {
-             statement = connection.prepareStatement(RETRIEVE_PERSISTED_USER_SQL);
-             rs = statement.executeQuery();
-             if (rs.next()) {
-                 name = rs.getString(1);
-             }
-         } finally {
-             if (statement != null) {
-                 statement.close();
-             }
-             if (rs != null) {
-                 rs.close();
-             }
-         }
-         assertEquals(name, username, "Data not added to the store");
+        try {
+            statement = connection.prepareStatement(RETRIEVE_PERSISTED_USER_SQL);
+            rs = statement.executeQuery();
+            if (rs.next()) {
+                name = rs.getString(1);
+            }
+        } finally {
+            if (statement != null) {
+                statement.close();
+            }
+            if (rs != null) {
+                rs.close();
+            }
+        }
+        assertEquals(name, username, "Data not added to the store");
     }
 
     @DataProvider(name = "provideDataToCheckApproved")
     public Object[][] provideDataToCheckApproved() {
-        return new Object[][] {
-                { username, clientId, appName, true },
-                { null, clientId, appName, true },
-                { null, "dummyClientId", appName, false},
-                { null, clientId, "dummyAppName", false }
+
+        return new Object[][]{
+                {username, clientId, appName, true},
+                {null, clientId, appName, true},
+                {null, "dummyClientId", appName, false},
+                {null, clientId, "dummyAppName", false}
         };
     }
 
     @Test(dataProvider = "provideDataToCheckApproved", dependsOnMethods = {"testPutUserRPToStore"})
     public void testHasUserApproved(String usernameValue, String consumerKey, String app, boolean expected)
             throws Exception {
+
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
         mockStatic(IdentityDatabaseUtil.class);
@@ -171,7 +174,8 @@ public class OpenIDConnectUserRPStoreTest extends TestOAuthEndpointBase {
         mockStatic(OAuthServerConfiguration.class);
         when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
         when(oAuthServerConfiguration.getPersistenceProcessor()).thenReturn(tokenPersistenceProcessor);
-        when(tokenPersistenceProcessor.getProcessedClientId(anyString())).thenAnswer(invocation -> invocation.getArguments()[0]);
+        when(tokenPersistenceProcessor.getProcessedClientId(anyString()))
+                .thenAnswer(invocation -> invocation.getArguments()[0]);
 
         user.setUserName(usernameValue);
         boolean result;

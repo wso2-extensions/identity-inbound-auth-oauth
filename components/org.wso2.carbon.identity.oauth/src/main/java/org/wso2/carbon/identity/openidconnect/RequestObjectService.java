@@ -54,7 +54,8 @@ public class RequestObjectService {
 
         } catch (IdentityOAuth2Exception e) {
             log.error("Error while persisting the Request Object against sessionDataKey: " + sessionDataKey, e);
-            throw new RequestObjectException(OAuth2ErrorCodes.SERVER_ERROR, "Error while processing the Request Object");
+            throw new RequestObjectException(OAuth2ErrorCodes.SERVER_ERROR,
+                    "Error while processing the Request Object");
         }
     }
 

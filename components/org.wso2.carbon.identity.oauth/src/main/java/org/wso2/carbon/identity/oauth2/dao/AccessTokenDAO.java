@@ -24,14 +24,12 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-/*
-NOTE
-This is the very first step of moving to simplified architecture for token persistence. New set of DAO classes  for
-each purpose  and factory class to get instance of each DAO classes were introduced  during  this step. Further methods
- on org.wso2.carbon.identity.oauth2.dao.TokenMgtDAO were distributed among new set of classes, each of these method
- need to be reviewed  and refactored  during next step.
+
+/**
+ * Access token related data access interface.
  */
 public interface AccessTokenDAO {
 
@@ -44,6 +42,24 @@ public interface AccessTokenDAO {
 
     AccessTokenDO getLatestAccessToken(String consumerKey, AuthenticatedUser authzUser, String userStoreDomain,
                                        String scope, boolean includeExpiredTokens) throws IdentityOAuth2Exception;
+
+    /**
+     * Get latest access token.
+     *
+     * @param consumerKey consumer key.
+     * @param authzUser authorized user.
+     * @param userStoreDomain user store domain.
+     * @param scope scope.
+     * @param tokenBindingReference token binding reference.
+     * @param includeExpiredTokens include expired tokens.
+     * @return latest access token.
+     * @throws IdentityOAuth2Exception in case of failure.
+     */
+    default AccessTokenDO getLatestAccessToken(String consumerKey, AuthenticatedUser authzUser, String userStoreDomain,
+            String scope, String tokenBindingReference, boolean includeExpiredTokens) throws IdentityOAuth2Exception {
+
+        return getLatestAccessToken(consumerKey, authzUser, userStoreDomain, scope, includeExpiredTokens);
+    }
 
     Set<AccessTokenDO> getAccessTokens(String consumerKey, AuthenticatedUser userName,
                                        String userStoreDomain, boolean includeExpired) throws IdentityOAuth2Exception;
@@ -128,4 +144,39 @@ public interface AccessTokenDAO {
     List<AccessTokenDO> getLatestAccessTokens(String consumerKey, AuthenticatedUser authzUser,
                                               String userStoreDomain, String scope,
                                               boolean includeExpiredTokens, int limit) throws IdentityOAuth2Exception;
+
+    /**
+     * Get latest access tokens.
+     *
+     * @param consumerKey consumer key.
+     * @param authzUser authorized user.
+     * @param userStoreDomain user store domain.
+     * @param scope scope.
+     * @param tokenBindingReference token binding reference.
+     * @param includeExpiredTokens include expired tokens.
+     * @param limit limit.
+     * @return list of latest access tokens.
+     * @throws IdentityOAuth2Exception in case of failure.
+     */
+    default List<AccessTokenDO> getLatestAccessTokens(String consumerKey, AuthenticatedUser authzUser,
+            String userStoreDomain, String scope, String tokenBindingReference, boolean includeExpiredTokens, int limit)
+            throws IdentityOAuth2Exception {
+
+        return getLatestAccessTokens(consumerKey, authzUser, userStoreDomain, scope, includeExpiredTokens, limit);
+    }
+
+    /**
+     * Update access token to the given state.
+     *
+     * @param tokenId         ID of the access token to update the state.
+     * @param tokenState      state to update.
+     * @throws IdentityOAuth2Exception
+     */
+    void updateAccessTokenState(String tokenId, String tokenState) throws IdentityOAuth2Exception;
+
+    default Set<AccessTokenDO> getActiveTokenSetWithTokenIdByConsumerKeyForOpenidScope(String consumerKey)
+            throws IdentityOAuth2Exception {
+
+        return Collections.emptySet();
+    }
 }

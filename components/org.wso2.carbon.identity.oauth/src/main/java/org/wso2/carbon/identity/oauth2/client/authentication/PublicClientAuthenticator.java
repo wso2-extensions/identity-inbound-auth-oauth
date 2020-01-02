@@ -29,6 +29,7 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.util.List;
 import java.util.Map;
+
 import javax.servlet.http.HttpServletRequest;
 
 /**
@@ -37,6 +38,7 @@ import javax.servlet.http.HttpServletRequest;
  */
 public class PublicClientAuthenticator extends AbstractOAuthClientAuthenticator {
 
+    public static final String PUBLIC_CLIENT_AUTHENTICATOR = "PublicClientAuthenticator";
     private static final Log log = LogFactory.getLog(PublicClientAuthenticator.class);
 
     /**
@@ -120,7 +122,7 @@ public class PublicClientAuthenticator extends AbstractOAuthClientAuthenticator 
     @Override
     public String getName() {
 
-        return "PublicClientAuthenticator";
+        return PUBLIC_CLIENT_AUTHENTICATOR;
     }
 
     /**
@@ -130,7 +132,6 @@ public class PublicClientAuthenticator extends AbstractOAuthClientAuthenticator 
      * @param bodyParams              Body paarameter map of the incoming request.
      * @param oAuthClientAuthnContext OAuthClientAuthentication context.
      * @return Client ID of the OAuth2 client.
-     * @throws OAuthClientAuthnException OAuth client authentication exception.
      */
     @Override
     public String getClientId(HttpServletRequest request, Map<String, List> bodyParams, OAuthClientAuthnContext

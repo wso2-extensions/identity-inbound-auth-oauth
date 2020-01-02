@@ -25,8 +25,10 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.stub.dto.OAuthConsumerAppDTO;
+
 import java.net.URI;
 import java.net.URISyntaxException;
+
 import javax.servlet.http.HttpServletRequest;
 
 /**
@@ -83,10 +85,12 @@ public class OAuthUIUtil {
 
     /**
      * This is used to verify the given URL is a valid or not
+     *
      * @param uri URI to validate
      * @return true if the uri is valid
      */
     public static boolean isValidURI(String uri) {
+
         try {
             new URI(uri);
             return true;
@@ -105,12 +109,13 @@ public class OAuthUIUtil {
      * @return
      */
     public static boolean isAudienceNotEmpty(String[] audiences) {
+
         if (ArrayUtils.isEmpty(audiences)) {
             return false;
         }
 
         for (String audience : audiences) {
-            if (StringUtils.isNotEmpty(audience) && !StringUtils.equalsIgnoreCase(audience , "null")) {
+            if (StringUtils.isNotEmpty(audience) && !StringUtils.equalsIgnoreCase(audience, "null")) {
                 return true;
             }
         }
@@ -118,15 +123,18 @@ public class OAuthUIUtil {
     }
 
     /**
-     *  Generate id for the scope validator
+     * Generate id for the scope validator
+     *
      * @param name scope validator name
      * @return scope validator id
      */
     public static String getScopeValidatorId(String name) {
+
         return SCOPE_VALIDATOR_PREFIX + name.replaceAll(" ", "_");
     }
 
     public static String getTokenTypeId(String type) {
+
         return TOKEN_TYPE_PREFIX + type.replaceAll(" ", "_");
     }
 }

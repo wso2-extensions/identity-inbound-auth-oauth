@@ -22,7 +22,7 @@ import org.wso2.carbon.identity.application.common.cache.CacheEntry;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionState;
 
 /**
- * This class holds OIDC session information and gets cached against a cache key
+ * This class holds OIDC session information and gets cached against a cache key.
  */
 public class OIDCSessionParticipantCacheEntry extends CacheEntry {
 
@@ -32,20 +32,22 @@ public class OIDCSessionParticipantCacheEntry extends CacheEntry {
 
     /**
      * Returns session state information which includes authenticated user, and clients authenticated for that user
-     * who participates in the same browser session
+     * who participates in the same browser session.
      *
      * @return OIDCSessionState instance
      */
     public OIDCSessionState getSessionState() {
+
         return sessionState;
     }
 
     /**
-     * Sets the session state
+     * Sets the session state.
      *
      * @param sessionState OIDCSessionState instance
      */
     public void setSessionState(OIDCSessionState sessionState) {
+
         this.sessionState = sessionState;
     }
 }

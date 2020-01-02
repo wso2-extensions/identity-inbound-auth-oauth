@@ -16,7 +16,6 @@
 
 package org.wso2.carbon.identity.oauth.dcr.exception;
 
-import org.apache.commons.lang.StringUtils;
 import org.wso2.carbon.identity.base.IdentityException;
 
 /**
@@ -27,43 +26,36 @@ public class DCRMException extends IdentityException {
     private static final long serialVersionUID = 3410706411312659760L;
 
     public DCRMException(String message) {
+
         super(message);
         this.setErrorCode(getDefaultErrorCode());
     }
 
     public DCRMException(String message, Throwable cause) {
+
         super(message, cause);
         this.setErrorCode(getDefaultErrorCode());
     }
 
     public DCRMException(String errorCode, String message) {
+
         super(errorCode, message);
         this.setErrorCode(errorCode);
     }
 
     public DCRMException(String errorCode, String message, Throwable throwable) {
+
         super(errorCode, message, throwable);
         this.setErrorCode(errorCode);
     }
 
     public String getErrorDescription() {
 
-        String errorDescription = this.getMessage();
-        if (StringUtils.isEmpty(errorDescription)) {
-            //TODO define error codes for DCRM
-//            errorDescription = Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_UNEXPECTED.getMessage();
-        }
-        return errorDescription;
+        return this.getMessage();
     }
 
     private String getDefaultErrorCode() {
 
-        String errorCode = super.getErrorCode();
-        if (StringUtils.isEmpty(errorCode)) {
-            //TODO define error codes for DCRM
-//            errorCode = Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_UNEXPECTED.getCode();
-        }
-        return errorCode;
+        return super.getErrorCode();
     }
-
 }

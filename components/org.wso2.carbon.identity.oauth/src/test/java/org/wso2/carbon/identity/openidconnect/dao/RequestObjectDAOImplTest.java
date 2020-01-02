@@ -33,7 +33,6 @@ import java.util.List;
 /**
  * This class contains unit tests for RequestObjectDAOImplTest..
  */
-
 @WithCarbonHome
 @WithH2Database(jndiName = "jdbc/WSO2IdentityDB",
         files = {"dbScripts/h2_with_application_and_token.sql", "dbScripts/identity.sql"})

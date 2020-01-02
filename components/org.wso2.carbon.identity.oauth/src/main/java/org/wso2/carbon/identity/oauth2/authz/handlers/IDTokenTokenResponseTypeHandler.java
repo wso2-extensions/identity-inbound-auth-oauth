@@ -47,14 +47,13 @@ public class IDTokenTokenResponseTypeHandler extends IDTokenResponseTypeHandler 
         return  respDTO;
     }
 
-    private OAuth2AuthorizeRespDTO buildResponseDTO(OAuthAuthzReqMessageContext oauthAuthzMsgCtx, AccessTokenDO accessTokenDO) throws IdentityOAuth2Exception {
+    private OAuth2AuthorizeRespDTO buildResponseDTO(OAuthAuthzReqMessageContext oauthAuthzMsgCtx,
+                                                    AccessTokenDO accessTokenDO) throws IdentityOAuth2Exception {
         // Initializing the response.
         OAuth2AuthorizeRespDTO respDTO = initResponse(oauthAuthzMsgCtx);
         // Add id_token details to the response.
         ResponseTypeHandlerUtil.buildIDTokenResponseDTO(respDTO, accessTokenDO, oauthAuthzMsgCtx);
         // Add access token details to the response.
         return ResponseTypeHandlerUtil.buildAccessTokenResponseDTO(respDTO, accessTokenDO);
-
     }
-
 }

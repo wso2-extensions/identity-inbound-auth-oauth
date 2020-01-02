@@ -37,11 +37,13 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
 import java.lang.reflect.Method;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 
+import static org.mockito.Matchers.anyObject;
 import static org.mockito.Matchers.anyString;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
@@ -82,12 +84,15 @@ public class OpenIDConnectUserEndpointTest extends PowerMockIdentityBaseTest {
 
     @BeforeTest
     public void setUp() throws Exception {
+
         openIDConnectUserEndpoint = new OpenIDConnectUserEndpoint();
     }
 
     @DataProvider(name = "provideDataForGetUserClaims")
     public Object[][] provideDataGetUserClaims() {
-        String authResponse = "{\"token_type\":\"Bearer\",\"expires_in\":2061,\"access_token\":\"ca19a540f544777860e44e75f605d927\"}";
+
+        String authResponse =
+                "{\"token_type\":\"Bearer\",\"expires_in\":2061,\"access_token\":\"ca19a540f544777860e44e75f605d927\"}";
         return new Object[][]{
                 {authResponse, null, OAuthError.ResourceResponse.INSUFFICIENT_SCOPE, HttpServletResponse.SC_FORBIDDEN},
                 {"", null, OAuthError.ResourceResponse.INSUFFICIENT_SCOPE, HttpServletResponse.SC_FORBIDDEN},
@@ -99,6 +104,7 @@ public class OpenIDConnectUserEndpointTest extends PowerMockIdentityBaseTest {
 
     /**
      * Here handleError & setServiceProviderTenantId private methods also covered by this method.
+     *
      * @param authResponse
      * @param errorMessage
      * @param errorCode
@@ -120,7 +126,7 @@ public class OpenIDConnectUserEndpointTest extends PowerMockIdentityBaseTest {
         Response errorResponse = (Response)
                 handleError.invoke(setHandleError, ex);
 
-        assertEquals(errorResponse.getStatus(), expectedStatus,"Error response values are not same");
+        assertEquals(errorResponse.getStatus(), expectedStatus, "Error response values are not same");
 
         mockStatic(OAuthServerConfiguration.class);
         when(OAuthServerConfiguration.getInstance()).thenReturn(oauthServerConfigurationMock);
@@ -134,7 +140,7 @@ public class OpenIDConnectUserEndpointTest extends PowerMockIdentityBaseTest {
         when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(appDO);
         when(OAuth2Util.getClientIdForAccessToken(anyString())).thenReturn(clientID);
 
-        when(tokenValidator.validateToken(anyString())).thenReturn(tokenResponse);
+        when(tokenValidator.validateToken(anyString(), anyObject())).thenReturn(tokenResponse);
         when(userInfoEndpointConfig.getUserInfoAccessTokenValidator()).thenReturn(tokenValidator);
         when(userInfoEndpointConfig.getUserInfoRequestValidator()).thenReturn(requestValidator);
         mockStatic(UserInfoEndpointConfig.class);

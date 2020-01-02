@@ -27,13 +27,15 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
 import org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 
-import javax.ws.rs.core.Response;
 import java.util.Set;
+
+import javax.ws.rs.core.Response;
 
 /**
  * ScopesApiServiceImpl is used to handling scope bindings
  */
 public class ScopesApiServiceImpl extends ScopesApiService {
+
     private static final Log LOG = LogFactory.getLog(ScopesApiServiceImpl.class);
 
     /**

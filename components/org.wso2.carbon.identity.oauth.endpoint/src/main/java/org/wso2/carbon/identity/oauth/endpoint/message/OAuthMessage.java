@@ -23,14 +23,19 @@ import org.wso2.carbon.identity.oauth.cache.SessionDataCache;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 import org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState;
 import org.wso2.carbon.identity.oauth.endpoint.state.OAuthRequestStateValidator;
-import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
+
 import java.util.HashMap;
 import java.util.Map;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+/**
+ * This class contains OAuth related messages.
+ */
 public class OAuthMessage {
 
     private static final String CLIENT_ID = "client_id";
@@ -68,6 +73,7 @@ public class OAuthMessage {
     }
 
     public Object getProperty(String key) {
+
         if (properties != null) {
             return properties.get(key);
         } else {
@@ -76,30 +82,37 @@ public class OAuthMessage {
     }
 
     public Map<String, Object> getProperties() {
+
         return properties;
     }
 
     public void setProperty(String key, Object value) {
+
         properties.put(key, value);
     }
 
     public void removeProperty(String key) {
+
         properties.remove(key);
     }
 
     public HttpServletRequest getRequest() {
+
         return request;
     }
 
     public HttpServletResponse getResponse() {
+
         return response;
     }
 
     public OAuthAuthorizeState getRequestType() {
+
         return requestType;
     }
 
     private void setRequestType(OAuthAuthorizeState requestType) {
+
         this.requestType = requestType;
         if (OAuthAuthorizeState.AUTHENTICATION_RESPONSE.equals(requestType)) {
             setSessionDataCacheEntry(resultFromLogin);
@@ -109,58 +122,72 @@ public class OAuthMessage {
     }
 
     public String getClientId() {
+
         return request.getParameter(CLIENT_ID);
     }
 
     public String getSessionDataKeyFromLogin() {
+
         return getSessionDataKey(request);
     }
 
     public String getSessionDataKeyFromConsent() {
+
         return sessionDataKeyFromConsent;
     }
 
     public void setSessionDataKeyFromConsent(String sessionDataKeyFromConsent) {
+
         this.sessionDataKeyFromConsent = sessionDataKeyFromConsent;
     }
 
     public SessionDataCacheEntry getResultFromLogin() {
+
         return resultFromLogin;
     }
 
     public void setResultFromLogin(SessionDataCacheEntry resultFromLogin) {
+
         this.resultFromLogin = resultFromLogin;
     }
 
     public SessionDataCacheEntry getResultFromConsent() {
+
         return resultFromConsent;
     }
 
     public void setResultFromConsent(SessionDataCacheEntry resultFromConsent) {
+
         this.resultFromConsent = resultFromConsent;
     }
 
     public boolean isForceAuthenticate() {
+
         return forceAuthenticate;
     }
 
     public void setForceAuthenticate(boolean forceAuthenticate) {
+
         this.forceAuthenticate = forceAuthenticate;
     }
 
     public boolean isPassiveAuthentication() {
+
         return isPassiveAuthentication;
     }
 
     public void setPassiveAuthentication(boolean passiveAuthentication) {
+
         this.isPassiveAuthentication = passiveAuthentication;
     }
 
     public SessionDataCacheEntry getSessionDataCacheEntry() {
+
         return sessionDataCacheEntry;
     }
 
     public void setSessionDataCacheEntry(SessionDataCacheEntry sessionDataCacheEntry) {
+
         this.sessionDataCacheEntry = sessionDataCacheEntry;
     }
 
@@ -172,6 +199,7 @@ public class OAuthMessage {
      * @return Session data key
      */
     protected String getSessionDataKey(HttpServletRequest req) {
+
         String sessionDataKey = (String) req.getAttribute(OAuthConstants.SESSION_DATA_KEY);
         if (sessionDataKey == null) {
             sessionDataKey = req.getParameter(OAuthConstants.SESSION_DATA_KEY);
@@ -180,36 +208,44 @@ public class OAuthMessage {
     }
 
     public boolean isConsentResponseFromUser() {
+
         return resultFromConsent != null;
     }
 
     public boolean isAuthResponseFromFramework() {
+
         return resultFromLogin != null;
     }
 
     public boolean isInitialRequest() {
+
         return request.getParameter(CLIENT_ID) != null && getSessionDataKey(request) == null
                 && request.getParameter(OAuthConstants.SESSION_DATA_KEY_CONSENT) == null;
     }
 
     public Object getFlowStatus() {
+
         return request.getAttribute(FrameworkConstants.RequestParams.FLOW_STATUS);
     }
 
     public boolean isRequestToCommonauth() {
+
         return Boolean.parseBoolean(request.getParameter(FrameworkConstants.RequestParams.TO_COMMONAUTH));
     }
 
     public String getOauthPKCECodeChallenge() {
+
         return request.getParameter(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE);
     }
 
     public String getOauthPKCECodeChallengeMethod() {
+
         return request.getParameter(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE_METHOD);
     }
 
     @Override
     public String toString() {
+
         return "OAuthMessage{" +
                 "properties=" + properties +
                 ", requestType=" + requestType +
@@ -217,6 +253,9 @@ public class OAuthMessage {
                 '}';
     }
 
+    /**
+     * This class build the OAuth message.
+     */
     public static class OAuthMessageBuilder {
 
         protected HttpServletRequest request;

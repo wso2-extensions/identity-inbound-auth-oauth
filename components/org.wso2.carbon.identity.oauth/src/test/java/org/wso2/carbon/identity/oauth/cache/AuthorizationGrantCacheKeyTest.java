@@ -21,9 +21,8 @@ package org.wso2.carbon.identity.oauth.cache;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
-import static junit.framework.TestCase.assertFalse;
-import static junit.framework.TestCase.assertTrue;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertTrue;
 
 public class AuthorizationGrantCacheKeyTest {
     String userAttributesId = "UserID123";
@@ -52,7 +51,7 @@ public class AuthorizationGrantCacheKeyTest {
         if (istrue) {
             assertTrue(authorizationGrantCacheKey.equals(authorizationGrantCacheKeySample));
         }
-        assertFalse(authorizationGrantCacheKey.equals(object));
+        assertTrue(!authorizationGrantCacheKey.equals(object));
     }
 
     @Test

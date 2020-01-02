@@ -39,16 +39,19 @@ public class UserInfoEndpointConfig {
     private UserInfoClaimRetriever claimRetriever;
 
     private UserInfoEndpointConfig() {
+
         if (log.isDebugEnabled()) {
             log.debug("Initializing the UserInfoEndpointConfig singleton");
         }
     }
 
     public static UserInfoEndpointConfig getInstance() {
+
         return config;
     }
 
     public UserInfoRequestValidator getUserInfoRequestValidator() throws OAuthSystemException {
+
         if (requestValidator == null) {
             synchronized (UserInfoRequestValidator.class) {
                 if (requestValidator == null) {
@@ -67,8 +70,8 @@ public class UserInfoEndpointConfig {
         return requestValidator;
     }
 
-
     public UserInfoAccessTokenValidator getUserInfoAccessTokenValidator() {
+
         if (accessTokenValidator == null) {
             synchronized (UserInfoAccessTokenValidator.class) {
                 if (accessTokenValidator == null) {
@@ -93,6 +96,7 @@ public class UserInfoEndpointConfig {
     }
 
     public UserInfoResponseBuilder getUserInfoResponseBuilder() {
+
         if (responseBuilder == null) {
             synchronized (UserInfoResponseBuilder.class) {
                 if (responseBuilder == null) {
@@ -116,6 +120,7 @@ public class UserInfoEndpointConfig {
     }
 
     public UserInfoClaimRetriever getUserInfoClaimRetriever() {
+
         if (claimRetriever == null) {
             synchronized (UserInfoClaimRetriever.class) {
                 if (claimRetriever == null) {

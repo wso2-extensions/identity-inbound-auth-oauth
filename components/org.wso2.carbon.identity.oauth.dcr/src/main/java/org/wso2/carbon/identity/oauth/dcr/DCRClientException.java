@@ -17,23 +17,30 @@
  */
 package org.wso2.carbon.identity.oauth.dcr;
 
-
 import org.wso2.carbon.identity.application.authentication.framework.inbound.FrameworkClientException;
 
+/**
+ * Exception class used to handle DCR client related exceptions.
+ */
 public class DCRClientException extends FrameworkClientException {
+
     public DCRClientException(String message) {
+
         super(message);
     }
 
     public DCRClientException(String errorCode, String message) {
+
         super(errorCode, message);
     }
 
     public DCRClientException(String message, Throwable cause) {
+
         super(message, cause);
     }
 
     public DCRClientException(String errorCode, String message, Throwable cause) {
+
         super(errorCode, message, cause);
     }
 }

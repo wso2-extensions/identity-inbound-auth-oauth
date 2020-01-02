@@ -36,6 +36,7 @@ public class TesUserInfoResponseBuilder implements UserInfoResponseBuilder {
     @Override
     public String getResponseString(OAuth2TokenValidationResponseDTO tokenResponse) throws UserInfoEndpointException,
             OAuthSystemException {
+
         return null;
     }
 }

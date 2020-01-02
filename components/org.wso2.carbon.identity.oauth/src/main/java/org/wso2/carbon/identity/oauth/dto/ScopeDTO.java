@@ -16,12 +16,10 @@
 package org.wso2.carbon.identity.oauth.dto;
 
 import java.io.Serializable;
-import java.util.List;
 
 /**
  * The model representing an OIDC scope.
  */
-
 public class ScopeDTO implements Serializable {
 
     private static final long serialVersionUID = 6372165740005867083L;

@@ -21,7 +21,6 @@ package org.wso2.carbon.identity.oauth.cache;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.store.SessionDataStore;
-import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.cache.BaseCache;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -182,7 +181,8 @@ public class AuthorizationGrantCache extends BaseCache<AuthorizationGrantCacheKe
             return OAuthTokenPersistenceFactory.getInstance().getAuthorizationCodeDAO()
                     .getCodeIdByAuthorizationCode(authzCode);
         } catch (IdentityOAuth2Exception e) {
-            log.error("Failed to retrieve authorization code id by authorization code from store for - ." + authzCode, e);
+            log.error("Failed to retrieve authorization code id by authorization code from store for - ." + authzCode,
+                    e);
         }
         return authzCode;
     }
@@ -227,6 +227,18 @@ public class AuthorizationGrantCache extends BaseCache<AuthorizationGrantCacheKe
      */
     private void storeToSessionStore(String id, AuthorizationGrantCacheEntry entry) {
         SessionDataStore.getInstance().storeSessionData(id, AUTHORIZATION_GRANT_CACHE_NAME, entry);
+    }
+
+    /**
+     * Clears a cache entry by authorization code Id.
+     *
+     * @param key         Key to clear cache
+     * @param authzCodeId AuthorizationCodeId
+     */
+    public void clearCacheEntryByCodeId(AuthorizationGrantCacheKey key, String authzCodeId) {
+
+        super.clearCacheEntry(key);
+        clearFromSessionStore(authzCodeId);
     }
 
 }

@@ -25,6 +25,8 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
  */
 public class MockAuthenticatedUser extends AuthenticatedUser {
 
+    private static final long serialVersionUID = -6173380521599043423L;
+
     public MockAuthenticatedUser(String userName) {
         this.userName = userName;
     }

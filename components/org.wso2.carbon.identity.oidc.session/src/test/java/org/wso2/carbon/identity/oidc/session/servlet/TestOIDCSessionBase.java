@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oidc.session.servlet;
 import org.apache.commons.dbcp.BasicDataSource;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 
@@ -36,6 +37,7 @@ public class TestOIDCSessionBase extends PowerMockIdentityBaseTest {
     protected BasicDataSource dataSource;
 
     protected void initiateInMemoryH2() throws Exception {
+
         dataSource = new BasicDataSource();
         dataSource.setDriverClassName("org.h2.Driver");
         dataSource.setUsername("username");
@@ -74,6 +76,7 @@ public class TestOIDCSessionBase extends PowerMockIdentityBaseTest {
     }
 
     public void cleanData() throws Exception {
+
         dataSource.close();
     }
 }

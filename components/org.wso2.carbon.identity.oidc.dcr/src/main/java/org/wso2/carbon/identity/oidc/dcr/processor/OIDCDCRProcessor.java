@@ -17,7 +17,6 @@
  */
 package org.wso2.carbon.identity.oidc.dcr.processor;
 
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.IdentityRequest;
@@ -32,6 +31,9 @@ import org.wso2.carbon.identity.oidc.dcr.util.OIDCDCRConstants;
 
 import java.util.regex.Matcher;
 
+/**
+ * OIDC DCR Processor class.
+ */
 public class OIDCDCRProcessor extends DCRProcessor {
 
     private static final Log log = LogFactory.getLog(OIDCDCRProcessor.class);
@@ -56,11 +58,13 @@ public class OIDCDCRProcessor extends DCRProcessor {
     @Override
     protected IdentityResponse.IdentityResponseBuilder registerOAuthApplication(DCRMessageContext dcrMessageContext)
             throws RegistrationException {
+
         return super.registerOAuthApplication(dcrMessageContext);
     }
 
     @Override
     public boolean canHandle(IdentityRequest identityRequest) {
+
         boolean canHandle = false;
         if (identityRequest != null) {
             Matcher registerMatcher =
@@ -74,6 +78,5 @@ public class OIDCDCRProcessor extends DCRProcessor {
         }
         return canHandle;
     }
-
 
 }

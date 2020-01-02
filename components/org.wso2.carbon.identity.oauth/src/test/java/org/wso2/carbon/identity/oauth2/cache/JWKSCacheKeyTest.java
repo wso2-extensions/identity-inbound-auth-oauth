@@ -21,9 +21,9 @@ package org.wso2.carbon.identity.oauth2.cache;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
+import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
-import static org.testng.Assert.assertEquals;
 
 public class JWKSCacheKeyTest {
     String cacheKeyString = "cacheKey1";

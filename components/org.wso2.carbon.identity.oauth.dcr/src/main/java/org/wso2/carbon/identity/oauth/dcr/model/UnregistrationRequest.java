@@ -20,14 +20,18 @@ package org.wso2.carbon.identity.oauth.dcr.model;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.FrameworkClientException;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.IdentityRequest;
 
-
+/**
+ * DCR Request data for un register an OAuth application.
+ */
 public class UnregistrationRequest extends IdentityRequest {
 
+    private static final long serialVersionUID = -5760272509104069285L;
     private String consumerKey;
     private String applicationName;
     private String userId;
 
     protected UnregistrationRequest(DCRUnregisterRequestBuilder builder) throws FrameworkClientException {
+
         super(builder);
         this.consumerKey = builder.consumerKey;
         this.applicationName = builder.applicationName;
@@ -35,35 +39,46 @@ public class UnregistrationRequest extends IdentityRequest {
     }
 
     public String getConsumerKey() {
+
         return consumerKey;
     }
 
     public String getApplicationName() {
+
         return applicationName;
     }
 
     public String getUserId() {
+
         return userId;
     }
 
+    /**
+     * OAuth DCR unregister request builder.
+     */
     public static class DCRUnregisterRequestBuilder extends IdentityRequestBuilder {
+
         private String consumerKey;
         private String applicationName;
         private String userId;
 
         public void setConsumerKey(String consumerKey) {
+
             this.consumerKey = consumerKey;
         }
 
         public void setApplicationName(String applicationName) {
+
             this.applicationName = applicationName;
         }
 
         public void setUserId(String userId) {
+
             this.userId = userId;
         }
 
         public UnregistrationRequest build() throws FrameworkClientException {
+
             return new UnregistrationRequest(this);
         }
     }

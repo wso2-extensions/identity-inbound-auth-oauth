@@ -51,6 +51,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import javax.sql.DataSource;
 
 import static org.junit.Assert.assertNull;
@@ -141,7 +142,7 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
             Map<String, Object> claimsInResponse = JSONUtils.parseJSON(responseString);
             assertNotNull(claimsInResponse);
             assertFalse(claimsInResponse.isEmpty());
-            assertNotNull(claimsInResponse.get(SUB));
+            assertNotNull(claimsInResponse.get(sub));
 
             for (Map.Entry<String, Object> expectClaimEntry : expectedClaims.entrySet()) {
                 assertTrue(claimsInResponse.containsKey(expectClaimEntry.getKey()));
@@ -158,14 +159,14 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
     public void testEssentialClaims() throws Exception {
 
         final Map<String, Object> inputClaims = new HashMap<>();
-        inputClaims.put(FIRST_NAME, FIRST_NAME_VALUE);
-        inputClaims.put(LAST_NAME, LAST_NAME_VALUE);
-        inputClaims.put(EMAIL, EMAIL_VALUE);
+        inputClaims.put(firstName, FIRST_NAME_VALUE);
+        inputClaims.put(lastName, LAST_NAME_VALUE);
+        inputClaims.put(email, EMAIL_VALUE);
 
         final Map<String, List<String>> oidcScopeMap = new HashMap<>();
-        oidcScopeMap.put(OIDC_SCOPE, Collections.singletonList(FIRST_NAME));
+        oidcScopeMap.put(OIDC_SCOPE, Collections.singletonList(firstName));
 
-        List<String> essentialClaims = Collections.singletonList(EMAIL);
+        List<String> essentialClaims = Collections.singletonList(email);
         prepareForResponseClaimTest(inputClaims, oidcScopeMap, false);
 
         setUpRequestObjectService();
@@ -180,18 +181,18 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
 
         Map<String, Object> claimsInResponse = JSONUtils.parseJSON(responseString);
         assertNotNull(claimsInResponse);
-        assertNotNull(claimsInResponse.get(SUB));
+        assertNotNull(claimsInResponse.get(sub));
 
         // Assert that claims not in scope were not sent
-        assertNull(claimsInResponse.get(LAST_NAME));
+        assertNull(claimsInResponse.get(lastName));
 
         // Assert claim in scope was sent
-        assertNotNull(claimsInResponse.get(FIRST_NAME));
-        assertEquals(claimsInResponse.get(FIRST_NAME), FIRST_NAME_VALUE);
+        assertNotNull(claimsInResponse.get(firstName));
+        assertEquals(claimsInResponse.get(firstName), FIRST_NAME_VALUE);
 
         // Assert whether essential claims are available even though they were not in requested scope.
-        assertNotNull(claimsInResponse.get(EMAIL));
-        assertEquals(claimsInResponse.get(EMAIL), EMAIL_VALUE);
+        assertNotNull(claimsInResponse.get(email));
+        assertEquals(claimsInResponse.get(email), EMAIL_VALUE);
     }
 
     @Test
@@ -268,11 +269,12 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
             mockDataSource();
             mockObjectsRelatedToTokenValidation();
             String responseString =
-                    userInfoJSONResponseBuilder.getResponseString(getTokenResponseDTO((authzUser).toFullQualifiedUsername()));
+                    userInfoJSONResponseBuilder
+                            .getResponseString(getTokenResponseDTO((authzUser).toFullQualifiedUsername()));
 
             Map<String, Object> claimsInResponse = JSONUtils.parseJSON(responseString);
             assertSubjectClaimPresent(claimsInResponse);
-            assertEquals(claimsInResponse.get(SUB), expectedSubjectValue);
+            assertEquals(claimsInResponse.get(sub), expectedSubjectValue);
         } finally {
             PrivilegedCarbonContext.endTenantFlow();
         }

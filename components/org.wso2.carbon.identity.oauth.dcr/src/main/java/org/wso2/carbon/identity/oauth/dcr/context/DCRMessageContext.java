@@ -23,20 +23,27 @@ import org.wso2.carbon.identity.core.bean.context.MessageContext;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Context class related to DCR Message.
+ */
 public class DCRMessageContext extends MessageContext {
 
+    private static final long serialVersionUID = -737090105446050708L;
     private IdentityRequest identityRequest = null;
 
     public DCRMessageContext(Map parameters) {
+
         super(parameters);
     }
 
     public DCRMessageContext(IdentityRequest identityRequest) {
+
         super(new HashMap());
         this.identityRequest = identityRequest;
     }
 
     public IdentityRequest getIdentityRequest() {
+
         return identityRequest;
     }
 }

@@ -15,9 +15,10 @@ import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2IntrospectionResponseDTO;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
-import javax.ws.rs.core.Response;
 import java.nio.file.Paths;
 import java.util.HashMap;
+
+import javax.ws.rs.core.Response;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyVararg;
@@ -26,7 +27,7 @@ import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.AssertJUnit.assertEquals;
 
-@PrepareForTest ( {PrivilegedCarbonContext.class} )
+@PrepareForTest({PrivilegedCarbonContext.class})
 public class OAuth2IntrospectionEndpointTest extends PowerMockIdentityBaseTest {
 
     @Mock
@@ -34,7 +35,6 @@ public class OAuth2IntrospectionEndpointTest extends PowerMockIdentityBaseTest {
 
     @Mock
     PrivilegedCarbonContext mockedPrivilegedCarbonContext;
-
 
     private static final String CLAIM_SEPARATOR = ",";
     private static final String USERNAME_CLAIM_URI = "http://wso2.org/claims/username";
@@ -50,7 +50,7 @@ public class OAuth2IntrospectionEndpointTest extends PowerMockIdentityBaseTest {
         System.setProperty(
                 CarbonBaseConstants.CARBON_HOME,
                 Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString()
-        );
+                          );
         oAuth2IntrospectionEndpoint = new OAuth2IntrospectionEndpoint();
     }
 
@@ -78,18 +78,18 @@ public class OAuth2IntrospectionEndpointTest extends PowerMockIdentityBaseTest {
 
         Response response = oAuth2IntrospectionEndpoint.introspect(token, tokenTypeHint, requiredClaims);
 
-        HashMap<String,String> map = new Gson().fromJson((String)response.getEntity(), new TypeToken<HashMap<String,
-                String>>(){}.getType());
+        HashMap<String, String> map = new Gson().fromJson((String) response.getEntity(), new TypeToken<HashMap<String,
+                String>>() {
+        }.getType());
 
         assertEquals(map.get("token_type"), expectedTokenType);
-
 
     }
 
     @DataProvider(name = "provideTokenInfo")
     public Object[][] provideTokenInfo() {
 
-        return new Object[][] {
+        return new Object[][]{
                 {BEARER_TOKEN_TYPE_HINT, "Bearer"},
                 {BEARER_TOKEN_TYPE_HINT, "JWT"}
         };
@@ -97,6 +97,7 @@ public class OAuth2IntrospectionEndpointTest extends PowerMockIdentityBaseTest {
 
     @ObjectFactory
     public IObjectFactory getObjectFactory() {
+
         return new org.powermock.modules.testng.PowerMockObjectFactory();
     }
 }

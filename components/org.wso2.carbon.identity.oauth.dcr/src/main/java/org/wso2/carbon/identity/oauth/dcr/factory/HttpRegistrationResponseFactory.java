@@ -17,7 +17,6 @@
  */
 package org.wso2.carbon.identity.oauth.dcr.factory;
 
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.json.simple.JSONArray;
@@ -40,15 +39,16 @@ import javax.ws.rs.core.MediaType;
  */
 public class HttpRegistrationResponseFactory extends HttpIdentityResponseFactory {
 
-    public static String INVALID_REDIRECT_URI = "invalid_redirect_uri";
-    public static String INVALID_CLIENT_METADATA = "invalid_client_metadata";
-    public static String INVALID_SOFTWARE_STATEMENT = "invalid_software_statement";
-    public static String UNAPPROVED_SOFTWARE_STATEMENT = "unapproved_software_statement";
-    public static String BACKEND_FAILED = "backend_failed";
+    public static final String INVALID_REDIRECT_URI = "invalid_redirect_uri";
+    public static final String INVALID_CLIENT_METADATA = "invalid_client_metadata";
+    public static final String INVALID_SOFTWARE_STATEMENT = "invalid_software_statement";
+    public static final String UNAPPROVED_SOFTWARE_STATEMENT = "unapproved_software_statement";
+    public static final String BACKEND_FAILED = "backend_failed";
     private static final Log log = LogFactory.getLog(HttpRegistrationResponseFactory.class);
 
     @Override
     public HttpIdentityResponse.HttpIdentityResponseBuilder create(IdentityResponse identityResponse) {
+
         HttpIdentityResponse.HttpIdentityResponseBuilder httpIdentityResponseBuilder = new HttpIdentityResponse
                 .HttpIdentityResponseBuilder();
 
@@ -59,6 +59,7 @@ public class HttpRegistrationResponseFactory extends HttpIdentityResponseFactory
     @Override
     public void create(HttpIdentityResponse.HttpIdentityResponseBuilder httpIdentityResponseBuilder,
                        IdentityResponse identityResponse) {
+
         RegistrationResponse registrationResponse = null;
         if (identityResponse instanceof RegistrationResponse) {
             registrationResponse = (RegistrationResponse) identityResponse;
@@ -77,6 +78,7 @@ public class HttpRegistrationResponseFactory extends HttpIdentityResponseFactory
     }
 
     public HttpIdentityResponse.HttpIdentityResponseBuilder handleException(FrameworkException exception) {
+
         HttpIdentityResponse.HttpIdentityResponseBuilder builder =
                 new HttpIdentityResponse.HttpIdentityResponseBuilder();
         String errorMessage = "";
@@ -109,8 +111,8 @@ public class HttpRegistrationResponseFactory extends HttpIdentityResponseFactory
         return false;
     }
 
-
     protected JSONObject generateSuccessfulResponse(RegistrationResponse registrationResponse) {
+
         JSONObject obj = new JSONObject();
         obj.put(RegistrationResponse.DCRegisterResponseConstants.CLIENT_ID, registrationResponse
                 .getRegistrationResponseProfile().getClientId());
@@ -139,11 +141,11 @@ public class HttpRegistrationResponseFactory extends HttpIdentityResponseFactory
     }
 
     protected JSONObject generateErrorResponse(String error, String description) {
+
         JSONObject obj = new JSONObject();
         obj.put("error", error);
         obj.put("error_description", description);
         return obj;
     }
-
 
 }

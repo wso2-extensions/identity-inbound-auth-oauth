@@ -44,7 +44,7 @@ import static org.testng.Assert.assertEquals;
  * Unit test covering UnregistrationRequestFactory
  */
 @PrepareForTest(UnregistrationRequestFactory.class)
-public class UnregistrationRequestFactoryTest extends PowerMockIdentityBaseTest{
+public class UnregistrationRequestFactoryTest extends PowerMockIdentityBaseTest {
 
     @Mock
     private UnregistrationRequest.DCRUnregisterRequestBuilder unregisterRequestBuilder;
@@ -59,6 +59,7 @@ public class UnregistrationRequestFactoryTest extends PowerMockIdentityBaseTest{
 
     @BeforeMethod
     private void setUp() {
+
         registrationRequestFactory = new UnregistrationRequestFactory();
     }
 
@@ -75,7 +76,7 @@ public class UnregistrationRequestFactoryTest extends PowerMockIdentityBaseTest{
     }
 
     @Test(dataProvider = "httpMethodAndUriProvider")
-    public void testCanHandle(String requestURI, String httpMethod, boolean expected ) throws Exception {
+    public void testCanHandle(String requestURI, String httpMethod, boolean expected) throws Exception {
 
         when(mockHttpRequest.getRequestURI()).thenReturn(requestURI);
         when(mockHttpRequest.getMethod()).thenReturn(httpMethod);

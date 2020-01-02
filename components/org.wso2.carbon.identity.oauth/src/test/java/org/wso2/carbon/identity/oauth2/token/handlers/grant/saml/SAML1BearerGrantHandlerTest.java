@@ -21,8 +21,7 @@ package org.wso2.carbon.identity.oauth2.token.handlers.grant.saml;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang.StringUtils;
 import org.joda.time.DateTime;
-import org.opensaml.DefaultBootstrap;
-import org.opensaml.security.SAMLSignatureProfileValidator;
+import org.opensaml.saml.security.impl.SAMLSignatureProfileValidator;
 import org.powermock.reflect.internal.WhiteboxImpl;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
@@ -40,6 +39,7 @@ import org.wso2.carbon.identity.oauth2.TestConstants;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.model.RequestParameter;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
+import org.wso2.carbon.identity.saml.common.util.SAMLInitializer;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 import org.wso2.carbon.idp.mgt.internal.IdpMgtServiceComponentHolder;
 import org.wso2.carbon.registry.core.service.RegistryService;
@@ -86,60 +86,63 @@ public class SAML1BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
 
     private static String assertion =
             "  <saml:Assertion\n" +
-            "    xmlns:saml=\"urn:oasis:names:tc:SAML:1.0:assertion\"\n" +
-            "    MajorVersion=\"1\" MinorVersion=\"1\"\n" +
-            "    AssertionID=\"buGxcG4gILg5NlocyLccDz6iXrUa\"\n" +
-            "    Issuer=\"" + ISSUER1 + "\"\n" +
-            "    IssueInstant=\"2002-06-19T17:05:37.795Z\">\n" +
-            "    <saml:Conditions\n" +
-            "      NotBefore=\"2002-06-19T17:00:37.795Z\"\n" +
-            "      NotOnOrAfter=\"" + NOT_ON_OR_AFTER1 + "\">\n" +
-            "      <saml:AudienceRestrictionCondition>\n" +
-            "           <saml:Audience>https://sp.example.com/samlsso</saml:Audience>\n" +
-            "      </saml:AudienceRestrictionCondition>\n" +
-            "    </saml:Conditions>\n" +
-            "    <saml:AuthenticationStatement\n" +
-            "      AuthenticationMethod=\"urn:oasis:names:tc:SAML:1.0:am:password\"\n" +
-            "      AuthenticationInstant=\"2002-06-19T17:05:17.706Z\">\n" +
-            "      <saml:Subject>\n" +
-            "        <saml:NameIdentifier\n" +
-            "          Format=\"urn:oasis:names:tc:SAML:1.0:assertion#emailAddress\">\n" +
-            "          user@" + ISSUER1 + "\n" +
-            "        </saml:NameIdentifier>\n" +
-            "        <saml:SubjectConfirmation>\n" +
-            "          <saml:ConfirmationMethod>\n" +
-            "            urn:oasis:names:tc:SAML:1.0:cm:bearer\n" +
-            "          </saml:ConfirmationMethod>\n" +
-            "        </saml:SubjectConfirmation>\n" +
-            "      </saml:Subject>\n" +
-            "    </saml:AuthenticationStatement>\n" +
-            "    <ds:Signature xmlns:ds=\"http://www.w3.org/2000/09/xmldsig#\">\n" +
-            "            <ds:SignedInfo>\n" +
-            "                <ds:CanonicalizationMethod Algorithm=\"http://www.w3.org/2001/10/xml-exc-c14n#\" />\n" +
-            "                <ds:SignatureMethod Algorithm=\"http://www.w3.org/2000/09/xmldsig#rsa-sha1\" />\n" +
-            "                <ds:Reference URI=\"#buGxcG4gILg5NlocyLccDz6iXrUa\">\n" +
-            "                    <ds:Transforms>\n" +
-            "                        <ds:Transform Algorithm=\"http://www.w3.org/2000/09/xmldsig#enveloped-signature\" />\n" +
-            "                        <ds:Transform Algorithm=\"http://www.w3.org/2001/10/xml-exc-c14n#\" />\n" +
-            "                    </ds:Transforms>\n" +
-            "                    <ds:DigestMethod Algorithm=\"http://www.w3.org/2000/09/xmldsig#sha1\" />\n" +
-            "                    <ds:DigestValue>FNB5TA/klWcRpdAIx4sBaANSnsg=</ds:DigestValue>\n" +
-            "                </ds:Reference>\n" +
-            "            </ds:SignedInfo>\n" +
-            "            <ds:SignatureValue>\n" +
-            "               kRL6SR/6zWqmndMzgsSaOwPNqXpgIZ193PcHBto5tYtOwKMpDs0dgpS/79h+jwuhZxVfuZ9U64gB\n" +
-            "               uwBfE3xjALYutF7f20aWQ9E3s7tWyI81RxLU6LtyyFveUCcRAzqvEfPu8w4qqOITJvl3zlTIBJ9x\n" +
-            "               d+Y4cWt54SmI66XT54g=\n" +
-            "            </ds:SignatureValue>\n" +
-            "           <ds:KeyInfo>\n" +
-            "            <ds:X509Data>\n" +
-            "                <ds:X509Certificate>" +
-                                CERTIFICATE +
-            "                </ds:X509Certificate>\n" +
-            "            </ds:X509Data>\n" +
-            "        </ds:KeyInfo>\n" +
-            "    </ds:Signature>" +
-            "  </saml:Assertion>";
+                    "    xmlns:saml=\"urn:oasis:names:tc:SAML:1.0:assertion\"\n" +
+                    "    MajorVersion=\"1\" MinorVersion=\"1\"\n" +
+                    "    AssertionID=\"buGxcG4gILg5NlocyLccDz6iXrUa\"\n" +
+                    "    Issuer=\"" + ISSUER1 + "\"\n" +
+                    "    IssueInstant=\"2002-06-19T17:05:37.795Z\">\n" +
+                    "    <saml:Conditions\n" +
+                    "      NotBefore=\"2002-06-19T17:00:37.795Z\"\n" +
+                    "      NotOnOrAfter=\"" + NOT_ON_OR_AFTER1 + "\">\n" +
+                    "      <saml:AudienceRestrictionCondition>\n" +
+                    "           <saml:Audience>https://sp.example.com/samlsso</saml:Audience>\n" +
+                    "      </saml:AudienceRestrictionCondition>\n" +
+                    "    </saml:Conditions>\n" +
+                    "    <saml:AuthenticationStatement\n" +
+                    "      AuthenticationMethod=\"urn:oasis:names:tc:SAML:1.0:am:password\"\n" +
+                    "      AuthenticationInstant=\"2002-06-19T17:05:17.706Z\">\n" +
+                    "      <saml:Subject>\n" +
+                    "        <saml:NameIdentifier\n" +
+                    "          Format=\"urn:oasis:names:tc:SAML:1.0:assertion#emailAddress\">\n" +
+                    "          user@" + ISSUER1 + "\n" +
+                    "        </saml:NameIdentifier>\n" +
+                    "        <saml:SubjectConfirmation>\n" +
+                    "          <saml:ConfirmationMethod>\n" +
+                    "            urn:oasis:names:tc:SAML:1.0:cm:bearer\n" +
+                    "          </saml:ConfirmationMethod>\n" +
+                    "        </saml:SubjectConfirmation>\n" +
+                    "      </saml:Subject>\n" +
+                    "    </saml:AuthenticationStatement>\n" +
+                    "    <ds:Signature xmlns:ds=\"http://www.w3.org/2000/09/xmldsig#\">\n" +
+                    "            <ds:SignedInfo>\n" +
+                    "                <ds:CanonicalizationMethod " +
+                    "Algorithm=\"http://www.w3.org/2001/10/xml-exc-c14n#\" />\n" +
+                    "                <ds:SignatureMethod " +
+                    "Algorithm=\"http://www.w3.org/2000/09/xmldsig#rsa-sha1\" />\n" +
+                    "                <ds:Reference URI=\"#buGxcG4gILg5NlocyLccDz6iXrUa\">\n" +
+                    "                    <ds:Transforms>\n" +
+                    "                        <ds:Transform " +
+                    "Algorithm=\"http://www.w3.org/2000/09/xmldsig#enveloped-signature\" />\n" +
+                    "                        <ds:Transform Algorithm=\"http://www.w3.org/2001/10/xml-exc-c14n#\" />\n" +
+                    "                    </ds:Transforms>\n" +
+                    "                    <ds:DigestMethod Algorithm=\"http://www.w3.org/2000/09/xmldsig#sha1\" />\n" +
+                    "                    <ds:DigestValue>FNB5TA/klWcRpdAIx4sBaANSnsg=</ds:DigestValue>\n" +
+                    "                </ds:Reference>\n" +
+                    "            </ds:SignedInfo>\n" +
+                    "            <ds:SignatureValue>\n" +
+                    "               kRL6SR/6zWqmndMzgsSaOwPNqXpgIZ193PcHBto5tYtOwKMpDs0dgpS/79h+jwuhZxVfuZ9U64gB\n" +
+                    "               uwBfE3xjALYutF7f20aWQ9E3s7tWyI81RxLU6LtyyFveUCcRAzqvEfPu8w4qqOITJvl3zlTIBJ9x\n" +
+                    "               d+Y4cWt54SmI66XT54g=\n" +
+                    "            </ds:SignatureValue>\n" +
+                    "           <ds:KeyInfo>\n" +
+                    "            <ds:X509Data>\n" +
+                    "                <ds:X509Certificate>" +
+                    CERTIFICATE +
+                    "                </ds:X509Certificate>\n" +
+                    "            </ds:X509Data>\n" +
+                    "        </ds:KeyInfo>\n" +
+                    "    </ds:Signature>" +
+                    "  </saml:Assertion>";
 
     @BeforeMethod
     public void setUp() throws Exception {
@@ -178,7 +181,7 @@ public class SAML1BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
         OAuthTokenReqMessageContext oAuthTokenReqMessageContext = buildOAuth2AccessTokenReqDTO();
         RequestParameter[] requestParameters = new RequestParameter[] {new RequestParameter("assertion",
                 Base64.encodeBase64String(assertion.getBytes()))};
-        DefaultBootstrap.bootstrap();
+        SAMLInitializer.doBootstrap();
         oAuthTokenReqMessageContext.getOauth2AccessTokenReqDTO().setRequestParameters(requestParameters);
         WhiteboxImpl.setInternalState(saml1BearerGrantHandler, "audienceRestrictionValidationEnabled",
                 enableAudienceRestriction);
@@ -228,5 +231,5 @@ public class SAML1BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
                 oAuth2AccessTokenReqDTO);
         return oAuthTokenReqMessageContext;
     }
-
 }
+

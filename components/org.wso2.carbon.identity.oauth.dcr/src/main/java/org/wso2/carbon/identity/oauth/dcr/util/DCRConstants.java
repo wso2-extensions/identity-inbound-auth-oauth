@@ -32,14 +32,22 @@ public final class DCRConstants {
     public static final String APP_NAME_VALIDATING_REGEX = "^[a-zA-Z0-9._-]*$";
     public static final String UNSUPPORTED_CHARACTERS_IN_REGISTRY = "[\\\\/:*?\"`,~!@#$&;%^*()+=<{}>'|]";
 
+    /**
+     * Contains the constants related to DCR operations.
+     */
     public static class DCROperation {
+
         public static final String DCR_OPERATION_REGISTER = "REGISTER";
         public static final String DCR_OPERATION_UNREGISTER = "UNREGISTER";
         public static final String DCR_OPERATION_UPDATE = "UPDATE";
         public static final String DCR_OPERATION_READ = "READ";
     }
 
+    /**
+     * Contains the constants related to client metadata.
+     */
     public static class ClientMetadata {
+
         public static final String OAUTH_CLIENT_ID = "client_id";
         public static final String OAUTH_CLIENT_SECRET = "client_secret";
         public static final String OAUTH_REDIRECT_URIS = "redirect_uris";
@@ -68,15 +76,17 @@ public final class DCRConstants {
         public static final String VALIDITY_PERIOD = "validityPeriod";
 
         private ClientMetadata() {
+
             throw new AssertionError();
         }
-
-
     }
 
+    /**
+     * Contains the grant types used in OAuth DCR component.
+     */
     public static class GrantTypes {
+
         public static final String IMPLICIT = "implicit";
         public static final String AUTHORIZATION_CODE = "authorization_code";
     }
-
 }

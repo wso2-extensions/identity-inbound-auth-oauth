@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth.endpoint.util;
 import org.apache.commons.dbcp.BasicDataSource;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -37,6 +38,7 @@ public class TestOAuthEndpointBase extends PowerMockIdentityBaseTest {
     protected BasicDataSource dataSource;
 
     protected void initiateInMemoryH2() throws Exception {
+
         dataSource = new BasicDataSource();
 
         dataSource.setDriverClassName("org.h2.Driver");
@@ -76,10 +78,12 @@ public class TestOAuthEndpointBase extends PowerMockIdentityBaseTest {
     }
 
     public void cleanData() throws Exception {
+
         dataSource.close();
     }
 
     public Connection getConnection() throws SQLException {
+
         return dataSource.getConnection();
     }
 }

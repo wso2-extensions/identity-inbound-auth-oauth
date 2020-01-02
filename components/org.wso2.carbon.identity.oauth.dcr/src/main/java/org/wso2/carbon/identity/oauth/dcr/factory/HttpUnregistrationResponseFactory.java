@@ -34,6 +34,7 @@ public class HttpUnregistrationResponseFactory extends HttpIdentityResponseFacto
 
     @Override
     public boolean canHandle(IdentityResponse identityResponse) {
+
         if (identityResponse instanceof UnregistrationResponse) {
             return true;
         }
@@ -42,6 +43,7 @@ public class HttpUnregistrationResponseFactory extends HttpIdentityResponseFacto
 
     @Override
     public HttpIdentityResponse.HttpIdentityResponseBuilder create(IdentityResponse identityResponse) {
+
         HttpIdentityResponse.HttpIdentityResponseBuilder httpIdentityResponseBuilder = new HttpIdentityResponse
                 .HttpIdentityResponseBuilder();
         create(httpIdentityResponseBuilder, identityResponse);
@@ -51,11 +53,12 @@ public class HttpUnregistrationResponseFactory extends HttpIdentityResponseFacto
     @Override
     public void create(HttpIdentityResponse.HttpIdentityResponseBuilder httpIdentityResponseBuilder,
                        IdentityResponse identityResponse) {
+
         httpIdentityResponseBuilder.setStatusCode(HttpServletResponse.SC_NO_CONTENT);
         httpIdentityResponseBuilder.addHeader(OAuthConstants.HTTP_RESP_HEADER_CACHE_CONTROL,
-                                              OAuthConstants.HTTP_RESP_HEADER_VAL_CACHE_CONTROL_NO_STORE);
+                OAuthConstants.HTTP_RESP_HEADER_VAL_CACHE_CONTROL_NO_STORE);
         httpIdentityResponseBuilder.addHeader(OAuthConstants.HTTP_RESP_HEADER_PRAGMA,
-                                              OAuthConstants.HTTP_RESP_HEADER_VAL_PRAGMA_NO_CACHE);
+                OAuthConstants.HTTP_RESP_HEADER_VAL_PRAGMA_NO_CACHE);
     }
 
     public HttpIdentityResponse.HttpIdentityResponseBuilder handleException(FrameworkException exception) {
@@ -64,13 +67,14 @@ public class HttpUnregistrationResponseFactory extends HttpIdentityResponseFacto
                 new HttpIdentityResponse.HttpIdentityResponseBuilder();
         builder.setStatusCode(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
         builder.addHeader(OAuthConstants.HTTP_RESP_HEADER_CACHE_CONTROL,
-                          OAuthConstants.HTTP_RESP_HEADER_VAL_CACHE_CONTROL_NO_STORE);
+                OAuthConstants.HTTP_RESP_HEADER_VAL_CACHE_CONTROL_NO_STORE);
         builder.addHeader(OAuthConstants.HTTP_RESP_HEADER_PRAGMA,
-                          OAuthConstants.HTTP_RESP_HEADER_VAL_PRAGMA_NO_CACHE);
+                OAuthConstants.HTTP_RESP_HEADER_VAL_PRAGMA_NO_CACHE);
         return builder;
     }
 
     public boolean canHandle(FrameworkException exception) {
+
         if (exception instanceof UnRegistrationException) {
             return true;
         }

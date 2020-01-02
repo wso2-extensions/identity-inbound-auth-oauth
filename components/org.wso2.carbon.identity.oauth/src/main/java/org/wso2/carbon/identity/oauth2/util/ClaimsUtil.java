@@ -23,10 +23,10 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.opensaml.saml2.core.Assertion;
-import org.opensaml.saml2.core.Attribute;
-import org.opensaml.saml2.core.AttributeStatement;
-import org.opensaml.xml.XMLObject;
+import org.opensaml.core.xml.XMLObject;
+import org.opensaml.saml.saml2.core.Assertion;
+import org.opensaml.saml.saml2.core.Attribute;
+import org.opensaml.saml.saml2.core.AttributeStatement;
 import org.w3c.dom.Element;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -46,7 +46,6 @@ import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
-import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
@@ -59,12 +58,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Utility methods for the claim related functionality.
+ */
 public class ClaimsUtil {
 
     private static final Log log = LogFactory.getLog(ClaimsUtil.class);
 
-    private final static String INBOUND_AUTH2_TYPE = "oauth2";
-    private final static String SP_DIALECT = "http://wso2.org/oidc/claim";
+    private static final String INBOUND_AUTH2_TYPE = "oauth2";
+    private static final String SP_DIALECT = "http://wso2.org/oidc/claim";
 
     public static boolean isInLocalDialect(Map<String, String> attributes) {
         Iterator<String> iterator = attributes.keySet().iterator();
@@ -74,9 +76,9 @@ public class ClaimsUtil {
         return false;
     }
 
-
-    public static Map<String, String> convertFederatedClaimsToLocalDialect(Map<String, String> remoteClaims, ClaimMapping[]
-            idPClaimMappings, String tenantDomain) {
+    public static Map<String, String> convertFederatedClaimsToLocalDialect(Map<String, String> remoteClaims,
+                                                                           ClaimMapping[] idPClaimMappings,
+                                                                           String tenantDomain) {
 
         if (log.isDebugEnabled()) {
             StringBuilder claimUris = new StringBuilder();
@@ -212,7 +214,8 @@ public class ClaimsUtil {
      * @param tenantDomain     Tenant Domain.
      * @param tokenReqMsgCtx   Token request message context.
      * @return mapped local claims.
-     * @throws IdentityOAuth2Exception Identity Oauth2 Exception.
+     * @throws IdentityException
+     * @throws IdentityApplicationManagementException
      */
     public static Map<String, String> handleClaimMapping(IdentityProvider identityProvider,
             Map<String, String> attributes, String tenantDomain, OAuthTokenReqMessageContext tokenReqMsgCtx)

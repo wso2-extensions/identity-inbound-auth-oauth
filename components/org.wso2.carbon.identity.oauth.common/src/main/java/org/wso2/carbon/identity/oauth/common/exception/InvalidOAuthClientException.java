@@ -20,15 +20,20 @@ package org.wso2.carbon.identity.oauth.common.exception;
 
 import org.wso2.carbon.identity.base.IdentityException;
 
+/**
+ * This class used to handle invalid OAuth client related exceptions.
+ */
 public class InvalidOAuthClientException extends IdentityException {
 
     private static final long serialVersionUID = -6940481864832015140L;
 
     public InvalidOAuthClientException(String message) {
+
         super(message);
     }
 
     public InvalidOAuthClientException(String message, Throwable e) {
+
         super(message, e);
     }
 

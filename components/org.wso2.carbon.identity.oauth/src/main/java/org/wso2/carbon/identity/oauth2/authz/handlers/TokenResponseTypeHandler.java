@@ -152,7 +152,7 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
 
                     if ((expireTime > 0 || expireTime < 0)) {
                         // Return still valid existing access token when JWTTokenIssuer is not used.
-                        if (isNotRenewAccessTokenPerRequest()) {
+                        if (isNotRenewAccessTokenPerRequest(oauthAuthzMsgCtx)) {
                             if (log.isDebugEnabled()) {
                                 if (expireTime > 0) {
                                     log.debug("Access Token is valid for another " + expireTime + "ms");
@@ -190,7 +190,8 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
                             }
                             refreshToken = existingAccessTokenDO.getRefreshToken();
                             refreshTokenIssuedTime = existingAccessTokenDO.getRefreshTokenIssuedTime();
-                            refreshTokenValidityPeriodInMillis = existingAccessTokenDO.getRefreshTokenValidityPeriodInMillis();
+                            refreshTokenValidityPeriodInMillis =
+                                    existingAccessTokenDO.getRefreshTokenValidityPeriodInMillis();
                         }
 
                         // Token is expired. Clear it from cache
@@ -229,7 +230,7 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
                     if (OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE.equals(existingAccessTokenDO.getTokenState())
                             && (expiryTime > 0 || expiryTime < 0)) {
                         // Return still valid existing access token when JWTTokenIssuer is not used.
-                        if (isNotRenewAccessTokenPerRequest()) {
+                        if (isNotRenewAccessTokenPerRequest(oauthAuthzMsgCtx)) {
                             // token is active and valid
                             if (log.isDebugEnabled()) {
                                 if (expiryTime > 0) {
@@ -268,7 +269,8 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
                         }
                     } else {
 
-                        if (log.isDebugEnabled() && IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                        if (log.isDebugEnabled() &&
+                                IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
                             log.debug("Access Token is " + existingAccessTokenDO.getTokenState());
                         }
                         String tokenState = existingAccessTokenDO.getTokenState();
@@ -545,20 +547,22 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
                 sub = authorizeReqDTO.getUser().getAuthenticatedSubjectIdentifier();
             }
             if (StringUtils.isNotBlank(sub)) {
-                if (log.isDebugEnabled() && IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.USER_CLAIMS)) {
+                if (log.isDebugEnabled() &&
+                        IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.USER_CLAIMS)) {
                     log.debug("Setting subject: " + sub + " as the sub claim in cache against the access token.");
                 }
                 authorizationGrantCacheEntry.setSubjectClaim(sub);
             }
-            authorizationGrantCacheEntry.setValidityPeriod(TimeUnit.MILLISECONDS.toNanos(accessTokenDO.getValidityPeriodInMillis()));
+            authorizationGrantCacheEntry
+                    .setValidityPeriod(TimeUnit.MILLISECONDS.toNanos(accessTokenDO.getValidityPeriodInMillis()));
             AuthorizationGrantCache.getInstance().addToCacheByToken(authorizationGrantCacheKey,
                     authorizationGrantCacheEntry);
         }
     }
 
-    private boolean isNotRenewAccessTokenPerRequest() {
+    private boolean isNotRenewAccessTokenPerRequest(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) {
 
-        boolean isRenew = oauthIssuerImpl.renewAccessTokenPerRequest();
+        boolean isRenew = oauthIssuerImpl.renewAccessTokenPerRequest(oauthAuthzMsgCtx);
         if (log.isDebugEnabled()) {
             log.debug("Access Token renew per request: " + isRenew);
         }

@@ -33,7 +33,6 @@ import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
-import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
@@ -60,7 +59,6 @@ import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.tenant.TenantManager;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 
-import javax.xml.namespace.QName;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -276,10 +274,10 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         cachedOAuthappDO.setOauthConsumerKey(clientId);
         cachedOAuthappDO.setOauthConsumerSecret(clientSecret);
 
-        final String SECRET_TO_FAIL = "4_EedLmABh_cPdmmYxCTwRdyDG5b";
+        final String secretToFail = "4_EedLmABh_cPdmmYxCTwRdyDG5b";
         OAuthAppDO oauthAppToFailAuthentication = new OAuthAppDO();
         oauthAppToFailAuthentication.setOauthConsumerKey(clientId);
-        oauthAppToFailAuthentication.setOauthConsumerSecret(SECRET_TO_FAIL);
+        oauthAppToFailAuthentication.setOauthConsumerSecret(secretToFail);
 
         // cacheResult
         // dummyClientSecret
@@ -288,8 +286,8 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
                 {null, null, false},
                 {null, clientSecret, true},
                 {cachedOAuthappDO, clientSecret, true},
-                {null, SECRET_TO_FAIL, false},
-                {oauthAppToFailAuthentication, SECRET_TO_FAIL, false},
+                {null, secretToFail, false},
+                {oauthAppToFailAuthentication, secretToFail, false},
         };
     }
 
@@ -450,7 +448,8 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
     @Test
     public void testGetAccessTokenPartitioningDomains() throws Exception {
         String accessTokenPartitioningDomains = "A:foo.com , B:bar.com";
-        when(oauthServerConfigurationMock.getAccessTokenPartitioningDomains()).thenReturn(accessTokenPartitioningDomains);
+        when(oauthServerConfigurationMock.getAccessTokenPartitioningDomains())
+                .thenReturn(accessTokenPartitioningDomains);
         assertEquals(OAuth2Util.getAccessTokenPartitioningDomains(), accessTokenPartitioningDomains);
     }
 
@@ -467,7 +466,9 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
     @Test(dataProvider = "accessTokenPartitioningDomainsData")
     public void testGetAvailableUserStoreDomainMappings(String accessTokenPartitioningDomains, int expectedResult)
             throws Exception {
-        when(oauthServerConfigurationMock.getAccessTokenPartitioningDomains()).thenReturn(accessTokenPartitioningDomains);
+
+        when(oauthServerConfigurationMock.getAccessTokenPartitioningDomains())
+                .thenReturn(accessTokenPartitioningDomains);
         Map<String, String> userStoreDomainMap = OAuth2Util.getAvailableUserStoreDomainMappings();
         assertEquals(userStoreDomainMap.size(), expectedResult);
     }
@@ -475,7 +476,8 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
     @Test(expectedExceptions = IdentityOAuth2Exception.class)
     public void testGetAvailableUserStoreDomainMappings1() throws Exception {
         String accessTokenPartitioningDomains = "A: , B:bar.com";
-        when(oauthServerConfigurationMock.getAccessTokenPartitioningDomains()).thenReturn(accessTokenPartitioningDomains);
+        when(oauthServerConfigurationMock.getAccessTokenPartitioningDomains())
+                .thenReturn(accessTokenPartitioningDomains);
         OAuth2Util.getAvailableUserStoreDomainMappings();
     }
 
@@ -495,7 +497,9 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
     @Test(dataProvider = "accessMappedUserStoreDomainData")
     public void testGetMappedUserStoreDomain(String accessTokenPartitioningDomains, String userStoreDomain,
                                              String expectedResult) throws Exception {
-        when(oauthServerConfigurationMock.getAccessTokenPartitioningDomains()).thenReturn(accessTokenPartitioningDomains);
+
+        when(oauthServerConfigurationMock.getAccessTokenPartitioningDomains())
+                .thenReturn(accessTokenPartitioningDomains);
         assertEquals(OAuth2Util.getMappedUserStoreDomain(userStoreDomain), expectedResult);
     }
 
@@ -545,7 +549,9 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
     public void testGetTokenPartitionedSqlByUserStore(boolean accessTokenPartitioningEnabled,
                                                       boolean assertionsUserNameEnabled, String sql,
                                                       String partitionedSql) throws Exception {
-        when(oauthServerConfigurationMock.isAccessTokenPartitioningEnabled()).thenReturn(accessTokenPartitioningEnabled);
+
+        when(oauthServerConfigurationMock.isAccessTokenPartitioningEnabled())
+                .thenReturn(accessTokenPartitioningEnabled);
         when(oauthServerConfigurationMock.isUserNameAssertionEnabled()).thenReturn(assertionsUserNameEnabled);
         when(oauthServerConfigurationMock.getAccessTokenPartitioningDomains()).thenReturn("A:H2, B:AD");
         mockStatic(IdentityUtil.class);
@@ -576,7 +582,9 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
     public void testGetTokenPartitionedSqlByUserId(boolean accessTokenPartitioningEnabled,
                                                    boolean assertionsUserNameEnabled, String sql,
                                                    String username, String partitionedSql) throws Exception {
-        when(oauthServerConfigurationMock.isAccessTokenPartitioningEnabled()).thenReturn(accessTokenPartitioningEnabled);
+
+        when(oauthServerConfigurationMock.isAccessTokenPartitioningEnabled())
+                .thenReturn(accessTokenPartitioningEnabled);
         when(oauthServerConfigurationMock.isUserNameAssertionEnabled()).thenReturn(assertionsUserNameEnabled);
         when(oauthServerConfigurationMock.getAccessTokenPartitioningDomains()).thenReturn("A:H2, B:AD");
         mockStatic(IdentityUtil.class);
@@ -610,7 +618,9 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
                                                   boolean assertionsUserNameEnabled, boolean isTokenLoggable, String
                                                           sql,
                                                   String apiKey, String partitionedSql) throws Exception {
-        when(oauthServerConfigurationMock.isAccessTokenPartitioningEnabled()).thenReturn(accessTokenPartitioningEnabled);
+
+        when(oauthServerConfigurationMock.isAccessTokenPartitioningEnabled())
+                .thenReturn(accessTokenPartitioningEnabled);
         when(oauthServerConfigurationMock.isUserNameAssertionEnabled()).thenReturn(assertionsUserNameEnabled);
         when(oauthServerConfigurationMock.getAccessTokenPartitioningDomains()).thenReturn("A:H2, B:AD");
         mockStatic(IdentityUtil.class);
@@ -886,7 +896,7 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
     }
 
     @Test(dataProvider = "IDTokenIssuerData")
-    public void testGetIDTokenIssuer(String oidcIDTokenIssuer, String oauth2TokenEPUrl, String issuer) throws Exception {
+    public void testGetIDTokenIssuer(String oidcIDTokenIssuer, String oauth2TokenEPUrl, String issuer) {
         when(oauthServerConfigurationMock.getOpenIDConnectIDTokenIssuerIdentifier()).thenReturn(oidcIDTokenIssuer);
         when(oauthServerConfigurationMock.getOAuth2TokenEPUrl()).thenReturn(oauth2TokenEPUrl);
         mockStatic(IdentityUtil.class);
@@ -1113,7 +1123,7 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
     }
 
     @Test(dataProvider = "ImplicitResponseTypeData")
-    public void testIsImplicitResponseType(String responseType, boolean expectedResult) throws Exception {
+    public void testIsImplicitResponseType(String responseType, boolean expectedResult) {
         assertEquals(OAuth2Util.isImplicitResponseType(responseType), expectedResult);
     }
 
@@ -1130,7 +1140,7 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         return codeVerifier.toString();
     }
 
-    @DataProvider(name="authzUserProvider")
+    @DataProvider(name = "authzUserProvider")
     public Object[][] providerAuthzUser() {
         AuthenticatedUser federatedDomainUser = new AuthenticatedUser();
         federatedDomainUser.setUserStoreDomain("FEDERATED");
