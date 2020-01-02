@@ -42,7 +42,7 @@ import javax.servlet.http.HttpServletRequest;
 public class OAuthClientAuthenticatorProxy extends AbstractPhaseInterceptor<Message> {
 
     private static final Log log = LogFactory.getLog(OAuthClientAuthenticatorProxy.class);
-    private static String httpRequest = "HTTP.REQUEST";
+    private static final String HTTP_REQUEST = "HTTP.REQUEST";
     private OAuthClientAuthnService oAuthClientAuthnService;
 
     public OAuthClientAuthenticatorProxy() {
