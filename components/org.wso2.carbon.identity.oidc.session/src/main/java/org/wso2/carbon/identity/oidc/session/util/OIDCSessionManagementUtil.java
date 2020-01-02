@@ -278,23 +278,6 @@ public class OIDCSessionManagementUtil {
         return OAuthServerConfiguration.getInstance().getOpenIDConnectSkipeUserConsentConfig();
     }
 
-//    private static String generateSaltValue() throws NoSuchAlgorithmException {
-//
-//        byte[] bytes = new byte[16];
-//        SecureRandom secureRandom = SecureRandom.getInstance(RANDOM_ALG_SHA1);
-//        secureRandom.nextBytes(bytes);
-//        return Base64.encodeBase64URLSafeString(bytes);
-//    }
-
-//    private static String bytesToHex(byte[] bytes) {
-//
-//        StringBuilder result = new StringBuilder();
-//        for (byte byt : bytes) {
-//            result.append(Integer.toString((byt & 0xff) + 0x100, 16).substring(1));
-//        }
-//        return result.toString();
-//    }
-
     public static OIDCSessionStateManager getOIDCessionStateManager() {
 
         if (oidcSessionStateManager == null) {
