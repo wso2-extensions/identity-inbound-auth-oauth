@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oidc.session;
 
 import org.apache.commons.codec.binary.Base64;
 
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
@@ -54,7 +55,7 @@ public class DefaultOIDCSessionStateManager implements OIDCSessionStateManager {
                     clientId + " " + getOrigin(rpCallBackUrl) + " " + opBrowserState + " " + salt;
 
             MessageDigest digest = MessageDigest.getInstance(DIGEST_ALG_SHA256);
-            digest.update(sessionStateDataString.getBytes());
+            digest.update(sessionStateDataString.getBytes(StandardCharsets.UTF_8));
             return bytesToHex(digest.digest()) + "." + salt;
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException("Error while calculating session state.", e);

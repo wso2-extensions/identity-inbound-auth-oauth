@@ -56,6 +56,7 @@ public class OIDCSessionIFrameServlet extends HttpServlet {
     private static final String ERROR_RESPONSE = "<html><body>Invalid OP IFrame Request</body></html>";
 
     private static final String OP_IFRAME_RESOURCE = "op_iframe.html";
+    private static final long serialVersionUID = 601536694998426357L;
 
     private static StringBuilder opIFrame = null;
 
