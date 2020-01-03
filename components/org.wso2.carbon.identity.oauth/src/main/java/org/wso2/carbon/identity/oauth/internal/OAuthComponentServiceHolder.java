@@ -32,6 +32,9 @@ import org.wso2.carbon.user.core.service.RealmService;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Data holder for OAuth component.
+ */
 public class OAuthComponentServiceHolder {
 
     private static OAuthComponentServiceHolder instance = new OAuthComponentServiceHolder();

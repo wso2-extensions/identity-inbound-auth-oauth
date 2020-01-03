@@ -26,12 +26,13 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.utils.CarbonUtils;
 
-import javax.security.auth.callback.Callback;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
+
+import javax.security.auth.callback.Callback;
 
 /**
  * This is used to maintain the list of OAuthCallback Handlers registered in the system. It handles
@@ -49,6 +50,7 @@ public class OAuthCallbackHandlerRegistry {
     private OAuthCallbackHandler[] authzCallbackHandlers;
 
     private OAuthCallbackHandlerRegistry() throws IdentityOAuth2Exception {
+
         initAuthzCallbackHandlers();
     }
 
@@ -73,6 +75,7 @@ public class OAuthCallbackHandlerRegistry {
      *                                 OAuthCallbackHandler instances
      */
     private void initAuthzCallbackHandlers() throws IdentityOAuth2Exception {
+
         if (!initAuthzHandlers) {
             synchronized (this) {
                 if (!initAuthzHandlers) {
@@ -164,6 +167,7 @@ public class OAuthCallbackHandlerRegistry {
 
         @Override
         public int compare(OAuthCallbackHandler o1, OAuthCallbackHandler o2) {
+
             return o1.getPriority() - o2.getPriority();
         }
     }

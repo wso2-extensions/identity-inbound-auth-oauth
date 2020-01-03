@@ -18,6 +18,9 @@
 
 package org.wso2.carbon.identity.oauth2.dto;
 
+/**
+ * OAuth 2 client validation response DTO.
+ */
 public class OAuth2ClientValidationResponseDTO {
     private boolean validClient;
     private String applicationName;

@@ -37,9 +37,12 @@ import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
+/**
+ * OAuth utility functionality.
+ */
 public final class OAuthUtil {
 
-    public static final Log log = LogFactory.getLog(OAuthUtil.class);
+    public static final Log LOG = LogFactory.getLog(OAuthUtil.class);
     private static final String ALGORITHM = "HmacSHA1";
 
     private OAuthUtil() {
@@ -81,8 +84,8 @@ public final class OAuthUtil {
             authenticatedIDP = ((AuthenticatedUser) authorizedUser).getFederatedIdPName();
         } else {
             authenticatedIDP = null;
-            if (log.isDebugEnabled()) {
-                log.debug("User object is not an instance of AuthenticatedUser therefore cannot resolve " +
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("User object is not an instance of AuthenticatedUser therefore cannot resolve " +
                         "authenticatedIDP name.");
             }
             clearOAuthCache(consumerKey, user);
@@ -100,8 +103,8 @@ public final class OAuthUtil {
             authenticatedIDP = ((AuthenticatedUser) authorizedUser).getFederatedIdPName();
         } else {
             authenticatedIDP = null;
-            if (log.isDebugEnabled()) {
-                log.debug("User object is not an instance of AuthenticatedUser therefore cannot resolve " +
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("User object is not an instance of AuthenticatedUser therefore cannot resolve " +
                         "authenticatedIDP name.");
             }
             clearOAuthCache(consumerKey, user, scope);
@@ -128,8 +131,8 @@ public final class OAuthUtil {
             authenticatedIDP = ((AuthenticatedUser) authorizedUser).getFederatedIdPName();
         } else {
             authenticatedIDP = null;
-            if (log.isDebugEnabled()) {
-                log.debug("User is not an instance of AuthenticatedUser therefore cannot resolve authenticatedIDP "
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("User is not an instance of AuthenticatedUser therefore cannot resolve authenticatedIDP "
                         + "name");
             }
             clearOAuthCache(consumerKey, user, scope);

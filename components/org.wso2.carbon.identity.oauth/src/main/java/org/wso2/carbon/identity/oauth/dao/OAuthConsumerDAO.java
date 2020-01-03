@@ -36,9 +36,13 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
+/**
+ * OAuth consumer apps DAO.
+ */
 public class OAuthConsumerDAO {
 
-    public static final Log log = LogFactory.getLog(OAuthConsumerDAO.class);
+    public static final Log LOG = LogFactory.getLog(OAuthConsumerDAO.class);
+    public static final String OUT_OF_BAND = "oob";
     private TokenPersistenceProcessor persistenceProcessor;
     private boolean isHashDisabled = OAuth2Util.isHashDisabled();
 
@@ -47,7 +51,7 @@ public class OAuthConsumerDAO {
         try {
             persistenceProcessor = OAuthServerConfiguration.getInstance().getPersistenceProcessor();
         } catch (IdentityOAuth2Exception e) {
-            log.error("Error retrieving TokenPersistenceProcessor. Defaulting to PlainTextProcessor", e);
+            LOG.error("Error retrieving TokenPersistenceProcessor. Defaulting to PlainTextProcessor", e);
             persistenceProcessor = new PlainTextPersistenceProcessor();
         }
 
@@ -75,22 +79,22 @@ public class OAuthConsumerDAO {
                 if (resultSet.next()) {
                         consumerSecret = persistenceProcessor.getPreprocessedClientSecret(resultSet.getString(1));
                 } else {
-                    if (log.isDebugEnabled()) {
-                        log.debug("Invalid Consumer Key : " + consumerKey);
+                    if (LOG.isDebugEnabled()) {
+                        LOG.debug("Invalid Consumer Key : " + consumerKey);
                     }
                 }
             } catch (SQLException e) {
                 throw new IdentityOAuthAdminException("Error when reading the consumer secret for consumer key : " +
                         consumerKey, e);
             } catch (IdentityOAuth2Exception e) {
-                throw new IdentityOAuthAdminException("Error occurred while processing client id and client secret by " +
-                        "TokenPersistenceProcessor", e);
+                throw new IdentityOAuthAdminException("Error occurred while processing client id and client secret " +
+                        "by TokenPersistenceProcessor", e);
             } finally {
                 IdentityDatabaseUtil.closeAllConnections(connection, resultSet, prepStmt);
             }
         } else {
-            if (log.isDebugEnabled()) {
-                log.debug("Consumer secret hashing enabled. Returning client secret as null.");
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Consumer secret hashing enabled. Returning client secret as null.");
             }
         }
 
@@ -123,8 +127,8 @@ public class OAuthConsumerDAO {
             if (resultSet.next()) {
                 return true;
             } else {
-                if (log.isDebugEnabled()) {
-                    log.debug(String.format("Invalid Consumer Secret : %s for Consumer Key : %s", consumerSecret,
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug(String.format("Invalid Consumer Secret : %s for Consumer Key : %s", consumerSecret,
                             consumerKey));
                 }
             }
@@ -174,7 +178,8 @@ public class OAuthConsumerDAO {
         ResultSet resultSet = null;
 
         try {
-            prepStmt = connection.prepareStatement(SQLQueries.OAuthConsumerDAOSQLQueries.GET_USERNAME_FOR_KEY_AND_SECRET);
+            prepStmt =
+                    connection.prepareStatement(SQLQueries.OAuthConsumerDAOSQLQueries.GET_USERNAME_FOR_KEY_AND_SECRET);
             prepStmt.setString(1, clientId);
             prepStmt.setString(2, clientSecret);
             resultSet = prepStmt.executeQuery();
@@ -182,11 +187,12 @@ public class OAuthConsumerDAO {
             if (resultSet.next()) {
                 username = resultSet.getString(1);
             } else {
-                log.debug("Invalid client id : " + clientId);
+                LOG.debug("Invalid client id : " + clientId);
             }
         } catch (SQLException e) {
-            log.error("Error when executing the SQL : " + SQLQueries.OAuthConsumerDAOSQLQueries.GET_USERNAME_FOR_KEY_AND_SECRET);
-            log.error(e.getMessage(), e);
+            LOG.error("Error when executing the SQL : " +
+                    SQLQueries.OAuthConsumerDAOSQLQueries.GET_USERNAME_FOR_KEY_AND_SECRET);
+            LOG.error(e.getMessage(), e);
             throw new IdentityOAuthAdminException("Error while reading username for client id : " + clientId +
                     ", and consumer secret : " + clientSecret);
         } finally {
@@ -203,7 +209,7 @@ public class OAuthConsumerDAO {
      * @param token         OAuth token, this could be a request token(temporary token) or a access token
      * @param isAccessToken True, if it is as access token
      * @return Token Secret
-     * @throws IdentityOAuthAdminException Error when accessing the token secret from the persistence store.
+     * @throws IdentityException Error when accessing the token secret from the persistence store.
      */
     public String getOAuthTokenSecret(String token, Boolean isAccessToken) throws IdentityException {
 
@@ -251,7 +257,6 @@ public class OAuthConsumerDAO {
      */
     public void createOAuthRequestToken(String consumerKey, String oauthToken, String oauthSecret,
                                         String userCallback, String scope) throws IdentityOAuthAdminException {
-        final String OUT_OF_BAND = "oob";
         if (userCallback == null || OUT_OF_BAND.equals(userCallback)) {
             userCallback = getCallbackURLOfApp(consumerKey);
         }
@@ -352,7 +357,8 @@ public class OAuthConsumerDAO {
     }
 
     public void issueAccessToken(String consumerKey, String accessToken, String accessTokenSecret,
-                                 String requestToken, String authorizedUser, String scope) throws IdentityOAuthAdminException {
+                                 String requestToken, String authorizedUser, String scope)
+            throws IdentityOAuthAdminException {
 
         Connection connection = IdentityDatabaseUtil.getDBConnection();
         PreparedStatement removeReqTokStmt = null;
@@ -392,7 +398,8 @@ public class OAuthConsumerDAO {
      * @param oauthToken  Access Token
      * @param reqScope    Scope in the request
      * @return Authorized Username
-     * @throws IdentityException Error when reading token information from persistence store or invalid token or invalid scope.
+     * @throws IdentityException Error when reading token information from persistence store or invalid token or
+     * invalid scope.
      */
     public String validateAccessToken(String consumerKey, String oauthToken, String reqScope)
             throws IdentityException {

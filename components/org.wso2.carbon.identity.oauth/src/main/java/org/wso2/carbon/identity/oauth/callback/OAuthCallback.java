@@ -253,7 +253,7 @@ public class OAuthCallback implements Callback {
     /**
      * Set the validity period
      *
-     * @return validity period of the next token when applicable
+     * @param validityPeriod validity period of the next token when applicable
      */
     public void setValidityPeriod(long validityPeriod) {
         this.validityPeriod = validityPeriod;

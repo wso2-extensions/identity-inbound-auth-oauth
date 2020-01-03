@@ -41,6 +41,9 @@ import org.wso2.carbon.registry.core.service.RegistryService;
 import org.wso2.carbon.user.core.listener.UserOperationEventListener;
 import org.wso2.carbon.user.core.service.RealmService;
 
+/**
+ * OAuth OSGi service component.
+ */
 @Component(
         name = "identity.oauth.component",
         immediate = true

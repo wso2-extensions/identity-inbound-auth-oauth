@@ -26,6 +26,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * OAuth 2 access token request DTO.
+ */
 public class OAuth2AccessTokenReqDTO {
     private String clientId;
     private String clientSecret;
@@ -40,7 +43,7 @@ public class OAuth2AccessTokenReqDTO {
     private String clientAssertionType;
     private String clientAssertion;
     private String tenantDomain;
-    private String windows_token;
+    private String windowsToken;
     private String pkceCodeVerifier;
     private RequestParameter[] requestParameters;
     private HttpRequestHeader[] httpRequestHeaders;
@@ -128,11 +131,11 @@ public class OAuth2AccessTokenReqDTO {
     }
 
     public String getWindowsToken() {
-        return windows_token;
+        return windowsToken;
     }
 
     public void setWindowsToken(String windowsToken) {
-        this.windows_token = windowsToken;
+        this.windowsToken = windowsToken;
     }
 
     public String getClientAssertionType() {

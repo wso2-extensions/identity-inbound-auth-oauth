@@ -24,6 +24,9 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * OAuth 2 access token response DTO.
+ */
 public class OAuth2AccessTokenRespDTO {
     String tokenType;
     String accessToken;

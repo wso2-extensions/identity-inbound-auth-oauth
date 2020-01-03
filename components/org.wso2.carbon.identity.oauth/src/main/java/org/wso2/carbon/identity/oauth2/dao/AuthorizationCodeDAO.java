@@ -50,7 +50,7 @@ public interface AuthorizationCodeDAO {
             IdentityOAuth2Exception;
 
     default List<AuthzCodeDO> getAuthorizationCodesByUserForOpenidScope(AuthenticatedUser authenticatedUser) throws
-            IdentityOAuth2Exception{
+            IdentityOAuth2Exception {
 
         return null;
     }
