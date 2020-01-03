@@ -18,11 +18,12 @@
 
 package org.wso2.carbon.identity.oauth2.token.handlers.grant.iwa.ntlm.util;
 
+import java.io.IOException;
+
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
-import java.io.IOException;
 
 /**
  * This is the implementation class of the javax.servlet.FilterChain.

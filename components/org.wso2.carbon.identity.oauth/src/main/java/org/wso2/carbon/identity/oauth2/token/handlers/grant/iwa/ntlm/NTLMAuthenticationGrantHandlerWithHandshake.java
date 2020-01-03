@@ -30,6 +30,9 @@ import waffle.util.Base64;
 import waffle.windows.auth.IWindowsSecurityContext;
 import waffle.windows.auth.impl.WindowsAuthProviderImpl;
 
+/**
+ * NTLM authentication grant handler with handshake
+ */
 public class NTLMAuthenticationGrantHandlerWithHandshake extends AbstractAuthorizationGrantHandler  {
 
     private static Log log = LogFactory.getLog(NTLMAuthenticationGrantHandlerWithHandshake.class);
@@ -47,9 +50,9 @@ public class NTLMAuthenticationGrantHandlerWithHandshake extends AbstractAuthori
     private static final int NTLM_TYPE_3_TOKEN = 3;
 
     //'provider' stores the current state of the handshake. i.e. when it receives TYPE-1 token and validate it, it 
-    //  generates the challenge for the client and stores it in its context. When the TYPE3 token is received as the final
-    //  step, this uses the stored challenge to validate the TYPE-3 token (response to the challenge). As this maintains the
-    //  status of the handshake, there should be only one instance of 'provider', hence it is made static.
+    //  generates the challenge for the client and stores it in its context. When the TYPE3 token is received as the
+    //  final step, this uses the stored challenge to validate the TYPE-3 token (response to the challenge). As this
+    //  maintains the status of the handshake, there should be only one instance of 'provider', hence it is made static.
     private static WindowsAuthProviderImpl provider = new WindowsAuthProviderImpl();
 
     public int getNLTMMessageType(byte[] decodedNLTMMessage) throws IdentityOAuth2Exception {

@@ -18,7 +18,6 @@
 
 package org.wso2.carbon.identity.oauth2.token.handlers.grant;
 
-import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
@@ -31,10 +30,10 @@ public interface AuthorizationGrantHandler {
     /**
      * Initialize the Authorization Grant Handler
      *
-     * @throws org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception Error when initializing
+     * @throws IdentityOAuth2Exception Error when initializing
      *                                                                 the authorization grant handler.
      */
-    public void init() throws IdentityOAuth2Exception;
+    void init() throws IdentityOAuth2Exception;
 
     /**
      * Tells if the clients using this grant type are confidential or public.
@@ -47,35 +46,35 @@ public interface AuthorizationGrantHandler {
      * ...
      *
      * @return <Code>true</Code>|<Code>false</Code> if the client type is confidential or not.
-     * @throws org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception Error when checking if clients using this grant type are confidential or public
+     * @throws IdentityOAuth2Exception Error when checking if clients using this grant type are confidential or public
      */
-    public boolean isConfidentialClient() throws IdentityOAuth2Exception;
+    boolean isConfidentialClient() throws IdentityOAuth2Exception;
 
     /**
      * Tells if this grant type could issue refresh tokens.
      *
      * @return <Code>true</Code>|<Code>false</Code> if this grant type can issue refresh tokens or not.
-     * @throws org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception Error when checking if this grant type can issue refresh tokens or not
+     * @throws IdentityOAuth2Exception Error when checking if this grant type can issue refresh tokens or not
      */
-    public boolean issueRefreshToken() throws IdentityOAuth2Exception;
+    boolean issueRefreshToken() throws IdentityOAuth2Exception;
 
     /**
      * Tells if the access tokens issued for this grant type go as APPLICATION tokens or APPLICATION_USER tokens.
      *
      * @return <Code>true</Code>|<Code>false</Code> if this grant type issues APPLICATION_USER tokens.
-     * @throws org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception Error when checking if this grant type issues APPLICATION tokens or not
+     * @throws IdentityOAuth2Exception Error when checking if this grant type issues APPLICATION tokens or not
      */
-    public boolean isOfTypeApplicationUser() throws IdentityOAuth2Exception;
+    boolean isOfTypeApplicationUser() throws IdentityOAuth2Exception;
 
     /**
      * Validate the Authorization Grant. Checks whether the token request satisfies minimum requirements to
      * generate a token in requested grant type.
      *
      * @return <Code>true</Code>|<Code>false</Code> if the grant_type is valid or not.
-     * @throws org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception Error when validating
+     * @throws IdentityOAuth2Exception Error when validating
      *                                                                 the authorization grant.
      */
-    public boolean validateGrant(OAuthTokenReqMessageContext tokReqMsgCtx)
+    boolean validateGrant(OAuthTokenReqMessageContext tokReqMsgCtx)
             throws IdentityOAuth2Exception;
 
     /**
@@ -84,7 +83,7 @@ public interface AuthorizationGrantHandler {
      * @return <Code>true</Code>|<Code>false</Code> if it's the rightful resource owner
      * @throws IdentityOAuth2Exception Error when performing the callback
      */
-    public boolean authorizeAccessDelegation(OAuthTokenReqMessageContext tokReqMsgCtx)
+    boolean authorizeAccessDelegation(OAuthTokenReqMessageContext tokReqMsgCtx)
             throws IdentityOAuth2Exception;
 
     /**
@@ -93,23 +92,23 @@ public interface AuthorizationGrantHandler {
      * @return <Code>true</Code>|<Code>false</Code> if the scope is correct.
      * @throws IdentityOAuth2Exception Error when performing the callback
      */
-    public boolean validateScope(OAuthTokenReqMessageContext tokReqMsgCtx)
+    boolean validateScope(OAuthTokenReqMessageContext tokReqMsgCtx)
             throws IdentityOAuth2Exception;
 
     /**
      * Issue the Access token
      *
      * @return <Code>OAuth2AccessTokenRespDTO</Code> representing the Access Token
-     * @throws IdentityException Error when generating or persisting the access token
+     * @throws IdentityOAuth2Exception Error when generating or persisting the access token
      */
-    public OAuth2AccessTokenRespDTO issue(OAuthTokenReqMessageContext tokReqMsgCtx)
+    OAuth2AccessTokenRespDTO issue(OAuthTokenReqMessageContext tokReqMsgCtx)
             throws IdentityOAuth2Exception;
 
     /**
      * check whether client has authorization to get access token from provided grant type
-     * @param tokReqMsgCtx
+     * @param tokReqMsgCtx Message context of token request.
      * @return
      * @throws IdentityOAuth2Exception
      */
-    public boolean isAuthorizedClient(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception;
+    boolean isAuthorizedClient(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception;
 }

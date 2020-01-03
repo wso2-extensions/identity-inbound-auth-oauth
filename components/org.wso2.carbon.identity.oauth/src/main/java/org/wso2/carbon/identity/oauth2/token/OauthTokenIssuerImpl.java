@@ -24,6 +24,9 @@ import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 
+/**
+ * UUID based access token issuer builder.
+ */
 public class OauthTokenIssuerImpl implements OauthTokenIssuer {
 
     private OAuthIssuer oAuthIssuerImpl = OAuthServerConfiguration.getInstance()

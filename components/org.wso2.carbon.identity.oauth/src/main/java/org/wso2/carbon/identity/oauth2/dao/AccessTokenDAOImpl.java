@@ -1346,7 +1346,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
      * @throws IdentityOAuth2Exception
      */
     @Override
-    public Set<AccessTokenDO> getAccessTokensByUserForOpenidScope(AuthenticatedUser authenticatedUser) throws IdentityOAuth2Exception {
+    public Set<AccessTokenDO> getAccessTokensByUserForOpenidScope(AuthenticatedUser authenticatedUser)
+            throws IdentityOAuth2Exception {
 
         if (log.isDebugEnabled()) {
             log.debug("Retrieving access tokens of user: " + authenticatedUser.toString());
@@ -1406,7 +1407,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 // We will only return tokens that would contain such cached clams in order to improve performance.
                 // Tokens issued for openid scope can contain cached claims against them.
                 // Tokens that are in ACTIVE state and not expired should be removed from the cache.
-                if(!isAccessTokenExpired(issuedTimeInMillis, validityPeriodInMillis)) {
+                if (!isAccessTokenExpired(issuedTimeInMillis, validityPeriodInMillis)) {
                     tokenMap.put(accessToken, accessTokenDO);
                 }
             }

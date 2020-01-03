@@ -300,7 +300,7 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
             throws IdentityOAuth2Exception {
         if (authzCodeBean == null) {
             // If no auth code details available, cannot proceed with Authorization code grant
-            if(log.isDebugEnabled()) {
+            if (log.isDebugEnabled()) {
                 log.debug("Invalid token request for client id: " + clientId +
                         "and couldn't find persisted data for authorization code: " + authzCode);
             }
@@ -322,7 +322,7 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
         if (cacheEnabled) {
             String cacheKeyString = buildCacheKeyForToken(clientId, authzCodeBean);
             OAuthCache.getInstance().clearCacheEntry(new OAuthCacheKey(cacheKeyString));
-            if(log.isDebugEnabled()) {
+            if (log.isDebugEnabled()) {
                 log.debug("Removed token from cache for user : " + authzCodeBean.getAuthorizedUser().toString() +
                         ", for client : " + clientId);
             }
@@ -331,7 +331,7 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
 
     private boolean isInactiveAuthzCode(AuthzCodeDO authzCodeBean) {
         if (OAuthConstants.AuthorizationCodeState.INACTIVE.equals(authzCodeBean.getState())) {
-            if(log.isDebugEnabled()) {
+            if (log.isDebugEnabled()) {
                 log.debug("Invalid access token request with Client Id : " + authzCodeBean.getConsumerKey() +
                         ", Inactive authorization code : " + authzCodeBean.getAuthorizationCode());
             }
@@ -342,7 +342,7 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
 
     private boolean isAuthzCodeRevoked(AuthzCodeDO authzCodeBean) {
         if (OAuthConstants.AuthorizationCodeState.REVOKED.equals(authzCodeBean.getState())) {
-            if(log.isDebugEnabled()) {
+            if (log.isDebugEnabled()) {
                 log.debug("Invalid access token request with Client Id : " + authzCodeBean.getConsumerKey() +
                         ", Revoked authorization code : " + authzCodeBean.getAuthorizationCode());
             }
@@ -359,7 +359,7 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
         // If the code is not valid for more than 1 sec, it is considered to be expired
         if (getTimeToExpire(issuedTime, validityPeriod) < ALLOWED_MINIMUM_VALIDITY_PERIOD) {
             markAsExpired(authzCodeBean);
-            if(log.isDebugEnabled()) {
+            if (log.isDebugEnabled()) {
                 log.debug("Authorization Code Issued Time(ms): " + issuedTime +
                         ", Validity Period: " + validityPeriod + ", Timestamp Skew: " +
                         OAuthServerConfiguration.getInstance().getTimeStampSkewInSeconds() * 1000 +
@@ -371,8 +371,10 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
     }
 
     private void markAsExpired(AuthzCodeDO authzCodeBean) throws IdentityOAuth2Exception {
+
         OAuthTokenPersistenceFactory.getInstance().getAuthorizationCodeDAO()
-                .updateAuthorizationCodeState(authzCodeBean.getAuthorizationCode(), OAuthConstants.AuthorizationCodeState.EXPIRED);
+                .updateAuthorizationCodeState(authzCodeBean.getAuthorizationCode(),
+                        OAuthConstants.AuthorizationCodeState.EXPIRED);
         if (log.isDebugEnabled()) {
             log.debug("Changed state of authorization code : " + authzCodeBean.getAuthorizationCode() + " to expired");
         }
@@ -397,11 +399,13 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
      * @return true if PKCE is validated
      * @throws IdentityOAuth2Exception
      */
-    private boolean validatePKCECode(AuthzCodeDO authzCodeBean, String verificationCode) throws IdentityOAuth2Exception {
-        String PKCECodeChallenge = authzCodeBean.getPkceCodeChallenge();
-        String PKCECodeChallengeMethod = authzCodeBean.getPkceCodeChallengeMethod();
+    private boolean validatePKCECode(AuthzCodeDO authzCodeBean, String verificationCode)
+            throws IdentityOAuth2Exception {
+
+        String pkceCodeChallenge = authzCodeBean.getPkceCodeChallenge();
+        String pkceCodeChallengeMethod = authzCodeBean.getPkceCodeChallengeMethod();
         OAuthAppDO oAuthApp = getOAuthAppDO(authzCodeBean.getConsumerKey());
-        if (!validatePKCE(PKCECodeChallenge, verificationCode, PKCECodeChallengeMethod, oAuthApp)) {
+        if (!validatePKCE(pkceCodeChallenge, verificationCode, pkceCodeChallengeMethod, oAuthApp)) {
             //possible malicious oAuthRequest
             log.warn("Failed PKCE Verification for oAuth 2.0 request");
             if (log.isDebugEnabled()) {
