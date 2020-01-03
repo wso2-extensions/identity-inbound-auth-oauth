@@ -41,19 +41,23 @@ import waffle.windows.auth.impl.WindowsAuthProviderImpl;
 import waffle.windows.auth.impl.WindowsCredentialsHandleImpl;
 import waffle.windows.auth.impl.WindowsSecurityContextImpl;
 
-import javax.security.auth.Subject;
-import javax.servlet.ServletException;
 import java.io.IOException;
 
+import javax.security.auth.Subject;
+import javax.servlet.ServletException;
 
+/**
+ * NTLM Authentication grant handler.
+ */
 public class NTLMAuthenticationGrantHandler extends AbstractAuthorizationGrantHandler {
+
     private static final Log log = LogFactory.getLog(NTLMAuthenticationGrantHandler.class);
     String securityPackage = "Negotiate";
 
     @Override
     public boolean validateGrant(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
 
-        if(!super.validateGrant(tokReqMsgCtx)){
+        if (!super.validateGrant(tokReqMsgCtx)) {
             return false;
         }
 

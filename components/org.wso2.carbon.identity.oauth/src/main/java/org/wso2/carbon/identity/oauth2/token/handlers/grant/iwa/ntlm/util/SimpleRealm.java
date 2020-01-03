@@ -22,6 +22,9 @@ import org.apache.catalina.realm.RealmBase;
 
 import java.security.Principal;
 
+/**
+ * Simple tomcat realm
+ */
 public class SimpleRealm extends RealmBase {
 
     protected String getName() {

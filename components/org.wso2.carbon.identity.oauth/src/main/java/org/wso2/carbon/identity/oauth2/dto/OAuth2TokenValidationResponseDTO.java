@@ -97,6 +97,9 @@ public class OAuth2TokenValidationResponseDTO {
         this.tokenBinding = tokenBinding;
     }
 
+    /**
+     * Authorization context token.
+     */
     public class AuthorizationContextToken {
 
         String tokenType;

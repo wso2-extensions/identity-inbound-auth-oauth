@@ -18,6 +18,9 @@
 
 package org.wso2.carbon.identity.oauth2.dto;
 
+/**
+ * OAuth 2 client application bean.
+ */
 public class OAuth2ClientApplicationDTO {
 
     private String consumerKey;

@@ -57,7 +57,6 @@ import org.wso2.carbon.utils.CarbonUtils;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -74,9 +73,7 @@ public class AccessTokenIssuer {
 
     private static AccessTokenIssuer instance;
     private static final Log log = LogFactory.getLog(AccessTokenIssuer.class);
-    private Map<String, AuthorizationGrantHandler> authzGrantHandlers =
-            new Hashtable<String, AuthorizationGrantHandler>();
-    private AppInfoCache appInfoCache;
+    private Map<String, AuthorizationGrantHandler> authzGrantHandlers;
     public static final String OAUTH_APP_DO = "OAuthAppDO";
 
     /**
@@ -85,7 +82,7 @@ public class AccessTokenIssuer {
     private AccessTokenIssuer() throws IdentityOAuth2Exception {
 
         authzGrantHandlers = OAuthServerConfiguration.getInstance().getSupportedGrantTypes();
-        appInfoCache = AppInfoCache.getInstance();
+        AppInfoCache appInfoCache = AppInfoCache.getInstance();
         if (appInfoCache != null) {
             if (log.isDebugEnabled()) {
                 log.debug("Successfully created AppInfoCache under " + OAuthConstants.OAUTH_CACHE_MANAGER);
@@ -376,14 +373,15 @@ public class AccessTokenIssuer {
     /**
      * Handle token binding for the grant type.
      *
-     * @param tokenReqDTO token request DTO.
-     * @param grantType grant type.
+     * @param tokenReqDTO  token request DTO.
+     * @param grantType    grant type.
      * @param tokReqMsgCtx token request message context.
-     * @param oAuthAppDO oauth application.
+     * @param oAuthAppDO   oauth application.
      * @throws IdentityOAuth2Exception in case of failure.
      */
     private void handleTokenBinding(OAuth2AccessTokenReqDTO tokenReqDTO, String grantType,
-            OAuthTokenReqMessageContext tokReqMsgCtx, OAuthAppDO oAuthAppDO) throws IdentityOAuth2Exception {
+                                    OAuthTokenReqMessageContext tokReqMsgCtx, OAuthAppDO oAuthAppDO)
+            throws IdentityOAuth2Exception {
 
         if (StringUtils.isBlank(oAuthAppDO.getTokenBindingType())) {
             tokReqMsgCtx.setTokenBinding(null);
@@ -500,7 +498,7 @@ public class AccessTokenIssuer {
             if (authorizationGrantCacheEntry != null) {
                 authorizationGrantCacheEntry.setTokenId(tokenRespDTO.getTokenId());
                 if (log.isDebugEnabled()) {
-                    if(IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                    if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
                         log.debug("Adding AuthorizationGrantCache entry for the access token(hashed):" +
                                 DigestUtils.sha256Hex(newCacheKey.getUserAttributesId()));
                     } else {
@@ -515,6 +513,7 @@ public class AccessTokenIssuer {
     }
 
     private void clearCacheEntryAgainstAuthorizationCode(String authorizationCode) {
+
         AuthorizationGrantCacheKey oldCacheKey = new AuthorizationGrantCacheKey(authorizationCode);
         //checking getUserAttributesId value of cacheKey before retrieve entry from cache as it causes to NPE
         if (oldCacheKey.getUserAttributesId() != null) {
@@ -523,6 +522,7 @@ public class AccessTokenIssuer {
     }
 
     private String getAuthorizationCode(OAuth2AccessTokenReqDTO tokenReqDTO) {
+
         return tokenReqDTO.getAuthorizationCode();
     }
 
@@ -561,7 +561,8 @@ public class AccessTokenIssuer {
                                     OAuth2AccessTokenRespDTO tokenRespDTO) {
 
         if (tokReqMsgCtx.getProperty(OAuthConstants.RESPONSE_HEADERS_PROPERTY) != null) {
-            tokenRespDTO.setResponseHeaders((ResponseHeader[]) tokReqMsgCtx.getProperty(OAuthConstants.RESPONSE_HEADERS_PROPERTY));
+            tokenRespDTO.setResponseHeaders(
+                    (ResponseHeader[]) tokReqMsgCtx.getProperty(OAuthConstants.RESPONSE_HEADERS_PROPERTY));
         }
     }
 

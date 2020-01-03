@@ -20,8 +20,11 @@ package org.wso2.carbon.identity.oauth2.token.handlers.grant.saml;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 
+/**
+ * OAuth 2 callback for token requests.
+ */
 public interface SAML2TokenCallbackHandler {
 
-    public void handleSAML2Token(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception;
+    void handleSAML2Token(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception;
 
 }

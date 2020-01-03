@@ -18,20 +18,23 @@
 
 package org.wso2.carbon.identity.oauth2.token.handlers.grant.iwa.ntlm.util;
 
+import java.io.IOException;
+
 import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
 
-
+/**
+ * Default request dispatcher.
+ */
 public class SimpleRequestDispatcher implements RequestDispatcher {
 
-    private String _url;
+    private String url;
 
     public SimpleRequestDispatcher(String url) {
-        _url = url;
+        this.url = url;
     }
 
     @Override
@@ -39,7 +42,7 @@ public class SimpleRequestDispatcher implements RequestDispatcher {
             throws ServletException, IOException {
         HttpServletResponse httpResponse = (HttpServletResponse) response;
         httpResponse.setStatus(304);
-        httpResponse.addHeader("Location", _url);
+        httpResponse.addHeader("Location", url);
     }
 
     @Override

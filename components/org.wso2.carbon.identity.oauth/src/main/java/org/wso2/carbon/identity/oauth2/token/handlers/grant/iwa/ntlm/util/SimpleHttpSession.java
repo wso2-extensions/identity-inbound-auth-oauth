@@ -18,12 +18,13 @@
 
 package org.wso2.carbon.identity.oauth2.token.handlers.grant.iwa.ntlm.util;
 
-import javax.servlet.ServletContext;
-import javax.servlet.http.HttpSession;
-import javax.servlet.http.HttpSessionContext;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
+
+import javax.servlet.ServletContext;
+import javax.servlet.http.HttpSession;
+import javax.servlet.http.HttpSessionContext;
 
 /**
  * Simple Http Session
@@ -31,11 +32,11 @@ import java.util.Map;
 @SuppressWarnings("deprecation")
 public class SimpleHttpSession implements HttpSession {
 
-    private Map<String, Object> _attributes = new HashMap<String, Object>();
+    private Map<String, Object> attributes = new HashMap<>();
 
     @Override
     public Object getAttribute(String attributeName) {
-        return _attributes.get(attributeName);
+        return attributes.get(attributeName);
     }
 
     @Override
@@ -104,7 +105,7 @@ public class SimpleHttpSession implements HttpSession {
 
     @Override
     public void removeAttribute(String attributeName) {
-        _attributes.remove(attributeName);
+        attributes.remove(attributeName);
     }
 
     @Override
@@ -114,6 +115,6 @@ public class SimpleHttpSession implements HttpSession {
 
     @Override
     public void setAttribute(String attributeName, Object attributeValue) {
-        _attributes.put(attributeName, attributeValue);
+        attributes.put(attributeName, attributeValue);
     }
 }

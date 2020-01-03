@@ -22,10 +22,14 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.oauth2.model.HttpRequestHeader;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 
-import javax.servlet.http.Cookie;
 import java.util.LinkedHashSet;
 import java.util.Properties;
 
+import javax.servlet.http.Cookie;
+
+/**
+ * OAuth 2 authorization request bean.
+ */
 public class OAuth2AuthorizeReqDTO {
     private String consumerKey;
     private String[] scopes;

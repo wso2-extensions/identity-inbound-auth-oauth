@@ -21,109 +21,128 @@ package org.wso2.carbon.identity.oauth2.token.handlers.grant.iwa.ntlm.util;
 import org.apache.catalina.connector.Connector;
 import org.apache.catalina.connector.Request;
 
-import javax.servlet.http.HttpSession;
 import java.security.Principal;
 import java.util.HashMap;
 import java.util.Map;
 
+import javax.servlet.http.HttpSession;
 
+/**
+ * Simple HTTP request.
+ */
 public class SimpleHttpRequest extends Request {
 
-    private static int _remotePort_s = 0;
+    private static int remotePorts = 0;
 
-    private String _requestURI = null;
-    private String _queryString = null;
-    private String _remoteUser = null;
-    private String _method = "GET";
-    private String _remoteHost = null;
-    private String _remoteAddr = null;
-    private int _remotePort = -1;
-    private Map<String, String> _headers = new HashMap<String, String>();
-    private Map<String, String> _parameters = new HashMap<String, String>();
-    private byte[] _content = null;
-    private HttpSession _session = new SimpleHttpSession();
-    private Principal _principal = null;
+    private String requestURI = null;
+    private String queryString = null;
+    private String remoteUser = null;
+    private String method = "GET";
+    private String remoteHost = null;
+    private String remoteAddr = null;
+    private int remotePort;
+    private Map<String, String> headers = new HashMap<>();
+    private Map<String, String> parameters = new HashMap<>();
+    private byte[] content = null;
+    private HttpSession simpleSession = new SimpleHttpSession();
+    private Principal principal = null;
 
     public SimpleHttpRequest(Connector connector) {
+
         super(connector);
-        _remotePort = nextRemotePort();
+        remotePort = nextRemotePort();
     }
 
-    public synchronized static int nextRemotePort() {
-        return ++_remotePort_s;
+    public static synchronized int nextRemotePort() {
+
+        return ++remotePorts;
     }
 
-    public synchronized static void resetRemotePort() {
-        _remotePort_s = 0;
+    public static synchronized void resetRemotePort() {
+
+        remotePorts = 0;
     }
 
     //@Override
     public void addHeader(String headerName, String headerValue) {
-        _headers.put(headerName, headerValue);
+
+        headers.put(headerName, headerValue);
     }
 
     @Override
     public String getHeader(String headerName) {
-        return _headers.get(headerName);
+
+        return headers.get(headerName);
     }
 
     @Override
     public String getMethod() {
-        return _method;
+
+        return method;
     }
 
     // @Override
     public void setMethod(String methodName) {
-        _method = methodName;
+
+        method = methodName;
     }
 
     @Override
     public int getContentLength() {
-        return _content == null ? -1 : _content.length;
+
+        return content == null ? -1 : content.length;
     }
 
     // @Override
     public void setContentLength(int length) {
-        _content = new byte[length];
+
+        content = new byte[length];
     }
 
     @Override
     public int getRemotePort() {
-        return _remotePort;
+
+        return remotePort;
     }
 
     @Override
     public String getRemoteUser() {
-        return _remoteUser;
+
+        return remoteUser;
     }
 
     public void setRemoteUser(String username) {
-        _remoteUser = username;
+
+        remoteUser = username;
     }
 
     @Override
     public HttpSession getSession() {
-        return _session;
+
+        return simpleSession;
     }
 
     @Override
     public HttpSession getSession(boolean create) {
-        if (_session == null && create) {
-            _session = new SimpleHttpSession();
+
+        if (simpleSession == null && create) {
+            simpleSession = new SimpleHttpSession();
         }
-        return _session;
+        return simpleSession;
     }
 
     @Override
     public String getQueryString() {
-        return _queryString;
+
+        return queryString;
     }
 
     //@Override
     public void setQueryString(String queryString) {
-        _queryString = queryString;
-        if (_queryString != null) {
-            for (String eachParameter : _queryString.split("[&]")) {
+
+        this.queryString = queryString;
+        if (this.queryString != null) {
+            for (String eachParameter : this.queryString.split("[&]")) {
                 String[] pair = eachParameter.split("=");
                 String value = (pair.length == 2) ? pair[1] : "";
                 addParameter(pair[0], value);
@@ -133,50 +152,60 @@ public class SimpleHttpRequest extends Request {
 
     @Override
     public String getRequestURI() {
-        return _requestURI;
+
+        return requestURI;
     }
 
     //@Override
     public void setRequestURI(String uri) {
-        _requestURI = uri;
+
+        requestURI = uri;
     }
 
     @Override
     public String getParameter(String parameterName) {
-        return _parameters.get(parameterName);
+
+        return parameters.get(parameterName);
     }
 
     public void addParameter(String parameterName, String parameterValue) {
-        _parameters.put(parameterName, parameterValue);
+
+        parameters.put(parameterName, parameterValue);
     }
 
     @Override
     public String getRemoteHost() {
-        return _remoteHost;
+
+        return remoteHost;
     }
 
     @Override
     public void setRemoteHost(String remoteHost) {
-        _remoteHost = remoteHost;
+
+        this.remoteHost = remoteHost;
     }
 
     @Override
     public String getRemoteAddr() {
-        return _remoteAddr;
+
+        return remoteAddr;
     }
 
     @Override
     public void setRemoteAddr(String remoteAddr) {
-        _remoteAddr = remoteAddr;
+
+        this.remoteAddr = remoteAddr;
     }
 
     @Override
     public Principal getUserPrincipal() {
-        return _principal;
+
+        return principal;
     }
 
     @Override
     public void setUserPrincipal(Principal principal) {
-        _principal = principal;
+
+        this.principal = principal;
     }
 }

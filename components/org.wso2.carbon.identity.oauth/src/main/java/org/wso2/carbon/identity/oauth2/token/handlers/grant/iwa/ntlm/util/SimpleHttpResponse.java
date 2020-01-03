@@ -29,47 +29,53 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * @author dblock[at]dblock[dot]org
+ * Simple HTTP Response.
  */
 public class SimpleHttpResponse extends Response {
-    private int _status = 500;
-    private Map<String, List<String>> _headers = new HashMap<String, List<String>>();
-    private static Log log = LogFactory.getLog(SimpleHttpResponse.class);
 
+    private int status = 500;
+    private Map<String, List<String>> headers = new HashMap<String, List<String>>();
+    private static final Log log = LogFactory.getLog(SimpleHttpResponse.class);
 
     @Override
     public int getStatus() {
-        return _status;
+
+        return status;
     }
 
     @Override
     public void setStatus(int value) {
-        _status = value;
+
+        status = value;
     }
 
     @Override
     public void addHeader(String headerName, String headerValue) {
-        List<String> current = _headers.get(headerName);
-        if (current == null)
-            current = new ArrayList<String>();
+
+        List<String> current = headers.get(headerName);
+        if (current == null) {
+            current = new ArrayList<>();
+        }
         current.add(headerValue);
-        _headers.put(headerName, current);
+        headers.put(headerName, current);
     }
 
     @Override
     public void setHeader(String headerName, String headerValue) {
-        List<String> current = _headers.get(headerName);
+
+        List<String> current = headers.get(headerName);
         if (current == null) {
             current = new ArrayList<String>();
         } else {
             current.clear();
         }
         current.add(headerValue);
-        _headers.put(headerName, current);
+        headers.put(headerName, current);
     }
 
     public String getStatusString() {
-        if (_status == 401) {
+
+        if (status == 401) {
             return "Unauthorized";
         }
         return "Unknown";
@@ -77,9 +83,10 @@ public class SimpleHttpResponse extends Response {
 
     @Override
     public void flushBuffer() {
-        if(log.isDebugEnabled()){
-            log.debug(_status + " " + getStatusString());
-            for (Map.Entry<String, List<String>> headerEntry : _headers.entrySet()) {
+
+        if (log.isDebugEnabled()) {
+            log.debug(status + " " + getStatusString());
+            for (Map.Entry<String, List<String>> headerEntry : headers.entrySet()) {
                 for (String valueEntry : headerEntry.getValue()) {
                     log.debug(headerEntry.getKey() + ": " + valueEntry);
                 }
@@ -87,16 +94,17 @@ public class SimpleHttpResponse extends Response {
         }
     }
 
-    //@Override
     public String[] getHeaderValues(String headerName) {
-        List<String> headerValues = _headers.get(headerName);
+
+        List<String> headerValues = headers.get(headerName);
         return headerValues == null ? null : headerValues
                 .toArray(new String[0]);
     }
 
     @Override
     public String getHeader(String headerName) {
-        List<String> headerValues = _headers.get(headerName);
+
+        List<String> headerValues = headers.get(headerName);
         if (headerValues == null) {
             return null;
         }
@@ -112,16 +120,19 @@ public class SimpleHttpResponse extends Response {
 
     @Override
     public Collection<String> getHeaderNames() {
-        return _headers.keySet();
+
+        return headers.keySet();
     }
 
     @Override
     public void sendError(int rc, String message) {
-        _status = rc;
+
+        status = rc;
     }
 
     @Override
     public void sendError(int rc) {
-        _status = rc;
+
+        status = rc;
     }
 }

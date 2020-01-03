@@ -40,12 +40,9 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
-import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
-import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationRequestDTO;
-import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationResponseDTO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
@@ -64,6 +61,9 @@ import java.util.UUID;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE;
 
+/**
+ * Abstract authorization grant handler.
+ */
 public abstract class AbstractAuthorizationGrantHandler implements AuthorizationGrantHandler {
 
     private static final Log log = LogFactory.getLog(AbstractAuthorizationGrantHandler.class);
@@ -181,7 +181,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         OAuth2AccessTokenReqDTO tokenReqDTO = tokReqMsgCtx.getOauth2AccessTokenReqDTO();
         String grantType = tokenReqDTO.getGrantType();
 
-        OAuthAppDO oAuthAppBean = (OAuthAppDO)tokReqMsgCtx.getProperty("OAuthAppDO");
+        OAuthAppDO oAuthAppBean = (OAuthAppDO) tokReqMsgCtx.getProperty("OAuthAppDO");
 
         if (oAuthAppBean == null) {
             if (log.isDebugEnabled()) {
@@ -352,8 +352,8 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     }
 
     private boolean isExistingTokenValid(AccessTokenDO existingTokenBean, long expireTime) {
-        if(TOKEN_STATE_ACTIVE.equals(existingTokenBean.getTokenState())
-                && expireTime != 0) {
+
+        if (TOKEN_STATE_ACTIVE.equals(existingTokenBean.getTokenState()) && expireTime != 0) {
             return true;
         } else {
             if (log.isDebugEnabled()) {
@@ -388,7 +388,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         newTokenBean.setIssuedTime(timestamp);
         newTokenBean.setAccessToken(getNewAccessToken(tokReqMsgCtx, oauthTokenIssuer));
         newTokenBean.setValidityPeriodInMillis(validityPeriodInMillis);
-        newTokenBean.setValidityPeriod(validityPeriodInMillis/ SECONDS_TO_MILISECONDS_FACTOR);
+        newTokenBean.setValidityPeriod(validityPeriodInMillis / SECONDS_TO_MILISECONDS_FACTOR);
         newTokenBean.setTokenBinding(tokReqMsgCtx.getTokenBinding());
         setRefreshTokenDetails(tokReqMsgCtx, oAuthAppBean, existingTokenBean, timestamp, validityPeriodInMillis,
                 tokenReq, newTokenBean, oauthTokenIssuer);
@@ -505,7 +505,8 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     private long getRefreshTokenValidityPeriod(String consumerKey, OAuthAppDO oAuthAppBean) {
         long refreshTokenValidityPeriodInMillis;
         if (oAuthAppBean.getRefreshTokenExpiryTime() != 0) {
-            refreshTokenValidityPeriodInMillis = oAuthAppBean.getRefreshTokenExpiryTime() * SECONDS_TO_MILISECONDS_FACTOR;
+            refreshTokenValidityPeriodInMillis =
+                    oAuthAppBean.getRefreshTokenExpiryTime() * SECONDS_TO_MILISECONDS_FACTOR;
             if (log.isDebugEnabled()) {
                 log.debug("OAuth application id : " + consumerKey + ", refresh token validity time " +
                         refreshTokenValidityPeriodInMillis + "ms");
@@ -595,7 +596,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                         ", Refresh token expiry time : " + oAuthAppBean.getRefreshTokenExpiryTime());
             }
         } catch (InvalidOAuthClientException e) {
-            throw new IdentityOAuth2Exception("Error while retrieving app information for clientId : " + consumerKey, e);
+            throw new IdentityOAuth2Exception("Error while retrieving app information for clientId: " + consumerKey, e);
         }
         return oAuthAppBean;
     }
@@ -682,7 +683,8 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     }
 
     private long getValidityPeriodForApplication(String consumerKey, OAuthAppDO oAuthAppBean) {
-        long validityPeriodInMillis;// If the user is an application
+
+        long validityPeriodInMillis; // If the user is an application
         // Default Validity Period (in seconds)
         if (oAuthAppBean.getApplicationAccessTokenExpiryTime() != 0) {
             validityPeriodInMillis = oAuthAppBean.getApplicationAccessTokenExpiryTime() * SECONDS_TO_MILISECONDS_FACTOR;
@@ -698,7 +700,8 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     }
 
     private long getValidityPeriodForApplicationUser(String consumerKey, OAuthAppDO oAuthAppBean) {
-        long validityPeriodInMillis;// If the user is an application user
+
+        long validityPeriodInMillis; // If the user is an application user
         if (oAuthAppBean.getUserAccessTokenExpiryTime() != 0) {
             validityPeriodInMillis = oAuthAppBean.getUserAccessTokenExpiryTime() * SECONDS_TO_MILISECONDS_FACTOR;
             if (log.isDebugEnabled()) {

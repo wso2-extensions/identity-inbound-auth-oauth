@@ -19,13 +19,15 @@
 package org.wso2.carbon.identity.oauth2.token;
 
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
-import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 
 import java.util.Properties;
 
+/**
+ * Oauth token request message context.
+ */
 public class OAuthTokenReqMessageContext {
 
     private OAuth2AccessTokenReqDTO oauth2AccessTokenReqDTO;
@@ -37,11 +39,11 @@ public class OAuthTokenReqMessageContext {
     private int tenantID;
 
     private long validityPeriod = OAuthConstants.UNASSIGNED_VALIDITY_PERIOD;
-    
+
     private long refreshTokenvalidityPeriod = OAuthConstants.UNASSIGNED_VALIDITY_PERIOD;
-    
+
     private long accessTokenIssuedTime;
-    
+
     private long refreshTokenIssuedTime;
 
     private Properties properties = new Properties();
@@ -49,75 +51,93 @@ public class OAuthTokenReqMessageContext {
     private TokenBinding tokenBinding;
 
     public OAuthTokenReqMessageContext(OAuth2AccessTokenReqDTO oauth2AccessTokenReqDTO) {
+
         this.oauth2AccessTokenReqDTO = oauth2AccessTokenReqDTO;
     }
 
     public OAuth2AccessTokenReqDTO getOauth2AccessTokenReqDTO() {
+
         return oauth2AccessTokenReqDTO;
     }
 
     public AuthenticatedUser getAuthorizedUser() {
+
         return authorizedUser;
     }
 
     public void setAuthorizedUser(AuthenticatedUser authorizedUser) {
+
         this.authorizedUser = authorizedUser;
     }
 
     public String[] getScope() {
+
         return scope;
     }
 
     public void setScope(String[] scope) {
+
         this.scope = scope;
     }
 
     public int getTenantID() {
+
         return tenantID;
     }
 
     public void setTenantID(int tenantID) {
+
         this.tenantID = tenantID;
     }
 
     public long getValidityPeriod() {
+
         return validityPeriod;
     }
 
     public void setValidityPeriod(long validityPeriod) {
+
         this.validityPeriod = validityPeriod;
     }
 
     public void addProperty(Object propName, Object propValue) {
+
         properties.put(propName, propValue);
     }
 
     public Object getProperty(Object propName) {
+
         return properties.get(propName);
     }
 
     public long getRefreshTokenvalidityPeriod() {
-	return refreshTokenvalidityPeriod;
+
+        return refreshTokenvalidityPeriod;
     }
 
     public void setRefreshTokenvalidityPeriod(long refreshTokenvalidityPeriod) {
-	this.refreshTokenvalidityPeriod = refreshTokenvalidityPeriod;
+
+        this.refreshTokenvalidityPeriod = refreshTokenvalidityPeriod;
     }
 
     public long getAccessTokenIssuedTime() {
-	return accessTokenIssuedTime;
+
+        return accessTokenIssuedTime;
     }
 
     public void setAccessTokenIssuedTime(long accessTokenIssuedTime) {
-	this.accessTokenIssuedTime = accessTokenIssuedTime;
+
+        this.accessTokenIssuedTime = accessTokenIssuedTime;
     }
 
     public long getRefreshTokenIssuedTime() {
-	return refreshTokenIssuedTime;
+
+        return refreshTokenIssuedTime;
     }
 
     public void setRefreshTokenIssuedTime(long refreshTokenIssuedTime) {
-	this.refreshTokenIssuedTime = refreshTokenIssuedTime;
+
+        this.refreshTokenIssuedTime = refreshTokenIssuedTime;
     }
 
     public TokenBinding getTokenBinding() {
