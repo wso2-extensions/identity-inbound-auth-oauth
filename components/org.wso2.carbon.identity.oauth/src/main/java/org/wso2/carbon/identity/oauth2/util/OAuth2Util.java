@@ -31,6 +31,10 @@ import com.nimbusds.jose.JWSVerifier;
 import com.nimbusds.jose.crypto.RSAEncrypter;
 import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
+import com.nimbusds.jose.jwk.JWK;
+import com.nimbusds.jose.jwk.JWKSet;
+import com.nimbusds.jose.jwk.KeyUse;
+import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWT;
@@ -57,6 +61,7 @@ import org.wso2.carbon.identity.application.common.IdentityApplicationManagement
 import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
@@ -106,6 +111,7 @@ import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
+import org.wso2.carbon.identity.openidconnect.model.Constants;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
@@ -120,12 +126,15 @@ import org.wso2.carbon.utils.CarbonUtils;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.security.Key;
@@ -135,6 +144,8 @@ import java.security.NoSuchAlgorithmException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.sql.Timestamp;
@@ -2129,22 +2140,62 @@ public class OAuth2Util {
                                       EncryptionMethod encryptionMethod, String spTenantDomain, String clientId)
             throws IdentityOAuth2Exception {
 
-        try {
-            if (StringUtils.isBlank(spTenantDomain)) {
-                spTenantDomain = MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
-                if (log.isDebugEnabled()) {
-                    log.debug("Assigned super tenant domain as signing domain when encrypting id token for " +
-                            "client_id: " + clientId);
-                }
+        if (StringUtils.isBlank(spTenantDomain)) {
+            spTenantDomain = MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
+            if (log.isDebugEnabled()) {
+                log.debug("Assigned super tenant domain as signing domain when encrypting id token for " +
+                        "client_id: " + clientId);
             }
+        }
+        String jwksUri = getSPJwksUrl(clientId, spTenantDomain);
+        Certificate publicCert;
+        String thumbPrint;
 
-            Certificate publicCert = getX509CertOfOAuthApp(clientId, spTenantDomain);
-            Key publicKey = publicCert.getPublicKey();
+        if (StringUtils.isBlank(jwksUri)) {
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("Jwks uri is not configured for the service provider associated with client_id: %s. Checking for " +
+                        "x509 certificate", clientId));
+            }
+            publicCert = getX509CertOfOAuthApp(clientId, spTenantDomain);
+            try {
+                thumbPrint = getThumbPrint(publicCert);
+            } catch (CertificateEncodingException | NoSuchAlgorithmException e) {
+                throw new IdentityOAuth2Exception("Error occurred while getting the certificate thumbprint for the " +
+                        "client_id: " + clientId + " with the tenant domain: " + spTenantDomain, e);
+            }
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("Fetching public keys for the client %s from jwks uri %s", clientId,  jwksUri));
+            }
+            publicCert = getPublicCertFromJWKS(jwksUri);
+            thumbPrint = getJwkThumbPrint(publicCert);
+        }
+        Key publicKey = publicCert.getPublicKey();
+        return encryptWithPublicKey(publicKey, jwtClaimsSet, encryptionAlgorithm, encryptionMethod,
+                spTenantDomain, clientId, thumbPrint);
+    }
 
-            JWEHeader.Builder headerBuilder = new JWEHeader.Builder(encryptionAlgorithm, encryptionMethod);
-            String thumbPrint = getThumbPrint(publicCert);
+    /**
+     * Encrypt the JWT token with with given public key.
+     *
+     * @param publicKey           public key used to encrypt
+     * @param jwtClaimsSet        contains JWT body
+     * @param encryptionAlgorithm JWT signing algorithm
+     * @param spTenantDomain      Service provider tenant domain
+     * @param clientId            ID of the client
+     * @param thumbPrint          value used as 'kid'
+     * @return encrypted JWT token
+     * @throws IdentityOAuth2Exception
+     */
+    private static JWT encryptWithPublicKey(Key publicKey, JWTClaimsSet jwtClaimsSet,
+                                            JWEAlgorithm encryptionAlgorithm, EncryptionMethod encryptionMethod,
+                                            String spTenantDomain, String clientId,
+                                            String thumbPrint) throws IdentityOAuth2Exception {
+
+        JWEHeader.Builder headerBuilder = new JWEHeader.Builder(encryptionAlgorithm, encryptionMethod);
+
+        try {
             headerBuilder.keyID(thumbPrint);
-            headerBuilder.x509CertThumbprint(new Base64URL(thumbPrint));
             JWEHeader header = headerBuilder.build();
             EncryptedJWT encryptedJWT = new EncryptedJWT(header, jwtClaimsSet);
 
@@ -2155,9 +2206,8 @@ public class OAuth2Util {
 
             JWEEncrypter encrypter = new RSAEncrypter((RSAPublicKey) publicKey);
             encryptedJWT.encrypt(encrypter);
-
             return encryptedJWT;
-        } catch (JOSEException | NoSuchAlgorithmException | CertificateEncodingException e) {
+        } catch (JOSEException e) {
             throw new IdentityOAuth2Exception("Error occurred while encrypting JWT for the client_id: " + clientId
                     + " with the tenant domain: " + spTenantDomain, e);
         }
@@ -3410,5 +3460,102 @@ public class OAuth2Util {
         }
 
         return tokenBinderOptional.get().isValidTokenBinding(request, tokenBinding.getBindingReference());
+    }
+
+    /**
+     * Get public certificate from JWKS when kid and JWKS Uri is given.
+     *
+     * @param jwksUri - JWKS Uri
+     * @return - X509Certificate
+     * @throws IdentityOAuth2Exception - IdentityOAuth2Exception
+     */
+    private static X509Certificate getPublicCertFromJWKS(String jwksUri) throws IdentityOAuth2Exception {
+        if (log.isDebugEnabled()) {
+            log.debug(String.format("Attempting to retrieve public certificate from the Jwks uri: %s.", jwksUri));
+        }
+        try {
+            JWKSet publicKeys = JWKSet.load(new URL(jwksUri));
+            JWK jwk = null;
+            X509Certificate certificate;
+            //Get the first signing JWK from the list
+            List<JWK> jwkList = publicKeys.getKeys();
+
+            for (JWK currentJwk : jwkList) {
+                if (KeyUse.SIGNATURE == currentJwk.getKeyUse()) {
+                    jwk = currentJwk;
+                    break;
+                }
+            }
+
+            if (jwk != null) {
+                certificate = jwk.getParsedX509CertChain().get(0);
+                if (log.isDebugEnabled()) {
+                    log.debug(String.format("Retrieved the public signing certificate successfully from the " +
+                            "jwks uri: %s", jwksUri));
+                }
+                return certificate;
+            } else {
+                throw new IdentityOAuth2Exception(String.format("Failed to retrieve public certificate from " +
+                        "jwks uri: %s", jwksUri));
+            }
+        } catch (ParseException | IOException e) {
+            throw new IdentityOAuth2Exception(String.format("Failed to retrieve public certificate from " +
+                    "jwks uri: %s", jwksUri), e);
+        }
+    }
+
+    /**
+     * Get Jwks uri of SP when clientId and spTenantDomain is provided.
+     *
+     * @param clientId       - ClientId
+     * @param spTenantDomain - Tenant domain
+     * @return Jwks Url
+     * @throws IdentityOAuth2Exception
+     */
+    private static String getSPJwksUrl(String clientId, String spTenantDomain) throws IdentityOAuth2Exception {
+
+        String jwksUri = null;
+        ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(clientId, spTenantDomain);
+        ServiceProviderProperty[] spPropertyArray = serviceProvider.getSpProperties();
+        //get jwks uri from sp-properties
+        for (ServiceProviderProperty spProperty : spPropertyArray) {
+            if (Constants.JWKS_URI.equals(spProperty.getName())) {
+                jwksUri = spProperty.getValue();
+                break;
+            }
+        }
+        if (log.isDebugEnabled()) {
+            log.debug(String.format("Retrieved jwks uri: %s for the service provider associated with client_id: %s",
+                    jwksUri, clientId));
+        }
+        return jwksUri;
+    }
+
+    /**
+     * Method to extract the SHA-1 JWK thumbprint from certificates.
+     *
+     * @param certificate x509 certificate
+     * @return String thumbprint
+     * @throws IdentityOAuth2Exception When failed to extract thumbprint
+     */
+    public static String getJwkThumbPrint(Certificate certificate) throws IdentityOAuth2Exception {
+
+        if (log.isDebugEnabled()) {
+            log.debug(String.format("Calculating SHA-1 JWK thumb-print for certificate: %s", certificate.toString()));
+        }
+        try {
+            CertificateFactory cf = CertificateFactory.getInstance(Constants.X509);
+            ByteArrayInputStream bais = new ByteArrayInputStream(certificate.getEncoded());
+            X509Certificate x509 = (X509Certificate) cf.generateCertificate(bais);
+            Base64URL jwkThumbprint = RSAKey.parse(x509).computeThumbprint(Constants.SHA1);
+            String thumbprintString = jwkThumbprint.toString();
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("Calculated SHA-1 JWK thumbprint %s from the certificate",
+                        thumbprintString));
+            }
+            return thumbprintString;
+        } catch (CertificateException | JOSEException e) {
+            throw new IdentityOAuth2Exception("Error occurred while generating SHA-1 JWK thumbprint", e);
+        }
     }
 }
