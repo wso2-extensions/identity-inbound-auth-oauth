@@ -29,7 +29,6 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
-import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.util.ClaimCache;
 import org.wso2.carbon.identity.oauth.util.ClaimCacheKey;
@@ -39,6 +38,7 @@ import org.wso2.carbon.identity.oauth.util.ClaimMetaDataCacheKey;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreException;
@@ -366,7 +366,7 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
         String userStoreDomain = UserCoreUtil.getDomainName(userStoreManager.getRealmConfiguration());
         String tenantDomain = IdentityTenantUtil.getTenantDomain(userStoreManager.getTenantId());
         Set<AccessTokenDO> accessTokenDOSet;
-        Set<String> authorizationCodes;
+        List<AuthzCodeDO> authorizationCodeDOSet;
         AuthenticatedUser authenticatedUser = new AuthenticatedUser();
         authenticatedUser.setUserStoreDomain(userStoreDomain);
         authenticatedUser.setTenantDomain(tenantDomain);
@@ -374,25 +374,24 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
         try {
             accessTokenDOSet = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                     .getAccessTokensByUserForOpenidScope(authenticatedUser);
-            authorizationCodes = OAuthTokenPersistenceFactory.getInstance()
-                    .getAuthorizationCodeDAO().getAuthorizationCodesByUser(authenticatedUser);
+            authorizationCodeDOSet = OAuthTokenPersistenceFactory.getInstance()
+                    .getAuthorizationCodeDAO().getAuthorizationCodesByUserForOpenidScope(authenticatedUser);
             removeAccessTokensFromCache(accessTokenDOSet);
-            removeAuthzCodesFromCache(authorizationCodes);
+            removeAuthzCodesFromCache(authorizationCodeDOSet);
         } catch (IdentityOAuth2Exception e) {
             String errorMsg = "Error occurred while retrieving access tokens issued for user : " + userName;
             log.error(errorMsg, e);
         }
     }
 
-    private void removeAuthzCodesFromCache(Set<String> authorizationCodes) {
-        if (CollectionUtils.isNotEmpty(authorizationCodes)) {
-            for (String accessToken : authorizationCodes) {
-                AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(accessToken);
-                AuthorizationGrantCacheEntry cacheEntry = (AuthorizationGrantCacheEntry) AuthorizationGrantCache
-                        .getInstance().getValueFromCacheByToken(cacheKey);
-                if (cacheEntry != null) {
-                    AuthorizationGrantCache.getInstance().clearCacheEntryByCode(cacheKey);
-                }
+    private void removeAuthzCodesFromCache(List<AuthzCodeDO> authorizationCodeDOSet) {
+
+        if (CollectionUtils.isNotEmpty(authorizationCodeDOSet)) {
+            for (AuthzCodeDO authorizationCodeDO : authorizationCodeDOSet) {
+                String authorizationCode = authorizationCodeDO.getAuthorizationCode();
+                String authzCodeId = authorizationCodeDO.getAuthzCodeId();
+                AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(authorizationCode);
+                AuthorizationGrantCache.getInstance().clearCacheEntryByCodeId(cacheKey, authzCodeId);
             }
         }
     }
