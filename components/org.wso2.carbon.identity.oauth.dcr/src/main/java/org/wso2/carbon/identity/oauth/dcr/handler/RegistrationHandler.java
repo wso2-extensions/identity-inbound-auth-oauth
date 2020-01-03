@@ -17,7 +17,6 @@
  */
 package org.wso2.carbon.identity.oauth.dcr.handler;
 
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.IdentityResponse;
@@ -29,11 +28,16 @@ import org.wso2.carbon.identity.oauth.dcr.model.RegistrationResponse;
 import org.wso2.carbon.identity.oauth.dcr.model.RegistrationResponseProfile;
 import org.wso2.carbon.identity.oauth.dcr.service.DCRManagementService;
 
+/**
+ * OAuth DCR handler class responsible for registration.
+ */
 public class RegistrationHandler extends AbstractDCRHandler {
+
     private static final Log log = LogFactory.getLog(RegistrationHandler.class);
 
     @Override
     public IdentityResponse.IdentityResponseBuilder handle(DCRMessageContext dcrMessageContext) throws DCRException {
+
         if (log.isDebugEnabled()) {
             log.debug("Request processing started by RegistrationRequestProcessor.");
         }
@@ -48,7 +52,6 @@ public class RegistrationHandler extends AbstractDCRHandler {
 
         dcrRegisterResponseBuilder = new RegistrationResponse.DCRRegisterResponseBuilder();
         dcrRegisterResponseBuilder.setRegistrationResponseProfile(registrationResponseProfile);
-
 
         return dcrRegisterResponseBuilder;
     }

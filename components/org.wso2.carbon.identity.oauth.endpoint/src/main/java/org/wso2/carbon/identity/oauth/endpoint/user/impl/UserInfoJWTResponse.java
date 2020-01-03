@@ -23,8 +23,6 @@ import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.PlainJWT;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.oltu.oauth2.common.error.OAuthError;
-import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -33,7 +31,6 @@ import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
-import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.AbstractUserInfoResponseBuilder;
 
@@ -52,6 +49,7 @@ public class UserInfoJWTResponse extends AbstractUserInfoResponseBuilder {
     @Override
     protected Map<String, Object> retrieveUserClaims(OAuth2TokenValidationResponseDTO tokenValidationResponse)
             throws UserInfoEndpointException {
+
         return ClaimUtil.getUserClaimsUsingTokenResponse(tokenValidationResponse);
     }
 
@@ -70,6 +68,7 @@ public class UserInfoJWTResponse extends AbstractUserInfoResponseBuilder {
     private String buildJWTResponse(OAuth2TokenValidationResponseDTO tokenResponse,
                                     String spTenantDomain,
                                     JWTClaimsSet jwtClaimsSet) throws UserInfoEndpointException {
+
         JWSAlgorithm signatureAlgorithm = getJWTSignatureAlgorithm();
         if (JWSAlgorithm.NONE.equals(signatureAlgorithm)) {
             if (log.isDebugEnabled()) {
@@ -88,13 +87,15 @@ public class UserInfoJWTResponse extends AbstractUserInfoResponseBuilder {
     }
 
     private JWSAlgorithm getJWTSignatureAlgorithm() throws UserInfoEndpointException {
+
         JWSAlgorithm signatureAlgorithm = DEFAULT_SIGNATURE_ALGORITHM;
         String sigAlg = OAuthServerConfiguration.getInstance().getUserInfoJWTSignatureAlgorithm();
         if (isNotBlank(sigAlg)) {
             try {
                 signatureAlgorithm = OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(sigAlg);
             } catch (IdentityOAuth2Exception e) {
-                throw new UserInfoEndpointException("Provided signature algorithm : " + sigAlg + " is not supported.", e);
+                throw new UserInfoEndpointException("Provided signature algorithm : " + sigAlg +
+                        " is not supported.", e);
             }
         }
         return signatureAlgorithm;
@@ -102,6 +103,7 @@ public class UserInfoJWTResponse extends AbstractUserInfoResponseBuilder {
 
     private String getSigningTenantDomain(OAuth2TokenValidationResponseDTO tokenResponse,
                                           String spTenantDomain) throws UserInfoEndpointException {
+
         boolean isJWTSignedWithSPKey = OAuthServerConfiguration.getInstance().isJWTSignedWithSPKey();
         String signingTenantDomain;
         if (isJWTSignedWithSPKey) {

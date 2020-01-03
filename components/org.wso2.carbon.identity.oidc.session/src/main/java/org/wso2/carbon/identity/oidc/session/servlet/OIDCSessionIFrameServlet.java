@@ -39,11 +39,15 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
+
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+/**
+ * Servlet class of OIDC session IFrame.
+ */
 public class OIDCSessionIFrameServlet extends HttpServlet {
 
     private static final Log log = LogFactory.getLog(OIDCSessionIFrameServlet.class);
@@ -52,11 +56,13 @@ public class OIDCSessionIFrameServlet extends HttpServlet {
     private static final String ERROR_RESPONSE = "<html><body>Invalid OP IFrame Request</body></html>";
 
     private static final String OP_IFRAME_RESOURCE = "op_iframe.html";
+    private static final long serialVersionUID = 601536694998426357L;
 
     private static StringBuilder opIFrame = null;
 
     @Override
     public void init() throws ServletException {
+
         loadOPIFrame();
     }
 
@@ -82,8 +88,8 @@ public class OIDCSessionIFrameServlet extends HttpServlet {
             response.getWriter().print(getOPIFrame(clientOrigin));
         } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
             log.error("Error while retrieving OAuth application information for the provided client id : " + clientId +
-                      ", " +  e.getMessage());
-            if(log.isDebugEnabled()){
+                    ", " + e.getMessage());
+            if (log.isDebugEnabled()) {
                 log.debug(e);
             }
             response.getWriter().print(ERROR_RESPONSE);
@@ -114,8 +120,8 @@ public class OIDCSessionIFrameServlet extends HttpServlet {
             if (StringUtils.isBlank(rpIFrameReqCallbackURL)) {
                 throw new OIDCSessionManagerException(
                         "Invalid request. redirect_uri not found in request as parameter. It is "
-                        + "mandatory because of there is regex pattern for "
-                        + "callback url in service provider configuration. client_id : " + clientId);
+                                + "mandatory because of there is regex pattern for "
+                                + "callback url in service provider configuration. client_id : " + clientId);
             } else {
                 if (log.isDebugEnabled()) {
                     log.debug("Requested redirect_uri from rp IFrame : " + rpIFrameReqCallbackURL);
@@ -130,7 +136,7 @@ public class OIDCSessionIFrameServlet extends HttpServlet {
                 } else {
                     throw new OIDCSessionManagerException(
                             "Invalid request. redirect_uri is not matched with the regex that is "
-                            + "configured in the service provider, client_id : " + clientId);
+                                    + "configured in the service provider, client_id : " + clientId);
                 }
             }
         }
@@ -138,6 +144,7 @@ public class OIDCSessionIFrameServlet extends HttpServlet {
     }
 
     private String getOPIFrame(String clientOrigin) {
+
         Map<String, Object> valuesMap = new HashMap<>();
         valuesMap.put(CLIENT_ORIGIN_PLACE_HOLDER, clientOrigin);
 

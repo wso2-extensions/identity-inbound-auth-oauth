@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oidc.session.internal;
 
 import org.osgi.service.http.HttpService;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oidc.session.handler.OIDCLogoutHandler;
 import org.wso2.carbon.user.core.service.RealmService;
 
@@ -27,58 +28,96 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * OIDC session management component service holder.
+ */
 public class OIDCSessionManagementComponentServiceHolder {
+
+    private static OIDCSessionManagementComponentServiceHolder instance =
+            new OIDCSessionManagementComponentServiceHolder();
     private static HttpService httpService;
     private static RealmService realmService;
-    private static List<OIDCLogoutHandler> OIDCPostLogoutHandlers = new ArrayList<>();
+    private static List<OIDCLogoutHandler> oidcPostLogoutHandlers = new ArrayList<>();
     private static ApplicationManagementService applicationMgtService;
+    private List<TokenBinder> tokenBinders = new ArrayList<>();
 
     private OIDCSessionManagementComponentServiceHolder() {
 
     }
 
+    public static OIDCSessionManagementComponentServiceHolder getInstance() {
+
+        return instance;
+    }
+
     public static HttpService getHttpService() {
+
         return httpService;
     }
 
     public static void setHttpService(HttpService httpService) {
+
         OIDCSessionManagementComponentServiceHolder.httpService = httpService;
     }
+
     public static void setRealmService(RealmService realmService) {
+
         OIDCSessionManagementComponentServiceHolder.realmService = realmService;
     }
 
     public static RealmService getRealmService() {
+
         return realmService;
     }
 
     public static List<OIDCLogoutHandler> getOIDCLogoutHandlers() {
-        return Collections.unmodifiableList(OIDCPostLogoutHandlers);
+
+        return Collections.unmodifiableList(oidcPostLogoutHandlers);
     }
 
-    public static void addPostLogoutHandler(OIDCLogoutHandler OIDCPostLogoutHandler) {
-        OIDCPostLogoutHandlers.add(OIDCPostLogoutHandler);;
+    public static void addPostLogoutHandler(OIDCLogoutHandler oidcPostLogoutHandler) {
+
+        oidcPostLogoutHandlers.add(oidcPostLogoutHandler);
+        ;
     }
 
-    public static void removePostLogoutHandler(OIDCLogoutHandler OIDCPostLogoutHandler) {
-        OIDCPostLogoutHandlers.remove(OIDCPostLogoutHandler);
+    public static void removePostLogoutHandler(OIDCLogoutHandler oidcPostLogoutHandler) {
+
+        oidcPostLogoutHandlers.remove(oidcPostLogoutHandler);
     }
 
     /**
-     * Get Application management service
+     * Get Application management service.
      *
      * @return ApplicationManagementService
      */
     public static ApplicationManagementService getApplicationMgtService() {
+
         return OIDCSessionManagementComponentServiceHolder.applicationMgtService;
     }
 
     /**
-     * Set Application management service
+     * Set Application management service.
      *
      * @param applicationMgtService ApplicationManagementService
      */
     public static void setApplicationMgtService(ApplicationManagementService applicationMgtService) {
+
         OIDCSessionManagementComponentServiceHolder.applicationMgtService = applicationMgtService;
+    }
+
+    public List<TokenBinder> getTokenBinders() {
+
+        return tokenBinders;
+    }
+
+    public void addTokenBinder(TokenBinder tokenBinder) {
+
+        this.tokenBinders.add(tokenBinder);
+    }
+
+    public void removeTokenBinder(TokenBinder tokenBinder) {
+
+        this.tokenBinders.remove(tokenBinder);
     }
 }

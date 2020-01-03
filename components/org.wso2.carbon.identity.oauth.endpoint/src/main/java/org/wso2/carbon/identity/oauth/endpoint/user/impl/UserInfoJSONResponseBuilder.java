@@ -34,6 +34,7 @@ public class UserInfoJSONResponseBuilder extends AbstractUserInfoResponseBuilder
     @Override
     protected Map<String, Object> retrieveUserClaims(OAuth2TokenValidationResponseDTO tokenValidationResponse)
             throws UserInfoEndpointException {
+
         return ClaimUtil.getUserClaimsUsingTokenResponse(tokenValidationResponse);
     }
 
@@ -41,8 +42,7 @@ public class UserInfoJSONResponseBuilder extends AbstractUserInfoResponseBuilder
     protected String buildResponse(OAuth2TokenValidationResponseDTO tokenResponse,
                                    String spTenantDomain,
                                    Map<String, Object> filteredUserClaims) throws UserInfoEndpointException {
+
         return JSONUtils.buildJSON(filteredUserClaims);
     }
-
-
 }

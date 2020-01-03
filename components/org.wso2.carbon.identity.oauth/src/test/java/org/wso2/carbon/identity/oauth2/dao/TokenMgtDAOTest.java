@@ -819,7 +819,8 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
             mockStatic(IdentityDatabaseUtil.class);
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
             when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
-            tokenMgtDAO.revokeTokensBatch(new String[]{accessTokenDO1.getAccessToken(), accessTokenDO2.getAccessToken()});
+            tokenMgtDAO
+                    .revokeTokensBatch(new String[]{accessTokenDO1.getAccessToken(), accessTokenDO2.getAccessToken()});
             assertTrue(OAuthConstants.TokenStates.TOKEN_STATE_REVOKED.equals(getAccessTokenStatusByTokenId
                     (accessTokenDO1.getTokenId())), "Failed to revoke access token.");
             assertTrue(OAuthConstants.TokenStates.TOKEN_STATE_REVOKED.equals(getAccessTokenStatusByTokenId
@@ -843,7 +844,8 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
             mockStatic(IdentityDatabaseUtil.class);
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
             when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
-            tokenMgtDAO.revokeTokensIndividual(new String[]{accessTokenDO1.getAccessToken(), accessTokenDO2.getAccessToken()});
+            tokenMgtDAO.revokeTokensIndividual(
+                    new String[]{accessTokenDO1.getAccessToken(), accessTokenDO2.getAccessToken()});
             assertTrue(OAuthConstants.TokenStates.TOKEN_STATE_REVOKED.equals(getAccessTokenStatusByTokenId
                     (accessTokenDO1.getTokenId())), "Failed to revoke access token.");
             assertTrue(OAuthConstants.TokenStates.TOKEN_STATE_REVOKED.equals(getAccessTokenStatusByTokenId
@@ -1130,8 +1132,9 @@ public class TokenMgtDAOTest extends IdentityBaseTest {
             when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
             tokenMgtDAO.invalidateAndCreateNewToken(existingAccessTokenDO.getTokenId(), tokenState, consumerKey, UUID
                     .randomUUID().toString(), newAccessTokenDO, userStoreDomain);
-            assertTrue(OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE.equals(getAccessTokenStatusByTokenId(newAccessTokenDO
-                    .getTokenId())));
+            assertTrue(
+                    OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE.equals(getAccessTokenStatusByTokenId(newAccessTokenDO
+                            .getTokenId())));
             assertTrue(tokenState.equals(getAccessTokenStatusByTokenId(existingAccessTokenDO.getTokenId())));
         }
     }

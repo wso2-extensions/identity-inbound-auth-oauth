@@ -25,18 +25,24 @@ import org.wso2.carbon.identity.oauth.dcr.internal.DCRDataHolder;
 
 import java.util.List;
 
+/**
+ * OAuth DCRM handler manager.
+ */
 public class HandlerManager {
 
     private static volatile HandlerManager instance = new HandlerManager();
 
     private HandlerManager() {
+
     }
 
     public static HandlerManager getInstance() {
+
         return instance;
     }
 
     public RegistrationHandler getRegistrationHandler(DCRMessageContext dcrMessageContext) {
+
         List<RegistrationHandler> registrationHandlers =
                 DCRDataHolder.getInstance().getRegistrationHandlerList();
         if (registrationHandlers != null && registrationHandlers.size() > 0) {
@@ -46,6 +52,7 @@ public class HandlerManager {
     }
 
     public UnRegistrationHandler getUnRegistrationHandler(DCRMessageContext dcrMessageContext) {
+
         List<UnRegistrationHandler> unRegistrationHandlers =
                 DCRDataHolder.getInstance().getUnRegistrationHandlerList();
         if (unRegistrationHandlers != null && unRegistrationHandlers.size() > 0) {

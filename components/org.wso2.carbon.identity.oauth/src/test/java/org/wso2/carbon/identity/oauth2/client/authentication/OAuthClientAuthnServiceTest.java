@@ -33,6 +33,7 @@ import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import javax.servlet.http.HttpServletRequest;
 
 import static org.testng.Assert.assertEquals;
@@ -44,12 +45,12 @@ import static org.testng.Assert.assertEquals;
 @WithCarbonHome
 public class OAuthClientAuthnServiceTest extends PowerMockIdentityBaseTest {
 
-    private static String CLIENT_ID = "someclientid";
-    private static String CLIENT_SECRET = "someclientsecret";
+    private static final String CLIENT_ID = "someclientid";
+    private static final String CLIENT_SECRET = "someclientsecret";
 
-    OAuthClientAuthnService oAuthClientAuthnService = new OAuthClientAuthnService();
-    BasicAuthClientAuthenticator basicAuthClientAuthenticator = new BasicAuthClientAuthenticator();
-    SampleClientAuthenticator sampleClientAuthenticator = new SampleClientAuthenticator();
+    private OAuthClientAuthnService oAuthClientAuthnService = new OAuthClientAuthnService();
+    private BasicAuthClientAuthenticator basicAuthClientAuthenticator = new BasicAuthClientAuthenticator();
+    private SampleClientAuthenticator sampleClientAuthenticator = new SampleClientAuthenticator();
 
     @BeforeMethod
     public void setUp() throws Exception {
@@ -112,8 +113,8 @@ public class OAuthClientAuthnServiceTest extends PowerMockIdentityBaseTest {
                         true},
 
                 // Basic authentication fails without exception from BasicClientAuthenticator.
-                {headersWithClientIDandSecret, new HashMap<String, List>(), false, false, "invalid_client", 1, CLIENT_ID,
-                        false},
+                {headersWithClientIDandSecret, new HashMap<String, List>(), false, false, "invalid_client", 1,
+                        CLIENT_ID, false},
 
         };
     }

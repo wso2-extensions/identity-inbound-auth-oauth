@@ -32,11 +32,12 @@ public class UserInfoUserStoreClaimRetriever implements UserInfoClaimRetriever {
 
     @Override
     public Map<String, Object> getClaimsMap(Map<ClaimMapping, String> userAttributes) {
+
         Map<String, Object> claims = new HashMap<String, Object>();
         if (MapUtils.isNotEmpty(userAttributes)) {
-            for (Map.Entry<ClaimMapping, String> entry : userAttributes.entrySet()){
+            for (Map.Entry<ClaimMapping, String> entry : userAttributes.entrySet()) {
                 if (IdentityCoreConstants.MULTI_ATTRIBUTE_SEPARATOR.equals(entry.getKey().getRemoteClaim()
-                        .getClaimUri())){
+                        .getClaimUri())) {
                     continue;
                 }
                 claims.put(entry.getKey().getRemoteClaim().getClaimUri(), entry.getValue());

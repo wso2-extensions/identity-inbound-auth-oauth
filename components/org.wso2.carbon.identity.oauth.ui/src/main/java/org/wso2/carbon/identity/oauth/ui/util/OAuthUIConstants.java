@@ -18,7 +18,11 @@
 
 package org.wso2.carbon.identity.oauth.ui.util;
 
+/**
+ * This class define constants for OAuth UI.
+ */
 public class OAuthUIConstants {
+
     public static final String CLAIM_URI = "ClaimURI";
     public static final String SCOPE_NAME = "scopeName";
 

@@ -30,6 +30,7 @@ import java.security.PublicKey;
 public class TestUtil {
 
     public static void startTenantFlow(String tenantDomain) {
+
         String carbonHome = Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString();
         System.setProperty(CarbonBaseConstants.CARBON_HOME, carbonHome);
         PrivilegedCarbonContext.startTenantFlow();
@@ -37,6 +38,7 @@ public class TestUtil {
     }
 
     public static KeyStore loadKeyStoreFromFileSystem(String keyStorePath, String password, String type) {
+
         try (FileInputStream inputStream = new FileInputStream(keyStorePath)) {
             KeyStore keyStore = KeyStore.getInstance(type);
             keyStore.load(inputStream, password.toCharArray());
@@ -48,6 +50,7 @@ public class TestUtil {
     }
 
     public static String getFilePath(String fileName) {
+
         if (StringUtils.isNotBlank(fileName)) {
             return Paths.get(System.getProperty("user.dir"), "src", "test", "resources", "conf", fileName).toString();
         }
@@ -55,6 +58,7 @@ public class TestUtil {
     }
 
     public static PublicKey getPublicKey(KeyStore keyStore, String alias) throws KeyStoreException {
+
         return keyStore.getCertificate(alias).getPublicKey();
     }
 

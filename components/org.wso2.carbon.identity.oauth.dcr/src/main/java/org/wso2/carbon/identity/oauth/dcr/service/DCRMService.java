@@ -52,11 +52,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 
-
 /**
  * DCRMService service is used to manage OAuth2/OIDC application registration.
  */
 public class DCRMService {
+
     private static final Log log = LogFactory.getLog(DCRMService.class);
     private static OAuthAdminService oAuthAdminService = new OAuthAdminService();
 
@@ -66,7 +66,8 @@ public class DCRMService {
     private static Pattern clientIdRegexPattern = null;
 
     /**
-     * Get OAuth2/OIDC application information with client_id
+     * Get OAuth2/OIDC application information with client_id.
+     *
      * @param clientId client_id of the application
      * @return
      * @throws DCRMException
@@ -77,7 +78,7 @@ public class DCRMService {
     }
 
     /**
-     * Get OAuth2/OIDC application information with client name
+     * Get OAuth2/OIDC application information with client name.
      *
      * @param clientName
      * @return Application
@@ -112,17 +113,20 @@ public class DCRMService {
     }
 
     /**
-     * Create OAuth2/OIDC application
+     * Create OAuth2/OIDC application.
+     *
      * @param registrationRequest
      * @return
      * @throws DCRMException
      */
     public Application registerApplication(ApplicationRegistrationRequest registrationRequest) throws DCRMException {
+
         return createOAuthApplication(registrationRequest);
     }
 
     /**
-     * Delete OAuth2/OIDC application with client_id
+     * Delete OAuth2/OIDC application with client_id.
+     *
      * @param clientId
      * @throws DCRMException
      */
@@ -156,7 +160,8 @@ public class DCRMService {
     }
 
     /**
-     * Update OAuth/OIDC application
+     * Update OAuth/OIDC application.
+     *
      * @param updateRequest
      * @param clientId
      * @return
@@ -196,13 +201,14 @@ public class DCRMService {
                 appDTO.setGrantTypes(grantType);
             }
             if (!updateRequest.getRedirectUris().isEmpty()) {
-                String callbackUrl = validateAndSetCallbackURIs(updateRequest.getRedirectUris(), updateRequest.getGrantTypes());
+                String callbackUrl =
+                        validateAndSetCallbackURIs(updateRequest.getRedirectUris(), updateRequest.getGrantTypes());
                 appDTO.setCallbackUrl(callbackUrl);
             }
             if (updateRequest.getTokenType() != null) {
                 appDTO.setTokenType(updateRequest.getTokenType());
             }
-            if(StringUtils.isNotEmpty(updateRequest.getBackchannelLogoutUri())) {
+            if (StringUtils.isNotEmpty(updateRequest.getBackchannelLogoutUri())) {
                 String backChannelLogoutUri = validateBackchannelLogoutURI(updateRequest.getBackchannelLogoutUri());
                 appDTO.setBackChannelLogoutUrl(backChannelLogoutUri);
             }
@@ -216,6 +222,7 @@ public class DCRMService {
     }
 
     private OAuthConsumerAppDTO getApplicationById(String clientId) throws DCRMException {
+
         if (StringUtils.isEmpty(clientId)) {
             String errorMessage = "Invalid client_id";
             throw DCRMUtils.generateClientException(
@@ -234,7 +241,8 @@ public class DCRMService {
             return dto;
         } catch (IdentityOAuthAdminException e) {
             if (e.getCause() instanceof InvalidOAuthClientException) {
-                throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.NOT_FOUND_APPLICATION_WITH_ID, clientId);
+                throw DCRMUtils
+                        .generateClientException(DCRMConstants.ErrorMessages.NOT_FOUND_APPLICATION_WITH_ID, clientId);
             }
             throw DCRMUtils.generateServerException(
                     DCRMConstants.ErrorMessages.FAILED_TO_GET_APPLICATION_BY_ID, clientId, e);
@@ -293,14 +301,15 @@ public class DCRMService {
     }
 
     private Application buildResponse(OAuthConsumerAppDTO createdApp) {
+
         Application application = new Application();
-        application.setClient_name(createdApp.getApplicationName());
-        application.setClient_id(createdApp.getOauthConsumerKey());
-        application.setClient_secret(createdApp.getOauthConsumerSecret());
+        application.setClientName(createdApp.getApplicationName());
+        application.setClientId(createdApp.getOauthConsumerKey());
+        application.setClientSecret(createdApp.getOauthConsumerSecret());
 
         List<String> redirectUrisList = new ArrayList<>();
         redirectUrisList.add(createdApp.getCallbackUrl());
-        application.setRedirect_uris(redirectUrisList);
+        application.setRedirectUris(redirectUrisList);
 
         return application;
     }
@@ -350,8 +359,9 @@ public class DCRMService {
             if (clientIdMatchesRegex(registrationRequest.getConsumerKey(), clientIdRegex)) {
                 oAuthConsumerApp.setOauthConsumerKey(registrationRequest.getConsumerKey());
             } else {
-                throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.BAD_REQUEST_CLIENT_ID_VIOLATES_PATTERN,
-                        clientIdRegex);
+                throw DCRMUtils
+                        .generateClientException(DCRMConstants.ErrorMessages.BAD_REQUEST_CLIENT_ID_VIOLATES_PATTERN,
+                                clientIdRegex);
             }
         }
 
@@ -414,28 +424,40 @@ public class DCRMService {
         try {
             serviceProvider = getServiceProvider(serviceProviderName, tenantDomain);
         } catch (DCRMException e) {
-            log.error("Error while retrieving service provider: " + serviceProviderName + " in tenant: " + tenantDomain);
+            log.error(
+                    "Error while retrieving service provider: " + serviceProviderName + " in tenant: " + tenantDomain);
         }
 
         return serviceProvider != null;
     }
 
-    private boolean isClientIdExist(String clientId) {
+    /**
+     * Check whether the provided client id is exists.
+     *
+     * @param clientId client id.
+     * @return true if application exists with the client id.
+     * @throws DCRMException in case of failure.
+     */
+    private boolean isClientIdExist(String clientId) throws DCRMException {
 
-        OAuthConsumerAppDTO app = null;
         try {
-            app = getApplicationById(clientId);
-        } catch (DCRMException e) {
-            log.error("Error while retrieving oauth application with client id: " + clientId);
+            OAuthConsumerAppDTO dto = oAuthAdminService.getOAuthApplicationData(clientId);
+            return dto != null && StringUtils.isNotBlank(dto.getApplicationName());
+        } catch (IdentityOAuthAdminException e) {
+            if (e.getCause() instanceof InvalidOAuthClientException) {
+                return false;
+            }
+            throw DCRMUtils
+                    .generateServerException(DCRMConstants.ErrorMessages.FAILED_TO_GET_APPLICATION_BY_ID, clientId, e);
         }
-
-        return app != null;
     }
 
     private ServiceProvider getServiceProvider(String applicationName, String tenantDomain) throws DCRMException {
+
         ServiceProvider serviceProvider = null;
         try {
-            serviceProvider = DCRDataHolder.getInstance().getApplicationManagementService().getServiceProvider(applicationName, tenantDomain);
+            serviceProvider = DCRDataHolder.getInstance().getApplicationManagementService()
+                    .getServiceProvider(applicationName, tenantDomain);
         } catch (IdentityApplicationManagementException e) {
             throw DCRMUtils.generateServerException(
                     DCRMConstants.ErrorMessages.FAILED_TO_GET_SP, applicationName, e);
@@ -443,7 +465,9 @@ public class DCRMService {
         return serviceProvider;
     }
 
-    private void updateServiceProvider(ServiceProvider serviceProvider, String tenantDomain, String userName) throws DCRMException {
+    private void updateServiceProvider(ServiceProvider serviceProvider, String tenantDomain, String userName)
+            throws DCRMException {
+
         try {
             DCRDataHolder.getInstance().getApplicationManagementService()
                     .updateApplication(serviceProvider, tenantDomain, userName);
@@ -462,7 +486,7 @@ public class DCRMService {
                         .isExistingApplicationTemplate(templateName, tenantDomain);
                 if (!isTemplateExists) {
                     throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages
-                                    .BAD_REQUEST_INVALID_SP_TEMPLATE_NAME, templateName);
+                            .BAD_REQUEST_INVALID_SP_TEMPLATE_NAME, templateName);
                 }
             }
             DCRDataHolder.getInstance().getApplicationManagementService()
@@ -477,11 +501,13 @@ public class DCRMService {
 
     private void deleteServiceProvider(String applicationName,
                                        String tenantDomain, String userName) throws DCRMException {
+
         try {
             DCRDataHolder.getInstance().getApplicationManagementService()
                     .deleteApplication(applicationName, tenantDomain, userName);
         } catch (IdentityApplicationManagementException e) {
-            throw DCRMUtils.generateServerException(DCRMConstants.ErrorMessages.FAILED_TO_DELETE_SP, applicationName, e);
+            throw DCRMUtils
+                    .generateServerException(DCRMConstants.ErrorMessages.FAILED_TO_DELETE_SP, applicationName, e);
         }
     }
 
@@ -575,11 +601,13 @@ public class DCRMService {
     }
 
     private boolean isRedirectURIMandatory(List<String> grantTypes) {
+
         return grantTypes.contains(DCRConstants.GrantTypes.AUTHORIZATION_CODE) ||
                 grantTypes.contains(DCRConstants.GrantTypes.IMPLICIT);
     }
 
     private String createRegexPattern(List<String> redirectURIs) throws DCRMException {
+
         StringBuilder regexPattern = new StringBuilder();
         for (String redirectURI : redirectURIs) {
             if (DCRMUtils.isRedirectionUriValid(redirectURI)) {
@@ -606,7 +634,9 @@ public class DCRMService {
             // Get applications owned by the user
             oAuthConsumerAppDTO = oAuthAdminService.getOAuthApplicationData(clientId);
             String appUserName = oAuthConsumerAppDTO.getUsername();
-            String threadLocalUserName = CarbonContext.getThreadLocalCarbonContext().getUsername().concat(UserCoreConstants.TENANT_DOMAIN_COMBINER).concat(CarbonContext.getThreadLocalCarbonContext().getTenantDomain());
+            String threadLocalUserName = CarbonContext.getThreadLocalCarbonContext().getUsername()
+                    .concat(UserCoreConstants.TENANT_DOMAIN_COMBINER)
+                    .concat(CarbonContext.getThreadLocalCarbonContext().getTenantDomain());
             if (threadLocalUserName.equals(appUserName)) {
                 return true;
             }
@@ -618,8 +648,10 @@ public class DCRMService {
     }
 
     /**
-     * Validate client id according to the regex
+     * Validate client id according to the regex.
      *
+     * @param clientId
+     * @param clientIdValidatorRegex
      * @return validated or not
      */
     private static boolean clientIdMatchesRegex(String clientId, String clientIdValidatorRegex) {

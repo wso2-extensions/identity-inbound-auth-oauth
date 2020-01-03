@@ -18,6 +18,9 @@
 
 package org.wso2.carbon.identity.oauth.dto;
 
+/**
+ * OAuth token revocation request dto.
+ */
 public class OAuthRevocationRequestDTO {
 
     private String[] apps;

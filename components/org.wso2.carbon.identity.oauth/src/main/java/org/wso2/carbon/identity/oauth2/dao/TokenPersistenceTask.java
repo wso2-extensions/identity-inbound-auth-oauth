@@ -24,7 +24,7 @@ import org.wso2.carbon.identity.base.IdentityException;
 import java.util.concurrent.BlockingDeque;
 
 /**
- *
+ * OAuth token persistence task.
  */
 public class TokenPersistenceTask implements Runnable {
 
@@ -55,8 +55,8 @@ public class TokenPersistenceTask implements Runnable {
                                     accessContextTokenDO.getUserStoreDomain());
                 }
             } catch (InterruptedException e) {
-                log.error("Error occurred while getting AccessContextTokenDO instance from accessContextTokenQueue" , e);
-            }catch (IdentityException e){
+                log.error("Error occurred while getting AccessContextTokenDO instance from accessContextTokenQueue", e);
+            } catch (IdentityException e) {
                 log.error("Error occurred while persisting access token :" + accessToken, e);
             }
         }

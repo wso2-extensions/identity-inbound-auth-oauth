@@ -34,7 +34,6 @@ import org.wso2.carbon.core.util.KeyStoreManager;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
-import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
@@ -78,9 +77,10 @@ public class OIDCRequestObjectUtilTest extends PowerMockTestCase {
     public void setUp() throws Exception {
         System.setProperty(CarbonBaseConstants.CARBON_HOME,
                 Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString());
-        clientKeyStore = getKeyStoreFromFile("testkeystore.jks", "wso2carbon", System.getProperty(CarbonBaseConstants.CARBON_HOME));
-        wso2KeyStore = getKeyStoreFromFile("wso2carbon.jks", "wso2carbon", System.getProperty(CarbonBaseConstants
-                .CARBON_HOME));
+        clientKeyStore = getKeyStoreFromFile("testkeystore.jks", "wso2carbon",
+                System.getProperty(CarbonBaseConstants.CARBON_HOME));
+        wso2KeyStore = getKeyStoreFromFile("wso2carbon.jks", "wso2carbon",
+                System.getProperty(CarbonBaseConstants.CARBON_HOME));
         rsaPrivateKey = (RSAPrivateKey) wso2KeyStore.getKey("wso2carbon", "wso2carbon".toCharArray());
 
     }
@@ -133,9 +133,10 @@ public class OIDCRequestObjectUtilTest extends PowerMockTestCase {
         when((oauthServerConfigurationMock.getRequestObjectBuilders())).thenReturn(requestObjectBuilderMap);
 
         try {
-            RequestObject requestObject = OIDCRequestObjectUtil.buildRequestObject(oAuthAuthzRequest, oAuth2Parameters);
+            OIDCRequestObjectUtil.buildRequestObject(oAuthAuthzRequest, oAuth2Parameters);
         } catch (RequestObjectException e) {
-            Assert.assertFalse(exceptionNotExpected, errorMsg + "Request Object Building failed due to " + e.getErrorMessage());
+            Assert.assertFalse(exceptionNotExpected,
+                    errorMsg + " Request Object Building failed due to " + e.getErrorMessage());
         }
     }
 

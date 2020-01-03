@@ -18,23 +18,30 @@
 
 package org.wso2.carbon.identity.oauth.dcr.exception;
 
+/**
+ * Exception class used to handle DCRM Client related exceptions.
+ */
 public class DCRMClientException extends DCRMException {
 
     private static final long serialVersionUID = -6567356895140790250L;
 
     public DCRMClientException(String message) {
+
         super(message);
     }
 
     public DCRMClientException(String message, Throwable cause) {
+
         super(message, cause);
     }
 
     public DCRMClientException(String errorCode, String message) {
+
         super(errorCode, message);
     }
 
     public DCRMClientException(String errorCode, String message, Throwable throwable) {
+
         super(errorCode, message, throwable);
     }
 }

@@ -17,7 +17,6 @@
  */
 package org.wso2.carbon.identity.oauth.endpoint.token;
 
-
 import org.apache.axiom.util.base64.Base64Utils;
 import org.apache.commons.collections.iterators.IteratorEnumeration;
 import org.apache.oltu.oauth2.as.validator.AuthorizationCodeValidator;
@@ -62,6 +61,7 @@ import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.HttpMethod;
@@ -116,16 +116,17 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
     private static final String ACCESS_TOKEN = "1234-542230-45220-54245";
     private static final String REFRESH_TOKEN = "1234-542230-45220-54245";
     private static final String AUTHORIZATION_HEADER =
-        "Basic " + Base64Utils.encode((CLIENT_ID_VALUE + ":" + SECRET).getBytes());
+            "Basic " + Base64Utils.encode((CLIENT_ID_VALUE + ":" + SECRET).getBytes());
 
     private OAuth2TokenEndpoint oAuth2TokenEndpoint;
 
     @BeforeTest
     public void setUp() throws Exception {
+
         System.setProperty(
                 CarbonBaseConstants.CARBON_HOME,
                 Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString()
-        );
+                          );
         oAuth2TokenEndpoint = new OAuth2TokenEndpoint();
 
         initiateInMemoryH2();
@@ -135,11 +136,13 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
 
     @AfterTest
     public void clear() throws Exception {
+
         super.cleanData();
     }
 
     @DataProvider(name = "testIssueAccessTokenDataProvider")
     public Object[][] testIssueAccessTokenDataProvider() {
+
         MultivaluedMap<String, String> mapWithCredentials = new MultivaluedHashMap<String, String>();
         List<String> clientId = new ArrayList<>();
         clientId.add(CLIENT_ID_VALUE);
@@ -169,7 +172,7 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
         customResponseParamMap.put("param_key_1", "param_value_1");
         customResponseParamMap.put("param_key_2", "param_value_2");
 
-        return new Object[][] {
+        return new Object[][]{
                 // Request with multivalued client_id parameter. Will return bad request error
                 {CLIENT_ID_VALUE + ",clientId2", null, new MultivaluedHashMap<String, String>(), GrantType.PASSWORD
                         .toString(), null, null, null, null, HttpServletResponse.SC_BAD_REQUEST, OAuth2ErrorCodes
@@ -226,6 +229,7 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
     public void testIssueAccessToken(String clientId, String authzHeader, Object paramMapObj, String grantType,
                                      String idToken, Object headerObj, Object customResponseParamObj, Exception e,
                                      int expectedStatus, String expectedErrorCode) throws Exception {
+
         MultivaluedMap<String, String> paramMap = (MultivaluedMap<String, String>) paramMapObj;
         ResponseHeader[] responseHeaders = (ResponseHeader[]) headerObj;
         Map<String, String> customResponseParameters = (Map<String, String>) customResponseParamObj;
@@ -244,7 +248,9 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
         HttpServletRequest request = mockHttpRequest(requestParams, new HashMap<String, Object>());
         when(request.getHeader(OAuthConstants.HTTP_REQ_HEADER_AUTHZ)).thenReturn(authzHeader);
         when(request.getHeaderNames()).thenReturn(
-                Collections.enumeration(new ArrayList<String>(){{ add(OAuthConstants.HTTP_REQ_HEADER_AUTHZ);}}));
+                Collections.enumeration(new ArrayList<String>() {{
+                    add(OAuthConstants.HTTP_REQ_HEADER_AUTHZ);
+                }}));
 
         spy(EndpointUtil.class);
         doReturn(REALM).when(EndpointUtil.class, "getRealmInfo");
@@ -298,6 +304,7 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
 
     @DataProvider(name = "testTokenErrorResponseDataProvider")
     public Object[][] testTokenErrorResponseDataProvider() {
+
         ResponseHeader contentType = new ResponseHeader();
         contentType.setKey(OAuth.HeaderType.CONTENT_TYPE);
         contentType.setValue(OAuth.ContentType.URL_ENCODED);
@@ -307,22 +314,23 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
         ResponseHeader[] headers3 = new ResponseHeader[0];
 
         // This object provides data to cover all the scenarios with token error response
-        return new Object[][] {
-                { OAuth2ErrorCodes.INVALID_CLIENT, null, HttpServletResponse.SC_UNAUTHORIZED,
-                        OAuth2ErrorCodes.INVALID_CLIENT },
-                { OAuth2ErrorCodes.SERVER_ERROR, null, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-                        OAuth2ErrorCodes.SERVER_ERROR },
-                { SQL_ERROR, null, HttpServletResponse.SC_BAD_GATEWAY, OAuth2ErrorCodes.SERVER_ERROR },
-                { TOKEN_ERROR, null, HttpServletResponse.SC_BAD_REQUEST, TOKEN_ERROR },
-                { TOKEN_ERROR, headers1, HttpServletResponse.SC_BAD_REQUEST, TOKEN_ERROR },
-                { TOKEN_ERROR, headers2, HttpServletResponse.SC_BAD_REQUEST, TOKEN_ERROR },
-                { TOKEN_ERROR, headers3, HttpServletResponse.SC_BAD_REQUEST, TOKEN_ERROR },
+        return new Object[][]{
+                {OAuth2ErrorCodes.INVALID_CLIENT, null, HttpServletResponse.SC_UNAUTHORIZED,
+                        OAuth2ErrorCodes.INVALID_CLIENT},
+                {OAuth2ErrorCodes.SERVER_ERROR, null, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+                        OAuth2ErrorCodes.SERVER_ERROR},
+                {SQL_ERROR, null, HttpServletResponse.SC_BAD_GATEWAY, OAuth2ErrorCodes.SERVER_ERROR},
+                {TOKEN_ERROR, null, HttpServletResponse.SC_BAD_REQUEST, TOKEN_ERROR},
+                {TOKEN_ERROR, headers1, HttpServletResponse.SC_BAD_REQUEST, TOKEN_ERROR},
+                {TOKEN_ERROR, headers2, HttpServletResponse.SC_BAD_REQUEST, TOKEN_ERROR},
+                {TOKEN_ERROR, headers3, HttpServletResponse.SC_BAD_REQUEST, TOKEN_ERROR},
         };
     }
 
     @Test(dataProvider = "testTokenErrorResponseDataProvider", groups = "testWithConnection")
     public void testTokenErrorResponse(String errorCode, Object headerObj, int expectedStatus,
                                        String expectedErrorCode) throws Exception {
+
         ResponseHeader[] responseHeaders = (ResponseHeader[]) headerObj;
 
         Map<String, String[]> requestParams = new HashMap<>();
@@ -333,7 +341,9 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
         HttpServletRequest request = mockHttpRequest(requestParams, new HashMap<String, Object>());
         when(request.getHeader(OAuthConstants.HTTP_REQ_HEADER_AUTHZ)).thenReturn(AUTHORIZATION_HEADER);
         when(request.getHeaderNames()).thenReturn(
-                Collections.enumeration(new ArrayList<String>(){{ add (OAuthConstants.HTTP_REQ_HEADER_AUTHZ);}}));
+                Collections.enumeration(new ArrayList<String>() {{
+                    add(OAuthConstants.HTTP_REQ_HEADER_AUTHZ);
+                }}));
 
         spy(EndpointUtil.class);
         doReturn(REALM).when(EndpointUtil.class, "getRealmInfo");
@@ -370,7 +380,8 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
 
     @DataProvider(name = "testGetAccessTokenDataProvider")
     public Object[][] testGetAccessTokenDataProvider() {
-        return new Object[][] {
+
+        return new Object[][]{
                 {GrantType.AUTHORIZATION_CODE.toString(), OAuth.OAUTH_CODE},
                 {GrantType.PASSWORD.toString(), OAuth.OAUTH_USERNAME + "," + OAuth.OAUTH_PASSWORD},
                 {GrantType.REFRESH_TOKEN.toString(), OAuth.OAUTH_REFRESH_TOKEN},
@@ -382,8 +393,9 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
 
     @Test(dataProvider = "testGetAccessTokenDataProvider")
     public void testGetAccessToken(String grantType, String additionalParameters) throws Exception {
+
         Map<String, String[]> requestParams = new HashMap<>();
-        requestParams.put(OAuth.OAUTH_CLIENT_ID, new String[] {CLIENT_ID_VALUE});
+        requestParams.put(OAuth.OAUTH_CLIENT_ID, new String[]{CLIENT_ID_VALUE});
         requestParams.put(OAuth.OAUTH_GRANT_TYPE, new String[]{grantType});
         requestParams.put(OAuth.OAUTH_SCOPE, new String[]{"scope1"});
 
@@ -407,7 +419,9 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
         HttpServletRequest request = mockHttpRequest(requestParams, new HashMap<String, Object>());
         when(request.getHeader(OAuthConstants.HTTP_REQ_HEADER_AUTHZ)).thenReturn(AUTHORIZATION_HEADER);
         when(request.getHeaderNames()).thenReturn(
-                Collections.enumeration(new ArrayList<String>(){{ add(OAuthConstants.HTTP_REQ_HEADER_AUTHZ);}}));
+                Collections.enumeration(new ArrayList<String>() {{
+                    add(OAuthConstants.HTTP_REQ_HEADER_AUTHZ);
+                }}));
 
         Map<String, Class<? extends OAuthValidator<HttpServletRequest>>> grantTypeValidators = new Hashtable<>();
         grantTypeValidators.put(GrantType.PASSWORD.toString(), PasswordValidator.class);
@@ -425,9 +439,10 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
         spy(EndpointUtil.class);
         doReturn(oAuth2Service).when(EndpointUtil.class, "getOAuth2Service");
         final Map<String, String> parametersSetToRequest = new HashMap<>();
-        doAnswer(new Answer<Object>(){
+        doAnswer(new Answer<Object>() {
             @Override
             public Object answer(InvocationOnMock invocation) throws Throwable {
+
                 OAuth2AccessTokenReqDTO request = (OAuth2AccessTokenReqDTO) invocation.getArguments()[0];
                 parametersSetToRequest.put(OAuth.OAUTH_CODE, request.getAuthorizationCode());
                 parametersSetToRequest.put(OAuth.OAUTH_USERNAME, request.getResourceOwnerUsername());
@@ -453,7 +468,7 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
 
         assertNotNull(tokenRespDTO, "ResponseDTO is null");
         String[] paramsToCheck = additionalParameters.split(",");
-        for(String param : paramsToCheck) {
+        for (String param : paramsToCheck) {
             assertNotNull(parametersSetToRequest.get(param), "Required parameter " + param + " is not set for " +
                     grantType + "grant type");
         }
@@ -461,26 +476,30 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
 
     private HttpServletRequest mockHttpRequest(final Map<String, String[]> requestParams,
                                                final Map<String, Object> requestAttributes) {
+
         HttpServletRequest httpServletRequest = mock(HttpServletRequest.class);
-        doAnswer(new Answer<Object>(){
+        doAnswer(new Answer<Object>() {
             @Override
             public Object answer(InvocationOnMock invocation) throws Throwable {
+
                 String key = (String) invocation.getArguments()[0];
-                return requestParams.get(key) != null ? requestParams.get(key)[0]: null;
+                return requestParams.get(key) != null ? requestParams.get(key)[0] : null;
             }
         }).when(httpServletRequest).getParameter(anyString());
 
-        doAnswer(new Answer<Object>(){
+        doAnswer(new Answer<Object>() {
             @Override
             public Object answer(InvocationOnMock invocation) throws Throwable {
+
                 String key = (String) invocation.getArguments()[0];
                 return requestAttributes.get(key);
             }
         }).when(httpServletRequest).getAttribute(anyString());
 
-        doAnswer(new Answer<Object>(){
+        doAnswer(new Answer<Object>() {
             @Override
             public Object answer(InvocationOnMock invocation) throws Throwable {
+
                 String key = (String) invocation.getArguments()[0];
                 Object value = invocation.getArguments()[1];
                 requestAttributes.put(key, value);
@@ -498,12 +517,14 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
     }
 
     private void mockOAuthServerConfiguration() throws Exception {
+
         mockStatic(OAuthServerConfiguration.class);
         when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
         when(oAuthServerConfiguration.getPersistenceProcessor()).thenReturn(tokenPersistenceProcessor);
-        when(tokenPersistenceProcessor.getProcessedClientId(anyString())).thenAnswer(new Answer<Object>(){
+        when(tokenPersistenceProcessor.getProcessedClientId(anyString())).thenAnswer(new Answer<Object>() {
             @Override
             public Object answer(InvocationOnMock invocation) throws Throwable {
+
                 return (String) invocation.getArguments()[0];
             }
         });

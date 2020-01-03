@@ -46,12 +46,11 @@ public class IDTokenResponseTypeHandler extends AbstractResponseTypeHandler {
         return respDTO;
     }
 
-    private OAuth2AuthorizeRespDTO buildResponseDTO(OAuthAuthzReqMessageContext oauthAuthzMsgCtx, AccessTokenDO accessTokenDO)
-            throws IdentityOAuth2Exception {
+    private OAuth2AuthorizeRespDTO buildResponseDTO(OAuthAuthzReqMessageContext oauthAuthzMsgCtx,
+                                                    AccessTokenDO accessTokenDO) throws IdentityOAuth2Exception {
         // Initializing the response.
         OAuth2AuthorizeRespDTO respDTO = initResponse(oauthAuthzMsgCtx);
         // Add id_token details to the response.
         return ResponseTypeHandlerUtil.buildIDTokenResponseDTO(respDTO, accessTokenDO, oauthAuthzMsgCtx);
     }
-
 }

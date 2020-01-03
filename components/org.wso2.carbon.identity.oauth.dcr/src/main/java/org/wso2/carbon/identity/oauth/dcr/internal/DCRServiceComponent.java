@@ -38,6 +38,9 @@ import org.wso2.carbon.identity.oauth.dcr.handler.UnRegistrationHandler;
 import org.wso2.carbon.identity.oauth.dcr.processor.DCRProcessor;
 import org.wso2.carbon.identity.oauth.dcr.service.DCRMService;
 
+/**
+ * OAuth DCRM service component.
+ */
 @Component(
         name = "identity.oauth.dcr",
         immediate = true
@@ -154,7 +157,6 @@ public class DCRServiceComponent {
         DCRDataHolder.getInstance().getUnRegistrationHandlerList().add(null);
     }
 
-
     /**
      * Sets ApplicationManagement Service.
      *
@@ -188,6 +190,5 @@ public class DCRServiceComponent {
         }
         DCRDataHolder.getInstance().setApplicationManagementService(null);
     }
-
 
 }

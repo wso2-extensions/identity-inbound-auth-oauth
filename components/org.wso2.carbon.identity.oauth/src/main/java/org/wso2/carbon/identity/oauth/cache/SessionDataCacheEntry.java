@@ -27,6 +27,9 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+/**
+ * Session data cache entry.
+ */
 public class SessionDataCacheEntry extends CacheEntry {
 
     private static final long serialVersionUID = -4123547630178387354L;
@@ -34,7 +37,7 @@ public class SessionDataCacheEntry extends CacheEntry {
     private OAuth2Parameters oAuth2Parameters;
     private long authTime;
     private String authenticatedIdPs;
-    private String essentialClaims ;
+    private String essentialClaims;
 
     private String queryString = null;
 

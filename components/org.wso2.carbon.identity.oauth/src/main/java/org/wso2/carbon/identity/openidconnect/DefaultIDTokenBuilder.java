@@ -231,8 +231,8 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
             throw new IdentityOAuth2Exception(error, e);
         }
 
-        String[] amrValueArray = (String[])(authzReqMessageContext.getAuthorizationReqDTO().getProperty(OAuthConstants
-                .AMR));
+        String[] amrValueArray =
+                (String[]) (authzReqMessageContext.getAuthorizationReqDTO().getProperty(OAuthConstants.AMR));
         if (ArrayUtils.isNotEmpty(amrValueArray)) {
             amrValues = Arrays.asList(amrValueArray);
         }
@@ -271,7 +271,8 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         setAdditionalClaims(authzReqMessageContext, tokenRespDTO, jwtClaimsSetBuilder);
 
         authzReqMessageContext.addProperty(OAuthConstants.ACCESS_TOKEN, accessToken);
-        authzReqMessageContext.addProperty(MultitenantConstants.TENANT_DOMAIN, getSpTenantDomain(authzReqMessageContext));
+        authzReqMessageContext
+                .addProperty(MultitenantConstants.TENANT_DOMAIN, getSpTenantDomain(authzReqMessageContext));
         jwtClaimsSetBuilder.subject(subject);
         JWTClaimsSet jwtClaimsSet = handleCustomOIDCClaims(authzReqMessageContext, jwtClaimsSetBuilder);
 
@@ -584,7 +585,9 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         return new Date(currentTimeInMillis + lifetimeInMillis);
     }
 
-    private JWTClaimsSet handleCustomOIDCClaims(OAuthAuthzReqMessageContext request, JWTClaimsSet.Builder jwtClaimsSetBuilder) {
+    private JWTClaimsSet handleCustomOIDCClaims(OAuthAuthzReqMessageContext request,
+                                                JWTClaimsSet.Builder jwtClaimsSetBuilder) {
+
         CustomClaimsCallbackHandler claimsCallBackHandler =
                 OAuthServerConfiguration.getInstance().getOpenIDConnectCustomClaimsCallbackHandler();
         return claimsCallBackHandler.handleCustomClaims(jwtClaimsSetBuilder, request);

@@ -24,14 +24,12 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-/*
-NOTE
-This is the very first step of moving to simplified architecture for token persistence. New set of DAO classes  for
-each purpose  and factory class to get instance of each DAO classes were introduced  during  this step. Further methods
- on org.wso2.carbon.identity.oauth2.dao.TokenMgtDAO were distributed among new set of classes, each of these method
- need to be reviewed  and refactored  during next step.
+
+/**
+ * Authorization code data access interface.
  */
 public interface AuthorizationCodeDAO {
 
@@ -70,4 +68,10 @@ public interface AuthorizationCodeDAO {
             newUserStoreDomain) throws IdentityOAuth2Exception;
 
     String getCodeIdByAuthorizationCode(String authzCode) throws IdentityOAuth2Exception;
+
+    default Set<AuthzCodeDO> getAuthorizationCodeDOSetByConsumerKeyForOpenidScope(String consumerKey) throws
+            IdentityOAuth2Exception {
+
+        return Collections.emptySet();
+    }
 }

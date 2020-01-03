@@ -23,34 +23,38 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMException;
-import org.wso2.carbon.identity.oauth2.dcr.endpoint.Exceptions.DCRMEndpointException;
 import org.wso2.carbon.identity.oauth2.dcr.endpoint.dto.RegistrationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dcr.endpoint.dto.UpdateRequestDTO;
+import org.wso2.carbon.identity.oauth2.dcr.endpoint.exceptions.DCRMEndpointException;
 
-import javax.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.ws.rs.core.Response;
+
 public class DCRMUtilsTest {
+
     private List<String> redirectUris = new ArrayList<>();
     private List<String> grantTypes = new ArrayList<>();
-    private final String client_name = "Application";
+    private final String clientName = "Application";
 
     @BeforeMethod
     public void setUp() throws Exception {
+
         redirectUris.add("https://op.certification.openid.net:60845/authz_cb");
         grantTypes.add("authorization_code");
     }
 
     @Test
     public void testGetApplicationRegistrationRequest() throws Exception {
-        RegistrationRequestDTO  registrationRequestDTO = new RegistrationRequestDTO();
-        registrationRequestDTO.setClientName(client_name);
+
+        RegistrationRequestDTO registrationRequestDTO = new RegistrationRequestDTO();
+        registrationRequestDTO.setClientName(clientName);
         registrationRequestDTO.setRedirectUris(redirectUris);
         registrationRequestDTO.setGrantTypes(grantTypes);
         Assert.assertNotNull(DCRMUtils.getApplicationRegistrationRequest(registrationRequestDTO));
         Assert.assertEquals(DCRMUtils.getApplicationRegistrationRequest
-                (registrationRequestDTO).getClientName(), client_name);
+                (registrationRequestDTO).getClientName(), clientName);
         Assert.assertEquals(DCRMUtils.getApplicationRegistrationRequest
                 (registrationRequestDTO).getGrantTypes(), grantTypes);
         Assert.assertEquals(DCRMUtils.getApplicationRegistrationRequest
@@ -59,13 +63,14 @@ public class DCRMUtilsTest {
 
     @Test
     public void testGetApplicationUpdateRequest() throws Exception {
+
         UpdateRequestDTO updateRequestDTO = new UpdateRequestDTO();
-        updateRequestDTO.setClientName(client_name);
+        updateRequestDTO.setClientName(clientName);
         updateRequestDTO.setRedirectUris(redirectUris);
         updateRequestDTO.setGrantTypes(grantTypes);
         Assert.assertNotNull(DCRMUtils.getApplicationUpdateRequest(updateRequestDTO));
         Assert.assertEquals(DCRMUtils.getApplicationUpdateRequest
-                (updateRequestDTO).getClientName(), client_name);
+                (updateRequestDTO).getClientName(), clientName);
         Assert.assertEquals(DCRMUtils.getApplicationUpdateRequest
                 (updateRequestDTO).getGrantTypes(), grantTypes);
         Assert.assertEquals(DCRMUtils.getApplicationUpdateRequest
@@ -74,12 +79,14 @@ public class DCRMUtilsTest {
 
     @DataProvider(name = "BuildDCRMException")
     public Object[][] buildDCRMException() {
-        DCRMException dcrmException1 = new DCRMException(null,"error code null");
-        DCRMException dcrmException2 = new DCRMException("CONFLICT_","error code start with conflict");
-        DCRMException dcrmException3 = new DCRMException("BAD_REQUEST_INVALID_REDIRECT_URI","error code for invalid redirect URI");
-        DCRMException dcrmException4 = new DCRMException("NOT_FOUND_","error code start with not found");
-        DCRMException dcrmException5 = new DCRMException("BAD_REQUEST_","error code start with bad request");
-        return new Object[][] {
+
+        DCRMException dcrmException1 = new DCRMException(null, "error code null");
+        DCRMException dcrmException2 = new DCRMException("CONFLICT_", "error code start with conflict");
+        DCRMException dcrmException3 =
+                new DCRMException("BAD_REQUEST_INVALID_REDIRECT_URI", "error code for invalid redirect URI");
+        DCRMException dcrmException4 = new DCRMException("NOT_FOUND_", "error code start with not found");
+        DCRMException dcrmException5 = new DCRMException("BAD_REQUEST_", "error code start with bad request");
+        return new Object[][]{
                 {dcrmException1},
                 {dcrmException2},
                 {dcrmException3},
@@ -90,18 +97,21 @@ public class DCRMUtilsTest {
 
     @Test(dataProvider = "BuildDCRMException", expectedExceptions = DCRMEndpointException.class)
     public void testHandleErrorResponse(DCRMException dcrmException) throws Exception {
+
         Log log = null;
         DCRMUtils.handleErrorResponse(dcrmException, log);
     }
 
     @DataProvider(name = "BuildDCRMEndpointException")
     public Object[][] buildDCRMEndpointException() {
+
         Response.Status status = Response.Status.BAD_REQUEST;
         Log log = LogFactory.getLog(DCRMUtils.class);
-        Throwable throwable1 = new DCRMException("BAD_REQUEST_INVALID_REDIRECT_URI","error code for invalid redirect URI");
+        Throwable throwable1 =
+                new DCRMException("BAD_REQUEST_INVALID_REDIRECT_URI", "error code for invalid redirect URI");
         Throwable throwable2 = new RuntimeException("BAD_REQUEST_INVALID_REDIRECT_URI");
 
-        return new Object[][] {
+        return new Object[][]{
                 {status, throwable1, true, log},
                 {status, throwable1, false, log},
                 {status, throwable2, true, log},
@@ -113,7 +123,8 @@ public class DCRMUtilsTest {
     @Test(dataProvider = "BuildDCRMEndpointException", expectedExceptions = DCRMEndpointException.class)
     public void testHandleErrorResponseWithThrowable(Response.Status status, Throwable throwable,
                                                      boolean isServerException, Log log) throws Exception {
-        DCRMUtils.handleErrorResponse(status, throwable, isServerException,log);
+
+        DCRMUtils.handleErrorResponse(status, throwable, isServerException, log);
     }
 
 }

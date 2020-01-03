@@ -21,26 +21,23 @@
 package org.wso2.carbon.identity.oauth2.dao;
 
 import org.wso2.carbon.identity.openidconnect.dao.CacheBackedScopeClaimMappingDAOImpl;
-import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAO;
 import org.wso2.carbon.identity.openidconnect.dao.RequestObjectDAO;
 import org.wso2.carbon.identity.openidconnect.dao.RequestObjectDAOImpl;
+import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAO;
 
-/*
-NOTE
-This is the very first step of moving to simplified architecture for token persistence. New set of DAO classes  for
-each purpose  and factory class to get instance of each DAO classes were introduced  during  this step. Further methods
- on org.wso2.carbon.identity.oauth2.dao.TokenMgtDAO were distributed among new set of classes, each of these method
- need to be reviewed  and refactored  during next step.
+/**
+ * OAUth token persistence factory.
  */
 public class OAuthTokenPersistenceFactory {
 
-    private static OAuthTokenPersistenceFactory factory;
+    private static OAuthTokenPersistenceFactory factory = new OAuthTokenPersistenceFactory();
     private AuthorizationCodeDAO authorizationCodeDAO;
     private AccessTokenDAO tokenDAO;
     private OAuthScopeDAO scopeDAO;
     private TokenManagementDAO managementDAO;
     private RequestObjectDAO requestObjectDAO;
     private ScopeClaimMappingDAO scopeClaimMappingDAO;
+    private TokenBindingMgtDAO tokenBindingMgtDAO;
 
     public OAuthTokenPersistenceFactory() {
 
@@ -50,13 +47,11 @@ public class OAuthTokenPersistenceFactory {
         this.managementDAO = new TokenManagementDAOImpl();
         this.requestObjectDAO = new RequestObjectDAOImpl();
         this.scopeClaimMappingDAO = new CacheBackedScopeClaimMappingDAOImpl();
+        this.tokenBindingMgtDAO = new TokenBindingMgtDAOImpl();
     }
 
     public static OAuthTokenPersistenceFactory getInstance() {
 
-        if (factory == null) {
-            factory = new OAuthTokenPersistenceFactory();
-        }
         return factory;
     }
 
@@ -88,5 +83,10 @@ public class OAuthTokenPersistenceFactory {
     public ScopeClaimMappingDAO getScopeClaimMappingDAO() {
 
         return scopeClaimMappingDAO;
+    }
+
+    public TokenBindingMgtDAO getTokenBindingMgtDAO() {
+
+        return tokenBindingMgtDAO;
     }
 }

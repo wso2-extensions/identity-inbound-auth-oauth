@@ -28,18 +28,22 @@ public class OIDCDCRException extends DCRException {
     private static final long serialVersionUID = -3151279311929070297L;
 
     public OIDCDCRException(String message) {
+
         super(message);
     }
 
     public OIDCDCRException(String errorCode, String message) {
+
         super(errorCode, message);
     }
 
     public OIDCDCRException(String message, Throwable cause) {
+
         super(message, cause);
     }
 
     public OIDCDCRException(String errorCode, String message, Throwable cause) {
+
         super(errorCode, message, cause);
     }
 }

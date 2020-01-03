@@ -30,6 +30,7 @@ import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.base.ServerConfiguration;
 import org.wso2.carbon.core.util.KeyStoreManager;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -52,6 +53,7 @@ import java.util.Map;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
+import static org.powermock.api.mockito.PowerMockito.doNothing;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertEquals;
@@ -59,7 +61,7 @@ import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 
 @PrepareForTest({CarbonUtils.class, IdentityTenantUtil.class, IdentityUtil.class, OAuthServerConfiguration.class,
-        KeyStoreManager.class, OAuth2Util.class})
+        KeyStoreManager.class, OAuth2Util.class, FrameworkUtils.class})
 public class JwksEndpointTest extends PowerMockIdentityBaseTest {
 
     @Mock
@@ -82,19 +84,21 @@ public class JwksEndpointTest extends PowerMockIdentityBaseTest {
 
     @BeforeTest
     public void setUp() throws Exception {
+
         System.setProperty(
                 CarbonBaseConstants.CARBON_HOME,
                 Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString()
-        );
+                          );
         jwksEndpoint = new JwksEndpoint();
 
         Class<?> clazz = IdentityUtil.class;
         identityUtilObj = clazz.newInstance();
     }
 
-    @DataProvider (name = "provideTenantDomain")
+    @DataProvider(name = "provideTenantDomain")
     public Object[][] provideTenantDomain() {
-        return new Object[][] {
+
+        return new Object[][]{
                 {null, MultitenantConstants.SUPER_TENANT_ID},
                 {"", MultitenantConstants.SUPER_TENANT_ID},
                 {"foo.com", 1},
@@ -104,6 +108,7 @@ public class JwksEndpointTest extends PowerMockIdentityBaseTest {
 
     @Test(dataProvider = "provideTenantDomain")
     public void testJwks(String tenantDomain, int tenantId) throws Exception {
+
         Path keystorePath = Paths.get(System.getProperty(CarbonBaseConstants.CARBON_HOME), "repository", "resources",
                 "security", "wso2carbon.jks");
         mockOAuthServerConfiguration();
@@ -113,9 +118,9 @@ public class JwksEndpointTest extends PowerMockIdentityBaseTest {
         when(serverConfiguration.getFirstProperty("Security.KeyStore.Password")).thenReturn("wso2carbon");
         when(serverConfiguration.getFirstProperty("Security.KeyStore.KeyAlias")).thenReturn("wso2carbon");
 
-
         ThreadLocal<Map<String, Object>> threadLocalProperties = new ThreadLocal() {
             protected Map<String, Object> initialValue() {
+
                 return new HashMap();
             }
         };
@@ -131,6 +136,10 @@ public class JwksEndpointTest extends PowerMockIdentityBaseTest {
 
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(tenantId);
+
+        mockStatic(FrameworkUtils.class);
+        doNothing().when(FrameworkUtils.class, "startTenantFlow", "foo.com");
+        doNothing().when(FrameworkUtils.class, "endTenantFlow");
 
         mockStatic(OAuth2Util.class);
 
@@ -182,6 +191,7 @@ public class JwksEndpointTest extends PowerMockIdentityBaseTest {
     }
 
     private void mockOAuthServerConfiguration() throws Exception {
+
         mockStatic(OAuthServerConfiguration.class);
         when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
         when(oAuthServerConfiguration.getPersistenceProcessor()).thenReturn(tokenPersistenceProcessor);
@@ -191,6 +201,7 @@ public class JwksEndpointTest extends PowerMockIdentityBaseTest {
     }
 
     private KeyStore getKeyStoreFromFile(String keystoreName, String password) throws Exception {
+
         Path tenantKeystorePath = Paths.get(System.getProperty(CarbonBaseConstants.CARBON_HOME), "repository",
                 "resources", "security", keystoreName);
         FileInputStream file = new FileInputStream(tenantKeystorePath.toString());

@@ -29,9 +29,10 @@ import java.util.Map;
 
 public class TestUserInfoClaimRetriever implements UserInfoClaimRetriever {
 
-    private TestUserInfoClaimRetriever(){
+    private TestUserInfoClaimRetriever() {
         // Do nothing.
     }
+
     @Override
     public Map<String, Object> getClaimsMap(Map<ClaimMapping, String> userAttributes) {
         // Do nothing

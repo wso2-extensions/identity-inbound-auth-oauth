@@ -22,13 +22,15 @@ import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
 import org.wso2.carbon.identity.oauth.user.UserInfoRequestValidator;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.ws.rs.core.HttpHeaders;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
+import java.nio.charset.StandardCharsets;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.core.HttpHeaders;
 
 /**
  * Validates the schema and authorization header according to the specification
@@ -64,7 +66,7 @@ public class UserInforRequestDefaultValidator implements UserInfoRequestValidato
 
     public static boolean isPureAscii(String requestBody) {
 
-        byte[] bytearray = requestBody.getBytes();
+        byte[] bytearray = requestBody.getBytes(StandardCharsets.UTF_8);
         CharsetDecoder charsetDecoder = Charset.forName(US_ASCII).newDecoder();
         try {
             CharBuffer charBuffer = charsetDecoder.decode(ByteBuffer.wrap(bytearray));

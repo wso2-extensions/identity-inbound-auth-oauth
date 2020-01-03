@@ -82,5 +82,4 @@ public class OauthTokenIssuerImplTest extends PowerMockIdentityBaseTest {
     public void testRefreshToken1() throws Exception {
         assertNotNull(UUID.fromString(accessTokenIssuer.refreshToken(tokenReqMessageContext)));
     }
-
 }

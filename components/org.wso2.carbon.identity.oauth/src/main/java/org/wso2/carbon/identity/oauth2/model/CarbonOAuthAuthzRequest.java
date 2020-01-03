@@ -30,6 +30,9 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 
 import javax.servlet.http.HttpServletRequest;
 
+/**
+ * OAuth 2 authorization request.
+ */
 public class CarbonOAuthAuthzRequest extends OAuthAuthzRequest {
 
     private static final Log log = LogFactory.getLog(CarbonOAuthTokenRequest.class);

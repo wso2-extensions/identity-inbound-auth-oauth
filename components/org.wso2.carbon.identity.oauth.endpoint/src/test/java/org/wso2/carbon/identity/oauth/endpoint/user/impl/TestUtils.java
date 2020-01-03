@@ -33,7 +33,6 @@ public class TestUtils {
     public static final String H2_SCRIPT_NAME = "scope.sql";
     public static Map<String, BasicDataSource> dataSourceMap = new HashMap<>();
 
-
     public static void initiateH2Base() throws Exception {
 
         BasicDataSource dataSource = new BasicDataSource();

@@ -39,7 +39,6 @@ import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
-import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
@@ -54,6 +53,9 @@ import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
 import static org.apache.commons.lang.StringUtils.isNotEmpty;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.USERINFO;
 
+/**
+ * Abstract user info response builder.
+ */
 public abstract class AbstractUserInfoResponseBuilder implements UserInfoResponseBuilder {
 
     private static final Log log = LogFactory.getLog(AbstractUserInfoResponseBuilder.class);
@@ -81,7 +83,7 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
                                                  Map<String, Object> userClaims)
             throws OAuthSystemException, UserInfoEndpointException {
 
-        if(MapUtils.isEmpty(userClaims)) {
+        if (MapUtils.isEmpty(userClaims)) {
             if (log.isDebugEnabled()) {
                 AuthenticatedUser authenticatedUser =
                         getAuthenticatedUser(OAuth2Util.getAccessTokenIdentifier(tokenResponse));
@@ -94,7 +96,8 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
 
         // Filter user claims based on the requested scopes
         Map<String, Object> userClaimsFilteredByScope =
-                getUserClaimsFilteredByScope(tokenResponse,userClaims, tokenResponse.getScope(), clientId, spTenantDomain);
+                getUserClaimsFilteredByScope(tokenResponse, userClaims, tokenResponse.getScope(), clientId,
+                        spTenantDomain);
 
         // Handle essential claims
         Map<String, Object> essentialClaims = getEssentialClaims(tokenResponse, userClaims);
@@ -282,7 +285,8 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
             clientId = getClientId(OAuth2Util.getAccessTokenIdentifier(tokenResponse));
             oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
         } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
-            throw new UserInfoEndpointException("Error while retrieving OAuth app information for clientId: " + clientId);
+            throw new UserInfoEndpointException(
+                    "Error while retrieving OAuth app information for clientId: " + clientId);
         }
         return OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
     }

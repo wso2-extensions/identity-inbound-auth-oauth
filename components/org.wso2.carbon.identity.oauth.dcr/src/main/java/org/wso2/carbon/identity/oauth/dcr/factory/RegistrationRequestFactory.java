@@ -44,6 +44,7 @@ import org.wso2.carbon.user.api.UserStoreException;
 import java.io.IOException;
 import java.io.Reader;
 import java.util.regex.Matcher;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.HttpMethod;
@@ -59,10 +60,10 @@ public class RegistrationRequestFactory extends HttpIdentityRequestFactory {
 
     private static final Log log = LogFactory.getLog(RegistrationRequestFactory.class);
 
-
     @Override
     public boolean canHandle(HttpServletRequest request, HttpServletResponse response)
             throws FrameworkRuntimeException {
+
         boolean canHandle = false;
         if (request != null) {
             Matcher matcher = DCRConstants.DCR_ENDPOINT_REGISTER_URL_PATTERN.matcher(request.getRequestURI());
@@ -78,7 +79,8 @@ public class RegistrationRequestFactory extends HttpIdentityRequestFactory {
 
     @Override
     public RegistrationRequest.RegistrationRequestBuilder create(HttpServletRequest request,
-                                                                 HttpServletResponse response) throws FrameworkClientException {
+                                                                 HttpServletResponse response)
+            throws FrameworkClientException {
 
         if (log.isDebugEnabled()) {
             log.debug("create RegistrationRequest.RegistrationRequestBuilder by RegistrationRequestFactory.");
@@ -106,7 +108,6 @@ public class RegistrationRequestFactory extends HttpIdentityRequestFactory {
                     log.debug("DCR request json : " + jsonData.toJSONString());
                 }
 
-
                 parseJson(jsonData, registerRequestBuilder);
 
             } catch (IOException e) {
@@ -121,6 +122,7 @@ public class RegistrationRequestFactory extends HttpIdentityRequestFactory {
 
     protected void parseJson(JSONObject jsonData, RegistrationRequest.RegistrationRequestBuilder
             registerRequestBuilder) throws FrameworkClientException {
+
         RegistrationRequestProfile registrationRequestProfile = registerRequestBuilder.getRegistrationRequestProfile();
         if (registrationRequestProfile == null) {
             registrationRequestProfile = new RegistrationRequestProfile();
@@ -246,6 +248,7 @@ public class RegistrationRequestFactory extends HttpIdentityRequestFactory {
     public HttpIdentityResponse.HttpIdentityResponseBuilder handleException(FrameworkClientException exception,
                                                                             HttpServletRequest request,
                                                                             HttpServletResponse response) {
+
         HttpIdentityResponse.HttpIdentityResponseBuilder builder = new HttpIdentityResponse
                 .HttpIdentityResponseBuilder();
         String errorMessage = generateErrorResponse(INVALID_CLIENT_METADATA, exception.getMessage()).toJSONString();
@@ -260,6 +263,7 @@ public class RegistrationRequestFactory extends HttpIdentityRequestFactory {
     }
 
     protected JSONObject generateErrorResponse(String error, String description) {
+
         JSONObject obj = new JSONObject();
         obj.put("error", error);
         obj.put("error_description", description);

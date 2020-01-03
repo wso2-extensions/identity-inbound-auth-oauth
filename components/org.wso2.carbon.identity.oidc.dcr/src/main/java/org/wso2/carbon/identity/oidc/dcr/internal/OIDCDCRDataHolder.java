@@ -31,13 +31,16 @@ public class OIDCDCRDataHolder {
     private ApplicationManagementService applicationManagementService = null;
 
     private OIDCDCRDataHolder() {
+
     }
 
     public static OIDCDCRDataHolder getInstance() {
+
         return thisInstance;
     }
 
     public ApplicationManagementService getApplicationManagementService() {
+
         if (applicationManagementService == null) {
             throw new IllegalStateException("ApplicationManagementService is not initialized properly");
         }
@@ -45,8 +48,8 @@ public class OIDCDCRDataHolder {
     }
 
     public void setApplicationManagementService(ApplicationManagementService applicationManagementService) {
+
         this.applicationManagementService = applicationManagementService;
     }
-
 
 }

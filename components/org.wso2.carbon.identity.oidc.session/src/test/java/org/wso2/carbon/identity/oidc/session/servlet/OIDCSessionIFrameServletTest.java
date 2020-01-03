@@ -28,8 +28,10 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
+
 import java.io.PrintWriter;
 import java.io.StringWriter;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
@@ -76,6 +78,7 @@ public class OIDCSessionIFrameServletTest extends TestOIDCSessionBase {
 
     @BeforeTest
     public void setUp() throws Exception {
+
         oidcSessionIFrameServlet = new OIDCSessionIFrameServlet();
 
         initiateInMemoryH2();
@@ -90,10 +93,12 @@ public class OIDCSessionIFrameServletTest extends TestOIDCSessionBase {
 
     /**
      * This provides data to testDoGet(String clientId, String redirectUri, String expected)
+     *
      * @return
      */
     @DataProvider(name = "provideDataForTestDoGet")
     public Object[][] provideDataForTestDoGet() {
+
         return new Object[][]{
                 {CLIENT_ID_VALUE, "", "playground2"},
                 {" ", "", "Invalid"},
@@ -107,6 +112,7 @@ public class OIDCSessionIFrameServletTest extends TestOIDCSessionBase {
 
     @Test(dataProvider = "provideDataForTestDoGet")
     public void testDoGet(String clientId, String redirectUri, String expected) throws Exception {
+
         mockStatic(IdentityDatabaseUtil.class);
         when(IdentityDatabaseUtil.getDBConnection()).thenAnswer(invocationOnMock -> dataSource.getConnection());
         oidcSessionIFrameServlet.init();
@@ -117,7 +123,8 @@ public class OIDCSessionIFrameServletTest extends TestOIDCSessionBase {
         mockStatic(OAuthServerConfiguration.class);
         when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
         when(oAuthServerConfiguration.getPersistenceProcessor()).thenReturn(tokenPersistenceProcessor);
-        when(tokenPersistenceProcessor.getProcessedClientId(anyString())).thenAnswer(invocation -> invocation.getArguments()[0]);
+        when(tokenPersistenceProcessor.getProcessedClientId(anyString()))
+                .thenAnswer(invocation -> invocation.getArguments()[0]);
 
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(TENANT_ID);
@@ -128,6 +135,6 @@ public class OIDCSessionIFrameServletTest extends TestOIDCSessionBase {
         PrintWriter out = new PrintWriter(outStringwriter);
         when(response.getWriter()).thenReturn(out);
         oidcSessionIFrameServlet.doGet(request, response);
-        assertTrue(outStringwriter.toString().contains(expected),"Expected one is different from the actual one");
+        assertTrue(outStringwriter.toString().contains(expected), "Expected one is different from the actual one");
     }
 }

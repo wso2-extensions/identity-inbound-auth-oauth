@@ -31,7 +31,7 @@ import org.wso2.carbon.utils.CarbonUtils;
 import javax.xml.namespace.QName;
 
 /**
- * This class loads configurations with regard the OIDC session management from repository/conf/identity/identity.xml
+ * This class loads configurations with regard the OIDC session management from repository/conf/identity/identity.xml.
  */
 public class OIDCSessionManagementConfiguration {
 
@@ -46,15 +46,17 @@ public class OIDCSessionManagementConfiguration {
     private static final String CONFIG_ELEM_OAUTH = "OAuth";
 
     private OIDCSessionManagementConfiguration() {
+
         buildConfiguration();
     }
 
     /**
-     * Returns the singleton instance of OIDCSessionManagementConfiguration
+     * Returns the singleton instance of OIDCSessionManagementConfiguration.
      *
      * @return OIDCSessionManagementConfiguration instance
      */
     public static OIDCSessionManagementConfiguration getInstance() {
+
         CarbonUtils.checkSecurity();
         if (instance == null) {
             synchronized (OIDCSessionManagementConfiguration.class) {
@@ -67,24 +69,27 @@ public class OIDCSessionManagementConfiguration {
     }
 
     /**
-     * Returns configured OIDC Logout Consent page URL
+     * Returns configured OIDC Logout Consent page URL.
      *
      * @return OIDC Logout Consent page URL
      */
     public String getOIDCLogoutConsentPageUrl() {
+
         return oidcLogoutConsentPageUrl;
     }
 
     /**
-     * Returns configured OIDC Logout page URL
+     * Returns configured OIDC Logout page URL.
      *
      * @return OIDC Logout page URL
      */
     public String getOIDCLogoutPageUrl() {
+
         return oidcLogoutPageUrl;
     }
 
     private void buildConfiguration() {
+
         IdentityConfigParser configParser = IdentityConfigParser.getInstance();
         OMElement oauthConfigElement = configParser.getConfigElement(CONFIG_ELEM_OAUTH);
 
@@ -117,6 +122,7 @@ public class OIDCSessionManagementConfiguration {
     }
 
     private QName getQNameWithIdentityNS(String localPart) {
+
         return new QName(IdentityCoreConstants.IDENTITY_DEFAULT_NAMESPACE, localPart);
     }
 

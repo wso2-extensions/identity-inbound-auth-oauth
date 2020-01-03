@@ -69,8 +69,8 @@ public class OAuth2TokenUtil {
                 }
             }
         } catch (IdentityEventException e) {
-            throw new IdentityOAuth2Exception("Error while invoking the request object persistance handler when issuing " +
-                    "the access token id: " + tokenId);
+            throw new IdentityOAuth2Exception("Error while invoking the request object persistance handler when " +
+                    "issuing the access token id: " + tokenId);
         }
     }
 
@@ -186,7 +186,8 @@ public class OAuth2TokenUtil {
         try {
             if (StringUtils.isNotBlank(eventName)) {
                 Event requestObjectPersistanceEvent = new Event(eventName, properties);
-                IdentityEventService identityEventService = OpenIDConnectServiceComponentHolder.getIdentityEventService();
+                IdentityEventService identityEventService =
+                        OpenIDConnectServiceComponentHolder.getIdentityEventService();
                 if (identityEventService != null) {
                     if (log.isDebugEnabled()) {
                         log.debug("The event: " + eventName + " triggered.");

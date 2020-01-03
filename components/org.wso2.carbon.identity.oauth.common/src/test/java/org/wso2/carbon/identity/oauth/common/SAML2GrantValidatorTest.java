@@ -11,6 +11,7 @@ import org.testng.annotations.Test;
 
 import java.util.HashMap;
 import java.util.Map;
+
 import javax.servlet.http.HttpServletRequest;
 
 import static org.powermock.api.mockito.PowerMockito.mock;
@@ -27,15 +28,18 @@ public class SAML2GrantValidatorTest {
 
     @BeforeMethod
     public void setUp() throws Exception {
+
         testedValidator = new SAML2GrantValidator();
     }
 
     @AfterMethod
     public void tearDown() throws Exception {
+
     }
 
     @DataProvider(name = "Request Provider")
     public Object[][] getRequestParams() {
+
         Map<String, String> allParamPresentMap = new HashMap<>();
         allParamPresentMap.put(OAuth.OAUTH_GRANT_TYPE, GrantType.SAML20_BEARER.toString());
         allParamPresentMap.put(OAuth.OAUTH_ASSERTION, "assertion");
@@ -52,9 +56,9 @@ public class SAML2GrantValidatorTest {
         };
     }
 
-
     @Test(dataProvider = "Request Provider")
     public void testValidateRequiredParameters(Map<String, String> headerMap, boolean shouldPass) throws Exception {
+
         HttpServletRequest mockRequest = mock(HttpServletRequest.class);
         for (Map.Entry<String, String> entry : headerMap.entrySet()) {
             when(mockRequest.getParameter(entry.getKey())).thenReturn(entry.getValue());

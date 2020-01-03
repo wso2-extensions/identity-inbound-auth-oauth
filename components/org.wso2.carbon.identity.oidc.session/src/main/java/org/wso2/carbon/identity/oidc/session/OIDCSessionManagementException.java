@@ -20,6 +20,9 @@ package org.wso2.carbon.identity.oidc.session;
 
 import org.wso2.carbon.identity.base.IdentityException;
 
+/**
+ * Handles the OIDC session management exceptions.
+ */
 public class OIDCSessionManagementException extends IdentityException {
 
     public OIDCSessionManagementException(String message) {

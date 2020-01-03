@@ -157,7 +157,7 @@ public class ResponseTypeHandlerUtil {
             AccessTokenDO existingTokenBean = getExistingToken(oauthAuthzMsgCtx, cacheEnabled);
 
             // Return a new access token in each request when JWTTokenIssuer is used.
-            if (isNotRenewAccessTokenPerRequest(oauthIssuerImpl)) {
+            if (isNotRenewAccessTokenPerRequest(oauthIssuerImpl, oauthAuthzMsgCtx)) {
                 if (existingTokenBean != null) {
 
                     // Revoke token if RenewTokenPerRequest configuration is enabled.
@@ -194,8 +194,8 @@ public class ResponseTypeHandlerUtil {
         }
     }
 
-    public static AuthzCodeDO generateAuthorizationCode(OAuthAuthzReqMessageContext oauthAuthzMsgCtx, boolean cacheEnabled)
-            throws IdentityOAuth2Exception {
+    public static AuthzCodeDO generateAuthorizationCode(OAuthAuthzReqMessageContext oauthAuthzMsgCtx,
+                                                        boolean cacheEnabled) throws IdentityOAuth2Exception {
         OAuth2AuthorizeReqDTO authorizationReqDTO = oauthAuthzMsgCtx.getAuthorizationReqDTO();
         String consumerKey = authorizationReqDTO.getConsumerKey();
         try {
@@ -207,8 +207,8 @@ public class ResponseTypeHandlerUtil {
         }
     }
 
-    public static AuthzCodeDO generateAuthorizationCode(OAuthAuthzReqMessageContext oauthAuthzMsgCtx, boolean cacheEnabled,
-                                                 OauthTokenIssuer oauthIssuerImpl)
+    public static AuthzCodeDO generateAuthorizationCode(OAuthAuthzReqMessageContext oauthAuthzMsgCtx,
+                                                        boolean cacheEnabled, OauthTokenIssuer oauthIssuerImpl)
             throws IdentityOAuth2Exception {
 
         OAuth2AuthorizeReqDTO authorizationReqDTO = oauthAuthzMsgCtx.getAuthorizationReqDTO();
@@ -234,7 +234,6 @@ public class ResponseTypeHandlerUtil {
         // if this is set before - then this will override it by the calculated new value.
         oauthAuthzMsgCtx.setValidityPeriod(validityPeriod);
         oauthAuthzMsgCtx.setAuthorizationCodeValidityPeriod(validityPeriod);
-
         // set code issued time.this is needed by downstream handlers.
         oauthAuthzMsgCtx.setCodeIssuedTime(timestamp.getTime());
 
@@ -280,14 +279,17 @@ public class ResponseTypeHandlerUtil {
         return authzCodeDO;
     }
 
-    public static OAuth2AuthorizeRespDTO buildAuthorizationCodeResponseDTO(OAuth2AuthorizeRespDTO respDTO, AuthzCodeDO authzCodeDO)
+    public static OAuth2AuthorizeRespDTO buildAuthorizationCodeResponseDTO(OAuth2AuthorizeRespDTO respDTO,
+                                                                           AuthzCodeDO authzCodeDO)
             throws IdentityOAuth2Exception {
+
         respDTO.setAuthorizationCode(authzCodeDO.getAuthorizationCode());
         respDTO.setCodeId(authzCodeDO.getAuthzCodeId());
-        return  respDTO;
+        return respDTO;
     }
 
-    public  static OAuth2AuthorizeRespDTO buildAccessTokenResponseDTO(OAuth2AuthorizeRespDTO respDTO, AccessTokenDO accessTokenDO) {
+    public static OAuth2AuthorizeRespDTO buildAccessTokenResponseDTO(OAuth2AuthorizeRespDTO respDTO,
+                                                                     AccessTokenDO accessTokenDO) {
 
         long expireTime = OAuth2Util.getTokenExpireTimeMillis(accessTokenDO);
         if (log.isDebugEnabled()) {
@@ -320,8 +322,9 @@ public class ResponseTypeHandlerUtil {
      * @return OAuth2AuthorizeRespDTO object with id_token details.
      * @throws IdentityOAuth2Exception
      */
-    public static OAuth2AuthorizeRespDTO buildIDTokenResponseDTO(OAuth2AuthorizeRespDTO respDTO, AccessTokenDO accessTokenDO,
-                                                   OAuthAuthzReqMessageContext oauthAuthzMsgCtx)
+    public static OAuth2AuthorizeRespDTO buildIDTokenResponseDTO(OAuth2AuthorizeRespDTO respDTO,
+                                                                 AccessTokenDO accessTokenDO,
+                                                                 OAuthAuthzReqMessageContext oauthAuthzMsgCtx)
             throws IdentityOAuth2Exception {
         if (isOIDCRequest(oauthAuthzMsgCtx)) {
             OAuth2AuthorizeRespDTO newRespDTO = new OAuth2AuthorizeRespDTO();
@@ -388,7 +391,8 @@ public class ResponseTypeHandlerUtil {
             userAttributes.put(key, sub);
         }
 
-        authorizationGrantCacheEntry.setValidityPeriod(TimeUnit.MILLISECONDS.toNanos(accessTokenDO.getValidityPeriodInMillis()));
+        authorizationGrantCacheEntry
+                .setValidityPeriod(TimeUnit.MILLISECONDS.toNanos(accessTokenDO.getValidityPeriodInMillis()));
         AuthorizationGrantCache.getInstance().addToCacheByToken(authorizationGrantCacheKey,
                 authorizationGrantCacheEntry);
     }
@@ -587,7 +591,7 @@ public class ResponseTypeHandlerUtil {
         } else {
             newTokenBean.setRefreshTokenIssuedTime(timestamp);
             newTokenBean.setRefreshTokenValidityPeriodInMillis(getConfiguredRefreshTokenValidityPeriodInMillis
-                    (oAuthAppBean));
+                    (oAuthAppBean, oauthAuthzMsgCtx));
             newTokenBean.setRefreshToken(getNewRefreshToken(oauthAuthzMsgCtx, oauthIssuerImpl));
         }
     }
@@ -716,10 +720,20 @@ public class ResponseTypeHandlerUtil {
         return validityPeriodInMillis;
     }
 
-    private static long getConfiguredRefreshTokenValidityPeriodInMillis(OAuthAppDO oAuthAppBean) {
+    private static long getConfiguredRefreshTokenValidityPeriodInMillis(OAuthAppDO oAuthAppBean,
+                                                                        OAuthAuthzReqMessageContext oauthAuthzMsgCtx) {
 
         long refreshTokenValidityPeriodInMillis;
-        if (oAuthAppBean.getRefreshTokenExpiryTime() != 0) {
+        long refreshTokenValidityPeriod = oauthAuthzMsgCtx.getRefreshTokenvalidityPeriod();
+        if (refreshTokenValidityPeriod != OAuthConstants.UNASSIGNED_VALIDITY_PERIOD && refreshTokenValidityPeriod > 0) {
+            refreshTokenValidityPeriodInMillis = oauthAuthzMsgCtx.getRefreshTokenvalidityPeriod() *
+                    SECOND_TO_MILLISECONDS_FACTOR;
+            if (log.isDebugEnabled()) {
+                log.debug("OAuth application id : " + oAuthAppBean.getOauthConsumerKey() + ", using refresh token " +
+                        "validity period configured from OAuthAuthzReqMessageContext: " +
+                        refreshTokenValidityPeriodInMillis + " ms");
+            }
+        } else if (oAuthAppBean.getRefreshTokenExpiryTime() != 0) {
             refreshTokenValidityPeriodInMillis = oAuthAppBean.getRefreshTokenExpiryTime() *
                     SECOND_TO_MILLISECONDS_FACTOR;
             if (log.isDebugEnabled()) {
@@ -828,9 +842,10 @@ public class ResponseTypeHandlerUtil {
         return oAuthAppBean;
     }
 
-    private static boolean isNotRenewAccessTokenPerRequest(OauthTokenIssuer oauthIssuerImpl) {
+    private static boolean isNotRenewAccessTokenPerRequest(OauthTokenIssuer oauthIssuerImpl,
+                                                           OAuthAuthzReqMessageContext oauthAuthzMsgCtx) {
 
-        boolean isRenew = oauthIssuerImpl.renewAccessTokenPerRequest();
+        boolean isRenew = oauthIssuerImpl.renewAccessTokenPerRequest(oauthAuthzMsgCtx);
         if (log.isDebugEnabled()) {
             log.debug("Enable Access Token renew per request: " + isRenew);
         }
@@ -902,6 +917,12 @@ public class ResponseTypeHandlerUtil {
         }
     }
 
+    /**
+     * Builds the revocation request and calls the revoke oauth service.
+     *
+     * @param clientId client id.
+     * @param accessToken access token.
+     */
     private static void revokeExistingToken(String clientId, String accessToken) throws IdentityOAuth2Exception {
 
         // This is used to avoid client validation failure in revokeTokenByOAuthClient.
@@ -944,5 +965,3 @@ public class ResponseTypeHandlerUtil {
         return oAuthClientAuthnContext;
     }
 }
-
-

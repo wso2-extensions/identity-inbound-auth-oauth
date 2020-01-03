@@ -26,10 +26,9 @@ import org.apache.commons.logging.LogFactory;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.Spy;
-import org.opensaml.saml2.core.Attribute;
-import org.opensaml.saml2.core.impl.AttributeBuilder;
-import org.opensaml.xml.ConfigurationException;
-import org.opensaml.xml.XMLObject;
+import org.opensaml.core.xml.XMLObject;
+import org.opensaml.saml.saml2.core.Attribute;
+import org.opensaml.saml.saml2.core.impl.AttributeBuilder;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
@@ -90,6 +89,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+
 import javax.sql.DataSource;
 
 import static org.mockito.Matchers.any;
@@ -246,7 +246,8 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
                 thenReturn(requestedClaims);
 
         // Skipping filtering with user consent.
-        // TODO: Remove mocking claims filtering based on consent when fixing https://github.com/wso2/product-is/issues/2676
+        // TODO: Remove mocking claims filtering based on consent when fixing
+        // https://github.com/wso2/product-is/issues/2676
         OpenIDConnectClaimFilterImpl openIDConnectClaimFilter = spy(new OpenIDConnectClaimFilterImpl());
         when(openIDConnectClaimFilter
                 .getClaimsFilteredByUserConsent(anyMap(), any(AuthenticatedUser.class), anyString(), anyString()))
@@ -543,8 +544,8 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
         JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx);
         assertNotNull(jwtClaimsSet);
         assertNotNull(jwtClaimsSet.getClaim("username"));
-        assertEquals(jwtClaimsSet.getStringArrayClaim("role")[0],"role1");
-        assertEquals(jwtClaimsSet.getStringArrayClaim("role")[1],"role2");
+        assertEquals(jwtClaimsSet.getStringArrayClaim("role")[0], "role1");
+        assertEquals(jwtClaimsSet.getStringArrayClaim("role")[1], "role2");
 
     }
 
@@ -897,11 +898,11 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
         JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
         OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForLocalUser();
 
-        ClaimMapping claimMappings[] = new ClaimMapping[]{
+        ClaimMapping[] claimMappings = new ClaimMapping[]{
                 ClaimMapping.build(LOCAL_DIVISION_CLAIM_URI, DIVISION, "", true),
                 ClaimMapping.build(LOCAL_DIVISION_CLAIM_WITH_PUNCUTATIONMARK_URI, DIVISION_WITH_DOT, "", true),
-                ClaimMapping.build(LOCAL_DIVISION_CLAIM_WITH_PUNCUTATIONMARK_IN_URL_FORMAT_URI, DIVISION_WITH_DOT_IN_URL, "",
-                        true),
+                ClaimMapping.build(LOCAL_DIVISION_CLAIM_WITH_PUNCUTATIONMARK_IN_URL_FORMAT_URI,
+                        DIVISION_WITH_DOT_IN_URL, "", true),
                 ClaimMapping.build(LOCAL_COUNTRY_CLAIM_URI, ADDRESS_COUNTRY, "", true)
         };
 
@@ -944,7 +945,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
         return authenticatedUser;
     }
 
-    private Attribute buildAttribute(String attributeName, String[] attributeValues) throws ConfigurationException {
+    private Attribute buildAttribute(String attributeName, String[] attributeValues)  {
 
         Attribute attribute = new AttributeBuilder().buildObject(Attribute.DEFAULT_ELEMENT_NAME);
         attribute.setName(attributeName);
@@ -969,7 +970,8 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
         return new org.powermock.modules.testng.PowerMockObjectFactory();
     }
 
-    private JWTClaimsSet getJwtClaimSet(JWTClaimsSet.Builder jwtClaimsSetBuilder, OAuthTokenReqMessageContext requestMsgCtx) {
+    private JWTClaimsSet getJwtClaimSet(JWTClaimsSet.Builder jwtClaimsSetBuilder,
+                                        OAuthTokenReqMessageContext requestMsgCtx) {
 
         OAuthServerConfiguration mockOAuthServerConfiguration = PowerMockito.mock(OAuthServerConfiguration.class);
         DataSource dataSource = mock(DataSource.class);
@@ -1009,7 +1011,8 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
         return jwtClaimsSet;
     }
 
-    private JWTClaimsSet getJwtClaimSet(JWTClaimsSet.Builder jwtClaimsSetBuilder, OAuthAuthzReqMessageContext requestMsgCtx) {
+    private JWTClaimsSet getJwtClaimSet(JWTClaimsSet.Builder jwtClaimsSetBuilder,
+                                        OAuthAuthzReqMessageContext requestMsgCtx) {
 
         OAuthServerConfiguration mockOAuthServerConfiguration = PowerMockito.mock(OAuthServerConfiguration.class);
         DataSource dataSource = mock(DataSource.class);

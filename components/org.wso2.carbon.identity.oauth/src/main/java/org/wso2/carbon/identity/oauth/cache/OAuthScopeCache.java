@@ -21,6 +21,7 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.common.cache.BaseCache;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
+import org.wso2.carbon.identity.oauth2.bean.ScopeBinding;
 
 /**
  * OAuthScopeCache is used to cache scope binding information.
@@ -60,6 +61,11 @@ public class OAuthScopeCache extends BaseCache<OAuthScopeCacheKey, Scope> {
                 log.debug("Scope is added to the cache. \n" + entry.toString());
             }
         }
+
+        for (ScopeBinding scopeBinding : entry.getScopeBindings()) {
+            OAuthScopeBindingCache.getInstance().clearCacheEntry(new OAuthScopeBindingCacheKey(scopeBinding
+                    .getBindingType(), Integer.parseInt(key.getTenantID())));
+        }
     }
 
     /**
@@ -91,5 +97,12 @@ public class OAuthScopeCache extends BaseCache<OAuthScopeCacheKey, Scope> {
                 log.debug("Scope: " + key.getScopeName() + " is removed from the cache.");
             }
         }
+        OAuthScopeBindingCache.getInstance().clear();
+    }
+
+    @Override
+    public void clear() {
+        super.clear();
+        OAuthScopeBindingCache.getInstance().clear();
     }
 }

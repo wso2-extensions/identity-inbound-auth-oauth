@@ -21,36 +21,42 @@ package org.wso2.carbon.identity.oidc.dcr.model;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.IdentityMessageContext;
 import org.wso2.carbon.identity.oauth.dcr.model.RegistrationResponse;
 
-
+/**
+ * OIDC DCR Response data returned for registration request.
+ */
 public class OIDCRegistrationResponse extends RegistrationResponse {
 
+    protected OIDCRegistrationResponse(OIDCRegisterResponseBuilder builder) {
 
-    protected OIDCRegistrationResponse(
-            OIDCRegisterResponseBuilder builder) {
         super(builder);
 
     }
 
-
+    /**
+     * OIDC Registration response builder.
+     */
     public static class OIDCRegisterResponseBuilder extends RegistrationResponse.DCRRegisterResponseBuilder {
 
-
         public OIDCRegisterResponseBuilder() {
+
             super();
         }
 
-        public OIDCRegisterResponseBuilder(
-                IdentityMessageContext context) {
+        public OIDCRegisterResponseBuilder(IdentityMessageContext context) {
+
             super(context);
         }
 
-
         @Override
         public OIDCRegistrationResponse build() {
+
             return new OIDCRegistrationResponse(this);
         }
     }
 
+    /**
+     * Contains the constants used in OIDC Register response.
+     */
     public static class OIDCRegisterResponseConstants extends DCRegisterResponseConstants {
 
     }

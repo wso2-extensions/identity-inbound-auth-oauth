@@ -20,11 +20,14 @@ package org.wso2.carbon.identity.oauth2.model;
 
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
-import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
+import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 
 import java.sql.Timestamp;
 
+/**
+ * Access token data object.
+ */
 public class AccessTokenDO extends CacheEntry {
 
     private static final long serialVersionUID = -8123522530178387354L;
@@ -63,9 +66,12 @@ public class AccessTokenDO extends CacheEntry {
 
     private String tokenType;
 
-    public AccessTokenDO(String consumerKey, AuthenticatedUser authzUser, String[] scope, Timestamp issuedTime, Timestamp
-            refreshTokenIssuedTime, long validityPeriodInMillis, long refreshTokenValidityPeriodInMillis, String
-                                 tokenType) {
+    private TokenBinding tokenBinding;
+
+    public AccessTokenDO(String consumerKey, AuthenticatedUser authzUser, String[] scope, Timestamp issuedTime,
+                         Timestamp refreshTokenIssuedTime, long validityPeriodInMillis,
+                         long refreshTokenValidityPeriodInMillis, String tokenType) {
+
         this.consumerKey = consumerKey;
         this.authzUser = authzUser;
         this.scope = scope;
@@ -78,12 +84,28 @@ public class AccessTokenDO extends CacheEntry {
         this.tokenType = tokenType;
     }
 
-    public AccessTokenDO(String consumerKey, AuthenticatedUser authzUser, String[] scope, Timestamp issuedTime, Timestamp
-            refreshTokenIssuedTime, long validityPeriodInMillis, long refreshTokenValidityPeriodInMillis, String
-                                 tokenType, String authorizationCode) {
+    public AccessTokenDO(String consumerKey, AuthenticatedUser authzUser, String[] scope, Timestamp issuedTime,
+                         Timestamp refreshTokenIssuedTime, long validityPeriodInMillis,
+                         long refreshTokenValidityPeriodInMillis, String tokenType, String authorizationCode) {
+
         this(consumerKey, authzUser, scope, issuedTime, refreshTokenIssuedTime, validityPeriodInMillis,
                 refreshTokenValidityPeriodInMillis, tokenType);
         this.authorizationCode = authorizationCode;
+    }
+
+    public AccessTokenDO(String consumerKey, AuthenticatedUser authzUser, String[] scope,
+            TokenBinding tokenBinding, Timestamp issuedTime, Timestamp refreshTokenIssuedTime,
+            long validityPeriodInMillis, long refreshTokenValidityPeriodInMillis, String tokenType) {
+
+        this.consumerKey = consumerKey;
+        this.authzUser = authzUser;
+        this.scope = scope;
+        this.issuedTime = issuedTime;
+        this.refreshTokenIssuedTime = refreshTokenIssuedTime;
+        this.validityPeriodInMillis = validityPeriodInMillis;
+        this.refreshTokenValidityPeriodInMillis = refreshTokenValidityPeriodInMillis;
+        this.tokenType = tokenType;
+        this.tokenBinding = tokenBinding;
     }
 
     /**
@@ -110,6 +132,7 @@ public class AccessTokenDO extends CacheEntry {
         newTokenDO.setTokenId(tokenDO.getTokenId());
         newTokenDO.setAuthorizationCode(tokenDO.getAuthorizationCode());
         newTokenDO.setGrantType(tokenDO.getGrantType());
+        newTokenDO.setTokenBinding(tokenDO.getTokenBinding());
 
         return newTokenDO;
     }
@@ -256,5 +279,15 @@ public class AccessTokenDO extends CacheEntry {
 
     public void setGrantType(String grantType) {
         this.grantType = grantType;
+    }
+
+    public TokenBinding getTokenBinding() {
+
+        return tokenBinding;
+    }
+
+    public void setTokenBinding(TokenBinding tokenBinding) {
+
+        this.tokenBinding = tokenBinding;
     }
 }
