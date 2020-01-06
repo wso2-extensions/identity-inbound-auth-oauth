@@ -20,6 +20,8 @@
 
 package org.wso2.carbon.identity.oauth2.token.handlers.grant;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -31,6 +33,7 @@ import java.util.Map;
  *
  * @since 5.4.10
  */
+@SuppressFBWarnings("NM_SAME_SIMPLE_NAME_AS_SUPERCLASS")
 public abstract class AbstractValidator extends org.apache.oltu.oauth2.common.validators.AbstractValidator {
 
     public AbstractValidator() {
