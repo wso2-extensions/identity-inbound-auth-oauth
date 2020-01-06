@@ -160,7 +160,7 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
             Assert.assertEquals(allOAuthApplicationData[0].getApplicationName(), "testapp1");
         } catch (IdentityOAuthAdminException allOAuthApplicationData) {
             Assert.assertEquals(allOAuthApplicationData.getMessage(),
-                    "User not logged in to get all registered OAuth Applications");
+                    "User not logged in to get all registered OAuth Applications.");
         }
     }
 
