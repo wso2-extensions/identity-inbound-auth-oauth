@@ -28,10 +28,12 @@ import org.wso2.carbon.identity.oauth.dto.OAuthRevocationResponseDTO;
 import org.wso2.carbon.identity.oauth.dto.OAuthTokenExpiryTimeDTO;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth.dto.TokenBindingMetaDataDTO;
-import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 
 import java.util.List;
 
+/**
+ * OAuth admin service.
+ */
 public class OAuthAdminService extends AbstractAdmin {
 
     private static final Log log = LogFactory.getLog(OAuthAdminService.class);
@@ -181,7 +183,7 @@ public class OAuthAdminService extends AbstractAdmin {
      * To retrieve all persisted oidc scopes with mapped claims.
      *
      * @return all persisted scopes and claims
-     * @throws IdentityOAuth2Exception if an error occurs when loading scopes and claims.
+     * @throws IdentityOAuthAdminException if an error occurs when loading scopes and claims.
      */
     public ScopeDTO[] getScopes() throws IdentityOAuthAdminException {
 
@@ -211,7 +213,7 @@ public class OAuthAdminService extends AbstractAdmin {
      * To retrieve all persisted oidc scopes.
      *
      * @return list of scopes persisted.
-     * @throws IdentityOAuth2Exception if an error occurs when loading oidc scopes.
+     * @throws IdentityOAuthAdminException if an error occurs when loading oidc scopes.
      */
     public String[] getScopeNames() throws IdentityOAuthAdminException {
 
@@ -227,7 +229,7 @@ public class OAuthAdminService extends AbstractAdmin {
      *
      * @param scope scope
      * @return list of claims which are mapped to the oidc scope.
-     * @throws IdentityOAuth2Exception if an error occurs when lading oidc claims.
+     * @throws IdentityOAuthAdminException if an error occurs when lading oidc claims.
      */
     public String[] getClaims(String scope) throws IdentityOAuthAdminException {
 
@@ -244,7 +246,7 @@ public class OAuthAdminService extends AbstractAdmin {
      * @param scope        scope name
      * @param addClaims    list of oidc claims to be added
      * @param deleteClaims list of oidc claims to be deleted
-     * @throws IdentityOAuth2Exception if an error occurs when adding a new claim for a scope.
+     * @throws IdentityOAuthAdminException if an error occurs when adding a new claim for a scope.
      */
     public void updateScope(String scope, String[] addClaims, String[] deleteClaims)
             throws IdentityOAuthAdminException {
@@ -261,7 +263,7 @@ public class OAuthAdminService extends AbstractAdmin {
      *
      * @param scope scope name
      * @return id of the given scope
-     * @throws IdentityOAuth2Exception if an error occurs when loading scope id.
+     * @throws IdentityOAuthAdminException if an error occurs when loading scope id.
      */
     public boolean isScopeExist(String scope) throws IdentityOAuthAdminException {
 

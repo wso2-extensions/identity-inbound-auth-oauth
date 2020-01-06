@@ -2153,8 +2153,8 @@ public class OAuth2Util {
 
         if (StringUtils.isBlank(jwksUri)) {
             if (log.isDebugEnabled()) {
-                log.debug(String.format("Jwks uri is not configured for the service provider associated with client_id: %s. Checking for " +
-                        "x509 certificate", clientId));
+                log.debug(String.format("Jwks uri is not configured for the service provider associated with " +
+                                "client_id: %s. Checking for x509 certificate", clientId));
             }
             publicCert = getX509CertOfOAuthApp(clientId, spTenantDomain);
             try {

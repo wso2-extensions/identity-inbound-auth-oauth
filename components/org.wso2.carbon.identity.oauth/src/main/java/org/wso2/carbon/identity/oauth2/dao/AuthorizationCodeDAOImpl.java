@@ -368,7 +368,8 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
     }
 
     /**
-     * @deprecated use {@link AuthorizationCodeDAOImpl#getAuthorizationCodesByUserForOpenidScope(AuthenticatedUser)} instead.
+     * @deprecated use {@link AuthorizationCodeDAOImpl#getAuthorizationCodesByUserForOpenidScope(AuthenticatedUser)}
+     * instead.
      */
     @Deprecated
     public Set<String> getAuthorizationCodesByUser(AuthenticatedUser authenticatedUser) throws
@@ -492,8 +493,9 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                     // Authorization codes that are in ACTIVE state and not expired should be removed from the cache.
                     if (OAuth2Util.getTimeToExpire(issuedTimeInMillis, validityPeriodInMillis) > 0) {
                         if (isHashDisabled) {
-                            authorizationCodes.add(new AuthzCodeDO(user, scope, timeCreated, validityPeriodInMillis, callbackUrl,
-                                    consumerKey, authorizationCode, authzCodeId));
+                            authorizationCodes
+                                    .add(new AuthzCodeDO(user, scope, timeCreated, validityPeriodInMillis, callbackUrl,
+                                            consumerKey, authorizationCode, authzCodeId));
                         }
                     }
                 }

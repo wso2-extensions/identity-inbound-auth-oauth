@@ -24,17 +24,22 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 
 import javax.security.auth.callback.Callback;
 
+/**
+ * OAuth callback manager.
+ */
 public class OAuthCallbackManager {
 
     private static final Log log = LogFactory.getLog(OAuthCallbackManager.class);
     private OAuthCallbackHandlerRegistry callbackHandlerRegistry;
 
     public OAuthCallbackManager() throws IdentityOAuth2Exception {
+
         callbackHandlerRegistry = OAuthCallbackHandlerRegistry.getInstance();
     }
 
     public void handleCallback(OAuthCallback authzCallback)
             throws IdentityOAuth2Exception {
+
         try {
             OAuthCallbackHandler authzCbHandler =
                     callbackHandlerRegistry.getOAuthAuthzHandler(authzCallback);

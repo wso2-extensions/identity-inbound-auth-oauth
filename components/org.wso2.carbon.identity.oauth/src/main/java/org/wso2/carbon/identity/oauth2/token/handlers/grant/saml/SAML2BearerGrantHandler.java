@@ -556,8 +556,10 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
 
             /*
               The process mentioned below is done because OpenSAML3 does not support OSGi refer
-              https://shibboleth.1660669.n2.nabble.com/Null-Pointer-Exception-from-UnmarshallerFactory-while-migrating-from-OpenSAML2-x-to-OpenSAML3-x-td7643903.html
-              and https://stackoverflow.com/questions/37948303/opensaml3-resource-not-found-default-config-xml-in-osgi-container
+              https://shibboleth.1660669.n2.nabble.com/Null-Pointer-Exception-from-UnmarshallerFactory-while-migrating
+              -from-OpenSAML2-x-to-OpenSAML3-x-td7643903.html
+              and https://stackoverflow.com/questions/37948303/opensaml3-resource-not-found-default-config-xml-in-osgi
+              -container
             */
 
             Thread thread = Thread.currentThread();

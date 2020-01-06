@@ -21,6 +21,9 @@ package org.wso2.carbon.identity.oauth2.dto;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * OAuth 2 introspection request DTO.
+ */
 public class OAuth2IntrospectionResponseDTO {
 
     /*
@@ -114,123 +117,153 @@ public class OAuth2IntrospectionResponseDTO {
     private String error;
 
     public boolean isActive() {
-	return active;
+
+        return active;
     }
 
     public void setActive(boolean active) {
-	this.active = active;
+
+        this.active = active;
     }
 
     public String getScope() {
-	return scope;
+
+        return scope;
     }
 
     public void setScope(String scope) {
-	this.scope = scope;
+
+        this.scope = scope;
     }
 
     public String getClientId() {
-	return clientId;
+
+        return clientId;
     }
 
     public void setClientId(String clientId) {
-	this.clientId = clientId;
+
+        this.clientId = clientId;
     }
 
     public String getUsername() {
-	return username;
+
+        return username;
     }
 
     public void setUsername(String username) {
-	this.username = username;
+
+        this.username = username;
     }
 
     public String getTokenType() {
-	return tokenType;
+
+        return tokenType;
     }
 
     public void setTokenType(String tokenType) {
-	this.tokenType = tokenType;
+
+        this.tokenType = tokenType;
     }
 
     public long getNbf() {
-	return nbf;
+
+        return nbf;
     }
 
     public void setNbf(long nbf) {
-	this.nbf = nbf;
+
+        this.nbf = nbf;
     }
 
     public String getAud() {
-	return aud;
+
+        return aud;
     }
 
     public void setAud(String aud) {
-	this.aud = aud;
+
+        this.aud = aud;
     }
 
     public String getIss() {
-	return iss;
+
+        return iss;
     }
 
     public void setIss(String iss) {
-	this.iss = iss;
+
+        this.iss = iss;
     }
 
     public String getJti() {
-	return jti;
+
+        return jti;
     }
 
     public void setJti(String jti) {
-	this.jti = jti;
+
+        this.jti = jti;
     }
 
     public String getSub() {
-	return sub;
+
+        return sub;
     }
 
     public void setSub(String sub) {
-	this.sub = sub;
+
+        this.sub = sub;
     }
 
     public long getExp() {
-	return exp;
+
+        return exp;
     }
 
     public void setExp(long exp) {
-	this.exp = exp;
+
+        this.exp = exp;
     }
 
     public long getIat() {
-	return iat;
+
+        return iat;
     }
 
     public void setIat(long iat) {
-	this.iat = iat;
+
+        this.iat = iat;
     }
 
     public Map<String, Object> getProperties() {
-	return properties;
+
+        return properties;
     }
 
     public void setProperties(Map<String, Object> properties) {
-	this.properties = properties;
+
+        this.properties = properties;
     }
 
     public String getError() {
-	return error;
+
+        return error;
     }
 
     public void setError(String error) {
-	this.error = error;
+
+        this.error = error;
     }
 
     public String getUserContext() {
-	return userContext;
+
+        return userContext;
     }
 
     public void setUserContext(String userContext) {
-	this.userContext = userContext;
+
+        this.userContext = userContext;
     }
 
     public String getBindingType() {

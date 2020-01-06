@@ -21,10 +21,14 @@ package org.wso2.carbon.identity.oauth.callback;
 import org.apache.commons.lang.ArrayUtils;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 
-import javax.security.auth.callback.Callback;
-import javax.security.auth.callback.UnsupportedCallbackException;
 import java.io.IOException;
 
+import javax.security.auth.callback.Callback;
+import javax.security.auth.callback.UnsupportedCallbackException;
+
+/**
+ * Default OAuth callback handler
+ */
 @SuppressWarnings("unused")
 public class DefaultCallbackHandler extends AbstractOAuthCallbackHandler {
 

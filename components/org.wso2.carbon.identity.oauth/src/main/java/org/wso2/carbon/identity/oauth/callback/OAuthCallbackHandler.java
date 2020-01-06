@@ -20,11 +20,12 @@ package org.wso2.carbon.identity.oauth.callback;
 
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 
+import java.io.IOException;
+import java.util.Properties;
+
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.CallbackHandler;
 import javax.security.auth.callback.UnsupportedCallbackException;
-import java.io.IOException;
-import java.util.Properties;
 
 /**
  * An extension point provided to verify whether the authenticated user is the rightful owner of

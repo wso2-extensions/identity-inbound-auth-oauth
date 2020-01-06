@@ -35,6 +35,9 @@ import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 
 import java.util.Map;
 
+/**
+ * OAuth event interceptor.
+ */
 public interface OAuthEventInterceptor extends IdentityHandler {
 
     /**

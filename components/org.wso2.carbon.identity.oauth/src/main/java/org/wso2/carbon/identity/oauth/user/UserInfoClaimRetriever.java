@@ -21,6 +21,9 @@ import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 
 import java.util.Map;
 
+/**
+ * Retrieving claims from the user store for the given claims dialect
+ */
 public interface UserInfoClaimRetriever {
 
     public Map<String, Object> getClaimsMap(Map<ClaimMapping, String> userAttributes);

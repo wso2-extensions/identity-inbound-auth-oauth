@@ -27,10 +27,10 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 public interface UserInfoResponseBuilder {
 
     /**
-     * @param tokenResponse
+     * @param tokenResponse OAuth 2 token validation response DTO.
      * @return
-     * @throws org.apache.oltu.oauth2.common.exception.OAuthSystemException
-     * @throws org.apache.oltu.oauth2.common.exception.OAuthProblemException TODO
+     * @throws OAuthSystemException
+     * @throws UserInfoEndpointException
      */
     public String getResponseString(OAuth2TokenValidationResponseDTO tokenResponse)
             throws UserInfoEndpointException, OAuthSystemException;

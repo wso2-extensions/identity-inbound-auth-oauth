@@ -75,6 +75,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.xml.namespace.QName;
 
@@ -127,7 +128,8 @@ public class OAuthServerConfiguration {
     private long applicationAccessTokenValidityPeriodInSeconds = 3600;
     private long refreshTokenValidityPeriodInSeconds = 24L * 3600;
     private long timeStampSkewInSeconds = 300;
-    private String tokenPersistenceProcessorClassName = "org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor";
+    private String tokenPersistenceProcessorClassName =
+            "org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor";
     private String oauthTokenGeneratorClassName;
     private OAuthIssuer oauthTokenGenerator;
     private String oauthIdentityTokenGeneratorClassName;
@@ -591,20 +593,21 @@ public class OAuthServerConfiguration {
 
     public boolean usePersistedAccessTokenAlias() {
 
-        return persistAccessTokenAlias != null ? Boolean.TRUE.toString().equalsIgnoreCase(persistAccessTokenAlias) :
-                true;
+        if (persistAccessTokenAlias != null) {
+            return Boolean.TRUE.toString().equalsIgnoreCase(persistAccessTokenAlias);
+        } else {
+            return true;
+        }
     }
 
     public boolean useRetainOldAccessTokens() {
 
-        return ((retainOldAccessTokens != null) && Boolean.TRUE.toString().equalsIgnoreCase(retainOldAccessTokens)) ?
-                true : false;
+        return Boolean.TRUE.toString().equalsIgnoreCase(retainOldAccessTokens);
     }
 
     public boolean isTokenCleanupEnabled() {
 
-        return ((tokenCleanupFeatureEnable != null) &&
-                Boolean.TRUE.toString().equalsIgnoreCase(tokenCleanupFeatureEnable)) ? true : false;
+        return Boolean.TRUE.toString().equalsIgnoreCase(tokenCleanupFeatureEnable);
     }
 
     public String getOIDCConsentPageUrl() {
@@ -1003,7 +1006,8 @@ public class OAuthServerConfiguration {
         return idTokenNotAllowedGrantTypesSet;
     }
 
-    public boolean isRedirectToRequestedRedirectUriEnabled(){
+    public boolean isRedirectToRequestedRedirectUriEnabled() {
+
         return redirectToRequestedRedirectUriEnabled;
     }
 

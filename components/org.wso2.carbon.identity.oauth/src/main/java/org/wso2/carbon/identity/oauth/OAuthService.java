@@ -28,9 +28,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.core.common.AuthenticationException;
 import org.wso2.carbon.identity.base.IdentityException;
-import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dao.OAuthConsumerDAO;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerDTO;
 import org.wso2.carbon.registry.core.exceptions.RegistryException;
@@ -41,11 +41,14 @@ import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * OAuthService admin service implementation.
+ */
 public class OAuthService {
 
     private static final String OAUTH_LATEST_TIMESTAMP = "OAUTH_LATEST_TIMESTAMP";
     private static final String OAUTH_NONCE_STORE = "OAUTH_NONCE_STORE";
-    private static final Log log = LogFactory.getLog(OAuthService.class);
+    private static final Log LOG = LogFactory.getLog(OAuthService.class);
 
     /**
      * Checks whether the given consumer is valid or not. This is done by validating the signature,
@@ -60,7 +63,7 @@ public class OAuthService {
         String oAuthSecretKey = getOAuthSecretKey(oauthConsumer.getOauthConsumerKey());
 
         if (oAuthSecretKey == null) {
-            log.debug("Invalid Consumer Key.");
+            LOG.debug("Invalid Consumer Key.");
             throw IdentityException.error("Invalid Consumer Key");
         }
         try {
@@ -79,39 +82,41 @@ public class OAuthService {
      * for an Access Token until the User successfully grants access in Obtaining User
      * Authorization.
      *
-     * @param params                        A container for the following attributes.
-     * @param params:oauth_consumer_key     (required) : Domain identifying the third-party web
-     *                                      application. This is the domain used when registering the application with WSO2
-     *                                      Identity Server.
-     * @param params:oauth_nonce            (required) : Random 64-bit, unsigned number encoded as an ASCII
-     *                                      string in decimal format. The nonce/time-stamp pair should always be unique to
-     *                                      prevent replay attacks.
-     * @param params:oauth_signature_method (required) : Signature algorithm. The legal values for
-     *                                      this parameter "RSA-SHA1" or "HMAC-SHA1". WSO2 does not support "PLAINTEXT" and
-     *                                      "RSA-SHA1".
-     * @param params:oauth_signature        (required) String generated using the referenced signature
-     *                                      method.
-     * @param params:oauth_timestamp        (required) : Integer representing the time the request is sent.
-     *                                      The time-stamp should be expressed in number of seconds after January 1, 1970
-     *                                      00:00:00 GMT. scope (required) URL identifying the service(s) to be accessed. The
-     *                                      resulting token enables access to the specified service(s) only.
-     * @param params:scope                  : The resource the third party web application should be authorized to
-     *                                      access. To specify more than one scope, list each one separated with a space. This
-     *                                      parameter is not defined in the OAuth standards, it is a WSO2-specific parameter.
-     * @param params:oauth_callback         (required) : URL the user should be redirected to after access
-     *                                      to a service is granted (in response to a call to OAuthAuthorizeToken). The
-     *                                      response to this getOauthRequestToken call verifies that WSO2 handles a call-back
-     *                                      URL.
-     * @param params:oauth_version          (optional) : The OAuth version used by the requesting web
-     *                                      application. This value must be "1.0"; if not provided, WSO2 assumes version 1.0
-     *                                      is in use.
+     * @param params                 A container for the following attributes.
+     * params:oauth_consumer_key     (required) : Domain identifying the third-party web
+     *                               application. This is the domain used when registering the application with WSO2
+     *                               Identity Server.
+     * params:oauth_nonce            (required) : Random 64-bit, unsigned number encoded as an ASCII
+     *                               string in decimal format. The nonce/time-stamp pair should always be unique to
+     *                               prevent replay attacks.
+     * params:oauth_signature_method (required) : Signature algorithm. The legal values for
+     *                               this parameter "RSA-SHA1" or "HMAC-SHA1". WSO2 does not support "PLAINTEXT" and
+     *                               "RSA-SHA1".
+     * params:oauth_signature        (required) String generated using the referenced signature
+     *                               method.
+     * params:oauth_timestamp        (required) : Integer representing the time the request is sent.
+     *                               The time-stamp should be expressed in number of seconds after January 1, 1970
+     *                               00:00:00 GMT. scope (required) URL identifying the service(s) to be accessed. The
+     *                               resulting token enables access to the specified service(s) only.
+     * params:scope                  : The resource the third party web application should be authorized to
+     *                               access. To specify more than one scope, list each one separated with a space. This
+     *                               parameter is not defined in the OAuth standards, it is a WSO2-specific parameter.
+     * params:oauth_callback         (required) : URL the user should be redirected to after access
+     *                               to a service is granted (in response to a call to OAuthAuthorizeToken). The
+     *                               response to this getOauthRequestToken call verifies that WSO2 handles a call-back
+     *                               URL.
+     * params:oauth_version          (optional) : The OAuth version used by the requesting web
+     *                               application. This value must be "1.0"; if not provided, WSO2 assumes version 1.0
+     *                               is in use.
      * @return oauth_token, oauth_token_secret, oauth_callback_confirmed
-     * @throws Exception
+     * @throws AuthenticationException
+     * @throws IdentityOAuthAdminException
      */
-    public Parameters getOauthRequestToken(Parameters params) throws AuthenticationException, IdentityOAuthAdminException {
+    public Parameters getOauthRequestToken(Parameters params)
+            throws AuthenticationException, IdentityOAuthAdminException {
 
-        boolean isValidSignature = false;
-        String secretkey = null;
+        boolean isValidSignature;
+        String secretkey;
 
         validateTimestampAndNonce(params.getOauthTimeStamp(), params.getOauthNonce());
 
@@ -119,7 +124,7 @@ public class OAuthService {
         secretkey = dao.getOAuthConsumerSecret(params.getOauthConsumerKey());
 
         if (secretkey == null) {
-            log.debug("Invalid Credentials.");
+            LOG.debug("Invalid Credentials.");
             throw new AuthenticationException("Invalid Credentials.");
         }
 
@@ -139,11 +144,13 @@ public class OAuthService {
      * request to the Service Provider's User Authorization URL with the following parameters.
      *
      * @param params             A container for the following attributes.
-     * @param params:oauth_token (required) : Request token obtained from WSO2.
-     * @param params:userName    : User who authorizes the token.
-     * @param params:password    : Password of the user who authorizes the token.
+     * params:oauth_token (required) : Request token obtained from WSO2.
+     * params:userName    : User who authorizes the token.
+     * params:password    : Password of the user who authorizes the token.
+     *
      * @return oauth_token, oauth_verifier
-     * @throws Exception
+     * @throws IdentityException
+     * @throws AuthenticationException
      */
     public Parameters authorizeOauthRequestToken(Parameters params) throws IdentityException, AuthenticationException {
         String tenantUser = MultitenantUtils.getTenantAwareUsername(params.getAuthorizedbyUserName());
@@ -154,7 +161,7 @@ public class OAuthService {
                     .getRealm(domainName, params.getAuthorizedbyUserName()).getUserStoreManager()
                     .authenticate(tenantUser, params.getAuthorizedbyUserPassword());
         } catch (UserStoreException e) {
-            log.error("Error while authenticating the user", e);
+            LOG.error("Error while authenticating the user", e);
             throw IdentityException.error("Error while authenticating the user");
         }
         if (isAuthenticated) {
@@ -180,26 +187,28 @@ public class OAuthService {
      * verification code received from the Consumer has been successfully verified.
      *
      * @param params                        A container for the following attributes.
-     * @param params:oauth_consumer_key     (required) : Domain identifying the third-party web
-     *                                      application. This is the domain used when registering the application with WSO2
-     *                                      Identity Server.
-     * @param params:oauth_nonce            (required) : Random 64-bit, unsigned number encoded as an ASCII
-     *                                      string in decimal format. The nonce/time-stamp pair should always be unique to
-     *                                      prevent replay attacks.
-     * @param params:oauth_signature_method (required) : Signature algorithm. The legal values for
-     *                                      this parameter "RSA-SHA1" or "HMAC-SHA1". WSO2 does not support "PLAINTEXT" and
-     *                                      "RSA-SHA1".
-     * @param params:oauth_signature        (required) String generated using the referenced signature
-     *                                      method.
-     * @param params:oauth_timestamp        (required) : Integer representing the time the request is sent.
-     *                                      The time-stamp should be expressed in number of seconds after January 1, 1970
-     *                                      00:00:00 GMT. scope (required) URL identifying the service(s) to be accessed. The
-     *                                      resulting token enables access to the specified service(s) only.
-     * @param params:oauth_version          (optional) : The OAuth version used by the requesting web
-     *                                      application. This value must be "1.0"; if not provided, WSO2 assumes version 1.0
-     *                                      is in use.
+     * params:oauth_consumer_key     (required) : Domain identifying the third-party web
+     *                               application. This is the domain used when registering the application with WSO2
+     *                               Identity Server.
+     * params:oauth_nonce            (required) : Random 64-bit, unsigned number encoded as an ASCII
+     *                               string in decimal format. The nonce/time-stamp pair should always be unique to
+     *                               prevent replay attacks.
+     * params:oauth_signature_method (required) : Signature algorithm. The legal values for
+     *                               this parameter "RSA-SHA1" or "HMAC-SHA1". WSO2 does not support "PLAINTEXT" and
+     *                               "RSA-SHA1".
+     * params:oauth_signature        (required) String generated using the referenced signature
+     *                               method.
+     * params:oauth_timestamp        (required) : Integer representing the time the request is sent.
+     *                               The time-stamp should be expressed in number of seconds after January 1, 1970
+     *                               00:00:00 GMT. scope (required) URL identifying the service(s) to be accessed. The
+     *                               resulting token enables access to the specified service(s) only.
+     * params:oauth_version          (optional) : The OAuth version used by the requesting web
+     *                               application. This value must be "1.0"; if not provided, WSO2 assumes version 1.0
+     *                               is in use.
      * @return oauth_token, oauth_token_secret
-     * @throws Exception
+     * @throws IdentityOAuthAdminException
+     * @throws AuthenticationException
+     * @throws IdentityException
      */
     public Parameters getAccessToken(Parameters params) throws IdentityOAuthAdminException, AuthenticationException,
             IdentityException {
@@ -211,7 +220,7 @@ public class OAuthService {
         secretKey = dao.getOAuthConsumerSecret(params.getOauthConsumerKey());
 
         if (secretKey == null) {
-            log.debug("Invalid Credentials.");
+            LOG.debug("Invalid Credentials.");
             throw new AuthenticationException("Invalid Credentials.");
         }
 
@@ -271,34 +280,45 @@ public class OAuthService {
     }
 
     /**
+     *
+     * @param params
+     * @return
+     * @throws AuthenticationException
+     * @throws IdentityException
+     */
+
+    /**
      * Validates the request to a resource protected with OAuth. After successfully receiving the
      * Access Token and Token Secret, the Consumer is able to access the Protected Resources on
      * behalf of the User.
      *
      * @param params                        A container for the following attributes.
-     * @param params:oauth_consumer_key     (required) : Domain identifying the third-party web
-     *                                      application. This is the domain used when registering the application with WSO2
-     *                                      Identity Server.
-     * @param params:oauth_token            (required) : OAuth access token.
-     * @param params:oauth_nonce            (required) : Random 64-bit, unsigned number encoded as an ASCII
-     *                                      string in decimal format. The nonce/time-stamp pair should always be unique to
-     *                                      prevent replay attacks.
-     * @param params:oauth_signature_method (required) : Signature algorithm. The legal values for
-     *                                      this parameter "RSA-SHA1" or "HMAC-SHA1". WSO2 does not support "PLAINTEXT" and
-     *                                      "RSA-SHA1".
-     * @param params:oauth_signature        (required) String generated using the referenced signature
-     *                                      method.
-     * @param params:oauth_timestamp        (required) : Integer representing the time the request is sent.
-     *                                      The time-stamp should be expressed in number of seconds after January 1, 1970
-     *                                      00:00:00 GMT. scope (required) URL identifying the service(s) to be accessed. The
-     *                                      resulting token enables access to the specified service(s) only.
-     * @param params:oauth_version          (optional) : The OAuth version used by the requesting web
-     *                                      application. This value must be "1.0"; if not provided, WSO2 assumes version 1.0
-     *                                      is in use.
+     * params:oauth_consumer_key     (required) : Domain identifying the third-party web
+     *                               application. This is the domain used when registering the application with WSO2
+     *                               Identity Server.
+     * params:oauth_token            (required) : OAuth access token.
+     * params:oauth_nonce            (required) : Random 64-bit, unsigned number encoded as an ASCII
+     *                               string in decimal format. The nonce/time-stamp pair should always be unique to
+     *                               prevent replay attacks.
+     * params:oauth_signature_method (required) : Signature algorithm. The legal values for
+     *                               this parameter "RSA-SHA1" or "HMAC-SHA1". WSO2 does not support "PLAINTEXT" and
+     *                               "RSA-SHA1".
+     * params:oauth_signature        (required) String generated using the referenced signature
+     *                               method.
+     * params:oauth_timestamp        (required) : Integer representing the time the request is sent.
+     *                               The time-stamp should be expressed in number of seconds after January 1, 1970
+     *                               00:00:00 GMT. scope (required) URL identifying the service(s) to be accessed. The
+     *                               resulting token enables access to the specified service(s) only.
+     * params:oauth_version          (optional) : The OAuth version used by the requesting web
+     *                               application. This value must be "1.0"; if not provided, WSO2 assumes version 1.0
+     *                               is in use.
      * @return Parameters : scope : the authorized scope
-     * @throws Exception Error when validating the access token request.
+     *
+     * @throws AuthenticationException Error when validating signature.
+     * @throws IdentityException Error when validating the access token request.
      */
-    public Parameters validateAuthenticationRequest(Parameters params) throws AuthenticationException, IdentityException {
+    public Parameters validateAuthenticationRequest(Parameters params)
+            throws AuthenticationException, IdentityException {
 
         boolean isAuthenticated = false;
         String secretKey = null;
@@ -308,7 +328,7 @@ public class OAuthService {
         OAuthConsumerDAO dao = new OAuthConsumerDAO();
         secretKey = dao.getOAuthConsumerSecret(params.getOauthConsumerKey());
         if (secretKey == null) {
-            log.debug("Invalid Credentials.");
+            LOG.debug("Invalid Credentials.");
             throw new AuthenticationException("Invalid Credentials.");
         }
 
