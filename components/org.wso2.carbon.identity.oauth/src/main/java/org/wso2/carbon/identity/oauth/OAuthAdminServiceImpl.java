@@ -99,7 +99,7 @@ public class OAuthAdminServiceImpl {
         String loggedInUser = CarbonContext.getThreadLocalCarbonContext().getUsername();
 
         if (LOG.isDebugEnabled()) {
-            LOG.debug("Adding a consumer secret for the logged in user " + loggedInUser);
+            LOG.debug("Adding a consumer secret for the logged in user:" + loggedInUser);
         }
 
         String tenantUser = MultitenantUtils.getTenantAwareUsername(loggedInUser);
@@ -122,7 +122,7 @@ public class OAuthAdminServiceImpl {
         OAuthConsumerAppDTO[] dtos = new OAuthConsumerAppDTO[0];
 
         if (userName == null) {
-            String msg = "User not logged in to get all registered OAuth Applications";
+            String msg = "User not logged in to get all registered OAuth Applications.";
             if (LOG.isDebugEnabled()) {
                 LOG.debug(msg);
             }
@@ -713,8 +713,7 @@ public class OAuthAdminServiceImpl {
             }
 
             Set<String> authorizationCodes = OAuthTokenPersistenceFactory.getInstance().getAuthorizationCodeDAO()
-                    .getActiveAuthorizationCodesByConsumerKey
-                            (consumerKey);
+                    .getActiveAuthorizationCodesByConsumerKey(consumerKey);
             for (String authorizationCode : authorizationCodes) {
                 OAuthCacheKey cacheKey = new OAuthCacheKey(authorizationCode);
                 OAuthCache.getInstance().clearCacheEntry(cacheKey);
@@ -928,8 +927,8 @@ public class OAuthAdminServiceImpl {
                                                     authzUser.getAuthenticatedSubjectIdentifier(),
                                                     tenantDomain, appName);
                                 } catch (IdentityOAuth2Exception e) {
-                                    String errorMsg = "Error occurred while removing OAuth Consent of Application " +
-                                            appName + " of user " + userName;
+                                    String errorMsg = "Error occurred while removing OAuth Consent of Application: " +
+                                            appName + " of user: " + userName;
                                     throw handleError(errorMsg, e);
                                 }
                             }
@@ -1009,7 +1008,7 @@ public class OAuthAdminServiceImpl {
                     oAuthEventInterceptorProxy.onPostTokenRevocationByResourceOwner(revokeRequestDTO, revokeRespDTO,
                             accessTokenDO, paramMap);
                 } catch (IdentityOAuth2Exception e) {
-                    LOG.error("Error occurred with post revocation listener ", e);
+                    LOG.error("Error occurred with post revocation listener.", e);
                 }
             }
         }
@@ -1168,8 +1167,8 @@ public class OAuthAdminServiceImpl {
     void logOnInvalidConfig(String appName, String tokenType, long defaultValue) {
 
         if (LOG.isDebugEnabled()) {
-            LOG.debug("Invalid expiry time value '0' set for " + tokenType + " in ServiceProvider: " + appName + ". "
-                    + "Defaulting to expiry value: " + defaultValue + " seconds.");
+            LOG.debug("Invalid expiry time value '0' set for token type: " + tokenType + " in ServiceProvider: " +
+                    appName + ". Defaulting to expiry value: " + defaultValue + " seconds.");
         }
     }
 
