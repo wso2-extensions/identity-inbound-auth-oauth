@@ -81,8 +81,8 @@ public class X509CredentialImpl implements X509Credential {
 
     @Override
     public X509Certificate getEntityCertificate() {
-        // This method is not implemented
-        return null;
+
+        return signingCert;
     }
 
     @Override
@@ -109,8 +109,8 @@ public class X509CredentialImpl implements X509Credential {
 
     @Override
     public Class<? extends Credential> getCredentialType() {
-        // This method is not implemented
-        return null;
+
+        return X509Credential.class;
     }
 
     @Override

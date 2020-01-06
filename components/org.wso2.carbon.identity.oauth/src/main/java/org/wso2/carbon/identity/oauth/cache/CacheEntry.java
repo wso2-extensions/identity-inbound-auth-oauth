@@ -18,10 +18,13 @@
 
 package org.wso2.carbon.identity.oauth.cache;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * Represents a cache entry. Any value that needs to be included in the
  * cache must be encapsulated with a class deriving from this class.
  */
+@SuppressFBWarnings("NM_SAME_SIMPLE_NAME_AS_SUPERCLASS")
 public abstract class CacheEntry extends org.wso2.carbon.identity.application.common.cache.CacheEntry {
 
     private static final long serialVersionUID = 1591693579088522864L;

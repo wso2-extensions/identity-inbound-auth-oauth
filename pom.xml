@@ -604,6 +604,14 @@
                 <version>${pax.logging.api.version}</version>
             </dependency>
 
+            <!-- Findbugs annotations-->
+            <dependency>
+                <groupId>com.google.code.findbugs</groupId>
+                <artifactId>annotations</artifactId>
+                <version>${findbugs.annotations.version}</version>
+                <scope>compile</scope>
+            </dependency>
+
         </dependencies>
     </dependencyManagement>
 
@@ -956,6 +964,8 @@
 
         <maven.checkstyleplugin.version>3.1.0</maven.checkstyleplugin.version>
         <maven.findbugsplugin.version>3.0.5</maven.findbugsplugin.version>
+
+        <findbugs.annotations.version>3.0.1</findbugs.annotations.version>
     </properties>
 
 </project>
