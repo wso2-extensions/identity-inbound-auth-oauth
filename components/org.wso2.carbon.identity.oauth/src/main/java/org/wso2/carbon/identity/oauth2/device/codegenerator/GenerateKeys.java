@@ -18,7 +18,10 @@
 
 package org.wso2.carbon.identity.oauth2.device.codegenerator;
 
+import org.apache.commons.lang.RandomStringUtils;
 import org.wso2.carbon.identity.oauth2.device.constants.Constants;
+
+import java.security.SecureRandom;
 
 /**
  * This class will be used to generate user code.
@@ -37,11 +40,7 @@ public class GenerateKeys {
      */
     public static String getKey(int num) {
 
-        StringBuilder sb = new StringBuilder(num);
-        for (int i = 0; i < num; i++) {
-            int index = (int) (Constants.KEY_SET.length() * Math.random());
-            sb.append(Constants.KEY_SET.charAt(index));
-        }
-        return sb.toString();
+        return RandomStringUtils.random(num, 0, Constants.KEY_SET.length(), false, false,
+                Constants.KEY_SET.toCharArray(), new SecureRandom());
     }
 }
