@@ -234,7 +234,7 @@ public class JDBCPermissionBasedInternalScopeValidator {
                 if (PERMISSION_BINDING_TYPE.equalsIgnoreCase(scopeBinding.getBindingType())) {
                     List<String> bindings = scopeBinding.getBindings();
                     for (String binding : bindings) {
-                        if (!binding.startsWith(ADMIN_PERMISSION_ROOT)) {
+                        if (!binding.startsWith(ADMIN_PERMISSION_ROOT) && !binding.equals(EVERYONE_PERMISSION)) {
                             adminAllowedScopes.remove(scope);
                             break;
                         }
