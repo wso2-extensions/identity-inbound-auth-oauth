@@ -66,6 +66,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MultivaluedHashMap;
@@ -82,7 +83,7 @@ import static org.powermock.api.mockito.PowerMockito.whenNew;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
-@PrepareForTest ( {SessionDataCache.class, OAuthServerConfiguration.class, OAuth2Util.class, IdentityUtil.class,
+@PrepareForTest({SessionDataCache.class, OAuthServerConfiguration.class, OAuth2Util.class, IdentityUtil.class,
         FrameworkUtils.class, OAuthASResponse.class, OAuthResponse.class, PrivilegedCarbonContext.class,
         ServerConfiguration.class})
 public class EndpointUtilTest extends PowerMockIdentityBaseTest {
@@ -139,9 +140,11 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
             "https://localhost:9443/authenticationendpoint/oauth2_authz.do";
     private static final String ERROR_PAGE_URL = "https://localhost:9443/authenticationendpoint/oauth2_error.do";
     private static final String ERROR_PAGE_URL_WITH_APP =
-            "https://localhost:9443/authenticationendpoint/oauth2_error.do?oauthErrorCode=3002&oauthErrorMsg=errorMessage&application=myApp";
+            "https://localhost:9443/authenticationendpoint/oauth2_error.do?oauthErrorCode=3002&" +
+                    "oauthErrorMsg=errorMessage&application=myApp";
     private static final String ERROR_PAGE_URL_WITHOUT_APP =
-            "https://localhost:9443/authenticationendpoint/oauth2_error.do?oauthErrorCode=3002&oauthErrorMsg=errorMessage";
+            "https://localhost:9443/authenticationendpoint/oauth2_error.do?oauthErrorCode=3002&" +
+                    "oauthErrorMsg=errorMessage";
 
     private static final String USER_INFO_CLAIM_DIALECT = "http://wso2.org/claims";
     private static final String USER_INFO_CLAIM_RETRIEVER =
@@ -173,16 +176,16 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         String authzValue = "Basic " + Base64Utils.encode((username + ":" + password).getBytes());
         String incorrectAuthzValue = "SomeValue " + Base64Utils.encode((username + ":" + password).getBytes());
 
-        return new Object[][] {
-                { authzValue, username, null},
-                { incorrectAuthzValue, username, "Error decoding authorization header"},
-                { username, null, "Error decoding authorization header"},
-                { "Basic " + Base64Utils.encode(username.getBytes()), null, "Error decoding authorization header"},
-                { null, null, "Authorization header value is null"},
+        return new Object[][]{
+                {authzValue, username, null},
+                {incorrectAuthzValue, username, "Error decoding authorization header"},
+                {username, null, "Error decoding authorization header"},
+                {"Basic " + Base64Utils.encode(username.getBytes()), null, "Error decoding authorization header"},
+                {null, null, "Authorization header value is null"},
         };
     }
 
-    @Test (dataProvider = "provideAuthzHeader")
+    @Test(dataProvider = "provideAuthzHeader")
     public void testExtractCredentialsFromAuthzHeader(String header, String expected, String msg) {
 
         String[] credentials = null;
@@ -202,14 +205,14 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         params.setApplicationName("TestApplication");
         params.setScopes(new HashSet<String>(Arrays.asList("scope1", "scope2")));
 
-        return new Object[][] {
-                { params, true, true, false, "QueryString", true},
-                { null, true, true, false, "QueryString", true},
-                { params, false, true, false, "QueryString", true},
-                { params, true, false, false, "QueryString", true},
-                { params, true, false, false, "QueryString", false},
-                { params, true, true, false, null, true},
-                { params, true, true, true, "QueryString", true},
+        return new Object[][]{
+                {params, true, true, false, "QueryString", true},
+                {null, true, true, false, "QueryString", true},
+                {params, false, true, false, "QueryString", true},
+                {params, true, false, false, "QueryString", true},
+                {params, true, false, false, "QueryString", false},
+                {params, true, true, false, null, true},
+                {params, true, true, true, "QueryString", true},
         };
     }
 
@@ -263,17 +266,21 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
 
     }
 
-    @DataProvider (name = "provideScopeData")
+    @DataProvider(name = "provideScopeData")
     public Object[][] provideScopeData() {
 
-        return new Object[][] {
-                { null, "oauth2"},
-                { new HashSet<String>() {{ add("scope1");}}, "oauth2"},
-                { new HashSet<String>() {{ add("openid");}}, "oidc"},
+        return new Object[][]{
+                {null, "oauth2"},
+                {new HashSet<String>() {{
+                    add("scope1");
+                }}, "oauth2"},
+                {new HashSet<String>() {{
+                    add("openid");
+                }}, "oidc"},
         };
     }
 
-    @Test (dataProvider = "provideScopeData")
+    @Test(dataProvider = "provideScopeData")
     public void testGetLoginPageURL(Set<String> scopes, String queryParam) throws Exception {
 
         Map<String, String[]> reqParams = new HashedMap();
@@ -289,7 +296,7 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         when(IdentityUtil.getServerURL(anyString(), anyBoolean(), anyBoolean())).thenReturn(COMMONAUTH_URL);
 
         mockStatic(FrameworkUtils.class);
-        doAnswer(new Answer<Object>(){
+        doAnswer(new Answer<Object>() {
             @Override
             public Object answer(InvocationOnMock invocation) throws Throwable {
 
@@ -314,16 +321,16 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
 //        Assert.assertTrue(scopeString.contains("scope1 scope2"));
 //    }
 
-    @DataProvider (name = "provideErrorData")
+    @DataProvider(name = "provideErrorData")
     public Object[][] provideErrorData() {
 
-        return new Object[][] {
-                { "myApp", ERROR_PAGE_URL_WITH_APP },
-                { null, ERROR_PAGE_URL_WITHOUT_APP }
+        return new Object[][]{
+                {"myApp", ERROR_PAGE_URL_WITH_APP},
+                {null, ERROR_PAGE_URL_WITHOUT_APP}
         };
     }
 
-    @Test (dataProvider = "provideErrorData")
+    @Test(dataProvider = "provideErrorData")
     public void testGetErrorPageURL(String applicationName, String expected) throws Exception {
 
         mockStatic(OAuth2Util.OAuthURL.class);
@@ -342,7 +349,6 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         String responseType = "dummyResponceType";
         String appName = "myApp";
 
-
         params1.setState(state);
         params1.setResponseType(responseType);
         params1.setApplicationName(appName);
@@ -353,20 +359,20 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         params2.setApplicationName(appName);
         params2.setRedirectURI(null);
 
-        return new Object[][] {
-                { true, true, params1, null, "http://localhost:8080/location", false},
-                { true, false, params1, null, "http://localhost:8080/location", false},
-                { false, true, params1, null, "http://localhost:8080/location", false},
-                { true, true, params2, null, ERROR_PAGE_URL, false},
-                { true, true, null, null, ERROR_PAGE_URL, false},
-                { true, true, params1, new OAuthSystemException(), ERROR_PAGE_URL, false},
-                { true, true, params1, new OAuthSystemException(), ERROR_PAGE_URL, true}
+        return new Object[][]{
+                {true, true, params1, null, "http://localhost:8080/location", false},
+                {true, false, params1, null, "http://localhost:8080/location", false},
+                {false, true, params1, null, "http://localhost:8080/location", false},
+                {true, true, params2, null, ERROR_PAGE_URL, false},
+                {true, true, null, null, ERROR_PAGE_URL, false},
+                {true, true, params1, new OAuthSystemException(), ERROR_PAGE_URL, false},
+                {true, true, params1, new OAuthSystemException(), ERROR_PAGE_URL, true}
         };
     }
 
-    @Test (dataProvider = "provideErrorRedirectData")
+    @Test(dataProvider = "provideErrorRedirectData")
     public void testGetErrorRedirectURL(boolean isImplicitResponse, boolean isImplicitFragment,
-                                        Object oAuth2ParamObject, Object exeObject, String expected,boolean isDebugOn)
+                                        Object oAuth2ParamObject, Object exeObject, String expected, boolean isDebugOn)
             throws Exception {
 
         setMockedLog(isDebugOn);
@@ -425,7 +431,7 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         Map<String, String[]> requestParams2 = new HashedMap();
         requestParams2.put("reqParam1", new String[]{"val1"});
 
-        return new Object[][] {
+        return new Object[][]{
                 {paramMap1, requestParams1, false},
                 {paramMap2, requestParams1, false},
                 {paramMap2, requestParams2, true},
@@ -433,7 +439,7 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         };
     }
 
-    @Test (dataProvider = "provideParams")
+    @Test(dataProvider = "provideParams")
     public void testValidateParams(Object paramObject, Map<String, String[]> requestParams, boolean expected) {
 
         MultivaluedMap<String, String> paramMap = (MultivaluedMap<String, String>) paramObject;
@@ -460,7 +466,7 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
 
         mockStatic(OAuth2Util.class);
         when(OAuth2Util.getClientTenatId()).thenReturn(-1234);
-        doAnswer(new Answer<Object>(){
+        doAnswer(new Answer<Object>() {
             @Override
             public Object answer(InvocationOnMock invocation) throws Throwable {
 
@@ -472,7 +478,7 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         when(IdentityUtil.getServerURL(anyString(), anyBoolean(), anyBoolean())).thenReturn(COMMONAUTH_URL);
 
         mockStatic(FrameworkUtils.class);
-        doAnswer(new Answer<Object>(){
+        doAnswer(new Answer<Object>() {
             @Override
             public Object answer(InvocationOnMock invocation) throws Throwable {
 
@@ -482,12 +488,15 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
                 any(AuthenticationRequestCacheEntry.class));
 
         String url = EndpointUtil.getLoginPageURL(clientId, sessionDataKey, true, true,
-                new HashSet<String>() {{ add("openid");}});
+                new HashSet<String>() {{
+                    add("openid");
+                }});
         Assert.assertEquals(url, "https://localhost:9443/commonauth?sessionDataKey=1234567890&type=oidc");
     }
 
     @Test
     public void testGetServices() {
+
         mockPrivilegedCarbonContext();
         EndpointUtil.setOAuth2Service(mockedOAuth2Service);
         EndpointUtil.setSSOConsentService(mockedSSOConsentService);
@@ -512,6 +521,7 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
 
     @Test
     public void testGetRealmInfo() {
+
         String expectedRealm = "Basic realm=is.com";
         mockStatic(ServerConfiguration.class);
         when(ServerConfiguration.getInstance()).thenReturn(mockedServerConfiguration);
@@ -521,6 +531,7 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
 
     @Test
     public void testGetOAuthServerConfigProperties() throws Exception {
+
         mockPrivilegedCarbonContext();
         setMockedOAuthServerConfiguration();
         EndpointUtil.setOauthServerConfiguration(mockedOAuthServerConfiguration);
@@ -548,6 +559,7 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
     }
 
     private void mockPrivilegedCarbonContext() {
+
         mockStatic(PrivilegedCarbonContext.class);
         when(PrivilegedCarbonContext.getThreadLocalCarbonContext()).thenReturn(mockedPrivilegedCarbonContext);
         when(mockedPrivilegedCarbonContext.getOSGiService(OAuthServerConfiguration.class, null)).
@@ -564,6 +576,7 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
     }
 
     private void setMockedOAuthServerConfiguration() {
+
         when(mockedOAuthServerConfiguration.getOpenIDConnectUserInfoEndpointRequestValidator()).
                 thenReturn(USER_INFO_REQUEST_VALIDATOR);
         when(mockedOAuthServerConfiguration.getOpenIDConnectUserInfoEndpointAccessTokenValidator()).

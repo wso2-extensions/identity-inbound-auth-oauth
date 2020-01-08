@@ -68,6 +68,8 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
      */
     private String subjectClaim;
 
+    private String tokenBindingValue;
+
     public String getSubjectClaim() {
         return subjectClaim;
     }
@@ -144,19 +146,23 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
         this.userAttributes = userAttributes;
     }
 
-    public String getCodeId(){
+    public String getCodeId() {
+
         return codeId;
     }
 
-    public void setCodeId(String codeId){
+    public void setCodeId(String codeId) {
+
         this.codeId = codeId;
     }
 
-    public String getTokenId(){
+    public String getTokenId() {
+
         return tokenId;
     }
 
-    public void setTokenId(String tokenId){
+    public void setTokenId(String tokenId) {
+
         this.tokenId = tokenId;
     }
 
@@ -208,5 +214,25 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
      */
     public List<String> getAmrList() {
         return Collections.unmodifiableList(amrList);
+    }
+
+    /**
+     * Get token binding value.
+     *
+     * @return token binding value.
+     */
+    public String getTokenBindingValue() {
+
+        return tokenBindingValue;
+    }
+
+    /**
+     * Set token binding value.
+     *
+     * @param tokenBindingValue
+     */
+    public void setTokenBindingValue(String tokenBindingValue) {
+
+        this.tokenBindingValue = tokenBindingValue;
     }
 }

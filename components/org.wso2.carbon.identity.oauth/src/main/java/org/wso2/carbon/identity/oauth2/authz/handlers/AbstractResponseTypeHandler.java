@@ -45,7 +45,7 @@ import java.util.List;
  */
 public abstract class AbstractResponseTypeHandler implements ResponseTypeHandler {
 
-    private static Log log = LogFactory.getLog(AbstractResponseTypeHandler.class);
+    private static final Log log = LogFactory.getLog(AbstractResponseTypeHandler.class);
 
     public static final String IMPLICIT = "implicit";
     protected OauthTokenIssuer oauthIssuerImpl;
@@ -153,6 +153,7 @@ public abstract class AbstractResponseTypeHandler implements ResponseTypeHandler
      */
     public OAuth2AuthorizeRespDTO initResponse(OAuthAuthzReqMessageContext oauthAuthzMsgCtx)
             throws IdentityOAuth2Exception {
+
         OAuth2AuthorizeRespDTO respDTO = new OAuth2AuthorizeRespDTO();
         OAuth2AuthorizeReqDTO authorizationReqDTO = oauthAuthzMsgCtx.getAuthorizationReqDTO();
         respDTO.setCallbackURI(authorizationReqDTO.getCallbackUrl());

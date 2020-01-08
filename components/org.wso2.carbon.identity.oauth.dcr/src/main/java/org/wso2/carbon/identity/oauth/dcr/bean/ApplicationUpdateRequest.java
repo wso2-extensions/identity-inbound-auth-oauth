@@ -22,53 +22,66 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * This object contains the context related to OAuth application update request.
+ */
 public class ApplicationUpdateRequest implements Serializable {
 
     private static final long serialVersionUID = 262481020746102240L;
 
-    private List<String> redirectUris = new ArrayList<String>();
+    private List<String> redirectUris = new ArrayList<>();
     private String clientName = null;
-    private List<String> grantTypes = new ArrayList<String>();
+    private List<String> grantTypes = new ArrayList<>();
     private String tokenType = null;
     private String backchannelLogoutUri = null;
 
     public List<String> getRedirectUris() {
+
         return redirectUris;
     }
 
     public void setRedirectUris(List<String> redirectUris) {
+
         this.redirectUris = redirectUris;
     }
 
     public String getClientName() {
+
         return clientName;
     }
 
     public void setClientName(String clientName) {
+
         this.clientName = clientName;
     }
 
     public List<String> getGrantTypes() {
+
         return grantTypes;
     }
 
     public void setGrantTypes(List<String> grantTypes) {
+
         this.grantTypes = grantTypes;
     }
 
     public String getTokenType() {
+
         return tokenType;
     }
 
     public void setTokenType(String tokenType) {
+
         this.tokenType = tokenType;
     }
 
     public String getBackchannelLogoutUri() {
+
         return backchannelLogoutUri;
     }
 
     public void setBackchannelLogoutUri(String backchannelLogoutUri) {
+
         this.backchannelLogoutUri = backchannelLogoutUri;
     }
 }

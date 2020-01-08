@@ -22,6 +22,7 @@ import com.nimbusds.jwt.JWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.JWTParser;
 import org.mockito.Mockito;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.IObjectFactory;
 import org.testng.annotations.BeforeClass;
@@ -44,6 +45,7 @@ import java.sql.SQLException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+
 import javax.sql.DataSource;
 
 import static org.mockito.Matchers.any;
@@ -61,6 +63,7 @@ import static org.testng.Assert.assertTrue;
  */
 @PrepareForTest({AuthorizationGrantCache.class, JDBCPersistenceManager.class,
         OAuthServerConfiguration.class})
+@PowerMockIgnore({"javax.management.*"})
 public class UserInfoJWTResponseTest extends UserInfoResponseBaseTest {
 
     private UserInfoJWTResponse userInfoJWTResponse;
@@ -113,7 +116,8 @@ public class UserInfoJWTResponseTest extends UserInfoResponseBaseTest {
             Mockito.when(jdbcPersistenceManager.getInstance()).thenReturn(jdbcPersistenceManager);
             Mockito.when(jdbcPersistenceManager.getDataSource()).thenReturn(dataSource);
             String responseString =
-                    userInfoJWTResponse.getResponseString(getTokenResponseDTO(authenticatedUser.toFullQualifiedUsername()));
+                    userInfoJWTResponse
+                            .getResponseString(getTokenResponseDTO(authenticatedUser.toFullQualifiedUsername()));
 
             JWT jwt = JWTParser.parse(responseString);
             assertNotNull(jwt);
@@ -223,7 +227,7 @@ public class UserInfoJWTResponseTest extends UserInfoResponseBaseTest {
                 assertEquals(
                         expectedClaimEntry.getValue(),
                         jwtClaimsSet.getClaim(expectedClaimEntry.getKey())
-                );
+                            );
             }
         } finally {
             PrivilegedCarbonContext.endTenantFlow();

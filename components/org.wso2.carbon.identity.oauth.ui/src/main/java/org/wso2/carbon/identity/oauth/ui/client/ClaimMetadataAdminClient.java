@@ -33,8 +33,8 @@ import java.rmi.RemoteException;
  */
 public class ClaimMetadataAdminClient {
 
-    private static final Log log = LogFactory.getLog(ClaimMetadataAdminClient.class);
     public static final String CLAIM_METADATA_MANAGEMENT_SERVICE = "ClaimMetadataManagementService";
+    private static final Log log = LogFactory.getLog(ClaimMetadataAdminClient.class);
     private ClaimMetadataManagementServiceStub stub;
 
     /**

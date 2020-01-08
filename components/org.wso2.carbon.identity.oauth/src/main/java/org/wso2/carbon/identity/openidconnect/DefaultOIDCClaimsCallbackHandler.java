@@ -73,10 +73,10 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.AUTHZ_CODE;
  */
 public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHandler {
 
-    private final static Log log = LogFactory.getLog(DefaultOIDCClaimsCallbackHandler.class);
-    private final static String OAUTH2 = "oauth2";
-    private final static String OIDC_DIALECT = "http://wso2.org/oidc/claim";
-    private final static String ATTRIBUTE_SEPARATOR = FrameworkUtils.getMultiAttributeSeparator();
+    private static final Log log = LogFactory.getLog(DefaultOIDCClaimsCallbackHandler.class);
+    private static final String OAUTH2 = "oauth2";
+    private static final String OIDC_DIALECT = "http://wso2.org/oidc/claim";
+    private static final String ATTRIBUTE_SEPARATOR = FrameworkUtils.getMultiAttributeSeparator();
 
     @Override
     public JWTClaimsSet handleCustomClaims(JWTClaimsSet.Builder jwtClaimsSetBuilder, OAuthTokenReqMessageContext
@@ -92,7 +92,9 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
     }
 
     @Override
-    public JWTClaimsSet handleCustomClaims(JWTClaimsSet.Builder jwtClaimsSet, OAuthAuthzReqMessageContext authzReqMessageContext) {
+    public JWTClaimsSet handleCustomClaims(JWTClaimsSet.Builder jwtClaimsSet,
+                                           OAuthAuthzReqMessageContext authzReqMessageContext) {
+
         try {
             Map<String, Object> userClaimsInOIDCDialect = getUserClaimsInOIDCDialect(authzReqMessageContext);
             return setClaimsToJwtClaimSet(jwtClaimsSet, userClaimsInOIDCDialect);
@@ -157,7 +159,8 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
     }
 
     private Map<String, Object> filterOIDCClaims(OAuthTokenReqMessageContext requestMsgCtx,
-                                                 Map<String, Object> userClaimsInOIDCDialect) throws OAuthSystemException {
+                                                 Map<String, Object> userClaimsInOIDCDialect)
+            throws OAuthSystemException {
 
         AuthenticatedUser user = requestMsgCtx.getAuthorizedUser();
         String clientId = requestMsgCtx.getOauth2AccessTokenReqDTO().getClientId();
@@ -166,7 +169,8 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         String token = getAccessToken(requestMsgCtx);
         String grantType = requestMsgCtx.getOauth2AccessTokenReqDTO().getGrantType();
 
-        return filterOIDCClaims(token, grantType, userClaimsInOIDCDialect, user, approvedScopes, clientId, spTenantDomain);
+        return filterOIDCClaims(token, grantType, userClaimsInOIDCDialect, user, approvedScopes, clientId,
+                spTenantDomain);
     }
 
 
@@ -225,8 +229,9 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         try {
             serviceProvider = getServiceProvider(spTenantDomain, clientId);
         } catch (IdentityApplicationManagementException e) {
-            throw new OAuthSystemException("Error while obtaining service provider for tenant domain : " + spTenantDomain +
-                    " client id : " + clientId, e);
+            throw new OAuthSystemException(
+                    "Error while obtaining service provider for tenant domain: " + spTenantDomain + " client id: "
+                            + clientId, e);
         }
 
         return OIDCClaimUtil.filterUserClaimsBasedOnConsent(userClaims, authenticatedUser, clientId,
@@ -245,7 +250,8 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
             }
             userAttributes = getUserAttributesCachedAgainstAuthorizationCode(getAuthorizationCode(requestMsgCtx));
             if (log.isDebugEnabled()) {
-                log.debug("Retrieving claims cached against authorization_code for user: " + requestMsgCtx.getAuthorizedUser());
+                log.debug("Retrieving claims cached against authorization_code for user: " +
+                        requestMsgCtx.getAuthorizedUser());
             }
         }
 
@@ -271,7 +277,8 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
                     log.debug("Retrieving claims from previous access token of user : " + requestMsgCtx
                             .getAuthorizedUser());
                 }
-                RefreshTokenValidationDataDO refreshTokenValidationDataDO = (RefreshTokenValidationDataDO) previousAccessTokenObject;
+                RefreshTokenValidationDataDO refreshTokenValidationDataDO =
+                        (RefreshTokenValidationDataDO) previousAccessTokenObject;
                 userAttributes = getUserAttributesCachedAgainstToken(refreshTokenValidationDataDO.getAccessToken());
                 requestMsgCtx.addProperty(OIDCConstants.HAS_NON_OIDC_CLAIMS,
                         isTokenHasCustomUserClaims(refreshTokenValidationDataDO));
@@ -316,7 +323,8 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
             throws OAuthSystemException {
 
         Map<String, Object> userClaimsInOIDCDialect;
-        Map<ClaimMapping, String> userAttributes = getUserAttributesCachedAgainstToken(getAccessToken(authzReqMessageContext));
+        Map<ClaimMapping, String> userAttributes =
+                getUserAttributesCachedAgainstToken(getAccessToken(authzReqMessageContext));
         if (isEmpty(userAttributes) && isLocalUser(authzReqMessageContext)) {
             if (log.isDebugEnabled()) {
                 log.debug("User attributes not found in cache. Trying to retrieve attribute for local user: " +
@@ -331,7 +339,8 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
     }
 
     private Map<String, Object> filterOIDCClaims(OAuthAuthzReqMessageContext authzReqMessageContext,
-                                                 Map<String, Object> userClaimsInOIDCDialect) throws OAuthSystemException {
+                                                 Map<String, Object> userClaimsInOIDCDialect)
+            throws OAuthSystemException {
 
         AuthenticatedUser user = authzReqMessageContext.getAuthorizationReqDTO().getUser();
         String clientId = authzReqMessageContext.getAuthorizationReqDTO().getConsumerKey();
@@ -418,7 +427,8 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
             return userClaimsMappedToOIDCDialect;
         } else {
             if (log.isDebugEnabled()) {
-                log.debug("Number of user claims retrieved for " + fullQualifiedUsername + " from user store: " + userClaims.size());
+                log.debug("Number of user claims retrieved for " + fullQualifiedUsername + " from user store: " +
+                        userClaims.size());
             }
             // Map the local roles to SP defined roles.
             handleServiceProviderRoleMappings(serviceProvider, ATTRIBUTE_SEPARATOR, userClaims);
@@ -439,7 +449,8 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
     }
 
     private Map<String, Object> getUserClaimsInOIDCDialect(String spTenantDomain,
-                                                           Map<String, String> userClaims) throws ClaimMetadataException {
+                                                           Map<String, String> userClaims)
+            throws ClaimMetadataException {
         // Retrieve OIDC to Local Claim Mappings.
         Map<String, String> oidcToLocalClaimMappings = ClaimMetadataHandler.getInstance()
                 .getMappingsMapFromOtherDialectToCarbon(OIDC_DIALECT, null, spTenantDomain, false);
@@ -449,7 +460,8 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
 
     private Map<String, String> getUserClaimsInLocalDialect(String username,
                                                             UserRealm realm,
-                                                            List<String> claimURIList) throws FrameworkException, UserStoreException {
+                                                            List<String> claimURIList)
+            throws UserStoreException {
         return realm.getUserStoreManager()
                 .getUserClaimValues(
                         MultitenantUtils.getTenantAwareUsername(username),
@@ -596,7 +608,8 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         }
 
         AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(authorizationCode);
-        AuthorizationGrantCacheEntry cacheEntry = AuthorizationGrantCache.getInstance().getValueFromCacheByCode(cacheKey);
+        AuthorizationGrantCacheEntry cacheEntry =
+                AuthorizationGrantCache.getInstance().getValueFromCacheByCode(cacheKey);
         return cacheEntry == null ? new HashMap<>() : cacheEntry.getUserAttributes();
     }
 

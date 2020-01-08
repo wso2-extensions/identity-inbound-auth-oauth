@@ -33,6 +33,9 @@ import org.wso2.carbon.identity.oidc.dcr.factory.HttpOIDCRegistrationResponseFac
 import org.wso2.carbon.identity.oidc.dcr.factory.OIDCRegistrationRequestFactory;
 import org.wso2.carbon.identity.oidc.dcr.processor.OIDCDCRProcessor;
 
+/**
+ * OIDC DCR service component.
+ */
 @Component(
         name = "identity.oidc.dcr",
         immediate = true
@@ -64,7 +67,6 @@ public class OIDCDCRServiceComponent {
             log.debug("Stopping OIDCDCRServiceComponent");
         }
     }
-
 
     /**
      * Sets ApplicationManagement Service.
@@ -99,6 +101,5 @@ public class OIDCDCRServiceComponent {
         }
         OIDCDCRDataHolder.getInstance().setApplicationManagementService(null);
     }
-
 
 }

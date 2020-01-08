@@ -24,7 +24,7 @@ import org.wso2.carbon.identity.application.authentication.framework.store.Sessi
 import org.wso2.carbon.identity.application.common.cache.BaseCache;
 
 /**
- * This is the class which caches OIDC session state information
+ * This is the class which caches OIDC session state information.
  */
 public class OIDCSessionParticipantCache
         extends BaseCache<OIDCSessionParticipantCacheKey, OIDCSessionParticipantCacheEntry> {
@@ -35,15 +35,17 @@ public class OIDCSessionParticipantCache
     private static volatile OIDCSessionParticipantCache instance;
 
     private OIDCSessionParticipantCache() {
+
         super(OIDC_SESSION_PARTICIPANT_CACHE_NAME);
     }
 
     /**
-     * Returns OIDCSessionParticipantCache singleton instance
+     * Returns OIDCSessionParticipantCache singleton instance.
      *
      * @return OIDCSessionParticipantCache instance
      */
     public static OIDCSessionParticipantCache getInstance() {
+
         if (instance == null) {
             synchronized (OIDCSessionParticipantCache.class) {
                 if (instance == null) {
@@ -55,16 +57,17 @@ public class OIDCSessionParticipantCache
     }
 
     /**
-     * Adds session information to the cache
-     * Cache key includes the browser state cookie id
+     * Adds session information to the cache.
+     * Cache key includes the browser state cookie id.
      * Cache entry includes the authenticated user, and clients authenticated for that user who participates in the
-     * same browser session
+     * same browser session.
      *
      * @param key   Key which cache entry is indexed.
      * @param entry Actual object where cache entry is placed.
      */
     @Override
     public void addToCache(OIDCSessionParticipantCacheKey key, OIDCSessionParticipantCacheEntry entry) {
+
         super.addToCache(key, entry);
         SessionDataStore.getInstance().storeSessionData(key.getSessionID(), OIDC_SESSION_PARTICIPANT_CACHE_NAME, entry);
         if (log.isDebugEnabled()) {
@@ -82,6 +85,7 @@ public class OIDCSessionParticipantCache
      */
     @Override
     public OIDCSessionParticipantCacheEntry getValueFromCache(OIDCSessionParticipantCacheKey key) {
+
         OIDCSessionParticipantCacheEntry entry = super.getValueFromCache(key);
         if (entry == null) {
             if (log.isDebugEnabled()) {
@@ -96,12 +100,13 @@ public class OIDCSessionParticipantCache
     }
 
     /**
-     * Clears the session information from the cache and remove from persistence store
+     * Clears the session information from the cache and remove from persistence store.
      *
      * @param key Key to clear cache.
      */
     @Override
     public void clearCacheEntry(OIDCSessionParticipantCacheKey key) {
+
         super.clearCacheEntry(key);
         SessionDataStore.getInstance().clearSessionData(key.getSessionID(), OIDC_SESSION_PARTICIPANT_CACHE_NAME);
         if (log.isDebugEnabled()) {

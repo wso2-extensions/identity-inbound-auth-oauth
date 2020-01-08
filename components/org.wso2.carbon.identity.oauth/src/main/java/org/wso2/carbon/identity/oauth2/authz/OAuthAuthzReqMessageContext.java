@@ -22,6 +22,9 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 
 import java.util.Properties;
 
+/**
+ * OAuth authorization request message context.
+ */
 public class OAuthAuthzReqMessageContext {
 
     private OAuth2AuthorizeReqDTO authorizationReqDTO;
@@ -33,35 +36,39 @@ public class OAuthAuthzReqMessageContext {
     private long authorizationCodeValidityPeriod;
 
     private long accessTokenValidityPeriod;
-    
-    private long refreshTokenvalidityPeriod;
-    
-    private long accessTokenIssuedTime;
-    
-    private long refreshTokenIssuedTime;
-    
-    private long codeIssuedTime;
 
+    private long refreshTokenvalidityPeriod;
+
+    private long accessTokenIssuedTime;
+
+    private long refreshTokenIssuedTime;
+
+    private long codeIssuedTime;
 
     private Properties properties = new Properties();
 
     public OAuthAuthzReqMessageContext(OAuth2AuthorizeReqDTO authorizationReqDTO) {
+
         this.authorizationReqDTO = authorizationReqDTO;
     }
 
     public OAuth2AuthorizeReqDTO getAuthorizationReqDTO() {
+
         return authorizationReqDTO;
     }
 
     public void setAuthorizationReqDTO(OAuth2AuthorizeReqDTO authorizationReqDTO) {
+
         this.authorizationReqDTO = authorizationReqDTO;
     }
 
     public String[] getApprovedScope() {
+
         return approvedScope;
     }
 
     public void setApprovedScope(String[] approvedScope) {
+
         this.approvedScope = approvedScope;
     }
 
@@ -70,6 +77,7 @@ public class OAuthAuthzReqMessageContext {
      * @deprecated Avoid using this, use getAccessTokenValidityPeriod or getOAuthorizationCodeValidityPeriod instead
      */
     public long getValidityPeriod() {
+
         return validityPeriod;
     }
 
@@ -78,62 +86,77 @@ public class OAuthAuthzReqMessageContext {
      * @deprecated Avoid using this, use setAccessTokenValidityPeriod or setOAuthorizationCodeValidityPeriod instead
      */
     public void setValidityPeriod(long validityPeriod) {
+
         this.validityPeriod = validityPeriod;
     }
 
     public long getAuthorizationCodeValidityPeriod() {
+
         return authorizationCodeValidityPeriod;
     }
 
     public void setAuthorizationCodeValidityPeriod(long oauthorizationCodeValidityPeriod) {
+
         this.authorizationCodeValidityPeriod = oauthorizationCodeValidityPeriod;
     }
 
     public long getAccessTokenValidityPeriod() {
+
         return accessTokenValidityPeriod;
     }
 
     public void setAccessTokenValidityPeriod(long accessTokenValidityPeriod) {
+
         this.accessTokenValidityPeriod = accessTokenValidityPeriod;
     }
 
     public void addProperty(Object propName, Object propValue) {
+
         properties.put(propName, propValue);
     }
 
     public Object getProperty(Object propName) {
+
         return properties.get(propName);
     }
 
     public long getRefreshTokenvalidityPeriod() {
-	return refreshTokenvalidityPeriod;
+
+        return refreshTokenvalidityPeriod;
     }
 
     public void setRefreshTokenvalidityPeriod(long refreshTokenvalidityPeriod) {
-	this.refreshTokenvalidityPeriod = refreshTokenvalidityPeriod;
+
+        this.refreshTokenvalidityPeriod = refreshTokenvalidityPeriod;
     }
 
     public long getAccessTokenIssuedTime() {
-	return accessTokenIssuedTime;
+
+        return accessTokenIssuedTime;
     }
 
     public void setAccessTokenIssuedTime(long accessTokenIssuedTime) {
-	this.accessTokenIssuedTime = accessTokenIssuedTime;
+
+        this.accessTokenIssuedTime = accessTokenIssuedTime;
     }
 
     public long getRefreshTokenIssuedTime() {
-	return refreshTokenIssuedTime;
+
+        return refreshTokenIssuedTime;
     }
 
     public void setRefreshTokenIssuedTime(long refreshTokenIssuedTime) {
-	this.refreshTokenIssuedTime = refreshTokenIssuedTime;
+
+        this.refreshTokenIssuedTime = refreshTokenIssuedTime;
     }
 
     public long getCodeIssuedTime() {
-	return codeIssuedTime;
+
+        return codeIssuedTime;
     }
 
     public void setCodeIssuedTime(long codeIssuedTime) {
-	this.codeIssuedTime = codeIssuedTime;
+
+        this.codeIssuedTime = codeIssuedTime;
     }
 }

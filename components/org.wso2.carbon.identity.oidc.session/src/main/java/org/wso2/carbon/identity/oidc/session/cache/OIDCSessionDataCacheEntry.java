@@ -24,7 +24,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
- * This class holds request session information and gets cached against a cache key
+ * This class holds request session information and gets cached against a cache key.
  */
 public class OIDCSessionDataCacheEntry extends CacheEntry {
 
@@ -36,34 +36,42 @@ public class OIDCSessionDataCacheEntry extends CacheEntry {
     private ConcurrentMap<String, String> paramMap = new ConcurrentHashMap<String, String>();
 
     public String getPostLogoutRedirectUri() {
+
         return postLogoutRedirectUri;
     }
 
     public void setPostLogoutRedirectUri(String postLogoutRedirectUri) {
+
         this.postLogoutRedirectUri = postLogoutRedirectUri;
     }
 
     public String getState() {
+
         return state;
     }
 
     public void setState(String state) {
+
         this.state = state;
     }
 
     public String getIdToken() {
+
         return idToken;
     }
 
     public void setIdToken(String idToken) {
+
         this.idToken = idToken;
     }
 
     public ConcurrentMap<String, String> getParamMap() {
+
         return paramMap;
     }
 
     public void setParamMap(ConcurrentMap<String, String> paramMap) {
+
         this.paramMap = paramMap;
     }
 }

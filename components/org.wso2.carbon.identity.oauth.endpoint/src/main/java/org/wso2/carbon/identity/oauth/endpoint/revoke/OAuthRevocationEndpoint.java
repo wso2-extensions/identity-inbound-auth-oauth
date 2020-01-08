@@ -39,6 +39,7 @@ import org.wso2.carbon.identity.oauth2.ResponseHeader;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationResponseDTO;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
@@ -66,6 +67,9 @@ import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getRealm
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.startSuperTenantFlow;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.validateParams;
 
+/**
+ * Rest implementation for oauth revocation endpoint.
+ */
 @Path("/revoke")
 @InInterceptors(classes = OAuthClientAuthenticatorProxy.class)
 public class OAuthRevocationEndpoint {
@@ -110,7 +114,8 @@ public class OAuthRevocationEndpoint {
 
     }
 
-    private Response handleRevokeResponse(String callback, OAuthRevocationResponseDTO oauthRevokeResp) throws OAuthSystemException {
+    private Response handleRevokeResponse(String callback, OAuthRevocationResponseDTO oauthRevokeResp)
+            throws OAuthSystemException {
 
         OAuthResponse response;
         if (isNotEmpty(callback)) {
@@ -156,15 +161,18 @@ public class OAuthRevocationEndpoint {
     }
 
     private boolean isErrorUnauthorizedClient(OAuthRevocationResponseDTO oauthRevokeResp) {
+
         return OAuth2ErrorCodes.UNAUTHORIZED_CLIENT.equals(oauthRevokeResp.getErrorCode());
     }
 
     private boolean isErrorInvalidClient(OAuthRevocationResponseDTO oauthRevokeResp) {
+
         return OAuth2ErrorCodes.INVALID_CLIENT.equals(oauthRevokeResp.getErrorCode());
     }
 
     private OAuthRevocationRequestDTO buildOAuthRevocationRequest(HttpServletRequest request,
-            MultivaluedMap<String, String> paramMap, String token, String tokenType) {
+                                                                  MultivaluedMap<String, String> paramMap, String token,
+                                                                  String tokenType) {
 
         OAuthRevocationRequestDTO revokeRequest = new OAuthRevocationRequestDTO();
         Object oauthClientAuthnContextObj = request.getAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT);
@@ -181,11 +189,12 @@ public class OAuthRevocationEndpoint {
         if (isNotEmpty(tokenType)) {
             revokeRequest.setTokenType(tokenType);
         }
+        revokeRequest.setRequest(request);
         return revokeRequest;
     }
 
     private void validateAuthorizationHeader(HttpServletRequest request, MultivaluedMap<String, String> paramMap,
-                               String callback) throws RevokeEndpointAccessDeniedException {
+                                             String callback) throws RevokeEndpointAccessDeniedException {
 
         try {
             // The client MUST NOT use more than one authentication method in each request
@@ -214,14 +223,17 @@ public class OAuthRevocationEndpoint {
     }
 
     private boolean isClientCredentialsExistsAsParams(MultivaluedMap<String, String> paramMap) {
+
         return paramMap.containsKey(OAuth.OAUTH_CLIENT_ID) && paramMap.containsKey(OAuth.OAUTH_CLIENT_SECRET);
     }
 
     private String[] getClientCredentials(HttpServletRequest request) throws OAuthClientException {
+
         return extractCredentialsFromAuthzHeader(request.getHeader(HTTP_REQ_HEADER_AUTHZ));
     }
 
     private boolean isAuthorizationHeaderExists(@Context HttpServletRequest request) {
+
         return request.getHeader(HTTP_REQ_HEADER_AUTHZ) != null;
     }
 
@@ -235,6 +247,7 @@ public class OAuthRevocationEndpoint {
     }
 
     private boolean isCallbackExistsAsParam(MultivaluedMap<String, String> paramMap) {
+
         return paramMap.get(CALLBACK_PARAM) != null && !paramMap.get(CALLBACK_PARAM).isEmpty();
     }
 
@@ -252,6 +265,7 @@ public class OAuthRevocationEndpoint {
     }
 
     private boolean isTokenTypeExistsAsParam(MultivaluedMap<String, String> paramMap) {
+
         return paramMap.get(TOKEN_TYPE_HINT_PARAM) != null && !paramMap.get(TOKEN_TYPE_HINT_PARAM).isEmpty();
     }
 
@@ -265,11 +279,13 @@ public class OAuthRevocationEndpoint {
     }
 
     private boolean isTokenExistsAsParam(MultivaluedMap<String, String> paramMap) {
+
         return paramMap.get(TOKEN_PARAM) != null && !paramMap.get(TOKEN_PARAM).isEmpty();
     }
 
     private Response handleAuthorizationFailure(String callback)
             throws OAuthSystemException {
+
         if (isBlank(callback)) {
             OAuthResponse response = OAuthASResponse.errorResponse(HttpServletResponse.SC_UNAUTHORIZED)
                     .setError(OAuth2ErrorCodes.UNAUTHORIZED_CLIENT)
@@ -331,6 +347,7 @@ public class OAuthRevocationEndpoint {
     }
 
     private OAuthRevocationResponseDTO revokeTokens(OAuthRevocationRequestDTO oauthRequest) {
+
         return getOAuth2Service().revokeTokenByOAuthClient(oauthRequest);
     }
 

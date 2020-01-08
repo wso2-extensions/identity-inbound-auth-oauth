@@ -51,6 +51,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+/**
+ * OAuth DCR Management class used to manage OAuth application registration.
+ */
 public class DCRManagementService {
 
     private static final Log log = LogFactory.getLog(DCRManagementService.class);
@@ -64,9 +67,11 @@ public class DCRManagementService {
     private static DCRManagementService dcrManagementService = new DCRManagementService();
 
     private DCRManagementService() {
+
     }
 
     public static DCRManagementService getInstance() {
+
         return DCRManagementService.dcrManagementService;
     }
 
@@ -80,7 +85,6 @@ public class DCRManagementService {
      */
     public RegistrationResponseProfile registerOAuthApplication(RegistrationRequestProfile profile)
             throws DCRException {
-
 
         String applicationName = profile.getClientName();
 
@@ -109,7 +113,7 @@ public class DCRManagementService {
 
         //Subscriber's name should be passed as a parameter, since it's under the subscriber
         //the OAuth App is created.
-        String owner =  profile.getOwner();
+        String owner = profile.getOwner();
         // Replace all unsupported characters
         String ownerName = owner.replaceAll(String.valueOf(DCRConstants.UNSUPPORTED_CHARACTERS_IN_REGISTRY), "_");
         String applicationName = ownerName + "_" + profile.getClientName();
@@ -151,12 +155,12 @@ public class DCRManagementService {
                 if (existingServiceProvider == null) {
                     appMgtService.createApplication(serviceProvider, profile.getTenantDomain(), userName);
                     createdServiceProvider = appMgtService.getServiceProvider(applicationName,
-                                                                              profile.getTenantDomain());
+                            profile.getTenantDomain());
                 } else {
                     String errorMessage = "Service Provider with name: " + applicationName +
-                        " already registered";
+                            " already registered";
                     throw IdentityException.error(DCRException.class,
-                        ErrorCodes.META_DATA_VALIDATION_FAILED.toString(), errorMessage);
+                            ErrorCodes.META_DATA_VALIDATION_FAILED.toString(), errorMessage);
                 }
 
             } catch (IdentityApplicationManagementException e) {
@@ -238,8 +242,8 @@ public class DCRManagementService {
             }
             inboundAuthenticationRequestConfigs.add(inboundAuthenticationRequestConfig);
             inboundAuthenticationConfig.setInboundAuthenticationRequestConfigs(inboundAuthenticationRequestConfigs
-                                                                                       .toArray(new InboundAuthenticationRequestConfig[inboundAuthenticationRequestConfigs
-                                                                                               .size()]));
+                    .toArray(new InboundAuthenticationRequestConfig[inboundAuthenticationRequestConfigs
+                            .size()]));
             createdServiceProvider.setInboundAuthenticationConfig(inboundAuthenticationConfig);
 
             // Update the Service Provider app to add OAuthApp as an Inbound Authentication Config
@@ -273,7 +277,6 @@ public class DCRManagementService {
      * @param userId          - UserId of the owner
      * @param applicationName - OAuth application name
      * @param consumerKey     - ConsumerKey of the OAuth application
-     * @return The status of the operation
      * @throws DCRException
      */
     public void unregisterOAuthApplication(String userId, String applicationName, String consumerKey)
@@ -298,7 +301,7 @@ public class DCRManagementService {
         } catch (Exception e) {
             //We had to catch Exception here because getOAuthApplicationData can throw exceptions of java.lang.Exception
             // class.
-            if(log.isDebugEnabled()) {
+            if (log.isDebugEnabled()) {
                 log.debug("Error occurred while oauth application data by consumer id.", e);
             }
         }
@@ -325,7 +328,7 @@ public class DCRManagementService {
                         "Error occurred while removing ServiceProvider for application '" + applicationName + "'", e);
             } catch (IdentityOAuthAdminException e) {
                 throw new DCRException("Error occurred while removing application '" +
-                                       applicationName + "'", e);
+                        applicationName + "'", e);
             } finally {
                 PrivilegedCarbonContext.endTenantFlow();
             }
@@ -340,6 +343,7 @@ public class DCRManagementService {
      * @throws DCRException
      */
     public boolean isOAuthApplicationAvailable(String applicationName) throws DCRException {
+
         ApplicationManagementService appMgtService = DCRDataHolder.getInstance().
                 getApplicationManagementService();
         if (appMgtService == null) {
@@ -347,9 +351,9 @@ public class DCRManagementService {
         }
         try {
             return appMgtService
-                           .getServiceProvider(applicationName, CarbonContext.getThreadLocalCarbonContext()
-                                   .getTenantDomain())
-                   != null;
+                    .getServiceProvider(applicationName, CarbonContext.getThreadLocalCarbonContext()
+                            .getTenantDomain())
+                    != null;
         } catch (IdentityApplicationManagementException e) {
             throw new DCRException(
                     "Error occurred while retrieving information of OAuthApp " + applicationName, e);
@@ -357,6 +361,7 @@ public class DCRManagementService {
     }
 
     private String createRegexPattern(List<String> redirectURIs) throws DCRException {
+
         StringBuilder regexPattern = new StringBuilder();
         for (String redirectURI : redirectURIs) {
             try {
@@ -380,6 +385,7 @@ public class DCRManagementService {
     }
 
     protected Registry getConfigSystemRegistry() {
+
         return (Registry) PrivilegedCarbonContext.getThreadLocalCarbonContext().getRegistry(
                 RegistryType.SYSTEM_CONFIGURATION);
     }

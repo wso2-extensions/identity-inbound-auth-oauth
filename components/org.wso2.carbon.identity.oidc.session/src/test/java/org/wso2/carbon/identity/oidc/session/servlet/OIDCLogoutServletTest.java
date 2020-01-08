@@ -46,6 +46,7 @@ import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
 import java.security.KeyStore;
 import java.util.Arrays;
 import java.util.Collections;
+
 import javax.servlet.ServletException;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
@@ -65,7 +66,7 @@ import static org.testng.Assert.assertTrue;
         CarbonCoreDataHolder.class, IdentityDatabaseUtil.class, OAuth2Util.class,
         OIDCSessionManagementComponentServiceHolder.class})
 /**
- * Unit test coverage for OIDCLogoutServlet class
+ * Unit test coverage for OIDCLogoutServlet class.
  */
 public class OIDCLogoutServletTest extends TestOIDCSessionBase {
 
@@ -114,46 +115,51 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
     private static final String CALLBACK_URL = "http://localhost:8080/playground2/oauth2client";
     private static final String OPBROWSER_STATE = "090907ce-eab0-40d2-a46d-acd4bb33f0d0";
     private static final int TENANT_ID = -1234;
+    private static final String SUPER_TENANT_DOMAIN_NAME = "carbon.super";
     private static final String INVALID_CALLBACK_URL = "http://localhost:8080/playground2/auth";
     private static final String REGEX_CALLBACK_URL = "regexp=http://localhost:8080/playground2/oauth2client";
-
 
     private OIDCLogoutServlet logoutServlet;
 
     @BeforeTest
     public void setUp() throws Exception {
+
         logoutServlet = new OIDCLogoutServlet();
 
         initiateInMemoryH2();
         createOAuthApp(CLIENT_ID_VALUE, SECRET, USERNAME, APP_NAME, "ACTIVE", CALLBACK_URL);
-        createOAuthApp(CLIENT_ID_WITH_REGEX_CALLBACK, SECRET, USERNAME, APP_NAME, "ACTIVE", REGEX_CALLBACK_URL);
+        createOAuthApp(CLIENT_ID_WITH_REGEX_CALLBACK, SECRET, USERNAME, APP_NAME, "ACTIVE",
+                REGEX_CALLBACK_URL);
         createOAuthApp(CLIENT_ID_FOR_REALM_TEST, SECRET, USERNAME, APP_NAME, "ACTIVE", CALLBACK_URL);
 
     }
 
     @DataProvider(name = "provideDataForTestDoGet")
     public Object[][] provideDataForTestDoGet() {
+
         Cookie opbsCookie = new Cookie("opbs", OPBROWSER_STATE);
 
         String idTokenHint =
                 "eyJ4NXQiOiJOVEF4Wm1NeE5ETXlaRGczTVRVMVpHTTBNekV6T0RKaFpXSTRORE5sWkRVMU9HRmtOakZpTVEiLCJr" +
-                        "aWQiOiJOVEF4Wm1NeE5ETXlaRGczTVRVMVpHTTBNekV6T0RKaFpXSTRORE5sWkRVMU9HRmtOakZpTVEiLCJhbGciOiJSUzI1" +
-                        "NiJ9.eyJzdWIiOiJhZG1pbiIsImF1ZCI6WyIzVDlsMnVVZjhBek5PZm1HUzlsUEVJc2RyUjhhIl0sImF6cCI6IjNUOWwydVVmO" +
-                        "EF6Tk9mbUdTOWxQRUlzZHJSOGEiLCJhdXRoX3RpbWUiOjE1MDcwMDk0MDQsImlzcyI6Imh0dHBzOlwvXC9sb2NhbGhvc3Q6OTQ0M" +
-                        "1wvb2F1dGgyXC90b2tlbiIsImV4cCI6MTUwNzAxMzAwNSwibm9uY2UiOiJDcXNVOXdabFFJWUdVQjg2IiwiaWF0IjoxNTA3MDA5ND" +
-                        "A1fQ.ivgnkuW-EFT7m55Mr1pyit1yALwVxrHjVqmgSley1lUhZNAlJMxefs6kjSbGStQg-mqEv0VQ7NJkZu0w1kYYD_76-KkjI1sk" +
-                        "P1zEqSXMhTyE8UtQ-CpR1w8bnTU7D50v-537z8vTf7PnTTA-wxpTuoYmv4ya2z0Rv-gFTM4KPdxsc7j6yFuQcfWg5SyP9lYpJdt-s-O" +
-                        "w9FY1rlUVvNbtF1u2Fruc1kj9jkjSbvFgSONRhizRH6P_25v0LpgNZrOpiLZF92CtkCBbAGQChWACN6RWDpy5Fj2JuQMNcCvkxlv" +
-                        "OVcx-7biH16qVnY9UFs4DxZo2cGzyWbXuH8sDTkzQBg";
+                        "aWQiOiJOVEF4Wm1NeE5ETXlaRGczTVRVMVpHTTBNekV6T0RKaFpXSTRORE5sWkRVMU9HRmtOakZpTVEi" +
+                        "LCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJhZG1pbiIsImF1ZCI6WyIzVDlsMnVVZjhBek5PZm1HUzlsUEV" +
+                        "Jc2RyUjhhIl0sImF6cCI6IjNUOWwydVVmOEF6Tk9mbUdTOWxQRUlzZHJSOGEiLCJhdXRoX3RpbWUiOjE" +
+                        "1MDcwMDk0MDQsImlzcyI6Imh0dHBzOlwvXC9sb2NhbGhvc3Q6OTQ0M1wvb2F1dGgyXC90b2tlbiIsImV" +
+                        "4cCI6MTUwNzAxMzAwNSwibm9uY2UiOiJDcXNVOXdabFFJWUdVQjg2IiwiaWF0IjoxNTA3MDA5NDA1fQ." +
+                        "ivgnkuW-EFT7m55Mr1pyit1yALwVxrHjVqmgSley1lUhZNAlJMxefs6kjSbGStQg-mqEv0VQ7NJkZu0w" +
+                        "1kYYD_76-KkjI1skP1zEqSXMhTyE8UtQ-CpR1w8bnTU7D50v-537z8vTf7PnTTA-wxpTuoYmv4ya2z0R" +
+                        "v-gFTM4KPdxsc7j6yFuQcfWg5SyP9lYpJdt-s-Ow9FY1rlUVvNbtF1u2Fruc1kj9jkjSbvFgSONRhizR" +
+                        "H6P_25v0LpgNZrOpiLZF92CtkCBbAGQChWACN6RWDpy5Fj2JuQMNcCvkxlvOVcx-7biH16qVnY9UFs4D" +
+                        "xZo2cGzyWbXuH8sDTkzQBg";
 
         String invalidIdToken =
                 "eyJ4NXQiOiJOVEF4Wm1NeE5ETXlaRGczTVRVMVpHTTBNekV6T0RKaFpXSTRORE5sWkRVMU9HRmtOakZpTVEiLCJr" +
-                        "aWQiOiJOVEF4Wm1NeE5ETXlaRGczTVRVMVpHTTBNekV6T0RKaFpXSTRORE5sWkRVMU9HRmtOakZpTVEiLCJhbGciOiJSUzI1" +
-                        "NiJ9.ivgnkuW-EFT7m55Mr1pyit1yALwVxrHjVqmgSley1lUhZNAlJMxefs6kjSbGStQg" +
-                        "-mqEv0VQ7NJkZu0w1kYYD_76-KkjI1sk" +
-                        "P1zEqSXMhTyE8UtQ-CpR1w8bnTU7D50v-537z8vTf7PnTTA-wxpTuoYmv4ya2z0Rv-gFTM4KPdxsc7j6yFuQcfWg5SyP9lYpJdt-s-O" +
-                        "w9FY1rlUVvNbtF1u2Fruc1kj9jkjSbvFgSONRhizRH6P_25v0LpgNZrOpiLZF92CtkCBbAGQChWACN6RWDpy5Fj2JuQMNcCvkxlv" +
-                        "OVcx-7biH16qVnY9UFs4DxZo2cGzyWbXuH8sDTkzQBg";
+                        "aWQiOiJOVEF4Wm1NeE5ETXlaRGczTVRVMVpHTTBNekV6T0RKaFpXSTRORE5sWkRVMU9HRmtOakZpTVEi" +
+                        "LCJhbGciOiJSUzI1NiJ9.ivgnkuW-EFT7m55Mr1pyit1yALwVxrHjVqmgSley1lUhZNAlJMxefs6kjSbGStQg" +
+                        "-mqEv0VQ7NJkZu0w1kYYD_76-KkjI1skP1zEqSXMhTyE8UtQ-CpR1w8bnTU7D50v-537z8vTf7PnTTA-wxpTu" +
+                        "oYmv4ya2z0Rv-gFTM4KPdxsc7j6yFuQcfWg5SyP9lYpJdt-s-Ow9FY1rlUVvNbtF1u2Fruc1kj9jkjSbvFgSO" +
+                        "NRhizRH6P_25v0LpgNZrOpiLZF92CtkCBbAGQChWACN6RWDpy5Fj2JuQMNcCvkxlvOVcx-7biH16qVnY9UFs4" +
+                        "DxZo2cGzyWbXuH8sDTkzQBg";
 
         String[] redirectUrl = {
                 "?oauthErrorCode=access_denied&oauthErrorMsg=opbs+cookie+not+received.+Missing+session+state.",
@@ -165,46 +171,48 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
                 "?oauthErrorCode=access_denied&oauthErrorMsg=ID+token+signature+validation+failed.",
                 "?oauthErrorCode=access_denied&oauthErrorMsg=Post+logout+URI+does+not+match+with+registered+callback" +
                         "+URI.",
-                "?oauthErrorCode=access_denied&oauthErrorMsg=Error+occurred+while+getting+application+information.+Clien" +
-                        "t+id+not+found",
+                "?oauthErrorCode=access_denied&oauthErrorMsg=Error+occurred+while+getting+application+information.+C" +
+                        "lient+id+not+found",
                 "/authenticationendpoint/retry.do"
         };
 
-        String IDTokenNotAddedToDB =
+        String idTokenNotAddedToDB =
                 "eyJ4NXQiOiJOVEF4Wm1NeE5ETXlaRGczTVRVMVpHTTBNekV6T0RKaFpXSTRORE5sWkRVMU9HRmtOakZpTVEiLCJraWQiOiJOVEF" +
-                        "4Wm1NeE5ETXlaRGczTVRVMVpHTTBNekV6T0RKaFpXSTRORE5sWkRVMU9HRmtOakZpTVEiLCJhbGciOiJSUzI1NiJ9.eyJz" +
-                        "dWIiOiJhZG1pbiIsImF1ZCI6WyJ1NUZJZkc1eHpMdkJHaWFtb0FZenpjcXBCcWdhIl0sImF6cCI6InU1RklmRzV4ekx2Qkd" +
-                        "pYW1vQVl6emNxcEJxZ2EiLCJhdXRoX3RpbWUiOjE1MDY1NzYwODAsImlzcyI6Imh0dHBzOlwvXC9sb2NhbGhvc3Q6OTQ0" +
-                        "M1wvb2F1dGgyXC90b2tlbiIsImV4cCI6MTUwNjU3OTY4NCwibm9uY2UiOiIwZWQ4ZjFiMy1lODNmLTQ2YzAtOGQ1Mi1m" +
-                        "MGQyZTc5MjVmOTgiLCJpYXQiOjE1MDY1NzYwODQsInNpZCI6Ijg3MDZmNWRhLTU0ZmMtNGZiMC1iNGUxLTY5MDZmYTRiM" +
-                        "DRjMiJ9.HopPYFs4lInXvGztNEkJKh8Kdy52eCGbzYy6PiVuM_BlCcGff3SHOoZxDH7JbIkPpKBe0cnYQWBxfHuGTUWhv" +
-                        "nu629ek6v2YLkaHlb_Lm04xLD9FNxuZUNQFw83pQtDVpoX5r1V-F0DdUc7gA1RKN3xMVYgRyfslRDveGYplxVVNQ1LU3l" +
-                        "rZhgaTfcMEsC6rdbd1HjdzG71EPS4674HCSAUelOisNKGa2NgORpldDQsj376QD0G9Mhc8WtWoguftrCCGjBy1kKT4VqF" +
-                        "LOqlA-8wUhOj_rZT9SUIBQRDPu0RZobvsskqYo40GEZrUoabrhbwv_QpDTf6-7-nrEjT7WA";
+                        "4Wm1NeE5ETXlaRGczTVRVMVpHTTBNekV6T0RKaFpXSTRORE5sWkRVMU9HRmtOakZpTVEiLCJhbGciOiJSUzI1NiJ9.e" +
+                        "yJzdWIiOiJhZG1pbiIsImF1ZCI6WyJ1NUZJZkc1eHpMdkJHaWFtb0FZenpjcXBCcWdhIl0sImF6cCI6InU1RklmRzV4" +
+                        "ekx2QkdpYW1vQVl6emNxcEJxZ2EiLCJhdXRoX3RpbWUiOjE1MDY1NzYwODAsImlzcyI6Imh0dHBzOlwvXC9sb2NhbGh" +
+                        "vc3Q6OTQ0M1wvb2F1dGgyXC90b2tlbiIsImV4cCI6MTUwNjU3OTY4NCwibm9uY2UiOiIwZWQ4ZjFiMy1lODNmLTQ2Yz" +
+                        "AtOGQ1Mi1mMGQyZTc5MjVmOTgiLCJpYXQiOjE1MDY1NzYwODQsInNpZCI6Ijg3MDZmNWRhLTU0ZmMtNGZiMC1iNGUxL" +
+                        "TY5MDZmYTRiMDRjMiJ9.HopPYFs4lInXvGztNEkJKh8Kdy52eCGbzYy6PiVuM_BlCcGff3SHOoZxDH7JbIkPpKBe0cn" +
+                        "YQWBxfHuGTUWhvnu629ek6v2YLkaHlb_Lm04xLD9FNxuZUNQFw83pQtDVpoX5r1V-F0DdUc7gA1RKN3xMVYgRyfslRD" +
+                        "veGYplxVVNQ1LU3lrZhgaTfcMEsC6rdbd1HjdzG71EPS4674HCSAUelOisNKGa2NgORpldDQsj376QD0G9Mhc8WtWog" +
+                        "uftrCCGjBy1kKT4VqFLOqlA-8wUhOj_rZT9SUIBQRDPu0RZobvsskqYo40GEZrUoabrhbwv_QpDTf6-7-nrEjT7WA";
 
         String idTokenWithRegexCallBack =
-                "eyJ4NXQiOiJOVEF4Wm1NeE5ETXlaRGczTVRVMVpHTTBNekV6T0RKaFpXSTRORE5sWkRVMU9HRmtOa" +
-                        "kZpTVEiLCJraWQiOiJOVEF4Wm1NeE5ETXlaRGczTVRVMVpHTTBNekV6T0RKaFpXSTRORE5sWkRVMU9HRmtOakZpTVEiLCJhbGciO" +
-                        "iJSUzI1NiJ9.eyJzdWIiOiJhZG1pbiIsImF1ZCI6WyJjRzFINTJ6Zm5rRkVoM1VMVDB5VGkxNGJaUlVhIl0sImF6cCI6ImNHMUg1Mn" +
-                        "pmbmtGRWgzVUxUMHlUaTE0YlpSVWEiLCJhdXRoX3RpbWUiOjE1MDg0MDcyOTYsImlzcyI6Imh0dHBzOlwvXC9sb2NhbGhvc3Q6OTQ0" +
-                        "M1wvb2F1dGgyXC90b2tlbiIsImV4cCI6MTUwODQxMDg5OCwibm9uY2UiOiJDcXNVOXdabFFJWUdVQjg2IiwiaWF0IjoxNTA4NDA3Mj" +
-                        "k4LCJzaWQiOiI3YjI1YzJjOC01YjVlLTQ0YzAtYWVjZS02MDE4ZDgyZTY4MDIifQ.DS9bThwHV3Ecp_ziYw52B_zpza6sxMqLaVTv" +
-                        "H5Qrxxbd9l2iPo56HuSzmT_ul0nzYYHcaQGbuO1LLe6kcSk7wwbbCG7vacjyBnJ4nT8SHGOtTOOjt1srQuNiZlgibi2LbQU0RUFaNq" +
-                        "1_3e0PtAQyWOvqugYFbdZc-SgrJSGHet7RxMHTcQxp785hnz8J-lUv5jCrMAuCOJprLzL9EEvX8tHYpmZfyj3UWR8YskLnDmVDnNhqDGt" +
-                        "buZ0Ebn3ppKSsJwsm0ITitQ4uXfYdgEx_EH4gniRThFD2X9rzfP-SXW0eaYHcrRO0zgZr6CIZQNmLQdgc7p5K_AAbPiycod82tg";
+                "eyJ4NXQiOiJOVEF4Wm1NeE5ETXlaRGczTVRVMVpHTTBNekV6T0RKaFpXSTRORE5sWkRVMU9HRmtOakZpTVEiLCJraWQiOiJOVEF" +
+                        "4Wm1NeE5ETXlaRGczTVRVMVpHTTBNekV6T0RKaFpXSTRORE5sWkRVMU9HRmtOakZpTVEiLCJhbGciOiJSUzI1NiJ9.e" +
+                        "yJzdWIiOiJhZG1pbiIsImF1ZCI6WyJjRzFINTJ6Zm5rRkVoM1VMVDB5VGkxNGJaUlVhIl0sImF6cCI6ImNHMUg1Mnpm" +
+                        "bmtGRWgzVUxUMHlUaTE0YlpSVWEiLCJhdXRoX3RpbWUiOjE1MDg0MDcyOTYsImlzcyI6Imh0dHBzOlwvXC9sb2NhbGh" +
+                        "vc3Q6OTQ0M1wvb2F1dGgyXC90b2tlbiIsImV4cCI6MTUwODQxMDg5OCwibm9uY2UiOiJDcXNVOXdabFFJWUdVQjg2Ii" +
+                        "wiaWF0IjoxNTA4NDA3Mjk4LCJzaWQiOiI3YjI1YzJjOC01YjVlLTQ0YzAtYWVjZS02MDE4ZDgyZTY4MDIifQ.DS9bTh" +
+                        "wHV3Ecp_ziYw52B_zpza6sxMqLaVTvH5Qrxxbd9l2iPo56HuSzmT_ul0nzYYHcaQGbuO1LLe6kcSk7wwbbCG7vacjyB" +
+                        "nJ4nT8SHGOtTOOjt1srQuNiZlgibi2LbQU0RUFaNq1_3e0PtAQyWOvqugYFbdZc-SgrJSGHet7RxMHTcQxp785hnz8J" +
+                        "-lUv5jCrMAuCOJprLzL9EEvX8tHYpmZfyj3UWR8YskLnDmVDnNhqDGtbuZ0Ebn3ppKSsJwsm0ITitQ4uXfYdgEx_EH4" +
+                        "gniRThFD2X9rzfP-SXW0eaYHcrRO0zgZr6CIZQNmLQdgc7p5K_AAbPiycod82tg";
 
         String idTokenHintWithRealm =
-                "eyJ4NXQiOiJOVEF4Wm1NeE5ETXlaRGczTVRVMVpHTTBNekV6T0RKaFpXSTRORE5sWkRVMU9HRmtOakZpTVEiLCJraWQiOiJOVEF4Wm1" +
-                        "NeE5ETXlaRGczTVRVMVpHTTBNekV6T0RKaFpXSTRORE5sWkRVMU9HRmtOakZpTVEiLCJhbGciOiJSUzI1NiJ9.eyJhdF9oY" +
-                        "XNoIjoiazBvdFlvRV84b21WTnd3ZEJCYWJsdyIsImF1ZCI6IjVHeGhtU0w4OU9WcFdlZjR3emlvUnMxYURZSWEiLCJjX2hh" +
-                        "c2giOiI2Y25ZZ25ZNFBVemNRTHNOSldsX1lBIiwic3ViIjoiYWRtaW4iLCJuYmYiOjE1NTQ0Nzc0MTMsImF6cCI6IjVHeGh" +
-                        "tU0w4OU9WcFdlZjR3emlvUnMxYURZSWEiLCJhbXIiOlsiQmFzaWNBdXRoZW50aWNhdG9yIl0sImlzcyI6Imh0dHBzOlwvXC" +
-                        "9sb2NhbGhvc3Q6OTQ0M1wvb2F1dGgyXC90b2tlbiIsInJlYWxtIjp7InVzZXJzdG9yZSI6IlBSSU1BUlkiLCJ0ZW5hbnQiO" +
-                        "iJjYXJib24uc3VwZXIifSwiZXhwIjoxNTU0NDgxMDEzLCJpYXQiOjE1NTQ0Nzc0MTMsInNpZCI6ImJjM2IzOTRjLTRjOWQt" +
-                        "NGRlOS1iN2MzLTI0YWIwOGNiMmQzZiJ9.KTrYVZ8QrcQFKCL7TIvSZsvLl3VEKxGRXiREg04ej5AEAteSNZZaC6druoymc9" +
-                        "z9-9PQMRFknNIh5EUpdT6Z2MuiRJC5_jy2ufFQflUe6ppi5fpvxAGHDK794Rta2jktK1FOdj10Seg0wysMiJ0MqXv52g847" +
-                        "wHXnOCHX-LpfFO-paT3R-M8hrcEUiIo4NqW_0tEuY5A2TwBNKnKsKRINgwwgYcMyX--XZEZVzq-Op41izLehua7Yh88skbR" +
-                        "ns-v2ViNiVhocgWWc8KjzIip5zeLFuea4Uo2ncMdGw9pUybFa7tRquP67RTvimdKmFv9YzhkdA2RpJFw0k5Ly7BZCA";
+                "eyJ4NXQiOiJOVEF4Wm1NeE5ETXlaRGczTVRVMVpHTTBNekV6T0RKaFpXSTRORE5sWkRVMU9HRmtOakZpTVEiLCJraWQiOiJOVEF" +
+                        "4Wm1NeE5ETXlaRGczTVRVMVpHTTBNekV6T0RKaFpXSTRORE5sWkRVMU9HRmtOakZpTVEiLCJhbGciOiJSUzI1NiJ9.e" +
+                        "yJhdF9oYXNoIjoiazBvdFlvRV84b21WTnd3ZEJCYWJsdyIsImF1ZCI6IjVHeGhtU0w4OU9WcFdlZjR3emlvUnMxYURZ" +
+                        "SWEiLCJjX2hhc2giOiI2Y25ZZ25ZNFBVemNRTHNOSldsX1lBIiwic3ViIjoiYWRtaW4iLCJuYmYiOjE1NTQ0Nzc0MTM" +
+                        "sImF6cCI6IjVHeGhtU0w4OU9WcFdlZjR3emlvUnMxYURZSWEiLCJhbXIiOlsiQmFzaWNBdXRoZW50aWNhdG9yIl0sIm" +
+                        "lzcyI6Imh0dHBzOlwvXC9sb2NhbGhvc3Q6OTQ0M1wvb2F1dGgyXC90b2tlbiIsInJlYWxtIjp7InVzZXJzdG9yZSI6I" +
+                        "lBSSU1BUlkiLCJ0ZW5hbnQiOiJjYXJib24uc3VwZXIifSwiZXhwIjoxNTU0NDgxMDEzLCJpYXQiOjE1NTQ0Nzc0MTMs" +
+                        "InNpZCI6ImJjM2IzOTRjLTRjOWQtNGRlOS1iN2MzLTI0YWIwOGNiMmQzZiJ9.KTrYVZ8QrcQFKCL7TIvSZsvLl3VEKx" +
+                        "GRXiREg04ej5AEAteSNZZaC6druoymc9z9-9PQMRFknNIh5EUpdT6Z2MuiRJC5_jy2ufFQflUe6ppi5fpvxAGHDK794" +
+                        "Rta2jktK1FOdj10Seg0wysMiJ0MqXv52g847wHXnOCHX-LpfFO-paT3R-M8hrcEUiIo4NqW_0tEuY5A2TwBNKnKsKRI" +
+                        "NgwwgYcMyX--XZEZVzq-Op41izLehua7Yh88skbRns-v2ViNiVhocgWWc8KjzIip5zeLFuea4Uo2ncMdGw9pUybFa7t" +
+                        "RquP67RTvimdKmFv9YzhkdA2RpJFw0k5Ly7BZCA";
 
         return new Object[][]{
                 // opbs cookie is null.
@@ -263,7 +271,7 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
                         invalidIdToken, false, INVALID_CALLBACK_URL, null},
                 // Thorws IdentityOAuth2Exception since the id token is not added to DB
                 {opbsCookie, true, redirectUrl[8], "application", " ", null, false,
-                        IDTokenNotAddedToDB, false, INVALID_CALLBACK_URL, null},
+                        idTokenNotAddedToDB, false, INVALID_CALLBACK_URL, null},
                 // AuthenticatorFlowStatus = SUCCESS_COMPLETED
                 {opbsCookie, true, redirectUrl[5], CALLBACK_URL, " ", null, true,
                         idTokenHint, false, CALLBACK_URL, AuthenticatorFlowStatus.SUCCESS_COMPLETED},
@@ -278,7 +286,6 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
                 {opbsCookie, true, redirectUrl[5], CALLBACK_URL, " ", null, true,
                         idTokenHintWithRealm, false, CALLBACK_URL, null},
 
-
         };
     }
 
@@ -286,6 +293,7 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
     public void testDoGet(Object cookie, boolean sessionExists, String redirectUrl, String expected, String consent,
                           String sessionDataKey, boolean skipUserConsent, String idTokenHint,
                           boolean isJWTSignedWithSPKey, String postLogoutUrl, Object flowStatus) throws Exception {
+
         TestUtil.startTenantFlow(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
 
         mockStatic(OIDCSessionManagementUtil.class);
@@ -327,6 +335,7 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
 
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(TENANT_ID);
+        when(IdentityTenantUtil.getTenantDomain(TENANT_ID)).thenReturn(SUPER_TENANT_DOMAIN_NAME);
 
         mockStatic(OAuthServerConfiguration.class);
         when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
@@ -339,14 +348,16 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
                         .getFilePath("wso2carbon.jks"), "wso2carbon", "JKS"), "wso2carbon"));
 
         mockStatic(OIDCSessionManagementComponentServiceHolder.class);
-        when(OIDCSessionManagementComponentServiceHolder.getApplicationMgtService()).thenReturn(mockedApplicationManagementService);
+        when(OIDCSessionManagementComponentServiceHolder.getApplicationMgtService())
+                .thenReturn(mockedApplicationManagementService);
         when(mockedApplicationManagementService.getServiceProviderNameByClientId(
                 anyString(), anyString(), anyString())).thenReturn("SP1");
 
         mockStatic(OAuthServerConfiguration.class);
         when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
         when(oAuthServerConfiguration.getPersistenceProcessor()).thenReturn(tokenPersistenceProcessor);
-        when(tokenPersistenceProcessor.getProcessedClientId(anyString())).thenAnswer(invocation -> invocation.getArguments()[0]);
+        when(tokenPersistenceProcessor.getProcessedClientId(anyString()))
+                .thenAnswer(invocation -> invocation.getArguments()[0]);
         when(request.getParameter("post_logout_redirect_uri")).thenReturn(postLogoutUrl);
         mockStatic(IdentityDatabaseUtil.class);
         when(IdentityDatabaseUtil.getDBConnection()).thenAnswer(invocationOnMock -> dataSource.getConnection());
@@ -368,28 +379,30 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
         Cookie opbsCookie = new Cookie("opbs", OPBROWSER_STATE);
 
         String idTokenHint =
-                "eyJ4NXQiOiJOVEF4Wm1NeE5ETXlaRGczTVRVMVpHTTBNekV6T0RKaFpXSTRORE5sWkRVMU9HRmtOakZpTVEiLCJr" +
-                        "aWQiOiJOVEF4Wm1NeE5ETXlaRGczTVRVMVpHTTBNekV6T0RKaFpXSTRORE5sWkRVMU9HRmtOakZpTVEiLCJhbGciOiJSUzI1" +
-                        "NiJ9.eyJzdWIiOiJhZG1pbiIsImF1ZCI6WyIzVDlsMnVVZjhBek5PZm1HUzlsUEVJc2RyUjhhIl0sImF6cCI6IjNUOWwydVVmO" +
-                        "EF6Tk9mbUdTOWxQRUlzZHJSOGEiLCJhdXRoX3RpbWUiOjE1MDcwMDk0MDQsImlzcyI6Imh0dHBzOlwvXC9sb2NhbGhvc3Q6OTQ0M" +
-                        "1wvb2F1dGgyXC90b2tlbiIsImV4cCI6MTUwNzAxMzAwNSwibm9uY2UiOiJDcXNVOXdabFFJWUdVQjg2IiwiaWF0IjoxNTA3MDA5ND" +
-                        "A1fQ.ivgnkuW-EFT7m55Mr1pyit1yALwVxrHjVqmgSley1lUhZNAlJMxefs6kjSbGStQg-mqEv0VQ7NJkZu0w1kYYD_76-KkjI1sk" +
-                        "P1zEqSXMhTyE8UtQ-CpR1w8bnTU7D50v-537z8vTf7PnTTA-wxpTuoYmv4ya2z0Rv-gFTM4KPdxsc7j6yFuQcfWg5SyP9lYpJdt-s-O" +
-                        "w9FY1rlUVvNbtF1u2Fruc1kj9jkjSbvFgSONRhizRH6P_25v0LpgNZrOpiLZF92CtkCBbAGQChWACN6RWDpy5Fj2JuQMNcCvkxlv" +
-                        "OVcx-7biH16qVnY9UFs4DxZo2cGzyWbXuH8sDTkzQBg";
+                "eyJ4NXQiOiJOVEF4Wm1NeE5ETXlaRGczTVRVMVpHTTBNekV6T0RKaFpXSTRORE5sWkRVMU9HRmtOakZpTVEiLCJraWQiOiJOVEF" +
+                        "4Wm1NeE5ETXlaRGczTVRVMVpHTTBNekV6T0RKaFpXSTRORE5sWkRVMU9HRmtOakZpTVEiLCJhbGciOiJSUzI1NiJ9.e" +
+                        "yJzdWIiOiJhZG1pbiIsImF1ZCI6WyIzVDlsMnVVZjhBek5PZm1HUzlsUEVJc2RyUjhhIl0sImF6cCI6IjNUOWwydVVm" +
+                        "OEF6Tk9mbUdTOWxQRUlzZHJSOGEiLCJhdXRoX3RpbWUiOjE1MDcwMDk0MDQsImlzcyI6Imh0dHBzOlwvXC9sb2NhbGh" +
+                        "vc3Q6OTQ0M1wvb2F1dGgyXC90b2tlbiIsImV4cCI6MTUwNzAxMzAwNSwibm9uY2UiOiJDcXNVOXdabFFJWUdVQjg2Ii" +
+                        "wiaWF0IjoxNTA3MDA5NDA1fQ.ivgnkuW-EFT7m55Mr1pyit1yALwVxrHjVqmgSley1lUhZNAlJMxefs6kjSbGStQg-m" +
+                        "qEv0VQ7NJkZu0w1kYYD_76-KkjI1skP1zEqSXMhTyE8UtQ-CpR1w8bnTU7D50v-537z8vTf7PnTTA-wxpTuoYmv4ya2" +
+                        "z0Rv-gFTM4KPdxsc7j6yFuQcfWg5SyP9lYpJdt-s-Ow9FY1rlUVvNbtF1u2Fruc1kj9jkjSbvFgSONRhizRH6P_25v0" +
+                        "LpgNZrOpiLZF92CtkCBbAGQChWACN6RWDpy5Fj2JuQMNcCvkxlvOVcx-7biH16qVnY9UFs4DxZo2cGzyWbXuH8sDTkz" +
+                        "QBg";
 
         String idTokenHintWithRealm =
-                "eyJ4NXQiOiJOVEF4Wm1NeE5ETXlaRGczTVRVMVpHTTBNekV6T0RKaFpXSTRORE5sWkRVMU9HRmtOakZpTVEiLCJraWQiOiJOVEF4Wm1" +
-                        "NeE5ETXlaRGczTVRVMVpHTTBNekV6T0RKaFpXSTRORE5sWkRVMU9HRmtOakZpTVEiLCJhbGciOiJSUzI1NiJ9.eyJhdF9oY" +
-                        "XNoIjoiazBvdFlvRV84b21WTnd3ZEJCYWJsdyIsImF1ZCI6IjVHeGhtU0w4OU9WcFdlZjR3emlvUnMxYURZSWEiLCJjX2hh" +
-                        "c2giOiI2Y25ZZ25ZNFBVemNRTHNOSldsX1lBIiwic3ViIjoiYWRtaW4iLCJuYmYiOjE1NTQ0Nzc0MTMsImF6cCI6IjVHeGh" +
-                        "tU0w4OU9WcFdlZjR3emlvUnMxYURZSWEiLCJhbXIiOlsiQmFzaWNBdXRoZW50aWNhdG9yIl0sImlzcyI6Imh0dHBzOlwvXC" +
-                        "9sb2NhbGhvc3Q6OTQ0M1wvb2F1dGgyXC90b2tlbiIsInJlYWxtIjp7InVzZXJzdG9yZSI6IlBSSU1BUlkiLCJ0ZW5hbnQiO" +
-                        "iJjYXJib24uc3VwZXIifSwiZXhwIjoxNTU0NDgxMDEzLCJpYXQiOjE1NTQ0Nzc0MTMsInNpZCI6ImJjM2IzOTRjLTRjOWQt" +
-                        "NGRlOS1iN2MzLTI0YWIwOGNiMmQzZiJ9.KTrYVZ8QrcQFKCL7TIvSZsvLl3VEKxGRXiREg04ej5AEAteSNZZaC6druoymc9" +
-                        "z9-9PQMRFknNIh5EUpdT6Z2MuiRJC5_jy2ufFQflUe6ppi5fpvxAGHDK794Rta2jktK1FOdj10Seg0wysMiJ0MqXv52g847" +
-                        "wHXnOCHX-LpfFO-paT3R-M8hrcEUiIo4NqW_0tEuY5A2TwBNKnKsKRINgwwgYcMyX--XZEZVzq-Op41izLehua7Yh88skbR" +
-                        "ns-v2ViNiVhocgWWc8KjzIip5zeLFuea4Uo2ncMdGw9pUybFa7tRquP67RTvimdKmFv9YzhkdA2RpJFw0k5Ly7BZCA";
+                "eyJ4NXQiOiJOVEF4Wm1NeE5ETXlaRGczTVRVMVpHTTBNekV6T0RKaFpXSTRORE5sWkRVMU9HRmtOakZpTVEiLCJraWQiOiJOVEF" +
+                        "4Wm1NeE5ETXlaRGczTVRVMVpHTTBNekV6T0RKaFpXSTRORE5sWkRVMU9HRmtOakZpTVEiLCJhbGciOiJSUzI1NiJ9.e" +
+                        "yJhdF9oYXNoIjoiazBvdFlvRV84b21WTnd3ZEJCYWJsdyIsImF1ZCI6IjVHeGhtU0w4OU9WcFdlZjR3emlvUnMxYURZ" +
+                        "SWEiLCJjX2hhc2giOiI2Y25ZZ25ZNFBVemNRTHNOSldsX1lBIiwic3ViIjoiYWRtaW4iLCJuYmYiOjE1NTQ0Nzc0MTM" +
+                        "sImF6cCI6IjVHeGhtU0w4OU9WcFdlZjR3emlvUnMxYURZSWEiLCJhbXIiOlsiQmFzaWNBdXRoZW50aWNhdG9yIl0sIm" +
+                        "lzcyI6Imh0dHBzOlwvXC9sb2NhbGhvc3Q6OTQ0M1wvb2F1dGgyXC90b2tlbiIsInJlYWxtIjp7InVzZXJzdG9yZSI6I" +
+                        "lBSSU1BUlkiLCJ0ZW5hbnQiOiJjYXJib24uc3VwZXIifSwiZXhwIjoxNTU0NDgxMDEzLCJpYXQiOjE1NTQ0Nzc0MTMs" +
+                        "InNpZCI6ImJjM2IzOTRjLTRjOWQtNGRlOS1iN2MzLTI0YWIwOGNiMmQzZiJ9.KTrYVZ8QrcQFKCL7TIvSZsvLl3VEKx" +
+                        "GRXiREg04ej5AEAteSNZZaC6druoymc9z9-9PQMRFknNIh5EUpdT6Z2MuiRJC5_jy2ufFQflUe6ppi5fpvxAGHDK794" +
+                        "Rta2jktK1FOdj10Seg0wysMiJ0MqXv52g847wHXnOCHX-LpfFO-paT3R-M8hrcEUiIo4NqW_0tEuY5A2TwBNKnKsKRI" +
+                        "NgwwgYcMyX--XZEZVzq-Op41izLehua7Yh88skbRns-v2ViNiVhocgWWc8KjzIip5zeLFuea4Uo2ncMdGw9pUybFa7t" +
+                        "RquP67RTvimdKmFv9YzhkdA2RpJFw0k5Ly7BZCA";
 
         String[] postLogoutUrl = {
                 "http://localhost:8080/playground2/oauth2client",
@@ -471,7 +484,7 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
 
     @AfterTest
     public void cleanData() throws Exception {
+
         super.cleanData();
     }
-
 }

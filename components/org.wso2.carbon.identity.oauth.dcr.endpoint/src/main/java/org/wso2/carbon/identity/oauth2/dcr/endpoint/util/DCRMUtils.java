@@ -19,21 +19,22 @@
 package org.wso2.carbon.identity.oauth2.dcr.endpoint.util;
 
 import org.apache.commons.logging.Log;
-import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.oauth.dcr.DCRMConstants;
+import org.wso2.carbon.identity.oauth.dcr.bean.Application;
 import org.wso2.carbon.identity.oauth.dcr.bean.ApplicationRegistrationRequest;
 import org.wso2.carbon.identity.oauth.dcr.bean.ApplicationUpdateRequest;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMException;
 import org.wso2.carbon.identity.oauth.dcr.service.DCRMService;
-import org.wso2.carbon.identity.oauth2.dcr.endpoint.Exceptions.DCRMEndpointException;
+import org.wso2.carbon.identity.oauth2.dcr.endpoint.dto.ApplicationDTO;
 import org.wso2.carbon.identity.oauth2.dcr.endpoint.dto.ErrorDTO;
 import org.wso2.carbon.identity.oauth2.dcr.endpoint.dto.RegistrationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dcr.endpoint.dto.UpdateRequestDTO;
+import org.wso2.carbon.identity.oauth2.dcr.endpoint.exceptions.DCRMEndpointException;
 
 import javax.ws.rs.core.Response;
 
 /**
- * This class holds Utils for DCRM endpoint component
+ * This class holds Utils for DCRM endpoint component.
  */
 public class DCRMUtils {
 
@@ -42,12 +43,20 @@ public class DCRMUtils {
     private static final String NOT_FOUND_STATUS = "NOT_FOUND_";
     private static final String FORBIDDEN_STATUS = "FORBIDDEN_";
 
-    public static DCRMService getOAuth2DCRMService() {
-        return (DCRMService) PrivilegedCarbonContext.getThreadLocalCarbonContext()
-                .getOSGiService(DCRMService.class, null);
+    private static DCRMService oAuth2DCRMService;
+
+    public static void setOAuth2DCRMService(DCRMService oAuth2DCRMService) {
+
+        DCRMUtils.oAuth2DCRMService = oAuth2DCRMService;
     }
 
-    public static ApplicationRegistrationRequest getApplicationRegistrationRequest(RegistrationRequestDTO registrationRequestDTO) {
+    public static DCRMService getOAuth2DCRMService() {
+
+        return oAuth2DCRMService;
+    }
+
+    public static ApplicationRegistrationRequest getApplicationRegistrationRequest(
+            RegistrationRequestDTO registrationRequestDTO) {
 
         ApplicationRegistrationRequest appRegistrationRequest = new ApplicationRegistrationRequest();
         appRegistrationRequest.setClientName(registrationRequestDTO.getClientName());
@@ -75,6 +84,7 @@ public class DCRMUtils {
     }
 
     public static void handleErrorResponse(DCRMException dcrmException, Log log) throws DCRMEndpointException {
+
         String errorCode = dcrmException.getErrorCode();
         Response.Status status = Response.Status.INTERNAL_SERVER_ERROR;
         boolean isStatusOnly = true;
@@ -95,7 +105,7 @@ public class DCRMUtils {
     }
 
     /**
-     * Logs the error, builds a DCRMEndpointException with specified details and throws it
+     * Logs the error, builds a DCRMEndpointException with specified details and throws it.
      *
      * @param status    response status
      * @param throwable throwable
@@ -121,6 +131,21 @@ public class DCRMUtils {
         }
         throw buildDCRMEndpointException(status, errorCode, throwable == null ? "" : throwable.getMessage(),
                 isServerException);
+    }
+
+    public static ApplicationDTO getApplicationDTOFromApplication(Application application) {
+
+        if (application == null) {
+            return null;
+        }
+
+        ApplicationDTO applicationDTO = new ApplicationDTO();
+        applicationDTO.setClientId(application.getClientId());
+        applicationDTO.setClientName(application.getClientName());
+        applicationDTO.setClientSecret(application.getClientSecret());
+        applicationDTO.setRedirectUris(application.getRedirectUris());
+
+        return applicationDTO;
     }
 
     private static DCRMEndpointException buildDCRMEndpointException(Response.Status status,

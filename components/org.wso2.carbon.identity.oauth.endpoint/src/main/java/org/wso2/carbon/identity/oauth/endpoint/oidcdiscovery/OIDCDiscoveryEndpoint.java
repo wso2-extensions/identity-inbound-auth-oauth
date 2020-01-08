@@ -40,6 +40,9 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 
+/**
+ * Rest implementation of OIDC discovery endpoint.
+ */
 @Path("/{issuer}/.well-known/openid-configuration")
 public class OIDCDiscoveryEndpoint {
 
@@ -64,23 +67,26 @@ public class OIDCDiscoveryEndpoint {
             return this.getResponse(request, tenantDomain);
         } else {
             Response.ResponseBuilder errorResponse = Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            if(log.isDebugEnabled()) {
-                log.debug("The discovery path component is " + discoveryEpPathComponent + " . The expected discovery path component is either '"
-                        + DISCOVERY_ENDPOINT_PATH_COMPONENT_VALUE_TOKEN + "' or '" + DISCOVERY_ENDPOINT_PATH_COMPONENT_VALUE_OIDCDISCOVERY );
+            if (log.isDebugEnabled()) {
+                log.debug("The discovery path component is " + discoveryEpPathComponent +
+                        " . The expected discovery path component is either '"
+                        + DISCOVERY_ENDPOINT_PATH_COMPONENT_VALUE_TOKEN + "' or '" +
+                        DISCOVERY_ENDPOINT_PATH_COMPONENT_VALUE_OIDCDISCOVERY);
             }
-            return errorResponse.entity("Invalid path to the discovery document. Received path : " + discoveryEpPathComponent + " is not resolvable")
-                    .build();
+            return errorResponse.entity("Invalid path to the discovery document. " +
+                    "Received path : " + discoveryEpPathComponent + " is not resolvable").build();
         }
     }
 
     private boolean isValidIssuer(String issuer) {
 
-        if (DISCOVERY_ENDPOINT_PATH_COMPONENT_VALUE_TOKEN.equals(issuer) || DISCOVERY_ENDPOINT_PATH_COMPONENT_VALUE_OIDCDISCOVERY
-                .equals(issuer)) {
+        if (DISCOVERY_ENDPOINT_PATH_COMPONENT_VALUE_TOKEN.equals(issuer) ||
+                DISCOVERY_ENDPOINT_PATH_COMPONENT_VALUE_OIDCDISCOVERY.equals(issuer)) {
             return true;
         }
         if (log.isDebugEnabled()) {
-            log.debug("DiscoveryEndpointPathComponent validation failed. DiscoveryEndpointPathComponent value: " + issuer + ", not matched to '"
+            log.debug("DiscoveryEndpointPathComponent validation failed. DiscoveryEndpointPathComponent value: " +
+                    issuer + ", not matched to '"
                     + DISCOVERY_ENDPOINT_PATH_COMPONENT_VALUE_TOKEN + "' or '" +
                     DISCOVERY_ENDPOINT_PATH_COMPONENT_VALUE_OIDCDISCOVERY + "'");
         }

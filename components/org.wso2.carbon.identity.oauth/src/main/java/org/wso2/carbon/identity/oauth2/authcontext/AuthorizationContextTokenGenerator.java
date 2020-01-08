@@ -21,6 +21,9 @@ package org.wso2.carbon.identity.oauth2.authcontext;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2TokenValidationMessageContext;
 
+/**
+ * OAuth authorization token generator.
+ */
 public interface AuthorizationContextTokenGenerator {
 
     public void init() throws IdentityOAuth2Exception;

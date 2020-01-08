@@ -33,6 +33,9 @@ import org.wso2.carbon.utils.ConfigurationContextService;
 
 import javax.servlet.Servlet;
 
+/**
+ * Service component for OAuth UI.
+ */
 @Component(
         name = "identity.provider.oauth.ui.component",
         immediate = true
@@ -44,6 +47,7 @@ public class OAuthUIServiceComponent {
 
     @SuppressWarnings("unchecked")
     protected void activate(ComponentContext context) {
+
         log.debug("Activating Identity OAuth UI bundle.");
 
         HttpService httpService = OAuthUIServiceComponentHolder.getInstance().getHttpService();
@@ -66,55 +70,62 @@ public class OAuthUIServiceComponent {
     }
 
     protected void deactivate(ComponentContext context) {
+
         log.debug("Identity OAuth UI bundle is deactivated");
     }
 
-    @Reference (
-            name="osgi.http.service",
+    @Reference(
+            name = "osgi.http.service",
             service = HttpService.class,
             cardinality = ReferenceCardinality.MANDATORY,
             policy = ReferencePolicy.DYNAMIC,
             unbind = "unsetHttpService"
     )
     protected void setHttpService(HttpService httpService) {
+
         OAuthUIServiceComponentHolder.getInstance().setHttpService(httpService);
     }
 
     protected void unsetHttpService(HttpService httpService) {
+
         httpService.unregister(OAUTH_URL);
         OAuthUIServiceComponentHolder.getInstance().setHttpService(null);
     }
 
-    @Reference (
-            name="configuration.context.service",
+    @Reference(
+            name = "configuration.context.service",
             service = ConfigurationContextService.class,
             cardinality = ReferenceCardinality.MANDATORY,
             policy = ReferencePolicy.DYNAMIC,
             unbind = "unsetConfigurationContextService"
     )
     protected void setConfigurationContextService(ConfigurationContextService configurationContextService) {
+
         OAuthUIServiceComponentHolder.getInstance().setConfigurationContextService(configurationContextService);
         log.debug("ConfigurationContextService Instance was set.");
     }
 
     protected void unsetConfigurationContextService(ConfigurationContextService configurationContextService) {
+
         OAuthUIServiceComponentHolder.getInstance().setConfigurationContextService(null);
         log.debug("ConfigurationContextService Instance was unset.");
     }
 
-    @Reference (
-            name="server.configuration.service",
+    @Reference(
+            name = "server.configuration.service",
             service = ServerConfigurationService.class,
             cardinality = ReferenceCardinality.MANDATORY,
             policy = ReferencePolicy.DYNAMIC,
             unbind = "unsetServerConfigurationService"
     )
     protected void setServerConfigurationService(ServerConfigurationService serverConfigService) {
+
         OAuthUIServiceComponentHolder.getInstance().setServerConfigurationService(serverConfigService);
         log.debug("ServerConfigurationService instance was set.");
     }
 
     protected void unsetServerConfigurationService(ServerConfigurationService serverConfigService) {
+
         OAuthUIServiceComponentHolder.getInstance().setServerConfigurationService(null);
         log.debug("ServerConfigurationService instance was unset.");
     }

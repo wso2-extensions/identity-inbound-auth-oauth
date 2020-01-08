@@ -25,11 +25,9 @@ import org.testng.IObjectFactory;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
-
 import org.wso2.carbon.identity.core.internal.IdentityCoreServiceComponent;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
-import org.wso2.carbon.identity.oidc.session.OIDCSessionManager;
 import org.wso2.carbon.identity.oidc.session.config.OIDCSessionManagementConfiguration;
 
 import javax.servlet.http.Cookie;
@@ -58,7 +56,7 @@ public class OIDCSessionManagementUtilTest {
     private static final String OPBROWSER_STATE = "090907ce-eab0-40d2-a46d-acd4bb33f0d0";
     private static final String SESSION_STATE = "18b2343e6edaec1c8b1208169ffa141d158156518135350be60dfbf6f41d340f" +
             ".W2Gf-RAzLUFy2xq_8tuM6A";
-    String responseType[] = new String[]{"id_token", "token", "code" };
+    String responseType[] = new String[]{"id_token", "token", "code"};
 
     @Test
     public void testGetSessionStateParam() {
@@ -144,7 +142,7 @@ public class OIDCSessionManagementUtilTest {
         };
     }
 
-    @Test (dataProvider = "provideDataForTestAddSessionStateToURL1")
+    @Test(dataProvider = "provideDataForTestAddSessionStateToURL1")
     public void testAddSessionStateToURL1(String url, Object obpscookie) {
 
         OAuthServerConfiguration mock = mock(OAuthServerConfiguration.class);
@@ -180,15 +178,15 @@ public class OIDCSessionManagementUtilTest {
     public void testGetOPBrowserStateCookie(Object[] cookie, Object expectedResult) {
 
         HttpServletRequest request = mock(HttpServletRequest.class);
-        when(request.getCookies()).thenReturn((Cookie[])cookie);
+        when(request.getCookies()).thenReturn((Cookie[]) cookie);
         Assert.assertEquals(OIDCSessionManagementUtil.getOPBrowserStateCookie(request), expectedResult);
     }
 
     @Test
-    public void testAddOPBrowserStateCookie()  {
+    public void testAddOPBrowserStateCookie() {
 
-        HttpServletResponse response=mock(HttpServletResponse.class);
-        Cookie cookie=OIDCSessionManagementUtil.addOPBrowserStateCookie(response);
+        HttpServletResponse response = mock(HttpServletResponse.class);
+        Cookie cookie = OIDCSessionManagementUtil.addOPBrowserStateCookie(response);
         Assert.assertNotNull(cookie, "Opbs cookie is null");
     }
 
@@ -236,7 +234,7 @@ public class OIDCSessionManagementUtilTest {
     public Object[][] provideDataForTestGetOIDCLogoutConsentURL() {
 
         String[] consentUrl = {"https://localhost:9443/authenticationendpoint/logout_consent.do",
-                "https://localhost:9443/authenticationendpoint/oauth2_logout_consent.do" };
+                "https://localhost:9443/authenticationendpoint/oauth2_logout_consent.do"};
         return new Object[][]{
                 {consentUrl[0], consentUrl[0]}, {"", consentUrl[1]}
         };
@@ -255,7 +253,7 @@ public class OIDCSessionManagementUtilTest {
                 .thenReturn("https://localhost:9443/authenticationendpoint/oauth2_logout_consent.do");
 
         String returnedUrl = OIDCSessionManagementUtil.getOIDCLogoutConsentURL();
-        Assert.assertEquals(returnedUrl, expectedUrl,"Consent Url is not same as the Expected Consent Url");
+        Assert.assertEquals(returnedUrl, expectedUrl, "Consent Url is not same as the Expected Consent Url");
     }
 
     /***
@@ -266,15 +264,16 @@ public class OIDCSessionManagementUtilTest {
     public Object[][] provideDataForTestGetOIDCLogoutURL() {
 
         String[] logoutPageUrl = {"https://localhost:9443/authenticationendpoint/logout.do",
-                "https://localhost:9443/authenticationendpoint/oauth2_logout.do" };
+                "https://localhost:9443/authenticationendpoint/oauth2_logout.do"};
         return new Object[][]{
                 {logoutPageUrl[0], logoutPageUrl[0]},
                 {"", logoutPageUrl[1]}
         };
     }
 
-    @Test (dataProvider = "provideDataForTestGetOIDCLogoutURL")
+    @Test(dataProvider = "provideDataForTestGetOIDCLogoutURL")
     public void testGetOIDCLogoutURL(String logoutPageUrl, String expectedUrl) {
+
         mockStatic(OIDCSessionManagementConfiguration.class);
         when(OIDCSessionManagementConfiguration.getInstance()).thenReturn(oidcSessionManagementConfiguration);
         when(oidcSessionManagementConfiguration.getOIDCLogoutPageUrl()).thenReturn(logoutPageUrl);
@@ -297,11 +296,11 @@ public class OIDCSessionManagementUtilTest {
     public Object[][] provideDataForTestGetErrorPageURL() {
 
         String[] errorPageUrl = {"https://localhost:9443/authenticationendpoint/error.do",
-                "https://localhost:9443/authenticationendpoint/oauth2_error.do" };
+                "https://localhost:9443/authenticationendpoint/oauth2_error.do"};
         String[] expectedUrl = {"https://localhost:9443/authenticationendpoint/error" +
                 ".do?oauthErrorCode=404&oauthErrorMsg=not+found",
                 "https://localhost:9443/authenticationendpoint/oauth2_error" +
-                        ".do?oauthErrorCode=404&oauthErrorMsg=not+found" };
+                        ".do?oauthErrorCode=404&oauthErrorMsg=not+found"};
         return new Object[][]{
                 {errorPageUrl[0], expectedUrl[0]},
                 {"", expectedUrl[1]}
@@ -318,10 +317,10 @@ public class OIDCSessionManagementUtilTest {
         mockStatic(IdentityUtil.class);
         when(IdentityUtil.getServerURL("/authenticationendpoint/oauth2_error.do", false,
                 false))
-                .thenReturn("https://localhost:9443/authenticationendpoint/oauth2_error.do" );
-        String returnedErrorPageUrl = OIDCSessionManagementUtil.getErrorPageURL("404", "not found" );
-        Assert.assertEquals(returnedErrorPageUrl,expectedUrl, "Expected error page url and actual url are " +
-                "different" );
+                .thenReturn("https://localhost:9443/authenticationendpoint/oauth2_error.do");
+        String returnedErrorPageUrl = OIDCSessionManagementUtil.getErrorPageURL("404", "not found");
+        Assert.assertEquals(returnedErrorPageUrl, expectedUrl, "Expected error page url and actual url are " +
+                "different");
     }
 
     @Test

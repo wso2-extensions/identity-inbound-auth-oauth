@@ -17,13 +17,18 @@
  */
 package org.wso2.carbon.identity.oauth.endpoint.exception;
 
+/**
+ * Exception class for ConsentHandlingFailedException.
+ */
 public class ConsentHandlingFailedException extends InvalidRequestParentException {
 
     public ConsentHandlingFailedException(String message) {
+
         super(message);
     }
 
     public ConsentHandlingFailedException(String message, Throwable throwable) {
+
         super(message, throwable);
     }
 }

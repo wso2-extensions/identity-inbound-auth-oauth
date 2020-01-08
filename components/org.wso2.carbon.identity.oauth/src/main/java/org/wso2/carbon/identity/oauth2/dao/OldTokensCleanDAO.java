@@ -18,6 +18,8 @@
 
 package org.wso2.carbon.identity.oauth2.dao;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.OldAccessTokenDO;
@@ -29,9 +31,6 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 /**
  * This is DAO class for cleaning old Tokens. When new tokens is generated ,refreshed or revoked old access token
  * will be moved to Audit table and deleted from the Access token table. Token cleaning process can be enable or
@@ -39,7 +38,7 @@ import org.apache.commons.logging.LogFactory;
  */
 public class OldTokensCleanDAO {
 
-    private static Log log = LogFactory.getLog(OldTokensCleanDAO.class);
+    private static final Log log = LogFactory.getLog(OldTokensCleanDAO.class);
 
     public void cleanupTokenByTokenId(String tokenId, Connection connection) throws SQLException {
 
@@ -144,19 +143,23 @@ public class OldTokensCleanDAO {
         }
         insertintoaudittable.execute();
         if (log.isDebugEnabled()) {
-            log.debug("Successfully saved old access token in audit table. Token ID: " + oldAccessTokenDAO.getTokenId());
+            log.debug(
+                    "Successfully saved old access token in audit table. Token ID: " + oldAccessTokenDAO.getTokenId());
         }
     }
 
     private void removeTokenFromMainTable(String oldAccessTokenID, Connection connection)
             throws SQLException {
+
         connection.setAutoCommit(false);
         try {
-            PreparedStatement deletefromaccesstokentable = connection.prepareStatement(SQLQueries.DELETE_OLD_TOKEN_BY_ID);
+            PreparedStatement deletefromaccesstokentable =
+                    connection.prepareStatement(SQLQueries.DELETE_OLD_TOKEN_BY_ID);
             deletefromaccesstokentable.setString(1, oldAccessTokenID);
             deletefromaccesstokentable.executeUpdate();
             if (log.isDebugEnabled()) {
-                log.debug("Successfully old access token deleted from access token table. Token ID: " + oldAccessTokenID);
+                log.debug(
+                        "Successfully old access token deleted from access token table. Token ID: " + oldAccessTokenID);
             }
             connection.commit();
         } catch (SQLException e) {

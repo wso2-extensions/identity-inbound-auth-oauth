@@ -111,10 +111,10 @@ public class TestUtils {
      * @throws org.wso2.carbon.identity.oauth2.RequestObjectException
      */
     public static String buildJWT(String issuer, String subject, String jti, String audience, String algorythm,
-                                  Key privateKey, long notBeforeMillis, Map<String,Object> claims)
+                                  Key privateKey, long notBeforeMillis, Map<String, Object> claims)
             throws RequestObjectException {
         long lifetimeInMillis = 3600 * 1000;
-        return buildJWTWithExpiry(issuer, subject, jti, audience, algorythm, privateKey,notBeforeMillis, claims,
+        return buildJWTWithExpiry(issuer, subject, jti, audience, algorythm, privateKey, notBeforeMillis, claims,
                 lifetimeInMillis);
     }
 
@@ -125,19 +125,19 @@ public class TestUtils {
      * @param subject
      * @param jti
      * @param audience
-     * @param algorythm
+     * @param algorithm
      * @param privateKey
      * @param notBeforeMillis
      * @return
      * @throws org.wso2.carbon.identity.oauth2.RequestObjectException
      */
     public static String buildJWTWithExpiry(String issuer, String subject, String jti, String audience, String
-            algorythm, Key privateKey, long notBeforeMillis, Map<String,Object> claims, long lifetimeInMillis)
+            algorithm, Key privateKey, long notBeforeMillis, Map<String, Object> claims, long lifetimeInMillis)
             throws RequestObjectException {
 
         JWTClaimsSet jwtClaimsSet = getJwtClaimsSet(issuer, subject, jti, audience, notBeforeMillis, claims,
                 lifetimeInMillis);
-        if (JWSAlgorithm.NONE.getName().equals(algorythm)) {
+        if (JWSAlgorithm.NONE.getName().equals(algorithm)) {
             return new PlainJWT(jwtClaimsSet).serialize();
         }
 
@@ -213,14 +213,16 @@ public class TestUtils {
         return signedJWT.serialize();
     }
 
-    private static SignedJWT getSignedJWT(JWTClaimsSet jwtClaimsSet, RSAPrivateKey privateKey) throws RequestObjectException {
+    private static SignedJWT getSignedJWT(JWTClaimsSet jwtClaimsSet, RSAPrivateKey privateKey)
+            throws RequestObjectException {
+
         try {
-        JWSSigner signer = new RSASSASigner(privateKey);
-        SignedJWT signedJWT = new SignedJWT(new JWSHeader(JWSAlgorithm.RS256), jwtClaimsSet);
-        signedJWT.sign(signer);
-        return signedJWT;
+            JWSSigner signer = new RSASSASigner(privateKey);
+            SignedJWT signedJWT = new SignedJWT(new JWSHeader(JWSAlgorithm.RS256), jwtClaimsSet);
+            signedJWT.sign(signer);
+            return signedJWT;
         } catch (JOSEException e) {
-            throw new RequestObjectException("error_signing_jwt","Error occurred while signing JWT.");
+            throw new RequestObjectException("error_signing_jwt", "Error occurred while signing JWT.");
         }
     }
 
@@ -269,22 +271,22 @@ public class TestUtils {
         return keystore;
     }
 
-
-    public static String buildJWE(String issuer, String subject, String jti, String audience, String algorythm,
-                                  Key privateKey,Key publicKey, long notBeforeMillis, Map<String,
-            Object> claims) throws RequestObjectException {
+    public static String buildJWE(String issuer, String subject, String jti, String audience, String algorithm,
+                                  Key privateKey, Key publicKey, long notBeforeMillis,
+                                  Map<String, Object> claims) throws RequestObjectException {
         long lifetimeInMillis = 3600 * 1000;
         JWTClaimsSet jwtClaimsSet = getJwtClaimsSet(issuer, subject, jti, audience, notBeforeMillis, claims,
                 lifetimeInMillis);
 
-        if (JWSAlgorithm.NONE.getName().equals(algorythm)) {
+        if (JWSAlgorithm.NONE.getName().equals(algorithm)) {
             return getEncryptedJWT((RSAPublicKey) publicKey, jwtClaimsSet);
         } else {
             return getSignedAndEncryptedJWT(publicKey, (RSAPrivateKey) privateKey, jwtClaimsSet);
         }
     }
 
-    private static String getSignedAndEncryptedJWT(Key publicKey, RSAPrivateKey privateKey, JWTClaimsSet jwtClaimsSet) throws RequestObjectException {
+    private static String getSignedAndEncryptedJWT(Key publicKey, RSAPrivateKey privateKey,
+                                                   JWTClaimsSet jwtClaimsSet) throws RequestObjectException {
         SignedJWT signedJWT = getSignedJWT(jwtClaimsSet, privateKey);
         // Create JWE object with signed JWT as payload
         JWEHeader jweHeader = new JWEHeader(JWEAlgorithm.RSA_OAEP_256, EncryptionMethod.A256GCM);
@@ -294,7 +296,7 @@ public class TestUtils {
             jweObject.encrypt(new RSAEncrypter((RSAPublicKey) publicKey));
             return jweObject.serialize();
         } catch (JOSEException e) {
-            throw new RequestObjectException("error_building_jwd","Error occurred while creating JWE.");
+            throw new RequestObjectException("error_building_jwd", "Error occurred while creating JWE.");
         }
     }
 
@@ -312,7 +314,7 @@ public class TestUtils {
             // Do the actual encryption
             jwt.encrypt(encrypter);
         } catch (JOSEException e) {
-            throw new RequestObjectException("error_building_jwd","Error occurred while creating JWE JWT.");
+            throw new RequestObjectException("error_building_jwd", "Error occurred while creating JWE JWT.");
 
         }
         return jwt.serialize();
@@ -322,10 +324,10 @@ public class TestUtils {
             testClientId, String audience) throws
             Exception {
 
-        Map<String,Object> claims1 = new HashMap<>();
-        Map<String,Object> claims2 = new HashMap<>();
-        Map<String,Object> claims3 = new HashMap<>();
-        Map<String,Object> claims4 = new HashMap<>();
+        Map<String, Object> claims1 = new HashMap<>();
+        Map<String, Object> claims2 = new HashMap<>();
+        Map<String, Object> claims3 = new HashMap<>();
+        Map<String, Object> claims4 = new HashMap<>();
 
         claims1.put(Constants.STATE, "af0ifjsldkj");
         claims1.put(Constants.CLIENT_ID, testClientId);

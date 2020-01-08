@@ -32,7 +32,7 @@ import javax.servlet.http.HttpServletResponse;
  * Singleton class to process the webfinger request.
  */
 public class DefaultWebFingerProcessor implements WebFingerProcessor {
-    private static Log log = LogFactory.getLog(DefaultWebFingerProcessor.class);
+    private static final Log log = LogFactory.getLog(DefaultWebFingerProcessor.class);
     private static DefaultWebFingerProcessor defaultWebFingerProcessor = new DefaultWebFingerProcessor();
 
     private DefaultWebFingerProcessor() {

@@ -1,20 +1,20 @@
 /*
-*Copyright (c) 2005-2013, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
-*
-*WSO2 Inc. licenses this file to you under the Apache License,
-*Version 2.0 (the "License"); you may not use this file except
-*in compliance with the License.
-*You may obtain a copy of the License at
-*
-*http://www.apache.org/licenses/LICENSE-2.0
-*
-*Unless required by applicable law or agreed to in writing,
-*software distributed under the License is distributed on an
-*"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-*KIND, either express or implied.  See the License for the
-*specific language governing permissions and limitations
-*under the License.
-*/
+ *Copyright (c) 2005-2013, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ *
+ *WSO2 Inc. licenses this file to you under the Apache License,
+ *Version 2.0 (the "License"); you may not use this file except
+ *in compliance with the License.
+ *You may obtain a copy of the License at
+ *
+ *http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *Unless required by applicable law or agreed to in writing,
+ *software distributed under the License is distributed on an
+ *"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *KIND, either express or implied.  See the License for the
+ *specific language governing permissions and limitations
+ *under the License.
+ */
 
 package org.wso2.carbon.identity.oauth.ui;
 
@@ -30,14 +30,18 @@ import org.wso2.carbon.identity.oauth.ui.client.OAuthServiceClient;
 import org.wso2.carbon.identity.oauth.ui.internal.OAuthUIServiceComponentHolder;
 import org.wso2.carbon.ui.CarbonUIUtil;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URLDecoder;
 
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+/**
+ * Servlet class for OAuth.
+ */
 public class OAuthServlet extends HttpServlet {
 
     /**
@@ -65,8 +69,11 @@ public class OAuthServlet extends HttpServlet {
         String oauthCallbackConfirmed = null;
 
         try {
-            String backendServerURL = CarbonUIUtil.getServerURL(OAuthUIServiceComponentHolder.getInstance().getServerConfigurationService());
-            ConfigurationContext configContext = OAuthUIServiceComponentHolder.getInstance().getConfigurationContextService().getServerConfigContext();
+            String backendServerURL = CarbonUIUtil
+                    .getServerURL(OAuthUIServiceComponentHolder.getInstance().getServerConfigurationService());
+            ConfigurationContext configContext =
+                    OAuthUIServiceComponentHolder.getInstance().getConfigurationContextService()
+                            .getServerConfigContext();
             OAuthServiceClient client = new OAuthServiceClient(backendServerURL, configContext);
 
             if (requestType.indexOf(OAuthConstants.OAuth10AEndpoints.REQUEST_TOKEN_URL) > -1) {
@@ -86,7 +93,8 @@ public class OAuthServlet extends HttpServlet {
                 oauthCallbackConfirmed = "true";
                 reqToken = OAuthConstants.OAUTH_TOKEN + "=" + Encode.forUriComponent(oauthToken) + "&"
                         + OAuthConstants.OAUTH_TOKEN_SECRET + "=" + Encode.forUriComponent(oauthTokenSecret) + "&"
-                        + OAuthConstants.OAUTH_CALLBACK_CONFIRMED + "=" + Encode.forUriComponent(oauthCallbackConfirmed);
+                        + OAuthConstants.OAUTH_CALLBACK_CONFIRMED + "=" +
+                        Encode.forUriComponent(oauthCallbackConfirmed);
                 out.write(reqToken);
                 out.close();
                 resp.setStatus(200);
@@ -135,6 +143,7 @@ public class OAuthServlet extends HttpServlet {
      * Populates the Parameters object from the OAuth authorization header or query string.
      */
     private Parameters populateOauthConsumerData(HttpServletRequest request) {
+
         String authHeader = null;
         Parameters params = null;
         String splitChar = ",";
@@ -228,6 +237,7 @@ public class OAuthServlet extends HttpServlet {
     }
 
     private String removeLeadingAndTrailingQuatation(String base) {
+
         String result = base;
 
         if (base.startsWith("\"") || base.endsWith("\"")) {

@@ -20,40 +20,53 @@ package org.wso2.carbon.identity.oauth.dcr.model;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.IdentityMessageContext;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.IdentityResponse;
 
+/**
+ * DCR Response data returned after un registering an OAuth application.
+ */
 public class UnregistrationResponse extends IdentityResponse {
 
+    private static final long serialVersionUID = -4059676691166142155L;
     private boolean isUnregistered = false;
 
     protected UnregistrationResponse(
             DCUnregisterResponseBuilder builder) {
+
         super(builder);
         this.isUnregistered = builder.isUnregistered;
     }
 
     public boolean isUnregistered() {
+
         return isUnregistered;
     }
 
+    /**
+     * OAuth DCR un registration response builder.
+     */
     public static class DCUnregisterResponseBuilder extends IdentityResponseBuilder {
 
         private boolean isUnregistered = false;
 
         public DCUnregisterResponseBuilder() {
+
             super();
         }
 
         public DCUnregisterResponseBuilder(
                 IdentityMessageContext context) {
+
             super(context);
         }
 
         public DCUnregisterResponseBuilder setIsUnregistered(boolean isUnregistered) {
+
             this.isUnregistered = isUnregistered;
             return this;
         }
 
         @Override
         public UnregistrationResponse build() {
+
             return new UnregistrationResponse(this);
         }
     }

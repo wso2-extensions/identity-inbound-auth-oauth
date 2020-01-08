@@ -20,10 +20,10 @@ package org.wso2.carbon.identity.oauth.endpoint.util;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.core.dao.OpenIDUserRPDAO;
-import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.core.model.OpenIDUserRPDO;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
@@ -40,6 +40,7 @@ public class OpenIDConnectUserRPStore {
     }
 
     public static OpenIDConnectUserRPStore getInstance() {
+
         return store;
     }
 
@@ -50,6 +51,7 @@ public class OpenIDConnectUserRPStore {
      */
     public void putUserRPToStore(AuthenticatedUser user, String appName, boolean trustedAlways, String clientId) throws
             OAuthSystemException {
+
         OpenIDUserRPDO repDO = new OpenIDUserRPDO();
         repDO.setDefaultProfileName(DEFAULT_PROFILE_NAME);
         repDO.setRpUrl(appName);

@@ -30,10 +30,10 @@ import org.wso2.carbon.identity.oauth.dcr.service.DCRManagementService;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
 import static org.mockito.Matchers.anyString;
+import static org.powermock.api.mockito.PowerMockito.doAnswer;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.powermock.api.mockito.PowerMockito.whenNew;
-import static org.powermock.api.mockito.PowerMockito.doAnswer;
 import static org.testng.Assert.assertEquals;
 
 /**
@@ -55,6 +55,7 @@ public class UnRegistrationHandlerTest extends PowerMockIdentityBaseTest {
 
     @BeforeMethod
     public void setUp() {
+
         unRegistrationHandler = new UnRegistrationHandler();
     }
 
@@ -63,7 +64,8 @@ public class UnRegistrationHandlerTest extends PowerMockIdentityBaseTest {
 
         when(mockDcrMessageContext.getIdentityRequest()).thenReturn(mockUnregistrationRequest);
 
-        UnregistrationRequest.DCRUnregisterRequestBuilder dCRUnregisterRequestBuilder = new UnregistrationRequest.DCRUnregisterRequestBuilder();
+        UnregistrationRequest.DCRUnregisterRequestBuilder dCRUnregisterRequestBuilder =
+                new UnregistrationRequest.DCRUnregisterRequestBuilder();
 
         UnregistrationResponse.DCUnregisterResponseBuilder dCUnregisterResponseBuilder =
                 new UnregistrationResponse.DCUnregisterResponseBuilder();
@@ -79,13 +81,14 @@ public class UnRegistrationHandlerTest extends PowerMockIdentityBaseTest {
         UnregistrationRequest requestBuilder = dCRUnregisterRequestBuilder.build();
 
         mockStatic(DCRManagementService.class);
-        when (DCRManagementService.getInstance()).thenReturn(mockDCRManagementService);
+        when(DCRManagementService.getInstance()).thenReturn(mockDCRManagementService);
         when(mockDcrMessageContext.getIdentityRequest()).thenReturn(requestBuilder);
 
         final String[] params = new String[3];
         doAnswer(new Answer<Object>() {
             @Override
             public Object answer(InvocationOnMock invocation) throws Throwable {
+
                 params[0] = (String) invocation.getArguments()[0];
                 params[1] = (String) invocation.getArguments()[1];
                 params[2] = (String) invocation.getArguments()[2];

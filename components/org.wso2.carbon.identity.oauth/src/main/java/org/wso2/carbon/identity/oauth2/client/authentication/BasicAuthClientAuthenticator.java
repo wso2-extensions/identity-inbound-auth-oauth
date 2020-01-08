@@ -32,22 +32,23 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
-import javax.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.Map;
 
+import javax.servlet.http.HttpServletRequest;
+
 /**
- * This classs is esponsible for authenticating OAuth clients which are client id and secret to authenticate. This
+ * This class is responsible for authenticating OAuth clients which are client id and secret to authenticate. This
  * authenticator will handle basic client authentication where client id and secret are present either as
- * Authroization header or in the body of the request.
+ * Authorization header or in the body of the request.
  */
 public class BasicAuthClientAuthenticator extends AbstractOAuthClientAuthenticator {
 
-    private static Log log = LogFactory.getLog(BasicAuthClientAuthenticator.class);
-    private static String CREDENTIAL_SEPARATOR = ":";
-    private static String SIMPLE_CASE_AUTHORIZATION_HEADER = "authorization";
-    private static String BASIC_PREFIX = "Basic";
-    private static int CREDENTIAL_LENGTH = 2;
+    private static final Log log = LogFactory.getLog(BasicAuthClientAuthenticator.class);
+    private static final String CREDENTIAL_SEPARATOR = ":";
+    private static final String SIMPLE_CASE_AUTHORIZATION_HEADER = "authorization";
+    private static final String BASIC_PREFIX = "Basic";
+    private static final int CREDENTIAL_LENGTH = 2;
 
     /**
      * Returns the execution order of this authenticator
@@ -196,10 +197,11 @@ public class BasicAuthClientAuthenticator extends AbstractOAuthClientAuthenticat
     protected boolean isBasicAuthorizationHeaderExists(HttpServletRequest request) {
 
         String authorizationHeader = getAuthorizationHeader(request);
-        if (StringUtils.isNotEmpty(authorizationHeader) && authorizationHeader.startsWith(BASIC_PREFIX)) {
-            return true;
-        }
-        return false;
+        // authorizationHeader should be case-insensitive according to the
+        // "The 'Basic' HTTP Authentication Scheme" spec (https://tools.ietf.org/html/rfc7617#page-3),
+        // "Note that both scheme and parameter names are matched case-insensitively."
+        return StringUtils.isNotEmpty(authorizationHeader) &&
+                authorizationHeader.toUpperCase().startsWith(BASIC_PREFIX.toUpperCase());
     }
 
     protected String getAuthorizationHeader(HttpServletRequest request) {
@@ -240,7 +242,7 @@ public class BasicAuthClientAuthenticator extends AbstractOAuthClientAuthenticat
         }
         String errMsg = "Error decoding authorization header. Space delimited \"<authMethod> <base64Hash>\" format " +
                 "violated.";
-        throw new OAuthClientAuthnException(errMsg, OAuth2ErrorCodes.INVALID_REQUEST);
+        throw new OAuthClientAuthnException(errMsg, OAuth2ErrorCodes.INVALID_CLIENT);
     }
 
     /**

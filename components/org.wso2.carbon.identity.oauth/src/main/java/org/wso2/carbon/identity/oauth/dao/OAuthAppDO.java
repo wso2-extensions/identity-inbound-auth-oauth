@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth.dao;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 
 import java.io.Serializable;
+
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
@@ -27,6 +28,9 @@ import javax.xml.bind.annotation.XmlElementWrapper;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
 
+/**
+ * OAuth application data object.
+ */
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.FIELD)
 public class OAuthAppDO implements Serializable {
@@ -41,7 +45,7 @@ public class OAuthAppDO implements Serializable {
     private String callbackUrl;
     private String oauthVersion;
     private String grantTypes;
-    @XmlElementWrapper(name="scopeValidators")
+    @XmlElementWrapper(name = "scopeValidators")
     @XmlElement(name = "scopeValidator")
     private String[] scopeValidators;
     private boolean pkceSupportPlain;
@@ -51,7 +55,7 @@ public class OAuthAppDO implements Serializable {
     private long applicationAccessTokenExpiryTime;
     private long refreshTokenExpiryTime;
     private long idTokenExpiryTime;
-    @XmlElementWrapper(name="audiences")
+    @XmlElementWrapper(name = "audiences")
     @XmlElement(name = "audience")
     private String[] audiences = new String[0];
     private boolean bypassClientCredentials;
@@ -66,6 +70,7 @@ public class OAuthAppDO implements Serializable {
     @XmlTransient
     private AuthenticatedUser appOwner;
     private String tokenType;
+    private String tokenBindingType;
 
     public AuthenticatedUser getAppOwner() {
 
@@ -245,10 +250,12 @@ public class OAuthAppDO implements Serializable {
     }
 
     public void setBackChannelLogoutUrl(String backChannelLogoutUrl) {
+
         this.backChannelLogoutUrl = backChannelLogoutUrl;
     }
 
     public String getBackChannelLogoutUrl() {
+
         return backChannelLogoutUrl;
     }
 
@@ -293,5 +300,15 @@ public class OAuthAppDO implements Serializable {
     public String getRenewRefreshTokenEnabled() {
 
         return renewRefreshTokenEnabled;
+    }
+
+    public String getTokenBindingType() {
+
+        return tokenBindingType;
+    }
+
+    public void setTokenBindingType(String tokenBindingType) {
+
+        this.tokenBindingType = tokenBindingType;
     }
 }

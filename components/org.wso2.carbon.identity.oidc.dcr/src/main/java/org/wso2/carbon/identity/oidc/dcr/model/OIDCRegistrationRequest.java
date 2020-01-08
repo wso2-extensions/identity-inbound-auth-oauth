@@ -31,22 +31,31 @@ import javax.servlet.http.HttpServletResponse;
 public class OIDCRegistrationRequest extends RegistrationRequest {
 
     public OIDCRegistrationRequest(OIDCRegistrationRequestBuilder builder) throws FrameworkClientException {
+
         super(builder);
     }
 
-
+    /**
+     * OIDC Registration request builder.
+     */
     public static class OIDCRegistrationRequestBuilder extends RegistrationRequestBuilder {
+
         public OIDCRegistrationRequestBuilder(HttpServletRequest request,
                                               HttpServletResponse response) {
+
             super(request, response);
         }
 
         @Override
         public RegistrationRequest build() throws FrameworkRuntimeException, FrameworkClientException {
+
             return new OIDCRegistrationRequest(this);
         }
     }
 
+    /**
+     * Contains the constants used in OIDC Register request.
+     */
     public static class OIDCRegistrationRequestConstants extends RegisterRequestConstant {
 
         public static final String SECTOR_IDENTIFIER_URI = "sector_identifier_uri";

@@ -47,12 +47,12 @@ import static org.wso2.carbon.identity.openidconnect.model.Constants.NUMBER_OF_P
 import static org.wso2.carbon.identity.openidconnect.model.Constants.NUMBER_OF_PARTS_IN_JWS;
 
 /**
- * This class is used to build request object parameter value which comes with the OIDC authorization request as an optional
- * parameter
+ * This class is used to build request object parameter value which comes with the OIDC authorization request as an
+ * optional parameter
  */
 public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
 
-    private static Log log = LogFactory.getLog(RequestParamRequestObjectBuilder.class);
+    private static final Log log = LogFactory.getLog(RequestParamRequestObjectBuilder.class);
 
     /**
      * Builds request object which comes as the value of the request query parameter of OIDC authorization request
@@ -158,5 +158,4 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
             throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST, errorMessage);
         }
     }
-
 }

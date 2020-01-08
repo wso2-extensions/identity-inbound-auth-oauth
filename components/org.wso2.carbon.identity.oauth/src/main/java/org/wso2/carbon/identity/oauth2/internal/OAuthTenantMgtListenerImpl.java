@@ -33,6 +33,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * Tenant management listener for OAuth related functionality.
+ */
 public class OAuthTenantMgtListenerImpl extends AbstractIdentityTenantMgtListener {
 
     @Override
@@ -77,7 +80,8 @@ public class OAuthTenantMgtListenerImpl extends AbstractIdentityTenantMgtListene
                 tokensToRevoke.add(((AccessTokenDO) entry.getValue()).getAccessToken());
             }
             OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
-                    .revokeAccessTokens(tokensToRevoke.toArray(new String[tokensToRevoke.size()]));
+                    .revokeAccessTokens(tokensToRevoke.toArray(new String[tokensToRevoke.size()]),
+                            OAuth2Util.isHashEnabled());
             List<AuthzCodeDO> latestAuthzCodes = OAuthTokenPersistenceFactory.getInstance()
                     .getAuthorizationCodeDAO().getLatestAuthorizationCodesByTenant(tenantId);
             for (AuthzCodeDO authzCodeDO : latestAuthzCodes) {

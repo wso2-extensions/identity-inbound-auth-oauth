@@ -18,6 +18,14 @@
 
 package org.wso2.carbon.identity.oauth2.token.handlers.grant.iwa.ntlm.util;
 
+import java.io.InputStream;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.EventListener;
+import java.util.Map;
+import java.util.Set;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterRegistration;
@@ -29,16 +37,10 @@ import javax.servlet.ServletRegistration;
 import javax.servlet.SessionCookieConfig;
 import javax.servlet.SessionTrackingMode;
 import javax.servlet.descriptor.JspConfigDescriptor;
-import java.io.InputStream;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.util.Collections;
-import java.util.Enumeration;
-import java.util.EventListener;
-import java.util.Map;
-import java.util.Set;
 
-
+/**
+ * Simple servlet context.
+ */
 public class SimpleServletContext implements ServletContext {
 
     @Override
@@ -162,6 +164,12 @@ public class SimpleServletContext implements ServletContext {
     }
 
     @Override
+    public ServletRegistration.Dynamic addJspFile(String s, String s1) {
+
+        return null;
+    }
+
+    @Override
     public <T extends Servlet> T createServlet(Class<T> tClass) throws ServletException {
         return null;  //To change body of implemented methods use File | Settings | File Templates.
     }
@@ -259,6 +267,45 @@ public class SimpleServletContext implements ServletContext {
     @Override
     public void declareRoles(String... strings) {
         //To change body of implemented methods use File | Settings | File Templates.
+    }
+
+    @Override
+    public String getVirtualServerName() {
+
+        return null;
+    }
+
+    @Override
+    public int getSessionTimeout() {
+
+        return 0;
+    }
+
+    @Override
+    public void setSessionTimeout(int i) {
+
+    }
+
+    @Override
+    public String getRequestCharacterEncoding() {
+
+        return null;
+    }
+
+    @Override
+    public void setRequestCharacterEncoding(String s) {
+
+    }
+
+    @Override
+    public String getResponseCharacterEncoding() {
+
+        return null;
+    }
+
+    @Override
+    public void setResponseCharacterEncoding(String s) {
+
     }
 
     @Override

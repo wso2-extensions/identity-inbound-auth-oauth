@@ -37,13 +37,16 @@ public class DCRDataHolder {
     private List<UnRegistrationHandler> unRegistrationHandlerList = new ArrayList<>();
 
     private DCRDataHolder() {
+
     }
 
     public static DCRDataHolder getInstance() {
+
         return thisInstance;
     }
 
     public ApplicationManagementService getApplicationManagementService() {
+
         if (applicationManagementService == null) {
             throw new IllegalStateException("ApplicationManagementService is not initialized properly");
         }
@@ -51,25 +54,29 @@ public class DCRDataHolder {
     }
 
     public void setApplicationManagementService(ApplicationManagementService applicationManagementService) {
+
         this.applicationManagementService = applicationManagementService;
     }
 
     public List<RegistrationHandler> getRegistrationHandlerList() {
+
         return registrationHandlerList;
     }
 
     public void setRegistrationHandlerList(
             List<RegistrationHandler> registrationHandlerList) {
+
         this.registrationHandlerList = registrationHandlerList;
     }
 
-
     public List<UnRegistrationHandler> getUnRegistrationHandlerList() {
+
         return unRegistrationHandlerList;
     }
 
     public void setUnRegistrationHandlerList(
             List<UnRegistrationHandler> unRegistrationHandlerList) {
+
         this.unRegistrationHandlerList = unRegistrationHandlerList;
     }
 }

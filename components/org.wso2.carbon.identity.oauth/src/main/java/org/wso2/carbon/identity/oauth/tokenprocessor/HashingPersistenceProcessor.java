@@ -22,10 +22,11 @@ package org.wso2.carbon.identity.oauth.tokenprocessor;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.json.JSONObject;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
-import org.json.JSONObject;
 
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
@@ -35,7 +36,7 @@ import java.security.NoSuchAlgorithmException;
  */
 public class HashingPersistenceProcessor implements TokenPersistenceProcessor {
 
-    protected Log log = LogFactory.getLog(HashingPersistenceProcessor.class);
+    protected static final Log LOG = LogFactory.getLog(HashingPersistenceProcessor.class);
     public static final String ALGORITHM = "algorithm";
     public static final String HASH = "hash";
 
@@ -117,7 +118,7 @@ public class HashingPersistenceProcessor implements TokenPersistenceProcessor {
         String hashAlgorithm = OAuthServerConfiguration.getInstance().getHashAlgorithm();
         try {
             messageDigest = MessageDigest.getInstance(hashAlgorithm);
-            messageDigest.update(plainText.getBytes());
+            messageDigest.update(plainText.getBytes(StandardCharsets.UTF_8));
             hash = messageDigest.digest();
 
         } catch (NoSuchAlgorithmException e) {

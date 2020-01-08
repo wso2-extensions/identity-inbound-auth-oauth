@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth2.token.handlers.grant.iwa.ntlm;
 
 import com.sun.jna.platform.win32.Sspi;
+import org.apache.catalina.connector.Connector;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.base.IdentityConstants;
@@ -40,19 +41,23 @@ import waffle.windows.auth.impl.WindowsAuthProviderImpl;
 import waffle.windows.auth.impl.WindowsCredentialsHandleImpl;
 import waffle.windows.auth.impl.WindowsSecurityContextImpl;
 
-import javax.security.auth.Subject;
-import javax.servlet.ServletException;
 import java.io.IOException;
 
+import javax.security.auth.Subject;
+import javax.servlet.ServletException;
 
+/**
+ * NTLM Authentication grant handler.
+ */
 public class NTLMAuthenticationGrantHandler extends AbstractAuthorizationGrantHandler {
-    private static Log log = LogFactory.getLog(NTLMAuthenticationGrantHandler.class);
+
+    private static final Log log = LogFactory.getLog(NTLMAuthenticationGrantHandler.class);
     String securityPackage = "Negotiate";
 
     @Override
     public boolean validateGrant(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
 
-        if(!super.validateGrant(tokReqMsgCtx)){
+        if (!super.validateGrant(tokReqMsgCtx)) {
             return false;
         }
 
@@ -88,7 +93,7 @@ public class NTLMAuthenticationGrantHandler extends AbstractAuthorizationGrantHa
             clientContext.setSecurityPackage(securityPackage);
             clientContext.initialize(null, null, WindowsAccountImpl.getCurrentUsername());
 
-            SimpleHttpRequest request = new SimpleHttpRequest();
+            SimpleHttpRequest request = new SimpleHttpRequest(new Connector());
             SimpleFilterChain filterChain = new SimpleFilterChain();
 
             while (true) {

@@ -27,6 +27,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.core.util.KeyStoreManager;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -45,14 +46,19 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import javax.jws.WebService;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 
+/**
+ * Rest implementation for JWKS endpoint.
+ */
 @WebService
 public class JwksEndpoint {
+
     private static final Log log = LogFactory.getLog(JwksEndpoint.class);
     private static final String KEY_USE = "sig";
     private static final String SECURITY_KEY_STORE_LOCATION = "Security.KeyStore.Location";
@@ -80,6 +86,7 @@ public class JwksEndpoint {
                     String errorMessage = "Invalid Tenant: " + tenantDomain;
                     return logAndReturnError(errorMessage, null);
                 }
+                FrameworkUtils.startTenantFlow(tenantDomain);
                 KeyStoreManager keyStoreManager = KeyStoreManager.getInstance(tenantId);
                 keystore = keyStoreManager.getKeyStore(generateKSNameFromDomainName(tenantDomain));
             }
@@ -95,6 +102,8 @@ public class JwksEndpoint {
         } catch (Exception e) {
             String errorMessage = "Error while generating the keyset for tenant domain: " + tenantDomain;
             return logAndReturnError(errorMessage, e);
+        } finally {
+            FrameworkUtils.endTenantFlow();
         }
     }
 
@@ -128,7 +137,6 @@ public class JwksEndpoint {
     }
 
     /**
-     *
      * @deprecated Earlier for all the type of JWT Tokens(eg: accessToken, ID token) only one algorithm is shown as
      * "algo" in keysets on the JWKS endpoint. But it is possible to configure different algorithms for different
      * JWT Types via identity.xml. Thus it is recommended to create keysets for different algorithms. In earlier
@@ -138,13 +146,11 @@ public class JwksEndpoint {
      *
      * This method is marked as @deprecated because this method should not be used in any other places. In future
      * this method should be removed.
-     *
      */
     @Deprecated
     private JSONArray createKeysetUsingOldKeyID(JSONArray jwksArray, Map<String, Certificate> certificates,
                                                 JWSAlgorithm algorithm) throws IdentityOAuth2Exception, ParseException {
 
-        JSONArray OldJwksArray = jwksArray;
         for (Map.Entry certificateWithAlias : certificates.entrySet()) {
             Certificate cert = (Certificate) certificateWithAlias.getValue();
             String alias = (String) certificateWithAlias.getKey();
@@ -155,11 +161,12 @@ public class JwksEndpoint {
             jwk.keyUse(KeyUse.parse(KEY_USE));
             jwksArray.put(jwk.build().toJSONObject());
         }
-        return OldJwksArray;
+        return jwksArray;
     }
 
     /**
      * This method read identity.xml and find different signing algorithms
+     *
      * @param accessTokenSignAlgorithm
      * @param config
      * @return
@@ -185,10 +192,12 @@ public class JwksEndpoint {
     }
 
     private boolean isInvalidTenantId(int tenantId) {
+
         return tenantId < 1 && tenantId != MultitenantConstants.SUPER_TENANT_ID;
     }
 
     private String getTenantDomain() {
+
         Object tenantObj = IdentityUtil.threadLocalProperties.get().get(OAuthConstants.TENANT_NAME_FROM_CONTEXT);
         if (tenantObj != null && StringUtils.isNotBlank((String) tenantObj)) {
             return (String) tenantObj;
@@ -197,6 +206,7 @@ public class JwksEndpoint {
     }
 
     private String logAndReturnError(String errorMesage, Exception e) {
+
         if (e != null) {
             log.error(errorMesage, e);
         } else {
@@ -211,6 +221,7 @@ public class JwksEndpoint {
      * @return key store file name
      */
     private String generateKSNameFromDomainName(String tenantDomain) {
+
         String ksName = tenantDomain.trim().replace(".", "-");
         return (ksName + ".jks");
     }

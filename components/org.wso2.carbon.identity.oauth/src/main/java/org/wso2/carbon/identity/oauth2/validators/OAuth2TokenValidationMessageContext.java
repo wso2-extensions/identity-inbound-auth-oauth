@@ -23,6 +23,9 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 
 import java.util.Properties;
 
+/**
+ * OAuth 2 token validation message context.
+ */
 public class OAuth2TokenValidationMessageContext {
 
     OAuth2TokenValidationRequestDTO requestDTO;

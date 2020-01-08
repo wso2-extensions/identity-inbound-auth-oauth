@@ -131,7 +131,8 @@ public class DCRMServiceTest extends PowerMockTestCase {
     @Test
     public void getApplicationDTOTestWithIOAException() throws Exception {
 
-        doThrow(new IdentityOAuthAdminException("")).when(mockOAuthAdminService).getOAuthApplicationData(dummyConsumerKey);
+        doThrow(new IdentityOAuthAdminException("")).when(mockOAuthAdminService)
+                .getOAuthApplicationData(dummyConsumerKey);
 
         when(mockOAuthAdminService.getAllOAuthApplicationData()).thenReturn(new OAuthConsumerAppDTO[0]);
 
@@ -183,10 +184,10 @@ public class DCRMServiceTest extends PowerMockTestCase {
         Whitebox.setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
         Application application = dcrmService.getApplication(dummyConsumerKey);
 
-        assertEquals(application.getClient_id(), dummyConsumerKey);
-        assertEquals(application.getClient_name(), dummyClientName);
-        assertEquals(application.getClient_secret(), dummyConsumerSecret);
-        assertEquals(application.getRedirect_uris().get(0), dummyCallbackUrl);
+        assertEquals(application.getClientId(), dummyConsumerKey);
+        assertEquals(application.getClientName(), dummyClientName);
+        assertEquals(application.getClientSecret(), dummyConsumerSecret);
+        assertEquals(application.getRedirectUris().get(0), dummyCallbackUrl);
     }
 
     @Test
@@ -365,7 +366,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
                 .thenReturn(oAuthConsumerApp);
 
         Application application = dcrmService.registerApplication(applicationRegistrationRequest);
-        assertEquals(application.getClient_name(), dummyClientName);
+        assertEquals(application.getClientName(), dummyClientName);
     }
 
     @Test
@@ -518,7 +519,8 @@ public class DCRMServiceTest extends PowerMockTestCase {
                 .getOAuthApplicationDataByAppName(dummyClientName)).thenReturn(oAuthConsumerApp);
         when(mockOAuthAdminService
                 .getOAuthApplicationData("dummyConsumerKey")).thenReturn(oAuthConsumerApp);
-        when(mockOAuthAdminService.getAllOAuthApplicationData()).thenReturn(new OAuthConsumerAppDTO[]{oAuthConsumerApp});
+        when(mockOAuthAdminService.getAllOAuthApplicationData())
+                .thenReturn(new OAuthConsumerAppDTO[]{oAuthConsumerApp});
         when(mockOAuthAdminService.registerAndRetrieveOAuthApplicationData(any(OAuthConsumerAppDTO.class))).
                 thenReturn(oAuthConsumerApp);
 
@@ -579,6 +581,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
     }
 
     private void startTenantFlow() {
+
         String carbonHome = Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString();
         System.setProperty(CarbonBaseConstants.CARBON_HOME, carbonHome);
         PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(dummyTenantDomain);

@@ -25,10 +25,10 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.cache.JWKSCache;
 import org.wso2.carbon.identity.oauth2.cache.JWKSCacheEntry;
 import org.wso2.carbon.identity.oauth2.cache.JWKSCacheKey;
-import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 
 import java.net.MalformedURLException;
 import java.net.URL;

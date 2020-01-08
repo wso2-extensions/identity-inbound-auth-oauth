@@ -73,7 +73,7 @@ import static org.testng.Assert.assertNotNull;
         RealmService.class})
 public class TokenValidationHandlerTest extends PowerMockTestCase {
 
-    private String scopeArraySorted[] = new String[]{"scope1", "scope2", "scope3"};
+    private String[] scopeArraySorted = new String[]{"scope1", "scope2", "scope3"};
     private String clientId = "dummyClientId";
     private String authorizationCode = "testAuthorizationCode";
     private String tokenType = "testTokenType";
@@ -185,8 +185,7 @@ public class TokenValidationHandlerTest extends PowerMockTestCase {
         OAuth2TokenValidationRequestDTO oAuth2TokenValidationRequestDTO = new OAuth2TokenValidationRequestDTO();
         OAuth2TokenValidationRequestDTO.OAuth2AccessToken accessToken = oAuth2TokenValidationRequestDTO.new
                 OAuth2AccessToken();
-        String ACCESS_TOKEN = "testAccessToken";
-        accessToken.setIdentifier(ACCESS_TOKEN);
+        accessToken.setIdentifier("testAccessToken");
         accessToken.setTokenType("bearer");
 
         AccessTokenDO accessTokenDO = new AccessTokenDO(clientId, authzUser, scopeArraySorted, issuedTime,
@@ -199,7 +198,7 @@ public class TokenValidationHandlerTest extends PowerMockTestCase {
         oAuthAppDO.setApplicationName("testApp");
         AppInfoCache appInfoCache = AppInfoCache.getInstance();
         appInfoCache.addToCache("testConsumerKey", oAuthAppDO);
-        tokenMgtDAO.persistAccessToken(ACCESS_TOKEN, "testConsumerKey", accessTokenDO, accessTokenDO,
+        tokenMgtDAO.persistAccessToken("testAccessToken", "testConsumerKey", accessTokenDO, accessTokenDO,
                 "TESTDOMAIN");
         oAuth2TokenValidationRequestDTO.setAccessToken(accessToken);
         when(OAuth2Util.getPersistenceProcessor()).thenReturn(new PlainTextPersistenceProcessor());
@@ -234,7 +233,8 @@ public class TokenValidationHandlerTest extends PowerMockTestCase {
             dataSource.setPassword("password");
             dataSource.setUrl("jdbc:h2:mem:test" + DB_NAME);
             try (Connection connection = dataSource.getConnection()) {
-                connection.createStatement().executeUpdate("RUNSCRIPT FROM '" + TestUtils.getFilePath(H2_SCRIPT_NAME) + "'");
+                connection.createStatement()
+                        .executeUpdate("RUNSCRIPT FROM '" + TestUtils.getFilePath(H2_SCRIPT_NAME) + "'");
             }
             conn = dataSource.getConnection();
         }

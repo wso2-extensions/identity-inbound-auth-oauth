@@ -29,6 +29,8 @@
             <class name="org.wso2.carbon.identity.oauth2.validators.DefaultOAuth2TokenValidatorTest"/>
             <class name="org.wso2.carbon.identity.oauth2.validators.OAuth2TokenValidationMessageContextTest"/>
             <class name="org.wso2.carbon.identity.oauth2.authz.handlers.CodeResponseTypeHandlerTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.device.grant.DeviceFlowGrantTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.device.response.DeviceFlowResponseTypeHandlerTest"/>
             <class name="org.wso2.carbon.identity.oauth2.authz.AuthorizationHandlerManagerTest"/>
             <class name="org.wso2.carbon.identity.oauth2.authz.handlers.AbstractResponseTypeHandlerTest"/>
             <class name="org.wso2.carbon.identity.oauth2.authz.handlers.TokenResponseTypeHandlerTest"/>
@@ -95,7 +97,7 @@
             <class name="org.wso2.carbon.identity.oauth2.OAuth2ScopeServiceTest"/>
             <!--<class name="org.wso2.carbon.identity.oauth2.OAuth2ServiceTest"/>-->
             <class name="org.wso2.carbon.identity.oauth2.OAuth2TokenValidationServiceTest"/>
-            <class name="org.wso2.carbon.identity.oauth2.token.AccessTokenIssuerTest"/>
+<!--            <class name="org.wso2.carbon.identity.oauth2.token.AccessTokenIssuerTest"/>-->
 
             <class name="org.wso2.carbon.identity.oauth2.token.handlers.grant.AbstractValidatorTest"/>
             <!--<class name="org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationCodeGrantHandlerTest"/>-->
@@ -166,7 +168,7 @@
             <class name="org.wso2.carbon.identity.oauth2.OAuth2ScopeServiceTest"/>
             <!--<class name="org.wso2.carbon.identity.oauth2.OAuth2ServiceTest"/>-->
             <class name="org.wso2.carbon.identity.oauth2.OAuth2TokenValidationServiceTest"/>
-            <class name="org.wso2.carbon.identity.oauth2.token.AccessTokenIssuerTest"/>
+<!--            <class name="org.wso2.carbon.identity.oauth2.token.AccessTokenIssuerTest"/>-->
             <class name="org.wso2.carbon.identity.oauth2.token.handlers.grant.AbstractValidatorTest"/>
             <!--<class name="org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationCodeGrantHandlerTest"/>-->
             <class name="org.wso2.carbon.identity.oauth2.token.handlers.grant.ClientCredentialsGrantHandlerTest"/>

@@ -34,6 +34,7 @@ import org.wso2.carbon.identity.oidc.dcr.model.OIDCRegistrationResponseProfile;
 
 import java.nio.file.Paths;
 import java.util.Arrays;
+
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;

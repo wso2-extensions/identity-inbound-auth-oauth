@@ -22,18 +22,23 @@ import org.wso2.carbon.identity.oauth.dcr.bean.Application;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMClientException;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMServerException;
 import org.wso2.carbon.identity.oauth2.dcr.endpoint.RegisterApiService;
+import org.wso2.carbon.identity.oauth2.dcr.endpoint.dto.ApplicationDTO;
 import org.wso2.carbon.identity.oauth2.dcr.endpoint.dto.RegistrationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dcr.endpoint.dto.UpdateRequestDTO;
 import org.wso2.carbon.identity.oauth2.dcr.endpoint.util.DCRMUtils;
 
 import javax.ws.rs.core.Response;
 
+/**
+ * API Service implementation to manage a DCR application.
+ */
 public class RegisterApiServiceImpl extends RegisterApiService {
 
     private static final Log LOG = LogFactory.getLog(RegisterApiServiceImpl.class);
 
     @Override
     public Response deleteApplication(String clientId) {
+
         try {
             DCRMUtils.getOAuth2DCRMService().deleteApplication(clientId);
         } catch (DCRMClientException e) {
@@ -52,9 +57,11 @@ public class RegisterApiServiceImpl extends RegisterApiService {
 
     @Override
     public Response getApplication(String clientId) {
-        Application application = null;
+
+        ApplicationDTO applicationDTO = null;
         try {
-            application = DCRMUtils.getOAuth2DCRMService().getApplication(clientId);
+            Application application = DCRMUtils.getOAuth2DCRMService().getApplication(clientId);
+            applicationDTO = DCRMUtils.getApplicationDTOFromApplication(application);
         } catch (DCRMClientException e) {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Client error while retrieving  application with client key:" + clientId, e);
@@ -66,14 +73,17 @@ public class RegisterApiServiceImpl extends RegisterApiService {
         } catch (Throwable throwable) {
             DCRMUtils.handleErrorResponse(Response.Status.INTERNAL_SERVER_ERROR, throwable, true, LOG);
         }
-        return Response.status(Response.Status.OK).entity(application).build();
+        return Response.status(Response.Status.OK).entity(applicationDTO).build();
     }
 
     @Override
     public Response registerApplication(RegistrationRequestDTO registrationRequest) {
-        Application application = null;
+
+        ApplicationDTO applicationDTO = null;
         try {
-            application = DCRMUtils.getOAuth2DCRMService().registerApplication(DCRMUtils.getApplicationRegistrationRequest(registrationRequest));
+            Application application = DCRMUtils.getOAuth2DCRMService()
+                    .registerApplication(DCRMUtils.getApplicationRegistrationRequest(registrationRequest));
+            applicationDTO = DCRMUtils.getApplicationDTOFromApplication(application);
         } catch (DCRMClientException e) {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Client error while registering application \n" + registrationRequest.toString(), e);
@@ -85,14 +95,17 @@ public class RegisterApiServiceImpl extends RegisterApiService {
         } catch (Throwable throwable) {
             DCRMUtils.handleErrorResponse(Response.Status.INTERNAL_SERVER_ERROR, throwable, true, LOG);
         }
-        return Response.status(Response.Status.CREATED).entity(application).build();
+        return Response.status(Response.Status.CREATED).entity(applicationDTO).build();
     }
 
     @Override
     public Response updateApplication(UpdateRequestDTO updateRequest, String clientId) {
-        Application application = null;
+
+        ApplicationDTO applicationDTO = null;
         try {
-            application = DCRMUtils.getOAuth2DCRMService().updateApplication(DCRMUtils.getApplicationUpdateRequest(updateRequest), clientId);
+            Application application = DCRMUtils.getOAuth2DCRMService()
+                    .updateApplication(DCRMUtils.getApplicationUpdateRequest(updateRequest), clientId);
+            applicationDTO = DCRMUtils.getApplicationDTOFromApplication(application);
         } catch (DCRMClientException e) {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Client error while updating application \n" + updateRequest.toString(), e);
@@ -104,15 +117,16 @@ public class RegisterApiServiceImpl extends RegisterApiService {
         } catch (Throwable throwable) {
             DCRMUtils.handleErrorResponse(Response.Status.INTERNAL_SERVER_ERROR, throwable, true, LOG);
         }
-        return Response.status(Response.Status.OK).entity(application).build();
+        return Response.status(Response.Status.OK).entity(applicationDTO).build();
     }
 
     @Override
     public Response getApplicationByName(String name) {
 
-        Application application = null;
+        ApplicationDTO applicationDTO = null;
         try {
-            application = DCRMUtils.getOAuth2DCRMService().getApplicationByName(name);
+            Application application = DCRMUtils.getOAuth2DCRMService().getApplicationByName(name);
+            applicationDTO = DCRMUtils.getApplicationDTOFromApplication(application);
         } catch (DCRMClientException e) {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Client error while retrieving application by name : " + name, e);
@@ -121,6 +135,6 @@ public class RegisterApiServiceImpl extends RegisterApiService {
         } catch (Exception e) {
             DCRMUtils.handleErrorResponse(Response.Status.INTERNAL_SERVER_ERROR, e, true, LOG);
         }
-        return Response.status(Response.Status.OK).entity(application).build();
+        return Response.status(Response.Status.OK).entity(applicationDTO).build();
     }
 }

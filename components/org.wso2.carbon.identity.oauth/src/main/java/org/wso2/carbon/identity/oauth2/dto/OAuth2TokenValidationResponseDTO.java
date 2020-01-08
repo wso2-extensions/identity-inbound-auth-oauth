@@ -18,6 +18,8 @@
 
 package org.wso2.carbon.identity.oauth2.dto;
 
+import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
+
 /**
  * Results holder for bearer token validation query
  */
@@ -32,6 +34,8 @@ public class OAuth2TokenValidationResponseDTO {
     private boolean valid;
 
     private String errorMsg;
+
+    private TokenBinding tokenBinding;
 
     private AuthorizationContextToken authorizationContextToken;
 
@@ -83,6 +87,19 @@ public class OAuth2TokenValidationResponseDTO {
         this.errorMsg = errorMsg;
     }
 
+    public TokenBinding getTokenBinding() {
+
+        return tokenBinding;
+    }
+
+    public void setTokenBinding(TokenBinding tokenBinding) {
+
+        this.tokenBinding = tokenBinding;
+    }
+
+    /**
+     * Authorization context token.
+     */
     public class AuthorizationContextToken {
 
         String tokenType;

@@ -19,15 +19,15 @@ package org.wso2.carbon.identity.oauth2.model;
 
 /**
  * This is used to store the supported token issuer configuration details from the identity.xml.
- *
+ * <p>
  * i.e:
- * 	<SupportedTokenTypes>
-        <SupportedTokenType>
-            <TokenTypeName>Default</TokenTypeName>
-            <TokenTypeImplClass>org.wso2.carbon.identity.oauth2.token.OauthTokenIssuerImpl</TokenTypeImplClass>
-            <PersistAccessTokenAlias>true</PersistAccessTokenAlias>
-        </SupportedTokenType>
-    </SupportedTokenTypes>
+ * <SupportedTokenTypes>
+ *     <SupportedTokenType>
+ *         <TokenTypeName>Default</TokenTypeName>
+ *         <TokenTypeImplClass>org.wso2.carbon.identity.oauth2.token.OauthTokenIssuerImpl</TokenTypeImplClass>
+ *         <PersistAccessTokenAlias>true</PersistAccessTokenAlias>
+ *     </SupportedTokenType>
+ * </SupportedTokenTypes>
  */
 public class TokenIssuerDO {
 

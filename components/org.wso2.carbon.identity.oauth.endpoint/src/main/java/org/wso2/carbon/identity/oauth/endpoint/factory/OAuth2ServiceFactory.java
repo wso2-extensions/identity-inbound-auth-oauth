@@ -42,12 +42,12 @@ public class OAuth2ServiceFactory extends AbstractFactoryBean<OAuth2Service> {
         if (this.oauth2Service != null) {
             return this.oauth2Service;
         } else {
-            OAuth2Service OAuth2Service = (OAuth2Service) PrivilegedCarbonContext
+            OAuth2Service oauth2Service = (OAuth2Service) PrivilegedCarbonContext
                     .getThreadLocalCarbonContext().getOSGiService(OAuth2Service.class, null);
-            if (OAuth2Service != null) {
-                this.oauth2Service = OAuth2Service;
+            if (oauth2Service != null) {
+                this.oauth2Service = oauth2Service;
             }
-            return OAuth2Service;
+            return oauth2Service;
         }
     }
 }

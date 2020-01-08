@@ -29,6 +29,7 @@ public class CarbonOAuthASResponseTest {
 
     @Test
     public void testCarbonOAuthASResponse() {
+
         CarbonOAuthASResponse carbonOAuthASResponse = new CarbonOAuthASResponse(
                 RESPONSE_URI, HttpServletResponse.SC_OK);
         assertEquals(carbonOAuthASResponse.getResponseStatus(), HttpServletResponse.SC_OK);

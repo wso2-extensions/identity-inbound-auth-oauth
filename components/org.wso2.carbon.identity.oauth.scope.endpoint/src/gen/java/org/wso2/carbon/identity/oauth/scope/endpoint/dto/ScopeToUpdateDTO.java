@@ -2,6 +2,7 @@ package org.wso2.carbon.identity.oauth.scope.endpoint.dto;
 
 import java.util.ArrayList;
 import java.util.List;
+import org.wso2.carbon.identity.oauth.scope.endpoint.dto.ScopeBindingDTO;
 
 import io.swagger.annotations.*;
 import com.fasterxml.jackson.annotation.*;
@@ -24,6 +25,9 @@ public class ScopeToUpdateDTO  {
   
   
   private List<String> bindings = new ArrayList<String>();
+  
+  
+  private List<ScopeBindingDTO> scopeBindings = new ArrayList<ScopeBindingDTO>();
 
   
   /**
@@ -62,6 +66,18 @@ public class ScopeToUpdateDTO  {
   }
 
   
+  /**
+   **/
+  @ApiModelProperty(value = "")
+  @JsonProperty("scopeBindings")
+  public List<ScopeBindingDTO> getScopeBindings() {
+    return scopeBindings;
+  }
+  public void setScopeBindings(List<ScopeBindingDTO> scopeBindings) {
+    this.scopeBindings = scopeBindings;
+  }
+
+  
 
   @Override
   public String toString()  {
@@ -71,6 +87,7 @@ public class ScopeToUpdateDTO  {
     sb.append("  displayName: ").append(displayName).append("\n");
     sb.append("  description: ").append(description).append("\n");
     sb.append("  bindings: ").append(bindings).append("\n");
+    sb.append("  scopeBindings: ").append(scopeBindings).append("\n");
     sb.append("}\n");
     return sb.toString();
   }

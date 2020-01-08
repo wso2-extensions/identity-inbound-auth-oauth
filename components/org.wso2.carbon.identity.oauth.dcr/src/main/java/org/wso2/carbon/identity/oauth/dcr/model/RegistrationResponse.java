@@ -21,55 +21,69 @@ package org.wso2.carbon.identity.oauth.dcr.model;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.IdentityMessageContext;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.IdentityResponse;
 
-
+/**
+ * DCR Response data returned after Registering an OAuth application.
+ */
 public class RegistrationResponse extends IdentityResponse {
-
 
     private static final long serialVersionUID = -8410341453019535800L;
     private RegistrationResponseProfile registrationResponseProfile = null;
 
     protected RegistrationResponse(
             DCRRegisterResponseBuilder builder) {
+
         super(builder);
         this.registrationResponseProfile = builder.registrationResponseProfile;
     }
 
     public RegistrationResponseProfile getRegistrationResponseProfile() {
+
         return registrationResponseProfile;
     }
 
+    /**
+     * OAuth DCR registration response builder.
+     */
     public static class DCRRegisterResponseBuilder extends IdentityResponseBuilder {
 
         private RegistrationResponseProfile registrationResponseProfile = null;
 
         public DCRRegisterResponseBuilder(
                 IdentityMessageContext context) {
+
             super(context);
         }
 
         public DCRRegisterResponseBuilder() {
+
         }
 
         public DCRRegisterResponseBuilder setRegistrationResponseProfile(
                 RegistrationResponseProfile registrationResponseProfile) {
+
             this.registrationResponseProfile = registrationResponseProfile;
             return this;
         }
 
         @Override
         public RegistrationResponse build() {
+
             return new RegistrationResponse(this);
         }
     }
 
+    /**
+     * Contains the constants related to OAuth DCR response.
+     */
     public static class DCRegisterResponseConstants extends IdentityResponseConstants {
+
         public static final String CLIENT_ID = "client_id";
         public static final String CLIENT_SECRET = "client_secret";
         public static final String CLIENT_NAME = "client_name";
         public static final String CLIENT_ID_ISSUED_AT = "client_id_issued_at";
         public static final String CLIENT_SECRET_EXPIRES_AT = "client_secret_expires_at";
-        public final static String REDIRECT_URIS = "redirect_uris";
-        public final static String GRANT_TYPES = "grant_types";
+        public static final String REDIRECT_URIS = "redirect_uris";
+        public static final String GRANT_TYPES = "grant_types";
 
     }
 }

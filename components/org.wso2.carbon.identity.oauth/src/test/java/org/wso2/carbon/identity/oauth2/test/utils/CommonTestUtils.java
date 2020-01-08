@@ -85,12 +85,9 @@ public class CommonTestUtils {
         FileInputStream fileInputStream = null;
         File spConfigDir = new File(spConfigDirPath);
         if (spConfigDir.exists()) {
-            File[] arr$ = spConfigDir.listFiles();
-            int len$ = arr$.length;
+            File[] files = spConfigDir.listFiles();
 
-            for (int i$ = 0; i$ < len$; ++i$) {
-                File fileEntry = arr$[i$];
-
+            for (File fileEntry : files) {
                 try {
                     if (!fileEntry.isDirectory()) {
                         fileInputStream = new FileInputStream(new File(fileEntry.getAbsolutePath()));

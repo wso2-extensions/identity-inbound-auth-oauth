@@ -40,8 +40,8 @@ import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcess
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
-import org.wso2.carbon.user.api.UserRealm;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.user.api.UserRealm;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
@@ -62,14 +62,15 @@ import java.util.Set;
 
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.BACK_CHANNEL_LOGOUT_URL;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.BYPASS_CLIENT_CREDENTIALS;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.FRONT_CHANNEL_LOGOUT_URL;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ID_TOKEN_ENCRYPTED;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ID_TOKEN_ENCRYPTION_ALGORITHM;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ID_TOKEN_ENCRYPTION_METHOD;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ID_TOKEN_ENCRYPTED;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.REQUEST_OBJECT_SIGNED;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_TYPE;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.BYPASS_CLIENT_CREDENTIALS;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.RENEW_REFRESH_TOKEN;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.REQUEST_OBJECT_SIGNED;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_BINDING_TYPE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_TYPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.OPENID_CONNECT_AUDIENCE;
 
 /**
@@ -77,7 +78,7 @@ import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.OPENID_CONNECT_AUD
  */
 public class OAuthAppDAO {
 
-    public static final Log log = LogFactory.getLog(OAuthAppDAO.class);
+    private static final Log LOG = LogFactory.getLog(OAuthAppDAO.class);
     private static final String APP_STATE = "APP_STATE";
     private static final String USERNAME = "USERNAME";
     private static final String LOWER_USERNAME = "LOWER(USERNAME)";
@@ -89,7 +90,7 @@ public class OAuthAppDAO {
         try {
             persistenceProcessor = OAuthServerConfiguration.getInstance().getPersistenceProcessor();
         } catch (IdentityOAuth2Exception e) {
-            log.error("Error retrieving TokenPersistenceProcessor. Defaulting to PlainTextPersistenceProcessor");
+            LOG.error("Error retrieving TokenPersistenceProcessor. Defaulting to PlainTextPersistenceProcessor");
             persistenceProcessor = new PlainTextPersistenceProcessor();
         }
 
@@ -104,8 +105,10 @@ public class OAuthAppDAO {
             int appId = 0;
             try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
                 try {
-                    String processedClientId = persistenceProcessor.getProcessedClientId(consumerAppDO.getOauthConsumerKey());
-                    String processedClientSecret = persistenceProcessor.getProcessedClientSecret(consumerAppDO.getOauthConsumerSecret());
+                    String processedClientId =
+                            persistenceProcessor.getProcessedClientId(consumerAppDO.getOauthConsumerKey());
+                    String processedClientSecret =
+                            persistenceProcessor.getProcessedClientSecret(consumerAppDO.getOauthConsumerSecret());
 
                     String dbProductName = connection.getMetaData().getDatabaseProductName();
                     try (PreparedStatement prepStmt = connection
@@ -137,8 +140,8 @@ public class OAuthAppDAO {
 
                     // Some JDBC Drivers returns this in the result, some don't so need to check before continuing.
                     if (appId == 0) {
-                        if (log.isDebugEnabled()) {
-                            log.debug(
+                        if (LOG.isDebugEnabled()) {
+                            LOG.debug(
                                     "JDBC Driver did not returning the app id of the newly created app " + consumerAppDO
                                             .getApplicationName() + ". So executing select operation to get the id");
                         }
@@ -439,8 +442,8 @@ public class OAuthAppDAO {
                 }
                 int count = prepStmt.executeUpdate();
                 updateScopeValidators(connection, oauthAppDO.getId(), oauthAppDO.getScopeValidators());
-                if (log.isDebugEnabled()) {
-                    log.debug("No. of records updated for updating consumer application. : " + count);
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("No. of records updated for updating consumer application. : " + count);
                 }
 
                 addOrUpdateOIDCSpProperty(oauthAppDO, connection);
@@ -490,7 +493,7 @@ public class OAuthAppDAO {
 
     private String getSqlQuery(boolean isUserValidForOwnerUpdate) {
 
-        String sqlQuery = null;
+        String sqlQuery;
         if (isUserValidForOwnerUpdate) {
             sqlQuery = SQLQueries.OAuthAppDAOSQLQueries.UPDATE_CONSUMER_APP_WITH_PKCE_AND_OWNER_UPDATE;
         } else {
@@ -499,8 +502,8 @@ public class OAuthAppDAO {
         return sqlQuery;
     }
 
-    private void setValuesToStatementWithPKCEAndOwnerUpdate(OAuthAppDO oauthAppDO, PreparedStatement prepStmt) throws SQLException,
-            IdentityOAuth2Exception {
+    private void setValuesToStatementWithPKCEAndOwnerUpdate(OAuthAppDO oauthAppDO, PreparedStatement prepStmt)
+            throws SQLException, IdentityOAuth2Exception {
 
         prepStmt.setString(4, oauthAppDO.isPkceMandatory() ? "1" : "0");
         prepStmt.setString(5, oauthAppDO.isPkceSupportPlain() ? "1" : "0");
@@ -513,30 +516,8 @@ public class OAuthAppDAO {
         prepStmt.setString(12, persistenceProcessor.getProcessedClientId(oauthAppDO.getOauthConsumerKey()));
     }
 
-    private void setValuesToStatementWithOwnerUpdateNoPKCE(OAuthAppDO oauthAppDO, PreparedStatement prepStmt) throws SQLException,
-            IdentityOAuth2Exception {
-
-        prepStmt.setLong(4, oauthAppDO.getUserAccessTokenExpiryTime());
-        prepStmt.setLong(5, oauthAppDO.getApplicationAccessTokenExpiryTime());
-        prepStmt.setLong(6, oauthAppDO.getRefreshTokenExpiryTime());
-        prepStmt.setLong(7, oauthAppDO.getIdTokenExpiryTime());
-        prepStmt.setString(8, oauthAppDO.getAppOwner().getUserName());
-        prepStmt.setString(9, oauthAppDO.getAppOwner().getUserStoreDomain());
-        prepStmt.setString(10, persistenceProcessor.getProcessedClientId(oauthAppDO.getOauthConsumerKey()));
-    }
-
-    private void setValuesToStatementWithNoPKCEAndNoOwnerUpdate(OAuthAppDO oauthAppDO, PreparedStatement prepStmt) throws SQLException,
-            IdentityOAuth2Exception {
-
-        prepStmt.setLong(4, oauthAppDO.getUserAccessTokenExpiryTime());
-        prepStmt.setLong(5, oauthAppDO.getApplicationAccessTokenExpiryTime());
-        prepStmt.setLong(6, oauthAppDO.getRefreshTokenExpiryTime());
-        prepStmt.setLong(7, oauthAppDO.getIdTokenExpiryTime());
-        prepStmt.setString(8, persistenceProcessor.getProcessedClientId(oauthAppDO.getOauthConsumerKey()));
-    }
-
-    private void setValuesToStatementWithPKCENoOwnerUpdate(OAuthAppDO oauthAppDO, PreparedStatement prepStmt) throws SQLException,
-            IdentityOAuth2Exception {
+    private void setValuesToStatementWithPKCENoOwnerUpdate(OAuthAppDO oauthAppDO, PreparedStatement prepStmt)
+            throws SQLException, IdentityOAuth2Exception {
 
         prepStmt.setString(4, oauthAppDO.isPkceMandatory() ? "1" : "0");
         prepStmt.setString(5, oauthAppDO.isPkceSupportPlain() ? "1" : "0");
@@ -623,6 +604,9 @@ public class OAuthAppDAO {
         addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties, RENEW_REFRESH_TOKEN,
                 oauthAppDO.getRenewRefreshTokenEnabled(), prepStatementForPropertyAdd,
                 preparedStatementForPropertyUpdate);
+
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties, TOKEN_BINDING_TYPE,
+                oauthAppDO.getTokenBindingType(), prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
         // Execute batched add/update/delete.
         prepStatementForPropertyAdd.executeBatch();
@@ -717,8 +701,8 @@ public class OAuthAppDAO {
             throws IdentityApplicationManagementException {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
-            try(PreparedStatement
-                    statement = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.UPDATE_OAUTH_INFO)) {
+            try (PreparedStatement
+                         statement = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.UPDATE_OAUTH_INFO)) {
                 statement.setString(1, appName);
                 statement.setString(2, consumerKey);
                 statement.execute();
@@ -743,8 +727,8 @@ public class OAuthAppDAO {
                 if (rSet.next()) {
                     consumerAppState = rSet.getString(APP_STATE);
                 } else {
-                    if (log.isDebugEnabled()) {
-                        log.debug("No App found for the consumerKey: " + consumerKey);
+                    if (LOG.isDebugEnabled()) {
+                        LOG.debug("No App found for the consumerKey: " + consumerKey);
                     }
                 }
             }
@@ -916,7 +900,7 @@ public class OAuthAppDAO {
     private void addScopeValidators(Connection connection, int appId, String[] scopeValidators) throws SQLException {
 
         if (scopeValidators != null && scopeValidators.length > 0) {
-            log.debug(String.format("Adding %d Scope validators registered for OAuth appId %d",
+            LOG.debug(String.format("Adding %d Scope validators registered for OAuth appId %d",
                     scopeValidators.length, appId));
             try (PreparedStatement stmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries
                     .ADD_APP_SCOPE_VALIDATOR)) {
@@ -950,11 +934,11 @@ public class OAuthAppDAO {
                 }
             }
         }
-        if (log.isDebugEnabled()) {
-            log.debug(String.format("Retrieving %d Scope validators registered for OAuth appId %d",
+        if (LOG.isDebugEnabled()) {
+            LOG.debug(String.format("Retrieving %d Scope validators registered for OAuth appId %d",
                     scopeValidators.size(), id));
         }
-        return scopeValidators.toArray(new String[scopeValidators.size()]);
+        return scopeValidators.toArray(new String[0]);
     }
 
     /**
@@ -968,7 +952,9 @@ public class OAuthAppDAO {
     private void updateScopeValidators(Connection connection, int appId, String[] scopeValidators)
             throws SQLException {
 
-        log.debug(String.format("Removing  Scope validators registered for OAuth appId %d", appId));
+        if (LOG.isDebugEnabled()) {
+            LOG.debug(String.format("Removing  Scope validators registered for OAuth appId %d", appId));
+        }
         try (PreparedStatement stmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries
                 .REMOVE_APP_SCOPE_VALIDATORS)) {
             stmt.setInt(1, appId);
@@ -1003,8 +989,8 @@ public class OAuthAppDAO {
                 }
                 if (!rSetHasRows) {
                     String message = "Cannot find an application associated with the given consumer key : " + clientId;
-                    if (log.isDebugEnabled()) {
-                        log.debug(message);
+                    if (LOG.isDebugEnabled()) {
+                        LOG.debug(message);
                     }
                     throw new InvalidOAuthClientException(message);
                 }
@@ -1055,6 +1041,9 @@ public class OAuthAppDAO {
 
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                     RENEW_REFRESH_TOKEN, consumerAppDO.getRenewRefreshTokenEnabled());
+
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty, TOKEN_BINDING_TYPE,
+                    consumerAppDO.getTokenBindingType());
 
             prepStmtAddOIDCProperty.executeBatch();
         }
@@ -1137,6 +1126,8 @@ public class OAuthAppDAO {
                 getFirstPropertyValue(spOIDCProperties, BYPASS_CLIENT_CREDENTIALS));
         oauthApp.setBypassClientCredentials(bypassClientCreds);
 
+        oauthApp.setTokenBindingType(getFirstPropertyValue(spOIDCProperties, TOKEN_BINDING_TYPE));
+
         String renewRefreshToken = getFirstPropertyValue(spOIDCProperties, RENEW_REFRESH_TOKEN);
         oauthApp.setRenewRefreshTokenEnabled(renewRefreshToken);
 
@@ -1152,16 +1143,16 @@ public class OAuthAppDAO {
 
     private void handleRequestForANonExistingConsumerKey(String consumerKey) throws InvalidOAuthClientException {
         String message = "Cannot find an application associated with the given consumer key : " + consumerKey;
-        if (log.isDebugEnabled()) {
-            log.debug(message);
+        if (LOG.isDebugEnabled()) {
+            LOG.debug(message);
         }
         throw new InvalidOAuthClientException(message);
     }
 
     private void handleRequestForANonExistingApp(String appName) throws InvalidOAuthClientException {
         String message = "Cannot find an application associated with the given appName : " + appName;
-        if (log.isDebugEnabled()) {
-            log.debug(message);
+        if (LOG.isDebugEnabled()) {
+            LOG.debug(message);
         }
         throw new InvalidOAuthClientException(message);
     }

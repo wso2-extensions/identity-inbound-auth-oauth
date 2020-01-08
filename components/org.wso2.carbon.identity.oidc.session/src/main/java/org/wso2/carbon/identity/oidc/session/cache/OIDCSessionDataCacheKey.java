@@ -21,7 +21,7 @@ package org.wso2.carbon.identity.oidc.session.cache;
 import org.wso2.carbon.identity.application.common.cache.CacheKey;
 
 /**
- * This class holds the cache key which is the request session key denoted with 'SessionDataKey' parameter
+ * This class holds the cache key which is the request session key denoted with 'SessionDataKey' parameter.
  */
 public class OIDCSessionDataCacheKey extends CacheKey {
 
@@ -29,15 +29,18 @@ public class OIDCSessionDataCacheKey extends CacheKey {
     private String sessionDataId;
 
     public OIDCSessionDataCacheKey(String sessionDataId) {
+
         this.sessionDataId = sessionDataId;
     }
 
     public String getSessionDataId() {
+
         return sessionDataId;
     }
 
     @Override
     public boolean equals(Object o) {
+
         if (!(o instanceof OIDCSessionDataCacheKey)) {
             return false;
         }
@@ -46,6 +49,7 @@ public class OIDCSessionDataCacheKey extends CacheKey {
 
     @Override
     public int hashCode() {
+
         return sessionDataId.hashCode();
     }
 }

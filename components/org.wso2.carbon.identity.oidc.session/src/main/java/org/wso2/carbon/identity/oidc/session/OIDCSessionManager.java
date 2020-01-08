@@ -23,14 +23,14 @@ import org.wso2.carbon.identity.oidc.session.cache.OIDCSessionParticipantCacheEn
 import org.wso2.carbon.identity.oidc.session.cache.OIDCSessionParticipantCacheKey;
 
 /**
- * This class provides session state CRUD operations
+ * This class provides session state CRUD operations.
  */
 public class OIDCSessionManager {
 
     /**
-     * Stores the session state against the provided session id
+     * Stores the session state against the provided session id.
      *
-     * @param sessionId session id value
+     * @param sessionId    session id value
      * @param sessionState OIDCSessionState instance
      */
     public void storeOIDCSessionState(String sessionId, OIDCSessionState sessionState) {
@@ -45,7 +45,7 @@ public class OIDCSessionManager {
     }
 
     /**
-     * Retrieves session state for the given session id
+     * Retrieves session state for the given session id.
      *
      * @param sessionId session id value
      * @return OIDCSessionState instance
@@ -62,7 +62,7 @@ public class OIDCSessionManager {
     }
 
     /**
-     * Removes the session against the old session id and restore against the provided new session id
+     * Removes the session against the old session id and restore against the provided new session id.
      *
      * @param oldSessionId
      * @param newSessionId
@@ -75,7 +75,7 @@ public class OIDCSessionManager {
     }
 
     /**
-     * Removes the session against the given session id
+     * Removes the session against the given session id.
      *
      * @param sessionId session id value
      */
@@ -88,12 +88,13 @@ public class OIDCSessionManager {
     }
 
     /**
-     * Checks if there is a session exists for the gives session id
+     * Checks if there is a session exists for the gives session id.
      *
      * @param sessionId session id value
      * @return true if session exists
      */
     public boolean sessionExists(String sessionId) {
+
         return getOIDCSessionState(sessionId) != null;
     }
 }

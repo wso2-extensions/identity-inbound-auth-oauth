@@ -22,6 +22,9 @@ package org.wso2.carbon.identity.oauth2.token;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 
+/**
+ * OAuth 2 access token issuer.
+ */
 public interface OauthTokenIssuer {
 
     String accessToken(OAuthTokenReqMessageContext tokReqMsgCtx) throws OAuthSystemException;
@@ -50,6 +53,15 @@ public interface OauthTokenIssuer {
      */
     default boolean renewAccessTokenPerRequest() {
         return false;
+    }
+
+    /**
+     * Renew access token per request.
+     * @param oauthAuthzMsgCtx Message context of the token request.
+     * @return true if new access token per each request.
+     */
+    default boolean renewAccessTokenPerRequest(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) {
+        return renewAccessTokenPerRequest();
     }
 
     /**

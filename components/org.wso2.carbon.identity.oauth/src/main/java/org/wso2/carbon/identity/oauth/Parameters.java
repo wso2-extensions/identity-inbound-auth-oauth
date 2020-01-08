@@ -20,6 +20,9 @@ package org.wso2.carbon.identity.oauth;
 
 import java.net.URLDecoder;
 
+/**
+ * Parameters for OAuth service.
+ */
 public class Parameters {
 
     // oauth_signature

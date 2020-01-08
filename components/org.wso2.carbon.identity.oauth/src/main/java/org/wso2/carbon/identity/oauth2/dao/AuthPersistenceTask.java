@@ -24,17 +24,14 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 import java.util.concurrent.BlockingDeque;
 
 /**
- *
+ * Authorization code persistence task.
  */
 public class AuthPersistenceTask implements Runnable {
 
-    private static Log log = LogFactory.getLog(AuthPersistenceTask.class);
+    private static final Log log = LogFactory.getLog(AuthPersistenceTask.class);
     private BlockingDeque<AuthContextTokenDO> authContextTokenQueue;
 
     public AuthPersistenceTask(BlockingDeque<AuthContextTokenDO> authContextTokenQueue) {

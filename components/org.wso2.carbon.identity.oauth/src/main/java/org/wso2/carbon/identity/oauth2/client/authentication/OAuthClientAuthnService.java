@@ -21,20 +21,20 @@ package org.wso2.carbon.identity.oauth2.client.authentication;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
-import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 
-import javax.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.Map;
+
+import javax.servlet.http.HttpServletRequest;
 
 /**
  * OAuth Client Authentication Service which will be registered as an OSGI service
  */
 public class OAuthClientAuthnService {
 
-    private Log log = LogFactory.getLog(OAuthClientAuthnService.class);
+    private static final Log log = LogFactory.getLog(OAuthClientAuthnService.class);
 
     /**
      * Retrieve OAuth2 client authenticators which are reigstered dynamically.

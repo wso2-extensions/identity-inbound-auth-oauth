@@ -21,6 +21,9 @@ package org.wso2.carbon.identity.oauth2.dto;
 
 import org.wso2.carbon.identity.oauth2.ResponseHeader;
 
+/**
+ * OAuth revocation request DTO.
+ */
 public class OAuthRevocationResponseDTO {
 
     ResponseHeader[] responseHeaders;
@@ -62,5 +65,4 @@ public class OAuthRevocationResponseDTO {
     public void setErrorMsg(String errorMsg) {
         this.errorMsg = errorMsg;
     }
-
 }

@@ -33,10 +33,11 @@ import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 
-import javax.cache.Cache;
-import javax.cache.event.CacheEntryEvent;
 import java.sql.Timestamp;
 import java.util.Calendar;
+
+import javax.cache.Cache;
+import javax.cache.event.CacheEntryEvent;
 
 import static org.mockito.Matchers.anyString;
 import static org.mockito.MockitoAnnotations.initMocks;

@@ -20,10 +20,7 @@ package org.wso2.carbon.identity.oidc.session.config;
 import org.apache.axiom.om.OMElement;
 import org.mockito.Mock;
 import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockObjectFactory;
-import org.testng.IObjectFactory;
 import org.testng.annotations.DataProvider;
-import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
@@ -34,7 +31,7 @@ import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertNotNull;
 
 /**
- * Unit test coverage for OIDCSessionManagementConfiguration
+ * Unit test coverage for OIDCSessionManagementConfiguration.
  */
 @PrepareForTest({IdentityConfigParser.class})
 public class OIDCSessionManagementConfigurationTest extends PowerMockIdentityBaseTest {
@@ -47,6 +44,7 @@ public class OIDCSessionManagementConfigurationTest extends PowerMockIdentityBas
 
     @DataProvider(name = "provideDataForTestGetInstance")
     public Object[][] provideDataForTestGetInstance() {
+
         return new Object[][]{
                 {oauthConfigElement}, {null}
         };
@@ -54,9 +52,10 @@ public class OIDCSessionManagementConfigurationTest extends PowerMockIdentityBas
 
     @Test(dataProvider = "provideDataForTestGetInstance")
     public void testGetInstance(Object oauthConfigElement) {
+
         mockStatic(IdentityConfigParser.class);
         when(IdentityConfigParser.getInstance()).thenReturn(configParser);
-        when(configParser.getConfigElement(eq("OAuth"))).thenReturn((OMElement)oauthConfigElement);
+        when(configParser.getConfigElement(eq("OAuth"))).thenReturn((OMElement) oauthConfigElement);
         assertNotNull(OIDCSessionManagementConfiguration.getInstance());
     }
 }

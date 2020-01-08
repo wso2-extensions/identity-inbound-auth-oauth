@@ -20,6 +20,8 @@
 
 package org.wso2.carbon.identity.oauth2.token.handlers.grant;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -31,77 +33,93 @@ import java.util.Map;
  *
  * @since 5.4.10
  */
+@SuppressFBWarnings("NM_SAME_SIMPLE_NAME_AS_SUPERCLASS")
 public abstract class AbstractValidator extends org.apache.oltu.oauth2.common.validators.AbstractValidator {
 
-	public AbstractValidator() {
-		super();
-		// Client Authentication is handled by
-		// org.wso2.carbon.identity.oauth2.token.handlers.clientauth.ClientAuthenticationHandler extensions point.
-		// Therefore client_id and client_secret are not mandatory since client can authenticate with other means.
-		setEnforceClientAuthentication(false);
-		configureParams();
-	}
+    public AbstractValidator() {
 
-	/*
-	Custom grant type Validator implementations should  implement this method to add or remove
-	required, optional and not-allowed  parameters.
-	 */
-	abstract protected void configureParams();
+        super();
+        // Client Authentication is handled by
+        // org.wso2.carbon.identity.oauth2.token.handlers.clientauth.ClientAuthenticationHandler extensions point.
+        // Therefore client_id and client_secret are not mandatory since client can authenticate with other means.
+        setEnforceClientAuthentication(false);
+        configureParams();
+    }
 
-	protected List<String> getRequiredParams() {
-		return requiredParams;
-	}
+    /**
+     * Custom grant type Validator implementations should  implement this method to add or remove
+     * required, optional and not-allowed  parameters.
+     */
+    protected abstract void configureParams();
 
-	protected void setRequiredParams(List<String> requiredParams) {
-		this.requiredParams = requiredParams;
-	}
+    protected List<String> getRequiredParams() {
 
-	protected void addRequiredParam(String requiredParam) {
-		this.requiredParams.add(requiredParam);
-	}
+        return requiredParams;
+    }
 
-	protected void removeRequiredParam(String requiredParam) {
-		this.requiredParams.remove(requiredParam);
-	}
+    protected void setRequiredParams(List<String> requiredParams) {
 
-	protected Map<String, String> getOptionalParams() {
-		return optionalParams;
-	}
+        this.requiredParams = requiredParams;
+    }
 
-	protected void setOptionalParams(Map<String, String> optionalParams) {
-		this.optionalParams = optionalParams;
-	}
+    protected void addRequiredParam(String requiredParam) {
 
-	protected void addOptionalParam(String key, String optionalParam) {
-		this.optionalParams.put(key, optionalParam);
-	}
+        this.requiredParams.add(requiredParam);
+    }
 
-	protected void removeOptionalParam(String optionalParamKey) {
-		this.optionalParams.remove(optionalParamKey);
-	}
+    protected void removeRequiredParam(String requiredParam) {
 
-	protected List<String> getNotAllowedParamsParams() {
-		return notAllowedParams;
-	}
+        this.requiredParams.remove(requiredParam);
+    }
 
-	protected void setNotAllowedParamsParams(List<String> params) {
-		this.notAllowedParams = params == null ? new ArrayList() : params;
-	}
+    protected Map<String, String> getOptionalParams() {
 
-	protected void addNotAllowedParamsParam(String param) {
-		this.notAllowedParams.add(param);
-	}
+        return optionalParams;
+    }
 
-	protected void removeNotAllowedParamsParam(String param) {
-		this.notAllowedParams.remove(param);
-	}
+    protected void setOptionalParams(Map<String, String> optionalParams) {
 
-	public boolean isEnforceClientAuthentication() {
-		return enforceClientAuthentication;
-	}
+        this.optionalParams = optionalParams;
+    }
 
-	public void setEnforceClientAuthentication(boolean enforceClientAuthentication) {
-		this.enforceClientAuthentication = enforceClientAuthentication;
-	}
+    protected void addOptionalParam(String key, String optionalParam) {
+
+        this.optionalParams.put(key, optionalParam);
+    }
+
+    protected void removeOptionalParam(String optionalParamKey) {
+
+        this.optionalParams.remove(optionalParamKey);
+    }
+
+    protected List<String> getNotAllowedParamsParams() {
+
+        return notAllowedParams;
+    }
+
+    protected void setNotAllowedParamsParams(List<String> params) {
+
+        this.notAllowedParams = params == null ? new ArrayList() : params;
+    }
+
+    protected void addNotAllowedParamsParam(String param) {
+
+        this.notAllowedParams.add(param);
+    }
+
+    protected void removeNotAllowedParamsParam(String param) {
+
+        this.notAllowedParams.remove(param);
+    }
+
+    public boolean isEnforceClientAuthentication() {
+
+        return enforceClientAuthentication;
+    }
+
+    public void setEnforceClientAuthentication(boolean enforceClientAuthentication) {
+
+        this.enforceClientAuthentication = enforceClientAuthentication;
+    }
 
 }

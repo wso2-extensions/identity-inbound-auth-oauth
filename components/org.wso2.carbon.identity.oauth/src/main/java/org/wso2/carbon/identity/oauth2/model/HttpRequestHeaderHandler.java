@@ -17,10 +17,11 @@
  */
 package org.wso2.carbon.identity.oauth2.model;
 
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequest;
 import java.util.ArrayList;
 import java.util.Enumeration;
+
+import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletRequest;
 
 /**
  * This class is to store all Http Request Headers

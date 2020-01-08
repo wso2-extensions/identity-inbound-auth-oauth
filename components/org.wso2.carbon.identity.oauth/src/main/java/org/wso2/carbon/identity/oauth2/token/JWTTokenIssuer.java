@@ -421,8 +421,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             jwtClaimsSetBuilder.claim(SCOPE, scope);
         }
 
-        jwtClaimsSetBuilder.expirationTime(
-                getExpiryTime(tokenReqMessageContext, new Date(curTimeInMillis + accessTokenLifeTimeInMillis)));
+        jwtClaimsSetBuilder.expirationTime(new Date(curTimeInMillis + accessTokenLifeTimeInMillis));
 
         // This is a spec (openid-connect-core-1_0:2.0) requirement for ID tokens. But we are keeping this in JWT
         // as well.
@@ -506,35 +505,6 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     }
 
     /**
-     * To get the expiry time claim of the JWT token, based on the previous assertion expiry time.
-     *
-     * @param tokenReqMessageContext Token request message context.
-     * @param originalExpiryTime     Original expiry time
-     * @return expiry time of the token.
-     */
-    private Date getExpiryTime(OAuthTokenReqMessageContext tokenReqMessageContext, Date originalExpiryTime) {
-
-        if (tokenReqMessageContext != null) {
-            Object assertionExpiryTime = tokenReqMessageContext.getProperty(EXPIRY_TIME_JWT);
-            if (assertionExpiryTime != null) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Expiry time from the previous token " + ((Date) assertionExpiryTime).getTime());
-                }
-
-                if (originalExpiryTime.after((Date) assertionExpiryTime)) {
-                    if (log.isDebugEnabled()) {
-                        log.debug("Expiry time of newly generated token as per the configurations " + originalExpiryTime
-                                + ", since this time is after assertion expiry time " + assertionExpiryTime
-                                + " setting, " + assertionExpiryTime + " as the expiry time");
-                    }
-                    originalExpiryTime = (Date) assertionExpiryTime;
-                }
-            }
-        }
-        return originalExpiryTime;
-    }
-
-    /**
      * Get token validity period for the Self contained JWT Access Token. (For implicit grant)
      *
      * @param authzReqMessageContext
@@ -600,7 +570,8 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
                 }
             } else {
                 lifetimeInMillis =
-                        OAuthServerConfiguration.getInstance().getApplicationAccessTokenValidityPeriodInSeconds() * 1000;
+                        OAuthServerConfiguration.getInstance().getApplicationAccessTokenValidityPeriodInSeconds() *
+                                1000;
                 if (log.isDebugEnabled()) {
                     log.debug("Application access token time was 0ms. Setting default Application access token " +
                             "lifetime : " + lifetimeInMillis + "ms.");
@@ -622,7 +593,9 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
      * @throws IdentityOAuth2Exception
      */
     protected JWTClaimsSet handleCustomClaims(JWTClaimsSet.Builder jwtClaimsSetBuilder,
-                                      OAuthTokenReqMessageContext tokenReqMessageContext) throws IdentityOAuth2Exception {
+                                              OAuthTokenReqMessageContext tokenReqMessageContext)
+            throws IdentityOAuth2Exception {
+
         CustomClaimsCallbackHandler claimsCallBackHandler =
                 OAuthServerConfiguration.getInstance().getOpenIDConnectCustomClaimsCallbackHandler();
         return claimsCallBackHandler.handleCustomClaims(jwtClaimsSetBuilder, tokenReqMessageContext);
@@ -636,7 +609,9 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
      * @throws IdentityOAuth2Exception
      */
     protected JWTClaimsSet handleCustomClaims(JWTClaimsSet.Builder jwtClaimsSetBuilder,
-                                      OAuthAuthzReqMessageContext authzReqMessageContext) throws IdentityOAuth2Exception {
+                                              OAuthAuthzReqMessageContext authzReqMessageContext)
+            throws IdentityOAuth2Exception {
+
         CustomClaimsCallbackHandler claimsCallBackHandler =
                 OAuthServerConfiguration.getInstance().getOpenIDConnectCustomClaimsCallbackHandler();
         return claimsCallBackHandler.handleCustomClaims(jwtClaimsSetBuilder, authzReqMessageContext);

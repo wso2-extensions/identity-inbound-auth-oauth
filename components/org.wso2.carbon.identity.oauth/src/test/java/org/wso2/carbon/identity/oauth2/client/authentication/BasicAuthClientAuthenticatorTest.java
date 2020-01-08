@@ -18,7 +18,6 @@
 
 package org.wso2.carbon.identity.oauth2.client.authentication;
 
-import org.apache.axiom.util.base64.Base64Utils;
 import org.apache.axis2.transport.http.HTTPConstants;
 import org.apache.commons.lang.StringUtils;
 import org.apache.oltu.oauth2.common.OAuth;
@@ -34,10 +33,9 @@ import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+
 import javax.servlet.http.HttpServletRequest;
 
 import static org.testng.Assert.assertEquals;
@@ -50,9 +48,9 @@ import static org.testng.Assert.assertEquals;
 public class BasicAuthClientAuthenticatorTest extends PowerMockIdentityBaseTest {
 
     private BasicAuthClientAuthenticator basicAuthClientAuthenticator = new BasicAuthClientAuthenticator();
-    private static String SIMPLE_CASE_AUTHORIZATION_HEADER = "authorization";
-    private static String CLIENT_ID = "someclientid";
-    private static String CLIENT_SECRET = "someclientsecret";
+    private static final String SIMPLE_CASE_AUTHORIZATION_HEADER = "authorization";
+    private static final String CLIENT_ID = "someclientid";
+    private static final String CLIENT_SECRET = "someclientsecret";
 
     @Test
     public void testGetPriority() throws Exception {
@@ -69,7 +67,8 @@ public class BasicAuthClientAuthenticatorTest extends PowerMockIdentityBaseTest 
                 // Correct authorization header present with correct encoding
                 {HTTPConstants.HEADER_AUTHORIZATION, ClientAuthUtil.getBase64EncodedBasicAuthHeader(CLIENT_ID,
                         CLIENT_SECRET, null),
-                        new HashMap<String, List>(), buildOAuthClientAuthnContext(CLIENT_ID, CLIENT_SECRET), true, true},
+                        new HashMap<String, List>(), buildOAuthClientAuthnContext(CLIENT_ID, CLIENT_SECRET), true,
+                        true},
 
                 // Correct authentication information is in headers and no information in context.
                 {HTTPConstants.HEADER_AUTHORIZATION, ClientAuthUtil.getBase64EncodedBasicAuthHeader(CLIENT_ID,
