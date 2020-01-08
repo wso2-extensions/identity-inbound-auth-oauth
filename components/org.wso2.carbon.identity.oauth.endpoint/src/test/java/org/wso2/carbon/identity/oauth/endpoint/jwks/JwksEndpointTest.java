@@ -171,9 +171,9 @@ public class JwksEndpointTest extends PowerMockIdentityBaseTest {
             assertEquals(keyObject.get("use"), USE, "Incorrect use value");
             assertEquals(keyObject.get("kty"), "RSA", "Incorrect kty value");
             if ("foo.com".equals(tenantDomain)) {
-                assertEquals(objectArray.length(), 3, "Incorrect no of keysets");
+                assertEquals(objectArray.length(), 2, "Incorrect no of keysets");
             } else {
-                assertEquals(objectArray.length(), 4, "Incorrect no of keysets");
+                assertEquals(objectArray.length(), 3, "Incorrect no of keysets");
             }
         } catch (JSONException e) {
             if ("invalid.com".equals(tenantDomain)) {
