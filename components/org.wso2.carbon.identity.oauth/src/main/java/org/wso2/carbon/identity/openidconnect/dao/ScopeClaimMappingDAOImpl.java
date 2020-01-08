@@ -82,7 +82,8 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
                             return;
                         }
                     } else {
-                        String errorMessage = "Error while persisting new claims for the scope for the tenant: " + tenantId;
+                        String errorMessage =
+                                "Error while persisting new claims for the scope for the tenant: " + tenantId;
                         throw new IdentityOAuth2Exception(errorMessage, e);
                     }
                 }
