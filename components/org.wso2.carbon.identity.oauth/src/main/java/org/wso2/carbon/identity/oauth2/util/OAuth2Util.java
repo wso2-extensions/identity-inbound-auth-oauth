@@ -2378,8 +2378,8 @@ public class OAuth2Util {
 
     private static String getThumbPrint(Certificate certificate)
             throws NoSuchAlgorithmException, CertificateEncodingException {
-        // Generate the SHA-1 thumbprint of the certificate.
-        MessageDigest digestValue = MessageDigest.getInstance("SHA-1");
+        // Generate the SHA-256 thumbprint of the certificate.
+        MessageDigest digestValue = MessageDigest.getInstance("SHA-256");
         byte[] der = certificate.getEncoded();
         digestValue.update(der);
         byte[] digestInBytes = digestValue.digest();
