@@ -115,8 +115,6 @@ public class JwksEndpoint {
         OAuthServerConfiguration config = OAuthServerConfiguration.getInstance();
         JWSAlgorithm accessTokenSignAlgorithm =
                 OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(config.getSignatureAlgorithm());
-        // This method add keysets which have thumbprint of certificate as KeyIDs.
-        jwksArray = createKeysetUsingOldKeyID(jwksArray, certificates, accessTokenSignAlgorithm);
         // If we read different algorithms from identity.xml then put them in a list.
         List<JWSAlgorithm> diffAlgorithms = findDifferentAlgorithms(accessTokenSignAlgorithm, config);
         // Create JWKS for different algorithms using new KeyID creation method.
@@ -134,34 +132,6 @@ public class JwksEndpoint {
         }
         jwksJson.put(KEYS, jwksArray);
         return jwksJson.toString();
-    }
-
-    /**
-     * @deprecated Earlier for all the type of JWT Tokens(eg: accessToken, ID token) only one algorithm is shown as
-     * "algo" in keysets on the JWKS endpoint. But it is possible to configure different algorithms for different
-     * JWT Types via identity.xml. Thus it is recommended to create keysets for different algorithms. In earlier
-     * cases thumbprint of certificate is used as KeyID but to differentiate algorithms which uses same certificates a
-     * new KeyID generating mechanism is created in the OAuth2Util. However for backward compatibility, a keyset
-     * which uses thumbPrint as KeyID is added. In future it okay to remove this keyset completely.
-     *
-     * This method is marked as @deprecated because this method should not be used in any other places. In future
-     * this method should be removed.
-     */
-    @Deprecated
-    private JSONArray createKeysetUsingOldKeyID(JSONArray jwksArray, Map<String, Certificate> certificates,
-                                                JWSAlgorithm algorithm) throws IdentityOAuth2Exception, ParseException {
-
-        for (Map.Entry certificateWithAlias : certificates.entrySet()) {
-            Certificate cert = (Certificate) certificateWithAlias.getValue();
-            String alias = (String) certificateWithAlias.getKey();
-            RSAPublicKey publicKey = (RSAPublicKey) cert.getPublicKey();
-            RSAKey.Builder jwk = new RSAKey.Builder(publicKey);
-            jwk.keyID(OAuth2Util.getThumbPrint(cert, alias));
-            jwk.algorithm(algorithm);
-            jwk.keyUse(KeyUse.parse(KEY_USE));
-            jwksArray.put(jwk.build().toJSONObject());
-        }
-        return jwksArray;
     }
 
     /**
