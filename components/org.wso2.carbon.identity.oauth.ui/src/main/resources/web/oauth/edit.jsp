@@ -95,11 +95,11 @@
         supportedIdTokenEncryptionMethods =
                 client.getSupportedIDTokenAlgorithms().getSupportedIdTokenEncryptionMethods();
         supportedTokenBindingsMetaData = client.getSupportedTokenBindingsMetaData();
-        
-        if (appName != null) {
-            app = client.getOAuthApplicationDataByAppName(appName);
-        } else {
+
+        if (consumerkey != null) {
             app = client.getOAuthApplicationData(consumerkey);
+        } else {
+            app = client.getOAuthApplicationDataByAppName(appName);
         }
         
         OAuthConsumerAppDTO consumerApp = null;
