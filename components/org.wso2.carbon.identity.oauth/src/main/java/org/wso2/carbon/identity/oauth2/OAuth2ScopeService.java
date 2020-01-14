@@ -50,17 +50,10 @@ public class OAuth2ScopeService {
                     ERROR_CODE_BAD_REQUEST_SCOPE_NAME_NOT_SPECIFIED, null);
         }
 
-        // check whether the scope description is provided
+        // Check whether the scope display name is provided.
         if (StringUtils.isBlank(scope.getDisplayName())) {
             throw Oauth2ScopeUtils.generateClientException(Oauth2ScopeConstants.ErrorMessages.
                     ERROR_CODE_BAD_REQUEST_SCOPE_DISPLAY_NAME_NOT_SPECIFIED, null);
-        }
-
-        // check whether a scope exists with the provided scope name
-        boolean isScopeExists = isScopeExists(scope.getName());
-        if (isScopeExists) {
-            throw Oauth2ScopeUtils.generateClientException(Oauth2ScopeConstants.ErrorMessages.
-                    ERROR_CODE_CONFLICT_REQUEST_EXISTING_SCOPE, scope.getName());
         }
 
         try {

@@ -78,9 +78,15 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
         }
 
         try (Connection conn = IdentityDatabaseUtil.getDBConnection()) {
+            // Check whether a scope exists with the provided scope name.
+            int scopeId = getScopeIDByName(scope.getName(), tenantID);
             try {
-                addScope(scope, conn, tenantID);
-                IdentityDatabaseUtil.commitTransaction(conn);
+                if (scopeId == Oauth2ScopeConstants.INVALID_SCOPE_ID) {
+                    addScope(scope, conn, tenantID);
+                    IdentityDatabaseUtil.commitTransaction(conn);
+                } else {
+                    addScopeBinding(scope, conn, scopeId);
+                }
             } catch (SQLException e1) {
                 IdentityDatabaseUtil.rollbackTransaction(conn);
                 String msg = "SQL error occurred while creating scope :" + scope.getName();
@@ -444,13 +450,15 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
     public void updateScopeByName(Scope updatedScope, int tenantID) throws IdentityOAuth2ScopeServerException {
 
         if (log.isDebugEnabled()) {
-            log.debug("Updae scope by name for scope name:" + updatedScope.getName());
+            log.debug("Update scope by name for scope name:" + updatedScope.getName());
         }
 
+        int scopeId = getScopeIDByName(updatedScope.getName(), tenantID);
         try (Connection conn = IdentityDatabaseUtil.getDBConnection()) {
             try {
-                deleteScope(updatedScope.getName(), tenantID, conn);
-                addScope(updatedScope, conn, tenantID);
+                updateScopeDetailsOnOauth2ScopeTable(updatedScope, tenantID, conn, scopeId);
+                deleteBindingOfScope(updatedScope.getName(), tenantID, conn);
+                addScopeBinding(updatedScope, conn, scopeId);
                 IdentityDatabaseUtil.commitTransaction(conn);
             } catch (SQLException e1) {
                 IdentityDatabaseUtil.rollbackTransaction(conn);
@@ -498,33 +506,92 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
                     }
                 }
             }
-
-            //Adding scope bindings
-            try (PreparedStatement ps = conn.prepareStatement(SQLQueries.ADD_SCOPE_BINDING)) {
-                List<ScopeBinding> scopeBindings = scope.getScopeBindings();
-                for (ScopeBinding scopeBinding : scopeBindings) {
-                    String bindingType = scopeBinding.getBindingType();
-                    for (String binding : scopeBinding.getBindings()) {
-                        ps.setInt(1, scopeID);
-                        ps.setString(2, binding);
-                        ps.setString(3, bindingType);
-                        ps.addBatch();
-                    }
-                }
-                ps.executeBatch();
-            }
+            addScopeBinding(scope, conn, scopeID);
         }
     }
 
-    private void deleteScope(String name, int tenantID, Connection conn) throws SQLException {
+    /**
+     * Add bindings to a scope.
+     *
+     * @param scope   Scope.
+     * @param conn    Connection.
+     * @param scopeID Scope ID.
+     * @throws SQLException
+     */
+    private void addScopeBinding(Scope scope, Connection conn, int scopeID) throws SQLException {
 
+        // Adding scope bindings.
+        try (PreparedStatement ps = conn.prepareStatement(SQLQueries.ADD_SCOPE_BINDING)) {
+            List<ScopeBinding> scopeBindings = scope.getScopeBindings();
+            for (ScopeBinding scopeBinding : scopeBindings) {
+                String bindingType = scopeBinding.getBindingType();
+                for (String binding : scopeBinding.getBindings()) {
+                    ps.setInt(1, scopeID);
+                    ps.setString(2, binding);
+                    ps.setString(3, bindingType);
+                    ps.addBatch();
+                }
+            }
+            ps.executeBatch();
+        }
+    }
+
+    /**
+     * Delete the scope by scope name.
+     *
+     * @param scopeName Scope name.
+     * @param tenantID  Tenant ID.
+     * @param conn      Data-base connection object.
+     * @throws SQLException
+     */
+    private void deleteScope(String scopeName, int tenantID, Connection conn) throws SQLException {
+
+        if (isOidcClaimMappingExistForScope(scopeName, tenantID, conn)) {
+            deleteBindingOfScope(scopeName, tenantID, conn);
+        } else {
+            deleteEntireScopeEntry(scopeName, tenantID, conn);
+        }
+    }
+
+    /**
+     * Delete the complete scope object.
+     *
+     * @param scopeName Scope name.
+     * @param tenantID  Tenant ID.
+     * @param conn      Data-base connection.
+     * @throws SQLException
+     */
+    private void deleteEntireScopeEntry(String scopeName, int tenantID, Connection conn) throws SQLException {
+
+        // Delete the entire scope entry.
         try (PreparedStatement ps = conn.prepareStatement(SQLQueries.DELETE_SCOPE_BY_NAME)) {
-            ps.setString(1, name);
+            ps.setString(1, scopeName);
             ps.setInt(2, tenantID);
             ps.execute();
         }
     }
 
+    /**
+     * Delete binding of the provided scope.
+     *
+     * @param scopeName Scope name.
+     * @param tenantID  Tenant ID.
+     * @param conn      Data-base connection.
+     * @throws SQLException
+     */
+    private void deleteBindingOfScope(String scopeName, int tenantID, Connection conn) throws SQLException {
+
+        // Delete only the binding part of the given scope.
+        if (log.isDebugEnabled()) {
+            log.debug("OIDC claim mapping exists for the scope: " + scopeName + ", hence delete only the " +
+                    "bindings of the scope");
+        }
+        try (PreparedStatement ps = conn.prepareStatement(SQLQueries.DELETE_BINDINGS_OF_SCOPE)) {
+            ps.setString(1, scopeName);
+            ps.setInt(2, tenantID);
+            ps.execute();
+        }
+    }
     /**
      * This method is to get resource scope key of the resource uri
      *
@@ -675,6 +742,75 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
             throw new IdentityOAuth2Exception(errorMsg, e);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, rs, ps);
+        }
+    }
+
+    /**
+     * Check whether OIDC claim mapping exist for the provided scope name.
+     *
+     * @param scopeName Scope name.
+     * @param tenantID  Tenant ID.
+     * @param conn      Data-base connection.
+     * @return true if OIDC claim mapping exist for given scope.
+     * @throws SQLException
+     */
+    public boolean isOidcClaimMappingExistForScope(String scopeName, int tenantID, Connection conn)
+            throws SQLException {
+
+        return getOidcClaimCountForScope(scopeName, tenantID, conn) > 0;
+
+    }
+
+    /**
+     * Get OIDC claim mapping count for given scope.
+     *
+     * @param scopeName Scope name.
+     * @param tenantID  Tenant ID.
+     * @param conn      Data-base connection.
+     * @return Number of claim count of given scope.
+     * @throws SQLException
+     */
+    public int getOidcClaimCountForScope(String scopeName, int tenantID, Connection conn) throws SQLException {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Get OIDC claim count for the scope name: " + scopeName);
+        }
+
+        int oidcClaimCount = Oauth2ScopeConstants.COUNT_ZERO;
+        try (PreparedStatement ps = conn.prepareStatement(SQLQueries.RETRIEVE_OIDC_CLAIMS_COUNT_OF_SCOPE)) {
+            ps.setString(1, scopeName);
+            ps.setInt(2, tenantID);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    oidcClaimCount = rs.getInt(1);
+                }
+            }
+        }
+        return oidcClaimCount;
+
+    }
+
+    /**
+     * Update scope details on IDN_OAUTH2_SCOPE scope table.
+     *
+     * @param updatedScope Updated scope.
+     * @param tenantID     Tenant ID.
+     * @param conn         Data-base connection.
+     * @param scopeId      Scope ID.
+     * @throws SQLException
+     */
+    public void updateScopeDetailsOnOauth2ScopeTable(Scope updatedScope, int tenantID, Connection conn, int scopeId)
+            throws SQLException {
+
+        // Update scope details on IDN_OAUTH2_SCOPE table.
+        try (PreparedStatement ps = conn.prepareStatement(SQLQueries.UPDATE_SCOPE)) {
+            ps.setString(1, updatedScope.getDisplayName());
+            ps.setString(2, updatedScope.getDescription());
+            ps.setInt(3, tenantID);
+            ps.setInt(4, scopeId);
+            ps.addBatch();
+
+            ps.executeBatch();
         }
     }
 

@@ -46,6 +46,7 @@ import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
+import org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants;
 import org.wso2.carbon.identity.oauth2.authz.handlers.ResponseTypeHandler;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
@@ -461,6 +462,7 @@ public class OAuthAdminServiceImpl {
      * @param scope an oidc scope
      * @throws IdentityOAuthAdminException if an error occurs when inserting scopes or claims.
      */
+    @Deprecated
     public void addScope(String scope, String[] claims) throws IdentityOAuthAdminException {
 
         int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
@@ -472,6 +474,41 @@ public class OAuthAdminServiceImpl {
             }
         } catch (IdentityOAuth2Exception e) {
             throw handleError("Error while inserting OIDC scopes and claims.", e);
+        }
+    }
+
+    /**
+     * Add an oidc scope and it's claims to the related db tables.
+     *
+     * @param scope An oidc scope.
+     * @throws IdentityOAuthAdminException If an error occurs when inserting scopes or claims.
+     */
+    public void addScope(ScopeDTO scope) throws IdentityOAuthAdminException {
+
+        // Check whether the scope name is provided.
+        if (StringUtils.isBlank(scope.getName())) {
+            throw handleError(Oauth2ScopeConstants.ErrorMessages.
+                    ERROR_CODE_BAD_REQUEST_SCOPE_NAME_NOT_SPECIFIED.getMessage(), null);
+        }
+
+        // Check whether the scope name contains any white spaces.
+        if (scope.getName().contains(" ")) {
+            throw handleError(Oauth2ScopeConstants.ErrorMessages.
+                    ERROR_CODE_BAD_REQUEST_SCOPE_NAME_CONTAINS_WHITESPACES.getMessage(), null);
+        }
+
+        // Check whether the scope display name is provided.
+        if (StringUtils.isBlank(scope.getDisplayName())) {
+            throw handleError(Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_BAD_REQUEST_SCOPE_DISPLAY_NAME_NOT_SPECIFIED
+                    .getMessage(), null);
+        }
+
+        int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
+
+        try {
+            OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().addScope(scope, tenantId);
+        } catch (IdentityOAuth2Exception e) {
+            throw handleError("Error while inserting OIDC scope.", e);
         }
     }
 
@@ -497,6 +534,28 @@ public class OAuthAdminServiceImpl {
             }
         } catch (IdentityOAuth2Exception e) {
             throw handleError("Error while loading OIDC scopes and claims for tenant: " + tenantId, e);
+        }
+    }
+
+    /**
+     * Get persisted oidc scope with mapped claims.
+     *
+     * @return Get a persisted scope and it's mapped claims
+     * @throws IdentityOAuthAdminException If an error occurs when loading scope and claims.
+     */
+    public ScopeDTO getScope(String scopeName) throws IdentityOAuthAdminException {
+
+        int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
+        try {
+            ScopeDTO scopeDTO = OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
+                    getScope(scopeName, tenantId);
+
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Could not find scope claim mapping. Hence returning an empty array.");
+            }
+            return scopeDTO;
+        } catch (IdentityOAuth2Exception e) {
+            throw handleError("Error while loading OIDC scope: " + scopeName + " for tenant: " + tenantId, e);
         }
     }
 
@@ -575,6 +634,7 @@ public class OAuthAdminServiceImpl {
      * @param deleteClaims list of oidc claims to be deleted
      * @throws IdentityOAuthAdminException if an error occurs when adding a new claim for a scope.
      */
+    @Deprecated
     public void updateScope(String scope, String[] addClaims, String[] deleteClaims)
             throws IdentityOAuthAdminException {
 
@@ -585,6 +645,23 @@ public class OAuthAdminServiceImpl {
         } catch (IdentityOAuth2Exception e) {
             throw handleError("Error while updating OIDC claims for the scope: " + scope + " in tenant: " + tenantId,
                     e);
+        }
+    }
+
+    /**
+     * Update an existing scope.
+     *
+     * @param scope scope name
+     * @throws IdentityOAuthAdminException if an error occurs when adding a new claim for a scope.
+     */
+    public void updateScope(ScopeDTO scope) throws IdentityOAuthAdminException {
+
+        int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
+        try {
+            OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
+                    updateScope(scope, tenantId);
+        } catch (IdentityOAuth2Exception e) {
+            throw handleError("Error while updating the scope: " + scope + " in tenant: " + tenantId, e);
         }
     }
 
