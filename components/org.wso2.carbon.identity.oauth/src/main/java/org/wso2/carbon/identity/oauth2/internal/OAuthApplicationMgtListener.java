@@ -294,8 +294,7 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                             OAUTH2.equals(authConfig.getInboundAuthType())) {
 
                         OAuthAppDAO dao = new OAuthAppDAO();
-                        OAuthAppDO authApplication = dao.getAppInformationByAppName(serviceProvider
-                                .getApplicationName());
+                        OAuthAppDO authApplication = dao.getAppInformation(authConfig.getInboundAuthKey());
                         String tokenProcessorName = OAuthServerConfiguration.getInstance().getPersistenceProcessor()
                                 .getClass().getName();
                         if (!"org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor"
