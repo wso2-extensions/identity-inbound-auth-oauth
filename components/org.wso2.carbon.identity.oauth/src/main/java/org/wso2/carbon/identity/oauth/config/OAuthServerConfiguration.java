@@ -301,7 +301,7 @@ public class OAuthServerConfiguration {
         OMElement scopeValidatorsElem = oauthElem.getFirstChildWithName(
                 getQNameWithIdentityNS(ConfigElements.SCOPE_VALIDATORS));
 
-        //Get scopeValidationEnabledConfigValue
+        //Get the configured scopeValidationEnabledConfigValue.
         OMElement scopeValidationElem = oauthElem.getFirstChildWithName(
                 getQNameWithIdentityNS(ConfigElements.SCOPE_VALIDATION_FOR_AUTHZ_CODE_AND_IMPLICIT));
 
