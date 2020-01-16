@@ -1169,14 +1169,15 @@ public class OAuthServerConfiguration {
     }
 
     /**
-     * Returns if login consent enabled or not
+     * Returns if login consent enabled or not.
      *
      */
     public boolean getOpenIDConnectSkipeUserConsentConfig() {
 
         if (openIDConnectSkipLoginConsent == null) {
             if (log.isDebugEnabled()) {
-                log.debug("The SkipLoginConsent property is not configured. So retrieving the SkipUserConsent value");
+                log.debug("The SkipLoginConsent property is not configured. " +
+                        "So retrieving the SkipUserConsent value.");
             }
             Boolean.parseBoolean(openIDConnectSkipUserConsent);
         }
@@ -1191,7 +1192,8 @@ public class OAuthServerConfiguration {
 
         if (openIDConnectSkipLogoutConsent == null) {
             if (log.isDebugEnabled()) {
-                log.debug("The SkipLogoutConsent property is not configured. So retrieving the SkipUserConsent value");
+                log.debug("The SkipLogoutConsent property is not configured. " +
+                        "So retrieving the SkipUserConsent value.");
             }
             Boolean.parseBoolean(openIDConnectSkipUserConsent);
         }
@@ -2540,14 +2542,19 @@ public class OAuthServerConfiguration {
                                 getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_SKIP_USER_CONSENT))
                                 .getText().trim();
             }
-            if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_SKIP_LOGIN_CONSENT)) != null) {
+            if (openIDConnectConfigElem
+                    .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_SKIP_LOGIN_CONSENT)) !=
+                    null) {
                 openIDConnectSkipLoginConsent =
-                        openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_SKIP_LOGIN_CONSENT))
+                        openIDConnectConfigElem.getFirstChildWithName(
+                                getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_SKIP_LOGIN_CONSENT))
                                 .getText().trim();
             }
-            if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_SKIP_LOGOUT_CONSENT)) != null) {
+            if (openIDConnectConfigElem.getFirstChildWithName(
+                    getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_SKIP_LOGOUT_CONSENT)) != null) {
                 openIDConnectSkipLogoutConsent =
-                        openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_SKIP_LOGOUT_CONSENT))
+                        openIDConnectConfigElem.getFirstChildWithName(
+                                getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_SKIP_LOGOUT_CONSENT))
                                 .getText().trim();
             }
             if (openIDConnectConfigElem
