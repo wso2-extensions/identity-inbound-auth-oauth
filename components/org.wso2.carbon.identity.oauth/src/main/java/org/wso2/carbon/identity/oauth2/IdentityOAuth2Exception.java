@@ -34,4 +34,14 @@ public class IdentityOAuth2Exception extends IdentityException {
     public IdentityOAuth2Exception(String message, Throwable e) {
         super(message, e);
     }
+
+    public IdentityOAuth2Exception(String code, String message) {
+
+        super(code, message);
+    }
+
+    public IdentityOAuth2Exception(String code, String message, Throwable e) {
+
+        super(code, message, e);
+    }
 }

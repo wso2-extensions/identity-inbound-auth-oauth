@@ -38,7 +38,6 @@ public class OAuth2ScopeService {
      *
      * @param scope details of the scope to be registered
      * @throws IdentityOAuth2ScopeServerException
-     * @throws IdentityOAuth2ScopeClientException
      */
     public Scope registerScope(Scope scope) throws IdentityOAuth2ScopeException {
 
@@ -54,6 +53,12 @@ public class OAuth2ScopeService {
         if (StringUtils.isBlank(scope.getDisplayName())) {
             throw Oauth2ScopeUtils.generateClientException(Oauth2ScopeConstants.ErrorMessages.
                     ERROR_CODE_BAD_REQUEST_SCOPE_DISPLAY_NAME_NOT_SPECIFIED, null);
+        }
+
+        // Check whether the scope name contains any white spaces.
+        if (scope.getName().contains(" ")) {
+            throw Oauth2ScopeUtils.generateClientException(Oauth2ScopeConstants.ErrorMessages.
+                    ERROR_CODE_BAD_REQUEST_SCOPE_NAME_CONTAINS_WHITESPACES, null);
         }
 
         try {

@@ -22,6 +22,7 @@ package org.wso2.carbon.identity.openidconnect.dao;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.database.utils.jdbc.JdbcTemplate;
@@ -29,6 +30,7 @@ import org.wso2.carbon.database.utils.jdbc.RowMapper;
 import org.wso2.carbon.database.utils.jdbc.exceptions.DataAccessException;
 import org.wso2.carbon.database.utils.jdbc.exceptions.TransactionException;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants;
 import org.wso2.carbon.identity.oauth2.util.JdbcUtils;
@@ -150,7 +152,8 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
                 throw new IdentityOAuth2Exception(errorMessage, e);
             }
         } else {
-            log.warn("Scope " + scope + " already exist in tenant " + tenantId + " , hence trying to add claims.");
+            log.warn("Scope " + scope.getName() + " already exist in tenant " + tenantId +
+                    " , hence trying to add claims.");
             if (scopeID > 0 && ArrayUtils.isNotEmpty(scope.getClaim())) {
                 Set<String> claimsSet = new HashSet<>(Arrays.asList(scope.getClaim()));
                 insertClaims(tenantId, scopeID, claimsSet);
@@ -165,19 +168,23 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
         List<ScopeDTO> oidcScopeClaimList;
         try {
-            Map<String, List<String>> scopeClaimMap = new HashMap<>();
+            Map<String, ScopeDTO> scopeClaimMap = new HashMap<>();
             jdbcTemplate.executeQuery(sql, (RowMapper<ScopeDTO>) (resultSet, i) -> {
-                List<String> claimsList;
 
                 String scope = resultSet.getString(1);
-                if (!scopeClaimMap.containsKey(scope)) {
-                    claimsList = new ArrayList<>();
-                    claimsList.add(resultSet.getString(2));
-                    scopeClaimMap.put(scope, claimsList);
-                } else {
-                    claimsList = scopeClaimMap.get(scope);
-                    claimsList.add(resultSet.getString(2));
-                    scopeClaimMap.put(scope, claimsList);
+                if (StringUtils.isNotBlank(resultSet.getString(4))) {
+                    if (!scopeClaimMap.containsKey(scope)) {
+                        ScopeDTO tempScopeDTO = new ScopeDTO();
+                        tempScopeDTO.setName(scope);
+                        tempScopeDTO.setDisplayName(resultSet.getString(2));
+                        tempScopeDTO.setDescription(resultSet.getString(3));
+                        tempScopeDTO.setClaim(new String[]{resultSet.getString(4)});
+                        scopeClaimMap.put(scope, tempScopeDTO);
+                    } else {
+                        ScopeDTO tempScope = scopeClaimMap.get(scope);
+                        tempScope.addNewClaimToExistingClaims(resultSet.getString(4));
+                        scopeClaimMap.replace(scope, tempScope);
+                    }
                 }
                 return null;
             }, preparedStatement -> {
@@ -185,7 +192,7 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
                 preparedStatement.setInt(2, tenantId);
                 preparedStatement.setString(3, OIDC_DIALECT_URI);
             });
-            oidcScopeClaimList = buildScopeDTO(scopeClaimMap, tenantId);
+            oidcScopeClaimList = new ArrayList<ScopeDTO>(scopeClaimMap.values());
         } catch (DataAccessException e) {
             String errorMessage = "Error occured while loading scopes claims mapping.";
             throw new IdentityOAuth2Exception(errorMessage, e);
@@ -298,15 +305,12 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
             if (scopeId != Oauth2ScopeConstants.INVALID_SCOPE_ID) {
                 updateScopeDetailsOnOauth2ScopeTable(scope, tenantId, jdbcTemplate, scopeId);
                 deleteOidcClaimMappingOfScope(scope.getName(), tenantId, jdbcTemplate);
-                addClaimsByScope(scopeId, tenantId, Arrays.asList(scope.getClaim()), jdbcTemplate, -1);
-
+                Set<String> claimsSet = new HashSet<>(Arrays.asList(scope.getClaim()));
+                insertClaims(tenantId, scopeId, claimsSet);
             }
         } catch (DataAccessException e) {
             throw new IdentityOAuth2Exception(
-                    "Error while updating the scope: " + scope.getName() + " and related claims.",
-                    e);
-        } catch (TransactionException e) {
-            throw new IdentityOAuth2Exception("Error while adding claim mapping to the scope: " + scope.getName(), e);
+                    "Error while updating the scope: " + scope.getName() + " and related claims.", e);
         }
     }
 
@@ -434,13 +438,16 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
                                     new String[]{})
                     , preparedStatement -> {
                         preparedStatement.setString(1, scopeName);
-                        preparedStatement.setInt(1, tenantId);
+                        preparedStatement.setInt(2, tenantId);
                     });
         } catch (DataAccessException e) {
             String errorMessage = "Error while fetching scope details for scope: " + scopeName;
             throw new IdentityOAuth2Exception(errorMessage, e);
         }
-        scope.setClaim(getClaims(scopeName, tenantId).getClaim());
+        if (scope != null) {
+            ScopeDTO tempScopeDTO = getClaims(scopeName, tenantId);
+            scope.setClaim(tempScopeDTO.getClaim());
+        }
         return scope;
     }
 
@@ -496,6 +503,13 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
 
     private void insertClaims(int tenantId, int scopeId, Set<String> claimsList) throws IdentityOAuth2Exception {
 
+        if (isOidcClaimMappingExistForScope(scopeId)) {
+            throw new IdentityOAuth2ClientException(
+                    Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_CONFLICT_REQUEST_EXISTING_OIDC_SCOPE.getCode(),
+                    Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_CONFLICT_REQUEST_EXISTING_OIDC_SCOPE
+                            .getMessage());
+        }
+
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
         int scopeClaimMappingId = -1;
         try {
@@ -517,7 +531,31 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
                 return null;
             });
         } catch (TransactionException e) {
-            String errorMessage = "Error when storing oidc claims for tenant: " + tenantId;
+            String errorMessage = "Error when storing oidc claims for scope ID:" + scopeId + " tenant: " + tenantId;
+            throw new IdentityOAuth2Exception(errorMessage, e);
+        }
+    }
+
+    /**
+     * Check whether OIDC claim mapping exist for the provided scope name.
+     *
+     * @param scopeId
+     * @return
+     * @throws IdentityOAuth2Exception
+     */
+    private boolean isOidcClaimMappingExistForScope(int scopeId) throws IdentityOAuth2Exception {
+
+        int scopeBindingCount;
+        try {
+            JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
+            scopeBindingCount = jdbcTemplate.withTransaction(template -> template.fetchSingleRecord
+                    (SQLQueries.RETRIEVE_OIDC_CLAIMS_COUNT_OF_SCOPE, (resultSet, rowNumber) ->
+                            resultSet.getInt(1), preparedStatement -> {
+                        preparedStatement.setInt(1, scopeId);
+                    }));
+            return scopeBindingCount > 0;
+        } catch (TransactionException e) {
+            String errorMessage = "Error while getting mapped OIDC claim count for given scope ID: " + scopeId;
             throw new IdentityOAuth2Exception(errorMessage, e);
         }
     }

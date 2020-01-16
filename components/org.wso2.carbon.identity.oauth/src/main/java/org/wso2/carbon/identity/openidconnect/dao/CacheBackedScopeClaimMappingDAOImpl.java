@@ -156,4 +156,18 @@ public class CacheBackedScopeClaimMappingDAOImpl extends ScopeClaimMappingDAOImp
         }
         return oidcScopeClaimCacheEntry;
     }
+
+    @Override
+    public ScopeDTO getScope(String scopeName, int tenantId) throws IdentityOAuth2Exception {
+
+        OIDCScopeClaimCacheEntry oidcScopeClaimCacheEntry = oidcScopeClaimCache.getScopeClaimMap(tenantId);
+        oidcScopeClaimCacheEntry = loadOIDCScopeClaims(tenantId, oidcScopeClaimCacheEntry);
+        ScopeDTO scopeDTO = new ScopeDTO();
+        for (ScopeDTO scopeObj : oidcScopeClaimCacheEntry.getScopeClaimMapping()) {
+            if (scopeName.equals(scopeObj.getName())) {
+                scopeDTO = scopeObj;
+            }
+        }
+        return scopeDTO;
+    }
 }

@@ -16,6 +16,9 @@
 package org.wso2.carbon.identity.oauth.dto;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * The model representing an OIDC scope.
@@ -78,6 +81,13 @@ public class ScopeDTO implements Serializable {
     public void setDescription(String description) {
 
         this.description = description;
+    }
+
+    public void addNewClaimToExistingClaims(String claimNeedToBeAdd) {
+
+        List<String> claimsAsList = new ArrayList<String>(Arrays.asList(this.claim));
+        claimsAsList.add(claimNeedToBeAdd);
+        this.claim = claimsAsList.toArray(new String[0]);
     }
 
 }

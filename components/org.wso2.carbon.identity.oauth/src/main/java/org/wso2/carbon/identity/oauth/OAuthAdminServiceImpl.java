@@ -69,6 +69,7 @@ import static org.wso2.carbon.identity.oauth.Error.AUTHENTICATED_USER_NOT_FOUND;
 import static org.wso2.carbon.identity.oauth.Error.INVALID_OAUTH_CLIENT;
 import static org.wso2.carbon.identity.oauth.Error.INVALID_REQUEST;
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
+import static org.wso2.carbon.identity.oauth.OAuthUtil.handleErrorWithExceptionType;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.buildScopeString;
@@ -487,20 +488,21 @@ public class OAuthAdminServiceImpl {
 
         // Check whether the scope name is provided.
         if (StringUtils.isBlank(scope.getName())) {
-            throw handleError(Oauth2ScopeConstants.ErrorMessages.
-                    ERROR_CODE_BAD_REQUEST_SCOPE_NAME_NOT_SPECIFIED.getMessage(), null);
+            throw handleClientError(INVALID_REQUEST, Oauth2ScopeConstants.ErrorMessages.
+                    ERROR_CODE_BAD_REQUEST_SCOPE_NAME_NOT_SPECIFIED.getMessage());
         }
 
         // Check whether the scope name contains any white spaces.
         if (scope.getName().contains(" ")) {
-            throw handleError(Oauth2ScopeConstants.ErrorMessages.
-                    ERROR_CODE_BAD_REQUEST_SCOPE_NAME_CONTAINS_WHITESPACES.getMessage(), null);
+            throw handleClientError(INVALID_REQUEST, Oauth2ScopeConstants.ErrorMessages.
+                    ERROR_CODE_BAD_REQUEST_SCOPE_NAME_CONTAINS_WHITESPACES.getMessage());
         }
 
         // Check whether the scope display name is provided.
         if (StringUtils.isBlank(scope.getDisplayName())) {
-            throw handleError(Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_BAD_REQUEST_SCOPE_DISPLAY_NAME_NOT_SPECIFIED
-                    .getMessage(), null);
+            throw handleClientError(INVALID_REQUEST,
+                    Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_BAD_REQUEST_SCOPE_DISPLAY_NAME_NOT_SPECIFIED
+                            .getMessage());
         }
 
         int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
@@ -508,7 +510,8 @@ public class OAuthAdminServiceImpl {
         try {
             OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().addScope(scope, tenantId);
         } catch (IdentityOAuth2Exception e) {
-            throw handleError("Error while inserting OIDC scope.", e);
+            throw handleErrorWithExceptionType(String.format("Error while inserting OIDC scope: %s, %s",
+                    scope.getName(), e.getMessage()), e);
         }
     }
 
@@ -546,16 +549,25 @@ public class OAuthAdminServiceImpl {
     public ScopeDTO getScope(String scopeName) throws IdentityOAuthAdminException {
 
         int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
+
+        // Check whether the scope name is provided.
+        if (StringUtils.isBlank(scopeName)) {
+            throw handleClientError(INVALID_REQUEST, Oauth2ScopeConstants.ErrorMessages.
+                    ERROR_CODE_BAD_REQUEST_SCOPE_NAME_NOT_SPECIFIED.getMessage());
+        }
+
         try {
             ScopeDTO scopeDTO = OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
                     getScope(scopeName, tenantId);
 
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("Could not find scope claim mapping. Hence returning an empty array.");
+            if (scopeDTO == null) {
+                throw handleClientError(INVALID_REQUEST, String.format(Oauth2ScopeConstants.ErrorMessages.
+                        ERROR_CODE_NOT_FOUND_SCOPE.getMessage(), scopeName));
             }
             return scopeDTO;
         } catch (IdentityOAuth2Exception e) {
-            throw handleError("Error while loading OIDC scope: " + scopeName + " for tenant: " + tenantId, e);
+            throw handleErrorWithExceptionType(
+                    "Error while loading OIDC scope: " + scopeName + " for tenant: " + tenantId, e);
         }
     }
 
@@ -568,10 +580,27 @@ public class OAuthAdminServiceImpl {
     public void deleteScope(String scope) throws IdentityOAuthAdminException {
 
         int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
+
+        // Check whether the scope name is provided.
+        if (StringUtils.isBlank(scope)) {
+            throw handleClientError(INVALID_REQUEST, Oauth2ScopeConstants.ErrorMessages.
+                    ERROR_CODE_BAD_REQUEST_SCOPE_NAME_NOT_SPECIFIED.getMessage());
+        }
+
+        // Check whether a scope exists with the provided scope name which to be updated.
+        boolean isScopeExists = isScopeExist(scope);
+        if (!isScopeExists) {
+            throw handleClientError(INVALID_REQUEST, String.format(Oauth2ScopeConstants.ErrorMessages.
+                    ERROR_CODE_NOT_FOUND_SCOPE.getMessage(), scope));
+        }
+
         try {
             OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().deleteScope(scope, tenantId);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Scope: " + scope + " is deleted from the database.");
+            }
         } catch (IdentityOAuth2Exception e) {
-            throw handleError("Error while deleting OIDC scope: " + scope, e);
+            throw handleErrorWithExceptionType("Error while deleting OIDC scope: " + scope, e);
         }
     }
 
@@ -651,17 +680,39 @@ public class OAuthAdminServiceImpl {
     /**
      * Update an existing scope.
      *
-     * @param scope scope name
+     * @param updatedScope Updated scope name.
      * @throws IdentityOAuthAdminException if an error occurs when adding a new claim for a scope.
      */
-    public void updateScope(ScopeDTO scope) throws IdentityOAuthAdminException {
+    public void updateScope(ScopeDTO updatedScope) throws IdentityOAuthAdminException {
 
         int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
+
+        // Check whether the scope name is provided.
+        if (StringUtils.isBlank(updatedScope.getName())) {
+            throw handleClientError(INVALID_REQUEST, Oauth2ScopeConstants.ErrorMessages.
+                    ERROR_CODE_BAD_REQUEST_SCOPE_NAME_NOT_SPECIFIED.getMessage());
+        }
+
+        // Check whether the scope display name is provided.
+        if (StringUtils.isBlank(updatedScope.getDisplayName())) {
+            throw handleClientError(INVALID_REQUEST,
+                    Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_BAD_REQUEST_SCOPE_DISPLAY_NAME_NOT_SPECIFIED
+                            .getMessage());
+        }
+
+        // Check whether a scope exists with the provided scope name which to be updated.
+        boolean isScopeExists = isScopeExist(updatedScope.getName());
+        if (!isScopeExists) {
+            throw handleClientError(INVALID_REQUEST, String.format(Oauth2ScopeConstants.ErrorMessages.
+                    ERROR_CODE_NOT_FOUND_SCOPE.getMessage(), updatedScope.getName()));
+        }
+
         try {
             OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
-                    updateScope(scope, tenantId);
+                    updateScope(updatedScope, tenantId);
         } catch (IdentityOAuth2Exception e) {
-            throw handleError("Error while updating the scope: " + scope + " in tenant: " + tenantId, e);
+            throw handleErrorWithExceptionType(
+                    "Error while updating the scope: " + updatedScope.getName() + " in tenant: " + tenantId, e);
         }
     }
 

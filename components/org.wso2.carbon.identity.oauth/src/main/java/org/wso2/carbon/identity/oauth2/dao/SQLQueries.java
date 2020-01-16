@@ -1013,7 +1013,7 @@ public class SQLQueries {
 
     public static final String DELETE_SCOPE_BY_NAME = "DELETE FROM IDN_OAUTH2_SCOPE WHERE NAME = ? AND TENANT_ID = ?";
 
-    public static final String DELETE_BINDINGS_OF_SCOPE = "DELETE FROM IDN_OIDC_SCOPE_CLAIM_MAPPING WHERE SCOPE_ID = " +
+    public static final String DELETE_BINDINGS_OF_SCOPE = "DELETE FROM IDN_OAUTH2_SCOPE_BINDING WHERE SCOPE_ID = " +
             "(SELECT ID FROM IDN_OAUTH2_SCOPE WHERE NAME=? AND TENANT_ID=?)";
 
     public static final String RETRIEVE_SCOPE_NAME_FOR_RESOURCE = "SELECT SCOPES.NAME FROM " +
@@ -1055,6 +1055,9 @@ public class SQLQueries {
     public static final String RETRIEVE_OIDC_CLAIMS_COUNT_OF_SCOPE = "SELECT COUNT(*) FROM " +
             "IDN_OIDC_SCOPE_CLAIM_MAPPING WHERE SCOPE_ID= (SELECT ID FROM IDN_OAUTH2_SCOPE WHERE NAME=? AND " +
             "TENANT_ID=?) ";
+
+    public static final String RETRIEVE_SCOPE_BINDING_COUNT_OF_SCOPE = "SELECT COUNT(*) FROM " +
+            "IDN_OAUTH2_SCOPE_BINDING WHERE SCOPE_ID=? ";
 
     public static final String RETRIEVE_REFRESH_TOKEN =
             "SELECT CONSUMER_KEY, " +

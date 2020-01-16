@@ -37,9 +37,12 @@ public class Oauth2ScopeConstants {
         ERROR_CODE_BAD_REQUEST_SCOPE_DISPLAY_NAME_NOT_SPECIFIED("41002", "Scope Display Name is not specified."),
         ERROR_CODE_NOT_FOUND_SCOPE("41003", "Scope %s is not found."),
         ERROR_CODE_CONFLICT_REQUEST_EXISTING_SCOPE("41004",
-                "Scope with the name %s already exists in the system. Please use a different scope name."),
+                "Scope name %s already exists with binding in the system. Please use a different scope name and " +
+                        "binding."),
+        ERROR_CODE_CONFLICT_REQUEST_EXISTING_OIDC_SCOPE("41004", "Scope is already exists with OIDC claim " +
+                "mapping in the system. Please use a different scope name or different OIDC claims to map."),
         ERROR_CODE_BAD_REQUEST_SCOPE_NOT_SPECIFIED("41005", "Scope is not specified."),
-        ERROR_CODE_BAD_REQUEST_SCOPE_NAME_CONTAINS_WHITESPACES("41006", "Scope Name contains white spaces."),
+        ERROR_CODE_BAD_REQUEST_SCOPE_NAME_CONTAINS_WHITESPACES("41006", "Scope name contains white spaces."),
 
         ERROR_CODE_FAILED_TO_REGISTER_SCOPE("51001", "Error occurred while registering scope %s."),
         ERROR_CODE_FAILED_TO_GET_ALL_SCOPES("51002", "Error occurred while retrieving all available scopes."),

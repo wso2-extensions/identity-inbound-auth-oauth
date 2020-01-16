@@ -25,6 +25,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeServerException;
 import org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants;
@@ -460,7 +461,7 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
                 deleteBindingOfScope(updatedScope.getName(), tenantID, conn);
                 addScopeBinding(updatedScope, conn, scopeId);
                 IdentityDatabaseUtil.commitTransaction(conn);
-            } catch (SQLException e1) {
+            } catch (SQLException | IdentityOAuth2ScopeClientException e1) {
                 IdentityDatabaseUtil.rollbackTransaction(conn);
                 String msg = "Error occurred while updating scope by ID ";
                 throw new IdentityOAuth2ScopeServerException(msg, e1);
@@ -471,7 +472,8 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
         }
     }
 
-    private void addScope(Scope scope, Connection conn, int tenantID) throws SQLException {
+    private void addScope(Scope scope, Connection conn, int tenantID)
+            throws SQLException, IdentityOAuth2ScopeClientException {
         //Adding the scope
         if (scope != null) {
             int scopeID = 0;
@@ -517,8 +519,15 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
      * @param conn    Connection.
      * @param scopeID Scope ID.
      * @throws SQLException
+     * @throws IdentityOAuth2ScopeClientException
      */
-    private void addScopeBinding(Scope scope, Connection conn, int scopeID) throws SQLException {
+    private void addScopeBinding(Scope scope, Connection conn, int scopeID)
+            throws SQLException, IdentityOAuth2ScopeClientException {
+
+        if (isScopeBindingAlreadyExists(scopeID, conn)) {
+            throw Oauth2ScopeUtils.generateClientException(Oauth2ScopeConstants.ErrorMessages.
+                    ERROR_CODE_CONFLICT_REQUEST_EXISTING_SCOPE, scope.getName());
+        }
 
         // Adding scope bindings.
         try (PreparedStatement ps = conn.prepareStatement(SQLQueries.ADD_SCOPE_BINDING)) {
@@ -534,6 +543,29 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
             }
             ps.executeBatch();
         }
+    }
+
+    private boolean isScopeBindingAlreadyExists(int scopeId, Connection conn) throws SQLException {
+
+        return getScopeBindingCount(scopeId, conn) > 0;
+    }
+
+    private int getScopeBindingCount(int scopeId, Connection conn) throws SQLException {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Get scope binding count for the scope ID: " + scopeId);
+        }
+
+        int scopeBindingCount = Oauth2ScopeConstants.COUNT_ZERO;
+        try (PreparedStatement ps = conn.prepareStatement(SQLQueries.RETRIEVE_SCOPE_BINDING_COUNT_OF_SCOPE)) {
+            ps.setInt(1, scopeId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    scopeBindingCount = rs.getInt(1);
+                }
+            }
+        }
+        return scopeBindingCount;
     }
 
     /**
@@ -808,9 +840,7 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
             ps.setString(2, updatedScope.getDescription());
             ps.setInt(3, tenantID);
             ps.setInt(4, scopeId);
-            ps.addBatch();
-
-            ps.executeBatch();
+            ps.execute();
         }
     }
 
