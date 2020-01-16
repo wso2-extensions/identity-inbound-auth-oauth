@@ -206,9 +206,9 @@ public class OAuthServerConfiguration {
     private CustomClaimsCallbackHandler openidConnectIDTokenCustomClaimsCallbackHandler = null;
     private String openIDConnectIDTokenIssuerIdentifier = null;
     private String openIDConnectIDTokenSubClaim = "http://wso2.org/claims/fullname";
-    private String openIDConnectSkipUserConsent = "true";
-    private String openIDConnectSkipLoginConsent;
-    private String openIDConnectSkipLogoutConsent;
+    private Boolean openIDConnectSkipUserConsent = true;
+    private Boolean openIDConnectSkipLoginConsent;
+    private Boolean openIDConnectSkipLogoutConsent;
     private String openIDConnectIDTokenExpiration = "3600";
     private long openIDConnectIDTokenExpiryTimeInSeconds = 3600;
 
@@ -1179,9 +1179,9 @@ public class OAuthServerConfiguration {
                 log.debug("The SkipLoginConsent property is not configured. " +
                         "So retrieving the SkipUserConsent value.");
             }
-            Boolean.parseBoolean(openIDConnectSkipUserConsent);
+            return openIDConnectSkipUserConsent;
         }
-        return Boolean.parseBoolean(openIDConnectSkipLoginConsent);
+        return openIDConnectSkipLoginConsent;
     }
 
     /**
@@ -1195,9 +1195,9 @@ public class OAuthServerConfiguration {
                 log.debug("The SkipLogoutConsent property is not configured. " +
                         "So retrieving the SkipUserConsent value.");
             }
-            Boolean.parseBoolean(openIDConnectSkipUserConsent);
+            return openIDConnectSkipUserConsent;
         }
-        return Boolean.parseBoolean(openIDConnectSkipLogoutConsent);
+        return openIDConnectSkipLogoutConsent;
     }
 
     /**
@@ -2537,25 +2537,25 @@ public class OAuthServerConfiguration {
             if (openIDConnectConfigElem
                     .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_SKIP_USER_CONSENT)) !=
                     null) {
-                openIDConnectSkipUserConsent =
+                openIDConnectSkipUserConsent = Boolean.parseBoolean(
                         openIDConnectConfigElem.getFirstChildWithName(
                                 getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_SKIP_USER_CONSENT))
-                                .getText().trim();
+                                .getText().trim());
             }
             if (openIDConnectConfigElem
                     .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_SKIP_LOGIN_CONSENT)) !=
                     null) {
-                openIDConnectSkipLoginConsent =
+                openIDConnectSkipLoginConsent = Boolean.parseBoolean(
                         openIDConnectConfigElem.getFirstChildWithName(
                                 getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_SKIP_LOGIN_CONSENT))
-                                .getText().trim();
+                                .getText().trim());
             }
             if (openIDConnectConfigElem.getFirstChildWithName(
                     getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_SKIP_LOGOUT_CONSENT)) != null) {
-                openIDConnectSkipLogoutConsent =
+                openIDConnectSkipLogoutConsent = Boolean.parseBoolean(
                         openIDConnectConfigElem.getFirstChildWithName(
                                 getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_SKIP_LOGOUT_CONSENT))
-                                .getText().trim();
+                                .getText().trim());
             }
             if (openIDConnectConfigElem
                     .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_IDTOKEN_ISSUER_ID)) !=
