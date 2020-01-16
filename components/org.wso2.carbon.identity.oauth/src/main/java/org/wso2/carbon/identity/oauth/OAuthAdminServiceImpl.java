@@ -564,6 +564,10 @@ public class OAuthAdminServiceImpl {
                 throw handleClientError(INVALID_REQUEST, String.format(Oauth2ScopeConstants.ErrorMessages.
                         ERROR_CODE_NOT_FOUND_SCOPE.getMessage(), scopeName));
             }
+            if (scopeDTO != null && scopeDTO.getClaim() == null) {
+                throw handleClientError(INVALID_REQUEST, String.format(Oauth2ScopeConstants.ErrorMessages.
+                        ERROR_CODE_NOT_FOUND_SCOPE.getMessage(), scopeName));
+            }
             return scopeDTO;
         } catch (IdentityOAuth2Exception e) {
             throw handleErrorWithExceptionType(

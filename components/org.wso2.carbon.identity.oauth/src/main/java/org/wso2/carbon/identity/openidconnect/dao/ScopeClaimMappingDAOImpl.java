@@ -429,24 +429,28 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
     @Override
     public ScopeDTO getScope(String scopeName, int tenantId) throws IdentityOAuth2Exception {
 
-        ScopeDTO scope;
+        ScopeDTO scope = null;
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
 
         try {
-            scope = jdbcTemplate.fetchSingleRecord(SQLQueries.GET_IDN_OIDC_SCOPE_DETAILS, (resultSet, rowNumber) ->
+            ScopeDTO tempScope = jdbcTemplate.fetchSingleRecord(SQLQueries.GET_IDN_OIDC_SCOPE_DETAILS, (resultSet,
+                                                                                                        rowNumber) ->
                             new ScopeDTO(resultSet.getString(1), resultSet.getString(2), resultSet.getString(3),
                                     new String[]{})
                     , preparedStatement -> {
                         preparedStatement.setString(1, scopeName);
                         preparedStatement.setInt(2, tenantId);
                     });
+            if (tempScope != null) {
+                ScopeDTO tempScopeWithClaims = getClaims(scopeName, tenantId);
+                if (tempScopeWithClaims.getClaim() != null && tempScopeWithClaims.getClaim().length != 0) {
+                    scope = new ScopeDTO(tempScope.getName(), tempScope.getDisplayName(), tempScope.getDescription(),
+                            tempScopeWithClaims.getClaim());
+                }
+            }
         } catch (DataAccessException e) {
             String errorMessage = "Error while fetching scope details for scope: " + scopeName;
             throw new IdentityOAuth2Exception(errorMessage, e);
-        }
-        if (scope != null) {
-            ScopeDTO tempScopeDTO = getClaims(scopeName, tenantId);
-            scope.setClaim(tempScopeDTO.getClaim());
         }
         return scope;
     }

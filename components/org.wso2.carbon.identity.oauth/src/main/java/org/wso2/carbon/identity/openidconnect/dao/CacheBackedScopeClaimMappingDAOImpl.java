@@ -164,8 +164,10 @@ public class CacheBackedScopeClaimMappingDAOImpl extends ScopeClaimMappingDAOImp
         oidcScopeClaimCacheEntry = loadOIDCScopeClaims(tenantId, oidcScopeClaimCacheEntry);
         ScopeDTO scopeDTO = new ScopeDTO();
         for (ScopeDTO scopeObj : oidcScopeClaimCacheEntry.getScopeClaimMapping()) {
-            if (scopeName.equals(scopeObj.getName())) {
-                scopeDTO = scopeObj;
+            if (scopeName.equals(scopeObj.getName()) && scopeObj.getClaim() != null) {
+                if ((scopeObj.getClaim().length != 0)) {
+                    scopeDTO = scopeObj;
+                }
             }
         }
         return scopeDTO;
