@@ -752,9 +752,9 @@ public class OIDCLogoutServlet extends HttpServlet {
      */
     private boolean getOpenIDConnectSkipUserConsent(String idTokenHint) throws ParseException, IdentityOAuth2Exception {
 
-        boolean skipLogoutConsentConfig =
+        boolean skipLogoutConsent =
                 OAuthServerConfiguration.getInstance().getOpenIDConnectSkipLogoutConsentConfig();
-        if (skipLogoutConsentConfig) {
+        if (skipLogoutConsent) {
             if (log.isDebugEnabled()) {
                 log.debug("Server wide configuration is to skip the logout consent. So continue without " +
                         "checking for the service provider level configuration.");
