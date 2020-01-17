@@ -52,9 +52,9 @@ public interface ScopeClaimMappingDAO {
     /**
      * To add OIDC scope for a specific tenant.
      *
-     * @param scope    scope
-     * @param tenantId tenant Id
-     * @throws IdentityOAuth2Exception if an error occurs when adding a scope.
+     * @param scope    Scope.
+     * @param tenantId Tenant ID.
+     * @throws IdentityOAuth2Exception If an error occurs when adding a scope.
      */
     void addScope(ScopeDTO scope, int tenantId) throws IdentityOAuth2Exception;
 

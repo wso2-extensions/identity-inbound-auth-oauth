@@ -472,6 +472,15 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
         }
     }
 
+    /**
+     * Add an OIDC scope.
+     *
+     * @param scope    Scope.
+     * @param conn     Databse connection.
+     * @param tenantID Tenant ID.
+     * @throws SQLException
+     * @throws IdentityOAuth2ScopeClientException
+     */
     private void addScope(Scope scope, Connection conn, int tenantID)
             throws SQLException, IdentityOAuth2ScopeClientException {
         //Adding the scope
@@ -545,11 +554,27 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
         }
     }
 
+    /**
+     * Check binding exist for provided scope name.
+     *
+     * @param scopeId Scope ID.
+     * @param conn    Data-base connection.
+     * @return Return true if the scope contains bindings.
+     * @throws SQLException
+     */
     private boolean isScopeBindingAlreadyExists(int scopeId, Connection conn) throws SQLException {
 
         return getScopeBindingCount(scopeId, conn) > 0;
     }
 
+    /**
+     * Get the binding count of a scope.
+     *
+     * @param scopeId Scope ID.
+     * @param conn    Data-base connection.
+     * @return Total number of binding.
+     * @throws SQLException
+     */
     private int getScopeBindingCount(int scopeId, Connection conn) throws SQLException {
 
         if (log.isDebugEnabled()) {
@@ -790,7 +815,6 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
             throws SQLException {
 
         return getOidcClaimCountForScope(scopeName, tenantID, conn) > 0;
-
     }
 
     /**
@@ -819,7 +843,6 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
             }
         }
         return oidcClaimCount;
-
     }
 
     /**

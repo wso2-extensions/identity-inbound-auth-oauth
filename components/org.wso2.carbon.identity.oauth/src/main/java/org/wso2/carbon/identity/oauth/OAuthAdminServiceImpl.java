@@ -506,7 +506,6 @@ public class OAuthAdminServiceImpl {
         }
 
         int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
-
         try {
             OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().addScope(scope, tenantId);
         } catch (IdentityOAuth2Exception e) {
@@ -543,7 +542,7 @@ public class OAuthAdminServiceImpl {
     /**
      * Get persisted oidc scope with mapped claims.
      *
-     * @return Get a persisted scope and it's mapped claims
+     * @return Get a persisted scope and it's mapped claims.
      * @throws IdentityOAuthAdminException If an error occurs when loading scope and claims.
      */
     public ScopeDTO getScope(String scopeName) throws IdentityOAuthAdminException {
@@ -560,18 +559,21 @@ public class OAuthAdminServiceImpl {
             ScopeDTO scopeDTO = OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
                     getScope(scopeName, tenantId);
 
+            // If scopeDTO is null then the requested scope is not exist.
             if (scopeDTO == null) {
                 throw handleClientError(INVALID_REQUEST, String.format(Oauth2ScopeConstants.ErrorMessages.
                         ERROR_CODE_NOT_FOUND_SCOPE.getMessage(), scopeName));
             }
+            // If the scope is exist but mapped claim is null then it is belong to OAuth2 scope
+            // binding. Hence we don't want to expose OAuth2 scope binding scope via OIDC scope APIs.
             if (scopeDTO != null && scopeDTO.getClaim() == null) {
                 throw handleClientError(INVALID_REQUEST, String.format(Oauth2ScopeConstants.ErrorMessages.
                         ERROR_CODE_NOT_FOUND_SCOPE.getMessage(), scopeName));
             }
             return scopeDTO;
         } catch (IdentityOAuth2Exception e) {
-            throw handleErrorWithExceptionType(
-                    "Error while loading OIDC scope: " + scopeName + " for tenant: " + tenantId, e);
+            throw handleErrorWithExceptionType(String.format("Error while loading OIDC scope: %s for tenant %s",
+                    scopeName, tenantId), e);
         }
     }
 
@@ -689,8 +691,6 @@ public class OAuthAdminServiceImpl {
      */
     public void updateScope(ScopeDTO updatedScope) throws IdentityOAuthAdminException {
 
-        int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
-
         // Check whether the scope name is provided.
         if (StringUtils.isBlank(updatedScope.getName())) {
             throw handleClientError(INVALID_REQUEST, Oauth2ScopeConstants.ErrorMessages.
@@ -711,12 +711,13 @@ public class OAuthAdminServiceImpl {
                     ERROR_CODE_NOT_FOUND_SCOPE.getMessage(), updatedScope.getName()));
         }
 
+        int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
         try {
             OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
                     updateScope(updatedScope, tenantId);
         } catch (IdentityOAuth2Exception e) {
-            throw handleErrorWithExceptionType(
-                    "Error while updating the scope: " + updatedScope.getName() + " in tenant: " + tenantId, e);
+            throw handleErrorWithExceptionType(String.format("Error while updating the scope: %s in tenant: %s",
+                    updatedScope.getName(), tenantId), e);
         }
     }
 

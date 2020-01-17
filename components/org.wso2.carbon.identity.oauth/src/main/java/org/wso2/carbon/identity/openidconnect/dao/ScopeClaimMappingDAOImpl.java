@@ -94,7 +94,8 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
                 }
 
             } else {
-                log.warn("Scope " + scope + " already exist in tenant " + tenantId + " , hence trying to add claims.");
+                log.warn(String.format("Scope %s already exist in tenant %s, hence trying to add claims.", scope
+                        , tenantId));
                 int scopeID = getScopeId(scope, tenantId);
                 if (scopeID > 0 && ArrayUtils.isNotEmpty(claims)) {
                     Set<String> claimsSet = new HashSet<>(Arrays.asList(claims));
@@ -107,11 +108,8 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
     @Deprecated
     public void addScope(int tenantId, String scope, String[] claims) throws IdentityOAuth2Exception {
 
-        ScopeDTO scopeDTO = new ScopeDTO();
-        scopeDTO.setName(scope);
-        //Since display name is mandatory add scope name as a displayname.
-        scopeDTO.setDisplayName(scope);
-        scopeDTO.setClaim(claims);
+        // Since display name is mandatory add scope name as a displayName.
+        ScopeDTO scopeDTO = new ScopeDTO(scope, scope, null, claims);
         addScope(scopeDTO, tenantId);
     }
 
@@ -152,8 +150,8 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
                 throw new IdentityOAuth2Exception(errorMessage, e);
             }
         } else {
-            log.warn("Scope " + scope.getName() + " already exist in tenant " + tenantId +
-                    " , hence trying to add claims.");
+            log.warn(String.format("Scope %s already exist in tenant %s, hence trying to add claims.", scope.getName()
+                    , tenantId));
             if (scopeID > 0 && ArrayUtils.isNotEmpty(scope.getClaim())) {
                 Set<String> claimsSet = new HashSet<>(Arrays.asList(scope.getClaim()));
                 insertClaims(tenantId, scopeID, claimsSet);
@@ -256,7 +254,8 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
                             }
                                               );
                     if (log.isDebugEnabled()) {
-                        log.debug("The scope: " + scope + "in the tenant: " + tenantId + "is successfully deleted.");
+                        log.debug(String.format("The scope: %s in the tenant: %s is successfully deleted.", scope,
+                                tenantId));
                     }
                 }
             } else {
@@ -310,15 +309,23 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
             }
         } catch (DataAccessException e) {
             throw new IdentityOAuth2Exception(
-                    "Error while updating the scope: " + scope.getName() + " and related claims.", e);
+                    "Error while updating the scope: " + scope.getName() + " and it's related claims.", e);
         }
     }
 
+    /**
+     * Delete existing OIDC claim mapping of a scope.
+     *
+     * @param scopeName    Scope name.
+     * @param tenantId     Tenant ID.
+     * @param jdbcTemplate JDBC template.
+     * @throws DataAccessException
+     */
     private void deleteOidcClaimMappingOfScope(String scopeName, int tenantId, JdbcTemplate jdbcTemplate)
             throws DataAccessException {
 
         if (log.isDebugEnabled()) {
-            log.debug("");
+            log.debug("Deleting existing OIDC claim mapping of scope: " + scopeName);
         }
         jdbcTemplate.executeUpdate(SQLQueries.DELETE_CLAIM_MAPPING_OF_SCOPE, preparedStatement -> {
             preparedStatement.setString(1, scopeName);
@@ -535,7 +542,8 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
                 return null;
             });
         } catch (TransactionException e) {
-            String errorMessage = "Error when storing oidc claims for scope ID:" + scopeId + " tenant: " + tenantId;
+            String errorMessage = String.format("Error when storing oidc claims for scope ID: %s for tenant: %s",
+                    scopeId, tenantId);
             throw new IdentityOAuth2Exception(errorMessage, e);
         }
     }
@@ -543,8 +551,8 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
     /**
      * Check whether OIDC claim mapping exist for the provided scope name.
      *
-     * @param scopeId
-     * @return
+     * @param scopeId Scope ID.
+     * @return Return true if OIDC claim mapping exist for the provided scope.
      * @throws IdentityOAuth2Exception
      */
     private boolean isOidcClaimMappingExistForScope(int scopeId) throws IdentityOAuth2Exception {
@@ -585,9 +593,11 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
     }
 
     /**
-     * @param scopeName
-     * @param tenantId
-     * @return
+     * Check whether scope binding exist for the provided scope name.
+     *
+     * @param scopeName Scope name.
+     * @param tenantId  Tenant ID.
+     * @return Return true if scope binding exist for the provided scope.
      * @throws IdentityOAuth2Exception
      */
     private boolean isScopeBindingExistForScope(String scopeName, int tenantId) throws IdentityOAuth2Exception {
@@ -610,14 +620,21 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
 
     /**
      * Update scope details on IDN_OAUTH2_SCOPE scope table.
+     *
+     * @param updatedScope Updated scope.
+     * @param tenantId     Tenant ID.
+     * @param jdbcTemplate JDBC template.
+     * @param scopeId      Scope ID.
+     * @throws DataAccessException
      */
     public void updateScopeDetailsOnOauth2ScopeTable(ScopeDTO updatedScope, int tenantId, JdbcTemplate jdbcTemplate,
                                                      int scopeId)
             throws DataAccessException {
 
         if (log.isDebugEnabled()) {
-            log.debug("");
+            log.debug("Update scope details on IDN_OAUTH2_SCOPE scope table for scope: " + updatedScope.getName());
         }
+
         // Update scope details on IDN_OAUTH2_SCOPE table.
         jdbcTemplate.executeUpdate(SQLQueries.UPDATE_IDN_OAUTH2_SCOPE, preparedStatement -> {
             preparedStatement.setString(1, updatedScope.getDisplayName());
