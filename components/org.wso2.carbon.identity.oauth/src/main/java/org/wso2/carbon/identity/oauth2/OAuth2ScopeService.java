@@ -24,6 +24,7 @@ import org.wso2.carbon.identity.oauth.cache.OAuthScopeCacheKey;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.util.Oauth2ScopeUtils;
+import org.wso2.carbon.identity.openidconnect.cache.OIDCScopeClaimCache;
 
 import java.util.Set;
 
@@ -254,6 +255,7 @@ public class OAuth2ScopeService {
 
         OAuthScopeCache.getInstance().addToCache(new OAuthScopeCacheKey(updatedScope.getName(),
                 Integer.toString(tenantID)), updatedScope);
+        OIDCScopeClaimCache.getInstance().clearScopeClaimMap(tenantID);
         return updatedScope;
     }
 

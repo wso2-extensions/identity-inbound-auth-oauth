@@ -22,6 +22,8 @@ package org.wso2.carbon.identity.openidconnect.dao;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.oauth.cache.OAuthScopeCache;
+import org.wso2.carbon.identity.oauth.cache.OAuthScopeCacheKey;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.openidconnect.cache.OIDCScopeClaimCache;
@@ -106,6 +108,8 @@ public class CacheBackedScopeClaimMappingDAOImpl extends ScopeClaimMappingDAOImp
 
         super.updateScope(scope, tenantId);
         oidcScopeClaimCache.clearScopeClaimMap(tenantId);
+        OAuthScopeCache.getInstance()
+                .clearCacheEntry(new OAuthScopeCacheKey(scope.getName(), Integer.toString(tenantId)));
         if (log.isDebugEnabled()) {
             log.debug("The cache oidcScopeClaimCache is cleared for the tenant : " + tenantId);
         }
