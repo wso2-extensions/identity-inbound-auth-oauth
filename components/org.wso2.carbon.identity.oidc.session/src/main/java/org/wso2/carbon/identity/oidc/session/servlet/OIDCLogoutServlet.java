@@ -752,6 +752,15 @@ public class OIDCLogoutServlet extends HttpServlet {
      */
     private boolean getOpenIDConnectSkipUserConsent(String idTokenHint) throws ParseException, IdentityOAuth2Exception {
 
+        boolean skipLogoutConsent =
+                OAuthServerConfiguration.getInstance().getOpenIDConnectSkipLogoutConsentConfig();
+        if (skipLogoutConsent) {
+            if (log.isDebugEnabled()) {
+                log.debug("Server wide configuration is to skip the logout consent. So continue without " +
+                        "checking for the service provider level configuration.");
+            }
+            return true;
+        }
         String clientId;
         if (StringUtils.isNotBlank(idTokenHint)) {
             if (validateIdToken(idTokenHint)) {
@@ -759,7 +768,7 @@ public class OIDCLogoutServlet extends HttpServlet {
                 ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(clientId);
                 if (serviceProvider != null) {
                     if (log.isDebugEnabled()) {
-                        log.debug("Get the logout consent skip from service prover. Client id: " + clientId);
+                        log.debug("Get the skip logout consent from service prover. clientID: " + clientId);
                     }
                     return FrameworkUtils.isLogoutConsentPageSkippedForSP(serviceProvider);
                 }
@@ -768,9 +777,9 @@ public class OIDCLogoutServlet extends HttpServlet {
             }
         }
         if (log.isDebugEnabled()) {
-            log.debug("Reading the skipConsent property from the identity.xml");
+            log.debug("Could not able to identify the service provider, so prompting the logout consent.");
         }
-        return OAuthServerConfiguration.getInstance().getOpenIDConnectSkipeUserConsentConfig();
+        return false;
     }
 
     /**
