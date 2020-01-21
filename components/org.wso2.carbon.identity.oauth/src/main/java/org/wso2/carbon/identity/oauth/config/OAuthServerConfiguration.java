@@ -1924,7 +1924,7 @@ public class OAuthServerConfiguration {
         if (tokenCleanElem != null) {
             OMElement tokenCleanupConfigElem =
                     tokenCleanElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.TOKEN_CLEANUP_FEATURE));
-            if (tokenCleanupConfigElem != null && StringUtils.isNotEmpty(tokenCleanupConfigElem.getText())) {
+            if (tokenCleanupConfigElem != null && StringUtils.isNotBlank(tokenCleanupConfigElem.getText())) {
                 tokenCleanupFeatureEnable = tokenCleanupConfigElem.getText().trim();
                 if (log.isDebugEnabled()) {
                     log.debug("Old token cleanup process enable is set to : " + tokenCleanupFeatureEnable);
