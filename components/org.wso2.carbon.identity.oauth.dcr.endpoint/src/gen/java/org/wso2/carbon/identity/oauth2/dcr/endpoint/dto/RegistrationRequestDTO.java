@@ -28,6 +28,7 @@ public class RegistrationRequestDTO  {
   private List<String> responseTypes = new ArrayList<>();
   private String tokenType = null;
   private String spTemplateName = null;
+  private Boolean extSaasApp = null;
   private String backchannelLogoutUri = null;
   private boolean backchannelLogoutSessionRequired;
 
@@ -182,6 +183,15 @@ public class RegistrationRequestDTO  {
   }
 
   @ApiModelProperty
+  @JsonProperty("ext_saas_app")
+  public Boolean getExtSaasApp() {
+    return extSaasApp;
+  }
+  public void setExtSaasApp(Boolean extSaasApp) {
+    this.extSaasApp = extSaasApp;
+  }
+
+  @ApiModelProperty
   @JsonProperty("ext_param_sp_template")
   public String getSpTemplateName() {
     return spTemplateName;
@@ -210,6 +220,7 @@ public class RegistrationRequestDTO  {
     sb.append("  response_types: ").append(responseTypes).append("\n");
     sb.append("  token_type_extension: ").append(tokenType).append("\n");
     sb.append("  ext_param_sp_template: ").append(spTemplateName).append("\n");
+    sb.append("  ext_saas_app: ").append(extSaasApp).append("\n");
     sb.append("  backchannel_logout_uri: ").append(backchannelLogoutUri).append("\n");
     sb.append("  backchannel_logout_session_required: ").append(backchannelLogoutSessionRequired).append("\n");
     sb.append("}\n");

@@ -300,6 +300,8 @@ definitions:
           type: string
       ext_param_sp_template:
         type: string
+      ext_saas_app:
+        type: boolean
       backchannel_logout_uri:
         type: string
       backchannel_logout_session_required:

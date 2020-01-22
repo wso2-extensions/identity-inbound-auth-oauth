@@ -256,6 +256,7 @@ public class DCRMService {
         String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         String spName = registrationRequest.getClientName();
         String templateName = registrationRequest.getSpTemplateName();
+        Boolean saasApp = registrationRequest.getSaasApp();
 
         // Regex validation of the application name.
         if (!DCRMUtils.isRegexValidated(spName)) {
@@ -274,7 +275,7 @@ public class DCRMService {
                     registrationRequest.getConsumerKey());
         }
 
-        // Create a service provider.
+        // Create a service provider.registrationRequestDTO.getExtSaasApp()
         ServiceProvider serviceProvider = createServiceProvider(applicationOwner, tenantDomain, spName, templateName);
 
         OAuthConsumerAppDTO createdApp;
@@ -291,7 +292,8 @@ public class DCRMService {
         }
 
         try {
-            updateServiceProviderWithOAuthAppDetails(serviceProvider, createdApp, applicationOwner, tenantDomain);
+            updateServiceProviderWithOAuthAppDetails(serviceProvider, createdApp, applicationOwner, tenantDomain,
+                    saasApp);
         } catch (DCRMException ex) {
             // Delete the OAuth app created. This will also remove the registered SP for the OAuth app.
             deleteApplication(createdApp.getOauthConsumerKey());
@@ -317,7 +319,7 @@ public class DCRMService {
     private void updateServiceProviderWithOAuthAppDetails(ServiceProvider serviceProvider,
                                                           OAuthConsumerAppDTO createdApp,
                                                           String applicationOwner,
-                                                          String tenantDomain) throws DCRMException {
+                                                          String tenantDomain, Boolean saasApp) throws DCRMException {
         // Update created service provider, InboundAuthenticationConfig with OAuth application info.
         InboundAuthenticationConfig inboundAuthenticationConfig = new InboundAuthenticationConfig();
         List<InboundAuthenticationRequestConfig> inboundAuthenticationRequestConfigs = new ArrayList<>();
@@ -332,7 +334,11 @@ public class DCRMService {
                         .size()]));
         serviceProvider.setInboundAuthenticationConfig(inboundAuthenticationConfig);
         //Set SaaS app option
-        serviceProvider.setSaasApp(false);
+        if (saasApp == null) {
+            serviceProvider.setSaasApp(false);
+        } else {
+            serviceProvider.setSaasApp(saasApp);
+        }
 
         // Update the Service Provider app to add OAuthApp as an Inbound Authentication Config
         updateServiceProvider(serviceProvider, tenantDomain, applicationOwner);
@@ -391,7 +397,8 @@ public class DCRMService {
     }
 
     private ServiceProvider createServiceProvider(String applicationOwner, String tenantDomain,
-                                                  String spName, String templateName) throws DCRMException {
+                                                  String spName, String templateName)
+            throws DCRMException {
         // Create the Service Provider
         ServiceProvider sp = new ServiceProvider();
         sp.setApplicationName(spName);

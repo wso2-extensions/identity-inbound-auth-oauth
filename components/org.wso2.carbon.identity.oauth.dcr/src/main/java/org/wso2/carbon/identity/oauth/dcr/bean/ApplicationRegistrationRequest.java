@@ -36,6 +36,7 @@ public class ApplicationRegistrationRequest implements Serializable {
     private String consumerKey = null;
     private String consumerSecret = null;
     private String spTemplateName = null;
+    private Boolean saasApp = null;
     private String backchannelLogoutUri = null;
 
     public List<String> getRedirectUris() {
@@ -106,6 +107,14 @@ public class ApplicationRegistrationRequest implements Serializable {
     public void setBackchannelLogoutUri(String backchannelLogoutUri) {
 
         this.backchannelLogoutUri = backchannelLogoutUri;
+    }
+
+    public Boolean getSaasApp() {
+        return saasApp;
+    }
+
+    public void setSaasApp(Boolean saasApp) {
+        this.saasApp = saasApp;
     }
 
     /**
