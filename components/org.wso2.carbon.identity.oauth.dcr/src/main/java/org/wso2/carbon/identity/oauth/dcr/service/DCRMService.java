@@ -275,7 +275,7 @@ public class DCRMService {
                     registrationRequest.getConsumerKey());
         }
 
-        // Create a service provider.registrationRequestDTO.getExtSaasApp()
+        // Create a service provider.
         ServiceProvider serviceProvider = createServiceProvider(applicationOwner, tenantDomain, spName, templateName);
 
         OAuthConsumerAppDTO createdApp;
@@ -397,8 +397,7 @@ public class DCRMService {
     }
 
     private ServiceProvider createServiceProvider(String applicationOwner, String tenantDomain,
-                                                  String spName, String templateName)
-            throws DCRMException {
+                                                  String spName, String templateName) throws DCRMException {
         // Create the Service Provider
         ServiceProvider sp = new ServiceProvider();
         sp.setApplicationName(spName);
