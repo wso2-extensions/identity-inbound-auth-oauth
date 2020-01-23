@@ -256,7 +256,7 @@ public class DCRMService {
         String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         String spName = registrationRequest.getClientName();
         String templateName = registrationRequest.getSpTemplateName();
-        boolean saasApp = registrationRequest.getSaasApp();
+        boolean saasApp = registrationRequest.isSaasApp();
 
         // Regex validation of the application name.
         if (!DCRMUtils.isRegexValidated(spName)) {

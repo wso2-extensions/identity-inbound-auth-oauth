@@ -109,7 +109,7 @@ public class ApplicationRegistrationRequest implements Serializable {
         this.backchannelLogoutUri = backchannelLogoutUri;
     }
 
-    public boolean getSaasApp() {
+    public boolean isSaasApp() {
         return saasApp;
     }
 
