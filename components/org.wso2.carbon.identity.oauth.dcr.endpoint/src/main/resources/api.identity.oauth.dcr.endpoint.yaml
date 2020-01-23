@@ -302,6 +302,7 @@ definitions:
         type: string
       ext_saas_app:
         type: boolean
+        default: false
       backchannel_logout_uri:
         type: string
       backchannel_logout_session_required:

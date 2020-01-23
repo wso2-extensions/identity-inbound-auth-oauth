@@ -28,7 +28,7 @@ public class RegistrationRequestDTO  {
   private List<String> responseTypes = new ArrayList<>();
   private String tokenType = null;
   private String spTemplateName = null;
-  private Boolean extSaasApp = null;
+  private Boolean extSaasApp = false;
   private String backchannelLogoutUri = null;
   private boolean backchannelLogoutSessionRequired;
 
