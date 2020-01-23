@@ -187,6 +187,7 @@ public class RegistrationRequestDTO  {
   public Boolean getExtSaasApp() {
     return extSaasApp;
   }
+
   public void setExtSaasApp(Boolean extSaasApp) {
     this.extSaasApp = extSaasApp;
   }
