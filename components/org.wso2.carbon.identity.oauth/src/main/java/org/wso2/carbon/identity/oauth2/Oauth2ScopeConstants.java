@@ -28,6 +28,9 @@ public class Oauth2ScopeConstants {
     public static final String PERMISSIONS_BINDING_TYPE = "PERMISSION";
     public static final String SYSTEM_SCOPE = "SYSTEM";
     public static final int COUNT_ZERO = 0;
+    public static final String SCOPE_TYPE_OAUTH2 = "OAUTH2";
+    public static final String SCOPE_TYPE_OIDC = "OIDC";
+
 
     /**
      * Enums for error messages.
@@ -84,6 +87,7 @@ public class Oauth2ScopeConstants {
 
         public static final String LIMIT = "limit";
         public static final String OFFSET = "offset";
+        public static final String SCOPE_TYPE = "scope_type";
     }
 
     /**

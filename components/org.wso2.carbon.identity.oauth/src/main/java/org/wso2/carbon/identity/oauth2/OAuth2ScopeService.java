@@ -27,6 +27,8 @@ import org.wso2.carbon.identity.oauth2.util.Oauth2ScopeUtils;
 import org.wso2.carbon.identity.openidconnect.cache.OIDCScopeClaimCache;
 
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * OAuth2ScopeService use for scope handling
@@ -42,26 +44,9 @@ public class OAuth2ScopeService {
      */
     public Scope registerScope(Scope scope) throws IdentityOAuth2ScopeException {
 
+        addScopePreValidation(scope);
+
         int tenantID = Oauth2ScopeUtils.getTenantID();
-
-        // check whether the scope name is provided
-        if (StringUtils.isBlank(scope.getName())) {
-            throw Oauth2ScopeUtils.generateClientException(Oauth2ScopeConstants.ErrorMessages.
-                    ERROR_CODE_BAD_REQUEST_SCOPE_NAME_NOT_SPECIFIED, null);
-        }
-
-        // Check whether the scope display name is provided.
-        if (StringUtils.isBlank(scope.getDisplayName())) {
-            throw Oauth2ScopeUtils.generateClientException(Oauth2ScopeConstants.ErrorMessages.
-                    ERROR_CODE_BAD_REQUEST_SCOPE_DISPLAY_NAME_NOT_SPECIFIED, null);
-        }
-
-        // Check whether the scope name contains any white spaces.
-        if (scope.getName().contains(" ")) {
-            throw Oauth2ScopeUtils.generateClientException(Oauth2ScopeConstants.ErrorMessages.
-                    ERROR_CODE_BAD_REQUEST_SCOPE_NAME_CONTAINS_WHITESPACES, null);
-        }
-
         try {
             OAuthTokenPersistenceFactory.getInstance().getOAuthScopeDAO().addScope(scope, tenantID);
             if (log.isDebugEnabled()) {
@@ -116,10 +101,7 @@ public class OAuth2ScopeService {
         Scope scope;
         int tenantID = Oauth2ScopeUtils.getTenantID();
 
-        if (StringUtils.isBlank(name)) {
-            throw Oauth2ScopeUtils.generateClientException(Oauth2ScopeConstants.ErrorMessages.
-                    ERROR_CODE_BAD_REQUEST_SCOPE_NAME_NOT_SPECIFIED, null);
-        }
+        throwErrorUponEmptyScopeName(name);
 
         scope = OAuthScopeCache.getInstance().getValueFromCache(new OAuthScopeCacheKey(name,
                 Integer.toString(tenantID)));
@@ -192,19 +174,11 @@ public class OAuth2ScopeService {
      */
     public void deleteScope(String name) throws IdentityOAuth2ScopeException {
 
+        throwErrorUponEmptyScopeName(name);
+        // Check whether a scope exists with the provided scope name which to be deleted.
+        throwErrorOnScopeExist(name);
+
         int tenantID = Oauth2ScopeUtils.getTenantID();
-        if (name == null) {
-            throw Oauth2ScopeUtils.generateClientException(Oauth2ScopeConstants.ErrorMessages.
-                    ERROR_CODE_BAD_REQUEST_SCOPE_NAME_NOT_SPECIFIED, null);
-        }
-
-        // check whether a scope exists with the provided scope name which to be deleted
-        boolean isScopeExists = isScopeExists(name);
-        if (!isScopeExists) {
-            throw Oauth2ScopeUtils.generateClientException(Oauth2ScopeConstants.ErrorMessages.
-                    ERROR_CODE_NOT_FOUND_SCOPE, name);
-        }
-
         OAuthScopeCache.getInstance().clearCacheEntry(new OAuthScopeCacheKey(name, Integer.toString(tenantID)));
 
         try {
@@ -227,25 +201,11 @@ public class OAuth2ScopeService {
      */
     public Scope updateScope(Scope updatedScope) throws IdentityOAuth2ScopeException {
 
+        updateScopePreValidation(updatedScope);
+        // Check whether a scope exists with the provided scope name which to be deleted.
+        throwErrorOnScopeExist(updatedScope.getName());
+
         int tenantID = Oauth2ScopeUtils.getTenantID();
-        if (updatedScope.getName() == null) {
-            throw Oauth2ScopeUtils.generateClientException(Oauth2ScopeConstants.ErrorMessages.
-                    ERROR_CODE_BAD_REQUEST_SCOPE_NAME_NOT_SPECIFIED, null);
-        }
-
-        // check whether the scope description is provided
-        if (StringUtils.isBlank(updatedScope.getDisplayName())) {
-            throw Oauth2ScopeUtils.generateClientException(Oauth2ScopeConstants.ErrorMessages.
-                    ERROR_CODE_BAD_REQUEST_SCOPE_DISPLAY_NAME_NOT_SPECIFIED, null);
-        }
-
-        // check whether a scope exists with the provided scope name which to be updated
-        boolean isScopeExists = isScopeExists(updatedScope.getName());
-        if (!isScopeExists) {
-            throw Oauth2ScopeUtils.generateClientException(Oauth2ScopeConstants.ErrorMessages.
-                    ERROR_CODE_NOT_FOUND_SCOPE, updatedScope.getName());
-        }
-
         try {
             OAuthTokenPersistenceFactory.getInstance().getOAuthScopeDAO().updateScopeByName(updatedScope, tenantID);
         } catch (IdentityOAuth2ScopeServerException e) {
@@ -293,5 +253,95 @@ public class OAuth2ScopeService {
                     ERROR_CODE_FAILED_TO_GET_ALL_SCOPES_PAGINATION, e);
         }
         return scopes;
+    }
+
+    /**
+     * Scope validation before adding the scope.
+     *
+     * @param scope Scope
+     * @throws IdentityOAuth2ScopeClientException
+     */
+    private void addScopePreValidation(Scope scope) throws IdentityOAuth2ScopeClientException {
+
+        throwErrorUponEmptyScopeName(scope.getName());
+        throwErrorIfScopeNameContainsWhiteSpaces(scope.getName());
+        throwErrorUponEmptyDisplayName(scope.getDisplayName());
+
+    }
+
+    /**
+     * Do the validation before updating the scope.
+     *
+     * @param updatedScope Updated scope.
+     * @throws IdentityOAuth2ScopeClientException
+     */
+    private void updateScopePreValidation(Scope updatedScope) throws IdentityOAuth2ScopeClientException {
+
+        throwErrorUponEmptyScopeName(updatedScope.getName());
+        throwErrorUponEmptyDisplayName(updatedScope.getDisplayName());
+
+    }
+
+    /**
+     * Check whether scope name is provided or not.
+     *
+     * @param scopeName Scope name.
+     * @throws IdentityOAuth2ScopeClientException
+     */
+    private void throwErrorUponEmptyScopeName(String scopeName) throws IdentityOAuth2ScopeClientException {
+
+        // Check whether the scope name is provided.
+        if (StringUtils.isBlank(scopeName)) {
+            throw Oauth2ScopeUtils.generateClientException(Oauth2ScopeConstants.ErrorMessages.
+                    ERROR_CODE_BAD_REQUEST_SCOPE_NAME_NOT_SPECIFIED, null);
+        }
+    }
+
+    /**
+     * Check whether scope name contains any white spaces.
+     * @param scopeName Scope name.
+     * @throws IdentityOAuth2ScopeClientException
+     */
+    private void throwErrorIfScopeNameContainsWhiteSpaces(String scopeName) throws IdentityOAuth2ScopeClientException {
+
+        // Check whether the scope name contains any white spaces.
+        Pattern pattern = Pattern.compile("\\s");
+        Matcher matcher = pattern.matcher(scopeName);
+        boolean foundWhiteSpace = matcher.find();
+
+        if (foundWhiteSpace) {
+            throw Oauth2ScopeUtils.generateClientException(Oauth2ScopeConstants.ErrorMessages.
+                    ERROR_CODE_BAD_REQUEST_SCOPE_NAME_CONTAINS_WHITESPACES, null);
+        }
+    }
+
+    /**
+     * Check whether display name is provided or empty.
+     * @param displayName Display name.
+     * @throws IdentityOAuth2ScopeClientException
+     */
+    private void throwErrorUponEmptyDisplayName(String displayName) throws IdentityOAuth2ScopeClientException {
+
+        // Check whether the scope display name is provided.
+        if (StringUtils.isBlank(displayName)) {
+            throw Oauth2ScopeUtils.generateClientException(Oauth2ScopeConstants.ErrorMessages.
+                    ERROR_CODE_BAD_REQUEST_SCOPE_DISPLAY_NAME_NOT_SPECIFIED, null);
+        }
+    }
+
+    /**
+     * Check whether scope exist or not, if scope does not exist trow not found error.
+     *
+     * @param name Scope name.
+     * @throws IdentityOAuth2ScopeException
+     */
+    private void throwErrorOnScopeExist(String name) throws IdentityOAuth2ScopeException {
+
+        // Check whether a scope exists with the provided scope name which to be updated.
+        boolean isScopeExists = isScopeExists(name);
+        if (!isScopeExists) {
+            throw Oauth2ScopeUtils.generateClientException(Oauth2ScopeConstants.ErrorMessages.
+                    ERROR_CODE_NOT_FOUND_SCOPE, name);
+        }
     }
 }
