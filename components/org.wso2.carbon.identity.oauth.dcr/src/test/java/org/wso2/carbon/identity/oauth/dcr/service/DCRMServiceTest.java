@@ -82,6 +82,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
         mockOAuthAdminService = mock(OAuthAdminService.class);
         applicationRegistrationRequest = new ApplicationRegistrationRequest();
         applicationRegistrationRequest.setClientName(dummyClientName);
+        applicationRegistrationRequest.setSaasApp(false);
         dcrmService = new DCRMService();
     }
 

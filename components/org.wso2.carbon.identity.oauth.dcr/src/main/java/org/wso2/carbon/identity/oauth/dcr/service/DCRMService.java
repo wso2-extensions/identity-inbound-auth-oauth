@@ -256,7 +256,7 @@ public class DCRMService {
         String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         String spName = registrationRequest.getClientName();
         String templateName = registrationRequest.getSpTemplateName();
-        Boolean saasApp = registrationRequest.getSaasApp();
+        boolean saasApp = registrationRequest.getSaasApp();
 
         // Regex validation of the application name.
         if (!DCRMUtils.isRegexValidated(spName)) {
@@ -319,7 +319,7 @@ public class DCRMService {
     private void updateServiceProviderWithOAuthAppDetails(ServiceProvider serviceProvider,
                                                           OAuthConsumerAppDTO createdApp,
                                                           String applicationOwner,
-                                                          String tenantDomain, Boolean saasApp) throws DCRMException {
+                                                          String tenantDomain, boolean saasApp) throws DCRMException {
         // Update created service provider, InboundAuthenticationConfig with OAuth application info.
         InboundAuthenticationConfig inboundAuthenticationConfig = new InboundAuthenticationConfig();
         List<InboundAuthenticationRequestConfig> inboundAuthenticationRequestConfigs = new ArrayList<>();

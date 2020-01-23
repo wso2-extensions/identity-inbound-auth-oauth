@@ -28,7 +28,7 @@ public class RegistrationRequestDTO  {
   private List<String> responseTypes = new ArrayList<>();
   private String tokenType = null;
   private String spTemplateName = null;
-  private Boolean extSaasApp = false;
+  private boolean extSaasApp = false;
   private String backchannelLogoutUri = null;
   private boolean backchannelLogoutSessionRequired;
 
@@ -184,11 +184,11 @@ public class RegistrationRequestDTO  {
 
   @ApiModelProperty
   @JsonProperty("ext_saas_app")
-  public Boolean getExtSaasApp() {
+  public boolean getExtSaasApp() {
     return extSaasApp;
   }
 
-  public void setExtSaasApp(Boolean extSaasApp) {
+  public void setExtSaasApp(boolean extSaasApp) {
     this.extSaasApp = extSaasApp;
   }
 
