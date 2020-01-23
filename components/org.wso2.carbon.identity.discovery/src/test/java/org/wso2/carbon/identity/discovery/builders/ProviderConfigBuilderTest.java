@@ -49,6 +49,9 @@ import static org.testng.Assert.assertNotNull;
 
 @PrepareForTest({OAuth2Util.class, OAuthServerConfiguration.class, OIDCDiscoveryDataHolder.class,
         ClaimMetadataManagementService.class})
+/**
+ * Unit test covering ProviderConfigBuilder class.
+ */
 public class ProviderConfigBuilderTest {
 
     private String idTokenSignatureAlgorithm = "SHA256withRSA";
@@ -62,17 +65,20 @@ public class ProviderConfigBuilderTest {
 
     @ObjectFactory
     public IObjectFactory getObjectFactory() {
+
         return new org.powermock.modules.testng.PowerMockObjectFactory();
     }
 
     @BeforeMethod
     public void setUp() throws Exception {
+
         initMocks(this);
         providerConfigBuilder = new ProviderConfigBuilder();
     }
 
     @Test
     public void testBuildOIDProviderConfig() throws Exception {
+
         OAuthServerConfiguration mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
         mockStatic(OAuthServerConfiguration.class);
         when(OAuthServerConfiguration.getInstance()).thenReturn(mockOAuthServerConfiguration);
@@ -99,6 +105,7 @@ public class ProviderConfigBuilderTest {
 
     @Test(expectedExceptions = ServerConfigurationException.class)
     public void testBuildOIDProviderConfig1() throws Exception {
+
         OAuthServerConfiguration mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
         mockStatic(OAuthServerConfiguration.class);
         when(OAuthServerConfiguration.getInstance()).thenReturn(mockOAuthServerConfiguration);
@@ -112,6 +119,7 @@ public class ProviderConfigBuilderTest {
 
     @Test(expectedExceptions = ServerConfigurationException.class)
     public void testBuildOIDProviderConfig2() throws Exception {
+
         OAuthServerConfiguration mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
         mockStatic(OAuthServerConfiguration.class);
         when(OAuthServerConfiguration.getInstance()).thenReturn(mockOAuthServerConfiguration);
@@ -132,6 +140,7 @@ public class ProviderConfigBuilderTest {
 
     @Test(expectedExceptions = ServerConfigurationException.class)
     public void testBuildOIDProviderConfig3() throws Exception {
+
         OAuthServerConfiguration mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
         mockStatic(OAuthServerConfiguration.class);
         when(OAuthServerConfiguration.getInstance()).thenReturn(mockOAuthServerConfiguration);

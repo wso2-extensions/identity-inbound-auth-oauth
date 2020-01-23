@@ -22,12 +22,16 @@ import org.testng.annotations.Test;
 
 import static org.testng.Assert.assertEquals;
 
+/**
+ * Unit test covering OIDProviderRequest class.
+ */
 public class OIDProviderRequestTest {
 
     private OIDProviderRequest oidProviderRequest = new OIDProviderRequest();
 
     @Test
     public void testGetandSetTenantDomain() throws Exception {
+
         String tenantDomain = "tenantDomain";
         oidProviderRequest.setTenantDomain("tenantDomain");
         String tenantDomain1 = oidProviderRequest.getTenantDomain();
@@ -36,11 +40,11 @@ public class OIDProviderRequestTest {
 
     @Test
     public void testGetandSetUri() throws Exception {
+
         String uri = "uri";
         OIDProviderRequest oidProviderRequest = new OIDProviderRequest();
         oidProviderRequest.setUri("uri");
         String uri1 = oidProviderRequest.getUri();
         assertEquals(uri1, uri, "Error while retrieving uri");
     }
-
 }

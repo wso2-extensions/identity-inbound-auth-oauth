@@ -39,6 +39,9 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 
 @PrepareForTest({DefaultOIDCProcessor.class})
+/**
+ * Unit test covering DefaultOIDCProcessor class.
+ */
 public class DefaultOIDCProcessorTest {
 
     @Mock
@@ -58,21 +61,25 @@ public class DefaultOIDCProcessorTest {
 
     @ObjectFactory
     public IObjectFactory getObjectFactory() {
+
         return new org.powermock.modules.testng.PowerMockObjectFactory();
     }
 
     @BeforeClass
     public void setUp() throws Exception {
+
         MockitoAnnotations.initMocks(this);
     }
 
     @Test
     public void testGetInstance() throws Exception {
+
         assertNotNull(DefaultOIDCProcessor.getInstance());
     }
 
     @Test
     public void testGetResponse() throws Exception {
+
         when(mockOidcProviderRequestBuilder.buildRequest(any(HttpServletRequest.class), anyString()))
                 .thenReturn(mockOidProviderRequest);
         when(mockProviderConfigBuilder.buildOIDProviderConfig(any(OIDProviderRequest.class)))
@@ -88,6 +95,7 @@ public class DefaultOIDCProcessorTest {
 
     @DataProvider(name = "errorData")
     public static Object[][] tenant() {
+
         return new Object[][]{
                 {OIDCDiscoveryEndPointException.ERROR_CODE_NO_OPENID_PROVIDER_FOUND,
                         OIDCDiscoveryEndPointException.ERROR_MESSAGE_NO_OPENID_PROVIDER_FOUND},
@@ -103,6 +111,7 @@ public class DefaultOIDCProcessorTest {
 
     @Test(dataProvider = "errorData")
     public void testHandleError(String errorCode, String errorMessage) throws Exception {
+
         OIDCDiscoveryEndPointException oidcDiscoveryEndPointException =
                 new OIDCDiscoveryEndPointException(errorCode, errorMessage);
         assertEquals(DefaultOIDCProcessor.getInstance().handleError(oidcDiscoveryEndPointException), 500);

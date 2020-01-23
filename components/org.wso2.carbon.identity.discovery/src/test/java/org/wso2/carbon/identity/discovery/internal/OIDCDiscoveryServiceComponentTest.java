@@ -42,6 +42,9 @@ import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertEquals;
 
 @PrepareForTest(BundleContext.class)
+/**
+ * Unit test covering OIDCDiscoveryServiceComponent class.
+ */
 public class OIDCDiscoveryServiceComponentTest {
 
     @Mock
@@ -55,22 +58,26 @@ public class OIDCDiscoveryServiceComponentTest {
 
     @ObjectFactory
     public IObjectFactory getObjectFactory() {
+
         return new org.powermock.modules.testng.PowerMockObjectFactory();
     }
 
     @BeforeClass
     public void setUp() throws Exception {
+
         initMocks(this);
     }
 
     @Test
     public void testGetBundleContext() throws Exception {
+
         OIDCDiscoveryServiceComponent.getBundleContext();
         assertEquals(OIDCDiscoveryServiceComponent.getBundleContext(), bundleContext);
     }
 
     @Test
     public void testActivate() throws Exception {
+
         mockStatic(BundleContext.class);
         when(context.getBundleContext()).thenReturn(bundleContext);
 
@@ -79,6 +86,7 @@ public class OIDCDiscoveryServiceComponentTest {
         doAnswer(new Answer<Object>() {
             @Override
             public Object answer(InvocationOnMock invocation) throws Throwable {
+
                 DefaultOIDCProcessor defaultOIDCProcessor = (DefaultOIDCProcessor) invocation.getArguments()[1];
                 serviceName[0] = defaultOIDCProcessor.getClass().getName();
                 return null;
@@ -93,14 +101,15 @@ public class OIDCDiscoveryServiceComponentTest {
 
     @Test
     public void testSetClaimManagementService() throws Exception {
+
         OIDCDiscoveryServiceComponent oidcDiscoveryServiceComponent = new OIDCDiscoveryServiceComponent();
         oidcDiscoveryServiceComponent.setClaimManagementService(claimMetadataManagementService);
     }
 
     @Test
     public void testUnsetClaimManagementService() throws Exception {
+
         OIDCDiscoveryServiceComponent oidcDiscoveryServiceComponent = new OIDCDiscoveryServiceComponent();
         oidcDiscoveryServiceComponent.unsetClaimManagementService(null);
     }
-
 }

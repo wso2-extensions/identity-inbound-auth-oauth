@@ -22,10 +22,14 @@ import org.testng.annotations.Test;
 
 import static org.testng.Assert.assertNotNull;
 
+/**
+ * Unit test covering OIDCDiscoveryDataHolder class.
+ */
 public class OIDCDiscoveryDataHolderTest {
 
     @Test
     public void testGetInstance() throws Exception {
+
         assertNotNull(OIDCDiscoveryDataHolder.getInstance());
     }
 }

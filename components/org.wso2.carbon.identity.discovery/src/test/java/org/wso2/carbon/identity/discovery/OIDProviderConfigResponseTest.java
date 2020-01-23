@@ -27,20 +27,26 @@ import java.util.Map;
 
 import static org.testng.Assert.assertEquals;
 
+/**
+ * Unit test covering OIDProviderConfigResponse class.
+ */
 public class OIDProviderConfigResponseTest {
 
     private OIDProviderConfigResponse oidProviderConfigResponse = new OIDProviderConfigResponse();
 
     @BeforeTest
     public void setUp() throws Exception {
+
     }
 
     @AfterMethod
     public void tearDown() throws Exception {
+
     }
 
     @Test
     public void testGetandSetIssuer() throws Exception {
+
         String issuer = "issuer";
         oidProviderConfigResponse.setIssuer("issuer");
         String issuer1 = oidProviderConfigResponse.getIssuer();
@@ -49,6 +55,7 @@ public class OIDProviderConfigResponseTest {
 
     @Test
     public void testGetandSetAuthorizationEndpoint() throws Exception {
+
         String authorizationEndpoint = "authorizationEndpoint";
         oidProviderConfigResponse.setAuthorizationEndpoint("authorizationEndpoint");
         String authorizationEndpoint1 = oidProviderConfigResponse.getAuthorizationEndpoint();
@@ -57,6 +64,7 @@ public class OIDProviderConfigResponseTest {
 
     @Test
     public void testGetandSetTokenEndpoint() throws Exception {
+
         String tokenEndpoint = "tokenEndpoint";
         oidProviderConfigResponse.setTokenEndpoint("tokenEndpoint");
         String tokenEndpoint1 = oidProviderConfigResponse.getTokenEndpoint();
@@ -65,6 +73,7 @@ public class OIDProviderConfigResponseTest {
 
     @Test
     public void testGetandSetUserinfoEndpoint() throws Exception {
+
         String userinfoEndpont = "userinfoEndpont";
         oidProviderConfigResponse.setUserinfoEndpoint("userinfoEndpont");
         String userinfoEndpoint1 = oidProviderConfigResponse.getUserinfoEndpoint();
@@ -73,6 +82,7 @@ public class OIDProviderConfigResponseTest {
 
     @Test
     public void testGetandSetJwksUri() throws Exception {
+
         String jwksUri = "jwksUri";
         oidProviderConfigResponse.setJwksUri("jwksUri");
         String jwksUri1 = oidProviderConfigResponse.getJwksUri();
@@ -81,6 +91,7 @@ public class OIDProviderConfigResponseTest {
 
     @Test
     public void testGetandSetRegistrationEndpoint() throws Exception {
+
         String registrationEndpoint = "registrationEndpoint";
         oidProviderConfigResponse.setRegistrationEndpoint("registrationEndpoint");
         String registrationEndpoint1 = oidProviderConfigResponse.getRegistrationEndpoint();
@@ -89,6 +100,7 @@ public class OIDProviderConfigResponseTest {
 
     @Test
     public void testGetandSetScopesSupported() throws Exception {
+
         String scopesSupported[] = {"scope1", "scope2"};
         oidProviderConfigResponse.setScopesSupported(new String[]{"scope1", "scope2"});
         String scopesSupported1[] = oidProviderConfigResponse.getScopesSupported();
@@ -97,6 +109,7 @@ public class OIDProviderConfigResponseTest {
 
     @Test
     public void testGetResponseTypesSupported() throws Exception {
+
         String responseTypesSupported[] = {"type1", "type2"};
         oidProviderConfigResponse.setResponseTypesSupported(new String[]{"type1", "type2"});
         String responseTypesSupported1[] = oidProviderConfigResponse.getResponseTypesSupported();
@@ -105,6 +118,7 @@ public class OIDProviderConfigResponseTest {
 
     @Test
     public void testGetandSetResponseModesSupported() throws Exception {
+
         String responseModesSupported[] = {"mode1", "mode2"};
         oidProviderConfigResponse.setResponseModesSupported(new String[]{"mode1", "mode2"});
         String responseModesSupported1[] = oidProviderConfigResponse.getResponseModesSupported();
@@ -113,6 +127,7 @@ public class OIDProviderConfigResponseTest {
 
     @Test
     public void testGetandSetGrantTypesSupported() throws Exception {
+
         String grantTypesSupported[] = {"type1", "type2"};
         oidProviderConfigResponse.setGrantTypesSupported(new String[]{"type1", "type2"});
         String grantTypesSupported1[] = oidProviderConfigResponse.getGrantTypesSupported();
@@ -121,6 +136,7 @@ public class OIDProviderConfigResponseTest {
 
     @Test
     public void testGetandSetAcrValuesSupported() throws Exception {
+
         String acrValuesSupported[] = {"value1", "value2"};
         oidProviderConfigResponse.setAcrValuesSupported(new String[]{"value1", "value2"});
         String acrValuesSupported1[] = oidProviderConfigResponse.getAcrValuesSupported();
@@ -129,6 +145,7 @@ public class OIDProviderConfigResponseTest {
 
     @Test
     public void testGetandSetSubjectTypesSupported() throws Exception {
+
         String subjectTypesSupported[] = {"type1", "type2"};
         oidProviderConfigResponse.setSubjectTypesSupported(new String[]{"type1", "type2"});
         String subjectTypesSupported1[] = oidProviderConfigResponse.getSubjectTypesSupported();
@@ -137,6 +154,7 @@ public class OIDProviderConfigResponseTest {
 
     @Test
     public void testGetandSetIdTokenSigningAlgValuesSupported() throws Exception {
+
         String idTokenSigningAlgValuesSupported[] = {"value1", "value2"};
         oidProviderConfigResponse.setIdTokenSigningAlgValuesSupported(new String[]{"value1", "value2"});
         String idTokenSigningAlgValuesSupported1[] = oidProviderConfigResponse.getIdTokenSigningAlgValuesSupported();
@@ -145,6 +163,7 @@ public class OIDProviderConfigResponseTest {
 
     @Test
     public void testGetandSetIdTokenEncryptionAlgValuesSupported() throws Exception {
+
         String idTokenEncryptionAlgValuesSupported[] = {"value1", "value2"};
         oidProviderConfigResponse.setIdTokenEncryptionAlgValuesSupported(new String[]{"value1", "value2"});
         String idTokenEncryptionAlgValuesSupported1[] = oidProviderConfigResponse.
@@ -154,6 +173,7 @@ public class OIDProviderConfigResponseTest {
 
     @Test
     public void testGetandSetIdTokenEncryptionEncValuesSupported() throws Exception {
+
         String idTokenEncryptionEncValuesSupported[] = {"value1", "value2"};
         oidProviderConfigResponse.setIdTokenEncryptionEncValuesSupported(new String[]{"value1", "value2"});
         String idTokenEncryptionEncValuesSupported1[] = oidProviderConfigResponse.
@@ -163,6 +183,7 @@ public class OIDProviderConfigResponseTest {
 
     @Test
     public void testGetandSetUserinfoSigningAlgValuesSupported() throws Exception {
+
         String userinfoSigningAlgValuesSupported[] = {"value1", "value2"};
         oidProviderConfigResponse.setUserinfoSigningAlgValuesSupported(new String[]{"value1", "value2"});
         String userinfoSigningAlgValuesSupported1[] = oidProviderConfigResponse.getUserinfoSigningAlgValuesSupported();
@@ -171,6 +192,7 @@ public class OIDProviderConfigResponseTest {
 
     @Test
     public void testGetandSetUserinfoEncryptionAlgValuesSupported() throws Exception {
+
         String userinfoEncryptionAlgValuesSupported[] = {"value1", "value2"};
         oidProviderConfigResponse.setUserinfoEncryptionAlgValuesSupported(new String[]{"value1", "value2"});
         String userinfoEncryptionAlgValuesSupported1[] = oidProviderConfigResponse.
@@ -180,6 +202,7 @@ public class OIDProviderConfigResponseTest {
 
     @Test
     public void testGetandSetUserinfoEncryptionEncValuesSupported() throws Exception {
+
         String userinfoEncryptionEncValuesSupported[] = {"value1", "value2"};
         oidProviderConfigResponse.setUserinfoEncryptionEncValuesSupported(new String[]{"value1", "value2"});
         String userinfoEncryptionEncValuesSupported1[] = oidProviderConfigResponse.
@@ -189,6 +212,7 @@ public class OIDProviderConfigResponseTest {
 
     @Test
     public void testGetandSetRequestObjectSigningAlgValuesSupported() throws Exception {
+
         String requestObjectSigningAlgValuesSupported[] = {"value1", "value2"};
         oidProviderConfigResponse.setRequestObjectSigningAlgValuesSupported(new String[]{"value1", "value2"});
         String requestObjectSigningAlgValuesSupported1[] = oidProviderConfigResponse.
@@ -198,6 +222,7 @@ public class OIDProviderConfigResponseTest {
 
     @Test
     public void testGetandSetRequestObjectEncryptionAlgValuesSupported() throws Exception {
+
         String requestObjectEncryptionAlgValuesSupported[] = {"value1", "value2"};
         oidProviderConfigResponse.setRequestObjectEncryptionAlgValuesSupported(new String[]{"value1", "value2"});
         String requestObjectEncryptionAlgValuesSupported1[] = oidProviderConfigResponse.
@@ -207,6 +232,7 @@ public class OIDProviderConfigResponseTest {
 
     @Test
     public void testGetandSetRequestObjectEncryptionEncValuesSupported() throws Exception {
+
         String requestObjectEncryptionEncValuesSupported[] = {"value1", "value2"};
         oidProviderConfigResponse.setRequestObjectEncryptionEncValuesSupported(new String[]{"value1", "value2"});
         String requestObjectEncryptionEncValuesSupported1[] = oidProviderConfigResponse.
@@ -216,6 +242,7 @@ public class OIDProviderConfigResponseTest {
 
     @Test
     public void testGetandSetTokenEndpointAuthMethodsSupported() throws Exception {
+
         String tokenEndpointAuthMethodsSupported[] = {"method1", "method2"};
         oidProviderConfigResponse.setTokenEndpointAuthMethodsSupported(new String[]{"method1", "method2"});
         String tokenEndpointAuthMethodsSupported1[] = oidProviderConfigResponse.
@@ -225,6 +252,7 @@ public class OIDProviderConfigResponseTest {
 
     @Test
     public void testGetandSetTokenEndpointAuthSigningAlgValuesSupported() throws Exception {
+
         String tokenEndpointAuthSigningAlgValuesSupported[] = {"value1", "value2"};
         oidProviderConfigResponse.setTokenEndpointAuthSigningAlgValuesSupported(new String[]{"value1", "value2"});
         String tokenEndpointAuthSigningAlgValuesSupported1[] = oidProviderConfigResponse.
@@ -234,6 +262,7 @@ public class OIDProviderConfigResponseTest {
 
     @Test
     public void testGetandSetDisplayValuesSupported() throws Exception {
+
         String displayValuesSupported[] = {"value1", "value2"};
         oidProviderConfigResponse.setDisplayValuesSupported(new String[]{"value1", "value2"});
         String displayValuesSupported1[] = oidProviderConfigResponse.
@@ -243,6 +272,7 @@ public class OIDProviderConfigResponseTest {
 
     @Test
     public void testGetandSetClaimTypesSupported() throws Exception {
+
         String claimTypesSupported[] = {"type1", "type2"};
         oidProviderConfigResponse.setClaimTypesSupported(new String[]{"type1", "type2"});
         String claimTypesSupported1[] = oidProviderConfigResponse.getClaimTypesSupported();
@@ -251,6 +281,7 @@ public class OIDProviderConfigResponseTest {
 
     @Test
     public void testGetandSetClaimsSupported() throws Exception {
+
         String claimsSupported[] = {"claim1", "claim2"};
         oidProviderConfigResponse.setClaimsSupported(new String[]{"claim1", "claim2"});
         String claimsSupported1[] = oidProviderConfigResponse.getClaimsSupported();
@@ -259,6 +290,7 @@ public class OIDProviderConfigResponseTest {
 
     @Test
     public void testGetandSetServiceDocumentation() throws Exception {
+
         String serviceDocumentation = "serviceDocumentation";
         oidProviderConfigResponse.setServiceDocumentation("serviceDocumentation");
         String serviceDocumentation1 = oidProviderConfigResponse.getServiceDocumentation();
@@ -267,6 +299,7 @@ public class OIDProviderConfigResponseTest {
 
     @Test
     public void testGetandSetClaimsLocalesSupported() throws Exception {
+
         String claimsLocalesSupported[] = {"claim1", "claim2"};
         oidProviderConfigResponse.setClaimsLocalesSupported(new String[]{"claim1", "claim2"});
         String claimsLocalesSupported1[] = oidProviderConfigResponse.getClaimsLocalesSupported();
@@ -275,6 +308,7 @@ public class OIDProviderConfigResponseTest {
 
     @Test
     public void testGetandSetUiLocalesSupported() throws Exception {
+
         String uiLocalesSupported[] = {"ui1", "ui2"};
         oidProviderConfigResponse.setUiLocalesSupported(new String[]{"ui1", "ui2"});
         String uiLocalesSupported1[] = oidProviderConfigResponse.getUiLocalesSupported();
@@ -283,6 +317,7 @@ public class OIDProviderConfigResponseTest {
 
     @Test
     public void testGetandSetClaimsParameterSupported() throws Exception {
+
         String claimsParameterSupported = "parameter";
         oidProviderConfigResponse.setClaimsParameterSupported("parameter");
         String claimsParameterSupported1 = oidProviderConfigResponse.getClaimsParameterSupported();
@@ -291,6 +326,7 @@ public class OIDProviderConfigResponseTest {
 
     @Test
     public void testGetandSetRequestParameterSupported() throws Exception {
+
         String requestParameterSupported = "parameter";
         oidProviderConfigResponse.setRequestParameterSupported("parameter");
         String requestParameterSupported1 = oidProviderConfigResponse.getRequestParameterSupported();
@@ -299,6 +335,7 @@ public class OIDProviderConfigResponseTest {
 
     @Test
     public void testIsandSetClaimsParameterSupported() throws Exception {
+
         Boolean isClaimsParameterSupported = true;
         oidProviderConfigResponse.setClaimsParameterSupported(true);
         Boolean isClaimsParameterSupported1 = oidProviderConfigResponse.isClaimsParameterSupported();
@@ -307,6 +344,7 @@ public class OIDProviderConfigResponseTest {
 
     @Test
     public void testIsandSetRequestParameterSupported() throws Exception {
+
         Boolean isRequestParameterSupported = true;
         oidProviderConfigResponse.setRequestParameterSupported(true);
         Boolean isRequestParameterSupported1 = oidProviderConfigResponse.isRequestParameterSupported();
@@ -315,6 +353,7 @@ public class OIDProviderConfigResponseTest {
 
     @Test
     public void testGetandSetRequestUriParameterSupported() throws Exception {
+
         String requestUriParameterSupported = "parameter";
         oidProviderConfigResponse.setRequestUriParameterSupported("parameter");
         String requestUriParameterSupported1 = oidProviderConfigResponse.getRequestUriParameterSupported();
@@ -323,6 +362,7 @@ public class OIDProviderConfigResponseTest {
 
     @Test
     public void testGetandSetRequireRequestUriRegistration() throws Exception {
+
         String requireRequestUriRegistration = "uri";
         oidProviderConfigResponse.setRequireRequestUriRegistration("uri");
         String requireRequestUriRegistration1 = oidProviderConfigResponse.getRequireRequestUriRegistration();
@@ -331,6 +371,7 @@ public class OIDProviderConfigResponseTest {
 
     @Test
     public void testGetandSetOpPolicyUri() throws Exception {
+
         String opPolicyUri = "uri";
         oidProviderConfigResponse.setOpPolicyUri("uri");
         String opPolicyUri1 = oidProviderConfigResponse.getOpPolicyUri();
@@ -339,6 +380,7 @@ public class OIDProviderConfigResponseTest {
 
     @Test
     public void testGetandSetOpTosUri() throws Exception {
+
         String opTosUri = "uri";
         oidProviderConfigResponse.setOpTosUri("uri");
         String opTosUri1 = oidProviderConfigResponse.getOpTosUri();
@@ -347,8 +389,8 @@ public class OIDProviderConfigResponseTest {
 
     @Test
     public void testGetConfigMap() throws Exception {
+
         Map map = oidProviderConfigResponse.getConfigMap();
         Assert.assertNotNull(map);
     }
-
 }

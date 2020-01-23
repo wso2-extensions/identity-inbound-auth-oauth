@@ -23,6 +23,9 @@ import org.testng.annotations.Test;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.fail;
 
+/**
+ * Unit test covering MessageContext class.
+ */
 public class MessageContextTest {
 
     private MessageContext messageContext;
@@ -30,6 +33,7 @@ public class MessageContextTest {
 
     @Test
     public void testMessageContext() throws Exception {
+
         try {
             messageContext = new MessageContext(oidProviderRequest);
         } catch (Exception e) {
@@ -39,6 +43,7 @@ public class MessageContextTest {
 
     @Test
     public void testSetandGetRequest() throws Exception {
+
         OIDProviderRequest oidProviderRequest = new OIDProviderRequest();
         messageContext = new MessageContext();
         messageContext.setRequest(oidProviderRequest);
@@ -47,10 +52,10 @@ public class MessageContextTest {
 
     @Test
     public void testSetandGetConfigurations() throws Exception {
+
         OIDProviderConfigResponse oidProviderConfigResponse = new OIDProviderConfigResponse();
         messageContext = new MessageContext();
         messageContext.setConfigurations(oidProviderConfigResponse);
         assertEquals(messageContext.getConfigurations(), oidProviderConfigResponse, "Error");
     }
-
 }
