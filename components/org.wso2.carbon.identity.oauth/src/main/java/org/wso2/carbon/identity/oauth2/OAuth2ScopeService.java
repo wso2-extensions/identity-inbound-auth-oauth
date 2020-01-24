@@ -101,7 +101,8 @@ public class OAuth2ScopeService {
         Scope scope;
         int tenantID = Oauth2ScopeUtils.getTenantID();
 
-        throwErrorUponEmptyScopeName(name);
+        // todo
+        validateScopeName(name);
 
         scope = OAuthScopeCache.getInstance().getValueFromCache(new OAuthScopeCacheKey(name,
                 Integer.toString(tenantID)));
@@ -174,9 +175,9 @@ public class OAuth2ScopeService {
      */
     public void deleteScope(String name) throws IdentityOAuth2ScopeException {
 
-        throwErrorUponEmptyScopeName(name);
+        validateScopeName(name);
         // Check whether a scope exists with the provided scope name which to be deleted.
-        throwErrorOnScopeExist(name);
+        validateScopeExistence(name);
 
         int tenantID = Oauth2ScopeUtils.getTenantID();
         OAuthScopeCache.getInstance().clearCacheEntry(new OAuthScopeCacheKey(name, Integer.toString(tenantID)));
@@ -203,7 +204,7 @@ public class OAuth2ScopeService {
 
         updateScopePreValidation(updatedScope);
         // Check whether a scope exists with the provided scope name which to be deleted.
-        throwErrorOnScopeExist(updatedScope.getName());
+        validateScopeExistence(updatedScope.getName());
 
         int tenantID = Oauth2ScopeUtils.getTenantID();
         try {
@@ -258,15 +259,13 @@ public class OAuth2ScopeService {
     /**
      * Scope validation before adding the scope.
      *
-     * @param scope Scope
+     * @param scope Scope.
      * @throws IdentityOAuth2ScopeClientException
      */
     private void addScopePreValidation(Scope scope) throws IdentityOAuth2ScopeClientException {
 
-        throwErrorUponEmptyScopeName(scope.getName());
-        throwErrorIfScopeNameContainsWhiteSpaces(scope.getName());
-        throwErrorUponEmptyDisplayName(scope.getDisplayName());
-
+        validateScopeName(scope.getName());
+        validateDisplayName(scope.getDisplayName());
     }
 
     /**
@@ -277,9 +276,8 @@ public class OAuth2ScopeService {
      */
     private void updateScopePreValidation(Scope updatedScope) throws IdentityOAuth2ScopeClientException {
 
-        throwErrorUponEmptyScopeName(updatedScope.getName());
-        throwErrorUponEmptyDisplayName(updatedScope.getDisplayName());
-
+        validateScopeName(updatedScope.getName());
+        validateDisplayName(updatedScope.getDisplayName());
     }
 
     /**
@@ -288,21 +286,23 @@ public class OAuth2ScopeService {
      * @param scopeName Scope name.
      * @throws IdentityOAuth2ScopeClientException
      */
-    private void throwErrorUponEmptyScopeName(String scopeName) throws IdentityOAuth2ScopeClientException {
+    private void validateScopeName(String scopeName) throws IdentityOAuth2ScopeClientException {
 
         // Check whether the scope name is provided.
         if (StringUtils.isBlank(scopeName)) {
             throw Oauth2ScopeUtils.generateClientException(Oauth2ScopeConstants.ErrorMessages.
                     ERROR_CODE_BAD_REQUEST_SCOPE_NAME_NOT_SPECIFIED, null);
         }
+        validateWhiteSpaces(scopeName);
     }
 
     /**
      * Check whether scope name contains any white spaces.
+     *
      * @param scopeName Scope name.
      * @throws IdentityOAuth2ScopeClientException
      */
-    private void throwErrorIfScopeNameContainsWhiteSpaces(String scopeName) throws IdentityOAuth2ScopeClientException {
+    private void validateWhiteSpaces(String scopeName) throws IdentityOAuth2ScopeClientException {
 
         // Check whether the scope name contains any white spaces.
         Pattern pattern = Pattern.compile("\\s");
@@ -317,10 +317,11 @@ public class OAuth2ScopeService {
 
     /**
      * Check whether display name is provided or empty.
+     *
      * @param displayName Display name.
      * @throws IdentityOAuth2ScopeClientException
      */
-    private void throwErrorUponEmptyDisplayName(String displayName) throws IdentityOAuth2ScopeClientException {
+    private void validateDisplayName(String displayName) throws IdentityOAuth2ScopeClientException {
 
         // Check whether the scope display name is provided.
         if (StringUtils.isBlank(displayName)) {
@@ -332,16 +333,16 @@ public class OAuth2ScopeService {
     /**
      * Check whether scope exist or not, if scope does not exist trow not found error.
      *
-     * @param name Scope name.
+     * @param scopeName Scope name.
      * @throws IdentityOAuth2ScopeException
      */
-    private void throwErrorOnScopeExist(String name) throws IdentityOAuth2ScopeException {
+    private void validateScopeExistence(String scopeName) throws IdentityOAuth2ScopeException {
 
         // Check whether a scope exists with the provided scope name which to be updated.
-        boolean isScopeExists = isScopeExists(name);
+        boolean isScopeExists = isScopeExists(scopeName);
         if (!isScopeExists) {
             throw Oauth2ScopeUtils.generateClientException(Oauth2ScopeConstants.ErrorMessages.
-                    ERROR_CODE_NOT_FOUND_SCOPE, name);
+                    ERROR_CODE_NOT_FOUND_SCOPE, scopeName);
         }
     }
 }

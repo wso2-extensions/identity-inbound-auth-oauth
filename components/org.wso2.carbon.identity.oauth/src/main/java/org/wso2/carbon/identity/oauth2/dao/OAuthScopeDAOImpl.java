@@ -464,8 +464,8 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
         int scopeId = getScopeIDByName(updatedScope.getName(), tenantID);
         try (Connection conn = IdentityDatabaseUtil.getDBConnection()) {
             try {
-                updateScopeDetailsOnOauth2ScopeTable(updatedScope, tenantID, conn, scopeId);
-                deleteBindingOfScope(updatedScope.getName(), tenantID, conn);
+                updateScopeDetails(updatedScope, tenantID, conn, scopeId);
+                deleteBindings(updatedScope.getName(), tenantID, conn);
                 addScopeBinding(updatedScope, conn, scopeId);
                 IdentityDatabaseUtil.commitTransaction(conn);
             } catch (SQLException e1) {
@@ -489,7 +489,7 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
      * @throws IdentityOAuth2ScopeClientException
      */
     private void addScope(Scope scope, Connection conn, int tenantID)
-            throws SQLException, IdentityOAuth2ScopeClientException {
+            throws SQLException {
         //Adding the scope
         if (scope != null) {
             int scopeID = 0;
@@ -585,7 +585,7 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
      * @param conn      Data-base connection.
      * @throws SQLException
      */
-    private void deleteBindingOfScope(String scopeName, int tenantID, Connection conn) throws SQLException {
+    private void deleteBindings(String scopeName, int tenantID, Connection conn) throws SQLException {
 
         // Delete only the binding part of the given scope.
         if (log.isDebugEnabled()) {
@@ -762,7 +762,7 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
      * @param scopeId      Scope ID.
      * @throws SQLException
      */
-    public void updateScopeDetailsOnOauth2ScopeTable(Scope updatedScope, int tenantID, Connection conn, int scopeId)
+    public void updateScopeDetails(Scope updatedScope, int tenantID, Connection conn, int scopeId)
             throws SQLException {
 
         // Update scope details on IDN_OAUTH2_SCOPE table.

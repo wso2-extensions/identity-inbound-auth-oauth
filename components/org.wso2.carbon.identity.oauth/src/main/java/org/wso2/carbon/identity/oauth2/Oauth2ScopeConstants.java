@@ -27,7 +27,6 @@ public class Oauth2ScopeConstants {
     public static final String DEFAULT_SCOPE_BINDING = "DEFAULT";
     public static final String PERMISSIONS_BINDING_TYPE = "PERMISSION";
     public static final String SYSTEM_SCOPE = "SYSTEM";
-    public static final int COUNT_ZERO = 0;
     public static final String SCOPE_TYPE_OAUTH2 = "OAUTH2";
     public static final String SCOPE_TYPE_OIDC = "OIDC";
 
@@ -40,10 +39,7 @@ public class Oauth2ScopeConstants {
         ERROR_CODE_BAD_REQUEST_SCOPE_DISPLAY_NAME_NOT_SPECIFIED("41002", "Scope Display Name is not specified."),
         ERROR_CODE_NOT_FOUND_SCOPE("41003", "Scope %s is not found."),
         ERROR_CODE_CONFLICT_REQUEST_EXISTING_SCOPE("41004",
-                "Scope name %s already exists with binding in the system. Please use a different scope name and " +
-                        "binding."),
-        ERROR_CODE_CONFLICT_REQUEST_EXISTING_OIDC_SCOPE("41004", "Scope is already exists with OIDC claim " +
-                "mapping in the system. Please use a different scope name or different OIDC claims to map."),
+                "Scope with the name %s already exists in the system. Please use a different scope name."),
         ERROR_CODE_BAD_REQUEST_SCOPE_NOT_SPECIFIED("41005", "Scope is not specified."),
         ERROR_CODE_BAD_REQUEST_SCOPE_NAME_CONTAINS_WHITESPACES("41006", "Scope name contains white spaces."),
 

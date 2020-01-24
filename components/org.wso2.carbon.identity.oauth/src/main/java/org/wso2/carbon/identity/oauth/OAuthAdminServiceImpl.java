@@ -466,6 +466,7 @@ public class OAuthAdminServiceImpl {
      *
      * @param scope an oidc scope
      * @throws IdentityOAuthAdminException if an error occurs when inserting scopes or claims.
+     * @deprecated use {@link #addScope(ScopeDTO)} instead.
      */
     @Deprecated
     public void addScope(String scope, String[] claims) throws IdentityOAuthAdminException {
@@ -534,7 +535,7 @@ public class OAuthAdminServiceImpl {
      */
     public ScopeDTO getScope(String scopeName) throws IdentityOAuthAdminException {
 
-        throwErrorUponEmptyScopeName(scopeName);
+        validateScopeName(scopeName);
 
         int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
         try {
@@ -561,9 +562,9 @@ public class OAuthAdminServiceImpl {
      */
     public void deleteScope(String scope) throws IdentityOAuthAdminException {
 
-        throwErrorUponEmptyScopeName(scope);
+        validateScopeName(scope);
         // Check whether a scope exists with the provided scope name which to be deleted.
-        throwErrorOnScopeExist(scope);
+        validateScopeExistence(scope);
 
         int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
         try {
@@ -634,6 +635,7 @@ public class OAuthAdminServiceImpl {
      * @param addClaims    list of oidc claims to be added
      * @param deleteClaims list of oidc claims to be deleted
      * @throws IdentityOAuthAdminException if an error occurs when adding a new claim for a scope.
+     * @deprecated use {@link #updateScope(ScopeDTO)} instead.
      */
     @Deprecated
     public void updateScope(String scope, String[] addClaims, String[] deleteClaims)
@@ -659,7 +661,7 @@ public class OAuthAdminServiceImpl {
 
         updateScopePreValidation(updatedScope);
         // Check whether a scope exists with the provided scope name which to be deleted.
-        throwErrorOnScopeExist(updatedScope.getName());
+        validateScopeExistence(updatedScope.getName());
 
         int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
         try {
@@ -1367,15 +1369,13 @@ public class OAuthAdminServiceImpl {
     /**
      * Scope validation before adding the scope.
      *
-     * @param scope Scope
+     * @param scope Scope.
      * @throws IdentityOAuth2ScopeClientException
      */
     private void addScopePreValidation(ScopeDTO scope) throws IdentityOAuthClientException {
 
-        throwErrorUponEmptyScopeName(scope.getName());
-        throwErrorIfScopeNameContainsWhiteSpaces(scope.getName());
-        throwErrorUponEmptyDisplayName(scope.getDisplayName());
-
+        validateScopeName(scope.getName());
+        validateDisplayName(scope.getDisplayName());
     }
 
     /**
@@ -1386,9 +1386,8 @@ public class OAuthAdminServiceImpl {
      */
     private void updateScopePreValidation(ScopeDTO updatedScope) throws IdentityOAuthClientException {
 
-        throwErrorUponEmptyScopeName(updatedScope.getName());
-        throwErrorUponEmptyDisplayName(updatedScope.getDisplayName());
-
+        validateScopeName(updatedScope.getName());
+        validateDisplayName(updatedScope.getDisplayName());
     }
 
     /**
@@ -1397,13 +1396,14 @@ public class OAuthAdminServiceImpl {
      * @param scopeName Scope name.
      * @throws IdentityOAuth2ScopeClientException
      */
-    private void throwErrorUponEmptyScopeName(String scopeName) throws IdentityOAuthClientException {
+    private void validateScopeName(String scopeName) throws IdentityOAuthClientException {
 
         // Check whether the scope name is provided.
         if (StringUtils.isBlank(scopeName)) {
             throw handleClientError(INVALID_REQUEST, Oauth2ScopeConstants.ErrorMessages.
                     ERROR_CODE_BAD_REQUEST_SCOPE_NAME_NOT_SPECIFIED.getMessage());
         }
+        validateWhiteSpaces(scopeName);
     }
 
     /**
@@ -1412,7 +1412,7 @@ public class OAuthAdminServiceImpl {
      * @param scopeName Scope name.
      * @throws IdentityOAuth2ScopeClientException
      */
-    private void throwErrorIfScopeNameContainsWhiteSpaces(String scopeName) throws IdentityOAuthClientException {
+    private void validateWhiteSpaces(String scopeName) throws IdentityOAuthClientException {
 
         // Check whether the scope name contains any white spaces.
         Pattern pattern = Pattern.compile("\\s");
@@ -1431,7 +1431,7 @@ public class OAuthAdminServiceImpl {
      * @param displayName Display name.
      * @throws IdentityOAuth2ScopeClientException
      */
-    private void throwErrorUponEmptyDisplayName(String displayName) throws IdentityOAuthClientException {
+    private void validateDisplayName(String displayName) throws IdentityOAuthClientException {
 
         // Check whether the scope display name is provided.
         if (StringUtils.isBlank(displayName)) {
@@ -1444,15 +1444,15 @@ public class OAuthAdminServiceImpl {
     /**
      * Check whether scope exist or not, if scope does not exist trow not found error.
      *
-     * @param name Scope name.
+     * @param scopeName Scope name.
      * @throws IdentityOAuth2ScopeException
      */
-    private void throwErrorOnScopeExist(String name) throws IdentityOAuthAdminException {
+    private void validateScopeExistence(String scopeName) throws IdentityOAuthAdminException {
 
-        boolean isScopeExists = isScopeExist(name);
+        boolean isScopeExists = isScopeExist(scopeName);
         if (!isScopeExists) {
             throw handleClientError(INVALID_REQUEST, String.format(Oauth2ScopeConstants.ErrorMessages.
-                    ERROR_CODE_NOT_FOUND_SCOPE.getMessage(), name));
+                    ERROR_CODE_NOT_FOUND_SCOPE.getMessage(), scopeName));
         }
     }
 }

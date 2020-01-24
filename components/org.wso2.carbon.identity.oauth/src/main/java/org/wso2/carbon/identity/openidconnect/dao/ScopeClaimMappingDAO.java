@@ -45,6 +45,7 @@ public interface ScopeClaimMappingDAO {
      * @param tenantId tenant Id
      * @param scope    scope
      * @throws IdentityOAuth2Exception if an error occurs when adding a scope.
+     * @deprecated use {@link #addScope(ScopeDTO, int)} instead.
      */
     @Deprecated
     void addScope(int tenantId, String scope, String[] claimsList) throws IdentityOAuth2Exception;
@@ -93,6 +94,7 @@ public interface ScopeClaimMappingDAO {
      * @param addClaims    list of oidc claims to be added
      * @param deleteClaims list of oidc claims to be deleted
      * @throws IdentityOAuth2Exception if an error occurs when adding a new claim for a scope.
+     * @deprecated use {@link #updateScope(ScopeDTO, int)} instead.
      */
     @Deprecated
     void updateScope(String scope, int tenantId, List<String> addClaims, List<String> deleteClaims)
